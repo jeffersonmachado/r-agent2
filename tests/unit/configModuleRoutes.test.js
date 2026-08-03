@@ -41,8 +41,10 @@ describe('config module', () => {
       '/config',
       '/server/process-manager',
       '/config/validate-provider-token',
+      '/config/validate-billing-credentials',
       '/config/validate-redis',
       '/server/restart',
+      '/rag/reload-config',
     ]);
   });
 

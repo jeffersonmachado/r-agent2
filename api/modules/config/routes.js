@@ -31,6 +31,7 @@ function createConfigRoutes({ buildDeps }) {
   router.post('/config/validate-billing-credentials', (req, res) => controllerFor(req, res).validateBillingCredentials(req, res));
   router.post('/config/validate-redis', (req, res) => controllerFor(req, res).validateRedis(req, res));
   router.post('/server/restart', (req, res) => controllerFor(req, res).restartServer(req, res));
+  router.post('/rag/reload-config', (req, res) => controllerFor(req, res).reloadRagConfig(req, res));
 
   return router;
 }

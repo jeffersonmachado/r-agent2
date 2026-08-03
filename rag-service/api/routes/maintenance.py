@@ -157,3 +157,46 @@ def clean_orphaned_documents(
             removedDocuments=0,
             error=str(e)
         )
+
+
+@router.post("/reload-config")
+def reload_config():
+    """
+    Recarrega as configurações do config.json sem reiniciar o serviço.
+    Útil após alterações na UI de configuração (ex.: troca de modelo LLM).
+
+    Além de reexecutar config.settings (mesmo module object — consumidores
+    que chamam get_settings() por uso recebem a config nova), invalida os
+    singletons dependentes: modelo de embeddings + cache LRU de queries e
+    cliente OpenAI. Sem isso, troca de embedding_model ou de api_key só
+    aplicaria após restart.
+    """
+    try:
+        from config.settings import get_settings
+        import importlib
+        import config.settings as settings_mod
+        from services.embedding_service import reset_embedding_model
+        from services.llm_service import reset_openai_client
+
+        # Recarrega o módulo de settings para forçar releitura do config.json
+        importlib.reload(settings_mod)
+
+        # Invalida singletons que congelam config em memória
+        reset_embedding_model()
+        reset_openai_client()
+
+        new_settings = get_settings()
+
+        return {
+            "success": True,
+            "message": "Configuração recarregada com sucesso",
+            "llm": {
+                "provider": new_settings.llm_provider,
+                "model": new_settings.llm_model,
+                "temperature": new_settings.llm_temperature,
+                "maxTokens": new_settings.llm_max_tokens,
+            }
+        }
+    except Exception as e:
+        logger.error(f"[Maintenance] Erro ao recarregar configuração: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erro ao recarregar configuração: {str(e)}")

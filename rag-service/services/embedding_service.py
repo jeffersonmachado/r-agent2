@@ -74,3 +74,14 @@ def generate_embeddings_batch(texts: List[str]) -> List[List[float]]:
     embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
     return embeddings.tolist()
 
+
+def reset_embedding_model():
+    """
+    Invalida o modelo singleton e o cache LRU de queries.
+    Chamado no reload de configuração: se embedding_model mudou, embeddings
+    cacheados do modelo anterior não podem ser reutilizados.
+    """
+    global _model
+    _model = None
+    _encode_query_cached.cache_clear()
+

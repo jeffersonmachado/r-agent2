@@ -20,6 +20,18 @@
     "enableWebhooks": true,
     "enableBulkMessaging": false
   },
+  "rag": {
+    "service": {
+      "host": "localhost",
+      "port": 8001,
+      "llm": {
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "temperature": 0.7,
+        "maxTokens": 1000
+      }
+    }
+  },
   "billing": {
     "provider": "asaas",
     "providers": {

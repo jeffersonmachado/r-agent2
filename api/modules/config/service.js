@@ -436,6 +436,26 @@ function createConfigService({ deps }) {
       return deps.detectProcessManager();
     },
 
+    async reloadRagConfig(logger) {
+      const ragServiceUrl = process.env.RAG_SERVICE_URL || appConfig.get('rag.serviceUrl', 'http://localhost:8001');
+      const url = `${ragServiceUrl}/rag/reload-config`;
+      const token = process.env.RAG_INTERNAL_TOKEN;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['X-RAG-Internal-Token'] = token;
+
+      logger.info('[Config] Solicitando reload de config do RAG', { url });
+      const response = await fetch(url, { method: 'POST', headers, signal: AbortSignal.timeout(10000) });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`RAG respondeu ${response.status}: ${text || response.statusText}`);
+      }
+
+      const data = await response.json();
+      logger.info('[Config] Config do RAG recarregada', { llm: data.llm });
+      return data;
+    },
+
     validateProviderToken: validateProviderCredentials,
     validateRedisUrl,
     validateRedisConnection,

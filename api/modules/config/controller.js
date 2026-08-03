@@ -338,6 +338,22 @@ function createConfigController({ service, deps }) {
         process.exit(0);
       }, 500);
     },
+
+    async reloadRagConfig(req, res) {
+      const authResult = ensureAuth(req, res);
+      if (!authResult) return;
+      const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+      if (!ensurePermission(req, res, 'config', 'update', isSuperAdminUser)) return;
+
+      try {
+        const result = await service.reloadRagConfig(deps.logger);
+        deps.sendJson(res, 200, result);
+      } catch (err) {
+        // Detalhe (URL/status interno do RAG) fica só no log — não vazar ao cliente
+        deps.logger.error('Erro ao recarregar configuração do RAG', { error: err.message });
+        deps.sendJson(res, 500, { success: false, error: 'Falha ao recarregar configuração do RAG' });
+      }
+    },
   };
 }
 

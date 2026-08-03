@@ -88,11 +88,18 @@ export function ConfigPage() {
   }, []);
   
   // Lê o parâmetro 'tab' da URL para abrir a aba correta
+  // Tabs restritas a super_admin: rag, billing, whatsapp, email, ai, webhooks
+  const SUPER_ADMIN_TABS = ['rag', 'billing', 'whatsapp', 'email', 'ai', 'webhooks'];
+  const ALLOWED_TABS = ['api', 'frontend', 'flows', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general'];
+
   const getInitialTab = () => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam && ['api', 'frontend', 'rag', 'billing', 'whatsapp', 'email', 'flows', 'ai', 'features', 'scripts', 'logging', 'rateLimit', 'fallbacks', 'general', 'webhooks'].includes(tabParam)) {
+      const allowedTabs = agent?.role === 'super_admin'
+        ? [...ALLOWED_TABS, ...SUPER_ADMIN_TABS]
+        : ALLOWED_TABS;
+      if (tabParam && allowedTabs.includes(tabParam)) {
         return tabParam;
       }
     }
@@ -878,22 +885,26 @@ export function ConfigPage() {
     );
   };
 
-  const tabs = [
-    { id: 'frontend', label: 'Frontend', icon: '🖥️' },
-    { id: 'rag', label: 'RAG', icon: '🔍' },
-    { id: 'billing', label: 'Billing', icon: '💳' },
-    { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
-    { id: 'email', label: 'Email SMTP', icon: '📧' },
-    { id: 'flows', label: 'Fluxos', icon: '🔄' },
-    { id: 'ai', label: 'IA', icon: '🤖' },
-    { id: 'features', label: 'Features', icon: '✨' },
-    { id: 'scripts', label: 'Scripts', icon: '📜' },
-    { id: 'logging', label: 'Logging', icon: '📝' },
-    { id: 'rateLimit', label: 'Rate Limiting', icon: '🚦' },
-    { id: 'fallbacks', label: 'Fallbacks', icon: '🛟' },
-    { id: 'general', label: 'Geral', icon: '🌐' },
-    { id: 'webhooks', label: 'Webhooks', icon: '🪝' },
-  ];
+  const isSuperAdmin = agent?.role === 'super_admin';
+
+  const ALL_TABS = {
+    frontend:       { id: 'frontend', label: 'Frontend', icon: '🖥️', superAdminOnly: false },
+    rag:            { id: 'rag', label: 'RAG', icon: '🔍', superAdminOnly: true },
+    billing:        { id: 'billing', label: 'Billing', icon: '💳', superAdminOnly: true },
+    whatsapp:       { id: 'whatsapp', label: 'WhatsApp', icon: '💬', superAdminOnly: true },
+    email:          { id: 'email', label: 'Email SMTP', icon: '📧', superAdminOnly: true },
+    flows:          { id: 'flows', label: 'Fluxos', icon: '🔄', superAdminOnly: false },
+    ai:             { id: 'ai', label: 'IA', icon: '🤖', superAdminOnly: true },
+    features:       { id: 'features', label: 'Features', icon: '✨', superAdminOnly: false },
+    scripts:        { id: 'scripts', label: 'Scripts', icon: '📜', superAdminOnly: false },
+    logging:        { id: 'logging', label: 'Logging', icon: '📝', superAdminOnly: false },
+    rateLimit:      { id: 'rateLimit', label: 'Rate Limiting', icon: '🚦', superAdminOnly: false },
+    fallbacks:      { id: 'fallbacks', label: 'Fallbacks', icon: '🛟', superAdminOnly: false },
+    general:        { id: 'general', label: 'Geral', icon: '🌐', superAdminOnly: false },
+    webhooks:       { id: 'webhooks', label: 'Webhooks', icon: '🪝', superAdminOnly: true },
+  };
+
+  const tabs = Object.values(ALL_TABS).filter(t => !t.superAdminOnly || isSuperAdmin);
 
   if (loading && !config) {
     return (
@@ -969,6 +980,7 @@ export function ConfigPage() {
                 <span>Descartar</span>
               </Button>
             )}
+            {isSuperAdmin && (
             <Button 
               onClick={handleRestart} 
               disabled={loading || saving}
@@ -978,6 +990,7 @@ export function ConfigPage() {
               <span>🔄</span>
               <span>Reiniciar Servidor</span>
             </Button>
+            )}
             <div className="ml-auto"></div>
           </div>
         </div>

@@ -33,6 +33,13 @@ def _get_openai_client(api_key: str) -> "OpenAI":
     return _openai_client
 
 
+def reset_openai_client():
+    """Invalida o cliente singleton (chamado no reload de configuração)."""
+    global _openai_client, _openai_client_key
+    _openai_client = None
+    _openai_client_key = None
+
+
 def generate_response(prompt: str, max_tokens: int = 1000, temperature: float = 0.7) -> str:
     """
     Gera resposta usando LLM.

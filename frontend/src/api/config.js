@@ -120,6 +120,22 @@ export async function getProcessManager() {
 }
 
 /**
+ * Recarrega a configuração do RAG Service sem reiniciá-lo.
+ * 
+ * @returns {Promise<{success: boolean, message?: string, llm?: object, error?: string}>}
+ */
+export async function reloadRagConfig() {
+  try {
+    return await fetchJson('/rag/reload-config', {
+      method: 'POST',
+    });
+  } catch (error) {
+    logger.error('Erro ao recarregar configuração do RAG', error);
+    return { success: false, error: error.message || 'Erro desconhecido' };
+  }
+}
+
+/**
  * Valida um token de provedor de IA.
  * 
  * @param {string} provider - Nome do provedor ('openai' ou 'anthropic')
