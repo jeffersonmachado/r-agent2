@@ -13,7 +13,7 @@ describe('RAG health inconsistency', () => {
 
   it('quando doc está indexed mas chunks=0 no Postgres -> warnings + marca inconsistente', async () => {
     jest.doMock('../../api/db/sequelize', () => ({
-      getSequelize: () => ({}),
+      getSequelize: () => ({ query: jest.fn(async () => [[{ current_version: null }]]) }),
     }));
 
     const updateCalls = [];

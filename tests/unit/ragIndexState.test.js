@@ -16,7 +16,7 @@ describe('RAG index state', () => {
   it('index fail (0 chunks) -> grava index_status=failed no DB', async () => {
     // Mock DB disponível
     jest.doMock('../../api/db/sequelize', () => ({
-      getSequelize: () => ({}),
+      getSequelize: () => ({ query: jest.fn(async () => [[{ current_version: null }]]) }),
     }));
 
     // Mock ragService (indexação retorna 0 chunks)

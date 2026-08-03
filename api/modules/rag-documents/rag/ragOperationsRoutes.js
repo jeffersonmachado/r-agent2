@@ -79,7 +79,7 @@ async function handleRagOperationsRoutes({ req, res, method, pathname, deps }) {
       const tenantId = deps.requireTenant(req, res);
       if (!tenantId) return true;
 
-      const stats = deps.ragDeduplicationService.getDeduplicationStats(tenantId);
+      const stats = await deps.ragDeduplicationService.getDeduplicationStats(tenantId);
       deps.sendJson(res, 200, stats);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao obter estatísticas de deduplicação:' });

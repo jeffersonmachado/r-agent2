@@ -445,7 +445,7 @@ async function indexDocument(document, tenantId) {
     
     // ETAPA 3: Verificação de duplicidade estrutural
     const sourceId = document.metadata?.source_id || document.id;
-    const structuralCheck = ragDeduplicationService.checkStructuralDuplicate(tenantId, contentHash, sourceId);
+    const structuralCheck = await ragDeduplicationService.checkStructuralDuplicate(tenantId, contentHash, sourceId);
     
     if (structuralCheck.isDuplicate) {
       logger.info('[RAGService] Documento duplicado estruturalmente detectado, descartando ingestão', {
@@ -468,12 +468,12 @@ async function indexDocument(document, tenantId) {
     }
 
     // ETAPA 4: Determina source_version
-    const currentVersion = ragDeduplicationService.getCurrentSourceVersion(tenantId, sourceId);
+    const currentVersion = await ragDeduplicationService.getCurrentSourceVersion(tenantId, sourceId);
     const sourceVersion = document.metadata?.source_version || (currentVersion + 1);
 
     // Se é nova versão, desativa versões anteriores
     if (sourceVersion > currentVersion) {
-      ragDeduplicationService.deactivatePreviousVersions(tenantId, sourceId, sourceVersion);
+      await ragDeduplicationService.deactivatePreviousVersions(tenantId, sourceId, sourceVersion);
     }
 
     // ETAPA 5: Prepara metadados obrigatórios

@@ -215,7 +215,7 @@ Registra:
 
 ## Próximos Passos (Opcional)
 
-1. Persistir índices de deduplicação em Redis ou DB (atualmente em memória)
+1. ~~Persistir índices de deduplicação em Redis ou DB~~ ✅ Feito (2026-08-03): o lado Node.js (`api/services/ragDeduplicationService.js`) consulta `rag_chunks` no Postgres (metadados de dedup no JSONB `metadata`); não há mais índices em memória
 2. Melhorar detecção de seções para `section_title` no chunking
 3. Implementar MMR (Maximum Marginal Relevance) para diversidade
 4. Adicionar métricas de qualidade de deduplicação

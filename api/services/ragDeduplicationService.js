@@ -1,20 +1,30 @@
 /**
  * Serviço de deduplicação RAG.
- * 
+ *
  * Responsabilidades:
  * - Verificar duplicidade estrutural (content_hash)
- * - Verificar duplicidade semântica (semantic_hash + cosine similarity)
+ * - Verificar duplicidade semântica (semantic_hash + cosine similarity via pgvector)
  * - Gerenciar versionamento de documentos
  * - Registrar logs de auditoria
- * 
+ *
  * REGRAS:
  * - Toda deduplicação ocorre ANTES da recuperação
  * - Lógica determinística e reexecutável
  * - NÃO reindexa documentos existentes automaticamente
  * - NÃO remove dados históricos
+ *
+ * PERSISTÊNCIA:
+ * - Os índices de dedup vivem na tabela `rag_chunks` (Postgres): os metadados
+ *   (content_hash, semantic_hash, source_id, source_version, active) ficam no
+ *   JSONB `metadata`. Não há estado em memória — falha de DB propaga erro
+ *   explícito (sem fallback silencioso).
+ * - As queries assumem os índices de expressão
+ *   `(tenant_key, (metadata->>'content_hash'))` e `(tenant_key, (metadata->>'source_id'))`,
+ *   mas funcionam mesmo sem eles (apenas mais lentas).
  */
 
 const logger = require('../utils/logger');
+const { getSequelize } = require('../db/sequelize');
 const {
   normalizeContent,
   generateContentHash,
@@ -34,73 +44,87 @@ function safeString(value, fallback = '') {
   }
 }
 
-function safeErrorMessage(error, fallback = '') {
-  let message;
-
-  try {
-    message = error?.message;
-  } catch (_) {
-    message = null;
+function requireSequelize() {
+  const sequelize = getSequelize();
+  if (!sequelize) {
+    throw new Error('Sequelize não inicializado. Chame connect() primeiro.');
   }
-
-  if (message !== null && message !== undefined) return safeString(message, fallback);
-  return safeString(error, fallback);
+  return sequelize;
 }
 
-// Storage em memória para metadados de chunks (em produção, usar Redis ou DB)
-// Estrutura: Map<tenantId, Map<contentHash, metadata>>
-const contentHashIndex = new Map();
+function normalizeTenantKey(tenantId) {
+  if (tenantId === null || tenantId === undefined) return null;
+  const tid = safeString(tenantId).trim();
+  return tid || null;
+}
 
-// Estrutura: Map<tenantId, Map<chunkId, metadata>>
-const chunkIndex = new Map();
+function requireTenantKey(tenantId) {
+  const tenantKey = normalizeTenantKey(tenantId);
+  if (!tenantKey) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
+  return tenantKey;
+}
 
-// Estrutura: Map<tenantId, Map<sourceId, {currentVersion, versions: []}>>
-const sourceVersionIndex = new Map();
+function embeddingToPgVectorLiteral(embedding) {
+  // pgvector aceita string no formato "[1,2,3]" (mesmo padrão do postgresVectorStore)
+  return `[${embedding.map((n) => {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return '0';
+    return String(Math.abs(v) < 1e-8 ? 0 : v);
+  }).join(',')}]`;
+}
 
-/**
- * Inicializa índices para um tenant.
- * 
- * @param {string} tenantId - ID do tenant
- */
-function initializeTenantIndices(tenantId) {
-  if (!contentHashIndex.has(tenantId)) {
-    contentHashIndex.set(tenantId, new Map());
-  }
-  if (!chunkIndex.has(tenantId)) {
-    chunkIndex.set(tenantId, new Map());
-  }
-  if (!sourceVersionIndex.has(tenantId)) {
-    sourceVersionIndex.set(tenantId, new Map());
-  }
+function rowToExistingChunk(row) {
+  const metadata = (row && row.metadata && typeof row.metadata === 'object') ? row.metadata : {};
+  return {
+    ...metadata,
+    chunk_id: row.id,
+    document_id: row.document_id,
+  };
+}
+
+function shortHash(hash) {
+  return safeString(hash).substring(0, 16) + '...';
 }
 
 /**
- * Verifica duplicidade estrutural (content_hash).
- * 
+ * Verifica duplicidade estrutural (content_hash) consultando `rag_chunks`.
+ *
  * @param {string} tenantId - ID do tenant
  * @param {string} contentHash - Hash do conteúdo normalizado
  * @param {string} sourceId - ID da fonte (opcional, para logs)
- * @returns {Object} {isDuplicate: boolean, existingChunk?: Object, reason?: string}
+ * @returns {Promise<Object>} {isDuplicate: boolean, existingChunk?: Object, reason?: string}
  */
-function checkStructuralDuplicate(tenantId, contentHash, sourceId = null) {
-  initializeTenantIndices(tenantId);
-  
-  const tenantContentHash = contentHashIndex.get(tenantId);
-  const existing = tenantContentHash.get(contentHash);
+async function checkStructuralDuplicate(tenantId, contentHash, sourceId = null) {
+  const sequelize = requireSequelize();
+  const tenantKey = requireTenantKey(tenantId);
 
-  if (existing) {
+  const [rows] = await sequelize.query(
+    `
+      SELECT id, document_id, metadata
+      FROM rag_chunks
+      WHERE tenant_key = :tenantKey
+        AND metadata->>'content_hash' = :contentHash
+      LIMIT 1
+    `,
+    { replacements: { tenantKey, contentHash: safeString(contentHash) } }
+  );
+
+  const row = rows && rows[0];
+  if (row) {
+    const existingChunk = rowToExistingChunk(row);
+
     logger.info('[RAGDeduplication] Duplicidade estrutural detectada', {
       tenantId,
-      contentHash: contentHash.substring(0, 16) + '...',
+      contentHash: shortHash(contentHash),
       sourceId,
-      existingChunkId: existing.chunk_id,
-      existingDocumentId: existing.document_id,
-      existingSourceId: existing.source_id,
+      existingChunkId: existingChunk.chunk_id,
+      existingDocumentId: existingChunk.document_id,
+      existingSourceId: existingChunk.source_id,
     });
 
     return {
       isDuplicate: true,
-      existingChunk: existing,
+      existingChunk,
       reason: 'content_hash_duplicate',
     };
   }
@@ -109,8 +133,13 @@ function checkStructuralDuplicate(tenantId, contentHash, sourceId = null) {
 }
 
 /**
- * Verifica duplicidade semântica (similaridade de embedding > 0.97).
- * 
+ * Verifica duplicidade semântica (similaridade de embedding > 0.97) no Postgres.
+ *
+ * Estratégia:
+ * 1. Match exato por `metadata->>'semantic_hash'` (apenas chunks ativos).
+ * 2. Vizinho mais próximo via pgvector (`embedding <=> :queryVector`),
+ *    similaridade = 1 - distância cosseno, apenas chunks ativos.
+ *
  * @param {string} tenantId - ID do tenant
  * @param {Array<number>} embedding - Embedding normalizado
  * @param {string} semanticHash - Hash do embedding
@@ -118,88 +147,102 @@ function checkStructuralDuplicate(tenantId, contentHash, sourceId = null) {
  * @returns {Promise<Object>} {isDuplicate: boolean, existingChunk?: Object, similarity?: number, reason?: string}
  */
 async function checkSemanticDuplicate(tenantId, embedding, semanticHash, sourceId = null) {
-  initializeTenantIndices(tenantId);
-  
-  const tenantChunks = chunkIndex.get(tenantId);
+  const sequelize = requireSequelize();
+  const tenantKey = requireTenantKey(tenantId);
   const normalizedEmbedding = normalizeEmbedding(embedding);
 
-  // Busca chunks do mesmo tenant
-  let maxSimilarity = 0;
-  let mostSimilarChunk = null;
+  // 1) Duplicata exata por semantic_hash (apenas chunks ativos)
+  const [exactRows] = await sequelize.query(
+    `
+      SELECT id, document_id, metadata
+      FROM rag_chunks
+      WHERE tenant_key = :tenantKey
+        AND metadata->>'semantic_hash' = :semanticHash
+        AND COALESCE((metadata->>'active')::boolean, true)
+      LIMIT 1
+    `,
+    { replacements: { tenantKey, semanticHash: safeString(semanticHash) } }
+  );
 
-  for (const [chunkId, chunkMetadata] of tenantChunks.entries()) {
-    // Verifica se chunk está ativo
-    if (!chunkMetadata.active) continue;
+  const exactRow = exactRows && exactRows[0];
+  if (exactRow) {
+    const existingChunk = rowToExistingChunk(exactRow);
 
-    // Se tem semantic_hash igual, é duplicata exata
-    if (chunkMetadata.semantic_hash === semanticHash) {
-      logger.info('[RAGDeduplication] Duplicidade semântica exata detectada (semantic_hash)', {
-        tenantId,
-        semanticHash: semanticHash.substring(0, 16) + '...',
-        sourceId,
-        existingChunkId: chunkId,
-        existingDocumentId: chunkMetadata.document_id,
-      });
-
-      return {
-        isDuplicate: true,
-        existingChunk: chunkMetadata,
-        similarity: 1.0,
-        reason: 'semantic_hash_exact_duplicate',
-      };
-    }
-
-    // Se tem embedding armazenado, calcula similaridade
-    if (chunkMetadata.embedding && Array.isArray(chunkMetadata.embedding)) {
-      try {
-        const similarity = cosineSimilarity(normalizedEmbedding, chunkMetadata.embedding);
-        
-        if (similarity > maxSimilarity) {
-          maxSimilarity = similarity;
-          mostSimilarChunk = { ...chunkMetadata, chunk_id: chunkId };
-        }
-      } catch (err) {
-        logger.warn('[RAGDeduplication] Erro ao calcular similaridade', {
-          tenantId,
-          chunkId,
-          error: safeErrorMessage(err),
-        });
-      }
-    }
-  }
-
-  // Threshold de 0.97 para considerar duplicata semântica
-  if (maxSimilarity > 0.97) {
-    logger.info('[RAGDeduplication] Duplicidade semântica detectada (similaridade alta)', {
+    logger.info('[RAGDeduplication] Duplicidade semântica exata detectada (semantic_hash)', {
       tenantId,
-      semanticHash: semanticHash.substring(0, 16) + '...',
+      semanticHash: shortHash(semanticHash),
       sourceId,
-      similarity: maxSimilarity,
-      existingChunkId: mostSimilarChunk.chunk_id,
-      existingDocumentId: mostSimilarChunk.document_id,
+      existingChunkId: existingChunk.chunk_id,
+      existingDocumentId: existingChunk.document_id,
     });
 
     return {
       isDuplicate: true,
-      existingChunk: mostSimilarChunk,
-      similarity: maxSimilarity,
+      existingChunk,
+      similarity: 1.0,
+      reason: 'semantic_hash_exact_duplicate',
+    };
+  }
+
+  // 2) Vizinho mais próximo via pgvector (distância cosseno), apenas chunks ativos
+  const q = embeddingToPgVectorLiteral(normalizedEmbedding);
+  const [rows] = await sequelize.query(
+    `
+      SELECT
+        id,
+        document_id,
+        metadata,
+        (embedding <=> (:q)::vector) AS distance
+      FROM rag_chunks
+      WHERE tenant_key = :tenantKey
+        AND COALESCE((metadata->>'active')::boolean, true)
+      ORDER BY embedding <=> (:q)::vector
+      LIMIT 1
+    `,
+    { replacements: { tenantKey, q } }
+  );
+
+  const row = rows && rows[0];
+  const distance = row ? Number(row.distance) : null;
+  const similarity = Number.isFinite(distance) ? 1 - distance : 0;
+
+  // Threshold de 0.97 para considerar duplicata semântica
+  if (row && similarity > 0.97) {
+    const existingChunk = rowToExistingChunk(row);
+
+    logger.info('[RAGDeduplication] Duplicidade semântica detectada (similaridade alta)', {
+      tenantId,
+      semanticHash: shortHash(semanticHash),
+      sourceId,
+      similarity,
+      existingChunkId: existingChunk.chunk_id,
+      existingDocumentId: existingChunk.document_id,
+    });
+
+    return {
+      isDuplicate: true,
+      existingChunk,
+      similarity,
       reason: 'semantic_similarity_duplicate',
     };
   }
 
-  return { isDuplicate: false, similarity: maxSimilarity };
+  return { isDuplicate: false, similarity };
 }
 
 /**
- * Registra chunk nos índices de deduplicação.
- * 
+ * Registra chunk para deduplicação.
+ *
+ * DEPRECADO (no-op): os metadados de dedup agora vivem no JSONB `metadata` de
+ * `rag_chunks`, escritos pelo próprio caminho de indexação — o Postgres é a
+ * fonte da verdade. Mantido apenas para compatibilidade de assinatura com
+ * callers existentes; valida os metadados obrigatórios e registra log.
+ *
  * @param {string} tenantId - ID do tenant
  * @param {Object} chunkMetadata - Metadados do chunk
- * @param {Array<number>} embedding - Embedding do chunk (opcional, para similaridade futura)
+ * @param {Array<number>} embedding - Embedding do chunk (ignorado)
  */
 function registerChunk(tenantId, chunkMetadata, embedding = null) {
-  initializeTenantIndices(tenantId);
-
   const {
     chunk_id,
     document_id,
@@ -207,91 +250,54 @@ function registerChunk(tenantId, chunkMetadata, embedding = null) {
     source_version,
     content_hash,
     semantic_hash,
-    active = true,
-  } = chunkMetadata;
+  } = chunkMetadata || {};
 
-  // Valida metadados obrigatórios
+  // Valida metadados obrigatórios (comportamento preservado)
   if (!chunk_id || !document_id || !source_id || !content_hash || !semantic_hash) {
     throw new Error('Metadados obrigatórios faltando: chunk_id, document_id, source_id, content_hash, semantic_hash');
   }
 
-  const metadata = {
-    tenant_id: tenantId,
-    chunk_id,
-    document_id,
-    source_id,
-    source_version: source_version || 1,
-    content_hash,
-    semantic_hash,
-    active,
-    created_at: chunkMetadata.created_at || new Date().toISOString(),
-    embedding: embedding ? normalizeEmbedding(embedding) : null, // Armazena normalizado
-  };
-
-  // Registra no índice de content_hash
-  const tenantContentHash = contentHashIndex.get(tenantId);
-  tenantContentHash.set(content_hash, metadata);
-
-  // Registra no índice de chunk_id
-  const tenantChunks = chunkIndex.get(tenantId);
-  tenantChunks.set(chunk_id, metadata);
-
-  // Atualiza versionamento de source
-  const tenantSources = sourceVersionIndex.get(tenantId);
-  if (!tenantSources.has(source_id)) {
-    tenantSources.set(source_id, {
-      currentVersion: source_version || 1,
-      versions: [],
-    });
-  }
-
-  const sourceInfo = tenantSources.get(source_id);
-  if (source_version && source_version > sourceInfo.currentVersion) {
-    // Nova versão: marca versões anteriores como inativas
-    for (const [chunkId, chunkMeta] of tenantChunks.entries()) {
-      if (chunkMeta.source_id === source_id && chunkMeta.source_version < source_version) {
-        chunkMeta.active = false;
-        tenantChunks.set(chunkId, chunkMeta);
-      }
-    }
-    sourceInfo.currentVersion = source_version;
-  }
-
-  if (!sourceInfo.versions.includes(source_version || 1)) {
-    sourceInfo.versions.push(source_version || 1);
-  }
-
-  logger.debug('[RAGDeduplication] Chunk registrado', {
+  logger.debug('[RAGDeduplication] registerChunk é no-op (dedup persistido em rag_chunks)', {
     tenantId,
-    chunkId: chunk_id.substring(0, 16) + '...',
+    chunkId: safeString(chunk_id).substring(0, 16) + '...',
     documentId: document_id,
     sourceId: source_id,
     sourceVersion: source_version || 1,
-    contentHash: content_hash.substring(0, 16) + '...',
+    contentHash: shortHash(content_hash),
   });
 }
 
 /**
- * Marca versões anteriores de um source como inativas.
- * 
+ * Marca versões anteriores de um source como inativas (metadata.active=false).
+ *
  * @param {string} tenantId - ID do tenant
  * @param {string} sourceId - ID da fonte
  * @param {number} newVersion - Nova versão
+ * @returns {Promise<void>}
  */
-function deactivatePreviousVersions(tenantId, sourceId, newVersion) {
-  initializeTenantIndices(tenantId);
-  
-  const tenantChunks = chunkIndex.get(tenantId);
-  let deactivatedCount = 0;
+async function deactivatePreviousVersions(tenantId, sourceId, newVersion) {
+  const sequelize = requireSequelize();
+  const tenantKey = requireTenantKey(tenantId);
 
-  for (const [chunkId, chunkMeta] of tenantChunks.entries()) {
-    if (chunkMeta.source_id === sourceId && chunkMeta.source_version < newVersion && chunkMeta.active) {
-      chunkMeta.active = false;
-      tenantChunks.set(chunkId, chunkMeta);
-      deactivatedCount++;
+  const [, meta] = await sequelize.query(
+    `
+      UPDATE rag_chunks
+      SET metadata = jsonb_set(metadata, '{active}', 'false'::jsonb, true)
+      WHERE tenant_key = :tenantKey
+        AND metadata->>'source_id' = :sourceId
+        AND COALESCE((metadata->>'source_version')::int, 1) < :newVersion
+        AND COALESCE((metadata->>'active')::boolean, true)
+    `,
+    {
+      replacements: {
+        tenantKey,
+        sourceId: safeString(sourceId),
+        newVersion: Number.isFinite(newVersion) ? newVersion : 1,
+      },
     }
-  }
+  );
 
+  const deactivatedCount = meta && Number.isFinite(meta.rowCount) ? meta.rowCount : 0;
   if (deactivatedCount > 0) {
     logger.info('[RAGDeduplication] Versões anteriores desativadas', {
       tenantId,
@@ -303,24 +309,33 @@ function deactivatePreviousVersions(tenantId, sourceId, newVersion) {
 }
 
 /**
- * Obtém versão atual de um source.
- * 
+ * Obtém versão atual de um source (MAX(source_version) em rag_chunks).
+ *
  * @param {string} tenantId - ID do tenant
  * @param {string} sourceId - ID da fonte
- * @returns {number} Versão atual ou 1 se não existir
+ * @returns {Promise<number>} Versão atual ou 1 se não existir
  */
-function getCurrentSourceVersion(tenantId, sourceId) {
-  initializeTenantIndices(tenantId);
-  
-  const tenantSources = sourceVersionIndex.get(tenantId);
-  const sourceInfo = tenantSources.get(sourceId);
-  
-  return sourceInfo ? sourceInfo.currentVersion : 1;
+async function getCurrentSourceVersion(tenantId, sourceId) {
+  const sequelize = requireSequelize();
+  const tenantKey = requireTenantKey(tenantId);
+
+  const [[row]] = await sequelize.query(
+    `
+      SELECT MAX((metadata->>'source_version')::int) AS current_version
+      FROM rag_chunks
+      WHERE tenant_key = :tenantKey
+        AND metadata->>'source_id' = :sourceId
+    `,
+    { replacements: { tenantKey, sourceId: safeString(sourceId) } }
+  );
+
+  const currentVersion = Number(row && row.current_version);
+  return Number.isFinite(currentVersion) && currentVersion > 0 ? currentVersion : 1;
 }
 
 /**
  * Filtra chunks para recuperação (remove duplicatas e inativos).
- * 
+ *
  * @param {string} tenantId - ID do tenant
  * @param {Array<Object>} chunks - Chunks recuperados
  * @returns {Array<Object>} Chunks filtrados (máximo 1 por source_id, apenas active=true)
@@ -384,41 +399,63 @@ function filterChunksForRetrieval(tenantId, chunks) {
 }
 
 /**
- * Limpa índices de um tenant (útil para testes).
- * 
+ * Limpa índices de um tenant.
+ *
+ * DEPRECADO (no-op): não há mais índices em memória — a fonte da verdade é
+ * `rag_chunks` no Postgres. Mantido apenas para compatibilidade com testes
+ * legados.
+ *
  * @param {string} tenantId - ID do tenant
  */
 function clearTenantIndices(tenantId) {
-  contentHashIndex.delete(tenantId);
-  chunkIndex.delete(tenantId);
-  sourceVersionIndex.delete(tenantId);
-  
-  logger.info('[RAGDeduplication] Índices limpos para tenant', { tenantId });
+  logger.debug('[RAGDeduplication] clearTenantIndices é no-op (sem índices em memória)', { tenantId });
 }
 
 /**
- * Obtém estatísticas de deduplicação para um tenant.
- * 
+ * Obtém estatísticas de deduplicação para um tenant via SQL (COUNT/GROUP BY).
+ *
  * @param {string} tenantId - ID do tenant
- * @returns {Object} Estatísticas
+ * @returns {Promise<Object>} Estatísticas
  */
-function getDeduplicationStats(tenantId) {
-  initializeTenantIndices(tenantId);
-  
-  const tenantContentHash = contentHashIndex.get(tenantId);
-  const tenantChunks = chunkIndex.get(tenantId);
-  const tenantSources = sourceVersionIndex.get(tenantId);
+async function getDeduplicationStats(tenantId) {
+  const sequelize = requireSequelize();
+  const tenantKey = requireTenantKey(tenantId);
 
-  const activeChunks = Array.from(tenantChunks.values()).filter(c => c.active);
-  const inactiveChunks = Array.from(tenantChunks.values()).filter(c => !c.active);
+  const [[row]] = await sequelize.query(
+    `
+      SELECT
+        COUNT(*)::int AS total_chunks,
+        COUNT(DISTINCT metadata->>'content_hash')::int AS total_content_hashes,
+        COUNT(*) FILTER (WHERE COALESCE((metadata->>'active')::boolean, true))::int AS active_chunks,
+        COUNT(*) FILTER (WHERE NOT COALESCE((metadata->>'active')::boolean, true))::int AS inactive_chunks,
+        COUNT(DISTINCT metadata->>'source_id')::int AS total_sources
+      FROM rag_chunks
+      WHERE tenant_key = :tenantKey
+    `,
+    { replacements: { tenantKey } }
+  );
+
+  const [[multiRow]] = await sequelize.query(
+    `
+      SELECT COUNT(*)::int AS sources
+      FROM (
+        SELECT metadata->>'source_id' AS source_id
+        FROM rag_chunks
+        WHERE tenant_key = :tenantKey
+        GROUP BY metadata->>'source_id'
+        HAVING COUNT(DISTINCT metadata->>'source_version') > 1
+      ) multi
+    `,
+    { replacements: { tenantKey } }
+  );
 
   return {
-    totalContentHashes: tenantContentHash.size,
-    totalChunks: tenantChunks.size,
-    activeChunks: activeChunks.length,
-    inactiveChunks: inactiveChunks.length,
-    totalSources: tenantSources.size,
-    sourcesWithMultipleVersions: Array.from(tenantSources.values()).filter(s => s.versions.length > 1).length,
+    totalContentHashes: Number(row?.total_content_hashes || 0),
+    totalChunks: Number(row?.total_chunks || 0),
+    activeChunks: Number(row?.active_chunks || 0),
+    inactiveChunks: Number(row?.inactive_chunks || 0),
+    totalSources: Number(row?.total_sources || 0),
+    sourcesWithMultipleVersions: Number(multiRow?.sources || 0),
   };
 }
 

@@ -10,7 +10,7 @@ async function buildDocumentForCreate(documentData, tenantId) {
 
   const sourceId = documentData.metadata?.source_id
     || (documentData.metadata?.fileName ? `file:${documentData.metadata.fileName}` : documentId);
-  const currentVersion = ragDeduplicationService.getCurrentSourceVersion(tenantId, sourceId);
+  const currentVersion = await ragDeduplicationService.getCurrentSourceVersion(tenantId, sourceId);
   const sourceVersion = documentData.metadata?.source_version || (currentVersion + 1);
 
   let contentHash = documentData.metadata?.content_hash;

@@ -3,6 +3,10 @@
  * evitando inconsistência "vector_ahead" após exclusões.
  */
 
+jest.mock('../../api/db/sequelize', () => ({
+  getSequelize: () => ({ query: jest.fn(async () => [[{ current_version: null }]]) }),
+}));
+
 jest.mock('../../api/services/ragService', () => ({
   // Necessário para o getRagService() não quebrar (ele valida indexDocument)
   indexDocument: jest.fn(async () => ({ success: true, documentId: 'x', chunksCreated: 1 })),
