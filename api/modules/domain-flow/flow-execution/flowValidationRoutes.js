@@ -12,6 +12,7 @@ async function handleFlowValidationRoutes(ctx) {
     hasJsonContentType,
     parseJsonBody,
     logger,
+    requireAuth,
     validateFlow,
     validateFlowStructure,
     addUiMessage,
@@ -69,6 +70,13 @@ async function handleFlowValidationRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname === '/flows/preview') {
+    // baseFlowId lê fluxo persistido do tenant — exige autenticação ANTES de
+    // qualquer acesso ao store (vazamento estrutural observado em 2026-08-03).
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
       return true;

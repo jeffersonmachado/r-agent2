@@ -42,8 +42,29 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
     return handleFlowTemplateMarketplaceRoutes({ req, res, method, pathname, deps });
   }
 
+  // Enforcement obrigatório (mesmo padrão de handleFlowTemplateMarketplaceRoutes):
+  // nenhuma rota /templates é pública — templates de runtime são fluxos criados
+  // pelo tenant e as mutações gravam/removem arquivos em RUNTIME_ROOT.
+  // Chamado no início de CADA branch (o scanner de inventário analisa a
+  // vizinhança de cada rota — helper central no topo da função ficaria fora
+  // da janela de análise e a rota seria reportada sem auth).
+  function ensureTemplatesAccess(action) {
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return false;
+    }
+    const permResult = requirePermission(req, 'flows', action);
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return false;
+    }
+    return true;
+  }
+
   // GET /templates - Lista todos os templates disponíveis
   if (method === 'GET' && pathname === '/templates') {
+    if (!ensureTemplatesAccess('read')) return true;
     try {
       // Built-ins versionados + overrides de runtime (runtime vence por id).
       const templates = new Map();
@@ -82,6 +103,7 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
 
   // GET /templates/:id - Obtém um template específico completo
   if (method === 'GET' && pathname.startsWith('/templates/') && pathname !== '/templates') {
+    if (!ensureTemplatesAccess('read')) return true;
     try {
       const templateId = decodeURIComponent(pathname.replace('/templates/', '').replace(/\.json$/, ''));
 
@@ -123,6 +145,7 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
 
   // POST /templates - Salva um novo template
   if (method === 'POST' && pathname === '/templates') {
+    if (!ensureTemplatesAccess('update')) return true;
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
       return true;
@@ -209,6 +232,7 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
 
   // DELETE /templates/:id - Remove um template
   if (method === 'DELETE' && pathname.startsWith('/templates/')) {
+    if (!ensureTemplatesAccess('update')) return true;
     try {
       let templateId = decodeURIComponent(pathname.slice('/templates/'.length));
       // Remove .json se presente

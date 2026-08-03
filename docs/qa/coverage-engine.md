@@ -213,6 +213,48 @@ canônica quando o scheduler enchia a janela com runs parciais e o gate
 oscilava GO → NO_GO sem mudança de código (bug corrigido em 2026-07-26,
 regressão em `tests/governance/meshHistoryPrune.test.js`).
 
+### API Surface Wave — política de probes e detecção de auth (2026-08-03)
+
+A API Surface Wave (`npm run wave:api-surface`, motor puro em
+`qa/coverage/apiSurfaceWave.js`) valida existência, enforcement de auth e
+enforcement de classificação de cada rota `api:` do inventário com probes
+HTTP reais:
+
+- **P1 anônimo**: todos os métodos quando `authRequired=true` no inventário;
+  401/403 esperado antes de qualquer efeito.
+- **P2 papel PRODUCTION**: GET/HEAD em qualquer rota e métodos mutáveis em
+  rotas SUPPORT/DEVELOPMENT com auth declarada — `requireClassification`
+  rejeita o papel operacional ANTES do handler, então o probe é livre de
+  efeito colateral por arquitetura e qualquer resposta ≠ 401/403 é violação
+  de visibilidade (antes de 2026-08-03, métodos mutáveis privilegiados
+  ficavam apenas VISITED e essa violação era invisível). Em rota PRODUCTION
+  mutável P2 é proibido: o papel é autorizado e executaria efeito real.
+- **P3 super_admin**: apenas GET/HEAD em rotas SUPPORT/DEVELOPMENT. Em
+  método mutável, `developmentReachable` é NOT_APPLICABLE por design (o
+  probe executaria a mutação); a alcançabilidade por DEVELOPMENT é
+  comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh.
+
+O `authRequired` do inventário vem do scanner estático
+(`api/services/qa/inventory/apiRouteScanner.js`), que resolve os idiomas
+reais do projeto: controllers delegados (`controllerFor(req, res).m(...)`),
+handlers por referência (`controller.m` como argumento), helpers de
+permissão que implicam auth transitivamente (`ensurePermission → ensureAuth`),
+módulos irmãos `*controller*`/`*utils*`/`*helpers*` (ex.: `ragRouteUtils.js`,
+`beautyRouteHelpers.js`), controllers injetados por parâmetro
+(`createTenantRoutes({ controller })` → `controller.js` irmão), chamadas
+diretas `requireAuth(`/`ensureAuth(`/`ensureAuthenticated(`/`ensureSupportAccess(`
+e merge de duplicatas por identidade normalizada de rota (`:webhookId` e
+`:id` no mesmo shape são o mesmo endpoint — a evidência mais forte vence).
+Quando a semântica real escapa à análise estática (auth centralizada em
+handler pai, guards de token custom, auth condicional por modo), o mecanismo
+oficial é `AUTH_REQUIRED_OVERRIDES` no próprio scanner — cada entrada exige
+justificativa ancorada em probe ao vivo.
+
+Rotas públicas mutáveis (login, signup, webhooks de provedores, storefront,
+`/flows/validate`) permanecem VISITED por design: probe anônimo mutável
+poderia causar efeito real e não há assertiva de auth a verificar — a
+cobertura de negócio delas vem das jornadas de mesh.
+
 ### Frescor das evidências das waves técnicas (STALE por idade)
 
 Os relatórios `reports/db-integrity-report.json`,

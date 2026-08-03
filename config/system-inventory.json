@@ -1,19 +1,19 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-30T18:44:55.437Z",
+  "generatedAt": "2026-08-03T00:57:15.882Z",
   "counts": {
-    "total": 2717,
+    "total": 2711,
     "byKind": {
-      "api": 768,
-      "field": 1492,
+      "api": 759,
+      "field": 1495,
       "model": 155,
       "page": 138,
       "relation": 9,
       "table": 155
     },
     "byClassification": {
-      "PRODUCTION": 2510,
-      "DEVELOPMENT": 125,
+      "PRODUCTION": 2503,
+      "DEVELOPMENT": 126,
       "SUPPORT": 82
     },
     "orphaned": 0
@@ -28,7 +28,8 @@
       "source": "api/modules/scheduling-support/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -38,7 +39,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "dae34261195432197aa40f45e3e009d2f63eae3791e79021c6b2eb8daf06e043"
+      "fingerprint": "10546553bc0c346d7f8178971487ec7db43c4de9e02a12f4b78dd56042862134"
     },
     {
       "id": "api:DELETE:/api/crm/accounts/:id",
@@ -254,14 +255,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "eefa3e8376ab186f7d6b00f08e12acf47e18c7d8cb8b381dd92f99e5c89c92f7"
+      "fingerprint": "c86660286e7061943b47169c2e2720630581d2d4feb40f91eb9282f50a29e360"
     },
     {
       "id": "api:DELETE:/api/test-executions/replays/:filename",
@@ -272,14 +274,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "70477489919b76ae5609aeabdbc296453c741d49f2a49d9c93344e8e271e2238"
+      "fingerprint": "023c1224229377bc0a03a3d0c3e17d067b881e999d8bbad31fe518958d2473b5"
     },
     {
       "id": "api:DELETE:/api/voice/runtime/session/:callId",
@@ -329,25 +332,6 @@
       "path": "/bulk-campaigns/:campaignId",
       "module": "bulk-campaigns",
       "source": "api/modules/bulk-campaigns/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "bulk_messaging",
-        "campaigns"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "1c0316b9f6f78100edb4898ce2cea1de382fa790738bf9c6a0a78751f52026b9"
-    },
-    {
-      "id": "api:DELETE:/bulk-campaigns/:id",
-      "kind": "api",
-      "method": "DELETE",
-      "path": "/bulk-campaigns/:id",
-      "module": "bulk-campaigns",
-      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
       "authRequired": true,
       "authorization": [
         "requireAuth",
@@ -361,7 +345,7 @@
         "campaigns"
       ],
       "linkedDomains": [],
-      "fingerprint": "18a9f77d9481edb93395788e450f7e98643b832e51f345b1d1bea2a523a36412"
+      "fingerprint": "e36a2682aedd98e1b65b3c00135cebe7a438552b7fc0e70edd379a58b187c87a"
     },
     {
       "id": "api:DELETE:/channel-accounts/:id",
@@ -450,7 +434,7 @@
       "path": "/projects/:projectId",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:delete"
       ],
@@ -462,7 +446,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "9e64adef368475ac01303b5726b323a0776e2bf997946019d842cdb369a26162"
+      "fingerprint": "72bbe3cb782121d85466d807671f58349d3b64184a760510d3e0fd1fd2498126"
     },
     {
       "id": "api:DELETE:/projects/:projectId/items/:itemId",
@@ -471,7 +455,7 @@
       "path": "/projects/:projectId/items/:itemId",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:delete"
       ],
@@ -483,7 +467,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "33d9b11e3e3d72e918778600efa09197ee7c7441cf3b2e06324d7465cafbcd4f"
+      "fingerprint": "31f19ba5bee120938e0c5627f4021b6e30989d6568ee0fe6919791ecc29083b9"
     },
     {
       "id": "api:DELETE:/projects/:projectId/members/:memberId",
@@ -492,7 +476,7 @@
       "path": "/projects/:projectId/members/:memberId",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:manage_members"
       ],
@@ -504,7 +488,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "5589b1df3600b3d0657852664c2583d3962be956d56092d23cad0298768f6265"
+      "fingerprint": "53f54f751a656c2bdfec3cf4693d00bf9e3b4a39b279fdc1fdc255d85428a86d"
     },
     {
       "id": "api:DELETE:/queues/:queueName",
@@ -553,8 +537,11 @@
       "path": "/rag/documents/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:delete"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -562,7 +549,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "acd7146aabd44e4356bae54444da7ce13911938fd7db3ed5d7f5e7c7fa272bcd"
+      "fingerprint": "eabc8c545e7ea310c69ff8d3825d5e9be082d498b237d054da785f714f33fec3"
     },
     {
       "id": "api:DELETE:/rag/learning/synonyms/:id",
@@ -571,8 +558,11 @@
       "path": "/rag/learning/synonyms/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:delete"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -581,7 +571,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "62eaf67b969ec1c8672ebc4712f7ef3056f3afc3c8b40f38658fd3ff35314bf6"
+      "fingerprint": "081ca1d2ac662f26d2a52a90db09906095e110d460305ae77ee2e06e4ff5dd23"
     },
     {
       "id": "api:DELETE:/rpa/recordings/:id",
@@ -608,8 +598,11 @@
       "path": "/templates/:id",
       "module": "platform-content",
       "source": "api/modules/platform-content/handleTemplatesRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTemplatesAccess",
+        "ensureTemplatesAccess:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -617,7 +610,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "4c2cb7571988f9b2cfb4727faf79a4468b0610e8c20a36c468e5943c5b499a1b"
+      "fingerprint": "d0fc3b65cebd00adc9fb738629f895228726268f1f7e39b39a357b52f314d4db"
     },
     {
       "id": "api:DELETE:/tenants/:tenantId",
@@ -626,22 +619,25 @@
       "path": "/tenants/:tenantId",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "deleteTenant",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "e1101fe093c9c20db3d2cde32746d2c39917dd77ac1dad7f780fe00d56dbe437"
+      "fingerprint": "87437d8b2be0ff3d25e1a7c3ca673df26e1de66aa11c87773215f9ec8ef1a8b1"
     },
     {
-      "id": "api:DELETE:/webhooks/:id",
+      "id": "api:DELETE:/webhooks/:webhookId",
       "kind": "api",
       "method": "DELETE",
-      "path": "/webhooks/:id",
+      "path": "/webhooks/:webhookId",
       "module": "webhooks",
-      "source": "api/modules/webhooks/handleWebhooksRoutes.js",
+      "source": "api/modules/webhooks/routes.js",
       "authRequired": true,
       "authorization": [
         "requireAuth",
@@ -654,25 +650,7 @@
         "webhooks"
       ],
       "linkedDomains": [],
-      "fingerprint": "7bee42885c11790d53a709895aa22f9a49c758bce2ca4b6f0a742250e3c8d144"
-    },
-    {
-      "id": "api:DELETE:/webhooks/:webhookId",
-      "kind": "api",
-      "method": "DELETE",
-      "path": "/webhooks/:webhookId",
-      "module": "webhooks",
-      "source": "api/modules/webhooks/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "webhooks"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "47b03cc1bb9bc14ddd9d5387fc9c35da1b1c7c596efb72371730d9480442ead1"
+      "fingerprint": "182e1c059a865f8f9e0a13db222efe2d7c4b0c9c2583b17178f4dd9f25070993"
     },
     {
       "id": "api:DELETE:/whatsapp/connections/:connectionId",
@@ -1226,8 +1204,11 @@
       "path": "/api/beauty/agenda",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyCustomerRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1239,7 +1220,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "0a8d2f47b54e4623e7abb979c82714f27e08ba7d6ea396692a410bbaf49f986f"
+      "fingerprint": "f913275eee83fe53b1bcf586233ef21aed5dec4317851c5764a8c878287b79fe"
     },
     {
       "id": "api:GET:/api/beauty/bundles",
@@ -1248,8 +1229,11 @@
       "path": "/api/beauty/bundles",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1260,7 +1244,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "8a26435192cdf209c5a391017b276a05f624cd563e00686ee10c8f140a950031"
+      "fingerprint": "accc208a3fed286808c2d1a036c82bcfb531090257afa5ea93aa2e3227556564"
     },
     {
       "id": "api:GET:/api/beauty/customers/search",
@@ -1269,8 +1253,11 @@
       "path": "/api/beauty/customers/search",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyCustomerRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1281,7 +1268,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "af9154930266c06808ec8bd2c50dc0073595b05fdb294ffab2f92d85c109b2cd"
+      "fingerprint": "98ceb304a4110552b2df5c1fc9fc42c2698899db6816005e1d1b387a8dd1f23d"
     },
     {
       "id": "api:GET:/api/beauty/dashboard",
@@ -1290,8 +1277,11 @@
       "path": "/api/beauty/dashboard",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyInsightsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1303,7 +1293,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "fc196cc4774ba65cdcc28ea454a059100df9267a3ded1cf05d1ff5c30c9f3e11"
+      "fingerprint": "792b6ec6beaba53e7a0558ab3386ca12279df3ff34d3e17c4f3b77fc4fdc2de6"
     },
     {
       "id": "api:GET:/api/beauty/metrics",
@@ -1312,8 +1302,11 @@
       "path": "/api/beauty/metrics",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyInsightsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1324,7 +1317,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "d3636750b419b569b814420c34868faf5b606e204f4a798818a4e4e0b1ae5920"
+      "fingerprint": "fe66dfb585143e03383914b779d5f13f6aaddc58223c5b74a341d62cc997c25c"
     },
     {
       "id": "api:GET:/api/beauty/services",
@@ -1333,8 +1326,11 @@
       "path": "/api/beauty/services",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -1345,7 +1341,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "92bcd427f250fde1cb53a513329234923f4b09cb32e65e762d92de27c1e36ac5"
+      "fingerprint": "187cd7db3114151eaa86fdda2fe4b0a52a28699365b07c3355c377a4b4a841cc"
     },
     {
       "id": "api:GET:/api/calendar/me",
@@ -1356,7 +1352,8 @@
       "source": "api/modules/scheduling-support/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -1366,7 +1363,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "d544ad8f33e955a339b72358ed8b39421e8505afad2dccc2bd6a990e81e52fc7"
+      "fingerprint": "db5bda694a258e443f4b3c56e11dd83cf62a740f6fcf3889c9c5aab270450237"
     },
     {
       "id": "api:GET:/api/calendar/resource/:resourceId",
@@ -1377,7 +1374,8 @@
       "source": "api/modules/scheduling-support/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -1387,7 +1385,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "1f525963275687bd3c3e7b1ac03d3c54828506d70ceb5de5aea591f5a0a13a7f"
+      "fingerprint": "83fd72fc5e4a13b074513ab32113455fbfcf16825a6fe603f37139a0b8ab2e00"
     },
     {
       "id": "api:GET:/api/cc/campaigns",
@@ -1656,7 +1654,9 @@
       "source": "api/modules/domain-operations/routes.js",
       "authRequired": true,
       "authorization": [
+        "checkPermission:read",
         "ensurePermission:reports:read",
+        "resolveAuth",
         "resolveAuthenticatedTenant"
       ],
       "classification": "PRODUCTION",
@@ -1668,7 +1668,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "a951ce38991eef4a26af3a3a405e65f3f4c4d6bd8c2ff2986c8fc2222b2302d8"
+      "fingerprint": "42a211c04137dcd540281e7f7ae611dbd2650bb4111a3e940b5c42b575709c17"
     },
     {
       "id": "api:GET:/api/crm/contacts",
@@ -1679,7 +1679,10 @@
       "source": "api/modules/scheduling-support/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "checkPermission:read",
+        "ensureAuth",
+        "requireAuth",
+        "resolveAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -1689,7 +1692,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "7e0aefd27ffa0f7acc7fec20a99fa336ec6d0d7e5c0dc030ed0c875e7455c854"
+      "fingerprint": "ec3b3c64fffcd38492da38347c5d80f146f2c3008c8df0959f5f651592156b7c"
     },
     {
       "id": "api:GET:/api/crm/contacts/:id",
@@ -1886,7 +1889,8 @@
       "source": "api/modules/demo/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -1895,7 +1899,7 @@
         "demo"
       ],
       "linkedDomains": [],
-      "fingerprint": "85aca608555906377299ae8438b2a359f0f9b4a585d396eb759d87d306f789a1"
+      "fingerprint": "9f5b57c650261f74571e83e80b9d61fd47c9de8030054cb1a00b71a18b27e6d3"
     },
     {
       "id": "api:GET:/api/event-ledger",
@@ -2036,8 +2040,10 @@
       "path": "/api/fitness/attendance/open",
       "module": "vertical",
       "source": "api/modules/vertical/handleFitnessAttendanceRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2049,7 +2055,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "2e51d0a146faeca640482181151274481502f8b416273aec5c57a37791347c0a"
+      "fingerprint": "3d4d2c5d94f23b4883387a7f7e118adec280958ca2b42c3c36969be576581f8f"
     },
     {
       "id": "api:GET:/api/fitness/dashboard",
@@ -2060,7 +2066,8 @@
       "source": "api/modules/vertical/handleFitnessRoutes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -2074,7 +2081,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "5432c89df8d78b1102608ba98a2bfd679ca9e396d8796517305e8a641bc39464"
+      "fingerprint": "bbed62fee90b684322bc136729624b9b831abbf3bb70e215b612dfde8e336665"
     },
     {
       "id": "api:GET:/api/fitness/memberships",
@@ -2085,7 +2092,8 @@
       "source": "api/modules/vertical/handleFitnessRoutes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -2098,7 +2106,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "490ee49dd378cfc8ce1a907651bdf65c593ba3242c288b64d6b2b34d6f120497"
+      "fingerprint": "3d8e1bbc5f9e6c9305ef04de601c62d28b32cf5d16426fb85f9e9b18d2386e71"
     },
     {
       "id": "api:GET:/api/fitness/metrics",
@@ -2109,7 +2117,8 @@
       "source": "api/modules/vertical/handleFitnessRoutes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -2122,7 +2131,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "b4fe193265c5762a0cfc4197770c74a65826dabc2408dc0c4438c711ae2a6c28"
+      "fingerprint": "92252cefcb4c1fe5b79476799d9813d7da43b0d9922a8d7627e4dd585de96dfd"
     },
     {
       "id": "api:GET:/api/fitness/students/search",
@@ -2131,8 +2140,10 @@
       "path": "/api/fitness/students/search",
       "module": "vertical",
       "source": "api/modules/vertical/handleFitnessStudentRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -2144,7 +2155,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "91889fa71c8a9828c6e1c3d05ff19c7b47188ed4c475c538562c366c776d9075"
+      "fingerprint": "353a0e5d044320c392d1808e114b34296c4c5e2d7b32797db952e7f3ee3b9aa4"
     },
     {
       "id": "api:GET:/api/intelligence/goals",
@@ -3829,7 +3840,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:analytics:read"
+        "ensurePermission:analytics:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -3838,7 +3850,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "1a8705c666dc361b9d3a8dd5ac042a9bf628b7f797d2c1d421c3cfcfa46c125a"
+      "fingerprint": "64334e700c06f087d4920728f347f2bda2fbf86623f6350ad3429bd36a1e7452"
     },
     {
       "id": "api:GET:/api/process-instances/:executionId",
@@ -3850,7 +3862,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:analytics:read"
+        "ensurePermission:analytics:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -3859,7 +3872,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "7d1cd86a4f9903c530f395ce29395f3ed81a7335213dc68a1cb70abbfd0dc6c5"
+      "fingerprint": "3f90db30f6de20d81d104f3182c9bf48164439cd16c129155cf1d47a99531c52"
     },
     {
       "id": "api:GET:/api/process-instances/:executionId/history",
@@ -3871,7 +3884,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:analytics:read"
+        "ensurePermission:analytics:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -3880,7 +3894,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "e22520962015d88396e7d0539ba80cff05160f88d54022ed98454c598d74f4c0"
+      "fingerprint": "6219c86016c9440be272c3dc246e00ab00c7adc08bbdb549450631e73d137489"
     },
     {
       "id": "api:GET:/api/process-runtime/analytics",
@@ -3892,7 +3906,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:analytics:read"
+        "ensurePermission:analytics:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -3902,7 +3917,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "88627e09e4300391836a61adb5af77ed87384a26d6fbc8a01f69c4c16b03d203"
+      "fingerprint": "c03499bf3d6aff26cbc1fc178e0b09d2bc10a7fd242eeadeb0371ba5cb4ee121"
     },
     {
       "id": "api:GET:/api/qa-waves/closure/analyze-gaps",
@@ -4047,6 +4062,24 @@
       "technicalWave": "resilience",
       "linkedJourneys": [],
       "fingerprint": "aa29c95f60a394f3f067fd2e125cd471657ba72c7caf4486c28bdb3023ad399b"
+    },
+    {
+      "id": "api:GET:/api/qa-waves/executions/history",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/qa-waves/executions/history",
+      "module": "qa-waves",
+      "source": "api/modules/qa-waves/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "1834e11ee2ce49db54a261abfc069c7583451d9de6027e936fd190aeff97f5cd"
     },
     {
       "id": "api:GET:/api/qa-waves/governance",
@@ -4358,7 +4391,8 @@
       "source": "api/modules/scheduling-support/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -4367,7 +4401,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "4d36db396dcce7575a4ae41bf4497e7bee48003fd291b413eda867b37cc46c43"
+      "fingerprint": "a6b984a56db248a38dd2a0ca042c4cf16a32e0aad44881fd0343c84937420591"
     },
     {
       "id": "api:GET:/api/schedules",
@@ -4419,7 +4453,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:read"
+        "ensurePermission:config:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -4428,7 +4463,7 @@
         "solutions"
       ],
       "linkedDomains": [],
-      "fingerprint": "7ef1d62f5c4e9409334bb06e0dea43bf26665ce30d59a77db1c04e90b3a33b0b"
+      "fingerprint": "f377e582ea2dcebda04b22f368b7729c85e85bcda61d583d7d98ec83d089e97a"
     },
     {
       "id": "api:GET:/api/support/dashboard",
@@ -4528,7 +4563,8 @@
       "source": "api/modules/scheduling-support/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -4537,7 +4573,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "8c9195ad3509904580607b1f016f5a15840fa342cf46aa994b45c3ad0e1d50a4"
+      "fingerprint": "4b9bc998f0b854fc4569da94e1062820b4abb9bb68a8077efe575f01b955276f"
     },
     {
       "id": "api:GET:/api/tenant-settings/:id",
@@ -4566,14 +4602,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "b49daab425aeff06d2fed1a1fcea201e042ba31349b8b610b16099980bf47f82"
+      "fingerprint": "ba5ab8e5f8c51a38c331b42e20d44e3a5ca6d12f92b2ee5413e5792f8abd2626"
     },
     {
       "id": "api:GET:/api/test-executions/:executionId/artifacts",
@@ -4584,14 +4621,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "b994db39b6a4b52183275150308a13673339365db7c79f91185197a26e511987"
+      "fingerprint": "b14aac0d8cc94e8a762b4f93ec76b740251db674cadd121bf8a1635146e8e965"
     },
     {
       "id": "api:GET:/api/test-executions/qa-waves/journey-status",
@@ -4602,14 +4640,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "f845b46d40fae211cda6ea2ddb103f2b314fa1b82ec57e31b802fcfbab20278e"
+      "fingerprint": "58fb95805d49bab0f98cfd79cae17a1fa65aa308bd3d1c6401480a246c5bd9f3"
     },
     {
       "id": "api:GET:/api/test-executions/qa-waves/journeys",
@@ -4620,14 +4659,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "28c709c9adfc467d9c002cc08c3b5b42afcefe9336f9f004ba1c8d7a8e9ec561"
+      "fingerprint": "c3823e154e14f1fe36579f2f20c8d5c0c358353c13d02929063df4dc5b687de5"
     },
     {
       "id": "api:GET:/api/test-executions/qa-waves/scenarios",
@@ -4638,14 +4678,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "dbc3d8b5d921ada42bc3f4463d62a9ba3bbc19310c5591e63eee746eb1d01c0c"
+      "fingerprint": "9d1715f102003cc8bc9cf7146c9e415f87766dc86884d6e33008c01e98dcf333"
     },
     {
       "id": "api:GET:/api/test-executions/qa-waves/step-status",
@@ -4656,14 +4697,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "e05bb5c5f5c3c0416f0a3e2c9b0f47e74ab094c7427192f32ab6da4134b7f3b0"
+      "fingerprint": "9db17506ffc4ea5d99ea3646cb1c2d6ed6d15e66a55fd02e1d90ce713da3a0d5"
     },
     {
       "id": "api:GET:/api/test-executions/recordings",
@@ -4674,14 +4716,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "c1b249d20041b47bc5d66d098a84aa84b55a8babff909dc065052848a69d387e"
+      "fingerprint": "9d62a79e13dea873b3ef9362b9062b32ef4f8903ed4593ba0f755c3b89fd08bf"
     },
     {
       "id": "api:GET:/api/test-executions/recordings/:recordingId/status",
@@ -4692,14 +4735,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "2192ca27c7949b38aea42263cfed9505c64e561dc6b777eec0e7d1a056d82cd0"
+      "fingerprint": "eb6c283386ebb20cdf1c7513d7fe7aecec04372edcb765572523e225982fbd07"
     },
     {
       "id": "api:GET:/api/test-executions/replays",
@@ -4710,14 +4754,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "9aa3644762d81a1d63dcc0985ca65559bcaa4b64102af619b068907d2e6d135f"
+      "fingerprint": "231d7bd01a3c18fe185276f701cfadf1525f5903f1f0f56cb3d8257c61097ede"
     },
     {
       "id": "api:GET:/api/test-executions/replays/:filename",
@@ -4728,14 +4773,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "8058cf144875899539466c29a8b167db62895e8c0b35c7c2f152595bf641cdbf"
+      "fingerprint": "b09b337a974f715cee8195b09d613a06310540e081c00625012e6dbe197e5ea9"
     },
     {
       "id": "api:GET:/api/test-executions/reports/:filename",
@@ -4746,14 +4792,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "e4d8c84167f3eb237463926e8e8d4f6930ec28e4a71e631a675cdc07f7244bb1"
+      "fingerprint": "bb5fdfe39e9f49ab0cdda6e113638c52c8da77fdd72ef7634ce4ca3a52555fa2"
     },
     {
       "id": "api:GET:/api/users/search",
@@ -4764,7 +4811,8 @@
       "source": "api/modules/scheduling-support/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -4773,7 +4821,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "f9075c2903f3c624ede08eb99cc4c1f01998dd2d33569e36af73a4f6846969d2"
+      "fingerprint": "30e5f842b6a40170820352ac4367636cd8dc49285d969d4a965bb20922ff6abb"
     },
     {
       "id": "api:GET:/api/vertical-templates",
@@ -5040,44 +5088,6 @@
       "path": "/bulk-campaigns",
       "module": "bulk-campaigns",
       "source": "api/modules/bulk-campaigns/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "bulk_messaging",
-        "campaigns"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "7786b734016b8558ffc5d3a74f1635e764491a636f170259f07b4705de21a52c"
-    },
-    {
-      "id": "api:GET:/bulk-campaigns/:campaignId",
-      "kind": "api",
-      "method": "GET",
-      "path": "/bulk-campaigns/:campaignId",
-      "module": "bulk-campaigns",
-      "source": "api/modules/bulk-campaigns/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "bulk_messaging",
-        "campaigns"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "0e983478de324514cd95cb46d239ad05394122d67c7585026f94af43deb689ba"
-    },
-    {
-      "id": "api:GET:/bulk-campaigns/:id",
-      "kind": "api",
-      "method": "GET",
-      "path": "/bulk-campaigns/:id",
-      "module": "bulk-campaigns",
-      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
       "authRequired": true,
       "authorization": [
         "requireAuth",
@@ -5091,7 +5101,29 @@
         "campaigns"
       ],
       "linkedDomains": [],
-      "fingerprint": "79a3005bc9cc8c5e953f2bbaeafe9983de23a8061ced1fb0f39d0af8739db747"
+      "fingerprint": "947e01b2742aced18c75be9c6136e2bca6e4b432eaf19086b001303b96f3a87b"
+    },
+    {
+      "id": "api:GET:/bulk-campaigns/:campaignId",
+      "kind": "api",
+      "method": "GET",
+      "path": "/bulk-campaigns/:campaignId",
+      "module": "bulk-campaigns",
+      "source": "api/modules/bulk-campaigns/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "bulk_messaging",
+        "campaigns"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "9b27b986af06683ea6f8ee0a80e855b8a706e2a5af9d8446e22adda1488cda54"
     },
     {
       "id": "api:GET:/channel-accounts",
@@ -5118,8 +5150,11 @@
       "path": "/close-reasons",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5127,7 +5162,7 @@
         "support_ticket_flow"
       ],
       "linkedDomains": [],
-      "fingerprint": "74b3ddda888db5bd9244c867306d2835b91d68ef1382906756de8404ee1d5ff7"
+      "fingerprint": "b8e67938414b8a6277b4e6ce09d126fbb6bc1a9b7a95b7237a1409b6e6d71070"
     },
     {
       "id": "api:GET:/config",
@@ -5568,7 +5603,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:read"
+        "ensurePermission:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -5579,7 +5615,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "0eafcb7f03465d4998ea08c06aad74678ffa25da68c41059436c2dfd6be832e3"
+      "fingerprint": "d5c6b4bd42ba4e7c6f1c3afd2cd972f1aa58cc8eeccfafecfe2a073fe60116ae"
     },
     {
       "id": "api:GET:/inbox/conversations/:conversationId",
@@ -5591,7 +5627,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:read"
+        "ensurePermission:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -5602,7 +5639,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "c03d51bdd73224974cae5bdee12522ca4569fc81389ad25d628f199b505a314c"
+      "fingerprint": "8b940e253ce874781c80af5facf03098d75f75d624c5b6b3d7d1422c64643588"
     },
     {
       "id": "api:GET:/lp/:id",
@@ -5627,8 +5664,11 @@
       "path": "/metrics/queues",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureQueuePermission",
+        "ensureQueuePermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -5637,7 +5677,7 @@
         "support_ticket_flow"
       ],
       "linkedDomains": [],
-      "fingerprint": "6e0565e29801be7f01af8681aa8bba3e1bc939196fa1149fa5fefccc60b402da"
+      "fingerprint": "e94d1e78a52e4ce82064857894189694410d2f4fce1fb43d1f64383256fad47d"
     },
     {
       "id": "api:GET:/mkt/l/:id",
@@ -5758,7 +5798,7 @@
       "path": "/payment-events",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -5769,7 +5809,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "1ec07530ed09a60dbeb24ef2f235e0b01e1981f7960b37496c004ba703d7f899"
+      "fingerprint": "bde18c4a594808c660023fe6afced5c2c549a83effde35407327511093a132e2"
     },
     {
       "id": "api:GET:/physical/panel/state",
@@ -5797,7 +5837,7 @@
       "path": "/project-templates",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5809,7 +5849,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "bf37b70e757b29c94575c88c0eb8cfc2288bf111b1f19c242df7b008856069da"
+      "fingerprint": "b9b30744aa96ea356af426ff6f7fd34748aaa1722e67c5398d52a3f5e3a98314"
     },
     {
       "id": "api:GET:/projects",
@@ -5818,7 +5858,7 @@
       "path": "/projects",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5830,7 +5870,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "1514147ba8cbc81617a5ef910e23070b7f6c6abc375da77cbd2548a3c93b199e"
+      "fingerprint": "3d2a0d15bdfd919b547fbb77117648e60bf857f24299c425d9c774b17bfd953e"
     },
     {
       "id": "api:GET:/projects/:projectId",
@@ -5839,7 +5879,7 @@
       "path": "/projects/:projectId",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5851,7 +5891,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "0b5aeaa1985ba256065950a17f5f23894d41d640f4b7d11d1ca743341ab4ea5c"
+      "fingerprint": "424ad402222a9ccce3877bff905733c9a6234d633f8a5a7e8fd08de68891abd4"
     },
     {
       "id": "api:GET:/projects/:projectId/activities",
@@ -5860,7 +5900,7 @@
       "path": "/projects/:projectId/activities",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5872,7 +5912,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "c312b51bdc76a0f8e4bc314e96b06a8b9dd0210ca64afc091a0d7312fc3d489e"
+      "fingerprint": "ac065a10ec27a50fdd796056367ba99563eae8846b6daef4db7adff07fc01574"
     },
     {
       "id": "api:GET:/projects/:projectId/dashboard",
@@ -5881,7 +5921,7 @@
       "path": "/projects/:projectId/dashboard",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5893,7 +5933,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "ec4e8e07e79503edc36c990e81c4113fca0d4dc2697e213432826601a9d1cad2"
+      "fingerprint": "ad4e5a5964155decdf767ec37a860d842765987ae91f7fc37078e98b931cc8ba"
     },
     {
       "id": "api:GET:/projects/:projectId/items",
@@ -5902,7 +5942,7 @@
       "path": "/projects/:projectId/items",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5914,7 +5954,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "252f11c3928f537098d70470d125062686ace58c72b32109c46cdd2f1a81d48b"
+      "fingerprint": "8bc094cf8c22878f95a95539fa8eda2aa6f23074527c49475f3543d2c405a265"
     },
     {
       "id": "api:GET:/projects/:projectId/items/:itemId",
@@ -5923,7 +5963,7 @@
       "path": "/projects/:projectId/items/:itemId",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5935,7 +5975,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "7693003f988af1a01446cbf303c78a3c8dcfbda0f9b15798dafc598cb81a3f9e"
+      "fingerprint": "7ef17441fcad176c875c057f152ca0adefdcbc12c545d67d2039eed9c6a4f3dc"
     },
     {
       "id": "api:GET:/projects/:projectId/items/:itemId/comments",
@@ -5944,7 +5984,7 @@
       "path": "/projects/:projectId/items/:itemId/comments",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:comment"
       ],
@@ -5956,7 +5996,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "247ce12cd6cb3192316814f00ec8a15db4d385bad25a70d3a220e0a0b80b5259"
+      "fingerprint": "66cf664a2771aaa9b77b87734662fead92169d1831e59aadc8f62538b0f81404"
     },
     {
       "id": "api:GET:/projects/:projectId/lists",
@@ -5965,7 +6005,7 @@
       "path": "/projects/:projectId/lists",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5977,7 +6017,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "c68b72687dfd274a6f50545b4c5b0452dfdf133ebd7168220a2e56826355995e"
+      "fingerprint": "c0c1f49ec886496992848582d6c9e2c243593db5ddded2bc5a6ffbd804e3aca0"
     },
     {
       "id": "api:GET:/projects/:projectId/members",
@@ -5986,7 +6026,7 @@
       "path": "/projects/:projectId/members",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -5998,7 +6038,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "ced31de515403bdc061155a5140b78f8567429b2ec2059effcafd580805738f6"
+      "fingerprint": "07f28ff4edffad4b882c33ba4895c9d706440ada4cb4877387ba0a31e7cf57c4"
     },
     {
       "id": "api:GET:/projects/:projectId/timeline",
@@ -6007,7 +6047,7 @@
       "path": "/projects/:projectId/timeline",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:read"
       ],
@@ -6019,7 +6059,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "c4c32fd25bb63e645fbce4348471cd9a8b4f22f97b179a2e1fda7d8b5c71f3ae"
+      "fingerprint": "fbe25e4ab4e6eed58ab256b21be90ba50f54b3c548415a2fe7f83fdc6cc0c03b"
     },
     {
       "id": "api:GET:/provision/:id",
@@ -6644,8 +6684,11 @@
       "path": "/rag/deduplication/stats",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6653,7 +6696,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "7aad6c7df76ffbcbb19442173f8b170845039852f164fd277c2c9928ddf6af83"
+      "fingerprint": "48297ada837cd3ac022c3b0b294d901cc4b5537805ed0712947cd95481842821"
     },
     {
       "id": "api:GET:/rag/documents",
@@ -6662,8 +6705,11 @@
       "path": "/rag/documents",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6671,7 +6717,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "2e2c4e63b274155e11e504920adb2acc7d093ba5ab6bd217338c7bba60dc8f4c"
+      "fingerprint": "650c5633bfaea7eb34c40d3e6836c3e7a12d50b40ec42aa0411decddb2c307ab"
     },
     {
       "id": "api:GET:/rag/documents/:id",
@@ -6680,8 +6726,11 @@
       "path": "/rag/documents/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6689,7 +6738,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "741c5e82547447b7735e481c5204a4b9fbb7460dc08785d72daf5840d303f2f7"
+      "fingerprint": "91a7a5d724431be539efc55c2cc766816201dd6254f499b94711344c1501b516"
     },
     {
       "id": "api:GET:/rag/documents/stats",
@@ -6698,8 +6747,11 @@
       "path": "/rag/documents/stats",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6707,7 +6759,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "152f2389f6916bb9ad8048e0cceb0684079d5da0682c320dc046da14412c1910"
+      "fingerprint": "c1b9862f35cb5dcba8a34983f00c1ab7f231a694e3047aaba3bd1db3b8f02d11"
     },
     {
       "id": "api:GET:/rag/domains",
@@ -6716,8 +6768,11 @@
       "path": "/rag/domains",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6725,7 +6780,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "880197db085d6f757a956fd33f04ba94ea4e550b44a824ff9458450580391f1b"
+      "fingerprint": "733361c274aa88279c622cf3c6272fe444b05c318d95089d4c2735eafd85e03a"
     },
     {
       "id": "api:GET:/rag/health",
@@ -6734,8 +6789,11 @@
       "path": "/rag/health",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6743,7 +6801,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "9625de2c0a0a5ccd32b4f5ca34629bcc3e9e385c97fec330731c120fd278157b"
+      "fingerprint": "e55863685f475b2968b0e5198c9d8b683f9319024748c5b2d0bb338c20d8da28"
     },
     {
       "id": "api:GET:/rag/learning/full-data/:id",
@@ -6752,8 +6810,11 @@
       "path": "/rag/learning/full-data/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6762,7 +6823,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "450b22c53f1ac55a11ee99396cb96522c02605292b5d4c957f9cc59b2af097ee"
+      "fingerprint": "bbac723fe4cb79ce135b834cdab82c5efeca8b9a4c158e55ab41283e85f87c44"
     },
     {
       "id": "api:GET:/rag/learning/metrics/:id",
@@ -6771,8 +6832,11 @@
       "path": "/rag/learning/metrics/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6781,7 +6845,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "33ffecf569e0e45e73ccdae8e67c8e88a0537852a0bd8e7ad261b5465df77c5c"
+      "fingerprint": "c60fb1e99e643708e84ae35d63223a90816b40efcd69f555e4654de19268a3f6"
     },
     {
       "id": "api:GET:/rag/learning/validation-rules",
@@ -6790,8 +6854,11 @@
       "path": "/rag/learning/validation-rules",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -6800,7 +6867,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "f1fe15e8b3d1233a764bb35fb33b9517098bb5f380f5edb3fb64b335d5cc2b71"
+      "fingerprint": "c50fa31aa1d79cdb15ea1c75b18cb25b3bb9d37493c61b99e684ed06818a73de"
     },
     {
       "id": "api:GET:/rbac/permissions",
@@ -6812,7 +6879,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:agents:read"
+        "ensurePermission:agents:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -6821,7 +6889,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "0139fc90db6e00235257b572bbcf0501c57361871e0a98f03a69740e24194321"
+      "fingerprint": "8351d9ae0d0d59f72ab3fc8374e67b0d82c80ff9ea8726e32d205071ea201471"
     },
     {
       "id": "api:GET:/rbac/roles",
@@ -6833,7 +6901,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:agents:read"
+        "ensurePermission:agents:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -6842,7 +6911,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "b0c2dc8a491b069749094398a57edf1de7b0583e79b84beb3374fbaedf3551c1"
+      "fingerprint": "2606aa54cde729f0596643bc3b2936c35d0f8ad1a08ab287ab92dc6c015d3972"
     },
     {
       "id": "api:GET:/replay/:id",
@@ -6871,7 +6940,7 @@
       "path": "/resource-bookings",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -6880,7 +6949,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "2bbbfe46321e1c5e6449b8376b82073a50b43bc12830eba138b9ba3ccd095bb1"
+      "fingerprint": "df6fa2ef2b81424b47538a51db1743fecdab2ef9f4a11cbeab41de8d2f6cf14c"
     },
     {
       "id": "api:GET:/resources",
@@ -6889,7 +6958,7 @@
       "path": "/resources",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -6898,7 +6967,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "5a06ddf3e6c7d58ac78c996f1d16354538804fb09a8cf770e1eca63945efc57a"
+      "fingerprint": "67db6845d9d0cf230890165be6b3a348cd94ce98592d1887e41339a9a4bbe8f6"
     },
     {
       "id": "api:GET:/rpa/execution/:id",
@@ -7041,14 +7110,15 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:read"
+        "ensurePermission:config:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "0b4dc9d2ee0329a026f068059fefba8bc2ecb476742cc17da155d7ec015804c3"
+      "fingerprint": "acf3804e1db6a978bf209a69c99b59f1a65da0343478a24bf55a7123bb77ee85"
     },
     {
       "id": "api:GET:/sla/breaches",
@@ -7273,8 +7343,12 @@
       "path": "/templates",
       "module": "platform-content",
       "source": "api/modules/platform-content/handleTemplatesRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTemplatesAccess",
+        "ensureTemplatesAccess:read",
+        "requirePermission:flows"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7282,7 +7356,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "fcd4d408bb12bb1bb84dc36b88de08a976c15ba83aa213ba126e5300bd20484a"
+      "fingerprint": "158b289dae28e41e21dd1d7420ef255bd67c73a5447f96d341edbea2734c81f8"
     },
     {
       "id": "api:GET:/templates/:id",
@@ -7291,8 +7365,11 @@
       "path": "/templates/:id",
       "module": "platform-content",
       "source": "api/modules/platform-content/handleTemplatesRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTemplatesAccess",
+        "ensureTemplatesAccess:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7300,7 +7377,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "92deb58f037da50886fc0d1efdd177b6eaf76ea3788834abe55e636592bc8dab"
+      "fingerprint": "c38459fd978e743ca1bcbda7652179762bf4cc358141c66ff2f3b5537af1a549"
     },
     {
       "id": "api:GET:/tenants",
@@ -7309,14 +7386,17 @@
       "path": "/tenants",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "listTenants",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "34361691d1c152e1ef1ae3629fea60c022e96a2f155eb91f33ea40ecdb05f23c"
+      "fingerprint": "7b4091b828f4e55d657db6a677b7eae823c3225996d37d7c0bd6534478d19916"
     },
     {
       "id": "api:GET:/tenants/:tenantId",
@@ -7325,14 +7405,17 @@
       "path": "/tenants/:tenantId",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "getTenant",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "662f36a2106c95b07647b01e9a7cd3716dd5899ce859d1b0af2e7d147f0b3d3d"
+      "fingerprint": "6d1e9fc38f69e7fa8faf4dccaf6b52678bf4333aa1a51f055f134d685f890fd5"
     },
     {
       "id": "api:GET:/tenants/:tenantId/ai-config",
@@ -7341,14 +7424,17 @@
       "path": "/tenants/:tenantId/ai-config",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "getAiConfig",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "1a1e60f70e8ba6e7dc12eae3457a0ef64a527c1f4179e01cb73fafe9ac1334cd"
+      "fingerprint": "a56ebd7cf2bac0f57d06a9b9691e95883d2643bec42c3223f33a224ae03b5dfb"
     },
     {
       "id": "api:GET:/tenants/:tenantId/ai-provider-status",
@@ -7357,14 +7443,17 @@
       "path": "/tenants/:tenantId/ai-provider-status",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "getAiProviderStatus",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "eb06c28359a21da1c8288c4aedbe449b55581b60e12944f8acd853d8f3b60baa"
+      "fingerprint": "624a63dc4fffbacbe48068297c1349162e1a57be7358d418ff792e4c03b64407"
     },
     {
       "id": "api:GET:/tenants/:tenantId/context",
@@ -7373,14 +7462,17 @@
       "path": "/tenants/:tenantId/context",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "getTenantContext",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "de737db1c00d0ae54ac0d1d11a342c9101a54b6bd68abc15528b788e93c56fe6"
+      "fingerprint": "bcf2e1cc2ff156ba2ed2aef117e8fe01afcdf610807bf2e2478890128cd07046"
     },
     {
       "id": "api:GET:/tenants/:tenantId/plan-usage",
@@ -7389,14 +7481,17 @@
       "path": "/tenants/:tenantId/plan-usage",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "getPlanUsage",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "40d6c3f6e252c834583ff58a73badc5119961af5dbbd48d0339a7071fd39ac28"
+      "fingerprint": "aad83203573b3e4e6bb04fc4840163a03294bee793dc04914ef806e5af5583bd"
     },
     {
       "id": "api:GET:/tenants/:tenantId/usage",
@@ -7405,14 +7500,17 @@
       "path": "/tenants/:tenantId/usage",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "getTenantUsage",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "bb8dd696cede1596befc2e09c25182b6b050d7c0b06bff06fe2c897ad6825251"
+      "fingerprint": "9fc2659a942450cb6ab4f346e5e868882829ca132a2d1a875c2d9f3ea35a3330"
     },
     {
       "id": "api:GET:/tenants/current/ai-config",
@@ -7423,14 +7521,15 @@
       "source": "api/modules/config/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "cb3e1893b65a3cf4c9b0b5d7384913047f91aecda979b219e4d74f27fb9be265"
+      "fingerprint": "d4968f17ac19d2c7f8d22ae5dc00be415b351d45007b48924744dac196c57d79"
     },
     {
       "id": "api:GET:/tickets",
@@ -7439,8 +7538,11 @@
       "path": "/tickets",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7449,7 +7551,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "dc8ed1e8cb19c4c9a2e9b570acb0423e258d44eb4aae4abee4b2d05e3a68a82f"
+      "fingerprint": "f44e739edd248ddad68b11cdf3597aa5e67aeaf6f724b13bfafe3485e4fff7a7"
     },
     {
       "id": "api:GET:/tickets/:id",
@@ -7477,8 +7579,11 @@
       "path": "/tickets/:id/ai-summary",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7489,7 +7594,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "3c613e57844409271684606c04110bf89170d50839b7b58222431b1a5321d481"
+      "fingerprint": "4710e21be8fa46d58192ee55e3152fe473a0784923be4b541f0596a4228cc326"
     },
     {
       "id": "api:GET:/tickets/:id/delivery-failures",
@@ -7498,8 +7603,11 @@
       "path": "/tickets/:id/delivery-failures",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7508,7 +7616,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "5091ffb5b6e80e689a9e11c49ce0f0fde6aabb680232a98ff15879acc7e4d252"
+      "fingerprint": "45e3425437da41219aaf0698f906b6ff9b91e8f17dc5783ae1d901c84db6bb7a"
     },
     {
       "id": "api:GET:/tickets/:id/messages",
@@ -7517,8 +7625,11 @@
       "path": "/tickets/:id/messages",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7528,7 +7639,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "ba7bcd21aa9f1ccb2a0049a9145266c41ae37425397973fe25ed1d5ad1f2c865"
+      "fingerprint": "94d4c5be6e96d0ffecf15be93d54421404adf710ad1a25c77504bd2fcf3d9ed0"
     },
     {
       "id": "api:GET:/tickets/media/:id",
@@ -7537,8 +7648,11 @@
       "path": "/tickets/media/:id",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7547,7 +7661,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "162f72f74166ce872bad93d063e65af485de8c0de476e65e0bb7d4f2faf94f1c"
+      "fingerprint": "54bade144502c8f930d58082e73fcbc7edce995bc218487797c18d68d2226a92"
     },
     {
       "id": "api:GET:/tickets/session/:id",
@@ -7556,8 +7670,11 @@
       "path": "/tickets/session/:id",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7566,7 +7683,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "348665f53bc5cd7e4007f14c9a9bcdae03f0b27779207c2d5fb41930ca3cf698"
+      "fingerprint": "586a018f62f42607b9c9eb129b8183e5075516140ad138b346fe88c73602ee69"
     },
     {
       "id": "api:GET:/timesheet",
@@ -7575,7 +7692,7 @@
       "path": "/timesheet",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -7584,7 +7701,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "678ed4358c78874f6731abcebea72bae518e30219e7e5beb9d32342455e49c43"
+      "fingerprint": "3ea5011b53dc2d494deb2c119297fb16a98866922f58a9f5a87426c3484890d5"
     },
     {
       "id": "api:GET:/version",
@@ -7609,24 +7726,6 @@
       "path": "/webhooks",
       "module": "webhooks",
       "source": "api/modules/webhooks/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "webhooks"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "4e4f319f8dfcbb524134da0dd71b3a71120711dae04f25bc92724012f6fb2ae1"
-    },
-    {
-      "id": "api:GET:/webhooks/:id",
-      "kind": "api",
-      "method": "GET",
-      "path": "/webhooks/:id",
-      "module": "webhooks",
-      "source": "api/modules/webhooks/handleWebhooksRoutes.js",
       "authRequired": true,
       "authorization": [
         "requireAuth"
@@ -7638,7 +7737,7 @@
         "webhooks"
       ],
       "linkedDomains": [],
-      "fingerprint": "9ff7a84a5f54f7e8231cb8fc72590cad8b83044c29040044ab8f9da62f25d195"
+      "fingerprint": "768b167564debd09e734a75d9a8b9f2e2f53e03c83c2160b49e93a3da4f5c478"
     },
     {
       "id": "api:GET:/webhooks/:webhookId",
@@ -7647,8 +7746,10 @@
       "path": "/webhooks/:webhookId",
       "module": "webhooks",
       "source": "api/modules/webhooks/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7656,7 +7757,7 @@
         "webhooks"
       ],
       "linkedDomains": [],
-      "fingerprint": "61331b8e81b5a60908654d4926231a19ff8b40dc16589b97282979b76455e9dd"
+      "fingerprint": "f5748d33080e8585fdc85373e95fd8fb5a274673999ecbb6a07bb204805ef311"
     },
     {
       "id": "api:GET:/webhooks/events",
@@ -7665,8 +7766,11 @@
       "path": "/webhooks/events",
       "module": "webhooks",
       "source": "api/modules/webhooks/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "handleWebhooksRoutes",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -7674,7 +7778,7 @@
         "webhooks"
       ],
       "linkedDomains": [],
-      "fingerprint": "6ddd3dbda2f03e424f3e8c303b75b82d4ce219aff07b7f50e1ea7423a702f580"
+      "fingerprint": "1bc50ab5a716f109d4001c841129734999ba9cfcae0e7646dfebbcee76eaffbf"
     },
     {
       "id": "api:GET:/webhooks/instagram",
@@ -7831,7 +7935,7 @@
       "path": "/workspace/entities",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -7840,7 +7944,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "9458845e0aa4f58e7b5ab556a58ac127afb87aed5ed343c3dcf810a3316e5f7d"
+      "fingerprint": "6e06d1cf7e938d7aff364df45065ea89a7cecdd83b2566bcb8f2c28e68d84983"
     },
     {
       "id": "api:GET:/workspace/entities/:id",
@@ -7849,7 +7953,7 @@
       "path": "/workspace/entities/:id",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -7858,7 +7962,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "11691a1eb5e16b20bef7a948baeb9b8991643a65876e4f6a4a45ea69c2a31f3e"
+      "fingerprint": "509b444cc5088bffdc2aece1e09b68574f3c43f3ce4672b436f058d7abf388f7"
     },
     {
       "id": "api:GET:/workspace/entities/:id/actions",
@@ -7867,7 +7971,7 @@
       "path": "/workspace/entities/:id/actions",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -7876,7 +7980,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "cacb018338296e36167331486f70db9367da75aae6dd5df5bcba3dbe4c543c57"
+      "fingerprint": "06df88b19f00ee994ea5871a9e5ac2013353bf70530ef236475295c113486e20"
     },
     {
       "id": "api:GET:/workspace/entities/:id/autocorrections",
@@ -7885,7 +7989,7 @@
       "path": "/workspace/entities/:id/autocorrections",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -7894,7 +7998,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "bc695e5001ba4d0d6653a8cb2826eedb8703922777b7cf8c026de68787f8d7f6"
+      "fingerprint": "e67e1762665bb0ec0e62ce338710b75ece4ebbadce4696338290eb4cdf24cfb2"
     },
     {
       "id": "api:GET:/workspace/entities/:id/insights",
@@ -7903,7 +8007,7 @@
       "path": "/workspace/entities/:id/insights",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -7912,7 +8016,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "b125e4e070e5b23002c91e14231503af92cd7949452872bc21f58c04299e1623"
+      "fingerprint": "2122778ab71e3d7d339a81fdd002d175784e62cf0779430fa40f312b6d265085"
     },
     {
       "id": "api:GET:/workspace/entities/:id/timeline",
@@ -7921,7 +8025,7 @@
       "path": "/workspace/entities/:id/timeline",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -7930,7 +8034,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "969922d40af6fc52c3121fdf1f77614e90607178cb3cac55075ba0b9665fb1e3"
+      "fingerprint": "7f496ca6ea1d0219d96f8a13c45b1a6785615e4fe1e010b4860b11de4c3c629b"
     },
     {
       "id": "api:GET:/workspace/tasks",
@@ -7939,7 +8043,7 @@
       "path": "/workspace/tasks",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -7950,7 +8054,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "b342ce74a92cd769fb052cbd8506cd24232351006a2f9a69ff4ce15bf43499f3"
+      "fingerprint": "e07e24f509f1651515531ed3ad8472ec82bad828e1035b5a9bbb054859c05b14"
     },
     {
       "id": "api:PATCH:/api/access-control/credentials/:id",
@@ -8038,7 +8142,7 @@
       "path": "/projects/:projectId",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:update"
       ],
@@ -8050,7 +8154,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "b3f2750634a085ec7f420f2bade5d157c09793519d8b115edd1cb26a436496c3"
+      "fingerprint": "4368fa11bd50a27b0ef0e76886518b6d591964d7111c27f563eda2d235ff9cf1"
     },
     {
       "id": "api:PATCH:/projects/:projectId/items/:itemId",
@@ -8059,7 +8163,7 @@
       "path": "/projects/:projectId/items/:itemId",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:update"
       ],
@@ -8071,7 +8175,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "f6202492eac23092e21fa22924f83f8dd63d018a1b0be631ff3655d5382d04de"
+      "fingerprint": "1146932d68a5aaf5b71ce8f2ee3d46f932d895cd246eefea491edd3a734160cb"
     },
     {
       "id": "api:PATCH:/projects/:projectId/lists/:listId",
@@ -8080,7 +8184,7 @@
       "path": "/projects/:projectId/lists/:listId",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:manage_workflow"
       ],
@@ -8092,7 +8196,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "d32d7bb197681a105274a3c06cafab243f213c74ef0548949fc0e8cbbf5be27c"
+      "fingerprint": "2d492eb3319a9b34a127cec9cac795d8ab118b630afe6b2d1f5028559617a4ee"
     },
     {
       "id": "api:POST:/admin/rate-limit/clear",
@@ -8702,8 +8806,11 @@
       "path": "/api/beauty/appointment",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8714,7 +8821,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "cc508bc85fbb6bff9146fc21efbaf32aeb067a8699a20a45617f356976ce07f7"
+      "fingerprint": "bd1880ffd9e2dd34948139ca506cbcc9d07bf3d10b15bdcd5216c3a9a37476a1"
     },
     {
       "id": "api:POST:/api/beauty/bundle",
@@ -8723,8 +8830,11 @@
       "path": "/api/beauty/bundle",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8735,7 +8845,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "5429b0cd43a751e8ab63b51c85245a3d8cc44477a6a655219e5a657d8bb5912a"
+      "fingerprint": "04aefcafe82347bb922437309759bf874bc7164910b228d683e641c311558032"
     },
     {
       "id": "api:POST:/api/beauty/confirmation",
@@ -8744,8 +8854,11 @@
       "path": "/api/beauty/confirmation",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8756,7 +8869,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "6c303917ec1e9b83c15ef23dae660ac6be69c91f8805abadbc0126923ecb9c60"
+      "fingerprint": "666543083d49f0edb721cc5de0ffd43674eb0cb134d620afddc7701a2f3bd9fc"
     },
     {
       "id": "api:POST:/api/beauty/customer",
@@ -8765,8 +8878,11 @@
       "path": "/api/beauty/customer",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8777,7 +8893,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "ee39060cd1719801ebd78f5e46fb0a22d7a4d466934a29b1e8337df30c789c54"
+      "fingerprint": "4cd2a4f7a07aecc4a55fd56508c2ffea94f0a4e16f7c6b2e599ab5dd625932c6"
     },
     {
       "id": "api:POST:/api/beauty/follow-up",
@@ -8786,8 +8902,11 @@
       "path": "/api/beauty/follow-up",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8798,7 +8917,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "e7ea001cc589be4cdcd2bec04d611bbfdcb7a38f01bd8f85b83fcfc484cc7938"
+      "fingerprint": "abe5c79351db15356c35aa9c15837f00104148ac8e6f129d1db374506a088425"
     },
     {
       "id": "api:POST:/api/beauty/journey/event",
@@ -8807,8 +8926,11 @@
       "path": "/api/beauty/journey/event",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8820,7 +8942,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "1a6d8e7d8e31f7b3d2a716c746f8b20b8614ef16cef08edf2b5fce0906a34bbe"
+      "fingerprint": "b9c04076abea26fa2fcdbcde7f6629521c915d8051bafce1da7a891f5c779616"
     },
     {
       "id": "api:POST:/api/beauty/lead/convert",
@@ -8829,8 +8951,11 @@
       "path": "/api/beauty/lead/convert",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8842,7 +8967,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "b0cdccd479a11dc0612c8d0f1151927d77a3e0d946ef8a5f88778fe28e09b20d"
+      "fingerprint": "db8607d5d203c035544264da0a66579574c6716c5338f309d0c6577da95caa82"
     },
     {
       "id": "api:POST:/api/beauty/no-show",
@@ -8851,8 +8976,11 @@
       "path": "/api/beauty/no-show",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8863,7 +8991,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "30700df1a1afc36c8301749c61fa2ab89407eb61bff5ecc933b2a84edd681877"
+      "fingerprint": "ecfde22308864e75a9bce1c7eb736807db5df75716c0af0991e44a66f44bb9e1"
     },
     {
       "id": "api:POST:/api/beauty/reactivation",
@@ -8872,8 +9000,11 @@
       "path": "/api/beauty/reactivation",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8884,7 +9015,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "e5360eb00bd9b50dcb955c0fcf728e6c222bb9de0dbd8ee463053f83f50c2bca"
+      "fingerprint": "158f767b2bb741c281bdc70068210b5f5729cb68acdbe0d2d7ed2d8eef4b8daa"
     },
     {
       "id": "api:POST:/api/beauty/service-completed",
@@ -8893,8 +9024,11 @@
       "path": "/api/beauty/service-completed",
       "module": "vertical",
       "source": "api/modules/vertical/vertical-beauty/beautyLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -8905,7 +9039,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "a87d30750553473aa180e5c54e817825e23099265af88c189b2cb0aae6945d4d"
+      "fingerprint": "4452017566ed4be781601742b21b8681e399beab7c7d9230211950a9dc7232cb"
     },
     {
       "id": "api:POST:/api/calendar/resource/:resourceId/blocks",
@@ -8916,7 +9050,8 @@
       "source": "api/modules/scheduling-support/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -8926,7 +9061,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "26ec371d3893c30c3b90a19402fe41ff5932b37f252eddf2fb26dd2aeb676fd9"
+      "fingerprint": "32e8aabd467c54f37c3815749d7d68d9568743d7e7fd182e6b483aca95dceda0"
     },
     {
       "id": "api:POST:/api/cc/campaigns",
@@ -9258,7 +9393,8 @@
       "source": "api/modules/demo/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -9267,7 +9403,7 @@
         "demo"
       ],
       "linkedDomains": [],
-      "fingerprint": "a12ef5c7fbf79bc72008dcc18d2a9b479a33d0110f2478e5701be7fc9624689b"
+      "fingerprint": "ae1303430f1a2dfc7bd8fa18e0c4e1bbd4dd5370ae582da4941b68a25682e8b6"
     },
     {
       "id": "api:POST:/api/evidence/backfill",
@@ -9349,8 +9485,10 @@
       "path": "/api/fitness/attendance/check-in",
       "module": "vertical",
       "source": "api/modules/vertical/handleFitnessAttendanceRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9362,7 +9500,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "f913156d0d7d61d8269b743ba35fa931be4fe16e526423228975a53852c70636"
+      "fingerprint": "6e766b426a1fcbb9f0e17454668d924968d6164f6494088658187d23af8a2ae5"
     },
     {
       "id": "api:POST:/api/fitness/attendance/check-out",
@@ -9371,8 +9509,10 @@
       "path": "/api/fitness/attendance/check-out",
       "module": "vertical",
       "source": "api/modules/vertical/handleFitnessAttendanceRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9384,7 +9524,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "c4cf2430c901040f48fbb5104d0fd4f97512861931a60c2fd1c332af59125435"
+      "fingerprint": "b4665af2db47795ad80d0aa4b148ae72037cd9b318c2176b6d645c88185f6ffc"
     },
     {
       "id": "api:POST:/api/fitness/journey/event",
@@ -9395,7 +9535,8 @@
       "source": "api/modules/vertical/handleFitnessRoutes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -9409,7 +9550,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "848cde58b517f2188de87eed9fdd32a6d82ab91df1df916aab1dccb9a94429d8"
+      "fingerprint": "f15f3c4b13b81e8e7da945dd7b45614eb89616ae60d92f1d28d7fdac78ec2c04"
     },
     {
       "id": "api:POST:/api/fitness/student",
@@ -9418,8 +9559,10 @@
       "path": "/api/fitness/student",
       "module": "vertical",
       "source": "api/modules/vertical/handleFitnessStudentRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -9431,7 +9574,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "e8325da9f9131685afc29c2ee643c26d08faf690a44d93c123c57d14053a53e0"
+      "fingerprint": "9430b50c300072af0ecfd079295bc4703883980c4215fc0c4c53d64616ff1477"
     },
     {
       "id": "api:POST:/api/intelligence/goals",
@@ -9440,7 +9583,7 @@
       "path": "/api/intelligence/goals",
       "module": "intelligence",
       "source": "api/modules/intelligence/handleIntelligenceGoalRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "requirePermission:config:update"
       ],
@@ -9451,7 +9594,7 @@
         "operational_intelligence"
       ],
       "linkedDomains": [],
-      "fingerprint": "75a20ef06b27067957f71c35cb18200209a48de06b9a645fc37e647aa9d40c75"
+      "fingerprint": "6ae3b4374656369f3d9e2f46c68fce00d2bf4e726d94c2ebf2c799e9cb95a64d"
     },
     {
       "id": "api:POST:/api/intelligence/metrics/snapshots",
@@ -9460,7 +9603,7 @@
       "path": "/api/intelligence/metrics/snapshots",
       "module": "intelligence",
       "source": "api/modules/intelligence/handleIntelligenceAnalyticsRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "handleIntelligenceAnalyticsRoutes",
         "requirePermission:analytics:read"
@@ -9472,7 +9615,7 @@
         "operational_intelligence"
       ],
       "linkedDomains": [],
-      "fingerprint": "3df5b6144ab272cb139ba261e74effbb9af332a0de577355fbce8ce9f8d62389"
+      "fingerprint": "5a4dc4408bb439a6bff7759086a163087005dde3c0dcf0c4d74d4c2349ac0f2f"
     },
     {
       "id": "api:POST:/api/intelligence/operational-state",
@@ -9481,7 +9624,7 @@
       "path": "/api/intelligence/operational-state",
       "module": "intelligence",
       "source": "api/modules/intelligence/handleIntelligenceRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "requirePermission:analytics:read"
       ],
@@ -9492,7 +9635,7 @@
         "operational_intelligence"
       ],
       "linkedDomains": [],
-      "fingerprint": "f2bccec6ba8a83665eb63b4bfea870ce268a49245238db61e8445ac1278534ab"
+      "fingerprint": "4f23a09f20eb5429d739274f214a2411fc1c5fa50bb71105549671b9b52bdef7"
     },
     {
       "id": "api:POST:/api/intelligence/search",
@@ -10695,7 +10838,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:update"
+        "ensurePermission:config:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -10704,7 +10848,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "0b3d84593c37d34d8f90021e4797e4514f3ca105fa3bfaaa12dae419293f3d33"
+      "fingerprint": "c8dca222101c6b252e1fea7a4c40744de77b114bd5a4d41f8800691836b5e1a2"
     },
     {
       "id": "api:POST:/api/process-instances/:executionId/resume",
@@ -10716,7 +10860,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:update"
+        "ensurePermission:config:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -10725,7 +10870,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "a52cd35c5fff2765f8ccf6fd1f9f272f454a45bcc65d7580a2a4e9816bfb0337"
+      "fingerprint": "7dffffbeac8681ba23ebc6d323107e2e2c46da1486b5fe2e07ed95c90e09e27d"
     },
     {
       "id": "api:POST:/api/process-instances/resume/external",
@@ -10737,7 +10882,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:update"
+        "ensurePermission:config:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -10746,7 +10892,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "9342d66070ccb918bdeef6579541f43fbec5f428a83eef733ebdc0badaa3ba4f"
+      "fingerprint": "d36786478fc44a8130a6cad8e375bec80c321f2ec83f53476db87a7bae0d5c7e"
     },
     {
       "id": "api:POST:/api/process-runtime/intelligence",
@@ -10758,7 +10904,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:analytics:read"
+        "ensurePermission:analytics:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -10768,7 +10915,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "678343b5930f60e39d68eff1c0bac5e77f6f5ad8dd7bf9a3dcc63986283c76b8"
+      "fingerprint": "c470b9a29dbb275b4cd5f7778d6cea0000d3a208a5e9959545025dc7e209ce16"
     },
     {
       "id": "api:POST:/api/process-runtime/simulate",
@@ -10780,7 +10927,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:analytics:read"
+        "ensurePermission:analytics:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -10789,7 +10937,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "fadeca9928c7a8076d42e02b3383794558239f8bee6f73502703bec15270025e"
+      "fingerprint": "e20f1f22a8a1ce7f61c893c31967521842472632e9f72c26884d36b0df1952bd"
     },
     {
       "id": "api:POST:/api/process-runtime/start",
@@ -10801,7 +10949,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:update"
+        "ensurePermission:config:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -10810,7 +10959,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "b9c60b696e57e72e360cff2362057b55e70460c1110ae0ef1b82f793031b591d"
+      "fingerprint": "014140b0b2e2dc483486db01db468f9e33b63dafd15b77766a149429d899d3e4"
     },
     {
       "id": "api:POST:/api/qa-waves/bot/apply-remediations",
@@ -11376,7 +11525,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:update"
+        "ensurePermission:config:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -11385,7 +11535,7 @@
         "solutions"
       ],
       "linkedDomains": [],
-      "fingerprint": "452298afdea47f733a1a220439e12dfecb805bffdcd7a77575d5190ae90de8c2"
+      "fingerprint": "710bc81258b40dba7dd08f254477bbbd3788297247c489cb9e6e243c817d89bc"
     },
     {
       "id": "api:POST:/api/support/sentiment/suggest",
@@ -11518,14 +11668,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "c5931c00bac165c7563cc802f88def58951d865d5ccdf76caaaa4cfb4f3cf760"
+      "fingerprint": "c50b0c06d9b71f90ac1c1f5716e61783d694fdd434a393e721b87e6013b52db9"
     },
     {
       "id": "api:POST:/api/test-executions/:executionId/cancel",
@@ -11536,14 +11687,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "1cc33581a607a00953435885c2c2a9884aba67f71dd582736cee9a4b1001bc07"
+      "fingerprint": "c981a542fcc0e042c9f1becb0382a2a239dc85cc122f216653d817b3fe0d1985"
     },
     {
       "id": "api:POST:/api/test-executions/recordings/:recordingId/stop",
@@ -11554,14 +11706,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "495833ad84b394fc0fb3756dd2d5c70d8bb997de841494cba38e16a7920d1b15"
+      "fingerprint": "a4aab1900e7ed7603ab9824d2cbd49158f91dbc19d8d9e4777a28090b357723a"
     },
     {
       "id": "api:POST:/api/test-executions/recordings/start",
@@ -11572,14 +11725,15 @@
       "source": "api/modules/test-executions/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "ensureAuth",
+        "requireAuth"
       ],
       "classification": "SUPPORT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "31cd90850239405cb33a4759e79bc8c1c33a17c0f5c8918529312982e0730338"
+      "fingerprint": "90f59e8b27effd783ed17b7d9223ee98d768463bb3b00204abd30ddfd3276116"
     },
     {
       "id": "api:POST:/api/vertical-templates",
@@ -12088,8 +12242,11 @@
       "path": "/bulk-campaigns",
       "module": "bulk-campaigns",
       "source": "api/modules/bulk-campaigns/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12098,7 +12255,7 @@
         "campaigns"
       ],
       "linkedDomains": [],
-      "fingerprint": "e724323d61956dccd3cb4941018e01020dbd46abcd1ab5563d8996092c87cbaf"
+      "fingerprint": "34bc57efc4f01093123428614c9b1dfd01d118cffa1839fbda13bc0bf1493bee"
     },
     {
       "id": "api:POST:/bulk-campaigns/:campaignId/pause",
@@ -12107,8 +12264,11 @@
       "path": "/bulk-campaigns/:campaignId/pause",
       "module": "bulk-campaigns",
       "source": "api/modules/bulk-campaigns/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12117,7 +12277,7 @@
         "campaigns"
       ],
       "linkedDomains": [],
-      "fingerprint": "f0d71d2d465250280e9948101e6dd4d0f3222cd61e8d2527d34b012fe14ccba0"
+      "fingerprint": "c15a0e6ece3c71803bbca3439bf18ff5c06f4381a62a2ebe7c1ff83ec887ca06"
     },
     {
       "id": "api:POST:/bulk-campaigns/:campaignId/resume",
@@ -12126,8 +12286,11 @@
       "path": "/bulk-campaigns/:campaignId/resume",
       "module": "bulk-campaigns",
       "source": "api/modules/bulk-campaigns/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:bulk_messaging:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12136,7 +12299,7 @@
         "campaigns"
       ],
       "linkedDomains": [],
-      "fingerprint": "911c6b40b87042dc3f03cc652def596ca1e30f85d4425f7958dce37ea1f1279f"
+      "fingerprint": "1b368aedb3dc074fdc1850c2b88e44513a669311e3d71e3ad7efbfd9c7bf5092"
     },
     {
       "id": "api:POST:/bulk-campaigns/:campaignId/start",
@@ -12145,25 +12308,6 @@
       "path": "/bulk-campaigns/:campaignId/start",
       "module": "bulk-campaigns",
       "source": "api/modules/bulk-campaigns/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "bulk_messaging",
-        "campaigns"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "9ff8745e8cef3b9a3757f3d8c195c27ee7c4b7feba1698c5fe4b047c8a52bdee"
-    },
-    {
-      "id": "api:POST:/bulk-campaigns/:id/pause",
-      "kind": "api",
-      "method": "POST",
-      "path": "/bulk-campaigns/:id/pause",
-      "module": "bulk-campaigns",
-      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
       "authRequired": true,
       "authorization": [
         "requireAuth",
@@ -12177,51 +12321,7 @@
         "campaigns"
       ],
       "linkedDomains": [],
-      "fingerprint": "249ab5e1587363f3ad974f6593b7a4ec852ffd49d27a3d39f9b4f75a97738f4c"
-    },
-    {
-      "id": "api:POST:/bulk-campaigns/:id/resume",
-      "kind": "api",
-      "method": "POST",
-      "path": "/bulk-campaigns/:id/resume",
-      "module": "bulk-campaigns",
-      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
-      "authRequired": true,
-      "authorization": [
-        "requireAuth",
-        "requirePermission:bulk_messaging:update"
-      ],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "bulk_messaging",
-        "campaigns"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "b31f31a3aa388f374c2b7d92b0f9da41701e0f44b2a987efae11b2c35c918698"
-    },
-    {
-      "id": "api:POST:/bulk-campaigns/:id/start",
-      "kind": "api",
-      "method": "POST",
-      "path": "/bulk-campaigns/:id/start",
-      "module": "bulk-campaigns",
-      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
-      "authRequired": true,
-      "authorization": [
-        "requireAuth",
-        "requirePermission:bulk_messaging:update"
-      ],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "bulk_messaging",
-        "campaigns"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "e4f0a748d4cefb460f53815e16facc9b16cf799c2819d4c563bdb625a42719f3"
+      "fingerprint": "1e437d86f41999f9d731616210287951962bd5031d277a5a4b5bf8264a9c2c08"
     },
     {
       "id": "api:POST:/channel-accounts",
@@ -12271,14 +12371,15 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:read"
+        "ensurePermission:config:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "9c80b4731cd115911192751f0eeb4205bfc9f1b91de517dc25402de536b60f0d"
+      "fingerprint": "5a300b0499a75aead4f73e5d4fd8f244b8cb600a80c8c711d7088fe65d3dfc95"
     },
     {
       "id": "api:POST:/config/validate-redis",
@@ -12290,14 +12391,15 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:read"
+        "ensurePermission:config:read",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "ad71869e8609bfbf8539ad23378a19d05e8f0942f13884c8d90178690981a926"
+      "fingerprint": "c746dc363347b329b1ea5f5d0b779511261217e3cc0c02f4916fa9bd685297a8"
     },
     {
       "id": "api:POST:/departments",
@@ -12499,8 +12601,10 @@
       "path": "/flows",
       "module": "domain-flow",
       "source": "api/modules/domain-flow/handleFlowCrudRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12508,7 +12612,7 @@
         "flows_editor_rpa_replay"
       ],
       "linkedDomains": [],
-      "fingerprint": "4c3264dbeb401816ce6be3fd2f1c132dcb5ded953756d15eae1ba036c8540735"
+      "fingerprint": "fc216e149957e8e7a4afc8d7041cc955ed9f7e367ce77584a763f9114b3300cd"
     },
     {
       "id": "api:POST:/flows/generate",
@@ -12517,7 +12621,7 @@
       "path": "/flows/generate",
       "module": "domain-flow",
       "source": "api/modules/domain-flow/flow-execution/flowGenerationRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12526,7 +12630,7 @@
         "flows_editor_rpa_replay"
       ],
       "linkedDomains": [],
-      "fingerprint": "3213f18f2ad2c3185231b838d3061b6858807875d16fdc676b3fade3198f3304"
+      "fingerprint": "3b6e3787f24bb262310840e5998715bf3cc66494b15771cc6be5ab881cf93340"
     },
     {
       "id": "api:POST:/flows/generate/dry-run",
@@ -12535,7 +12639,7 @@
       "path": "/flows/generate/dry-run",
       "module": "domain-flow",
       "source": "api/modules/domain-flow/flow-execution/flowGenerationRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12544,7 +12648,7 @@
         "flows_editor_rpa_replay"
       ],
       "linkedDomains": [],
-      "fingerprint": "1a599bd392507306f5b7bbb262f5dcc2b089528eb113a4725cb929c4574fc535"
+      "fingerprint": "a0bcc3f6bf9be3f3169cb3d90c772e125c30ff492bd3a844e1407565f92d3ad3"
     },
     {
       "id": "api:POST:/flows/preview",
@@ -12553,8 +12657,10 @@
       "path": "/flows/preview",
       "module": "domain-flow",
       "source": "api/modules/domain-flow/flow-execution/flowValidationRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12562,7 +12668,7 @@
         "flows_editor_rpa_replay"
       ],
       "linkedDomains": [],
-      "fingerprint": "b4af4e7057bb3515e19ea1c1f4e0092fdb2418eeda4bad534c7e8206d33f6a18"
+      "fingerprint": "e9c5e6257c070fefcebe58697b4c7cfe550a67e1aa00525860b70bc6bfad5ba5"
     },
     {
       "id": "api:POST:/flows/simulate",
@@ -12571,8 +12677,10 @@
       "path": "/flows/simulate",
       "module": "domain-flow",
       "source": "api/modules/domain-flow/flow-execution/flowExecutionRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -12580,7 +12688,7 @@
         "flows_editor_rpa_replay"
       ],
       "linkedDomains": [],
-      "fingerprint": "5164e294640974c1cb920e54a989e3263761841e29a33e7667eaef0f137cb822"
+      "fingerprint": "6263a246bd421717f8fe2b665222bc3f83d6d4a765c733b832fe96f0c8b9cd0e"
     },
     {
       "id": "api:POST:/flows/validate",
@@ -12610,7 +12718,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:assign"
+        "ensurePermission:assign",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12621,7 +12730,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "1ac4bdc57540b245c59c1e79832530551240160e153b6cdbb448401a5832b46d"
+      "fingerprint": "4188103e3899355600b13f156afd9dde3b32657d73c45104086d2662998e7b84"
     },
     {
       "id": "api:POST:/inbox/conversations/:conversationId/notes",
@@ -12633,7 +12742,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:update"
+        "ensurePermission:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12644,7 +12754,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "37bc4802ee28a07e23a183155f554903a77fb32b8fd14af8d07b146fcc57851f"
+      "fingerprint": "deb789d864cd0f55af91db8dd05306f5f9e566b8354115bfd2378aab108ebd73"
     },
     {
       "id": "api:POST:/inbox/conversations/:conversationId/transfer",
@@ -12656,7 +12766,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:update"
+        "ensurePermission:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12667,7 +12778,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "9d224519b2d5c4b931f675dade1cf854ff70aad060adc4426233f6086cd7f1a5"
+      "fingerprint": "403884500ba2db9fc0eb0282c9c299f6121d940c217a9cf7ef3a68f34a8418a4"
     },
     {
       "id": "api:POST:/instagram/send",
@@ -12867,7 +12978,7 @@
       "path": "/payment-events",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12878,7 +12989,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "4d334f505ddcbc8f2e64e76822b89b1105ce0bb7ab7c89fc2e54531a6d17eeb3"
+      "fingerprint": "3e361f89bce590bb67ec4c3312cb33d64e663c828ddffa2dcbd3968c9f3b06d8"
     },
     {
       "id": "api:POST:/physical/access/ack",
@@ -12887,7 +12998,7 @@
       "path": "/physical/access/ack",
       "module": "platform-public",
       "source": "api/modules/platform-public/handlePhysicalAccessControlPublicRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12898,7 +13009,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "844851d8d43cc4e88730f56e1e64c645724f30993da10e47e11fdf661800399c"
+      "fingerprint": "8c4b8064daa584b592d298ddb82c3951dee70650034e22b240cb57dff795f830"
     },
     {
       "id": "api:POST:/physical/access/events",
@@ -12907,7 +13018,7 @@
       "path": "/physical/access/events",
       "module": "platform-public",
       "source": "api/modules/platform-public/handlePhysicalAccessControlPublicRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12918,7 +13029,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "95e3097059a43a228340d4cb1d81236f554c283d41b61a3a74af80dfbb44927f"
+      "fingerprint": "6e0b1731cc5dc4af3652b5e7f974b6a22736274b38a29ce16a863cbbca79a5e6"
     },
     {
       "id": "api:POST:/physical/access/resolve",
@@ -12927,7 +13038,7 @@
       "path": "/physical/access/resolve",
       "module": "platform-public",
       "source": "api/modules/platform-public/handlePhysicalAccessControlPublicRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12938,7 +13049,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "c4799eb62f8934103988708c0037ded4b056186b69c64f97eb3681ffc45691c6"
+      "fingerprint": "75aad0fa78ce27e8bfa996f98af27088cceccd69a173d7c2fb61d1dedf41f8a6"
     },
     {
       "id": "api:POST:/physical/kiosk/tickets",
@@ -12947,7 +13058,7 @@
       "path": "/physical/kiosk/tickets",
       "module": "platform-public",
       "source": "api/modules/platform-public/handlePhysicalKioskPanelRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12958,7 +13069,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "51351d4d2bffe512cd05eeebdb7071ae6e730f91e64cd19206714fa450055ac2"
+      "fingerprint": "ff7190facab2856f2bcfa8bb1f4dae4a65e8d42c45ecb610ec59aae063f44f3b"
     },
     {
       "id": "api:POST:/physical/station/call-next",
@@ -12967,7 +13078,7 @@
       "path": "/physical/station/call-next",
       "module": "platform-public",
       "source": "api/modules/platform-public/physical-station/physicalStationQueueRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12977,7 +13088,7 @@
         "public_tokens"
       ],
       "linkedDomains": [],
-      "fingerprint": "f7193294f184c38f5546c39b4bdbd2e18be01ae8270a192af459ae495920df97"
+      "fingerprint": "8e6a7a9fea09959074ab9323f81b5b11d9aac34478db0b9b12483bf6b7c8ced5"
     },
     {
       "id": "api:POST:/physical/station/transfer",
@@ -12986,7 +13097,7 @@
       "path": "/physical/station/transfer",
       "module": "platform-public",
       "source": "api/modules/platform-public/physical-station/physicalStationQueueRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -12996,7 +13107,7 @@
         "public_tokens"
       ],
       "linkedDomains": [],
-      "fingerprint": "f5c7886d6b0133b46f267c3bfbbc8d650938b8a790ab34385c0b3fbac3a91175"
+      "fingerprint": "f9370a519a1ce71b0706b517d7a03abefa349064bdf43b7bc97108b78eac43e2"
     },
     {
       "id": "api:POST:/project-templates",
@@ -13005,7 +13116,7 @@
       "path": "/project-templates",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:manage_templates"
       ],
@@ -13017,7 +13128,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "b94d145d6fc000f6e32cc24135d3eae260333a44cdad074184451ac468d7d724"
+      "fingerprint": "b7b92e179f1811627b091778f105a8c24cd95a638fe995e75831c286e1c5e752"
     },
     {
       "id": "api:POST:/projects",
@@ -13026,7 +13137,7 @@
       "path": "/projects",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:create"
       ],
@@ -13038,7 +13149,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "50d898929770d9b4a8b49ab7a4a982584aa17fe7e44a7ca9004d0c3ef353cb0e"
+      "fingerprint": "8da2102f6ae7458a9e79c74b500fcbe9732aa98bce41bf342b1840ff5ea411d2"
     },
     {
       "id": "api:POST:/projects/:projectId/items",
@@ -13047,7 +13158,7 @@
       "path": "/projects/:projectId/items",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:update"
       ],
@@ -13059,7 +13170,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "2218b96232557e7af553d6f81df906895b6fc5c254e00d4b17df97b32ca55c68"
+      "fingerprint": "a99d0cf1bf0380450050953deb2f799291db098cf92841b7d4776b0aadb1886b"
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/comments",
@@ -13068,7 +13179,7 @@
       "path": "/projects/:projectId/items/:itemId/comments",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:comment"
       ],
@@ -13080,7 +13191,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "aafcfa6223018b1137275e9d35c7fa91ba79cff8eb26dc00f2fd6b747bf56650"
+      "fingerprint": "bcea54fa2fc9ac4f684b1b7b13111e33c2de195ae60f3d87cfc0764a81be919f"
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/complete",
@@ -13089,7 +13200,7 @@
       "path": "/projects/:projectId/items/:itemId/complete",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:update"
       ],
@@ -13101,7 +13212,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "54383b9e24e0393e9313290e491db10f06f1dcb9175c325990a962283a3ff412"
+      "fingerprint": "2fbc6c64e231f623b34b89507adca2cead768c306a87bab52abbfcf485124f4b"
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/move",
@@ -13110,7 +13221,7 @@
       "path": "/projects/:projectId/items/:itemId/move",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:update"
       ],
@@ -13122,7 +13233,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "1c439c0f2564d362201b09d167e5aa5cedd1d42b41ce9a2f8ce8f99021a7e689"
+      "fingerprint": "bcf3ec123521e2b23dd1f76f3e443835b8febeaa382a591467b5812cabcacc1d"
     },
     {
       "id": "api:POST:/projects/:projectId/lists",
@@ -13131,7 +13242,7 @@
       "path": "/projects/:projectId/lists",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:manage_workflow"
       ],
@@ -13143,7 +13254,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "5a84724f84cf197b1a10ff59044b4fedf7e7c24e5b4bbd88953b1e98b14ecfb2"
+      "fingerprint": "2b1f9ccadf244d9391ff61cbed5df960146504cd85924d2c9827a1a92b05480b"
     },
     {
       "id": "api:POST:/projects/:projectId/lists/reorder",
@@ -13152,7 +13263,7 @@
       "path": "/projects/:projectId/lists/reorder",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:manage_workflow"
       ],
@@ -13164,7 +13275,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "76c9ddafc5487cad7c0e9f35e470ecb04c74b132a81c859860b64a55a258afc2"
+      "fingerprint": "9c5af2c5fad6d2fb8a66c2f086ef08d36f75f149db08d1ffda7bc22943b7c73c"
     },
     {
       "id": "api:POST:/projects/:projectId/members",
@@ -13173,7 +13284,7 @@
       "path": "/projects/:projectId/members",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:manage_members"
       ],
@@ -13185,7 +13296,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "fe67056350f224234abf58413d276655fa9fc3344ca3cecc361642fd05b9094f"
+      "fingerprint": "f99ffd398484690e34f51b7aa2073a10d824146b2f64b53889ce56e45f4bf562"
     },
     {
       "id": "api:POST:/projects/from-template",
@@ -13194,7 +13305,7 @@
       "path": "/projects/from-template",
       "module": "domain-operations",
       "source": "api/modules/project-management/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "ensurePermission:create"
       ],
@@ -13206,7 +13317,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "831b1b9702451cd130d4eb32bfe344460d1e7ce613c6b66806328d48e69e36bc"
+      "fingerprint": "90d2783813e3876d438a4db18ce27d8616d887d68127525dec0140581ef26c58"
     },
     {
       "id": "api:POST:/public-tokens",
@@ -13342,14 +13453,14 @@
       "path": "/qa/operational-status/check-operation",
       "module": "operationalStatus",
       "source": "api/routes/operationalStatusRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "DEVELOPMENT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "ee37b43745e1a7fc243661c4088baad4c6b19fbbc2f1d381f6dfcdc4daef5735"
+      "fingerprint": "80a2bbf59719b56328285df301e4c809df79c34aa79bc74cd406a56f6e781531"
     },
     {
       "id": "api:POST:/qa/operational-status/update-governance",
@@ -13358,14 +13469,14 @@
       "path": "/qa/operational-status/update-governance",
       "module": "operationalStatus",
       "source": "api/routes/operationalStatusRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "DEVELOPMENT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "cd1f027f64cd98828d85735441287aafd5f6763a0b4cf1e79cf4e387655655b3"
+      "fingerprint": "234ade466cbf0ca8acf7ae64f2c46afd2e0f35ab839f1eee543ec7d93d52a540"
     },
     {
       "id": "api:POST:/qa/run",
@@ -13412,8 +13523,11 @@
       "path": "/queues/reload",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureQueuePermission",
+        "ensureQueuePermission:admin"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13422,7 +13536,7 @@
         "support_ticket_flow"
       ],
       "linkedDomains": [],
-      "fingerprint": "5b5dccc506095a532d3e87364da36a35a6a03a945be04252201a70ca94c63088"
+      "fingerprint": "67adfab4bf0021733c096e67d0b7c49c2673febb34115d962c0c4275a647448e"
     },
     {
       "id": "api:POST:/quick-replies",
@@ -13492,8 +13606,11 @@
       "path": "/rag/documents",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13501,17 +13618,20 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "2778d0fac93420781c9c6c365fd881d5f18f75f7475f3c623ae175c1898c22e7"
+      "fingerprint": "d2da1c94ee06f848aff28878940dcad16637238ccad08a787a42e39b6187becd"
     },
     {
-      "id": "api:POST:/rag/documents/:id",
+      "id": "api:POST:/rag/documents/:id/reindex",
       "kind": "api",
       "method": "POST",
-      "path": "/rag/documents/:id",
+      "path": "/rag/documents/:id/reindex",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13519,7 +13639,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "2b88dd21e53225acf87a00f7d16b9d2aa35167ae8b291fbe6cc06d64be2e3096"
+      "fingerprint": "382a2d187c7c967839aa8ec6ea38efacca38ff9e4bd18e7a8024bb2d49bb7324"
     },
     {
       "id": "api:POST:/rag/documents/clean-orphans",
@@ -13528,8 +13648,11 @@
       "path": "/rag/documents/clean-orphans",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13537,7 +13660,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "f2583a9bfa7489728bc36c06b22f9f749b251b523157c511596cb3c29debaace"
+      "fingerprint": "ded4a612dc081337fc812f7fd0881ecdb7af47b15383fc22ca7af9a08c6879a2"
     },
     {
       "id": "api:POST:/rag/documents/reindex-all",
@@ -13546,8 +13669,11 @@
       "path": "/rag/documents/reindex-all",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13555,7 +13681,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "97cd71725f4f4638087b59a8af11ee28fc2f43d7f91ae0fdeca78e011bd5cd86"
+      "fingerprint": "4e04c8290821fcf7da98611ae10a56e3dd09b59a765bf2aa4383507087d96c8c"
     },
     {
       "id": "api:POST:/rag/documents/upload",
@@ -13564,8 +13690,11 @@
       "path": "/rag/documents/upload",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragIngestionRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13573,7 +13702,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "b84a7cbbf2d309bec86021ea58bb8b30ce0d30b7964d65a3ad2d05694c5bd263"
+      "fingerprint": "5db69d8f239e24867bf01e345f300cf5cf91da6295614392aec44a3f8fdfa6df"
     },
     {
       "id": "api:POST:/rag/ephemeral/context",
@@ -13582,8 +13711,11 @@
       "path": "/rag/ephemeral/context",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragEphemeralRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13591,7 +13723,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "f208ef0b02169511c90ab9385af5a7191ca48f44d0a75746446bad9e5d747ccc"
+      "fingerprint": "2bf0ec79476ca196e10e537d116901ba763bafc5d3e03eb7f86ad668d671d3c4"
     },
     {
       "id": "api:POST:/rag/learning/clean-invalid-queries/:id",
@@ -13600,8 +13732,11 @@
       "path": "/rag/learning/clean-invalid-queries/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13610,7 +13745,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "bccff3c02daac1dfb461a6073832a306941f9cf7ab7f09cfc423019b42dac2ce"
+      "fingerprint": "a633305a5a29d0723a40ea45a8467e602867b42acfac382018f6319562c5b435"
     },
     {
       "id": "api:POST:/rag/learning/trigger-learning/:id",
@@ -13619,8 +13754,11 @@
       "path": "/rag/learning/trigger-learning/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13629,7 +13767,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "1f1d83659f3a173fa0767bbb38d803d9cce312193ad6fe4987d781d21740e569"
+      "fingerprint": "33e64a055c88338ddaa59696acba4f9d2591e2eb0ac7ccf468ea93967f37a3c2"
     },
     {
       "id": "api:POST:/rag/learning/update-synonyms",
@@ -13638,8 +13776,11 @@
       "path": "/rag/learning/update-synonyms",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13648,7 +13789,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "6a1a87dd5ba2febe2867b51d989fe41c4445d205f1355749c62af2c195cb5f3a"
+      "fingerprint": "c2b7c1d62369c4349ee2ac8c8d19677fa36c79ce22aa3fab9356dcf240399ba6"
     },
     {
       "id": "api:POST:/rag/learning/validation-rules/adapt/:id",
@@ -13657,8 +13798,11 @@
       "path": "/rag/learning/validation-rules/adapt/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13667,7 +13811,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "44136bc3bab4a45e5f8e1eb86a71778162ced6bd523cfd09f71c257343b88d22"
+      "fingerprint": "32806181a8859bda28e335088a3571f20d16ba33419852ff60cd226499ed00fd"
     },
     {
       "id": "api:POST:/rag/query",
@@ -13676,8 +13820,11 @@
       "path": "/rag/query",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragQueryRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:query"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13685,7 +13832,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "c890e3e172bbbafc14812b5e64e8a46d35a62e2e67ced3027c2843f4323302f4"
+      "fingerprint": "13b39c2f9da1e33a4234246f897882fddd694f6264418efce60942dbe0b48fee"
     },
     {
       "id": "api:POST:/rag/reindex-all",
@@ -13694,8 +13841,11 @@
       "path": "/rag/reindex-all",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -13703,7 +13853,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "efa0b99225ab34fb8e83e9abe5f80ebd4ef9a4e206c7331ccaddc7e717a2c32e"
+      "fingerprint": "05ed0589388a14ad591f6a3cfdd33d48cdb25e4934509d4e082568942ffbdcdb"
     },
     {
       "id": "api:POST:/rbac/assign",
@@ -13715,7 +13865,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:agents:update"
+        "ensurePermission:agents:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -13724,7 +13875,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "15ad3c4d67807c9e8be2013082725d5f523a4c5be5d6b423d6263ad03b001fbf"
+      "fingerprint": "9890a585a159aa27d421682426d20ac56cb2b96c5b2e1a83177af0c475728735"
     },
     {
       "id": "api:POST:/rbac/roles",
@@ -13736,7 +13887,8 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:update"
+        "ensurePermission:config:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -13745,7 +13897,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "f92a2cd13a912fe7220e39e517932f87312983c0a9b45e54c6db26cab3c7f3d0"
+      "fingerprint": "c380643105eed0612a6e3407d5eae76843b4fdbfde40e34e5eb8622ba12a152f"
     },
     {
       "id": "api:POST:/resource-bookings",
@@ -13754,7 +13906,7 @@
       "path": "/resource-bookings",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -13763,7 +13915,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "63b71a24ab0a69d7e2a6a6e30c375f401c5a3d6856f281776ccf634f1824fb68"
+      "fingerprint": "bd56eb1896e20c94d66451210245bd3715c99433f9f19590550362460f70bb74"
     },
     {
       "id": "api:POST:/resources",
@@ -13772,7 +13924,7 @@
       "path": "/resources",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -13781,7 +13933,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "d725d1f7f41a57b6048fae8303c58c7106824508acbe55a80d984519097514b1"
+      "fingerprint": "f8d8abe0af5aaf44dd069453b57b108c09828b4c0117a2877709236810679ed6"
     },
     {
       "id": "api:POST:/resources/availability",
@@ -13790,7 +13942,7 @@
       "path": "/resources/availability",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -13799,7 +13951,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "576efcafda87f9f0ce4fa278dc11bb5f6d1d09d2bc1410d3a34abdb6083d5a0a"
+      "fingerprint": "d627420407541224cd5f84b9e61c08edbbca328fde93f364bebb96058949306f"
     },
     {
       "id": "api:POST:/rpa-tests",
@@ -13885,14 +14037,15 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:update"
+        "ensurePermission:config:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "449607ba36525089586e48856154916f1e4c12238d3e5869fb17204d6d319667"
+      "fingerprint": "c6a8170810b1d82568873efbad6ef26180815a9ffe1ae3fdf5b2d6e03fde694e"
     },
     {
       "id": "api:POST:/sla/policies",
@@ -14053,8 +14206,11 @@
       "path": "/templates",
       "module": "platform-content",
       "source": "api/modules/platform-content/handleTemplatesRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTemplatesAccess",
+        "ensureTemplatesAccess:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14062,7 +14218,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "5a24f566e72ad80f51a4a9ab06598d8bca5571bc9ada2f8f174bcd27c13e2c06"
+      "fingerprint": "5a3bd515b1c39d2cf0439ccd4a1652ad05a8b2d4df585995381f769a3622aed4"
     },
     {
       "id": "api:POST:/tenants",
@@ -14071,14 +14227,17 @@
       "path": "/tenants",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "createTenant",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "912d0bcd3dea5318f370f958b769cd0900d5492b233fec4f15833159b62575e7"
+      "fingerprint": "aff12efaccc785154424be1659e72f887628382c3e5e9ab4eb2bf285275c5e43"
     },
     {
       "id": "api:POST:/tenants/:tenantId/ai-credentials/test",
@@ -14087,14 +14246,18 @@
       "path": "/tenants/:tenantId/ai-credentials/test",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth",
+        "testTenantAiCredentials"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "2bfe358ff8d4dac84ddb6af771a671fb652174d72b8982f80ccbb16da858e93c"
+      "fingerprint": "31b7fb7240b648bedfff4204f2f2d6e20f6a3ca6e61fbee79853c2cf93fe70e9"
     },
     {
       "id": "api:POST:/tenants/:tenantId/change-plan",
@@ -14103,14 +14266,17 @@
       "path": "/tenants/:tenantId/change-plan",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "changePlan",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "662bced3d27912f9d169b975ccead62fa93b866e0b0a20c0f73959ca2e48eb55"
+      "fingerprint": "6dafaa6a631638ca22cd6f5347ae945b39dee3bc7ec4cb15aa6db05615ef78c0"
     },
     {
       "id": "api:POST:/tenants/:tenantId/reactivate",
@@ -14119,14 +14285,17 @@
       "path": "/tenants/:tenantId/reactivate",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "reactivateTenant",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "589af0a5e04a437321147f438f3a86e4ef4e45d7f240d41c69509fdbcbf8aa09"
+      "fingerprint": "f676d3f8c39d479a25a5a3a45993fa52328efd5217cc507850eee693a8115dc6"
     },
     {
       "id": "api:POST:/tenants/:tenantId/suspend",
@@ -14135,32 +14304,17 @@
       "path": "/tenants/:tenantId/suspend",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "technical-wave",
-      "technicalWave": "platform",
-      "linkedJourneys": [],
-      "fingerprint": "3643841dcb9c50403296b43986976a1e912999fe84fe5e084b286445db0279b5"
-    },
-    {
-      "id": "api:POST:/tenants/:tenantKey/ai-credentials/test",
-      "kind": "api",
-      "method": "POST",
-      "path": "/tenants/:tenantKey/ai-credentials/test",
-      "module": "platform-admin",
-      "source": "api/modules/config/routes.js",
       "authRequired": true,
       "authorization": [
-        "ensureAuth"
+        "requireAuth",
+        "suspendTenant"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "d54758dfa7636c106d37037fad1983e77294bb853e888c7cc0f9c87bdd916d29"
+      "fingerprint": "68f2c427fd9e4e806d7c1deed396e7f4d1558e03d4431a684a1a6db33c9f1f4e"
     },
     {
       "id": "api:POST:/tenants/generate-by-ai",
@@ -14169,14 +14323,17 @@
       "path": "/tenants/generate-by-ai",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "generateByAi",
+        "requireAuth"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "220ddf0162d4bda559556aae3a0790a9f91fd6f7fdfb8a92ec2faefbf3fd5d06"
+      "fingerprint": "edc99af8828edcbc6c60f3a6f17476ccb40e1695380f5dbe11c85894d6acbd23"
     },
     {
       "id": "api:POST:/tickets",
@@ -14185,8 +14342,11 @@
       "path": "/tickets",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14195,7 +14355,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "34c13f7d1b03ea69d0c9a4912c4528294b9bcff3499220ce3c561c1671357ba2"
+      "fingerprint": "3a3bd9642b5b27aa624069d7bd702a1925ea450ffecd7c9746ffc67d83f3f605"
     },
     {
       "id": "api:POST:/tickets/:id/ai-summary",
@@ -14204,8 +14364,11 @@
       "path": "/tickets/:id/ai-summary",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketOperationsRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14216,7 +14379,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "3036fe4a40e14fcb97b59d16efa54beb382e703709919a24d11819883ed073e2"
+      "fingerprint": "edb9fceae418e2dfd3a055c550602cf15e5ec05a430fc159262b7fa880168401"
     },
     {
       "id": "api:POST:/tickets/:id/assign",
@@ -14225,8 +14388,11 @@
       "path": "/tickets/:id/assign",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:assign"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14235,7 +14401,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "8f052c3524dcb529634f2e01581f02a7333c675f170a06cf57dd27b37e11c9f4"
+      "fingerprint": "aa52f57acb6c51bf64c6174b8e539454632f5db83939019f4d3f83888424f13e"
     },
     {
       "id": "api:POST:/tickets/:id/close",
@@ -14244,8 +14410,11 @@
       "path": "/tickets/:id/close",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:close"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14254,7 +14423,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "1e5f0d1a527d8d406a718a1ef9601247aad8adeba8bb52181e30d00463c2b473"
+      "fingerprint": "db5f9783aa38b84bdaf445e6744845e73b1a97b506188c5df7578fb549930433"
     },
     {
       "id": "api:POST:/tickets/:id/mark-read",
@@ -14263,8 +14432,11 @@
       "path": "/tickets/:id/mark-read",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCommunicationRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:read"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14273,7 +14445,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "ba12d0c03441ebcc06577bdadaace8c143c31b3fcf6413310597202b8ba4d5df"
+      "fingerprint": "9d6ea0059aee4163c99ed5a827f32ab750c939ca1011904b8566553bad19e2b6"
     },
     {
       "id": "api:POST:/tickets/:id/message",
@@ -14282,8 +14454,11 @@
       "path": "/tickets/:id/message",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCommunicationRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14292,7 +14467,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "a8f2fdac2227936af7d11b19688d52a359897fdbb4af9787a66fa7f569bd782f"
+      "fingerprint": "3626d153e4b375311ac890ac2d94d49c44c72e9e2b446145c899223806ec364b"
     },
     {
       "id": "api:POST:/tickets/:id/pause",
@@ -14301,8 +14476,11 @@
       "path": "/tickets/:id/pause",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14311,7 +14489,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "a982fa119ec2df5eb26aa877d21d1b66dca55395f5139e7c7c264d30e0aaee89"
+      "fingerprint": "eb5c580c98f3021fed6801d964f24bf45ecf6f2c1479623e84c5789c8bc9526e"
     },
     {
       "id": "api:POST:/tickets/:id/resume",
@@ -14320,8 +14498,11 @@
       "path": "/tickets/:id/resume",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14330,7 +14511,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "3986f04008faa5094697c91a5b8cdd65fab1334cb83cf895d8d7991d40a554a6"
+      "fingerprint": "4773f36ef1774269654db3a29f17bb22730c3d1623de3caf322e0b581b0d8b27"
     },
     {
       "id": "api:POST:/tickets/:id/return-to-bot",
@@ -14339,8 +14520,11 @@
       "path": "/tickets/:id/return-to-bot",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14349,7 +14533,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "df582723cd93087ee38481c8ca5aafe634497f5ec989d1efa82db4228520498a"
+      "fingerprint": "a71f16996b2e1e07e3440320cdac2f104097e7334397e45d4178a8d6832c42dd"
     },
     {
       "id": "api:POST:/tickets/:id/tags",
@@ -14377,8 +14561,11 @@
       "path": "/tickets/:id/takeover",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketLifecycleRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14387,7 +14574,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "d16c9017e5bdb4ceedc2b11c709aaf8cc9de9dbc4ef32d8e1bdfe1f8ac36d60b"
+      "fingerprint": "e56f028867a2576168d3e777c105ac422b5fc0bd3adc3c4536bc16b8066e62a5"
     },
     {
       "id": "api:POST:/tickets/media/upload",
@@ -14396,8 +14583,11 @@
       "path": "/tickets/media/upload",
       "module": "ticket",
       "source": "api/modules/ticket/tickets/ticketCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureTicketPermission",
+        "ensureTicketPermission:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14406,7 +14596,7 @@
         "tickets_tags"
       ],
       "linkedDomains": [],
-      "fingerprint": "c8ccc4f170c14f97b1b4a0f9910585845a92f6211fa9634257b0cb2fe19e0b6b"
+      "fingerprint": "3e60c5aa15293701c6cc71f97a495a098094b85fd674d5f32a9350be44abc36d"
     },
     {
       "id": "api:POST:/timesheet",
@@ -14415,7 +14605,7 @@
       "path": "/timesheet",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14424,7 +14614,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "1eb4ed1ebf9361bf1a3934771d5a14d181cd261949706aafe0b07d406cf21541"
+      "fingerprint": "7a388734cecd1c5d0e0a8cb602f3b76d5bce4a504f58fe098a6d8d7a5fe3b998"
     },
     {
       "id": "api:POST:/web-scraping/scrape",
@@ -14475,8 +14665,11 @@
       "path": "/webhooks",
       "module": "webhooks",
       "source": "api/modules/webhooks/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:webhooks:create"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -14484,7 +14677,7 @@
         "webhooks"
       ],
       "linkedDomains": [],
-      "fingerprint": "e6ac19283605a65ae44ef815fb248d0ba67f4fe7f43fada05ba0b9674067cf63"
+      "fingerprint": "66a988723a9d4f9e827cd06a3204aa40319535b9ff20a71e1e858493b8969e72"
     },
     {
       "id": "api:POST:/webhooks/instagram",
@@ -14573,7 +14766,7 @@
       "path": "/whatsapp/connections/:connectionId/disconnect",
       "module": "whatsapp-connection",
       "source": "api/modules/whatsapp-connection/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14582,7 +14775,7 @@
         "whatsapp_connections"
       ],
       "linkedDomains": [],
-      "fingerprint": "baf57bf7e5f8c47b2c94db2e90ce25335022951314fc73fb5b0ba347ab5bfa7b"
+      "fingerprint": "edd5267e73c7e07ae302761dc8ebe6aec691b05d8eb2fd6c3c6dcba7cfbdf5ad"
     },
     {
       "id": "api:POST:/whatsapp/connections/:connectionId/events",
@@ -14591,7 +14784,7 @@
       "path": "/whatsapp/connections/:connectionId/events",
       "module": "whatsapp-connection",
       "source": "api/modules/whatsapp-connection/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14600,7 +14793,7 @@
         "whatsapp_connections"
       ],
       "linkedDomains": [],
-      "fingerprint": "4ad24a9bd1d4c70caa41903d9814be7ec3f82d4e0b3dab7c552388f809b6f76f"
+      "fingerprint": "95329c2a8ee3fa88fb375f8895ba2df081c32849c8a3e6c23ecc5ca0cd733277"
     },
     {
       "id": "api:POST:/whatsapp/connections/:connectionId/qr",
@@ -14609,7 +14802,7 @@
       "path": "/whatsapp/connections/:connectionId/qr",
       "module": "whatsapp-connection",
       "source": "api/modules/whatsapp-connection/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14618,7 +14811,7 @@
         "whatsapp_connections"
       ],
       "linkedDomains": [],
-      "fingerprint": "523ae3848688f1569894aa48361d223610fbb4aa62c7503faa6de474b04bef96"
+      "fingerprint": "c9052262bc5c0803645a6ec8c11ef7e7ddddbc45ffdd3e31c0bd6180e6116dc5"
     },
     {
       "id": "api:POST:/whatsapp/connections/:connectionId/status",
@@ -14627,7 +14820,7 @@
       "path": "/whatsapp/connections/:connectionId/status",
       "module": "whatsapp-connection",
       "source": "api/modules/whatsapp-connection/routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14636,7 +14829,7 @@
         "whatsapp_connections"
       ],
       "linkedDomains": [],
-      "fingerprint": "babfe7c1618fb13d3155b3988efb2e98a8ae0e7a31fd2459831cb09f54f0032c"
+      "fingerprint": "fc608e502e6371c958e843f5927be4e11e194e4a20087d97b96d5e22dd4f6d47"
     },
     {
       "id": "api:POST:/whatsapp/ivr",
@@ -14751,7 +14944,7 @@
       "path": "/workspace/actions",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14760,7 +14953,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "59763228bc179d1f5316f323ecf404f8d52f863fb7b294e5f8ab634a81e5351b"
+      "fingerprint": "a66d886ff06ffaded43443f5d92a4061ee2e4367e3501c017cfb4b6742de3d84"
     },
     {
       "id": "api:POST:/workspace/entities",
@@ -14769,7 +14962,7 @@
       "path": "/workspace/entities",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14778,7 +14971,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "b3c4500393be797529d503c5b7540272228c465de7518288aebc69171aabfd4c"
+      "fingerprint": "8e2dcfbac52b56f371efab5c0af91749b2d587a3e2daeab717edf5fc8be176eb"
     },
     {
       "id": "api:POST:/workspace/entities/:id/actions/auto",
@@ -14787,7 +14980,7 @@
       "path": "/workspace/entities/:id/actions/auto",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14796,7 +14989,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "03d13d40a6f000e2bbc2971f2a900c5dd5edc047168bcc35e3ed2d2ce75275d0"
+      "fingerprint": "08e419d459aa2e183435449b16626eb32953cba7ae2390ab868e0f2bd387427f"
     },
     {
       "id": "api:POST:/workspace/links",
@@ -14805,7 +14998,7 @@
       "path": "/workspace/links",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14814,7 +15007,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "61e89670e20fae837b678f0c38463d6866a9d0d3fb5bdc7866b42110d12145bb"
+      "fingerprint": "5ef4f4a4ccfd703bffbfe7642d29db3af4e91547ae8e8cbdb7be23a45fa1e094"
     },
     {
       "id": "api:POST:/workspace/tasks",
@@ -14823,7 +15016,7 @@
       "path": "/workspace/tasks",
       "module": "workspace",
       "source": "api/modules/workspace/workspace.routes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -14834,7 +15027,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "30e3ba0d4a707023467bddd4574c06dcf6f79ee2eed31dc5068c52135e122127"
+      "fingerprint": "b59aa731c3e03035df23b04decc1d6c50fa392e98408c8a266075b0f866d14de"
     },
     {
       "id": "api:PUT:/api/intelligence/goals/:id",
@@ -14843,7 +15036,7 @@
       "path": "/api/intelligence/goals/:id",
       "module": "intelligence",
       "source": "api/modules/intelligence/handleIntelligenceGoalRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [
         "requirePermission:config:update"
       ],
@@ -14854,7 +15047,7 @@
         "operational_intelligence"
       ],
       "linkedDomains": [],
-      "fingerprint": "2345177174465a050babeb851115cdad51e22e2c7ad4069062409516dad7cc8e"
+      "fingerprint": "c8a9b80311035ced16b46fa3ed4bc36cfacd1f62274fafd454c7c43a92ff171a"
     },
     {
       "id": "api:PUT:/api/marketing/google-ads/recommendations/:recommendationId",
@@ -14902,25 +15095,6 @@
       "path": "/bulk-campaigns/:campaignId",
       "module": "bulk-campaigns",
       "source": "api/modules/bulk-campaigns/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "bulk_messaging",
-        "campaigns"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "c674e671108234c84b620d3c5d08c5595aa5497677fb299fd49307dde340559e"
-    },
-    {
-      "id": "api:PUT:/bulk-campaigns/:id",
-      "kind": "api",
-      "method": "PUT",
-      "path": "/bulk-campaigns/:id",
-      "module": "bulk-campaigns",
-      "source": "api/modules/bulk-campaigns/handleBulkCampaignsRoutes.js",
       "authRequired": true,
       "authorization": [
         "requireAuth",
@@ -14934,7 +15108,7 @@
         "campaigns"
       ],
       "linkedDomains": [],
-      "fingerprint": "36505eb283552b0a554e956864f7e17146163a1513db5e06974b4958c7276643"
+      "fingerprint": "4cc9780f6f61a3d7ac27205a2dbab89242c61828d22bb652a654d92ddeee25f7"
     },
     {
       "id": "api:PUT:/channel-accounts/:id",
@@ -14965,14 +15139,15 @@
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:config:update"
+        "ensurePermission:config:update",
+        "requireAuth"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "ca31bdce8e3e3481f2a1eda0878116c12d7ee8b0af72db075350c522432cce51"
+      "fingerprint": "ef8b35bf7570ff2261c71fd9f7cf1c8e8653061d35eee1953869773a7ca7bed8"
     },
     {
       "id": "api:PUT:/deliveries/:deliveryId/status",
@@ -15040,7 +15215,7 @@
       "path": "/flows/:id",
       "module": "domain-flow",
       "source": "api/modules/domain-flow/handleFlowCrudRoutes.js",
-      "authRequired": false,
+      "authRequired": true,
       "authorization": [],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -15049,7 +15224,7 @@
         "flows_editor_rpa_replay"
       ],
       "linkedDomains": [],
-      "fingerprint": "ab4792c0238548e8cd496b9b74eb7083b55550669771d654a5f12d9d7f4589ad"
+      "fingerprint": "5e1c20f4e76c2b0e7c70d72efae3c490fc3dbe8f9656702076dca8e204c42342"
     },
     {
       "id": "api:PUT:/flows/:id/environment",
@@ -15121,8 +15296,11 @@
       "path": "/rag/documents/:id",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragCoreRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -15130,7 +15308,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "0e54fa0e0575da106ba9fab3a35a64721bedfd151f9204c74b98ce047c00d875"
+      "fingerprint": "57fc86b82f8a8598a7d2f2bb0af10e77559d81e32cd7a213a3001f77f71201fb"
     },
     {
       "id": "api:PUT:/rag/learning/synonyms",
@@ -15139,8 +15317,11 @@
       "path": "/rag/learning/synonyms",
       "module": "platform-content",
       "source": "api/modules/rag-documents/rag/ragLearningRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureRagPermission",
+        "ensureRagPermission:update"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "journey",
@@ -15149,7 +15330,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "6415a6ee0eedd6dcbece4d86787f094192a6b9fa91f75ba1abfa6882fd29c501"
+      "fingerprint": "f6d621eb2dea5081c0bc1beda8e812fc4795f3a4e5f31612502b7323d3dd8f9b"
     },
     {
       "id": "api:PUT:/tenants/:tenantId",
@@ -15158,14 +15339,17 @@
       "path": "/tenants/:tenantId",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "updateTenant"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "8872cbbdfe29b7c0eab1453c676d5d2ecdc5ab8ec418932174b403b3f928baa9"
+      "fingerprint": "ffb3714006e57ed1b3aa093bc74645501abcb5b6dc6bbbd96c80a6ebf9ae21fe"
     },
     {
       "id": "api:PUT:/tenants/:tenantId/context",
@@ -15174,14 +15358,17 @@
       "path": "/tenants/:tenantId/context",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "updateTenantContext"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "2ca09f85d2197475dad2023b82eaf453efd1d428deaafba5316b0b720520fa8c"
+      "fingerprint": "11cac5f6b06e1766bc1c5db392c0eb9053fc30f7e38d48c62f961ff14f660821"
     },
     {
       "id": "api:PUT:/tenants/current/ai-config",
@@ -15190,14 +15377,20 @@
       "path": "/tenants/current/ai-config",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update",
+        "requireAuth",
+        "requirePermission:config:update",
+        "updateCurrentTenantAiConfig"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "5245497ca832661c5c649cc728de90d00e1f0fc547be9bf5e5391b89da0de534"
+      "fingerprint": "0a74660585eb78ef8fbbf9346bf0b8cbf6bdd4cdd8e58fdfb3d0c1b2faa4a695"
     },
     {
       "id": "api:PUT:/tenants/current/ai-credentials",
@@ -15206,14 +15399,20 @@
       "path": "/tenants/current/ai-credentials",
       "module": "tenant",
       "source": "api/modules/tenant/routes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update",
+        "requireAuth",
+        "requirePermission:config:update",
+        "saveCurrentTenantAiCredentials"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "ff9974c5e074d9afb5e86fac2651365d2db3649eeb642a324b2e908e6acf5a31"
+      "fingerprint": "2f8e0cccaab7f5946b7abdc14015cd94b5a58dce4af3bb529a096191e96dd62d"
     },
     {
       "id": "api:PUT:/tickets/:id/category",
@@ -15235,12 +15434,12 @@
       "fingerprint": "0b8aa64888fafd8b9173f4910f701b7196f15e1f08ac13dfd074ba9c714abdda"
     },
     {
-      "id": "api:PUT:/webhooks/:id",
+      "id": "api:PUT:/webhooks/:webhookId",
       "kind": "api",
       "method": "PUT",
-      "path": "/webhooks/:id",
+      "path": "/webhooks/:webhookId",
       "module": "webhooks",
-      "source": "api/modules/webhooks/handleWebhooksRoutes.js",
+      "source": "api/modules/webhooks/routes.js",
       "authRequired": true,
       "authorization": [
         "requireAuth",
@@ -15253,25 +15452,7 @@
         "webhooks"
       ],
       "linkedDomains": [],
-      "fingerprint": "e0ee704e5572de49f3fc81e32e350023acc2316eb54b645707d964f752b468da"
-    },
-    {
-      "id": "api:PUT:/webhooks/:webhookId",
-      "kind": "api",
-      "method": "PUT",
-      "path": "/webhooks/:webhookId",
-      "module": "webhooks",
-      "source": "api/modules/webhooks/routes.js",
-      "authRequired": false,
-      "authorization": [],
-      "classification": "PRODUCTION",
-      "linkStatus": "LINKED",
-      "linkKind": "journey",
-      "linkedJourneys": [
-        "webhooks"
-      ],
-      "linkedDomains": [],
-      "fingerprint": "48290f11a87a3d3589e4e4cb15e6b08110c15290b8cf9a6e67e6abddb4190917"
+      "fingerprint": "f9b96c8c17dd54dea861e06e0df8376ac2fb230bc887256e10535e37a8bb29d8"
     },
     {
       "id": "api:PUT:/whatsapp/connections/:connectionId",
@@ -36769,6 +36950,26 @@
       "fingerprint": "92a9e14551c1834de1e0bba20f566da33543fc9e7a69b8bd2a52f13c0f89c872"
     },
     {
+      "id": "field:RagDocument.classification",
+      "kind": "field",
+      "model": "RagDocument",
+      "field": "classification",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'PRODUCTION'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RagDocument.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "rag_documents"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f8e1d174d34cd968a8bd1a2bf699d39da21ee67086da366e3b73174cd0c3e20d"
+    },
+    {
       "id": "field:RagDocument.content",
       "kind": "field",
       "model": "RagDocument",
@@ -36787,6 +36988,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "90f326f849ff0b3bcaa2d72a656c84edbda1909a7717830906ac6bfc4446534d"
+    },
+    {
+      "id": "field:RagDocument.domain",
+      "kind": "field",
+      "model": "RagDocument",
+      "field": "domain",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'OPERATIONAL'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RagDocument.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "rag_documents"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a194c5e73bab9f1648eca7e82c31d27db69860e08c8d0d6a52b39154fac732cb"
     },
     {
       "id": "field:RagDocument.id",
@@ -37007,6 +37228,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "a5290453497e8cf803fcea34556989136e2c633dc250be4316eff03fc005ba43"
+    },
+    {
+      "id": "field:RagDocument.sensitivity",
+      "kind": "field",
+      "model": "RagDocument",
+      "field": "sensitivity",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'INTERNAL'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RagDocument.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "rag_documents"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "930a5c114d795d4ad161eef36aee132463380f876db065965e1e28cae00c4052"
     },
     {
       "id": "field:RagDocument.status",
@@ -46681,7 +46922,7 @@
       "kind": "model",
       "model": "RagDocument",
       "tableName": "rag_documents",
-      "fieldCount": 16,
+      "fieldCount": 19,
       "hasTenantId": true,
       "classification": "PRODUCTION",
       "source": "api/db/models/RagDocument.js",
@@ -46691,7 +46932,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "f85ea4a337ce81e9c81260cb5e8ec6eedcb292e482c562903732e697cbb014f7"
+      "fingerprint": "c95cbaa5183d3b5f551616dda51d5fea3028ad55f876de930ee533daa694dfd0"
     },
     {
       "id": "model:RagDocumentFile",

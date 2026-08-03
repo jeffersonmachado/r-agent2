@@ -33,9 +33,17 @@ describe('apiSurfaceWave — probePolicy (política de probe seguro)', () => {
     expect(probePolicy(apiItem({ classification: 'SUPPORT' }))).toMatchObject({ p1: true, p2: true, p3: true });
   });
 
-  test('método mutável com auth: apenas P1 anônimo', () => {
+  test('método mutável PRODUCTION com auth: apenas P1 anônimo (P2 autorizado executaria efeito real)', () => {
     expect(probePolicy(apiItem({ method: 'POST' }))).toMatchObject({ p1: true, p2: false, p3: false });
-    expect(probePolicy(apiItem({ method: 'DELETE', classification: 'DEVELOPMENT' }))).toMatchObject({ p1: true, p2: false, p3: false });
+  });
+
+  test('método mutável SUPPORT/DEVELOPMENT com auth: P1 + P2 (requireClassification rejeita antes do handler); P3 nunca', () => {
+    expect(probePolicy(apiItem({ method: 'DELETE', classification: 'DEVELOPMENT' }))).toMatchObject({ p1: true, p2: true, p3: false });
+    expect(probePolicy(apiItem({ method: 'POST', classification: 'SUPPORT' }))).toMatchObject({ p1: true, p2: true, p3: false });
+  });
+
+  test('método mutável privilegiado SEM auth declarada: nenhum probe (sem middleware que garanta rejeição pré-handler)', () => {
+    expect(probePolicy(apiItem({ method: 'POST', authRequired: false, classification: 'DEVELOPMENT' }))).toMatchObject({ p1: false, p2: false, p3: false });
   });
 
   test('método mutável sem auth declarada: nenhum probe (risco de efeito colateral)', () => {
@@ -108,7 +116,35 @@ describe('apiSurfaceWave — evaluateApiItem', () => {
     expect(result.state).toBe(COVERAGE_STATES.VALIDATED);
   });
 
-  test('método mutável DEVELOPMENT: P1 401 → VISITED (classificationEnforced não avaliada com segurança)', () => {
+  test('método mutável DEVELOPMENT: P1 401 + P2 403 → VALIDATED (classificationEnforced avaliada; developmentReachable NOT_APPLICABLE por design)', () => {
+    const result = evaluateApiItem(apiItem({ method: 'DELETE', classification: 'DEVELOPMENT', id: 'api:DELETE:/api/qa-waves/executions' }), {
+      p1: { status: 401 },
+      p2: { status: 403 },
+    });
+    expect(result.state).toBe(COVERAGE_STATES.VALIDATED);
+    const ce = result.assertions.find((x) => x.name === 'classificationEnforced');
+    expect(ce.notEvaluated).toBeUndefined();
+    expect(ce.passed).toBe(true);
+    const dr = result.assertions.find((x) => x.name === 'developmentReachable');
+    expect(dr.notApplicable).toBe(true);
+    expect(dr.notEvaluated).toBeUndefined();
+  });
+
+  test('VIOLAÇÃO DE VISIBILIDADE: rota mutável DEVELOPMENT acessível por papel PRODUCTION → FAILED', () => {
+    // Antes da política P2-em-mutável, esta violação era invisível (P2 pulado,
+    // item ficava apenas VISITED). O middleware requireClassification rejeita
+    // o papel PRODUCTION antes do handler — um 200/400/404 aqui significa que
+    // a rota respondeu sem o gate de classificação.
+    const result = evaluateApiItem(apiItem({ method: 'POST', classification: 'DEVELOPMENT', id: 'api:POST:/api/qa-waves/executions' }), {
+      p1: { status: 401 },
+      p2: { status: 400 },
+    });
+    expect(result.state).toBe(COVERAGE_STATES.FAILED);
+    const a = result.assertions.find((x) => x.name === 'classificationEnforced');
+    expect(a.passed).toBe(false);
+  });
+
+  test('método mutável DEVELOPMENT sem token PRODUCTION disponível: P1 401 → VISITED (classificationEnforced não avaliada)', () => {
     const result = evaluateApiItem(apiItem({ method: 'DELETE', classification: 'DEVELOPMENT', id: 'api:DELETE:/api/qa-waves/executions' }), {
       p1: { status: 401 },
     });

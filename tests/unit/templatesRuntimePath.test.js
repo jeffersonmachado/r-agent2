@@ -32,6 +32,10 @@ function makeRes() {
 
 function deps(overrides = {}) {
   return {
+    // Rotas /templates exigem auth + permissão (ver templatesAuthEnforcement.test.js);
+    // estes testes exercitam o comportamento autenticado e autorizado.
+    requireAuth: () => ({ valid: true }),
+    requirePermission: () => ({ allowed: true }),
     sendJson: (res, status, payload) => { res.statusCode = status; res.body = payload; },
     badRequest: (res, message) => { res.statusCode = 400; res.body = { error: 'bad_request', message }; },
     hasJsonContentType: () => true,

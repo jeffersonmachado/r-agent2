@@ -205,6 +205,61 @@ function findObjectMethodDefinitions(source) {
 }
 
 /**
+ * Encontra propriedades arrow de objeto `name: (async )?(params) => body` —
+ * formato dos controllers retornados como objeto literal (ex.:
+ * `createTimesheet: (req, res) => run(req, res, 'write', ...)` no controller
+ * do workspace). O corpo pode ser bloco `{ ... }` ou expressão única
+ * (capturada até a vírgula/fecha-objeto de nível zero).
+ */
+function findArrowPropertyDefinitions(source) {
+  const defs = [];
+  const re = /([A-Za-z_$][\w$]*)\s*:\s*(?:async\s*)?\(([^)]*)\)\s*=>\s*/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    const bodyStart = match.index + match[0].length;
+    if (source[bodyStart] === '{') {
+      const closeBrace = matchDelimiter(source, bodyStart, '{', '}');
+      if (closeBrace === -1) continue;
+      defs.push({
+        name: match[1],
+        params: match[2].split(',').map((p) => p.trim()).filter(Boolean),
+        body: source.slice(bodyStart + 1, closeBrace),
+        end: closeBrace,
+      });
+      continue;
+    }
+    // Expressão: até `,` ou `}` de nível zero (respeitando strings).
+    let i = bodyStart;
+    let depth = 0;
+    let quote = null;
+    while (i < source.length) {
+      const ch = source[i];
+      if (quote) {
+        if (ch === '\\') i += 1;
+        else if (ch === quote) quote = null;
+      } else if (ch === "'" || ch === '"' || ch === '`') {
+        quote = ch;
+      } else if (ch === '(' || ch === '[' || ch === '{') {
+        depth += 1;
+      } else if (ch === ')' || ch === ']' || ch === '}') {
+        if (depth === 0) break; // '}' que fecha o objeto literal
+        depth -= 1;
+      } else if (ch === ',' && depth === 0) {
+        break;
+      }
+      i += 1;
+    }
+    defs.push({
+      name: match[1],
+      params: match[2].split(',').map((p) => p.trim()).filter(Boolean),
+      body: source.slice(bodyStart, i),
+      end: i,
+    });
+  }
+  return defs;
+}
+
+/**
  * Overrides declarados e auditáveis de authRequired por rota. Usado quando a
  * análise estática não consegue expressar a semântica real do handler — cada
  * entrada exige justificativa ancorada no comportamento observado ao vivo.
@@ -216,29 +271,85 @@ const AUTH_REQUIRED_OVERRIDES = {
   // anônimo → 200. Sem o override, a presença do requireAuth condicional
   // marcaria a rota como protegida (falso positivo).
   'api:GET:/config': false,
+
+  // --- Auth centralizada fora do alcance da análise estática (2026-08-03) ---
+  // As rotas abaixo respondem 401 ao probe anônimo ao vivo, mas a proteção
+  // vive em handler pai/guard central (nunca dentro da janela de análise da
+  // rota). Cada entrada foi ancorada em probe real antes de ser declarada.
+
+  // intelligence: requireAuth no topo do handler pai
+  // (handleIntelligenceRoutes.js) antes de delegar aos sub-handlers.
+  // Probe ao vivo: POST /api/intelligence/goals anônimo → 401.
+  'api:POST:/api/intelligence/goals': true,
+  'api:PUT:/api/intelligence/goals/:id': true,
+  'api:POST:/api/intelligence/metrics/snapshots': true,
+  'api:POST:/api/intelligence/operational-state': true,
+
+  // physical (kiosk/station/access): guard de token central em
+  // handlePhysicalPublicRouteUtils.js ("Token obrigatório", 401).
+  // Probe ao vivo: POST /physical/kiosk/tickets anônimo → 401.
+  'api:POST:/physical/kiosk/tickets': true,
+  'api:POST:/physical/station/call-next': true,
+  'api:POST:/physical/station/transfer': true,
+  'api:POST:/physical/access/ack': true,
+  'api:POST:/physical/access/events': true,
+  'api:POST:/physical/access/resolve': true,
+
+  // qa/operational-status: requireAuth central no router do módulo
+  // (api/modules/qa/routes.js). Probe ao vivo: anônimo → 401.
+  'api:POST:/qa/operational-status/check-operation': true,
+  'api:POST:/qa/operational-status/update-governance': true,
+
+  // flows: auth condicional (STRICT_TENANT_MODE) — a análise estática não
+  // expressa a semântica "401 em produção, tenant explícito em DEV".
+  // Probes ao vivo (strict): POST /flows → 401, POST /flows/generate → 401,
+  // POST /flows/generate/dry-run → 401, PUT /flows/:id → 401.
+  'api:POST:/flows': true,
+  'api:POST:/flows/generate': true,
+  'api:POST:/flows/generate/dry-run': true,
+  'api:PUT:/flows/:id': true,
 };
 
 /**
  * Carrega controllers irmãos referenciados pelo router (require('./controller'))
  * para resolver delegações `controllerFor(req, res).metodo(req, res)`: a
  * proteção (ensureAuth/ensurePermission) vive no controller, não no router.
- * @returns {{ methodBodies: Map<string, string>, authHelpers: string[], permissionHelpers: string[] }}
+ * Módulos irmãos de utilidades de rota (ex.: ragRouteUtils.js) também são
+ * carregados — helpers como ensureRagPermission concentram requireAuth +
+ * requirePermission fora de arquivos com "controller" no nome.
+ * @returns {{ methodBodies: Map<string, string>, authHelpers: string[], permissionHelpers: string[], authImplyingHelpers: string[] }}
  */
 function loadDelegatedControllerIndex(sourceFile, routerSource, rootDir) {
   const methodBodies = new Map();
   const authHelpers = new Set();
   const permissionHelpers = new Set();
 
-  const requireRe = /require\(\s*'(\.{1,2}\/[^']*controller[^']*)'\s*\)/gi;
+  const requireRe = /require\(\s*'(\.{1,2}\/[^']*(?:controller|utils|helpers)[^']*)'\s*\)/gi;
+  const controllerFiles = new Set();
   let match;
   while ((match = requireRe.exec(routerSource)) !== null) {
     const resolved = path.resolve(path.dirname(sourceFile), match[1]);
-    const controllerFile = resolved.endsWith('.js') ? resolved : `${resolved}.js`;
+    controllerFiles.add(resolved.endsWith('.js') ? resolved : `${resolved}.js`);
+  }
+
+  // Idioma de injeção por parâmetro: createTenantRoutes({ controller }) usa
+  // `controller.metodo` sem require local — o controller é o arquivo irmão
+  // convencional `controller.js` do módulo (api/modules/*/controller.js).
+  if (/\bcontroller\s*\./.test(routerSource)) {
+    const siblingController = path.join(path.dirname(sourceFile), 'controller.js');
+    if (fs.existsSync(siblingController)) controllerFiles.add(siblingController);
+  }
+
+  for (const controllerFile of controllerFiles) {
     const raw = readFileSafe(controllerFile);
     if (raw === null) continue;
     const source = stripComments(raw);
 
-    const defs = [...findFunctionDefinitions(source), ...findObjectMethodDefinitions(source)];
+    const defs = [
+      ...findFunctionDefinitions(source),
+      ...findObjectMethodDefinitions(source),
+      ...findArrowPropertyDefinitions(source),
+    ];
     for (const def of defs) {
       if (!methodBodies.has(def.name)) methodBodies.set(def.name, def.body);
       if (/\brequireAuth\s*\(/.test(def.body)) authHelpers.add(def.name);
@@ -246,18 +357,83 @@ function loadDelegatedControllerIndex(sourceFile, routerSource, rootDir) {
     }
   }
 
-  return { methodBodies, authHelpers: [...authHelpers], permissionHelpers: [...permissionHelpers] };
+  const authImplyingHelpers = computeAuthImplyingHelpers(
+    [...methodBodies.entries()].map(([name, body]) => ({ name, body })),
+    [...authHelpers],
+  );
+
+  return {
+    methodBodies,
+    authHelpers: [...authHelpers],
+    permissionHelpers: [...permissionHelpers],
+    authImplyingHelpers,
+  };
+}
+
+/**
+ * Fechamento transitivo de "implica auth": um helper implica autenticação
+ * quando seu corpo chama requireAuth(...) diretamente OU chama outro helper
+ * que implica auth (ex.: ensurePermission → ensureAuth no controller de
+ * project-management). Uma rota que chama apenas o helper de permissão é
+ * protegida na prática — sem o fechamento, o inventário reportava
+ * authRequired=false e a API Surface Wave pulava o probe P1 (rota mutável),
+ * deixando a rota eternamente VISITED.
+ * Retorna os nomes que implicam auth SEM estarem em directAuthHelpers.
+ */
+function computeAuthImplyingHelpers(defs, directAuthHelpers) {
+  const implying = new Set(directAuthHelpers);
+  const indirect = new Set();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const def of defs) {
+      if (implying.has(def.name)) continue;
+      const callsImplying = [...implying].some((name) => new RegExp(`\\b${name}\\s*\\(`).test(def.body));
+      if (callsImplying || /\brequireAuth\s*\(/.test(def.body)) {
+        implying.add(def.name);
+        indirect.add(def.name);
+        changed = true;
+      }
+    }
+  }
+  return [...indirect].filter((name) => !directAuthHelpers.includes(name));
+}
+
+/**
+ * Chave canônica de identidade da rota: mesmo método + mesmo shape de path,
+ * com parâmetros normalizados. O scan direto registra o nome real do parâmetro
+ * (router.delete('/webhooks/:webhookId', ...)) e o scan de handler irmão
+ * descobre o mesmo endpoint via startsWith como ':id' — sem a normalização,
+ * o inventário tinha DOIS itens para a mesma rota real, um com auth e outro
+ * sem. O primeiro id encontrado (scan direto, com o nome real do parâmetro)
+ * é preservado; as evidências de auth são mescladas.
+ */
+function normalizedRouteKey(method, fullPath) {
+  const shape = String(fullPath).split('/').map((seg) => (seg.startsWith(':') ? ':' : seg)).join('/');
+  return `${String(method).toUpperCase()}:${shape}`;
 }
 
 /** Extrai corpos dos métodos de controller delegados no handler do router. */
 function resolveDelegatedBodies(chainAndBody, methodBodies) {
   const bodies = [];
-  const re = /\.([A-Za-z_$][\w$]*)\s*\(\s*req\s*,\s*res\s*\)/g;
+  const seenBodies = new Set();
+  const collect = (name) => {
+    const body = methodBodies.get(name);
+    if (body && !seenBodies.has(body)) {
+      seenBodies.add(body);
+      bodies.push(body);
+    }
+  };
+  // Idioma de chamada inline: controllerFor(req, res).metodo(req, res)
+  const callRe = /\.([A-Za-z_$][\w$]*)\s*\(\s*req\s*,\s*res\s*\)/g;
   let match;
-  while ((match = re.exec(chainAndBody)) !== null) {
-    const body = methodBodies.get(match[1]);
-    if (body) bodies.push(body);
-  }
+  while ((match = callRe.exec(chainAndBody)) !== null) collect(match[1]);
+  // Idioma de referência: router.delete('/x', controller.deleteTenant) — o
+  // handler é passado por referência (sem chamada), mas seu corpo é onde a
+  // proteção vive. O $ cobre o handler como último argumento (argsText não
+  // inclui o ')' de fechamento).
+  const refRe = /\.([A-Za-z_$][\w$]*)\s*(?=[,)\]]|$)/gm;
+  while ((match = refRe.exec(chainAndBody)) !== null) collect(match[1]);
   return bodies;
 }
 
@@ -361,7 +537,7 @@ function resolveRouterSource(targetNoExt, rootDir) {
 // Scan de um arquivo de router
 // ---------------------------------------------------------------------------
 
-function analyzeAuthAndAuthorization(chainAndBody, localAuthHelpers, localPermissionHelpers) {
+function analyzeAuthAndAuthorization(chainAndBody, localAuthHelpers, localPermissionHelpers, authImplyingHelpers = []) {
   const authorization = new Set();
   let authRequired = false;
 
@@ -371,7 +547,15 @@ function analyzeAuthAndAuthorization(chainAndBody, localAuthHelpers, localPermis
       authorization.add(name);
     }
   }
-  if (/\brequireAuth\s*\(/.test(chainAndBody) || /\bensureAuthenticated\s*\(/.test(chainAndBody) || /\bensureSupportAccess\s*\(/.test(chainAndBody)) {
+  // Helpers que implicam auth transitivamente (ex.: ensurePermission → ensureAuth)
+  // marcam a rota como protegida; a autorização específica já é registrada
+  // pelo loop de permission helpers abaixo.
+  for (const name of authImplyingHelpers) {
+    if (new RegExp(`\\b${name}\\s*\\(`).test(chainAndBody)) {
+      authRequired = true;
+    }
+  }
+  if (/\brequireAuth\s*\(/.test(chainAndBody) || /\bensureAuthenticated\s*\(/.test(chainAndBody) || /\bensureSupportAccess\s*\(/.test(chainAndBody) || /\bensureAuth\s*\(/.test(chainAndBody)) {
     authRequired = true;
     authorization.add('requireAuth');
   }
@@ -468,6 +652,10 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
   // `controllerFor(req, res).metodo(req, res)` — a proteção vive lá.
   const controllerIndex = loadDelegatedControllerIndex(sourceFile, source, rootDir);
 
+  // Helpers locais que implicam auth transitivamente (ex.: ensurePermission
+  // que chama ensureAuth) — chamadas a eles também marcam a rota protegida.
+  const localAuthImplyingHelpers = computeAuthImplyingHelpers(functionDefs, localAuthHelpers);
+
   // Helpers que registram rotas com path dinâmico (ex.: registerJsonPost(pathname, handler)).
   const routeHelpers = new Map(); // name -> { method, body }
   for (const def of functionDefs) {
@@ -479,7 +667,24 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
 
   const relativeSource = path.relative(rootDir, sourceFile);
   const items = [];
-  const seen = new Set();
+  // Duplicatas por id são MESCLADAS (não descartadas): o mesmo id pode ser
+  // descoberto pelo scan direto (router.delete('/x', runHandled(...)) — sem
+  // auth visível) e pelo scan do handler irmão (com requireAuth na janela).
+  // A evidência mais forte vence: auth detectada em qualquer caminho marca a
+  // rota como protegida; autorizações são unidas. Overrides continuam
+  // soberanos sobre o resultado mesclado.
+  const itemsById = new Map();
+
+  function mergeItem(existing, detectedAuth, authorization) {
+    existing.detectedAuth = existing.detectedAuth || detectedAuth;
+    for (const entry of authorization) {
+      if (!existing.authorization.includes(entry)) existing.authorization.push(entry);
+    }
+    existing.authorization.sort();
+    existing.authRequired = Object.prototype.hasOwnProperty.call(AUTH_REQUIRED_OVERRIDES, existing.id)
+      ? AUTH_REQUIRED_OVERRIDES[existing.id]
+      : existing.detectedAuth;
+  }
 
   function joinPath(routePath) {
     if (!prefix) return routePath;
@@ -495,6 +700,7 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
       analysisText,
       [...localAuthHelpers, ...controllerIndex.authHelpers],
       [...localPermissionHelpers, ...controllerIndex.permissionHelpers],
+      [...localAuthImplyingHelpers, ...controllerIndex.authImplyingHelpers],
     );
     const middlewares = extraMiddlewares || [];
     for (const mw of middlewares) {
@@ -508,23 +714,29 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
       }
     }
     const id = `api:${method}:${fullPath}`;
-    if (seen.has(id)) return;
-    seen.add(id);
-    let authRequired = detectedAuthRequired || middlewares.some((mw) => AUTH_MIDDLEWARE_NAMES.has(mw));
-    if (Object.prototype.hasOwnProperty.call(AUTH_REQUIRED_OVERRIDES, id)) {
-      authRequired = AUTH_REQUIRED_OVERRIDES[id];
+    const detectedAuth = detectedAuthRequired || middlewares.some((mw) => AUTH_MIDDLEWARE_NAMES.has(mw));
+    const existing = itemsById.get(normalizedRouteKey(method, fullPath));
+    if (existing) {
+      mergeItem(existing, detectedAuth, authorization);
+      return;
     }
-    items.push({
+    const item = {
       id,
       kind: 'api',
       method,
       path: fullPath,
       module: moduleName,
       source: relativeSource,
-      authRequired,
+      authRequired: detectedAuth,
       authorization,
       classification,
-    });
+      detectedAuth,
+    };
+    if (Object.prototype.hasOwnProperty.call(AUTH_REQUIRED_OVERRIDES, id)) {
+      item.authRequired = AUTH_REQUIRED_OVERRIDES[id];
+    }
+    itemsById.set(normalizedRouteKey(method, fullPath), item);
+    items.push(item);
   }
 
   // 1. Chamadas diretas router|app.<method>('<path>', ...) ou com array de paths.
@@ -569,10 +781,24 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
 
   // 2b. Helpers de dispatch do projeto: `isRouteMatch(method, pathname, 'GET', '/x')`
   // e `canHandlePrefix(method, pathname, 'GET', '/x/')` (prefixo → ':id').
+  // Sufixo `&& pathname.endsWith('/suffix')` na mesma condição entra no path
+  // (ex.: reindex) — sem isso o scanner emite a rota nua fantasma (:id puro),
+  // que não existe no runtime e falha como 404 de fallback na API Surface Wave.
   const helperCallRe = /\b\w+\s*\(\s*method\s*,\s*pathname\s*,\s*'(GET|POST|PUT|PATCH|DELETE)'\s*,\s*'([^']+)'\s*\)/g;
   while ((match = helperCallRe.exec(source)) !== null) {
-    const routePath = match[2].endsWith('/') ? `${match[2]}:id` : match[2];
-    pushItem(match[1], routePath, source.slice(Math.max(0, match.index - 400), match.index + 400), []);
+    const basePath = match[2].endsWith('/') ? `${match[2]}:id` : match[2];
+    // Sufixo só conta se estiver na MESMA condição — delimitada pelo `{` que
+    // abre o bloco ou pelo `;` que encerra o statement (sem isso, o endsWith
+    // do if seguinte vazava para a rota anterior).
+    const window = source.slice(match.index, match.index + 200);
+    const stopAt = ['{', ';'].reduce((acc, ch) => {
+      const idx = window.indexOf(ch);
+      return idx === -1 ? acc : Math.min(acc, idx);
+    }, window.length);
+    const tail = window.slice(0, stopAt);
+    const suffixMatch = /[^!]\bpathname\.endsWith\('([^']+)'\)/.exec(tail);
+    const suffix = match[2].endsWith('/') && suffixMatch ? suffixMatch[1] : '';
+    pushItem(match[1], `${basePath}${suffix}`, source.slice(Math.max(0, match.index - 400), match.index + 400), []);
   }
 
   // 2c. Rotas parametrizadas via startsWith:
@@ -647,8 +873,11 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
         _depth + 1,
       );
       for (const item of sibling.items) {
-        if (!seen.has(item.id)) {
-          seen.add(item.id);
+        const existing = itemsById.get(normalizedRouteKey(item.method, item.path));
+        if (existing) {
+          mergeItem(existing, item.detectedAuth === true, item.authorization || []);
+        } else {
+          itemsById.set(normalizedRouteKey(item.method, item.path), item);
           items.push(item);
         }
       }
@@ -658,6 +887,7 @@ function scanRouterFile(sourceFile, { prefix, module: moduleName, rootDir, class
   if (items.length === 0) {
     warnings.push(`nenhuma rota literal encontrada em ${relativeSource}`);
   }
+  // detectedAuth é estado interno do merge — removido na saída de scanApiRoutes.
   return { items, warnings };
 }
 
@@ -687,7 +917,10 @@ function scanApiRoutes({ rootDir, registryFile, registerFile }) {
   const items = [];
   const warnings = [];
   const unresolvedMounts = [];
-  const seenIds = new Set();
+  // Mesma regra de merge do scan por arquivo: ids duplicados entre arquivos
+  // (ex.: rota descoberta pelo mount e por um handler irmão) mantêm a
+  // evidência mais forte de auth e a união das autorizações.
+  const itemsById = new Map();
 
   for (const mount of mounts) {
     const factoryName = instances.get(mount.routerVar);
@@ -708,15 +941,31 @@ function scanApiRoutes({ rootDir, registryFile, registerFile }) {
       });
       warnings.push(...result.warnings);
       for (const item of result.items) {
-        if (seenIds.has(item.id)) continue;
-        seenIds.add(item.id);
-        items.push(item);
+        const existing = itemsById.get(normalizedRouteKey(item.method, item.path));
+        if (existing) {
+          existing.detectedAuth = existing.detectedAuth || item.detectedAuth === true;
+          for (const entry of item.authorization || []) {
+            if (!existing.authorization.includes(entry)) existing.authorization.push(entry);
+          }
+          existing.authorization.sort();
+          existing.authRequired = Object.prototype.hasOwnProperty.call(AUTH_REQUIRED_OVERRIDES, existing.id)
+            ? AUTH_REQUIRED_OVERRIDES[existing.id]
+            : existing.detectedAuth;
+        } else {
+          itemsById.set(normalizedRouteKey(item.method, item.path), item);
+          items.push(item);
+        }
       }
     }
   }
 
   items.sort((a, b) => a.id.localeCompare(b.id));
-  return { items, mounts, unresolvedMounts, warnings };
+  return {
+    items: items.map(({ detectedAuth, ...rest }) => rest),
+    mounts,
+    unresolvedMounts,
+    warnings,
+  };
 }
 
 module.exports = { scanApiRoutes, classifyModule };

@@ -63,6 +63,15 @@ async function handleFlowCrudRoutes(ctx) {
   // -----------------------------------------------------------------------
   
   if (method === 'POST' && pathname === '/flows') {
+    // Modo estrito: a rejeição do anônimo precede QUALQUER validação de entrada
+    // (antes respondia 400 de Content-Type/estrutura a quem nem credencial
+    // tinha — além de expor comportamento, impedia a API Surface Wave de
+    // comprovar o enforcement de auth).
+    const authResult = requireAuth(req);
+    if (STRICT_TENANT_MODE && !authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
     // Valida Content-Type para requisições com body
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -79,13 +88,8 @@ async function handleFlowCrudRoutes(ctx) {
         return true;
       }
 
-      const authResult = requireAuth(req);
       let tenantId = null;
       if (STRICT_TENANT_MODE) {
-        if (!authResult.valid) {
-          sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
-          return true;
-        }
         tenantId = requireTenant(req, res);
         if (!tenantId) return true;
         body.tenantId = tenantId; // força tenant do agente (ou X-Tenant-Id do super-admin)

@@ -31,6 +31,13 @@ async function handleFlowExecutionRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname === '/flows/simulate') {
+    // Carrega fluxo persistido do tenant (flows.get) — exige autenticação
+    // ANTES de qualquer acesso ao store (mesma classe do /flows/preview).
+    const authResult = requireAuth(req);
+    if (!authResult.valid) {
+      sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
+      return true;
+    }
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
       return true;

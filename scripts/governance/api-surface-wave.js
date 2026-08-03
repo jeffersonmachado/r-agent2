@@ -14,9 +14,17 @@
  *   - P1 anonymous:  sem credencial (todos os métodos quando authRequired;
  *                    apenas GET/HEAD quando a rota é pública — probes
  *                    mutáveis autenticados poderiam causar efeitos reais).
- *   - P2 production: token de papel operacional (admin via fluxo RPA).
+ *   - P2 production: token de papel operacional (admin via fluxo RPA) —
+ *                    GET/HEAD em qualquer rota e métodos mutáveis em rotas
+ *                    SUPPORT/DEVELOPMENT com auth declarada (requireClassification
+ *                    rejeita o papel PRODUCTION antes do handler; 401/403
+ *                    esperados — qualquer outra resposta é violação de
+ *                    visibilidade). Nunca em rota PRODUCTION mutável (o papel
+ *                    é autorizado e executaria efeito real).
  *   - P3 superadmin: token super_admin (apenas GET/HEAD em rotas
- *                    SUPPORT/DEVELOPMENT).
+ *                    SUPPORT/DEVELOPMENT — em método mutável executaria a
+ *                    mutação; developmentReachable fica NOT_APPLICABLE por
+ *                    design nesses itens).
  *
  * Uso:
  *   node scripts/governance/api-surface-wave.js

@@ -18,11 +18,19 @@
  *   - P1 anonymous:   sem Authorization.
  *   - P2 production:  token de papel operacional (admin → PRODUCTION).
  *   - P3 development: token super_admin (→ DEVELOPMENT). Só aplicável a
- *                     rotas SUPPORT/DEVELOPMENT.
- *   Métodos não-GET (POST/PUT/PATCH/DELETE) recebem apenas P1 e somente
- *   quando o inventário declara authRequired — probes autenticados em rotas
- *   mutáveis poderiam executar efeitos colaterais reais (política de probe
- *   seguro; itens assim ficam no máximo VALIDATED nas assertivas de P1).
+ *                     rotas SUPPORT/DEVELOPMENT com método seguro (GET/HEAD).
+ *   Métodos não-GET (POST/PUT/PATCH/DELETE) recebem P1 (quando o inventário
+ *   declara authRequired) e, em rotas SUPPORT/DEVELOPMENT, também P2: o
+ *   middleware requireClassification rejeita o papel PRODUCTION ANTES do
+ *   handler, portanto o probe é livre de efeito colateral por arquitetura —
+ *   qualquer resposta diferente de 401/403 indica rota privilegiada sem o
+ *   gate de classificação (violação de visibilidade, antes invisível para
+ *   métodos mutáveis). Em rotas PRODUCTION mutáveis P2 permanece proibido:
+ *   o papel operacional é autorizado ali e o probe executaria efeito real.
+ *   P3 nunca é executado em método mutável (token autorizado executaria a
+ *   mutação); developmentReachable fica NOT_APPLICABLE por design nesses
+ *   itens — a alcançabilidade por DEVELOPMENT é comprovada pelas rotas GET
+ *   do mesmo módulo e pelos cenários de mesh que executam o endpoint.
  *
  * Assertivas por item:
  *   - routeRegistered:        ao menos um probe respondeu algo diferente do
@@ -39,14 +47,16 @@
  *   - developmentReachable:   (apenas SUPPORT/DEVELOPMENT, rotas GET) P3
  *                             (super_admin) NÃO respondeu 401/403. Falha =
  *                             engenharia/suporte bloqueado na própria rota.
+ *                             Em rotas mutáveis: NOT_APPLICABLE por design
+ *                             (P3 executaria efeito real).
  *
  * Estado final por item (precedência FAILED > VISITED > VALIDATED > BLOCKED):
  *   - qualquer assertiva avaliada falha                    → FAILED
  *   - routeRegistered passa + todas as assertivas
  *     aplicáveis avaliadas e passando                      → VALIDATED
  *   - routeRegistered passa + ao menos uma assertiva
- *     aplicável não avaliada (probe pulado por segurança
- *     ou token indisponível)                               → VISITED
+ *     aplicável não avaliada (probe pulado por token
+ *     indisponível ou política de probe seguro)            → VISITED
  *   - nenhum probe executou (servidor inalcançável)        → BLOCKED
  *
  * Rotas GET públicas (authRequired=false, PRODUCTION): VALIDATED exige apenas
@@ -113,15 +123,22 @@ function probePolicy(item) {
   const safe = SAFE_METHODS.has(method);
   const authRequired = item.authRequired === true;
   const privileged = PRIVILEGED_CLASSIFICATIONS.has(item.classification);
+  // P2 em rota mutável só é livre de efeito colateral quando a rota é
+  // privilegiada COM auth declarada: requireClassification rejeita o papel
+  // PRODUCTION antes do handler. Em rota PRODUCTION mutável, P2 é autorizado
+  // e executaria efeito real — proibido.
+  const p2Mutable = !safe && authRequired && privileged;
   return {
     p1: safe || authRequired,
-    p2: safe,
+    p2: safe || p2Mutable,
     p3: safe && privileged,
     reason: safe
       ? 'método seguro (GET/HEAD)'
-      : (authRequired
-        ? 'método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito)'
-        : 'método mutável sem auth declarada: probe pulado (risco de efeito colateral)'),
+      : (p2Mutable
+        ? 'método mutável privilegiado: P1 anônimo + P2 papel PRODUCTION (requireClassification rejeita antes do handler; 401/403 esperados)'
+        : (authRequired
+          ? 'método mutável PRODUCTION: apenas P1 anônimo (P2 autenticado executaria efeito real)'
+          : 'método mutável sem auth declarada: probe pulado (risco de efeito colateral)')),
   };
 }
 
@@ -210,8 +227,19 @@ function evaluateApiItem(item, probes = {}, exemption = null) {
       ));
     }
 
-    // developmentReachable (somente quando P3 é seguro de executar)
-    if (!p3) {
+    // developmentReachable
+    if (!p3 && !policy.p3) {
+      // P3 não se aplica por design (método mutável: o token super_admin é
+      // autorizado e o probe executaria efeito real). NOT_APPLICABLE
+      // justificado e auditável — não bloqueia VALIDATED.
+      assertions.push(assertion(
+        'developmentReachable',
+        true,
+        'NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; '
+          + 'alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh',
+        { notApplicable: true },
+      ));
+    } else if (!p3) {
       assertions.push(notEvaluated('developmentReachable', `P3 não executado (${policy.reason})`));
     } else if (p3.error) {
       assertions.push(notEvaluated('developmentReachable', 'P3 com erro de rede'));

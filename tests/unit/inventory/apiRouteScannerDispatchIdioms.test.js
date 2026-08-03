@@ -62,6 +62,7 @@ async function handleHelperRoutes({ req, res, method, pathname, deps }) {
   if (isRouteMatch(method, pathname, 'GET', '/rag/documents')) { return true; }
   if (isRouteMatch(method, pathname, 'POST', '/rag/documents')) { return true; }
   if (canHandlePrefix(method, pathname, 'DELETE', '/rag/documents/')) { return true; }
+  if (canHandlePrefix(method, pathname, 'POST', '/rag/documents/') && pathname.endsWith('/reindex')) { return true; }
   if (pathname !== '/api/backup/export' && pathname !== '/api/backup/import') { return false; }
   if ((method === 'GET' && pathname !== '/api/backup/export') || (method === 'POST' && pathname !== '/api/backup/import')) { return false; }
   return false;
@@ -115,6 +116,15 @@ describe('apiRouteScanner — idiomas de dispatch manual', () => {
     expect(has('api:GET:/rag/documents')).toBe(true);
     expect(has('api:POST:/rag/documents')).toBe(true);
     expect(has('api:DELETE:/rag/documents/:id')).toBe(true);
+  });
+
+  it('canHandlePrefix com sufixo endsWith vira /:id/sufixo — nunca a rota nua fantasma', () => {
+    // Falha observada (2026-08-03): ragOperationsRoutes.js guarda o reindex com
+    // `canHandlePrefix(..., 'POST', '/rag/documents/') && pathname.endsWith('/reindex')`.
+    // O scanner emitia api:POST:/rag/documents/:id (rota inexistente → 404 de
+    // fallback → FAILED na API Surface Wave) em vez de /:id/reindex.
+    expect(has('api:POST:/rag/documents/:id/reindex')).toBe(true);
+    expect(has('api:POST:/rag/documents/:id')).toBe(false);
   });
 
   it('descobre pares método+rota em guarda negada (backup)', () => {

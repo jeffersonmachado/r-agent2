@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-02T04:26:05.503Z",
-  "commit": "3e12b9edb4bf933861ee9754d264faf5543e408d",
+  "generatedAt": "2026-08-03T00:57:34.004Z",
+  "commit": "0262a0c38a582a1f3b95c589f55419efced18853",
   "baseUrl": "http://localhost:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 768,
+    "items": 759,
     "byState": {
-      "VALIDATED": 583,
-      "VISITED": 185
+      "VALIDATED": 738,
+      "VISITED": 21
     }
   },
   "exemptions": [
@@ -224,7 +224,7 @@
     },
     {
       "id": "api:DELETE:/api/qa-waves/executions",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -239,14 +239,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -254,13 +253,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:DELETE:/api/qa-waves/journeys/:journeyId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -275,14 +277,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -290,13 +291,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:DELETE:/api/qa-waves/scenarios/:scenarioId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -311,14 +315,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -326,13 +329,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:DELETE:/api/test-executions/replays",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -347,14 +353,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota SUPPORT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -362,13 +367,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:DELETE:/api/test-executions/replays/:filename",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -383,14 +391,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota SUPPORT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -398,7 +405,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -452,23 +462,6 @@
     },
     {
       "id": "api:DELETE:/bulk-campaigns/:campaignId",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:DELETE:/bulk-campaigns/:id",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -589,51 +582,72 @@
     },
     {
       "id": "api:DELETE:/projects/:projectId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:DELETE:/projects/:projectId/items/:itemId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:DELETE:/projects/:projectId/members/:memberId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -688,41 +702,55 @@
     },
     {
       "id": "api:DELETE:/rag/documents/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:DELETE:/rag/learning/synonyms/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:DELETE:/rpa/recordings/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -737,14 +765,40 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:DELETE:/templates/:id",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -757,41 +811,7 @@
       }
     },
     {
-      "id": "api:DELETE:/templates/:id",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
       "id": "api:DELETE:/tenants/:tenantId",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:DELETE:/webhooks/:id",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -816,17 +836,24 @@
     },
     {
       "id": "api:DELETE:/webhooks/:webhookId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -1528,6 +1555,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -1550,6 +1582,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -1572,6 +1609,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -1594,6 +1636,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -1616,6 +1663,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -1638,6 +1690,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -2575,6 +2632,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -2678,6 +2740,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -3066,7 +3133,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 500,
+          "status": 200,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -4230,10 +4297,7 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": {
-          "status": 200,
-          "notFoundFallback": false
-        },
+        "p2": "network-error",
         "p3": "skipped"
       }
     },
@@ -5331,6 +5395,46 @@
         },
         "p3": {
           "status": 404,
+          "notFoundFallback": false
+        }
+      }
+    },
+    {
+      "id": "api:GET:/api/qa-waves/executions/history",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "super_admin alcançou a rota (200)"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": {
+          "status": 200,
           "notFoundFallback": false
         }
       }
@@ -7038,6 +7142,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -7054,28 +7163,6 @@
     },
     {
       "id": "api:GET:/bulk-campaigns/:campaignId",
-      "state": "VALIDATED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "rota respondeu no runtime"
-        }
-      ],
-      "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
-        "p2": {
-          "status": 404,
-          "notFoundFallback": false
-        },
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:GET:/bulk-campaigns/:id",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -7136,6 +7223,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -7829,6 +7921,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8003,6 +8100,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8047,6 +8149,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8069,6 +8176,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8091,6 +8203,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8113,6 +8230,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8135,6 +8257,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8157,6 +8284,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8179,6 +8311,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8201,6 +8338,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8223,6 +8365,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8245,6 +8392,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8267,6 +8419,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -8521,7 +8678,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (404)"
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -8534,7 +8691,7 @@
           "notFoundFallback": false
         },
         "p3": {
-          "status": 404,
+          "status": 200,
           "notFoundFallback": false
         }
       }
@@ -9451,6 +9608,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9473,6 +9635,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9495,6 +9662,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9517,6 +9689,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9539,6 +9716,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9561,6 +9743,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9583,6 +9770,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9591,7 +9783,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 500,
+          "status": 403,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -9605,6 +9797,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9613,7 +9810,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 500,
+          "status": 403,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -9627,6 +9824,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9730,6 +9932,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -9752,6 +9959,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10324,11 +10536,16 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
         "p1": {
-          "status": 200,
+          "status": 401,
           "notFoundFallback": false
         },
         "p2": {
@@ -10346,11 +10563,16 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
         "p1": {
-          "status": 404,
+          "status": 401,
           "notFoundFallback": false
         },
         "p2": {
@@ -10368,6 +10590,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10390,6 +10617,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10412,6 +10644,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10434,6 +10671,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10456,6 +10698,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10478,6 +10725,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10500,6 +10752,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10549,6 +10806,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10593,6 +10855,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10615,6 +10882,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10637,6 +10909,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10659,6 +10936,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10681,6 +10963,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10703,6 +10990,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10747,6 +11039,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -10762,7 +11059,7 @@
       }
     },
     {
-      "id": "api:GET:/webhooks/:id",
+      "id": "api:GET:/webhooks/:webhookId",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -10789,28 +11086,6 @@
       }
     },
     {
-      "id": "api:GET:/webhooks/:webhookId",
-      "state": "VALIDATED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "rota respondeu no runtime"
-        }
-      ],
-      "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
-        "p2": {
-          "status": 404,
-          "notFoundFallback": false
-        },
-        "p3": "skipped"
-      }
-    },
-    {
       "id": "api:GET:/webhooks/events",
       "state": "VALIDATED",
       "assertions": [
@@ -10818,6 +11093,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -11019,6 +11299,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -11041,6 +11326,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -11063,6 +11353,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -11085,6 +11380,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -11107,6 +11407,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -11129,6 +11434,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -11151,6 +11461,11 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -11263,51 +11578,72 @@
     },
     {
       "id": "api:PATCH:/projects/:projectId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:PATCH:/projects/:projectId/items/:itemId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:PATCH:/projects/:projectId/lists/:listId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -11975,170 +12311,240 @@
     },
     {
       "id": "api:POST:/api/beauty/appointment",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/bundle",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/confirmation",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/customer",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/follow-up",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/journey/event",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/lead/convert",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/no-show",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/reactivation",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/beauty/service-completed",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -12625,7 +13031,7 @@
     },
     {
       "id": "api:POST:/api/executions/:id/replay-from-node",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -12640,14 +13046,40 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota SUPPORT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/fitness/attendance/check-in",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
@@ -12660,35 +13092,25 @@
       }
     },
     {
-      "id": "api:POST:/api/fitness/attendance/check-in",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
       "id": "api:POST:/api/fitness/attendance/check-out",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -12719,68 +13141,96 @@
     },
     {
       "id": "api:POST:/api/fitness/student",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/intelligence/goals",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/intelligence/metrics/snapshots",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/intelligence/operational-state",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -13483,7 +13933,7 @@
     },
     {
       "id": "api:POST:/api/ops/execution-jobs/retry",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -13498,14 +13948,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -13513,13 +13962,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/ops/notifications/reprocess",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -13534,14 +13986,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -13549,7 +14000,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -14275,7 +14729,7 @@
     },
     {
       "id": "api:POST:/api/qa-waves/bot/apply-remediations",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14290,14 +14744,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14305,13 +14758,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/bot/execute-full-generation",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14326,14 +14782,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14341,13 +14796,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/bot/generate-scenarios",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14362,14 +14820,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14377,13 +14834,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/bot/generate-seeds",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14398,14 +14858,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14413,13 +14872,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/bot/generate-ui-steps",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14434,14 +14896,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14449,13 +14910,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/bot/generate-validators",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14470,14 +14934,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14485,13 +14948,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/bot/validate-preflight",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14506,14 +14972,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14521,13 +14986,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/closure/autonomous-loop",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14542,14 +15010,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14557,13 +15024,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/closure/autonomous-loop/smoke-run",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14578,14 +15048,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14593,13 +15062,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/closure/classify-operationality",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14614,14 +15086,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14629,13 +15100,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/closure/preflight",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14650,14 +15124,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14665,13 +15138,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/closure/validate-replay",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14686,14 +15162,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14701,13 +15176,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/executions",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14722,14 +15200,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14737,13 +15214,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/generate-seeds",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14758,14 +15238,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14773,13 +15252,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/governance/evaluate",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14794,14 +15276,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14809,13 +15290,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/infer-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14830,14 +15314,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14845,13 +15328,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/intelligence/analyze-gaps",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14866,14 +15352,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14881,13 +15366,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/intelligence/approve-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14902,14 +15390,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14917,13 +15404,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/intelligence/generate-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14938,14 +15428,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14953,13 +15442,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/intelligence/generate-seeds",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -14974,14 +15466,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -14989,13 +15480,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/intelligence/reject-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15010,14 +15504,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15025,13 +15518,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/journeys",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15046,14 +15542,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15061,13 +15556,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/operational/recompute",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15082,14 +15580,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15097,13 +15594,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/replays/:id/reexecute",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15118,14 +15618,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15133,13 +15632,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/run",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15154,14 +15656,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15169,13 +15670,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/save-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15190,14 +15694,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15205,13 +15708,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/qa-waves/validate-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15226,14 +15732,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15241,7 +15746,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -15487,7 +15995,7 @@
     },
     {
       "id": "api:POST:/api/test-executions",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15502,14 +16010,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota SUPPORT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15517,13 +16024,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/test-executions/:executionId/cancel",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15538,14 +16048,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota SUPPORT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15553,13 +16062,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/test-executions/recordings/:recordingId/stop",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15574,14 +16086,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota SUPPORT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15589,13 +16100,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/api/test-executions/recordings/start",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -15610,14 +16124,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota SUPPORT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -15625,7 +16138,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -16192,122 +16708,78 @@
     },
     {
       "id": "api:POST:/bulk-campaigns",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/bulk-campaigns/:campaignId/pause",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/bulk-campaigns/:campaignId/resume",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/bulk-campaigns/:campaignId/start",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:POST:/bulk-campaigns/:id/pause",
-      "state": "VALIDATED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "rota respondeu no runtime"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "anônimo rejeitado com 401"
-        }
-      ],
-      "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:POST:/bulk-campaigns/:id/resume",
-      "state": "VALIDATED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "rota respondeu no runtime"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "anônimo rejeitado com 401"
-        }
-      ],
-      "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:POST:/bulk-campaigns/:id/start",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -16476,7 +16948,7 @@
     },
     {
       "id": "api:POST:/dev/qa-waves/generate-seeds",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -16491,14 +16963,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -16506,13 +16977,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/dev/qa-waves/infer-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -16527,14 +17001,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -16542,13 +17015,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/dev/qa-waves/run",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -16563,14 +17039,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -16578,13 +17053,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/dev/qa-waves/save-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -16599,14 +17077,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -16614,13 +17091,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/dev/qa-waves/validate-scenario",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -16635,14 +17115,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -16650,7 +17129,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -16728,85 +17210,120 @@
     },
     {
       "id": "api:POST:/flows",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/flows/generate",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/flows/generate/dry-run",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/flows/preview",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/flows/simulate",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -17128,289 +17645,408 @@
     },
     {
       "id": "api:POST:/payment-events",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/physical/access/ack",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/physical/access/events",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/physical/access/resolve",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/physical/kiosk/tickets",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/physical/station/call-next",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/physical/station/transfer",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/project-templates",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects/:projectId/items",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/comments",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/complete",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects/:projectId/items/:itemId/move",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects/:projectId/lists",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects/:projectId/lists/reorder",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects/:projectId/members",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/projects/from-template",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -17489,7 +18125,7 @@
     },
     {
       "id": "api:POST:/qa-mesh/registry/refresh",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -17504,14 +18140,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -17519,13 +18154,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/qa-mesh/replay/:scenarioId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -17540,14 +18178,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -17555,13 +18192,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/qa-mesh/run",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -17576,14 +18216,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -17591,71 +18230,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/qa/operational-status/check-operation",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 não executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 não executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:POST:/qa/operational-status/update-governance",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        },
-        {
-          "name": "classificationEnforced",
-          "passed": true,
-          "detail": "P2 não executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        },
-        {
-          "name": "developmentReachable",
-          "passed": true,
-          "detail": "P3 não executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:POST:/qa/run",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -17670,14 +18254,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -17685,7 +18268,86 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/qa/operational-status/update-governance",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/qa/run",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -17715,17 +18377,24 @@
     },
     {
       "id": "api:POST:/queues/reload",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -17804,204 +18473,288 @@
     },
     {
       "id": "api:POST:/rag/documents",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
-      "id": "api:POST:/rag/documents/:id",
-      "state": "VISITED",
+      "id": "api:POST:/rag/documents/:id/reindex",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/documents/clean-orphans",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/documents/reindex-all",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/documents/upload",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/ephemeral/context",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/learning/clean-invalid-queries/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/learning/trigger-learning/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/learning/update-synonyms",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/learning/validation-rules/adapt/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/query",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rag/reindex-all",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -18056,51 +18809,72 @@
     },
     {
       "id": "api:POST:/resource-bookings",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/resources",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/resources/availability",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -18131,7 +18905,7 @@
     },
     {
       "id": "api:POST:/rpa/execute/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -18146,14 +18920,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -18161,13 +18934,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rpa/record/start",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -18182,14 +18958,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -18197,13 +18972,16 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rpa/record/stop/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -18218,14 +18996,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -18233,7 +19010,10 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -18448,108 +19228,126 @@
     },
     {
       "id": "api:POST:/templates",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tenants",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tenants/:tenantId/ai-credentials/test",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tenants/:tenantId/change-plan",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tenants/:tenantId/reactivate",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tenants/:tenantId/suspend",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:POST:/tenants/:tenantKey/ai-credentials/test",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -18574,170 +19372,240 @@
     },
     {
       "id": "api:POST:/tenants/generate-by-ai",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/:id/ai-summary",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/:id/assign",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/:id/close",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/:id/mark-read",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/:id/message",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/:id/pause",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/:id/resume",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/:id/return-to-bot",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -18768,51 +19636,72 @@
     },
     {
       "id": "api:POST:/tickets/:id/takeover",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/tickets/media/upload",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/timesheet",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -18867,17 +19756,24 @@
     },
     {
       "id": "api:POST:/webhooks",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -18959,68 +19855,96 @@
     },
     {
       "id": "api:POST:/whatsapp/connections/:connectionId/disconnect",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/whatsapp/connections/:connectionId/events",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/whatsapp/connections/:connectionId/qr",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/whatsapp/connections/:connectionId/status",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -19147,102 +20071,144 @@
     },
     {
       "id": "api:POST:/workspace/actions",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/workspace/entities",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/workspace/entities/:id/actions/auto",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/workspace/links",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/workspace/tasks",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:PUT:/api/intelligence/goals/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -19297,23 +20263,6 @@
     },
     {
       "id": "api:PUT:/bulk-campaigns/:campaignId",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:PUT:/bulk-campaigns/:id",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -19434,7 +20383,7 @@
     },
     {
       "id": "api:PUT:/dev/files/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
@@ -19449,14 +20398,13 @@
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "P2 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
         },
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "P3 não executado (método mutável: apenas P1 anônimo (401 esperado antes de qualquer efeito))",
-          "notEvaluated": true
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
         }
       ],
       "probes": {
@@ -19464,23 +20412,33 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
     {
       "id": "api:PUT:/flows/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -19559,102 +20517,144 @@
     },
     {
       "id": "api:PUT:/rag/documents/:id",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:PUT:/rag/learning/synonyms",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:PUT:/tenants/:tenantId",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:PUT:/tenants/:tenantId/context",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:PUT:/tenants/current/ai-config",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:PUT:/tenants/current/ai-credentials",
-      "state": "VISITED",
+      "state": "VALIDATED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
         }
       ],
       "probes": {
-        "p1": "skipped",
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
         "p2": "skipped",
         "p3": "skipped"
       }
@@ -19684,7 +20684,7 @@
       }
     },
     {
-      "id": "api:PUT:/webhooks/:id",
+      "id": "api:PUT:/webhooks/:webhookId",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -19703,23 +20703,6 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": "skipped",
-        "p3": "skipped"
-      }
-    },
-    {
-      "id": "api:PUT:/webhooks/:webhookId",
-      "state": "VISITED",
-      "assertions": [
-        {
-          "name": "routeRegistered",
-          "passed": true,
-          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
-          "notEvaluated": true
-        }
-      ],
-      "probes": {
-        "p1": "skipped",
         "p2": "skipped",
         "p3": "skipped"
       }
