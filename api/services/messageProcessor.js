@@ -77,6 +77,44 @@ const { resolveRuntimePath } = require('../utils/runtimePaths');
 /** @type {Map<string, import('../../engine/flowTypes').ConversationState>} */
 const sessions = new Map();
 
+// Último acesso por sessão (ms) — base do sweeper de TTL que evita leak por contato.
+/** @type {Map<string, number>} */
+const sessionLastAccessAt = new Map();
+const SESSION_IDLE_TTL_MS = 24 * 60 * 60 * 1000; // 24h de inatividade
+const SESSION_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // padrão de flowRuntimeState
+
+function touchSession(sessionId) {
+  sessionLastAccessAt.set(sessionId, Date.now());
+}
+
+function removeSession(sessionId) {
+  sessions.delete(sessionId);
+  sessionLastAccessAt.delete(sessionId);
+}
+
+/**
+ * Remove sessões sem mensagens há mais de SESSION_IDLE_TTL_MS.
+ * Sessões ativas nunca são removidas: o último acesso é atualizado a cada mensagem.
+ */
+function sweepIdleSessions(now = Date.now()) {
+  let removed = 0;
+  for (const [sessionId, lastAccessAt] of sessionLastAccessAt.entries()) {
+    if (now - lastAccessAt > SESSION_IDLE_TTL_MS) {
+      removeSession(sessionId);
+      removed += 1;
+    }
+  }
+  if (removed > 0) {
+    logger.debug(`[MessageProcessor] Sweeper de sessões: ${removed} sessão(ões) inativa(s) removida(s)`);
+  }
+  return removed;
+}
+
+const sessionSweepTimer = setInterval(sweepIdleSessions, SESSION_SWEEP_INTERVAL_MS);
+if (typeof sessionSweepTimer.unref === 'function') {
+  sessionSweepTimer.unref();
+}
+
 /**
  * Cria um NodeRegistry completo com todos os handlers padrão.
  *
@@ -289,6 +327,7 @@ async function processWhatsAppMessage(message, value, deps) {
   }
 
   let state = sessions.get(sessionId);
+  touchSession(sessionId);
 
   // Verifica se já existe ticket ativo (handoff em andamento)
   // Importante: em ambiente multi-tenant, sessionId pode colidir; preferimos filtrar por tenant quando possível.
@@ -598,6 +637,14 @@ async function processWhatsAppMessage(message, value, deps) {
 
   // Atualiza sessão
   sessions.set(sessionId, result.state);
+  touchSession(sessionId);
+
+  // Quando a conversa termina (sem próximo nó), remove a sessão da memória.
+  // O desfecho já foi registrado via ledger/eventos; manter o ConversationState
+  // completo por contato indefinidamente era um leak de memória.
+  if (!result?.state?.currentNodeId) {
+    removeSession(sessionId);
+  }
 
   // Execution ledger: marca execução como concluída quando conversa termina (best-effort)
   try {
@@ -896,4 +943,10 @@ async function processWhatsAppMessage(message, value, deps) {
 
 module.exports = {
   processWhatsAppMessage,
+  _internal: {
+    sessions,
+    sessionLastAccessAt,
+    sweepIdleSessions,
+    SESSION_IDLE_TTL_MS,
+  },
 };

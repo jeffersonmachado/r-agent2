@@ -59,6 +59,36 @@ const STAGE_LABELS_PT = Object.freeze({
 // -------------------------------------------------------------------
 const executionRegistry = new Map(); // Map<executionId, PipelineExecution>
 
+// -------------------------------------------------------------------
+// Evicção de execuções concluídas (TTL): entradas em status terminal
+// (approved/failed/abstained) são removidas 1h após a última atualização.
+// Execuções em andamento nunca são removidas (polling de status intacto).
+// -------------------------------------------------------------------
+const REGISTRY_TERMINAL_STATUSES = new Set(['approved', 'failed', 'abstained']);
+const EXECUTION_TTL_AFTER_TERMINAL_MS = 60 * 60 * 1000; // 1h
+const EXECUTION_SWEEP_INTERVAL_MS = 10 * 60 * 1000;
+
+function sweepTerminalExecutions(now = Date.now()) {
+  let removed = 0;
+  for (const [executionId, execution] of executionRegistry.entries()) {
+    if (!execution || !REGISTRY_TERMINAL_STATUSES.has(execution.status)) continue;
+    const updatedAt = Number(execution.updatedAt) || 0;
+    if (now - updatedAt > EXECUTION_TTL_AFTER_TERMINAL_MS) {
+      executionRegistry.delete(executionId);
+      removed += 1;
+    }
+  }
+  if (removed > 0) {
+    logger.debug('[PipelineContext] Sweeper: execuções terminais expiradas removidas', { removed });
+  }
+  return removed;
+}
+
+const executionSweepTimer = setInterval(sweepTerminalExecutions, EXECUTION_SWEEP_INTERVAL_MS);
+if (typeof executionSweepTimer.unref === 'function') {
+  executionSweepTimer.unref();
+}
+
 const BASE_STAGE_KEYS = Object.freeze([
   'filesInferred',
   'payloadValid',
@@ -612,5 +642,10 @@ module.exports = {
   isStageCompleted,
   getNextPendingStage,
   toProgressFormat,
+  _internal: {
+    executionRegistry,
+    sweepTerminalExecutions,
+    EXECUTION_TTL_AFTER_TERMINAL_MS,
+  },
 };
 

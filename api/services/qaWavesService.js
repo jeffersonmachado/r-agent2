@@ -24,7 +24,18 @@ const HISTORY_DIR_CANDIDATES = [
 const JOURNEY_STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'journey-store.json');
 const SCENARIO_STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
 const MAX_SCREENSHOT_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_SCREENSHOT_CACHE_ENTRIES = 20;
 const screenshotDataUrlCache = new Map();
+
+// Cap por quantidade com evicção do mais antigo (Map preserva ordem de inserção).
+// Sem cap, data URLs base64 de até 5MB cada se acumulavam sem bound.
+function cacheScreenshotDataUrl(key, value) {
+  if (!screenshotDataUrlCache.has(key) && screenshotDataUrlCache.size >= MAX_SCREENSHOT_CACHE_ENTRIES) {
+    const oldestKey = screenshotDataUrlCache.keys().next().value;
+    screenshotDataUrlCache.delete(oldestKey);
+  }
+  screenshotDataUrlCache.set(key, value);
+}
 let cachedJourneyStore = null;
 let cachedScenarioStore = null;
 
@@ -175,21 +186,21 @@ function buildScreenshotDataUrl(screenshotPath) {
 
       const stat = fs.statSync(candidatePath);
       if (!stat.isFile() || stat.size > MAX_SCREENSHOT_SIZE_BYTES) {
-        screenshotDataUrlCache.set(rawPath, null);
+        cacheScreenshotDataUrl(rawPath, null);
         return null;
       }
 
       const mimeType = detectImageMimeType(candidatePath);
       const base64 = fs.readFileSync(candidatePath, 'base64');
       const dataUrl = `data:${mimeType};base64,${base64}`;
-      screenshotDataUrlCache.set(rawPath, dataUrl);
+      cacheScreenshotDataUrl(rawPath, dataUrl);
       return dataUrl;
     } catch (_error) {
       // Ignora falhas de leitura e tenta próximo candidato.
     }
   }
 
-  screenshotDataUrlCache.set(rawPath, null);
+  cacheScreenshotDataUrl(rawPath, null);
   return null;
 }
 
@@ -1501,4 +1512,9 @@ module.exports = {
   reexecuteReplay,
   getExecutionStatus,
   collectScenarioLatestStats,
+  _internal: {
+    screenshotDataUrlCache,
+    cacheScreenshotDataUrl,
+    MAX_SCREENSHOT_CACHE_ENTRIES,
+  },
 };

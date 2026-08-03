@@ -139,6 +139,10 @@ const tickets = new Map();
 /** @type {Map<string, Set<string>>} */
 const queues = new Map(); // queueName -> Set<ticketId>
 
+// Singleton: o serviço é stateless (só referencia models/logger), não precisa
+// ser instanciado a cada ticket criado.
+const workspaceLinkAutomationService = new WorkspaceLinkAutomationService();
+
 function dbAvailable() {
   return !!getSequelize();
 }
@@ -233,8 +237,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
   persistTicketBestEffort(ticket);
 
   setImmediate(() => {
-    const linker = new WorkspaceLinkAutomationService();
-    linker.linkTicketCreated({ tenantId: normalizedTenantId, ticket }).catch((err) => {
+    workspaceLinkAutomationService.linkTicketCreated({ tenantId: normalizedTenantId, ticket }).catch((err) => {
       logger.warn('[QueueService] Workspace ticket link best-effort falhou', { tenantId: normalizedTenantId, ticketId: ticket.id, error: err?.message || String(err) });
     });
   });

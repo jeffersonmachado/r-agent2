@@ -469,6 +469,18 @@ async function getChannelHealth({ tenantId, windowMinutes = 10, now = new Date()
 
 let monitorInterval = null;
 const lastAlertAt = new Map(); // key = tenantId:channelType:type
+const CACHE_PRUNE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+
+// Prune oportunista (executado no tick do monitor): remove entradas velhas dos
+// caches em memória para não crescerem sem bound.
+function pruneInMemoryCaches(nowMs = Date.now()) {
+  for (const [key, atMs] of lastAlertAt.entries()) {
+    if (nowMs - atMs > CACHE_PRUNE_MAX_AGE_MS) lastAlertAt.delete(key);
+  }
+  for (const [accountId, entry] of waQualityCache.entries()) {
+    if (!entry || nowMs - entry.atMs > CACHE_PRUNE_MAX_AGE_MS) waQualityCache.delete(accountId);
+  }
+}
 
 function startChannelHealthMonitor({
   intervalMs = 60000,
@@ -484,6 +496,8 @@ function startChannelHealthMonitor({
 
   monitorInterval = setInterval(async () => {
     try {
+      pruneInMemoryCaches();
+
       const sequelize = getSequelize();
       const [rows] = await sequelize.query(
         `
@@ -545,6 +559,9 @@ module.exports = {
   stopChannelHealthMonitor,
   _internal: {
     computeStatus,
+    pruneInMemoryCaches,
+    lastAlertAt,
+    waQualityCache,
   },
 };
 

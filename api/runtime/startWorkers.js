@@ -1,5 +1,9 @@
 'use strict';
 
+// Handles dos workers iniciados por startWorkers (para stopWorkers no shutdown).
+let ticketCleanupIntervalId = null;
+let outboundWorkerRef = null;
+
 function startWorkers({
   logger,
   outboundWorker,
@@ -10,6 +14,7 @@ function startWorkers({
   startAssignmentWorker,
   processRef = process,
 }) {
+  outboundWorkerRef = outboundWorker || null;
   // Playwright browser check (best-effort): validators de runtime/RPA dependem
   // do Chromium do Playwright; avisa cedo se o cache de browsers foi apagado.
   if (processRef.env.ENABLE_PLAYWRIGHT_BOOT_CHECK !== 'false') {
@@ -48,7 +53,7 @@ function startWorkers({
 
   if (typeof startAutoCleanup === 'function' && processRef.env.ENABLE_TICKET_AUTO_CLEANUP !== 'false') {
     try {
-      startAutoCleanup(ticketCleanupIntervalHours, ticketMaxAgeDays);
+      ticketCleanupIntervalId = startAutoCleanup(ticketCleanupIntervalHours, ticketMaxAgeDays);
     } catch (err) {
       logger.warn('[QueueService] Falha ao iniciar limpeza automatica de tickets (ignorado)', { error: err.message });
     }
@@ -134,6 +139,42 @@ function startWorkers({
   }
 }
 
+/**
+ * Para todos os workers iniciados por startWorkers (best-effort).
+ * Usado pelo shutdown gracioso (registerShutdownHooks).
+ */
+function stopWorkers() {
+  if (ticketCleanupIntervalId) {
+    clearInterval(ticketCleanupIntervalId);
+    ticketCleanupIntervalId = null;
+  }
+
+  try {
+    if (outboundWorkerRef && typeof outboundWorkerRef.stop === 'function') {
+      outboundWorkerRef.stop();
+    }
+  } catch (_) {}
+
+  const stopFns = [
+    () => require('../services/handoverService').stopAutoReturnToBot(),
+    () => require('../services/assignmentService').stopAssignmentWorker(),
+    () => require('../services/executionQueueService').stopExecutionQueueWorker(),
+    () => require('../services/schedulerService').stopScheduler(),
+    () => require('../services/vertical/verticalSchedulerService').stopVerticalScheduler(),
+    () => require('../services/channelHealthService').stopChannelHealthMonitor(),
+    () => require('../services/marketing/googleAdsRecommendationSchedulerService').stopMarketingGoogleAdsScheduler(),
+  ];
+
+  for (const stopFn of stopFns) {
+    try {
+      stopFn();
+    } catch (_) {
+      // Shutdown é best-effort: nunca falhar por um worker.
+    }
+  }
+}
+
 module.exports = {
   startWorkers,
+  stopWorkers,
 };

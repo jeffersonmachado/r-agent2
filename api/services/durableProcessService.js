@@ -12,6 +12,15 @@ const { ProcessOptimizationService } = require('../core/process-intelligence/pro
 let runtimeSingleton = null;
 let recoveryPromise = null;
 
+// Singletons module-level: esses serviços são stateless (computação pura sobre
+// eventos/definições passados por argumento); instanciá-los por request era
+// alocação desnecessária.
+const processAnalyticsService = new ProcessAnalyticsService();
+const processBottleneckService = new ProcessBottleneckService();
+const processVersionComparisonService = new ProcessVersionComparisonService();
+const processSimulationService = new ProcessSimulationService();
+const processOptimizationService = new ProcessOptimizationService();
+
 // ── defensive helpers ────────────────────────────────────────────────────────
 function safeToString(value) {
   if (value == null) return '';
@@ -252,12 +261,9 @@ async function listEventsForProcess(runtime, { tenantId = null, processId, limit
 async function getProcessAnalytics({ tenantId = null, processId, limit = 500 } = {}) {
   const runtime = getRuntime();
   await ensureRecovered();
-  const analyticsService = new ProcessAnalyticsService();
-  const bottleneckService = new ProcessBottleneckService();
-  const versionComparisonService = new ProcessVersionComparisonService();
   const events = await listEventsForProcess(runtime, { tenantId, processId, limit });
-  const analytics = analyticsService.buildAnalytics(events);
-  const bottlenecks = bottleneckService.identifyBottlenecks(analytics.nodes);
+  const analytics = processAnalyticsService.buildAnalytics(events);
+  const bottlenecks = processBottleneckService.identifyBottlenecks(analytics.nodes);
   const byVersion = new Map();
 
   analytics.process.executions.forEach((item) => {
@@ -284,7 +290,7 @@ async function getProcessAnalytics({ tenantId = null, processId, limit = 500 } =
         p95DurationMs: durations.length > 0 ? durations.sort((a, b) => a - b)[Math.max(0, durations.length - 1)] : 0,
       };
     };
-    comparison = versionComparisonService.compareVersions(
+    comparison = processVersionComparisonService.compareVersions(
       { process: toMetrics(byVersion.get(currentVersion), currentVersion) },
       { process: toMetrics(byVersion.get(previousVersion), previousVersion) },
     );
@@ -303,10 +309,9 @@ async function simulateProcessDefinition({ tenantId = null, processId = null, pr
   await ensureRecovered();
   const definition = await resolveDefinitionForAnalysis({ tenantId, processId, processDefinition, processVersion });
   if (!definition) return { ok: false, error: 'process_definition_not_found' };
-  const simulationService = new ProcessSimulationService();
   return {
     ok: true,
-    simulation: simulationService.simulateProcess(definition),
+    simulation: processSimulationService.simulateProcess(definition),
   };
 }
 
@@ -321,8 +326,8 @@ async function getProcessIntelligence({ tenantId = null, processId = null, proce
     : { analytics: { process: {}, nodes: [], gateways: [] }, bottlenecks: [] };
   const analytics = analyticsResult.analytics;
   const bottlenecks = analyticsResult.bottlenecks;
-  const simulation = new ProcessSimulationService().simulateProcess(compiledProcess);
-  const optimization = new ProcessOptimizationService().optimize({
+  const simulation = processSimulationService.simulateProcess(compiledProcess);
+  const optimization = processOptimizationService.optimize({
     compiledProcess,
     analytics: { ...analytics, bottlenecks },
     simulation,

@@ -53,11 +53,28 @@ function deleteTicketBestEffort(ticketId) {
   });
 }
 
+// Alinhado ao auto-cleanup de tickets fechados (ticketMaxAgeDays = 7, queueTicketRetention).
+const BOOT_CLOSED_TICKET_MAX_AGE_DAYS = 7;
+
 async function initializeRuntimeCache({ tickets, queues, fromDbRow, addTicketToQueueIndex }) {
   if (!dbAvailable()) return;
   try {
     const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
-    const rows = await TicketModel.findAll();
+    const sequelize = getSequelize();
+    const Op = sequelize.constructor.Op;
+    // Boot não carrega a tabela inteira: apenas tickets ativos + fechados dentro
+    // da janela de retenção (7 dias). Tickets fechados mais antigos permanecem
+    // apenas no PostgreSQL (fonte da verdade) e são removidos da memória pelo
+    // auto-cleanup; leituras históricas devem consultar o DB.
+    const closedCutoff = new Date(Date.now() - BOOT_CLOSED_TICKET_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
+    const rows = await TicketModel.findAll({
+      where: {
+        [Op.or]: [
+          { status: { [Op.ne]: 'closed' } },
+          { status: 'closed', updated_at: { [Op.gte]: closedCutoff } },
+        ],
+      },
+    });
 
     tickets.clear();
     queues.clear();

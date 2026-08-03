@@ -20,7 +20,7 @@ const { clearLimitersCache } = require('../infra/rate-limit');
 const outboundWorker = require('./services/outboundWorker');
 const { createStartInitialization } = require('./bootstrap/startInitialization');
 const { createInitializeSystemAdmin } = require('./bootstrap/systemAdminBootstrap');
-const { startWorkers } = require('./runtime/startWorkers');
+const { startWorkers, stopWorkers } = require('./runtime/startWorkers');
 const { registerShutdownHooks } = require('./runtime/registerShutdownHooks');
 const { detectProcessManager } = require('./runtime/processManager');
 const { startServerRuntime } = require('./runtime/startServerRuntime');
@@ -161,6 +161,8 @@ registerShutdownHooks({
   logger,
   outboundWorker,
   saveSessionEventsToFileImmediate: runtimeState.saveSessionEventsToFileImmediate,
+  stopWorkers,
+  getServer: () => serverInstance,
   processRef: process,
 });
 

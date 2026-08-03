@@ -76,6 +76,37 @@ const campaigns = new Map();
 /** @type {Map<string, NodeJS.Timeout>} */
 const activeSenders = new Map();
 
+// ---------------------------------------------------------------------------
+// Evicção de campanhas concluídas (TTL 24h, padrão do auto-cleanup de tickets).
+// Campanhas com pacing ativo nunca são removidas.
+// ---------------------------------------------------------------------------
+const COMPLETED_CAMPAIGN_TTL_MS = 24 * 60 * 60 * 1000;
+const CAMPAIGN_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+
+function sweepCompletedCampaigns(now = Date.now()) {
+  let removed = 0;
+  for (const [id, campaign] of campaigns.entries()) {
+    if (campaign.status !== 'completed') continue;
+    if (activeSenders.has(id)) continue;
+
+    const completedAt = new Date(campaign.completedAt || campaign.updatedAt).getTime();
+    if (Number.isNaN(completedAt) || now - completedAt <= COMPLETED_CAMPAIGN_TTL_MS) continue;
+
+    campaigns.delete(id);
+    removed += 1;
+  }
+
+  if (removed > 0) {
+    logger.debug('[BulkMessaging] Sweeper: campanhas concluídas removidas da memória', { removed });
+  }
+  return removed;
+}
+
+const campaignSweepTimer = setInterval(sweepCompletedCampaigns, CAMPAIGN_SWEEP_INTERVAL_MS);
+if (typeof campaignSweepTimer.unref === 'function') {
+  campaignSweepTimer.unref();
+}
+
 // Caminho do arquivo de persistência
 const dataDir = path.join(__dirname, '..', 'data');
 const bulkMessagingFile = path.join(dataDir, 'bulkMessaging.json');
@@ -488,5 +519,11 @@ module.exports = {
   startCampaign,
   pauseCampaign,
   resumeCampaign,
+  _internal: {
+    campaigns,
+    activeSenders,
+    sweepCompletedCampaigns,
+    COMPLETED_CAMPAIGN_TTL_MS,
+  },
 };
 

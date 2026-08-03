@@ -51,6 +51,38 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+// ---------------------------------------------------------------------------
+// Sweeper de sessões expiradas (tokens abandonados nunca passam por
+// validateToken, então precisam de limpeza periódica para sair do Map).
+// ---------------------------------------------------------------------------
+const SESSION_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // 1h
+
+function sweepExpiredSessions(now = new Date()) {
+  let removed = 0;
+  for (const [token, session] of sessions.entries()) {
+    const expiresAt = new Date(session.expiresAt);
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt > now) continue;
+
+    sessions.delete(token);
+    removed += 1;
+
+    if (dbAvailable()) {
+      const SessionModel = typeof Session === 'function' ? Session() : Session;
+      setImmediate(() => SessionModel.destroy({ where: { token } }).catch(() => {}));
+    }
+  }
+
+  if (removed > 0) {
+    logger.debug('[AuthService] Sweeper: sessões expiradas removidas do cache', { removed });
+  }
+  return removed;
+}
+
+const sessionSweepTimer = setInterval(sweepExpiredSessions, SESSION_SWEEP_INTERVAL_MS);
+if (typeof sessionSweepTimer.unref === 'function') {
+  sessionSweepTimer.unref();
+}
+
 // ── defensive helpers ────────────────────────────────────────────────────────
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -1134,5 +1166,9 @@ module.exports = {
   acceptInvitation,
   requestPasswordReset,
   resetPassword,
+  _internal: {
+    sessions,
+    sweepExpiredSessions,
+  },
 };
 
