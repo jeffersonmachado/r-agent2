@@ -15,10 +15,18 @@
 
 const express = require('express');
 
+// Mock hermético do config: a rota lê o segredo via config.get(), que resolve
+// também de api/data/config.json da máquina (bootstrap gera um valor real) —
+// sem mock, "sem secret configurado" depende do ambiente e quebra.
+jest.mock('../../api/utils/config', () => ({
+  get: jest.fn(),
+}));
+
 jest.mock('../../api/services/whatsappQrService', () => ({
   ingestConnectionEvent: jest.fn(),
 }));
 
+const config = require('../../api/utils/config');
 const whatsappQrService = require('../../api/services/whatsappQrService');
 const { parseJsonBody } = require('../../api/express/httpHelpers');
 const { createWhatsAppQrWebhookRoutes } = require('../../api/modules/whatsapp-qr-webhook/routes');
@@ -45,14 +53,15 @@ function buildDeps() {
 
 let server;
 let baseUrl;
-let savedSecret;
 let savedNodeEnv;
+let currentSecret = '';
 
 // jest.config.cjs usa resetMocks:true — implementação do mock em beforeEach.
 beforeEach(async () => {
-  savedSecret = process.env.WHATSAPP_QR_WEBHOOK_SECRET;
   savedNodeEnv = process.env.NODE_ENV;
-  delete process.env.WHATSAPP_QR_WEBHOOK_SECRET;
+
+  currentSecret = '';
+  config.get.mockImplementation((key) => (key === 'webhooks.whatsappQrSecret' ? currentSecret : undefined));
 
   whatsappQrService.ingestConnectionEvent.mockResolvedValue({ ok: true, connection: { id: 'c1' } });
 
@@ -68,8 +77,6 @@ afterEach(async () => {
   if (server) await new Promise((resolve) => server.close(resolve));
   server = null;
 
-  if (savedSecret === undefined) delete process.env.WHATSAPP_QR_WEBHOOK_SECRET;
-  else process.env.WHATSAPP_QR_WEBHOOK_SECRET = savedSecret;
   if (savedNodeEnv === undefined) delete process.env.NODE_ENV;
   else process.env.NODE_ENV = savedNodeEnv;
 });
@@ -104,7 +111,7 @@ describe('POST /webhooks/whatsapp-qr/events — enforcement de segredo', () => {
   });
 
   test('com secret + header errado → 401, SEM efeito', async () => {
-    process.env.WHATSAPP_QR_WEBHOOK_SECRET = 'segredo-qr';
+    currentSecret = 'segredo-qr';
 
     const res = await postEvent({ 'x-whatsapp-qr-secret': 'Segredo-QR-errado' });
 
@@ -113,7 +120,7 @@ describe('POST /webhooks/whatsapp-qr/events — enforcement de segredo', () => {
   });
 
   test('com secret + header ausente → 401, SEM efeito', async () => {
-    process.env.WHATSAPP_QR_WEBHOOK_SECRET = 'segredo-qr';
+    currentSecret = 'segredo-qr';
 
     const res = await postEvent();
 
@@ -122,7 +129,7 @@ describe('POST /webhooks/whatsapp-qr/events — enforcement de segredo', () => {
   });
 
   test('com secret + header correto → 200 e processamento ocorre', async () => {
-    process.env.WHATSAPP_QR_WEBHOOK_SECRET = 'segredo-qr';
+    currentSecret = 'segredo-qr';
 
     const res = await postEvent({ 'x-whatsapp-qr-secret': 'segredo-qr' });
     const body = await res.json();
