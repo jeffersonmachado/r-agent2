@@ -4,7 +4,7 @@ Configurações do serviço RAG.
 Lê configurações de api/data/config.json com fallback para variáveis de ambiente.
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import os
 import json
@@ -250,12 +250,15 @@ class Settings(BaseSettings):
         if _CONFIG_JSON else 0.45
     )
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
         # Permite override via variáveis de ambiente (com precedência sobre config.json)
-        env_prefix = "RAG_"
-        case_sensitive = False
+        env_prefix="RAG_",
+        case_sensitive=False,
+        # Ignora variáveis RAG_* que não correspondem a campos (ex.: RAG_INTERNAL_TOKEN)
+        extra="ignore",
+    )
 
 
 _settings: Optional[Settings] = None
