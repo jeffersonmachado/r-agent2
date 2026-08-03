@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-02T14:09:34.397Z",
+  "generatedAt": "2026-08-03T17:46:30.634Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -20,7 +20,7 @@
     {
       "domain": "OPERATIONAL",
       "classification": "PRODUCTION",
-      "count": 42
+      "count": 44
     }
   ],
   "details": [],
