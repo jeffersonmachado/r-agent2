@@ -223,6 +223,26 @@ const viteConfig = defineConfig(({ mode }) => {
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         importScripts: ['pwa-webpush-sw.js'],
+        // Pré-cache restrito ao shell (entry + react-vendor + CSS + index.html).
+        // Chunks pesados sob demanda (rotas lazy, rete/bpmn/pdf vendors,
+        // pdf.worker, fontes/svg do bpmn) ficam fora do pré-cache e são
+        // cobertos pelo runtimeCaching abaixo.
+        globPatterns: [
+          'index.html',
+          'assets/index-*.js',
+          'assets/index-*.css',
+          'assets/react-vendor-*.js',
+        ],
+        runtimeCaching: [
+          {
+            // Assets com hash de conteúdo (chunks de rota/vendor): SWR é seguro.
+            urlPattern: /\/assets\/.+/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'rap-assets',
+            },
+          },
+        ],
       },
       manifest: {
         name: 'R-Agent2',
@@ -264,7 +284,8 @@ const viteConfig = defineConfig(({ mode }) => {
         ],
       },
       devOptions: {
-        enabled: true,
+        // SW desabilitado em dev para não servir assets stale durante HMR
+        enabled: false,
       },
     }),
     // Plugin customizado para processar CommonJS do backend
@@ -881,15 +902,28 @@ const viteConfig = defineConfig(({ mode }) => {
   // Configuração para SPA routing - todas as rotas devem retornar index.html
   // E para tratar arquivos CommonJS do backend
   build: {
-    chunkSizeWarningLimit: 5000,
+    // 1500 (não 1000): o rete-vendor (rete core + 7 plugins, ~1,49 MB min /
+    // ~455 KB gzip) é um vendor legítimo carregado sob demanda apenas na rota
+    // /editor; abaixo de 1500 ele geraria warning falso em todo build.
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        // Grupos estáveis de vendors pesados: separados do entry e cacheáveis
+        // de forma independente (hash muda só quando a lib muda).
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react-vendor';
+          if (/node_modules[\\/]rete[^\\/]*[\\/]/.test(id)) return 'rete-vendor';
+          if (/node_modules[\\/](bpmn-js|bpmn-moddle|diagram-js)[\\/]/.test(id)) return 'bpmn-vendor';
+          if (/node_modules[\\/]pdfjs-dist[\\/]/.test(id)) return 'pdf-vendor';
+          return undefined;
+        },
       },
       // Garante que React não seja externalizado
       external: [],
-      // Força o Rollup a preservar todas as exportações do React
-      preserveEntrySignatures: 'strict',
+      // 'exports-only' permite tree-shaking das exportações não usadas do entry;
+      // safe aqui porque o entry (main.jsx) não é consumido como módulo por terceiros.
+      preserveEntrySignatures: 'exports-only',
       // Plugin para garantir que React seja processado corretamente
       plugins: [],
     },

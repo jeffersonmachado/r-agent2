@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import { EditorProvider } from './state/editorStore';
@@ -6,111 +6,122 @@ import { ThemeProvider } from './styles/themeContext';
 import { AuthProvider, useAuth } from './context/authContext';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { FileUploadProvider } from './context/FileUploadContext';
-import { FlowEditorPage } from './pages/FlowEditorPage';
-import { BpmnEditorPage } from './pages/BpmnEditorPage';
-import { SupportPage } from './pages/SupportPage';
-import { InboxPage } from './pages/InboxPage';
-import { TicketMaintenancePage } from './pages/TicketMaintenancePage';
-import { ConfigPage } from './pages/ConfigPage';
-import { AgentsPage } from './pages/AgentsPage';
-import { TenantsPage } from './pages/TenantsPage';
-import { SuperAdminPage } from './pages/SuperAdminPage';
-import { OnboardingPage } from './pages/OnboardingPage';
-import { AuditPage } from './pages/AuditPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { QuickRepliesPage } from './pages/QuickRepliesPage';
-import { FaqManagementPage } from './pages/FaqManagementPage';
-import { DepartmentsPage } from './pages/DepartmentsPage';
-import { BulkMessagingPage } from './pages/BulkMessagingPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { AcademyPage } from './pages/AcademyPage';
-import { TenantIntelligencePage } from './pages/TenantIntelligencePage';
-import { SupervisorPage } from './pages/SupervisorPage';
-import { RbacPage } from './pages/RbacPage';
-import { MfaPage } from './pages/MfaPage';
-import { WhatsAppIvrPage } from './pages/WhatsAppIvrPage';
-import { WhatsAppConnectionsPage } from './pages/WhatsAppConnectionsPage';
-import { DeveloperKeysPage } from './pages/DeveloperKeysPage';
-import { AutomationsPage } from './pages/AutomationsPage';
-import { TasksPage } from './pages/TasksPage';
-import { CalendarPage } from './pages/CalendarPage';
-import { ProjectsPage } from './pages/projects/ProjectsPage';
-import { ProjectBoardPage } from './pages/projects/ProjectBoardPage';
-import { ProjectListPage } from './pages/projects/ProjectListPage';
-import { ProjectDashboardPage } from './pages/projects/ProjectDashboardPage';
-import { ProjectTimelinePage } from './pages/projects/ProjectTimelinePage';
-import { ProjectActivitiesPage } from './pages/projects/ProjectActivitiesPage';
-import { ProjectSettingsPage } from './pages/projects/ProjectSettingsPage';
-import { ProjectGanttPage } from './pages/projects/ProjectGanttPage';
-import { ProjectCalendarViewPage } from './pages/projects/ProjectCalendarViewPage';
-import { SlaPoliciesPage } from './pages/SlaPoliciesPage';
-import { ExportPage } from './pages/ExportPage';
-import { AIToolsPage } from './pages/AIToolsPage';
-import { SegmentationPage } from './pages/SegmentationPage';
-import { WhatsAppTemplatesPage } from './pages/WhatsAppTemplatesPage';
-import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
-import { ProductDocsPage } from './pages/ProductDocsPage';
-import { RAGDocumentsPage } from './pages/RAGDocumentsPage';
-import { WebScrapingPage } from './pages/WebScrapingPage';
-import { RpaTestPage } from './pages/RpaTestPage';
-import { RpaReplaysPage } from './pages/RpaReplaysPage';
-import { RpaSeedsPage } from './pages/RpaSeedsPage';
-import { ChatPage } from './pages/ChatPage';
-import { QaPage } from './pages/QaPage';
-import { QaMeshPage } from './pages/QaMeshPage';
-import { StabilityPage } from './pages/qa/StabilityPage';
-import { GenerateSystemPage } from './pages/GenerateSystemPage';
-import { SystemStatusPage } from './pages/SystemStatusPage';
-import { ChannelHealthPage } from './pages/ChannelHealthPage';
-import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
-import { PlanUsagePage } from './pages/PlanUsagePage';
-import { DevDashboardPage } from './pages/DevDashboardPage';
-import { QaWavesPage } from './pages/QaWavesPage';
-import { QaGapsPage } from './pages/QaGapsPage';
-import { QaWavesOperationalHealthPage } from './pages/QaWavesOperationalHealthPage';
-import { QaWavesEnterpriseGovernancePage } from './pages/QaWavesEnterpriseGovernancePage';
-import { WorkspacePage } from './pages/WorkspacePage';
-import { PbxPage } from './pages/PbxPage';
-import { PbxRoutesPage } from './pages/PbxRoutesPage';
-import { PbxExtensionsPage } from './pages/PbxExtensionsPage';
-import { PbxTrunksPage } from './pages/PbxTrunksPage';
-import { PbxModulePage } from './pages/PbxModulePage';
-import { PbxOperatorPanelPage } from './pages/PbxOperatorPanelPage';
-import { ChatHumanoDashboardPage } from './pages/ChatHumanoDashboardPage';
-import { FailedMessagesPage } from './pages/FailedMessagesPage';
-import { QueuePhysicalDashboardPage } from './pages/QueuePhysicalDashboardPage';
-import { MarketingPage } from './pages/MarketingPage';
-import { AccessControlPage } from './pages/AccessControlPage';
-import { OperationsDashboardPage } from './pages/OperationsDashboardPage';
-import { FitnessStudentsPage } from './pages/FitnessStudentsPage';
-import { FitnessMembershipsPage } from './pages/FitnessMembershipsPage';
-import { FitnessAttendancePage } from './pages/FitnessAttendancePage';
-import { BeautySchedulePage } from './pages/BeautySchedulePage';
-import { BeautyCampaignsPage } from './pages/BeautyCampaignsPage';
-import { BeautyLeadsPage } from './pages/BeautyLeadsPage';
-import { BeautyCustomersPage } from './pages/BeautyCustomersPage';
-import { BeautyBundlesPage } from './pages/BeautyBundlesPage';
-import { BeautyServicesPage } from './pages/BeautyServicesPage';
-import { BeautyPaymentsPage } from './pages/BeautyPaymentsPage';
-import { VerticalOperationalDashboardPage } from './pages/VerticalOperationalDashboardPage';
-import { SolutionsPage } from './pages/SolutionsPage';
-import { NodeMarketplacePage } from './pages/NodeMarketplacePage';
-import { SsoScimPage } from './pages/SsoScimPage';
-import { BackupPage } from './pages/BackupPage';
-import { AgentOsHubPage } from './pages/AgentOsHubPage';
-import { QaAuditPage } from './pages/QaAuditPage';
-import { StorefrontOrderPage } from './pages/StorefrontOrderPage';
-import { StorefrontOrderStatusPage } from './pages/StorefrontOrderStatusPage';
-import { OrdersPage } from './pages/OrdersPage';
-import { KitchenPage } from './pages/KitchenPage';
-import { DispatchPage } from './pages/DispatchPage';
+// Páginas públicas do primeiro paint ficam estáticas (login + landing SaaS);
+// todas as demais são carregadas sob demanda via React.lazy (code splitting por rota).
 import { SaasPublicPage } from './pages/SaasPublicPage';
-import { KioskPage } from './pages/KioskPage';
-import { PanelPage } from './pages/PanelPage';
-import { StationPage } from './pages/StationPage';
-import { CrmDashboardPage } from './pages/crm/CrmDashboardPage';
-import DemoPage from './pages/DemoPage';
+import { PageLoadingFallback } from './shared/PageLoadingFallback';
 import { Login } from './components/Login';
+
+/**
+ * Helper para React.lazy com named export (padrão das páginas do projeto).
+ */
+const lazyPage = (loader, exportName) =>
+  React.lazy(() => loader().then((module) => ({ default: module[exportName] })));
+
+const FlowEditorPage = lazyPage(() => import('./pages/FlowEditorPage'), 'FlowEditorPage');
+const BpmnEditorPage = lazyPage(() => import('./pages/BpmnEditorPage'), 'BpmnEditorPage');
+const SupportPage = lazyPage(() => import('./pages/SupportPage'), 'SupportPage');
+const InboxPage = lazyPage(() => import('./pages/InboxPage'), 'InboxPage');
+const TicketMaintenancePage = lazyPage(() => import('./pages/TicketMaintenancePage'), 'TicketMaintenancePage');
+const ConfigPage = lazyPage(() => import('./pages/ConfigPage'), 'ConfigPage');
+const AgentsPage = lazyPage(() => import('./pages/AgentsPage'), 'AgentsPage');
+const TenantsPage = lazyPage(() => import('./pages/TenantsPage'), 'TenantsPage');
+const SuperAdminPage = lazyPage(() => import('./pages/SuperAdminPage'), 'SuperAdminPage');
+const OnboardingPage = lazyPage(() => import('./pages/OnboardingPage'), 'OnboardingPage');
+const AuditPage = lazyPage(() => import('./pages/AuditPage'), 'AuditPage');
+const DashboardPage = lazyPage(() => import('./pages/DashboardPage'), 'DashboardPage');
+const QuickRepliesPage = lazyPage(() => import('./pages/QuickRepliesPage'), 'QuickRepliesPage');
+const FaqManagementPage = lazyPage(() => import('./pages/FaqManagementPage'), 'FaqManagementPage');
+const DepartmentsPage = lazyPage(() => import('./pages/DepartmentsPage'), 'DepartmentsPage');
+const BulkMessagingPage = lazyPage(() => import('./pages/BulkMessagingPage'), 'BulkMessagingPage');
+const AnalyticsPage = lazyPage(() => import('./pages/AnalyticsPage'), 'AnalyticsPage');
+const AcademyPage = lazyPage(() => import('./pages/AcademyPage'), 'AcademyPage');
+const TenantIntelligencePage = lazyPage(() => import('./pages/TenantIntelligencePage'), 'TenantIntelligencePage');
+const SupervisorPage = lazyPage(() => import('./pages/SupervisorPage'), 'SupervisorPage');
+const RbacPage = lazyPage(() => import('./pages/RbacPage'), 'RbacPage');
+const MfaPage = lazyPage(() => import('./pages/MfaPage'), 'MfaPage');
+const WhatsAppIvrPage = lazyPage(() => import('./pages/WhatsAppIvrPage'), 'WhatsAppIvrPage');
+const WhatsAppConnectionsPage = lazyPage(() => import('./pages/WhatsAppConnectionsPage'), 'WhatsAppConnectionsPage');
+const DeveloperKeysPage = lazyPage(() => import('./pages/DeveloperKeysPage'), 'DeveloperKeysPage');
+const AutomationsPage = lazyPage(() => import('./pages/AutomationsPage'), 'AutomationsPage');
+const TasksPage = lazyPage(() => import('./pages/TasksPage'), 'TasksPage');
+const CalendarPage = lazyPage(() => import('./pages/CalendarPage'), 'CalendarPage');
+const ProjectsPage = lazyPage(() => import('./pages/projects/ProjectsPage'), 'ProjectsPage');
+const ProjectBoardPage = lazyPage(() => import('./pages/projects/ProjectBoardPage'), 'ProjectBoardPage');
+const ProjectListPage = lazyPage(() => import('./pages/projects/ProjectListPage'), 'ProjectListPage');
+const ProjectDashboardPage = lazyPage(() => import('./pages/projects/ProjectDashboardPage'), 'ProjectDashboardPage');
+const ProjectTimelinePage = lazyPage(() => import('./pages/projects/ProjectTimelinePage'), 'ProjectTimelinePage');
+const ProjectActivitiesPage = lazyPage(() => import('./pages/projects/ProjectActivitiesPage'), 'ProjectActivitiesPage');
+const ProjectSettingsPage = lazyPage(() => import('./pages/projects/ProjectSettingsPage'), 'ProjectSettingsPage');
+const ProjectGanttPage = lazyPage(() => import('./pages/projects/ProjectGanttPage'), 'ProjectGanttPage');
+const ProjectCalendarViewPage = lazyPage(() => import('./pages/projects/ProjectCalendarViewPage'), 'ProjectCalendarViewPage');
+const SlaPoliciesPage = lazyPage(() => import('./pages/SlaPoliciesPage'), 'SlaPoliciesPage');
+const ExportPage = lazyPage(() => import('./pages/ExportPage'), 'ExportPage');
+const AIToolsPage = lazyPage(() => import('./pages/AIToolsPage'), 'AIToolsPage');
+const SegmentationPage = lazyPage(() => import('./pages/SegmentationPage'), 'SegmentationPage');
+const WhatsAppTemplatesPage = lazyPage(() => import('./pages/WhatsAppTemplatesPage'), 'WhatsAppTemplatesPage');
+const KnowledgeBasePage = lazyPage(() => import('./pages/KnowledgeBasePage'), 'KnowledgeBasePage');
+const ProductDocsPage = lazyPage(() => import('./pages/ProductDocsPage'), 'ProductDocsPage');
+const RAGDocumentsPage = lazyPage(() => import('./pages/RAGDocumentsPage'), 'RAGDocumentsPage');
+const WebScrapingPage = lazyPage(() => import('./pages/WebScrapingPage'), 'WebScrapingPage');
+const RpaTestPage = lazyPage(() => import('./pages/RpaTestPage'), 'RpaTestPage');
+const RpaReplaysPage = lazyPage(() => import('./pages/RpaReplaysPage'), 'RpaReplaysPage');
+const RpaSeedsPage = lazyPage(() => import('./pages/RpaSeedsPage'), 'RpaSeedsPage');
+const ChatPage = lazyPage(() => import('./pages/ChatPage'), 'ChatPage');
+const QaPage = lazyPage(() => import('./pages/QaPage'), 'QaPage');
+const QaMeshPage = lazyPage(() => import('./pages/QaMeshPage'), 'QaMeshPage');
+const StabilityPage = lazyPage(() => import('./pages/qa/StabilityPage'), 'StabilityPage');
+const GenerateSystemPage = lazyPage(() => import('./pages/GenerateSystemPage'), 'GenerateSystemPage');
+const SystemStatusPage = lazyPage(() => import('./pages/SystemStatusPage'), 'SystemStatusPage');
+const ChannelHealthPage = lazyPage(() => import('./pages/ChannelHealthPage'), 'ChannelHealthPage');
+const ChannelAccountsPage = lazyPage(() => import('./pages/ChannelAccountsPage'), 'ChannelAccountsPage');
+const PlanUsagePage = lazyPage(() => import('./pages/PlanUsagePage'), 'PlanUsagePage');
+const DevDashboardPage = lazyPage(() => import('./pages/DevDashboardPage'), 'DevDashboardPage');
+const QaWavesPage = lazyPage(() => import('./pages/QaWavesPage'), 'QaWavesPage');
+const QaGapsPage = lazyPage(() => import('./pages/QaGapsPage'), 'QaGapsPage');
+const QaWavesOperationalHealthPage = lazyPage(() => import('./pages/QaWavesOperationalHealthPage'), 'QaWavesOperationalHealthPage');
+const QaWavesEnterpriseGovernancePage = lazyPage(() => import('./pages/QaWavesEnterpriseGovernancePage'), 'QaWavesEnterpriseGovernancePage');
+const WorkspacePage = lazyPage(() => import('./pages/WorkspacePage'), 'WorkspacePage');
+const PbxPage = lazyPage(() => import('./pages/PbxPage'), 'PbxPage');
+const PbxRoutesPage = lazyPage(() => import('./pages/PbxRoutesPage'), 'PbxRoutesPage');
+const PbxExtensionsPage = lazyPage(() => import('./pages/PbxExtensionsPage'), 'PbxExtensionsPage');
+const PbxTrunksPage = lazyPage(() => import('./pages/PbxTrunksPage'), 'PbxTrunksPage');
+const PbxModulePage = lazyPage(() => import('./pages/PbxModulePage'), 'PbxModulePage');
+const PbxOperatorPanelPage = lazyPage(() => import('./pages/PbxOperatorPanelPage'), 'PbxOperatorPanelPage');
+const ChatHumanoDashboardPage = lazyPage(() => import('./pages/ChatHumanoDashboardPage'), 'ChatHumanoDashboardPage');
+const FailedMessagesPage = lazyPage(() => import('./pages/FailedMessagesPage'), 'FailedMessagesPage');
+const QueuePhysicalDashboardPage = lazyPage(() => import('./pages/QueuePhysicalDashboardPage'), 'QueuePhysicalDashboardPage');
+const MarketingPage = lazyPage(() => import('./pages/MarketingPage'), 'MarketingPage');
+const AccessControlPage = lazyPage(() => import('./pages/AccessControlPage'), 'AccessControlPage');
+const OperationsDashboardPage = lazyPage(() => import('./pages/OperationsDashboardPage'), 'OperationsDashboardPage');
+const FitnessStudentsPage = lazyPage(() => import('./pages/FitnessStudentsPage'), 'FitnessStudentsPage');
+const FitnessMembershipsPage = lazyPage(() => import('./pages/FitnessMembershipsPage'), 'FitnessMembershipsPage');
+const FitnessAttendancePage = lazyPage(() => import('./pages/FitnessAttendancePage'), 'FitnessAttendancePage');
+const BeautySchedulePage = lazyPage(() => import('./pages/BeautySchedulePage'), 'BeautySchedulePage');
+const BeautyCampaignsPage = lazyPage(() => import('./pages/BeautyCampaignsPage'), 'BeautyCampaignsPage');
+const BeautyLeadsPage = lazyPage(() => import('./pages/BeautyLeadsPage'), 'BeautyLeadsPage');
+const BeautyCustomersPage = lazyPage(() => import('./pages/BeautyCustomersPage'), 'BeautyCustomersPage');
+const BeautyBundlesPage = lazyPage(() => import('./pages/BeautyBundlesPage'), 'BeautyBundlesPage');
+const BeautyServicesPage = lazyPage(() => import('./pages/BeautyServicesPage'), 'BeautyServicesPage');
+const BeautyPaymentsPage = lazyPage(() => import('./pages/BeautyPaymentsPage'), 'BeautyPaymentsPage');
+const VerticalOperationalDashboardPage = lazyPage(() => import('./pages/VerticalOperationalDashboardPage'), 'VerticalOperationalDashboardPage');
+const SolutionsPage = lazyPage(() => import('./pages/SolutionsPage'), 'SolutionsPage');
+const NodeMarketplacePage = lazyPage(() => import('./pages/NodeMarketplacePage'), 'NodeMarketplacePage');
+const SsoScimPage = lazyPage(() => import('./pages/SsoScimPage'), 'SsoScimPage');
+const BackupPage = lazyPage(() => import('./pages/BackupPage'), 'BackupPage');
+const AgentOsHubPage = lazyPage(() => import('./pages/AgentOsHubPage'), 'AgentOsHubPage');
+const QaAuditPage = lazyPage(() => import('./pages/QaAuditPage'), 'QaAuditPage');
+const StorefrontOrderPage = lazyPage(() => import('./pages/StorefrontOrderPage'), 'StorefrontOrderPage');
+const StorefrontOrderStatusPage = lazyPage(() => import('./pages/StorefrontOrderStatusPage'), 'StorefrontOrderStatusPage');
+const OrdersPage = lazyPage(() => import('./pages/OrdersPage'), 'OrdersPage');
+const KitchenPage = lazyPage(() => import('./pages/KitchenPage'), 'KitchenPage');
+const DispatchPage = lazyPage(() => import('./pages/DispatchPage'), 'DispatchPage');
+const KioskPage = lazyPage(() => import('./pages/KioskPage'), 'KioskPage');
+const PanelPage = lazyPage(() => import('./pages/PanelPage'), 'PanelPage');
+const StationPage = lazyPage(() => import('./pages/StationPage'), 'StationPage');
+const CrmDashboardPage = lazyPage(() => import('./pages/crm/CrmDashboardPage'), 'CrmDashboardPage');
+const DemoPage = React.lazy(() => import('./pages/DemoPage'));
+const DashboardV2 = lazyPage(() => import('./pages/DashboardV2'), 'DashboardV2');
 import { UserMenu } from './components/UserMenu';
 import { TenantGate } from './components/TenantGate';
 import { PwaUpdateManager } from './components/PwaUpdateManager';
@@ -127,7 +138,6 @@ import { useWebSocketAuthGuard } from './hooks/useWebSocketAuthGuard';
 import { initInteractionTracker, stopInteractionTracker } from './core/interactionTracker';
 import { canAccessPath, isSuperAdmin as checkIsSuperAdmin } from './utils/menuPermissions';
 import { getFeature } from './utils/featuresConfig';
-import { DashboardV2 } from './pages/DashboardV2';
 import { getTenant, getTenantContext } from './api/tenants';
 import { getWorkspaceKeysForPath, inferWorkspaceKeyFromTenantProfile, verticalWorkspaces } from './navigation/menu';
 
@@ -790,18 +800,24 @@ function AppWithAuth() {
 
   // Render público (sem menu/gate)
   if (isPublicRoute) {
-    if (isSaasLanding) return <SaasPublicPage mode="landing" />;
-    if (isSaasProducts) return <SaasPublicPage mode="products" />;
-    if (isSaasSolutions) return <SaasPublicPage mode="solutions" />;
-    if (isSaasPricing) return <SaasPublicPage mode="pricing" />;
-    if (isSaasSignup) return <SaasPublicPage mode="signup" />;
-    if (isStorefrontOrder) return <StorefrontOrderPage />;
-    if (isStorefrontOrderStatus) return <StorefrontOrderStatusPage />;
-    if (isKiosk) return <KioskPage />;
-    if (isPanel) return <PanelPage />;
-    if (isStation) return <StationPage />;
+    let publicContent = null;
+    if (isSaasLanding) publicContent = <SaasPublicPage mode="landing" />;
+    else if (isSaasProducts) publicContent = <SaasPublicPage mode="products" />;
+    else if (isSaasSolutions) publicContent = <SaasPublicPage mode="solutions" />;
+    else if (isSaasPricing) publicContent = <SaasPublicPage mode="pricing" />;
+    else if (isSaasSignup) publicContent = <SaasPublicPage mode="signup" />;
+    else if (isStorefrontOrder) publicContent = <StorefrontOrderPage />;
+    else if (isStorefrontOrderStatus) publicContent = <StorefrontOrderStatusPage />;
+    else if (isKiosk) publicContent = <KioskPage />;
+    else if (isPanel) publicContent = <PanelPage />;
+    else if (isStation) publicContent = <StationPage />;
     // fallback
-    return <StorefrontOrderPage />;
+    else publicContent = <StorefrontOrderPage />;
+    return (
+      <Suspense fallback={<PageLoadingFallback />}>
+        {publicContent}
+      </Suspense>
+    );
   }
 
   // Guardas de acesso por módulo/ação (RBAC) para evitar bypass por URL direta.
@@ -1079,6 +1095,13 @@ function AppWithAuth() {
       </VerticalLayout>
     );
   }
+
+  // Code splitting por rota: páginas lazy resolvem dentro deste boundary
+  pageContent = (
+    <Suspense fallback={<PageLoadingFallback />}>
+      {pageContent}
+    </Suspense>
+  );
 
   // Se chegou aqui, está autenticado OU é rota pública
   if (!newNavigationEnabled) {
