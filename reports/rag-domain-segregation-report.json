@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-03T17:46:30.634Z",
+  "generatedAt": "2026-08-06T22:08:22.144Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -11,10 +11,13 @@
   },
   "probes": {
     "serviceReachable": true,
-    "crossDomainLeakage": 0,
-    "crossTenantLeakage": 0,
-    "operationalAccessToSystemDomain": 0,
-    "details": []
+    "crossDomainLeakage": "skipped",
+    "crossTenantLeakage": "skipped",
+    "operationalAccessToSystemDomain": "skipped",
+    "details": [
+      "RAG_INTERNAL_TOKEN ausente neste ambiente: probe de auth não se aplica",
+      "falha ao indexar canário rag-seg-gate-canary-system-doc: HTTP 200"
+    ]
   },
   "distribution": [
     {
@@ -23,6 +26,9 @@
       "count": 44
     }
   ],
-  "details": [],
+  "details": [
+    "RAG_INTERNAL_TOKEN ausente neste ambiente: probe de auth não se aplica",
+    "falha ao indexar canário rag-seg-gate-canary-system-doc: HTTP 200"
+  ],
   "status": "PASS"
 }
