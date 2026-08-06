@@ -45,3 +45,12 @@ Arquitetura de eficiência da plataforma. API Node: auditoria de 2026-08-03 (com
 - **Ruído**: `client.js` e `Login.jsx` com zero `console.*` — `logger.debug` gated por DEV; nunca logar token (nem preview), objeto agent ou JSON de onboarding.
 - **Polling**: guarda de overlap (`inFlightRef`) obrigatória; toggles de auto-refresh seguem o padrão visual de `SystemStatusPage.jsx`; `useDevDashboard` default OFF; ChannelHealthPage subscreve `channel.health.alert` via WS (poll 120s só fallback). Follow-up: substituir polls de campanhas/verticais/fila física por eventos WS (exige emissão no backend).
 - **validate:runtime**: isenta `ERR_ABORTED` de chunks `/src/pages/*.jsx` — page.goto aborta imports em voo da rota anterior (ruído de navegação, mesma classe de /auth/me).
+
+## Engine de fluxos (2026-08-06, commit `f1a19a0d`)
+
+- **Invalidação obrigatória**: qualquer mutação de flow DEVE chamar `invalidateCompiledFlow(tenantId, flowId)` (`engine/compiledFlowCache.js`) — cobertos PUT/DELETE/environment (`handleFlowCrudRoutes.js`) e import com overwrite (`handleConfigAdminRoutes.js`). Marketplace só cria ids novos (seguro). Cache: cap 200, eviction FIFO.
+- **Hot path O(1)**: `CompiledFlow.nodeIndex` (Map congelado) usado por `findNode`/`resolveNodeType` com fallback linear para flows crus; `defaultNodeRegistry` singleton no messageProcessor.
+- **Revalidação de flows de IA**: só em cache miss (o compilado é deep-frozen).
+- **Timeout de IA**: todo provider de `getAiProviderForTenant` sai com `generate` envolvido em timeout de 30s (`ENGINE_AI_TIMEOUT_MS`), erro `code: 'ai_timeout'` por tentativa (fallback secundário intacto); provider memoizado por tenant, invalidado em `setTenantAiConfig`/`registerAiProvider`/`clearAiProviderConfig`.
+- **Caps de crescimento**: 500 eventos/sessão (`MAX_SESSION_EVENTS`), 100 itens de `state.history` (`MAX_HISTORY_ITEMS`), ledger trunca `history` nos últimos 20 em stateBefore/stateAfter (replay preservado — demais campos completos).
+- **persistenceServices**: `getFlow` via findByPk; `getQueueInfo` = 1 query filtrada (era 3 varreduras globais da tabela de tickets).
