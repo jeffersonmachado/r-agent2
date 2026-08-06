@@ -435,7 +435,7 @@ async function replayFromNode({
   if (!flow) return { ok: false, error: 'flow_not_found' };
 
   const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
-  const { executeStep } = require('../../engine/executeStep');
+  const { executeStep, buildLedgerStateSnapshot } = require('../../engine/executeStep');
   const compiled = getOrCompileFlow(flow);
 
   const registry = createReplayRegistry();
@@ -517,8 +517,8 @@ async function replayFromNode({
         finishedAt,
         input: storedInput,
         output: {},
-        stateBefore: before,
-        stateAfter: before,
+        stateBefore: buildLedgerStateSnapshot(before),
+        stateAfter: buildLedgerStateSnapshot(before),
         events: [],
         errorMessage: safeErrorMessage(error),
       }).catch(() => {});
@@ -545,8 +545,8 @@ async function replayFromNode({
       finishedAt,
       input: storedInput,
       output: safeJson(result.output || {}, {}),
-      stateBefore: before,
-      stateAfter: safeJson(result.state || {}, {}),
+      stateBefore: buildLedgerStateSnapshot(before),
+      stateAfter: buildLedgerStateSnapshot(result.state || {}),
       events: Array.isArray(result.events) ? result.events : [],
       errorMessage: null,
     }).catch(() => {});

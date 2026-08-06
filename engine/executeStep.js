@@ -21,6 +21,13 @@ function safeNumber(v, fallback) {
 
 function resolveNodeType(compiledFlow, nodeId) {
   try {
+    // Lookup O(1) quando o fluxo é compilado (nodeIndex construído em compileFlow);
+    // fallback para busca linear em flows "crus" (simulador/testes).
+    const index = compiledFlow && compiledFlow.nodeIndex;
+    if (index instanceof Map) {
+      const found = nodeId != null ? index.get(nodeId) : null;
+      return found && found.type != null ? String(found.type) : null;
+    }
     const nodes = compiledFlow && Array.isArray(compiledFlow.nodes) ? compiledFlow.nodes : [];
     const found = nodeId ? nodes.find((n) => n && String(n.id) === String(nodeId)) : null;
     return found && found.type != null ? String(found.type) : null;
@@ -65,6 +72,30 @@ function toJsonSafe(obj, fallback) {
   } catch (_) {
     return fallback;
   }
+}
+
+// Limite de itens de history persistidos por snapshot no execution ledger.
+// O history cresce a cada step; serializar o ConversationState inteiro por
+// step tinha custo quadrático. O snapshot preserva TODOS os demais campos
+// do estado (sessionId, flowId, tenantId, flowVersion, currentNodeId,
+// variables, metadata) porque o replay (flowExecutionLedgerService) usa
+// state_before como estado inicial completo da reexecução — apenas o
+// history é truncado, e o replay reconstrói o history dali em diante.
+const LEDGER_STATE_HISTORY_LIMIT = 20;
+
+/**
+ * Monta um snapshot JSON-safe do estado para o execution ledger,
+ * com o history truncado aos últimos LEDGER_STATE_HISTORY_LIMIT itens.
+ *
+ * @param {ConversationState} state
+ * @returns {Object<string, any>}
+ */
+function buildLedgerStateSnapshot(state) {
+  const snapshot = toJsonSafe(state, {});
+  if (snapshot && Array.isArray(snapshot.history) && snapshot.history.length > LEDGER_STATE_HISTORY_LIMIT) {
+    snapshot.history = snapshot.history.slice(-LEDGER_STATE_HISTORY_LIMIT);
+  }
+  return snapshot;
 }
 
 /**
@@ -200,8 +231,8 @@ async function executeStep(state, compiledFlow, options) {
           finishedAt: new Date(),
           input: sanitizedInput,
           output: {},
-          stateBefore: state,
-          stateAfter: state,
+          stateBefore: buildLedgerStateSnapshot(state),
+          stateAfter: buildLedgerStateSnapshot(state),
           events: [],
           errorMessage: err && err.message ? String(err.message) : String(err),
         });
@@ -268,8 +299,8 @@ async function executeStep(state, compiledFlow, options) {
         finishedAt: new Date(),
         input: sanitizedInput,
         output: sanitizedOutput,
-        stateBefore: state,
-        stateAfter: stepOutput.nextState,
+        stateBefore: buildLedgerStateSnapshot(state),
+        stateAfter: buildLedgerStateSnapshot(stepOutput.nextState),
         events: Array.isArray(stepOutput.events) ? stepOutput.events : [],
         errorMessage: null,
       });
@@ -285,5 +316,7 @@ async function executeStep(state, compiledFlow, options) {
 
 module.exports = {
   executeStep,
+  buildLedgerStateSnapshot,
+  LEDGER_STATE_HISTORY_LIMIT,
 };
 

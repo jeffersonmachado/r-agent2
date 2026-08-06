@@ -139,6 +139,21 @@ function compileFlow(flow) {
   // Anexamos o hash ao objeto clonado antes de congelar.
   cloned.versionHash = versionHash;
 
+  // Índice de nós por id para lookup O(1) em runtime (findNode/resolveNodeType).
+  // - Construído uma única vez aqui, em vez de varrer `nodes` a cada step.
+  // - Congelado junto com o restante da árvore (deepFreeze abaixo).
+  // - Flows "crus" (não compilados) não têm este índice; os consumidores
+  //   fazem fallback para a busca linear, preservando compatibilidade.
+  const nodeIndex = new Map();
+  if (Array.isArray(cloned.nodes)) {
+    for (const node of cloned.nodes) {
+      if (node && node.id != null) {
+        nodeIndex.set(node.id, node);
+      }
+    }
+  }
+  cloned.nodeIndex = nodeIndex;
+
   // Aplicamos Object.freeze recursivo em toda a árvore.
   const frozen = deepFreeze(cloned);
 

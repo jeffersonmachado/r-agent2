@@ -45,12 +45,25 @@ function createEngineEvent(base) {
 /**
  * Localiza um nó por ID em um fluxo.
  *
+ * Performance:
+ * - Se o fluxo é um CompiledFlow (possui `nodeIndex` construído em
+ *   compileFlow), o lookup é O(1) via Map.
+ * - Flows "crus" (simulador/testes) fazem fallback para a busca linear
+ *   original, com a mesma semântica de igualdade estrita.
+ *
  * @param {import('./flowTypes').FlowDefinition} flow
  * @param {string} nodeId
  * @returns {import('./flowTypes').FlowNode|null}
  */
 function findNode(flow, nodeId) {
-  const node = flow.nodes.find((n) => n.id === nodeId);
+  if (!flow) return null;
+  const index = flow.nodeIndex;
+  if (index instanceof Map) {
+    const node = index.get(nodeId);
+    return node || null;
+  }
+  const nodes = Array.isArray(flow.nodes) ? flow.nodes : [];
+  const node = nodes.find((n) => n.id === nodeId);
   return node || null;
 }
 

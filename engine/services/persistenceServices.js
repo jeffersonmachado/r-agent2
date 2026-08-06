@@ -12,6 +12,46 @@ const { getSequelize } = require('../../api/db/sequelize');
 const { Flow: FlowGetter, Ticket: TicketGetter } = require('../../api/db/models');
 
 /**
+ * Mapeia uma row do model Flow para o objeto de fluxo usado pela engine.
+ *
+ * @param {Object} row
+ * @returns {Object}
+ */
+function mapFlowRow(row) {
+  const data = row.data && typeof row.data === 'object' ? row.data : {};
+  const flowObj = { ...data, id: row.id };
+  if (row.tenant_key && !flowObj.tenantId) flowObj.tenantId = row.tenant_key;
+  if (row.name && !flowObj.name) flowObj.name = row.name;
+  return flowObj;
+}
+
+/**
+ * Mapeia uma row do model Ticket para o objeto de ticket usado pela engine.
+ *
+ * @param {Object} row
+ * @returns {Object}
+ */
+function mapTicketRow(row) {
+  return {
+    id: row.id,
+    tenantId: row.tenant_key,
+    sessionId: row.session_id,
+    queue: row.queue,
+    status: row.status,
+    assignedTo: row.assigned_to || null,
+    phoneNumber: row.phone_number || null,
+    lastUserMessage: row.last_user_message || null,
+    unreadCount: Number.isFinite(row.unread_count) ? row.unread_count : 0,
+    tags: Array.isArray(row.tags) ? row.tags : [],
+    category: row.category || null,
+    messages: Array.isArray(row.messages) ? row.messages : [],
+    context: row.context || {},
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
+  };
+}
+
+/**
  * Lê todos os fluxos disponíveis.
  * 
  * @returns {Promise<Array<Object>>} Lista de fluxos
@@ -21,13 +61,7 @@ async function getFlows() {
     if (!getSequelize()) return [];
     const FlowModel = typeof FlowGetter === 'function' ? FlowGetter() : FlowGetter;
     const rows = await FlowModel.findAll();
-    return rows.map((row) => {
-      const data = row.data && typeof row.data === 'object' ? row.data : {};
-      const flowObj = { ...data, id: row.id };
-      if (row.tenant_key && !flowObj.tenantId) flowObj.tenantId = row.tenant_key;
-      if (row.name && !flowObj.name) flowObj.name = row.name;
-      return flowObj;
-    });
+    return rows.map(mapFlowRow);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[PersistenceServices] Erro ao ler flows do PostgreSQL:', err.message);
@@ -37,6 +71,10 @@ async function getFlows() {
 
 /**
  * Obtém um fluxo específico por ID.
+ *
+ * Busca direta por chave primária (findByPk): a versão anterior fazia
+ * findAll de TODOS os flows + .find linear a cada chamada de nó
+ * (subflow/get_flow_info).
  * 
  * @param {string} flowId - ID do fluxo
  * @returns {Promise<Object|null>} Fluxo encontrado ou null
@@ -47,8 +85,10 @@ async function getFlow(flowId) {
   }
   
   try {
-    const flows = await getFlows();
-    return flows.find(f => f && f.id === flowId) || null;
+    if (!getSequelize()) return null;
+    const FlowModel = typeof FlowGetter === 'function' ? FlowGetter() : FlowGetter;
+    const row = await FlowModel.findByPk(flowId);
+    return row ? mapFlowRow(row) : null;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[PersistenceServices] Erro ao buscar fluxo:', err.message);
@@ -112,23 +152,7 @@ async function getAllTickets() {
     if (!getSequelize()) return [];
     const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
     const rows = await TicketModel.findAll();
-    return rows.map((row) => ({
-      id: row.id,
-      tenantId: row.tenant_key,
-      sessionId: row.session_id,
-      queue: row.queue,
-      status: row.status,
-      assignedTo: row.assigned_to || null,
-      phoneNumber: row.phone_number || null,
-      lastUserMessage: row.last_user_message || null,
-      unreadCount: Number.isFinite(row.unread_count) ? row.unread_count : 0,
-      tags: Array.isArray(row.tags) ? row.tags : [],
-      category: row.category || null,
-      messages: Array.isArray(row.messages) ? row.messages : [],
-      context: row.context || {},
-      createdAt: row.created_at ? new Date(row.created_at).toISOString() : (row.createdAt?.toISOString?.() || new Date().toISOString()),
-      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : (row.updatedAt?.toISOString?.() || new Date().toISOString()),
-    }));
+    return rows.map(mapTicketRow);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[PersistenceServices] Erro ao ler tickets do PostgreSQL:', err.message);
@@ -138,6 +162,10 @@ async function getAllTickets() {
 
 /**
  * Obtém tickets de uma fila específica.
+ *
+ * O filtro por fila (e status, quando informado) é aplicado no SQL:
+ * a versão anterior varria a tabela inteira e filtrava em memória a
+ * cada execução de nó.
  * 
  * @param {string} queueName - Nome da fila
  * @param {Object} [options] - Opções de filtro
@@ -150,15 +178,14 @@ async function getQueueTickets(queueName, options = {}) {
   }
   
   try {
-    const allTickets = await getAllTickets();
-    let result = allTickets.filter((t) => t.queue === queueName);
-    
-    // Filtra por status se especificado
+    if (!getSequelize()) return [];
+    const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
+    const where = { queue: queueName };
     if (options.status) {
-      result = result.filter(t => t.status === options.status);
+      where.status = options.status;
     }
-    
-    return result;
+    const rows = await TicketModel.findAll({ where });
+    return rows.map(mapTicketRow);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[PersistenceServices] Erro ao buscar tickets:', err.message);
@@ -168,6 +195,11 @@ async function getQueueTickets(queueName, options = {}) {
 
 /**
  * Obtém informações sobre uma fila.
+ *
+ * Uma única query filtrada por fila (reutiliza getQueueTickets):
+ * - O "exists" derivado de `tickets.length > 0` é equivalente ao antigo
+ *   fallback via getQueuesData(), pois o mapa de filas era construído a
+ *   partir dos mesmos tickets — a varredura extra da tabela era redundante.
  * 
  * @param {string} queueName - Nome da fila
  * @returns {Promise<Object>} Informações da fila
@@ -183,7 +215,7 @@ async function getQueueInfo(queueName) {
     const closedTickets = tickets.filter(t => t.status === 'closed').length;
     
     return {
-      exists: tickets.length > 0 || (await getQueuesData()).queues[queueName] !== undefined,
+      exists: tickets.length > 0,
       ticketCount: tickets.length,
       activeTickets,
       closedTickets,

@@ -205,6 +205,7 @@ async function handleBackupRoute(ctx) {
   try {
     const { Flow, TenantSetting } = require('../../db/models');
     const { resolveTenantUuid } = require('../../services/tenantSettingsService');
+    const { invalidateCompiledFlow } = require('../../../engine/compiledFlowCache');
     const FlowModel = Flow();
     const TenantSettingModel = TenantSetting();
     // tenant_settings.tenant_id é UUID (FK para tenants.id): a chave do tenant
@@ -263,6 +264,9 @@ async function handleBackupRoute(ctx) {
         await FlowModel.create({ id: String(flowInput.id), tenant_key: tenantId, name: nextFlow.name || null, data: nextFlow, created_at: now, updated_at: now });
       }
       flows.set(String(flowInput.id), nextFlow);
+      // Invalida o cache compilado: import com overwrite substitui o flow e a
+      // versão compilada anterior ficaria stale até reiniciar o processo.
+      invalidateCompiledFlow(tenantId, String(flowInput.id));
       flowImported += 1;
     }
 

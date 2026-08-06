@@ -19,6 +19,17 @@
  * @typedef {import('./nodes/aiNode').AiProvider} AiProvider
  */
 
+// engine → api (acesso a logger/config) é best-effort
+const logger = require('../api/utils/logger');
+let config = null;
+try {
+  // eslint-disable-next-line global-require
+  config = require('../api/utils/config');
+} catch {
+  // Se não conseguir carregar config, mantém postura segura (ver getAiProviderForTenant).
+  config = null;
+}
+
 /**
  * Configuração de provider de IA por tenant.
  *
@@ -35,6 +46,51 @@ const providerRegistry = new Map();
 
 /** @type {Map<string, TenantAiConfig>} */
 const tenantConfig = new Map();
+
+// Memoização do provider resolvido por tenant (inclui null = sem provider).
+// Invalidada em setTenantAiConfig (por tenant), registerAiProvider (toda a
+// memo, pois a instância do provider pode ter sido substituída) e
+// clearAiProviderConfig.
+/** @type {Map<string, AiProvider|null>} */
+const tenantProviderCache = new Map();
+
+// Timeout padrão da chamada de IA (configurável via ENGINE_AI_TIMEOUT_MS).
+// Sem timeout, um provider pendurado segurava a mensagem indefinidamente.
+const DEFAULT_AI_TIMEOUT_MS = 30000;
+
+function resolveAiTimeoutMs() {
+  const raw = Number(process.env.ENGINE_AI_TIMEOUT_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_AI_TIMEOUT_MS;
+}
+
+/**
+ * Envolve uma função generate com timeout explícito (erro code='ai_timeout').
+ *
+ * @param {(prompt: string, context: any) => Promise<any>} generateFn
+ * @param {number} timeoutMs
+ * @returns {(prompt: string, context: any) => Promise<any>}
+ */
+function withAiTimeout(generateFn, timeoutMs) {
+  return async function generateWithTimeout(prompt, context) {
+    let timer = null;
+    try {
+      return await Promise.race([
+        generateFn(prompt, context),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            const err = new Error(`ai_timeout: provider de IA excedeu ${timeoutMs}ms`);
+            // @ts-ignore
+            err.code = 'ai_timeout';
+            reject(err);
+          }, timeoutMs);
+          if (typeof timer.unref === 'function') timer.unref();
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+}
 
 function normalizeId(value) {
   if (typeof value !== 'string') return '';
@@ -61,6 +117,8 @@ function registerAiProvider(id, provider) {
     throw new Error('registerAiProvider: provider inválido');
   }
   providerRegistry.set(providerId, provider);
+  // A instância do provider pode ter sido substituída: invalida toda a memo.
+  tenantProviderCache.clear();
 }
 
 /**
@@ -88,6 +146,7 @@ function setTenantAiConfig(tenantId, config) {
     primary,
     secondary: secondary || undefined,
   });
+  tenantProviderCache.delete(normalizedTenantId);
 }
 
 /**
@@ -110,53 +169,46 @@ function getAiProviderForTenant(tenantId) {
     return null;
   }
 
+  // Provider resolvido é memoizado por tenant (invalidado quando a config
+  // ou o registry de providers muda — ver setTenantAiConfig/registerAiProvider).
+  if (tenantProviderCache.has(normalizedTenantId)) {
+    return tenantProviderCache.get(normalizedTenantId);
+  }
+
+  const resolved = resolveAiProviderForTenant(normalizedTenantId, tenantId);
+  tenantProviderCache.set(normalizedTenantId, resolved);
+  return resolved;
+}
+
+/**
+ * Resolve (sem cache) o provider de um tenant, aplicando provider
+ * secundário configurado e timeout explícito em cada chamada de IA.
+ *
+ * @param {string} normalizedTenantId
+ * @param {string} tenantId - tenantId original (para logs)
+ * @returns {AiProvider|null}
+ */
+function resolveAiProviderForTenant(normalizedTenantId, tenantId) {
   // Fallback "provider secundário" deve ser explícito e configurável.
   // Default: false (não usar secondary automaticamente).
   let allowSecondaryFallback = false;
   try {
-    // engine → api (acesso a config) é best-effort
-    // eslint-disable-next-line global-require
-    const config = require('../api/utils/config');
-    allowSecondaryFallback = config.get('fallbacks.aiProviderSecondary', false) === true;
+    allowSecondaryFallback = !!(config && config.get && config.get('fallbacks.aiProviderSecondary', false) === true);
   } catch {
     // Se não conseguir ler config, mantém postura segura: não usa secondary por padrão.
     allowSecondaryFallback = false;
   }
 
-  // Logger simples para o engine
-  const log = {
-    debug: (msg, data) => {
-      if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log(`[DEBUG] ${msg}`, data || '');
-      }
-    },
-    info: (msg, data) => {
-      if (process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.log(`[INFO] ${msg}`, data || '');
-      }
-    },
-    warn: (msg, data) => {
-      // eslint-disable-next-line no-console
-      console.warn(`[WARN] ${msg}`, data || '');
-    },
-    error: (msg, data) => {
-      // eslint-disable-next-line no-console
-      console.error(`[ERROR] ${msg}`, data || '');
-    },
-  };
-
-  log.debug('🔍 getAiProviderForTenant: Buscando provider', { tenantId: normalizedTenantId });
+  logger.debug('🔍 getAiProviderForTenant: Buscando provider', { tenantId: normalizedTenantId });
   
   const cfg = tenantConfig.get(normalizedTenantId);
   if (!cfg) {
-    log.warn('⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant', { tenantId });
-    log.debug('📋 Tenants configurados', { tenants: Array.from(tenantConfig.keys()) });
+    logger.warn('⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant', { tenantId });
+    logger.debug('📋 Tenants configurados', { tenants: Array.from(tenantConfig.keys()) });
     return null;
   }
 
-  log.debug('✅ getAiProviderForTenant: Configuração encontrada', {
+  logger.debug('✅ getAiProviderForTenant: Configuração encontrada', {
     tenantId,
     primary: cfg.primary,
     secondary: cfg.secondary,
@@ -164,7 +216,7 @@ function getAiProviderForTenant(tenantId) {
 
   const primary = providerRegistry.get(cfg.primary);
   if (!primary) {
-    log.error('❌ getAiProviderForTenant: Provider primário não encontrado', {
+    logger.error('❌ getAiProviderForTenant: Provider primário não encontrado', {
       tenantId,
       primaryId: cfg.primary,
       providersDisponiveis: Array.from(providerRegistry.keys()),
@@ -172,39 +224,43 @@ function getAiProviderForTenant(tenantId) {
     return null;
   }
 
-  log.debug('✅ getAiProviderForTenant: Provider primário encontrado', {
+  logger.debug('✅ getAiProviderForTenant: Provider primário encontrado', {
     tenantId,
     primaryId: cfg.primary,
     hasGenerate: typeof primary.generate === 'function',
   });
 
   const secondary = cfg.secondary ? providerRegistry.get(cfg.secondary) : null;
+  const timeoutMs = resolveAiTimeoutMs();
 
   if (!allowSecondaryFallback || !secondary) {
-    log.debug('ℹ️ getAiProviderForTenant: Sem provider secundário configurado, retornando provider primário', {
+    logger.debug('ℹ️ getAiProviderForTenant: Sem provider secundário configurado, retornando provider primário', {
       tenantId,
       primaryId: cfg.primary,
       allowSecondaryFallback,
     });
-    return primary;
+    return { generate: withAiTimeout(primary.generate.bind(primary), timeoutMs) };
   }
 
-  log.debug('✅ getAiProviderForTenant: Provider composto (com secundário)', {
+  logger.debug('✅ getAiProviderForTenant: Provider composto (com secundário)', {
     tenantId,
     primaryId: cfg.primary,
     secondaryId: cfg.secondary,
   });
 
+  const primaryGenerate = withAiTimeout(primary.generate.bind(primary), timeoutMs);
+  const secondaryGenerate = withAiTimeout(secondary.generate.bind(secondary), timeoutMs);
+
   /** @type {AiProvider} */
   const composite = {
     async generate(prompt, context) {
       try {
-        log.debug('🔄 Provider composto: Tentando provider primário', {
+        logger.debug('🔄 Provider composto: Tentando provider primário', {
           tenantId: normalizedTenantId,
           primaryId: cfg.primary,
         });
-        const result = await primary.generate(prompt, context);
-        log.debug('✅ Provider composto: Provider primário funcionou', {
+        const result = await primaryGenerate(prompt, context);
+        logger.debug('✅ Provider composto: Provider primário funcionou', {
           tenantId,
           primaryId: cfg.primary,
           hasText: !!result?.text,
@@ -212,7 +268,7 @@ function getAiProviderForTenant(tenantId) {
         return result;
       } catch (err) {
         // Log como warning - provider secundário sendo usado
-        log.warn('⚠️ Provider composto: Provider primário falhou, usando provider secundário', {
+        logger.warn('⚠️ Provider composto: Provider primário falhou, usando provider secundário', {
           tenantId: normalizedTenantId,
           primaryId: cfg.primary,
           secondaryId: cfg.secondary,
@@ -223,14 +279,14 @@ function getAiProviderForTenant(tenantId) {
         // Tentamos o provider secundário, mas sem mudar a semântica de fluxo:
         // qualquer erro ainda será tratado no nível do nó de IA.
         if (!secondary) {
-          log.error('❌ Provider composto: Provider secundário não disponível', {
+          logger.error('❌ Provider composto: Provider secundário não disponível', {
             tenantId: normalizedTenantId,
             secondaryId: cfg.secondary,
           });
           throw err;
         }
-        const secondaryResult = await secondary.generate(prompt, context);
-        log.info('✅ Provider composto: Provider secundário funcionou', {
+        const secondaryResult = await secondaryGenerate(prompt, context);
+        logger.info('✅ Provider composto: Provider secundário funcionou', {
           tenantId: normalizedTenantId,
           secondaryId: cfg.secondary,
           primaryId: cfg.primary,
@@ -269,6 +325,7 @@ function getRegisteredProviderIds() {
 function clearAiProviderConfig() {
   providerRegistry.clear();
   tenantConfig.clear();
+  tenantProviderCache.clear();
 }
 
 module.exports = {

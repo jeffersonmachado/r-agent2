@@ -47,6 +47,7 @@
  * @property {number} version
  * @property {string} versionHash   - Hash estável do conteúdo da versão (gerado em compileFlow)
  * @property {FlowNode[]} nodes
+ * @property {Map<string, FlowNode>} nodeIndex - Índice id → nó para lookup O(1) (gerado em compileFlow; ausente em flows crus)
  * @property {Object<string, any>} [metadata]
  */
 

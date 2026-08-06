@@ -11,11 +11,16 @@
  *   - Node.js é single-thread no mesmo processo; ao usar apenas
  *     estruturas imutáveis e Map interno, leitura concorrente é segura.
  *   - Nenhuma mutação é feita sobre os objetos retornados.
- * - Cache invalidado apenas por nova versão:
- *   - Este módulo NUNCA remove nem sobrescreve entradas de uma
- *     mesma versão; novas versões geram novas chaves.
- *   - Opcionalmente, o chamador pode limpar o cache inteiro se
- *     necessário, mas não há invalidação automática por tempo.
+ * - Capacidade limitada com eviction FIFO:
+ *   - O cache tem um teto de entradas (MAX_CACHE_ENTRIES); ao exceder,
+ *     a entrada mais antiga (ordem de inserção do Map) é removida.
+ * - Invalidação explícita por fluxo:
+ *   - `invalidateCompiledFlow(tenantId, flowId)` remove TODAS as versões
+ *     cacheadas de um fluxo. Deve ser chamada pelos caminhos de mutação
+ *     de flow (update/delete), pois o PUT de flow preserva `version` e a
+ *     chave tenant+id+version não mudaria — sem invalidação, a versão
+ *     antiga continuaria executando até restart.
+ *   - Não há invalidação automática por tempo.
  */
 
 const { compileFlow, _internal } = require('./compileFlow');
@@ -24,6 +29,9 @@ const { compileFlow, _internal } = require('./compileFlow');
  * @typedef {import('./flowTypes').FlowDefinition} FlowDefinition
  * @typedef {import('./flowTypes').CompiledFlow} CompiledFlow
  */
+
+// Teto de entradas do cache (eviction FIFO pela ordem de inserção do Map).
+const MAX_CACHE_ENTRIES = 200;
 
 // Mapa interno de cache: chave -> CompiledFlow
 /** @type {Map<string, CompiledFlow>} */
@@ -67,7 +75,41 @@ function getCompiledFlowFromCache(tenantId, flowId, version) {
 function putCompiledFlowInCache(compiled) {
   const key = makeKey(compiled.tenantId, compiled.id, compiled.version);
   if (!cache.has(key)) {
-    cache.set(key, compiled);
+    setCacheEntry(key, compiled);
+  }
+}
+
+/**
+ * Armazena uma entrada aplicando o teto do cache (eviction FIFO).
+ *
+ * @param {string} key
+ * @param {CompiledFlow} compiled
+ */
+function setCacheEntry(key, compiled) {
+  cache.set(key, compiled);
+  while (cache.size > MAX_CACHE_ENTRIES) {
+    // Map preserva ordem de inserção: a primeira chave é a mais antiga.
+    const oldestKey = cache.keys().next().value;
+    cache.delete(oldestKey);
+  }
+}
+
+/**
+ * Invalida (remove) TODAS as versões cacheadas de um fluxo.
+ *
+ * Deve ser chamada quando um fluxo é atualizado ou removido, pois a
+ * chave de cache (tenant+id+version) não muda quando o update preserva
+ * `flow.version`.
+ *
+ * @param {string} tenantId
+ * @param {string} flowId
+ */
+function invalidateCompiledFlow(tenantId, flowId) {
+  const prefix = `tenant:${tenantId}:flow:${flowId}:v:`;
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) {
+      cache.delete(key);
+    }
   }
 }
 
@@ -89,8 +131,18 @@ function getOrCompileFlow(flow) {
     throw new Error('getOrCompileFlow: flow inválido');
   }
 
+  const key = makeKey(flow.tenantId, flow.id, flow.version);
+  const existing = cache.get(key);
+  if (existing) {
+    return existing;
+  }
+
   // Hardening: se o fluxo foi gerado por IA, revalida antes de compilar/executar.
   // (Execução só ocorre após aprovação, mas ainda assim revalidamos como blindagem final.)
+  // A revalidação roda apenas em cache MISS: o CompiledFlow cacheado é
+  // profundamente congelado (compileFlow → deepFreeze), portanto não pode ser
+  // mutado por referência depois de cacheado — revalidar a cada hit era custo
+  // redundante por chamada.
   const isAiFlow = flow?.metadata?.generatedBy === 'ai' || flow?.metadata?.generated === true;
   if (isAiFlow) {
     const { validateFlow } = require('./validator');
@@ -105,14 +157,8 @@ function getOrCompileFlow(flow) {
     }
   }
 
-  const key = makeKey(flow.tenantId, flow.id, flow.version);
-  const existing = cache.get(key);
-  if (existing) {
-    return existing;
-  }
-
   const compiled = compileFlow(flow);
-  cache.set(key, compiled);
+  setCacheEntry(key, compiled);
   return compiled;
 }
 
@@ -129,7 +175,9 @@ module.exports = {
   getCompiledFlowFromCache,
   putCompiledFlowInCache,
   getOrCompileFlow,
+  invalidateCompiledFlow,
   clearCompiledFlowCache,
+  MAX_CACHE_ENTRIES,
 };
 
 

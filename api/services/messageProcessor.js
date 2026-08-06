@@ -83,6 +83,10 @@ const sessionLastAccessAt = new Map();
 const SESSION_IDLE_TTL_MS = 24 * 60 * 60 * 1000; // 24h de inatividade
 const SESSION_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // padrão de flowRuntimeState
 
+// Teto de eventos guardados por sessão (replay/conversa): o concat anterior
+// era O(total) por mensagem e crescia sem limite.
+const MAX_SESSION_EVENTS = 500;
+
 function touchSession(sessionId) {
   sessionLastAccessAt.set(sessionId, Date.now());
 }
@@ -166,6 +170,12 @@ function createNodeRegistry() {
   registry.register('voice_hangup', voiceHangupNodeHandler);
   return registry;
 }
+
+// Registry padrão criado UMA vez em nível de módulo: o NodeRegistry é
+// stateless (mapa tipo -> handler, sem estado por request) e nenhum
+// consumidor registra handlers novos em runtime (subflow usa apenas .get),
+// então é seguro reutilizá-lo entre mensagens.
+const defaultNodeRegistry = createNodeRegistry();
 
 /**
  * Cria estado inicial de conversa para um número do WhatsApp.
@@ -497,7 +507,7 @@ async function processWhatsAppMessage(message, value, deps) {
     }
     throw err;
   }
-  const registry = createNodeRegistry();
+  const registry = defaultNodeRegistry;
 
   // Execution ledger (DB-first) - best-effort
   // Mantém um executionId por sessão (em memória) para anexar node_executions por mensagem.
@@ -685,9 +695,10 @@ async function processWhatsAppMessage(message, value, deps) {
     }
   } catch (_) {}
 
-  // Guarda eventos para replay
+  // Guarda eventos para replay (com teto por sessão — mantém os mais recentes)
   const existingEvents = sessionEvents.get(sessionId) || [];
-  sessionEvents.set(sessionId, existingEvents.concat(result.events || []));
+  const mergedEvents = existingEvents.concat(result.events || []);
+  sessionEvents.set(sessionId, mergedEvents.length > MAX_SESSION_EVENTS ? mergedEvents.slice(-MAX_SESSION_EVENTS) : mergedEvents);
   // Carimbo de tenant: readers de replay/conversa são fail-closed sem ele.
   if (sessionTenants && typeof sessionTenants.set === 'function' && inboundTenantId) {
     sessionTenants.set(sessionId, inboundTenantId);

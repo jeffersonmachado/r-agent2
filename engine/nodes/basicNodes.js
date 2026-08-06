@@ -35,6 +35,13 @@ function cloneState(state) {
 
 const { renderTemplate } = require('../utils/templateRenderer');
 
+// Operadores permitidos nas regras do nó router.
+// Constante de módulo (Set): antes era realocada como array a cada execução
+// do handler. A validação estrutural das regras continua no handler
+// (mensagens de erro preservadas) — aqui só removemos o trabalho redundante.
+const ROUTER_VALID_OPS = new Set(['always', 'equals', 'contains', 'not_equals', 'not_contains', 'greater_than', 'less_than']);
+const ROUTER_VALID_OPS_LABEL = [...ROUTER_VALID_OPS].join(', ');
+
 /**
  * Nó "start"
  * - Ponto lógico de entrada do fluxo.
@@ -488,7 +495,6 @@ async function routerNodeHandler(node, state, input, deps = null) {
   }
 
   // Valida regras antes de executar (segurança)
-  const validOps = ['always', 'equals', 'contains', 'not_equals', 'not_contains', 'greater_than', 'less_than'];
   for (let i = 0; i < rules.length; i += 1) {
     const rule = rules[i];
     if (!rule || typeof rule !== 'object') {
@@ -515,8 +521,8 @@ async function routerNodeHandler(node, state, input, deps = null) {
     }
     
     const op = condition.op;
-    if (!op || !validOps.includes(op)) {
-      const error = new Error(`Router node "${node.id}" tem operador proibido "${op}" na regra ${i + 1}. Use apenas: ${validOps.join(', ')}.`);
+    if (!op || !ROUTER_VALID_OPS.has(op)) {
+      const error = new Error(`Router node "${node.id}" tem operador proibido "${op}" na regra ${i + 1}. Use apenas: ${ROUTER_VALID_OPS_LABEL}.`);
       // @ts-ignore
       error.code = 'ENGINE_ROUTER_PROHIBITED_OPERATOR';
       // @ts-ignore

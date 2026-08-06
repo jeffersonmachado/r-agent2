@@ -6,6 +6,31 @@
 const { handleFlowCrudReadRoutes } = require('./handleFlowCrudReadRoutes');
 const { handleFlowCrudEnvironmentRoute } = require('./handleFlowCrudEnvironmentRoute');
 const { handleFlowCrudDeleteRoute } = require('./handleFlowCrudDeleteRoute');
+const { invalidateCompiledFlow } = require('../../../engine/compiledFlowCache');
+
+/**
+ * Invalida o cache de CompiledFlow para o fluxo de uma URL /flows/:id,
+ * usando o tenant do fluxo em memória (best-effort).
+ *
+ * Necessário porque o update de flow preserva `flow.version` e a chave do
+ * cache (tenant+id+version) não muda: sem invalidação explícita, a versão
+ * antiga continuaria executando até restart.
+ *
+ * @param {Map<string, any>} flows
+ * @param {string} pathname
+ * @param {any} [flowSnapshot] - snapshot do fluxo antes da mutação (delete)
+ */
+function invalidateCompiledFlowForPath(flows, pathname, flowSnapshot = null) {
+  try {
+    if (!pathname || !pathname.startsWith('/flows/')) return;
+    const id = decodeURIComponent(pathname.slice('/flows/'.length).replace(/\/environment$/, ''));
+    if (!id) return;
+    const flow = flowSnapshot || (flows && typeof flows.get === 'function' ? flows.get(id) : null);
+    if (flow && flow.tenantId) {
+      invalidateCompiledFlow(flow.tenantId, id);
+    }
+  } catch (_) {}
+}
 
 async function handleFlowCrudRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
@@ -218,7 +243,11 @@ async function handleFlowCrudRoutes(ctx) {
       STRICT_TENANT_MODE,
     },
   });
-  if (environmentHandled) return true;
+  if (environmentHandled) {
+    // Environment muda metadata do fluxo: invalida o CompiledFlow cacheado.
+    invalidateCompiledFlowForPath(flows, pathname);
+    return true;
+  }
 
   // -----------------------------------------------------------------------
   // PUT /flows/:id
@@ -361,7 +390,10 @@ async function handleFlowCrudRoutes(ctx) {
       }
       flows.set(id, flow);
       persistFlowBestEffort(flow);
-      
+      // O update preserva flow.version: invalida o CompiledFlow cacheado
+      // para não continuar executando a versão antiga até restart.
+      invalidateCompiledFlow(flow.tenantId, id);
+
       // Dispara webhooks e WebSocket
       triggerWebhooks(flow.tenantId, 'flow.updated', {
         flowId: flow.id,
@@ -394,6 +426,11 @@ async function handleFlowCrudRoutes(ctx) {
   // -----------------------------------------------------------------------
   // DELETE /flows/:id  →  handleFlowCrudDeleteRoute
   // -----------------------------------------------------------------------
+  // Snapshot pré-delete para conseguir invalidar o cache compilado depois
+  // (o handler de delete remove o fluxo do mapa em memória).
+  const flowBeforeDelete = method === 'DELETE' && pathname.startsWith('/flows/')
+    ? flows.get(decodeURIComponent(pathname.slice('/flows/'.length)))
+    : null;
   const deleteHandled = await handleFlowCrudDeleteRoute({
     req,
     res,
@@ -411,7 +448,12 @@ async function handleFlowCrudRoutes(ctx) {
       STRICT_TENANT_MODE,
     },
   });
-  if (deleteHandled) return true;
+  if (deleteHandled) {
+    if (flowBeforeDelete) {
+      invalidateCompiledFlowForPath(flows, pathname, flowBeforeDelete);
+    }
+    return true;
+  }
 
   // No route handled
   return false;

@@ -81,6 +81,27 @@ function cloneState(state) {
   };
 }
 
+// Teto de itens em state.history: sem cap, o histórico crescia sem limite
+// por sessão. 100 itens é folgado para os consumidores atuais:
+// - fallbackNode lê apenas as últimas 4 entradas / última mensagem do usuário;
+// - aiNode monta o prompt a partir de variables (não lê history);
+// - handoff (messageProcessor) exporta o histórico do bot para o ticket —
+//   passa a levar no máximo as últimas 100 mensagens.
+const MAX_HISTORY_ITEMS = 100;
+
+/**
+ * Adiciona um item ao history aplicando o teto (mantém os mais recentes).
+ *
+ * @param {ConversationState} state
+ * @param {Object} item
+ */
+function pushHistoryItem(state, item) {
+  state.history.push(item);
+  if (state.history.length > MAX_HISTORY_ITEMS) {
+    state.history = state.history.slice(-MAX_HISTORY_ITEMS);
+  }
+}
+
 const { renderTemplate } = require('../utils/templateRenderer');
 const { validateJsonSchema } = require('../utils/jsonSchemaValidator');
 const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
@@ -434,7 +455,7 @@ async function aiNodeHandler(node, state, input, deps = null) {
           aiUnavailable: true,
         },
       };
-      nextState.history.push(historyItem);
+      pushHistoryItem(nextState, historyItem);
 
       /** @type {EngineStepOutput} */
       const result = {
@@ -462,19 +483,6 @@ async function aiNodeHandler(node, state, input, deps = null) {
     );
 
     try {
-    // Emitimos evento de requisição de IA (auditável).
-    events.push(
-      createEngineEvent({
-        sessionId: state.sessionId,
-        flowId: state.flowId,
-        nodeId: node.id,
-        type: 'AI_REQUESTED',
-        payload: {
-          prompt,
-        },
-      }),
-    );
-
       const providerResult = await aiProvider.generate(prompt, {
         sessionId: state.sessionId,
         flowId: state.flowId,
@@ -606,7 +614,7 @@ async function aiNodeHandler(node, state, input, deps = null) {
         validationErrors: validationErrorMessages,
       },
     };
-    nextState.history.push(historyItem);
+    pushHistoryItem(nextState, historyItem);
 
     /** @type {EngineStepOutput} */
     const result = {
@@ -637,7 +645,7 @@ async function aiNodeHandler(node, state, input, deps = null) {
       rawResponse,
     },
   };
-  nextState.history.push(historyItem);
+  pushHistoryItem(nextState, historyItem);
 
   // Evento de uso de IA (tokens/medidas), se fornecido pelo provider.
   if (aiUsage) {
