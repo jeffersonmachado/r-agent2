@@ -1,6 +1,6 @@
 # AI_MEMORY — api-performance.md
 
-Arquitetura de eficiência da API Node (auditoria de 2026-08-03, commits `788b34f8`, `b5580c12`, `4c2d6468`, `8f45a9a7`).
+Arquitetura de eficiência da plataforma. API Node: auditoria de 2026-08-03 (commits `788b34f8`, `b5580c12`, `4c2d6468`, `8f45a9a7`). Frontend: auditoria de 2026-08-06 (commits `68c40fee`, `df844b3e`, `1a07907f`, `a757f64c`) — ver seção ao final.
 
 ## Caminho de request
 
@@ -33,3 +33,15 @@ Arquitetura de eficiência da API Node (auditoria de 2026-08-03, commits `788b34
 ## Lição de ambiente (2026-08-03)
 
 - `validate:runtime` falhou com `ERR_ABORTED` em `/system/status` porque o rag-service dev (uvicorn --reload) estava **travado após reinstall do venv com o processo vivo** — o probe de health batia no timeout de 2s e a página abortava na navegação. Reiniciar o processo resolveu (4,2s → 48ms). Após mexer no venv do rag-service, sempre reiniciar o uvicorn dev.
+
+## Frontend (2026-08-06)
+
+- **Code splitting total**: `main.jsx` carrega 104 páginas via `React.lazy` (helper `lazyPage(loader, exportName)` para named exports) + `Suspense` (`shared/PageLoadingFallback.jsx`); estáticos só `Login`/`SaasPublicPage`/shell. Entry: 5.188 kB/1.342 kB gzip → **311 kB/86 kB gzip**. Vendors isolados via `manualChunks` (react/rete/bpmn/pdf) em `vite.config.mjs`; `chunkSizeWarningLimit` 1500 (rete-vendor ~1,5 MB é legítimo, só rota /editor); `preserveEntrySignatures: 'exports-only'`.
+- **PWA**: pré-cache restrito ao shell (735 KiB; era ~5,9 MB) + `runtimeCaching` SWR para `/assets/`; `devOptions.enabled: false`.
+- **Tailwind 4**: `@import "tailwindcss"` já inclui as camadas — as 3 diretivas `@tailwind *` foram removidas do `index.css`.
+- **WebSocketContext**: `value` memoizado; `registerHandler`/`unregisterHandler` estáveis (leem `authenticatedRef`); `useWebSocketContext` registra 1x por componentId com callbacks em refs (re-registro só quando o CONTEÚDO de subscribeEvents muda — compare por `join('|')`). Padrão a seguir em todo consumidor novo: pode passar callback inline, o hook cuida.
+- **Renders quentes**: estado de composer vive no componente do composer (não no controller raiz — digitação não re-renderiza listas); `React.memo` em `SupportTicketList`/`SupportConversationPane`/`SupportTicketCard`; filtros de texto com debounce 400ms + guarda de resposta por sequência; `value` de TODO contexto em `useMemo`.
+- **Rules of hooks**: early returns de auth SEMPRE depois de todos os hooks (padrão InboxPage; FlowEditorPage tinha o bug — tela branca em sessão expirada).
+- **Ruído**: `client.js` e `Login.jsx` com zero `console.*` — `logger.debug` gated por DEV; nunca logar token (nem preview), objeto agent ou JSON de onboarding.
+- **Polling**: guarda de overlap (`inFlightRef`) obrigatória; toggles de auto-refresh seguem o padrão visual de `SystemStatusPage.jsx`; `useDevDashboard` default OFF; ChannelHealthPage subscreve `channel.health.alert` via WS (poll 120s só fallback). Follow-up: substituir polls de campanhas/verticais/fila física por eventos WS (exige emissão no backend).
+- **validate:runtime**: isenta `ERR_ABORTED` de chunks `/src/pages/*.jsx` — page.goto aborta imports em voo da rota anterior (ruído de navegação, mesma classe de /auth/me).
