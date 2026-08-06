@@ -14,6 +14,7 @@ import {
 } from '../api/inbox';
 import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
+import { useIncrementalList, useLoadMoreSentinel } from '../hooks/useIncrementalList';
 import { CrudPageBase } from '../modules/crud-base';
 
 export function InboxPage() {
@@ -297,6 +298,25 @@ export function InboxPage() {
     });
   }, [filteredTickets, prioritizeSla]);
 
+  // Lista pode chegar a 500 conversas: renderiza em blocos de 200
+  // (IntersectionObserver + botão manual como fallback).
+  const {
+    visibleItems: visibleTickets,
+    hasMore: hasMoreTickets,
+    loadMore: loadMoreTickets,
+    visibleCount: visibleTicketCount,
+    totalCount: totalTicketCount,
+  } = useIncrementalList(displayedTickets, { batchSize: 200 });
+  const ticketListSentinelRef = useLoadMoreSentinel({ enabled: hasMoreTickets, onLoadMore: loadMoreTickets });
+
+  // Timeline de mensagens: mostra as últimas 200 e revela blocos anteriores
+  // no topo (a API não pagina, então o recorte é client-side).
+  const {
+    visibleItems: visibleMessages,
+    hasMore: hasMoreMessages,
+    loadMore: loadMoreMessages,
+  } = useIncrementalList(messages, { batchSize: 200, fromEnd: true });
+
   const handleAssign = async () => {
     if (!selectedTicket) return;
     try {
@@ -532,7 +552,7 @@ export function InboxPage() {
             {displayedTickets.length === 0 && (
               <p className="support-tickets-empty">Nenhum ticket disponível</p>
             )}
-            {displayedTickets.map((ticket) => (
+            {visibleTickets.map((ticket) => (
               <div
                 key={ticket.id}
                 role="listitem"
@@ -566,6 +586,18 @@ export function InboxPage() {
                 </div>
               </div>
             ))}
+            {hasMoreTickets ? (
+              <div ref={ticketListSentinelRef} style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={loadMoreTickets}
+                  aria-label={`Carregar mais conversas (${visibleTicketCount} de ${totalTicketCount} exibidas)`}
+                >
+                  Carregar mais conversas ({visibleTicketCount}/{totalTicketCount})
+                </Button>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -635,7 +667,19 @@ export function InboxPage() {
                   {messages.length === 0 && (
                     <div style={{ color: 'var(--color-text-tertiary)' }}>Sem mensagens</div>
                   )}
-                  {messages.map((msg) => (
+                  {hasMoreMessages ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={loadMoreMessages}
+                        aria-label="Carregar mensagens anteriores"
+                      >
+                        Carregar mensagens anteriores
+                      </Button>
+                    </div>
+                  ) : null}
+                  {visibleMessages.map((msg) => (
                     <div key={msg.id || msg.timestamp} className="mb-2">
                       <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
                         {msg.sender === 'note' ? `Nota • ${msg.authorName || agent?.username || 'system'}` : msg.sender}

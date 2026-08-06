@@ -1,4 +1,6 @@
 import { memo } from 'react';
+import { Button } from '../../../styles/Button';
+import { useIncrementalList, useLoadMoreSentinel } from '../../../hooks/useIncrementalList';
 
 function getAgingInfo(ticket) {
   const ts = ticket?.createdAt || ticket?.updatedAt;
@@ -134,6 +136,17 @@ export const SupportTicketList = memo(function SupportTicketList({
   showClosedTickets = false,
   setShowClosedTickets = null,
 }) {
+  // Lista pode chegar a ~2.000 chamados: renderiza em blocos de 200
+  // (IntersectionObserver + botão manual como fallback).
+  const {
+    visibleItems: visibleTickets,
+    hasMore: hasMoreTickets,
+    loadMore: loadMoreTickets,
+    visibleCount: visibleTicketCount,
+    totalCount: totalTicketCount,
+  } = useIncrementalList(ticketsView, { batchSize: 200 });
+  const loadMoreSentinelRef = useLoadMoreSentinel({ enabled: hasMoreTickets, onLoadMore: loadMoreTickets });
+
   return (
     <div className="support-tickets-panel">
       <div className="support-tickets-header">
@@ -173,7 +186,7 @@ export const SupportTicketList = memo(function SupportTicketList({
         <p className="support-tickets-empty">Nenhum chamado disponível</p>
       ) : (
         <div className="support-tickets-list" data-testid="ticket-list" role="list">
-          {ticketsView.map((ticket) => (
+          {visibleTickets.map((ticket) => (
             <SupportTicketCard
               key={ticket.id}
               ticket={ticket}
@@ -195,6 +208,18 @@ export const SupportTicketList = memo(function SupportTicketList({
               getTicketDisplayId={getTicketDisplayId}
             />
           ))}
+          {hasMoreTickets ? (
+            <div ref={loadMoreSentinelRef} style={{ display: 'flex', justifyContent: 'center', padding: '4px 0' }}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={loadMoreTickets}
+                aria-label={`Carregar mais chamados (${visibleTicketCount} de ${totalTicketCount} exibidos)`}
+              >
+                Carregar mais chamados ({visibleTicketCount}/{totalTicketCount})
+              </Button>
+            </div>
+          ) : null}
           <div aria-hidden="true" style={{ height: 1 }} />
         </div>
       )}

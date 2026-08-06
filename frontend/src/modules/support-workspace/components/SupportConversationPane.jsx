@@ -7,6 +7,7 @@ import {
   formatSupportMode,
   formatSupportReason,
 } from '../../../components/support/supportHumanization';
+import { useIncrementalList } from '../../../hooks/useIncrementalList';
 
 const EMOJI_GROUPS = {
   smileys: {
@@ -131,6 +132,15 @@ function SupportConversationPaneInner({
     if (emojiCategory === 'recent') return recentEmojis;
     return EMOJI_GROUPS[emojiCategory]?.items || [];
   }, [emojiCategory, recentEmojis]);
+
+  // Timeline pode ser longa: renderiza as últimas 200 mensagens e revela
+  // blocos anteriores no topo (scroll-to-bottom do pai não é afetado, pois
+  // o recorte é local e `timelineMessages` não muda ao carregar mais).
+  const {
+    visibleItems: visibleTimelineMessages,
+    hasMore: hasMoreTimelineMessages,
+    loadMore: loadMoreTimelineMessages,
+  } = useIncrementalList(timelineMessages, { batchSize: 200, fromEnd: true });
 
   const insertEmojiAtCursor = (emoji) => {
     const symbol = String(emoji || '').trim();
@@ -362,7 +372,20 @@ function SupportConversationPaneInner({
               {timelineMessages.length === 0 ? (
                 <p className="support-history-empty">Nenhuma mensagem ainda</p>
               ) : (
-                timelineMessages.map((msg) => (
+                <>
+                {hasMoreTimelineMessages ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={loadMoreTimelineMessages}
+                      aria-label="Carregar mensagens anteriores"
+                    >
+                      Carregar mensagens anteriores
+                    </Button>
+                  </div>
+                ) : null}
+                {visibleTimelineMessages.map((msg) => (
                     <div key={msg.key} className={`support-message ${msg.sender === 'user' ? 'is-user' : 'is-other'}`} data-testid={msg.sender === 'agent' ? 'message-sent' : 'message-received'}>
                     <div className="support-message-meta">
                       {msg.sender === 'user' ? '👤 Usuário' : msg.sender === 'agent' ? '👨‍💼 Atendente' : '🤖 Sistema'} • {formatDate(msg.timestamp)}
@@ -416,7 +439,8 @@ function SupportConversationPaneInner({
                       );
                     })()}
                   </div>
-                ))
+                ))}
+                </>
               )}
             </div>
           ) : isWaitingTicket ? (
