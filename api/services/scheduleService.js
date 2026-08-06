@@ -1,4 +1,7 @@
 // ── defensive helpers ────────────────────────────────────────────────────────
+const { emitEvent } = require('./websocketService');
+const logger = require('../utils/logger');
+
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
   try { return String(value); } catch (_) { return fallback; }
@@ -14,6 +17,24 @@ function safeSafeArray(value) {
   try { return [...value]; } catch (_) { return []; }
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Notifica páginas operacionais (agenda Beauty, Painel Vertical) via WebSocket.
+// Best-effort: falha no emit nunca bloqueia o write do agendamento.
+function emitScheduleUpdated({ tenantId, scheduleId, action, schedule = null }) {
+  const safeTenantId = safeToString(tenantId, '') || '';
+  if (!safeTenantId) return;
+  try {
+    emitEvent('vertical.schedule.updated', {
+      tenantId: safeTenantId,
+      entityId: scheduleId,
+      action,
+      contextType: schedule ? schedule.contextType : null,
+      vertical: schedule && schedule.metadata && typeof schedule.metadata === 'object' ? (schedule.metadata.vertical || null) : null,
+    }, { tenantId: safeTenantId });
+  } catch (err) {
+    logger.warn('[ScheduleService] Falha ao emitir vertical.schedule.updated', { action, scheduleId });
+  }
+}
 
 const schedulesByTenant = new Map();
 
@@ -68,6 +89,7 @@ function createSchedule({ tenantId, payload }) {
     updatedAt: now,
   };
   getTenantStore(tenantId).set(id, schedule);
+  emitScheduleUpdated({ tenantId, scheduleId: id, action: 'created', schedule });
   return schedule;
 }
 
@@ -77,7 +99,11 @@ function getSchedule({ tenantId, scheduleId }) {
 
 function deleteSchedule({ tenantId, scheduleId }) {
   const store = getTenantStore(tenantId);
-  return store.delete(safeToString(scheduleId));
+  const deleted = store.delete(safeToString(scheduleId));
+  if (deleted) {
+    emitScheduleUpdated({ tenantId, scheduleId: safeToString(scheduleId), action: 'deleted' });
+  }
+  return deleted;
 }
 
 function updateScheduleStatus({ tenantId, scheduleId, action, payload = {} }) {
@@ -115,6 +141,7 @@ function updateScheduleStatus({ tenantId, scheduleId, action, payload = {} }) {
 
   schedule.updatedAt = now;
   getTenantStore(tenantId).set(safeToString(scheduleId), schedule);
+  emitScheduleUpdated({ tenantId, scheduleId: safeToString(scheduleId), action, schedule });
   return schedule;
 }
 

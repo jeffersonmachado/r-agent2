@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getBeautyAgenda, markBeautyNoShow, markBeautyServiceCompleted } from '../api/verticalPilot';
 import { useToast } from '../components/Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -62,8 +63,20 @@ export function BeautySchedulePage() {
     loadAgenda();
   }, [date, professionalId]);
 
+  // Refresh sob demanda via WebSocket: o backend emite
+  // `vertical.schedule.updated` em agendamento criado/remarcado/cancelado.
+  useWebSocketContext({
+    onEvent: (event) => {
+      if (event === 'vertical.schedule.updated') {
+        loadAgenda();
+      }
+    },
+    subscribeEvents: ['vertical.schedule.updated'],
+  });
+
   useEffect(() => {
-    const timer = setInterval(loadAgenda, 15000);
+    // Poll de 120s: fallback caso o evento WS não chegue
+    const timer = setInterval(loadAgenda, 120000);
     return () => clearInterval(timer);
   }, [date, professionalId]);
 

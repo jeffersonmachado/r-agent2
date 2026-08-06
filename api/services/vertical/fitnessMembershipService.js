@@ -20,8 +20,23 @@ const { updateBillingStatus, blockMembership, reactivateMembership, computeEffec
 const { emitJourneyEvent } = require('./customerJourneyEngine');
 const { appendEventV1 } = require('../eventLedgerService');
 const { enqueueNotification } = require('../notificationService');
+const { emitEvent } = require('../websocketService');
+const logger = require('../../utils/logger');
 
 const VERTICAL = 'fitness';
+
+// Notifica páginas operacionais via WebSocket. Best-effort.
+function emitMembershipUpdated({ tenantId, entityId = null, action }) {
+  if (!tenantId) return;
+  try {
+    emitEvent('vertical.memberships.updated', { tenantId, entityId, action }, { tenantId: String(tenantId) });
+  } catch (error) {
+    logger.warn('[FitnessMembership] Falha ao emitir vertical.memberships.updated', {
+      action,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+}
 
 async function queueFitnessNotification({
   tenantId,
@@ -110,6 +125,7 @@ async function updateMembershipDetails({ tenantId, membershipId, fields }) {
   const row = await Model.findOne({ where: { tenant_key: tenantId, id: String(membershipId) } });
   if (!row) return null;
   await row.update(update);
+  emitMembershipUpdated({ tenantId, entityId: membershipId, action: 'updated' });
   return row.toJSON ? row.toJSON() : row;
 }
 

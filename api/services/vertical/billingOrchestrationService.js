@@ -17,6 +17,24 @@ const crypto = require('crypto');
 const { getSequelize } = require('../../db/sequelize');
 const { AccessMembership, VerticalSessionBundle } = require('../../db/models');
 const { appendEventV1 } = require('../eventLedgerService');
+const { emitEvent } = require('../websocketService');
+const logger = require('../../utils/logger');
+
+// ── Realtime (WebSocket) ──────────────────────────────────────────────────
+// Notifica páginas operacionais verticais. Best-effort: falha no emit nunca
+// bloqueia o write de billing/bundle.
+function emitVerticalEvent(event, { tenantId, entityId = null, action, extra = {} }) {
+  if (!tenantId) return;
+  try {
+    emitEvent(event, { tenantId, entityId, action, ...extra }, { tenantId: String(tenantId) });
+  } catch (error) {
+    logger.warn('[BillingOrchestration] Falha ao emitir evento vertical', {
+      event,
+      action,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+}
 
 // ── Billing status machine ────────────────────────────────────────────────
 // allowed transitions
@@ -103,6 +121,12 @@ async function updateBillingStatus({ tenantId, membershipId, toStatus, reason = 
   const updated = row.toJSON ? row.toJSON() : row;
 
   await emitBillingEvent({ tenantId, membershipId, fromStatus, toStatus, reason, actor });
+  emitVerticalEvent('vertical.memberships.updated', {
+    tenantId,
+    entityId: membershipId,
+    action: 'billing_status_changed',
+    extra: { fromStatus, toStatus },
+  });
   return updated;
 }
 
@@ -183,7 +207,14 @@ async function createSessionBundle({ tenantId, vertical, subjectId, customerId =
     renewal_at: renewalAt ? new Date(renewalAt) : null,
     metadata,
   });
-  return row.toJSON ? row.toJSON() : row;
+  const bundle = row.toJSON ? row.toJSON() : row;
+  emitVerticalEvent('vertical.bundles.updated', {
+    tenantId,
+    entityId: bundle.id || id,
+    action: 'sold',
+    extra: { vertical, subjectId },
+  });
+  return bundle;
 }
 
 /**
@@ -218,6 +249,13 @@ async function consumeSession({ tenantId, bundleId, correlationId = null }) {
   const newUsed = bundle.used_sessions + 1;
   const newStatus = bundle.total_sessions !== null && newUsed >= bundle.total_sessions ? 'exhausted' : 'active';
   await row.update({ used_sessions: newUsed, status: newStatus });
+
+  emitVerticalEvent('vertical.bundles.updated', {
+    tenantId,
+    entityId: bundleId,
+    action: 'used',
+    extra: { vertical: bundle.vertical, usedSessions: newUsed, totalSessions: bundle.total_sessions, status: newStatus },
+  });
 
   // Audit append (best-effort)
   await appendEventV1({

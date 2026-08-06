@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence } from '../api/verticalOperations';
 import { useToast } from '../components/Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import { verticalWorkspaces } from '../navigation/menu';
+
+const VERTICAL_WS_EVENTS = [
+  'vertical.attendance.updated',
+  'vertical.schedule.updated',
+  'vertical.bundles.updated',
+  'vertical.memberships.updated',
+];
 
 export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAdmin = false }) {
   const { showToast, ToastContainer } = useToast();
@@ -47,9 +55,21 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
     }
   }
 
+  // Refresh sob demanda via WebSocket: qualquer evento operacional vertical
+  // (presença, agenda, bundles, memberships) dispara refetch do painel.
+  useWebSocketContext({
+    onEvent: (event) => {
+      if (VERTICAL_WS_EVENTS.includes(event)) {
+        loadData();
+      }
+    },
+    subscribeEvents: VERTICAL_WS_EVENTS,
+  });
+
   useEffect(() => {
     loadData();
-    const timer = setInterval(loadData, 20000);
+    // Poll de 120s: fallback caso os eventos WS não cheguem
+    const timer = setInterval(loadData, 120000);
     return () => clearInterval(timer);
   }, []);
 

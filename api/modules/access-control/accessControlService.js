@@ -1,6 +1,20 @@
 const repository = require('./accessControlRepository');
 const { CREDENTIAL_TYPES, DEVICE_TYPES, ANTI_PASSBACK_MODES } = require('./constants');
 const { makeId, hashCredential } = require('./utils');
+const { emitEvent } = require('../../services/websocketService');
+const logger = require('../../utils/logger');
+
+// Notifica páginas operacionais via WebSocket quando uma membership é criada. Best-effort.
+function emitMembershipCreated({ tenantId, membershipId, vertical }) {
+  if (!tenantId) return;
+  try {
+    emitEvent('vertical.memberships.updated', { tenantId, entityId: membershipId, action: 'created', vertical }, { tenantId: String(tenantId) });
+  } catch (error) {
+    logger.warn('[AccessControl] Falha ao emitir vertical.memberships.updated', {
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+}
 
 function assertAllowed(value, allowed, code) {
   if (!allowed.includes(String(value))) {
@@ -35,7 +49,7 @@ async function upsertMembership({ tenantId, subjectId, membershipId, vertical = 
   if (!membershipId) return null;
   const existing = await repository.findMembership({ tenantId, where: { id: String(membershipId) } });
   if (existing) return existing;
-  return repository.createMembership({
+  const created = await repository.createMembership({
     id: String(membershipId),
     tenant_key: tenantId,
     subject_id: String(subjectId),
@@ -47,6 +61,8 @@ async function upsertMembership({ tenantId, subjectId, membershipId, vertical = 
     unit_scope: Array.isArray(unitScope) ? unitScope : [],
     metadata,
   });
+  emitMembershipCreated({ tenantId, membershipId: String(membershipId), vertical });
+  return created;
 }
 
 async function listDevices({ tenantId }) {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { listOpenFitnessAttendances } from '../api/verticalOperations';
 import { registerFitnessCheckOut } from '../api/verticalPilot';
 import { useToast } from '../components/Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
 
 export function FitnessAttendancePage() {
   const { showToast, ToastContainer } = useToast();
@@ -20,6 +21,17 @@ export function FitnessAttendancePage() {
     }
   }
 
+  // Refresh sob demanda via WebSocket: o backend emite
+  // `vertical.attendance.updated` em check-in/check-out/no-show.
+  useWebSocketContext({
+    onEvent: (event) => {
+      if (event === 'vertical.attendance.updated') {
+        loadData();
+      }
+    },
+    subscribeEvents: ['vertical.attendance.updated'],
+  });
+
   async function closeAttendance(item) {
     try {
       await registerFitnessCheckOut({ subjectId: item.subject_id, attendanceId: item.id, metadata: { source: 'fitness_attendance_page' } });
@@ -32,7 +44,8 @@ export function FitnessAttendancePage() {
 
   useEffect(() => {
     loadData();
-    const timer = setInterval(loadData, 15000);
+    // Poll de 120s: fallback caso o evento WS não chegue
+    const timer = setInterval(loadData, 120000);
     return () => clearInterval(timer);
   }, []);
 

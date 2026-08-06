@@ -3,6 +3,7 @@ import { listCampaigns, createCampaign, updateCampaign, deleteCampaign, startCam
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
 import { useAuth } from '../context/authContext';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import { useRouter } from '../hooks/useRouter';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
@@ -36,7 +37,8 @@ export function BulkMessagingPage() {
   useEffect(() => {
     if (isAuthenticated) {
       loadCampaigns();
-      const interval = setInterval(loadCampaigns, 30000); // Atualiza a cada 30s
+      // Poll de 120s: fallback caso o evento WS `campaign.updated` não chegue
+      const interval = setInterval(loadCampaigns, 120000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
@@ -56,6 +58,18 @@ export function BulkMessagingPage() {
       loadInFlightRef.current = false;
     }
   };
+
+  // Refresh sob demanda via WebSocket: o backend emite `campaign.updated`
+  // nas transições de estado e em progresso agregado (throttle de 5s).
+  useWebSocketContext({
+    enabled: isAuthenticated,
+    onEvent: (event) => {
+      if (event === 'campaign.updated') {
+        loadCampaigns();
+      }
+    },
+    subscribeEvents: ['campaign.updated'],
+  });
 
   const handleCreate = async () => {
     try {

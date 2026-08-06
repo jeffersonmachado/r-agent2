@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { listBeautyBundles, createBeautyBundle } from '../api/verticalOperations';
 import { useToast } from '../components/Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
 
 export function BeautyBundlesPage() {
   const { showToast, ToastContainer } = useToast();
@@ -47,9 +48,21 @@ export function BeautyBundlesPage() {
     }
   }
 
+  // Refresh sob demanda via WebSocket: o backend emite
+  // `vertical.bundles.updated` quando um bundle é vendido ou consumido.
+  useWebSocketContext({
+    onEvent: (event) => {
+      if (event === 'vertical.bundles.updated') {
+        loadData();
+      }
+    },
+    subscribeEvents: ['vertical.bundles.updated'],
+  });
+
   useEffect(() => {
     loadData();
-    const timer = setInterval(loadData, 20000);
+    // Poll de 120s: fallback caso o evento WS não chegue
+    const timer = setInterval(loadData, 120000);
     return () => clearInterval(timer);
   }, [status]);
 

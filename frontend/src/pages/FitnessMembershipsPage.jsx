@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { listFitnessMemberships, chargeFitnessMembership } from '../api/verticalOperations';
 import { useToast } from '../components/Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
 
 function formatDate(value) {
   if (!value) return '-';
@@ -50,9 +51,21 @@ export function FitnessMembershipsPage() {
     delinquent: items.filter((item) => ['delinquent', 'grace_period'].includes(item.effectiveBillingStatus)).length,
   }), [items]);
 
+  // Refresh sob demanda via WebSocket: o backend emite
+  // `vertical.memberships.updated` em criação/alteração de membership.
+  useWebSocketContext({
+    onEvent: (event) => {
+      if (event === 'vertical.memberships.updated') {
+        loadData();
+      }
+    },
+    subscribeEvents: ['vertical.memberships.updated'],
+  });
+
   useEffect(() => {
     loadData();
-    const timer = setInterval(loadData, 20000);
+    // Poll de 120s: fallback caso o evento WS não chegue
+    const timer = setInterval(loadData, 120000);
     return () => clearInterval(timer);
   }, [billingStatus]);
 

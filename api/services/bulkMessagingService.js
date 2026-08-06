@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
 const outboundQueueService = require('./outboundQueueService');
+const { emitEvent } = require('./websocketService');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -75,6 +76,46 @@ const campaigns = new Map();
 // Controle de envio ativo
 /** @type {Map<string, NodeJS.Timeout>} */
 const activeSenders = new Map();
+
+// ---------------------------------------------------------------------------
+// Realtime: `campaign.updated` via WebSocket (padrão channel.health.alert).
+// Emitido apenas em transições de estado e em progresso agregado com throttle
+// (nunca por destinatário — o pacing envia mensagem a mensagem).
+// ---------------------------------------------------------------------------
+const CAMPAIGN_PROGRESS_EMIT_INTERVAL_MS = 5000;
+
+/** @type {Map<string, number>} campaignId -> timestamp do último emit de progresso */
+const lastProgressEmitAt = new Map();
+
+function emitCampaignUpdated(campaign, action) {
+  if (!campaign) return;
+  const tenantId = safeTrim(campaign.tenantId);
+  if (!tenantId) return;
+  try {
+    emitEvent('campaign.updated', {
+      tenantId,
+      campaignId: campaign.id,
+      status: campaign.status,
+      action,
+      counters: {
+        totalRecipients: campaign.totalRecipients,
+        sentCount: campaign.sentCount,
+        failedCount: campaign.failedCount,
+        pendingCount: campaign.pendingCount,
+      },
+    }, { tenantId });
+  } catch (err) {
+    logger.warn('[BulkMessaging] Falha ao emitir campaign.updated', { campaignId: campaign.id, error: safeErrorMessage(err) });
+  }
+}
+
+function emitCampaignProgressThrottled(campaign) {
+  const now = Date.now();
+  const last = lastProgressEmitAt.get(campaign.id) || 0;
+  if (now - last < CAMPAIGN_PROGRESS_EMIT_INTERVAL_MS) return;
+  lastProgressEmitAt.set(campaign.id, now);
+  emitCampaignUpdated(campaign, 'progress');
+}
 
 // ---------------------------------------------------------------------------
 // Evicção de campanhas concluídas (TTL 24h, padrão do auto-cleanup de tickets).
@@ -257,7 +298,9 @@ function createCampaign(data) {
   
   campaigns.set(id, campaign);
   // Dados agora estão no banco de dados PostgreSQL
-  
+
+  emitCampaignUpdated(campaign, 'created');
+
   return { success: true, campaign };
 }
 
@@ -295,7 +338,9 @@ function updateCampaign(id, updates) {
   
   campaigns.set(id, updated);
   // Dados agora estão no banco de dados PostgreSQL
-  
+
+  emitCampaignUpdated(updated, 'updated');
+
   return { success: true, campaign: updated };
 }
 
@@ -316,8 +361,11 @@ function deleteCampaign(id) {
   }
   
   campaigns.delete(id);
+  lastProgressEmitAt.delete(id);
   // Dados agora estão no banco de dados PostgreSQL
-  
+
+  emitCampaignUpdated(existing, 'deleted');
+
   return { success: true };
 }
 
@@ -347,7 +395,9 @@ async function startCampaign(id) {
   campaign.status = 'sending';
   campaign.updatedAt = new Date().toISOString();
   // Dados agora estão no banco de dados PostgreSQL
-  
+
+  emitCampaignUpdated(campaign, 'started');
+
   // Inicia processo de envio assíncrono
   startSendingProcess(id);
   
@@ -372,7 +422,9 @@ function pauseCampaign(id) {
   campaign.status = 'paused';
   campaign.updatedAt = new Date().toISOString();
   // Dados agora estão no banco de dados PostgreSQL
-  
+
+  emitCampaignUpdated(campaign, 'paused');
+
   // Para o processo de envio
   stopSendingProcess(id);
   
@@ -397,7 +449,9 @@ function resumeCampaign(id) {
   campaign.status = 'sending';
   campaign.updatedAt = new Date().toISOString();
   // Dados agora estão no banco de dados PostgreSQL
-  
+
+  emitCampaignUpdated(campaign, 'resumed');
+
   // Retoma processo de envio
   startSendingProcess(id);
   
@@ -439,6 +493,7 @@ async function startSendingProcess(campaignId) {
     campaign.updatedAt = new Date().toISOString();
     // Dados agora estão no banco de dados PostgreSQL
     stopSendingProcess(campaignId);
+    emitCampaignUpdated(campaign, 'completed');
     return;
   }
   
@@ -455,6 +510,7 @@ async function startSendingProcess(campaignId) {
       campaign.updatedAt = new Date().toISOString();
       // Dados agora estão no banco de dados PostgreSQL
       stopSendingProcess(campaignId);
+      emitCampaignUpdated(campaign, 'completed');
       return;
     }
     
@@ -488,7 +544,10 @@ async function startSendingProcess(campaignId) {
     
     campaign.updatedAt = new Date().toISOString();
     // Dados agora estão no banco de dados PostgreSQL
-    
+
+    // Progresso agregado com throttle (nunca 1 evento por destinatário)
+    emitCampaignProgressThrottled(campaign);
+
     // Agenda próximo envio
     const timeout = setTimeout(sendNext, intervalMs);
     activeSenders.set(campaignId, timeout);
@@ -522,8 +581,10 @@ module.exports = {
   _internal: {
     campaigns,
     activeSenders,
+    lastProgressEmitAt,
     sweepCompletedCampaigns,
     COMPLETED_CAMPAIGN_TTL_MS,
+    CAMPAIGN_PROGRESS_EMIT_INTERVAL_MS,
   },
 };
 

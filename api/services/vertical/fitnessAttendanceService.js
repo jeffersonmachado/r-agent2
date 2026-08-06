@@ -17,9 +17,26 @@ const { getSequelize } = require('../../db/sequelize');
 const { VerticalAttendance } = require('../../db/models');
 const { appendEventV1 } = require('../eventLedgerService');
 const { emitJourneyEvent } = require('./customerJourneyEngine');
+const { emitEvent } = require('../websocketService');
 const logger = require('../../utils/logger');
 
 const VERTICAL = 'fitness';
+
+/**
+ * Notifica páginas operacionais (Presença Fitness, Painel Vertical) via
+ * WebSocket. Best-effort: falha no emit nunca bloqueia a catraca.
+ */
+function emitAttendanceUpdated({ tenantId, entityId = null, action, extra = {} }) {
+  if (!tenantId) return;
+  try {
+    emitEvent('vertical.attendance.updated', { tenantId, entityId, action, ...extra }, { tenantId: String(tenantId) });
+  } catch (error) {
+    logger.warn('[FitnessAttendance] Falha ao emitir vertical.attendance.updated', {
+      action,
+      error: error && error.message ? error.message : String(error),
+    });
+  }
+}
 
 function makeId(prefix) {
   return `${prefix}-${Date.now()}-${crypto.randomBytes(5).toString('hex')}`;
@@ -84,6 +101,8 @@ async function recordCheckIn({ tenantId, subjectId, membershipId = null, accessD
     row = created.toJSON ? created.toJSON() : created;
   }
 
+  emitAttendanceUpdated({ tenantId, entityId: row.id || id, action: 'checkin' });
+
   // Emit ledger event (best-effort)
   await appendEventV1({
     tenantId,
@@ -142,6 +161,8 @@ async function recordCheckOut({ tenantId, subjectId, accessDecisionId = null, at
   await row.update({ checked_out_at: now, duration_minutes: durationMinutes, status: 'completed', metadata: { ...row.metadata, ...metadata } });
   const updated = row.toJSON ? row.toJSON() : row;
 
+  emitAttendanceUpdated({ tenantId, entityId: updated.id, action: 'checkout' });
+
   await appendEventV1({
     tenantId,
     type: 'FitnessCheckOut',
@@ -182,7 +203,9 @@ async function markAbsent({ tenantId, attendanceId, subjectId, metadata = {} }) 
   const row = await Model.findOne({ where: { tenant_key: tenantId, id: String(attendanceId) } }).catch(() => null);
   if (!row) return null;
   await row.update({ status: 'absent', metadata: { ...row.metadata, ...metadata } });
-  return row.toJSON ? row.toJSON() : row;
+  const updated = row.toJSON ? row.toJSON() : row;
+  emitAttendanceUpdated({ tenantId, entityId: updated.id, action: 'absent' });
+  return updated;
 }
 
 // ── Queries ───────────────────────────────────────────────────────────────
@@ -262,6 +285,9 @@ async function closeStaleOpenAttendances({ tenantId, maxOpenHours = 8 }) {
     const durationMinutes = Math.round((now - checkedIn) / 60000);
     await row.update({ status: 'absent', checked_out_at: now, duration_minutes: durationMinutes, metadata: { ...row.metadata, auto_closed: true } }).catch(() => {});
     closed++;
+  }
+  if (closed > 0) {
+    emitAttendanceUpdated({ tenantId, action: 'auto_closed', extra: { closed } });
   }
   return { closed };
 }
