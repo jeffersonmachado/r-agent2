@@ -62,6 +62,12 @@ async function main() {
       if (url.includes('/api/learning/interactions') && /ERR_ABORTED/i.test(failure)) {
         return;
       }
+      // Chunks lazy de páginas (code splitting, main.jsx): o validador navega
+      // com page.goto (reload completo), que aborta imports dinâmicos em voo da
+      // rota anterior — ruído de navegação, não falha funcional.
+      if (/ERR_ABORTED/i.test(failure) && /\/src\/pages\/.+\.jsx/.test(url)) {
+        return;
+      }
       networkFailures.push({
         url,
         method: request.method(),
