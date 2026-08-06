@@ -21,8 +21,6 @@ export function ChatPage() {
   const [selectedFlowId, setSelectedFlowId] = useState(null);
   const [selectedFlow, setSelectedFlow] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [selectFocused, setSelectFocused] = useState(false);
-  const [selectHovered, setSelectHovered] = useState(false);
   const urlFlowIdRef = useRef(null);
 
   // Proteção: redireciona para login se não estiver autenticado
@@ -159,20 +157,13 @@ export function ChatPage() {
             value={selectedFlowId || ''}
             onChange={handleFlowChange}
             disabled={loading || flows.length === 0}
-            onFocus={() => setSelectFocused(true)}
-            onBlur={() => setSelectFocused(false)}
-            onMouseEnter={() => !loading && flows.length > 0 && setSelectHovered(true)}
-            onMouseLeave={() => setSelectHovered(false)}
+            className={`border border-solid [border-color:var(--color-border-default)] rounded-md outline-none${
+              loading || flows.length === 0
+                ? ''
+                : ' hover:[border-color:var(--color-border-hover)] focus-visible:[border-color:var(--color-border-focus)] focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-[var(--color-accent-light)] focus-visible:outline-offset-2'
+            }`}
             style={{
               padding: '8px 12px',
-              border: `1px solid ${
-                selectFocused 
-                  ? theme.colors.border.focus 
-                  : selectHovered 
-                    ? theme.colors.border.hover 
-                    : theme.colors.border.default
-              }`,
-              borderRadius: '6px',
               backgroundColor: loading || flows.length === 0 
                 ? theme.colors.bg.tertiary 
                 : theme.colors.bg.primary,
@@ -182,8 +173,6 @@ export function ChatPage() {
               fontSize: '14px',
               minWidth: '200px',
               cursor: loading || flows.length === 0 ? 'not-allowed' : 'pointer',
-              outline: selectFocused ? `2px solid ${theme.colors.accent.light}` : 'none',
-              outlineOffset: '2px',
               transition: 'border-color 0.2s, background-color 0.2s'
             }}
           >

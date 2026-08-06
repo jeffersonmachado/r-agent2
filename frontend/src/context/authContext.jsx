@@ -2,7 +2,7 @@
  * Contexto de autenticação para gerenciar estado de login/logout.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import * as authApi from '../api/auth';
 import logger from '../utils/logger';
 
@@ -229,7 +229,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     agent,
     loading,
     isAuthenticated,
@@ -237,7 +237,7 @@ export function AuthProvider({ children }) {
     logout,
     reloadAgent: loadAgent,
     updateAgent,
-  };
+  }), [agent, loading, isAuthenticated, login, logout, loadAgent, updateAgent]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

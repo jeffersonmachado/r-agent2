@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 
 const CrmContext = createContext();
 
@@ -21,32 +21,45 @@ export function CrmProvider({ children }) {
     setTimeout(clearError, 5000);
   }, [clearError]);
 
+  const value = useMemo(() => ({
+    accounts,
+    setAccounts,
+    contacts,
+    setContacts,
+    leads,
+    setLeads,
+    pipelines,
+    setPipelines,
+    opportunities,
+    setOpportunities,
+    activities,
+    setActivities,
+    loading,
+    setLoading,
+    error,
+    setErrorMsg,
+    clearError,
+    selectedAccount,
+    setSelectedAccount,
+    selectedPipeline,
+    setSelectedPipeline,
+  }), [
+    accounts,
+    contacts,
+    leads,
+    pipelines,
+    opportunities,
+    activities,
+    loading,
+    error,
+    setErrorMsg,
+    clearError,
+    selectedAccount,
+    selectedPipeline,
+  ]);
+
   return (
-    <CrmContext.Provider
-      value={{
-        accounts,
-        setAccounts,
-        contacts,
-        setContacts,
-        leads,
-        setLeads,
-        pipelines,
-        setPipelines,
-        opportunities,
-        setOpportunities,
-        activities,
-        setActivities,
-        loading,
-        setLoading,
-        error,
-        setErrorMsg,
-        clearError,
-        selectedAccount,
-        setSelectedAccount,
-        selectedPipeline,
-        setSelectedPipeline,
-      }}
-    >
+    <CrmContext.Provider value={value}>
       {children}
     </CrmContext.Provider>
   );

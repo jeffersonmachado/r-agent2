@@ -89,17 +89,6 @@ export function FlowEditorPage() {
     };
   }, []);
 
-  if (authLoading) {
-    return (
-      <div className="page-loading">
-        <p>Carregando...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null; // Será redirecionado pelo useEffect
-  }
   const {
     currentFlow,
     selectedNode,
@@ -120,6 +109,7 @@ export function FlowEditorPage() {
 
   // Se a página foi aberta com ?flowId=..., carrega automaticamente o fluxo
   useEffect(() => {
+    if (!isAuthenticated) return;
     try {
       const params = new URLSearchParams(window.location.search || '');
       const flowId = params.get('flowId');
@@ -127,7 +117,7 @@ export function FlowEditorPage() {
         loadFlow(flowId).catch(() => {});
       }
     } catch {}
-  }, [loadFlow]);
+  }, [isAuthenticated, loadFlow]);
 
   useEffect(() => {
     const env = currentFlow?.metadata?.environment;
@@ -751,6 +741,18 @@ export function FlowEditorPage() {
       logger.warn('Falha ao aplicar erros de validação no canvas (best-effort)', { error: err });
     });
   }, [validation, displayedFlow]);
+
+  if (authLoading) {
+    return (
+      <div className="page-loading">
+        <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Será redirecionado pelo useEffect
+  }
 
   return (
     <div className={`flow-editor-page ${debugModeEnabled ? 'is-debug-mode' : ''} ${minimapVisible ? 'is-minimap-visible' : ''} ${reroutePointsVisible ? 'is-reroute-visible' : ''}`}>

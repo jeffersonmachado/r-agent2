@@ -254,10 +254,6 @@ export function useFlowEditorNodeInteraction({
         editorRef.current.updateNodeIO(nodeId);
       }
 
-      if (editorRef.current.updateNodeIO) {
-        editorRef.current.updateNodeIO(nodeId);
-      }
-
       setSelectedNode((prev) => {
         if (!prev || prev.id !== nodeId) return prev;
         return { ...prev, config: { ...prev.config, ...newConfig } };

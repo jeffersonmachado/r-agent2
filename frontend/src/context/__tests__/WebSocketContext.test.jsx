@@ -471,6 +471,51 @@ describe('WebSocketContext', () => {
     expect(onEvent).not.toHaveBeenCalled();
   });
 
+  it('mantém um único registro e usa o callback mais recente após re-renders', async () => {
+    // Regressão: consumidores passam callbacks inline; cada render re-registrava
+    // o handler em cascata. Agora o handler é registrado uma vez e delega
+    // para a versão mais recente do callback via ref.
+    const onEvent1 = vi.fn();
+    const onEvent2 = vi.fn();
+
+    function InlineCallbackComponent({ cb }) {
+      useWebSocketContext({ onEvent: cb, subscribeEvents: ['ticket.created'] });
+      return <div data-testid="inline-callback-component" />;
+    }
+
+    const { rerender } = render(
+      <WebSocketProvider>
+        <InlineCallbackComponent cb={onEvent1} />
+      </WebSocketProvider>
+    );
+
+    await act(async () => {
+      mockWs._simulateOpen();
+    });
+
+    // Re-render com nova identidade de callback (padrão inline dos consumidores)
+    rerender(
+      <WebSocketProvider>
+        <InlineCallbackComponent cb={onEvent2} />
+      </WebSocketProvider>
+    );
+
+    await act(async () => {
+      mockWs._simulateMessage({
+        type: 'event',
+        event: 'ticket.created',
+        data: { ticketId: '999' },
+      });
+    });
+
+    // Callback mais recente recebe o evento exatamente uma vez (sem handler duplicado)
+    await waitFor(() => {
+      expect(onEvent2).toHaveBeenCalledTimes(1);
+    }, { timeout: 2000 });
+    expect(onEvent2).toHaveBeenCalledWith('ticket.created', { ticketId: '999' }, expect.any(Object));
+    expect(onEvent1).not.toHaveBeenCalled();
+  });
+
   it('limpa recursos ao desmontar Provider', async () => {
     const { unmount, container } = render(
       <WebSocketProvider>

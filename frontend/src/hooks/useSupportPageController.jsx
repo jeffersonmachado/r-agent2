@@ -8,7 +8,6 @@ import { addTagToTicket, removeTagFromTicket } from '../api/segmentation';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { useDebounce } from './useDebounce';
 import { useSupportEvidence } from './useSupportEvidence';
-import { useSupportSlashMenu } from './useSupportSlashMenu';
 import { useSupportTicketContext } from './useSupportTicketContext';
 import { useSupportQuickReplies } from './useSupportQuickReplies';
 import { useSupportTicketActions } from './useSupportTicketActions';
@@ -31,7 +30,6 @@ export function useSupportPageController({
   const [queues, setQueues] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [messageText, setMessageText] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [loading, setLoading] = useState(false);
   const [uiSearch, setUiSearch] = useState('');
@@ -49,8 +47,27 @@ export function useSupportPageController({
   const isLoadingTicketsRef = React.useRef(false);
   const lastErrorToastTimeRef = React.useRef(0);
   const hasLoadedInitialDataRef = React.useRef(false);
+  // API do composer local (registrada pelo SupportConversationPane):
+  // mantém o texto da mensagem fora do estado raiz para que cada tecla
+  // não re-renderize a lista de tickets e a timeline.
+  const composerApiRef = React.useRef(null);
 
   const ERROR_TOAST_COOLDOWN = 30000;
+
+  const registerComposer = useCallback((api) => {
+    composerApiRef.current = api;
+    return () => {
+      if (composerApiRef.current === api) {
+        composerApiRef.current = null;
+      }
+    };
+  }, []);
+
+  const applyComposerText = useCallback((updater) => {
+    if (composerApiRef.current?.updateText) {
+      composerApiRef.current.updateText(updater);
+    }
+  }, []);
 
   useEffect(() => {
     showToastRef.current = showToast;
@@ -396,7 +413,7 @@ export function useSupportPageController({
     insertQuickReply,
   } = useSupportQuickReplies({
     selectedTicket,
-    setMessageText,
+    setMessageText: applyComposerText,
   });
 
   const {
@@ -464,14 +481,17 @@ export function useSupportPageController({
     }
   }, [selectedTicket, showToast, updateTicketLocal]);
 
-  const handleSendMessage = useCallback(async () => {
-    if (!selectedTicket || !messageText.trim()) {
+  const handleSendMessage = useCallback(async (textOverride) => {
+    const currentText = typeof textOverride === 'string'
+      ? textOverride
+      : (composerApiRef.current?.getText?.() || '');
+    if (!selectedTicket || !currentText.trim()) {
       showToast('Digite uma mensagem', 'warning');
       return;
     }
 
-    const messageToSend = messageText.trim();
-    setMessageText('');
+    const messageToSend = currentText.trim();
+    composerApiRef.current?.updateText?.(() => '');
 
     try {
       await sendTicketMessage(selectedTicket.id, messageToSend);
@@ -480,11 +500,11 @@ export function useSupportPageController({
       if (loadTicketsRef.current) loadTicketsRef.current();
     } catch (error) {
       logger.error('Erro ao enviar mensagem', error);
-      setMessageText(messageToSend);
+      composerApiRef.current?.updateText?.(() => messageToSend);
       const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao enviar mensagem. Verifique sua conexão e tente novamente.';
       showToast(errorMessage, 'error');
     }
-  }, [selectedTicket, messageText, showToast, loadTicketMessages]);
+  }, [selectedTicket, showToast, loadTicketMessages]);
 
   const executeSlashCommand = useCallback(async (commandId) => {
     switch (commandId) {
@@ -514,24 +534,6 @@ export function useSupportPageController({
     }
   }, [handleClose, handlePause, handleResume, handleReturnToBot, handleTakeOver, openDeliveryFailures, selectedTicket?.id, showToast]);
 
-  const {
-    quickReplySlashResults,
-    quickReplySlashOpen,
-    slashMenuMode,
-    slashCommandResults,
-    slashMenuCursorIndex,
-    onHoverSlashItem,
-    onSelectSlashItem,
-    onComposerKeyDown,
-  } = useSupportSlashMenu({
-    selectedTicket,
-    messageText,
-    quickReplySelectedCategory,
-    onExecuteSlashCommand: executeSlashCommand,
-    onInsertQuickReply: insertQuickReply,
-    onSendMessage: handleSendMessage,
-  });
-
   const formatDate = useCallback((dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -550,7 +552,7 @@ export function useSupportPageController({
     selectedTicket,
     tickets,
     setSelectedTicket,
-    setMessageText,
+    setMessageText: applyComposerText,
     showToast,
     formatDate,
   });
@@ -663,7 +665,6 @@ export function useSupportPageController({
       uiSearchDebounced,
       ticketQueueOptions,
       wsStatus,
-      messageText,
       assignedTo,
       tagInput,
       phoneMaskingEnabled,
@@ -696,7 +697,6 @@ export function useSupportPageController({
       setUiQueue,
       clearTicketFilters,
       handleSelectTicket,
-      setMessageText,
       setAssignedTo,
       setTagInput,
       handleAddTag,
@@ -741,15 +741,9 @@ export function useSupportPageController({
       quickReplyCategories,
       quickReplyCategoryItems,
       quickReplySuggestions,
-      quickReplySlashOpen,
-      quickReplySlashResults,
-      slashMenuMode,
-      slashCommandResults,
-      slashMenuCursorIndex,
-      onSelectSlashItem,
-      onHoverSlashItem,
-      onComposerKeyDown,
       insertQuickReply,
+      registerComposer,
+      executeSlashCommand,
       handleClose,
     },
     newConversation: {

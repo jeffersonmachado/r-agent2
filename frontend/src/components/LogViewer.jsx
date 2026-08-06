@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTheme } from '../styles/themeContext';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
@@ -25,8 +25,15 @@ export function LogViewer({ onClose }) {
   useEffect(() => {
     const updateLogs = () => {
       const allLogs = logger.getHistory();
-      setLogs(allLogs);
-      setCurrentLevel(logger.getLevel());
+      setLogs((prev) => {
+        const sameLength = prev.length === allLogs.length;
+        const sameLast = allLogs.length === 0 || prev[prev.length - 1] === allLogs[allLogs.length - 1];
+        return sameLength && sameLast ? prev : allLogs;
+      });
+      setCurrentLevel((prev) => {
+        const next = logger.getLevel();
+        return prev === next ? prev : next;
+      });
     };
 
     updateLogs();
@@ -41,9 +48,11 @@ export function LogViewer({ onClose }) {
     }
   }, [logs, autoScroll]);
 
-  const filteredLogs = filterLevel === -1 
-    ? logs 
-    : logs.filter(log => log.level === filterLevel);
+  const filteredLogs = useMemo(() => (
+    filterLevel === -1
+      ? logs
+      : logs.filter(log => log.level === filterLevel)
+  ), [logs, filterLevel]);
 
   const getLevelName = (level) => {
     const names = ['DEBUG', 'INFO', 'WARN', 'ERROR'];

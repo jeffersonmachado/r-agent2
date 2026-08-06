@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -32,6 +32,7 @@ export function InboxPage() {
   const [statusFilter, setStatusFilter] = useState('open');
   const [queueFilter, setQueueFilter] = useState('');
   const [assignedFilter, setAssignedFilter] = useState('');
+  const [assignedFilterDebounced, setAssignedFilterDebounced] = useState('');
   const [tagFilter, setTagFilter] = useState('');
   const [channelFilter, setChannelFilter] = useState('');
   const [slaMaxMinutes, setSlaMaxMinutes] = useState('');
@@ -40,6 +41,16 @@ export function InboxPage() {
   const [transferQueue, setTransferQueue] = useState('');
   const [transferAssigned, setTransferAssigned] = useState('');
   const [noteText, setNoteText] = useState('');
+
+  // Cache id→nome de atendente e sequência para descartar respostas obsoletas
+  const agentNameCacheRef = useRef(new Map());
+  const loadTicketsSeqRef = useRef(0);
+
+  // Debounce do filtro "Atendente": evita refetch de 500 conversas a cada tecla
+  useEffect(() => {
+    const timeout = setTimeout(() => setAssignedFilterDebounced(assignedFilter), 400);
+    return () => clearTimeout(timeout);
+  }, [assignedFilter]);
 
   const statusOptions = useMemo(() => [
     { value: 'open', label: 'Abertos (waiting + in_progress)' },
@@ -108,15 +119,19 @@ export function InboxPage() {
     ));
 
     const resolvedById = {};
-    await Promise.all(ids.map(async (id) => {
+    const idsToFetch = ids.filter((id) => !agentNameCacheRef.current.has(id));
+    await Promise.all(idsToFetch.map(async (id) => {
       try {
         const resp = await getAgentNameById(id);
         const name = String(resp?.agent?.name || '').trim();
-        resolvedById[id] = name || id;
+        agentNameCacheRef.current.set(id, name || id);
       } catch {
-        resolvedById[id] = id;
+        agentNameCacheRef.current.set(id, id);
       }
     }));
+    ids.forEach((id) => {
+      resolvedById[id] = agentNameCacheRef.current.get(id);
+    });
 
     return list.map((ticket) => {
       const raw = String(ticket?.assignedTo || '').trim();
@@ -128,29 +143,35 @@ export function InboxPage() {
   }, []);
 
   const loadTickets = useCallback(async () => {
+    const seq = ++loadTicketsSeqRef.current;
     setLoading(true);
     try {
       const data = await listInboxConversations({
         status: statusFilter === 'open' ? undefined : statusFilter,
         queue: queueFilter || undefined,
-        assignedTo: assignedFilter || undefined,
+        assignedTo: assignedFilterDebounced || undefined,
         limit: 500,
         offset: 0,
       });
+      if (seq !== loadTicketsSeqRef.current) return; // resposta obsoleta (filtro mudou)
       const list = Array.isArray(data?.tickets) ? data.tickets : [];
       const listWithDisplay = await resolveAssignedToDisplay(list);
+      if (seq !== loadTicketsSeqRef.current) return; // resposta obsoleta (filtro mudou)
       setTickets(listWithDisplay);
       if (selectedTicket) {
         const updated = listWithDisplay.find((t) => t.id === selectedTicket.id) || selectedTicket;
         setSelectedTicket(updated);
       }
     } catch (err) {
+      if (seq !== loadTicketsSeqRef.current) return;
       logger.error('[Inbox] Erro ao carregar conversas', err);
       showToast('Erro ao carregar conversas do inbox', 'error');
     } finally {
-      setLoading(false);
+      if (seq === loadTicketsSeqRef.current) {
+        setLoading(false);
+      }
     }
-  }, [assignedFilter, queueFilter, resolveAssignedToDisplay, selectedTicket, showToast, statusFilter]);
+  }, [assignedFilterDebounced, queueFilter, resolveAssignedToDisplay, selectedTicket, showToast, statusFilter]);
 
   const loadMessages = useCallback(async (ticketId) => {
     if (!ticketId) {
@@ -189,7 +210,7 @@ export function InboxPage() {
     if (!authLoading && isAuthenticated) {
       loadTickets();
     }
-  }, [assignedFilter, authLoading, isAuthenticated, queueFilter, statusFilter]);
+  }, [assignedFilterDebounced, authLoading, isAuthenticated, queueFilter, statusFilter]);
 
   useEffect(() => {
     if (selectedTicket?.id) {

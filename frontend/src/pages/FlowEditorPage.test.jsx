@@ -52,12 +52,14 @@ vi.mock('../state/editorStore', async () => {
   };
 });
 
+let mockIsAuthenticated = true;
+
 vi.mock('../context/authContext', async () => {
   const actual = await vi.importActual('../context/authContext');
   return {
     ...actual,
     useAuth: () => ({
-      isAuthenticated: true,
+      isAuthenticated: mockIsAuthenticated,
       loading: false,
       agent: { id: 'test-agent', username: 'test' },
       login: vi.fn(),
@@ -225,6 +227,7 @@ describe('pages/FlowEditorPage', () => {
     // interferência de mocks/imports vindos de outros arquivos.
     vi.resetModules();
     mockValidation = null;
+    mockIsAuthenticated = true;
     // Usa fake timers para controlar todos os setTimeout
     vi.useFakeTimers();
     vi.clearAllMocks();
@@ -343,6 +346,52 @@ describe('pages/FlowEditorPage', () => {
     expect(screen.getByText('Este é um warning')).toBeTruthy();
     expect(screen.getByText('[SAMPLE_WARNING]')).toBeTruthy();
     expect(screen.getByText('WARNING')).toBeTruthy();
+  }, TEST_TIMEOUT);
+
+  it('não quebra quando a sessão expira com a página montada', async () => {
+    // Regressão: hooks declarados após early returns causavam
+    // "Rendered fewer hooks than expected" quando isAuthenticated virava false.
+    vi.useRealTimers();
+
+    let rerender;
+    let unmount;
+
+    await act(async () => {
+      const { FlowEditorPage } = await import('./FlowEditorPage');
+      const { ThemeProvider } = await import('../styles/themeContext');
+      const { WebSocketProvider } = await import('../context/WebSocketContext');
+      const result = render(
+        <ThemeProvider>
+          <WebSocketProvider>
+            <FlowEditorPage />
+          </WebSocketProvider>
+        </ThemeProvider>,
+      );
+      rerender = result.rerender;
+      unmount = result.unmount;
+    });
+
+    const { FlowEditorPage } = await import('./FlowEditorPage');
+    const { ThemeProvider } = await import('../styles/themeContext');
+    const { WebSocketProvider } = await import('../context/WebSocketContext');
+
+    // Simula expiração da sessão com a página já montada
+    mockIsAuthenticated = false;
+    await act(async () => {
+      rerender(
+        <ThemeProvider>
+          <WebSocketProvider>
+            <FlowEditorPage />
+          </WebSocketProvider>
+        </ThemeProvider>,
+      );
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/login');
+
+    if (unmount) {
+      unmount();
+    }
   }, TEST_TIMEOUT);
 
   // Observação: o badge IA/Fallback (score/tentativas) é testado em `FlowCurrentDisplay.test.jsx`

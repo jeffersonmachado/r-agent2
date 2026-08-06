@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
@@ -121,6 +121,22 @@ function SupportPageInner({ agent, isAuthenticated, showToast, confirm, phoneMas
   const [showOtherAgents, setShowOtherAgents] = useState(false);
   const [showClosedTickets, setShowClosedTickets] = useState(false);
 
+  const getTicketPhoneNode = useCallback((ticket) => {
+    const resolvedPhone = ticket?.phoneNumber
+      || ticket?.phone_number
+      || ticket?.phone
+      || ticket?.contactPhone
+      || ticket?.contact_phone
+      || ticket?.contact?.phone
+      || ticket?.context?.metadata?.phoneNumber
+      || ticket?.context?.metadata?.phone_number
+      || ticket?.context?.metadata?.phone
+      || ticket?.context?.variables?.phoneNumber
+      || ticket?.context?.variables?.phone_number
+      || ticket?.context?.variables?.phone;
+    return <MaskedPhone phone={resolvedPhone} mask={state.phoneMaskingEnabled} />;
+  }, [state.phoneMaskingEnabled]);
+
   const filteredTicketsView = useMemo(() => {
     const view = state.ticketsView || [];
     if (ticketViewFilter === 'unread') return view.filter((t) => Number(t.unreadCount || 0) > 0);
@@ -214,21 +230,7 @@ function SupportPageInner({ agent, isAuthenticated, showToast, confirm, phoneMas
                 uiSearchDebounced={state.uiSearchDebounced}
                 highlightText={actions.highlightText}
                 getContactName={actions.getContactName}
-                getPhoneNode={(ticket) => {
-                  const resolvedPhone = ticket?.phoneNumber
-                    || ticket?.phone_number
-                    || ticket?.phone
-                    || ticket?.contactPhone
-                    || ticket?.contact_phone
-                    || ticket?.contact?.phone
-                    || ticket?.context?.metadata?.phoneNumber
-                    || ticket?.context?.metadata?.phone_number
-                    || ticket?.context?.metadata?.phone
-                    || ticket?.context?.variables?.phoneNumber
-                    || ticket?.context?.variables?.phone_number
-                    || ticket?.context?.variables?.phone;
-                  return <MaskedPhone phone={resolvedPhone} mask={state.phoneMaskingEnabled} />;
-                }}
+                getPhoneNode={getTicketPhoneNode}
                 formatTicketMode={actions.formatTicketMode}
                 shouldShowTicketModeBadge={actions.shouldShowTicketModeBadge}
                 getStatusClass={actions.getStatusClass}
@@ -312,16 +314,8 @@ function SupportPageInner({ agent, isAuthenticated, showToast, confirm, phoneMas
                     quickReplyCategoryItems={responseComposer.quickReplyCategoryItems}
                     quickReplySuggestions={responseComposer.quickReplySuggestions}
                     insertQuickReply={responseComposer.insertQuickReply}
-                    messageText={state.messageText}
-                    setMessageText={actions.setMessageText}
-                    quickReplySlashOpen={responseComposer.quickReplySlashOpen}
-                    quickReplySlashResults={responseComposer.quickReplySlashResults}
-                    slashMenuMode={responseComposer.slashMenuMode}
-                    slashCommandResults={responseComposer.slashCommandResults}
-                    slashMenuCursorIndex={responseComposer.slashMenuCursorIndex}
-                    onSelectSlashItem={responseComposer.onSelectSlashItem}
-                    onHoverSlashItem={responseComposer.onHoverSlashItem}
-                    onComposerKeyDown={responseComposer.onComposerKeyDown}
+                    registerComposer={responseComposer.registerComposer}
+                    executeSlashCommand={responseComposer.executeSlashCommand}
                     handleSendMessage={actions.handleSendMessage}
                     handleClose={responseComposer.handleClose}
                     handleAttachMedia={() => showToast('Área de anexos em preparação', 'info')}

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../../styles/Button';
+import { useSupportSlashMenu } from '../../../hooks/useSupportSlashMenu';
 import {
   formatSupportActor,
   formatSupportEventType,
@@ -30,7 +31,7 @@ const EMOJI_GROUPS = {
   },
 };
 
-export function SupportConversationPane({
+function SupportConversationPaneInner({
   isMobile,
   isConversationListVisibleDesktop,
   selectedTicket,
@@ -56,16 +57,9 @@ export function SupportConversationPane({
   quickReplySelectedCategory,
   setQuickReplySelectedCategory,
   quickReplyCategories,
-  messageText,
-  setMessageText,
-  quickReplySlashOpen,
-  quickReplySlashResults,
-  slashMenuMode,
-  slashCommandResults,
-  slashMenuCursorIndex,
-  onSelectSlashItem,
-  onHoverSlashItem,
-  onComposerKeyDown,
+  insertQuickReply,
+  registerComposer,
+  executeSlashCommand,
   formatTicketStatus,
   handleSendMessage,
   handleInsertEmoji,
@@ -93,6 +87,45 @@ export function SupportConversationPane({
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [emojiCategory, setEmojiCategory] = useState('smileys');
   const [recentEmojis, setRecentEmojis] = useState([]);
+
+  // Estado local do composer: digitação não re-renderiza a lista de tickets
+  const [messageText, setMessageText] = useState('');
+  const messageTextRef = useRef('');
+
+  useEffect(() => {
+    messageTextRef.current = messageText;
+  }, [messageText]);
+
+  // Registra a API do composer no controller (texto só sai daqui no envio)
+  useEffect(() => {
+    if (typeof registerComposer !== 'function') return undefined;
+    return registerComposer({
+      getText: () => messageTextRef.current,
+      updateText: (updater) => setMessageText((prev) => (typeof updater === 'function' ? updater(prev) : updater)),
+    });
+  }, [registerComposer]);
+
+  const handleLocalSendMessage = useCallback(() => {
+    handleSendMessage(messageTextRef.current);
+  }, [handleSendMessage]);
+
+  const {
+    quickReplySlashResults,
+    quickReplySlashOpen,
+    slashMenuMode,
+    slashCommandResults,
+    slashMenuCursorIndex,
+    onHoverSlashItem,
+    onSelectSlashItem,
+    onComposerKeyDown,
+  } = useSupportSlashMenu({
+    selectedTicket,
+    messageText,
+    quickReplySelectedCategory,
+    onExecuteSlashCommand: executeSlashCommand,
+    onInsertQuickReply: insertQuickReply,
+    onSendMessage: handleLocalSendMessage,
+  });
 
   const activeEmojiItems = useMemo(() => {
     if (emojiCategory === 'recent') return recentEmojis;
@@ -491,7 +524,7 @@ export function SupportConversationPane({
                 <button
                   type="button"
                   data-testid="ticket-send-button"
-                  onClick={handleSendMessage}
+                  onClick={handleLocalSendMessage}
                   className="support-send-icon-button"
                   aria-label="Enviar"
                   title="Enviar mensagem"
@@ -675,3 +708,5 @@ export function SupportConversationPane({
     </div>
   );
 }
+
+export const SupportConversationPane = memo(SupportConversationPaneInner);

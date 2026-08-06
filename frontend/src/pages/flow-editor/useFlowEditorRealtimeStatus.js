@@ -1,7 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useWebSocketContext } from '../../context/WebSocketContext';
 import { useWebSocketStatus } from '../../utils/webSocketStatusConfig';
 import logger from '../../utils/logger';
+
+const FLOW_UPDATED_EVENTS = ['flow.updated'];
 
 export function useFlowEditorRealtimeStatus({
   isAuthenticated,
@@ -9,6 +11,12 @@ export function useFlowEditorRealtimeStatus({
   loadFlow,
   showToast,
 }) {
+  const currentFlowRef = useRef(currentFlow);
+
+  useEffect(() => {
+    currentFlowRef.current = currentFlow;
+  }, [currentFlow]);
+
   const handleWebSocketEvent = useCallback((event, data) => {
     logger.debug('[FlowEditorPage] Evento WebSocket recebido', { event, data });
 
@@ -17,7 +25,8 @@ export function useFlowEditorRealtimeStatus({
     }
 
     const updatedFlowId = data?.flowId || data?.flow?.id || data?.id;
-    const currentFlowId = currentFlow?.id;
+    const activeFlow = currentFlowRef.current;
+    const currentFlowId = activeFlow?.id;
 
     if (updatedFlowId && updatedFlowId === currentFlowId) {
       logger.info('[FlowEditorPage] Fluxo atual foi atualizado via WebSocket, recarregando...', {
@@ -28,7 +37,7 @@ export function useFlowEditorRealtimeStatus({
 
       loadFlow(updatedFlowId)
         .then(() => {
-          const flowName = data?.flowName || currentFlow?.name || 'Fluxo';
+          const flowName = data?.flowName || currentFlowRef.current?.name || 'Fluxo';
           showToast(`"${flowName}" foi atualizado automaticamente`, 'info', 3000);
         })
         .catch((err) => {
@@ -45,12 +54,12 @@ export function useFlowEditorRealtimeStatus({
         flowName: data?.flowName,
       });
     }
-  }, [currentFlow, loadFlow, showToast]);
+  }, [loadFlow, showToast]);
 
   const { connected, authenticated, authFailed } = useWebSocketContext({
     enabled: isAuthenticated,
     onEvent: handleWebSocketEvent,
-    subscribeEvents: ['flow.updated'],
+    subscribeEvents: FLOW_UPDATED_EVENTS,
   });
 
   return useWebSocketStatus({

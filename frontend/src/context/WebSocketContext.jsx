@@ -5,7 +5,7 @@
  * precisam de atualizações em tempo real.
  */
 
-import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getToken } from '../api/auth';
 import logger from '../utils/logger';
 import { buildWebSocketUrl } from '../utils/wsUrl';
@@ -163,7 +163,7 @@ export function WebSocketProvider({ children }) {
 
   // Atualiza subscriptions quando handlers mudam
   const updateSubscriptions = useCallback(() => {
-    if (!authenticated || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    if (!authenticatedRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       return;
     }
 
@@ -197,7 +197,7 @@ export function WebSocketProvider({ children }) {
     } else {
       logger.debug('[WebSocketContext] Eventos não mudaram, ignorando re-inscrição');
     }
-  }, [authenticated]);
+  }, []);
 
   // Verifica se o servidor está acessível antes de conectar
   const checkServerHealth = useCallback(async () => {
@@ -516,19 +516,19 @@ export function WebSocketProvider({ children }) {
     eventHandlersRef.current.set(componentId, { onEvent, subscribeEvents });
     // Só atualiza subscriptions se já estiver autenticado
     // Caso contrário, o useEffect que observa 'authenticated' fará isso
-    if (authenticated) {
+    if (authenticatedRef.current) {
       updateSubscriptions();
     }
-  }, [authenticated, updateSubscriptions]);
+  }, [updateSubscriptions]);
 
   // Remove um handler de eventos
   const unregisterHandler = useCallback((componentId) => {
     eventHandlersRef.current.delete(componentId);
     // Só atualiza subscriptions se já estiver autenticado
-    if (authenticated) {
+    if (authenticatedRef.current) {
       updateSubscriptions();
     }
-  }, [authenticated, updateSubscriptions]);
+  }, [updateSubscriptions]);
 
   // Ref para armazenar a função connect mais recente
   const connectRef = useRef(connect);
@@ -719,7 +719,7 @@ export function WebSocketProvider({ children }) {
     };
   }, [connected, authenticated, authFailed, authenticateWebSocket]);
 
-  const value = {
+  const value = useMemo(() => ({
     connected,
     authenticated,
     authFailed,
@@ -727,7 +727,7 @@ export function WebSocketProvider({ children }) {
     reconnect,
     registerHandler,
     unregisterHandler,
-  };
+  }), [connected, authenticated, authFailed, sendMessage, reconnect, registerHandler, unregisterHandler]);
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }
@@ -748,19 +748,36 @@ export function useWebSocketContext({ enabled = true, onEvent, subscribeEvents =
   }
 
   const componentIdRef = useRef(`component-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  // Refs sempre atualizadas: o handler registrado uma única vez delega para a
+  // versão mais recente dos callbacks, evitando re-registro a cada render.
+  const onEventRef = useRef(onEvent);
+  const subscribeEventsRef = useRef(subscribeEvents);
 
   useEffect(() => {
-    if (enabled) {
-      context.registerHandler(componentIdRef.current, { onEvent, subscribeEvents });
-      // Expor trigger de evento para testes automatizados
-      if (typeof window !== 'undefined' && process.env.NODE_ENV === 'test') {
-        window.__wsTestTrigger__ = onEvent;
-      }
-      return () => {
-        context.unregisterHandler(componentIdRef.current);
-      };
+    onEventRef.current = onEvent;
+    subscribeEventsRef.current = subscribeEvents;
+  });
+
+  const { registerHandler, unregisterHandler } = context;
+  // Re-registra apenas quando o CONTEÚDO da lista de eventos muda
+  const subscribeKey = Array.isArray(subscribeEvents) ? subscribeEvents.join('|') : '';
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
     }
-  }, [enabled, onEvent, subscribeEvents, context]);
+    registerHandler(componentIdRef.current, {
+      onEvent: (event, data, raw) => onEventRef.current?.(event, data, raw),
+      subscribeEvents: subscribeEventsRef.current || [],
+    });
+    // Expor trigger de evento para testes automatizados
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'test') {
+      window.__wsTestTrigger__ = (event, data, raw) => onEventRef.current?.(event, data, raw);
+    }
+    return () => {
+      unregisterHandler(componentIdRef.current);
+    };
+  }, [enabled, subscribeKey, registerHandler, unregisterHandler]);
 
   return {
     connected: context.connected,

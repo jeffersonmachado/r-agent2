@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 const ThemeContext = createContext(null);
 
@@ -298,12 +298,19 @@ export function ThemeProvider({ children }) {
     // Nota: Variáveis CSS para toolbar buttons removidas - agora usando classes Tailwind diretamente
   }, [themeName, theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setThemeName((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    theme,
+    themeName,
+    toggleTheme,
+    setTheme: setThemeName,
+  }), [theme, themeName, toggleTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, themeName, toggleTheme, setTheme: setThemeName }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

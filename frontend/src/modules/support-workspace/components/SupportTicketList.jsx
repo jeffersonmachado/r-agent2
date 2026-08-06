@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 function getAgingInfo(ticket) {
   const ts = ticket?.createdAt || ticket?.updatedAt;
   if (!ts || ticket?.status !== 'waiting') return null;
@@ -17,7 +19,98 @@ function getAgingInfo(ticket) {
   return { color, label };
 }
 
-export function SupportTicketList({
+const SupportTicketCard = memo(function SupportTicketCard({
+  ticket,
+  selected,
+  onSelect,
+  uiSearchDebounced,
+  highlightText,
+  getContactName,
+  getPhoneNode,
+  formatTicketMode,
+  shouldShowTicketModeBadge,
+  getStatusClass,
+  formatTicketStatus,
+  formatTime,
+  formatBadgeCount,
+  getTicketPreview,
+  getAssignedLabel,
+  getQueueLabel,
+  getTicketDisplayId,
+}) {
+  return (
+    <div
+      role="listitem"
+      tabIndex={0}
+      onClick={() => onSelect(ticket)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect(ticket);
+        }
+      }}
+      className={`support-ticket-card ${selected ? 'selected' : ''}`}
+      data-testid="ticket-card"
+      data-ticket-id={ticket.id}
+      data-ticket-status={ticket.status}
+      aria-label={[
+        `Chamado ${getTicketDisplayId ? getTicketDisplayId(ticket) : ticket.id}`,
+        getContactName(ticket),
+        formatTicketStatus(ticket.status),
+        ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : '',
+      ].filter(Boolean).join(', ')}
+      aria-selected={selected}
+    >
+      <div className="support-ticket-contact-row">
+        <span className="support-ticket-contact-name">{highlightText(getContactName(ticket), uiSearchDebounced)}</span>
+        {(() => {
+          const cname = getContactName(ticket);
+          const isMaskedFallback = /^Contato\s/.test(cname) && /•/.test(cname);
+          return !isMaskedFallback && ticket.phoneNumber ? (
+            <span className="support-ticket-contact-phone" aria-label={`Telefone: ${ticket.phoneNumber}`}>
+              {getPhoneNode(ticket)}
+            </span>
+          ) : null;
+        })()}
+      </div>
+      <div className="support-ticket-id-row">
+        {(() => {
+          const aging = getAgingInfo(ticket);
+          return aging ? (
+            <span
+              className="support-ticket-aging"
+              style={{ color: aging.color }}
+              title={aging.label}
+              aria-label={aging.label}
+            >●</span>
+          ) : null;
+        })()}
+        {shouldShowTicketModeBadge?.(ticket.mode) ? (
+          <span className="support-ticket-mode-badge">{formatTicketMode(ticket.mode)}</span>
+        ) : null}
+      </div>
+      <div className="support-ticket-top-row">
+        <div className="support-ticket-status-group">
+          <span className={`support-ticket-status ${getStatusClass(ticket.status)}`} aria-label={`Status: ${formatTicketStatus(ticket.status)}`}>
+            {formatTicketStatus(ticket.status)}
+          </span>
+          <span className="support-ticket-time">{formatTime(ticket.updatedAt || ticket.createdAt)}</span>
+        </div>
+        {ticket.unreadCount > 0 ? (
+          <span className="support-ticket-unread-badge" role="status" aria-label={`${ticket.unreadCount} mensagens não lidas`}>
+            {formatBadgeCount(ticket.unreadCount)}
+          </span>
+        ) : null}
+      </div>
+      <div className="support-ticket-preview">{getTicketPreview(ticket, uiSearchDebounced)}</div>
+      <div className="support-ticket-meta-row">
+        {getAssignedLabel(ticket)} • {getQueueLabel(ticket)}
+      </div>
+    </div>
+  );
+});
+
+export const SupportTicketList = memo(function SupportTicketList({
   loading,
   ticketsView,
   handleSelectTicket,
@@ -81,79 +174,30 @@ export function SupportTicketList({
       ) : (
         <div className="support-tickets-list" data-testid="ticket-list" role="list">
           {ticketsView.map((ticket) => (
-            <div
+            <SupportTicketCard
               key={ticket.id}
-              role="listitem"
-              tabIndex={0}
-              onClick={() => handleSelectTicket(ticket)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  handleSelectTicket(ticket);
-                }
-              }}
-              className={`support-ticket-card ${selectedTicket?.id === ticket.id ? 'selected' : ''}`}
-              data-testid="ticket-card"
-              data-ticket-id={ticket.id}
-              data-ticket-status={ticket.status}
-              aria-label={[
-                `Chamado ${getTicketDisplayId ? getTicketDisplayId(ticket) : ticket.id}`,
-                getContactName(ticket),
-                formatTicketStatus(ticket.status),
-                ticket.unreadCount > 0 ? `${ticket.unreadCount} mensagens não lidas` : '',
-              ].filter(Boolean).join(', ')}
-              aria-selected={selectedTicket?.id === ticket.id}
-            >
-              <div className="support-ticket-contact-row">
-                <span className="support-ticket-contact-name">{highlightText(getContactName(ticket), uiSearchDebounced)}</span>
-                {(() => {
-                  const cname = getContactName(ticket);
-                  const isMaskedFallback = /^Contato\s/.test(cname) && /•/.test(cname);
-                  return !isMaskedFallback && ticket.phoneNumber ? (
-                    <span className="support-ticket-contact-phone" aria-label={`Telefone: ${ticket.phoneNumber}`}>
-                      {getPhoneNode(ticket)}
-                    </span>
-                  ) : null;
-                })()}
-              </div>
-              <div className="support-ticket-id-row">
-                {(() => {
-                  const aging = getAgingInfo(ticket);
-                  return aging ? (
-                    <span
-                      className="support-ticket-aging"
-                      style={{ color: aging.color }}
-                      title={aging.label}
-                      aria-label={aging.label}
-                    >●</span>
-                  ) : null;
-                })()}
-                {shouldShowTicketModeBadge?.(ticket.mode) ? (
-                  <span className="support-ticket-mode-badge">{formatTicketMode(ticket.mode)}</span>
-                ) : null}
-              </div>
-              <div className="support-ticket-top-row">
-                <div className="support-ticket-status-group">
-                  <span className={`support-ticket-status ${getStatusClass(ticket.status)}`} aria-label={`Status: ${formatTicketStatus(ticket.status)}`}>
-                    {formatTicketStatus(ticket.status)}
-                  </span>
-                  <span className="support-ticket-time">{formatTime(ticket.updatedAt || ticket.createdAt)}</span>
-                </div>
-                {ticket.unreadCount > 0 ? (
-                  <span className="support-ticket-unread-badge" role="status" aria-label={`${ticket.unreadCount} mensagens não lidas`}>
-                    {formatBadgeCount(ticket.unreadCount)}
-                  </span>
-                ) : null}
-              </div>
-              <div className="support-ticket-preview">{getTicketPreview(ticket, uiSearchDebounced)}</div>
-              <div className="support-ticket-meta-row">
-                {getAssignedLabel(ticket)} • {getQueueLabel(ticket)}
-              </div>
-            </div>
+              ticket={ticket}
+              selected={selectedTicket?.id === ticket.id}
+              onSelect={handleSelectTicket}
+              uiSearchDebounced={uiSearchDebounced}
+              highlightText={highlightText}
+              getContactName={getContactName}
+              getPhoneNode={getPhoneNode}
+              formatTicketMode={formatTicketMode}
+              shouldShowTicketModeBadge={shouldShowTicketModeBadge}
+              getStatusClass={getStatusClass}
+              formatTicketStatus={formatTicketStatus}
+              formatTime={formatTime}
+              formatBadgeCount={formatBadgeCount}
+              getTicketPreview={getTicketPreview}
+              getAssignedLabel={getAssignedLabel}
+              getQueueLabel={getQueueLabel}
+              getTicketDisplayId={getTicketDisplayId}
+            />
           ))}
           <div aria-hidden="true" style={{ height: 1 }} />
         </div>
       )}
     </div>
   );
-}
+});
