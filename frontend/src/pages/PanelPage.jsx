@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getPanelState } from '../api/physicalQueuePublic';
 
 function getQueryParam(name) {
@@ -14,11 +14,16 @@ export function PanelPage() {
   const token = useMemo(() => getQueryParam('token') || '', []);
   const [state, setState] = useState(null);
   const [error, setError] = useState(null);
+  const inFlightRef = useRef(false);
 
   const load = async () => {
+    // Guarda de overlap: não dispara novo fetch se o anterior não terminou
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setError(null);
     if (!token) {
       setError('Token ausente na URL.');
+      inFlightRef.current = false;
       return;
     }
     try {
@@ -26,12 +31,14 @@ export function PanelPage() {
       setState(res);
     } catch (e) {
       setError(e?.body?.message || e?.message || 'Erro ao carregar painel');
+    } finally {
+      inFlightRef.current = false;
     }
   };
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 3000);
+    const id = setInterval(load, 10000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

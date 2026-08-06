@@ -20,7 +20,7 @@ export function useDevDashboard() {
   const [rateLimitStatus, setRateLimitStatus] = useState(null);
   const [wsConnections, setWsConnections] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(5000);
   const [showLogs, setShowLogs] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);

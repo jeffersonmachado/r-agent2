@@ -3,6 +3,7 @@ import { useRouter } from '../../hooks/useRouter';
 import { CrmPage } from './CrmPage';
 import { buildApiUrl } from '../../api/client';
 import { getAuthHeaders } from '../../api/auth';
+import logger from '../../utils/logger';
 import { CrudPageBase } from '../../modules/crud-base';
 
 export function CrmDashboardPage() {
@@ -43,6 +44,7 @@ function CrmDashboardContent() {
     winRate: 0
   });
   const [loadingMetrics, setLoadingMetrics] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // Buscar métricas do CRM
   useEffect(() => {
@@ -75,16 +77,17 @@ function CrmDashboardContent() {
           });
         }
       } catch (err) {
-        console.error('[CRM] Erro ao carregar métricas:', err);
+        logger.error('[CRM] Erro ao carregar métricas', err);
       } finally {
         setLoadingMetrics(false);
       }
     };
 
     fetchCrmMetrics();
+    if (!autoRefresh) return;
     const interval = setInterval(fetchCrmMetrics, 60000); // Atualiza a cada 60s
     return () => clearInterval(interval);
-  }, []);
+  }, [autoRefresh]);
 
   const features = [
     { 
@@ -272,6 +275,15 @@ function CrmDashboardContent() {
           >
             🔄 Atualizar
           </button>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm text-text-primary">Auto-atualizar</span>
+          </label>
         </div>
       </div>
 

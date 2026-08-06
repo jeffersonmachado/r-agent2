@@ -208,6 +208,7 @@ export function StabilityPage() {
 	const [checkpoints, setCheckpoints] = useState(null);
 	const [learnSummary, setLearnSummary] = useState(null);
 	const [loading, setLoading] = useState(true);
+	const [autoRefresh, setAutoRefresh] = useState(true);
 
 	async function loadAll() {
 		setLoading(true);
@@ -231,9 +232,10 @@ export function StabilityPage() {
 
 	useEffect(() => {
 		loadAll();
+		if (!autoRefresh) return;
 		const timer = setInterval(loadAll, 30000);
 		return () => clearInterval(timer);
-	}, []);
+	}, [autoRefresh]);
 
 	if (loading) {
 		return (
@@ -252,7 +254,18 @@ export function StabilityPage() {
 						<h1 className="text-3xl font-bold text-text-primary">Painel de Estabilidade QA</h1>
 						<p className="mt-1 text-sm text-text-secondary">Saude operacional em tempo real com checkpoints, release gate e RAP Learn.</p>
 					</div>
-					<Button onClick={loadAll}>Atualizar</Button>
+					<div className="flex items-center gap-3">
+						<label className="flex items-center gap-2 cursor-pointer">
+							<input
+								type="checkbox"
+								checked={autoRefresh}
+								onChange={(e) => setAutoRefresh(e.target.checked)}
+								className="w-4 h-4"
+							/>
+							<span className="text-sm text-text-primary">Auto-atualizar</span>
+						</label>
+						<Button onClick={loadAll}>Atualizar</Button>
+					</div>
 				</div>
 			</section>
 

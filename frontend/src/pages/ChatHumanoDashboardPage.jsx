@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { useRouter } from '../hooks/useRouter';
 import { buildApiUrl } from '../api/client';
+import logger from '../utils/logger';
 import { DashboardKpiCard, DashboardSection, DashboardFeatureGrid } from '../modules/dashboard-base';
 import { CrudPageBase } from '../modules/crud-base';
 
@@ -8,6 +9,7 @@ export function ChatHumanoDashboardPage() {
   const { navigate } = useRouter();
   const [failedMessages, setFailedMessages] = React.useState({ pending: 0, failed: 0, errors: [] });
   const [loadingMetrics, setLoadingMetrics] = React.useState(true);
+  const [autoRefresh, setAutoRefresh] = React.useState(true);
 
   // ✅ Buscar dados de mensagens falhadas
   useEffect(() => {
@@ -32,16 +34,17 @@ export function ChatHumanoDashboardPage() {
           });
         }
       } catch (err) {
-        console.error('[ChatHumano] Erro ao carregar métricas:', err);
+        logger.error('[ChatHumano] Erro ao carregar métricas', err);
       } finally {
         setLoadingMetrics(false);
       }
     };
 
     fetchFailedMessages();
+    if (!autoRefresh) return;
     const interval = setInterval(fetchFailedMessages, 30000); // Atualiza a cada 30s
     return () => clearInterval(interval);
-  }, []);
+  }, [autoRefresh]);
 
   const features = [
     { id: 'support', title: 'Atendimento', description: 'Operação central de tickets e conversas', icon: '💬', path: '/support', color: 'bg-cyan-500', category: 'Operação' },
@@ -71,6 +74,15 @@ export function ChatHumanoDashboardPage() {
           <button type="button" className="btn-default px-4 py-2 text-sm cursor-pointer" onClick={() => window.location.reload()}>
             🔄 Atualizar
           </button>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm text-text-primary">Auto-atualizar</span>
+          </label>
         </div>
       </div>
 

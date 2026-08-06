@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { listCampaigns, createCampaign, updateCampaign, deleteCampaign, startCampaign, pauseCampaign, resumeCampaign } from '../api/bulkMessaging';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
@@ -36,17 +36,24 @@ export function BulkMessagingPage() {
   useEffect(() => {
     if (isAuthenticated) {
       loadCampaigns();
-      const interval = setInterval(loadCampaigns, 5000); // Atualiza a cada 5s
+      const interval = setInterval(loadCampaigns, 30000); // Atualiza a cada 30s
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
 
+  const loadInFlightRef = useRef(false);
+
   const loadCampaigns = async () => {
+    // Guarda de overlap: não dispara novo fetch se o anterior não terminou
+    if (loadInFlightRef.current) return;
+    loadInFlightRef.current = true;
     try {
       const data = await listCampaigns();
       setCampaigns(data.campaigns || []);
     } catch (error) {
       logger.error('Erro ao carregar campanhas:', error);
+    } finally {
+      loadInFlightRef.current = false;
     }
   };
 

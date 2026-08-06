@@ -48,7 +48,13 @@ export function FallbackEventsViewer() {
         .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)) // Mais recentes primeiro
         .slice(0, 20); // Últimos 20 eventos
       
-      setEvents(fallbackEvents);
+      // Só atualiza o estado quando há eventos novos (evita re-render a cada poll de 1s)
+      setEvents((prev) => {
+        const unchanged =
+          prev.length === fallbackEvents.length &&
+          (prev.length === 0 || (prev[0].id === fallbackEvents[0].id && prev[prev.length - 1].id === fallbackEvents[fallbackEvents.length - 1].id));
+        return unchanged ? prev : fallbackEvents;
+      });
     };
 
     updateEvents();

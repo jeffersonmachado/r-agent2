@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import logger from '../utils/logger';
 import { Button } from '../styles/Button';
 import { getChannelHealth } from '../api/channelHealth';
@@ -57,7 +58,7 @@ export function ChannelHealthPage() {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  const fetchHealth = async () => {
+  const fetchHealth = useCallback(async () => {
     try {
       setError(null);
       const data = await getChannelHealth({ windowMinutes: 10 });
@@ -69,17 +70,31 @@ export function ChannelHealthPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
     fetchHealth();
-  }, []);
+  }, [fetchHealth]);
 
+  // Refresh sob demanda via WebSocket: o backend emite `channel.health.alert`.
+  const handleWebSocketEvent = useCallback((event) => {
+    if (event === 'channel.health.alert') {
+      fetchHealth();
+    }
+  }, [fetchHealth]);
+
+  useWebSocketContext({
+    enabled: isAuthenticated,
+    onEvent: handleWebSocketEvent,
+    subscribeEvents: ['channel.health.alert'],
+  });
+
+  // Poll reduzido para 120s: atua como fallback caso o evento WS não chegue.
   useEffect(() => {
     if (!autoRefresh) return;
-    const id = setInterval(() => fetchHealth(), 30000);
+    const id = setInterval(() => fetchHealth(), 120000);
     return () => clearInterval(id);
-  }, [autoRefresh]);
+  }, [autoRefresh, fetchHealth]);
 
   if (authLoading) {
     return (

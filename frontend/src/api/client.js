@@ -53,7 +53,7 @@ function buildUrl(path) {
       // Desenvolvimento: usa URL relativa para que o proxy do Vite funcione
       // O proxy do Vite redireciona para a porta da API injetada via Vite/config.json.
       // IMPORTANTE: Não adiciona basePath aqui em desenvolvimento, pois o proxy precisa da URL relativa
-      console.log('[buildUrl] Desenvolvimento Vite detectado, usando URL relativa:', {
+      logger.debug('[buildUrl] Desenvolvimento Vite detectado, usando URL relativa', {
         path,
         normalizedPath,
         port: window.location.port,
@@ -160,21 +160,22 @@ async function fetchWithTimeout(input, init) {
 export async function fetchJson(path, init) {
   const silent = init?.silent === true;
   const isPipelineStatusRequest = false;
+  // Logs de request/response de debug ficam restritos a desenvolvimento;
+  // erros genuínos seguem para logger.error/warn (visíveis em produção).
+  const isDev = import.meta.env.DEV;
 
-  // Log IMEDIATO no início para garantir que a função está sendo chamada
-  if (!silent) {
-    console.log('[HTTP Client] 🚀 fetchJson chamado', {
+  if (!silent && isDev) {
+    logger.debug('[HTTP Client] fetchJson chamado', {
       path,
       timestamp: new Date().toISOString(),
-      stack: new Error().stack?.split('\n').slice(0, 5).join('\n'),
     });
   }
   
   const url = buildUrl(path);
   const method = init?.method || 'GET';
   
-  if (!silent) {
-    console.log('[HTTP Client] 📍 URL construída:', {
+  if (!silent && isDev) {
+    logger.debug('[HTTP Client] URL construída', {
       path,
       url,
       method,
@@ -197,9 +198,9 @@ export async function fetchJson(path, init) {
   }
   
   // Log adicional para debug de proxy
-  if (!silent && typeof window !== 'undefined' && window.location.port === '5173') {
+  if (!silent && isDev && typeof window !== 'undefined' && window.location.port === '5173') {
     const devPort = Number(import.meta.env.VITE_API_DEV_PORT || 3000);
-    console.log('[HTTP Client] 🔄 Requisição em desenvolvimento:', {
+    logger.debug('[HTTP Client] Requisição em desenvolvimento', {
       path,
       url,
       method,
@@ -212,15 +213,14 @@ export async function fetchJson(path, init) {
     // Inclui headers de autenticação se disponível
     const authHeaders = getAuthHeaders();
     
-    // DEBUG: Log auth headers
-    if (!silent && (path.includes('replay') || path.includes('test-execution'))) {
-      console.log('[HTTP Client] 🔐 Auth status:', {
+    // DEBUG: Log auth headers (nunca loga conteúdo do token)
+    if (!silent && isDev && (path.includes('replay') || path.includes('test-execution'))) {
+      logger.debug('[HTTP Client] Auth status', {
         path,
         hasAuthHeaders: Object.keys(authHeaders).length > 0,
         hasAuthorization: !!authHeaders.Authorization,
         authHeaderKeys: Object.keys(authHeaders),
         tokenLength: authHeaders.Authorization ? authHeaders.Authorization.length : 0,
-        token: authHeaders.Authorization ? authHeaders.Authorization.substring(0, 50) + '...' : 'NO TOKEN'
       });
     }
     
@@ -305,8 +305,8 @@ export async function fetchJson(path, init) {
       }
     }
     
-    if (!silent) {
-      console.log('[HTTP Client] 📤 Fazendo requisição fetch:', {
+    if (!silent && isDev) {
+      logger.debug('[HTTP Client] Fazendo requisição fetch', {
         url,
         method,
         headers: Object.keys(mergedHeaders),
@@ -320,27 +320,31 @@ export async function fetchJson(path, init) {
       timeoutMs, // Passa timeoutMs explicitamente
     });
 
+    // Serialização de headers é cara: só executa sob demanda (logs de debug/401).
     // Alguns testes mockam `headers` como objeto simples (sem entries()).
-    let responseHeadersObj = {};
-    try {
-      if (response?.headers && typeof response.headers.entries === 'function') {
-        responseHeadersObj = Object.fromEntries(response.headers.entries());
-      } else if (response?.headers && typeof response.headers.forEach === 'function') {
-        const tmp = {};
-        response.headers.forEach((v, k) => { tmp[k] = v; });
-        responseHeadersObj = tmp;
+    const collectResponseHeaders = () => {
+      try {
+        if (response?.headers && typeof response.headers.entries === 'function') {
+          return Object.fromEntries(response.headers.entries());
+        }
+        if (response?.headers && typeof response.headers.forEach === 'function') {
+          const tmp = {};
+          response.headers.forEach((v, k) => { tmp[k] = v; });
+          return tmp;
+        }
+      } catch {
+        // ignora
       }
-    } catch {
-      responseHeadersObj = {};
-    }
+      return {};
+    };
 
-    if (!silent) {
-      console.log('[HTTP Client] 📥 Resposta recebida:', {
+    if (!silent && isDev) {
+      logger.debug('[HTTP Client] Resposta recebida', {
         url: response.url,
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
-        headers: responseHeadersObj,
+        headers: collectResponseHeaders(),
       });
     }
 
@@ -360,7 +364,7 @@ export async function fetchJson(path, init) {
 	      const isPipelineStatusNotFound = false;
 	      if (!isPipelineStatusNotFound) {
 	        if (!suppressNonOkConsoleLog) {
-	          console.log('[HTTP Client] ❌ Resposta não OK:', {
+	          logger.debug('[HTTP Client] Resposta não OK', {
 	            status: response.status,
 	            statusText: response.statusText,
 	            url: response.url,
@@ -425,14 +429,14 @@ export async function fetchJson(path, init) {
 	      // Tratamento especial para erro 401 (Unauthorized)
 	      // Redireciona para login, exceto se já estiver em rotas de autenticação
 	      if (!suppressNonOkConsoleLog) {
-	        console.log('[HTTP Client] 🔍 Verificando status da resposta:', {
+	        logger.debug('[HTTP Client] Verificando status da resposta', {
 	          status: response.status,
 	          is401: response.status === 401,
 	        });
 	      }
 	      
 	      if (response.status === 401) {
-        console.warn('[HTTP Client] ⚠️ 401 detectado. Iniciando tratamento...');
+        logger.debug('[HTTP Client] 401 detectado. Iniciando tratamento...');
         
         // Check current token state
         const currentToken = (() => {
@@ -459,23 +463,19 @@ export async function fetchJson(path, init) {
           isOnLoginPage,
           errorBody,
           responseUrl: response.url,
-          headers: responseHeadersObj,
+          headers: collectResponseHeaders(),
           tokenState: {
             hasToken: !!currentToken,
             tokenLength: currentToken ? currentToken.length : 0,
-            tokenPreview: currentToken ? currentToken.substring(0, 30) + '...' : 'NO TOKEN',
           },
         };
-        
-        console.warn('[HTTP Client] ⚠️ 401 (Unauthorized) detectado', logData);
-        console.warn('[HTTP Client] Detalhes completos:', JSON.stringify(logData, null, 2));
         
         // 401 é condição esperada de sessão inválida/expirada: log como warning.
         logger.warn('Erro 401 (Unauthorized) detectado', logData);
         
         if (!isAuthRoute && typeof window !== 'undefined' && !isOnLoginPage) {
           // Remove o token inválido
-          console.warn('[HTTP Client] 🗑️ Removendo token inválido...');
+          logger.debug('[HTTP Client] Removendo token inválido...');
           removeToken();
           
           logger.warn('Token removido e redirecionando para login', {
@@ -483,14 +483,12 @@ export async function fetchJson(path, init) {
             currentPath,
             redirectTo: '/login',
           });
-          console.warn('[HTTP Client] 🔄 Redirecionando para /login devido a erro 401');
-          console.warn('[HTTP Client] Path atual:', currentPath);
-          console.warn('[HTTP Client] Vai redirecionar para:', '/login');
+          logger.debug('[HTTP Client] Redirecionando para /login devido a erro 401', { currentPath });
           
           // Redireciona para login IMEDIATAMENTE
           try {
             redirectToLogin();
-            console.log('[HTTP Client] ✅ redirectToLogin() chamado com sucesso');
+            logger.debug('[HTTP Client] redirectToLogin() chamado com sucesso');
             
             // IMPORTANTE: Não lança o erro para evitar que o componente tente tratá-lo
             // Retorna uma Promise que nunca resolve, mas o redirecionamento já foi feito
@@ -499,7 +497,7 @@ export async function fetchJson(path, init) {
               // Promise que nunca resolve - o redirecionamento já foi feito
             });
           } catch (err) {
-            console.warn('[HTTP Client] ⚠️ Erro ao chamar redirectToLogin():', err);
+            logger.warn('[HTTP Client] Erro ao chamar redirectToLogin()', err);
             // Fallback: tenta redirecionar manualmente
             const basePath = typeof window !== 'undefined' && window.location.pathname.match(/^\/([^/]+)/) 
               ? window.location.pathname.match(/^\/([^/]+)/)[0] 
@@ -513,7 +511,6 @@ export async function fetchJson(path, init) {
           // Log quando não redireciona (já está em rota de auth ou login)
           const reason = isAuthRoute ? 'rota de autenticação' : isOnLoginPage ? 'já está na página de login' : 'outro motivo';
           logger.debug(`Erro 401 - não redirecionando (${reason})`, logData);
-          console.debug(`[HTTP Client] Erro 401 - não redirecionando (${reason})`, logData);
         }
       }
 
@@ -649,7 +646,7 @@ export async function fetchJson(path, init) {
     // Para polling do pipeline, evitamos spam de console no catch (timeouts/abort podem ocorrer sob carga).
     if (!silent && !isPipelineStatusRequest && !isExpectedError) {
       if (errStatus === 401) {
-        console.warn('[HTTP Client] ⚠️ Erro 401 capturado no catch:', {
+        logger.warn('[HTTP Client] Erro 401 capturado no catch', {
           name: err?.name,
           message: err?.message,
           status: err?.status,
@@ -658,7 +655,7 @@ export async function fetchJson(path, init) {
           stack: err?.stack?.split('\n').slice(0, 10).join('\n'),
         });
       } else {
-        console.error('[HTTP Client] 💥 Erro capturado no catch:', {
+        logger.error('[HTTP Client] Erro capturado no catch', {
           name: err?.name,
           message: err?.message,
           status: err?.status,
@@ -671,7 +668,7 @@ export async function fetchJson(path, init) {
     
     // Verifica se é erro 401 no catch também
     if (err?.status === 401) {
-      console.warn('[HTTP Client] ⚠️ 401 no catch', {
+      logger.debug('[HTTP Client] 401 no catch', {
         path,
         url,
         errMessage: err.message,
@@ -683,7 +680,7 @@ export async function fetchJson(path, init) {
       const isOnLoginPage = currentPath.includes('/login');
       
       if (!isAuthRoute && typeof window !== 'undefined' && !isOnLoginPage) {
-        console.warn('[HTTP Client] 🗑️ Removendo token e redirecionando (do catch)...');
+        logger.debug('[HTTP Client] Removendo token e redirecionando (do catch)...');
         removeToken();
         redirectToLogin();
         

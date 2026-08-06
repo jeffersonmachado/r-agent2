@@ -36,9 +36,11 @@ export function Login() {
   // Redireciona quando tenant for selecionado
   const handleTenantSelected = async (tenant) => {
     try {
-      console.log('[Login] Tenant selecionado:', tenant);
-      console.log('[Login] loginResult disponível:', !!loginResult);
-      console.log('[Login] loginResult.agent disponível:', !!loginResult?.agent);
+      logger.debug('[Login] Tenant selecionado', {
+        tenantId: tenant?.id,
+        hasLoginResult: !!loginResult,
+        hasAgent: !!loginResult?.agent,
+      });
 
       if (!tenant || !tenant.id) {
         showToast('Erro: tenant inválido', 'error');
@@ -55,13 +57,16 @@ export function Login() {
           ...(isSuperAdmin ? { originalTenantId: loginResult.agent.tenantId } : {}),
         };
         
-        console.log('[Login] Atualizando agente com novo tenantId:', updatedAgent);
-        console.log('[Login] isSuperAdmin:', isSuperAdmin, 'isSystemTenant:', isSystemTenant);
+        logger.debug('[Login] Atualizando agente com novo tenantId', {
+          tenantId: tenant.id,
+          isSuperAdmin,
+          isSystemTenant,
+        });
         
         // Super-admin OU tenant system: pula verificações de provider/integrações
         // Tenant system é para administração da plataforma, não operação de negócio
         if (isSuperAdmin || isSystemTenant) {
-          console.log('[Login] ⏩ Pulando verificações de onboarding (super-admin ou tenant system)');
+          logger.debug('[Login] Pulando verificações de onboarding (super-admin ou tenant system)');
           updateAgent(updatedAgent);
           setIsSuperAdminLogin(false);
           setShowTenantModal(false);
@@ -89,13 +94,16 @@ export function Login() {
         // Verifica se o onboarding está bloqueando o acesso
         // Usa GET /onboarding/check que consolida todas as verificações obrigatórias
         try {
-          console.log('[Login] Verificando onboarding para o tenant:', tenant.id);
+          logger.debug('[Login] Verificando onboarding para o tenant', { tenantId: tenant.id });
           const onboardingCheck = await getOnboardingCheck();
-          console.log('[Login] Onboarding check:', JSON.stringify(onboardingCheck));
+          logger.debug('[Login] Onboarding check', {
+            blocking: !!onboardingCheck?.blocking,
+            missingSteps: onboardingCheck?.missingSteps || [],
+          });
 
           if (onboardingCheck?.blocking) {
             const missingPreview = (onboardingCheck.missingSteps || []).join(', ');
-            console.log('[Login] ❌ Onboarding bloqueado. Steps pendentes:', missingPreview);
+            logger.debug('[Login] Onboarding bloqueado. Steps pendentes', { missingSteps: missingPreview });
 
             setIsSuperAdminLogin(false);
             setShowTenantModal(false);
@@ -119,12 +127,11 @@ export function Login() {
             return;
           }
         } catch (err) {
-          console.error('[Login] Erro ao verificar onboarding:', err);
           logger.warn('Erro ao verificar onboarding, permitindo acesso', err);
           // Se falhar a verificação, permite acesso (não bloqueia por erro de rede)
         }
 
-        console.log('[Login] ✅ Onboarding check passou, continuando para /workspace');
+        logger.debug('[Login] Onboarding check passou, continuando para /workspace');
 
         // Marca que não é mais login de super-admin (tenant foi selecionado)
         setIsSuperAdminLogin(false);
@@ -138,28 +145,27 @@ export function Login() {
         // Usa requestAnimationFrame para garantir que o React processou a atualização do estado
         requestAnimationFrame(() => {
           setTimeout(() => {
-            console.log('[Login] Redirecionando para /workspace após seleção do tenant');
-            console.log('[Login] Estado antes do redirecionamento:', {
+            logger.debug('[Login] Redirecionando para /workspace após seleção do tenant', {
               isAuthenticated,
-              agent: !!agent,
+              hasAgent: !!agent,
               tenantId: agent?.tenantId,
             });
             
             // Força o redirecionamento usando window.location se navigate não funcionar
             try {
               navigate('/workspace');
-              console.log('[Login] Comando navigate executado');
+              logger.debug('[Login] Comando navigate executado');
               
               // Verifica se o redirecionamento funcionou após um tempo
               setTimeout(() => {
                 if (window.location.pathname.includes('/login')) {
-                  console.warn('[Login] ⚠️ Ainda em /login após navigate, tentando window.location');
+                  logger.warn('[Login] Ainda em /login após navigate, tentando window.location');
                   const basePath = window.location.pathname.split('/login')[0] || '';
                   window.location.href = `${basePath}/workspace`;
                 }
               }, 500);
             } catch (err) {
-              console.error('[Login] Erro ao usar navigate, tentando window.location:', err);
+              logger.error('[Login] Erro ao usar navigate, tentando window.location', err);
               const basePath = window.location.pathname.split('/login')[0] || '';
               window.location.href = `${basePath}/workspace`;
             }
@@ -167,7 +173,7 @@ export function Login() {
         });
       } else {
         // Se não há loginResult ou agent, tenta usar o agente atual do contexto
-        console.warn('[Login] ⚠️ loginResult ou agent não disponível, tentando usar agente do contexto');
+        logger.warn('[Login] loginResult ou agent não disponível, tentando usar agente do contexto');
         if (agent) {
           const updatedAgent = {
             ...agent,
@@ -179,16 +185,15 @@ export function Login() {
           setShowTenantModal(false);
           showToast(`Acessando tenant: ${tenant.name || tenant.id}`, 'success');
           setTimeout(() => {
-            console.log('[Login] Redirecionando para /workspace (usando agente do contexto)');
+            logger.debug('[Login] Redirecionando para /workspace (usando agente do contexto)');
             navigate('/workspace');
           }, 200);
         } else {
-          console.error('[Login] ❌ Não foi possível atualizar agente: loginResult e agent não disponíveis');
+          logger.error('[Login] Não foi possível atualizar agente: loginResult e agent não disponíveis');
           showToast('Erro: informações de autenticação não disponíveis', 'error');
         }
       }
     } catch (err) {
-      console.error('[Login] Erro ao selecionar tenant:', err);
       logger.error('Erro ao selecionar tenant', err);
       showToast('Erro ao selecionar tenant', 'error');
     }
@@ -210,7 +215,7 @@ export function Login() {
         // Força seleção explícita do tenant efetivo no login via formulário
         localStorage.removeItem('auth_effective_tenant_id');
       } catch (err) {
-        console.warn('[Login] Falha ao limpar sessão local (ignorado):', err);
+        logger.warn('[Login] Falha ao limpar sessão local (ignorado)', err);
       }
       // Zera estado local do contexto para não “vazar” autenticação anterior.
       updateAgent(null);
@@ -219,8 +224,12 @@ export function Login() {
       const result = await login(username, password);
       setLoginResult(result);
       
-      console.log('[Login] Resultado do login:', result);
-      console.log('[Login] Agente recebido:', result?.agent);
+      // Nunca logar dados de sessão/agent em produção: apenas metadados mínimos em debug
+      logger.debug('[Login] Resultado do login', {
+        hasAgent: !!result?.agent,
+        tenantId: result?.agent?.tenantId,
+        role: result?.agent?.role,
+      });
       
       // Verifica se é super-admin
       // Usa a mesma lógica central do app:
@@ -229,10 +238,10 @@ export function Login() {
       // - fallback por username (systemadmin)
       const isSuperAdmin = checkIsSuperAdmin(result.agent);
       
-      console.log('[Login] É super-admin?', isSuperAdmin, {
+      logger.debug('[Login] É super-admin?', {
+        isSuperAdmin,
         role: result.agent?.role,
         tenantId: result.agent?.tenantId,
-        agent: result.agent,
       });
 
       // Lógica de redirecionamento após login:
@@ -241,39 +250,42 @@ export function Login() {
       // 3. Outros: abre modal de seleção
       if (isSuperAdmin) {
         // Super-admin: sempre força seleção de tenant
-        console.log('[Login] Super-admin: abrindo modal de seleção de tenant');
+        logger.debug('[Login] Super-admin: abrindo modal de seleção de tenant');
         setIsSuperAdminLogin(true);
         setShowTenantModal(true);
         showToast('Login realizado. Selecione o tenant para continuar.', 'info');
         setLoading(false);
       } else if (result.agent?.tenantId) {
         // Admin/usuário normal com tenantId: verifica onboarding antes de redirecionar
-        console.log('[Login] Usuário com tenantId:', result.agent.tenantId);
+        logger.debug('[Login] Usuário com tenantId', { tenantId: result.agent.tenantId });
         updateAgent(result.agent);
         await new Promise(r => setTimeout(r, 100));
         
         try {
           const onboardingCheck = await getOnboardingCheck();
-          console.log('[Login] Onboarding check:', JSON.stringify(onboardingCheck));
+          logger.debug('[Login] Onboarding check', {
+            blocking: !!onboardingCheck?.blocking,
+            missingSteps: onboardingCheck?.missingSteps || [],
+          });
           
           if (onboardingCheck?.blocking) {
-            console.log('[Login] ❌ Onboarding bloqueado, redirecionando...');
+            logger.debug('[Login] Onboarding bloqueado, redirecionando...');
             showToast('Configure os itens obrigatórios do onboarding para continuar.', 'warning', 8000);
             setLoading(false);
             setTimeout(() => navigate('/onboarding?source=login'), 100);
             return;
           }
         } catch (err) {
-          console.warn('[Login] Erro ao verificar onboarding, continuando:', err);
+          logger.warn('[Login] Erro ao verificar onboarding, continuando', err);
         }
         
-        console.log('[Login] Redirecionando para /workspace');
+        logger.debug('[Login] Redirecionando para /workspace');
         showToast('Login realizado com sucesso!', 'success');
         setLoading(false);
         setTimeout(() => navigate('/workspace'), 100);
       } else {
         // Admin sem tenantId: precisa selecionar
-        console.log('[Login] Admin sem tenantId: abrindo modal de seleção');
+        logger.debug('[Login] Admin sem tenantId: abrindo modal de seleção');
         setIsSuperAdminLogin(false);
         setShowTenantModal(true);
         showToast('Login realizado. Selecione o tenant para continuar.', 'info');
@@ -423,7 +435,7 @@ export function Login() {
             : null
         }
         onClose={() => {
-          console.log('[Login] Modal fechado sem selecionar tenant - fazendo logout');
+          logger.debug('[Login] Modal fechado sem selecionar tenant - fazendo logout');
           setShowTenantModal(false);
           setIsSuperAdminLogin(false);
           // Se cancelar, faz logout

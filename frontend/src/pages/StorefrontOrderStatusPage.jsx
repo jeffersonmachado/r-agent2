@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getStorefrontOrder } from '../api/storefront';
 
 function getQueryParam(name) {
@@ -21,15 +21,21 @@ export function StorefrontOrderStatusPage() {
   const orderId = useMemo(() => getOrderIdFromPath(), []);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const inFlightRef = useRef(false);
 
   const load = async () => {
+    // Guarda de overlap: não dispara novo fetch se o anterior não terminou
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setError(null);
     if (!token) {
       setError('Token ausente na URL.');
+      inFlightRef.current = false;
       return;
     }
     if (!orderId) {
       setError('orderId ausente na URL.');
+      inFlightRef.current = false;
       return;
     }
     try {
@@ -42,12 +48,14 @@ export function StorefrontOrderStatusPage() {
         err?.message ||
         'Erro ao carregar pedido';
       setError(String(msg));
+    } finally {
+      inFlightRef.current = false;
     }
   };
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 5000);
+    const id = setInterval(load, 15000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -59,7 +67,7 @@ export function StorefrontOrderStatusPage() {
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '2rem' }}>
       <h1 style={{ marginBottom: '0.25rem' }}>Status do pedido</h1>
       <p style={{ marginTop: 0, color: '#6b7280' }}>
-        Atualiza automaticamente a cada 5s.
+        Atualiza automaticamente a cada 15s.
       </p>
 
       {error ? (
