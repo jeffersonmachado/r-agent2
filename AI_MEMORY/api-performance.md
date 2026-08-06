@@ -54,3 +54,8 @@ Arquitetura de eficiência da plataforma. API Node: auditoria de 2026-08-03 (com
 - **Timeout de IA**: todo provider de `getAiProviderForTenant` sai com `generate` envolvido em timeout de 30s (`ENGINE_AI_TIMEOUT_MS`), erro `code: 'ai_timeout'` por tentativa (fallback secundário intacto); provider memoizado por tenant, invalidado em `setTenantAiConfig`/`registerAiProvider`/`clearAiProviderConfig`.
 - **Caps de crescimento**: 500 eventos/sessão (`MAX_SESSION_EVENTS`), 100 itens de `state.history` (`MAX_HISTORY_ITEMS`), ledger trunca `history` nos últimos 20 em stateBefore/stateAfter (replay preservado — demais campos completos).
 - **persistenceServices**: `getFlow` via findByPk; `getQueueInfo` = 1 query filtrada (era 3 varreduras globais da tabela de tickets).
+
+## Realtime e listas (2026-08-06, commits `48087dbc`, `873a9573`)
+
+- **Eventos WS de domínio** (padrão `channel.health.alert`): `emitEvent(event, payload, { tenantId })` — sempre direcionado por tenant + tenantId no payload, best-effort (try/catch + warn, nunca bloqueia o write). Existem: `campaign.updated` (progresso throttled 1x/5s por campanha, NUNCA por destinatário), `vertical.attendance.updated`, `vertical.schedule.updated`, `vertical.bundles.updated`, `vertical.memberships.updated`. Páginas subscrevem via `useWebSocketContext` e refetcham; poll de 120s é só fallback. Páginas públicas (Panel, StorefrontOrder) seguem com poll — sem JWT para o WS.
+- **Listas longas**: hook `frontend/src/hooks/useIncrementalList.js` (blocos de 200 + IntersectionObserver + botão fallback; `fromEnd` para timelines). Sem react-window — cards sem altura fixa inviabilizam windowing. Progresso preservado em updates via WS (reset só quando filtro muda).
