@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T07:23:12.449Z",
+  "generatedAt": "2026-08-07T10:15:54.234Z",
   "writtenArtifacts": [
     "qa/enterprise/pbx-asr-transcript.json",
     "qa/enterprise/pbx-tts-prompts.json",
@@ -10,5 +10,5 @@
     "governance/proof-signature.json",
     "governance/cleanup-proof.json"
   ],
-  "reboundAt": "2026-08-07T07:23:12.914Z"
+  "reboundAt": "2026-08-07T10:15:54.860Z"
 }

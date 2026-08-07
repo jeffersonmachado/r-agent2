@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T07:24:55.219Z",
+  "generatedAt": "2026-08-07T10:25:01.311Z",
   "status": "GO",
   "governanceStatus": "GO",
   "threshold": 95,
@@ -205,10 +205,10 @@
     "blockers": []
   },
   "enterpriseGovernanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-  "reportHash": "60981ff0bf979dc8b7d79e786e06e7e1b51ecf221e6dc3116b79e8df457657aa",
+  "reportHash": "4d051683834ad4475243956820f49c8419491870849ece19b3da8e3ca830ecac",
   "auditTrail": {
     "path": "/opt/results/ria/r-agent2/qa/qa-waves-governance-audit.jsonl",
-    "latestEntryHash": "af959150ff13febe6987a3fe54aeb0f490cf72a76358924fd3be3e28e9c1de1a",
+    "latestEntryHash": "bdb66fc15de0f39e84fc93b102e7524ddac706b1e35eab1dd5562864a7f0a85f",
     "immutable": true
   }
 }
