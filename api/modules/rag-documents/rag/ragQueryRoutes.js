@@ -39,7 +39,7 @@ async function handleRagQueryRoutes({ req, res, method, pathname, deps }) {
 
     const filters = {
       topK: options.topK || 6,
-      minScore: options.minScore || 0.45,
+      minScore: options.minScore ?? 0.45,
       maxTokens: options.maxTokens || 1000,
       scope: scopeResolution.scope,
     };

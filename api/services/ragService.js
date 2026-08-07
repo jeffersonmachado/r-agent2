@@ -99,7 +99,7 @@ function buildResponseCacheScope(retrievalScope, filters, tenantContext) {
     },
     options: {
       topK: filters.topK || 6,
-      minScore: filters.minScore || 0.45,
+      minScore: filters.minScore ?? 0.45,
       maxTokens: filters.maxTokens || 1000,
     },
     tenantContext: tenantContext ? {
@@ -392,7 +392,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       },
       options: {
         topK: filters.topK || 6,  // Aumentado de 5 para 6 para melhor cobertura
-        minScore: filters.minScore || 0.45,  // Reduzido de 0.5 para 0.45 para melhor captura de chunks relevantes
+        minScore: filters.minScore ?? 0.45,  // Reduzido de 0.5 para 0.45 para melhor captura de chunks relevantes; 0 explícito é honrado (?? em vez de ||)
         maxTokens: filters.maxTokens || 1000,
       },
       scope: retrievalScope,
