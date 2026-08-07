@@ -269,7 +269,10 @@ if [[ "$INCLUDE_NODE_MODULES" == false ]]; then
 fi
 
 if [[ "$INCLUDE_COVERAGE" == false ]]; then
-  RSYNC_EXCLUDES+=('coverage/' '**/coverage/')
+  # Apenas relatórios de cobertura de teste (raiz e frontend). NÃO usar
+  # padrão solto 'coverage/': ele casa qa/coverage/ (código-fonte do
+  # Coverage Engine, exigido pela API em runtime).
+  RSYNC_EXCLUDES+=('/coverage/' '/frontend/coverage/')
 fi
 
 if [[ "$INCLUDE_DIST" == false ]]; then
@@ -346,7 +349,8 @@ FORBIDDEN_REGEX=(
   '(^|/)\.env$'
   '(^|/)\.env\..+$'
   '\.env\.production$'
-  '(^|/)coverage/'
+  # cobertura de teste (raiz/frontend); qa/coverage/ é código-fonte e permitido
+  '(^|/)(frontend/)?coverage/'
   '(^|/)frontend-e2e/playwright-report/'
   '(^|/)frontend-e2e/test-results/'
   '(^|/)playwright-report/'

@@ -87,7 +87,8 @@ FORBIDDEN_PATTERNS=(
   '(^|/)\.codex($|/)'
   '\.(bkp|bak|backup)$'
   '\.env\.production$'
-  '(^|/)coverage/'
+  # cobertura de teste (raiz/frontend); qa/coverage/ é código-fonte e permitido
+  '(^|/)(frontend/)?coverage/'
   '(^|/)frontend-e2e/playwright-report/'
   '(^|/)frontend-e2e/test-results/'
   '(^|/)playwright-report/'
