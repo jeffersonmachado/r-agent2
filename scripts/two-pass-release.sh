@@ -133,7 +133,8 @@ write_payload_manifest() {
   "git_commit": "$git_commit",
   "git_branch": "$git_branch",
   "generated_by": "scripts/two-pass-release.sh",
-  "status": "immutable"
+  "status": "immutable",
+  "audit": "passed"
 }
 EOF
 }
