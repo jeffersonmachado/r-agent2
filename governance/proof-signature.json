@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-07T10:14:25.129Z",
+  "generatedAt": "2026-08-07T10:55:20.600Z",
   "sourceArtifact": "qa/qa-waves-enterprise-governance.json",
   "signature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-  "reportHash": "ebaa45ec731b324c1a49601aa2ba98cbbd48b8d72d38cab9df244bad339b55c2",
+  "reportHash": "97cd7a3e6cf022b923d1dff1a3014b756da3293d5e43ab484a8c351cb1e24daf",
   "subjectHashes": [
     {
       "journeyId": "support_ticket_flow",
@@ -93,6 +93,5 @@
         "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
       }
     ]
-  },
-  "reboundAt": "2026-08-07T10:15:54.865Z"
+  }
 }
