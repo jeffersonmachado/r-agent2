@@ -87,8 +87,9 @@ FORBIDDEN_PATTERNS=(
   '(^|/)\.codex($|/)'
   '\.(bkp|bak|backup)$'
   '\.env\.production$'
-  # cobertura de teste (raiz/frontend); qa/coverage/ é código-fonte e permitido
-  '(^|/)(frontend/)?coverage/'
+  # cobertura de teste (raiz/frontend); qa/coverage/ e tests/unit/coverage/
+  # são código-fonte e permitidos (paths no ZIP têm prefixo r-agent2/)
+  '^([^/]+/)?(frontend/)?coverage/'
   '(^|/)frontend-e2e/playwright-report/'
   '(^|/)frontend-e2e/test-results/'
   '(^|/)playwright-report/'
