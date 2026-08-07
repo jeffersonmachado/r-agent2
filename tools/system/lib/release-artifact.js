@@ -127,7 +127,14 @@ function findLatestReleaseArtifact(options = {}) {
 }
 
 function updateArtifactManifest(zipName, patch) {
-  const manifestPath = path.join(DIST_DIR, zipName.replace(/\.zip$/, '.manifest.json'));
+  // O layout normalizado (PASS 4b do two-pass) move o sidecar para
+  // dist/release/; o flat dist/ é o legado. Resolve como listArtifacts.
+  const manifestName = zipName.replace(/\.zip$/, '.manifest.json');
+  const candidates = [
+    path.join(DIST_DIR, 'release', manifestName),
+    path.join(DIST_DIR, manifestName),
+  ];
+  const manifestPath = candidates.find((candidate) => fs.existsSync(candidate)) || candidates[1];
   const current = readJsonFileStrict(manifestPath, 'artifact_manifest');
   const next = {
     ...current,
