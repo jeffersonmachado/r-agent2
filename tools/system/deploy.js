@@ -269,6 +269,24 @@ async function main() {
     return;
   }
 
+  // A imagem da API depende da base local r-agent2-api-base:test
+  // (api/Dockerfile.base: ffmpeg + Chromium do Playwright), construída à
+  // parte no deploy remoto oficial (scripts/docker-deploy.sh). Garante a
+  // base antes do compose build, senão o build da API falha com
+  // "pull access denied" ao resolver o FROM.
+  const apiDockerfile = fs.readFileSync(path.join(artifactRoot, 'api', 'Dockerfile'), 'utf8');
+  const baseImage = (apiDockerfile.match(/^ARG API_BASE_IMAGE=(.+)$/m) || [])[1];
+  if (baseImage) {
+    let baseExists = false;
+    try {
+      execSync(`docker image inspect ${baseImage}`, { stdio: 'ignore' });
+      baseExists = true;
+    } catch (_) { /* ausente */ }
+    if (!baseExists) {
+      run(`docker build -t ${baseImage} -f api/Dockerfile.base .`, `Construindo imagem base da API (${baseImage})`, artifactRoot, deployEnv);
+    }
+  }
+
   run('npm run deploy:build', 'Construindo imagens a partir do artefato extraído', artifactRoot, deployEnv);
   run('npm run deploy:up', 'Executando deploy a partir do artefato extraído', artifactRoot, deployEnv);
   run('npm run deploy:status', 'Validando status do deploy', artifactRoot, deployEnv);
