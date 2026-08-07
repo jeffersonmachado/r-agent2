@@ -3,28 +3,34 @@ uvicorn[standard]==0.52.1
 pydantic==2.13.4
 pydantic-settings==2.14.2
 sentence-transformers==5.6.1
-# transformers 5.x exige torch>=2.4; com torch pinado em 2.2.2+cpu, ficar na última 4.x
+# transformers 5.x NÃO pode ser usado: o backend ONNX ficaria sem suporte —
+# optimum-onnx 0.1.0 exige transformers<4.58 e o optimum 1.27.0 importa
+# is_tf_available, removido no transformers 5.x (smoke ONNX quebra com
+# ImportError). Validado em 2026-08-07 com transformers 5.14.1.
 transformers==4.57.6
 # transformers 4.x exige huggingface-hub<1.0
 huggingface-hub==0.36.2
 # Força Torch CPU (evita baixar CUDA no CI/Compose).
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.2+cpu
-# Python 3.12 precisa de numpy >= 1.26 (há wheels oficiais; evita build via source)
-numpy==1.26.4
+torch==2.9.1+cpu
+# numpy 2.x: aceito por torch 2.9, onnxruntime 1.28 e sentence-transformers 5.6;
+# suíte pytest (88 passed, 8 skipped) validada com 2.5.1
+numpy==2.5.1
 openai==2.52.1
 python-multipart==0.0.32
 psycopg2-binary==2.9.12
 
 # Backend ONNX opcional de embeddings (RAG_EMBEDDING_BACKEND=onnx).
-# O extra optimum[onnxruntime] exige transformers<4.54 (conflita com o pin 4.57.6)
-# e optimum>=2.x exige torch.rms_norm (ausente no torch 2.2.2). Por isso os pacotes
-# do extra são pinados diretamente: optimum base só exige transformers>=4.29.
-optimum==1.27.0
+# optimum 1.27.0 NÃO funciona com torch 2.9: importa _attention_scale de
+# torch.onnx.symbolic_opset14 (removido no torch 2.9) em nível de módulo.
+# A linha 2.x do optimum separa o suporte ONNX no pacote optimum-onnx
+# (0.1.0 exige optimum~=2.1.0 e transformers<4.58 — compatível com o pin 4.57.6),
+# onde esse import é lazy e não quebra o carregamento de modelos pré-exportados.
+# Os pacotes do extra optimum-onnx[onnxruntime] são pinados diretamente.
+optimum==2.1.0
+optimum-onnx==0.1.0
 onnx==1.22.0
-# onnxruntime >=1.21 referencia torch.uint16 (só existe em torch>=2.3); com o
-# torch 2.2.2 pinado, a última compatível é 1.20.1.
-onnxruntime==1.20.1
+onnxruntime==1.28.0
 
 # Testes
 pytest==8.4.2
