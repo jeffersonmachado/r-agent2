@@ -417,6 +417,7 @@ async function main() {
       { label: 'frontend unit', command: 'npm run frontend:test:unit' },
       { label: 'frontend build', command: 'npm run frontend:build' },
       { label: 'frontend smoke', command: 'npm run frontend:smoke' },
+      { label: 'email smoke', command: 'npm run test:email:smoke' },
       { label: 'qa mesh', command: 'PIPELINE_BYPASS=1 npm run qa:mesh' },
     ];
 
