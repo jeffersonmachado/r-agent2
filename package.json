@@ -87,6 +87,7 @@
     "system:deploy": "node tools/system/deploy.js",
     "system:checklist": "node tools/system/checklist.js",
     "system:release-gate": "node tools/system/release-gate.js",
+    "system:package-validator": "node governance/package-validator.js",
     "system:rollback-drill": "node tools/system/rollback-drill.js",
     "system:go-no-go": "node tools/system/go-no-go.js",
     "system:release-decision": "node tools/system/release-decision.js",
