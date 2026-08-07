@@ -226,7 +226,10 @@ function main() {
     if (!validateReport || !['pass', 'degraded'].includes(validateReport.status)) report.reasons.push('system_validate_not_releasable');
     if (!gate || gate.status !== 'pass') report.reasons.push('release_gate_not_pass');
     if (!drill || drill.status !== 'pass') report.reasons.push('rollback_drill_not_pass');
-    if (platformReadinessReport.finalDecision !== 'GO') {
+    // O proof engine emite decisões granulares (GO, ENTERPRISE_READY_GO,
+    // AUTONOMOUS_READY_GO, NO_GO:...). Bloqueia apenas NO_GO:/PENDING/ausente.
+    const readinessDecision = String(platformReadinessReport.finalDecision || 'NO_GO:UNKNOWN');
+    if (readinessDecision.startsWith('NO_GO') || readinessDecision === 'PENDING') {
       report.reasons.push(`platform_readiness_${String(platformReadinessReport.platformMaturity || 'unknown').replace(/[^a-z0-9]+/gi, '_').toLowerCase()}`);
       for (const gap of platformReadinessReport.blockingGaps.slice(0, 10)) {
         report.reasons.push(`platform_gap:${gap.id}`);
