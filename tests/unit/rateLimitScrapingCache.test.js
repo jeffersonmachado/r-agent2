@@ -14,11 +14,19 @@ const {
   domainLimitersCache,
   executionLimitersCache,
 } = require('../../infra/rate-limit/scraping');
+const { closeRateLimitClient } = require('../../infra/redis/rateLimitClient');
 
 describe('Rate Limit — caches de limiters de scraping com bound (LRU)', () => {
   beforeEach(() => {
     domainLimitersCache.clear();
     executionLimitersCache.clear();
+  });
+
+  // getDomainLimiter cria um cliente Redis real (TCPWRAP); sem fechar, o
+  // handle mantém o event loop vivo e o Jest nunca encerra (pipeline
+  // system:validate ficava zumbi após "Test Suites: 463 passed").
+  afterAll(async () => {
+    await closeRateLimitClient();
   });
 
   test('cache por domínio evicta o mais antigo ao exceder o cap', () => {
