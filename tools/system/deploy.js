@@ -209,7 +209,21 @@ async function main() {
   const artifact = findLatestApprovedArtifact();
   const extractDir = fs.mkdtempSync(path.join(os.tmpdir(), 'r-agent2-deploy-'));
   extractArtifact(artifact.zipPath, extractDir);
-  const artifactRoot = resolveExtractedRoot(extractDir);
+  let artifactRoot = resolveExtractedRoot(extractDir);
+  if (!fs.existsSync(path.join(artifactRoot, 'package.json'))) {
+    // Arquitetura envelope-payload-split (two-pass): o envelope carrega apenas
+    // dist/ (payload.zip + governança + verifier). O código deployável está no
+    // payload interno.
+    const releaseDir = path.join(artifactRoot, 'dist', 'release');
+    const payloadName = fs.existsSync(releaseDir)
+      ? fs.readdirSync(releaseDir).find((name) => /\.payload\.zip$/.test(name))
+      : null;
+    if (payloadName) {
+      const payloadDir = path.join(extractDir, 'payload');
+      extractArtifact(path.join(releaseDir, payloadName), payloadDir);
+      artifactRoot = resolveExtractedRoot(payloadDir);
+    }
+  }
   const report = {
     startedAt: new Date().toISOString(),
     status: 'running',
