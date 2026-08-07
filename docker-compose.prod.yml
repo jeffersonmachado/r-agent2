@@ -61,6 +61,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       RUNTIME_ROOT: ${RUNTIME_ROOT:-/var/lib/ragent2}
       WWEBJS_AUTH_PATH: ${WWEBJS_AUTH_PATH:-/var/lib/ragent2/whatsapp/auth}
+      QA_MESH_DISABLE_SCHEDULER: '1'
       QA_MESH_HISTORY_DIR: ${QA_MESH_HISTORY_DIR:-/var/lib/ragent2/qa-mesh/history}
       QA_MESH_EVIDENCE_DIR: ${QA_MESH_EVIDENCE_DIR:-/var/lib/ragent2/qa-mesh/evidence}
       QA_MESH_SYSTEM_VALIDATE_DIR: ${QA_MESH_SYSTEM_VALIDATE_DIR:-/var/lib/ragent2/qa-mesh/system-validate}

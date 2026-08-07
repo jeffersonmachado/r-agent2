@@ -295,7 +295,8 @@ async function queryAccountDiagnostics(tenantId) {
     }
 
     let waQuality = null;
-    if (type === 'whatsapp' && status === 'active' && cfg) {
+    // Pula chamadas externas (Meta API) quando DB está degradado ou monitor em backoff
+    if (type === 'whatsapp' && status === 'active' && cfg && !globalThis.__channelHealthSkipExternal) {
       // eslint-disable-next-line no-await-in-loop
       waQuality = await fetchWhatsAppQualityBestEffort({ accountId: base.id, cfg, externalId, nowMs });
     }
@@ -468,8 +469,29 @@ async function getChannelHealth({ tenantId, windowMinutes = 10, now = new Date()
 }
 
 let monitorInterval = null;
+let monitorTimeoutId = null;
 const lastAlertAt = new Map(); // key = tenantId:channelType:type
 const CACHE_PRUNE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+
+// ── Cache de tenants + métricas do monitor ──
+const tenantListCache = { tenants: [], fetchedAt: 0 };
+const TENANT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
+const DB_HEALTH_TIMEOUT_MS = 2000; // 2s para health check
+const PER_TENANT_TIMEOUT_MS = 15000; // 15s por tenant
+const MAX_PARALLEL_TENANTS = 3;
+const MAX_BACKOFF_MS = 10 * 60 * 1000; // 10 min máximo de backoff
+
+const monitorMetrics = {
+  cycles: 0,
+  cyclesFailed: 0,
+  consecutiveFailures: 0,
+  tenantsProcessed: 0,
+  tenantsFailed: 0,
+  lastCycleMs: 0,
+  lastCycleDurationMs: 0,
+  currentBackoffMs: 0,
+  dbHealthy: true,
+};
 
 // Prune oportunista (executado no tick do monitor): remove entradas velhas dos
 // caches em memória para não crescerem sem bound.
@@ -480,6 +502,152 @@ function pruneInMemoryCaches(nowMs = Date.now()) {
   for (const [accountId, entry] of waQualityCache.entries()) {
     if (!entry || nowMs - entry.atMs > CACHE_PRUNE_MAX_AGE_MS) waQualityCache.delete(accountId);
   }
+}
+
+/**
+ * Health check rápido do DB: executa SELECT 1 com timeout curto.
+ * Retorna true se DB respondeu em menos de DB_HEALTH_TIMEOUT_MS.
+ */
+async function checkDbHealth() {
+  try {
+    const sequelize = getSequelize();
+    await Promise.race([
+      sequelize.query('SELECT 1'),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('db_health_timeout')), DB_HEALTH_TIMEOUT_MS)
+      ),
+    ]);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Obtém lista de tenants com cache em memória (TTL 5 min).
+ * Evita UNION pesada em 3 tabelas a cada ciclo de 60s.
+ */
+async function getTenantListCached() {
+  const now = Date.now();
+  if (tenantListCache.tenants.length > 0 && (now - tenantListCache.fetchedAt) < TENANT_CACHE_TTL_MS) {
+    return tenantListCache.tenants;
+  }
+
+  try {
+    const sequelize = getSequelize();
+    const [rows] = await Promise.race([
+      sequelize.query(`
+        SELECT DISTINCT tenant_key
+        FROM (
+          SELECT tenant_key FROM channel_accounts
+          UNION
+          SELECT tenant_key FROM outbound_queue
+          UNION
+          SELECT tenant_key FROM channel_conversations
+        ) t
+      `),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('tenant_query_timeout')), DB_HEALTH_TIMEOUT_MS)
+      ),
+    ]);
+    const tenants = (Array.isArray(rows) ? rows : []).map(r => r.tenant_key).filter(Boolean);
+    tenantListCache.tenants = tenants;
+    tenantListCache.fetchedAt = now;
+    return tenants;
+  } catch (_) {
+    // Em falha, retorna cache antigo se existir
+    if (tenantListCache.tenants.length > 0) {
+      logger.warn('[ChannelHealth] Query tenants falhou, usando cache antigo', {
+        cacheAgeMs: now - tenantListCache.fetchedAt,
+      });
+      return tenantListCache.tenants;
+    }
+    return [];
+  }
+}
+
+/**
+ * Processa tenants em lotes paralelos (MAX_PARALLEL_TENANTS por vez)
+ * com timeout individual por tenant.
+ */
+async function processTenantsInBatches(tenants, { windowMinutes, failRateThreshold, minSamples, cooldownMs }) {
+  let processed = 0;
+  let failed = 0;
+
+  for (let i = 0; i < tenants.length; i += MAX_PARALLEL_TENANTS) {
+    const batch = tenants.slice(i, i + MAX_PARALLEL_TENANTS);
+
+    const results = await Promise.allSettled(
+      batch.map(async (tenantId) => {
+        const healthPromise = getChannelHealth({ tenantId, windowMinutes, failRateThreshold, minSamples });
+        const result = await Promise.race([
+          healthPromise,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('per_tenant_timeout')), PER_TENANT_TIMEOUT_MS)
+          ),
+        ]);
+        return { tenantId, health: result };
+      })
+    );
+
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        failed++;
+        continue;
+      }
+      const { tenantId, health } = r.value;
+      processed++;
+
+      if (!health.alerts || health.alerts.length === 0) continue;
+
+      for (const a of health.alerts) {
+        const key = `${tenantId}:${a.channelType}:${a.type}`;
+        const prev = lastAlertAt.get(key) || 0;
+        const now = Date.now();
+        if (now - prev < cooldownMs) continue;
+        lastAlertAt.set(key, now);
+
+        logger.warn('[ChannelHealth] Alerta', { tenantId, ...a });
+        emitEvent('channel.health.alert', { tenantId, ...a }, { tenantId });
+        try {
+          logAction({
+            agentId: 'system',
+            username: 'system',
+            tenantId,
+            action: 'channel_health_alert',
+            resource: 'channel',
+            resourceId: a.channelType || null,
+            details: { ...a },
+            ipAddress: 'internal',
+            userAgent: 'channelHealthMonitor',
+          });
+        } catch (_) {}
+      }
+    }
+  }
+
+  return { processed, failed };
+}
+
+/**
+ * Agenda o próximo ciclo com backoff adaptativo.
+ * Em caso de falha consecutiva, dobra o intervalo até MAX_BACKOFF_MS.
+ */
+function scheduleNextCycle(intervalMs, fn) {
+  const effectiveInterval = monitorMetrics.consecutiveFailures > 0
+    ? Math.min(intervalMs * Math.pow(2, Math.min(monitorMetrics.consecutiveFailures, 4)), MAX_BACKOFF_MS)
+    : intervalMs;
+
+  monitorMetrics.currentBackoffMs = effectiveInterval;
+
+  if (effectiveInterval !== intervalMs) {
+    logger.info('[ChannelHealth] Backoff ativado', {
+      consecutiveFailures: monitorMetrics.consecutiveFailures,
+      effectiveIntervalMs: effectiveInterval,
+    });
+  }
+
+  monitorTimeoutId = setTimeout(fn, effectiveInterval);
 }
 
 function startChannelHealthMonitor({
@@ -493,70 +661,113 @@ function startChannelHealthMonitor({
   if (!dbAvailable()) return;
 
   const cooldownMs = Math.max(1, safeInt(cooldownMinutes, 10)) * 60 * 1000;
+  const baseIntervalMs = Math.max(30000, safeInt(intervalMs, 60000)); // mínimo 30s
 
-  monitorInterval = setInterval(async () => {
+  async function runCycle() {
+    const cycleStartedAt = Date.now();
+    monitorMetrics.cycles++;
+
     try {
       pruneInMemoryCaches();
 
-      const sequelize = getSequelize();
-      const [rows] = await sequelize.query(
-        `
-        SELECT DISTINCT tenant_key
-        FROM (
-          SELECT tenant_key FROM channel_accounts
-          UNION
-          SELECT tenant_key FROM outbound_queue
-          UNION
-          SELECT tenant_key FROM channel_conversations
-        ) t
-        `
-      );
-      const tenants = (Array.isArray(rows) ? rows : []).map(r => r.tenant_key).filter(Boolean);
-
-      for (const tenantId of tenants) {
-        // eslint-disable-next-line no-await-in-loop
-        const health = await getChannelHealth({ tenantId, windowMinutes, failRateThreshold, minSamples });
-        if (!health.alerts || health.alerts.length === 0) continue;
-
-        for (const a of health.alerts) {
-          const key = `${tenantId}:${a.channelType}:${a.type}`;
-          const prev = lastAlertAt.get(key) || 0;
-          const now = Date.now();
-          if (now - prev < cooldownMs) continue;
-          lastAlertAt.set(key, now);
-
-          logger.warn('[ChannelHealth] Alerta', { tenantId, ...a });
-          emitEvent('channel.health.alert', { tenantId, ...a }, { tenantId });
-          try {
-            logAction({
-              agentId: 'system',
-              username: 'system',
-              tenantId,
-              action: 'channel_health_alert',
-              resource: 'channel',
-              resourceId: a.channelType || null,
-              details: { ...a },
-              ipAddress: 'internal',
-              userAgent: 'channelHealthMonitor',
-            });
-          } catch (_) {}
-        }
+      // ── DB health check: pula ciclo se DB não responder em 2s ──
+      const dbHealthy = await checkDbHealth();
+      monitorMetrics.dbHealthy = dbHealthy;
+      if (!dbHealthy) {
+        monitorMetrics.consecutiveFailures++;
+        monitorMetrics.cyclesFailed++;
+        logger.warn('[ChannelHealth] DB não respondeu ao health check, pulando ciclo');
+        scheduleNextCycle(baseIntervalMs, runCycle);
+        return;
       }
+
+      // Se DB estava degradado, desabilita chamadas externas (Meta API) neste ciclo
+      if (monitorMetrics.consecutiveFailures > 0 && typeof skipExternalCalls === 'undefined') {
+        // eslint-disable-next-line no-global-assign
+        globalThis.__channelHealthSkipExternal = true;
+      }
+
+      const tenants = await getTenantListCached();
+
+      if (tenants.length === 0) {
+        monitorMetrics.consecutiveFailures = 0;
+        monitorMetrics.lastCycleMs = cycleStartedAt;
+        monitorMetrics.lastCycleDurationMs = Date.now() - cycleStartedAt;
+        scheduleNextCycle(baseIntervalMs, runCycle);
+        return;
+      }
+
+      const { processed, failed } = await processTenantsInBatches(tenants, {
+        windowMinutes,
+        failRateThreshold,
+        minSamples,
+        cooldownMs,
+      });
+
+      // ── Atualiza métricas ──
+      if (failed > processed) {
+        monitorMetrics.consecutiveFailures++;
+        monitorMetrics.cyclesFailed++;
+      } else {
+        monitorMetrics.consecutiveFailures = 0;
+      }
+      monitorMetrics.tenantsProcessed += processed;
+      monitorMetrics.tenantsFailed += failed;
+      monitorMetrics.lastCycleMs = cycleStartedAt;
+      monitorMetrics.lastCycleDurationMs = Date.now() - cycleStartedAt;
+
+      // Limpa flag de skip externo
+      globalThis.__channelHealthSkipExternal = false;
+
     } catch (err) {
-      logger.warn('[ChannelHealth] Falha no monitor (ignorado)', { error: safeErrorMessage(err) });
+      monitorMetrics.consecutiveFailures++;
+      monitorMetrics.cyclesFailed++;
+      monitorMetrics.lastCycleMs = cycleStartedAt;
+      monitorMetrics.lastCycleDurationMs = Date.now() - cycleStartedAt;
+      logger.warn('[ChannelHealth] Falha no monitor (ignorado)', {
+        error: safeErrorMessage(err),
+        consecutiveFailures: monitorMetrics.consecutiveFailures,
+      });
     }
-  }, Math.max(5000, safeInt(intervalMs, 60000)));
+
+    scheduleNextCycle(baseIntervalMs, runCycle);
+  }
+
+  // Inicia primeiro ciclo imediatamente
+  runCycle();
 }
 
 function stopChannelHealthMonitor() {
-  if (monitorInterval) clearInterval(monitorInterval);
-  monitorInterval = null;
+  if (monitorTimeoutId) {
+    clearTimeout(monitorTimeoutId);
+    monitorTimeoutId = null;
+  }
+  if (monitorInterval) {
+    clearInterval(monitorInterval);
+    monitorInterval = null;
+  }
+}
+
+/**
+ * Retorna métricas do monitor para debugging.
+ */
+function getMonitorMetrics() {
+  return {
+    ...monitorMetrics,
+    tenantCache: {
+      count: tenantListCache.tenants.length,
+      ageMs: tenantListCache.fetchedAt ? Date.now() - tenantListCache.fetchedAt : null,
+    },
+    alertCooldownEntries: lastAlertAt.size,
+    waQualityCacheEntries: waQualityCache.size,
+  };
 }
 
 module.exports = {
   getChannelHealth,
   startChannelHealthMonitor,
   stopChannelHealthMonitor,
+  getMonitorMetrics,
   _internal: {
     computeStatus,
     pruneInMemoryCaches,
