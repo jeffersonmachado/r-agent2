@@ -37339,6 +37339,270 @@
       "platform": {
         "platformScenarioIds": []
       }
+    },
+    {
+      "id": "agent-validation-qa-agent-20260807020045",
+      "waveId": "agent-os-qa-agent-20260807020045",
+      "vertical": "agent-os",
+      "journeyId": "d4310a17-a2c2-4110-924a-6ba03ee02fe8",
+      "name": "Agent Validation: QA Factory Agent 20260807020045",
+      "description": "Validação automatizada do agente qa-agent-20260807020045",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "journey": "d4310a17-a2c2-4110-924a-6ba03ee02fe8",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-08-07T02:00:45.248Z",
+      "updatedAt": "2026-08-07T02:00:45.661Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
+    },
+    {
+      "id": "agent-validation-qa-agent-20260807032531",
+      "waveId": "agent-os-qa-agent-20260807032531",
+      "vertical": "agent-os",
+      "journeyId": "afc175ab-ecdc-433b-b8e3-bc62ff42dc00",
+      "name": "Agent Validation: QA Factory Agent 20260807032531",
+      "description": "Validação automatizada do agente qa-agent-20260807032531",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "journey": "afc175ab-ecdc-433b-b8e3-bc62ff42dc00",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-08-07T03:25:31.481Z",
+      "updatedAt": "2026-08-07T03:25:31.828Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
+    },
+    {
+      "id": "agent-validation-qa-agent-20260807044744",
+      "waveId": "agent-os-qa-agent-20260807044744",
+      "vertical": "agent-os",
+      "journeyId": "e28b4c55-d9e3-46b0-b2c7-9f5b0c15f043",
+      "name": "Agent Validation: QA Factory Agent 20260807044744",
+      "description": "Validação automatizada do agente qa-agent-20260807044744",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "journey": "e28b4c55-d9e3-46b0-b2c7-9f5b0c15f043",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-08-07T04:47:44.917Z",
+      "updatedAt": "2026-08-07T04:47:45.267Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     }
   ],
   "history": {
@@ -38274,7 +38538,58 @@
           "scenario upserted"
         ]
       }
+    ],
+    "agent-validation-qa-agent-20260807020045": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-08-07T02:00:45.249Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "changedBy": "system",
+        "changedAt": "2026-08-07T02:00:45.661Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
+    ],
+    "agent-validation-qa-agent-20260807032531": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-08-07T03:25:31.482Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "changedBy": "system",
+        "changedAt": "2026-08-07T03:25:31.828Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
+    ],
+    "agent-validation-qa-agent-20260807044744": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-08-07T04:47:44.918Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "changedBy": "system",
+        "changedAt": "2026-08-07T04:47:45.267Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
     ]
   },
-  "updatedAt": "2026-07-31T05:08:58.278Z"
+  "updatedAt": "2026-08-07T04:47:45.353Z"
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-21T09:09:13.214Z",
+  "generatedAt": "2026-08-07T07:24:55.219Z",
   "status": "GO",
   "governanceStatus": "GO",
   "threshold": 95,
@@ -9,59 +9,59 @@
     "artifacts": [
       {
         "journeyId": "support_ticket_flow",
-        "replayHash": "47c492b179c85e56c252bcc5abc36a679f5fc2125a92ed1bd804aba0e5c9fb5d",
-        "replayChecksum": "sha256:47c492b179c85e56c252bcc5abc36a679f5fc2125a92ed1bd804aba0e5c9fb5d",
+        "replayHash": "97685eef1a90a26468a38f344761cc2b3ca80057b5fc2edafab78abea72bfc1d",
+        "replayChecksum": "sha256:97685eef1a90a26468a38f344761cc2b3ca80057b5fc2edafab78abea72bfc1d",
         "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-support_ticket_flow-1778610611798"
+        "smokeExecutionId": "prod-like-replay-support_ticket_flow-1785671524100"
       },
       {
         "journeyId": "fitness_customer_checkin",
-        "replayHash": "6250e365fbb2c7f33a12906d0531acc52cd23c153c844d25765cd8e1abe2e85f",
-        "replayChecksum": "sha256:6250e365fbb2c7f33a12906d0531acc52cd23c153c844d25765cd8e1abe2e85f",
+        "replayHash": "4730eb2384c6869ca71430caaf4b0370ba0bf0ad905ea122db3cefc5acacce1c",
+        "replayChecksum": "sha256:4730eb2384c6869ca71430caaf4b0370ba0bf0ad905ea122db3cefc5acacce1c",
         "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1778610647343"
+        "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1785671531691"
       },
       {
         "journeyId": "booking_flow",
-        "replayHash": "6eeafc7481b1749ee7718dc645a80f349ff79e333eb1eaf81a14f42d75ae0db5",
-        "replayChecksum": "sha256:6eeafc7481b1749ee7718dc645a80f349ff79e333eb1eaf81a14f42d75ae0db5",
+        "replayHash": "1abbf48bdd3c411cdaa5faa7159d6f2409c7519e786a64a85f2333deb1ebd82d",
+        "replayChecksum": "sha256:1abbf48bdd3c411cdaa5faa7159d6f2409c7519e786a64a85f2333deb1ebd82d",
         "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-booking_flow-1778610654807"
+        "smokeExecutionId": "prod-like-replay-booking_flow-1785671536394"
       },
       {
         "journeyId": "payment_charge_flow",
-        "replayHash": "bc9c6ef3ff17dd5b30f8c07eb4bc445087b1e3dc9230565b2a38106d8b66e3fe",
-        "replayChecksum": "sha256:bc9c6ef3ff17dd5b30f8c07eb4bc445087b1e3dc9230565b2a38106d8b66e3fe",
+        "replayHash": "0a6ca40e58e8d52fe1b9fd60fec8fd5c83d4338bd146f56be96c7f17d90a0d6a",
+        "replayChecksum": "sha256:0a6ca40e58e8d52fe1b9fd60fec8fd5c83d4338bd146f56be96c7f17d90a0d6a",
         "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-payment_charge_flow-1778610664514"
+        "smokeExecutionId": "prod-like-replay-payment_charge_flow-1785671548454"
       },
       {
         "journeyId": "food_order_status_flow",
-        "replayHash": "c2c3e6da412efb834434201efb8f09bea3ac5641e759bb7435304059362e349f",
-        "replayChecksum": "sha256:c2c3e6da412efb834434201efb8f09bea3ac5641e759bb7435304059362e349f",
+        "replayHash": "8e281b224cc5964ab2c8e42d0ea455bea5ecfd4837c9762ff4b2319b34c70209",
+        "replayChecksum": "sha256:8e281b224cc5964ab2c8e42d0ea455bea5ecfd4837c9762ff4b2319b34c70209",
         "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-food_order_status_flow-1778610670209"
+        "smokeExecutionId": "prod-like-replay-food_order_status_flow-1785671552706"
       },
       {
         "journeyId": "market_node_publish_flow",
-        "replayHash": "32ddc9c3df78456c3aadefaeaea5d82b53651c6ceb1fad22394d49190a7dae45",
-        "replayChecksum": "sha256:32ddc9c3df78456c3aadefaeaea5d82b53651c6ceb1fad22394d49190a7dae45",
+        "replayHash": "d85507d31ec4eb57aefb9f4854c7c3c133ab9776aa28c2c390d9b1b1300cc4bf",
+        "replayChecksum": "sha256:d85507d31ec4eb57aefb9f4854c7c3c133ab9776aa28c2c390d9b1b1300cc4bf",
         "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1778610676188"
+        "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1785671557076"
       },
       {
         "journeyId": "clinic_calendar_block_flow",
-        "replayHash": "d2480228279df90b07f9b50d718a82f273a342717f373a53034946b2da09588f",
-        "replayChecksum": "sha256:d2480228279df90b07f9b50d718a82f273a342717f373a53034946b2da09588f",
+        "replayHash": "a96f967f6c651cb53f8836fbdc765bb81120e368858e78c454fb29ebb4697374",
+        "replayChecksum": "sha256:a96f967f6c651cb53f8836fbdc765bb81120e368858e78c454fb29ebb4697374",
         "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1778610683022"
+        "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1785671561350"
       }
     ],
     "blockers": []
@@ -70,7 +70,7 @@
     "status": "GO",
     "productionReadiness": "GO",
     "healthy": true,
-    "evidencePath": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
   },
   "operationalConfidence": 100,
   "confidenceGrade": "A+",
@@ -80,59 +80,59 @@
   "replayArtifacts": [
     {
       "journeyId": "support_ticket_flow",
-      "replayHash": "47c492b179c85e56c252bcc5abc36a679f5fc2125a92ed1bd804aba0e5c9fb5d",
-      "replayChecksum": "sha256:47c492b179c85e56c252bcc5abc36a679f5fc2125a92ed1bd804aba0e5c9fb5d",
+      "replayHash": "97685eef1a90a26468a38f344761cc2b3ca80057b5fc2edafab78abea72bfc1d",
+      "replayChecksum": "sha256:97685eef1a90a26468a38f344761cc2b3ca80057b5fc2edafab78abea72bfc1d",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-support_ticket_flow-1778610611798"
+      "smokeExecutionId": "prod-like-replay-support_ticket_flow-1785671524100"
     },
     {
       "journeyId": "fitness_customer_checkin",
-      "replayHash": "6250e365fbb2c7f33a12906d0531acc52cd23c153c844d25765cd8e1abe2e85f",
-      "replayChecksum": "sha256:6250e365fbb2c7f33a12906d0531acc52cd23c153c844d25765cd8e1abe2e85f",
+      "replayHash": "4730eb2384c6869ca71430caaf4b0370ba0bf0ad905ea122db3cefc5acacce1c",
+      "replayChecksum": "sha256:4730eb2384c6869ca71430caaf4b0370ba0bf0ad905ea122db3cefc5acacce1c",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1778610647343"
+      "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1785671531691"
     },
     {
       "journeyId": "booking_flow",
-      "replayHash": "6eeafc7481b1749ee7718dc645a80f349ff79e333eb1eaf81a14f42d75ae0db5",
-      "replayChecksum": "sha256:6eeafc7481b1749ee7718dc645a80f349ff79e333eb1eaf81a14f42d75ae0db5",
+      "replayHash": "1abbf48bdd3c411cdaa5faa7159d6f2409c7519e786a64a85f2333deb1ebd82d",
+      "replayChecksum": "sha256:1abbf48bdd3c411cdaa5faa7159d6f2409c7519e786a64a85f2333deb1ebd82d",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-booking_flow-1778610654807"
+      "smokeExecutionId": "prod-like-replay-booking_flow-1785671536394"
     },
     {
       "journeyId": "payment_charge_flow",
-      "replayHash": "bc9c6ef3ff17dd5b30f8c07eb4bc445087b1e3dc9230565b2a38106d8b66e3fe",
-      "replayChecksum": "sha256:bc9c6ef3ff17dd5b30f8c07eb4bc445087b1e3dc9230565b2a38106d8b66e3fe",
+      "replayHash": "0a6ca40e58e8d52fe1b9fd60fec8fd5c83d4338bd146f56be96c7f17d90a0d6a",
+      "replayChecksum": "sha256:0a6ca40e58e8d52fe1b9fd60fec8fd5c83d4338bd146f56be96c7f17d90a0d6a",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-payment_charge_flow-1778610664514"
+      "smokeExecutionId": "prod-like-replay-payment_charge_flow-1785671548454"
     },
     {
       "journeyId": "food_order_status_flow",
-      "replayHash": "c2c3e6da412efb834434201efb8f09bea3ac5641e759bb7435304059362e349f",
-      "replayChecksum": "sha256:c2c3e6da412efb834434201efb8f09bea3ac5641e759bb7435304059362e349f",
+      "replayHash": "8e281b224cc5964ab2c8e42d0ea455bea5ecfd4837c9762ff4b2319b34c70209",
+      "replayChecksum": "sha256:8e281b224cc5964ab2c8e42d0ea455bea5ecfd4837c9762ff4b2319b34c70209",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-food_order_status_flow-1778610670209"
+      "smokeExecutionId": "prod-like-replay-food_order_status_flow-1785671552706"
     },
     {
       "journeyId": "market_node_publish_flow",
-      "replayHash": "32ddc9c3df78456c3aadefaeaea5d82b53651c6ceb1fad22394d49190a7dae45",
-      "replayChecksum": "sha256:32ddc9c3df78456c3aadefaeaea5d82b53651c6ceb1fad22394d49190a7dae45",
+      "replayHash": "d85507d31ec4eb57aefb9f4854c7c3c133ab9776aa28c2c390d9b1b1300cc4bf",
+      "replayChecksum": "sha256:d85507d31ec4eb57aefb9f4854c7c3c133ab9776aa28c2c390d9b1b1300cc4bf",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1778610676188"
+      "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1785671557076"
     },
     {
       "journeyId": "clinic_calendar_block_flow",
-      "replayHash": "d2480228279df90b07f9b50d718a82f273a342717f373a53034946b2da09588f",
-      "replayChecksum": "sha256:d2480228279df90b07f9b50d718a82f273a342717f373a53034946b2da09588f",
+      "replayHash": "a96f967f6c651cb53f8836fbdc765bb81120e368858e78c454fb29ebb4697374",
+      "replayChecksum": "sha256:a96f967f6c651cb53f8836fbdc765bb81120e368858e78c454fb29ebb4697374",
       "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1778610683022"
+      "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1785671561350"
     }
   ],
   "governanceSignature": {
@@ -183,14 +183,14 @@
     ]
   },
   "lastSmokeExecution": {
-    "generatedAt": "2026-05-12T18:31:23.306Z",
-    "evidencePath": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
+    "generatedAt": "2026-08-02T11:52:41.542Z",
+    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
     "tenantId": "system"
   },
   "continuousValidationStatus": {
     "status": "GO",
     "healthy": true,
-    "evidencePath": "qa/smoke/qa-waves-scheduled-operational-smoke.json",
+    "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/qa-waves-scheduled-operational-smoke.json",
     "mode": "nightly_full_replay",
     "generatedAt": "2026-07-20T00:00:00.000Z"
   },
@@ -205,5 +205,10 @@
     "blockers": []
   },
   "enterpriseGovernanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-  "reportHash": "0d3cf2154127e6ec67310b0709dbcd1baf2c8b37660e712f3ab3c2bcda3fc680"
+  "reportHash": "60981ff0bf979dc8b7d79e786e06e7e1b51ecf221e6dc3116b79e8df457657aa",
+  "auditTrail": {
+    "path": "/opt/results/ria/r-agent2/qa/qa-waves-governance-audit.jsonl",
+    "latestEntryHash": "af959150ff13febe6987a3fe54aeb0f490cf72a76358924fd3be3e28e9c1de1a",
+    "immutable": true
+  }
 }

@@ -8,7 +8,6 @@
 - QA Waves e replay: docs/governance/QA_WAVES_STATUS.md e docs/governance/REPLAY_OPERATIONAL_STATUS.md
 
 ## Now
-- Repair QA Mesh canonical scope so GO/NO_GO reflects the complete registry.
 - Preserve the current zero-blocking mesh state and monitor regressions in the canonical run.
 - Produce a full omnichannel replay proving WhatsApp -> AI -> handoff -> human -> backend mutation chronology.
 - Eliminate broken document references and retire legacy docs as non-canonical.

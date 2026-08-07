@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-05-29T03:22:09.428Z",
-  "artifact": "r-agent2-20260806-221327.zip",
+  "artifact": "r-agent2-20260807-042032.zip",
   "pass": false,
   "decision": "NO_GO",
   "totalChecks": 9,
@@ -12,7 +12,7 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260806-221327.zip",
+        "zipName": "r-agent2-20260807-042032.zip",
         "computedHash": "8a471dab04da1bfed987c7807e05a1388d9f9731fd7f7e266b3ed400fff8418d",
         "recordedHash": "8a471dab04da1bfed987c7807e05a1388d9f9731fd7f7e266b3ed400fff8418d",
         "match": true
@@ -57,14 +57,14 @@
             "reason": "hash_mismatch",
             "expected": "a2e7821eadc422f876e8eb29d322a232c18ebabe09644bea520c9a32bdceeff9",
             "actual": "8a471dab04da1bfed987c7807e05a1388d9f9731fd7f7e266b3ed400fff8418d",
-            "path": "dist/r-agent2-20260806-221327.zip"
+            "path": "dist/r-agent2-20260807-042032.zip"
           },
           {
             "id": "sidecar_manifest",
             "reason": "hash_mismatch",
             "expected": "59ca39e01150819863e050534a85b2bc4d53bac0c000e4f520904804bd384226",
             "actual": "7c09acd8469ace801473659cdcfbe4f41f9887ef7fdabb16931031216170a3d5",
-            "path": "dist/r-agent2-20260806-221327.manifest.json"
+            "path": "dist/r-agent2-20260807-042032.manifest.json"
           },
           {
             "id": "evidence_manifest",
@@ -168,5 +168,5 @@
     }
   ],
   "summary": "5 check(s) falharam (3 críticos). Adulteração ou configuração incompleta detectada.",
-  "reboundAt": "2026-08-07T01:17:20.932Z"
+  "reboundAt": "2026-08-07T07:23:13.303Z"
 }

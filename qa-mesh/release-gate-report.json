@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-07-27T21-25-02-808Z",
+  "executionId": "mesh-2026-08-07T04-39-21-202Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -20,16 +20,16 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-07-27T21-25-02-808Z",
-    "timestamp": "2026-07-27T21:25:02.808Z",
+    "executionId": "mesh-2026-08-07T04-39-21-202Z",
+    "timestamp": "2026-08-07T04:39:21.202Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 130,
-    "attempted": 130,
-    "executed": 130,
-    "total": 130,
-    "passed": 130,
+    "registryTotal": 131,
+    "attempted": 131,
+    "executed": 131,
+    "total": 131,
+    "passed": 131,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
@@ -69,14 +69,14 @@
         "total": 2
       },
       "core": {
-        "passed": 83,
+        "passed": 84,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 83
+        "total": 84
       },
       "fitness": {
         "passed": 15,
@@ -251,26 +251,26 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-07-27T21-25-02-808Z",
-      "startedAt": "2026-07-27T21:25:02.808Z",
+      "executionId": "mesh-2026-08-07T04-39-21-202Z",
+      "startedAt": "2026-08-07T04:39:21.202Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-07-27T22:29:20.788Z",
-      "registryTotal": 130,
+      "promotedAt": "2026-08-07T05:43:45.911Z",
+      "registryTotal": 131,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-07-27T21-25-02-808Z",
-    "startedAt": "2026-07-27T21:25:02.808Z",
+    "executionId": "mesh-2026-08-07T04-39-21-202Z",
+    "startedAt": "2026-08-07T04:39:21.202Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-07-27T22:29:20.788Z",
-    "registryTotal": 130,
+    "promotedAt": "2026-08-07T05:43:45.911Z",
+    "registryTotal": 131,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
-  "generatedAt": "2026-07-27T22:29:20.789Z"
+  "generatedAt": "2026-08-07T05:43:45.911Z"
 }

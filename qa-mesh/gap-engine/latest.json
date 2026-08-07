@@ -1,36 +1,8 @@
 {
-  "generatedAt": "2026-08-07T01:14:58.000Z",
-  "status": "NO_GO:ENTERPRISE_READY_GO",
-  "platformMaturity": "enterprise-partial",
-  "backlog": [
-    {
-      "blockingClassification": "release-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-registry-scope-mismatch",
-      "severity": "critical",
-      "area": "qa-mesh",
-      "title": "Canonical GO usa registry parcial do workspace-core",
-      "evidence": {
-        "registryDeclaredTotal": 131,
-        "registryCanonicalTotal": 130
-      },
-      "suggestedFix": "Executar o gate canonical contra o meshRegistry completo e bloquear GO enquanto registryTotal for menor que o registry declarado."
-    },
-    {
-      "id": "gap-proof-package-validation",
-      "severity": "critical",
-      "area": "package",
-      "title": "ZIP de release nao contem todos os proofs obrigatorios",
-      "evidence": {
-        "missingEntries": []
-      },
-      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
-    }
-  ],
-  "blocking": 2,
+  "generatedAt": "2026-08-07T07:24:31.617Z",
+  "status": "AUTONOMOUS_READY_GO",
+  "platformMaturity": "autonomous-ready",
+  "backlog": [],
+  "blocking": 0,
   "nonBlocking": 0
 }
