@@ -35,6 +35,7 @@ RUN npm ci --omit=dev && \
 # Copia apenas o código necessário (sem tests)
 COPY engine/ ./engine/
 COPY core/ ./core/
+COPY src/ ./src/
 COPY api/ ./api/
 COPY tools/system/ ./tools/system/
 COPY rpa/ ./rpa/
@@ -69,6 +70,7 @@ COPY --from=builder /build/r-agent2/node_modules ./node_modules
 COPY --from=builder /app/.cache ./.cache
 COPY --from=builder /build/r-agent2/engine ./engine
 COPY --from=builder /build/r-agent2/core ./core
+COPY --from=builder /build/r-agent2/src ./src
 COPY --from=builder /build/r-agent2/api ./api
 COPY --from=builder /build/r-agent2/tools/system ./tools/system
 COPY --from=builder /build/r-agent2/rpa ./rpa
