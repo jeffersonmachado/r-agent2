@@ -154,17 +154,21 @@ describe('channelHealthService coercion hardening', () => {
     const { startChannelHealthMonitor, stopChannelHealthMonitor } = require('../../api/services/channelHealthService');
 
     startChannelHealthMonitor({ intervalMs: 5000, windowMinutes: 5, failRateThreshold: 0.2, minSamples: 5, cooldownMs: 1000 });
-    jest.advanceTimersByTime(5000);
+    await jest.advanceTimersByTimeAsync(5000);
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(logger.warn).toHaveBeenCalledWith(
-      '[ChannelHealth] Falha no monitor (ignorado)',
-      expect.objectContaining({ error: '' })
-    );
-
+    // Cleanup ANTES do expect: se a asserção falhar, fake timers não vazam
+    // para o afterEach global (que pendura 10s esperando setTimeout real).
     stopChannelHealthMonitor();
     jest.useRealTimers();
+
+    // Com o health check do monitor (rework com backoff), o erro hostil do
+    // sequelize.query é capturado em checkDbHealth e o ciclo é pulado — o que
+    // importa é que o getter hostil não derruba nem pendura o monitor.
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[ChannelHealth] DB não respondeu ao health check, pulando ciclo'
+    );
   });
 
   test('static guard: no direct err/error.message outside helper', () => {
