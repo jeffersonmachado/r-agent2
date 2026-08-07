@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-07-28T01:19:24.740Z",
-  "runtimeClean": true,
+  "generatedAt": "2026-08-07T01:06:35.164Z",
+  "runtimeClean": false,
   "workspaceClean": true,
-  "runtimeCheck": "\u001b[0;34m[runtime-clean] Inspecionando resíduos operacionais no workspace\u001b[0m\n\u001b[0;32m  ✓ workspace sem resíduos de runtime conhecidos\u001b[0m\n",
+  "runtimeCheck": "\u001b[0;31m  x foram encontrados 1 resíduos de runtime. Execute: npm run runtime:clean\u001b[0m\n",
   "workspaceArtifacts": []
 }

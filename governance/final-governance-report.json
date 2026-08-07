@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-28T01:17:10.696Z",
+  "generatedAt": "2026-08-07T01:08:12.467Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
   "finalDecision": "NO_GO:STRICT_ENTERPRISE [98 step(s) com ui.available=false em jornadas visuais críticas]",
@@ -912,9 +912,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260727-221549.zip",
-      "computed": "139b752835bd7867be5ecd2e…",
-      "recorded": "139b752835bd7867be5ecd2e…",
+      "zipName": "r-agent2-20260806-220456.zip",
+      "computed": "239bcc139c60aa3eab874fe1…",
+      "recorded": "239bcc139c60aa3eab874fe1…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },

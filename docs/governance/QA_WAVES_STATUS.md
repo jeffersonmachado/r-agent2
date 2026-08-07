@@ -10,4 +10,4 @@
 
 ## Core divergence
 - QA Waves enterprise governance reports GO for the prod-like scope already validated.
-- QA Mesh canonical decision is GO after executing 130 scenario(s) against 130 declared scenario(s).
+- QA Mesh canonical decision is GO after executing 130 scenario(s) against 131 declared scenario(s).

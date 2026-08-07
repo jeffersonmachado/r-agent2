@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-28T01:19:24.691Z",
+  "generatedAt": "2026-08-07T01:06:35.028Z",
   "sourceArtifact": "qa/qa-waves-enterprise-governance.json",
   "signature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
   "reportHash": "0d3cf2154127e6ec67310b0709dbcd1baf2c8b37660e712f3ab3c2bcda3fc680",
@@ -93,5 +93,6 @@
         "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
       }
     ]
-  }
+  },
+  "reboundAt": "2026-08-07T01:08:08.305Z"
 }

@@ -1,11 +1,11 @@
 # Platform Status
 
-- Generated at: 2026-07-28T01:19:24.661Z
+- Generated at: 2026-08-07T01:06:34.953Z
 - Canonical mesh execution: mesh-2026-07-27T21-25-02-808Z
 - Canonical mesh decision: GO
-- Readiness decision: AUTONOMOUS_READY_GO
-- Readiness score: 98.5
-- QA coverage: 100%
+- Readiness decision: NO_GO:ENTERPRISE_READY_GO
+- Readiness score: 98.31
+- QA coverage: 99.24%
 - Replay coverage: 116.67%
 - Vertical coverage: 100%
 
@@ -23,4 +23,6 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Sem bloqueadores ativos.
+- Canonical GO usa registry parcial do workspace-core [gap-mesh-registry-scope-mismatch]
+- ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]
+- Governance signature ou cleanup proof nao possuem artifact fisico valido [gap-proof-governance-support]

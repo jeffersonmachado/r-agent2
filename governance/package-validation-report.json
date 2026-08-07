@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-07-28T01:19:38.073Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260727-221549.payload.zip",
-  "zipName": "r-agent2-20260727-221549.payload.zip",
-  "zipSha256": "a6300b39ae69fc71d1f5a7bc9addee111033bfda73ac65bdad7ebdd598958d01",
-  "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260727-221549.zip",
-  "selectionMode": "audited",
+  "generatedAt": "2026-08-07T01:08:07.721Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260806-220456.zip",
+  "zipName": "r-agent2-20260806-220456.zip",
+  "zipSha256": "239bcc139c60aa3eab874fe162547c2dec1139bb5e1482715bb59733c25f902a",
+  "payloadCentric": false,
+  "envelopePath": null,
+  "selectionMode": "explicit",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260727-221549.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260806-220456.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -40,15 +40,16 @@
     "governance/cleanup-proof.json",
     "governance/final-readiness-report.json"
   ],
-  "entryCount": 5252,
+  "entryCount": 5412,
   "missingEntries": [],
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20260727-221549.payload.zip",
-    "sha256": "a6300b39ae69fc71d1f5a7bc9addee111033bfda73ac65bdad7ebdd598958d01",
+    "boundTo": "r-agent2-20260806-220456.zip",
+    "sha256": "239bcc139c60aa3eab874fe162547c2dec1139bb5e1482715bb59733c25f902a",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
-  }
+  },
+  "reboundAt": "2026-08-07T01:08:08.301Z"
 }
