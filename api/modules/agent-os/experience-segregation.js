@@ -88,7 +88,8 @@ const DEVELOPMENT_VISIBLE_ROUTES = [
 ];
 
 function validateRouteVisibility(route, userClassification) {
-  if (!userClassification) return { visible: true, reason: 'no_classification' };
+  // P1: Fail closed — sem classificação, unknown, ou inválida → DENY.
+  if (!userClassification) return { visible: false, reason: 'no_classification_denied' };
 
   switch (userClassification.toUpperCase()) {
     case 'PRODUCTION':
@@ -98,7 +99,6 @@ function validateRouteVisibility(route, userClassification) {
       return { visible: true, reason: 'production_allowed' };
 
     case 'SUPPORT':
-      // Support sees replay + operational, but NOT QA Waves dev tools
       if (route.startsWith('/dev/qa-waves') || route.startsWith('/qa-mesh') ||
           route.startsWith('/qa/stability') || route === '/generate-system' ||
           route.startsWith('/admin/agents')) {
@@ -107,16 +107,20 @@ function validateRouteVisibility(route, userClassification) {
       return { visible: true, reason: 'support_allowed' };
 
     case 'DEVELOPMENT':
-      // Development sees everything
       return { visible: true, reason: 'development_allowed' };
 
     default:
-      return { visible: true, reason: 'unknown_classification' };
+      // P1: unknown classification → DENY (fail closed).
+      return { visible: false, reason: `unknown_classification_denied: ${userClassification}` };
   }
 }
 
 function validateAgentVisibility(agent, userClassification) {
-  if (!agent || !agent.classification) return { visible: true };
+  // P1: Fail closed — sem classificação do agente ou do usuário → DENY.
+  if (!agent || !agent.classification) return { visible: false, reason: 'missing_agent_classification' };
+  if (!userClassification || !['PRODUCTION', 'SUPPORT', 'DEVELOPMENT'].includes(String(userClassification).toUpperCase())) {
+    return { visible: false, reason: 'invalid_user_classification' };
+  }
 
   switch (userClassification.toUpperCase()) {
     case 'PRODUCTION':
@@ -135,7 +139,8 @@ function validateAgentVisibility(agent, userClassification) {
       return { visible: true };
 
     default:
-      return { visible: true };
+      // P1: unknown classification → DENY (fail closed).
+      return { visible: false, reason: `unknown_classification_denied: ${userClassification}` };
   }
 }
 

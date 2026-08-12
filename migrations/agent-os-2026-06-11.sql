@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS corporate_agents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id VARCHAR(255) NOT NULL DEFAULT 'system',
     name VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) NOT NULL UNIQUE,
+    slug VARCHAR(255) NOT NULL,
     description TEXT,
     owner VARCHAR(255),
     department VARCHAR(255),
@@ -26,10 +26,12 @@ CREATE TABLE IF NOT EXISTS corporate_agents (
     metrics JSONB NOT NULL DEFAULT '{"executions":0,"successRate":0,"latency":0,"cost":0,"satisfaction":0}',
     governance JSONB NOT NULL DEFAULT '{"approvedBy":null,"approvedAt":null,"riskLevel":"low","auditEnabled":false}',
     lifecycle VARCHAR(20) NOT NULL DEFAULT 'draft'
-        CHECK (lifecycle IN ('draft','validation','approved','active','deprecated','archived')),
+        CHECK (lifecycle IN ('draft','validation','validated','approved','active','deprecated','archived')),
     config JSONB NOT NULL DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Slug único por tenant (id UUID permanece global).
+    CONSTRAINT corporate_agents_tenant_slug_uidx UNIQUE (tenant_id, slug)
 );
 
 CREATE INDEX IF NOT EXISTS corporate_agents_tenant_idx ON corporate_agents(tenant_id);

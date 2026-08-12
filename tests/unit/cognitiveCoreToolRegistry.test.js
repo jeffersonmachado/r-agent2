@@ -97,18 +97,47 @@ describe('Cognitive Core — Tool Registry', () => {
   });
 
   describe('tools padrão (delegação a serviços reais)', () => {
-    test('registra as 13 tools de negócio, todas PRODUCTION', () => {
+    test('registra as 16 tools de negócio canônicas (namespacadas), todas PRODUCTION', () => {
       const registry = registerDefaultTools(createToolRegistry());
       const tools = registry.list({ classification: 'PRODUCTION' });
       const ids = tools.map((t) => t.id);
       expect(ids).toEqual(expect.arrayContaining([
-        'searchCustomer', 'createLead', 'updateLead', 'createOpportunity',
-        'createAppointment', 'rescheduleAppointment', 'cancelAppointment',
-        'sendWhatsappMessage', 'createTicket', 'transferConversation',
-        'originateCall', 'createCampaign', 'generateInsight',
+        'crm.searchCustomer', 'crm.createLead', 'crm.updateLead', 'crm.createOpportunity',
+        'schedule.listAppointments', 'schedule.findAvailability', 'schedule.createAppointment', 'schedule.rescheduleAppointment',
+        'schedule.cancelAppointment', 'messaging.sendWhatsAppMessage', 'support.createTicket',
+        'support.transferConversation', 'voice.originateCall', 'campaign.createCampaign',
+        'workspace.generateInsight', 'knowledge.searchOperational',
       ]));
-      expect(tools).toHaveLength(13);
+      expect(tools).toHaveLength(16);
       expect(tools.every((t) => t.visibility === 'PRODUCTION')).toBe(true);
+      // Lista expõe somente ids canônicos — aliases nunca aparecem.
+      expect(ids).not.toContain('searchCustomer');
+      expect(ids).not.toContain('createLead');
+    });
+
+    test('aliases legados executam a tool canônica (deprecation, sem quebrar consumidores)', async () => {
+      const marketingService = {
+        upsertLead: jest.fn(async ({ tenantId, name }) => ({ ok: true, lead: { id: 'l1', tenantId, name } })),
+      };
+      const registry = registerDefaultTools(createToolRegistry(), { marketingService });
+      expect(registry.isAlias('createLead')).toBe(true);
+      const result = await registry.execute('createLead', { name: 'Maria' }, {
+        tenantId: 'tenant-a',
+        actor: { classification: 'PRODUCTION', permissions: ['*'] },
+        idempotencyKey: 'k-alias-1',
+      });
+      expect(result.success).toBe(true);
+      expect(result.toolId).toBe('crm.createLead');
+      expect(result.requestedToolId).toBe('createLead');
+    });
+
+    test('tools SUPPORT/DEVELOPMENT existem mas ficam invisíveis para PRODUCTION', () => {
+      const registry = registerDefaultTools(createToolRegistry());
+      const support = registry.list({ classification: 'SUPPORT' }).map((t) => t.id);
+      expect(support).toEqual(expect.arrayContaining(['knowledge.searchSystem', 'audit.listReplays']));
+      expect(support).not.toContain('qa.getWaveStatus');
+      const dev = registry.list({ classification: 'DEVELOPMENT' }).map((t) => t.id);
+      expect(dev).toContain('qa.getWaveStatus');
     });
 
     test('ocultação: nenhuma tool operacional expõe QA Waves, Replay, Seeds, Mesh ou RPA', () => {
@@ -126,6 +155,7 @@ describe('Cognitive Core — Tool Registry', () => {
       const result = await registry.execute('createLead', { name: 'Maria' }, {
         tenantId: 'tenant-a',
         actor: { classification: 'PRODUCTION', permissions: ['*'] },
+        idempotencyKey: 'k-create-lead-1',
       });
       expect(marketingService.upsertLead).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-a', name: 'Maria' }));
       expect(result.success).toBe(true);
@@ -157,6 +187,8 @@ describe('Cognitive Core — Tool Registry', () => {
       await expect(registry.execute('createOpportunity', { name: 'Deal' }, {
         tenantId: 'tenant-a',
         actor: { classification: 'PRODUCTION', permissions: ['*'] },
+        idempotencyKey: 'k-opp-1',
+        confirmed: true,
       })).rejects.toThrow('cognitive_tool_unavailable');
     });
   });

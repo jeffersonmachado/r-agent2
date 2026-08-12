@@ -3,7 +3,19 @@ import { test, expect } from '@playwright/test';
 async function ensureAuthenticated(page: any, baseUrl: string) {
   await page.goto(`${baseUrl}/operations-dashboard`, { waitUntil: 'domcontentloaded' });
 
-  const onLoginPage = await page.locator('text=Login de Agente').isVisible().catch(() => false);
+  // O goto resolve em domcontentloaded, antes do React renderizar. Sob
+  // contenção de CPU (ex.: wave RPA em andamento na API) um isVisible
+  // imediato retorna falso e a autenticação seria pulada indevidamente.
+  // Esperar a decisão real da rota: ou o login aparece, ou a página alvo
+  // já renderizou autenticada (botão da jornada de check-in).
+  const loginHeading = page.locator('text=Login de Agente');
+  await loginHeading
+    .or(page.getByRole('button', { name: /Check-in Fitness/i }))
+    .first()
+    .waitFor({ state: 'visible', timeout: 30000 })
+    .catch(() => {});
+
+  const onLoginPage = await loginHeading.isVisible().catch(() => false);
   if (!onLoginPage) return;
 
   const username = process.env.TEST_USERNAME || process.env.TEST_ADMIN_USERNAME || 'systemadmin';
@@ -11,7 +23,17 @@ async function ensureAuthenticated(page: any, baseUrl: string) {
   await page.locator('input[placeholder*="username" i]').fill(username);
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: /entrar/i }).click();
-  await page.waitForURL((url: URL) => !url.pathname.includes('/login'), { timeout: 30000 });
+
+  // O login é inline (a URL não muda para /login) e super-admin recebe o
+  // modal de tenant na mesma rota — waitForURL seria trivialmente satisfeito
+  // sem provar nada. Esperar o desfecho real: modal de tenant ou a página
+  // alvo autenticada (botão da jornada de check-in).
+  await page
+    .getByRole('heading', { name: /Selecione o Tenant/i })
+    .or(page.getByRole('button', { name: /Check-in Fitness/i }))
+    .first()
+    .waitFor({ state: 'visible', timeout: 60000 })
+    .catch(() => {});
 }
 
 async function ensureTenantSelected(page: any) {

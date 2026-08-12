@@ -303,8 +303,12 @@ async function reassignIfOffline(ticketId) {
   return { success: true, ticket: updated, reassignedTo: chosen, strategy };
 }
 
-async function reassignOfflineTicketsForTenant(tenantId) {
-  const inProgress = listAllTickets({ tenantId, status: 'in_progress', limit: 10000 }).tickets || [];
+async function reassignOfflineTicketsForTenant(tenantId, options = {}) {
+  // options.inProgressTickets: lista pré-computada pelo ciclo do worker —
+  // evita re-escanear a base inteira por tenant a cada tick.
+  const inProgress = Array.isArray(options.inProgressTickets)
+    ? options.inProgressTickets
+    : (listAllTickets({ tenantId, status: 'in_progress', limit: 10000 }).tickets || []);
   let changed = 0;
   for (const t of inProgress) {
     if (!t?.assignedTo) continue;
@@ -316,20 +320,48 @@ async function reassignOfflineTicketsForTenant(tenantId) {
 }
 
 let worker = null;
+let cycleRunning = false;
+
+/**
+ * Um ciclo do worker: UMA varredura de tickets in_progress, agrupada por
+ * tenant em memória. A versão anterior fazia 1 + N_tenants varreduras
+ * completas por tick (com ~170 tenants e ~2.3k tickets: centenas de
+ * Array.from+filter+sort a cada 15s, com ciclos sobrepostos — saturava o
+ * event loop da API a ponto de derrubar requests HTTP durante waves RPA).
+ */
+async function runAssignmentCycle() {
+  if (cycleRunning) return { skipped: 'cycle_in_progress' };
+  cycleRunning = true;
+  try {
+    const inProgress = listAllTickets({ status: 'in_progress', limit: 10000 }).tickets || [];
+    const byTenant = new Map();
+    for (const t of inProgress) {
+      const tenantId = t?.tenantId;
+      if (!tenantId) continue;
+      if (!byTenant.has(tenantId)) byTenant.set(tenantId, []);
+      byTenant.get(tenantId).push(t);
+    }
+    let changed = 0;
+    for (const [tenantId, tickets] of byTenant.entries()) {
+      // eslint-disable-next-line no-await-in-loop
+      const res = await reassignOfflineTicketsForTenant(tenantId, { inProgressTickets: tickets });
+      changed += res?.changed || 0;
+    }
+    return { changed, tenants: byTenant.size };
+  } catch (err) {
+    logger.debug('[Assignment] worker erro (ignorado)', { error: safeErrorMessage(err) });
+    return { error: safeErrorMessage(err) };
+  } finally {
+    cycleRunning = false;
+  }
+}
 
 function startAssignmentWorker({ intervalMs = 15000 } = {}) {
   if (worker) return;
   worker = setInterval(() => {
-    try {
-      // best-effort: varre por tenant, baseado em tickets em memória
-      const all = listAllTickets({ limit: 10000 }).tickets || [];
-      const tenants = new Set(all.map(t => t?.tenantId).filter(Boolean));
-      for (const tenantId of tenants) {
-        reassignOfflineTicketsForTenant(tenantId).catch(() => {});
-      }
-    } catch (err) {
-      logger.debug('[Assignment] worker erro (ignorado)', { error: safeErrorMessage(err) });
-    }
+    // Guarda de reentrância dentro de runAssignmentCycle: se o ciclo anterior
+    // ainda estiver em voo, este tick é ignorado em vez de se sobrepor.
+    runAssignmentCycle().catch(() => {});
   }, intervalMs);
   if (worker.unref) worker.unref();
   logger.info('[Assignment] Worker iniciado', { intervalMs });
@@ -349,5 +381,8 @@ module.exports = {
   reassignOfflineTicketsForTenant,
   startAssignmentWorker,
   stopAssignmentWorker,
+  _internal: {
+    runAssignmentCycle,
+  },
 };
 

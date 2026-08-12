@@ -18,15 +18,40 @@ function readJsonFileStrict(filePath, label = path.basename(filePath)) {
   }
 }
 
-function listArtifacts() {
-  if (!fs.existsSync(DIST_DIR)) {
-    throw new Error(`dist_missing:${DIST_DIR}`);
+function resolveDistDir(options = {}) {
+  return options.distDir || DIST_DIR;
+}
+
+function approvalNameFor(zipName) {
+  return zipName.replace(/\.zip$/, '.approval.json');
+}
+
+// Metadados de aprovação (goNoGo, releaseGate, approvedForDeploy...) NÃO podem
+// ser escritos no manifest sidecar do payload: o hash desse manifest é selado
+// no self-proving-report (verify-enterprise-governance-v2 exige igualdade).
+// A aprovação vive em um sidecar próprio (<nome>.approval.json), mantendo o
+// manifest do artefato imutável após o packaging.
+function readApproval(distDir, dir, zipName) {
+  const approvalName = approvalNameFor(zipName);
+  const candidates = [path.join(dir, approvalName), path.join(distDir, approvalName)];
+  const approvalPath = candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
+  try {
+    return { approval: readJsonFileStrict(approvalPath, 'artifact_approval'), approvalPath };
+  } catch (_) {
+    return { approval: null, approvalPath };
+  }
+}
+
+function listArtifacts(options = {}) {
+  const distDir = resolveDistDir(options);
+  if (!fs.existsSync(distDir)) {
+    throw new Error(`dist_missing:${distDir}`);
   }
 
   // ORDEM: dist/ flat PRIMEIRO (pipeline cria ZIPs aqui), dist/release/ como fallback.
   // Nunca buscar dist/release/ primeiro — evita encontrar ZIP de release anterior.
-  const RELEASE_DIR = path.join(DIST_DIR, 'release');
-  const searchDirs  = [DIST_DIR, RELEASE_DIR].filter((d) => fs.existsSync(d));
+  const RELEASE_DIR = path.join(distDir, 'release');
+  const searchDirs  = [distDir, RELEASE_DIR].filter((d) => fs.existsSync(d));
 
   const seen = new Set();
   const results = [];
@@ -46,7 +71,7 @@ function listArtifacts() {
       // Procurar manifest na mesma dir ou no flat dist/
       let manifestPath = path.join(dir, manifestName);
       if (!fs.existsSync(manifestPath)) {
-        manifestPath = path.join(DIST_DIR, manifestName);
+        manifestPath = path.join(distDir, manifestName);
       }
 
       let manifest = null;
@@ -56,7 +81,14 @@ function listArtifacts() {
       } catch (error) {
         manifestError = error.message || String(error);
       }
-      results.push({ zip, zipPath, manifestPath, manifest, manifestError });
+      // Merge do sidecar de aprovação (se existir): campos de aprovação prevalecem
+      // na visão dos consumidores (deploy exige manifest.goNoGo === 'GO') sem
+      // mutar o arquivo de manifest selado.
+      const { approval, approvalPath } = readApproval(distDir, dir, zip);
+      if (manifest && approval) {
+        manifest = { ...manifest, ...approval };
+      }
+      results.push({ zip, zipPath, manifestPath, manifest, manifestError, approvalPath, approval });
     }
   }
 
@@ -66,7 +98,7 @@ function listArtifacts() {
 function findLatestReleaseArtifact(options = {}) {
   const requireAuditPassed = options.requireAuditPassed !== false;
   const requireGoNoGoGo = options.requireGoNoGoGo === true;
-  const artifacts = listArtifacts();
+  const artifacts = listArtifacts(options);
 
   if (artifacts.length === 0) {
     throw new Error('artifact_missing:none_found_in_dist');
@@ -126,25 +158,34 @@ function findLatestReleaseArtifact(options = {}) {
   throw new Error('artifact_missing:no_zip_found_in_dist');
 }
 
-function updateArtifactManifest(zipName, patch) {
-  // O layout normalizado (PASS 4b do two-pass) move o sidecar para
-  // dist/release/; o flat dist/ é o legado. Resolve como listArtifacts.
-  const manifestName = zipName.replace(/\.zip$/, '.manifest.json');
+function updateArtifactManifest(zipName, patch, options = {}) {
+  // O manifest sidecar do payload é IMUTÁVEL após o packaging: seu hash é
+  // selado no self-proving-report (o verifier rígido exige igualdade).
+  // Metadados de aprovação são persistidos no sidecar próprio
+  // (<nome>.approval.json); listArtifacts faz o merge na leitura.
+  const distDir = resolveDistDir(options);
+  const approvalName = approvalNameFor(zipName);
   const candidates = [
-    path.join(DIST_DIR, 'release', manifestName),
-    path.join(DIST_DIR, manifestName),
+    path.join(distDir, 'release', approvalName),
+    path.join(distDir, approvalName),
   ];
-  const manifestPath = candidates.find((candidate) => fs.existsSync(candidate)) || candidates[1];
-  const current = readJsonFileStrict(manifestPath, 'artifact_manifest');
+  const approvalPath = candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
+  let current = {};
+  try {
+    current = readJsonFileStrict(approvalPath, 'artifact_approval');
+  } catch (_) {
+    current = {};
+  }
   const next = {
     ...current,
     ...patch,
     updatedAt: new Date().toISOString(),
   };
-  fs.writeFileSync(manifestPath, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+  fs.mkdirSync(path.dirname(approvalPath), { recursive: true });
+  fs.writeFileSync(approvalPath, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
   return {
-    manifestPath,
-    manifest: next,
+    approvalPath,
+    approval: next,
   };
 }
 

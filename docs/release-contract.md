@@ -14,12 +14,22 @@ Entregáveis mínimos:
 - dist/<artifact>.zip
 - dist/<artifact>.manifest.json (audit=passed, sha256)
 
-Depois de `system:release`, o manifesto do artefato é carimbado com:
+O manifesto do artefato é **imutável após o packaging**: seu SHA-256 é selado
+em `dist/governance/self-proving-report.json` (`manifestHash`) e o verificador
+rígido (`verify-enterprise-governance-v2.sh`) exige igualdade.
+
+Depois de `system:release`, os metadados de aprovação são gravados no sidecar
+próprio `dist/release/<artifact>.approval.json` (nunca no manifesto selado):
 - goNoGo
 - releaseGate
 - validateResult
 - runtimeGovernance
 - approvedForDeploy
+
+Os consumidores (`system:deploy`, `release-gate`, `release-summary`) leêm a
+visão merged manifest+approval via `tools/system/lib/release-artifact.js`
+(`listArtifacts`), portanto o contrato "manifesto com audit=passed e goNoGo=GO"
+permanece válido sem mutar o artefato selado.
 
 Bloqueios de contaminação incluem:
 - .env / .token.env

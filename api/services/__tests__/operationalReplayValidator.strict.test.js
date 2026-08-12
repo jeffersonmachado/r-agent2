@@ -235,6 +235,50 @@ describe('operationalReplayValidator strict replay gates', () => {
     expect(result.blockers.some((item) => item.reason === 'replay_not_operational')).toBe(true);
   });
 
+  test('reconhece /resource-bookings (rota operacional real do workspace) como acesso a modulo operacional', () => {
+    const result = operationalReplayValidator.validateOperationalReplay(
+      makeStrictSupportReplay({
+        journeyId: 'booking_flow',
+        steps: [
+          {
+            id: 'booking-step',
+            type: 'custom',
+            actionType: 'create_booking',
+            page: '/workspace',
+            url: '/workspace',
+            selector: 'resource-booking-fetch',
+            timestamp: '2026-05-07T10:00:00.000Z',
+            screenshotAfter: 'booking.png',
+            networkEvents: [
+              { type: 'response', url: 'http://localhost:3001/resource-bookings', method: 'POST', status: 201 },
+              { type: 'response', url: 'http://localhost:3001/resource-bookings?resourceId=res-1&limit=20', method: 'GET', status: 200 },
+            ],
+          },
+        ],
+        screenshots: [
+          {
+            id: 'booking-ss',
+            path: 'booking.png',
+            description: '/workspace',
+            timestamp: '2026-05-07T10:00:00.000Z',
+            critical: true,
+            type: 'validation',
+          },
+        ],
+        events: [
+          { type: 'response', url: 'http://localhost:3001/resource-bookings', module: '', operation: 'create', timestamp: '2026-05-07T10:00:00.500Z' },
+          { type: 'response', url: 'http://localhost:3001/resource-bookings?resourceId=res-1&limit=20', module: '', operation: 'read', timestamp: '2026-05-07T10:00:01.000Z' },
+        ],
+      }),
+      { journeyId: 'booking_flow' }
+    );
+
+    expect(result.results.moduleAccess.isRealAccess).toBe(true);
+    expect(result.results.moduleAccess.realModulesAccessed.some((page) => page.includes('/resource-bookings'))).toBe(true);
+    expect(result.results.journeyPath.operationalPages.length).toBeGreaterThan(0);
+    expect(result.results.journeyPath.isRealJourney).toBe(true);
+  });
+
   test('retorna NO_GO quando mutationCount = 0', () => {
     const snap = supportSnapshot(1, 'open', 0, 0);
     const result = operationalReplayValidator.validateOperationalReplay(

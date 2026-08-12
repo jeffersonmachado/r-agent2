@@ -1,3 +1,40 @@
 {
-  "items": []
+  "items": [
+    {
+      "id": "qa-market-node-1786289389517",
+      "label": "QA Market Node 1786289389517",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-08-09T15:29:52.361Z",
+      "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
+    },
+    {
+      "id": "qa-market-node-1786298004280",
+      "label": "QA Market Node 1786298004280",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-08-09T17:53:25.741Z",
+      "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
+    },
+    {
+      "id": "qa-market-node-1786360434193",
+      "label": "QA Market Node 1786360434193",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-08-10T11:13:55.729Z",
+      "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
+    }
+  ]
 }

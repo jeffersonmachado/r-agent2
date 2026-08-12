@@ -3,135 +3,45 @@
 const agentRegistryService = require('../../agent-registry/service');
 const governanceService = require('../../ai-governance/service');
 const logger = require('../../../utils/logger');
+const { getCapabilityRegistry } = require('../../../../src/core/cognitive/capability-registry');
+const { canAccess } = require('../../../../src/core/cognitive/visibility');
 
 /**
- * Capability Registry - mapeia capacidades para serviços reais.
+ * Agent Orchestrator — FACADE sobre o Cognitive Core.
  *
- * NUNCA retorna resposta simulada. Cada capability executa o serviço real.
+ * Não é um runtime independente: as capabilities vêm do Canonical Capability
+ * Registry (config/canonical-capabilities.json) e a execução passa pelo
+ * Cognitive Tool Registry — a mesma fonte da verdade do Cognitive Core e do
+ * MCP Server Adapter.
+ *
+ * Contrato obrigatório (self-proving):
+ *   REAL SUCCESS ou EXPLICIT FAILURE — nunca FAKE SUCCESS.
+ * Não existe fallback silencioso: serviço indisponível, capability sem tool
+ * executável ou falha de execução retornam success:false com erro real.
  */
-const CAPABILITY_REGISTRY = {
-  'crm.read': {
-    name: 'CRM Read',
-    type: 'crm',
-    service: 'crmService',
-    action: 'read',
-    category: 'PRODUCTION',
-  },
-  'crm.write': {
-    name: 'CRM Write',
-    type: 'crm',
-    service: 'crmService',
-    action: 'write',
-    category: 'PRODUCTION',
-  },
-  'crm.search': {
-    name: 'CRM Search',
-    type: 'crm',
-    service: 'crmService',
-    action: 'search',
-    category: 'PRODUCTION',
-  },
-  'agenda.read': {
-    name: 'Agenda Read',
-    type: 'agenda',
-    service: 'scheduleService',
-    action: 'read',
-    category: 'PRODUCTION',
-  },
-  'agenda.book': {
-    name: 'Agenda Book',
-    type: 'agenda',
-    service: 'scheduleService',
-    action: 'book',
-    category: 'PRODUCTION',
-  },
-  'ticket.read': {
-    name: 'Ticket Read',
-    type: 'support',
-    service: 'ticketService',
-    action: 'read',
-    category: 'PRODUCTION',
-  },
-  'ticket.create': {
-    name: 'Ticket Create',
-    type: 'support',
-    service: 'ticketService',
-    action: 'create',
-    category: 'PRODUCTION',
-  },
-  'campaign.execute': {
-    name: 'Campaign Execute',
-    type: 'campaign',
-    service: 'campaignService',
-    action: 'execute',
-    category: 'PRODUCTION',
-  },
-  'pbx.call': {
-    name: 'PBX Call',
-    type: 'pbx',
-    service: 'pbxService',
-    action: 'call',
-    category: 'PRODUCTION',
-  },
-  'knowledge.search': {
-    name: 'Knowledge Search',
-    type: 'knowledge',
-    service: 'knowledgeGraphService',
-    action: 'search',
-    category: 'PRODUCTION',
-  },
-  'workspace.read': {
-    name: 'Workspace Read',
-    type: 'workspace',
-    service: 'workspaceService',
-    action: 'read',
-    category: 'PRODUCTION',
-  },
-  'inbox.process': {
-    name: 'Inbox Process',
-    type: 'inbox',
-    service: 'inboxService',
-    action: 'process',
-    category: 'PRODUCTION',
-  },
-  'support.diagnose': {
-    name: 'Support Diagnose',
-    type: 'support',
-    service: 'supportService',
-    action: 'diagnose',
-    category: 'SUPPORT',
-  },
-  'replay.view': {
-    name: 'Replay View',
-    type: 'replay',
-    service: 'replayService',
-    action: 'view',
-    category: 'SUPPORT',
-  },
-  'qa.wave.execute': {
-    name: 'QA Wave Execute',
-    type: 'qa',
-    service: 'qaWavesService',
-    action: 'execute',
-    category: 'DEVELOPMENT',
-  },
-  'qa.mesh.run': {
-    name: 'QA Mesh Run',
-    type: 'qa',
-    service: 'qaMeshService',
-    action: 'run',
-    category: 'DEVELOPMENT',
-  },
-};
+
+function getToolRegistry() {
+  return require('../../../../src/core/cognitive').getCognitiveOrchestrator().toolRegistry;
+}
+
+function normalizeActorClassification(context) {
+  const c = String(context.actor?.classification || context.classification || 'PRODUCTION').toUpperCase();
+  return ['PRODUCTION', 'SUPPORT', 'DEVELOPMENT'].includes(c) ? c : 'PRODUCTION';
+}
 
 /**
- * Resolve e executa uma capability real.
+ * Resolve e executa uma capability real via Canonical Capability Registry +
+ * Cognitive Tool Registry.
  *
- * Cada capability mapeia para um serviço real do RAP.
- * NUNCA retorna "Simulated response".
+ * @param {string} capabilityKey  nome canônico ou alias legado
+ * @param {object} agent          agente corporativo (para auditoria)
+ * @param {object} context        { tenantId, query, params, action?, actor? }
  */
 async function executeCapability(capabilityKey, agent, context = {}) {
-  const capDef = CAPABILITY_REGISTRY[capabilityKey];
+  const capabilityRegistry = getCapabilityRegistry();
+  const capDef = capabilityRegistry.get(capabilityKey);
+  const startTime = Date.now();
+
   if (!capDef) {
     return {
       success: false,
@@ -140,120 +50,89 @@ async function executeCapability(capabilityKey, agent, context = {}) {
     };
   }
 
-  const startTime = Date.now();
+  const actorClassification = normalizeActorClassification(context);
+  if (!canAccess(actorClassification, capDef.visibility)) {
+    return {
+      success: false,
+      capability: capDef.id,
+      name: capDef.name,
+      category: capDef.visibility,
+      error: `capability_visibility_denied: ${capDef.id} requer ${capDef.visibility} (actor=${actorClassification})`,
+      durationMs: Date.now() - startTime,
+    };
+  }
+
+  if (!capDef.tools || capDef.tools.length === 0) {
+    // explicit_unavailable: capability sem tool executável registrada.
+    return {
+      success: false,
+      capability: capDef.id,
+      name: capDef.name,
+      category: capDef.visibility,
+      error: `capability_without_executable_tool: ${capDef.id}`,
+      durationMs: Date.now() - startTime,
+    };
+  }
+
+  const toolRegistry = getToolRegistry();
+  const toolId = capDef.tools[0];
+  const input = { ...(context.query || {}), ...(context.params || {}) };
+
   try {
-    // Resolve o serviço real baseado no tipo
-    let result;
-    switch (capDef.type) {
-      case 'crm':
-        try {
-          const crmService = require('../../../services/crmService');
-          result = await crmService.queryEntities
-            ? { data: await crmService.queryEntities(context.tenantId, context.query || {}) }
-            : { data: { message: `CRM capability ${capDef.action} executed`, context } };
-        } catch (_) {
-          result = { data: { capability: capDef.name, action: capDef.action, context } };
-        }
-        break;
+    const result = await toolRegistry.execute(toolId, input, {
+      tenantId: context.tenantId,
+      // Fail closed: sem actor explícito, sem permissões — nunca wildcard.
+      actor: context.actor || { classification: actorClassification, permissions: [] },
+      correlationId: context.correlationId || null,
+      idempotencyKey: context.idempotencyKey || `agent-orchestrator:${context.tenantId}:${capDef.id}:${startTime}`,
+    });
 
-      case 'agenda':
-        try {
-          const scheduleService = require('../../../services/scheduleService');
-          result = scheduleService.getSchedule
-            ? { data: await scheduleService.getSchedule(context) }
-            : { data: { capability: capDef.name, action: capDef.action, context } };
-        } catch (_) {
-          result = { data: { capability: capDef.name, action: capDef.action, context } };
-        }
-        break;
-
-      case 'support':
-      case 'ticket':
-        try {
-          const ticketService = require('../../../services/ticketService');
-          result = ticketService.list
-            ? { data: await ticketService.list(context.tenantId, context.query || {}) }
-            : { data: { capability: capDef.name, action: capDef.action, context } };
-        } catch (_) {
-          result = { data: { capability: capDef.name, action: capDef.action, context } };
-        }
-        break;
-
-      case 'knowledge':
-        try {
-          const kgService = require('../../knowledge-graph/service');
-          result = kgService.queryGraph
-            ? { data: await kgService.queryGraph({ tenantId: context.tenantId, ...context.query }) }
-            : { data: { capability: capDef.name, action: capDef.action, context } };
-        } catch (_) {
-          result = { data: { capability: capDef.name, action: capDef.action, context } };
-        }
-        break;
-
-      case 'workspace':
-        try {
-          const wsService = require('../../../services/workspace/workspaceService');
-          result = wsService.getEntity
-            ? { data: await wsService.getEntity(context.entityId, context.tenantId) }
-            : { data: { capability: capDef.name, action: capDef.action, context } };
-        } catch (_) {
-          result = { data: { capability: capDef.name, action: capDef.action, context } };
-        }
-        break;
-
-      case 'replay':
-        try {
-          const testExecutionService = require('../../../services/testExecutionService');
-          const replays = testExecutionService.listReplayFiles
-            ? await testExecutionService.listReplayFiles(context.query || {})
-            : [];
-          result = { data: replays };
-        } catch (_) {
-          result = { data: { capability: capDef.name, action: capDef.action, context } };
-        }
-        break;
-
-      case 'qa':
-        try {
-          const qaWavesService = require('../../../services/qaWavesService');
-          result = qaWavesService.getExecutionStatus
-            ? { data: await qaWavesService.getExecutionStatus(context.executionId) }
-            : { data: { capability: capDef.name, action: capDef.action, context } };
-        } catch (_) {
-          result = { data: { capability: capDef.name, action: capDef.action, context } };
-        }
-        break;
-
-      default:
-        // Fallback: tenta resolver serviço dinamicamente
-        result = { data: { capability: capDef.name, action: capDef.action, note: 'capability executed', context } };
-        break;
-    }
-
-    const durationMs = Date.now() - startTime;
     return {
       success: true,
-      capability: capabilityKey,
+      capability: capDef.id,
+      requestedCapability: capabilityKey,
       name: capDef.name,
-      category: capDef.category,
-      result,
-      durationMs,
+      category: capDef.visibility,
+      result: { toolId: result.toolId, data: result.output },
+      durationMs: Date.now() - startTime,
     };
   } catch (error) {
-    const durationMs = Date.now() - startTime;
+    // Falha real e explícita — sem payload sintético.
     logger.error('[AgentOrchestrator] Capability execution failed', {
-      capability: capabilityKey,
+      capability: capDef.id,
+      toolId,
       agentId: agent?.id,
       error: error.message,
     });
     return {
       success: false,
-      capability: capabilityKey,
+      capability: capDef.id,
+      requestedCapability: capabilityKey,
       name: capDef.name,
+      category: capDef.visibility,
       error: error.message,
-      durationMs,
+      durationMs: Date.now() - startTime,
     };
   }
+}
+
+/**
+ * Adapter de compatibilidade: o antigo CAPABILITY_REGISTRY (fonte independente)
+ * foi eliminado. Esta visão é DERIVADA do Canonical Capability Registry —
+ * mesma fonte, mesmo comportamento de execução.
+ */
+function buildLegacyCapabilityView() {
+  const capabilityRegistry = getCapabilityRegistry();
+  const view = {};
+  for (const cap of capabilityRegistry.list({ classification: 'DEVELOPMENT' })) {
+    view[cap.id] = {
+      name: cap.name,
+      type: cap.domain,
+      tools: cap.tools,
+      category: cap.visibility,
+    };
+  }
+  return view;
 }
 
 async function handleAgentOrchestratorRoutes(ctx) {
@@ -276,122 +155,92 @@ async function handleAgentOrchestratorRoutes(ctx) {
     // Orchestration logic:
     // 1. Parse intent
     // 2. Select relevant agents
-    // 3. Resolve capabilities
-    // 4. Execute capabilities reais
-    // 5. Collect results
+    // 3. Resolve capabilities (Canonical Capability Registry)
+    // 4. Execute capabilities reais (Cognitive Tool Registry)
+    // 5. Collect results — sucesso real ou falha explícita
 
     const intentMap = {
-      'whatsapp_message': ['sdr-agent', 'crm-agent', 'support-agent'],
-      'customer_inquiry': ['crm-agent', 'support-agent'],
+      'whatsapp_message': ['sdr-agent', 'crm-agent', 'customer-service-agent'],
+      'customer_inquiry': ['crm-agent', 'customer-service-agent'],
       'appointment_request': ['scheduling-agent', 'crm-agent'],
       'payment_reminder': ['collection-agent'],
       'campaign_trigger': ['campaign-agent'],
-      'knowledge_query': ['knowledge-agent'],
+      'knowledge_query': ['operational-knowledge-agent'],
     };
 
     const capabilityIntentMap = {
-      'whatsapp_message': ['crm.read', 'ticket.create', 'inbox.process'],
-      'customer_inquiry': ['crm.search', 'ticket.read'],
-      'appointment_request': ['agenda.read', 'crm.read', 'agenda.book'],
-      'payment_reminder': ['crm.search', 'crm.read'],
-      'campaign_trigger': ['campaign.execute', 'crm.search'],
-      'knowledge_query': ['knowledge.search'],
+      'whatsapp_message': ['crm.read', 'ticket.manage'],
+      'customer_inquiry': ['crm.read', 'ticket.manage'],
+      'appointment_request': ['schedule.read', 'crm.read', 'schedule.manage'],
+      'payment_reminder': ['crm.read', 'messaging.send'],
+      'campaign_trigger': ['campaign.manage', 'crm.read'],
+      'knowledge_query': ['knowledge.operational'],
     };
 
-    const agentSlugs = intentMap[body.intent] || ['support-agent'];
-    const agents = await agentRegistryService.listCorporateAgents({
-      tenantId,
-      filters: { lifecycle: 'active' },
-    });
-
-    const selectedAgents = agents.filter(a => agentSlugs.includes(a.slug));
-
-    // Resolve capabilities para o intent
+    // P1: Legacy facade — delega ao CognitiveOrchestrator (runtime único).
+    // O intentMap/capabilityIntentMap é apenas para compatibilidade de resposta.
+    const agentSlugs = intentMap[body.intent] || ['customer-service-agent'];
     const capabilityKeys = capabilityIntentMap[body.intent] || [];
 
-    // Executa capabilities reais (NUNCA simuladas)
-    const executionSteps = [];
+    // Ator derivado do request autenticado (RBAC real) — nunca do body.
+    const { _internal: cognitiveInternal } = require('../../cognitive/routes');
+    const requestActor = {
+      userId: req.agent?.id || req.agent?.username || null,
+      classification: cognitiveInternal.resolveActorClassification(req.agent),
+      permissions: cognitiveInternal.resolveActorToolPermissions(req.agent),
+    };
+
     const overallStartTime = Date.now();
+    const executionSteps = [];
 
-    for (const capabilityKey of capabilityKeys) {
-      const primaryAgent = selectedAgents.find(a =>
-        (a.capabilities || []).includes(capabilityKey) ||
-        (a.capabilities || []).some(c => c.startsWith(capabilityKey.split('.')[0]))
-      ) || selectedAgents[0];
+    // P1: Delega execução ao CognitiveOrchestrator (runtime único).
+    // O Agent Orchestrator NÃO executa capabilities diretamente.
+    try {
+      const { getCognitiveOrchestrator } = require('../../../../src/core/cognitive/cognitive-orchestrator');
+      const orchestrator = getCognitiveOrchestrator();
 
-      const capResult = await executeCapability(capabilityKey, primaryAgent, {
+      const cognitiveResult = await orchestrator.process({
         tenantId,
-        intent: body.intent,
-        params: body.params || {},
-        query: body.query || body.params || {},
+        channel: 'api',
+        message: body.message || body.intent,
+        eventType: body.intent,
+        payload: {
+          intent: body.intent,
+          params: body.params || {},
+          query: body.query || body.params || {},
+          correlationId: body.correlationId || null,
+        },
+        actor: requestActor,
       });
 
       executionSteps.push({
-        capability: capabilityKey,
-        agent: primaryAgent?.slug || 'orchestrator',
-        status: capResult.success ? 'executed' : 'failed',
-        durationMs: capResult.durationMs,
-        result: capResult,
+        capability: cognitiveResult.intent || body.intent,
+        agent: cognitiveResult.agentSlug || 'cognitive-core',
+        status: cognitiveResult.status === 'completed' ? 'executed' : cognitiveResult.status,
+        durationMs: cognitiveResult.latencyMs || (Date.now() - overallStartTime),
+        result: {
+          success: cognitiveResult.status === 'completed',
+          executionId: cognitiveResult.executionId,
+          businessOutcome: cognitiveResult.businessOutcome,
+          outputs: cognitiveResult.outputs,
+        },
+      });
+    } catch (error) {
+      // P1: CognitiveOrchestrator falhou → erro explícito. NUNCA fallback para execução direta.
+      logger.error('[AgentOrchestrator] CognitiveOrchestrator failed — no fallback', {
+        tenantId, intent: body.intent, error: error.message,
       });
 
-      // Log governance event
-      await governanceService.logGovernanceEvent({
-        tenantId,
-        agentId: primaryAgent?.id || null,
-        eventType: 'execute',
-        actor: req.user?.username || 'system',
-        description: `Orchestrator executed capability ${capabilityKey} via agent ${primaryAgent?.name || 'orchestrator'} for intent: ${body.intent}`,
-        toolsUsed: [capabilityKey],
-        dataAccessed: [],
-        cost: 0.01,
-        riskLevel: 'low',
-      }).catch((err) => {
-        logger.warn('[AgentOrchestrator] Governance log failed (non-blocking)', { error: err.message });
+      executionSteps.push({
+        capability: body.intent,
+        agent: 'cognitive-core',
+        status: 'failed',
+        durationMs: Date.now() - overallStartTime,
+        result: {
+          success: false,
+          error: error.message,
+        },
       });
-    }
-
-    // Se não há capabilities mapeadas, executa agentes diretamente
-    if (capabilityKeys.length === 0) {
-      for (const agent of selectedAgents) {
-        const startTime = Date.now();
-        // Tenta executar as capabilities do agente
-        const agentCapabilities = agent.capabilities || [];
-        let agentResult = { success: true, capabilitiesExecuted: [] };
-
-        for (const capKey of agentCapabilities) {
-          const capResult = await executeCapability(capKey, agent, {
-            tenantId,
-            intent: body.intent,
-            params: body.params || {},
-          });
-          agentResult.capabilitiesExecuted.push(capResult);
-          if (!capResult.success) {
-            agentResult.success = false;
-          }
-        }
-
-        executionSteps.push({
-          agent: agent.slug,
-          status: agentResult.success ? 'executed' : 'partial_failure',
-          durationMs: Date.now() - startTime,
-          result: {
-            success: agentResult.success,
-            capabilitiesExecuted: agentResult.capabilitiesExecuted,
-          },
-        });
-
-        await governanceService.logGovernanceEvent({
-          tenantId,
-          agentId: agent.id,
-          eventType: 'execute',
-          actor: req.user?.username || 'system',
-          description: `Orchestrator executed ${agent.name} for intent: ${body.intent}`,
-          toolsUsed: agent.tools || [],
-          dataAccessed: [],
-          cost: 0.01,
-          riskLevel: 'low',
-        }).catch(() => {});
-      }
     }
 
     const totalDurationMs = Date.now() - overallStartTime;
@@ -399,11 +248,11 @@ async function handleAgentOrchestratorRoutes(ctx) {
     sendJson({
       orchestration: {
         intent: body.intent,
-        agentsSelected: selectedAgents.map(a => a.slug),
+        agentsSelected: agentSlugs,
         capabilitiesResolved: capabilityKeys,
         steps: executionSteps,
         totalDurationMs,
-        status: executionSteps.every(s => s.status === 'executed') ? 'completed' : 'partial',
+        status: executionSteps.every(s => s.status === 'executed' || s.status === 'completed') ? 'completed' : 'partial',
       },
     });
   }
@@ -413,18 +262,20 @@ async function handleAgentOrchestratorRoutes(ctx) {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
 
+    const capabilityView = buildLegacyCapabilityView();
+
     sendJson({
       intents: [
-        { id: 'whatsapp_message', label: 'Mensagem WhatsApp', agents: ['sdr-agent', 'crm-agent', 'support-agent'] },
-        { id: 'customer_inquiry', label: 'Consulta de Cliente', agents: ['crm-agent', 'support-agent'] },
+        { id: 'whatsapp_message', label: 'Mensagem WhatsApp', agents: ['sdr-agent', 'crm-agent', 'customer-service-agent'] },
+        { id: 'customer_inquiry', label: 'Consulta de Cliente', agents: ['crm-agent', 'customer-service-agent'] },
         { id: 'appointment_request', label: 'Solicitação de Agendamento', agents: ['scheduling-agent', 'crm-agent'] },
         { id: 'payment_reminder', label: 'Lembrete de Pagamento', agents: ['collection-agent'] },
         { id: 'campaign_trigger', label: 'Disparo de Campanha', agents: ['campaign-agent'] },
-        { id: 'knowledge_query', label: 'Consulta de Conhecimento', agents: ['knowledge-agent'] },
+        { id: 'knowledge_query', label: 'Consulta de Conhecimento', agents: ['operational-knowledge-agent'] },
       ],
-      capabilities: Object.keys(CAPABILITY_REGISTRY).map(key => ({
+      capabilities: Object.keys(capabilityView).map(key => ({
         key,
-        ...CAPABILITY_REGISTRY[key],
+        ...capabilityView[key],
       })),
     });
   }
@@ -434,16 +285,22 @@ async function handleAgentOrchestratorRoutes(ctx) {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
 
+    const capabilityView = buildLegacyCapabilityView();
     const byCategory = {};
-    for (const [key, def] of Object.entries(CAPABILITY_REGISTRY)) {
+    for (const [key, def] of Object.entries(capabilityView)) {
       if (!byCategory[def.category]) byCategory[def.category] = [];
       byCategory[def.category].push({ key, ...def });
     }
 
-    sendJson({ capabilities: CAPABILITY_REGISTRY, byCategory });
+    sendJson({ capabilities: capabilityView, byCategory });
   }
 
   return false;
 }
 
-module.exports = { handleAgentOrchestratorRoutes, CAPABILITY_REGISTRY, executeCapability };
+module.exports = {
+  handleAgentOrchestratorRoutes,
+  executeCapability,
+  // Adapter derivado do Canonical Capability Registry (não é fonte independente).
+  get CAPABILITY_REGISTRY() { return buildLegacyCapabilityView(); },
+};

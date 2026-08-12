@@ -25,6 +25,7 @@ function buildStubRegistry({ onExecute } = {}) {
   const registry = createToolRegistry();
   const toolIds = [
     'searchCustomer', 'createLead', 'updateLead', 'createOpportunity',
+    'schedule.findAvailability', 'schedule.listAppointments',
     'createAppointment', 'rescheduleAppointment', 'cancelAppointment',
     'sendWhatsappMessage', 'createTicket', 'transferConversation',
     'originateCall', 'createCampaign', 'generateInsight',
@@ -90,6 +91,7 @@ function buildOrchestrator(overrides = {}) {
       record: jest.fn(async (record) => { learningRecords.push(record); return { recorded: true }; }),
     },
     generateAiResponse: overrides.generateAiResponse || buildStubGenerateAiResponse(),
+    agentSupervisor: overrides.agentSupervisor !== undefined ? overrides.agentSupervisor : null,
     ...overrides.extra,
   });
   return { orchestrator, registry, learningRecords };
@@ -127,7 +129,7 @@ describe('Cognitive Core — Action Planner', () => {
     expect(confirmedPlan.requiresConfirmation).toBe(false);
   });
 
-  test('ator sem permissão tem passos negados e plano sem passos executáveis falha', () => {
+  test('ator sem permissão para ação obrigatória tem plano rejeitado com required_action_denied', () => {
     const guarded = createToolRegistry();
     guarded.register({
       id: 'transferConversation',
@@ -141,7 +143,7 @@ describe('Cognitive Core — Action Planner', () => {
       intent: 'transferir_humano',
       context,
       actor: { classification: 'PRODUCTION', permissions: [] },
-    })).toThrow('cognitive_planner_no_executable_steps');
+    })).toThrow('cognitive_planner_required_action_denied');
   });
 
   test('todas as 11 intenções têm template de plano', () => {
@@ -444,7 +446,9 @@ describe('Cognitive Core — Cognitive Orchestrator (pipeline completo)', () => 
     expect(result.validation).toBeUndefined();
     expect(result.plan).toBeUndefined();
     expect(result.contextTrace).toBeUndefined();
+    // Business outcome fields são expostos (resultado de negócio, não técnico).
     expect(Object.keys(result).sort()).toEqual([
+      'businessEvidence', 'businessFailures', 'businessOutcome',
       'confidence', 'executionId', 'fallback', 'humanHandoff', 'intent',
       'latencyMs', 'outputs', 'requiresConfirmation', 'status', 'tenantId',
     ]);

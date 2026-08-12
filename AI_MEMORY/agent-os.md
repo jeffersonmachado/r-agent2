@@ -2,6 +2,19 @@
 
 Implementado e populado em 2026-06-11. O RAP agora é um Sistema Operacional de Agentes Corporativos com Knowledge Graph populado.
 
+## Evolução 2026-08-09 — Agent Runtime + Specialist Agents + MCP
+
+Doc canônica: `docs/architecture/agent-runtime-mcp.md`.
+
+- **Agent Supervisor** (`src/core/cognitive/agent-supervisor/`): seleção governada de especialistas entre Intent e Planning; toda delegação entre agentes passa por ele (depth máx., cycle detection, boundaries de tenant/classificação/capability).
+- **Specialist Agent Profiles**: `corporate_agents` + `config` JSONB (goal, autonomy, delegation, verticals, channels, knowledge scope). Catálogo em `api/modules/agent-marketplace/service.js` — PRODUCTION (9: sdr, crm, customer-service, scheduling, collection, campaign, voice, operations, operational-knowledge), SUPPORT (incident-diagnostic, audit-replay), DEVELOPMENT (qa-engineering, platform-knowledge, dev, discovery). Aliases: `support-agent→customer-service-agent`, `knowledge-agent→operational-knowledge-agent`, `qa-agent→qa-engineering-agent`.
+- **Canonical Capability Registry**: `config/canonical-capabilities.json` + `src/core/cognitive/capability-registry/` (aliases legados → ids canônicos).
+- **Capability Kernel**: Tool Registry com ids namespacados (`crm.searchCustomer`, ...), aliases, input/output schemas (AJV), riskLevel, sideEffects, confirmationPolicy, idempotencyPolicy, executionMode.
+- **Execution Router** (`src/core/cognitive/execution-router/`): ATOMIC → Tool Registry; DURABLE → Process Runtime existente.
+- **MCP** (`src/core/mcp/`): Server Adapter (SDK oficial, tools derivadas do registry, authorization fail-closed, tenant nunca via input), Client Hub (conexões registradas; `no_configured_mcp_connection`), External Tool Adapter (proxies governados no registry).
+- **Entry Policy** (`api/services/cognitive/cognitiveEntryPolicy.js`): DETERMINISTIC_FLOW (default) | COGNITIVE | DURABLE_PROCESS | HUMAN; integrada ao `messageProcessor`.
+- **Segurança**: sem wildcard implícito (principal.js); lifecycle inclui `validated`; slug único por `(tenant_id, slug)` (migration `api/db/migrations/20260809000001-corporate-agent-lifecycle-tenant-slug.js`); populate-agent-os.js sem override de QA.
+
 ## Arquitetura
 
 ```

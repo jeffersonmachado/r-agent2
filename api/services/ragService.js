@@ -38,7 +38,8 @@ const {
   safeTrimLower,
   safeErrorMessage,
 } = require('../utils/defensiveCoercion');
-const { resolveRetrievalScope, sanitizeScope } = require('./rag/domainRouter');
+// Knowledge Plane: domainRouter é alias backward-compatível do Knowledge Router.
+const { resolveRetrievalScope, sanitizeScope } = require('../../src/core/knowledge-plane');
 const ragResponseCache = require('./rag/ragResponseCache');
 
 // ---------------------------------------------------------------------------
@@ -242,21 +243,47 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     throw new Error('tenantId é obrigatório');
   }
 
-  // Domain Router: resolve o escopo de recuperação ANTES da busca vetorial.
-  // Precedência: escopo já resolvido pela rota (filters.scope) > ator do
-  // contexto > default restritivo. O domínio nunca vem do texto da pergunta.
+  // Knowledge Router: resolve o escopo de recuperação ANTES da busca vetorial.
+  // P1: filters.scope NÃO pode ser bypass — apenas ResolvedKnowledgeScope interno.
+  // O domínio nunca vem do texto da pergunta nem de payload externo.
+  const { isResolvedScope, resolveKnowledgeContext } = require('../../src/core/knowledge-plane');
+
   let scopeResolution;
-  if (filters.scope) {
+  if (filters.scope && isResolvedScope(filters.scope)) {
+    // Scope já resolvido internamente pelo Knowledge Router (ex.: via SpecialistContext).
     scopeResolution = {
       allowed: true,
-      scope: sanitizeScope(filters.scope),
-      reason: 'caller_provided_scope',
+      scope: filters.scope,
+      reason: 'internal_resolved_scope',
+    };
+  } else if (filters.scope) {
+    // P1: Payload externo tentando injetar scope — REJEITADO.
+    logger.warn('[RAGService] External scope bypass attempt rejected', {
+      tenantId,
+      scopeKeys: Object.keys(filters.scope || {}),
+    });
+    scopeResolution = {
+      allowed: false,
+      scope: { domain: 'OPERATIONAL', classifications: ['PRODUCTION'] },
+      reason: 'external_scope_rejected',
     };
   } else {
-    scopeResolution = resolveRetrievalScope({
-      actor: context.actor || null,
+    // P1: Usa Principal.classification como fonte canônica (não role).
+    const principal = context.actor
+      ? { classification: context.actor.classification || 'PRODUCTION' }
+      : null;
+    const knowledgeResult = resolveKnowledgeContext({
+      principal,
       requestedDomain: filters.domain || null,
     });
+    scopeResolution = {
+      allowed: knowledgeResult.allowed,
+      scope: {
+        domain: knowledgeResult.scope.domain,
+        classifications: [...knowledgeResult.scope.classifications],
+      },
+      reason: knowledgeResult.scope.reason,
+    };
   }
 
   if (!scopeResolution.allowed) {

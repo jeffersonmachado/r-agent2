@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-06T22:08:22.144Z",
+  "generatedAt": "2026-08-12T16:53:12.981Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -10,13 +10,12 @@
     "operationalAccessToSystemDomain": 0
   },
   "probes": {
-    "serviceReachable": true,
+    "serviceReachable": false,
     "crossDomainLeakage": "skipped",
     "crossTenantLeakage": "skipped",
     "operationalAccessToSystemDomain": "skipped",
     "details": [
-      "RAG_INTERNAL_TOKEN ausente neste ambiente: probe de auth não se aplica",
-      "falha ao indexar canário rag-seg-gate-canary-system-doc: HTTP 200"
+      "rag-service inalcançável: probes de runtime pulados (falha de ambiente, não de código)"
     ]
   },
   "distribution": [
@@ -27,8 +26,7 @@
     }
   ],
   "details": [
-    "RAG_INTERNAL_TOKEN ausente neste ambiente: probe de auth não se aplica",
-    "falha ao indexar canário rag-seg-gate-canary-system-doc: HTTP 200"
+    "rag-service inalcançável: probes de runtime pulados (falha de ambiente, não de código)"
   ],
   "status": "PASS"
 }

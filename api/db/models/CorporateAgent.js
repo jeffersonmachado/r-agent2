@@ -20,7 +20,7 @@ function getCorporateAgentModel() {
       id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
       tenant_id: { type: DataTypes.STRING, allowNull: false, defaultValue: 'system' },
       name: { type: DataTypes.STRING, allowNull: false },
-      slug: { type: DataTypes.STRING, allowNull: false, unique: true },
+      slug: { type: DataTypes.STRING, allowNull: false },
       description: { type: DataTypes.TEXT, allowNull: true },
       owner: { type: DataTypes.STRING, allowNull: true },
       department: { type: DataTypes.STRING, allowNull: true },
@@ -50,7 +50,7 @@ function getCorporateAgentModel() {
         auditEnabled: false,
       }},
       lifecycle: {
-        type: DataTypes.ENUM('draft', 'validation', 'approved', 'active', 'deprecated', 'archived'),
+        type: DataTypes.ENUM('draft', 'validation', 'validated', 'approved', 'active', 'deprecated', 'archived'),
         allowNull: false,
         defaultValue: 'draft',
       },
@@ -64,6 +64,8 @@ function getCorporateAgentModel() {
       indexes: [
         { fields: ['tenant_id'], name: 'corporate_agents_tenant_idx' },
         { fields: ['slug'], name: 'corporate_agents_slug_idx' },
+        // Unicidade composta: o mesmo slug pode existir em tenants distintos.
+        { fields: ['tenant_id', 'slug'], name: 'corporate_agents_tenant_slug_uidx', unique: true },
         { fields: ['classification'], name: 'corporate_agents_classification_idx' },
         { fields: ['lifecycle'], name: 'corporate_agents_lifecycle_idx' },
         { fields: ['status'], name: 'corporate_agents_status_idx' },

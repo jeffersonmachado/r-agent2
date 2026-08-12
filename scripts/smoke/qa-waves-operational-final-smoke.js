@@ -3255,7 +3255,10 @@ if (require.main === module) {
         flows: Object.fromEntries(summary.flows.map((flow) => [flow.journeyId, {
           auditValid: flow.audit.valid,
           strictGovernance: flow.strictGovernance.status,
-          legacyGovernance: flow.governance.goNoGo || (flow.governance.isOperational ? 'GO' : 'NO_GO'),
+          // "replayGovernance": camada de análise heurística do replay
+          // (moduleAccess/journeyPath/humanBehavior/completeness) — antes rotulada
+          // "legacyGovernance"; não é removível: é a única prova de navegação em UI real.
+          replayGovernance: flow.governance.goNoGo || (flow.governance.isOperational ? 'GO' : 'NO_GO'),
         }])),
       }, null, 2));
       if (summary.environment?.mode === 'prod_like_real_stack') {

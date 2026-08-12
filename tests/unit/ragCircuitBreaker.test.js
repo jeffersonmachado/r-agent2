@@ -90,7 +90,7 @@ describe('ragRuntime circuit breaker', () => {
   });
 
   it('abre com HTTP 5xx e meio-aberto fecha após probe com sucesso', async () => {
-    process.env.RAG_CB_RESET_MS = '20';
+    process.env.RAG_CB_RESET_MS = '500';
 
     fetch.mockResolvedValue(httpResponse(500));
     for (let i = 0; i < 3; i++) {
@@ -104,7 +104,7 @@ describe('ragRuntime circuit breaker', () => {
       .rejects.toMatchObject({ code: 'rag_unavailable' });
 
     // Após a janela de reset, probe em meio-aberto
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await new Promise((resolve) => setTimeout(resolve, 550));
     fetch.mockResolvedValueOnce(okResponse({ status: 'healthy' }));
     const probe = await fetchRagWithBreaker('http://rag/health', { method: 'GET' }, 1000);
 
@@ -115,7 +115,7 @@ describe('ragRuntime circuit breaker', () => {
   });
 
   it('reabre quando o probe do meio-aberto falha', async () => {
-    process.env.RAG_CB_RESET_MS = '20';
+    process.env.RAG_CB_RESET_MS = '500';
 
     fetch.mockRejectedValue(new Error('fetch failed'));
     for (let i = 0; i < 3; i++) {
@@ -123,7 +123,7 @@ describe('ragRuntime circuit breaker', () => {
     }
     expect(getRagCircuitBreakerState().state).toBe('open');
 
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await new Promise((resolve) => setTimeout(resolve, 550));
     // Probe falha -> reabre
     await expect(fetchRagWithBreaker('http://rag/query', {}, 1000)).rejects.toThrow('Falha ao conectar com serviço RAG');
     expect(getRagCircuitBreakerState().state).toBe('open');

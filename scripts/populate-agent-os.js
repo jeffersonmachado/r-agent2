@@ -37,10 +37,18 @@ async function login() {
 // ============================================================
 // Step 1: Install & Publish Marketplace Agents
 // ============================================================
+// Taxonomia canônica de especialistas (2026-08-09). Aliases legados
+// ('support-agent', 'knowledge-agent', 'qa-agent') são resolvidos pelo
+// marketplace para os slugs canônicos.
 const MARKETPLACE_AGENTS = [
-  'sdr-agent', 'crm-agent', 'support-agent', 'scheduling-agent',
-  'collection-agent', 'campaign-agent', 'knowledge-agent',
-  'qa-agent', 'discovery-agent', 'dev-agent',
+  // PRODUCTION
+  'sdr-agent', 'crm-agent', 'customer-service-agent', 'scheduling-agent',
+  'collection-agent', 'campaign-agent', 'voice-agent', 'operations-agent',
+  'operational-knowledge-agent',
+  // SUPPORT
+  'incident-diagnostic-agent', 'audit-replay-agent',
+  // DEVELOPMENT
+  'qa-engineering-agent', 'platform-knowledge-agent', 'dev-agent', 'discovery-agent',
 ];
 
 async function installAndPublishAgents(token) {
@@ -49,13 +57,13 @@ async function installAndPublishAgents(token) {
 
   for (const slug of MARKETPLACE_AGENTS) {
     console.log(`  Installing: ${slug}...`);
-    
+
     // Step 1: Install from marketplace
     const installData = await api('/api/agent-marketplace/install', {
       method: 'POST', headers, body: JSON.stringify({ slug }),
     });
     const agentId = installData.agent.id;
-    
+
     // Step 2: Configure
     await api('/api/agent-factory/configure', {
       method: 'POST', headers,
@@ -67,16 +75,32 @@ async function installAndPublishAgents(token) {
       }),
     });
 
-    // Step 3: Validate (QA Wave GO)
-    await api('/api/agent-factory/validate', {
+    // Step 3: Validate — execução REAL de QA Wave. PROIBIDO override manual
+    // (o Agent Factory rejeita qualquer resultado de QA injetado no body).
+    // O bootstrap cria, configura, executa validação real e aguarda o veredito.
+    const validateData = await api('/api/agent-factory/validate', {
       method: 'POST', headers,
-      body: JSON.stringify({ id: agentId, qaWaveResult: 'GO' }),
+      body: JSON.stringify({ id: agentId }),
     });
+
+    // Aprova somente se elegível: QA Wave real retornou GO.
+    if (validateData?.qaWave?.status !== 'GO') {
+      console.log(`    ⚠️  Validation NO_GO for ${slug} — skipping approve/publish (real result preserved)`);
+      results.push({
+        slug,
+        id: agentId,
+        name: installData.agent.name,
+        classification: installData.agent.classification,
+        published: false,
+        qaWaveStatus: validateData?.qaWave?.status || 'UNKNOWN',
+      });
+      continue;
+    }
 
     // Step 4: Approve
     await api('/api/agent-factory/approve', {
       method: 'POST', headers,
-      body: JSON.stringify({ id: agentId, riskLevel: slug.includes('qa') || slug.includes('dev') ? 'low' : 'low', auditEnabled: true }),
+      body: JSON.stringify({ id: agentId, riskLevel: 'low', auditEnabled: true }),
     });
 
     // Step 5: Publish
@@ -85,7 +109,7 @@ async function installAndPublishAgents(token) {
     });
 
     const agent = pubData.agent;
-    results.push({ slug, id: agent.id, name: agent.name, classification: agent.classification });
+    results.push({ slug, id: agent.id, name: agent.name, classification: agent.classification, published: true });
     console.log(`    ✅ Published: ${agent.name} (${agent.classification})`);
   }
 
@@ -187,12 +211,12 @@ async function createKGEdges(token, { nodes, journeyNodes, customerNode, convers
   const agentJourneyMap = {
     'sdr-agent': ['Lead Conversion'],
     'crm-agent': ['Lead Conversion', 'Customer Support', 'Retention'],
-    'support-agent': ['Customer Support', 'Collection'],
+    'customer-service-agent': ['Customer Support', 'Collection'],
     'scheduling-agent': ['Appointment Scheduling', 'Fitness Check-in'],
     'collection-agent': ['Billing', 'Collection'],
     'campaign-agent': ['Lead Conversion', 'Retention'],
-    'knowledge-agent': ['Customer Support', 'Lead Conversion'],
-    'qa-agent': ['Lead Conversion', 'Appointment Scheduling', 'Customer Support', 'Billing'],
+    'operational-knowledge-agent': ['Customer Support', 'Lead Conversion'],
+    'qa-engineering-agent': ['Lead Conversion', 'Appointment Scheduling', 'Customer Support', 'Billing'],
     'discovery-agent': ['Retention', 'Lead Conversion'],
     'dev-agent': ['Lead Conversion', 'Customer Support'],
   };

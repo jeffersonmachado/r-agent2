@@ -427,7 +427,7 @@ step "Removendo ZIPs e manifests anteriores de dist/ e dist/release/..."
 mkdir -p "$DIST_DIR"
 for old_zip in "$DIST_DIR"/r-agent2-*.zip "$DIST_DIR/release"/r-agent2-*.zip; do
   [[ -f "$old_zip" ]] || continue
-  rm -f "$old_zip" "${old_zip%.zip}.manifest.json"
+  rm -f "$old_zip" "${old_zip%.zip}.manifest.json" "${old_zip%.zip}.approval.json"
   echo "  Removido: $(basename "$old_zip")"
 done
 ok "dist/ limpo de releases anteriores"
@@ -614,6 +614,14 @@ for m in "$DIST_DIR"/r-agent2-*.manifest.json; do
   if [[ "$(basename "$m")" != "$CURRENT_MANIFEST" ]]; then
     rm -f "$m"
     echo "  Removido: $(basename "$m")"
+  fi
+done
+# Approvals de releases anteriores nunca sobrevivem a um novo packaging
+for a in "$DIST_DIR"/r-agent2-*.approval.json "$DIST_DIR/release"/r-agent2-*.approval.json; do
+  [[ -f "$a" ]] || continue
+  if [[ "$(basename "$a")" != "${RELEASE_NAME}.approval.json" ]]; then
+    rm -f "$a"
+    echo "  Removido approval stale: $(basename "$a")"
   fi
 done
 ok "dist/ contém apenas o manifest atual: $CURRENT_MANIFEST"

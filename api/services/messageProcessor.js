@@ -65,6 +65,8 @@ const {
 const { ESCALATION_MODES } = require('../../engine/fallbackController');
 const { emitEvent } = require('./websocketService');
 const config = require('../utils/config');
+const { decideEntryPath } = require('./cognitive/cognitiveEntryPolicy');
+const { handleInboundWithCognitiveCore } = require('./cognitive/inboundCognitiveHandler');
 const { checkLimit } = require('./planLimitsService');
 const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
 const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
@@ -447,6 +449,43 @@ async function processWhatsAppMessage(message, value, deps) {
 
   // Se não existe sessão, cria nova baseada em um fluxo padrão
   if (!state) {
+    // Cognitive Entry Policy: decide o path de entrada (DETERMINISTIC_FLOW |
+    // COGNITIVE | DURABLE_PROCESS | HUMAN) de forma explícita e registrada.
+    // Flows determinísticos existentes continuam sendo o caminho padrão.
+    const defaultFlowIdForPolicy = config.get('flows.defaultFlowId');
+    const usableDefaultFlow = !!(defaultFlowIdForPolicy
+      && defaultFlowIdForPolicy !== 'ID_DO_FLUXO_PADRAO'
+      && !defaultFlowIdForPolicy.includes('SEU_')
+      && !defaultFlowIdForPolicy.includes('YOUR_')
+      && flows.get(defaultFlowIdForPolicy));
+    const entryDecision = decideEntryPath({
+      hasDeterministicFlow: usableDefaultFlow,
+      cognitiveConfig: config.get('cognitive') || null,
+      payload: { conversationId: conversationId || null },
+      message: text,
+    });
+
+    logger.info('[MessageProcessor] Cognitive entry path', {
+      tenantId: inboundTenantId,
+      sessionId,
+      path: entryDecision.path,
+      reason: entryDecision.reason,
+    });
+
+    if (entryDecision.path === 'COGNITIVE' || entryDecision.path === 'DURABLE_PROCESS') {
+      await handleInboundWithCognitiveCore({
+        tenantId: inboundTenantId,
+        channel: effectiveChannelType,
+        message: text,
+        conversationId: conversationId || sessionId,
+        correlationId: messageId || null,
+        payload: entryDecision.path === 'DURABLE_PROCESS' ? { durable: true } : {},
+        sendText: (reply) => sendWhatsAppTextBestEffort(from, reply),
+        configGet: (key) => config.get(key),
+      });
+      return;
+    }
+
     const defaultFlowId = config.get('flows.defaultFlowId');
     
     // Valida se defaultFlowId não é um placeholder

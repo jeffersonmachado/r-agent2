@@ -88,6 +88,18 @@ const EVENT_TYPES_V1 = new Set([
   'cognitive.execution.completed',
   'cognitive.execution.failed',
 
+  // Agent Runtime — roteamento, execução e delegação de agentes especialistas
+  'agent.routing.completed',
+  'agent.execution.started',
+  'agent.execution.completed',
+  'agent.execution.failed',
+  'agent.delegation.requested',
+  'agent.delegation.completed',
+  'tool.execution.started',
+  'tool.execution.completed',
+  'tool.execution.failed',
+  'process.delegated',
+
   // Learning Core — interação de usuário na UI (telemetria de aprendizado)
   'learning.interaction.navigation',
   'learning.interaction.click',

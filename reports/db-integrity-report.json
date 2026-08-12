@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-02T04:25:49.692Z",
-  "commit": "3e12b9edb4bf933861ee9754d264faf5543e408d",
+  "generatedAt": "2026-08-09T15:27:37.938Z",
+  "commit": "5dcec340e282342ea63041096666c30131357c10",
   "dbAvailable": true,
   "totals": {
     "models": 155,
@@ -6027,7 +6027,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20250111000022-create-rag-documents.js, api/db/migrations/20260121000001-add-rag-index-state.js, api/db/migrations/20260122000002-create-rag-document-files.js"
+          "detail": "migrations: api/db/migrations/20250111000022-create-rag-documents.js, api/db/migrations/20260121000001-add-rag-index-state.js, api/db/migrations/20260122000002-create-rag-document-files.js, api/db/migrations/20260801000001-add-rag-domain-segregation.js"
         },
         {
           "name": "tenantScope",
@@ -6047,7 +6047,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "16 colunas do model presentes"
+          "detail": "19 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",

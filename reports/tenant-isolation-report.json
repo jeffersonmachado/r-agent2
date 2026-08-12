@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-06T22:08:22.066Z",
+  "generatedAt": "2026-08-12T16:53:12.785Z",
   "command": "jest tests/tenant api/middleware/__tests__/tenantValidation.test.js tests/unit/exportServiceTenantIsolation.test.js tests/unit/departmentsServiceTenantIsolation.test.js --ci --json",
   "suites": {
     "total": 8,

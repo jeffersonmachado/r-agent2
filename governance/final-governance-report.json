@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T22:58:05.386Z",
+  "generatedAt": "2026-08-09T19:15:46.534Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
   "finalDecision": "NO_GO:STRICT_ENTERPRISE [98 step(s) com ui.available=false em jornadas visuais críticas]",
@@ -13,7 +13,7 @@
       "severity": "OK",
       "status": "GO",
       "reasons": [],
-      "executionId": "mesh-2026-08-07T04-39-21-202Z",
+      "executionId": "mesh-2026-08-09T16-47-06-616Z",
       "passRate": "131/131",
       "reason": null
     },
@@ -912,9 +912,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260807-195511.zip",
-      "computed": "8d6e87977d1321f0d6330bba…",
-      "recorded": "8d6e87977d1321f0d6330bba…",
+      "zipName": "r-agent2-20260809-161322.zip",
+      "computed": "12a40a9753178d6ff819c395…",
+      "recorded": "12a40a9753178d6ff819c395…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },

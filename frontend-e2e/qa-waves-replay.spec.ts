@@ -26,20 +26,71 @@ function pickExecutionIdFromPayload(payload: any) {
   return typeof candidate === 'string' ? candidate : '';
 }
 
+// Sonda de infra (não assertiva): durante uma wave RPA o event loop da API
+// pode ficar saturado por dezenas de segundos e requests falham em nível de
+// rede (status -1, sem resposta). Aguardar a API voltar a responder antes de
+// interagir evita falhas espúrias de autenticação/navegação. Best-effort:
+// esgotado o orçamento, o fluxo normal continua e as assertivas reais falham
+// com evidência.
+async function waitForApiResponsive(page: any, budgetMs = 180000) {
+  const deadline = Date.now() + budgetMs;
+  for (;;) {
+    const ok = await page
+      .evaluate(async () => {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch('/config', { signal: controller.signal });
+          clearTimeout(timer);
+          return resp.ok;
+        } catch {
+          return false;
+        }
+      })
+      .catch(() => false);
+    if (ok) return;
+    if (Date.now() > deadline) return;
+    await page.waitForTimeout(5000).catch(() => {});
+  }
+}
+
 async function ensureAuthenticated(page: any, baseUrl: string) {
   const username = process.env.TEST_USERNAME || process.env.TEST_ADMIN_USERNAME || 'systemadmin';
   const password = process.env.TEST_PASSWORD || process.env.TEST_ADMIN_PASSWORD || 'Admin123!';
 
   await page.goto(`${baseUrl}/dev/qa-waves`, { waitUntil: 'domcontentloaded' });
 
-  const onLoginPage = await page.locator('text=Login de Agente').isVisible().catch(() => false);
+  // O goto resolve em domcontentloaded, antes do React renderizar. Sob
+  // contenção de CPU (ex.: wave RPA em andamento na API) um isVisible
+  // imediato retorna falso e a autenticação seria pulada indevidamente.
+  // Esperar a decisão real da rota: ou o login aparece, ou a página alvo
+  // já renderizou autenticada.
+  const loginHeading = page.locator('text=Login de Agente');
+  await loginHeading
+    .or(page.getByTestId('qa-waves-page'))
+    .first()
+    .waitFor({ state: 'visible', timeout: 30000 })
+    .catch(() => {});
+
+  const onLoginPage = await loginHeading.isVisible().catch(() => false);
   if (!onLoginPage) return;
 
   await page.locator('input[placeholder*="username" i]').fill(username);
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: /entrar/i }).click();
 
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
+  // O login é inline (a URL não muda para /login) e super-admin recebe o
+  // modal de tenant na mesma rota — waitForURL seria trivialmente satisfeito
+  // sem provar nada. Esperar o desfecho real: modal de tenant, página alvo
+  // autenticada ou erro de login (neste caso a tentativa seguinte do
+  // ensureQaWavesReady refaz o fluxo).
+  await page
+    .getByRole('heading', { name: /Selecione o Tenant/i })
+    .or(page.getByTestId('qa-waves-page'))
+    .or(page.getByText(/erro ao fazer login|credenciais inv/i))
+    .first()
+    .waitFor({ state: 'visible', timeout: 60000 })
+    .catch(() => {});
   await page.goto(`${baseUrl}/dev/qa-waves`, { waitUntil: 'domcontentloaded' });
 }
 
@@ -79,8 +130,18 @@ async function ensureTenantSelected(page: any) {
 async function ensureQaWavesReady(page: any, baseUrl: string) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     await page.goto(`${baseUrl}/dev/qa-waves`, { waitUntil: 'domcontentloaded' });
+    await waitForApiResponsive(page);
 
-    const loginVisible = await page.locator('text=Login de Agente').isVisible().catch(() => false);
+    // Mesma proteção contra render atrasado do React (ver ensureAuthenticated):
+    // aguardar login OU qa-waves-page antes de decidir se precisa autenticar.
+    const loginHeading = page.locator('text=Login de Agente');
+    await loginHeading
+      .or(page.getByTestId('qa-waves-page'))
+      .first()
+      .waitFor({ state: 'visible', timeout: 30000 })
+      .catch(() => {});
+
+    const loginVisible = await loginHeading.isVisible().catch(() => false);
     if (loginVisible) {
       await ensureAuthenticated(page, baseUrl);
       await page.goto(`${baseUrl}/dev/qa-waves`, { waitUntil: 'domcontentloaded' });
@@ -338,6 +399,11 @@ test.describe('QA Waves -> RPA Replays', () => {
             }, executionId)
             .catch(() => 'processing');
         }
+        // O status vira terminal ANTES do pós-processamento RPA (browser,
+        // screenshots) terminar — e é esse pós-processamento que satura o
+        // event loop da API e derruba requests das specs seguintes.
+        // Segundo estágio do drain: aguardar a API voltar a responder.
+        await waitForApiResponsive(page, 240000);
         console.log(`[spec] drain da execução ${executionId}: status final=${drainStatus}`);
         if (drainStatus !== 'success') {
           // Evidência de diagnóstico: a execução RPA da wave termina 'failed'

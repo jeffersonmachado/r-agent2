@@ -268,6 +268,10 @@
     "rag:restart:script": "./scripts/restart-rag-service.sh",
     "rag:dev": "cd rag-service && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
     "rag:dev:logs": "tail -f /tmp/rag-service-dev.log",
+    "rag:sync": "node scripts/rag-sync.js",
+    "rag:sync:all": "node scripts/rag-sync.js --all",
+    "rag:index:verticals": "node scripts/rag-index-verticals.js",
+    "rag:index:gaps": "node scripts/rag-index-gaps.js",
     "services:fix": "sudo ./scripts/fix-services.sh",
     "services:clean": "sudo ./scripts/clean-restart-services.sh",
     "services:reset": "sudo ./scripts/clean-restart-services.sh",
@@ -287,6 +291,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@results/auth": "file:../../packages/auth",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",

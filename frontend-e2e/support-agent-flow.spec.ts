@@ -27,19 +27,70 @@ function getCredentialsForRole(role: string) {
   }
 }
 
+// Sonda de infra (não assertiva): durante uma wave RPA o event loop da API
+// pode ficar saturado por dezenas de segundos e requests falham em nível de
+// rede (status -1, sem resposta). Aguardar a API voltar a responder antes de
+// interagir evita falhas espúrias de autenticação/navegação. Best-effort:
+// esgotado o orçamento, o fluxo normal continua e as assertivas reais falham
+// com evidência.
+async function waitForApiResponsive(page: any, budgetMs = 180000) {
+  const deadline = Date.now() + budgetMs;
+  for (;;) {
+    const ok = await page
+      .evaluate(async () => {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch('/config', { signal: controller.signal });
+          clearTimeout(timer);
+          return resp.ok;
+        } catch {
+          return false;
+        }
+      })
+      .catch(() => false);
+    if (ok) return;
+    if (Date.now() > deadline) return;
+    await page.waitForTimeout(5000).catch(() => {});
+  }
+}
+
 async function ensureAuthenticated(page: any, baseUrl: string, role = 'agent') {
   const { username, password } = getCredentialsForRole(role);
 
   await page.goto(`${baseUrl}/support`, { waitUntil: 'domcontentloaded' });
 
-  const onLoginPage = await page.locator('text=Login de Agente').isVisible().catch(() => false);
+  // O goto resolve em domcontentloaded, antes do React renderizar. Sob
+  // contenção de CPU (ex.: wave RPA em andamento na API) um isVisible
+  // imediato retorna falso e a autenticação seria pulada indevidamente.
+  // Esperar a decisão real da rota: ou o login aparece, ou a página alvo
+  // já renderizou autenticada.
+  const loginHeading = page.locator('text=Login de Agente');
+  await loginHeading
+    .or(page.getByTestId('support-page'))
+    .first()
+    .waitFor({ state: 'visible', timeout: 30000 })
+    .catch(() => {});
+
+  const onLoginPage = await loginHeading.isVisible().catch(() => false);
   if (!onLoginPage) return;
 
   await page.locator('input[placeholder*="username" i]').fill(username);
   await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: /entrar/i }).click();
 
-  await page.waitForURL((url: URL) => !url.pathname.includes('/login'), { timeout: 30000 });
+  // O login é inline (a URL /support não muda para /login) e super-admin
+  // recebe o modal de tenant na mesma rota — waitForURL seria trivialmente
+  // satisfeito sem provar nada. Esperar o desfecho real: modal de tenant,
+  // página alvo autenticada ou erro de login (neste caso a tentativa
+  // seguinte do navigateToSupport refaz o fluxo).
+  await page
+    .getByRole('heading', { name: /Selecione o Tenant/i })
+    .or(page.getByTestId('support-page'))
+    .or(page.getByText(/erro ao fazer login|credenciais inv/i))
+    .first()
+    .waitFor({ state: 'visible', timeout: 60000 })
+    .catch(() => {});
 }
 
 async function ensureTenantSelected(page: any) {
@@ -76,8 +127,18 @@ async function ensureTenantSelected(page: any) {
 async function navigateToSupport(page: any, baseUrl: string, role = 'agent') {
   for (let attempt = 1; attempt <= 3; attempt++) {
     await page.goto(`${baseUrl}/support`, { waitUntil: 'domcontentloaded' });
+    await waitForApiResponsive(page);
 
-    const loginVisible = await page.locator('text=Login de Agente').isVisible().catch(() => false);
+    // Mesma proteção contra render atrasado do React (ver ensureAuthenticated):
+    // aguardar login OU support-page antes de decidir se precisa autenticar.
+    const loginHeading = page.locator('text=Login de Agente');
+    await loginHeading
+      .or(page.getByTestId('support-page'))
+      .first()
+      .waitFor({ state: 'visible', timeout: 30000 })
+      .catch(() => {});
+
+    const loginVisible = await loginHeading.isVisible().catch(() => false);
     if (loginVisible) {
       await ensureAuthenticated(page, baseUrl, role);
       await page.goto(`${baseUrl}/support`, { waitUntil: 'domcontentloaded' });
@@ -228,6 +289,11 @@ function failNoGo(reason: string, missing: string[]) {
   );
 }
 
+// Wait de infra (não assertivo): sob contenção de CPU com o Chromium do RPA
+// de uma wave em andamento na API, 10s não bastam para o painel de detalhe
+// do ticket renderizar após o clique no card.
+const TICKET_DETAIL_WAIT_MS = 30000;
+
 // ─── tests ────────────────────────────────────────────────────────────────────
 
 test.describe('Support Agent Operations Wave', () => {
@@ -259,7 +325,7 @@ test.describe('Support Agent Operations Wave', () => {
     await openTicketCard(page, ticketCards.first());
 
     // Verifica que a conversa está aberta (ticket-detail é obrigatório)
-    await expect(page.getByTestId('ticket-detail')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('ticket-detail')).toBeVisible({ timeout: TICKET_DETAIL_WAIT_MS });
     // ticket-message-list só é renderizado quando ticket está in_progress ou paused
     // Verificar que algum conteúdo do painel de conversa está visível
     const hasDetail = await page.getByTestId('ticket-detail').isVisible().catch(() => false);
@@ -315,7 +381,7 @@ test.describe('Support Agent Operations Wave', () => {
 
     await openTicketCard(page, ticketCards.first());
 
-    await expect(page.getByTestId('ticket-detail')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('ticket-detail')).toBeVisible({ timeout: TICKET_DETAIL_WAIT_MS });
     await expect(page.getByTestId('ticket-updated')).toBeVisible({ timeout: 10000 });
 
     // Verifica que o status é exibido
@@ -337,7 +403,7 @@ test.describe('Support Agent Operations Wave', () => {
     }
 
     await openTicketCard(page, ticketCards.first());
-    await expect(page.getByTestId('ticket-detail')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('ticket-detail')).toBeVisible({ timeout: TICKET_DETAIL_WAIT_MS });
 
     const tagButton = page.getByTestId('ticket-tag-button');
     const tagButtonVisible = await tagButton.isVisible().catch(() => false);
@@ -393,6 +459,9 @@ test.describe('Support Agent Operations Wave', () => {
   });
 
   test('cenário 6: wave operacional gera replay e replay aparece na listagem', async ({ page }) => {
+    // A wave real + o drain final podem ultrapassar o timeout padrão de 180s
+    // (mesmo motivo do test.setTimeout na spec qa-waves-replay).
+    test.setTimeout(420000);
     const apiBase = process.env.API_URL || 'http://localhost:13001';
 
     // 0) Navegar para suporte primeiro (necessário para localStorage acessível em supportFetch)
@@ -488,6 +557,33 @@ test.describe('Support Agent Operations Wave', () => {
     } else {
       // Sem replayId: confirmar que a listagem carrega (sem replay disponível é evidência operacional)
       await expect(replaysPage).toBeVisible({ timeout: 10000 });
+    }
+
+    // 5) Drenar a wave antes de encerrar: o replay pode aparecer na listagem
+    // enquanto o browser RPA da API ainda finaliza a execução. Sem este
+    // drain, a wave vaza para a run seguinte e deixa os primeiros testes
+    // dela sem CPU (falhas intermitentes de carregamento de página).
+    // Dois estágios: (a) status da execução sair de processing; (b) a API
+    // voltar a responder — o status vira terminal ANTES do pós-processamento
+    // RPA (browser/screenshot) terminar, e é esse pós-processamento que
+    // satura o event loop e derruba requests (status -1) na run seguinte.
+    // Higiene de infra, não assertiva: não falha o teste se estourar o
+    // orçamento ou se o browser do teste fechar.
+    if (executionId) {
+      try {
+        for (let poll = 0; poll < 24; poll++) {
+          const statusResp = await supportFetch(page, `/api/test-executions/${encodeURIComponent(executionId)}`);
+          const currentStatus = String(statusResp.body?.status || '').toLowerCase();
+          if (!statusResp.ok || (currentStatus && currentStatus !== 'processing' && currentStatus !== 'queued' && currentStatus !== 'running')) {
+            break;
+          }
+          await page.waitForTimeout(5000);
+        }
+        await waitForApiResponsive(page, 240000);
+      } catch {
+        // best-effort: browser/contexto fechado durante a higiene não invalida
+        // as evidências já validadas acima
+      }
     }
   });
 });

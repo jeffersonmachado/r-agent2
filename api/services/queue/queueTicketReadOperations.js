@@ -45,9 +45,9 @@ function getTicketMessages(ticketId, { tickets }) {
 }
 
 function listAllTickets(options = {}, { tickets, logger, buildListAllTicketsResponse }) {
-  logger.debug(`[QueueService] listAllTickets: Map tem ${tickets.size} ticket(s), Array tem ${tickets.size} ticket(s)`, {
-    filters: { tenantId: options.tenantId, status: options.status, queue: options.queue, q: options.q },
-  });
+  // Hot path: chamado dezenas de vezes por segundo (workers + rotas). NÃO
+  // logar por chamada — o debug anterior (com payload JSON pretty-printed)
+  // gerava ~50k linhas/min e contribuía para saturar o event loop da API.
   return buildListAllTicketsResponse(Array.from(tickets.values()), options);
 }
 
