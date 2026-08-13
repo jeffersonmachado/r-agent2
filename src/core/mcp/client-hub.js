@@ -174,6 +174,12 @@ function createMcpClientHub({ connections = [], transportFactory, clientFactory,
         log.warn('[McpClientHub] callTool failed', {
           connection: name, tool: toolName, attempt, error: error.message,
         });
+        // Backoff exponencial entre tentativas (evita loop apertado de
+        // reconexão quando o endpoint MCP falha rápido/imediato).
+        if (attempt < attempts) {
+          const delay = Math.min(2000, 250 * (2 ** (attempt - 1)));
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
       } finally {
         try { await client?.close?.(); } catch (_) { /* best-effort */ }
       }
