@@ -22,6 +22,35 @@ const STATUS = Object.freeze(['pairing', 'connected', 'ready', 'disconnected', '
 const DEFAULT_SYNC_INTERVAL_MS = 30000;
 const DEFAULT_QR_EXPIRES_IN_MS = 2 * 60 * 1000;
 
+/**
+ * Workaround para o bug wwebjs#127084: a partir de 2026-06-20 os builds
+ * 2.3000.1041xxx+ do WhatsApp Web quebram o whatsapp-web.js — `authenticated`
+ * dispara, mas `ready` nunca (loading chega a 100% e trava). O remédio
+ * validado é pinar um build anterior à quebra, servido de cache LOCAL (o
+ * wa-version poda builds antigos, então `type: 'remote'` daria 404).
+ * O HTML pinado fica em `wa-web/<versao>.html` dentro do próprio pacote.
+ */
+const PINNED_WEB_VERSION = '2.3000.1037753511-alpha';
+const WA_WEB_CACHE_DIR = path.join(__dirname, '..', 'wa-web');
+
+/**
+ * Resolve as opções `webVersion`/`webVersionCache` para o Client do
+ * whatsapp-web.js.
+ *   - webVersion undefined        → pin default (PINNED_WEB_VERSION + cache
+ *                                   local do pacote);
+ *   - webVersion null/false/''    → sem pin (WA Web mais recente; comportamento
+ *                                   nativo da lib);
+ *   - webVersion '<versao>'       → pin custom; o arquivo `<versao>.html` deve
+ *                                   existir em webVersionCacheDir (default:
+ *                                   wa-web/ do pacote).
+ */
+function resolveWebVersionOptions({ webVersion, webVersionCacheDir } = {}) {
+  if (webVersion === null || webVersion === false || webVersion === '') return {};
+  const version = safeTrim(webVersion) || PINNED_WEB_VERSION;
+  const cacheDir = path.resolve(safeTrim(webVersionCacheDir) || WA_WEB_CACHE_DIR);
+  return { webVersion: version, webVersionCache: { type: 'local', path: cacheDir } };
+}
+
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
   try { return String(value); } catch (_) { return fallback; }
@@ -123,7 +152,7 @@ function normalizeLogger(logger) {
  * O require é lazy para que testes (com clientFactory injetado) não puxem
  * puppeteer/Chrome.
  */
-function defaultClientFactory({ clientId, dataPath, puppeteer }) {
+function defaultClientFactory({ clientId, dataPath, puppeteer, webVersion, webVersionCacheDir }) {
   const wa = loadWhatsappWebJs();
   const { Client, LocalAuth } = wa;
   return new Client({
@@ -132,6 +161,7 @@ function defaultClientFactory({ clientId, dataPath, puppeteer }) {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     },
+    ...resolveWebVersionOptions({ webVersion, webVersionCacheDir }),
   });
 }
 
@@ -251,6 +281,8 @@ function createBridge(options = {}) {
           dataPath,
           connectionId: entry.id,
           puppeteer: options.puppeteer,
+          webVersion: options.webVersion,
+          webVersionCacheDir: options.webVersionCacheDir,
         });
       } catch (err) {
         const message = safeErrorMessage(err, 'client_factory_failed');
@@ -520,5 +552,8 @@ module.exports = {
   createBridge,
   normalizeDestination,
   sanitizeClientId,
+  resolveWebVersionOptions,
+  PINNED_WEB_VERSION,
+  WA_WEB_CACHE_DIR,
   STATUS,
 };

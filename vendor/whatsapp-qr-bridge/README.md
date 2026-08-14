@@ -37,8 +37,10 @@ const { createBridge } = require('@results/whatsapp-qr-bridge');
 const bridge = createBridge({
   authDataPath: '/var/lib/meuapp/whatsapp/auth', // dataPath do LocalAuth
   syncIntervalMs: 30000,                          // default 30000; 0 desliga
-  // clientFactory: ({ clientId, dataPath, connectionId, puppeteer }) => client,
+  // clientFactory: ({ clientId, dataPath, connectionId, puppeteer, webVersion, webVersionCacheDir }) => client,
   // puppeteer: { headless: true, args: [...] },
+  // webVersion: undefined → pin default (ver abaixo); null → WA Web latest; '<versao>' → pin custom
+  // webVersionCacheDir: '/dir/com/<versao>.html',  // default: wa-web/ do pacote
   // logger: console,
 });
 
@@ -69,6 +71,37 @@ await bridge.sendMedia('conn-1', '5511999990000', {
 await bridge.disconnect('conn-1');                       // logout + destroy
 await bridge.removeConnection('conn-1');                 // remove do bridge
 await bridge.stop();                                     // para sync e destrói tudo
+```
+
+## Pin de versão do WhatsApp Web (workaround wwebjs#127084)
+
+Desde 2026-06-20, os builds `2.3000.1041xxx+` do WhatsApp Web quebram o
+whatsapp-web.js: `authenticated` dispara, mas `ready` nunca (o loading chega a
+100% e trava — pareamento e restore de sessão ficam em "aguardando"). O
+remédio validado pela comunidade é pinar um build anterior à quebra servido de
+cache **local** (o repositório `wppconnect-team/wa-version` poda builds
+antigos, então `type: 'remote'` daria 404).
+
+Por isso o pacote **pina por default** o build `2.3000.1037753511-alpha`,
+cujo HTML fica em `wa-web/2.3000.1037753511-alpha.html` dentro do próprio
+pacote. Comportamento:
+
+- `webVersion` **não informado** → pin default (recomendado enquanto o bug
+  estiver aberto);
+- `webVersion: null` → sem pin, usa o WA Web mais recente (volta ao
+  comportamento nativo da lib — útil para testar se o bug foi corrigido);
+- `webVersion: '<versao>'` → pin custom; exige `<versao>.html` em
+  `webVersionCacheDir` (default: `wa-web/` do pacote).
+
+`resolveWebVersionOptions({ webVersion, webVersionCacheDir })` é exportada
+para que `clientFactory` customizadas apliquem o mesmo pin:
+
+```js
+const { resolveWebVersionOptions } = require('@results/whatsapp-qr-bridge');
+const client = new Client({
+  authStrategy: new LocalAuth({ clientId, dataPath }),
+  ...resolveWebVersionOptions({ webVersion, webVersionCacheDir }),
+});
 ```
 
 ## API

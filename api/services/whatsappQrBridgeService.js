@@ -479,15 +479,20 @@ async function recoverRecentInboundMessages({ tenantId, connectionId, client }) 
  * clientId/dataPath precisam manter o formato legado (`ria_<tenant>_<conn>`)
  * para reutilizar as sessões já pareadas em disco.
  */
-function bridgeClientFactory({ dataPath, connectionId }) {
+function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCacheDir }) {
   const wa = loadWhatsappWebJs();
   const { Client, LocalAuth } = wa;
+  // eslint-disable-next-line global-require
+  const { resolveWebVersionOptions } = require('@results/whatsapp-qr-bridge');
   const ref = connectionRefs.get(connectionId) || {};
   const clientId = sanitizeClientId(ref.tenantId, ref.connectionId);
   clearChromeLocks(clientId, dataPath);
   const client = new Client({
     authStrategy: new LocalAuth({ clientId, dataPath }),
     puppeteer: buildPuppeteerOptions(),
+    // Pin do build do WA Web (workaround wwebjs#127084): undefined → default
+    // do pacote; null → latest. Configurável via WHATSAPP_QR_WEB_VERSION.
+    ...resolveWebVersionOptions({ webVersion, webVersionCacheDir }),
   });
   activeClients.set(connectionId, {
     tenantId: ref.tenantId,
@@ -586,6 +591,12 @@ function getBridge() {
     // o sync interno do pacote fica desligado para não haver dois reconciliadores.
     syncIntervalMs: 0,
     clientFactory: bridgeClientFactory,
+    // undefined → pin default do pacote; 'latest' → null (sem pin).
+    webVersion: (() => {
+      const raw = safeTrim(process.env.WHATSAPP_QR_WEB_VERSION || '');
+      if (!raw) return undefined;
+      return raw.toLowerCase() === 'latest' ? null : raw;
+    })(),
     logger: {
       info: (msg, extra) => logger.info(msg, extra),
       warn: (msg, extra) => logger.warn(msg, extra),
