@@ -22,7 +22,8 @@ function fakeClient(id, tenantId) {
   return {
     id,
     tenantId,
-    agentId: null,
+    agentId: `agent-${id}`,
+    authenticated: true,
     executionIds: new Set(),
     ws: { readyState: 1, send: jest.fn() },
   };

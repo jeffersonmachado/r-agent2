@@ -1,5 +1,7 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../api/utils/runtimePaths');
+
 /**
  * Regressão — filtro `source` na listagem de replays QA Waves.
  *
@@ -49,13 +51,13 @@ describe('testExecutionService.listReplayFiles — filtro source de replays QA W
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'replay-source-'));
     replayDir = path.join(runtimeRoot, 'rpa', 'replay');
     fs.mkdirSync(replayDir, { recursive: true });
-    process.env.RUNTIME_ROOT = runtimeRoot;
+    configureRuntimeRoot(runtimeRoot);
     jest.resetModules();
     ({ listReplayFiles } = require('../../api/services/testExecutionService'));
   });
 
   afterEach(() => {
-    delete process.env.RUNTIME_ROOT;
+    configureRuntimeRoot(null);
     fs.rmSync(runtimeRoot, { recursive: true, force: true });
   });
 
@@ -119,7 +121,7 @@ describe('qaWavesExecutionService.writeReplayArtifact — origem de produto no a
 
   beforeEach(() => {
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'replay-write-'));
-    process.env.RUNTIME_ROOT = runtimeRoot;
+    configureRuntimeRoot(runtimeRoot);
     // O mesh registry real (qa-mesh/meshRegistry.json) é artefato de runtime
     // gitignored — ausente em clones limpos (CI). O teste provê um registry
     // fixture autocontido via QA_MESH_REGISTRY_PATH.
@@ -135,7 +137,7 @@ describe('qaWavesExecutionService.writeReplayArtifact — origem de produto no a
   });
 
   afterEach(() => {
-    delete process.env.RUNTIME_ROOT;
+    configureRuntimeRoot(null);
     delete process.env.QA_MESH_REGISTRY_PATH;
     fs.rmSync(runtimeRoot, { recursive: true, force: true });
   });

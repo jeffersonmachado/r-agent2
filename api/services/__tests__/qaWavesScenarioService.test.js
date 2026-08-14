@@ -1,34 +1,42 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../utils/runtimePaths');
+
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+
+// Store temporário ISOLADO por processo: este suite apaga/regrava o store a
+// cada teste; usar o store real (qa/qa-waves/scenario-store.json) corrompe
+// suites paralelas do Jest que o leem (ex.: meshRunner.blockingEvidence).
+// A env precisa ser definida ANTES do require do service (STORE_PATH é
+// resolvido no carregamento do módulo).
+const STORE_PATH = path.join(os.tmpdir(), `qa-waves-scenario-store-test-${process.pid}.json`);
+process.env.QA_WAVES_SCENARIO_STORE_PATH = STORE_PATH;
 
 jest.mock('../qaMeshService', () => ({
   queueMeshRun: jest.fn(() => ({ executionId: 'mesh-test-1' })),
 }));
 
+// computeMisalignment é IA-first: o provider é mockado para o teste ficar
+// hermético (sem chamada real a LLM).
+jest.mock('../aiProviderService', () => ({
+  generateAiResponse: jest.fn().mockResolvedValue({
+    text: '[{"type":"aligned","severity":"info","message":"Cenário alinhado com a proposta da IA."}]',
+  }),
+}));
+
 const qaMeshService = require('../qaMeshService');
 const qaWavesScenarioService = require('../qaWavesScenarioService');
+const journeyReviewService = require('../journeyReviewService');
 const { getRpaReplayDir } = require('../../../lib/rpaPathResolver');
 
-const STORE_PATH = path.join(__dirname, '..', '..', '..', 'qa', 'qa-waves', 'scenario-store.json');
-
-function safeRead(filePath) {
-  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
-}
-
 describe('qaWavesScenarioService', () => {
-  let storeBackup;
   let runtimeRoot;
-
-  beforeAll(() => {
-    storeBackup = safeRead(STORE_PATH);
-  });
 
   beforeEach(() => {
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-waves-runtime-'));
-    process.env.RUNTIME_ROOT = runtimeRoot;
+    configureRuntimeRoot(runtimeRoot);
 
     if (fs.existsSync(STORE_PATH)) {
       fs.unlinkSync(STORE_PATH);
@@ -38,15 +46,8 @@ describe('qaWavesScenarioService', () => {
   });
 
   afterAll(() => {
-    delete process.env.RUNTIME_ROOT;
-
-    if (storeBackup == null) {
-      if (fs.existsSync(STORE_PATH)) fs.unlinkSync(STORE_PATH);
-      return;
-    }
-
-    fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
-    fs.writeFileSync(STORE_PATH, storeBackup, 'utf8');
+    configureRuntimeRoot(null);
+    if (fs.existsSync(STORE_PATH)) fs.unlinkSync(STORE_PATH);
   });
 
   test('inferScenario deve retornar scenario validado no formato semantico', () => {
@@ -170,7 +171,7 @@ describe('qaWavesScenarioService', () => {
     expect(run.executionId).toBe('mesh-test-1');
     expect(typeof run.replayId).toBe('string');
 
-    const replayPath = path.join(getRpaReplayDir(), `${run.replayId}.json`);
+    const replayPath = path.join(getRpaReplayDir('system'), `${run.replayId}.json`);
     expect(fs.existsSync(replayPath)).toBe(true);
 
     const payload = JSON.parse(fs.readFileSync(replayPath, 'utf8'));
@@ -178,5 +179,133 @@ describe('qaWavesScenarioService', () => {
     expect(payload.executionId).toBe('mesh-test-1');
     expect(payload.scenarioId).toBe('fitness_trial_class');
     expect(payload.platformScenarioIds).toEqual(['rpa-example-test']);
+  });
+
+  test('status executável exige platformScenarioIds explícitos', () => {
+    const inferred = qaWavesScenarioService.inferScenario({
+      vertical: 'fitness',
+      journey: 'cliente_novo',
+      goal: 'aula experimental',
+      channels: ['whatsapp'],
+    });
+    const validation = qaWavesScenarioService.validateScenarioPayload({
+      scenario: {
+        ...inferred.scenario,
+        status: 'approved',
+        platformScenarioIds: [],
+        platform: { platformScenarioIds: [] },
+      },
+    });
+
+    expect(validation.valid).toBe(false);
+    expect(validation.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'missing_platform_scenario_ids' }),
+    ]));
+  });
+
+  test('revisão usa o baseScenario ajustado e apply persiste status approved', async () => {
+    const inferred = qaWavesScenarioService.inferScenario({
+      vertical: 'fitness',
+      journey: 'cliente_novo',
+      goal: 'aula experimental',
+      channels: ['whatsapp'],
+    });
+    const baseScenario = {
+      ...inferred.scenario,
+      description: 'Descrição ajustada pelo revisor humano',
+      platformScenarioIds: ['rpa-example-test'],
+      platform: { platformScenarioIds: ['rpa-example-test'] },
+    };
+
+    const review = await journeyReviewService.inferJourneyReview({
+      vertical: 'fitness',
+      journeyId: 'cliente_novo',
+      baseScenario,
+      tenantId: 'system',
+      reviewedBy: 'agent-reviewer',
+    });
+    expect(review.inferredScenario.description).toBe('Descrição ajustada pelo revisor humano');
+    expect(review.inferredScenario.status).toBe('reviewed');
+    expect(review.inferredScenario.journeyId).toBe('cliente_novo');
+
+    const applied = journeyReviewService.applyJourneyReview({
+      scenario: review.inferredScenario,
+      reviewToken: review.reviewToken,
+      approved: true,
+      tenantId: 'system',
+      changedBy: 'agent-reviewer',
+    });
+    expect(applied.scenario.status).toBe('approved');
+    expect(applied.scenario.platformScenarioIds.length).toBeGreaterThan(0);
+  });
+
+  test('apply de revisão rejeita ausência, adulteração e troca de tenant do token', async () => {
+    const inferred = qaWavesScenarioService.inferScenario({
+      vertical: 'fitness',
+      journey: 'cliente_novo',
+      goal: 'aula experimental',
+      channels: ['whatsapp'],
+      tenantId: 'tenant-a',
+    });
+    const review = await journeyReviewService.inferJourneyReview({
+      vertical: 'fitness',
+      journeyId: 'cliente_novo',
+      baseScenario: inferred.scenario,
+      tenantId: 'tenant-a',
+      reviewedBy: 'agent-a',
+    });
+    const baseApply = {
+      scenario: review.inferredScenario,
+      approved: true,
+      tenantId: 'tenant-a',
+      changedBy: 'agent-a',
+    };
+
+    expect(() => journeyReviewService.applyJourneyReview(baseApply)).toThrow('reviewToken inválido');
+    expect(() => journeyReviewService.applyJourneyReview({
+      ...baseApply,
+      reviewToken: `${review.reviewToken}tampered`,
+    })).toThrow('reviewToken inválido');
+    expect(() => journeyReviewService.applyJourneyReview({
+      ...baseApply,
+      tenantId: 'tenant-b',
+      reviewToken: review.reviewToken,
+    })).toThrow('não pertence ao tenant');
+    expect(() => journeyReviewService.applyJourneyReview({
+      ...baseApply,
+      changedBy: 'agent-b',
+      reviewToken: review.reviewToken,
+    })).toThrow('não pertence ao revisor');
+    expect(() => journeyReviewService.applyJourneyReview({
+      ...baseApply,
+      scenario: { ...review.inferredScenario, description: 'alterado depois da inferência' },
+      reviewToken: review.reviewToken,
+    })).toThrow('foi alterado após a inferência');
+  });
+
+  test('cenários com o mesmo id permanecem isolados por tenant', () => {
+    const base = qaWavesScenarioService.inferScenario({
+      vertical: 'fitness',
+      journey: 'cliente_novo',
+      goal: 'aula experimental',
+      channels: ['whatsapp'],
+      tenantId: 'tenant-a',
+    }).scenario;
+
+    qaWavesScenarioService.saveScenario({
+      scenario: { ...base, tenantId: 'tenant-a', description: 'somente A' },
+      tenantId: 'tenant-a',
+    });
+    qaWavesScenarioService.saveScenario({
+      scenario: { ...base, tenantId: 'tenant-b', description: 'somente B' },
+      tenantId: 'tenant-b',
+    });
+
+    const tenantA = qaWavesScenarioService.listLatestScenarios({ tenantId: 'tenant-a' }).items;
+    const tenantB = qaWavesScenarioService.listLatestScenarios({ tenantId: 'tenant-b' }).items;
+    expect(tenantA).toHaveLength(1);
+    expect(tenantB).toHaveLength(1);
+    expect(tenantA[0].description).toBe('somente A');
+    expect(tenantB[0].description).toBe('somente B');
   });
 });

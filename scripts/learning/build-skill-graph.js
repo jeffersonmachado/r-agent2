@@ -26,7 +26,7 @@
  *     journey / capability e edges requires_capability / belongs_to_skill.
  *     Falha de DB é warning explícito, nunca derruba a geração do artefato.
  *
- * Uso: RUNTIME_ROOT=/tmp/ragent2-runtime-dev node scripts/learning/build-skill-graph.js
+ * Uso: node scripts/learning/build-skill-graph.js
  */
 
 const fs = require('fs');

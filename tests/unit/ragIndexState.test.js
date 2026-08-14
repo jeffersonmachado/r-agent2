@@ -47,6 +47,11 @@ describe('RAG index state', () => {
           dataValues: createdRows.get(id),
         };
       }),
+      findOne: jest.fn(async ({ where }) => {
+        const row = await RagDocumentModel.findByPk(where.id);
+        const tenantKey = row?.dataValues?.tenant_key;
+        return row && tenantKey === where.tenant_key ? row : null;
+      }),
       create: jest.fn(async (payload) => {
         createdRows.set(payload.id, payload);
         return {
@@ -77,7 +82,7 @@ describe('RAG index state', () => {
     await Promise.resolve();
 
     // agora reindex (que deve falhar com 0 chunks)
-    const reindexRes = await ragDocumentsService.reindexDocument(createRes.document.id);
+    const reindexRes = await ragDocumentsService.reindexDocument(createRes.document.id, 'tenant-1');
     expect(reindexRes.success).toBe(false);
     expect(reindexRes.chunksCreated).toBe(0);
 
@@ -92,4 +97,3 @@ describe('RAG index state', () => {
     expect(lastUpdate.payload.index_error_code).toBe('RAG_INDEX_FAILED');
   });
 });
-

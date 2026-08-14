@@ -4,6 +4,7 @@ const uiStepInferenceService = require('./uiStepInferenceService');
 const validatorInferenceService = require('./validatorInferenceService');
 const seedInferenceService = require('./seedInferenceService');
 const preflightEngine = require('./preflightEngine');
+const { normalizeTenantKey } = require('../../../lib/rpaSecurity');
 
 /**
  * AUTO-GENERATION BOT
@@ -23,8 +24,10 @@ const preflightEngine = require('./preflightEngine');
  * Executa geração automática de cenários para capabilities com gaps
  */
 function executeScenarioGeneration(capabilities = [], frontendData = {}, options = {}) {
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
   const results = {
     timestamp: new Date().toISOString(),
+    tenantId,
     requested: capabilities.length,
     generated: 0,
     failed: 0,
@@ -36,7 +39,8 @@ function executeScenarioGeneration(capabilities = [], frontendData = {}, options
     try {
       const scenarios = autoScenarioGenerator.generateAllScenariosForCapability(
         capability,
-        frontendData
+        frontendData,
+        { tenantId },
       );
 
       for (const scenario of scenarios) {
@@ -84,8 +88,10 @@ function executeScenarioGeneration(capabilities = [], frontendData = {}, options
  * Executa geração automática de uiSteps para capabilities
  */
 function executeUIStepGeneration(capabilities = [], frontendData = {}, options = {}) {
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
   const results = {
     timestamp: new Date().toISOString(),
+    tenantId,
     requested: capabilities.length,
     generated: 0,
     stepsMap: {},
@@ -118,8 +124,10 @@ function executeUIStepGeneration(capabilities = [], frontendData = {}, options =
  * Executa geração automática de validators para capabilities
  */
 function executeValidatorGeneration(capabilities = [], options = {}) {
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
   const results = {
     timestamp: new Date().toISOString(),
+    tenantId,
     requested: capabilities.length,
     generated: 0,
     validatorsMap: {},
@@ -161,8 +169,10 @@ function executeValidatorGeneration(capabilities = [], options = {}) {
  * Executa geração automática de seeds para capabilities
  */
 function executeSeedGeneration(capabilities = [], options = {}) {
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
   const results = {
     timestamp: new Date().toISOString(),
+    tenantId,
     requested: capabilities.length,
     generated: 0,
     seedsMap: {},
@@ -205,8 +215,10 @@ function executeSeedGeneration(capabilities = [], options = {}) {
  * Valida preflight para capabilities antes de execução
  */
 async function validatePreflightForCapabilities(capabilities = [], options = {}) {
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
   const results = {
     timestamp: new Date().toISOString(),
+    tenantId,
     requested: capabilities.length,
     validated: 0,
     blocker_free: 0,
@@ -217,7 +229,10 @@ async function validatePreflightForCapabilities(capabilities = [], options = {})
   for (const capability of capabilities) {
     try {
       const journeyId = capability.name || capability.id;
-      const validation = await preflightEngine.validateJourneyPreconditions(journeyId, options.context || {});
+      const validation = await preflightEngine.validateJourneyPreconditions(journeyId, {
+        ...(options.context || {}),
+        tenantId,
+      });
 
       results.preconditionsByCapability[capability.id] = validation;
       results.validated++;
@@ -253,11 +268,14 @@ async function executeFullGenerationBot(options = {}) {
     generateValidators = true,
     generateSeeds = true,
     validatePreflight = true,
+    tenantId: tenantInput = 'system',
   } = options;
+  const tenantId = normalizeTenantKey(tenantInput, { defaultValue: 'system' });
 
   const startTime = Date.now();
   const results = {
     timestamp: new Date().toISOString(),
+    tenantId,
     duration: 0,
     status: 'in_progress',
     steps: {},
@@ -266,29 +284,30 @@ async function executeFullGenerationBot(options = {}) {
   try {
     // 1. Validate preflight
     if (validatePreflight) {
-      results.steps.preflight = await validatePreflightForCapabilities(capabilities, { context });
+      results.steps.preflight = await validatePreflightForCapabilities(capabilities, { context, tenantId });
     }
 
     // 2. Generate scenarios
     if (generateScenarios) {
       results.steps.scenarios = executeScenarioGeneration(capabilities, frontendData, {
         persist: true,
+        tenantId,
       });
     }
 
     // 3. Generate UI steps
     if (generateUISteps) {
-      results.steps.uiSteps = executeUIStepGeneration(capabilities, frontendData);
+      results.steps.uiSteps = executeUIStepGeneration(capabilities, frontendData, { tenantId });
     }
 
     // 4. Generate validators
     if (generateValidators) {
-      results.steps.validators = executeValidatorGeneration(capabilities);
+      results.steps.validators = executeValidatorGeneration(capabilities, { tenantId });
     }
 
     // 5. Generate seeds
     if (generateSeeds) {
-      results.steps.seeds = executeSeedGeneration(capabilities);
+      results.steps.seeds = executeSeedGeneration(capabilities, { tenantId });
     }
 
     // Calcular estatísticas globais
@@ -324,8 +343,10 @@ async function executeFullGenerationBot(options = {}) {
  * Versão simplificada que aceita a saída de autonomousGapClosureEngine
  */
 function applyAutoRemediations(remediations = {}, capabilities = [], frontendData = {}, options = {}) {
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
   const results = {
     timestamp: new Date().toISOString(),
+    tenantId,
     appliedRemediations: [],
     generatedArtefacts: {
       scenarios: 0,
@@ -342,7 +363,11 @@ function applyAutoRemediations(remediations = {}, capabilities = [], frontendDat
       try {
         const store = autoScenarioGenerator.loadScenarioStore();
         const beforeCount = store.scenarios.length;
-        store.scenarios.push(...remediations.scenarios);
+        const scopedScenarios = remediations.scenarios.map((scenario) => ({
+          ...scenario,
+          tenantId,
+        }));
+        store.scenarios.push(...scopedScenarios);
         autoScenarioGenerator.persistScenarioStore(store);
 
         results.generatedArtefacts.scenarios = store.scenarios.length - beforeCount;

@@ -138,8 +138,22 @@ async function upsertWebhookToDb(webhook) {
   const existing = await WebhookModel.findByPk(webhook.id);
   if (existing) {
     await existing.update({ ...payload, updated_at: now });
-  } else {
+    return;
+  }
+  try {
     await WebhookModel.create({ ...payload, created_at: now, updated_at: now });
+  } catch (error) {
+    const isUnique = error?.name === 'SequelizeUniqueConstraintError'
+      || error?.original?.code === '23505'
+      || error?.parent?.code === '23505';
+    if (!isUnique) throw error;
+    // Corrida de idempotência: insert concorrente do mesmo id. Re-fetch + update.
+    const raced = await WebhookModel.findByPk(webhook.id);
+    if (raced) {
+      await raced.update({ ...payload, updated_at: now });
+      return;
+    }
+    throw error;
   }
 }
 
@@ -620,5 +634,6 @@ module.exports = {
   triggerWebhooks,
   getAvailableEvents,
   calculateSignature, // Exportado para validação de assinatura
+  upsertWebhookToDb, // Exportado para teste da corrida de idempotência (23505)
 };
 

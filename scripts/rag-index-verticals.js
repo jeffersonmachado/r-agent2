@@ -18,6 +18,9 @@ const ROOT = path.resolve(__dirname, '..');
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function postJSON(urlPath, body) {
+  if (!String(RAG_TOKEN).trim()) {
+    return Promise.reject(new Error('RAG_INTERNAL_TOKEN não configurado'));
+  }
   return new Promise((resolve, reject) => {
     const url = new URL(urlPath, RAG_BASE);
     const data = JSON.stringify(body);
@@ -30,7 +33,7 @@ function postJSON(urlPath, body) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(data),
-        ...(RAG_TOKEN ? { 'X-RAG-Internal-Token': RAG_TOKEN } : {})
+        'X-RAG-Internal-Token': RAG_TOKEN
       }
     };
     const req = mod.request(opts, (res) => {
@@ -366,6 +369,10 @@ async function main() {
   const dryRun = process.argv.includes('--dry-run');
   console.log(`🔍 RAG Vertical Indexer ${dryRun ? '(DRY RUN)' : ''}`);
   console.log(`   RAG: ${RAG_BASE}\n`);
+
+  if (!dryRun && !String(RAG_TOKEN).trim()) {
+    throw new Error('RAG_INTERNAL_TOKEN não configurado');
+  }
 
   let totalDocs = 0;
   let successDocs = 0;

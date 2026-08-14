@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { searchFitnessStudents, getFitnessStudentDetail, registerFitnessCheckIn, registerFitnessCheckOut } from '../api/verticalPilot';
+import { searchFitnessStudents, getFitnessStudentDetail, registerFitnessCheckIn, registerFitnessCheckOut, createFitnessStudent } from '../api/verticalPilot';
 import { useToast } from '../components/Toast';
 
 function badgeClass(tone) {
@@ -23,6 +23,57 @@ export function FitnessStudentsPage() {
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
+
+  // Formulário de cadastro de novo aluno (fecha o gap: antes não havia UI
+  // para criar aluno — a criação só existia via API).
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    document: '',
+    planName: 'Plano Mensal',
+    monthlyAmount: '129.90',
+  });
+
+  function updateForm(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleCreateStudent() {
+    if (!form.name || !form.name.trim()) {
+      showToast('Informe o nome do aluno', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      const now = Date.now();
+      const subjectId = `stu-${now}`;
+      const membershipId = `mem-${now}`;
+      await createFitnessStudent({
+        subjectId,
+        name: form.name.trim(),
+        phone: form.phone.trim() || null,
+        email: form.email.trim() || null,
+        document: form.document.trim() || null,
+        membershipId,
+        planName: form.planName.trim() || 'Plano Mensal',
+        monthlyAmount: Number(form.monthlyAmount) || 129.9,
+        billingStatus: 'active',
+        status: 'active',
+      });
+      showToast('Aluno criado com sucesso', 'success');
+      setShowForm(false);
+      setForm({ name: '', phone: '', email: '', document: '', planName: 'Plano Mensal', monthlyAmount: '129.90' });
+      setQuery('');
+      await runSearch();
+    } catch (err) {
+      showToast(err?.message || 'Falha ao criar aluno', 'error');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const summary = useMemo(() => ({
     total: items.length,
@@ -104,7 +155,44 @@ export function FitnessStudentsPage() {
           }}
         />
         <button className="support-button" onClick={runSearch} disabled={loading}>{loading ? 'Buscando...' : 'Buscar'}</button>
+        <button className="support-button" onClick={() => setShowForm(true)}>+ Novo Aluno</button>
       </div>
+
+      {showForm && (
+        <div className="support-details-panel" style={{ marginTop: '1rem' }}>
+          <h3>Novo Aluno</h3>
+          <div className="support-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.75rem', marginTop: '0.75rem' }}>
+            <div>
+              <label className="text-xs text-text-secondary">Nome *</label>
+              <input className="support-input" value={form.name} onChange={(e) => updateForm('name', e.target.value)} placeholder="Nome completo" />
+            </div>
+            <div>
+              <label className="text-xs text-text-secondary">Telefone</label>
+              <input className="support-input" value={form.phone} onChange={(e) => updateForm('phone', e.target.value)} placeholder="+5511..." />
+            </div>
+            <div>
+              <label className="text-xs text-text-secondary">E-mail</label>
+              <input className="support-input" value={form.email} onChange={(e) => updateForm('email', e.target.value)} placeholder="email@exemplo.com" />
+            </div>
+            <div>
+              <label className="text-xs text-text-secondary">Documento (CPF)</label>
+              <input className="support-input" value={form.document} onChange={(e) => updateForm('document', e.target.value)} placeholder="000.000.000-00" />
+            </div>
+            <div>
+              <label className="text-xs text-text-secondary">Plano</label>
+              <input className="support-input" value={form.planName} onChange={(e) => updateForm('planName', e.target.value)} placeholder="Plano Mensal" />
+            </div>
+            <div>
+              <label className="text-xs text-text-secondary">Mensalidade (R$)</label>
+              <input className="support-input" value={form.monthlyAmount} onChange={(e) => updateForm('monthlyAmount', e.target.value)} placeholder="129.90" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+            <button className="support-button" onClick={handleCreateStudent} disabled={saving}>{saving ? 'Criando...' : 'Criar aluno'}</button>
+            <button className="support-button" onClick={() => setShowForm(false)} disabled={saving}>Cancelar</button>
+          </div>
+        </div>
+      )}
 
       <div className="support-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
         <div className="support-details-panel"><strong>Total</strong><div>{summary.total}</div></div>

@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-08-09T15:27:37.938Z",
-  "commit": "5dcec340e282342ea63041096666c30131357c10",
+  "generatedAt": "2026-08-14T14:40:42.486Z",
+  "commit": "3d531e8fc07d4ff099714d8befc549e39b679fe0",
   "dbAvailable": true,
   "totals": {
-    "models": 155,
-    "validated": 155,
+    "models": 157,
+    "validated": 157,
     "visited": 0,
     "failed": 0,
-    "warnings": 15
+    "warnings": 16
   },
   "relationTotals": {
     "relations": 9,
@@ -457,7 +457,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
+          "detail": "migrations: api/db/migrations/20260814090000-create-agent-os-core-tables.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -1393,7 +1393,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
+          "detail": "migrations: api/db/migrations/20260809000001-corporate-agent-lifecycle-tenant-slug.js, api/db/migrations/20260814090000-create-agent-os-core-tables.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -1414,6 +1414,58 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "21 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:CoverageEvidence",
+      "table": "coverage_evidence",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/CoverageEvidence.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=coverage_evidence"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260813030000-create-coverage-evidence.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'coverage_evidence' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "4 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -1653,7 +1705,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20250111000012-create-executions.js, migrations/agent-os-2026-06-11.sql"
+          "detail": "migrations: api/db/migrations/20250111000012-create-executions.js, api/db/migrations/20260814090000-create-agent-os-core-tables.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -1965,7 +2017,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
+          "detail": "migrations: api/db/migrations/20260814090000-create-agent-os-core-tables.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -2017,7 +2069,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
+          "detail": "migrations: api/db/migrations/20260814090000-create-agent-os-core-tables.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -2069,7 +2121,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
+          "detail": "migrations: api/db/migrations/20260814090000-create-agent-os-core-tables.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -2225,7 +2277,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
+          "detail": "migrations: api/db/migrations/20260814090000-create-agent-os-core-tables.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",
@@ -6265,6 +6317,58 @@
       ]
     },
     {
+      "id": "model:RuntimeArtifact",
+      "table": "runtime_artifacts",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/RuntimeArtifact.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=runtime_artifacts"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260813020000-create-runtime-artifacts.js, api/db/migrations/20260813040000-add-runtime-artifacts-storage-key.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'runtime_artifacts' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "9 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
       "id": "model:Schedule",
       "table": "schedules",
       "state": "VALIDATED",
@@ -6287,7 +6391,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260204021000-create-exec-jobs-and-schedules.js, api/db/migrations/20260204033000-event-dispatch-state-and-schedule.js, api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js, api/db/migrations/20260205010000-prune-flow-execution-ledger-schedule.js, api/db/migrations/20260723170000-seed-learning-adaptive-schedule.js"
+          "detail": "migrations: api/db/migrations/20260204021000-create-exec-jobs-and-schedules.js, api/db/migrations/20260204033000-event-dispatch-state-and-schedule.js, api/db/migrations/20260204035000-pbx-call-events-state-and-schedule.js, api/db/migrations/20260205010000-prune-flow-execution-ledger-schedule.js, api/db/migrations/20260723170000-seed-learning-adaptive-schedule.js, api/db/migrations/20260813010000-prune-execution-jobs-schedule.js"
         },
         {
           "name": "tenantScope",
@@ -7796,7 +7900,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: migrations/agent-os-2026-06-11.sql"
+          "detail": "migrations: api/db/migrations/20260814090000-create-agent-os-core-tables.js, migrations/agent-os-2026-06-11.sql"
         },
         {
           "name": "tenantScope",

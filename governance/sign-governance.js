@@ -5,7 +5,8 @@
  * Governance Signing Engine — HMAC-SHA256 sobre a cadeia de governança.
  *
  * Modelo criptográfico (sem dependência circular):
- *   key       = SHA256("rap-governance-v1:" + gitCommit)
+ *   rootKey   = REPLAY_SIGNING_KEY || ENCRYPTION_KEY (segredo, >= 32 bytes)
+ *   key       = HMAC-SHA256(rootKey, "rap-governance-v2:" + gitCommit)
  *   gov.seal  = HMAC-SHA256(key, "governance-chain:" + chainRoot + ":" + timestamp)
  *   rel.seal  = HMAC-SHA256(key, zipName + ":" + chainRoot + ":" + gitCommit + ":" + timestamp)
  *   att.seal  = HMAC-SHA256(key, "governance-attestation:" + contentHash + ":" + chainRoot)
@@ -39,14 +40,16 @@ const {
   sha256String,
   resolveArtifact,
 } = require('./governance-chain');
+const { resolveSigningKey } = require('../lib/replayIntegrity');
 
 const ROOT              = path.join(__dirname, '..');
 const GOV_ARTIFACTS_DIR = path.join(ROOT, 'dist', 'governance-artifacts');
 
 // ─── Derivação determinística de chave ────────────────────────────────────────
-function deriveGovernanceKey(gitCommit) {
-  return crypto.createHash('sha256')
-    .update(`rap-governance-v1:${gitCommit}`)
+function deriveGovernanceKey(gitCommit, explicitKey = null) {
+  const rootKey = resolveSigningKey(explicitKey);
+  return crypto.createHmac('sha256', rootKey)
+    .update(`rap-governance-v2:${gitCommit}`, 'utf8')
     .digest();
 }
 
@@ -55,14 +58,17 @@ function hmacSign(key, message) {
 }
 
 // ─── Assinatura de artefato individual ───────────────────────────────────────
-function signArtifact({ subject, hash, chainRoot, gitCommit, timestamp, extra = '' }) {
-  const key     = deriveGovernanceKey(gitCommit);
+function signArtifact({ subject, hash, chainRoot, gitCommit, timestamp, extra = '', signingKey = null }) {
+  const rootKey = resolveSigningKey(signingKey);
+  const key     = deriveGovernanceKey(gitCommit, rootKey);
   const message = [subject, hash, chainRoot, timestamp, extra].filter(Boolean).join(':');
   const seal    = hmacSign(key, message);
 
   const result = {
+    signatureVersion: 2,
     algorithm:    'hmac-sha256',
-    keyDerivation: `sha256(rap-governance-v1:${gitCommit})`,
+    keyDerivation: 'hmac-sha256(replay-signing-key,rap-governance-v2:gitCommit)',
+    keyId: crypto.createHash('sha256').update(rootKey).digest('hex').slice(0, 16),
     subject,
     sha256:       hash,
     chainRoot,
@@ -70,20 +76,38 @@ function signArtifact({ subject, hash, chainRoot, gitCommit, timestamp, extra = 
     timestamp,
     seal,
     governanceLevel: 'LEVEL_4_IMMUTABLE',
-    verificationNote: 'key=SHA256("rap-governance-v1:"+gitCommit); verify=HMAC-SHA256(key, subject:sha256:chainRoot:timestamp[:extra])',
+    verificationNote: 'derive key with configured replay signing secret; verify HMAC-SHA256 over subject:sha256:chainRoot:timestamp[:extra]',
   };
   if (extra) result.extra = extra;
   return result;
 }
 
 // ─── Verificação de assinatura ────────────────────────────────────────────────
-function verifySeal(sigObj) {
+function verifySeal(sigObj, options = {}) {
   if (!sigObj || !sigObj.seal || !sigObj.gitCommit) return false;
-  const key     = deriveGovernanceKey(sigObj.gitCommit);
+  if (sigObj.signatureVersion !== 2
+    || sigObj.algorithm !== 'hmac-sha256'
+    || sigObj.keyDerivation !== 'hmac-sha256(replay-signing-key,rap-governance-v2:gitCommit)') {
+    return false;
+  }
+  let rootKey;
+  let key;
+  try {
+    rootKey = resolveSigningKey(options.signingKey);
+    key = deriveGovernanceKey(sigObj.gitCommit, rootKey);
+  } catch (_) {
+    return false;
+  }
+  const actualKeyId = crypto.createHash('sha256').update(rootKey).digest('hex').slice(0, 16);
+  if (!sigObj.keyId || sigObj.keyId !== actualKeyId) return false;
   const message = [sigObj.subject, sigObj.sha256, sigObj.chainRoot, sigObj.timestamp, sigObj.extra || '']
     .filter(Boolean).join(':');
   const expected = hmacSign(key, message);
-  return expected === sigObj.seal;
+  const expectedBuffer = Buffer.from(expected, 'hex');
+  const actualBuffer = Buffer.from(String(sigObj.seal || ''), 'hex');
+  return expectedBuffer.length === actualBuffer.length
+    && expectedBuffer.length > 0
+    && crypto.timingSafeEqual(expectedBuffer, actualBuffer);
 }
 
 // ─── Utilitário de leitura ────────────────────────────────────────────────────
@@ -278,7 +302,7 @@ function preSign(options = {}) {
     verificationInstructions: [
       '1. Verify ZIP SHA256 against sidecar manifest: sha256sum <zip> vs manifest.sha256',
       '2. Run: node governance/governance-chain.js --verify',
-      '3. Verify signatures: derive key=SHA256("rap-governance-v1:"+gitCommit), verify HMAC-SHA256',
+      '3. Configure REPLAY_SIGNING_KEY/ENCRYPTION_KEY and verify HMAC-SHA256 signatures',
       '4. Run: bash scripts/verify-enterprise-governance.sh (offline, no external deps)',
       '5. All proof artifacts are in dist/governance-artifacts/ inside the ZIP',
     ],

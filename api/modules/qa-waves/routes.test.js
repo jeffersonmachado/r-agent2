@@ -98,6 +98,9 @@ function createDefaultDeps() {
     saveWaveScenario: jest.fn(() => ({ scenario: { id: 'scenario-1', version: 'v2' } })),
     listWaveScenarios: jest.fn(() => ({ items: [{ id: 'scenario-1', version: 'v1' }], history: {} })),
     runWaveScenario: jest.fn(() => ({ executionId: 'mesh-1', replayId: 'replay-1' })),
+    reviewVertical: jest.fn(() => ({ reviewId: 'vr-1', recordedJourney: null })),
+    reviewJourneyInfer: jest.fn(() => ({ inferredScenario: { id: 'scenario-1' } })),
+    reviewJourneyApply: jest.fn(() => ({ scenario: { id: 'scenario-1', status: 'approved' } })),
     getWaveExecutionHistory: jest.fn(() => ({
       items: [{ executionId: 'exec-hist-1', goNoGo: 'GO' }],
       verification: { valid: true, brokenAt: null },
@@ -326,7 +329,7 @@ describe('qa-waves routes', () => {
       verification: { valid: true, brokenAt: null },
       chainPath: '/tmp/chain.jsonl',
     });
-    expect(deps.getWaveExecutionHistory).toHaveBeenCalledWith(10);
+    expect(deps.getWaveExecutionHistory).toHaveBeenCalledWith(10, 'system');
   });
 
   test('GET /api/qa-waves/executions/history não colide com /executions/:executionId', async () => {
@@ -525,6 +528,93 @@ describe('qa-waves routes', () => {
     expect(deps.runWaveScenario).toHaveBeenCalled();
   });
 
+  test('vertical review usa tenant do principal e não o tenant enviado no body', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({ vertical: 'fitness', tenantId: 'tenant-injetado' });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/vertical-review', {
+      vertical: 'fitness',
+      tenantId: 'tenant-injetado',
+    });
+
+    expect(res.status).toBe(200);
+    expect(deps.reviewVertical).toHaveBeenCalledWith(expect.objectContaining({
+      vertical: 'fitness',
+      tenantId: 'system',
+    }));
+  });
+
+  test('execução ignora tenant enviado no body e vincula a fila ao principal', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        scenarioIds: ['scenario-1'],
+        tenantId: 'tenant-injetado',
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/executions', {
+      scenarioIds: ['scenario-1'],
+      tenantId: 'tenant-injetado',
+    });
+
+    expect(res.status).toBe(202);
+    expect(deps.queueWaveExecution).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 'tenant-injetado' }),
+      'system',
+    );
+  });
+
+  test('apply de jornada usa tenant e ator autenticados, ignorando campos forjados', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        scenario: { id: 'scenario-1' },
+        reviewToken: 'signed-token',
+        approved: true,
+        tenantId: 'tenant-injetado',
+        changedBy: 'attacker',
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/review-journey/apply', {});
+
+    expect(res.status).toBe(200);
+    expect(deps.reviewJourneyApply).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'system',
+      changedBy: 'agent-root',
+      reviewToken: 'signed-token',
+      approved: true,
+    }));
+  });
+
+  test('inferência de jornada vincula o token ao revisor autenticado', async () => {
+    await startWithDeps((d) => {
+      d.parseJsonBody.mockResolvedValue({
+        vertical: 'fitness',
+        journeyId: 'cliente_novo',
+        tenantId: 'tenant-injetado',
+        reviewedBy: 'attacker',
+      });
+    });
+
+    const res = await request(port, 'POST', '/api/qa-waves/review-journey/infer', {});
+
+    expect(res.status).toBe(200);
+    expect(deps.reviewJourneyInfer).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'system',
+      reviewedBy: 'agent-root',
+    }));
+  });
+
+  test('docs rejeita path traversal antes de ler arquivo fora da raiz permitida', async () => {
+    await startWithDeps();
+
+    const res = await request(port, 'GET', '/api/qa-waves/docs/roteiros?name=..%2F..%2F.env');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'bad_request', message: 'Nome de documento inválido' });
+  });
+
   test('GET /api/qa-waves/operational/summary deve retornar snapshot operacional', async () => {
     await startWithDeps();
 
@@ -533,6 +623,26 @@ describe('qa-waves routes', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('summary');
     expect(deps.getOperationalSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  test('governança operacional global rejeita super_admin fora do tenant system', async () => {
+    await startWithDeps((d) => {
+      d.requireAuth.mockImplementation((req) => {
+        req.agent = {
+          id: 'agent-tenant-a',
+          username: 'admin-a',
+          role: 'super_admin',
+          tenantId: 'tenant-a',
+        };
+        return { valid: true, agent: req.agent };
+      });
+    });
+
+    const res = await request(port, 'GET', '/api/qa-waves/operational/summary');
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual(expect.objectContaining({ error: 'system_tenant_required' }));
+    expect(deps.getOperationalSnapshot).not.toHaveBeenCalled();
   });
 
   test('GET /api/qa-waves/operational/gaps deve retornar gaps consolidados', async () => {
@@ -765,7 +875,7 @@ describe('qa-waves routes', () => {
     );
   });
 
-  test('GET /api/qa-waves/closure/autonomous-loop/smoke-payload deve retornar payload pronto para staging', async () => {
+  test('GET /api/qa-waves/closure/autonomous-loop/smoke-payload ignora tenant da query e usa o principal', async () => {
     await startWithDeps();
 
     const res = await request(port, 'GET', '/api/qa-waves/closure/autonomous-loop/smoke-payload?tenantId=tenant-a');
@@ -780,7 +890,7 @@ describe('qa-waves routes', () => {
     );
     expect(res.body).not.toHaveProperty('readiness');
     expect(deps.buildStagingAutonomousLoopPayload).toHaveBeenCalledWith(
-      expect.objectContaining({ tenantId: 'tenant-a' })
+      expect.objectContaining({ tenantId: 'system' })
     );
   });
 

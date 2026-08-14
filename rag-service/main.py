@@ -14,13 +14,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
-import os
 import uvicorn
 import logging
 
 from api.routes import query, index, health, nlp, learning, maintenance, embeddings
 from config.settings import get_settings
-from services.internal_auth import has_valid_internal_token
+from services.internal_auth import get_internal_token, has_valid_internal_token
 
 # Configura logging
 logging.basicConfig(
@@ -66,25 +65,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-INTERNAL_TOKEN_HEADER = "x-rag-internal-token"
-_internal_token = os.getenv("RAG_INTERNAL_TOKEN")
-
-if not _internal_token:
-    logger.warning(
-        "[SECURITY] RAG_INTERNAL_TOKEN não configurado: serviço RAG aceita chamadas "
-        "sem autenticação interna. Configure o token em produção."
+if not get_internal_token():
+    logger.error(
+        "[SECURITY] RAG_INTERNAL_TOKEN não configurado: todas as chamadas /rag "
+        "permanecerão bloqueadas até a configuração ser corrigida."
     )
 
 
 @app.middleware("http")
 async def require_internal_token(request: Request, call_next):
     """
-    Autenticação serviço-a-serviço: quando RAG_INTERNAL_TOKEN está configurado,
-    toda rota /rag/* exige o header X-RAG-Internal-Token correspondente.
+    Autenticação serviço-a-serviço obrigatória: toda rota /rag/* exige que
+    RAG_INTERNAL_TOKEN esteja configurado e que o header correspondente confira.
     O backend Node é o único chamador autorizado — clientes finais nunca
     falam diretamente com este serviço.
     """
-    if _internal_token and request.url.path.startswith("/rag"):
+    if request.url.path.startswith("/rag"):
+        configured_token = get_internal_token()
+        if not configured_token:
+            logger.error(
+                "[SECURITY] RAG bloqueado: RAG_INTERNAL_TOKEN ausente",
+                extra={"path": request.url.path},
+            )
+            return JSONResponse(
+                status_code=503,
+                content={"error": "service_misconfigured", "message": "Autenticação interna do RAG não configurada"},
+            )
         if not has_valid_internal_token(request.headers):
             logger.warning(
                 "[SECURITY] Chamada rejeitada sem token interno válido",
@@ -124,4 +130,3 @@ if __name__ == "__main__":
         port=settings.port,
         reload=settings.debug
     )
-

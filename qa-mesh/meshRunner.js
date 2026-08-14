@@ -17,6 +17,8 @@ const { generateStabilitySnapshot } = require('../qa/mesh/intelligence/stability
 const { persistStabilitySnapshot } = require('../qa/mesh/intelligence/stabilityHistory');
 const { runLearningPipeline } = require('../qa/mesh/intelligence/learning');
 const { loadBlockingJourneyEvidence } = require('./blockingJourneyEvidence');
+const { isBlockingJourney: isRegistryBlockingJourney } = require('../qa/contracts/journeyCriticality');
+const { belongsToTenant, normalizeTenantKey } = require('../lib/rpaSecurity');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const REGISTRY_PATH = path.join(__dirname, 'meshRegistry.json');
@@ -359,6 +361,7 @@ function loadRpaSeedScenarios() {
       if (!recording) return null;
       const domain = inferFlowDomain(recording);
       const semantic = waveScenarioMap.get(recording.id || file.replace(/\.json$/, '')) || null;
+      const journeyId = semantic?.journeyId || recording.metadata?.journey || null;
       return toScenarioBase({
         id: recording.id || file.replace(/\.json$/, ''),
         scenarioId: semantic?.id || recording.id || file.replace(/\.json$/, ''),
@@ -371,10 +374,13 @@ function loadRpaSeedScenarios() {
           : (recording.steps || []).map((step) => step.type || step.url || 'step'),
         semanticSteps: Array.isArray(semantic?.semanticSteps) ? semantic.semanticSteps : [],
         wave: semantic?.waveId || null,
+        journeyId,
+        scenarioStatus: semantic?.status || null,
         executionMode: semantic ? 'semantic' : 'legacy_seed',
         assertions: ['execução RPA seed concluída sem erro crítico'],
         rpaRecordingId: recording.id || file.replace(/\.json$/, ''),
-        criticality: 'standard',
+        criticality: semantic?.criticality
+          || (journeyId && operationalStepExecutor.isBlockingJourney(journeyId) ? 'blocking' : 'standard'),
         adapter: 'rpa',
         impactScopes: [domain, recording.metadata?.journey || 'general'],
       });
@@ -384,12 +390,14 @@ function loadRpaSeedScenarios() {
 
 function loadWaveScenarioMapByPlatformId() {
   const map = new Map();
+  const tenantId = normalizeTenantKey(process.env.TEST_TENANT_ID || 'system');
   const payload = safeReadJson(SCENARIO_STORE_PATH, null);
   const scenarios = Array.isArray(payload)
     ? payload
     : (Array.isArray(payload?.scenarios) ? payload.scenarios : []);
 
   for (const scenario of scenarios) {
+    if (!belongsToTenant(scenario, tenantId)) continue;
     const ids = new Set();
     ids.add(String(scenario?.id || '').trim());
     toArray(scenario?.platformScenarioIds).forEach((id) => ids.add(String(id || '').trim()));
@@ -400,6 +408,9 @@ function loadWaveScenarioMapByPlatformId() {
       map.set(id, {
         id: scenario.id,
         waveId: scenario.waveId || null,
+        journeyId: scenario.journeyId || scenario.journey || null,
+        criticality: scenario.criticality || null,
+        status: scenario.status || null,
         semanticSteps: Array.isArray(scenario?.semanticSteps)
           ? scenario.semanticSteps
           : (Array.isArray(scenario?.steps) ? scenario.steps : []),
@@ -1241,7 +1252,7 @@ function classifyScenarioResult(result, history = [], options = {}) {
   // passed_via_fallback: degradação bloqueante em strictMode ou criticality=blocking
   if (result.status === 'passed_via_fallback') {
     const isBlockingJourney = result.criticality === 'blocking'
-      || (result.journeyId && ['support_ticket_flow', 'fitness_customer_checkin'].includes(result.journeyId));
+      || (result.journeyId && isRegistryBlockingJourney(result.journeyId));
     const isStrict = options.strictMode === true || result.strictMode === true;
     const isDegradedBlocking = isBlockingJourney || isStrict;
     return {
@@ -1321,7 +1332,7 @@ function aggregateFailures(results = [], options = {}) {
     if (item.status === 'passed_via_fallback') {
       // Tratar como falha bloqueante se jornada blocking ou strictMode
       const isBlockingJourney = item.criticality === 'blocking'
-        || (item.journeyId && ['support_ticket_flow', 'fitness_customer_checkin'].includes(item.journeyId));
+        || (item.journeyId && isRegistryBlockingJourney(item.journeyId));
       return strictMode || isBlockingJourney;
     }
     return true;
@@ -1935,13 +1946,20 @@ async function executeScenarioWithFallback(scenario, context) {
   }
 
   try {
-    const adapterResult = await adapter.executeScenario(scenario, { repoRoot: ROOT_DIR, onStepProgress: context.onStepProgress });
+    const adapterResult = await adapter.executeScenario(scenario, {
+      repoRoot: ROOT_DIR,
+      onStepProgress: context.onStepProgress,
+      tenantId: scenario.tenantId || scenario.tenant_id || process.env.TEST_TENANT_ID || 'system',
+    });
     return normalizeOperationalResult(adapterResult);
   } catch (error) {
     if (adapter !== apiAdapter && scenario.command) {
       context.appendLog?.(`Fallback para adapter API em ${scenario.id}`, 'warning');
       try {
-        const fallbackResult = await apiAdapter.executeScenario(scenario, { repoRoot: ROOT_DIR });
+        const fallbackResult = await apiAdapter.executeScenario(scenario, {
+          repoRoot: ROOT_DIR,
+          tenantId: scenario.tenantId || scenario.tenant_id || process.env.TEST_TENANT_ID || 'system',
+        });
         const fallbackStatus = classifyScenarioStatus(fallbackResult);
         // Marcar explicitamente que o resultado passou via fallback — nunca ocultar degradação.
         const degradedStatus = fallbackStatus === 'passed' ? 'passed_via_fallback' : fallbackStatus;
@@ -1977,6 +1995,23 @@ async function executeScenarioWithFallback(scenario, context) {
 }
 
 async function runMesh(options = {}) {
+  // The mesh adapters still consume TEST_TENANT_ID.  Executions are
+  // single-flight, so set it explicitly for every run (including the system
+  // default) instead of inheriting the tenant from a previous request.
+  const tenantId = normalizeTenantKey(options.tenantId || 'system');
+  const previousTestTenantId = process.env.TEST_TENANT_ID;
+  process.env.TEST_TENANT_ID = tenantId;
+  try {
+    return await runMeshInner(options, tenantId);
+  } finally {
+    // Restaura o valor anterior: o tenant residual no env polui outros
+    // consumidores do mesmo processo (ex.: testes no mesmo worker do Jest).
+    if (previousTestTenantId === undefined) delete process.env.TEST_TENANT_ID;
+    else process.env.TEST_TENANT_ID = previousTestTenantId;
+  }
+}
+
+async function runMeshInner(options = {}, tenantId = 'system') {
   ensureMeshAuthDefaults();
   ensureDir(HISTORY_DIR);
   ensureDir(EVIDENCE_DIR);
@@ -2110,6 +2145,7 @@ async function runMesh(options = {}) {
       type: effectiveScenario.type,
       source: effectiveScenario.source,
       flow: effectiveScenario.flow,
+      journeyId: effectiveScenario.journeyId || effectiveScenario.journey || null,
       criticality: effectiveScenario.criticality,
       adapter: effectiveScenario.adapter,
       status: adapterResult.status,
@@ -2122,6 +2158,7 @@ async function runMesh(options = {}) {
       assertions: effectiveScenario.assertions || [],
       rpaRecordingId: effectiveScenario.rpaRecordingId || null,
       mode: effectiveScenario.runtimeMode || null,
+      scenarioStatus: effectiveScenario.scenarioStatus || effectiveScenario.status || null,
       // rawStatus compacto alimenta o uiTrace do replay QA Waves (passo a passo das telas).
       rawStatus: compactRawStatus(adapterResult.rawStatus),
       // Evidência transparente do retry de falha transitória de ambiente.
@@ -2197,6 +2234,7 @@ async function runMesh(options = {}) {
 
   const summary = {
     executionId,
+    tenantId,
     timestamp: startedAt,
     executionOrigin,
     executionKind,
@@ -2296,6 +2334,7 @@ async function runMesh(options = {}) {
 
   const execution = {
     executionId,
+    tenantId,
     startedAt,
     finishedAt: nowIso(),
     executionOrigin,
@@ -2329,13 +2368,19 @@ async function runMesh(options = {}) {
     writeJson(METRICS_PATH, execution.metrics);
   }
   execution.historyPath = path.join(HISTORY_DIR, `${executionId}.json`);
-  writeJson(execution.historyPath, normalizeExecutionRecord(execution));
+  const normalizedExecution = normalizeExecutionRecord(execution);
+  writeJson(execution.historyPath, normalizedExecution);
   try {
     require('./executionHistoryChain').appendExecutionRecord(execution);
   } catch (chainError) {
     execution.historyChainError = chainError.message;
     console.error(`[meshRunner] Falha ao anexar registro na cadeia de histórico: ${chainError.message}`);
   }
+  // Dual-write opcional (MESH_HISTORY_DB=1): espelha no Postgres sem afetar o gate.
+  require('./meshHistoryDb').mirrorExecution(normalizedExecution).catch((mirrorError) => {
+    execution.historyDbError = mirrorError.message;
+    console.error(`[meshRunner] Falha ao espelhar histórico no banco: ${mirrorError.message}`);
+  });
   if (writeCanonicalOutputs) {
     writeJson(QA_MESH_CANONICAL_PROMOTION_PATH, {
       ...canonicalPromotion,

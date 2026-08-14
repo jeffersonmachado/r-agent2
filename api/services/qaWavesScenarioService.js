@@ -2,19 +2,24 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
+const { getRpaSeedReadDirs } = require('../../lib/rpaPathResolver');
+const { belongsToTenant, normalizeTenantKey } = require('../../lib/rpaSecurity');
 const { adaptAiScenario } = require('../modules/qa-waves/aiScenarioAdapter');
 const { validateScenarioCompatibility } = require('../modules/qa-waves/waveScenarioSchema');
 const { EXECUTABLE_SCENARIO_STATUS } = require('../modules/qa-waves/waveScenario.constants');
 const { isInPipeline } = require('../../pipeline/guard');
+const { writeJsonAtomic } = require('../utils/atomicJsonFile');
 const {
   inferJourney,
   resolveJourneyFromRegistry,
 } = require('../../qa/qa-waves/services/journeyInferenceService');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
-const STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
-const RPA_SEEDS_DIR = path.join(ROOT_DIR, 'rpa', 'seeds');
+// Override via env permite testes apontarem para um store temporário sem
+// tocar no store real compartilhado (corrida entre workers paralelos do Jest).
+const STORE_PATH = process.env.QA_WAVES_SCENARIO_STORE_PATH
+  ? path.resolve(process.env.QA_WAVES_SCENARIO_STORE_PATH)
+  : path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-store.json');
 const STORE_DEFAULT_VERSION = 1;
 
 function ensureDir(dirPath) {
@@ -67,12 +72,12 @@ function ensureStore() {
   ensureDir(path.dirname(STORE_PATH));
 
   if (!fs.existsSync(STORE_PATH)) {
-    fs.writeFileSync(STORE_PATH, `${JSON.stringify({
+    writeJsonAtomic(STORE_PATH, {
       version: STORE_DEFAULT_VERSION,
       scenarios: [],
       history: {},
       updatedAt: nowIso(),
-    }, null, 2)}\n`, 'utf8');
+    });
   }
 
   try {
@@ -95,16 +100,16 @@ function saveStore(store) {
   normalized.updatedAt = nowIso();
 
   if (normalized.format === 'array') {
-    fs.writeFileSync(STORE_PATH, `${JSON.stringify(normalized.scenarios, null, 2)}\n`, 'utf8');
+    writeJsonAtomic(STORE_PATH, normalized.scenarios);
     return;
   }
 
-  fs.writeFileSync(STORE_PATH, `${JSON.stringify({
+  writeJsonAtomic(STORE_PATH, {
     version: normalized.version,
     scenarios: normalized.scenarios,
     history: normalized.history,
     updatedAt: normalized.updatedAt,
-  }, null, 2)}\n`, 'utf8');
+  });
 }
 
 function toPlatformScenarioIds(scenario) {
@@ -125,21 +130,25 @@ function toSemanticSteps(scenario) {
   return [];
 }
 
-function loadRpaSeedsIndex() {
+function loadRpaSeedsIndex(tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   try {
-    if (!fs.existsSync(RPA_SEEDS_DIR)) return new Map();
-    const files = fs.readdirSync(RPA_SEEDS_DIR).filter((name) => name.endsWith('.json'));
     const index = new Map();
 
-    for (const fileName of files) {
-      try {
-        const filePath = path.join(RPA_SEEDS_DIR, fileName);
-        const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        const seedId = String(raw?.id || fileName.replace(/\.json$/i, '')).trim();
-        if (!seedId) continue;
-        index.set(seedId, { ...raw, __fileName: fileName });
-      } catch (_) {
-        // Ignora seed inválida para não quebrar listagem de cenários.
+    for (const seedDir of getRpaSeedReadDirs(scopedTenantId)) {
+      if (!fs.existsSync(seedDir)) continue;
+      const files = fs.readdirSync(seedDir).filter((name) => name.endsWith('.json'));
+      for (const fileName of files) {
+        try {
+          const filePath = path.join(seedDir, fileName);
+          const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+          if (!belongsToTenant(raw, scopedTenantId)) continue;
+          const seedId = String(raw?.id || fileName.replace(/\.json$/i, '')).trim();
+          if (!seedId || index.has(seedId)) continue;
+          index.set(seedId, { ...raw, __fileName: fileName });
+        } catch (_) {
+          // Ignora seed inválida para não quebrar listagem de cenários.
+        }
       }
     }
 
@@ -192,6 +201,15 @@ async function resolveJourneyMetadata(input = {}) {
   // adapter) nao e uma jornada real: descarta e deixa a IA escolher entre
   // as jornadas candidatas da vertical.
   const explicitJourneyId = String(input.journeyId || input.journey || '').trim();
+  if (explicitJourneyId && input.preserveExplicitJourney === true) {
+    return {
+      journeyId: explicitJourneyId,
+      journey: explicitJourneyId,
+      journeySteps: Array.isArray(input.journeySteps) ? clone(input.journeySteps) : [],
+      journeySource: String(input.journeySource || '').trim() || 'manual_review',
+      baseTemplateId: input.baseTemplateId || 'customer_lifecycle_v1',
+    };
+  }
   const resolvedInRegistry = explicitJourneyId
     ? resolveJourneyFromRegistry({ ...input, journeyId: explicitJourneyId })
     : null;
@@ -248,6 +266,7 @@ function normalizeScenarioRecord(input = {}) {
   const normalized = {
     ...clone(input),
     id: String(input.id || '').trim(),
+    tenantId: normalizeTenantKey(input.tenantId || input.tenant_id || 'system'),
     journeyId: resolvedJourneyId,
     journey: resolvedJourneyId,
     journeySteps: resolvedJourneySteps,
@@ -306,15 +325,16 @@ function dedupeStoreScenarios(store) {
       continue;
     }
 
-    const existing = deduped.get(normalized.id);
+    const storageKey = `${normalized.tenantId}\u0000${normalized.id}`;
+    const existing = deduped.get(storageKey);
     if (!existing) {
-      deduped.set(normalized.id, normalized);
+      deduped.set(storageKey, normalized);
       continue;
     }
 
     const existingVersion = Number.parseInt(String(existing.version || 'v0').replace(/^v/i, ''), 10) || 0;
     const candidateVersion = Number.parseInt(String(normalized.version || 'v0').replace(/^v/i, ''), 10) || 0;
-    if (candidateVersion >= existingVersion) deduped.set(normalized.id, normalized);
+    if (candidateVersion >= existingVersion) deduped.set(storageKey, normalized);
   }
 
   if (invalidScenarios.length > 0) {
@@ -338,7 +358,8 @@ function loadScenarioStore() {
 function upsertScenarioStore(scenario, options = {}) {
   const store = loadScenarioStore();
   const normalized = normalizeScenarioRecord(scenario);
-  const index = store.scenarios.findIndex((item) => item.id === normalized.id);
+  const index = store.scenarios.findIndex((item) => item.id === normalized.id
+    && belongsToTenant(item, normalized.tenantId));
 
   if (index >= 0) {
     const previous = store.scenarios[index];
@@ -352,8 +373,9 @@ function upsertScenarioStore(scenario, options = {}) {
     store.scenarios.push(normalized);
   }
 
-  if (!Array.isArray(store.history[normalized.id])) store.history[normalized.id] = [];
-  store.history[normalized.id].push({
+  const historyKey = `${normalized.tenantId}::${normalized.id}`;
+  if (!Array.isArray(store.history[historyKey])) store.history[historyKey] = [];
+  store.history[historyKey].push({
     version: normalized.version || (index >= 0 ? store.scenarios[index].version : 'v1'),
     changedBy: options.changedBy || 'system',
     changedAt: nowIso(),
@@ -362,7 +384,8 @@ function upsertScenarioStore(scenario, options = {}) {
 
   dedupeStoreScenarios(store);
   saveStore(store);
-  return clone(store.scenarios.find((item) => item.id === normalized.id));
+  return clone(store.scenarios.find((item) => item.id === normalized.id
+    && belongsToTenant(item, normalized.tenantId)));
 }
 
 function nextVersion(currentVersions = []) {
@@ -494,10 +517,11 @@ function buildGenericExampleScenario(vertical, journey, goal, channels) {
 
 
 function listLatestScenarios(filters = {}) {
+  const scopedTenantId = normalizeTenantKey(filters.tenantId || 'system');
   const store = loadScenarioStore();
-  const rpaSeedsIndex = loadRpaSeedsIndex();
+  const rpaSeedsIndex = loadRpaSeedsIndex(scopedTenantId);
   const byId = new Map();
-  for (const item of store.scenarios) {
+  for (const item of store.scenarios.filter((candidate) => belongsToTenant(candidate, scopedTenantId))) {
     const current = byId.get(item.id);
     if (!current) {
       byId.set(item.id, item);
@@ -517,7 +541,9 @@ function listLatestScenarios(filters = {}) {
 
   return {
     items,
-    history: store.history,
+    history: Object.fromEntries(Object.entries(store.history || {}).filter(([key]) => (
+      key.startsWith(`${scopedTenantId}::`) || (scopedTenantId === 'system' && !key.includes('::'))
+    ))),
   };
 }
 
@@ -559,21 +585,16 @@ function collectDeclaredPlatformScenarioIds(scenario) {
 // Versão "soft" — retorna [] sem erro se não houver platformScenarioIds (usado em geração de exemplos)
 function tryInferPlatformScenarioIds(scenario) {
   const merged = collectDeclaredPlatformScenarioIds(scenario);
-  if (merged.length > 0) {
-    return filterLocalRunnable(merged);
-  }
-
-  return []; // Sem IDs = retorna vazio (será validado no schema)
+  return merged; // Persistência preserva IDs; filtragem local só ocorre ao executar.
 }
 
 // Versão "hard" — lança erro mandatório se não houver platformScenarioIds (usado na execução)
 function inferPlatformScenarioIds(scenario) {
-  const result = tryInferPlatformScenarioIds(scenario);
-  if (result.length > 0) return result;
-
   const context = isInPipeline() ? 'pipeline' : 'local';
   const declared = collectDeclaredPlatformScenarioIds(scenario);
   if (declared.length > 0) {
+    const runnable = filterLocalRunnable(declared);
+    if (runnable.length > 0) return runnable;
     // IDs declarados existem, mas TODOS exigem o pipeline oficial e foram
     // filtrados do contexto local. Erro distinto para não confundir com
     // cenário sem declaração.
@@ -595,6 +616,7 @@ function inferPlatformScenarioIds(scenario) {
 }
 
 function inferScenario(input = {}) {
+  const tenantId = normalizeTenantKey(input.tenantId || 'system');
   const vertical = String(input.vertical || '').toLowerCase();
   const journey = String(input.journey || input.journeyId || '').toLowerCase();
 
@@ -608,6 +630,7 @@ function inferScenario(input = {}) {
   });
 
   if (adapted.scenario) {
+    adapted.scenario.tenantId = tenantId;
     const platformScenarioIds = tryInferPlatformScenarioIds(adapted.scenario);
     adapted.scenario.platformScenarioIds = platformScenarioIds;
     adapted.scenario.platform = {
@@ -707,8 +730,8 @@ function buildGeneratedSeeds(scenario, count = 5) {
   return seeds;
 }
 
-function getLatestScenarioById(scenarioId) {
-  const listed = listLatestScenarios();
+function getLatestScenarioById(scenarioId, tenantId = 'system') {
+  const listed = listLatestScenarios({ tenantId });
   const existing = listed.items.find((item) => item.id === scenarioId) || null;
   if (existing) return existing;
 
@@ -716,7 +739,11 @@ function getLatestScenarioById(scenarioId) {
 }
 
 function validateScenarioPayload(payload = {}) {
-  const scenario = payload.scenario || payload;
+  const requestedTenantId = payload.tenantId || payload.scenario?.tenantId || 'system';
+  const scenario = {
+    ...(payload.scenario || payload),
+    tenantId: normalizeTenantKey(requestedTenantId),
+  };
   const adapted = adaptAiScenario(scenario, {
     vertical: scenario?.vertical,
     journey: scenario?.journey,
@@ -728,7 +755,10 @@ function validateScenarioPayload(payload = {}) {
     valid: adapted.validation.valid,
     errors: adapted.validation.errors,
     warnings: adapted.validation.warnings,
-    normalizedScenario: normalizeScenarioRecord(adapted.scenario),
+    normalizedScenario: normalizeScenarioRecord({
+      ...adapted.scenario,
+      tenantId: scenario.tenantId,
+    }),
   };
 }
 
@@ -743,9 +773,10 @@ function saveScenario(payload = {}) {
 
   const store = loadScenarioStore();
   const normalized = validation.normalizedScenario;
+  const scopedTenantId = normalized.tenantId;
   const scenarioId = normalized.id;
   const previousVersions = store.scenarios
-    .filter((item) => item.id === scenarioId)
+    .filter((item) => item.id === scenarioId && belongsToTenant(item, scopedTenantId))
     .map((item) => item.version);
 
   const version = nextVersion(previousVersions);
@@ -764,22 +795,25 @@ function saveScenario(payload = {}) {
   };
 
   store.scenarios.push(saved);
-  if (!Array.isArray(store.history[scenarioId])) store.history[scenarioId] = [];
-  store.history[scenarioId].push({
+  const historyKey = `${scopedTenantId}::${scenarioId}`;
+  if (!Array.isArray(store.history[historyKey])) store.history[historyKey] = [];
+  store.history[historyKey].push({
     version: effectiveVersion,
     changedBy: payload.changedBy || (saved.source === 'manual' ? 'manual' : 'ai_inferred'),
     changedAt: saved.updatedAt,
     changes: Array.isArray(payload.changes) ? payload.changes : ['scenario atualizado'],
+    reviewId: payload.reviewId || null,
   });
 
   saveStore(store);
   return {
     scenario: saved,
-    history: store.history[scenarioId],
+    history: store.history[historyKey],
   };
 }
 
 function generateSeeds(payload = {}) {
+  const scopedTenantId = normalizeTenantKey(payload.tenantId || 'system');
   const scenarioId = String(payload.scenarioId || '');
   if (!scenarioId) {
     const error = new Error('scenarioId obrigatorio');
@@ -787,7 +821,7 @@ function generateSeeds(payload = {}) {
     throw error;
   }
 
-  const scenario = getLatestScenarioById(scenarioId);
+  const scenario = getLatestScenarioById(scenarioId, scopedTenantId);
   if (!scenario) {
     const error = new Error('Scenario nao encontrado');
     error.code = 'NOT_FOUND';
@@ -796,7 +830,9 @@ function generateSeeds(payload = {}) {
 
   const seeds = buildGeneratedSeeds(scenario, payload.count || 5);
   const store = ensureStore();
-  const index = store.scenarios.findIndex((item) => item.id === scenario.id && item.version === scenario.version);
+  const index = store.scenarios.findIndex((item) => item.id === scenario.id
+    && item.version === scenario.version
+    && belongsToTenant(item, scopedTenantId));
   if (index >= 0) {
     store.scenarios[index] = {
       ...store.scenarios[index],
@@ -844,6 +880,7 @@ function evaluateGovernanceBeforeRun({ scenarios, replayEnabled }) {
 }
 
 function runScenarioExecution(payload = {}) {
+  const scopedTenantId = normalizeTenantKey(payload.tenantId || 'system');
   const mode = String(payload.mode || 'real').toLowerCase();
   if (mode !== 'real') {
     const error = new Error('Somente modo real e permitido para /dev/qa-waves/run');
@@ -858,9 +895,10 @@ function runScenarioExecution(payload = {}) {
     throw error;
   }
 
-  const listed = listLatestScenarios();
+  const listed = listLatestScenarios({ tenantId: scopedTenantId });
   const scenarios = scenarioIds
-    .map((scenarioId) => listed.items.find((item) => item.id === scenarioId) || getLatestScenarioById(scenarioId))
+    .map((scenarioId) => listed.items.find((item) => item.id === scenarioId)
+      || getLatestScenarioById(scenarioId, scopedTenantId))
     .filter(Boolean);
   if (scenarios.length === 0) {
     const error = new Error('Nenhum scenario encontrado para execucao');
@@ -872,8 +910,13 @@ function runScenarioExecution(payload = {}) {
     const isDevMode = payloadAllowsDevExecution(payload);
     const validation = validateScenarioCompatibility(scenario);
     if (!validation.valid) {
+      // Preserva o código específico quando a violação inclui ausência de
+      // platformScenarioIds — contrato consumido pelo mapeamento de erros do
+      // demo run (regressão: demoRunErrorMapping.test.js).
+      const missingIds = (validation.errors || [])
+        .some((item) => item && item.code === 'missing_platform_scenario_ids');
       const error = new Error(`Scenario invalido: ${scenario.id}`);
-      error.code = 'BAD_REQUEST';
+      error.code = missingIds ? 'MISSING_PLATFORM_SCENARIO_IDS' : 'BAD_REQUEST';
       error.details = validation;
       throw error;
     }
@@ -937,7 +980,7 @@ function runScenarioExecution(payload = {}) {
     expanded,
     platformScenarioIds,
     governanceFindings,
-    tenantId: payload.tenantId || null,
+    tenantId: scopedTenantId,
   });
 }
 
@@ -946,10 +989,12 @@ function payloadAllowsDevExecution(payload = {}) {
   return process.env.NODE_ENV !== 'production';
 }
 
-function deleteScenario(scenarioId) {
+function deleteScenario(scenarioId, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   if (!scenarioId) throw Object.assign(new Error('scenarioId é obrigatório'), { code: 'BAD_REQUEST' });
   const store = loadScenarioStore();
-  const index = store.scenarios.findIndex((s) => s.id === scenarioId);
+  const index = store.scenarios.findIndex((s) => s.id === scenarioId
+    && belongsToTenant(s, scopedTenantId));
   if (index < 0) throw Object.assign(new Error(`Cenário não encontrado: ${scenarioId}`), { code: 'NOT_FOUND' });
   const [removed] = store.scenarios.splice(index, 1);
   saveStore(store);

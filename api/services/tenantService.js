@@ -372,7 +372,7 @@ async function indexSiteAsInstitutionalSource(tenantId, site) {
           rag_source: 'site_institucional',
           canonical: true,
         },
-      });
+      }, tenantId);
       
       if (updateResult.success) {
         logger.info(`[TenantService] Site indexado como fonte institucional canônica: ${scrapeResult.documentId}`);

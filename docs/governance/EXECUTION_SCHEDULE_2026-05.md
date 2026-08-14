@@ -26,7 +26,7 @@ Close current NO_GO blockers and restore release promotion eligibility with evid
 - Publish updated go-no-go and metrics reports.
 
 ### Day 4 - P0 fix wave (release gate)
-- Execute official gate end-to-end with external RUNTIME_ROOT.
+- Execute official gate end-to-end with external runtime root.
 - Validate final-governance decision and cross-report consistency.
 - Block release if any CRITICAL check remains false.
 

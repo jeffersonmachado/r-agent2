@@ -36,11 +36,24 @@ async function ensureStateRow({ consumer }) {
   const sequelize = getSequelize();
   if (!sequelize) return null;
   const id = `pces:${String(consumer)}`;
+
+  // Safe cold-start: cursor NUNCA nasce em 1970 (evita re-scan retroativo de
+  // TODO o pbx_cdr histórico e flood de eventos CallRinging/Answered/Ended).
+  const [maxRows] = await sequelize.query(
+    `SELECT COALESCE(MAX(calldate), NOW()) AS max_calldate FROM pbx_cdr`,
+  ).catch(() => [[{ max_calldate: null }]]);
+  const safeStart = (Array.isArray(maxRows) && maxRows[0] && maxRows[0].max_calldate)
+    ? new Date(maxRows[0].max_calldate)
+    : new Date();
+
   await sequelize.query(
     `INSERT INTO pbx_call_event_state (id, consumer, last_calldate, last_cdr_id, created_at, updated_at)
-     VALUES (:id, :consumer, '1970-01-01'::timestamptz, NULL, NOW(), NOW())
-     ON CONFLICT (consumer) DO NOTHING`,
-    { replacements: { id, consumer: String(consumer) } },
+     VALUES (:id, :consumer, :safeStart::timestamptz, NULL, NOW(), NOW())
+     ON CONFLICT (consumer) DO UPDATE
+       SET last_calldate = EXCLUDED.last_calldate,
+           updated_at = NOW()
+       WHERE pbx_call_event_state.last_calldate < '2000-01-01'::timestamptz`,
+    { replacements: { id, consumer: String(consumer), safeStart } },
   );
   const [rows] = await sequelize.query(
     `SELECT id, consumer, last_calldate, last_cdr_id
@@ -80,7 +93,7 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
       { replacements: { consumer: String(consumer) }, transaction: t },
     );
     const locked = Array.isArray(lockedRows) && lockedRows[0] ? lockedRows[0] : null;
-    const lastCalldate = locked?.last_calldate ? new Date(locked.last_calldate) : new Date('1970-01-01');
+    const lastCalldate = locked?.last_calldate ? new Date(locked.last_calldate) : new Date();
     const lastCdrId = locked?.last_cdr_id ? String(locked.last_cdr_id) : '';
 
     const rows = await PbxCdr.findAll({
@@ -209,4 +222,5 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
 
 module.exports = {
   scanPbxCdrAndEmitEvents,
+  ensureStateRow,
 };

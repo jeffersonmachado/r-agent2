@@ -2,36 +2,45 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const { runFinalOperationalSmoke } = require('./qa-waves-operational-final-smoke');
+const { validateReplayIntegrity } = require('../../api/services/qa/replayIntegrityService');
+const { writeJsonAtomic } = require('../../api/utils/atomicJsonFile');
+
+const REQUIRED_OPERATIONAL_JOURNEYS = Object.freeze([
+  'support_ticket_flow',
+  'fitness_customer_checkin',
+  'booking_flow',
+]);
 
 const SCHEDULED_MODES = {
   hourly_lightweight: {
     id: 'hourly_lightweight',
     label: 'Hourly lightweight validation',
     realStack: false,
-    journeys: ['support_ticket_flow', 'fitness_customer_checkin'],
+    journeys: [...REQUIRED_OPERATIONAL_JOURNEYS],
     checks: ['replay_integrity', 'provenance_integrity', 'governance_consistency'],
   },
   nightly_full_replay: {
     id: 'nightly_full_replay',
     label: 'Nightly full replay validation',
     realStack: true,
-    journeys: ['support_ticket_flow', 'fitness_customer_checkin'],
+    journeys: [...REQUIRED_OPERATIONAL_JOURNEYS],
     checks: ['replay_integrity', 'provenance_integrity', 'governance_consistency', 'exact_mutations', 'exact_side_effects'],
   },
   pre_release_governance: {
     id: 'pre_release_governance',
     label: 'Pre-release governance validation',
     realStack: true,
-    journeys: ['support_ticket_flow', 'fitness_customer_checkin'],
+    journeys: [...REQUIRED_OPERATIONAL_JOURNEYS],
     checks: ['replay_integrity', 'provenance_integrity', 'governance_consistency', 'tenant_isolation'],
   },
   production_health: {
     id: 'production_health',
     label: 'Production health validation',
     realStack: true,
-    journeys: ['support_ticket_flow', 'fitness_customer_checkin'],
+    journeys: [...REQUIRED_OPERATIONAL_JOURNEYS],
     checks: ['replay_integrity', 'provenance_integrity', 'governance_consistency', 'operational_confidence'],
   },
 };
@@ -43,17 +52,18 @@ function resolveMode(value) {
 
 function summarizeFlow(flow = {}) {
   const replay = flow.replay || {};
-  const governance = flow.governance || {};
+  const governance = replay.governance || flow.governance || {};
   const steps = Array.isArray(replay.steps) ? replay.steps : [];
   const failedSteps = steps.filter((step) => step?.status === 'failed');
   const missingEvidence = steps.flatMap((step) => Array.isArray(step?.missingEvidence) ? step.missingEvidence : []);
+  const integrity = validateReplayIntegrity(replay, governance);
   return {
     journeyId: flow.journeyId,
     goNoGo: governance.goNoGo || (governance.isOperational ? 'GO' : 'NO_GO'),
     replayHash: replay.replayHash || null,
     replayChecksum: replay.replayChecksum || null,
     governanceSignature: replay.governanceSignature || null,
-    integrityValid: governance?.replayIntegrity?.valid !== false,
+    integrityValid: integrity.valid,
     failedResidualSteps: failedSteps.map((step) => step.id || step.stepId || 'unknown'),
     missingEvidence,
     actionTypes: steps.map((step) => ({
@@ -87,14 +97,35 @@ async function runScheduledOperationalSmoke(options = {}) {
   }
 
   const flows = Array.isArray(summary.flows) ? summary.flows.map(summarizeFlow) : [];
-  const blockers = flows.flatMap((flow) => [
+  const presentJourneys = new Set(flows.map((flow) => String(flow.journeyId || '').trim()).filter(Boolean));
+  const blockers = [
+    ...scheduledMode.journeys
+      .filter((journeyId) => !presentJourneys.has(journeyId))
+      .map((journeyId) => ({ journeyId, reason: 'scheduled_journey_missing' })),
+    ...flows.flatMap((flow) => [
+    ...(flow.goNoGo === 'GO' ? [] : [{ journeyId: flow.journeyId, reason: 'flow_not_go' }]),
     ...flow.failedResidualSteps.map((stepId) => ({ journeyId: flow.journeyId, reason: 'failed_residual_step', stepId })),
     ...flow.missingEvidence.map((field) => ({ journeyId: flow.journeyId, reason: 'missing_evidence', field })),
     ...(flow.integrityValid ? [] : [{ journeyId: flow.journeyId, reason: 'replay_integrity_invalid' }]),
-  ]);
+    ...(
+      flow.replayHash && flow.replayChecksum && flow.governanceSignature
+        ? []
+        : [{ journeyId: flow.journeyId, reason: 'replay_proof_missing' }]
+    ),
+  ]),
+  ];
   const governanceStatus = forceRealStack
     ? (summary.productionReadiness?.decision || summary.status || 'NO_GO')
     : (summary.status || 'NO_GO');
+  const evidencePath = typeof summary.evidencePath === 'string' ? path.resolve(summary.evidencePath) : null;
+  const evidenceValid = Boolean(evidencePath && fs.existsSync(evidencePath) && fs.statSync(evidencePath).isFile());
+  if (!evidenceValid) {
+    blockers.push({ reason: 'scheduled_source_evidence_missing' });
+  }
+  const evidenceSha256 = evidenceValid
+    ? crypto.createHash('sha256').update(fs.readFileSync(evidencePath)).digest('hex')
+    : null;
+
   const report = {
     generatedAt: new Date().toISOString(),
     scheduledMode,
@@ -104,13 +135,19 @@ async function runScheduledOperationalSmoke(options = {}) {
     journeys: scheduledMode.journeys,
     flows,
     blockers,
-    evidencePath: summary.evidencePath || null,
+    evidencePath,
+    evidenceSha256,
+    sourceGeneratedAt: summary.generatedAt || null,
+    releaseEvidenceEligible: forceRealStack && evidenceValid,
   };
 
   const outDir = options.outDir || path.join(process.cwd(), 'qa', 'smoke');
   fs.mkdirSync(outDir, { recursive: true });
-  const outPath = path.join(outDir, 'qa-waves-scheduled-operational-smoke.json');
-  fs.writeFileSync(outPath, JSON.stringify(report, null, 2) + '\n', 'utf8');
+  const outName = forceRealStack
+    ? 'qa-waves-scheduled-operational-smoke.json'
+    : `qa-waves-scheduled-operational-smoke-${scheduledMode.id}.json`;
+  const outPath = path.join(outDir, outName);
+  writeJsonAtomic(outPath, report);
   report.scheduledEvidencePath = outPath;
   return report;
 }
@@ -134,6 +171,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  REQUIRED_OPERATIONAL_JOURNEYS,
   SCHEDULED_MODES,
   runScheduledOperationalSmoke,
   resolveMode,

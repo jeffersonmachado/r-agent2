@@ -1,15 +1,41 @@
 'use strict';
 
+const os = require('os');
 const path = require('path');
 
-function getRuntimeRoot(rootDir, env = process.env) {
-  const runtimeRoot = env.RUNTIME_ROOT;
-  if (!runtimeRoot) {
-    throw new Error('RUNTIME_ROOT é obrigatório para execução dos scripts oficiais.');
+function defaultRuntimeRoot(env) {
+  if (env && env.NODE_ENV === 'production') return '/var/lib/ragent2';
+  const home = env && env.HOME ? String(env.HOME).trim() : '';
+  return home
+    ? path.join(home, '.local', 'share', 'ragent2-runtime')
+    : path.join(os.tmpdir(), 'ragent2-runtime');
+}
+
+const RUNTIME_ROOT_GLOBAL = Symbol.for('ragent2.runtimeRoot');
+
+function configureRuntimeRoot(root) {
+  if (root) {
+    const resolved = path.isAbsolute(root) ? root : path.resolve(root);
+    globalThis[RUNTIME_ROOT_GLOBAL] = resolved;
+  } else {
+    delete globalThis[RUNTIME_ROOT_GLOBAL];
   }
-  const resolved = path.isAbsolute(runtimeRoot) ? runtimeRoot : path.join(rootDir, runtimeRoot);
-  if (resolved === rootDir || resolved.startsWith(`${rootDir}${path.sep}`)) {
-    throw new Error('RUNTIME_ROOT inválido: deve apontar para diretório externo ao workspace.');
+}
+
+function configuredRootValue() {
+  return globalThis[RUNTIME_ROOT_GLOBAL] || null;
+}
+
+function getRuntimeRoot(rootDir, env = process.env) {
+  const configured = configuredRootValue();
+  const raw = configured || defaultRuntimeRoot(env);
+  const resolved = path.isAbsolute(raw) ? raw : path.join(rootDir, raw);
+  const insideWorkspace = resolved === rootDir || resolved.startsWith(`${rootDir}${path.sep}`);
+  if (insideWorkspace) {
+    if (configured) {
+      throw new Error('runtime root inválido: deve apontar para diretório externo ao workspace.');
+    }
+    return path.join(os.tmpdir(), 'ragent2-runtime');
   }
   return resolved;
 }
@@ -31,9 +57,13 @@ function resolveWorkspacePath(rootDir, targetPath) {
 
 function resolveEvidenceCandidates(rootDir, targetPath, explicitEnvVar, env = process.env) {
   const candidates = [];
-  const runtimeRoot = env.RUNTIME_ROOT
-    ? (path.isAbsolute(env.RUNTIME_ROOT) ? env.RUNTIME_ROOT : path.join(rootDir, env.RUNTIME_ROOT))
-    : null;
+  let runtimeRoot = null;
+  try {
+    const resolved = configuredRootValue() || defaultRuntimeRoot(env);
+    runtimeRoot = path.isAbsolute(resolved) ? resolved : path.join(rootDir, resolved);
+  } catch (_) {
+    runtimeRoot = null;
+  }
 
   if (!targetPath && !(explicitEnvVar && env[explicitEnvVar])) {
     return candidates;
@@ -65,6 +95,8 @@ function resolveEvidenceCandidates(rootDir, targetPath, explicitEnvVar, env = pr
 
 module.exports = {
   getRuntimeRoot,
+  configureRuntimeRoot,
+  configuredRootValue,
   runtimeAwarePath,
   resolveWorkspacePath,
   resolveEvidenceCandidates,

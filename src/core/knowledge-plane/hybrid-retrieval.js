@@ -46,6 +46,7 @@ const HYBRID_WEIGHTS = Object.freeze({
  * @param {Object} args
  * @param {string} args.query
  * @param {string} args.tenantId
+ * @param {Object} [args.actor] — principal autenticado usado na ACL documental
  * @param {Object} args.knowledgeScope — ResolvedKnowledgeScope do Knowledge Router
  * @param {Object} [args.deps] — dependências injetáveis
  * @param {Object} [args.deps.vectorRag] — cliente Vector RAG
@@ -56,6 +57,7 @@ const HYBRID_WEIGHTS = Object.freeze({
 async function hybridRetrieve({
   query,
   tenantId,
+  actor = null,
   knowledgeScope,
   deps = {},
 } = {}) {
@@ -83,6 +85,7 @@ async function hybridRetrieve({
       const vectorResults = await retrieveVectorRag({
         query,
         tenantId,
+        actor,
         knowledgeScope,
         deps,
       });
@@ -148,7 +151,7 @@ async function hybridRetrieve({
 // Retrieval strategies
 // ---------------------------------------------------------------------------
 
-async function retrieveVectorRag({ query, tenantId, knowledgeScope, deps }) {
+async function retrieveVectorRag({ query, tenantId, actor, knowledgeScope, deps }) {
   const ragService = deps.vectorRag || (() => {
     try { return require('../../../api/services/ragService'); } catch (_) { return null; }
   })();
@@ -157,7 +160,7 @@ async function retrieveVectorRag({ query, tenantId, knowledgeScope, deps }) {
     return { results: [], sources: [] };
   }
 
-  const result = await ragService.queryRag(query, tenantId, {}, {
+  const result = await ragService.queryRag(query, tenantId, { actor: actor || null }, {
     domain: knowledgeScope.domain,
     classifications: knowledgeScope.classifications,
     topK: knowledgeScope.collections?.maxResults || 6,

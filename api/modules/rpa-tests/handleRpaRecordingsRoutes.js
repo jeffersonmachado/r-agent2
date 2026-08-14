@@ -1,6 +1,7 @@
 const {
   ensureSupportAccess,
   getPathSuffix,
+  resolveRequestTenant,
 } = require('./rpaRouteUtils');
 
 async function handleRpaRecordingsRoutes(ctx) {
@@ -21,9 +22,11 @@ async function handleRpaRecordingsRoutes(ctx) {
 
   if (method === 'GET' && pathname === '/rpa/recordings') {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
-      const recordings = listRecordings();
+      const recordings = listRecordings(tenantId);
       sendJson(res, 200, { recordings });
     } catch (error) {
       logger.error('Erro ao listar gravações RPA:', error);
@@ -34,6 +37,8 @@ async function handleRpaRecordingsRoutes(ctx) {
 
   if (method === 'DELETE' && pathname.startsWith('/rpa/recordings/')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
       let recordingId = decodeURIComponent(pathname.slice('/rpa/recordings/'.length));
@@ -46,7 +51,7 @@ async function handleRpaRecordingsRoutes(ctx) {
         return true;
       }
 
-      const result = deleteRecording(recordingId);
+      const result = deleteRecording(recordingId, tenantId);
       if (!result.success) {
         if (result.message.includes('não encontrada')) {
           sendJson(res, 404, { error: 'not_found', message: result.message });
@@ -74,6 +79,8 @@ async function handleRpaRecordingsRoutes(ctx) {
 
   if (method === 'POST' && pathname === '/rpa/record/start') {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -90,7 +97,7 @@ async function handleRpaRecordingsRoutes(ctx) {
         return true;
       }
 
-      const result = await startManualRecording(seedName, initialUrl);
+      const result = await startManualRecording(seedName, initialUrl, tenantId);
       if (!result.success) {
         sendJson(res, 400, result);
         return true;
@@ -109,6 +116,8 @@ async function handleRpaRecordingsRoutes(ctx) {
 
   if (method === 'POST' && pathname.startsWith('/rpa/record/stop/')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
       const recordingId = getPathSuffix(pathname, '/rpa/record/stop/');
@@ -117,7 +126,7 @@ async function handleRpaRecordingsRoutes(ctx) {
         return true;
       }
 
-      const result = await stopManualRecording(recordingId);
+      const result = await stopManualRecording(recordingId, tenantId);
       if (!result.success) {
         sendJson(res, 400, result);
         return true;
@@ -136,6 +145,8 @@ async function handleRpaRecordingsRoutes(ctx) {
 
   if (method === 'GET' && pathname.startsWith('/rpa/record/status/')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
       const recordingId = getPathSuffix(pathname, '/rpa/record/status/');
@@ -144,7 +155,7 @@ async function handleRpaRecordingsRoutes(ctx) {
         return true;
       }
 
-      const result = getRecordingStatus(recordingId);
+      const result = getRecordingStatus(recordingId, tenantId);
       if (!result.success) {
         sendJson(res, 404, result);
         return true;

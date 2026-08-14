@@ -11,7 +11,7 @@
  *   node scripts/qa-waves-governance.js --waveId=fitness-cliente-novo [--minCoverage=0.7] [--minQuality=0.8]
  */
 
-process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime';
+require('../api/utils/runtimePaths').configureRuntimeRoot('/tmp/ragent2-runtime');
 
 const fs = require('fs');
 const path = require('path');

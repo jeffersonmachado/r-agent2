@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const { checkRateLimit } = require('../../../infra/rate-limit');
 const { requireAuth, requirePermission } = require('../../middleware/auth');
-const { logAction } = require('../../services/auditService');
+const { logAction, logActionRequired } = require('../../services/auditService');
 const {
   parseJsonBody,
   setCorsHeaders,
@@ -25,6 +25,7 @@ function buildPlatformCommonDeps({ req, res, detectProcessManager, requireTenant
     parseJsonBody,
     logger,
     logAction,
+    logActionRequired,
     requireTenant,
     crypto,
     setCorsHeaders,

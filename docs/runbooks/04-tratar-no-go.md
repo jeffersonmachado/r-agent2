@@ -22,7 +22,7 @@ cat qa/qa-waves-enterprise-governance.json | jq '.activeBlockers'
 
 | Bloqueador | Causa | Correção |
 |---|---|---|
-| `continuous_smoke_degraded` | Scheduled smoke ausente ou falho | Rodar `scripts/smoke/qa-waves-scheduled-operational-smoke.js` ou criar arquivo manualmente |
+| `continuous_smoke_degraded` | Scheduled smoke ausente, vencido, incompleto ou falho | Rodar o smoke agendado real e corrigir os bloqueadores reportados; evidência manual não é aceita |
 | `operational_confidence_degraded` | Score abaixo do threshold (95) | Investigar métricas individuais |
 | `failed_step` | Passo de cenário falhou na execução | Corrigir o cenário e reexecutar |
 | `missing_evidence` | Evidência de replay ausente | Reexecutar cenário com replay habilitado |
@@ -54,29 +54,20 @@ cat qa/qa-waves-enterprise-governance.json | jq '{
 # Verificar se o arquivo existe
 ls -la qa/smoke/qa-waves-scheduled-operational-smoke.json
 
-# Se ausente, criar arquivo mínimo com status GO:
-cat > qa/smoke/qa-waves-scheduled-operational-smoke.json << 'EOF'
-{
-  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)",
-  "scheduledMode": {"id": "nightly_full_replay", "label": "Nightly full replay validation"},
-  "status": "GO",
-  "governanceStatus": "GO",
-  "checks": ["replay_integrity", "provenance_integrity", "governance_consistency"],
-  "journeys": ["support_ticket_flow", "fitness_customer_checkin"],
-  "flows": [],
-  "blockers": [],
-  "evidencePath": null
-}
-EOF
+# Produzir evidência executável nova (não editar o JSON manualmente).
+# O bridge exige status/governança GO, timestamp fresco, artefato existente,
+# provas de replay e as jornadas bloqueantes support, fitness e agendamento
+# (`booking_flow` é a prova operacional executável de agendamento).
+QA_WAVES_SCHEDULED_MODE=nightly_full_replay \
+  node scripts/smoke/qa-waves-scheduled-operational-smoke.js
 
-# Regenerar enterprise governance
-node -e "
-const { buildQaWavesEnterpriseGovernance } = require('./tools/system/lib/qa-waves-enterprise-governance-bridge');
-const fs = require('fs');
-const report = buildQaWavesEnterpriseGovernance({ root: __dirname });
-fs.writeFileSync('qa/qa-waves-enterprise-governance.json', JSON.stringify(report, null, 2));
-console.log('status:', report.status);
-"
+# Inspecionar exatamente por que a evidência foi rejeitada
+cat qa/qa-waves-enterprise-governance.json | jq '.continuousValidationStatus | {
+  healthy, reasons, ageHours, maxAgeHours, evidenceValid, missingJourneys
+}'
+
+# Reexecutar o gate oficial; ele reconstrói o bridge a partir das evidências
+npm run validate:qa-governance
 ```
 
 ### 5. Para cenários com failed_step

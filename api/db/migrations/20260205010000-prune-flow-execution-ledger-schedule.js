@@ -15,7 +15,7 @@ module.exports = {
         name: 'Prune flow execution ledger',
         enabled: true,
         kind: 'prune_flow_execution_ledger',
-        payload: {},
+        payload: JSON.stringify({}),
         interval_sec: 3600,
         next_run_at: in10,
         last_run_at: null,

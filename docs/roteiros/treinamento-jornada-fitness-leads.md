@@ -22,7 +22,7 @@ O replay é a gravação determinística de uma execução real do cenário **Fi
 
 ## 3. Como assistir ao replay na UI
 
-1. Acesse `http://localhost:5173` e faça login (QA local: usuário `systemadmin`, senha `Admin123!`, tenant `system`).
+1. Acesse `http://localhost:5173` e faça login (QA local: usuário `systemadmin`, senha `***`, tenant `system`).
 2. Abra diretamente a listagem de replays filtrada:
    `http://localhost:5173/dev/rpa-replays?search=qa_wave_replay_1784735269633_nkhthn`
    (Não use `?source=qa-waves` — a listagem não filtra por origem; use `?search=` com o id do replay.)
@@ -111,7 +111,7 @@ O NO_GO é estrutural: faltam provas de browser para jornadas classificadas como
 Em `AI_MEMORY/evidence/qa-waves/browser-run-<timestamp>/`, incluindo `run-report.json` com ids, URLs finais, erros de console e falhas de rede.
 
 **Quais são os pré-requisitos para executar a jornada?**
-API na porta 3001, frontend Vite na 5173, Redis e PostgreSQL acessíveis, credenciais de QA (`systemadmin`/`Admin123!`, tenant `system`) e Playwright disponível para o replay RPA.
+API na porta 3001, frontend Vite na 5173, Redis e PostgreSQL acessíveis, credenciais de QA (`systemadmin`/`***`, tenant `system`) e Playwright disponível para o replay RPA.
 
 **Este roteiro responde dúvidas automaticamente?**
 Sim — este documento foi ingerido na base de conhecimento (RAG) da plataforma. Perguntas como "como executar o cenário fitness-matricula-leads?" podem ser feitas diretamente ao assistente com RAG, que responde com base neste conteúdo.

@@ -75,10 +75,9 @@ REDIS_HOST=ragent2-redis
 REDIS_PORT=6379
 
 # ===== Runtime (CRITICAL) =====
-# Points to HOST path mounted in containers
-RUNTIME_ROOT=/var/lib/ragent2
+# Runtime root é resolvido automaticamente: /var/lib/ragent2 em produção.
 
-# ===== Service-Specific (cascade from RUNTIME_ROOT) =====
+# ===== Service-Specific (cascade from runtime root) =====
 WWEBJS_AUTH_PATH=/var/lib/ragent2/wa_sessions
 RAG_DATA_ROOT=/var/lib/ragent2/rag
 VECTOR_STORE_PATH=/var/lib/ragent2/rag/vector_store

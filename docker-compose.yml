@@ -25,6 +25,7 @@ services:
       RATE_LIMIT_SCRAPING_RPS: ${RATE_LIMIT_SCRAPING_RPS:-3}
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
       RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
+      RAG_INTERNAL_TOKEN: "${RAG_INTERNAL_TOKEN:?RAG_INTERNAL_TOKEN obrigatória}"
       # PostgreSQL
       DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
       PGHOST: ${PGHOST:-postgres}
@@ -36,7 +37,6 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY obrigatória}
       # OpenAI API Key (server default, opcional)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      RUNTIME_ROOT: ${RUNTIME_ROOT:-/var/lib/ragent2}
       WWEBJS_AUTH_PATH: ${WWEBJS_AUTH_PATH:-/var/lib/ragent2/whatsapp/auth}
       QA_MESH_HISTORY_DIR: ${QA_MESH_HISTORY_DIR:-/var/lib/ragent2/qa-mesh/history}
       QA_MESH_EVIDENCE_DIR: ${QA_MESH_EVIDENCE_DIR:-/var/lib/ragent2/qa-mesh/evidence}
@@ -48,7 +48,7 @@ services:
       AMI_HOST: ${AMI_HOST:-asterisk}
       AMI_PORT: ${AMI_PORT:-5038}
       AMI_USERNAME: ${AMI_USERNAME:-ragent2}
-      AMI_SECRET: ${AMI_SECRET:?Erro: AMI_SECRET não definida}
+      AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
       AMI_ORIGINATE_ENABLED: ${AMI_ORIGINATE_ENABLED:-false}
       PBX_MEDIA_DIR: ${PBX_MEDIA_DIR:-/app/api/data/pbx-media}
       PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
@@ -125,6 +125,8 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 8000
+      RAG_ENVIRONMENT: production
+      RAG_INTERNAL_TOKEN: "${RAG_INTERNAL_TOKEN:?RAG_INTERNAL_TOKEN obrigatória}"
       DEBUG: ${RAG_DEBUG:-false}
       EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
       EMBEDDING_DIM: ${EMBEDDING_DIM:-384}
@@ -140,8 +142,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Usa o mesmo Postgres da API (fonte única)
       DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
-    ports:
-      - "${RAG_HOST_PORT:-8001}:8000"
+    expose:
+      - "8000"
     volumes:
       - r-agent2-rag-data:/var/lib/ragent2/rag
     restart: unless-stopped
@@ -191,5 +193,3 @@ volumes:
   postgres-data:
   pbx-media:
   pbx-recordings:
-
-

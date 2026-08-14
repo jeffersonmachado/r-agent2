@@ -122,7 +122,7 @@ http://localhost:5173/rag-documents
 ### 2. Verificar Endpoint Diretamente
 ```bash
 # Estatísticas do BD
-curl -H "Authorization: Bearer <TOKEN_DO_ADMIN>" http://localhost:3000/rag/documents/stats
+curl -H "Authorization: Bearer <TOKEN>" http://localhost:3000/rag/documents/stats
 
 # Estatísticas do Vector Store
 curl http://localhost:8000/rag/health?tenant_id=tenant-acme

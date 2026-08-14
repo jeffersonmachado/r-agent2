@@ -62,7 +62,7 @@ async function downloadAudio(url) {
 
 /**
  * Salva buffer de áudio temporariamente.
- * Grava sob RUNTIME_ROOT (fora do workspace) — política de runtime paths:
+ * Grava sob o runtime root (fora do workspace) — política de runtime paths:
  * artefatos transitórios nunca na árvore do repositório.
  * @param {Buffer} audioBuffer
  * @param {string} extension

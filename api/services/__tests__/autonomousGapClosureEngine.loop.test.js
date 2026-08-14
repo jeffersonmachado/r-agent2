@@ -3,6 +3,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { signReplayArtifact } = require('../../../lib/replayIntegrity');
 
 jest.mock('../../../qa-mesh/meshRunner', () => ({
   runMesh: jest.fn(),
@@ -143,7 +144,8 @@ describe('autonomousGapClosureEngine runAutonomousGapClosureLoop', () => {
     fs.writeFileSync(
       replayPath,
       JSON.stringify(
-        {
+        signReplayArtifact({
+          tenantId: 'tenant-1',
           replayId: 'replay-1',
           journeyId: 'support_ticket_flow',
           duration: 12000,
@@ -216,7 +218,10 @@ describe('autonomousGapClosureEngine runAutonomousGapClosureLoop', () => {
             contactId: 'contact-1',
           },
           steps: buildJourneyReplaySteps('support_ticket_flow'),
-        },
+        }, {
+          tenantId: 'tenant-1',
+          governance: { goNoGo: 'GO', isOperational: true, blockers: [] },
+        }),
         null,
         2
       )
@@ -234,7 +239,7 @@ describe('autonomousGapClosureEngine runAutonomousGapClosureLoop', () => {
         summary: { goNoGo: 'GO', executionCoverage: 92, executionQuality: 'high' },
         results: [{ artifacts: [{ type: 'replay', path: replayPath }] }],
         historyPath: '/tmp/history.json',
-        evidenceDir: '/tmp/evidence',
+        evidenceDir: path.dirname(replayPath),
       });
 
     engine = require('../qa/autonomousGapClosureEngine');
@@ -254,7 +259,10 @@ describe('autonomousGapClosureEngine runAutonomousGapClosureLoop', () => {
     });
 
     expect(runMesh).toHaveBeenCalledTimes(2);
-    expect(result.status).toBe('GO');
+    expect({ status: result.status, blockers: result.governance.blockers }).toEqual({
+      status: 'GO',
+      blockers: [],
+    });
     expect(result.execution.attempts).toBe(2);
     expect(result.execution.remediationAttempts).toHaveLength(1);
     expect(result.replay.validation.isOperational).toBe(true);

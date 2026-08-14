@@ -232,15 +232,24 @@ async function waitForLoginSurface(page, timeout = 15000) {
   const start = Date.now();
 
   while (Date.now() - start < timeout) {
+    // Uma página autenticada pode conter vários inputs de texto (busca,
+    // filtros, formulários). Só é uma superfície de login quando o campo de
+    // usuário aparece junto de um campo de senha visível.
+    const passwordField = await firstVisible(page, [
+      'input[type="password"]',
+      'input[name="password"]',
+      '[data-testid="password"]',
+    ], 500);
+
     const usernameField = await firstVisible(page, [
       'input[name="username"]',
       'input[placeholder*="username" i]',
       'input[autocomplete="username"]',
       '[data-testid="username"]',
       'input[type="text"]',
-    ], 1000);
+    ], 500);
 
-    if (usernameField) {
+    if (usernameField && passwordField) {
       return true;
     }
 
@@ -375,12 +384,23 @@ async function loginWithTenantSelection(page, {
 
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-  let loginSurfaceReady = await waitForLoginSurface(page);
-  if (!loginSurfaceReady) {
-    const loginUrl = new URL('/login', targetUrl).toString();
-    await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    loginSurfaceReady = await waitForLoginSurface(page);
+  const hasStoredToken = await page.evaluate(() => Boolean(localStorage.getItem('auth_token'))).catch(() => false);
+  if (hasStoredToken) {
+    const tenantSelection = await selectTenant(page, { tenantId, tenantName });
+    if (page.url() !== targetUrl || tenantSelection.handled) {
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    }
+    return tenantSelection;
   }
+
+  // Sem sessão, sempre usa a rota canônica. Detectar login pela presença de
+  // inputs na rota alvo é ambíguo (páginas de configuração também possuem
+  // campos de texto/senha) e pode preencher formulários não relacionados.
+  const loginUrl = new URL('/login', targetUrl).toString();
+  if (page.url() !== loginUrl) {
+    await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  }
+  const loginSurfaceReady = await waitForLoginSurface(page);
 
   const usernameOk = await fillFirst(page, [
     'input[name="username"]',

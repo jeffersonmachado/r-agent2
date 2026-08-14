@@ -6,13 +6,11 @@ const path = require('path');
 const { execSync, spawn } = require('child_process');
 const { buildRuntimeGovernanceReport, writeRuntimeGovernanceReport, toBool } = require('./runtime-governance');
 const { evaluatePillars } = require('./lib/pillar-readiness');
+const { configuredRootValue } = require('./lib/runtime-paths');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
-const RUNTIME_ROOT = process.env.RUNTIME_ROOT
-  ? (path.isAbsolute(process.env.RUNTIME_ROOT)
-    ? process.env.RUNTIME_ROOT
-    : path.join(ROOT_DIR, process.env.RUNTIME_ROOT))
-  : null;
+// Sem override explícito, evidências permanecem no workspace (default relativo).
+const RUNTIME_ROOT = configuredRootValue() || null;
 
 function runtimeAwarePath(defaultRelPath, explicitEnvVar) {
   if (explicitEnvVar && process.env[explicitEnvVar]) {

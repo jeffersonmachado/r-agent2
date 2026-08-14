@@ -50,11 +50,16 @@ function createPlatformContentRoutes({ buildDeps }) {
 
   router.use(runHandled(handleAiRoutes, (ctx) => ({
     requireAuth: ctx.requireAuth,
+    requirePermission: ctx.requirePermission,
     requireTenant: ctx.requireTenant,
     sendJson: ctx.sendJson,
     badRequest: ctx.badRequest,
     hasJsonContentType: ctx.hasJsonContentType,
     parseJsonBody: ctx.parseJsonBody,
+    checkRateLimit: ctx.checkRateLimit,
+    logAction: ctx.logAction,
+    logActionRequired: ctx.logActionRequired,
+    ragService: ctx.ragService,
     logger: ctx.logger,
   })));
 

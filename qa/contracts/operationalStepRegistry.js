@@ -651,6 +651,121 @@ const PAYMENT_CHARGE_FLOW = {
 };
 
 /**
+ * AGENDAMENTO FLOW (agendamento)
+ *
+ * Jornada operacional de agendamento (vertical fitness):
+ *   1. Operador acessa o workspace (navegação, SEM mutação)
+ *   2. Abre o rail Construtor → Execução → Tarefas (SEM mutação)
+ *   3. Cria tarefa real "Aula experimental QA" (MUTAÇÃO: task_created → tabela tasks)
+ *   4. Abre o modal de agendamento da tarefa criada (SEM mutação)
+ *   5. Preenche e confirma o agendamento (toast "Agendamento criado")
+ *
+ * NOTA: a ÚNICA mutação persistente em banco é a criação da tarefa
+ * (POST /api/tasks → tabela tasks). O agendamento em si é gravado no
+ * scheduleService (em memória) e NÃO é contabilizável por snapshot de banco;
+ * por isso o contrato de estado exige apenas db.task.count:incremented.
+ */
+const AGENDAMENTO_FLOW = {
+  step_agendamento_access_workspace: {
+    stepId: 'step_agendamento_access_workspace',
+    actionType: 'navigate',
+    journeyId: 'agendamento',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_navigation'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_agendamento_open_builder: {
+    stepId: 'step_agendamento_open_builder',
+    actionType: 'open_builder_rail',
+    journeyId: 'agendamento',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_click', 'dom_element_presence'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_agendamento_open_tasks: {
+    stepId: 'step_agendamento_open_tasks',
+    actionType: 'open_tasks_module',
+    journeyId: 'agendamento',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_click', 'dom_element_presence'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_agendamento_create_task: {
+    stepId: 'step_agendamento_create_task',
+    actionType: 'create_task',
+    journeyId: 'agendamento',
+    mutationExpected: true,
+    expectedMutations: ['task_created'],
+    expectedSideEffects: ['task_created'],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['task', 'audit'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'POST', pathPattern: /\/api\/tasks(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'POST', path: '/api/tasks' },
+    ],
+  },
+
+  step_agendamento_open_schedule: {
+    stepId: 'step_agendamento_open_schedule',
+    actionType: 'open_schedule_modal',
+    journeyId: 'agendamento',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_click', 'dom_element_presence'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_agendamento_confirm_schedule: {
+    stepId: 'step_agendamento_confirm_schedule',
+    actionType: 'assert_ui_state',
+    journeyId: 'agendamento',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    requiresIncrementalDiff: false,
+    requiresMutationLinkage: false,
+    requiresProvenance: false,
+    snapshotScope: 'entity',
+    entityScope: ['task'],
+    proofRequirements: ['state_assertion', 'dom_element_presence'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+};
+
+/**
  * Registry consolidado: stepId → stepSpec
  */
 const OPERATIONAL_STEP_REGISTRY = new Map([
@@ -668,6 +783,8 @@ const OPERATIONAL_STEP_REGISTRY = new Map([
   ...Object.entries(BOOKING_FLOW).map(([, spec]) => [spec.stepId, spec]),
   // Payment flow
   ...Object.entries(PAYMENT_CHARGE_FLOW).map(([, spec]) => [spec.stepId, spec]),
+  // Agendamento flow
+  ...Object.entries(AGENDAMENTO_FLOW).map(([, spec]) => [spec.stepId, spec]),
 ]);
 
 /**
@@ -702,6 +819,10 @@ const ACTION_TYPE_REGISTRY = new Map([
   ...Object.entries(PAYMENT_CHARGE_FLOW).map(([, spec]) =>
     [`${spec.journeyId}:${spec.actionType}`, spec]
   ),
+  // Agendamento flow
+  ...Object.entries(AGENDAMENTO_FLOW).map(([, spec]) =>
+    [`${spec.journeyId}:${spec.actionType}`, spec]
+  ),
 ]);
 
 /**
@@ -715,6 +836,7 @@ const JOURNEY_STEPS_REGISTRY = {
   clinic_calendar_block_flow: CLINIC_CALENDAR_BLOCK_FLOW,
   booking_flow: BOOKING_FLOW,
   payment_charge_flow: PAYMENT_CHARGE_FLOW,
+  agendamento: AGENDAMENTO_FLOW,
 };
 
 const REGISTERED_JOURNEY_IDS = new Set(Object.keys(JOURNEY_STEPS_REGISTRY));
@@ -1078,6 +1200,7 @@ module.exports = {
   CLINIC_CALENDAR_BLOCK_FLOW,
   BOOKING_FLOW,
   PAYMENT_CHARGE_FLOW,
+  AGENDAMENTO_FLOW,
 
   // Query API
   getStepSpec,

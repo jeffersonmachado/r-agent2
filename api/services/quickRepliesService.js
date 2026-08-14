@@ -102,8 +102,22 @@ async function upsertQuickReplyToDb(reply) {
   const existing = await QuickReplyModel.findByPk(reply.id);
   if (existing) {
     await existing.update({ ...payload, updated_at: now });
-  } else {
+    return;
+  }
+  try {
     await QuickReplyModel.create({ ...payload, created_at: now, updated_at: now });
+  } catch (error) {
+    const isUnique = error?.name === 'SequelizeUniqueConstraintError'
+      || error?.original?.code === '23505'
+      || error?.parent?.code === '23505';
+    if (!isUnique) throw error;
+    // Corrida de idempotência: insert concorrente do mesmo id. Re-fetch + update.
+    const raced = await QuickReplyModel.findByPk(reply.id);
+    if (raced) {
+      await raced.update({ ...payload, updated_at: now });
+      return;
+    }
+    throw error;
   }
 }
 

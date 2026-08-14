@@ -16,9 +16,30 @@ function isBlank(value) {
   return value === undefined || value === null || String(value).trim() === '';
 }
 
+// Placeholders comuns de configuração que devem ser tratados como "não
+// configurado" — evita chamar o provider real com chave fake e retornar 401/500.
+// Os padrões são ANCORADOS no início do valor: templates de placeholder são
+// escritos por humanos ("SEU_TOKEN_AQUI"), enquanto chaves reais são aleatórias
+// e podem conter substrings como "xxx" ou "example" no meio sem serem fake.
+const PLACEHOLDER_PATTERNS = [
+  /^REPLACE_WITH/i,
+  /^SEU[_-]/i,
+  /^YOUR[_-]/i,
+  /^PLACEHOLDER/i,
+  /^EXAMPLE/i,
+  /^CHANGE[_-]?ME/i,
+  /^X{3,}$/i, // somente "XXXX..." puro, nunca substring
+];
+
+function isPlaceholder(value) {
+  const s = String(value || '').trim();
+  if (!s) return true;
+  return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(s));
+}
+
 function requireConfig(path) {
   const value = config.getFromFile(path);
-  if (isBlank(value)) {
+  if (isBlank(value) || isPlaceholder(value)) {
     const err = new Error(`required_config_missing:${path}`);
     err.code = 'required_config_missing';
     throw err;

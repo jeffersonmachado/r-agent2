@@ -35,12 +35,23 @@ function createTestExecutionsRoutes({ buildDeps }) {
     return auth;
   }
 
+  function requireScopedTenant(deps, req, res) {
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || null;
+    if (!tenantId) {
+      deps.sendJson(res, 400, { error: 'tenant_required', message: 'Selecione um tenant para esta operação' });
+      return null;
+    }
+    return String(tenantId);
+  }
+
   router.get('/api/test-executions/recordings', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const recordings = deps.listRecordings();
+      const recordings = deps.listRecordings(tenantId);
       deps.sendJson(res, 200, { recordings });
     } catch (error) {
       deps.logger.error('Erro ao listar recordings unificados:', error);
@@ -51,9 +62,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/qa-waves/journeys', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      deps.sendJson(res, 200, deps.listQaWaveJourneys());
+      deps.sendJson(res, 200, deps.listQaWaveJourneys(tenantId));
     } catch (error) {
       deps.logger.error('Erro ao listar jornadas QA Waves pelo endpoint unificado:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar jornadas QA Waves' });
@@ -63,9 +76,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/qa-waves/journey-status', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      deps.sendJson(res, 200, deps.listQaWaveJourneyStatus());
+      deps.sendJson(res, 200, deps.listQaWaveJourneyStatus(tenantId));
     } catch (error) {
       deps.logger.error('Erro ao listar status de jornadas QA Waves pelo endpoint unificado:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar status de jornadas QA Waves' });
@@ -75,9 +90,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/qa-waves/scenarios', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      deps.sendJson(res, 200, deps.listQaWaveScenarios(req.query || {}));
+      deps.sendJson(res, 200, deps.listQaWaveScenarios({ ...(req.query || {}), tenantId }));
     } catch (error) {
       deps.logger.error('Erro ao listar cenários QA Waves pelo endpoint unificado:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar cenários QA Waves' });
@@ -87,9 +104,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/qa-waves/step-status', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      deps.sendJson(res, 200, deps.listQaWaveStepStatus(req.query || {}));
+      deps.sendJson(res, 200, deps.listQaWaveStepStatus({ ...(req.query || {}), tenantId }));
     } catch (error) {
       deps.logger.error('Erro ao listar status de passos QA Waves pelo endpoint unificado:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar status de passos QA Waves' });
@@ -99,6 +118,8 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.post('/api/test-executions/recordings/start', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     if (!deps.hasJsonContentType(req)) {
       deps.badRequest(res, 'Content-Type deve ser application/json');
@@ -109,7 +130,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
       const body = await deps.parseJsonBody(req);
       const seedName = body.seedName || body.name;
       const initialUrl = body.initialUrl || body.url;
-      const result = await deps.startManualRecording(seedName, initialUrl);
+      const result = await deps.startManualRecording(seedName, initialUrl, tenantId);
 
       if (!result?.success) {
         deps.sendJson(res, 400, { error: 'validation_error', message: result?.error || 'Falha ao iniciar gravação' });
@@ -126,9 +147,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.post('/api/test-executions/recordings/:recordingId/stop', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const result = await deps.stopManualRecording(req.params.recordingId);
+      const result = await deps.stopManualRecording(req.params.recordingId, tenantId);
       if (!result?.success) {
         deps.sendJson(res, 400, { error: 'validation_error', message: result?.error || 'Falha ao parar gravação' });
         return;
@@ -143,9 +166,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/recordings/:recordingId/status', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const result = deps.getRecordingStatus(req.params.recordingId);
+      const result = deps.getRecordingStatus(req.params.recordingId, tenantId);
       if (!result?.success) {
         deps.sendJson(res, 404, { error: 'not_found', message: result?.error || 'Recording não encontrado' });
         return;
@@ -160,6 +185,8 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/replays', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
       const limit = req.query.limit;
@@ -189,6 +216,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
         scenarioId,
         seedId,
         executionId,
+        tenantId,
       });
       const payload = {
         ...replayList,
@@ -222,9 +250,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/replays/:filename', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const replay = deps.getReplayFile(req.params.filename);
+      const replay = deps.getReplayFile(req.params.filename, tenantId);
       if (!replay) {
         deps.sendJson(res, 404, { error: 'not_found', message: 'Replay não encontrado' });
         return;
@@ -239,9 +269,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.delete('/api/test-executions/replays/:filename', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const result = deps.deleteReplayFile(req.params.filename);
+      const result = deps.deleteReplayFile(req.params.filename, tenantId);
       deps.sendJson(res, 200, result);
     } catch (error) {
       const status = mapErrorCodeToHttp(error.code);
@@ -255,9 +287,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.delete('/api/test-executions/replays', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const result = deps.deleteAllReplayFiles();
+      const result = deps.deleteAllReplayFiles(tenantId);
       deps.sendJson(res, 200, result);
     } catch (error) {
       const status = mapErrorCodeToHttp(error.code);
@@ -271,9 +305,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/reports/:filename', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const report = deps.getReportFile(req.params.filename);
+      const report = deps.getReportFile(req.params.filename, tenantId);
       if (!report) {
         deps.sendJson(res, 404, { error: 'not_found', message: 'Relatório não encontrado' });
         return;
@@ -289,6 +325,8 @@ function createTestExecutionsRoutes({ buildDeps }) {
     const deps = buildDeps(req, res);
     const auth = ensureAuth(deps, req, res);
     if (!auth) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     if (!deps.hasJsonContentType(req)) {
       deps.badRequest(res, 'Content-Type deve ser application/json');
@@ -299,7 +337,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
       const body = await deps.parseJsonBody(req);
       const execution = await deps.createExecution(body || {}, {
         authToken: req.token || null,
-        tenantId: auth.agent?.tenantId || null,
+        tenantId,
         agentId: auth.agent?.id || null,
       });
       deps.sendJson(res, 202, execution);
@@ -317,12 +355,14 @@ function createTestExecutionsRoutes({ buildDeps }) {
     }
   });
 
-  router.get('/api/test-executions/:executionId/artifacts', (req, res) => {
+  router.get('/api/test-executions/:executionId/artifacts', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const artifacts = deps.getExecutionArtifacts(req.params.executionId);
+      const artifacts = await deps.getExecutionArtifacts(req.params.executionId, tenantId);
       if (!artifacts) {
         deps.sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
         return;
@@ -334,12 +374,79 @@ function createTestExecutionsRoutes({ buildDeps }) {
     }
   });
 
+  // Download de artefato persistido (roteiro, replay, trace visual ou screenshot).
+  router.get('/api/test-executions/artifacts', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
+
+    try {
+      const items = await deps.listExecutionArtifacts(tenantId);
+      deps.sendJson(res, 200, { items });
+    } catch (error) {
+      deps.logger.error('Erro ao listar execuções RPA persistidas:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar execuções RPA' });
+    }
+  });
+
+  // Download de artefato persistido (roteiro, replay, trace visual ou screenshot).
+  router.get('/api/test-executions/:executionId/artifact/:kind', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
+
+    try {
+      const artifact = await deps.getExecutionArtifact(req.params.executionId, req.params.kind, null, tenantId);
+      if (!artifact) {
+        deps.sendJson(res, 404, { error: 'not_found', message: 'Artefato não encontrado' });
+        return;
+      }
+      if (artifact.json !== undefined) {
+        deps.sendJson(res, 200, artifact.json);
+        return;
+      }
+      res.setHeader('Content-Type', artifact.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${artifact.filename}"`);
+      res.setHeader('Content-Length', artifact.buffer.length);
+      res.end(artifact.buffer);
+    } catch (error) {
+      deps.logger.error('Erro ao obter artefato de execução:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter artefato' });
+    }
+  });
+
+  router.get('/api/test-executions/:executionId/artifact/screenshot/:index', async (req, res) => {
+    const deps = buildDeps(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
+
+    try {
+      const artifact = await deps.getExecutionArtifact(req.params.executionId, 'screenshot', req.params.index, tenantId);
+      if (!artifact) {
+        deps.sendJson(res, 404, { error: 'not_found', message: 'Artefato não encontrado' });
+        return;
+      }
+      res.setHeader('Content-Type', artifact.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${artifact.filename}"`);
+      res.setHeader('Content-Length', artifact.buffer.length);
+      res.end(artifact.buffer);
+    } catch (error) {
+      deps.logger.error('Erro ao obter screenshot de execução:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao obter screenshot' });
+    }
+  });
+
   router.post('/api/test-executions/:executionId/cancel', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const result = await deps.cancelUnifiedExecution(req.params.executionId);
+      const result = await deps.cancelUnifiedExecution(req.params.executionId, tenantId);
       deps.sendJson(res, 200, result);
     } catch (error) {
       const status = mapErrorCodeToHttp(error.code);
@@ -353,9 +460,11 @@ function createTestExecutionsRoutes({ buildDeps }) {
   router.get('/api/test-executions/:executionId', (req, res) => {
     const deps = buildDeps(req, res);
     if (!ensureAuth(deps, req, res)) return;
+    const tenantId = requireScopedTenant(deps, req, res);
+    if (!tenantId) return;
 
     try {
-      const execution = deps.getExecutionStatus(req.params.executionId);
+      const execution = deps.getExecutionStatus(req.params.executionId, tenantId);
       if (!execution) {
         deps.sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
         return;

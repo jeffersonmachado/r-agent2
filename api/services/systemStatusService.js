@@ -260,8 +260,23 @@ async function checkRagServiceStatus() {
               dbIndexedDocuments = await RagDocumentModel.count({ where: { index_status: 'indexed' } });
               dbInconsistentDocuments = await RagDocumentModel.count({ where: { inconsistent: true } });
 
-              const vectorDocs = data.indexedDocuments || 0;
-              const vectorChunks = data.indexedChunks || 0;
+              // Vetores: conta direto do pgvector (mesma fonte de verdade do BD).
+              // Não usa `data.indexedDocuments` do /rag/health, que é
+              // scope-restricted sem tenant_id (retorna 0) e gerava falso
+              // warning de inconsistência.
+              let vectorDocs = 0;
+              let vectorChunks = 0;
+              try {
+                const [vectorRows] = await getSequelize().query(
+                  `SELECT COUNT(*)::int AS chunks, COUNT(DISTINCT document_id)::int AS docs FROM rag_chunks`,
+                );
+                const vectorRow = Array.isArray(vectorRows) && vectorRows[0] ? vectorRows[0] : null;
+                vectorChunks = Number(vectorRow?.chunks || 0);
+                vectorDocs = Number(vectorRow?.docs || 0);
+              } catch (vectorErr) {
+                logger.debug('[SystemStatus] Falha ao contar rag_chunks (best-effort)', { error: safeErrorMessage(vectorErr) });
+              }
+
               const inconsistent =
                 (dbIndexedDocuments || 0) > 0 &&
                 (vectorChunks === 0 || vectorDocs === 0);

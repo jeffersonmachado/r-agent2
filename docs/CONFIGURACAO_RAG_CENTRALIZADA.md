@@ -44,7 +44,7 @@ O serviço RAG Python (`rag-service`) agora lê suas configurações do `config.
       },
       "llm": {
         "provider": "openai",
-        "model": "gpt-3.5-turbo",
+        "model": "gpt-4o-mini",
         "maxTokens": 1000,
         "temperature": 0.7
       },
@@ -103,7 +103,7 @@ O `settings.py` tenta encontrar o `config.json` nos seguintes caminhos (em ordem
 ### LLM
 - `llm.provider`: Provedor LLM (padrão: "openai")
   - Opções: "openai", "anthropic"
-- `llm.model`: Modelo LLM (padrão: "gpt-3.5-turbo")
+- `llm.model`: Modelo LLM (padrão: "gpt-4o-mini")
 - `llm.maxTokens`: Máximo de tokens (padrão: 1000)
 - `llm.temperature`: Temperatura (padrão: 0.7)
 
@@ -209,4 +209,3 @@ default_min_score: float = 0.45
 ---
 
 **Última atualização**: 2026-01-05
-

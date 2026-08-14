@@ -115,7 +115,7 @@ async function handleTicketOperationsRoutes({ req, res, method, pathname, deps }
 
     try {
       deps.logger.info('Endpoint /metrics/queues chamado');
-      const metrics = deps.getMetrics();
+      const metrics = deps.getMetrics({ tenantId: req.tenantId });
       deps.logger.info('Métricas retornadas', {
         totalTickets: metrics.totalTickets,
         ticketsByStatus: metrics.ticketsByStatus,

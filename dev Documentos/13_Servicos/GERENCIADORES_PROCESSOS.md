@@ -52,6 +52,6 @@ A interface de configuração detecta automaticamente o processo em execução:
 
 ## Observações
 
-- Runtime deve usar `RUNTIME_ROOT` fora do workspace.
+- Runtime deve usar runtime root fora do workspace (resolvido automaticamente).
 - Release depende das validações oficiais de build/smoke/empacotamento.
 

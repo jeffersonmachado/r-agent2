@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-08-10T11:10:47.954Z",
-  "commit": "5dcec340e282342ea63041096666c30131357c10",
+  "generatedAt": "2026-08-14T14:44:27.323Z",
+  "commit": "3d531e8fc07d4ff099714d8befc549e39b679fe0",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 138,
+    "items": 139,
     "byState": {
-      "VALIDATED": 138
+      "VALIDATED": 139
     }
   },
   "exemptions": [
@@ -2076,6 +2076,53 @@
     },
     {
       "id": "page:/dev/rpa-test",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/stack-versions",
       "state": "VALIDATED",
       "assertions": [
         {

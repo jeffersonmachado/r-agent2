@@ -1,7 +1,9 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../api/utils/runtimePaths');
+
 /**
- * Regressão: saveTempAudio deve gravar sob RUNTIME_ROOT (fora do workspace),
+ * Regressão: saveTempAudio deve gravar sob o runtime root (fora do workspace),
  * não em <repo>/temp.
  *
  * Falha observada (2026-07-27): o serviço de transcrição gravava
@@ -21,12 +23,12 @@ describe('audioTranscriptionService.saveTempAudio — runtime path', () => {
 
   beforeAll(() => {
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'audio-runtime-'));
-    process.env.RUNTIME_ROOT = runtimeRoot;
+    configureRuntimeRoot(runtimeRoot);
     jest.resetModules();
   });
 
   afterAll(() => {
-    delete process.env.RUNTIME_ROOT;
+    configureRuntimeRoot(null);
     if (savedPath) {
       try { fs.unlinkSync(savedPath); } catch (_) { /* noop */ }
     }

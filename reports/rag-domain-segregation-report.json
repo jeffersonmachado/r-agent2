@@ -1,32 +1,25 @@
 {
-  "generatedAt": "2026-08-12T16:53:12.981Z",
-  "ragServiceUrl": "http://localhost:8001",
+  "generatedAt": "2026-08-14T09:19:16.261Z",
+  "ragServiceUrl": "http://127.0.0.1:18001",
   "metrics": {
     "crossDomainLeakage": 0,
     "crossTenantLeakage": 0,
     "unclassifiedDocuments": 0,
     "incoherentDocuments": 0,
     "indexedSecrets": 0,
-    "operationalAccessToSystemDomain": 0
+    "operationalAccessToSystemDomain": 0,
+    "dbChecksFailed": 0,
+    "runtimeChecksFailed": 0,
+    "internalTokenMissing": 0
   },
   "probes": {
-    "serviceReachable": false,
-    "crossDomainLeakage": "skipped",
-    "crossTenantLeakage": "skipped",
-    "operationalAccessToSystemDomain": "skipped",
-    "details": [
-      "rag-service inalcançável: probes de runtime pulados (falha de ambiente, não de código)"
-    ]
+    "serviceReachable": true,
+    "crossDomainLeakage": 0,
+    "crossTenantLeakage": 0,
+    "operationalAccessToSystemDomain": 0,
+    "details": []
   },
-  "distribution": [
-    {
-      "domain": "OPERATIONAL",
-      "classification": "PRODUCTION",
-      "count": 44
-    }
-  ],
-  "details": [
-    "rag-service inalcançável: probes de runtime pulados (falha de ambiente, não de código)"
-  ],
+  "distribution": [],
+  "details": [],
   "status": "PASS"
 }

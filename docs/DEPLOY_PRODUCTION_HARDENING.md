@@ -192,7 +192,7 @@ ALTER TABLE users ADD COLUMN api_key_rotation_at TIMESTAMP;
 
 -- API endpoint to rotate
 POST /api/admin/users/:id/rotate-api-key
-  Response: { apiKey: "new_key_here" }
+  Response: { apiKey: "SUA_CHAVE" }
 
 -- Enforce rotation every 90 days
 Agende um job externo chamando o endpoint de rotacao ou um script operacional interno do ambiente.

@@ -11,6 +11,7 @@ const { enqueueExecution, getExecution, getAllExecutions, appendLog, updateExecu
 const { emitEvent } = require('./websocketService');
 const qaWavesLogger = require('../utils/qaWavesLogger');
 const logger = require('../utils/logger');
+const { belongsToTenant, normalizeTenantKey } = require('../../lib/rpaSecurity');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const MESH_RUNNING_LOCK_PATH = path.join(ROOT_DIR, 'qa-mesh', 'mesh-running.lock');
@@ -93,16 +94,22 @@ function getMeshHistory(options = {}) {
   if (options.domain) {
     history = history.filter((item) => (item.results || []).some((result) => result.domain === options.domain));
   }
+  if (options.tenantId != null) {
+    const tenantId = normalizeTenantKey(options.tenantId);
+    history = history.filter((item) => belongsToTenant(item, tenantId));
+  }
   return history.slice(0, limit);
 }
 
-function getExecutionById(executionId) {
+function getExecutionById(executionId, options = {}) {
   if (!executionId) return null;
   const live = getExecution(executionId);
-  if (live) return live;
+  const tenantId = options?.tenantId == null ? null : normalizeTenantKey(options.tenantId);
+  if (live) return tenantId == null || belongsToTenant(live, tenantId) ? live : null;
   const filePath = path.join(__dirname, '../../qa-mesh/meshHistory', `${executionId}.json`);
   if (!fs.existsSync(filePath)) return null;
-  return normalizeExecutionRecord(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+  const execution = normalizeExecutionRecord(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+  return tenantId == null || belongsToTenant(execution, tenantId) ? execution : null;
 }
 
 function getOfficialReference() {
@@ -320,6 +327,7 @@ function queueMeshRun(options = {}) {
       executionOrigin: options.executionOrigin || 'manual_run',
       closeGovernanceDbAfterIntegration: false,
       scenarioIds: options.scenarioIds,
+      tenantId,
       domain: options.domain,
       type: options.type,
       criticality: options.criticality,
@@ -388,8 +396,8 @@ function queueScenarioReplay(scenarioId, options = {}) {
     error.code = 'PIPELINE_REQUIRED';
     throw error;
   }
-  return enqueueExecution('replay', { scenarioId }, async (executionId) => {
-    const tenantId = options.tenantId || null;
+  const tenantId = normalizeTenantKey(options.tenantId || 'system');
+  return enqueueExecution('replay', { scenarioId, tenantId }, async (executionId) => {
 
     // ── Proteção: não inicia replay se já tem mesh rodando ──
     const running = isMeshAlreadyRunning();
@@ -414,6 +422,7 @@ function queueScenarioReplay(scenarioId, options = {}) {
       executionOrigin: 'manual_replay',
       closeGovernanceDbAfterIntegration: false,
       scenarioIds: [scenarioId],
+      tenantId,
       autoReplayOnFailure: false,
       writeCanonicalOutputs: false,
       onLog(log) {
@@ -465,8 +474,8 @@ function queueScenarioReplay(scenarioId, options = {}) {
   });
 }
 
-function getQueuedExecutionStatus(executionId) {
-  return getExecutionById(executionId);
+function getQueuedExecutionStatus(executionId, tenantId = null) {
+  return getExecutionById(executionId, tenantId == null ? {} : { tenantId });
 }
 
 function getMeshSchedulerStatus() {

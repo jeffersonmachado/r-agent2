@@ -35,7 +35,7 @@ module.exports = {
         name: 'Emit PBX call events v0 (CDR scan)',
         enabled: true,
         kind: 'scan_pbx_cdr_events',
-        payload: { consumer: 'pbx_cdr_v0', batchSize: 200 },
+        payload: JSON.stringify({ consumer: 'pbx_cdr_v0', batchSize: 200 }),
         interval_sec: 10,
         next_run_at: in10,
         last_run_at: null,

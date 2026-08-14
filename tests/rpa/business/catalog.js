@@ -1322,7 +1322,7 @@ const FLOW_SCENARIOS = [
     preconditions: ['Credenciais QA systemadmin seedadas'],
     assertions: [
       'Página /login renderiza o formulário deslogada',
-      'Login UI com systemadmin/Admin123! redireciona e grava auth_token',
+      'Login UI com systemadmin/*** redireciona e grava auth_token',
       'Logout executado quando o controle existe',
     ],
     integrations: ['frontend', 'auth'],

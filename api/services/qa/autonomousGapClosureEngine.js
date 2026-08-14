@@ -14,6 +14,14 @@ const dataTestIdValidationService = require('./dataTestIdValidationService');
 const transitionInferenceService = require('./transitionInferenceService');
 const operationalStateEngine = require('./operationalStateEngine');
 const { runMesh } = require('../../../qa-mesh/meshRunner');
+const {
+  belongsToTenant,
+  normalizeTenantKey,
+  redactDeep,
+  stripInternalFilesystemPaths,
+} = require('../../../lib/rpaSecurity');
+const { validateReplayIntegrity } = require('../../../lib/replayIntegrity');
+const { writeJsonAtomic } = require('../../utils/atomicJsonFile');
 
 const JOURNEY_CONTRACTS_PATH = path.join(__dirname, '../../../config/journey-contracts.json');
 
@@ -28,7 +36,11 @@ function safeReadJson(filePath, fallback) {
 
 function safeWriteJson(filePath, payload) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  writeJsonAtomic(filePath, payload);
+}
+
+function publicPayload(value) {
+  return stripInternalFilesystemPaths(redactDeep(value));
 }
 
 function buildNoGo(reason, missing = [], extra = {}) {
@@ -44,7 +56,7 @@ function inferJourneyForCapability(capability = {}) {
   return capability.journeyId || capability.journey || capability.vertical || capability.id || capability.name;
 }
 
-function persistAutoWaveExpansion(capabilities = []) {
+function persistAutoWaveExpansion(capabilities = [], options = {}) {
   const store = safeReadJson(JOURNEY_CONTRACTS_PATH, {
     version: 1,
     generatedAt: new Date().toISOString(),
@@ -78,13 +90,14 @@ function persistAutoWaveExpansion(capabilities = []) {
     }
   }
 
-  if (changed) {
+  const persist = options.persist === true;
+  if (changed && persist) {
     store.generatedAt = new Date().toISOString();
     store.journeys = journeys;
     safeWriteJson(JOURNEY_CONTRACTS_PATH, store);
   }
 
-  return { changed, journeys: Object.keys(journeys).length };
+  return { changed, persisted: changed && persist, journeys: Object.keys(journeys).length };
 }
 
 /**
@@ -146,6 +159,7 @@ async function detectGapsWithAutoRemediations(options = {}) {
  * Gera remediações automáticas para capabilities com gaps
  */
 async function generateAutoRemediations(gappedCapabilities = [], options = {}) {
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
   const remediations = {
     scenarios: [],
     uiSteps: { byCapability: {}, coverage: 0 },
@@ -169,7 +183,10 @@ async function generateAutoRemediations(gappedCapabilities = [], options = {}) {
     remediations.scenarios = autoScenarioGenerator.generateScenariosForGaps(
       gappedCapabilities,
       frontendData,
-      { persist: true }
+      {
+        persist: options.persistGeneratedScenarios !== false,
+        tenantId,
+      }
     );
   } catch (err) {
     logger.error(`[AutonomousGapClosureEngine] Erro ao gerar scenarios: ${err.message}`);
@@ -264,8 +281,7 @@ async function generateAutoRemediations(gappedCapabilities = [], options = {}) {
   if (options.discovery?.replay?.sampleReplays) {
     for (const replay of options.discovery.replay.sampleReplays.slice(0, 5)) {
       try {
-          const normalized = replayNormalizationService.normalizeReplay(replay);
-          const validation = operationalReplayValidator.validateOperationalReplay(normalized);
+          const validation = operationalReplayValidator.validateOperationalReplay(replay);
         if (!validation.isOperational) {
           const improvements = operationalReplayValidator.suggestReplayImprovements(validation);
           remediations.replayImprovements.push(...improvements);
@@ -292,9 +308,7 @@ function checkPreflightBlockers(waveSpec = {}) {
  * Valida se replay é operacional real
  */
 function validateReplayOperationality(replay = {}) {
-  return operationalReplayValidator.validateOperationalReplay(
-    replayNormalizationService.normalizeReplay(replay)
-  );
+  return operationalReplayValidator.validateOperationalReplay(replay);
 }
 
 /**
@@ -427,14 +441,15 @@ async function runAutonomousGapClosureLoop(options = {}) {
   if (missing.length > 0) {
     return buildNoGo('PRECONDITION_FAILED', missing);
   }
+  const tenantId = normalizeTenantKey(options.tenantId);
 
   const preflight = await preflightEngine.executeFullPreflight({
     waveId: options.waveId,
     journeyId: options.journeyId,
     scenarioIds: options.scenarioIds,
     capabilityIds: options.capabilityIds,
-    tenantId: options.tenantId,
-    context: options.context || {},
+    tenantId,
+    context: { ...(options.context || {}), tenantId },
   });
 
   if (preflight.status === 'NO_GO') {
@@ -452,10 +467,16 @@ async function runAutonomousGapClosureLoop(options = {}) {
     const capabilityId = capability.id || capability.name;
     return capabilityId && !options.capabilityIds.includes(capabilityId);
   });
-  const waveExpansion = persistAutoWaveExpansion(discoveredCapabilities);
+  const waveExpansion = persistAutoWaveExpansion(discoveredCapabilities, {
+    // Runtime tenant executions may propose an expansion, but may never mutate
+    // the canonical source registry.  That mutation remains an explicit,
+    // system-tenant governance operation outside this HTTP workflow.
+    persist: options.persistRegistryExpansion === true && tenantId === 'system',
+  });
 
   const executionInput = {
     wave: options.waveId,
+    tenantId,
     scenarioIds: expandedScenarioIds,
     executionOrigin: 'autonomous_gap_closure',
     closeGovernanceDbAfterIntegration: false,
@@ -492,6 +513,7 @@ async function runAutonomousGapClosureLoop(options = {}) {
       if (regeneratedSeeds.length > 0) {
         const seedScenario = {
           id: `${capability.id || capability.name}-recovery-${Date.now()}`,
+          tenantId,
           capabilityId: capability.id || capability.name,
           capabilityName: capability.name || capability.id,
           journeyId: inferJourneyForCapability(capability),
@@ -502,17 +524,41 @@ async function runAutonomousGapClosureLoop(options = {}) {
           governanceRules: [{ rule: 'recovery_retry', enabled: true }],
           replayRequirements: { requireOperationalConsequence: true },
         };
-        autoScenarioGenerator.persistGeneratedArtifacts(seedScenario);
+        autoScenarioGenerator.persistGeneratedArtifacts(seedScenario, { tenantId });
       }
     }
   }
 
   const replaySample = executionResult?.results?.[0]?.artifacts?.find((artifact) => artifact.type === 'replay');
-  const replayPayload = replaySample
-    ? safeReadJson(replaySample.path, {})
-    : { events: [], screenshots: [] };
+  const replayArtifactBlockers = [];
+  let replayPayload = { events: [], screenshots: [] };
+  if (replaySample?.path && executionResult?.evidenceDir) {
+    const evidenceRoot = path.resolve(executionResult.evidenceDir);
+    const replayPath = path.resolve(replaySample.path);
+    const isContained = replayPath.startsWith(`${evidenceRoot}${path.sep}`);
+    if (!isContained) {
+      replayArtifactBlockers.push({ reason: 'replay_path_outside_execution_evidence' });
+    } else {
+      const candidate = safeReadJson(replayPath, null);
+      if (!candidate || !belongsToTenant(candidate, tenantId)) {
+        replayArtifactBlockers.push({ reason: 'replay_tenant_mismatch' });
+      } else {
+        const integrity = validateReplayIntegrity(candidate, candidate.governance || {});
+        if (!integrity.valid) {
+          replayArtifactBlockers.push({ reason: 'replay_integrity_invalid', blockers: integrity.blockers });
+        } else {
+          replayPayload = candidate;
+        }
+      }
+    }
+  } else {
+    replayArtifactBlockers.push({ reason: 'missing_operational_replay' });
+  }
   const normalizedReplay = replayNormalizationService.normalizeReplay(replayPayload);
-  const replayValidation = operationalReplayValidator.validateOperationalReplay(normalizedReplay);
+  // O validator faz sua própria normalização, mas a assinatura deve ser
+  // verificada contra o artefato bruto canônico. Validar o objeto já
+  // normalizado alteraria o hash e produziria falso tamper.
+  const replayValidation = operationalReplayValidator.validateOperationalReplay(replayPayload);
 
   const expectedConsequences = options.expectedConsequences || [
     'ticket_status_changed',
@@ -581,6 +627,7 @@ async function runAutonomousGapClosureLoop(options = {}) {
       : [{ reason: replaySample ? 'replay_invalid' : 'missing_operational_replay', details: replayValidation.recommendation }];
     governance.blockers.push(...replayBlockers);
   }
+  governance.blockers.push(...replayArtifactBlockers);
   if (!consequences.valid) {
     governance.blockers.push({ reason: 'missing_operational_consequence', missing: consequences.missing });
   }
@@ -600,12 +647,12 @@ async function runAutonomousGapClosureLoop(options = {}) {
     governance.blockers.push({ reason: 'click_without_operational_consequence' });
   }
 
-  return {
+  return publicPayload({
     status: goNoGo,
     reason: goNoGo === 'GO' ? null : 'PRECONDITION_FAILED',
     waveId: options.waveId,
     journeyId: options.journeyId,
-    tenantId: options.tenantId,
+    tenantId,
     flow: [
       'Gap Detection',
       'Scenario Generation',
@@ -626,8 +673,6 @@ async function runAutonomousGapClosureLoop(options = {}) {
       attempts: executionAttempts,
       remediationAttempts,
       summary: executionResult?.summary || null,
-      historyPath: executionResult?.historyPath || null,
-      evidenceDir: executionResult?.evidenceDir || null,
     },
     replay: {
       validation: replayValidation,
@@ -640,7 +685,7 @@ async function runAutonomousGapClosureLoop(options = {}) {
     coverage,
     governance,
     missing: governance.blockers,
-  };
+  });
 }
 
 module.exports = {

@@ -191,6 +191,8 @@ describe('validateScenarioCompatibility — novos campos', () => {
       journey: 'leads',
       source: 'manual',
       status: 'approved',
+      // status 'approved' é executável: exige platformScenarioIds (regra do schema)
+      platformScenarioIds: ['plat-test-1'],
       channels: ['whatsapp'],
       risk: 'medium',
       priority: 'medium',

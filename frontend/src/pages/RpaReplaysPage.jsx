@@ -4,7 +4,7 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Dialog } from '../components/Dialog';
-import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays } from '../api/flows';
+import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays, listRpaExecutionArtifacts, downloadRpaExecutionArtifact } from '../api/flows';
 import logger from '../utils/logger';
 
 const STRICT_REASON_LABELS = {
@@ -237,6 +237,45 @@ export function RpaReplaysPage() {
       showToast(errorMessage, 'error', 5000);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- Artefatos persistidos no banco (roteiro + trace visual + replay) ---
+  const [executionArtifacts, setExecutionArtifacts] = useState([]);
+  const [loadingExecutionArtifacts, setLoadingExecutionArtifacts] = useState(false);
+  const [showExecutionArtifacts, setShowExecutionArtifacts] = useState(false);
+
+  const loadExecutionArtifacts = async () => {
+    setLoadingExecutionArtifacts(true);
+    try {
+      const result = await listRpaExecutionArtifacts();
+      setExecutionArtifacts(result.items || []);
+    } catch (err) {
+      logger.error('[RpaReplaysPage] Erro ao carregar execuções RPA persistidas:', err);
+    } finally {
+      setLoadingExecutionArtifacts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) loadExecutionArtifacts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+
+  const downloadArtifact = async (executionId, kind, index = null) => {
+    try {
+      const { blob, filename } = await downloadRpaExecutionArtifact(executionId, kind, index);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      logger.error('[RpaReplaysPage] Erro ao baixar artefato:', err);
+      showToast(`Erro ao baixar ${kind}`, 'error', 5000);
     }
   };
 
@@ -1020,6 +1059,91 @@ export function RpaReplaysPage() {
               🗑️ Remover Todos
             </Button>
           </div>
+        </div>
+
+        {/* Painel de Artefatos RPA persistidos no banco (roteiro + trace visual) */}
+        <div className="bg-bg-secondary rounded-lg border border-border-default mb-4">
+          <div className="flex items-center justify-between p-4 border-b border-border-default">
+            <button
+              onClick={() => {
+                setShowExecutionArtifacts(!showExecutionArtifacts);
+                if (!showExecutionArtifacts) loadExecutionArtifacts();
+              }}
+              className="flex items-center gap-2 text-sm font-semibold text-text-primary hover:text-accent-primary transition-colors"
+            >
+              <span className={`collapse-btn-vertical ${showExecutionArtifacts ? '' : 'collapsed'}`}></span>
+              <span>🗄️ Roteiros + Traces visuais (Banco de dados)</span>
+            </button>
+            <span className="text-xs text-text-tertiary">
+              {loadingExecutionArtifacts ? 'Carregando…' : `${executionArtifacts.length} execução(ões)`}
+            </span>
+          </div>
+
+          {showExecutionArtifacts && (
+            <div className="p-4 overflow-x-auto">
+              {executionArtifacts.length === 0 && !loadingExecutionArtifacts ? (
+                <p className="text-sm text-text-tertiary py-2">
+                  Nenhuma execução RPA persistida ainda. Execute uma gravação RPA para gerar roteiro + trace visual.
+                </p>
+              ) : (
+                <table className="w-full text-sm text-text-primary">
+                  <thead>
+                    <tr className="text-left text-xs text-text-tertiary border-b border-border-default">
+                      <th className="py-2 pr-4">Execução</th>
+                      <th className="py-2 pr-4">Gravação (roteiro)</th>
+                      <th className="py-2 pr-4">Status</th>
+                      <th className="py-2 pr-4">Início</th>
+                      <th className="py-2 pr-4">Artefatos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {executionArtifacts.map((item) => (
+                      <tr key={item.executionId} className="border-b border-border-default last:border-0">
+                        <td className="py-2 pr-4 font-mono text-xs">{item.executionId}</td>
+                        <td className="py-2 pr-4 font-mono text-xs">{item.recordingId || '—'}</td>
+                        <td className="py-2 pr-4">
+                          <span className={`px-2 py-0.5 rounded text-xs ${
+                            item.status === 'completed'
+                              ? 'bg-green-500/15 text-green-400'
+                              : 'bg-red-500/15 text-red-400'
+                          }`}>
+                            {item.status || 'unknown'}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-4 text-xs text-text-secondary">
+                          {item.startedAt ? new Date(item.startedAt).toLocaleString() : '—'}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {item.hasRecording && (
+                              <Button size="sm" variant="default" onClick={() => downloadArtifact(item.executionId, 'recording')}>
+                                📜 Roteiro
+                              </Button>
+                            )}
+                            {item.hasTrace && (
+                              <Button size="sm" variant="default" onClick={() => downloadArtifact(item.executionId, 'trace')}>
+                                🎬 Trace (.zip)
+                              </Button>
+                            )}
+                            {item.hasReplay && (
+                              <Button size="sm" variant="default" onClick={() => downloadArtifact(item.executionId, 'replay')}>
+                                ▶️ Replay
+                              </Button>
+                            )}
+                            {Array.from({ length: Number(item.screenshots || 0) }).map((_, idx) => (
+                              <Button key={idx} size="sm" variant="default" onClick={() => downloadArtifact(item.executionId, 'screenshot', idx)}>
+                                📸 {idx + 1}
+                              </Button>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Painel de Filtros */}

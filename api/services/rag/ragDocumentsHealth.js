@@ -41,11 +41,11 @@ async function getRagHealth(tenantId, options = {}, documentsCache, persistFn, m
           errorMessage: 'Marcado como indexed, mas não há chunks gravados no Postgres (pgvector)',
         });
         documentsCache.set(documentId, document);
-        persistFn(document);
+        await persistFn(document);
       }
-      await markInconsistentFn(finalTenantId, reason, inconsistentDocIds).catch(() => {});
+      await markInconsistentFn(finalTenantId, reason, inconsistentDocIds);
     } else {
-      await markConsistentFn(finalTenantId).catch(() => {});
+      await markConsistentFn(finalTenantId);
     }
 
     if ((vectorCounts.documents || 0) > total) {

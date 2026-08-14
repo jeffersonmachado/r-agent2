@@ -42,8 +42,8 @@ git clone https://github.com/r-agent2/r-agent2.git
 cd r-agent2
 
 # Define runtime directory (mutable state outside workspace)
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
-mkdir -p $RUNTIME_ROOT
+export runtime_root=~/.local/share/ragent2-runtime
+mkdir -p $runtime_root
 
 # Copy .env.example
 cp env.example .env
@@ -61,7 +61,7 @@ NODE_ENV=development
 LOG_LEVEL=debug
 
 # Runtime (mutable state fora do workspace)
-RUNTIME_ROOT=~/.local/share/ragent2-runtime
+runtime_root=~/.local/share/ragent2-runtime
 
 # Database (local ou docker)
 DB_HOST=localhost
@@ -75,16 +75,16 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 
 # WhatsApp (auth vive em runtime, não workspace)
-WWEBJS_AUTH_PATH=$RUNTIME_ROOT/wa_sessions
+WWEBJS_AUTH_PATH=$runtime_root/wa_sessions
 
 # RAG Service (mutable data in runtime)
-RAG_DATA_ROOT=$RUNTIME_ROOT/rag
-VECTOR_STORE_PATH=$RUNTIME_ROOT/rag/vector_store
-ADAPTIVE_LEARNING_DATA_PATH=$RUNTIME_ROOT/rag/adaptive_learning
+RAG_DATA_ROOT=$runtime_root/rag
+VECTOR_STORE_PATH=$runtime_root/rag/vector_store
+ADAPTIVE_LEARNING_DATA_PATH=$runtime_root/rag/adaptive_learning
 
 # QA/Testing (smoke tests output to runtime)
-QA_MESH_SYSTEM_VALIDATE_DIR=$RUNTIME_ROOT/qa-mesh/system-validate
-PHYSICAL_QUEUE_EVIDENCE_PATH=$RUNTIME_ROOT/qa/l01-physical-queue-evidence.json
+QA_MESH_SYSTEM_VALIDATE_DIR=$runtime_root/qa-mesh/system-validate
+PHYSICAL_QUEUE_EVIDENCE_PATH=$runtime_root/qa/l01-physical-queue-evidence.json
 
 # Frontend (development mode)
 VITE_API_BASE=http://localhost:3000/api
@@ -156,8 +156,8 @@ npm run rag:dev
 ### 3.1. Start Rápido
 
 ```bash
-# Garantir export de RUNTIME_ROOT
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+# Garantir export de runtime_root
+export runtime_root=~/.local/share/ragent2-runtime
 
 # Iniciar
 npm run dev
@@ -185,7 +185,7 @@ npm run rag:status
 npm run test:physical:smoke
 
 # Validação completa (DEMORADO - 10-15 min)
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+export runtime_root=~/.local/share/ragent2-runtime
 npm run system:validate
 ```
 
@@ -359,18 +359,18 @@ kill -9 <PID>
 PORT=3001 npm run dev
 ```
 
-### "RUNTIME_ROOT not set / paths in workspace"
+### "runtime_root not set / paths in workspace"
 
 ```bash
 # Verificar export
-echo $RUNTIME_ROOT
+echo $runtime_root
 
 # Se vazio:
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+export runtime_root=~/.local/share/ragent2-runtime
 npm run dev
 
 # Persistir em ~/.bashrc
-echo 'export RUNTIME_ROOT=~/.local/share/ragent2-runtime' >> ~/.bashrc
+echo 'export runtime_root=~/.local/share/ragent2-runtime' >> ~/.bashrc
 source ~/.bashrc
 ```
 
@@ -402,11 +402,11 @@ redis-cli shutdown
 ### "Smoke tests writing to workspace"
 
 ```bash
-# Garantir RUNTIME_ROOT exportado
-echo $RUNTIME_ROOT
+# Garantir runtime_root exportado
+echo $runtime_root
 
 # Se vazio:
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+export runtime_root=~/.local/share/ragent2-runtime
 npm run runtime:clean:check   # Detectar resíduos
 npm run runtime:clean         # Limpar
 npm run system:validate       # Validar (sem escrever em workspace)
@@ -469,7 +469,7 @@ npm run db:migrate
 git checkout -b feature/minha-feature
 
 # 2. Garantir runtime
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+export runtime_root=~/.local/share/ragent2-runtime
 npm run dev
 
 # 3. Fazer changes
@@ -498,7 +498,7 @@ git push origin feature/minha-feature
 npm run runtime:clean:check
 
 # 2. Rodar validação completa
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+export runtime_root=~/.local/share/ragent2-runtime
 npm run system:validate    # Deve passar
 
 # 3. Check verde
@@ -519,12 +519,12 @@ git merge feature/minha-feature
 |----------|-----------------|---------------|---------|
 | `NODE_ENV` | Required | `development` | N/A |
 | `LOG_LEVEL` | Required | `debug` | N/A |
-| `RUNTIME_ROOT` | **Importante** | `~/.local/share/ragent2-runtime` | Base |
+| `runtime_root` | **Importante** | `~/.local/share/ragent2-runtime` | Base |
 | `DB_HOST` | Required | `localhost` | N/A |
-| `WWEBJS_AUTH_PATH` | Cascata | `$RUNTIME_ROOT/wa_sessions` | Explicit > RUNTIME_ROOT |
-| `RAG_DATA_ROOT` | Cascata | `$RUNTIME_ROOT/rag` | Explicit > RUNTIME_ROOT |
-| `VECTOR_STORE_PATH` | Cascata | `$RUNTIME_ROOT/rag/vector_store` | Explicit > RUNTIME_ROOT |
-| `QA_MESH_SYSTEM_VALIDATE_DIR` | Cascata | `$RUNTIME_ROOT/qa-mesh/system-validate` | Explicit > RUNTIME_ROOT |
+| `WWEBJS_AUTH_PATH` | Cascata | `$runtime_root/wa_sessions` | Explicit > runtime_root |
+| `RAG_DATA_ROOT` | Cascata | `$runtime_root/rag` | Explicit > runtime_root |
+| `VECTOR_STORE_PATH` | Cascata | `$runtime_root/rag/vector_store` | Explicit > runtime_root |
+| `QA_MESH_SYSTEM_VALIDATE_DIR` | Cascata | `$runtime_root/qa-mesh/system-validate` | Explicit > runtime_root |
 
 ---
 
@@ -533,23 +533,23 @@ git merge feature/minha-feature
 Adicione ao `~/.bashrc` ou `~/.zshrc`:
 
 ```bash
-# Start dev com RUNTIME_ROOT automático
+# Start dev com runtime_root automático
 ragent2-dev() {
-  export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+  export runtime_root=~/.local/share/ragent2-runtime
   cd ~/projects/r-agent2  # ou seu path
   npm run dev
 }
 
 # Clean runtime
 ragent2-clean() {
-  export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+  export runtime_root=~/.local/share/ragent2-runtime
   npm run runtime:clean:check
   npm run runtime:clean
 }
 
 # Validar sistema
 ragent2-validate() {
-  export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+  export runtime_root=~/.local/share/ragent2-runtime
   npm run system:validate
 }
 

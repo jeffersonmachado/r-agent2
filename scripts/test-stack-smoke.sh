@@ -46,7 +46,7 @@ API_URL="$API_URL" FRONTEND_URL="$FRONTEND_URL" RAG_URL="$RAG_URL" bash ./script
 
 check_json_field "API live" "${API_URL}/health/live" '"status":"ok"'
 check_json_field "API ready" "${API_URL}/health/ready" '"status":"ready"'
-check_json_field "API version" "${API_URL}/version" '"name":"chatbot-engine-api"'
+check_json_field "API version" "${API_URL}/version" '"name":"RAP"'
 check_json_field "RAG health" "${RAG_URL}/health" '"status"'
 check_html "Frontend root" "${FRONTEND_URL}/"
 

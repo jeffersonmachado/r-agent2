@@ -112,7 +112,7 @@ export async function startManualRecording(seedName, initialUrl) {
  * Para gravação manual e salva o seed.
  * 
  * @param {string} recordingId - ID da gravação (nome do seed)
- * @returns {Promise<{success: boolean, seedPath?: string, replayPath?: string, message?: string}>}
+ * @returns {Promise<{success: boolean, seedId?: string, replayId?: string, message?: string}>}
  */
 export async function stopManualRecording(recordingId) {
   return fetchJson(`/rpa/record/stop/${encodeURIComponent(recordingId)}`, {
@@ -174,4 +174,3 @@ export async function deleteRpaRecording(recordingId) {
     throw error;
   }
 }
-

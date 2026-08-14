@@ -67,6 +67,7 @@ function appendExecutionRecord(execution) {
   const record = {
     type: 'wave-execution',
     executionId: execution.executionId,
+    tenantId: execution.tenantId || summary.tenantId || 'system',
     executionKind: execution.executionKind || null,
     executionOrigin: execution.executionOrigin || summary.executionOrigin || null,
     isCanonicalExecution: execution.isCanonicalExecution === true,

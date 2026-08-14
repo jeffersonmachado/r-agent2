@@ -1,4 +1,5 @@
 const http = require('http');
+const { configureRuntimeRoot } = require('./utils/runtimePaths');
 
 /**
  * Helper para fazer requisições HTTP simples contra o servidor em teste.
@@ -107,7 +108,7 @@ describe('API server (api/server.js)', () => {
     process.env.NODE_ENV = 'development';
     delete process.env.STRICT_TENANT_MODE;
     // Evita erro de bootstrap do runtime em ambientes de teste.
-    process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime-jest';
+    configureRuntimeRoot('/tmp/ragent2-runtime-jest');
     jest.resetModules();
 
     // eslint-disable-next-line global-require
@@ -143,7 +144,9 @@ describe('API server (api/server.js)', () => {
         })
         .then(() => done(), done);
     });
-  });
+    // Boot do servidor + retries de conexão com o DB podem exceder o timeout
+    // padrão (10s) quando a suíte roda em paralelo; hook com folga de 60s.
+  }, 60000);
 
   afterAll((done) => {
     const finalize = async () => {
@@ -195,7 +198,9 @@ describe('API server (api/server.js)', () => {
     });
 
     test('GET /health/db deve retornar informações detalhadas do banco', async () => {
-      if (skipServerTests) return;
+      // Sem PostgreSQL o authenticate do Sequelize não retorna em tempo útil
+      // (retries com backoff) — mesmo padrão dos demais testes DB-dependentes.
+      if (skipServerTests || !dbReady) return;
       const res = await request(port, 'GET', '/health/db');
       // Pode retornar 200 (ok) ou 503 (fail) dependendo do estado do DB
       expect([200, 503]).toContain(res.status);
@@ -274,7 +279,7 @@ describe('API server (api/server.js)', () => {
     if (skipServerTests) return;
     const res = await request(port, 'GET', '/version');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('name', 'chatbot-engine-api');
+    expect(res.body).toHaveProperty('name', 'RAP');
     expect(res.body).toHaveProperty('env');
   });
 
@@ -298,12 +303,12 @@ describe('API server (api/server.js)', () => {
     expect(res.body).toEqual({ error: 'not_found' });
   });
 
-  test('GET /api/qa-waves/health deve retornar status ok do modulo', async () => {
+  test('GET /api/qa-waves/health sem token deve retornar 401 (endpoint protegido)', async () => {
     if (skipServerTests) return;
     const res = await request(port, 'GET', '/api/qa-waves/health');
 
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok', service: 'qa-waves' });
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error', 'unauthorized');
   });
 
   test('GET /api/qa-waves/journeys sem token deve retornar 401', async () => {

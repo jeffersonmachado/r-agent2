@@ -9,7 +9,7 @@ Este projeto adota **Docker Compose** como padrão único de execução operacio
 
 ## Padrão obrigatório
 
-1. Definir `RUNTIME_ROOT` fora do workspace.
+1. Garantir runtime root fora do workspace (resolvido automaticamente pela aplicação).
 2. Subir stack por `docker-compose.prod.yml` (ou compose equivalente do ambiente).
 3. Executar validações oficiais antes de release.
 

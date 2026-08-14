@@ -28,6 +28,17 @@ const { executeRecording, getExecutionStatus } = require('./rpaService');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const { resolveRuntimePath } = require('../utils/runtimePaths');
+const { writeJsonAtomic } = require('../utils/atomicJsonFile');
+const {
+  getRpaFlowWriteDir,
+  getRpaSeedWriteDir,
+  resolveContainedJsonPath,
+} = require('../../lib/rpaPathResolver');
+const {
+  normalizeJsonName,
+  normalizeTenantKey,
+  protectRecordingSecrets,
+} = require('../../lib/rpaSecurity');
 const {
   safeToString,
   safeTrim,
@@ -201,19 +212,22 @@ async function generateRpaArtifact(flow, options = {}) {
  * @param {Object} rpaTest - Teste RPA gerado
  * @returns {string} Caminho do arquivo salvo
  */
-function saveRpaTestFile(rpaTest) {
-  // Runtime: não gravar em `tests/`. Artefatos gerados vão para `rpa/flows/`.
-  const flowsDir = path.join(__dirname, '..', '..', 'rpa', 'flows');
-  
-  // Garante que o diretório existe
-  if (!fs.existsSync(flowsDir)) {
-    fs.mkdirSync(flowsDir, { recursive: true });
-  }
+function saveRpaTestFile(rpaTest, tenantId = null) {
+  const scopedTenantId = normalizeTenantKey(
+    tenantId || rpaTest?.tenantId || rpaTest?.tenant_id || rpaTest?.metadata?.tenantId,
+  );
+  const testId = normalizeJsonName(rpaTest?.id);
+  const flowsDir = getRpaFlowWriteDir(scopedTenantId);
+  const filePath = resolveContainedJsonPath(flowsDir, testId);
+  const protectedTest = protectRecordingSecrets({
+    ...rpaTest,
+    id: testId,
+    tenantId: scopedTenantId,
+    metadata: { ...(rpaTest?.metadata || {}), tenantId: scopedTenantId },
+  });
 
-  const fileName = `${rpaTest.id}.json`;
-  const filePath = path.join(flowsDir, fileName);
-
-  fs.writeFileSync(filePath, JSON.stringify(rpaTest, null, 2), 'utf8');
+  fs.mkdirSync(flowsDir, { recursive: true });
+  writeJsonAtomic(filePath, protectedTest);
 
   logger.info('Teste RPA salvo', { testId: rpaTest.id, filePath });
 
@@ -310,23 +324,23 @@ function convertRpaTestToRecording(rpaTest) {
  * @param {Object} recording - Gravação RPA
  * @returns {string} Caminho do arquivo salvo
  */
-function saveTemporaryRecording(recording) {
-  const seedsDir = path.join(__dirname, '..', '..', 'tests', 'rpa', 'seeds');
-  
-  // Garante que o diretório existe
-  if (!fs.existsSync(seedsDir)) {
-    fs.mkdirSync(seedsDir, { recursive: true });
-  }
+function saveTemporaryRecording(recording, tenantId = null) {
+  const scopedTenantId = normalizeTenantKey(
+    tenantId || recording?.tenantId || recording?.tenant_id || recording?.metadata?.tenantId,
+  );
+  const recordingId = normalizeJsonName(recording?.id);
+  const seedsDir = getRpaSeedWriteDir(scopedTenantId);
+  const filePath = resolveContainedJsonPath(seedsDir, recordingId);
+  const protectedRecording = protectRecordingSecrets({
+    ...recording,
+    id: recordingId,
+    tenantId: scopedTenantId,
+    source: recording?.source || 'automatic',
+    metadata: { ...(recording?.metadata || {}), tenantId: scopedTenantId },
+  });
 
-  // Adiciona flag source: automatic
-  if (!recording.source) {
-    recording.source = 'automatic';
-  }
-
-  const fileName = `${recording.id}.json`;
-  const filePath = path.join(seedsDir, fileName);
-
-  fs.writeFileSync(filePath, JSON.stringify(recording, null, 2), 'utf8');
+  fs.mkdirSync(seedsDir, { recursive: true });
+  writeJsonAtomic(filePath, protectedRecording);
 
   logger.info('Gravação RPA temporária salva', { recordingId: recording.id, filePath, source: recording.source });
 
@@ -338,9 +352,10 @@ function saveTemporaryRecording(recording) {
  * 
  * @param {string} recordingId - ID da gravação
  */
-function removeTemporaryRecording(recordingId) {
-  const seedsDir = path.join(__dirname, '..', '..', 'tests', 'rpa', 'seeds');
-  const filePath = path.join(seedsDir, `${recordingId}.json`);
+function removeTemporaryRecording(recordingId, tenantId = null) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const seedsDir = getRpaSeedWriteDir(scopedTenantId);
+  const filePath = resolveContainedJsonPath(seedsDir, recordingId);
   
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
@@ -359,6 +374,9 @@ function removeTemporaryRecording(recordingId) {
  */
 async function executeAndValidateRpa(rpaTest, options = {}) {
   try {
+    const tenantId = normalizeTenantKey(
+      options.tenantId || rpaTest?.tenantId || rpaTest?.tenant_id || rpaTest?.metadata?.tenantId,
+    );
     // Normaliza URLs no teste antes de converter (garante que ações navigate tenham URL)
     const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
     normalizeRpaTestUrls(rpaTest);
@@ -437,7 +455,7 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
     const recording = convertRpaTestToRecording(rpaTest);
     
     // Salva temporariamente
-    const recordingPath = saveTemporaryRecording(recording);
+    const recordingPath = saveTemporaryRecording(recording, tenantId);
     
     try {
       // Executa gravação
@@ -451,7 +469,7 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
         headless: options.headless !== false, // Headless por padrão para validação
         slowMo: 0, // Mais rápido possível para validação
         timeout: 30000,
-      }, {});
+      }, {}, null, tenantId);
       
       const executionId = executionResult.executionId;
       
@@ -468,7 +486,7 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
       while (attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Aguarda 1 segundo
         
-        const status = getExecutionStatus(executionId);
+        const status = getExecutionStatus(executionId, tenantId);
         
         if (!status) {
           throw new Error('Execução RPA não encontrada');
@@ -537,7 +555,7 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
       }
       
       // Timeout
-      const finalStatus = getExecutionStatus(executionId);
+      const finalStatus = getExecutionStatus(executionId, tenantId);
       logger.error('Timeout aguardando conclusão do teste RPA', {
         executionId,
         testId: rpaTest.id,
@@ -560,7 +578,7 @@ async function executeAndValidateRpa(rpaTest, options = {}) {
       
     } finally {
       // Remove gravação temporária
-      removeTemporaryRecording(recording.id);
+      removeTemporaryRecording(recording.id, tenantId);
     }
   } catch (err) {
     logger.error('Erro ao executar teste RPA', { 
@@ -1049,7 +1067,7 @@ async function orchestrateGeneration(payload, options = {}) {
 
       // No modo bootstrap, NÃO salva ainda - só salva se RPA passar
       if (!payload.bootstrap && rpaArtifact.rpaTest) {
-        const rpaFilePath = saveRpaTestFile(rpaArtifact.rpaTest);
+        const rpaFilePath = saveRpaTestFile(rpaArtifact.rpaTest, tenantId);
         rpaArtifact.rpaTest.filePath = rpaFilePath;
       }
     }
@@ -1189,4 +1207,3 @@ module.exports = {
   calculateContractHash,
   executeAndValidateRpa,
 };
-

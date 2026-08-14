@@ -13,18 +13,25 @@
  *
  * Outputs:
  *   governance/replay-integrity-report.json
- *   dist/governance-artifacts/replay-integrity-report.json (copiado)
+ *   (o fluxo de release copia para dist/governance-artifacts/ ao empacotar)
  */
 
 const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 const { sha256File, sha256String, resolveArtifact } = require('./governance-chain');
+const {
+  validateQaWavesEnterpriseGovernance,
+} = require('../tools/system/lib/qa-waves-enterprise-governance-bridge');
 
 const ROOT        = path.join(__dirname, '..');
 const REPORT_PATH = path.join(ROOT, 'governance', 'replay-integrity-report.json');
 const GOV_ARTS    = path.join(ROOT, 'dist', 'governance-artifacts');
 const GENESIS_HASH = '0'.repeat(64);
+
+function isHmacSignature(value) {
+  return /^hmac-sha256:[a-f0-9]{64}$/i.test(String(value || ''));
+}
 
 function readJsonSafe(filePath) {
   if (!fs.existsSync(filePath)) return null;
@@ -125,24 +132,44 @@ function checkReplayChain(chain, proofSigAudit) {
     });
   }
 
-  // 2. Verificar assinaturas de governança (proof-signature.json)
-  if (proofSigAudit?.signatures) {
-    const invalidSigs = proofSigAudit.signatures.filter((s) => !s.valid);
-    if (invalidSigs.length > 0) {
-      issues.push({
-        type:     'invalid_governance_signatures',
-        severity: 'CRITICAL',
-        journeys: invalidSigs.map((s) => s.journeyId),
-      });
-    }
+  // 2. A auditoria precisa existir e aceitar somente HMAC com chave secreta.
+  // Relatórios legados usavam gov-sha256 (hash público) e não constituem
+  // assinatura; ausência da auditoria nunca pode virar PASS por omissão.
+  const auditedSignatures = Array.isArray(proofSigAudit?.signatures)
+    ? proofSigAudit.signatures
+    : [];
+  if (proofSigAudit?.valid !== true || auditedSignatures.length === 0) {
+    issues.push({
+      type: 'replay_signature_audit_missing_or_invalid',
+      severity: 'CRITICAL',
+    });
+  }
+  const invalidSigs = auditedSignatures.filter((signature) => (
+    signature?.valid !== true
+    || !isHmacSignature(signature?.actual)
+    || !isHmacSignature(signature?.expected)
+  ));
+  if (invalidSigs.length > 0) {
+    issues.push({
+      type: 'invalid_governance_signatures',
+      severity: 'CRITICAL',
+      journeys: invalidSigs.map((signature) => signature.journeyId),
+    });
   }
 
-  // 3. Verificar coerência da cadeia (parent-child)
-  for (let i = 1; i < chain.length; i++) {
-    const expected = sha256String(`${chain[i - 1].replayHash}:${chain[i].replayHash}`);
-    // cumulative usa prevHash (chain[i-1].replayHash), já calculado no buildReplayChain
-    // verificamos se parentReplayHash bate com o hash do item anterior
-    if (chain[i].parentReplayHash !== chain[i - 1].replayHash) {
+  // 3. Verificar algoritmo individual e coerência completa da cadeia.
+  for (let i = 0; i < chain.length; i++) {
+    const expectedParent = i === 0 ? GENESIS_HASH : chain[i - 1].replayHash;
+    const expectedCumulative = sha256String(`${expectedParent}:${chain[i].replayHash}`);
+    if (!isHmacSignature(chain[i].governanceHash)) {
+      issues.push({
+        type: 'unsupported_replay_governance_signature',
+        severity: 'CRITICAL',
+        index: i,
+        journeyId: chain[i].journeyId,
+      });
+    }
+    if (chain[i].parentReplayHash !== expectedParent) {
       issues.push({
         type:     'chain_break',
         severity: 'CRITICAL',
@@ -150,8 +177,60 @@ function checkReplayChain(chain, proofSigAudit) {
         journeyId: chain[i].journeyId,
       });
     }
+    if (chain[i].cumulativeHash !== expectedCumulative) {
+      issues.push({
+        type: 'cumulative_hash_mismatch',
+        severity: 'CRITICAL',
+        index: i,
+        journeyId: chain[i].journeyId,
+      });
+    }
   }
 
+  return issues;
+}
+
+function checkProofBinding(proofSig, enterpriseReport, enterpriseValidation) {
+  const issues = [];
+  if (!enterpriseReport || enterpriseValidation?.valid !== true) {
+    issues.push({
+      type: 'enterprise_replay_governance_invalid',
+      severity: 'CRITICAL',
+      reasons: enterpriseValidation?.reasons || ['enterprise_report_missing'],
+    });
+    return issues;
+  }
+
+  if (proofSig?.sourceArtifact !== 'qa/qa-waves-enterprise-governance.json') {
+    issues.push({ type: 'proof_source_invalid', severity: 'CRITICAL' });
+  }
+  if (!proofSig?.reportHash || proofSig.reportHash !== enterpriseReport.reportHash) {
+    issues.push({ type: 'proof_report_hash_mismatch', severity: 'CRITICAL' });
+  }
+  if (!proofSig?.signature || proofSig.signature !== enterpriseReport.enterpriseGovernanceSignature) {
+    issues.push({ type: 'proof_enterprise_signature_mismatch', severity: 'CRITICAL' });
+  }
+
+  const expectedArtifacts = new Map(
+    (enterpriseReport.replayArtifacts || []).map((artifact) => [artifact.journeyId, artifact])
+  );
+  const subjects = Array.isArray(proofSig?.subjectHashes) ? proofSig.subjectHashes : [];
+  if (subjects.length === 0 || subjects.length !== expectedArtifacts.size) {
+    issues.push({ type: 'proof_subject_count_mismatch', severity: 'CRITICAL' });
+  }
+  for (const subject of subjects) {
+    const expected = expectedArtifacts.get(subject.journeyId);
+    if (!expected
+      || subject.replayHash !== expected.replayHash
+      || subject.replayChecksum !== expected.replayChecksum
+      || subject.governanceSignature !== expected.governanceSignature) {
+      issues.push({
+        type: 'proof_subject_binding_mismatch',
+        severity: 'CRITICAL',
+        journeyId: subject.journeyId || null,
+      });
+    }
+  }
   return issues;
 }
 
@@ -163,9 +242,17 @@ function generateReplayIntegrityReport() {
   }
 
   const proofSig     = readJsonSafe(path.join(ROOT, 'governance', 'proof-signature.json')) || {};
+  const enterpriseReport = readJsonSafe(path.join(ROOT, 'qa', 'qa-waves-enterprise-governance.json'));
+  let enterpriseValidation = { valid: false, reasons: ['enterprise_report_missing'] };
+  if (enterpriseReport) {
+    enterpriseValidation = validateQaWavesEnterpriseGovernance(enterpriseReport);
+  }
   const sources      = collectReplaySources();
   const chain        = buildReplayChain(sources);
-  const issues       = checkReplayChain(chain, proofSig.signatureAudit);
+  const signatureAudit = proofSig.signatureAudit || proofSig.audit || null;
+  const chainIssues = checkReplayChain(chain, signatureAudit);
+  const proofBindingIssues = checkProofBinding(proofSig, enterpriseReport, enterpriseValidation);
+  const issues       = chainIssues.concat(proofBindingIssues);
   const criticals    = issues.filter((i) => i.severity === 'CRITICAL');
   const replayRoot   = chain.length > 0 ? chain[chain.length - 1].cumulativeHash : GENESIS_HASH;
 
@@ -185,6 +272,21 @@ function generateReplayIntegrityReport() {
   }
 
   const pass = criticals.length === 0 && replaySigValid;
+  const auditedSignatures = Array.isArray(signatureAudit?.signatures) ? signatureAudit.signatures : [];
+  const signatureAuditValid = signatureAudit?.valid === true
+    && auditedSignatures.length > 0
+    && auditedSignatures.every((signature) => (
+      signature?.valid === true
+      && isHmacSignature(signature?.actual)
+      && isHmacSignature(signature?.expected)
+    ));
+  const signatureAlgorithmsValid = chain.length > 0
+    && auditedSignatures.length > 0
+    && chain.every((item) => isHmacSignature(item.governanceHash))
+    && auditedSignatures.every((signature) => (
+      isHmacSignature(signature?.actual) && isHmacSignature(signature?.expected)
+    ));
+  const proofBindingValid = proofBindingIssues.length === 0;
 
   const report = {
     generatedAt:     new Date().toISOString(),
@@ -193,8 +295,14 @@ function generateReplayIntegrityReport() {
     totalReplays:    chain.length,
     physicalHashes:  chain.filter((l) => l.hasPhysicalHash).length,
     declaredOnly:    chain.filter((l) => l.declared).length,
-    replayRoot:      replayRoot.slice(0, 32) + '…',
+    replayRoot,
     replaySigValid,
+    enterpriseGovernanceValid: enterpriseValidation.valid === true,
+    enterpriseGovernanceReasons: enterpriseValidation.reasons || [],
+    proofBindingValid,
+    signatureAuditValid,
+    signatureAlgorithmsValid,
+    sourceGeneratedAt: proofSig.generatedAt || null,
     issues,
     criticalIssues:  criticals.length,
     chain,
@@ -208,14 +316,21 @@ function generateReplayIntegrityReport() {
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
-  // Copiar para dist/governance-artifacts/
-  fs.mkdirSync(GOV_ARTS, { recursive: true });
-  fs.copyFileSync(REPORT_PATH, path.join(GOV_ARTS, 'replay-integrity-report.json'));
+  // NOTA: não copiar para dist/governance-artifacts/ — esse diretório é
+  // populado exclusivamente pelo fluxo de release (release-package.sh /
+  // two-pass-release.sh) e validate:dist falha se houver resíduo fora dele.
 
   return report;
 }
 
-module.exports = { generateReplayIntegrityReport, buildReplayChain, collectReplaySources };
+module.exports = {
+  generateReplayIntegrityReport,
+  buildReplayChain,
+  checkProofBinding,
+  checkReplayChain,
+  collectReplaySources,
+  isHmacSignature,
+};
 
 if (require.main === module) {
   const report = generateReplayIntegrityReport();

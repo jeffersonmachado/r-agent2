@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime';
+require('../api/utils/runtimePaths').configureRuntimeRoot('/tmp/ragent2-runtime');
 
 const { listLatestScenarios, runScenarioExecution } = require('../api/services/qaWavesScenarioService');
 const { getQueuedExecutionStatus } = require('../api/services/qaMeshService');

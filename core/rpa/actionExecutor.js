@@ -102,7 +102,9 @@ class ActionExecutor {
         : (process.env.RPA_CAPTURE_HTTP_ERRORS === '1' || process.env.RPA_CAPTURE_HTTP_ERRORS === 'true'),
       traceEnabled: options.traceEnabled !== undefined
         ? options.traceEnabled
-        : (process.env.RPA_TRACE === '1' || process.env.RPA_TRACE === 'true'),
+        // Trace visual é gerado SEMPRE por padrão (replay visual auditável).
+        // Use RPA_TRACE=0/false apenas para desabilitar explicitamente.
+        : (process.env.RPA_TRACE !== '0' && process.env.RPA_TRACE !== 'false'),
       traceDir: options.traceDir || process.env.RPA_TRACE_DIR || path.join(RPA_ARTIFACT_ROOT, 'traces'),
     };
   }

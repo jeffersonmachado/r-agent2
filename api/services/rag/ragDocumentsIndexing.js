@@ -3,14 +3,13 @@ const { safeErrorMessage, safeToString } = require('../../utils/defensiveCoercio
 const { setIndexState } = require('./ragDocumentsState');
 
 const ragService = require('../ragService');
-const postgresVectorStore = require('../vectorStore/postgresVectorStore');
 
 /**
  * Reindexa um documento único.
  * 
  * @param {string} documentId - ID do documento
  * @param {Map} documentsCache - Cache de documentos (referência mutável)
- * @param {Function} persistFn - Função para persistir documento (best-effort)
+ * @param {Function} persistFn - Persistência obrigatória do estado do documento
  * @param {Function} [loadContentFn] - Carrega content via query pontual quando o cache é leve
  * @returns {Promise<{success: boolean, chunksCreated: number, error?: string, errorCode?: string}>}
  */
@@ -49,20 +48,13 @@ async function reindexDocument(documentId, documentsCache, persistFn, loadConten
 
     setIndexState(document, 'indexing');
     documentsCache.set(document.id, document);
-    if (persistFn) persistFn(document);
+    if (persistFn) await persistFn(document);
 
-    // Remove vetores anteriores antes de reinserir
-    try {
-      if (document.tenantId) {
-        await postgresVectorStore.deleteDocumentVectors({ tenantId: document.tenantId, documentId: document.id });
-      }
-    } catch (e) {
-      logger.warn('[RAGDocuments] Falha ao remover vetores antes do reindex (best-effort)', {
-        tenantId: document.tenantId || null,
-        documentId: document.id,
-        error: e.message,
-      });
-    }
+    // O serviço Python substitui os chunks dentro de uma única transação.
+    // Nunca apagar a versão atual antes de a nova estar pronta: uma falha de
+    // embedding ou persistência deve preservar os chunks anteriores. O pai fica
+    // fora do estado `indexed`, portanto retrieval permanece fail-closed até o
+    // refresh terminar com sucesso.
 
     const indexResult = await ragService.indexDocument({ ...document, content }, document.tenantId);
     
@@ -77,7 +69,7 @@ async function reindexDocument(documentId, documentsCache, persistFn, loadConten
     const chunksCreated = indexResult.chunksCreated || 0;
     if (indexResult.success && chunksCreated > 0) {
       setIndexState(document, 'indexed', { chunksCount: chunksCreated });
-      if (persistFn) persistFn(document);
+      if (persistFn) await persistFn(document);
       
       logger.info('[RAGDocuments] Documento marcado como indexado no BD', {
         documentId: document.id,
@@ -93,7 +85,7 @@ async function reindexDocument(documentId, documentsCache, persistFn, loadConten
           ? (indexResult.isDuplicate ? 'Indexação retornou 0 chunks (duplicado/sem ingestão)' : 'Indexação retornou 0 chunks (não persistido no vector store)')
           : (indexResult.error || 'Falha ao indexar documento'),
       });
-      if (persistFn) persistFn(document);
+      if (persistFn) await persistFn(document);
       logger.error('[RAGDocuments] Falha ao indexar documento', {
         documentId: document.id,
         error: indexResult.error,
@@ -115,7 +107,8 @@ async function reindexDocument(documentId, documentsCache, persistFn, loadConten
     return {
       success: false,
       chunksCreated: 0,
-      errorCode: safeToString(safeError).includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED',
+      errorCode: error?.code
+        || (safeToString(safeError).includes('EMBEDDING_DIM_MISMATCH') ? 'EMBEDDING_DIM_MISMATCH' : 'RAG_INDEX_FAILED'),
       error: safeError,
     };
   }
@@ -127,7 +120,7 @@ async function reindexDocument(documentId, documentsCache, persistFn, loadConten
  * @param {string|null} tenantId - ID do tenant (opcional)
  * @param {boolean} includeInconsistent - Incluir documentos indexados para sincronização
  * @param {Map} documentsCache - Cache de documentos
- * @param {Function} persistFn - Função para persistir documento (best-effort)
+ * @param {Function} persistFn - Persistência obrigatória do estado do documento
  * @param {Function} reindexDocFn - Função de reindex individual
  * @param {Function} [loadContentfulIdsFn] - Retorna Set de ids com content no DB (cache leve)
  * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
@@ -153,7 +146,7 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
     const hasContent = (doc) => {
       if (doc.content !== undefined) return !!doc.content;
       if (contentfulIds) return contentfulIds.has(doc.id);
-      return true; // DB indisponível: tenta e deixa o reindex individual falhar explícito
+      return true; // o caller DB-backed decide; o reindex individual valida o conteúdo
     };
     
     // Filtra documentos não indexados
@@ -311,8 +304,7 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
 /**
  * Reindex completo de um tenant (single source of truth = Postgres):
  * 1) marca todos docs como pending
- * 2) apaga todos os rag_chunks do tenant
- * 3) reprocessa indexação
+ * 2) reprocessa cada documento com substituição atômica no serviço RAG
  * 
  * @param {string} tenantId - ID do tenant (obrigatório)
  * @param {Map} documentsCache - Cache de documentos
@@ -326,18 +318,17 @@ async function reindexAllTenant(tenantId, documentsCache, persistFn, reindexAllF
     return { success: false, total: 0, indexed: 0, failed: 0, errors: [{ error: 'tenantId é obrigatório' }] };
   }
 
-  // Marca todos como pending (cache + best-effort persist)
+  // Marca todos como pending no cache e na persistência autoritativa.
   for (const doc of documentsCache.values()) {
     if (doc.tenantId !== finalTenantId) continue;
     setIndexState(doc, 'pending');
     documentsCache.set(doc.id, doc);
-    if (persistFn) persistFn(doc);
+    if (persistFn) await persistFn(doc);
   }
 
-  // Apaga vetores do tenant (fonte única)
-  await postgresVectorStore.deleteTenantVectors(finalTenantId);
-
-  // Reindexa tudo (agora todos estão !indexed)
+  // Não apaga o corpus antecipadamente. Cada documento é substituído em uma
+  // transação própria pelo serviço RAG; assim uma falha preserva a versão
+  // anterior em vez de deixar o tenant inteiro sem conhecimento.
   return await reindexAllFn(finalTenantId, true);
 }
 

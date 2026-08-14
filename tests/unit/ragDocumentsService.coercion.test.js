@@ -1,5 +1,65 @@
+const mockRagRows = new Map();
+
+function mockRowFor(id) {
+  const current = mockRagRows.get(id);
+  if (!current) return null;
+  return {
+    ...current,
+    dataValues: current,
+    toJSON: () => ({ ...mockRagRows.get(id) }),
+    update: async (payload) => {
+      mockRagRows.set(id, { ...mockRagRows.get(id), ...payload });
+    },
+  };
+}
+
+const mockRagDocumentModel = {
+  findByPk: async (id) => mockRowFor(String(id)),
+  findOne: async ({ where }) => {
+    const row = mockRowFor(String(where.id));
+    return row && row.tenant_key === where.tenant_key ? row : null;
+  },
+  findAll: async ({ where = {} } = {}) => Array.from(mockRagRows.keys())
+    .filter((id) => !where.tenant_key || mockRagRows.get(id).tenant_key === where.tenant_key)
+    .filter((id) => !Array.isArray(where.id) || where.id.includes(id))
+    .map(mockRowFor),
+  create: async (payload) => {
+    mockRagRows.set(String(payload.id), { ...payload });
+    return mockRowFor(String(payload.id));
+  },
+  destroy: async ({ where }) => {
+    const row = mockRagRows.get(String(where.id));
+    if (!row || (where.tenant_key && row.tenant_key !== where.tenant_key)) return 0;
+    mockRagRows.delete(String(where.id));
+    return 1;
+  },
+};
+
 jest.mock('../../api/db/sequelize', () => ({
-  getSequelize: () => null,
+  getSequelize: () => ({
+    query: async (_sql, { replacements = {} } = {}) => {
+      const term = String(replacements.pattern || '').replaceAll('%', '').replaceAll('\\', '').toLowerCase();
+      const rows = Array.from(mockRagRows.values())
+        .filter((row) => !replacements.tenantId || row.tenant_key === replacements.tenantId)
+        .filter((row) => !term || `${row.title || ''} ${row.content || ''}`.toLowerCase().includes(term))
+        .map((row) => ({ id: row.id }));
+      return [rows];
+    },
+  }),
+}));
+
+jest.mock('../../api/db/models', () => ({
+  RagDocument: () => mockRagDocumentModel,
+  RagDocumentFile: () => ({
+    findByPk: async () => null,
+    findOne: async () => null,
+    create: async () => null,
+    destroy: async () => 0,
+  }),
+}));
+
+jest.mock('../../api/utils/logger', () => ({
+  debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
 }));
 
 jest.mock('../../api/services/ragService', () => ({
@@ -157,7 +217,7 @@ describe('ragDocumentsService - defensive coercions', () => {
       },
     };
 
-    const result = await ragDocumentsService.deleteDocument(hostileId);
+    const result = await ragDocumentsService.deleteDocument(hostileId, 'tenant-safe-3');
     expect(result.success).toBe(true);
   });
 

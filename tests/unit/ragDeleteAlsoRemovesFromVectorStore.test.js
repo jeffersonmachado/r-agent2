@@ -7,6 +7,41 @@ jest.mock('../../api/db/sequelize', () => ({
   getSequelize: () => ({ query: jest.fn(async () => [[{ current_version: null }]]) }),
 }));
 
+const mockRows = new Map();
+const mockRowFor = (id) => {
+  const current = mockRows.get(id);
+  if (!current) return null;
+  return {
+    ...current,
+    dataValues: current,
+    toJSON: () => ({ ...mockRows.get(id) }),
+    update: async (payload) => mockRows.set(id, { ...mockRows.get(id), ...payload }),
+  };
+};
+
+jest.mock('../../api/db/models', () => ({
+  RagDocument: () => ({
+    findByPk: async (id) => mockRowFor(String(id)),
+    findOne: async ({ where }) => {
+      const row = mockRowFor(String(where.id));
+      return row && row.tenant_key === where.tenant_key ? row : null;
+    },
+    create: async (payload) => {
+      mockRows.set(String(payload.id), { ...payload });
+      return mockRowFor(String(payload.id));
+    },
+    destroy: async ({ where }) => {
+      const row = mockRows.get(String(where.id));
+      if (!row || (where.tenant_key && row.tenant_key !== where.tenant_key)) return 0;
+      mockRows.delete(String(where.id));
+      return 1;
+    },
+  }),
+  RagDocumentFile: () => ({
+    destroy: async () => 0,
+  }),
+}));
+
 jest.mock('../../api/services/ragService', () => ({
   // Necessário para o getRagService() não quebrar (ele valida indexDocument)
   indexDocument: jest.fn(async () => ({ success: true, documentId: 'x', chunksCreated: 1 })),
@@ -35,10 +70,13 @@ describe('RAG delete -> remove do vector store', () => {
     expect(created.document.id).toBe(docId);
     expect(created.document.tenantId).toBe(tenantId);
 
-    const del = await ragDocumentsService.deleteDocument(docId);
+    const unscopedDelete = await ragDocumentsService.deleteDocument(docId);
+    expect(unscopedDelete).toMatchObject({ success: false, errorCode: 'TENANT_REQUIRED' });
+    expect(postgresVectorStore.deleteDocumentVectors).not.toHaveBeenCalled();
+
+    const del = await ragDocumentsService.deleteDocument(docId, tenantId);
     expect(del.success).toBe(true);
 
     expect(postgresVectorStore.deleteDocumentVectors).toHaveBeenCalledWith({ tenantId, documentId: String(docId) });
   });
 });
-

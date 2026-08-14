@@ -37,7 +37,7 @@ Navegação pela doutrina operacional, configuração e procedures do r-agent2.
 
 ```bash
 # Quick start
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+export runtime_root=~/.local/share/ragent2-runtime
 npm ci
 npm run dev
 
@@ -78,16 +78,16 @@ npm run dev
 - Arquivo: `scripts/test-rpa-replays-scale-smoke.js`
 - Evidência: `qa/l07-rpa-replays-scale-evidence.json`
 
-**Todos respeitam `RUNTIME_ROOT`** se definido, caso contrário fallback workspace.
+**Todos respeitam `runtime_root`** se definido, caso contrário fallback workspace.
 
 **Documentação:** [DOUTRINA_OPERACIONAL.md#41-desenvolvimento-local](./DOUTRINA_OPERACIONAL.md#41-desenvolvimento-local)
 
 ### System Validate (QA Mesh Pipeline)
 
 ```bash
-export RUNTIME_ROOT=/var/lib/r-agent2-runtime
+export runtime_root=/var/lib/r-agent2-runtime
 npm run system:validate
-# → Outputs to $RUNTIME_ROOT/qa-mesh/system-validate/meshReport.json
+# → Outputs to $runtime_root/qa-mesh/system-validate/meshReport.json
 ```
 
 **Decisão:** Retorna exit code 0 (GO) ou 1 (NO_GO)
@@ -98,7 +98,7 @@ npm run system:validate
 ### Release Gate & Go/No-Go
 
 ```bash
-export RUNTIME_ROOT=/var/lib/r-agent2-release
+export runtime_root=/var/lib/r-agent2-release
 npm run system:release-gate     # Read verdicts, apply governance
 npm run system:go-no-go         # Make decision (GO=0 / NO_GO=1)
 npm run system:release-summary  # Document approval
@@ -135,7 +135,7 @@ npm run zip:release:clean       # Package safely
 
 ### Development Local
 ```bash
-RUNTIME_ROOT=~/.local/share/ragent2-runtime  # Opcional
+runtime_root=~/.local/share/ragent2-runtime  # Opcional
 NODE_ENV=development
 LOG_LEVEL=debug
 # Restante usa defaults
@@ -144,7 +144,7 @@ LOG_LEVEL=debug
 
 ### Docker / Compose (Produção)
 ```bash
-RUNTIME_ROOT=/var/lib/ragent2
+runtime_root=/var/lib/ragent2
 NODE_ENV=production
 LOG_LEVEL=info
 RELEASE_EVIDENCE_BASE_DIR=/var/lib/ragent2/release-evidence
@@ -154,7 +154,7 @@ QA_MESH_SYSTEM_VALIDATE_DIR=/var/lib/ragent2/qa-mesh/system-validate
 
 ### CI/CD (GitHub Actions / Jenkins)
 ```bash
-RUNTIME_ROOT=/tmp/r-agent2-runtime-$BUILD_ID
+runtime_root=/tmp/r-agent2-runtime-$BUILD_ID
 NODE_ENV=test
 LOG_LEVEL=debug
 ```
@@ -168,7 +168,7 @@ LOG_LEVEL=debug
 
 | Variável | Tipo | Default | Cascata | Uso |
 |----------|------|---------|---------|-----|
-| `RUNTIME_ROOT` | Universal | N/A | N/A | Raiz de runtime mutável |
+| `runtime_root` | Universal | N/A | N/A | Raiz de runtime mutável |
 | `PHYSICAL_QUEUE_EVIDENCE_PATH` | Específica | `qa/l01-*` | Sim | L-01 smoke |
 | `BPMN_EDITOR_EVIDENCE_PATH` | Específica | `qa/l06-*` | Sim | L-06 smoke |
 | `RELEASE_EVIDENCE_BASE_DIR` | Específica | `qa/release-evidence` | Sim | Release gates |
@@ -184,12 +184,12 @@ LOG_LEVEL=debug
 ## ⚠️ Troubleshooting
 
 ### "Path not found / Evidência em workspace"
-**Causa:** RUNTIME_ROOT não definido
-**Solução:** `export RUNTIME_ROOT=/path` antes de scripts
+**Causa:** runtime_root não definido
+**Solução:** `export runtime_root=/path` antes de scripts
 [Troubleshooting guide →](./DOUTRINA_OPERACIONAL.md#9-troubleshooting-operacional)
 
 ### "npm run system:validate escreve em workspace"
-**Causa:** RUNTIME_ROOT não exportado
+**Causa:** runtime_root não exportado
 **Solução:** Exportar antes, ou redefinir em .env
 [Troubleshooting guide →](./DOUTRINA_OPERACIONAL.md#9-troubleshooting-operacional)
 
@@ -233,7 +233,7 @@ Após "Doutrina operacional e config única":
 
 - ✅ **Wave 1** — Core runtime utilities (scripts/check-green.js, etc.)
 - ✅ **Wave 2** — Smoke tests + internal validator (8 testers + L-00)
-- ✅ **Separar produto e runtime** — Path separation, RUNTIME_ROOT, cleanup
+- ✅ **Separar produto e runtime** — Path separation, runtime_root, cleanup
 - ✅ **Doutrina operacional e config única** — Unified operational doctrine
 - ✅ **Environment-specific deployment guides** — Dev, Docker, CI/CD, Hardening
 
@@ -260,10 +260,10 @@ Após "Doutrina operacional e config única":
 - Novas convenções de env vars
 
 **Padrões agora únicos:**
-- Cascata de paths: explícito > RUNTIME_ROOT > default
+- Cascata de paths: explícito > runtime_root > default
 - Governança: GO/NO_GO baseado em thresholds
 - Limpeza: npm run runtime:clean:check obrigatório
-- Setup: export RUNTIME_ROOT + npm ci padrão
+- Setup: export runtime_root + npm ci padrão
 
 ---
 

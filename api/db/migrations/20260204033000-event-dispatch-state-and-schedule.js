@@ -34,7 +34,7 @@ module.exports = {
         name: 'Dispatch event_ledger triggers',
         enabled: true,
         kind: 'scan_event_triggers',
-        payload: { consumer: 'webhooks_v1', batchSize: 100 },
+        payload: JSON.stringify({ consumer: 'webhooks_v1', batchSize: 100 }),
         interval_sec: 5,
         next_run_at: in10,
         last_run_at: null,

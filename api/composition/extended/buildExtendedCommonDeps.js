@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { checkRateLimit } = require('../../../infra/rate-limit');
 const { requireAuth, requirePermission } = require('../../middleware/auth');
-const { logAction } = require('../../services/auditService');
+const { logAction, logActionRequired } = require('../../services/auditService');
 const { isSuperAdmin } = require('../../services/superAdminService');
 const { sendApiError, buildApiError } = require('../../utils/apiError');
 const {
@@ -31,6 +31,7 @@ function buildExtendedCommonDeps({ req, res, requireTenant }) {
     parseJsonBodyWithRaw,
     isSuperAdmin,
     logAction,
+    logActionRequired,
     logger,
     setCorsHeaders,
     sendApiError,

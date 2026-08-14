@@ -7,6 +7,7 @@ const {
   ALLOWED_CHANNELS,
   ALLOWED_SCENARIO_SOURCES,
   ALLOWED_SCENARIO_STATUS,
+  EXECUTABLE_SCENARIO_STATUS,
   ALLOWED_SEED_SOURCES,
   ALLOWED_RISK_PRIORITY,
   KNOWN_BACKEND_ENTITIES,
@@ -90,6 +91,19 @@ function validateScenarioCompatibility(scenario) {
 
   if (!ALLOWED_SCENARIO_STATUS.includes(scenario.status)) {
     errors.push({ code: 'invalid_status', field: 'status', message: `status invalido: ${scenario.status}` });
+  }
+
+  const platformScenarioIds = Array.from(new Set([
+    ...(Array.isArray(scenario.platformScenarioIds) ? scenario.platformScenarioIds : []),
+    ...(Array.isArray(scenario.platform?.platformScenarioIds) ? scenario.platform.platformScenarioIds : []),
+  ].map((item) => String(item || '').trim()).filter(Boolean)));
+  if (EXECUTABLE_SCENARIO_STATUS.includes(String(scenario.status || '').toLowerCase())
+      && platformScenarioIds.length === 0) {
+    errors.push({
+      code: 'missing_platform_scenario_ids',
+      field: 'platformScenarioIds',
+      message: 'Scenario executável deve declarar ao menos um platformScenarioId',
+    });
   }
 
   if (!ALLOWED_RISK_PRIORITY.includes(scenario.risk)) {

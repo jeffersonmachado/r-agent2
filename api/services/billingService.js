@@ -163,30 +163,56 @@ async function createCharge(payload = {}) {
     idempotencyKey: `${idempotencyKey}:charge`,
   });
 
-  const created = await Tx.create({
-    id: makeId('bt'),
-    tenant_key: tenantId,
-    vertical,
-    membership_id: payload.membershipId || null,
-    bundle_id: payload.bundleId || null,
-    subject_id: payload.subjectId || null,
-    customer_id: payload.customerId || null,
-    provider,
-    type: chargeType,
-    amount,
-    currency: payload.currency || 'BRL',
-    status: charge.status || 'pending',
-    due_at: payload.dueDate ? new Date(payload.dueDate) : null,
-    external_customer_id: customer.id || null,
-    external_transaction_id: charge.transactionId || null,
-    external_subscription_id: subscription?.subscriptionId || null,
-    idempotency_key: idempotencyKey,
-    metadata: {
-      paymentUrl: charge.paymentUrl || null,
-      providerRaw: charge.raw || {},
-      ...(payload.metadata || {}),
-    },
-  });
+  let created;
+  try {
+    created = await Tx.create({
+      id: makeId('bt'),
+      tenant_key: tenantId,
+      vertical,
+      membership_id: payload.membershipId || null,
+      bundle_id: payload.bundleId || null,
+      subject_id: payload.subjectId || null,
+      customer_id: payload.customerId || null,
+      provider,
+      type: chargeType,
+      amount,
+      currency: payload.currency || 'BRL',
+      status: charge.status || 'pending',
+      due_at: payload.dueDate ? new Date(payload.dueDate) : null,
+      external_customer_id: customer.id || null,
+      external_transaction_id: charge.transactionId || null,
+      external_subscription_id: subscription?.subscriptionId || null,
+      idempotency_key: idempotencyKey,
+      metadata: {
+        paymentUrl: charge.paymentUrl || null,
+        providerRaw: charge.raw || {},
+        ...(payload.metadata || {}),
+      },
+    });
+  } catch (error) {
+    // Corrida de idempotência: outro request concorrente criou a transação
+    // com o mesmo idempotency_key entre o findOne inicial e este insert.
+    // Em vez de falhar com SequelizeUniqueConstraintError, retorna a
+    // transação já persistida (comportamento idempotente).
+    const isUniqueViolation = error?.name === 'SequelizeUniqueConstraintError'
+      || error?.original?.code === '23505'
+      || error?.parent?.code === '23505';
+    if (isUniqueViolation) {
+      const existingRow = await Tx.findOne({
+        where: { tenant_key: tenantId, idempotency_key: idempotencyKey },
+      }).catch(() => null);
+      if (existingRow) {
+        const existingData = existingRow.toJSON ? existingRow.toJSON() : existingRow;
+        logger.warn('[Billing] colisão de idempotência resolvida — retornando transação existente', {
+          tenantId,
+          transactionId: existingData.id || null,
+          idempotencyKey,
+        });
+        return { idempotent: true, transaction: existingData };
+      }
+    }
+    throw error;
+  }
 
   const transaction = created.toJSON ? created.toJSON() : created;
 

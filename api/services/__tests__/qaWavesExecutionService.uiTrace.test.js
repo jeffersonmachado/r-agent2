@@ -1,5 +1,7 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../utils/runtimePaths');
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -15,7 +17,7 @@ describe('qaWavesExecutionService.buildUiTrace', () => {
   beforeEach(() => {
     jest.resetModules();
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-waves-uitrace-'));
-    process.env.RUNTIME_ROOT = runtimeRoot;
+    configureRuntimeRoot(runtimeRoot);
 
     jest.isolateModules(() => {
       qaWavesExecutionService = require('../qaWavesExecutionService');
@@ -23,7 +25,7 @@ describe('qaWavesExecutionService.buildUiTrace', () => {
   });
 
   afterEach(() => {
-    delete process.env.RUNTIME_ROOT;
+    configureRuntimeRoot(null);
     fs.rmSync(runtimeRoot, { recursive: true, force: true });
   });
 

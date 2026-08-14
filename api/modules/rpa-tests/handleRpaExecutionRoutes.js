@@ -2,6 +2,7 @@ const {
   ensureSupportAccess,
   getPathSuffix,
   getExecutionIdFromActionPath,
+  resolveRequestTenant,
 } = require('./rpaRouteUtils');
 
 async function handleRpaExecutionRoutes(ctx) {
@@ -22,6 +23,8 @@ async function handleRpaExecutionRoutes(ctx) {
 
   if (method === 'POST' && pathname.startsWith('/rpa/execute/')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -40,7 +43,7 @@ async function handleRpaExecutionRoutes(ctx) {
       const data = body.data || {};
       const token = req.token || null;
 
-      const result = await executeRecording(recordingId, config, data, token);
+      const result = await executeRecording(recordingId, config, data, token, tenantId);
       sendJson(res, 200, result);
     } catch (error) {
       logger.error('Erro ao executar RPA:', error);
@@ -54,6 +57,8 @@ async function handleRpaExecutionRoutes(ctx) {
 
   if (method === 'GET' && pathname.startsWith('/rpa/execution/')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
       const executionId = getPathSuffix(pathname, '/rpa/execution/');
@@ -62,7 +67,7 @@ async function handleRpaExecutionRoutes(ctx) {
         return true;
       }
 
-      const status = getExecutionStatus(executionId);
+      const status = getExecutionStatus(executionId, tenantId);
       if (!status) {
         sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
         return true;
@@ -78,6 +83,8 @@ async function handleRpaExecutionRoutes(ctx) {
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/cancel')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
       const executionId = getExecutionIdFromActionPath(pathname);
@@ -86,7 +93,7 @@ async function handleRpaExecutionRoutes(ctx) {
         return true;
       }
 
-      const result = await cancelExecution(executionId);
+      const result = await cancelExecution(executionId, tenantId);
       if (!result.success) {
         sendJson(res, 400, { error: 'validation_error', message: result.error });
         return true;
@@ -102,6 +109,8 @@ async function handleRpaExecutionRoutes(ctx) {
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/continue')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
       const executionId = getExecutionIdFromActionPath(pathname);
@@ -110,7 +119,7 @@ async function handleRpaExecutionRoutes(ctx) {
         return true;
       }
 
-      const result = continueExecution(executionId, true);
+      const result = continueExecution(executionId, true, tenantId);
       if (!result.success) {
         sendJson(res, 400, { error: 'validation_error', message: result.error });
         return true;
@@ -126,6 +135,8 @@ async function handleRpaExecutionRoutes(ctx) {
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/next')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
       const executionId = getExecutionIdFromActionPath(pathname);
@@ -134,7 +145,7 @@ async function handleRpaExecutionRoutes(ctx) {
         return true;
       }
 
-      const result = nextStep(executionId);
+      const result = nextStep(executionId, tenantId);
       if (!result.success) {
         sendJson(res, 400, { error: 'validation_error', message: result.error });
         return true;
@@ -150,6 +161,8 @@ async function handleRpaExecutionRoutes(ctx) {
 
   if (method === 'GET' && pathname.includes('/rpa/execution/') && pathname.endsWith('/report')) {
     if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    const tenantId = resolveRequestTenant(req, res, sendJson);
+    if (!tenantId) return true;
 
     try {
       const executionId = getExecutionIdFromActionPath(pathname);
@@ -158,7 +171,7 @@ async function handleRpaExecutionRoutes(ctx) {
         return true;
       }
 
-      const status = getExecutionStatus(executionId);
+      const status = getExecutionStatus(executionId, tenantId);
       if (!status) {
         sendJson(res, 404, { error: 'not_found', message: 'Execução não encontrada' });
         return true;

@@ -61,6 +61,7 @@ const CANONICAL_MUTATION_RULES = [
   { stepId: 'step_publish_marketplace_node', path: 'db.nodeMarketplace.published.id', op: 'appeared', mutation: 'node_published' },
   { stepId: 'step_create_calendar_block', path: 'db.calendar.block.exists', op: 'became_true', mutation: 'calendar_block_created' },
   { stepId: 'step_create_calendar_block', path: 'db.calendar.block.id', op: 'appeared', mutation: 'calendar_block_created' },
+  { stepId: 'step_agendamento_create_task', path: 'db.task.count', op: 'incremented', mutation: 'task_created' },
 ];
 
 const CANONICAL_SIDE_EFFECT_RULES = [
@@ -87,6 +88,7 @@ const CANONICAL_SIDE_EFFECT_RULES = [
   { stepId: 'step_publish_marketplace_node', path: 'api.nodeMarketplace.catalog.count', op: 'incremented', sideEffect: 'catalog_updated' },
   { stepId: 'step_create_calendar_block', path: 'db.calendar.block.count', op: 'incremented', sideEffect: 'calendar_updated' },
   { stepId: 'step_create_calendar_block', path: 'api.calendar.resource.blockCount', op: 'incremented', sideEffect: 'calendar_updated' },
+  { stepId: 'step_agendamento_create_task', path: 'db.task.count', op: 'incremented', sideEffect: 'task_created' },
 ];
 
 function getStepId(step = {}) {

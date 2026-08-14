@@ -1,5 +1,7 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../api/utils/runtimePaths');
+
 /**
  * Regressão: POST /rpa-tests era uma rota morta e sem autenticação.
  *
@@ -18,6 +20,7 @@ const path = require('path');
 const {
   handleRpaTestGenerationRoutes,
 } = require('../../api/modules/domain-flow/flow-execution/rpaTestGenerationRoutes');
+const { getRpaSeedWriteDir } = require('../../lib/rpaPathResolver');
 
 function makeReq(body) {
   const stream = require('stream');
@@ -59,7 +62,11 @@ function baseDeps(overrides) {
     },
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     flows: new Map(),
-    requireAuth: () => ({ valid: true, agent: { id: 'qa-agent' } }),
+    requireAuth: (req) => {
+      req.agent = { id: 'qa-agent', role: 'auditor', tenantId: 'system' };
+      req.tenantId = 'system';
+      return { valid: true, agent: req.agent };
+    },
     requireTenant: () => 'system',
     STRICT_TENANT_MODE: true,
     ...overrides,
@@ -82,11 +89,11 @@ describe('POST /rpa-tests — rota alcançável e autenticada', () => {
 
   beforeEach(() => {
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'rpa-tests-route-'));
-    process.env.RUNTIME_ROOT = runtimeRoot;
+    configureRuntimeRoot(runtimeRoot);
   });
 
   afterEach(() => {
-    delete process.env.RUNTIME_ROOT;
+    configureRuntimeRoot(null);
     fs.rmSync(runtimeRoot, { recursive: true, force: true });
   });
 
@@ -134,7 +141,7 @@ describe('POST /rpa-tests — rota alcançável e autenticada', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('success', true);
     expect(res.body).toHaveProperty('testId', 'rpa-qa-route-ok');
-    expect(fs.existsSync(path.join(runtimeRoot, 'rpa', 'seeds', 'rpa-qa-route-ok.json'))).toBe(true);
+    expect(fs.existsSync(path.join(getRpaSeedWriteDir('system'), 'rpa-qa-route-ok.json'))).toBe(true);
   });
 
   test('branch /flows/:id/generate-rpa-test continua roteável', async () => {

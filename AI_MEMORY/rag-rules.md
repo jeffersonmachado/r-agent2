@@ -17,7 +17,9 @@ RAG is tenant-scoped governed knowledge. It includes documents, adaptive learnin
 
 ## Runtime notes
 
-Browser validation confirmed `/rag-documents` renders authenticated and loads document totals, but console/network events included aborted RAG/API calls during route transitions. Treat these as evidence to inspect when changing RAG UI/API behavior.
+Validação Playwright de 2026-08-14 na stack local isolada confirmou
+`/rag-documents` autenticada, renderizada em HTTP 200, sem erros de console nem
+falhas de rede (`reports/runtime-routes-validation-report.json`).
 
 ## Arquitetura de eficiência (2026-08-03)
 
@@ -25,12 +27,34 @@ Browser validation confirmed `/rag-documents` renders authenticated and loads do
 - **Circuit breaker** no Node (`fetchRagWithBreaker` em `api/services/rag/ragRuntime.js`): 3 falhas → abre 30s, fail-fast `rag_unavailable`; retry com backoff só em GETs idempotentes. Config: `RAG_CB_*`.
 - **Timeout de query dedicado**: 30s default (`RAG_QUERY_TIMEOUT` / `rag.queryTimeoutMs`, por tenant); demais chamadas 5s. Python desiste da OpenAI em 25s (client singleton em `llm_service.py`) — nunca pagar token de resposta abortada.
 - **Caches**: tenant context (TTL 60s, `invalidateTenantContextCache` em writes de tenant_context), resposta RAG (TTL 10min, `api/services/rag/ragResponseCache.js`), embeddings de query no Python (LRU 1024), `config.json`/learning data por mtime, contrato RAG memoizado, `ragContextCache` com TTL 1h + cap 500.
-- **Gating por intent**: `queryRag` pula `/rag/query` para saudação/confirmação/despedida (config `RAG_SKIP_INTENTS`).
+- **Gating por intent**: `queryRag` pula `/rag/query` para saudação e despedida
+  (incluindo agradecimentos/encerramentos), configurável por `RAG_SKIP_INTENTS`.
 - **Token interno obrigatório em TODAS as chamadas** Node → rag-service (`getRagInternalHeaders()`), inclusive GETs (`/rag/health`, `/rag/documents`, `/rag/embeddings`).
+- **Fail-closed de autenticação/persistência (2026-08-14)**: token interno ausente/curto bloqueia o cliente Node e todas as rotas `/rag/*` do Python; compose injeta a mesma credencial nos dois serviços e produção não publica a porta do RAG. CRUD documental exige PostgreSQL e retorna `PERSISTENCE_REQUIRED`/503 em vez de confirmar cache em memória.
+- **Mutações por ID sempre tenant-scoped**: update/delete/reindex exigem o tenant também no serviço, consultam `id + tenant_key` e criação pública não aceita PK escolhida pelo cliente. Reindex substitui chunks transacionalmente, sem apagar antecipadamente o corpus inteiro.
+- **ACL de retrieval fail-closed**: roles e agentId são derivados do ator autenticado, nunca de filtros do payload; SQL aplica roles, agents, sensitivity, status ativo e `index_status=indexed` antes da similaridade. Sem ator, apenas documentos sem restrição de identidade são elegíveis.
+- **Perguntar à IA**: `POST /api/ask-ai` exige autenticação, tenant, `rag:query`, rate limit e auditoria PostgreSQL confirmada antes de consultar. A indisponibilidade do audit log responde 503.
 - **Python**: handlers síncronos no threadpool (não `async def` bloqueante — 1 worker); warm-up do modelo no lifespan de `main.py` + pré-download no Dockerfile; índice vetorial **HNSW** (`rag_chunks_embedding_hnsw_idx`, migration `20260803000002`) com `hnsw.ef_search=40` por sessão (`RAG_HNSW_EF_SEARCH`, fallback `ivfflat.probes`); LLM default `gpt-4o-mini`.
 - **Permissões no SQL**: `vector_store.search` filtra `permissions->'roles'`/`->'agents'` no SQL (jsonb `?|`/`?`); chunk sem restrição = visível a todos. Sem pós-filtro em Python.
 - **Deps do rag-service** (2026-08-06): torch **2.9.1+cpu** (era 2.2.2), onnxruntime 1.28, optimum 2.1.0 + `optimum-onnx 0.1.0` (optimum 1.27 quebra com torch 2.9: import de `_attention_scale` removido), numpy 2.5.1, fastapi 0.141, sentence-transformers 5.6, openai 2.x. `transformers==4.57.6` + `huggingface-hub==0.36.2` SEGUEM pinados — transformers 5.x quebra o optimum (import de `is_tf_available` removido; `optimum-onnx` exige transformers<4.58). `settings.py` usa `SettingsConfigDict`.
 - **Cache leve de documentos**: `ragDocumentsService` não carrega `content` no Map de startup; search via ILIKE no DB; content pontual via findByPk/hidratação.
-- **Backend ONNX de embeddings** (`RAG_EMBEDDING_BACKEND`, default `torch` no código; compose de produção define `onnx`): `get_embedding_model()` em `embedding_service.py` carrega `SentenceTransformer(..., backend='onnx')` com fallback explícito para torch + warning (nunca derruba o serviço). Deps: `optimum==1.27.0` (sem extra — o extra exige transformers<4.54) + `onnxruntime==1.20.1` (>=1.21 quebra com torch 2.2.2). Paridade medida torch×onnx: cosine 1.000000. O `rag-service/Dockerfile` pré-baixa os pesos torch E a variante ONNX (`onnx/model.onnx`).
+- O cache de resposta inclui tenant, identidade/ACL e escopo de domínio; qualquer mutação documental invalida as entradas do tenant.
 
-- **Restart do rag-service dev exige env do `.env`** (2026-08-07): uvicorn SEM `DATABASE_URL` sobe "healthy" mas com `dbConfigured: false` — `/rag/index` retorna 200 e o documento nunca fica `indexed=true` (quebra silenciosa; derrubou 2 cenários do mesh canônico: CORE-BIZ-RAG-SEGREGATION e CORE-BIZ-ACADEMY). Restart correto: `set -a; source .env; set +a; ./venv/bin/uvicorn main:app --reload --port 8001`. Verificar depois: `curl localhost:8001/health` não pode ter `dbConfigured: false`.
+## Estado executável observado (2026-08-14)
+
+`reports/rag-domain-segregation-report.json` está `PASS` na stack local
+isolada: PostgreSQL e rag-service reais estavam acessíveis, os probes
+obrigatórios foram executados e todos os contadores bloqueantes ficaram em
+zero. Probe ignorado ou serviço inalcançável continua não contando como PASS;
+este resultado do controle RAG não implica, isoladamente, GO agregado de
+release.
+
+- **Backend ONNX de embeddings** (`RAG_EMBEDDING_BACKEND`, default `torch` no código; compose de produção define `onnx`): `get_embedding_model()` em `embedding_service.py` carrega `SentenceTransformer(..., backend='onnx')` com fallback explícito para torch + warning. Pins atuais: `torch==2.9.1+cpu`, `optimum==2.1.0`, `optimum-onnx==0.1.0`, `onnxruntime==1.28.0` e `transformers==4.57.6`. O `rag-service/Dockerfile` pré-baixa os pesos torch e a variante ONNX (`onnx/model.onnx`).
+
+- **Restart do rag-service dev exige env do `.env`** (2026-08-07): sem
+  `DATABASE_URL`, `/health` pode responder `healthy` com `dbConfigured: false`,
+  mas readiness/report falham e `/rag/index` não confirma persistência
+  (`success: false`, `chunksCreated: 0`, erro `persistence_required`). Restart
+  correto: `set -a; source .env; set +a; ./venv/bin/uvicorn main:app --reload --port 8001`.
+  Verifique depois que `curl localhost:8001/health` reporte
+  `dbConfigured: true`.

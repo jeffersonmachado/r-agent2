@@ -431,8 +431,35 @@ function loadTenantIsolationViolations() {
  * quando COVERAGE_GATE_SKIP_RAG_RUN=1. A contagem agrega as métricas
  * bloqueantes (crossDomainLeakage, crossTenantLeakage, unclassifiedDocuments,
  * indexedSecrets, operationalAccessToSystemDomain etc.); os itens nomeiam as
- * métricas ofensoras. Sem relatório algum: source='missing', 0 (conservador).
+ * métricas ofensoras. Relatório ausente, vencido, FAIL ou com probes
+ * incompletos conta como violação: ausência de evidência é fail-closed.
  */
+function evaluateRagDomainSegregationReport(report, { now = Date.now(), source = 'memory' } = {}) {
+  if (!report || !report.metrics) {
+    return { count: 1, items: ['rag_report_missing'], source };
+  }
+
+  const finalGeneratedAt = Date.parse(report.generatedAt);
+  const evidenceFailures = [];
+  if (!Number.isFinite(finalGeneratedAt)
+    || (now - finalGeneratedAt) > TENANT_REPORT_MAX_AGE_MS) {
+    evidenceFailures.push('rag_report_stale');
+  }
+  if (report.status !== 'PASS') evidenceFailures.push(`rag_report_status=${report.status || 'missing'}`);
+  if (report.probes?.serviceReachable !== true) evidenceFailures.push('rag_runtime_unreachable');
+  for (const key of ['crossDomainLeakage', 'crossTenantLeakage', 'operationalAccessToSystemDomain']) {
+    if (typeof report.probes?.[key] !== 'number') evidenceFailures.push(`${key}=not_executed`);
+  }
+  const offending = Object.entries(report.metrics)
+    .filter(([, value]) => typeof value === 'number' && value > 0);
+  const metricCount = offending.reduce((acc, [, value]) => acc + value, 0);
+  const items = [
+    ...new Set(evidenceFailures),
+    ...offending.map(([metric, value]) => `${metric}=${value}`),
+  ];
+  return { count: metricCount + evidenceFailures.length, items, source };
+}
+
 function loadRagDomainSegregationViolations() {
   const skipRun = process.env.COVERAGE_GATE_SKIP_RAG_RUN === '1';
   let report = loadJsonIfExists(RAG_SEGREGATION_REPORT_PATH);
@@ -451,14 +478,10 @@ function loadRagDomainSegregationViolations() {
     report = loadJsonIfExists(RAG_SEGREGATION_REPORT_PATH);
   }
 
-  if (!report || !report.metrics) {
-    return { count: 0, items: [], source: 'missing' };
-  }
-  const offending = Object.entries(report.metrics).filter(([, value]) => typeof value === 'number' && value > 0);
-  const count = offending.reduce((acc, [, value]) => acc + value, 0);
-  const items = offending.map(([metric, value]) => `${metric}=${value}`);
-  const source = `reports/rag-domain-segregation-report.json${skipRun ? ' (skip-run)' : ''}`;
-  return { count, items, source };
+  const source = report
+    ? `reports/rag-domain-segregation-report.json${skipRun ? ' (skip-run)' : ''}`
+    : 'missing';
+  return evaluateRagDomainSegregationReport(report, { source });
 }
 
 function main() {
@@ -606,4 +629,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { buildExecutions, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, loadApiSurfaceTechnicalExecutions, loadPageSurfaceTechnicalExecutions, applyWaveReportStaleness, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };
+module.exports = { buildExecutions, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, loadApiSurfaceTechnicalExecutions, loadPageSurfaceTechnicalExecutions, evaluateRagDomainSegregationReport, loadRagDomainSegregationViolations, applyWaveReportStaleness, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };

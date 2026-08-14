@@ -3,7 +3,17 @@
 const fs = require('fs');
 const path = require('path');
 const qaMeshService = require('./qaMeshService');
-const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
+const { getRpaReplayReadDirs } = require('../../lib/rpaPathResolver');
+const {
+  belongsToTenant,
+  normalizeJsonName,
+  normalizeTenantKey,
+  redactDeep,
+  resolveContainedJsonPath,
+  stripInternalFilesystemPaths,
+} = require('../../lib/rpaSecurity');
+const { validateReplayIntegrity } = require('../../lib/replayIntegrity');
+const { writeJsonAtomic } = require('../utils/atomicJsonFile');
 const operationalStepExecutor = require('./qa/operationalStepExecutor');
 const {
   visitedCoverage: calcVisitedCoverage,
@@ -26,6 +36,10 @@ const SCENARIO_STORE_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'scenario-stor
 const MAX_SCREENSHOT_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_SCREENSHOT_CACHE_ENTRIES = 20;
 const screenshotDataUrlCache = new Map();
+
+function publicPayload(value) {
+  return stripInternalFilesystemPaths(redactDeep(value));
+}
 
 // Cap por quantidade com evicção do mais antigo (Map preserva ordem de inserção).
 // Sem cap, data URLs base64 de até 5MB cada se acumulavam sem bound.
@@ -293,7 +307,7 @@ function enrichReplayStepsWithEvidenceContracts(steps = [], journeyId = '') {
       executionMode: 'operational_go',
     });
 
-    return {
+    return publicPayload({
       ...step,
       actionType: audit.actionType,
       evidenceContract: audit.evidenceContract,
@@ -306,7 +320,7 @@ function enrichReplayStepsWithEvidenceContracts(steps = [], journeyId = '') {
       snapshotDiff: audit.snapshotDiff,
       evidenceStatus: audit.evidenceStatus,
       goNoGo: audit.goNoGo,
-    };
+    });
   });
 }
 
@@ -328,13 +342,15 @@ function listHistoryFilesNewestFirst() {
   });
 }
 
-function buildExecutionLogIndex(limit = 80) {
+function buildExecutionLogIndex(limit = 80, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const files = listHistoryFilesNewestFirst().slice(0, limit);
   const index = new Map();
 
   for (const filePath of files) {
     try {
       const json = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (!belongsToTenant(json, scopedTenantId)) continue;
       const executionId = json.executionId || json.summary?.executionId;
       const results = Array.isArray(json.results) ? json.results : [];
       if (!executionId || results.length === 0) continue;
@@ -374,7 +390,8 @@ function boolFromQuery(value) {
   return false;
 }
 
-function collectWaveEvidenceStats(stats = new Map()) {
+function collectWaveEvidenceStats(stats = new Map(), tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const evidenceBaseDir = path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence');
   if (!fs.existsSync(evidenceBaseDir)) return stats;
 
@@ -404,6 +421,7 @@ function collectWaveEvidenceStats(stats = new Map()) {
       try {
         const raw = fs.readFileSync(path.join(waveFullDir, file), 'utf8');
         const evidence = JSON.parse(raw);
+        if (!belongsToTenant(evidence, scopedTenantId)) continue;
         const scenarioId = String(evidence.scenarioId || '').trim();
         if (!scenarioId) continue;
 
@@ -445,8 +463,9 @@ function collectWaveEvidenceStats(stats = new Map()) {
   return stats;
 }
 
-function collectScenarioLatestStats(maxExecutions = 250) {
-  const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
+function collectScenarioLatestStats(maxExecutions = 250, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const history = qaMeshService.getMeshHistory({ limit: maxExecutions, tenantId: scopedTenantId }) || [];
   const stats = new Map();
 
   for (const execution of history) {
@@ -490,7 +509,7 @@ function collectScenarioLatestStats(maxExecutions = 250) {
   }
 
   // Complementar com execuções disparadas pela UI (meshEvidence/waveId/meshq-*.json)
-  collectWaveEvidenceStats(stats);
+  collectWaveEvidenceStats(stats, scopedTenantId);
 
   return stats;
 }
@@ -575,9 +594,10 @@ function resolveScenarioStat(scenario = {}, scenarioStats = new Map()) {
   return merged;
 }
 
-function buildJourneyTreeWithStatus() {
-  const scenarioStore = loadScenarioStore();
-  const storedJourneys = loadJourneyStore();
+function buildJourneyTreeWithStatus(tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const scenarioStore = loadScenarioStore().filter((item) => belongsToTenant(item, scopedTenantId));
+  const storedJourneys = loadJourneyStore().filter((item) => belongsToTenant(item, scopedTenantId));
 
   // Suplementar com itens do registry que têm journeyId definido
   const registryItems = (qaMeshService.getRegistry() || []).filter(
@@ -594,7 +614,7 @@ function buildJourneyTreeWithStatus() {
   const journeyStore = storedJourneys.length > 0
     ? storedJourneys
     : buildJourneyStoreFromScenarioStore(combinedScenarios);
-  const scenarioStats = collectScenarioLatestStats();
+  const scenarioStats = collectScenarioLatestStats(250, scopedTenantId);
 
   // Agrupar jornadas por vertical (domínio)
   const byVertical = new Map();
@@ -650,7 +670,7 @@ function buildJourneyTreeWithStatus() {
         lastExecutionAt,
       }));
 
-      return {
+      return publicPayload({
         journeyId: journey.id,
         journeyName: journey.title || journey.id,
         status,
@@ -661,7 +681,7 @@ function buildJourneyTreeWithStatus() {
         criticalFailures,
         lastExecutionAt,
         steps,
-      };
+      });
     });
 
     return {
@@ -677,11 +697,12 @@ function buildJourneyTreeWithStatus() {
   };
 }
 
-function listJourneys() {
-  return buildJourneyTreeWithStatus();
+function listJourneys(tenantId = 'system') {
+  return buildJourneyTreeWithStatus(tenantId);
 }
 
-function saveJourney(journey = {}) {
+function saveJourney(journey = {}, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const id = String(journey.id || '').trim();
   const vertical = String(journey.vertical || '').trim();
   if (!id) throw Object.assign(new Error('id é obrigatório'), { code: 'BAD_REQUEST' });
@@ -689,9 +710,11 @@ function saveJourney(journey = {}) {
 
   const store = loadJourneyStore();
   const now = new Date().toISOString();
-  const index = store.findIndex((j) => j.id === id && j.vertical === vertical);
+  const index = store.findIndex((j) => j.id === id && j.vertical === vertical
+    && belongsToTenant(j, scopedTenantId));
   const record = {
     id,
+    tenantId: scopedTenantId,
     title: String(journey.title || id),
     vertical,
     script: journey.script && typeof journey.script === 'object' ? journey.script : { steps: [] },
@@ -706,28 +729,28 @@ function saveJourney(journey = {}) {
   }
 
   cachedJourneyStore = store;
-  const dir = require('path').dirname(JOURNEY_STORE_PATH);
-  if (!require('fs').existsSync(dir)) require('fs').mkdirSync(dir, { recursive: true });
-  require('fs').writeFileSync(JOURNEY_STORE_PATH, JSON.stringify({ journeys: store, updatedAt: now }, null, 2), 'utf8');
+  fs.mkdirSync(path.dirname(JOURNEY_STORE_PATH), { recursive: true });
+  writeJsonAtomic(JOURNEY_STORE_PATH, { journeys: store, updatedAt: now });
   return record;
 }
 
-function deleteJourney(journeyId, vertical) {
+function deleteJourney(journeyId, vertical, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   if (!journeyId) throw Object.assign(new Error('journeyId é obrigatório'), { code: 'BAD_REQUEST' });
   const store = loadJourneyStore();
   const index = vertical
-    ? store.findIndex((j) => j.id === journeyId && j.vertical === vertical)
-    : store.findIndex((j) => j.id === journeyId);
+    ? store.findIndex((j) => j.id === journeyId && j.vertical === vertical && belongsToTenant(j, scopedTenantId))
+    : store.findIndex((j) => j.id === journeyId && belongsToTenant(j, scopedTenantId));
   if (index < 0) throw Object.assign(new Error(`Jornada não encontrada: ${journeyId}`), { code: 'NOT_FOUND' });
   const [removed] = store.splice(index, 1);
   cachedJourneyStore = store;
   const now = new Date().toISOString();
-  require('fs').writeFileSync(JOURNEY_STORE_PATH, JSON.stringify({ journeys: store, updatedAt: now }, null, 2), 'utf8');
+  writeJsonAtomic(JOURNEY_STORE_PATH, { journeys: store, updatedAt: now });
   return { deleted: true, journeyId: removed.id, vertical: removed.vertical };
 }
 
-function listJourneyStatus() {
-  const tree = buildJourneyTreeWithStatus();
+function listJourneyStatus(tenantId = 'system') {
+  const tree = buildJourneyTreeWithStatus(tenantId);
   return {
     generatedAt: tree.generatedAt,
     items: tree.domains.flatMap((domain) =>
@@ -748,7 +771,7 @@ function listJourneyStatus() {
 }
 
 function listStepStatus(options = {}) {
-  const tree = buildJourneyTreeWithStatus();
+  const tree = buildJourneyTreeWithStatus(options.tenantId || 'system');
   const journeyFilter = options.journeyId ? String(options.journeyId) : null;
   const stepFilter = options.stepId ? String(options.stepId) : null;
 
@@ -822,7 +845,8 @@ function mapCriticalityToWeightTier(criticality) {
  * normalização com perda (normalizeStatus colapsa skipped → success).
  * @returns {Map<string, {status: string, at: string|null}>}
  */
-function collectScenarioLatestRawStatus(maxExecutions = 250) {
+function collectScenarioLatestRawStatus(maxExecutions = 250, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const latest = new Map();
 
   const consider = (scenarioId, rawStatus, at) => {
@@ -836,7 +860,7 @@ function collectScenarioLatestRawStatus(maxExecutions = 250) {
     }
   };
 
-  const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
+  const history = qaMeshService.getMeshHistory({ limit: maxExecutions, tenantId: scopedTenantId }) || [];
   for (const execution of history) {
     const results = Array.isArray(execution.results) ? execution.results : [];
     for (const result of results) {
@@ -871,6 +895,7 @@ function collectScenarioLatestRawStatus(maxExecutions = 250) {
       for (const file of files) {
         try {
           const evidence = JSON.parse(fs.readFileSync(path.join(evidenceBaseDir, waveDir, file), 'utf8'));
+          if (!belongsToTenant(evidence, scopedTenantId)) continue;
           consider(evidence.scenarioId, evidence.status, evidence.generatedAt || evidence.startedAt || null);
         } catch (_) {
           // Ignora arquivos de evidência malformados
@@ -921,10 +946,11 @@ function computeCoverageMetrics(coverageItems) {
   };
 }
 
-function listWaves() {
+function listWaves(tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const registry = qaMeshService.getRegistry() || [];
   const items = buildWaveItems(registry);
-  const coverageItems = buildCoverageItems(registry, collectScenarioLatestRawStatus());
+  const coverageItems = buildCoverageItems(registry, collectScenarioLatestRawStatus(250, scopedTenantId));
   const coverageById = new Map(coverageItems.map((item) => [item.id, item]));
   const byDomain = new Map();
 
@@ -965,9 +991,10 @@ function listWaves() {
 }
 
 /** Consolidado global de cobertura sobre meshRegistry + última execução. */
-function getGlobalCoverageSummary() {
+function getGlobalCoverageSummary(tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const registry = qaMeshService.getRegistry() || [];
-  const coverageItems = buildCoverageItems(registry, collectScenarioLatestRawStatus());
+  const coverageItems = buildCoverageItems(registry, collectScenarioLatestRawStatus(250, scopedTenantId));
 
   return {
     generatedAt: new Date().toISOString(),
@@ -978,10 +1005,11 @@ function getGlobalCoverageSummary() {
   };
 }
 
-function flattenReplays(maxExecutions = 150) {
-  const history = qaMeshService.getMeshHistory({ limit: maxExecutions }) || [];
-  const scenarioStore = loadScenarioStore();
-  const journeyStore = loadJourneyStore();
+function flattenReplays(maxExecutions = 150, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const history = qaMeshService.getMeshHistory({ limit: maxExecutions, tenantId: scopedTenantId }) || [];
+  const scenarioStore = loadScenarioStore().filter((item) => belongsToTenant(item, scopedTenantId));
+  const journeyStore = loadJourneyStore().filter((item) => belongsToTenant(item, scopedTenantId));
 
   // Criar mapas para busca rápida
   const scenarioMap = new Map(scenarioStore.map((s) => [s.id, s]));
@@ -1026,6 +1054,7 @@ function flattenReplays(maxExecutions = 150) {
 
       replays.push({
         id: `${executionSeed}::${scenarioId}`,
+        tenantId: scopedTenantId,
         executionId: executionSeed,
         scenarioId,
         waveId: `wave-${vertical}`,
@@ -1057,17 +1086,28 @@ function sortReplaysNewestFirst(replays = []) {
   return [...replays].sort((a, b) => String(b.startedAt || '').localeCompare(String(a.startedAt || '')));
 }
 
-function loadQueuedReplayArtifactById(id) {
+function loadQueuedReplayArtifactById(id, tenantId = 'system') {
   if (!id || !String(id).startsWith('qa_wave_replay_')) return null;
 
   try {
-    const replayPath = path.join(getRpaReplayDir(), `${id}.json`);
-    if (!fs.existsSync(replayPath)) return null;
-    const parsed = JSON.parse(fs.readFileSync(replayPath, 'utf8'));
-    return {
-      replayPath,
-      data: parsed,
-    };
+    const scopedTenantId = normalizeTenantKey(tenantId);
+    const replayName = normalizeJsonName(id);
+    for (const replayDir of getRpaReplayReadDirs(scopedTenantId)) {
+      const replayPath = resolveContainedJsonPath(replayDir, replayName);
+      if (!fs.existsSync(replayPath) || !fs.statSync(replayPath).isFile()) continue;
+      const parsed = JSON.parse(fs.readFileSync(replayPath, 'utf8'));
+      if (!belongsToTenant(parsed, scopedTenantId)) continue;
+      const governance = parsed.governance || {};
+      const integrity = validateReplayIntegrity(parsed, governance, { maxAgeMs: -1 });
+      const terminal = ['success', 'failure', 'completed', 'failed', 'cancelled']
+        .includes(String(parsed.status || parsed.result || '').toLowerCase());
+      // Terminal replay artifacts are immutable evidence.  A tampered or
+      // unsigned artifact must look absent to the API instead of being parsed
+      // and returned as authoritative history.
+      if (terminal && !integrity.valid) return null;
+      return { data: parsed, integrity };
+    }
+    return null;
   } catch (_error) {
     return null;
   }
@@ -1118,7 +1158,7 @@ function mapAssertionStatus(status) {
   return 'pending';
 }
 
-function buildQueuedArtifactReplayPayload(id, artifactData, replayPath) {
+function buildQueuedArtifactReplayPayload(id, artifactData) {
   const assertions = Array.isArray(artifactData?.assertions) ? artifactData.assertions : [];
   const stepsFromAssertions = assertions.map((item, index) => ({
     id: item?.id || `assertion-${index + 1}`,
@@ -1154,7 +1194,6 @@ function buildQueuedArtifactReplayPayload(id, artifactData, replayPath) {
     source: {
       executionId: artifactData?.executionId || null,
       scenarioId: artifactData?.scenarioId || artifactData?.recordingId || null,
-      historyFile: replayPath || null,
       logsCount: Array.isArray(artifactData?.logs) ? artifactData.logs.length : 0,
     },
   };
@@ -1176,9 +1215,11 @@ function listReplays(options = {}) {
     stepId,
     domainId,
     failure,
+    tenantId = 'system',
   } = options;
 
-  let replays = flattenReplays();
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  let replays = flattenReplays(150, scopedTenantId);
 
   const start = combineDateTime(startDate, startTime, false);
   const end = combineDateTime(endDate, endTime, true);
@@ -1234,16 +1275,17 @@ function listReplays(options = {}) {
   };
 }
 
-function getReplayById(id) {
-  const allReplays = flattenReplays(250);
-  const queuedArtifact = loadQueuedReplayArtifactById(id);
+function getReplayById(id, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const allReplays = flattenReplays(250, scopedTenantId);
+  const queuedArtifact = loadQueuedReplayArtifactById(id, scopedTenantId);
 
   if (queuedArtifact) {
     const artifact = queuedArtifact.data || {};
     const resolvedReplay = resolveReplayFromQueuedArtifact(artifact, allReplays);
 
-    const baseReplay = resolvedReplay || buildQueuedArtifactReplayPayload(id, artifact, queuedArtifact.replayPath);
-    const executionIndex = buildExecutionLogIndex();
+    const baseReplay = resolvedReplay || buildQueuedArtifactReplayPayload(id, artifact);
+    const executionIndex = buildExecutionLogIndex(80, scopedTenantId);
     const executionEntry = executionIndex.get(baseReplay.executionId);
     const scenarioEntry = executionEntry?.get(baseReplay.scenarioId);
     const logs = Array.isArray(scenarioEntry?.logs) ? scenarioEntry.logs : [];
@@ -1264,7 +1306,7 @@ function getReplayById(id) {
     // Quando foi resolvido via executionId que existe no histórico, formata como executionId::scenarioId
     // para rastreabilidade; caso contrário, mantém o id original do artifact.
     const executionKnownInHistory = resolvedExecutionId
-      ? (qaMeshService.getMeshHistory({ limit: 10 }) || []).some(
+      ? (qaMeshService.getMeshHistory({ limit: 10, tenantId: scopedTenantId }) || []).some(
           (e) => (e.executionId || e.id) === resolvedExecutionId,
         )
       : false;
@@ -1275,7 +1317,7 @@ function getReplayById(id) {
         ? `${resolvedExecutionId}::${resolvedScenarioId || id}`
         : (artifact.replayId || artifact.id || id));
 
-    return {
+    return publicPayload({
       ...baseReplay,
       id: resolvedId,
       replayId: artifact.replayId || artifact.id || baseReplay.replayId || baseReplay.id,
@@ -1298,16 +1340,16 @@ function getReplayById(id) {
       source: {
         executionId: artifact.executionId || baseReplay.executionId,
         scenarioId: artifact.scenarioId || baseReplay.scenarioId,
-        historyFile: scenarioEntry?.sourceFile || queuedArtifact.replayPath || null,
         logsCount: logs.length,
       },
-    };
+      integrity: queuedArtifact.integrity,
+    });
   }
 
   const replay = allReplays.find((entry) => entry.id === id);
   if (!replay) return null;
 
-  const executionIndex = buildExecutionLogIndex();
+  const executionIndex = buildExecutionLogIndex(80, scopedTenantId);
   const executionEntry = executionIndex.get(replay.executionId);
   const scenarioEntry = executionEntry?.get(replay.scenarioId);
   const logs = Array.isArray(scenarioEntry?.logs) ? scenarioEntry.logs : [];
@@ -1318,47 +1360,53 @@ function getReplayById(id) {
     : extractPlaybackSteps(logs, replay);
   const playbackSteps = enrichReplayStepsWithEvidenceContracts(playbackStepsRaw, replay.journeyId);
 
-  return {
+  return publicPayload({
     ...replay,
     steps: playbackSteps,
     typedEntries,
     source: {
       executionId: replay.executionId,
       scenarioId: replay.scenarioId,
-      historyFile: scenarioEntry?.sourceFile || null,
       logsCount: logs.length,
     },
-  };
+  });
 }
 
-function queueWaveExecution(payload = {}) {
+function queueWaveExecution(payload = {}, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const scenarioIds = Array.isArray(payload.scenarioIds) ? payload.scenarioIds.filter(Boolean) : [];
   if (scenarioIds.length === 0) {
     const error = new Error('scenarioIds obrigatorio');
     error.code = 'BAD_REQUEST';
     throw error;
   }
-  return qaMeshService.queueMeshRun({ scenarioIds, executionOrigin: 'qa_waves_real' });
+  return qaMeshService.queueMeshRun({
+    scenarioIds,
+    executionOrigin: 'qa_waves_real',
+    tenantId: scopedTenantId,
+  });
 }
 
-function reexecuteReplay(replayId) {
-  const replay = getReplayById(replayId);
+function reexecuteReplay(replayId, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const replay = getReplayById(replayId, scopedTenantId);
   if (!replay) {
     const error = new Error('Replay nao encontrado');
     error.code = 'NOT_FOUND';
     throw error;
   }
-  return qaMeshService.queueScenarioReplay(replay.scenarioId);
+  return qaMeshService.queueScenarioReplay(replay.scenarioId, { tenantId: scopedTenantId });
 }
 
-function getExecutionStatus(executionId) {
+function getExecutionStatus(executionId, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   if (!executionId || !String(executionId).trim()) return null;
 
   const cleanId = String(executionId).trim();
 
   // Primeiro tenta resolver em memória (fila de execução),
   // pois o arquivo de histórico pode ainda não existir nos primeiros segundos.
-  const queuedExecution = qaMeshService.getQueuedExecutionStatus(cleanId);
+  const queuedExecution = qaMeshService.getQueuedExecutionStatus(cleanId, scopedTenantId);
   if (queuedExecution) {
     const rawStatus = String(queuedExecution.status || '').toLowerCase();
     const status = rawStatus === 'completed'
@@ -1384,7 +1432,7 @@ function getExecutionStatus(executionId) {
       ? queuedExecution.currentStep.trim()
       : '';
 
-    return {
+    return publicPayload({
       executionId: cleanId,
       status,
       progress,
@@ -1413,7 +1461,7 @@ function getExecutionStatus(executionId) {
         }
         : null,
       results,
-    };
+    });
   }
 
   // Procura o arquivo de histórico com esse executionId
@@ -1430,6 +1478,7 @@ function getExecutionStatus(executionId) {
 
     try {
       const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      if (!belongsToTenant(data, scopedTenantId)) continue;
       const summary = data.summary || {};
       const results = Array.isArray(data.results) ? data.results : [];
 
@@ -1463,7 +1512,7 @@ function getExecutionStatus(executionId) {
         };
       }
 
-      return {
+      return publicPayload({
         executionId: cleanId,
         status,
         progress,
@@ -1489,7 +1538,7 @@ function getExecutionStatus(executionId) {
           finishedAt: r.finishedAt,
           durationMs: r.durationMs || 0,
         })),
-      };
+      });
     } catch (_error) {
       // Ignora erro de parsing e tenta próximo diretório
     }

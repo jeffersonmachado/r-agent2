@@ -22,13 +22,60 @@ QA Waves are governed journeys and scenario waves. They connect seeds, business 
 - Auto-correction must generate evidence, never hide a failing journey.
 - Scenario inference is allowed only when linked to explicit journey/domain metadata and validated runtime behavior.
 
+## AI as journey owner (2026-08-12)
+
+- The AI agent is the **primary actor** for journey QA. It must: infer business needs → configure the journey → execute it **via browser as a normal user** → identify failures and gaps → fix them → register the journey as an executable QA scenario.
+- **API-only coverage does not prove the user can complete a journey in the UI.** A journey is only "covered" when exercised end-to-end through the frontend by a real user flow. QA/Wave is the persistence/regression layer, not the sole detector.
+- When an API endpoint exists but no UI calls it (e.g., `POST /api/fitness/student` had no create form), treat it as a gap immediately — not as intentional design.
+- After fixing a gap, register it as an executable scenario (browser adapter) so the detection persists in the mesh/waves and does not depend on an agent being present.
+- Concrete case (2026-08-12): the Fitness first journey (create student → charge → confirm payment → check-in) surfaced two defects that API-only QA missed: (a) no "create student" UI; (b) billing provider placeholder (`REPLACE_WITH_ASAAS_API_KEY`) returning 500. Both fixed (see `FitnessStudentsPage` "+ Novo Aluno" and `paymentProvider` placeholder detection) and covered by unit tests (`tests/unit/paymentProviderPlaceholder.test.js`, `frontend/src/pages/FitnessStudentsPage.test.jsx`).
+
+## Journey → RPA/replay → revisão, treinamento e mentoria/tutoria (2026-08-12)
+
+- **Toda execução QA/Wave grava em RPA/replay.** `runScenarioExecution` (botão "▶ Executar cenário" e "▶ Executar seeds") grava `qa_wave_replay_*` via `writeReplayArtifact` — replay é obrigatório para Waves RPA (`Replay deve estar habilitado`). A revisão analítica de vertical não dispara uma execução implicitamente: `reviewVertical({ recordJourney: true })` exige opt-in explícito. Sem replay de uma execução aprovada, a jornada não é evidência revisável.
+- **Pipeline de consumo do replay (já existente, manter ligado):** replay real → `journeyTrainerService` (`api/modules/learning-core/journeyTrainerService.js`: anonimização → roteiro markdown → RAG `training:<replayId>` → `LearningMission`) → `tutorService` (mentoria/tutoria: hints e respostas a partir dos docs `training:*`). Revisão humana: `/dev/rpa-replays` (filtro Origem `qa-waves`, modo "🎓 Treinar").
+- **Gravação de jornada na revisão de vertical:** `verticalReviewService.reviewVertical({ recordJourney: true })` (endpoint `POST /api/qa-waves/vertical-review`) encontra cenários executáveis da vertical (status `approved`/`active`/`regression` + seeds de browser + `platformScenarioIds`) e enfileira a execução, retornando `recordedJourney` (executionId + replayIds). Rota: `api/services/verticalReviewService.js` → `findRecordableScenarios` / `recordVerticalJourney`.
+- **Drafts NUNCA são executados/gravados automaticamente** — apenas cenários aprovados com seeds de browser. Drafts (`draft_ai`) continuam exigindo aprovação manual antes de virar replay.
+- A gravação é o elo que torna a jornada auditável e didática: revisão (auditoria do que QA fez), treinamento (roteiro derivado do replay) e mentoria/tutoria (RAG `training:*` consultado pelo Tutor).
+
+## Revisão de Jornada interativa (2026-08-12)
+
+Botão "🔍 Revisar jornada" na aba Jornadas (`QaWavesPage`) implementa o loop dirigido por IA com aprovação humana:
+
+1. **Inferir** — `POST /api/qa-waves/review-journey/infer` (`journeyReviewService.inferJourneyReview`): gera proposta via `generateScenarioWithAI`.
+2. **Mostrar desalinhamento** — `computeMisalignment` compara o cenário atual/ajustado com a proposta (passos faltando/sobrando, seeds, validadores, `platformScenarioIds`).
+3. **Ajustes do usuário** — edita o cenário no editor JSON.
+4. **Nova inferência** — re-inferir com `baseScenario` (ajustes do usuário como contexto).
+5. **Aprovar e atualizar jornada** — `POST /api/qa-waves/review-journey/apply` (`applyJourneyReview` → `saveScenario`, nova versão + histórico).
+6. **Detectar falhas/gaps e sugerir correções** — `collectJourneySuggestions` (coverage gaps + business gaps da jornada).
+
+Serviço: `api/services/journeyReviewService.js`. Endpoints: `/api/qa-waves/review-journey/{infer,apply}` (+ `/dev/...`). A gravação da jornada em replay continua ocorrendo quando o cenário aprovado for executado.
+
+## Inferência de IA (mecanismo)
+
+- **Núcleo:** `api/services/qaWavesIntelligenceService.js`. Entradas de inferência:
+  - `generateScenarioDraft({ vertical, journey, stage, gap, context })` — gera rascunho de cenário a partir de um gap.
+  - `generateSeedsForScenario({ scenarioId, quantity, scenarioContext })` — gera seeds diversificadas.
+  - `journeyReviewService.inferJourneyReview` → `generateScenarioWithAI` (proposta na revisão de jornada).
+- **Chamada LLM:** tudo passa por `aiProviderService.generateAiResponse(prompt, roleOrTenant, { source, caller })` (fonte `qa_waves_intelligence`). O provider/config vem do tenant de IA (ver `aiProviderService`; não há hardcode de provedor).
+- **Prompt:** `SCENARIO_SYSTEM_PROMPT` (papel system: "retorne APENAS JSON válido") + `buildScenarioDraftPrompt`/`buildSeedGenerationPrompt` (formato JSON específico com tipos válidos de `semanticSteps`). Saída esperada é JSON cru ou fenced ```json.
+- **Parsing:** `extractJsonFromAiResponse` — extrai JSON de bloco markdown ou plain text; retorna `null` se inválido.
+- **Normalização:** `api/modules/qa-waves/aiScenarioAdapter.js` — `normalizeAiOutput`/`adaptAiScenario` sanificam a saída para o schema do RAP (steps, seeds, validators, `platformScenarioIds`).
+- **Fallback estrutural:** se IA indisponível ou saída inválida, usa `buildFallbackScenarioDraft`/`buildFallbackSeeds` (templates determinísticos). Nunca lança erro para cima.
+- **Invariante de status:** todo rascunho sai com `status: 'draft_ai'` (`aiModel: 'intelligence_engine_v1'`), persiste em `qa/qa-waves/ai-drafts.json` e **nunca** é executado/gravado automaticamente — exige aprovação manual (→ `approved` → `active`).
+- Doc canônica detalhada: `docs/qa-waves-ai.md` (arquitetura, endpoints `/api/qa-waves/intelligence/*`, ciclo de vida `draft_ai → approved → active`).
+
 ## Current state
 
-`docs/governance/PLATFORM_STATUS.md` reports QA Waves enterprise governance aligned with canonical mesh. Canonical QA Mesh is `GO` (mesh-2026-06-11T22-13-23-346Z, promoted 2026-06-11T22:24:19Z, 47/47 scenarios passed, 0 failures, 0 infra errors). All 11 domains at 100%. Release gate is GO.
+Observed on 2026-08-14, the executable state is **NO_GO**, regardless of the older generated snapshot in `docs/governance/PLATFORM_STATUS.md` (2026-08-09):
 
-Enterprise governance JSON (`qa/qa-waves-enterprise-governance.json`) regenerated 2026-07-21: status `GO`, operational confidence 100, zero blockers, continuous smoke healthy. Previous NO_GO (2026-05-16) was caused by missing `qa/smoke/qa-waves-scheduled-operational-smoke.json` — resolved.
+- `npm run validate:qa-governance` fails because the promoted canonical execution references a missing history artifact: `qa-mesh/meshHistory/mesh-2026-08-09T16-47-06-616Z.json`.
+- `qa/qa-waves-enterprise-governance.json` reports `NO_GO`, operational confidence `79.2`, grade `D`, risk `CRITICAL`.
+- The scheduled smoke is stale (generated 2026-07-20), has no bound/canonical evidence path or source hash and omits the required `booking_flow` journey.
+- Existing prod-like replay records use legacy `gov-sha256` signatures. The gate now accepts only secret-key HMAC (`hmac-sha256`) and therefore rejects those records until they are regenerated by a real smoke.
+- `hourly_lightweight` is diagnostic only and writes `qa-waves-scheduled-operational-smoke-hourly_lightweight.json`; it cannot overwrite the canonical release wrapper. Promotion to `qa-waves-scheduled-operational-smoke.json` requires a `realStack` mode and the bridge verifies `prod_like_real_stack`, no fixture server, real backend/database and an isolated tenant.
 
-Platform readiness: **AUTONOMOUS_READY_GO** (score 98.5, 0 blocking gaps, regenerated 2026-07-21). Overall governance score: **100** (all 7 pillars PASS).
+Do not infer release readiness from `PLATFORM_STATUS.md` alone. The executable governance reports and validators are authoritative; no GO may be declared until a fresh real smoke, signed replays and the exact canonical mesh history all pass.
 
 ## Legacy cleanup (2026-07-21)
 
@@ -38,9 +85,10 @@ Platform readiness: **AUTONOMOUS_READY_GO** (score 98.5, 0 blocking gaps, regene
 
 ## Snapshot refresh cadence (Gap 4)
 
-- `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json`: last generated 2026-05-12. Regenerate via `npm run qa:waves:business-e2e` when runtime stack is available. Recommended cadence: every release cycle.
+- `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json`: observed generated 2026-08-10, but its replay signatures are legacy and do not satisfy the current HMAC contract. Regenerate with the real runtime and configured signing key before release.
 - `qa/qa-waves/operational-gaps-report.json`: last generated 2026-05-12. Regenerate via `POST /api/qa-waves/operational/recompute` (requires API running). Recommended cadence: weekly or pre-release.
-- `qa/smoke/qa-waves-scheduled-operational-smoke.json`: regenerated 2026-07-21. Recommended cadence: daily via cron or CI scheduled job.
+- `qa/smoke/qa-waves-scheduled-operational-smoke.json`: observed generated 2026-07-20 and invalid/stale on 2026-08-14. Regenerate daily via cron/CI from a real source artifact; the report must bind `evidencePath`, SHA-256, source timestamp and all required journeys.
+- Lightweight scheduled diagnostics use a mode-specific file and are never release evidence; do not copy or rename them into the canonical path.
 
 ## qa:waves scripts (Gap 3)
 
@@ -56,7 +104,7 @@ Platform readiness: **AUTONOMOUS_READY_GO** (score 98.5, 0 blocking gaps, regene
 
 ## JSON-store formalization (Gap 8)
 
-QA Waves subsystem uses JSON files as the canonical persistence layer. This is a deliberate architectural choice:
+QA Waves uses versioned JSON for declarative registries and scenario definitions. Runtime execution history, replay artifacts and governed evidence use the persistent artifact/database layer and must fail closed when persistence is unavailable:
 
 - **Scenario store**: `qa/qa-waves/scenario-store.json` — read/written by `qaWavesService.js`, `gapDetectionEngine.js`, `meshRunner.js`.
 - **Enterprise governance**: `qa/qa-waves-enterprise-governance.json` — generated by `tools/system/lib/qa-waves-enterprise-governance-bridge.js` from smoke evidence.
@@ -65,7 +113,7 @@ QA Waves subsystem uses JSON files as the canonical persistence layer. This is a
 - **Journey coverage**: `qa-waves/journey-coverage/*.json` — per-vertical coverage artifacts.
 - **Smoke evidence**: `qa/smoke/prod-like/` and `qa/smoke/qa-waves-scheduled-operational-smoke.json`.
 
-No migration to Postgres is planned. JSON-store is the standard for this subsystem. All read/write operations use `readJsonSafe`/`writeJsonSafe` helpers with atomic writes (write to temp + rename).
+JSON files that remain mutable are written atomically and scoped by tenant. A JSON or in-memory fallback must not be introduced for runtime artifacts that require durable persistence.
 
 ## New scripts (2026-07-21)
 
@@ -81,8 +129,8 @@ No migration to Postgres is planned. JSON-store is the standard for this subsyst
   - 6 deprecated (esqueletos `fitness-matricula-*` sem steps, substituídos pelos `fitness_full_*`)
 - Todos os cenários em status executável (approved/active) possuem steps validados pelo schema.
 - Journey coverage: 17 journeys across 6 verticals, 64 scenarios (artefato derivado do store + mesh registry; entradas `business-*` do mesh não têm steps em formato wave por design).
-- Canonical mesh: 47/47 GO (June 2026)
-- Readiness: AUTONOMOUS_READY_GO, 0 blocking gaps (regenerado 2026-07-21 após remediação).
+- Historical mesh snapshot: 47/47 GO (June 2026). It is not current release evidence.
+- Current executable governance: `NO_GO` as observed on 2026-08-14; see the Current state section.
 
 ## Batch remediation notes (2026-07-21)
 
@@ -142,9 +190,9 @@ Pedido: "trocar tudo o que for pooling por websocket" no fluxo QA Waves/RPA e ex
 
 - `qa-mesh/executionQueue.js`: `EventEmitter` em processo (`executionEvents`, evento `updated`); `waitForQueuedExecution(executionId, {timeoutMs, onUpdate})` resolve em status terminal por evento, com **um único deadline** (não é polling). `updateExecution` emite a cada patch.
 - `api/services/qaWavesExecutionService.js` `monitorExecution`: loop `setTimeout(poll)` substituído por `waitForQueuedExecution` (orçamento padrão 720s, env `QA_WAVES_MONITOR_MAX_POLLS`). Timeout → `failAndFinalize` preservando os erros `execution_not_found`/`timeout`; sucesso → `finalizeExecutionArtifacts` + WS `qa-waves.execution.updated`.
-- `api/services/rpaService.impl.js`: `rpaExecutionEvents` (EventEmitter) emitido em toda mutação de status/progresso da execução RPA (running/paused/completed/failed/cancelled), com `logs` recentes no payload; ponte WS emite `rpa.execution.updated` (broadcast `allowGlobal`, clientes filtram por `id`). Gravações manuais emitem `rpa.recording.updated` em start/stop.
+- `api/services/rpaService.impl.js`: `rpaExecutionEvents` (EventEmitter) emitido em toda mutação de status/progresso da execução RPA (running/paused/completed/failed/cancelled), com payload redigido e sem caminhos internos; a ponte WS emite `rpa.execution.updated` somente para o tenant autenticado. Gravações manuais emitem `rpa.recording.updated` em start/stop com o mesmo isolamento.
 - `qa-mesh/adapters/rpaAdapter.js` `waitForExecution`: loop `while/sleep(1000)` substituído por espera orientada a evento no `rpaExecutionEvents` + primeira leitura síncrona + deadline único (10min). Shape de retorno preservado (artifacts, rawStatus, normalizedErrors, onStepProgress).
-- `api/services/websocketService.js`: nova opção `allowGlobal` em `emitEvent` para broadcast global sem warn (eventos RPA não têm tenant).
+- `api/services/websocketService.js`: o handshake exige autenticação e resolve tenant/agent no servidor. Eventos RPA sem `tenantId` são rejeitados; broadcast global não é permitido para execuções, gravações ou logs.
 - `api/modules/qa-mesh/routes.js`: `POST /qa-mesh/run` agora passa `tenantId` (senão `emitQaWavesExecutionRealtime` não emite).
 - Frontend: `QaMeshPage` (polling 1.5s → WS `qa-waves.execution.updated`, map success→completed/processing→running) e `RpaSeedsPage` (pollings de gravação 2s e execução 2s → WS `rpa.recording.updated`/`rpa.execution.updated`; deadline de segurança de 10min mantido). `RpaReplaysPage` tem um `setInterval` que é apenas o **timer de animação do playback** (botão Play) — não é sincronização de estado, mantido de propósito.
 - O que NÃO virou evento (de propósito): backoff de retry do adapter (`sleep(1000)` entre tentativas), `nodeCronCompat` (scheduler cron) e waits internos do Playwright.

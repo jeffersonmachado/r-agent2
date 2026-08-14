@@ -145,14 +145,18 @@ describe('Cenário 1 — page === null em jornada blocking => NO_GO', () => {
     expect(result.blocker).toBeNull();
   });
 
-  test('isBlockingJourney: support => true', () => {
+  test('isBlockingJourney: jornadas blocking do registry => true', () => {
+    // Fonte única: config/journey-criticality.json (sem substring heurística).
     expect(isBlockingJourney('support_ticket_flow')).toBe(true);
-    expect(isBlockingJourney('enterprise_support_escalation')).toBe(true);
+    expect(isBlockingJourney('fitness_customer_checkin')).toBe(true);
+    expect(isBlockingJourney('agendamento')).toBe(true);
   });
 
-  test('isBlockingJourney: fitness => true', () => {
-    expect(isBlockingJourney('fitness_customer_checkin')).toBe(true);
-    expect(isBlockingJourney('gym_checkin_flow')).toBe(true);
+  test('isBlockingJourney: substring de nome NÃO torna blocking (sem heurística)', () => {
+    // Regressão da era heurística: ids contendo 'support'/'checkin' eram
+    // blocking por substring. Agora só o registry declara criticality.
+    expect(isBlockingJourney('enterprise_support_escalation')).toBe(false);
+    expect(isBlockingJourney('gym_checkin_flow')).toBe(false);
   });
 
   test('isBlockingJourney: outros => false', () => {

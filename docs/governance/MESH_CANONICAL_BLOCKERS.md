@@ -23,5 +23,5 @@
 ## Recommended Next Slice
 
 1. Recover the 4 regressions in the canonical mesh and promote a fresh GO execution.
-2. Rerun official release-gate with the recovered canonical execution and external RUNTIME_ROOT.
+2. Rerun official release-gate with the recovered canonical execution and external runtime root.
 3. Stabilize browser snapshots for critical journeys to clear visual_journeys high-severity findings.

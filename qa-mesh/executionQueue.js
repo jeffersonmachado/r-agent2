@@ -64,6 +64,7 @@ function createExecutionRecord(kind, payload = {}) {
   const executionId = `meshq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const record = {
     executionId,
+    tenantId: payload?.tenantId || 'system',
     kind,
     status: 'queued',
     progress: 0,
@@ -106,8 +107,10 @@ function getExecution(executionId) {
   return executions.get(executionId) || null;
 }
 
-function getAllExecutions(limit = 20) {
+function getAllExecutions(limit = 20, options = {}) {
+  const tenantId = options && options.tenantId != null ? String(options.tenantId) : null;
   return Array.from(executions.values())
+    .filter((record) => tenantId == null || String(record?.payload?.tenantId || '') === tenantId)
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .slice(0, limit);
 }
@@ -165,8 +168,29 @@ function enqueueExecution(kind, payload, runner) {
   };
 }
 
-function clearExecutions() {
-  executions.clear();
+function clearExecutions(options = null) {
+  // Backward-compatible process reset for test/bootstrap callers. HTTP paths
+  // must always provide a tenant and can only discard terminal in-memory state;
+  // persisted evidence and the append-only chain are never deleted here.
+  if (!options || options.tenantId == null) {
+    const cleared = executions.size;
+    executions.clear();
+    return { cleared, skippedActive: 0 };
+  }
+
+  const tenantId = String(options.tenantId);
+  let cleared = 0;
+  let skippedActive = 0;
+  for (const [executionId, record] of executions.entries()) {
+    if (String(record?.payload?.tenantId || '') !== tenantId) continue;
+    if (!isTerminalStatus(record.status)) {
+      skippedActive += 1;
+      continue;
+    }
+    executions.delete(executionId);
+    cleared += 1;
+  }
+  return { cleared, skippedActive };
 }
 
 module.exports = {

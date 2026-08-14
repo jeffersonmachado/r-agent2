@@ -1,13 +1,14 @@
 """
 Autenticação serviço-a-serviço do RAG (backend Node -> rag-service).
 
-Quando RAG_INTERNAL_TOKEN está configurado, toda rota /rag/* exige o header
-X-RAG-Internal-Token correspondente. Clientes finais nunca falam diretamente
-com este serviço; o backend Node é o único chamador autorizado.
+RAG_INTERNAL_TOKEN é obrigatório e toda rota /rag/* exige o header
+X-RAG-Internal-Token correspondente. A ausência da configuração bloqueia o
+serviço; clientes finais nunca falam diretamente com ele.
 """
 
 import os
 import logging
+import hmac
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,9 @@ INTERNAL_TOKEN_HEADER = "x-rag-internal-token"
 
 
 def get_internal_token() -> str:
-    return os.getenv("RAG_INTERNAL_TOKEN") or ""
+    token = (os.getenv("RAG_INTERNAL_TOKEN") or "").strip()
+    # Placeholder curto equivale a configuração ausente.
+    return token if len(token.encode("utf-8")) >= 32 else ""
 
 
 def has_valid_internal_token(headers) -> bool:
@@ -23,4 +26,5 @@ def has_valid_internal_token(headers) -> bool:
     token = get_internal_token()
     if not token:
         return False
-    return headers.get(INTERNAL_TOKEN_HEADER) == token
+    provided = headers.get(INTERNAL_TOKEN_HEADER) or ""
+    return hmac.compare_digest(str(provided), str(token))

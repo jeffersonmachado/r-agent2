@@ -35,6 +35,8 @@
 - `npm run test:governance`
 - `npm run test:rpa:jest`
 - `npm run frontend:build`
+- `npm run stack:versions:sync` — regenera `AI_MEMORY/stack-versions.md` a partir das fontes declaradas
+- `npm run validate:stack-versions` — valida o doc + fiação da página "Versões da Stack"
 
 ## Pipelines and gates
 

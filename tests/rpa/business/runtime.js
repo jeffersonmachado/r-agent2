@@ -3487,7 +3487,7 @@ async function runFlowScenario(definition, ctx) {
         generateOutcome = 'structured_failure';
       }
 
-      // Plano RPA test-only: a rota grava o seed em disco (RUNTIME_ROOT) —
+      // Plano RPA test-only: a rota grava o seed em disco (runtime root) —
       // o cleanup remove o arquivo gravado.
       const planId = `qa-rpa-plan-${runId}`;
       const rpaPlan = {

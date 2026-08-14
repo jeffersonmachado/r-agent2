@@ -30,6 +30,7 @@ O **Cognitive Core** (2026-06-12) é o núcleo obrigatório de inteligência da 
 - **RPA (`core/rpa/`):** gravação/replay/player determinísticos com Playwright, CLI em `core/rpa/cli.js`.
 - **Mobile:** `apps/mobile/` existe mas está vazio (apenas `node_modules`).
 - **Infra:** Docker Compose (produção), systemd (redis + rag-service), Apache como reverse proxy. **Nunca introduzir PM2.**
+- **Versões da stack:** a referência canônica das versões declaradas é `AI_MEMORY/stack-versions.md`; quando a stack mudar, rode `npm run stack:versions:sync` e commit o doc + `reports/stack-versions-report.json`. Valide com `npm run validate:stack-versions`.
 - **Dependência externa de pacote:** `@results/auth` é dependência `file:../../packages/auth`; o Jest inclui `/opt/results/packages` em `roots` (ver `jest.config.cjs`). Em clones fora de `/opt/results/ria/`, garantir que o diretório irmão `packages/` exista. `vendor/auth/` é a cópia versionada desse pacote usada pelo CI (o workflow copia `vendor/auth` → `../../packages/auth` antes do `npm ci`); ao alterar o pacote em `/opt/results/packages/auth`, sincronizar `vendor/auth/`.
 - **Pacote `@results/whatsapp-qr-bridge`:** núcleo do bridge WhatsApp QR (`api/services/whatsappQrBridgeService.js` é apenas o adaptador: tenant_settings, tickets/mídia, WS, sync contra settings). Dependência `file:../packages/whatsapp-qr-bridge` (fonte em `/opt/results/ria/packages/whatsapp-qr-bridge`); `vendor/whatsapp-qr-bridge/` é a cópia versionada usada pelo CI/Docker — ao alterar o pacote, sincronizar o vendor. O `npm ci` do pacote (dependência `qrcode`) é feito no workflow e no `api/Dockerfile` porque o require do pacote resolve a partir do path real, fora do `node_modules` da API.
 
@@ -48,7 +49,7 @@ Camadas (nunca misturar):
 Outros diretórios relevantes:
 
 - `core/rpa/` → CLI, recorder, player, replay determinístico e recuperação de RPA.
-- `qa/`, `qa-mesh/`, `qa-waves/` → runner de QA, malha de cenários (registry, runner, scheduler, go/no-go) e cobertura por ondas. São insumos de governança de release, não extras opcionais.
+- `qa/`, `qa-mesh/`, `qa-waves/` → runner de QA, malha de cenários (registry, runner, scheduler, go/no-go) e cobertura por ondas. São insumos de governança de release, não extras opcionais. Criticidade de jornadas (blocking/severidade) é declarativa: fonte única em `config/journey-criticality.json`, resolvida via `qa/contracts/journeyCriticality.js` — nunca hardcodar listas de jornadas em código.
 - `qa/coverage/` → Coverage Engine: fingerprints SHA-256 canônicos, estados de cobertura (UNCOVERED→VALIDATED/STALE/ORPHANED etc.), grafo de rastreabilidade, calculadora (visitada/validada/sucesso/ponderada), Evidence Store append-only com hash chain + redaction, motor do coverage gate e análise de impacto. Inventário automático versionado em `api/services/qa/inventory/` (saída: `config/system-inventory.json`). Doc canônica: `docs/qa/coverage-engine.md`.
 - `governance/` → engines e relatórios de prova: self-proving, integridade de replay, validação de pacote, tamper detection, readiness.
 - `pipeline/` → validação completa, release gate e autocorreção (`pipeline/runFullValidation.js`, `pipeline/entrypoints/`).
@@ -59,12 +60,10 @@ Outros diretórios relevantes:
 - `tests/` → suítes Jest (unit, flow, integration, contracts, governance, ci, runtime, organizational, stress, rate-limit, rpa, security etc.).
 - `reports/` → relatórios oficiais de governança em JSON (ver seção de governança).
 
-### Legado a ignorar
+### Legado
 
-- Arquivos soltos na raiz: `test-*.js`, `debug-*.js`, `validate-*.js`, `direct-*.js`.
-- Diretórios: `frontend_backup/`, `backups/`, `remote-dumps/`, `remote-dumps2/`, `scripts/legacy/`.
-- Relatórios `.md` na raiz (`PHASE2_*`, `EXECUTIVE_*`, `GO_REPORT_*`, `REFACTORING_*`) e PNGs de screenshot na raiz.
-- Docs históricos em `dev Documentos/` e relatórios de raiz são históricos, salvo quando um índice canônico os referencia.
+- Os diretórios legados `frontend_backup/`, `backups/`, `remote-dumps/`, `remote-dumps2/`, `scripts/legacy/` e o script `scripts/legacy-ripabx-inventory.js` foram **removidos do repositório** (2026-08-14). Não os recrie; exclusões que os citam (`.gitignore`, blocklists de release) são inertes e podem ser limpas oportunisticamente.
+- Docs históricos em `dev Documentos/` são históricos, salvo quando um índice canônico os referencia — mas o diretório é lido pela API viva de dev-management e **não** deve ser removido.
 
 ## Comandos de build, teste e release
 
@@ -155,7 +154,7 @@ Documentação não é suficiente. Use os validadores bloqueantes em `scripts/go
 - `dist/` deve permanecer limpo, exceto ZIPs/manifestos de release aprovados.
 - Nunca commitar/empacotar `.env`, `.token.env`, tokens, dumps, backups, `node_modules`, caches de auth do WhatsApp ou caches transitórios de autenticação de browser.
 - `.env` exige `ENCRYPTION_KEY` válida; `.env` e `api/data/config.json` são criados pelo `system:bootstrap` a partir dos exemplos do repositório.
-- Caminhos de runtime/evidência devem usar raízes externas quando possível (`RUNTIME_ROOT`, padrão `/var/lib/ragent2` em containers); ver `docs/runtime-paths.md`.
+- Caminhos de runtime/evidência devem usar raízes externas ao workspace; o runtime root é resolvido automaticamente pela aplicação (`/var/lib/ragent2` em produção, `~/.local/share/ragent2-runtime` em dev); ver `docs/runtime-paths.md`.
 - Docker é o modelo oficial de runtime/deploy em produção; nunca introduzir PM2.
 - APIs de engenharia (QA Waves, QA Mesh) exigem `requireClassification('DEVELOPMENT')` e APIs de replay/RPA `requireClassification('SUPPORT')` (`api/middleware/requireClassification.js`; mapeamento role→classificação: super_admin→DEVELOPMENT, auditor→SUPPORT, demais→PRODUCTION). A política canônica de rotas é `api/modules/agent-os/experience-segregation.js`, verificada por `validate:visibility-policy`.
 

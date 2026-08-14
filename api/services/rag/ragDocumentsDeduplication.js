@@ -65,7 +65,7 @@ async function ensureContentHash(document, generateContentHash, documentsCache, 
     content_hash: contentHash,
   };
   documentsCache.set(document.id, document);
-  persistFn(document);
+  await persistFn(document);
 }
 
 async function maybeReindexDuplicate(documentData, existingDoc, finalTenantId, documentsCache, persistFn, generateContentHash, reindexDocumentFn, loadContentFn = null) {

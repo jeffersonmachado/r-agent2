@@ -209,6 +209,7 @@ async function handleRagIngestionRoutes({ req, res, method, pathname, deps }) {
 
     const result = await deps.createDocument(documentData, finalTenantId);
     if (!result.success) {
+      const persistenceUnavailable = result.errorCode === 'PERSISTENCE_REQUIRED';
       await emitUploadStage(deps, pipelineWsForStage, execIdForStage, {
         stage: 'file-ocr',
         status: 'error',
@@ -216,14 +217,18 @@ async function handleRagIngestionRoutes({ req, res, method, pathname, deps }) {
         meta: { code: 'RAG_INDEX_FAILED', fileName: file.filename },
       });
       return sendRagApiError(req, res, deps, {
-        code: 'RAG_INDEX_FAILED',
-        message: result.error || 'Falha ao criar/indexar documento no RAG',
-        httpStatus: 500,
+        code: persistenceUnavailable ? 'PERSISTENCE_REQUIRED' : 'RAG_INDEX_FAILED',
+        message: persistenceUnavailable ? 'Persistência PostgreSQL indisponível' : (result.error || 'Falha ao criar/indexar documento no RAG'),
+        httpStatus: persistenceUnavailable ? 503 : 500,
         retryable: true,
         details: { tenantId: finalTenantId, fileName: file.filename, mimeType: file.mimeType },
       }, 'Erro ao criar/indexar documento no RAG:', new Error(result.error || 'RAG_INDEX_FAILED'));
     }
 
+    // Compensação: a partir daqui o documento já existe. Se a persistência do
+    // binário/metadados falhar, remove o documento recém-criado para não deixar
+    // órfão sem binário (um re-upload do cliente deve recriar do zero, não
+    // duplicar). NUNCA compensar quando isDuplicate: o documento é pré-existente.
     try {
       await deps.ragDocumentsService.upsertDocumentFileToDb({
         documentId: result.document.id,
@@ -234,27 +239,35 @@ async function handleRagIngestionRoutes({ req, res, method, pathname, deps }) {
         data: file.buffer,
       });
 
-      try {
-        await deps.ragDocumentsService.updateDocument(result.document.id, {
-          metadata: {
-            originalBinary: {
-              stored: true,
-              filename: file.filename,
-              mimeType: file.mimeType,
-              sizeBytes: Number(file.size || 0),
-              storedAt: new Date().toISOString(),
-            },
+      const binaryMetadataUpdate = await deps.ragDocumentsService.updateDocument(result.document.id, {
+        metadata: {
+          originalBinary: {
+            stored: true,
+            filename: file.filename,
+            mimeType: file.mimeType,
+            sizeBytes: Number(file.size || 0),
+            storedAt: new Date().toISOString(),
           },
-        });
-      } catch {
-        // ignore
+        },
+      }, finalTenantId);
+      if (!binaryMetadataUpdate?.success) {
+        const metadataError = new Error(binaryMetadataUpdate?.error || 'Falha ao persistir metadados do binário');
+        metadataError.code = binaryMetadataUpdate?.errorCode || 'PERSISTENCE_REQUIRED';
+        throw metadataError;
       }
-    } catch (e) {
-      deps.logger.warn('[RAGDocuments] Falha ao salvar binário original no BD (best-effort)', {
-        tenantId: finalTenantId,
-        documentId: result.document?.id,
-        error: e.message,
-      });
+    } catch (binaryError) {
+      if (!result.isDuplicate && result.document && result.document.id) {
+        try {
+          await deps.ragDocumentsService.deleteDocument(result.document.id, finalTenantId);
+        } catch (cleanupError) {
+          deps.logger.error('Falha ao compensar documento órfão do RAG:', {
+            documentId: result.document.id,
+            tenantId: finalTenantId,
+            error: cleanupError.message,
+          });
+        }
+      }
+      throw binaryError;
     }
 
     if (result.isDuplicate) {
@@ -307,10 +320,11 @@ async function handleRagIngestionRoutes({ req, res, method, pathname, deps }) {
       }
     } catch {}
 
+    const persistenceUnavailable = err?.code === 'PERSISTENCE_REQUIRED';
     return sendRagApiError(req, res, deps, {
-      code: 'FILE_UPLOAD_FAILED',
-      message: err.message || 'Erro ao processar upload de arquivo',
-      httpStatus: 500,
+      code: persistenceUnavailable ? 'PERSISTENCE_REQUIRED' : 'FILE_UPLOAD_FAILED',
+      message: persistenceUnavailable ? 'Persistência PostgreSQL indisponível' : (err.message || 'Erro ao processar upload de arquivo'),
+      httpStatus: persistenceUnavailable ? 503 : 500,
       retryable: true,
       details: null,
     }, 'Erro ao fazer upload e extrair arquivo:', err);

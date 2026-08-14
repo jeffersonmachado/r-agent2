@@ -190,7 +190,8 @@ describe('websocketService', () => {
             const message = JSON.parse(data.toString());
             if (message.type === 'connection') {
               clearTimeout(timeout);
-              expect(message.status).toBe('connected');
+              // Handshake endurecido: conexão exige autenticação antes de assinar eventos
+              expect(message.status).toBe('authentication_required');
               expect(message.clientId).toBeDefined();
               ws.close();
               resolve();
@@ -374,6 +375,77 @@ describe('websocketService', () => {
   describe('Subscribe', () => {
     test('cliente pode se inscrever em eventos', async () => {
       if (skipWsTests) return;
+      // Subscribe exige autenticação (handshake endurecido): cria agente e faz login
+      const uniqueUsername = `test-sub-user-${Date.now()}`;
+      const agentResult = await createAgent({
+        tenantId: 'tenant-test-sub',
+        username: uniqueUsername,
+        email: `test-sub-${Date.now()}@example.com`,
+        password: 'password123',
+        role: 'agent',
+      });
+
+      if (!agentResult.success) {
+        const loginFallback = await login(uniqueUsername, 'password123', '127.0.0.1', 'test');
+        if (!loginFallback.success) {
+          throw new Error(`Falha ao criar agente: ${agentResult.error}`);
+        }
+      }
+
+      const loginResult = await login(uniqueUsername, 'password123', '127.0.0.1', 'test');
+
+      if (!loginResult.success) {
+        throw new Error(`Falha ao fazer login: ${loginResult.error}`);
+      }
+
+      return runWithTimeout(async () => {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
+          activeConnections.push(ws);
+          let authenticated = false;
+
+          const timeout = setTimeout(() => {
+            ws.close();
+            reject(new Error('Timeout ao se inscrever em eventos'));
+          }, 10000);
+
+          ws.on('message', (data) => {
+            const message = JSON.parse(data.toString());
+            if (message.type === 'connection') {
+              ws.send(JSON.stringify({ type: 'auth', token: loginResult.token }));
+            }
+            if (message.type === 'auth' && message.status === 'success' && !authenticated) {
+              authenticated = true;
+              ws.send(
+                JSON.stringify({
+                  type: 'subscribe',
+                  events: ['ticket.created', 'ticket.updated'],
+                })
+              );
+            }
+            if (message.type === 'auth' && message.status === 'error') {
+              clearTimeout(timeout);
+              ws.close();
+              reject(new Error(`Autenticação falhou: ${message.message}`));
+            }
+            if (message.type === 'subscribe' && message.status === 'success') {
+              clearTimeout(timeout);
+              expect(message.events).toEqual(['ticket.created', 'ticket.updated']);
+              ws.close();
+              resolve();
+            }
+          });
+
+          ws.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+      }, 15000);
+    });
+
+    test('subscribe sem autenticação é rejeitado', async () => {
+      if (skipWsTests) return;
       return runWithTimeout(async () => {
         return new Promise((resolve, reject) => {
           const ws = new WebSocket(`ws://localhost:${wssPort}/ws`);
@@ -381,23 +453,22 @@ describe('websocketService', () => {
 
           const timeout = setTimeout(() => {
             ws.close();
-            reject(new Error('Timeout ao se inscrever em eventos'));
+            reject(new Error('Timeout ao aguardar rejeição de subscribe'));
           }, 5000);
 
           ws.on('open', () => {
             ws.send(
               JSON.stringify({
                 type: 'subscribe',
-                events: ['ticket.created', 'ticket.updated'],
+                events: ['ticket.created'],
               })
             );
           });
 
           ws.on('message', (data) => {
             const message = JSON.parse(data.toString());
-            if (message.type === 'subscribe' && message.status === 'success') {
+            if (message.type === 'error' && message.code === 'authentication_required') {
               clearTimeout(timeout);
-              expect(message.events).toEqual(['ticket.created', 'ticket.updated']);
               ws.close();
               resolve();
             }

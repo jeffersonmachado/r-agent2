@@ -1,5 +1,7 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../utils/runtimePaths');
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -16,7 +18,7 @@ describe('qaWavesExecutionService', () => {
   beforeEach(() => {
     jest.resetModules();
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-waves-exec-'));
-    process.env.RUNTIME_ROOT = runtimeRoot;
+    configureRuntimeRoot(runtimeRoot);
 
     jest.isolateModules(() => {
       qaMeshService = require('../qaMeshService');
@@ -25,7 +27,7 @@ describe('qaWavesExecutionService', () => {
   });
 
   afterEach(() => {
-    delete process.env.RUNTIME_ROOT;
+    configureRuntimeRoot(null);
     fs.rmSync(runtimeRoot, { recursive: true, force: true });
   });
 

@@ -290,6 +290,8 @@ async function analyzeGapsForAutoClosure(options = {}) {
     dependencies: snapshot.dependencyGraph,
     journeyContracts: snapshot.journeyContracts,
     policy: snapshot.policy,
+    tenantId: options.tenantId || 'system',
+    persistGeneratedScenarios: options.persistGeneratedScenarios === true,
   });
 }
 
@@ -304,6 +306,8 @@ async function generateGapClosureReport(options = {}) {
     dependencies: snapshot.dependencyGraph,
     journeyContracts: snapshot.journeyContracts,
     policy: snapshot.policy,
+    tenantId: options.tenantId || 'system',
+    persistGeneratedScenarios: options.persistGeneratedScenarios === true,
   });
 }
 

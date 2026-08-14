@@ -62,7 +62,6 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci
       REDIS_URL: redis://localhost:6379
-      RUNTIME_ROOT: /tmp/ragent2-runtime-ci
       CI: true
 
     steps:
@@ -100,7 +99,6 @@ jobs:
           # precisa acomodar os atores sintéticos; o default de produto (3)
           # permanece inalterado.
           node -e "const fs=require('fs');const p='api/data/config.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.auth={...(c.auth||{}),maxSessionsPerAgent:50};fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');"
-          mkdir -p "$RUNTIME_ROOT"
 
       - name: Run migrations (schema completo no banco efêmero)
         run: npm run db:migrate

@@ -149,9 +149,11 @@ async function main() {
     ...collectApiViolations(),
   ];
 
+  const generatedAt = new Date().toISOString();
   const report = {
     status: violations.length === 0 ? 'PASS' : 'FAIL',
-    checkedAt: new Date().toISOString(),
+    generatedAt,
+    checkedAt: generatedAt,
     policy: {
       protectedPrefixes: PROTECTED_PREFIXES,
       productionHiddenRoutes: PRODUCTION_HIDDEN_ROUTES,

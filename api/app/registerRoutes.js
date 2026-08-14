@@ -238,6 +238,28 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
       badRequest(res, 'JSON inválido no corpo da requisição');
       return;
     }
+
+    // Mapeia códigos de erro de domínio para status HTTP adequados, em vez de
+    // devolver 500 genérico (ex.: provider de pagamento não configurado).
+    const code = err?.code || null;
+    if (code === 'required_config_missing' || code === 'payment_provider_not_configured') {
+      logger.warn('[Server] Configuração obrigatória ausente', { code, message: err?.message });
+      sendJson(res, 503, { error: code, message: err?.message || 'Configuração obrigatória ausente' });
+      return;
+    }
+    if (code === 'payment_provider_http_error') {
+      const status = Number(err?.status) || 502;
+      const httpStatus = status >= 400 && status < 500 ? 502 : status;
+      logger.warn('[Server] Erro no provider de pagamento', { code, status, message: err?.message });
+      sendJson(res, httpStatus, { error: code, message: err?.message || 'Erro no provider de pagamento' });
+      return;
+    }
+    if (code === 'invalid_payment_provider') {
+      logger.warn('[Server] Provider de pagamento inválido', { code, message: err?.message });
+      sendJson(res, 400, { error: code, message: err?.message || 'Provider de pagamento inválido' });
+      return;
+    }
+
     logger.error('[Server] Erro não tratado na pipeline Express', err);
     sendJson(res, 500, { error: 'internal_error', message: 'Erro interno do servidor' });
   });

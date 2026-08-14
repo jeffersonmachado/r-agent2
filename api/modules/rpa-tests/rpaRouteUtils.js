@@ -1,4 +1,5 @@
 const { checkClassification } = require('../../middleware/requireClassification');
+const { tenantFromRequest } = require('../../../lib/rpaSecurity');
 
 const ensureAuthenticated = (req, res, requireAuth, sendJson) => {
   const authResult = requireAuth(req);
@@ -30,6 +31,15 @@ const ensureSupportAccess = (req, res, requireAuth, sendJson) => {
 
 const getPathSuffix = (pathname, prefix) => decodeURIComponent(pathname.slice(prefix.length));
 
+const resolveRequestTenant = (req, res, sendJson) => {
+  try {
+    return tenantFromRequest(req);
+  } catch (error) {
+    sendJson(res, 400, { error: 'tenant_required', message: 'Tenant autenticado obrigatório' });
+    return null;
+  }
+};
+
 const getExecutionIdFromActionPath = (pathname) => {
   const parts = pathname.split('/').filter(Boolean);
   const executionIndex = parts.indexOf('execution');
@@ -53,4 +63,5 @@ module.exports = {
   getPathSuffix,
   getExecutionIdFromActionPath,
   isSafeJsonFilename,
+  resolveRequestTenant,
 };

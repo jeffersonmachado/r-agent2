@@ -40,6 +40,7 @@ const {
 } = require('../utils/defensiveCoercion');
 // Knowledge Plane: domainRouter é alias backward-compatível do Knowledge Router.
 const { resolveRetrievalScope, sanitizeScope } = require('../../src/core/knowledge-plane');
+const { getClassificationForAgent } = require('../modules/agent-os/experience-segregation');
 const ragResponseCache = require('./rag/ragResponseCache');
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,29 @@ function buildResponseCacheScope(retrievalScope, filters, tenantContext) {
       escopo: tenantContext.escopo,
     } : null,
   };
+}
+
+function buildEffectiveAccessFilters(actor, filters = {}) {
+  const actorRoles = actor
+    ? [actor.role, ...(Array.isArray(actor.roles) ? actor.roles : [])]
+    : [];
+  const roles = [...new Set(actorRoles
+    .map((role) => safeTrim(role))
+    .filter(Boolean))];
+
+  return {
+    ...filters,
+    roles,
+    // ACL nunca é derivada de filtros controláveis pelo caller. Sem principal
+    // autenticado, somente documentos sem restrição de role/agent são elegíveis.
+    agentId: actor?.id ? safeTrim(actor.id) : null,
+  };
+}
+
+function clampNumber(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
 }
 
 /**
@@ -186,8 +210,16 @@ async function generateEmbeddingsBatch(texts, tenantId, options = {}) {
  * @returns {Promise<{success: boolean, response?: string, sources?: Array, confidence?: number, error?: string}>}
  */
 async function queryRag(query, tenantId, context = {}, filters = {}) {
-  if (!query || !query.trim()) {
+  if (typeof query !== 'string' || !query.trim()) {
     throw new Error('Query não pode ser vazia');
+  }
+  if (query.trim().length > 2000) {
+    throw new Error('Query excede o limite de 2000 caracteres');
+  }
+
+  tenantId = normalizeTenantId(tenantId);
+  if (!tenantId) {
+    throw new Error('tenantId é obrigatório');
   }
 
   // Inicializa replay (opcional, pode ser desabilitado para performance)
@@ -238,10 +270,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     });
   }
 
-  tenantId = normalizeTenantId(tenantId);
-  if (!tenantId) {
-    throw new Error('tenantId é obrigatório');
-  }
+  filters = buildEffectiveAccessFilters(context.actor || null, filters);
 
   // Knowledge Router: resolve o escopo de recuperação ANTES da busca vetorial.
   // P1: filters.scope NÃO pode ser bypass — apenas ResolvedKnowledgeScope interno.
@@ -270,7 +299,11 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
   } else {
     // P1: Usa Principal.classification como fonte canônica (não role).
     const principal = context.actor
-      ? { classification: context.actor.classification || 'PRODUCTION' }
+      ? {
+        classification: context.actor.classification
+          || getClassificationForAgent(context.actor)
+          || 'PRODUCTION',
+      }
       : null;
     const knowledgeResult = resolveKnowledgeContext({
       principal,
@@ -316,8 +349,9 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       });
     }
 
-    // Cache de resposta (TTL simples, sem invalidação por reindex — decisão
-    // de projeto). O check acontece ANTES do NLP analyze e do /rag/query:
+    // Cache de resposta por tenant/identidade/escopo. Mutações documentais
+    // invalidam o tenant; o TTL limita entradas sem mudança de corpus. O check
+    // acontece ANTES do NLP analyze e do /rag/query:
     // um hit poupa as 2 chamadas HTTP ao rag-service.
     // Efeito colateral conhecido e DESEJADO: o Python registra cada query
     // para aprendizado adaptativo (rag-service/api/routes/query.py,
@@ -418,9 +452,9 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
         category: filters.category || null,
       },
       options: {
-        topK: filters.topK || 6,  // Aumentado de 5 para 6 para melhor cobertura
-        minScore: filters.minScore ?? 0.45,  // Reduzido de 0.5 para 0.45 para melhor captura de chunks relevantes; 0 explícito é honrado (?? em vez de ||)
-        maxTokens: filters.maxTokens || 1000,
+        topK: Math.trunc(clampNumber(filters.topK, 6, 1, 50)),
+        minScore: clampNumber(filters.minScore, 0.45, 0, 1),
+        maxTokens: Math.trunc(clampNumber(filters.maxTokens, 1000, 1, 2000)),
       },
       scope: retrievalScope,
     };
@@ -524,7 +558,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
       && typeof responsePayload.response === 'string'
       && responsePayload.response.trim()
     ) {
-      ragResponseCache.setCachedResponse(responseCacheKey, responsePayload);
+      ragResponseCache.setCachedResponse(responseCacheKey, responsePayload, tenantId);
     }
 
     return responsePayload;
@@ -1204,6 +1238,56 @@ async function cleanInvalidQueries(tenantId) {
   }
 }
 
+/** Obtém as regras de validação do aprendizado via canal interno autenticado. */
+async function getValidationRules(tenantId) {
+  tenantId = normalizeTenantId(tenantId);
+  if (!tenantId) throw new Error('tenantId é obrigatório');
+
+  const serviceUrl = getRagServiceUrl(tenantId);
+  const response = await fetchRagWithBreaker(
+    `${serviceUrl}/rag/learning/validation-rules`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getRagInternalHeaders(),
+      },
+    },
+    getRagTimeout(tenantId),
+    { idempotent: true }
+  );
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw await handleRagHttpError(response, serviceUrl, '/rag/learning/validation-rules', errorText);
+  }
+  return response.json();
+}
+
+/** Adapta as regras de validação de um tenant via canal interno autenticado. */
+async function adaptValidationRules(tenantId) {
+  tenantId = normalizeTenantId(tenantId);
+  if (!tenantId) throw new Error('tenantId é obrigatório');
+
+  const serviceUrl = getRagServiceUrl(tenantId);
+  const endpoint = `/rag/learning/validation-rules/adapt/${encodeURIComponent(tenantId)}`;
+  const response = await fetchRagWithBreaker(
+    `${serviceUrl}${endpoint}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getRagInternalHeaders(),
+      },
+    },
+    getRagTimeout(tenantId)
+  );
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw await handleRagHttpError(response, serviceUrl, endpoint, errorText);
+  }
+  return response.json();
+}
+
 /**
  * Remove documentos órfãos do vector store.
  * 
@@ -1313,7 +1397,8 @@ module.exports = {
   updateSynonym,
   deleteSynonym,
   cleanInvalidQueries,
+  getValidationRules,
+  adaptValidationRules,
   cleanOrphanedDocuments,
   listVectorDocuments,
 };
-

@@ -76,8 +76,11 @@ function parseJsonBody(req, maxSize = 10 * 1024 * 1024) {
  */
 function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Tenant-Id');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, X-Tenant-Id, X-Request-Id'
+  );
   res.setHeader('Access-Control-Max-Age', '86400');
 
   res.setHeader('X-Content-Type-Options', 'nosniff');

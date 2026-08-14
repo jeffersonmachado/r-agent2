@@ -67,6 +67,7 @@ function logRagAction({ req, deps, action, resource, resourceId }) {
   deps.logAction({
     agentId: req.agent.id,
     username: req.agent.username,
+    tenantId: req.tenantId || req.agent.tenantId || null,
     action,
     resource,
     resourceId,
@@ -78,6 +79,13 @@ function logRagAction({ req, deps, action, resource, resourceId }) {
 function createInternalErrorResponder(req, res, deps, message) {
   return (err, { loggerMessage = message } = {}) => {
     logger.error(loggerMessage, err);
+    if (err?.code === 'PERSISTENCE_REQUIRED') {
+      deps.sendJson(res, 503, {
+        error: 'persistence_required',
+        message: 'Persistência PostgreSQL indisponível',
+      });
+      return true;
+    }
     deps.sendJson(res, 500, { error: 'internal_error', message: err.message });
     return true;
   };

@@ -1,5 +1,7 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../utils/runtimePaths');
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -20,7 +22,7 @@ describe('qaWavesService journey model compatibility', () => {
 
   beforeEach(() => {
     runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-waves-service-'));
-    process.env.RUNTIME_ROOT = runtimeRoot;
+    configureRuntimeRoot(runtimeRoot);
 
     // IDs devem corresponder aos cenários reais do scenario-store.json para que
     // collectScenarioLatestStats() correlacione corretamente os resultados
@@ -87,7 +89,7 @@ describe('qaWavesService journey model compatibility', () => {
   });
 
   afterEach(() => {
-    delete process.env.RUNTIME_ROOT;
+    configureRuntimeRoot(null);
     if (runtimeRoot && fs.existsSync(runtimeRoot)) {
       fs.rmSync(runtimeRoot, { recursive: true, force: true });
     }
@@ -183,5 +185,32 @@ describe('qaWavesService journey model compatibility', () => {
     expect(details.status).toBe('queued');
     expect(Array.isArray(details.steps)).toBe(true);
     expect(details.steps.length).toBe(1);
+    expect(details.source).not.toHaveProperty('historyFile');
+  });
+
+  test('resolve replay com mesmo id somente dentro do tenant autenticado', () => {
+    const replayId = 'qa_wave_replay_same_id';
+    for (const tenantId of ['tenant-a', 'tenant-b']) {
+      const replayDir = getRpaReplayDir(tenantId);
+      fs.mkdirSync(replayDir, { recursive: true });
+      fs.writeFileSync(path.join(replayDir, `${replayId}.json`), JSON.stringify({
+        id: replayId,
+        replayId,
+        tenantId,
+        type: 'qa_wave_rpa_replay',
+        executionId: `exec-${tenantId}`,
+        scenarioId: 'shared-scenario',
+        scenarioName: `Replay ${tenantId}`,
+        status: 'queued',
+      }), 'utf8');
+    }
+
+    const tenantA = qaWavesService.getReplayById(replayId, 'tenant-a');
+    const tenantB = qaWavesService.getReplayById(replayId, 'tenant-b');
+
+    expect(tenantA.executionId).toBe('exec-tenant-a');
+    expect(tenantA.itemName).toBe('Replay tenant-a');
+    expect(tenantB.executionId).toBe('exec-tenant-b');
+    expect(tenantB.itemName).toBe('Replay tenant-b');
   });
 });

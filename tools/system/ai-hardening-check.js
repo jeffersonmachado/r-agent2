@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
+const { runtimeAwarePath, resolveWorkspacePath, getRuntimeRoot } = require('./lib/runtime-paths');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const REPORT_PATH = runtimeAwarePath(ROOT_DIR, 'qa/ai-hardening-report.json', 'AI_HARDENING_REPORT_PATH');
@@ -155,7 +155,7 @@ function main() {
     source: 'system:ai-hardening-check',
     generatedAt: new Date().toISOString(),
     status: failed.length === 0 ? 'GO' : 'NO_GO',
-    runtimeRoot: process.env.RUNTIME_ROOT || null,
+    runtimeRoot: getRuntimeRoot(ROOT_DIR),
     checks,
   };
 

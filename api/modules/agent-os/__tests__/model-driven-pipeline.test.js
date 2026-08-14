@@ -337,12 +337,14 @@ describe('Model-Driven Waves & Journeys Pipeline', () => {
       const { CAPABILITY_REGISTRY } = require('../routes/agent-orchestrator');
       expect(CAPABILITY_REGISTRY).toBeDefined();
       expect(Object.keys(CAPABILITY_REGISTRY).length).toBeGreaterThan(10);
-      // Nenhuma capability deve apontar para serviço simulado
+      // Nenhuma capability deve apontar para domínio simulado;
+      // execução real ocorre via tools do Cognitive Tool Registry.
       for (const [key, cap] of Object.entries(CAPABILITY_REGISTRY)) {
-        expect(cap.service).toBeDefined();
-        expect(cap.service).not.toBe('simulated');
-        expect(cap.service).not.toBe('mock');
-        expect(cap.service).not.toBe('fake');
+        expect(cap.type).toBeDefined();
+        expect(cap.type).not.toBe('simulated');
+        expect(cap.type).not.toBe('mock');
+        expect(cap.type).not.toBe('fake');
+        expect(Array.isArray(cap.tools)).toBe(true);
       }
     });
   });

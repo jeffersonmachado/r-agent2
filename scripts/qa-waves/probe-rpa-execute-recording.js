@@ -1,7 +1,7 @@
 'use strict';
 /* Probe 3: executa a gravação fitness-matricula-leads pelo MESMO caminho do mesh
    (rpaService.executeRecording) e despeja resultado por step. */
-process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime-dev';
+require('../../api/utils/runtimePaths').configureRuntimeRoot('/tmp/ragent2-runtime-dev');
 const { executeRecording, getExecutionStatus } = require('../../api/services/rpaService');
 
 (async () => {

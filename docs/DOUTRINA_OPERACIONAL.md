@@ -12,7 +12,7 @@ Convenções operacionais, arquitetura de configuração e procedimentos padrão
 - **Runtime**: Sessões, stores, aprendizado, evidências, logs de release (vive fora do workspace)
 
 Quando uma decisão arquitetural tiver impacto em path, aplicar esta regra:
-> *"Se é estado mutável ou transitório, deve respeitar `RUNTIME_ROOT` por default"*
+> *"Se é estado mutável ou transitório, deve respeitar o runtime_root por default"*
 
 ### 1.2 Convenção de configuração em cascata
 
@@ -20,14 +20,14 @@ Para qualquer path que precise ser externalizável:
 
 ```
 1. Explicit override (env var específico, e.g. PHYSICAL_QUEUE_EVIDENCE_PATH)
-2. RUNTIME_ROOT (env var universal de runtime)
+2. Runtime root (resolvido automaticamente: /var/lib/ragent2 em produção, ~/.local/share/ragent2-runtime em dev)
 3. Default (path workspace relativo, e.g. qa/l01-physical-queue-evidence.json)
 ```
 
 Implementação unitária via `tools/system/lib/runtime-paths.js`:
 - `runtimeAwarePath(rootDir, defaultRelPath, explicitEnvVar)` — aplica cascata
 - `resolveWorkspacePath(rootDir, targetPath)` — resolve absolute/relative
-- `getRuntimeRoot(rootDir)` — obtém RUNTIME_ROOT resolvido
+- `getRuntimeRoot(rootDir)` — obtém o runtime_root resolvido
 
 ---
 
@@ -37,7 +37,7 @@ Implementação unitária via `tools/system/lib/runtime-paths.js`:
 
 | Variável | Descrição | Recomendação Docker | Recomendação Dev Local |
 |----------|-----------|---------------------|------------------------|
-| `RUNTIME_ROOT` | Raiz única de runtime mutável | `/var/lib/ragent2/runtime` | `~/.local/share/ragent2-runtime` ou `/tmp/ragent2-runtime` |
+| — (sem env var) | Runtime root é resolvido pela aplicação | `/var/lib/ragent2` (default em produção) | `~/.local/share/ragent2-runtime` (default em dev) |
 | `NODE_ENV` | Ambiente (development, test, production) | `production` | `development` |
 | `LOG_LEVEL` | Nível de logging (debug, info, warn, error) | `info` ou `debug` | `debug` |
 
@@ -49,18 +49,18 @@ Implementação unitária via `tools/system/lib/runtime-paths.js`:
 |----------|---------|-------------|-----|
 | `TEST_BASE_URL` | — | Explícito | URL da API para smoke tests |
 | `FRONTEND_URL` | `http://localhost:5173` | Config/explícito | URL do frontend |
-| `PHYSICAL_QUEUE_EVIDENCE_PATH` | `qa/l01-physical-queue-evidence.json` | Explícito > RUNTIME_ROOT | L-01 smoke evidence |
-| `URA_PUBLISH_EVIDENCE_PATH` | `qa/l02-ura-publish-rollback-evidence.json` | Explícito > RUNTIME_ROOT | L-02 smoke evidence |
-| `BPMN_EDITOR_EVIDENCE_PATH` | `qa/l06-bpmn-editor-evidence.json` | Explícito > RUNTIME_ROOT | L-06 smoke evidence |
-| `BPMN_EDITOR_SMOKE_REPORT_PATH` | `qa/smoke/l06-bpmn-editor-smoke.md` | Explícito > RUNTIME_ROOT | L-06 smoke report |
-| `RPA_REPLAY_SCALE_EVIDENCE_PATH` | `qa/l07-rpa-replays-scale-evidence.json` | Explícito > RUNTIME_ROOT | L-07 scale test |
-| `QA_RESULT_PATH` | `qa/qa-result.json` | Explícito > RUNTIME_ROOT | IA rollout validator |
+| `PHYSICAL_QUEUE_EVIDENCE_PATH` | `qa/l01-physical-queue-evidence.json` | Explícito > runtime_root | L-01 smoke evidence |
+| `URA_PUBLISH_EVIDENCE_PATH` | `qa/l02-ura-publish-rollback-evidence.json` | Explícito > runtime_root | L-02 smoke evidence |
+| `BPMN_EDITOR_EVIDENCE_PATH` | `qa/l06-bpmn-editor-evidence.json` | Explícito > runtime_root | L-06 smoke evidence |
+| `BPMN_EDITOR_SMOKE_REPORT_PATH` | `qa/smoke/l06-bpmn-editor-smoke.md` | Explícito > runtime_root | L-06 smoke report |
+| `RPA_REPLAY_SCALE_EVIDENCE_PATH` | `qa/l07-rpa-replays-scale-evidence.json` | Explícito > runtime_root | L-07 scale test |
+| `QA_RESULT_PATH` | `qa/qa-result.json` | Explícito > runtime_root | IA rollout validator |
 
 #### RAG Service
 
 | Variável | Default | Precedência | Uso |
 |----------|---------|-------------|-----|
-| `RAG_DATA_ROOT` | `rag-service/data` | Explícito > RUNTIME_ROOT | Raiz mutable do RAG |
+| `RAG_DATA_ROOT` | `rag-service/data` | Explícito > runtime_root | Raiz mutable do RAG |
 | `VECTOR_STORE_PATH` | `rag-service/data/vector_store` | Explícito | Store vetorial persistente |
 | `ADAPTIVE_LEARNING_DATA_PATH` | `rag-service/data/adaptive_learning` | Explícito | Aprendizado adaptativo |
 
@@ -68,14 +68,14 @@ Implementação unitária via `tools/system/lib/runtime-paths.js`:
 
 | Variável | Default | Precedência | Uso |
 |----------|---------|-------------|-----|
-| `WWEBJS_AUTH_PATH` | `api/data/wa_sessions` | Explícito > RUNTIME_ROOT | Autenticação WhatsApp Web.js |
+| `WWEBJS_AUTH_PATH` | `api/data/wa_sessions` | Explícito > runtime_root | Autenticação WhatsApp Web.js |
 
 #### Release / Governance
 
 | Variável | Default | Precedência | Uso |
 |----------|---------|-------------|-----|
-| `RELEASE_EVIDENCE_BASE_DIR` | `qa/release-evidence` | Explícito > RUNTIME_ROOT | Evidências de release (manifest, gates, summary, etc) |
-| `QA_MESH_SYSTEM_VALIDATE_DIR` | `qa-mesh/system-validate` | Explícito > RUNTIME_ROOT | Saídas do system:validate para QA Mesh |
+| `RELEASE_EVIDENCE_BASE_DIR` | `qa/release-evidence` | Explícito > runtime_root | Evidências de release (manifest, gates, summary, etc) |
+| `QA_MESH_SYSTEM_VALIDATE_DIR` | `qa-mesh/system-validate` | Explícito > runtime_root | Saídas do system:validate para QA Mesh |
 
 ---
 
@@ -86,7 +86,7 @@ Implementação unitária via `tools/system/lib/runtime-paths.js`:
 #### Docker / Compose (Recomendado para produção e teste)
 
 ```
-/var/lib/ragent2/                    ← RUNTIME_ROOT
+/var/lib/ragent2/                    ← runtime_root
 ├── runtime/                          ← Core runtime (API cache, RPA session state)
 ├── qa/                               ← QA evidências (smokes, reports)
 ├── qa-mesh/                          ← QA Mesh outputs (system-validate, mesh runs)
@@ -115,20 +115,20 @@ volumes:
 #### Desenvolvimento local (Flexível)
 
 ```
-~/.local/share/ragent2-runtime/      ← RUNTIME_ROOT (recomendado)
+~/.local/share/ragent2-runtime/      ← runtime_root (recomendado)
   ou /tmp/ragent2-runtime-$USER/     ← Alternativa temporária
 ```
 
-Ou simplesmente deixar RUNTIME_ROOT indefinido e usar defaults workspace-relative durante dev.
+Ou simplesmente deixar `runtime_root` indefinido — o default computado é `~/.local/share/ragent2-runtime` (fora do workspace), com fallback para `os.tmpdir()/ragent2-runtime` quando não houver `HOME`. Valor explícito dentro do workspace continua sendo erro.
 
 ### 3.2 Paths que devem estar isolados (NUNCA em workspace)
 
-- `$RUNTIME_ROOT/qa-mesh/system-validate` — saídas do npm run system:validate
-- `$RUNTIME_ROOT/qa/release-evidence` — manifests, gates, summaries
-- `$RUNTIME_ROOT/rag-service/data/vector_store` — vetores
-- `$RUNTIME_ROOT/rag-service/data/adaptive_learning` — modelos personalizados
-- `api/data/wa_sessions` (ou `$RUNTIME_ROOT/whatsapp/auth`) — sessões WhatsApp
-- `$RUNTIME_ROOT/qa/l01-l07*` — smoke test evidências
+- `$runtime_root/qa-mesh/system-validate` — saídas do npm run system:validate
+- `$runtime_root/qa/release-evidence` — manifests, gates, summaries
+- `$runtime_root/rag-service/data/vector_store` — vetores
+- `$runtime_root/rag-service/data/adaptive_learning` — modelos personalizados
+- `api/data/wa_sessions` (ou `$runtime_root/whatsapp/auth`) — sessões WhatsApp
+- `$runtime_root/qa/l01-l07*` — smoke test evidências
 
 ### 3.3 Paths que podem estar em workspace (durante dev, desaconselhado em prod)
 
@@ -153,19 +153,19 @@ npm run zip:release:clean          # Empacotar limpo
 # 1. Setup inicial
 npm ci
 cp env.example .env
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+export runtime_root=~/.local/share/ragent2-runtime
 
 # 2. Build & serve
 npm run dev
 
-# 3. Smoke tests isolados (com RUNTIME_ROOT, fallback workspace se indefinido)
+# 3. Smoke tests isolados (com runtime_root, fallback workspace se indefinido)
 npm run test:physical:smoke              # L-01
 npm run test:ura:publish-rollback:smoke  # L-02
 npm run test:bpmn:smoke                  # L-06
 # ... etc
 
 # 4. Validação local full
-npm run system:validate                  # Lê de RUNTIME_ROOT, escreve lá
+npm run system:validate                  # Lê de runtime_root, escreve lá
 
 # 5. Limpeza periódica
 npm run runtime:clean
@@ -175,7 +175,7 @@ npm run runtime:clean
 
 ```bash
 # 1. Prepare environment
-export RUNTIME_ROOT=/var/lib/r-agent2-runtime  # ou similar
+export runtime_root=/var/lib/r-agent2-runtime  # ou similar
 export NODE_ENV=test
 npm ci
 
@@ -191,31 +191,31 @@ npm run check:green                      # Read qa/final-verdict.json
 ```
 
 **Expected behavior:**
-- Scripts respeitam `RUNTIME_ROOT` para evidências/reports
-- Fallback para workspace-relative defaults se `RUNTIME_ROOT` indefinido
+- Scripts respeitam `runtime_root` para evidências/reports
+- Fallback para workspace-relative defaults se `runtime_root` indefinido
 - Official `npm run system:validate` é a única validação obrigatória
 
 ### 4.3 Release Gate & Decision
 
 ```bash
-export RUNTIME_ROOT=/var/lib/r-agent2-release
+export runtime_root=/var/lib/r-agent2-release
 
 # 1. Execute gate (reads verdicts, applies governance)
 npm run system:release-gate
-# → Outputs: qa-mesh/release-gate-report.json (in RUNTIME_ROOT)
+# → Outputs: qa-mesh/release-gate-report.json (in runtime_root)
 
 # 2. Generate manifest & evidence pack
 npm run system:release-manifest
 npm run system:release-evidence-pack
-# → Outputs: evidences + SHA-256 manifest in RUNTIME_ROOT/qa/release-evidence/
+# → Outputs: evidences + SHA-256 manifest in runtime_root/qa/release-evidence/
 
 # 3. Release decision (GO / NO_GO)
 npm run system:go-no-go
-# → Outputs: qa-mesh/go-no-go-report.json (in RUNTIME_ROOT)
+# → Outputs: qa-mesh/go-no-go-report.json (in runtime_root)
 
 # 4. Summary & approval
 npm run system:release-summary
-# → Outputs: qa-mesh/release-summary.json (in RUNTIME_ROOT)
+# → Outputs: qa-mesh/release-summary.json (in runtime_root)
 ```
 
 **Governance rules:**
@@ -251,29 +251,29 @@ ls -la qa-mesh/system-validate 2>&1 | grep -i "no such\|cannot"
 # Universal
 NODE_ENV=production
 LOG_LEVEL=info
-RUNTIME_ROOT=/var/lib/ragent2
+runtime_root=/var/lib/ragent2
 
 # API
 TEST_BASE_URL=http://localhost:3001
 FRONTEND_URL=http://localhost:5173
 
 # RAG
-RAG_DATA_ROOT=${RUNTIME_ROOT}/rag
-VECTOR_STORE_PATH=${RUNTIME_ROOT}/rag/vector_store
-ADAPTIVE_LEARNING_DATA_PATH=${RUNTIME_ROOT}/rag/adaptive_learning
+RAG_DATA_ROOT=${runtime_root}/rag
+VECTOR_STORE_PATH=${runtime_root}/rag/vector_store
+ADAPTIVE_LEARNING_DATA_PATH=${runtime_root}/rag/adaptive_learning
 
 # WhatsApp Auth
-WWEBJS_AUTH_PATH=${RUNTIME_ROOT}/whatsapp/auth
+WWEBJS_AUTH_PATH=${runtime_root}/whatsapp/auth
 
 # Release/QA
-RELEASE_EVIDENCE_BASE_DIR=${RUNTIME_ROOT}/release-evidence
-QA_MESH_SYSTEM_VALIDATE_DIR=${RUNTIME_ROOT}/qa-mesh/system-validate
+RELEASE_EVIDENCE_BASE_DIR=${runtime_root}/release-evidence
+QA_MESH_SYSTEM_VALIDATE_DIR=${runtime_root}/qa-mesh/system-validate
 ```
 
 ### 5.2 Precedência de configuração
 
 1. **Explicit environment variable** (e.g., `PHYSICAL_QUEUE_EVIDENCE_PATH=/custom/path`)
-2. **RUNTIME_ROOT-derived** (e.g., `RUNTIME_ROOT=/var/lib/ragent2` → `qa/l01-*` → `/var/lib/ragent2/qa/l01-*`)
+2. **runtime_root-derived** (e.g., `runtime_root=/var/lib/ragent2` → `qa/l01-*` → `/var/lib/ragent2/qa/l01-*`)
 3. **Default workspace-relative** (e.g., `qa/l01-physical-queue-evidence.json`)
 
 Never hardcode paths. Always use the cascade pattern via `tools/system/lib/runtime-paths.js`.
@@ -306,7 +306,7 @@ Never hardcode paths. Always use the cascade pattern via `tools/system/lib/runti
 
 ### 6.3 Validation
 
-- [ ] `RUNTIME_ROOT` definido para release (não usar workspace)
+- [ ] `runtime_root` definido para release (não usar workspace)
 - [ ] `npm run system:bootstrap` completa
 - [ ] `npm run system:validate` retorna **GREEN (GO)** com executionQuality = "valid"
 - [ ] `npm run check:green` retorna "GO"
@@ -360,7 +360,7 @@ Never hardcode paths. Always use the cascade pattern via `tools/system/lib/runti
 ### 8.1 Desenvolvimento
 
 ```bash
-# Sem RUNTIME_ROOT defino, fallback para workspace relativo
+# Sem runtime_root defino, fallback para workspace relativo
 npm run system:validate
 # → qa/system-validate-report.json (workspace)
 ```
@@ -368,24 +368,24 @@ npm run system:validate
 ### 8.2 CI/CD (GitHub Actions / Jenkins / GitLab)
 
 ```bash
-export RUNTIME_ROOT=/tmp/r-agent2-runtime-$BUILD_ID
-mkdir -p $RUNTIME_ROOT
+export runtime_root=/tmp/r-agent2-runtime-$BUILD_ID
+mkdir -p $runtime_root
 npm ci
 npm run system:validate
-# → $RUNTIME_ROOT/qa-mesh/system-validate/...
+# → $runtime_root/qa-mesh/system-validate/...
 # → Artifacts coletados após execução
 ```
 
 ### 8.3 Produção / Release
 
 ```bash
-export RUNTIME_ROOT=/var/lib/r-agent2-release
-export RELEASE_EVIDENCE_BASE_DIR=$RUNTIME_ROOT/evidences
+export runtime_root=/var/lib/r-agent2-release
+export RELEASE_EVIDENCE_BASE_DIR=$runtime_root/evidences
 npm run system:validate
 npm run system:release-gate
 npm run system:go-no-go
 npm run system:release-summary
-# → Tudo em $RUNTIME_ROOT, nunca no workspace
+# → Tudo em $runtime_root, nunca no workspace
 ```
 
 ---
@@ -394,20 +394,20 @@ npm run system:release-summary
 
 ### "scripts/test-*-smoke.js não encontram evidências"
 
-**Causa:** RUNTIME_ROOT indefinido ou path errado
+**Causa:** runtime_root indefinido ou path errado
 **Solução:**
 ```bash
-export RUNTIME_ROOT=/path/to/runtime
-node scripts/test-physical-queue-smoke.js  # Escreve em $RUNTIME_ROOT/qa/l01-...
+export runtime_root=/path/to/runtime
+node scripts/test-physical-queue-smoke.js  # Escreve em $runtime_root/qa/l01-...
 ```
 
-### "npm run system:validate escreve em workspace, não em RUNTIME_ROOT"
+### "npm run system:validate escreve em workspace, não em runtime_root"
 
-**Causa:** RUNTIME_ROOT não definido antes da execução
+**Causa:** runtime_root não definido antes da execução
 **Solução:**
 ```bash
-export RUNTIME_ROOT=/var/lib/ragent2
-npm run system:validate  # Agora escreve em RUNTIME_ROOT/qa-mesh/...
+export runtime_root=/var/lib/ragent2
+npm run system:validate  # Agora escreve em runtime_root/qa-mesh/...
 ```
 
 ### "Cleanup falha com 'resíduos não-removíveis'"
@@ -418,19 +418,19 @@ npm run system:validate  # Agora escreve em RUNTIME_ROOT/qa-mesh/...
 npm run runtime:clean:check -- --verbose  # Listar resíduos
 sudo npm run runtime:clean  # Se necessário elevação
 # ou manualmente:
-rm -rf $RUNTIME_ROOT/qa-mesh/system-validate/*
-rm -rf $RUNTIME_ROOT/release-evidence/*
+rm -rf $runtime_root/qa-mesh/system-validate/*
+rm -rf $runtime_root/release-evidence/*
 ```
 
-### "CI pipeline falha porque RUNTIME_ROOT indefinido"
+### "CI pipeline falha porque runtime_root indefinido"
 
 **Causa:** Variável não exportada em script de build
 **Solução:**
 ```yaml
 # GitHub Actions
 env:
-  RUNTIME_ROOT: /tmp/r-agent2-runtime-${{ github.run_id }}
-before-script: mkdir -p $RUNTIME_ROOT
+  runtime_root: /tmp/r-agent2-runtime-${{ github.run_id }}
+before-script: mkdir -p $runtime_root
 ```
 
 ---
@@ -440,7 +440,7 @@ before-script: mkdir -p $RUNTIME_ROOT
 ### v1.0 (Abril 2026)
 
 - Consolidação de runtime paths em `tools/system/lib/runtime-paths.js`
-- 8 smoke tests + 3 utilidades com suporte a `RUNTIME_ROOT`
+- 8 smoke tests + 3 utilidades com suporte a `runtime_root`
 - Variáveis de ambiente oficiais documentadas
 - Release gate + go/no-go governance definida
 - Cleanup procedures padronizadas
@@ -448,7 +448,7 @@ before-script: mkdir -p $RUNTIME_ROOT
 **Próximas evoluções:**
 - Auto-configuration de .env por ambiente
 - Healthcheck integrado para pre-release validation
-- Dashboard de operações (status de RUNTIME_ROOT, evidências, approval)
+- Dashboard de operações (status de runtime_root, evidências, approval)
 
 ---
 

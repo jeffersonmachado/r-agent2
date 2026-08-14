@@ -24,11 +24,13 @@
 
 const logger = require('../../utils/logger');
 const operationalStepExecutor = require('./operationalStepExecutor');
+const { isBlockingJourney } = require('../../../qa/contracts/journeyCriticality');
 const fs = require('fs');
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
-const BLOCKING_JOURNEYS = ['support_ticket_flow', 'fitness_customer_checkin'];
+// Jornadas blocking: fonte única em config/journey-criticality.json
+// (resolver qa/contracts/journeyCriticality) — sem lista/substring hardcoded.
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_NAV_TIMEOUT_MS = 45000;
@@ -68,16 +70,7 @@ function resolveSystemChromeExecutable() {
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
 
-function isBlockingJourney(journeyId = '') {
-  const id = String(journeyId).toLowerCase();
-  return (
-    BLOCKING_JOURNEYS.includes(id)
-    || id.includes('support')
-    || id.includes('fitness')
-    || id.includes('checkin')
-  );
-}
-
+// isBlockingJourney vem do registry (qa/contracts/journeyCriticality).
 function buildBlockerEntry(reason, details = {}) {
   return { reason, blocking: true, ...details };
 }

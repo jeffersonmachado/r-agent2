@@ -254,7 +254,7 @@ function getDatabaseConfig() {
     port: parseInt(process.env.PGPORT || '5432', 10),
     database: process.env.PGDATABASE || 'r_agent2',
     username: process.env.PGUSER || 'postgres',
-    password: process.env.PGPASSWORD || 'postgres',
+    password: '***' , // usar PGPASSWORD do ambiente
   };
 }
 ```

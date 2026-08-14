@@ -93,6 +93,64 @@ function logAction({ agentId, username, tenantId = null, action, resource, resou
 }
 
 /**
+ * Persiste uma ação antes de permitir que um boundary sensível responda
+ * sucesso. Não usa o buffer em memória como substituto de evidência durável.
+ */
+async function logActionRequired({
+  agentId,
+  username,
+  tenantId,
+  action,
+  resource,
+  resourceId = null,
+  details = null,
+  ipAddress = 'unknown',
+  userAgent = 'unknown',
+}) {
+  const scopedTenantId = safeToString(tenantId).trim();
+  if (!scopedTenantId) {
+    const error = new Error('audit_tenant_required');
+    error.code = 'PERSISTENCE_REQUIRED';
+    throw error;
+  }
+
+  const sequelize = getSequelize();
+  if (!sequelize) {
+    const error = new Error('audit_persistence_required');
+    error.code = 'PERSISTENCE_REQUIRED';
+    throw error;
+  }
+  const AuditEventModel = typeof AuditEvent === 'function' ? AuditEvent() : AuditEvent;
+  if (!AuditEventModel || typeof AuditEventModel.create !== 'function') {
+    const error = new Error('audit_persistence_required');
+    error.code = 'PERSISTENCE_REQUIRED';
+    throw error;
+  }
+
+  try {
+    await AuditEventModel.create({
+      tenant_key: scopedTenantId,
+      actor_user_id: agentId && agentId !== 'system' ? agentId : null,
+      username: username || null,
+      action,
+      resource,
+      resource_id: resourceId || null,
+      details: details || {},
+      ip_address: ipAddress || null,
+      user_agent: userAgent || null,
+    });
+  } catch (cause) {
+    const error = new Error('audit_persistence_required');
+    error.code = 'PERSISTENCE_REQUIRED';
+    error.cause = cause;
+    throw error;
+  }
+
+  logger.debug('Ação de auditoria persistida', { action, resource, resourceId, tenantId: scopedTenantId });
+  return { persisted: true, tenantId: scopedTenantId, action, resource, resourceId };
+}
+
+/**
  * Consulta logs de auditoria.
  *
  * @param {Object} filters - Filtros (agentId, action, resource, startDate, endDate, tenantId)
@@ -417,6 +475,7 @@ async function queryAuditRecords(filters = {}) {
 module.exports = {
   // Auditoria de ações do sistema
   logAction,
+  logActionRequired,
   queryLogs,
   getAuditStats,
   // Auditoria de geração

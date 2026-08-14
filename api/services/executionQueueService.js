@@ -470,6 +470,12 @@ async function processJob(job) {
     await pruneFlowExecutionLedger({ retentionDays: days });
     return;
   }
+  if (kind === 'prune_execution_jobs') {
+    const { pruneExecutionJobs } = require('./pruneExecutionJobsService');
+    const days = intEnv('EXECUTION_JOB_RETENTION_DAYS', 30);
+    await pruneExecutionJobs({ retentionDays: days });
+    return;
+  }
   if (kind === 'scan_event_triggers') {
     const { scanAndEnqueue } = require('./eventLedgerTriggerDispatcher');
     const consumer = safeGet(job, 'payload.consumer', 'webhooks_v1');

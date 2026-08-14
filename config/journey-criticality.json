@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "description": "Registry declarativo de criticidade de jornadas operacionais. Fonte única de verdade para 'jornada bloqueante' (blocking) e severidade por jornada — substitui as listas hardcoded que existiam em api/services/qa/*, qa-mesh/* e qaWavesIntelligenceService. Jornadas com criticality 'blocking' bloqueiam GO/NO_GO em fallback/degradação e exigem evidência operacional completa. Evoluir para inferência via Cognitive Core deve passar pelo fluxo de revisão humana antes de alterar este arquivo.",
+  "journeys": {
+    "support_ticket_flow": {
+      "criticality": "blocking",
+      "severity": "critical"
+    },
+    "fitness_customer_checkin": {
+      "criticality": "blocking",
+      "severity": "critical"
+    },
+    "agendamento": {
+      "criticality": "blocking",
+      "severity": "critical"
+    },
+    "booking_flow": {
+      "criticality": "high",
+      "severity": "high"
+    }
+  }
+}

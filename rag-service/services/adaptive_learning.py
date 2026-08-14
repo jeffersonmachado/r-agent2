@@ -17,6 +17,8 @@ from pathlib import Path
 from collections import defaultdict, Counter
 from datetime import datetime, timedelta
 import math
+import tempfile
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -32,19 +34,19 @@ LEARNING_DATA_PATH.mkdir(parents=True, exist_ok=True)
 def find_project_root(start_path: Optional[Path] = None) -> Optional[Path]:
     """
     Encontra o diretório raiz do projeto procurando por arquivos marcadores.
-    
+
     Procura por: package.json, docker-compose.yml, docker-compose.prod.yml
     """
     if start_path is None:
         start_path = Path(__file__).resolve()
     else:
         start_path = Path(start_path).resolve()
-    
+
     current = start_path
     # Se start_path é um arquivo, começa do diretório pai
     if current.is_file():
         current = current.parent
-    
+
     # Procura pelo diretório raiz (máximo 10 níveis acima)
     markers = ['package.json', 'docker-compose.yml', 'docker-compose.prod.yml']
     for _ in range(10):
@@ -96,6 +98,7 @@ class AdaptiveLearningService:
     
     def __init__(self):
         self.learning_data: Dict[str, Dict] = {}
+        self._io_lock = threading.RLock()
         # mtime do arquivo por tenant, usado para invalidar o cache de leitura
         self._learning_mtimes: Dict[str, float] = {}
         self.validation_rules: Optional[Dict] = None
@@ -104,9 +107,20 @@ class AdaptiveLearningService:
     
     def get_learning_file_path(self, tenant_id: str) -> Path:
         """Retorna caminho do arquivo de aprendizado para um tenant."""
-        return LEARNING_DATA_PATH / f"{tenant_id}_learning.json"
-    
+        tenant_key = str(tenant_id or "").strip()
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", tenant_key):
+            raise ValueError("tenant_id inválido para armazenamento de aprendizado")
+        root = LEARNING_DATA_PATH.resolve()
+        file_path = (root / f"{tenant_key}_learning.json").resolve()
+        if file_path.parent != root:
+            raise ValueError("tenant_id fora da raiz de aprendizado")
+        return file_path
+
     def load_learning_data(self, tenant_id: str) -> Dict:
+        with self._io_lock:
+            return self._load_learning_data_unlocked(tenant_id)
+
+    def _load_learning_data_unlocked(self, tenant_id: str) -> Dict:
         """
         Carrega dados de aprendizado de um tenant.
 
@@ -174,6 +188,10 @@ class AdaptiveLearningService:
         return default_data
     
     def save_learning_data(self, tenant_id: str):
+        with self._io_lock:
+            return self._save_learning_data_unlocked(tenant_id)
+
+    def _save_learning_data_unlocked(self, tenant_id: str):
         """Salva dados de aprendizado de um tenant."""
         if tenant_id not in self.learning_data:
             return
@@ -182,9 +200,20 @@ class AdaptiveLearningService:
         data = self.learning_data[tenant_id]
         data["updatedAt"] = datetime.utcnow().isoformat()
         
+        temporary_path = None
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            fd, temporary_name = tempfile.mkstemp(
+                prefix=f".{file_path.stem}-",
+                suffix=".tmp",
+                dir=str(file_path.parent),
+            )
+            temporary_path = Path(temporary_name)
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temporary_path, file_path)
+            temporary_path = None
             # Atualiza o mtime do cache para refletir o conteúdo recém-escrito
             try:
                 self._learning_mtimes[tenant_id] = file_path.stat().st_mtime
@@ -195,6 +224,12 @@ class AdaptiveLearningService:
             logger.error(f"Erro ao salvar dados de aprendizado para {tenant_id}: {e}")
             # Invalida o cache: o arquivo pode estar parcialmente escrito
             self._learning_mtimes.pop(tenant_id, None)
+        finally:
+            if temporary_path is not None:
+                try:
+                    temporary_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
     
     def load_all_learning_data(self):
         """Carrega todos os dados de aprendizado disponíveis."""
@@ -461,8 +496,21 @@ class AdaptiveLearningService:
         
         return True
     
-    def record_query_result(self, tenant_id: str, query: str, success: bool, 
-                           confidence: float, chunks_found: int, 
+    def record_query_result(self, tenant_id: str, query: str, success: bool,
+                           confidence: float, chunks_found: int,
+                           response: Optional[str] = None):
+        with self._io_lock:
+            return self._record_query_result_unlocked(
+                tenant_id,
+                query,
+                success,
+                confidence,
+                chunks_found,
+                response,
+            )
+
+    def _record_query_result_unlocked(self, tenant_id: str, query: str, success: bool,
+                           confidence: float, chunks_found: int,
                            response: Optional[str] = None):
         """
         Registra resultado de uma consulta para aprendizado.

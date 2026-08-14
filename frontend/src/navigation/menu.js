@@ -162,6 +162,7 @@ export const navigationMenu = [
           { id: 'tenant-intelligence', label: 'Inteligência do Tenant', path: '/tenant-intelligence', permission: { resource: 'reports', action: 'read' } },
           { id: 'channel-health', label: 'Saúde de Canais', path: '/channel-health', permission: { resource: 'config', action: 'read' }, roles: ['supervisor', 'manager', 'admin', 'owner', 'super_admin'] },
           { id: 'system-status', label: 'Status do Sistema', path: '/dev/system-status', permission: { resource: 'config', action: 'read' }, roles: ['super_admin'] },
+          { id: 'stack-versions', label: 'Versões da Stack', path: '/dev/stack-versions', permission: { resource: 'config', action: 'read' }, roles: ['super_admin'] },
           { id: 'plan-usage', label: 'Plano e Uso', path: '/plan-usage', permission: { resource: 'config', action: 'read' }, roles: ['admin', 'owner', 'super_admin'] },
           { id: 'orders', label: 'Pedidos', path: '/orders', permission: { resource: 'reports', action: 'read' }, hiddenInSidebar: true },
           { id: 'kitchen', label: 'Cozinha', path: '/kitchen', permission: { resource: 'reports', action: 'read' }, hiddenInSidebar: true },

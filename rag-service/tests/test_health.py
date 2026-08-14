@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 
-client = TestClient(app)
+client = TestClient(app, backend_options={"use_uvloop": True})
 
 # Token interno obrigatório quando configurado (auth serviço-a-serviço)
 import os as _os
@@ -41,4 +41,3 @@ def test_health_check_structure():
     assert isinstance(data["status"], str)
     assert isinstance(data["indexedDocuments"], int)
     assert isinstance(data["indexedChunks"], int)
-

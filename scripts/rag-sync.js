@@ -23,6 +23,7 @@ const crypto = require('crypto');
 const http = require('http');
 
 const RAG_BASE = process.env.RAG_BASE_URL || 'http://10.10.2.30:8002';
+const RAG_TOKEN = process.env.RAG_INTERNAL_TOKEN || '';
 const ROOT = process.env.RAG_REPO_ROOT || path.resolve(__dirname, '..');
 const MANIFEST_PATH = path.join(ROOT, 'reports', 'rag-sync-manifest.json');
 
@@ -34,7 +35,7 @@ const SOURCE_DIRS = [
   'contracts',
 ];
 
-const EXTENSIONS = new Set(['.md', '.json']);
+const EXTENSIONS = new Set(['.md', '.json', '.html']);
 
 // Diretórios transitórios a excluir (evidência de runtime, não fonte canônica)
 const EXCLUDE_DIRS = new Set([
@@ -78,6 +79,9 @@ function saveManifest(manifest) {
 }
 
 function postJSON(urlPath, body) {
+  if (!String(RAG_TOKEN).trim()) {
+    return Promise.reject(new Error('RAG_INTERNAL_TOKEN não configurado'));
+  }
   return new Promise((resolve, reject) => {
     const url = new URL(urlPath, RAG_BASE);
     const data = JSON.stringify(body);
@@ -89,6 +93,7 @@ function postJSON(urlPath, body) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(data),
+        'X-RAG-Internal-Token': RAG_TOKEN,
       },
     };
     const req = http.request(opts, (res) => {
@@ -108,43 +113,166 @@ function postJSON(urlPath, body) {
   });
 }
 
+// ─── Mapeamento de domínio (OPERATIONAL × SYSTEM) ──────────────────────────
+//
+// Princípio (fail-closed): o que não for explicitamente operacional cai em
+// SYSTEM/DEVELOPMENT. O domínio é decidido pelo caminho canônico, nunca pelo
+// conteúdo, coerente com domain_policy.py.
+//
+//   OPERATIONAL/PRODUCTION → produto/cliente (visível a qualquer usuário)
+//   OPERATIONAL/SUPPORT    → operação de atendimento/suporte
+//   SYSTEM/SUPPORT         → runbooks/diagnóstico (auditor)
+//   SYSTEM/DEVELOPMENT     → arquitetura/QA/engenharia (super_admin)
+
+const SYSTEM_DEV_DIRS = [
+  'AI_MEMORY/',
+  'config/',
+  'contracts/',
+  'docs/governance/',
+  'docs/architecture/',
+  'docs/qa/',
+  'docs/cognitive-core/',
+  'docs/rag/',
+  'docs/rpa-reliability-handbook/',
+  'docs/release/',
+  'docs/diagrams/',
+  'docs/history/',
+  'docs/platform/',
+  'docs/capabilities/',
+  'docs/contracts/',
+];
+
+const SYSTEM_SUPPORT_DIRS = [
+  'docs/runbooks/',
+  'docs/operations/',
+];
+
+const OPERATIONAL_PROD_PREFIXES = [
+  'docs/manual/',
+  'docs/cliente/',
+  'docs/roteiros/jornada-',
+];
+
+const OPERATIONAL_SUPPORT_PREFIXES = [
+  'docs/roteiros/manual-',
+  'docs/roteiros/treinamento-',
+  'docs/roteiros/README',
+];
+
+// Arquivos soltos na raiz de docs/ que descrevem produto/uso (não técnico).
+const OPERATIONAL_PROD_FILE_PATTERNS = [
+  /^docs\/COMO_USAR/,
+  /^docs\/COMO_ACESSAR_FUNCIONALIDADES/,
+  /^docs\/GUIA_ACESSO_ATENDIMENTO/,
+  /^docs\/GUIA_MANUTENCAO_FILAS/,
+  /^docs\/FILAS_FISICAS/,
+  /^docs\/FLUXO_APOS_LOGIN/,
+  /^docs\/DOUTRINA_OPERACIONAL/,
+  /^docs\/DOCUMENTACAO_OPERACIONAL_INDICE/,
+  /^docs\/CASOS_DE_USO/,
+  /^docs\/00_DOCUMENTACAO_INDEX/,
+];
+
+function resolveDomainClassification(rel) {
+  if (SYSTEM_DEV_DIRS.some((p) => rel.startsWith(p))) {
+    return { domain: 'SYSTEM', classification: 'DEVELOPMENT' };
+  }
+  if (SYSTEM_SUPPORT_DIRS.some((p) => rel.startsWith(p))) {
+    return { domain: 'SYSTEM', classification: 'SUPPORT' };
+  }
+  if (OPERATIONAL_PROD_PREFIXES.some((p) => rel.startsWith(p))) {
+    return { domain: 'OPERATIONAL', classification: 'PRODUCTION' };
+  }
+  if (OPERATIONAL_SUPPORT_PREFIXES.some((p) => rel.startsWith(p))) {
+    return { domain: 'OPERATIONAL', classification: 'SUPPORT' };
+  }
+  if (OPERATIONAL_PROD_FILE_PATTERNS.some((p) => p.test(rel))) {
+    return { domain: 'OPERATIONAL', classification: 'PRODUCTION' };
+  }
+  return { domain: 'SYSTEM', classification: 'DEVELOPMENT' };
+}
+
+// Remove marcação HTML para indexar manuais de produto como texto.
+function htmlToText(html) {
+  return String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Arquivos que jamais devem ser indexados (segredos/credenciais).
+const SECRET_PATH_PATTERNS = [/\.env/, /\.token/, /\.pem$/, /\.key$/, /credentials/i, /secret/i];
+const SECRET_CONTENT_PATTERNS = [
+  /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/,
+  /sk-[a-zA-Z0-9]{20,}/,
+  /AKIA[0-9A-Z]{16}/,
+  /xox[baprs]-[a-zA-Z0-9-]{10,}/,
+  /gh[pousr]_[a-zA-Z0-9]{30,}/,
+  /eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/,
+];
+
+function looksSensitive(rel, content) {
+  if (SECRET_PATH_PATTERNS.some((pattern) => pattern.test(rel))) return true;
+  return SECRET_CONTENT_PATTERNS.some((pattern) => pattern.test(content));
+}
+
 // Mapeia um arquivo-fonte para um documento RAG.
 function buildDocumentFromFile(filePath, content) {
   const rel = path.relative(ROOT, filePath);
   const ext = path.extname(filePath);
   const hash = sha256(content);
+  const now = new Date().toISOString();
   // ID estável baseado no caminho relativo (sem hash, para permitir atualização in-place)
   const id = `src-${rel.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase()}`.slice(0, 120);
 
-  let classification = 'documentation';
-  let domain = 'OPERATIONAL';
-  if (rel.startsWith('AI_MEMORY/')) {
-    classification = rel.includes('rules') || rel.includes('governance') ? 'governance' : 'documentation';
-  } else if (rel.startsWith('config/')) {
-    classification = 'configuration';
-    domain = 'SYSTEM';
-  } else if (rel.startsWith('contracts/')) {
-    classification = 'contract';
-    domain = 'SYSTEM';
-  } else if (rel.startsWith('docs/')) {
-    classification = rel.includes('governance') ? 'governance' : 'documentation';
+  const { domain, classification } = resolveDomainClassification(rel);
+
+  let documentContent = content;
+  if (ext === '.html') {
+    documentContent = htmlToText(content);
+  } else if (ext === '.json') {
+    documentContent = `# ${rel}\n\n\`\`\`json\n${content}\n\`\`\``;
   }
+
+  // Filtro de permissões secundário (o primário é domain+classification no SQL):
+  // roles null/[] = visível a todos do tenant.
+  const rolesByClassification = {
+    PRODUCTION: null,
+    SUPPORT: ['super_admin', 'auditor'],
+    DEVELOPMENT: ['super_admin'],
+  };
 
   return {
     document: {
       id,
       tenantId: 'system',
+      title: rel,
       domain,
       classification,
-      sensitivity: 'internal',
-      content: ext === '.json' ? `# ${rel}\n\n\`\`\`json\n${content}\n\`\`\`` : content,
+      sensitivity: 'INTERNAL',
+      content: documentContent,
       metadata: {
+        source: 'canonical-source',
+        category: domain === 'OPERATIONAL' ? 'operational-documentation' : 'technical-source',
         sourceFile: rel,
         sha256: hash,
-        syncedAt: new Date().toISOString(),
-        category: 'canonical-source',
+        createdAt: now,
+        updatedAt: now,
+        version: 1,
       },
-      permissions: { readRoles: ['super_admin', 'auditor', 'agent'], readTenants: ['system'] },
+      permissions: {
+        roles: rolesByClassification[classification] || null,
+        agents: [],
+      },
+      status: 'active',
     },
   };
 }
@@ -178,6 +306,11 @@ async function main() {
       continue;
     }
 
+    if (looksSensitive(rel, content)) {
+      console.log(`   🚫 ${rel}: pulado (padrão de secret/credencial detectado)`);
+      continue;
+    }
+
     toIndex.push({ rel, hash, doc: buildDocumentFromFile(filePath, content) });
   }
 
@@ -190,6 +323,10 @@ async function main() {
     }
     console.log(`\nDRY RUN — nada foi alterado.`);
     return;
+  }
+
+  if (!String(RAG_TOKEN).trim()) {
+    throw new Error('RAG_INTERNAL_TOKEN não configurado');
   }
 
   let ok = 0;

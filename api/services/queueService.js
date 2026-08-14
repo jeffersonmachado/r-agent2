@@ -549,13 +549,19 @@ function startAutoCleanup(intervalHours = 1, maxAgeDays = 7) {
  *
  * @returns {Object} Métricas do sistema
  */
-function getMetrics() {
+function getMetrics(options = {}) {
+  const tenantId = options && typeof options === 'object' && options.tenantId != null
+    ? String(options.tenantId).trim()
+    : null;
+  const scopedTickets = tenantId
+    ? new Map(Array.from(tickets.entries()).filter(([, ticket]) => String(ticket?.tenantId || '') === tenantId))
+    : tickets;
   // Log de debug para verificar o estado do Map
-  const ticketCount = tickets.size;
+  const ticketCount = scopedTickets.size;
   logger.debug(`[QueueService] getMetrics: Map tem ${ticketCount} ticket(s), Array tem ${ticketCount} ticket(s)`);
 
   const metrics = buildTicketMetrics({
-    tickets,
+    tickets: scopedTickets,
     logger,
     memoryUsageProvider: () => ({
       rss: process.memoryUsage().rss,

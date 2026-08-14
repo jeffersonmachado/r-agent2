@@ -19,14 +19,6 @@ cd "$ROOT_DIR"
 
 runtime_aware_path() {
   local rel_path="$1"
-  if [[ -n "${RUNTIME_ROOT:-}" ]]; then
-    if [[ "$RUNTIME_ROOT" = /* ]]; then
-      printf '%s\n' "$RUNTIME_ROOT/$rel_path"
-    else
-      printf '%s\n' "$ROOT_DIR/$RUNTIME_ROOT/$rel_path"
-    fi
-    return
-  fi
   printf '%s\n' "$rel_path"
 }
 

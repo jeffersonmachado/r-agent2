@@ -11,6 +11,7 @@ const {
   matchExpectedNetworkEvent,
 } = require('../../../qa/contracts/operationalStepRegistry');
 const { validateReplayIntegrity } = require('./replayIntegrityService');
+const { isBlockingJourney: isRegistryBlockingJourney } = require('../../../qa/contracts/journeyCriticality');
 
 /**
  * Valida se replay é operacional real
@@ -28,7 +29,9 @@ const { validateReplayIntegrity } = require('./replayIntegrityService');
 // Nota: /resource-bookings é a rota operacional real de reservas do workspace
 // (api/modules/workspace/workspace.routes.js); URLs gravadas no replay carregam
 // query string, por isso o lookahead aceita ?, / ou fim.
-const OPERATIONAL_MODULE_PATTERN = /\/(support|fitness|access-control|calendar|bookings|orders|node-marketplace)(\/|$)|\/api\/(support|crm|access-control|fitness|calendar|bookings|node-marketplace)(\/|$)|\/resource-bookings(\?|\/|$)/i;
+// `tasks` é o módulo operacional real da jornada `agendamento`
+// (POST /api/tasks → tenant_settings); a UI navega em /workspace → /editor → /tasks.
+const OPERATIONAL_MODULE_PATTERN = /\/(support|fitness|access-control|calendar|bookings|orders|node-marketplace|tasks)(\/|$)|\/api\/(support|crm|access-control|fitness|calendar|bookings|node-marketplace|tasks)(\/|$)|\/resource-bookings(\?|\/|$)/i;
 const DIAGNOSTIC_PAGE_PATTERN = /\/dev\/qa-waves(\/|$)|\/rpa-replays(\/|$)/i;
 
 function toSnakeCase(value = '') {
@@ -149,7 +152,7 @@ function validateReplayStepEvidence(replay = {}) {
   const steps = operationalSteps;
   const blockers = [];
   const journeyId = normalizeJourneyId(replay.journeyId);
-  const isBlockingJourney = ['support_ticket_flow', 'fitness_customer_checkin'].includes(journeyId);
+  const blockingJourney = isRegistryBlockingJourney(journeyId);
 
   if (steps.length === 0 && diagnosticSteps.length > 0) {
     blockers.push({ reason: 'operational_evidence_missing', journeyId });
@@ -164,7 +167,7 @@ function validateReplayStepEvidence(replay = {}) {
       journeyContext: {
         journeyId,
         stepId,
-        isBlockingJourney,
+        isBlockingJourney: blockingJourney,
         executionMode: 'operational_go',
       },
     });
@@ -302,7 +305,7 @@ function validateMutationProvenanceCompleteness(replay = {}) {
 
 function validateOperationalSeedLinkage(replay = {}) {
   const journeyId = normalizeJourneyId(replay.journeyId);
-  const isBlockingJourney = ['support_ticket_flow', 'fitness_customer_checkin'].includes(journeyId);
+  const isBlockingJourney = isRegistryBlockingJourney(journeyId);
   const seedEvidence = replay.seedEvidence || replay.metadata?.seedEvidence || null;
   const seedStatus = String(
     replay.operationalSeedStatus
@@ -859,14 +862,14 @@ function buildReplayBlockers(results = {}, replay = {}) {
 /**
  * Executa validação operacional completa do replay.
  *
- * PRECONDIÇÃO: Para jornadas blocking (support_ticket_flow, fitness_customer_checkin),
+ * PRECONDIÇÃO: Para jornadas blocking (registry config/journey-criticality.json),
  * afterSnapshot DEVE existir antes de chamar esta função.
  * Se chamado antes de collectAfterSnapshot(), retorna preconditionFailed=true
  * sem nenhum blocker — evita falsos NO_GO temporários.
  */
 function validateOperationalReplay(replay = {}, options = {}) {
   const journeyIdNorm = normalizeJourneyId(replay.journeyId || '');
-  const isBlockingReplay = ['support_ticket_flow', 'fitness_customer_checkin'].includes(journeyIdNorm);
+  const isBlockingReplay = isRegistryBlockingJourney(journeyIdNorm);
 
   // Guard temporal: jornadas blocking exigem afterSnapshot antes de validar.
   // Se afterSnapshot ainda não foi coletado, retornar sem blockers (precondição não atendida).

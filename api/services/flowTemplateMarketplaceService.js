@@ -233,6 +233,17 @@ async function upsertToDbBestEffort(tpl) {
       await FlowTemplateModel.create({ ...payload, created_at: now, updated_at: now });
     }
   } catch (err) {
+    const isUnique = err?.name === 'SequelizeUniqueConstraintError'
+      || err?.original?.code === '23505'
+      || err?.parent?.code === '23505';
+    if (isUnique) {
+      // Corrida de idempotência: insert concorrente do mesmo id. Re-fetch + update.
+      const raced = await FlowTemplateModel.findByPk(tpl.id).catch(() => null);
+      if (raced) {
+        await raced.update({ ...payload, updated_at: now }).catch(() => {});
+        return;
+      }
+    }
     logger.warn('[FlowTemplateMarketplace] Falha ao persistir template', { id: tpl.id, error: safeErrorMessage(err) });
   }
 }

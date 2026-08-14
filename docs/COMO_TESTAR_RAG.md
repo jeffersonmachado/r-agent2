@@ -113,8 +113,11 @@ EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
 # LLM (opcional - para geração de respostas)
 LLM_PROVIDER=openai
-LLM_MODEL=gpt-3.5-turbo
+LLM_MODEL=gpt-4o-mini
 OPENAI_API_KEY=sk-...  # Opcional
+
+# Autenticação interna obrigatória do serviço RAG (mínimo de 32 bytes)
+RAG_INTERNAL_TOKEN=replace-with-a-random-secret-at-least-32-bytes
 
 # Banco de dados (vector store Postgres/pgvector)
 DATABASE_URL=postgresql://user:pass@localhost:5432/ragent
@@ -140,7 +143,8 @@ O serviço estará disponível em `http://localhost:8000`
 Verifique se o serviço está rodando:
 
 ```bash
-curl http://localhost:8000/rag/health
+curl http://localhost:8000/rag/health \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN"
 ```
 
 **Resposta esperada:**
@@ -161,10 +165,14 @@ Antes de fazer consultas, você precisa indexar documentos:
 ```bash
 curl -X POST http://localhost:8000/rag/index \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "document": {
       "id": "doc-001",
       "tenantId": "tenant-001",
+      "domain": "OPERATIONAL",
+      "classification": "PRODUCTION",
+      "sensitivity": "INTERNAL",
       "title": "Guia de Atendimento",
       "content": "Para resetar sua senha, acesse o menu Configurações > Segurança > Redefinir Senha. Você receberá um email com instruções.",
       "metadata": {
@@ -195,6 +203,7 @@ Faça uma consulta para testar a busca e geração de resposta:
 ```bash
 curl -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "query": "Como resetar minha senha?",
     "tenantId": "tenant-001",
@@ -415,7 +424,7 @@ npm start
 # 2. Gerar teste RPA via API (se houver endpoint)
 curl -X POST http://localhost:3000/api/flows/flow-id/generate-rpa-test \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Authorization: Bearer <TOKEN>" \
   -d '{
     "flowId": "flow-test-id"
   }'
@@ -480,10 +489,14 @@ npm test
 # Documento 1
 curl -X POST http://localhost:8000/rag/index \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "document": {
       "id": "doc-001",
       "tenantId": "tenant-001",
+      "domain": "OPERATIONAL",
+      "classification": "PRODUCTION",
+      "sensitivity": "INTERNAL",
       "title": "Reset de Senha",
       "content": "Para resetar sua senha, acesse Configurações > Segurança."
     }
@@ -492,10 +505,14 @@ curl -X POST http://localhost:8000/rag/index \
 # Documento 2
 curl -X POST http://localhost:8000/rag/index \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "document": {
       "id": "doc-002",
       "tenantId": "tenant-001",
+      "domain": "OPERATIONAL",
+      "classification": "PRODUCTION",
+      "sensitivity": "INTERNAL",
       "title": "Cancelamento",
       "content": "Para cancelar sua conta, entre em contato com o suporte."
     }
@@ -507,6 +524,7 @@ curl -X POST http://localhost:8000/rag/index \
 # Query 1 - Deve encontrar doc-001
 curl -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "query": "Como faço para resetar minha senha?",
     "tenantId": "tenant-001"
@@ -515,6 +533,7 @@ curl -X POST http://localhost:8000/rag/query \
 # Query 2 - Deve encontrar doc-002
 curl -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "query": "Quero cancelar minha conta",
     "tenantId": "tenant-001"
@@ -523,6 +542,7 @@ curl -X POST http://localhost:8000/rag/query \
 # Query 3 - Não deve encontrar nada
 curl -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "query": "Como fazer um bolo de chocolate?",
     "tenantId": "tenant-001"
@@ -540,6 +560,7 @@ cat > test_performance.sh << 'EOF'
 for i in {1..10}; do
   curl -X POST http://localhost:8000/rag/query \
     -H "Content-Type: application/json" \
+    -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
     -d "{\"query\": \"Teste $i\", \"tenantId\": \"tenant-001\"}" &
 done
 wait
@@ -557,10 +578,14 @@ Teste filtros por roles, agentId, etc:
 # Indexar documento com permissões específicas
 curl -X POST http://localhost:8000/rag/index \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "document": {
       "id": "doc-admin",
       "tenantId": "tenant-001",
+      "domain": "OPERATIONAL",
+      "classification": "PRODUCTION",
+      "sensitivity": "INTERNAL",
       "title": "Documento Admin",
       "content": "Este documento só é visível para admins.",
       "permissions": {
@@ -572,6 +597,7 @@ curl -X POST http://localhost:8000/rag/index \
 # Consultar como admin (deve encontrar)
 curl -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "query": "documento admin",
     "tenantId": "tenant-001",
@@ -583,6 +609,7 @@ curl -X POST http://localhost:8000/rag/query \
 # Consultar como user (não deve encontrar)
 curl -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "query": "documento admin",
     "tenantId": "tenant-001",
@@ -676,11 +703,13 @@ uvicorn main:app --reload --log-level debug
 **Solução:**
 ```bash
 # Verificar documentos indexados
-curl http://localhost:8000/rag/health
+curl http://localhost:8000/rag/health \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN"
 
 # Reduzir minScore
 curl -X POST http://localhost:8000/rag/query \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "query": "sua query",
     "tenantId": "tenant-001",
@@ -700,7 +729,8 @@ const RAG_TIMEOUT = 10000; // 10 segundos
 
 - Verificar se o serviço Python está respondendo:
 ```bash
-curl http://localhost:8000/rag/health
+curl http://localhost:8000/rag/health \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN"
 ```
 
 #### Problema: Erro de LLM
@@ -774,25 +804,32 @@ Crie um arquivo `test_rag.sh`:
 #!/bin/bash
 
 BASE_URL="http://localhost:8000"
+: "${RAG_INTERNAL_TOKEN:?Defina RAG_INTERNAL_TOKEN com pelo menos 32 bytes}"
 
 echo "1. Health Check..."
-curl -s $BASE_URL/rag/health | jq
+curl -s "${BASE_URL}/rag/health" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" | jq
 
 echo -e "\n2. Indexando documento..."
-curl -s -X POST $BASE_URL/rag/index \
+curl -s -X POST "${BASE_URL}/rag/index" \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "document": {
       "id": "test-doc",
       "tenantId": "test-tenant",
+      "domain": "OPERATIONAL",
+      "classification": "PRODUCTION",
+      "sensitivity": "INTERNAL",
       "title": "Teste",
       "content": "Este é um documento de teste para verificar o funcionamento do RAG."
     }
   }' | jq
 
 echo -e "\n3. Consultando RAG..."
-curl -s -X POST $BASE_URL/rag/query \
+curl -s -X POST "${BASE_URL}/rag/query" \
   -H "Content-Type: application/json" \
+  -H "X-RAG-Internal-Token: $RAG_INTERNAL_TOKEN" \
   -d '{
     "query": "O que é este documento?",
     "tenantId": "test-tenant"
@@ -824,4 +861,3 @@ chmod +x test_rag.sh
 - [Documentação FastAPI](https://fastapi.tiangolo.com/)
 - [pgvector](https://github.com/pgvector/pgvector)
 - [Sentence Transformers](https://www.sbert.net/)
-

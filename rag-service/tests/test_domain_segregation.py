@@ -14,10 +14,13 @@ Cobre (pedido 2026-08-01, seção 16):
 """
 
 import os
+import asyncio
+from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, require_internal_token
+from api.routes.index import generate_tenant_chunk_id
 from services.domain_policy import (
     DEFAULT_SCOPE,
     DomainPolicyError,
@@ -26,7 +29,9 @@ from services.domain_policy import (
     resolve_query_scope,
 )
 
-client = TestClient(app)
+# O runtime oficial usa uvloop (uvicorn[standard]); reproduzi-lo aqui também
+# evita o deadlock do event loop asyncio deste ambiente em callbacks de worker.
+client = TestClient(app, backend_options={"use_uvloop": True})
 
 # Token interno obrigatório quando configurado (auth serviço-a-serviço)
 import os as _os
@@ -35,6 +40,70 @@ if _os.getenv("RAG_INTERNAL_TOKEN"):
 
 INTERNAL_TOKEN = os.getenv("RAG_INTERNAL_TOKEN", "")
 AUTH_HEADERS = {"X-RAG-Internal-Token": INTERNAL_TOKEN} if INTERNAL_TOKEN else {}
+
+
+def _postgres_disponivel() -> bool:
+    try:
+        from config.settings import get_settings
+        import psycopg2
+
+        dsn = get_settings().postgres_dsn
+        if not dsn:
+            return False
+        conn = psycopg2.connect(dsn, connect_timeout=2)
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+
+requires_postgres = pytest.mark.skipif(
+    not _postgres_disponivel(), reason="Postgres indisponível"
+)
+
+
+def test_qualquer_ambiente_sem_token_interno_falha_fechado(monkeypatch):
+    monkeypatch.delenv("RAG_INTERNAL_TOKEN", raising=False)
+
+    request = SimpleNamespace(
+        url=SimpleNamespace(path="/rag/query"),
+        headers={},
+        client=SimpleNamespace(host="127.0.0.1"),
+    )
+
+    async def unexpected_next(_request):
+        raise AssertionError("middleware não pode encaminhar a chamada")
+
+    response = asyncio.run(require_internal_token(request, unexpected_next))
+
+    assert response.status_code == 503
+    assert b'"error":"service_misconfigured"' in response.body
+
+
+def test_token_interno_curto_tambem_falha_fechado(monkeypatch):
+    monkeypatch.setenv("RAG_INTERNAL_TOKEN", "placeholder-curto")
+
+    request = SimpleNamespace(
+        url=SimpleNamespace(path="/rag/query"),
+        headers={"x-rag-internal-token": "placeholder-curto"},
+        client=SimpleNamespace(host="127.0.0.1"),
+    )
+
+    async def unexpected_next(_request):
+        raise AssertionError("middleware não pode encaminhar a chamada")
+
+    response = asyncio.run(require_internal_token(request, unexpected_next))
+
+    assert response.status_code == 503
+    assert b'"error":"service_misconfigured"' in response.body
+
+
+def test_chunk_id_deterministico_inclui_tenant():
+    chunk_a = generate_tenant_chunk_id("tenant-a", "documento-igual", "", 0)
+    chunk_b = generate_tenant_chunk_id("tenant-b", "documento-igual", "", 0)
+
+    assert chunk_a != chunk_b
+    assert chunk_a == generate_tenant_chunk_id("tenant-a", "documento-igual", "", 0)
 
 
 # ---------------------------------------------------------------------------
@@ -108,11 +177,19 @@ class TestResolveQueryScope:
 
     def test_operational_nunca_inclui_development(self):
         scope = resolve_query_scope({"domain": "OPERATIONAL", "classifications": ["PRODUCTION", "DEVELOPMENT"]})
-        assert scope == {"domain": "OPERATIONAL", "classifications": ["PRODUCTION"]}
+        assert scope == {
+            "domain": "OPERATIONAL",
+            "classifications": ["PRODUCTION"],
+            "sensitivities": ["PUBLIC", "INTERNAL"],
+        }
 
     def test_system_com_classifications_validas(self):
         scope = resolve_query_scope({"domain": "SYSTEM", "classifications": ["SUPPORT", "DEVELOPMENT"]})
-        assert scope == {"domain": "SYSTEM", "classifications": ["SUPPORT", "DEVELOPMENT"]}
+        assert scope == {
+            "domain": "SYSTEM",
+            "classifications": ["SUPPORT", "DEVELOPMENT"],
+            "sensitivities": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"],
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +226,7 @@ class TestIngestaoEstrita:
         assert detail["error"] == "secret_detected"
         assert "SuperSecret123" not in str(detail)  # secret nunca é ecoado
 
+    @requires_postgres
     def test_documento_operacional_valido_aceito(self):
         response = client.post("/rag/index", headers=AUTH_HEADERS, json={
             "document": {
@@ -166,22 +244,6 @@ class TestIngestaoEstrita:
 # ---------------------------------------------------------------------------
 # Recuperação com escopo (integração com Postgres; pula se indisponível)
 # ---------------------------------------------------------------------------
-
-def _postgres_disponivel() -> bool:
-    try:
-        from config.settings import get_settings
-        import psycopg2
-        dsn = get_settings().postgres_dsn
-        if not dsn:
-            return False
-        conn = psycopg2.connect(dsn, connect_timeout=2)
-        conn.close()
-        return True
-    except Exception:
-        return False
-
-
-requires_postgres = pytest.mark.skipif(not _postgres_disponivel(), reason="Postgres indisponível")
 
 SYSTEM_DOC = {
     "id": "seg-doc-system-runbook",
@@ -284,7 +346,7 @@ class TestRecuperacaoSegregada:
 @pytest.mark.skipif(not INTERNAL_TOKEN, reason="RAG_INTERNAL_TOKEN não configurado neste ambiente")
 class TestTokenInterno:
     # Cliente sem headers default: simula chamador direto sem credencial.
-    anon_client = TestClient(app)
+    anon_client = TestClient(app, backend_options={"use_uvloop": True})
 
     def test_chamada_direta_sem_token_e_401(self):
         response = self.anon_client.post("/rag/query", json={"query": "teste", "tenantId": "seg-tenant-x"})

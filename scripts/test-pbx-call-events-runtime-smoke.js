@@ -23,9 +23,16 @@ function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
 }
 
-async function reqJson(url, { method = 'GET', token = null, body = null } = {}) {
+// Tenant default do smoke: STRICT_TENANT_MODE exige X-Tenant-Id explícito
+// para super_admin; definido após o login e aplicado a todas as chamadas.
+let smokeTenantId = null;
+
+async function reqJson(url, { method = 'GET', token = null, body = null, tenantId = null } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
+  // STRICT_TENANT_MODE: super_admin precisa declarar o tenant explicitamente
+  const effectiveTenantId = tenantId || smokeTenantId;
+  if (effectiveTenantId) headers['X-Tenant-Id'] = String(effectiveTenantId);
   const retries = Math.max(1, Number(process.env.L04_HTTP_RETRIES || 3));
   const timeoutMs = Math.max(3000, Number(process.env.L04_HTTP_TIMEOUT_MS || 20000));
   let lastErr = null;
@@ -274,6 +281,7 @@ async function upsertFlow(baseUrl, token, flow) {
     method: 'POST',
     token,
     body: flow,
+    tenantId: flow.tenantId,
   });
   if (create.ok) return create.payload?.id || flow.id;
   if (create.status !== 409) throw new Error(`flow_create_failed:${create.status}`);
@@ -282,6 +290,7 @@ async function upsertFlow(baseUrl, token, flow) {
     method: 'PUT',
     token,
     body: flow,
+    tenantId: flow.tenantId,
   });
   if (!update.ok) throw new Error(`flow_update_failed:${update.status}`);
   return update.payload?.id || flow.id;
@@ -639,7 +648,7 @@ async function waitExecution({ baseUrl, token, tenantId, correlationId, flowId, 
   for (let i = 0; i < 120; i += 1) {
     const execListByCorrelation = await reqJson(
       `${baseUrl}/api/executions?correlationId=${encodeURIComponent(correlationId)}&limit=20`,
-      { method: 'GET', token },
+      { method: 'GET', token, tenantId },
     );
     expect(
       execListByCorrelation.ok && Array.isArray(execListByCorrelation.payload?.items),
@@ -649,7 +658,7 @@ async function waitExecution({ baseUrl, token, tenantId, correlationId, flowId, 
     if (!item) {
       const execListFallback = await reqJson(
         `${baseUrl}/api/executions?limit=200`,
-        { method: 'GET', token },
+        { method: 'GET', token, tenantId },
       );
       expect(
         execListFallback.ok && Array.isArray(execListFallback.payload?.items),
@@ -662,6 +671,7 @@ async function waitExecution({ baseUrl, token, tenantId, correlationId, flowId, 
       const details = await reqJson(`${baseUrl}/api/executions/${encodeURIComponent(execId)}`, {
         method: 'GET',
         token,
+        tenantId,
       });
       expect(details.ok && details.payload?.ok === true, `execution_detail_failed:${details.status}`);
       const execution = details.payload?.execution || item;
@@ -691,6 +701,7 @@ async function main() {
   assertDirectModeDbIntent();
   const baseUrl = apiBaseUrl();
   const auth = await login(baseUrl);
+  smokeTenantId = auth.tenantId || null;
   const ts = Date.now();
   const uniqueid = `l04-${ts}`;
   const cdrId = `cdr-${uniqueid}`;
@@ -726,6 +737,7 @@ async function main() {
   const metrics = await reqJson(`${baseUrl}/api/ops/event-ledger/metrics?windowMinutes=30`, {
     method: 'GET',
     token: auth.token,
+    tenantId: auth.tenantId,
   });
   const hasMetrics = metrics.ok && metrics.payload?.ok === true;
 

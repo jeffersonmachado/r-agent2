@@ -22,3 +22,12 @@
 
 Canonical sources: `docs/release-contract.md`, `docs/runtime-governance.md`, `docs/runtime-paths.md`, `scripts/check-dist-clean.sh`, `scripts/release-payload-blocklist.sh`, `scripts/governance/validate-cleanup.js`.
 
+## Stack Versions
+
+- `AI_MEMORY/stack-versions.md` is the canonical declared-stack reference (Node, npm, package version, RAG pins, embedding model, compose images). The "Versões da Stack" page (`/dev/stack-versions`) mirrors it plus live runtime versions from `/version` and `/system/status`.
+- Whenever the stack changes (Node/npm, package version, RAG pins or embedding model, `docker-compose.prod.yml` images), run `npm run stack:versions:sync` and commit `AI_MEMORY/stack-versions.md` (the report in `reports/` is a git-ignored byproduct).
+- Validate before concluding: `npm run validate:stack-versions`.
+- The sync script only updates the managed block (`<!-- STACK_VERSIONS_AUTO_START -->` … `<!-- STACK_VERSIONS_AUTO_END -->`); never hand-edit that block.
+
+Canonical source: `scripts/stack-versions.js`.
+

@@ -37,12 +37,29 @@ async function ensureStateRow({ consumer }) {
   if (!sequelize) return null;
   const consumerKey = safeToString(consumer);
   const id = `eds:${consumerKey}`;
+
+  // Safe cold-start: o cursor NUNCA nasce em 1970. Começa no evento mais
+  // recente do event_ledger (ou NOW se vazio) — senão o primeiro scan num BD
+  // com histórico dispara webhook/flows retroativos em massa (flood). O
+  // DO UPDATE abaixo também cura cursors legados que ficaram presos no default
+  // antigo (1970).
+  const [maxRows] = await sequelize.query(
+    `SELECT COALESCE(MAX(received_at), NOW()) AS max_received_at FROM event_ledger`,
+  ).catch(() => [[{ max_received_at: null }]]);
+  const safeStart = (Array.isArray(maxRows) && maxRows[0] && maxRows[0].max_received_at)
+    ? new Date(maxRows[0].max_received_at)
+    : new Date();
+
   await sequelize.query(
     `INSERT INTO event_dispatch_state (id, consumer, last_received_at, last_event_id, created_at, updated_at)
-     VALUES (:id, :consumer, '1970-01-01'::timestamptz, NULL, NOW(), NOW())
-     ON CONFLICT (consumer) DO NOTHING`,
-    { replacements: { id, consumer: consumerKey } },
+     VALUES (:id, :consumer, :safeStart::timestamptz, NULL, NOW(), NOW())
+     ON CONFLICT (consumer) DO UPDATE
+       SET last_received_at = EXCLUDED.last_received_at,
+           updated_at = NOW()
+       WHERE event_dispatch_state.last_received_at < '2000-01-01'::timestamptz`,
+    { replacements: { id, consumer: consumerKey, safeStart } },
   );
+
   const [rows] = await sequelize.query(
     `SELECT id, consumer, last_received_at, last_event_id
      FROM event_dispatch_state
@@ -81,7 +98,7 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
       { replacements: { consumer: consumerKey }, transaction: t },
     );
     const locked = Array.isArray(lockedRows) && lockedRows[0] ? lockedRows[0] : null;
-    const lastReceivedAt = locked?.last_received_at ? new Date(locked.last_received_at) : new Date('1970-01-01');
+    const lastReceivedAt = locked?.last_received_at ? new Date(locked.last_received_at) : new Date();
     const lastEventId = locked?.last_event_id ? safeToString(locked.last_event_id) : '';
 
     const EventModel = EventLedger();
@@ -250,4 +267,5 @@ async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId, dispat
 module.exports = {
   scanAndEnqueue,
   dispatchOne,
+  ensureStateRow,
 };

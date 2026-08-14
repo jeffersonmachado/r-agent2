@@ -401,13 +401,13 @@ describe('Agent OS Hardening - Regression Tests', () => {
       expect(categories.has('DEVELOPMENT')).toBe(true);
     });
 
-    it('cada capability deve ter service e action definidos', () => {
+    it('cada capability deve ter name, type, tools e category definidos', () => {
       const { CAPABILITY_REGISTRY } = require('../routes/agent-orchestrator');
 
       for (const [key, cap] of Object.entries(CAPABILITY_REGISTRY)) {
         expect(cap.name).toBeDefined();
-        expect(cap.service).toBeDefined();
-        expect(cap.action).toBeDefined();
+        expect(cap.type).toBeDefined();
+        expect(Array.isArray(cap.tools)).toBe(true);
         expect(cap.category).toBeDefined();
       }
     });

@@ -73,6 +73,7 @@ const QaMeshPage = lazyPage(() => import('./pages/QaMeshPage'), 'QaMeshPage');
 const StabilityPage = lazyPage(() => import('./pages/qa/StabilityPage'), 'StabilityPage');
 const GenerateSystemPage = lazyPage(() => import('./pages/GenerateSystemPage'), 'GenerateSystemPage');
 const SystemStatusPage = lazyPage(() => import('./pages/SystemStatusPage'), 'SystemStatusPage');
+const StackVersionsPage = lazyPage(() => import('./pages/StackVersionsPage'), 'StackVersionsPage');
 const ChannelHealthPage = lazyPage(() => import('./pages/ChannelHealthPage'), 'ChannelHealthPage');
 const ChannelAccountsPage = lazyPage(() => import('./pages/ChannelAccountsPage'), 'ChannelAccountsPage');
 const PlanUsagePage = lazyPage(() => import('./pages/PlanUsagePage'), 'PlanUsagePage');
@@ -132,6 +133,7 @@ import { AreaHeader } from './components/AreaHeader';
 import { ContextPanel } from './components/ContextPanel';
 import { CommandPalette } from './components/CommandPalette';
 import { TutorDock } from './components/TutorDock';
+import { AskAiWidget } from './components/AskAiWidget';
 import { VerticalLayout } from './components/VerticalLayout';
 import { useRouter } from './hooks/useRouter';
 import { useWebSocketAuthGuard } from './hooks/useWebSocketAuthGuard';
@@ -469,6 +471,7 @@ function AppWithAuth() {
   const isGenerateSystem = isRoute('/generate-system');
   const isSystemStatus = isRoute('/dev/system-status');
   const isSystemStatusAlias = isRoute('/system-status');
+  const isStackVersions = isRoute('/dev/stack-versions');
   const isChannelHealth = isRoute('/channel-health');
   const isChannelAccounts = isRoute('/channel-accounts');
   const isPlanUsage = isRoute('/plan-usage');
@@ -566,7 +569,7 @@ function AppWithAuth() {
       isKiosk, isPanel, isStation,
       isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
-      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaReplaysAlias, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isSystemStatusAlias, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+      isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaReplaysAlias, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isSystemStatusAlias, isStackVersions, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
       isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard,
       isOrders, isKitchen, isDispatch,
@@ -588,7 +591,7 @@ function AppWithAuth() {
     isStorefront, isStorefrontOrder, isStorefrontOrderStatus,
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
-    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
+    isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isStackVersions, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
             isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
@@ -651,6 +654,7 @@ function AppWithAuth() {
       '/qa-mesh': '🕸️ Malha Unificada de Execução',
       '/generate-system': '🎯 Gerar Sistema / Fluxo / RPA / Seed',
       '/dev/system-status': '📊 Status dos Serviços',
+      '/dev/stack-versions': '🧩 Versões da Stack',
       '/channel-health': '📡 Saúde de Canais',
       '/channel-accounts': '🔌 Canais',
       '/plan-usage': '📦 Plano e Uso',
@@ -980,6 +984,8 @@ function AppWithAuth() {
     pageContent = <GenerateSystemPage />;
   } else if (isSystemStatus || isSystemStatusAlias) {
     pageContent = <SystemStatusPage />;
+  } else if (isStackVersions) {
+    pageContent = <StackVersionsPage />;
   } else if (isChannelHealth) {
     pageContent = <ChannelHealthPage />;
   } else if (isChannelAccounts) {
@@ -1110,6 +1116,7 @@ function AppWithAuth() {
         <UserMenu tenantLabel={subNavTenantLabel} verticalLabels={subNavVerticalLabels} />
         <TenantGate />
         {pageContent}
+        <AskAiWidget />
       </div>
     );
   }
@@ -1156,6 +1163,7 @@ function AppWithAuth() {
           onClose={() => setIsContextPanelOpen(false)}
         />
       ) : null}
+      <AskAiWidget />
     </div>
   );
 }

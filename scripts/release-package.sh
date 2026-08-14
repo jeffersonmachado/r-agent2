@@ -33,6 +33,10 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 source "$SCRIPT_DIR/release-payload-blocklist.sh"
 
+node_with_workspace_env() {
+  node --env-file-if-exists="$PROJECT_ROOT/.env" "$@"
+}
+
 SKIP_AUDIT=false
 SKIP_FRONTEND=false
 KEEP_DIST=3
@@ -209,7 +213,7 @@ else
 
   # ── 2b. Materializar proof reports ───────────────────────────────────────────
   step "Materializando proof reports antes do empacotamento..."
-  if ! node "$PROJECT_ROOT/tools/system/platform-readiness.js"; then
+  if ! node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js"; then
     warn "platform-readiness retornou NO_GO; mantendo artifacts para validar o candidate ZIP"
   fi
 
@@ -217,19 +221,19 @@ else
   # Crítico: as assinaturas não dependem do hash do ZIP (sem dependência circular).
   # Os artefatos vão para dist/governance-artifacts/ e serão incluídos no ZIP.
   step "PRE-SIGN: construindo cadeia de governança e gerando artefatos self-proving..."
-  if node "$PROJECT_ROOT/governance/governance-chain.js" 2>/dev/null; then
+  if node_with_workspace_env "$PROJECT_ROOT/governance/governance-chain.js" 2>/dev/null; then
     ok "Cadeia de imutabilidade construída"
   else
     warn "Cadeia de imutabilidade incompleta (continuando)"
   fi
 
-  if node "$PROJECT_ROOT/governance/sign-governance.js" 2>/dev/null; then
+  if node_with_workspace_env "$PROJECT_ROOT/governance/sign-governance.js" 2>/dev/null; then
     ok "Artefatos pré-assinados em dist/governance-artifacts/"
   else
     warn "Pre-signing falhou (continuando)"
   fi
 
-  if node "$PROJECT_ROOT/governance/replay-integrity.js" 2>/dev/null; then
+  if node_with_workspace_env "$PROJECT_ROOT/governance/replay-integrity.js" 2>/dev/null; then
     ok "Replay integrity report gerado"
   else
     warn "Replay integrity falhou (continuando)"
@@ -339,7 +343,7 @@ ok "Manifesto: $MANIFEST_FILE"
 echo "  SHA-256: $ZIP_HASH"
 
 step "Validando candidate ZIP contra o manifest de provas..."
-if ! node "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --audited-only; then
+if ! node_with_workspace_env "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --audited-only; then
   rm -f "$LATEST_ZIP" "$MANIFEST_FILE"
   fail "Candidate ZIP reprovado pela validacao fisica de proofs."
 fi
@@ -361,7 +365,7 @@ ok "Manifest sidecar preservado: $MANIFEST_FILE (auditabilidade offline)"
 #
 # Este passo é o que garante que o pacote seja genuinamente self-proving.
 step "REBINDING CRIPTOGRÁFICO: vinculando governança ao ZIP final..."
-if node "$PROJECT_ROOT/governance/rebind-to-current-package.js" 2>/dev/null; then
+if node_with_workspace_env "$PROJECT_ROOT/governance/rebind-to-current-package.js" 2>/dev/null; then
   ok "Rebinding completo — governança 100% vinculada ao ZIP atual"
 else
   warn "rebind-to-current-package falhou — governança pode referenciar ZIP anterior"
@@ -381,7 +385,7 @@ done
 ok "dist/ contém apenas o manifest do ZIP atual: $CURRENT_MANIFEST_NAME"
 
 # Regenerar self-proving-report APÓS limpeza completa (garante staleReferencesFound=0)
-if node "$PROJECT_ROOT/governance/self-proving-report.js" 2>/dev/null; then
+if node_with_workspace_env "$PROJECT_ROOT/governance/self-proving-report.js" 2>/dev/null; then
   [[ -f "$PROJECT_ROOT/governance/self-proving-report.json" ]] && \
     cp "$PROJECT_ROOT/governance/self-proving-report.json" "$DIST_DIR/self-proving-report.json" || true
   ok "dist/self-proving-report.json regenerado com stale=0"
@@ -391,20 +395,20 @@ fi
 
 # ── 4c. Engines de verificação de governança ─────────────────────────────────
 step "Avaliando maturidade e consistência de governança..."
-if node "$PROJECT_ROOT/governance/governance-maturity.js" 2>/dev/null; then
+if node_with_workspace_env "$PROJECT_ROOT/governance/governance-maturity.js" 2>/dev/null; then
   ok "Nível de maturidade: LEVEL_4_IMMUTABLE"
 else
   warn "Avaliação de maturidade falhou (continuando)"
 fi
 
-node "$PROJECT_ROOT/governance/replay-hardening-engine.js"       2>/dev/null && ok "Replay hardening: OK (formato real flows[].replay)" || warn "Replay hardening detectou violações"
-node "$PROJECT_ROOT/governance/replay-consistency-engine.js"     2>/dev/null && ok "Replay consistency: OK" || warn "Replay consistency detectou inconsistências"
-node "$PROJECT_ROOT/governance/governance-consistency-engine.js" 2>/dev/null && ok "Consistency engine: sem contradições" || warn "Consistency engine detectou contradições"
-node "$PROJECT_ROOT/governance/package-integrity-engine.js"      2>/dev/null && ok "Package integrity: OK" || warn "Package integrity detectou divergências"
+node_with_workspace_env "$PROJECT_ROOT/governance/replay-hardening-engine.js"       2>/dev/null && ok "Replay hardening: OK (formato real flows[].replay)" || warn "Replay hardening detectou violações"
+node_with_workspace_env "$PROJECT_ROOT/governance/replay-consistency-engine.js"     2>/dev/null && ok "Replay consistency: OK" || warn "Replay consistency detectou inconsistências"
+node_with_workspace_env "$PROJECT_ROOT/governance/governance-consistency-engine.js" 2>/dev/null && ok "Consistency engine: sem contradições" || warn "Consistency engine detectou contradições"
+node_with_workspace_env "$PROJECT_ROOT/governance/package-integrity-engine.js"      2>/dev/null && ok "Package integrity: OK" || warn "Package integrity detectou divergências"
 # self-proving-report já foi gerado pelo rebind (passo 4b) com binding correto
-node "$PROJECT_ROOT/governance/self-proving-report.js"           2>/dev/null && ok "Self-proving report: OK (rebind já vinculou ao ZIP atual)" || warn "Self-proving report detectou falhas"
-node "$PROJECT_ROOT/governance/report-contamination-cleaner.js"  2>/dev/null && ok "Report contamination: limpo" || warn "Relatórios contaminados detectados"
-node "$PROJECT_ROOT/governance/final-governance-engine.js"       2>/dev/null && ok "Final governance: AUTONOMOUS_READY_GO" || warn "Final governance engine retornou bloqueio"
+node_with_workspace_env "$PROJECT_ROOT/governance/self-proving-report.js"           2>/dev/null && ok "Self-proving report: OK (rebind já vinculou ao ZIP atual)" || warn "Self-proving report detectou falhas"
+node_with_workspace_env "$PROJECT_ROOT/governance/report-contamination-cleaner.js"  2>/dev/null && ok "Report contamination: limpo" || warn "Relatórios contaminados detectados"
+node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js"       2>/dev/null && ok "Final governance: AUTONOMOUS_READY_GO" || warn "Final governance engine retornou bloqueio"
 
 # ── 4c. Gerar relatórios finais em qa/reports/ + garantir sidecar em dist/ ───
 step "Propagando relatórios de governança para qa/reports/ e dist/..."

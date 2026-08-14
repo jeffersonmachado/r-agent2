@@ -35,6 +35,7 @@ const PROD_LIKE_JOURNEY_VERTICAL = {
   market_node_publish_flow: 'market',
   clinic_calendar_block_flow: 'clinic',
 };
+const REQUIRED_REPLAY_JOURNEYS = Object.freeze(Object.keys(PROD_LIKE_JOURNEY_VERTICAL));
 const MESH_VERTICAL_DOMAIN_ALIASES = {
   beauty: ['beauty'],
   fitness: ['fitness'],
@@ -83,6 +84,17 @@ function joinReadableList(items) {
   if (values.length === 1) return values[0];
   if (values.length === 2) return `${values[0]} and ${values[1]}`;
   return `${values.slice(0, -1).join(', ')} and ${values[values.length - 1]}`;
+}
+
+function calculateReplayCoveragePercent(supportedJourneyIds = []) {
+  const supported = new Set(
+    (Array.isArray(supportedJourneyIds) ? supportedJourneyIds : [])
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  );
+  if (REQUIRED_REPLAY_JOURNEYS.length === 0) return 0;
+  const covered = REQUIRED_REPLAY_JOURNEYS.filter((journeyId) => supported.has(journeyId)).length;
+  return round((covered / REQUIRED_REPLAY_JOURNEYS.length) * 100);
 }
 
 function resolveEvidenceCandidates(relativePath) {
@@ -1290,7 +1302,7 @@ function buildReport() {
     ? (meshSummary.registryDeclaredTotal - meshSummary.intelligenceFailures.length) / meshSummary.registryDeclaredTotal
     : 0) * 100);
   const qaCoveragePercent = round(Math.min(meshSummary.registryCoveragePercent, observedFailureFreePercent));
-  const replayCoveragePercent = round((prodLikeSummary.supportedJourneyIds.length / 6) * 100);
+  const replayCoveragePercent = calculateReplayCoveragePercent(prodLikeSummary.supportedJourneyIds);
   const verticalCoveragePercent = round((verticalSummaries.filter((item) => item.implemented).length / REQUIRED_VERTICALS.length) * 100);
 
   const context = {
@@ -1389,6 +1401,7 @@ function buildReport() {
     },
     replayCoverage: {
       percent: replayCoveragePercent,
+      requiredJourneys: REQUIRED_REPLAY_JOURNEYS,
       supportedJourneys: prodLikeSummary.supportedJourneyIds,
       findings: [
         'Support and fitness prod-like replays are valid and signed.',
@@ -1576,5 +1589,7 @@ if (require.main === module) {
 
 module.exports = {
   buildReport,
+  calculateReplayCoveragePercent,
   persistReport,
+  REQUIRED_REPLAY_JOURNEYS,
 };

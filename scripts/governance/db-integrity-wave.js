@@ -20,7 +20,7 @@
  * - evidências append-only em qa/evidence/db-integrity-wave.jsonl (gitignored)
  * - relatório versionado em reports/db-integrity-report.json
  *
- * Uso: RUNTIME_ROOT=/tmp/ragent2-runtime node scripts/governance/db-integrity-wave.js
+ * Uso: node scripts/governance/db-integrity-wave.js
  */
 
 const fs = require('fs');

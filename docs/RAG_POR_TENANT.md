@@ -24,13 +24,12 @@ Os documentos são armazenados no **PostgreSQL** (tabela `rag_documents`) e cada
 
 O vector store é persistido no **PostgreSQL** via **pgvector** (tabela `rag_chunks`), usando `tenant_key` como chave de isolamento.
 
-### 3. **Isolamento em Memória**
+### 3. **Handles de runtime por tenant**
 
-O serviço Python mantém instâncias separadas em memória:
-
-```python
-_vector_stores: Dict[str, Any] = {}  # tenantId -> VectorStore
-```
+O serviço Python pode reutilizar um objeto `VectorStore` leve por tenant, mas
+esse objeto é apenas um wrapper tenant-bound. Documentos, chunks, embeddings e
+o enforcement de acesso permanecem no PostgreSQL; não existe fallback de dados
+em memória.
 
 ## 🔄 Fluxo de Funcionamento
 
@@ -52,7 +51,7 @@ _vector_stores: Dict[str, Any] = {}  # tenantId -> VectorStore
 2. **Indexação no Vector Store (Python)**
    ```python
    # rag-service/api/routes/index.py
-   vector_store = get_vector_store(document.tenantId)  # ← Obtém store específico do tenant
+   vector_store = get_vector_store(document.tenantId)  # wrapper vinculado ao tenant
    vector_store.add_chunks(chunks, embeddings)
    ```
 
@@ -76,7 +75,7 @@ _vector_stores: Dict[str, Any] = {}  # tenantId -> VectorStore
 2. **Busca no Vector Store do Tenant (Python)**
    ```python
    # rag-service/api/routes/query.py
-   vector_store = get_vector_store(request.tenantId)  # ← Store específico do tenant
+   vector_store = get_vector_store(request.tenantId)  # wrapper vinculado ao tenant
    chunks = vector_store.search(query_embedding, top_k=top_k, filters=filters)
    ```
 
@@ -105,27 +104,14 @@ if (!tenantId) {
 
 ### **2. Filtragem por Tenant**
 
-**Node.js (Documentos):**
-```javascript
-// api/services/ragDocumentsService.js
-function listDocuments(filters = {}) {
-  let result = Array.from(documents.values());
-  
-  if (filters.tenantId) {
-    result = result.filter(doc => doc.tenantId === filters.tenantId);
-  }
-  // ...
-}
-```
+**Node.js (documentos):** `ragDocumentsService` exige `tenantId`, consulta
+`rag_documents` por `tenant_key` e usa seu `Map` apenas como cache leve. Falha
+de PostgreSQL resulta em `PERSISTENCE_REQUIRED`; o cache nunca vira fonte
+alternativa de verdade.
 
-**Python (Vector Store):**
-```python
-# rag-service/services/vector_store.py
-def get_vector_store(tenant_id: Optional[str] = None):
-    if tenant_id not in _vector_stores:
-        _vector_stores[tenant_id] = VectorStore(tenant_id)  # ← Nova instância por tenant
-    return _vector_stores[tenant_id]
-```
+**Python (recuperação):** `vector_store.search` inclui `c.tenant_key = %s` no
+`WHERE`, junto com domínio, classificação, sensitivity, ACL e estado do
+documento pai, antes de calcular similaridade.
 
 ### **3. Persistência Isolada**
 
@@ -221,7 +207,7 @@ const result = await queryRag(
 
 - **Node.js**: Filtra documentos por `tenantId` antes de enviar para indexação
 - **Python**: Valida `tenantId` em todas as requisições
-- **Vector Store**: Usa instâncias separadas por tenant
+- **Vector Store**: aplica `tenant_key` no SQL autoritativo antes da similaridade
 
 ### **2. Sem Vazamento de Dados**
 
@@ -231,31 +217,21 @@ const result = await queryRag(
 
 ### **3. Permissões Granulares**
 
-Além do isolamento por tenant, há filtros adicionais:
-
-```python
-# rag-service/services/vector_store.py
-def _filter_chunks(self, chunks: List[Chunk], filters: Dict):
-    # Filtra por roles
-    if filters.get('roles') and chunk.permissions.roles:
-        if not any(role in chunk.permissions.roles for role in filters['roles']):
-            continue
-    
-    # Filtra por agentId
-    if filters.get('agentId') and chunk.permissions.agents:
-        if filters['agentId'] not in chunk.permissions.agents:
-            continue
-```
+Além do isolamento por tenant, a mesma consulta SQL aplica `domain`,
+`classification`, `sensitivity`, ACL de roles/agent e exige documento pai
+ativo e indexado. Roles e `agentId` são derivados do ator autenticado no Node,
+nunca aceitos como ampliação de acesso enviada pelo cliente. É proibido buscar
+um conjunto amplo e pós-filtrar em Python.
 
 ## 📝 Resumo
 
 ### **Isolamento Garantido Por:**
 
 1. ✅ **tenantId obrigatório** em todas as operações
-2. ✅ **Isolamento por `tenant_key`** no Postgres (pgvector) e instância por tenant no serviço
-3. ✅ **Filtragem de documentos** por tenant no Node.js
+2. ✅ **Isolamento por `tenant_key`** no Postgres/pgvector antes da similaridade
+3. ✅ **Filtragem autoritativa no PostgreSQL** e cache Node apenas auxiliar
 4. ✅ **Validação de tenantId** no Python
-5. ✅ **Configurações específicas** por tenant (URL, domínios, timeout)
+5. ✅ **Configurações específicas** por tenant (URL, capacidades e timeout)
 
 ### **Fluxo Completo:**
 
@@ -281,4 +257,3 @@ Resultados isolados por tenant
 - **Python - Indexação**: `rag-service/api/routes/index.py`
 - **Python - Consultas**: `rag-service/api/routes/query.py`
 - **Segurança**: `engine/security.js`
-

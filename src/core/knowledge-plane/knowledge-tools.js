@@ -77,7 +77,7 @@ function registerKnowledgeTools(registry, deps = {}) {
         throw new Error('knowledge_service_unavailable: RAG service not available');
       }
 
-      const result = await ragService.queryRag(input.query, context.tenantId, {}, {
+      const result = await ragService.queryRag(input.query, context.tenantId, { actor: context.actor || null }, {
         domain: 'OPERATIONAL',
         classifications: knowledgeResult.scope.classifications,
         scope: knowledgeResult.scope,
@@ -139,7 +139,7 @@ function registerKnowledgeTools(registry, deps = {}) {
         throw new Error('knowledge_service_unavailable: RAG service not available');
       }
 
-      const result = await ragService.queryRag(input.query, context.tenantId, {}, {
+      const result = await ragService.queryRag(input.query, context.tenantId, { actor: context.actor || null }, {
         domain: 'SYSTEM',
         classifications: knowledgeResult.scope.classifications,
         scope: knowledgeResult.scope,
@@ -211,7 +211,7 @@ function registerKnowledgeTools(registry, deps = {}) {
 
       let ragResult = null;
       if (ragService && typeof ragService.queryRag === 'function') {
-        ragResult = await ragService.queryRag(input.query, context.tenantId, {}, {
+        ragResult = await ragService.queryRag(input.query, context.tenantId, { actor: context.actor || null }, {
           domain: 'SYSTEM',
           classifications: knowledgeResult.scope.classifications,
           scope: knowledgeResult.scope,
@@ -325,7 +325,7 @@ function registerKnowledgeTools(registry, deps = {}) {
         throw new Error('knowledge_service_unavailable: RAG service not available');
       }
 
-      const result = await ragService.queryRag(input.query, context.tenantId, {}, {
+      const result = await ragService.queryRag(input.query, context.tenantId, { actor: context.actor || null }, {
         domain: 'SYSTEM',
         classifications: knowledgeResult.scope.classifications,
         scope: knowledgeResult.scope,

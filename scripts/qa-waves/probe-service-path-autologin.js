@@ -2,7 +2,7 @@
 /* Probe 13: replica 1:1 o caminho do rpaService (RpaTestRunner + tracing +
    autoLoginBeforeSteps na página do executor) e despeja URL/storage/screenshot.
    Uso: PROBE_TRACING=0 para desligar tracing e comparar. */
-process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime-dev';
+require('../../api/utils/runtimePaths').configureRuntimeRoot('/tmp/ragent2-runtime-dev');
 
 const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
 const { autoLoginBeforeSteps } = require('../../core/rpa/utils/autoLoginFlow');

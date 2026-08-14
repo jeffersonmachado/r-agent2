@@ -1,8 +1,8 @@
 # QA Waves Enterprise Governance
 
-Status: ENTERPRISE_GOVERNANCE_READY.
+Contract status: implemented and fail-closed.
 
-Validated on: 2026-05-09.
+Observed governance state on 2026-08-14: **NO_GO**. This status is evidence-dependent and must be read from `qa/qa-waves-enterprise-governance.json`, not copied from an older documentation snapshot.
 
 ## Architecture
 
@@ -11,7 +11,6 @@ QA Waves now exports an enterprise governance bridge consumed by global release,
 Bridge command:
 
 ```bash
-RUNTIME_ROOT=/tmp/ragent2-runtime-enterprise \
 QA_WAVES_ENTERPRISE_GOVERNANCE_PATH=qa/qa-waves-enterprise-governance.json \
 QA_WAVES_GOVERNANCE_AUDIT_PATH=qa/qa-waves-governance-audit.jsonl \
 npm run qa:waves:enterprise-governance
@@ -25,19 +24,23 @@ Bridge output:
 Scheduled smoke command:
 
 ```bash
-RUNTIME_ROOT=/tmp/ragent2-runtime-enterprise \
 QA_WAVES_SCHEDULED_MODE=hourly_lightweight \
 node scripts/smoke/qa-waves-scheduled-operational-smoke.js
 ```
 
 Scheduled smoke output:
 
-- `qa/smoke/qa-waves-scheduled-operational-smoke.json`
+- diagnóstico horário: `qa/smoke/qa-waves-scheduled-operational-smoke-hourly_lightweight.json`
+- prova de release real-stack: `qa/smoke/qa-waves-scheduled-operational-smoke.json`
+
+O modo leve nunca é elegível para release e não promove/substitui a evidência
+canônica. Para produzir prova candidata a release, execute um modo `realStack`
+como `nightly_full_replay`; o bridge ainda valida ambiente real, tenant isolado,
+frescor, hash, caminho canônico, três jornadas e assinaturas.
 
 Global GO/NO_GO command used for final validation:
 
 ```bash
-RUNTIME_ROOT=/tmp/ragent2-runtime-enterprise \
 SYSTEM_VALIDATE_REPORT_PATH=qa/system-validate-report.json \
 RELEASE_GATE_REPORT_PATH=qa/release-gate-report.json \
 SMOKE_EVIDENCE_SUMMARY_PATH=qa/smoke-evidence.json \
@@ -49,7 +52,7 @@ QA_WAVES_GOVERNANCE_AUDIT_PATH=qa/qa-waves-governance-audit.jsonl \
 npm run system:go-no-go
 ```
 
-## Final Evidence Snapshot
+## Current Evidence Snapshot
 
 Persisted evidence paths:
 
@@ -58,22 +61,19 @@ Persisted evidence paths:
 - `qa/smoke/qa-waves-scheduled-operational-smoke.json`
 - `qa/go-no-go-report.json`
 
-Final enterprise governance state:
+Observed enterprise governance state on 2026-08-14:
 
 ```json
 {
-  "status": "ENTERPRISE_GOVERNANCE_READY",
-  "governanceStatus": "GO",
-  "replayIntegrity": { "valid": true },
-  "governanceSignature": { "valid": true },
-  "continuousValidationStatus": { "status": "GO", "healthy": true },
-  "operationalConfidence": 100,
-  "confidenceGrade": "A+",
-  "riskLevel": "LOW",
-  "activeBlockers": [],
-  "failedProofs": [],
-  "deploymentSafety": { "deployAllowed": true },
-  "globalGoNoGo": "GO"
+  "governanceStatus": "NO_GO",
+  "replayIntegrity": { "valid": false },
+  "governanceSignature": { "valid": false },
+  "continuousValidationStatus": { "status": "GO", "healthy": false },
+  "operationalConfidence": 79.2,
+  "confidenceGrade": "D",
+  "riskLevel": "CRITICAL",
+  "deploymentSafety": { "deployAllowed": false },
+  "globalGoNoGo": "NO_GO"
 }
 ```
 
@@ -81,27 +81,29 @@ Governance reasoning:
 
 - release governance consumes the enterprise bridge and blocks on non-GO, replay tampering, invalid signatures, failed proofs, degraded smoke or degraded confidence.
 - deployment governance consumes `deploymentSafety` and blocks deploy whenever enterprise governance is not GO.
-- runtime governance remains part of global `system:go-no-go`, which now passed with QA Waves governance loaded and validated.
+- runtime governance remains part of global `system:go-no-go`; it cannot override a QA Waves blocker.
 - the immutable audit trail preserves decision lineage, smoke lineage, replay hashes, replay checksums, governance signatures and deployment safety state.
 
-Final readiness decision:
+Active evidence blockers in the observed report:
 
-- `ENTERPRISE_GOVERNANCE_READY`
+- promoted canonical mesh history is missing;
+- the scheduled smoke is stale, not bound to a canonical source artifact/hash and is missing `booking_flow`;
+- existing prod-like replay signatures use unsupported legacy `gov-sha256` instead of keyed `hmac-sha256`.
 
-Exported contract:
+The following is the handoff contract shape, not a claimed GO result:
 
 ```json
 {
-  "governanceStatus": "GO",
-  "replayIntegrity": { "valid": true },
-  "smokeHealth": { "healthy": true },
-  "operationalConfidence": 100,
-  "failedProofs": [],
-  "activeBlockers": [],
-  "replayArtifacts": [],
-  "governanceSignature": { "valid": true },
-  "lastSmokeExecution": {},
-  "continuousValidationStatus": { "healthy": true }
+  "governanceStatus": "GO | NO_GO",
+  "replayIntegrity": { "valid": "boolean" },
+  "smokeHealth": { "healthy": "boolean" },
+  "operationalConfidence": "number",
+  "failedProofs": "array",
+  "activeBlockers": "array",
+  "replayArtifacts": "array",
+  "governanceSignature": { "valid": "boolean" },
+  "lastSmokeExecution": "object",
+  "continuousValidationStatus": { "healthy": "boolean" }
 }
 ```
 
@@ -118,6 +120,8 @@ Release is blocked when:
 - active blockers exist
 - continuous smoke is degraded
 - operational confidence is below threshold
+
+Replay and package signatures use keyed `hmac-sha256`. The signing root comes from `REPLAY_SIGNING_KEY` or `ENCRYPTION_KEY` (minimum 32 bytes); a hash derived only from public commit metadata and legacy `gov-sha256` values are rejected. Official npm/release commands load an optional workspace `.env` without overriding variables already exported by CI or the operator.
 
 Default confidence threshold: `95`.
 
@@ -190,6 +194,8 @@ Each entry stores:
 
 The hash chain makes later tampering detectable.
 
+The validator recomputes every link before appending. A missing signing key, a legacy/unkeyed replay signature, a broken link or a mismatched report hash produces `NO_GO`; the bridge never substitutes a synthetic success record.
+
 ## Runtime Integration
 
 The bridge unifies:
@@ -234,11 +240,11 @@ Deployment is allowed only when:
 - zero failed proofs
 - zero active blockers
 
-Current validated bridge result:
+Observed bridge result on 2026-08-14:
 
-- status: `GO`
-- operationalConfidence: `100`
-- confidenceGrade: `A+`
-- riskLevel: `LOW`
+- status: `NO_GO`
+- operationalConfidence: `79.2`
+- confidenceGrade: `D`
+- riskLevel: `CRITICAL`
 
-RAP QA Waves is now an Enterprise Operational Governance Layer with signed replay integrity, release governance, deployment governance, confidence scoring, continuous validation and immutable audit trail.
+RAP QA Waves is an Enterprise Operational Governance Layer with signed replay integrity, release governance, deployment governance, confidence scoring, continuous validation and an immutable audit trail. The layer is ready only when its current evidence passes all of those checks.

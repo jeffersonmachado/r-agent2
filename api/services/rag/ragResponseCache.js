@@ -128,7 +128,7 @@ function getCachedResponse(cacheKey) {
  * @param {string} cacheKey
  * @param {Object} response - Resposta de sucesso do queryRag
  */
-function setCachedResponse(cacheKey, response) {
+function setCachedResponse(cacheKey, response, tenantId = null) {
   if (!cacheKey || !response || typeof response !== 'object') {
     return;
   }
@@ -138,11 +138,26 @@ function setCachedResponse(cacheKey, response) {
   responseCache.set(cacheKey, {
     value: response,
     expiresAt: Date.now() + getTtlMs(),
+    tenantId: tenantId ? String(tenantId) : null,
   });
   logger.debug('[ragResponseCache] Resposta RAG armazenada em cache', {
     cacheKey: cacheKey.substring(0, 16),
     ttlMs: getTtlMs(),
   });
+}
+
+/** Invalida respostas após qualquer mutação/revogação do corpus do tenant. */
+function invalidateTenant(tenantId) {
+  if (!tenantId) return 0;
+  const normalized = String(tenantId);
+  let removed = 0;
+  for (const [key, entry] of responseCache.entries()) {
+    if (entry?.tenantId === normalized) {
+      responseCache.delete(key);
+      removed += 1;
+    }
+  }
+  return removed;
 }
 
 /**
@@ -157,5 +172,6 @@ module.exports = {
   normalizeQuestion,
   getCachedResponse,
   setCachedResponse,
+  invalidateTenant,
   clearResponseCache,
 };

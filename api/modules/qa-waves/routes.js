@@ -7,6 +7,7 @@ const {
   buildQaWavesEnterpriseGovernance,
 } = require('../../../tools/system/lib/qa-waves-enterprise-governance-bridge');
 const { checkClassification } = require('../../middleware/requireClassification');
+const { tenantFromRequest } = require('../../../lib/rpaSecurity');
 
 const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 const RUNTIME_GOVERNANCE_REPORT_PATH = process.env.RUNTIME_GOVERNANCE_REPORT_PATH || path.join(ROOT_DIR, 'qa', 'runtime-governance-report.json');
@@ -38,6 +39,34 @@ function createQaWavesRoutes({ buildDeps }) {
     return true;
   }
 
+  function requireAuthenticatedTenant(deps, req, res, auth = null) {
+    try {
+      return tenantFromRequest(req, auth);
+    } catch (error) {
+      deps.sendJson(res, 400, {
+        error: error.code === 'TENANT_INVALID' ? 'tenant_invalid' : 'tenant_required',
+        message: 'Tenant autenticado é obrigatório para QA Waves',
+      });
+      return null;
+    }
+  }
+
+  function enforceQaExecutePermission(deps, req, res) {
+    const permission = deps.requirePermission(req, 'qa', 'execute');
+    if (permission.allowed) return true;
+    deps.sendJson(res, 403, { error: 'forbidden', message: permission.error });
+    return false;
+  }
+
+  function enforceSystemTenant(deps, req, res, tenantId) {
+    if (tenantId === 'system') return true;
+    deps.sendJson(res, 403, {
+      error: 'system_tenant_required',
+      message: 'Esta operação altera ou expõe governança canônica global e exige o tenant system',
+    });
+    return false;
+  }
+
   function registerJsonPost(pathname, handler) {
     router.post(pathname, async (req, res) => {
       const deps = buildDeps(req, res);
@@ -47,6 +76,11 @@ function createQaWavesRoutes({ buildDeps }) {
         return;
       }
       if (!enforceDevelopmentClassification(deps, req, res)) return;
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      req.qaTenantId = tenantId;
+
+      if (!enforceQaExecutePermission(deps, req, res)) return;
 
       if (!deps.hasJsonContentType(req)) {
         deps.badRequest(res, 'Content-Type deve ser application/json');
@@ -71,6 +105,10 @@ function createQaWavesRoutes({ buildDeps }) {
           deps.sendJson(res, 404, { error: 'not_found', message: error.message });
           return;
         }
+        if (error.code === 'CONFLICT') {
+          deps.sendJson(res, 409, { error: 'conflict', message: error.message });
+          return;
+        }
         deps.logger.error(`Erro ao processar ${pathname}:`, error);
         deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro interno ao processar requisicao' });
       }
@@ -79,6 +117,14 @@ function createQaWavesRoutes({ buildDeps }) {
 
   router.get('/api/qa-waves/health', (req, res) => {
     const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
+    const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+    if (!tenantId) return;
     deps.sendJson(res, 200, { status: 'ok', service: 'qa-waves' });
   });
 
@@ -92,7 +138,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      deps.sendJson(res, 200, { items: deps.listWaves() });
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      deps.sendJson(res, 200, { items: deps.listWaves(tenantId) });
     } catch (error) {
       deps.logger.error('Erro ao listar waves:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar waves' });
@@ -109,7 +157,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      deps.sendJson(res, 200, deps.getWaveCoverageSummary());
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      deps.sendJson(res, 200, deps.getWaveCoverageSummary(tenantId));
     } catch (error) {
       deps.logger.error('Erro ao obter resumo de cobertura:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao calcular resumo de cobertura' });
@@ -126,7 +176,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      deps.sendJson(res, 200, deps.listWaveScenarios(req.query || {}));
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      deps.sendJson(res, 200, deps.listWaveScenarios({ ...(req.query || {}), tenantId }));
     } catch (error) {
       deps.logger.error('Erro ao listar cenarios:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar cenarios' });
@@ -141,9 +193,12 @@ function createQaWavesRoutes({ buildDeps }) {
       return;
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
+    if (!enforceQaExecutePermission(deps, req, res)) return;
 
     try {
-      const result = deps.deleteWaveScenario(req.params.scenarioId);
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const result = deps.deleteWaveScenario(req.params.scenarioId, tenantId);
       deps.sendJson(res, 200, result);
     } catch (error) {
       if (error.code === 'NOT_FOUND') {
@@ -169,7 +224,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      deps.sendJson(res, 200, deps.listJourneys());
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      deps.sendJson(res, 200, deps.listJourneys(tenantId));
     } catch (error) {
       deps.logger.error('Erro ao listar jornadas:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar jornadas' });
@@ -184,13 +241,16 @@ function createQaWavesRoutes({ buildDeps }) {
       return;
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
+    if (!enforceQaExecutePermission(deps, req, res)) return;
     if (!deps.hasJsonContentType(req)) {
       deps.badRequest(res, 'Content-Type deve ser application/json');
       return;
     }
     try {
       const body = await deps.parseJsonBody(req);
-      const result = deps.saveWaveJourney(body || {});
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const result = deps.saveWaveJourney(body || {}, tenantId);
       deps.sendJson(res, 200, result);
     } catch (error) {
       if (error.code === 'BAD_REQUEST') {
@@ -210,8 +270,11 @@ function createQaWavesRoutes({ buildDeps }) {
       return;
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
+    if (!enforceQaExecutePermission(deps, req, res)) return;
     try {
-      const result = deps.deleteWaveJourney(req.params.journeyId, req.query.vertical);
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const result = deps.deleteWaveJourney(req.params.journeyId, req.query.vertical, tenantId);
       deps.sendJson(res, 200, result);
     } catch (error) {
       if (error.code === 'NOT_FOUND') {
@@ -237,7 +300,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      deps.sendJson(res, 200, deps.listJourneyStatus());
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      deps.sendJson(res, 200, deps.listJourneyStatus(tenantId));
     } catch (error) {
       deps.logger.error('Erro ao listar status de jornada:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar status de jornada' });
@@ -254,7 +319,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      deps.sendJson(res, 200, deps.listStepStatus(req.query || {}));
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      deps.sendJson(res, 200, deps.listStepStatus({ ...(req.query || {}), tenantId }));
     } catch (error) {
       deps.logger.error('Erro ao listar status de passos:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao listar status de passos' });
@@ -271,7 +338,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      const data = deps.listReplays(req.query || {});
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const data = deps.listReplays({ ...(req.query || {}), tenantId });
       deps.sendJson(res, 200, data);
     } catch (error) {
       deps.logger.error('Erro ao listar replays:', error);
@@ -289,7 +358,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      const replay = deps.getReplayById(req.params.id);
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const replay = deps.getReplayById(req.params.id, tenantId);
       if (!replay) {
         deps.sendJson(res, 404, { error: 'not_found', message: 'Replay nao encontrado' });
         return;
@@ -309,10 +380,13 @@ function createQaWavesRoutes({ buildDeps }) {
       return;
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
+    if (!enforceQaExecutePermission(deps, req, res)) return;
 
     try {
-      const result = deps.clearWaveExecutions();
-      deps.sendJson(res, 200, { ...result, message: 'Execucoes e historico limpos' });
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const result = deps.clearWaveExecutions(tenantId);
+      deps.sendJson(res, 200, { ...result, message: 'Estado terminal em memória limpo; evidências preservadas' });
     } catch (error) {
       deps.logger.error('Erro ao limpar execucoes QA Waves:', error);
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao limpar execucoes' });
@@ -330,7 +404,9 @@ function createQaWavesRoutes({ buildDeps }) {
 
     try {
       const limit = Number.parseInt(String(req.query?.limit || '20'), 10);
-      const items = deps.listWaveExecutions(Number.isFinite(limit) ? limit : 20);
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const items = deps.listWaveExecutions(Number.isFinite(limit) ? limit : 20, tenantId);
       deps.sendJson(res, 200, { items, count: items.length });
     } catch (error) {
       deps.logger.error('Erro ao listar execucoes QA Waves:', error);
@@ -349,7 +425,9 @@ function createQaWavesRoutes({ buildDeps }) {
 
     try {
       const limit = Number.parseInt(String(req.query?.limit || '50'), 10);
-      const history = deps.getWaveExecutionHistory(Number.isFinite(limit) ? limit : 50);
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const history = deps.getWaveExecutionHistory(Number.isFinite(limit) ? limit : 50, tenantId);
       deps.sendJson(res, 200, history);
     } catch (error) {
       deps.logger.error('Erro ao consultar histórico imutável de execuções QA Waves:', error);
@@ -367,16 +445,18 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
       const pollLog = {
         ts: Date.now(),
         iso: new Date().toISOString(),
         executionId: String(req.params.executionId || ''),
-        tenantId: auth.agent?.tenantId || req.agent?.tenantId || null,
+        tenantId,
         agentId: auth.agent?.id || req.agent?.id || null,
       };
       deps.logger.info('[qa-waves-poll] request', pollLog);
 
-      const execution = deps.getExecutionStatus(req.params.executionId);
+      const execution = deps.getExecutionStatus(req.params.executionId, tenantId);
       if (!execution) {
         deps.logger.info('[qa-waves-poll] not_found', pollLog);
         deps.sendJson(res, 404, { error: 'not_found', message: 'Execucao nao encontrada' });
@@ -418,12 +498,14 @@ function createQaWavesRoutes({ buildDeps }) {
 
     try {
       const body = await deps.parseJsonBody(req);
-      const execution = deps.queueWaveExecution(body || {});
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const execution = deps.queueWaveExecution(body || {}, tenantId);
       if (deps.emitWavesEvent) {
         deps.emitWavesEvent('qa-waves.execution.started', {
           executionId: execution.executionId,
           scenarioIds: body?.scenarioIds || [],
-        }, { tenantId: req.agent?.tenantId || null });
+        }, { tenantId });
       }
       deps.sendJson(res, 202, execution);
     } catch (error) {
@@ -452,7 +534,9 @@ function createQaWavesRoutes({ buildDeps }) {
     }
 
     try {
-      const result = deps.reexecuteReplay(req.params.id);
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const result = deps.reexecuteReplay(req.params.id, tenantId);
       deps.sendJson(res, 202, result);
     } catch (error) {
       if (error.code === 'NOT_FOUND') {
@@ -468,8 +552,8 @@ function createQaWavesRoutes({ buildDeps }) {
     try {
       return await deps.inferWaveScenario({
         ...(body || {}),
-        tenantId: req.agent?.tenantId || body?.tenantId || 'system',
-        agentId: req.agent?.id || body?.agentId || null,
+        tenantId: req.qaTenantId,
+        agentId: req.agent?.id || null,
       });
     } catch (error) {
       if (error.code === 'AI_UNAVAILABLE') {
@@ -492,16 +576,16 @@ function createQaWavesRoutes({ buildDeps }) {
     handleInferScenario(deps, body, req, res)
   );
 
-  registerJsonPost('/api/qa-waves/generate-seeds', async (deps, body) => {
-    return deps.generateWaveSeeds(body || {});
+  registerJsonPost('/api/qa-waves/generate-seeds', async (deps, body, req) => {
+    return deps.generateWaveSeeds({ ...(body || {}), tenantId: req.qaTenantId });
   });
 
-  registerJsonPost('/dev/qa-waves/generate-seeds', async (deps, body) => {
-    return deps.generateWaveSeeds(body || {});
+  registerJsonPost('/dev/qa-waves/generate-seeds', async (deps, body, req) => {
+    return deps.generateWaveSeeds({ ...(body || {}), tenantId: req.qaTenantId });
   });
 
-  registerJsonPost('/api/qa-waves/validate-scenario', async (deps, body) => {
-    const result = deps.validateWaveScenario(body || {});
+  registerJsonPost('/api/qa-waves/validate-scenario', async (deps, body, req) => {
+    const result = deps.validateWaveScenario({ ...(body || {}), tenantId: req.qaTenantId });
     return {
       valid: result.valid,
       errors: result.errors,
@@ -510,8 +594,8 @@ function createQaWavesRoutes({ buildDeps }) {
     };
   });
 
-  registerJsonPost('/dev/qa-waves/validate-scenario', async (deps, body) => {
-    const result = deps.validateWaveScenario(body || {});
+  registerJsonPost('/dev/qa-waves/validate-scenario', async (deps, body, req) => {
+    const result = deps.validateWaveScenario({ ...(body || {}), tenantId: req.qaTenantId });
     return {
       valid: result.valid,
       errors: result.errors,
@@ -520,20 +604,28 @@ function createQaWavesRoutes({ buildDeps }) {
     };
   });
 
-  registerJsonPost('/api/qa-waves/save-scenario', async (deps, body) => {
-    return deps.saveWaveScenario(body || {});
+  registerJsonPost('/api/qa-waves/save-scenario', async (deps, body, req) => {
+    return deps.saveWaveScenario({
+      ...(body || {}),
+      tenantId: req.qaTenantId,
+      changedBy: req.agent?.id || req.agent?.username || 'qa_waves',
+    });
   });
 
-  registerJsonPost('/dev/qa-waves/save-scenario', async (deps, body) => {
-    return deps.saveWaveScenario(body || {});
+  registerJsonPost('/dev/qa-waves/save-scenario', async (deps, body, req) => {
+    return deps.saveWaveScenario({
+      ...(body || {}),
+      tenantId: req.qaTenantId,
+      changedBy: req.agent?.id || req.agent?.username || 'qa_waves',
+    });
   });
 
   registerJsonPost('/api/qa-waves/run', async (deps, body, req) => {
-    return deps.runWaveScenario({ ...(body || {}), tenantId: req.agent?.tenantId || body?.tenantId || null });
+    return deps.runWaveScenario({ ...(body || {}), tenantId: req.qaTenantId });
   });
 
   registerJsonPost('/dev/qa-waves/run', async (deps, body, req) => {
-    return deps.runWaveScenario({ ...(body || {}), tenantId: req.agent?.tenantId || body?.tenantId || null });
+    return deps.runWaveScenario({ ...(body || {}), tenantId: req.qaTenantId });
   });
 
   // ─── Intelligence & Coverage ──────────────────────────────────────────────
@@ -548,7 +640,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const { vertical, journey } = req.query || {};
-      const result = deps.getCoverageSummary({ vertical: vertical || null, journey: journey || null });
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const result = deps.getCoverageSummary({ vertical: vertical || null, journey: journey || null, tenantId });
       deps.sendJson(res, 200, result);
     } catch (error) {
       deps.logger.error('Erro ao obter cobertura:', error);
@@ -556,16 +650,81 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
-  registerJsonPost('/api/qa-waves/intelligence/analyze-gaps', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/intelligence/analyze-gaps', async (deps, body, req) => {
     const { vertical, journey } = body;
     if (!vertical) {
       const err = new Error('vertical é obrigatório');
       err.code = 'BAD_REQUEST';
       throw err;
     }
-    const scenarios = await deps.listWaveScenarios({});
+    const scenarios = await deps.listWaveScenarios({ tenantId: req.qaTenantId });
     const allScenarios = Array.isArray(scenarios?.items) ? scenarios.items : (Array.isArray(scenarios) ? scenarios : []);
-    return deps.analyzeWaveCoverageGaps({ vertical, journey: journey || null }, allScenarios);
+    return deps.analyzeWaveCoverageGaps({ vertical, journey: journey || null, tenantId: req.qaTenantId }, allScenarios);
+  });
+
+  // ─── Vertical Review (botão "Revisar vertical") ────────────────────────────
+  //
+  // Orquestra o que o agente de IA fazia manualmente: discovery → inferência de
+  // jornada → gaps de negócio/cobertura → geração de drafts por IA.
+  // Nada é executado automaticamente; drafts entram como draft_ai.
+  registerJsonPost('/api/qa-waves/vertical-review', async (deps, body, req) => {
+    const { vertical } = body || {};
+    if (!vertical) {
+      const err = new Error('vertical é obrigatório');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+    return deps.reviewVertical({
+      ...(body || {}),
+      tenantId: req.qaTenantId,
+    });
+  });
+
+  registerJsonPost('/dev/qa-waves/vertical-review', async (deps, body, req) => {
+    const { vertical } = body || {};
+    if (!vertical) {
+      const err = new Error('vertical é obrigatório');
+      err.code = 'BAD_REQUEST';
+      throw err;
+    }
+    return deps.reviewVertical({
+      ...(body || {}),
+      tenantId: req.qaTenantId,
+    });
+  });
+
+  // ─── Revisão de Jornada (fluxo interativo: inferir → ajustar → re-inferir →
+  //      aprovar → atualizar) ────────────────────────────────────────────────
+  registerJsonPost('/api/qa-waves/review-journey/infer', async (deps, body, req) => {
+    return deps.reviewJourneyInfer({
+      ...(body || {}),
+      tenantId: req.qaTenantId,
+      reviewedBy: req.agent?.id || req.agent?.username || '',
+    });
+  });
+
+  registerJsonPost('/dev/qa-waves/review-journey/infer', async (deps, body, req) => {
+    return deps.reviewJourneyInfer({
+      ...(body || {}),
+      tenantId: req.qaTenantId,
+      reviewedBy: req.agent?.id || req.agent?.username || '',
+    });
+  });
+
+  registerJsonPost('/api/qa-waves/review-journey/apply', async (deps, body, req) => {
+    return deps.reviewJourneyApply({
+      ...(body || {}),
+      tenantId: req.qaTenantId,
+      changedBy: req.agent?.id || req.agent?.username || '',
+    });
+  });
+
+  registerJsonPost('/dev/qa-waves/review-journey/apply', async (deps, body, req) => {
+    return deps.reviewJourneyApply({
+      ...(body || {}),
+      tenantId: req.qaTenantId,
+      changedBy: req.agent?.id || req.agent?.username || '',
+    });
   });
 
   // ─── Business Gaps ──────────────────────────────────────────────────────
@@ -579,7 +738,9 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const { vertical, journey } = req.query || {};
-      const result = deps.getBusinessGaps({ vertical: vertical || null, journey: journey || null });
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const result = deps.getBusinessGaps({ vertical: vertical || null, journey: journey || null, tenantId });
       deps.sendJson(res, 200, result);
     } catch (error) {
       deps.logger.error('Erro ao obter business gaps:', error);
@@ -597,9 +758,17 @@ function createQaWavesRoutes({ buildDeps }) {
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
-      const docType = req.params.type;
-      const docName = req.query.name || null;
-      const baseDir = docType === 'roteiros' ? 'docs/roteiros' : 'docs/diagrams/qa-waves';
+      const docType = String(req.params.type || '').trim();
+      const docName = typeof req.query.name === 'string' ? req.query.name.trim() : null;
+      const allowedTypes = {
+        roteiros: 'docs/roteiros',
+        diagrams: 'docs/diagrams/qa-waves',
+      };
+      const baseDir = allowedTypes[docType];
+      if (!baseDir) {
+        deps.sendJson(res, 400, { error: 'bad_request', message: 'Tipo de documentação inválido' });
+        return;
+      }
       const fullPath = path.join(ROOT_DIR, baseDir);
 
       if (!fs.existsSync(fullPath)) {
@@ -609,8 +778,14 @@ function createQaWavesRoutes({ buildDeps }) {
 
       if (docName) {
         // Serve specific doc
-        const filePath = path.join(fullPath, docName);
-        if (!fs.existsSync(filePath)) {
+        const filePath = path.resolve(fullPath, docName);
+        const isDirectMarkdown = path.dirname(filePath) === path.resolve(fullPath)
+          && path.extname(filePath).toLowerCase() === '.md';
+        if (!isDirectMarkdown) {
+          deps.sendJson(res, 400, { error: 'bad_request', message: 'Nome de documento inválido' });
+          return;
+        }
+        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
           deps.sendJson(res, 404, { error: 'not_found', message: 'Documento não encontrado: ' + docName });
           return;
         }
@@ -629,17 +804,24 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
-  registerJsonPost('/api/qa-waves/intelligence/generate-scenario', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/intelligence/generate-scenario', async (deps, body, req) => {
     const { vertical, journey, stage, gap, context } = body;
     if (!vertical || !journey || !stage || !gap) {
       const err = new Error('vertical, journey, stage e gap são obrigatórios');
       err.code = 'BAD_REQUEST';
       throw err;
     }
-    return deps.generateWaveScenarioDraft({ vertical, journey, stage, gap, context: context || {} });
+    return deps.generateWaveScenarioDraft({
+      vertical,
+      journey,
+      stage,
+      gap,
+      context: context || {},
+      tenantId: req.qaTenantId,
+    });
   });
 
-  registerJsonPost('/api/qa-waves/intelligence/generate-seeds', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/intelligence/generate-seeds', async (deps, body, req) => {
     const { scenarioId, quantity, scenarioContext } = body;
     if (!scenarioId) {
       const err = new Error('scenarioId é obrigatório');
@@ -650,27 +832,35 @@ function createQaWavesRoutes({ buildDeps }) {
       scenarioId,
       quantity: Number(quantity) || 5,
       scenarioContext: scenarioContext || {},
+      tenantId: req.qaTenantId,
     });
   });
 
-  registerJsonPost('/api/qa-waves/intelligence/approve-scenario', async (deps, body) => {
-    const { draftId, approvedBy } = body;
+  registerJsonPost('/api/qa-waves/intelligence/approve-scenario', async (deps, body, req) => {
+    const { draftId } = body;
     if (!draftId) {
       const err = new Error('draftId é obrigatório');
       err.code = 'BAD_REQUEST';
       throw err;
     }
-    return deps.approveWaveDraft(draftId, { approvedBy: approvedBy || 'unknown' });
+    return deps.approveWaveDraft(draftId, {
+      approvedBy: req.agent?.id || req.agent?.username || 'qa_waves',
+      tenantId: req.qaTenantId,
+    });
   });
 
-  registerJsonPost('/api/qa-waves/intelligence/reject-scenario', async (deps, body) => {
-    const { draftId, rejectedBy, reason } = body;
+  registerJsonPost('/api/qa-waves/intelligence/reject-scenario', async (deps, body, req) => {
+    const { draftId, reason } = body;
     if (!draftId) {
       const err = new Error('draftId é obrigatório');
       err.code = 'BAD_REQUEST';
       throw err;
     }
-    return deps.rejectWaveDraft(draftId, { rejectedBy: rejectedBy || 'unknown', reason: reason || '' });
+    return deps.rejectWaveDraft(draftId, {
+      rejectedBy: req.agent?.id || req.agent?.username || 'qa_waves',
+      reason: reason || '',
+      tenantId: req.qaTenantId,
+    });
   });
 
   router.get('/api/qa-waves/intelligence/drafts', (req, res) => {
@@ -683,7 +873,14 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
       const { status, vertical, journey } = req.query || {};
-      const drafts = deps.listWaveDrafts({ status: status || null, vertical: vertical || null, journey: journey || null });
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const drafts = deps.listWaveDrafts({
+        status: status || null,
+        vertical: vertical || null,
+        journey: journey || null,
+        tenantId,
+      });
       deps.sendJson(res, 200, { items: drafts, count: drafts.length });
     } catch (error) {
       deps.logger.error('Erro ao listar drafts de IA:', error);
@@ -702,6 +899,8 @@ function createQaWavesRoutes({ buildDeps }) {
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId || !enforceSystemTenant(deps, req, res, tenantId)) return;
       const report = deps.getOperationalSnapshot();
       deps.sendJson(res, 200, report);
     } catch (error) {
@@ -710,7 +909,8 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
-  registerJsonPost('/api/qa-waves/operational/recompute', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/operational/recompute', async (deps, body, req, res) => {
+    if (!enforceSystemTenant(deps, req, res, req.qaTenantId)) return { __sent: true };
     const persist = body?.persist !== false;
     return deps.buildOperationalSnapshot({
       persist,
@@ -727,6 +927,8 @@ function createQaWavesRoutes({ buildDeps }) {
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId || !enforceSystemTenant(deps, req, res, tenantId)) return;
       const report = deps.getOperationalSnapshot();
       deps.sendJson(res, 200, {
         summary: report.summary,
@@ -750,6 +952,8 @@ function createQaWavesRoutes({ buildDeps }) {
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId || !enforceSystemTenant(deps, req, res, tenantId)) return;
       const enterpriseGovernance = buildQaWavesEnterpriseGovernance({ root: ROOT_DIR });
       const runtimeGovernance = readJsonIfExists(RUNTIME_GOVERNANCE_REPORT_PATH);
       const globalGoNoGo = readJsonIfExists(GO_NO_GO_REPORT_PATH);
@@ -777,7 +981,9 @@ function createQaWavesRoutes({ buildDeps }) {
     }
     if (!enforceDevelopmentClassification(deps, req, res)) return;
     try {
-      const reports = deps.listWaveGovernanceReports();
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
+      const reports = deps.listWaveGovernanceReports(tenantId);
       deps.sendJson(res, 200, { items: reports, count: reports.length });
     } catch (error) {
       deps.logger.error('Erro ao listar relatórios de governança:', error);
@@ -785,20 +991,26 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
-  registerJsonPost('/api/qa-waves/governance/evaluate', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/governance/evaluate', async (deps, body, req, res) => {
+    if (!enforceSystemTenant(deps, req, res, req.qaTenantId)) return { __sent: true };
     const { waveId, scenarioIds, policy } = body;
     if (!waveId) {
       const err = new Error('waveId é obrigatório');
       err.code = 'BAD_REQUEST';
       throw err;
     }
-    const scenarios = await deps.listWaveScenarios({});
+    const scenarios = await deps.listWaveScenarios({ tenantId: req.qaTenantId });
     const allScenarios = Array.isArray(scenarios?.items) ? scenarios.items : (Array.isArray(scenarios) ? scenarios : []);
     const filtered = scenarioIds && Array.isArray(scenarioIds)
       ? allScenarios.filter((s) => scenarioIds.includes(s.id || s.scenarioId))
       : allScenarios;
 
-    const governance = deps.evaluateWaveGovernance({ waveId, scenarios: filtered, policy: policy || {} });
+    const governance = deps.evaluateWaveGovernance({
+      waveId,
+      scenarios: filtered,
+      policy: policy || {},
+      tenantId: req.qaTenantId,
+    });
     const operational = deps.buildOperationalSnapshot({ persist: true });
 
     return {
@@ -821,7 +1033,12 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      const analysis = await deps.analyzeGapsForAutoClosure({});
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId || !enforceSystemTenant(deps, req, res, tenantId)) return;
+      const analysis = await deps.analyzeGapsForAutoClosure({
+        tenantId,
+        persistGeneratedScenarios: false,
+      });
       deps.sendJson(res, 200, analysis);
     } catch (error) {
       deps.logger.error('Erro ao analisar gaps:', error);
@@ -839,7 +1056,12 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
-      const report = await deps.generateGapClosureReport({});
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId || !enforceSystemTenant(deps, req, res, tenantId)) return;
+      const report = await deps.generateGapClosureReport({
+        tenantId,
+        persistGeneratedScenarios: false,
+      });
       deps.sendJson(res, 200, report);
     } catch (error) {
       deps.logger.error('Erro ao gerar closure report:', error);
@@ -847,8 +1069,8 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
-  registerJsonPost('/api/qa-waves/closure/preflight', async (deps, body) => {
-    const { waveId, journeyId, scenarioIds, capabilityIds, tenantId, context } = body;
+  registerJsonPost('/api/qa-waves/closure/preflight', async (deps, body, req) => {
+    const { waveId, journeyId, scenarioIds, capabilityIds, context } = body;
     if (!waveId) {
       const err = new Error('waveId é obrigatório');
       err.code = 'BAD_REQUEST';
@@ -860,21 +1082,21 @@ function createQaWavesRoutes({ buildDeps }) {
       journeyId,
       scenarioIds: scenarioIds || [],
       capabilityIds: capabilityIds || [],
-      tenantId,
-      context: context || {},
+      tenantId: req.qaTenantId,
+      context: { ...(context || {}), tenantId: req.qaTenantId },
     });
 
     return validation;
   });
 
-  registerJsonPost('/api/qa-waves/closure/autonomous-loop', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/closure/autonomous-loop', async (deps, body, req) => {
     const payload = {
       waveId: body.waveId,
       journeyId: body.journeyId,
       scenarioIds: body.scenarioIds || [],
       capabilityIds: body.capabilityIds || [],
-      tenantId: body.tenantId,
-      context: body.context || {},
+      tenantId: req.qaTenantId,
+      context: { ...(body.context || {}), tenantId: req.qaTenantId },
       capabilities: body.capabilities || [],
       discovery: body.discovery || {},
       dependencies: body.dependencies || {},
@@ -897,10 +1119,12 @@ function createQaWavesRoutes({ buildDeps }) {
     if (!enforceDevelopmentClassification(deps, req, res)) return;
 
     try {
+      const tenantId = requireAuthenticatedTenant(deps, req, res, auth);
+      if (!tenantId) return;
       const payload = deps.buildStagingAutonomousLoopPayload({
         waveId: req.query?.waveId || undefined,
         journeyId: req.query?.journeyId || undefined,
-        tenantId: req.query?.tenantId || undefined,
+        tenantId,
         ticketId: req.query?.ticketId || undefined,
         contactId: req.query?.contactId || undefined,
         membershipId: req.query?.membershipId || undefined,
@@ -932,14 +1156,16 @@ function createQaWavesRoutes({ buildDeps }) {
     }
   });
 
-  registerJsonPost('/api/qa-waves/closure/autonomous-loop/smoke-run', async (deps, body) => {
-    const built = deps.buildStagingAutonomousLoopPayload(body || {});
+  registerJsonPost('/api/qa-waves/closure/autonomous-loop/smoke-run', async (deps, body, req) => {
+    const built = deps.buildStagingAutonomousLoopPayload({ ...(body || {}), tenantId: req.qaTenantId });
     const payload = {
       ...built,
       ...body,
+      tenantId: req.qaTenantId,
       context: {
         ...(built.context || {}),
         ...(body?.context || {}),
+        tenantId: req.qaTenantId,
       },
     };
     return deps.executeAutonomousGapClosureLoop(payload);
@@ -971,7 +1197,7 @@ function createQaWavesRoutes({ buildDeps }) {
 
   // ===== AUTO-GENERATION BOT ENDPOINTS =====
 
-  registerJsonPost('/api/qa-waves/bot/generate-scenarios', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/bot/generate-scenarios', async (deps, body, req) => {
     const { capabilities, frontendData } = body;
     if (!capabilities || !Array.isArray(capabilities)) {
       const err = new Error('capabilities é obrigatório (array)');
@@ -979,11 +1205,14 @@ function createQaWavesRoutes({ buildDeps }) {
       throw err;
     }
 
-    const result = deps.executeScenarioGeneration(capabilities, frontendData || {}, { persist: true });
+    const result = deps.executeScenarioGeneration(capabilities, frontendData || {}, {
+      persist: true,
+      tenantId: req.qaTenantId,
+    });
     return result;
   });
 
-  registerJsonPost('/api/qa-waves/bot/generate-ui-steps', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/bot/generate-ui-steps', async (deps, body, req) => {
     const { capabilities, frontendData } = body;
     if (!capabilities || !Array.isArray(capabilities)) {
       const err = new Error('capabilities é obrigatório (array)');
@@ -991,11 +1220,11 @@ function createQaWavesRoutes({ buildDeps }) {
       throw err;
     }
 
-    const result = deps.executeUIStepGeneration(capabilities, frontendData || {});
+    const result = deps.executeUIStepGeneration(capabilities, frontendData || {}, { tenantId: req.qaTenantId });
     return result;
   });
 
-  registerJsonPost('/api/qa-waves/bot/generate-validators', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/bot/generate-validators', async (deps, body, req) => {
     const { capabilities } = body;
     if (!capabilities || !Array.isArray(capabilities)) {
       const err = new Error('capabilities é obrigatório (array)');
@@ -1003,11 +1232,11 @@ function createQaWavesRoutes({ buildDeps }) {
       throw err;
     }
 
-    const result = deps.executeValidatorGeneration(capabilities);
+    const result = deps.executeValidatorGeneration(capabilities, { tenantId: req.qaTenantId });
     return result;
   });
 
-  registerJsonPost('/api/qa-waves/bot/generate-seeds', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/bot/generate-seeds', async (deps, body, req) => {
     const { capabilities } = body;
     if (!capabilities || !Array.isArray(capabilities)) {
       const err = new Error('capabilities é obrigatório (array)');
@@ -1015,11 +1244,11 @@ function createQaWavesRoutes({ buildDeps }) {
       throw err;
     }
 
-    const result = deps.executeSeedGeneration(capabilities);
+    const result = deps.executeSeedGeneration(capabilities, { tenantId: req.qaTenantId });
     return result;
   });
 
-  registerJsonPost('/api/qa-waves/bot/validate-preflight', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/bot/validate-preflight', async (deps, body, req) => {
     const { capabilities, context } = body;
     if (!capabilities || !Array.isArray(capabilities)) {
       const err = new Error('capabilities é obrigatório (array)');
@@ -1027,11 +1256,14 @@ function createQaWavesRoutes({ buildDeps }) {
       throw err;
     }
 
-    const result = await deps.validatePreflightForCapabilities(capabilities, { context: context || {} });
+    const result = await deps.validatePreflightForCapabilities(capabilities, {
+      context: { ...(context || {}), tenantId: req.qaTenantId },
+      tenantId: req.qaTenantId,
+    });
     return result;
   });
 
-  registerJsonPost('/api/qa-waves/bot/execute-full-generation', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/bot/execute-full-generation', async (deps, body, req) => {
     const { capabilities, frontendData, context, generateScenarios, generateUISteps, generateValidators, generateSeeds, validatePreflight } = body;
     if (!capabilities || !Array.isArray(capabilities)) {
       const err = new Error('capabilities é obrigatório (array)');
@@ -1042,18 +1274,19 @@ function createQaWavesRoutes({ buildDeps }) {
     const result = await deps.executeFullGenerationBot({
       capabilities,
       frontendData: frontendData || {},
-      context: context || {},
+      context: { ...(context || {}), tenantId: req.qaTenantId },
       generateScenarios: generateScenarios !== false,
       generateUISteps: generateUISteps !== false,
       generateValidators: generateValidators !== false,
       generateSeeds: generateSeeds !== false,
       validatePreflight: validatePreflight !== false,
+      tenantId: req.qaTenantId,
     });
 
     return result;
   });
 
-  registerJsonPost('/api/qa-waves/bot/apply-remediations', async (deps, body) => {
+  registerJsonPost('/api/qa-waves/bot/apply-remediations', async (deps, body, req) => {
     const { remediations, capabilities, frontendData } = body;
     if (!remediations) {
       const err = new Error('remediations é obrigatório');
@@ -1061,7 +1294,9 @@ function createQaWavesRoutes({ buildDeps }) {
       throw err;
     }
 
-    const result = deps.applyAutoRemediations(remediations, capabilities || [], frontendData || {});
+    const result = deps.applyAutoRemediations(remediations, capabilities || [], frontendData || {}, {
+      tenantId: req.qaTenantId,
+    });
     return result;
   });
 

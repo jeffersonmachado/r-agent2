@@ -45,6 +45,29 @@ function envOrDefault(key, defaultValue) {
   return trimmed !== '' ? trimmed : defaultValue;
 }
 
+function resolveSuperAdminBootstrapConfig() {
+  const email = envOrDefault(
+    'SUPERADMIN_EMAIL',
+    envOrDefault('SYSTEMADMIN_EMAIL', 'systemadmin@exemplo.com')
+  );
+
+  return {
+    email,
+    username: envOrDefault(
+      'SUPERADMIN_USERNAME',
+      envOrDefault('SYSTEMADMIN_USERNAME', email.split('@')[0] || 'systemadmin')
+    ),
+    name: envOrDefault(
+      'SUPERADMIN_NAME',
+      envOrDefault('SYSTEMADMIN_NAME', 'Super Admin')
+    ),
+    password: envOrDefault(
+      'SUPERADMIN_PASSWORD',
+      envOrDefault('SYSTEMADMIN_PASSWORD', 'Admin123!')
+    ),
+  };
+}
+
 /**
  * Cria ou atualiza tenant "system"
  */
@@ -97,6 +120,37 @@ async function ensureSystemTenant() {
   
   logger.info('[Seed] ✅ Tenant "system" criado/atualizado');
   return tenantId;
+}
+
+/**
+ * Garante o contexto cognitivo mínimo do tenant bootstrap. A UI consulta esse
+ * recurso após o login; um tenant `system` sem contexto deixa toda navegação
+ * autenticada com 404, apesar de o tenant existir.
+ */
+async function ensureSystemTenantContext() {
+  const sequelize = getSequelize();
+  if (!sequelize) {
+    throw new Error('Sequelize não inicializado');
+  }
+
+  await sequelize.query(
+    `INSERT INTO tenant_contexts (
+       tenant_key, ramo_atividade, objetivo, site_oficial,
+       prioridade, escopo, created_at, updated_at
+     ) VALUES (
+       :tenantKey, '', '', '', :prioridade, CAST(:escopo AS JSONB),
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+     )
+     ON CONFLICT (tenant_key) DO NOTHING`,
+    {
+      replacements: {
+        tenantKey: 'system',
+        prioridade: 'HIGH',
+        escopo: JSON.stringify(['rag', 'chatbot', 'classificacao_intencao']),
+      },
+      type: sequelize.constructor.QueryTypes.INSERT,
+    }
+  );
 }
 
 /**
@@ -354,13 +408,10 @@ async function ensureAdminAndSystemAdmin(systemTenantId) {
  * - Se usuário não existir e não houver senha, gera e loga a senha (1x por execução do seed).
  */
 async function ensureSuperAdmin(systemTenantId) {
-  // Mantém precedência: SUPERADMIN_* > SYSTEMADMIN_* > defaults
-  const email = envOrDefault('SUPERADMIN_EMAIL', envOrDefault('SYSTEMADMIN_EMAIL', 'systemadmin@exemplo.com'));
-
-  const username = envOrDefault('SUPERADMIN_USERNAME', email.split('@')[0] || 'systemadmin');
-
-  const name = envOrDefault('SUPERADMIN_NAME', 'Super Admin');
-  const password = envOrDefault('SUPERADMIN_PASSWORD', 'Admin123!');
+  // Mantém precedência: SUPERADMIN_* > SYSTEMADMIN_* > defaults.
+  // A segunda etapa do seed não pode sobrescrever a senha recém-aplicada por
+  // ensureAdminAndSystemAdmin quando somente SYSTEMADMIN_* foi configurado.
+  const { email, username, name, password } = resolveSuperAdminBootstrapConfig();
 
   console.log(`[Seed] Garantindo superadmin: ${email}...`);
   logger.info(`[Seed] Garantindo superadmin: ${email}...`);
@@ -405,6 +456,9 @@ async function runSeed() {
     // Garante tenant system
     const systemTenantId = await ensureSystemTenant();
 
+    // Garante que a navegação autenticada e o RAG tenham contexto inicial.
+    await ensureSystemTenantContext();
+
     // Garante usuários básicos sempre (admin + systemadmin)
     await ensureAdminAndSystemAdmin(systemTenantId);
     
@@ -430,4 +484,10 @@ if (require.main === module) {
     });
 }
 
-module.exports = { runSeed, ensureSystemTenant, ensureSuperAdmin };
+module.exports = {
+  runSeed,
+  ensureSystemTenant,
+  ensureSystemTenantContext,
+  ensureSuperAdmin,
+  resolveSuperAdminBootstrapConfig,
+};

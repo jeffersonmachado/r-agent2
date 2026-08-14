@@ -4,12 +4,15 @@
 
 process.env.NODE_ENV = 'test';
 process.env.DISABLE_BACKGROUND_INIT = 'true';
+// Assinaturas de replay são obrigatórias. Testes usam uma chave isolada,
+// explícita e sem qualquer relação com segredos de runtime.
+process.env.REPLAY_SIGNING_KEY = process.env.REPLAY_SIGNING_KEY
+  || 'jest-only-replay-signing-key-32-bytes-minimum';
+process.env.RAG_INTERNAL_TOKEN = process.env.RAG_INTERNAL_TOKEN
+  || 'jest-only-rag-internal-token-32-bytes-minimum';
 
-// RUNTIME_ROOT necessário para testes que carregam server.js ou rpaService indiretamente.
-// Usa /tmp para que resolveRuntimeRoot não bloqueie ao validar que não está dentro do workspace.
-if (!process.env.RUNTIME_ROOT) {
-  process.env.RUNTIME_ROOT = '/tmp/r-agent2-test-runtime';
-}
+// Isolamento do runtime root para testes (fora do workspace, em /tmp).
+require('../api/utils/runtimePaths').configureRuntimeRoot('/tmp/r-agent2-test-runtime');
 
 // Timeout global para hooks
 jest.setTimeout(10000);

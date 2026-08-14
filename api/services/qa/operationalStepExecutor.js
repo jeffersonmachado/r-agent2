@@ -43,14 +43,15 @@ const {
   computeMutationProvenance,
 } = postStateProofModule;
 
-const BLOCKING_JOURNEYS = ['support_ticket_flow', 'fitness_customer_checkin'];
+const { isBlockingJourney: isRegistryBlockingJourney } = require('../../../qa/contracts/journeyCriticality');
 
 /**
- * Verifica se uma jornada é blocking.
+ * Verifica se uma jornada é blocking (fonte: config/journey-criticality.json
+ * via qa/contracts/journeyCriticality — sem lista hardcoded).
  */
 function isBlockingJourney(journeyId = '') {
   const resolved = resolveJourneyId(journeyId) || String(journeyId || '').toLowerCase();
-  return BLOCKING_JOURNEYS.includes(resolved);
+  return isRegistryBlockingJourney(resolved);
 }
 
 /**
@@ -295,7 +296,7 @@ async function collectStepBeforeSnapshot(stepSpec = {}, options = {}) {
   } catch (err) {
     const stepId = stepSpec?.id || stepSpec?.stepId || null;
     const contract = getOperationalStepContract(stepId);
-    const isBlocking = BLOCKING_JOURNEYS.includes(contract?.journeyId);
+    const isBlocking = isBlockingJourney(contract?.journeyId);
     if (contract?.snapshotRequired && isBlocking) {
       throw new BlockingOperationalError('snapshot_before_collection_failed', {
         stepId,
@@ -322,7 +323,7 @@ async function collectStepAfterSnapshot(stepSpec = {}, stepResult = {}, options 
   } catch (err) {
     const stepId = stepResult?.id || stepSpec?.id || stepSpec?.stepId || null;
     const contract = getOperationalStepContract(stepId);
-    const isBlocking = BLOCKING_JOURNEYS.includes(contract?.journeyId);
+    const isBlocking = isBlockingJourney(contract?.journeyId);
     if (contract?.snapshotRequired && isBlocking) {
       throw new BlockingOperationalError('snapshot_after_collection_failed', {
         stepId,
@@ -1147,7 +1148,6 @@ module.exports = {
   validateEvidenceByContract,
   resolveEvidenceContract,
   isBlockingJourney,
-  BLOCKING_JOURNEYS,
   collectStepBeforeSnapshot,
   collectStepAfterSnapshot,
   computeIncrementalStepDiff,

@@ -9,7 +9,7 @@
  *   node scripts/qa-waves-analyze.js [--vertical=fitness] [--journey=fitness_new_customer]
  */
 
-process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime';
+require('../api/utils/runtimePaths').configureRuntimeRoot('/tmp/ragent2-runtime');
 
 const {
   analyzeCoverageGaps,

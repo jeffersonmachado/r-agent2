@@ -154,6 +154,7 @@ function initializeWebSocket(httpServer) {
       tenantId: null,
       agentId: null,
       username: null,
+      authenticated: false,
       // Subscriptions por executionId (pipeline)
       executionIds: new Set(),
       connectedAt: new Date(),
@@ -161,16 +162,20 @@ function initializeWebSocket(httpServer) {
     };
 
     clients.set(clientId, client);
-    addClientToTenantIndex(client);
+
+    // Conexão pré-login é legítima (SPA conecta antes do login e autentica
+    // depois): NÃO há deadline de handshake. A invariante de segurança é
+    // garantida sem ele — subscribe exige autenticação e broadcasts só vão
+    // para clientes autenticados do mesmo tenant.
 
     logger.info(`[WebSocketService] Cliente conectado: ${clientId}`);
 
     // Envia mensagem de boas-vindas
     sendToClient(clientId, {
       type: 'connection',
-      status: 'connected',
+      status: 'authentication_required',
       clientId,
-      message: 'Conectado ao servidor WebSocket',
+      message: 'Conectado; autentique antes de assinar ou receber eventos',
     });
 
     // Handler de mensagens
@@ -183,11 +188,17 @@ function initializeWebSocket(httpServer) {
         if (data.type === 'auth' && data.token) {
           const validation = validateToken(data.token);
           if (validation.valid) {
-            // Move o cliente no índice por tenant (null -> tenant autenticado)
+            const tenantId = safeTrim(validation.agent?.tenantId || validation.agent?.tenant_id);
+            if (!tenantId) {
+              sendToClient(clientId, { type: 'auth', status: 'error', message: 'Token sem tenant válido' });
+              try { ws.close(4403, 'tenant_required'); } catch (_) { /* noop */ }
+              return;
+            }
             removeClientFromTenantIndex(client);
-            client.tenantId = validation.agent.tenantId;
+            client.tenantId = tenantId;
             client.agentId = validation.agent.id;
             client.username = validation.agent.username;
+            client.authenticated = true;
             addClientToTenantIndex(client);
 
             sendToClient(clientId, {
@@ -208,6 +219,9 @@ function initializeWebSocket(httpServer) {
               status: 'error',
               message: 'Token inválido',
             });
+            setTimeout(() => {
+              try { ws.close(4401, 'invalid_token'); } catch (_) { /* noop */ }
+            }, 10);
           }
           return;
         }
@@ -217,6 +231,15 @@ function initializeWebSocket(httpServer) {
           sendToClient(clientId, {
             type: 'pong',
             timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        if (!client.authenticated || !client.tenantId || !client.agentId) {
+          sendToClient(clientId, {
+            type: 'error',
+            code: 'authentication_required',
+            message: 'Autentique antes de assinar eventos',
           });
           return;
         }
@@ -340,13 +363,14 @@ function sendToClient(clientId, data) {
  * @param {Object} data - Dados a enviar
  */
 function broadcastToTenant(tenantId, data) {
+  if (!tenantId) return 0;
   // Serializa uma única vez fora do loop
   const payload = JSON.stringify(data);
   let sent = 0;
   const tenantSet = tenantClients.get(tenantId || null);
   if (tenantSet) {
     for (const client of tenantSet) {
-      if (client.ws.readyState === 1) {
+      if (client.authenticated && client.agentId && client.ws.readyState === 1) {
         try {
           client.ws.send(payload);
           sent++;
@@ -369,6 +393,7 @@ function broadcastToTenant(tenantId, data) {
   } else {
     logger.debug(msg);
   }
+  return sent;
 }
 
 /**
@@ -384,6 +409,7 @@ function broadcastToExecution(tenantId, executionId, data) {
   const tenantSet = tenantClients.get(tenantId || null);
   if (tenantSet) {
     for (const client of tenantSet) {
+      if (!client.authenticated || !client.agentId) continue;
       if (!client.executionIds || !(client.executionIds instanceof Set)) continue;
       if (!client.executionIds.has(executionId)) continue;
       if (client.ws.readyState !== 1) continue;
@@ -396,6 +422,7 @@ function broadcastToExecution(tenantId, executionId, data) {
     }
   }
   logger.info('[WebSocketService] Broadcast (execution) enviado', { tenantId, executionId, sent, event: data?.event || null });
+  return sent;
 }
 
 /**
@@ -403,21 +430,34 @@ function broadcastToExecution(tenantId, executionId, data) {
  * 
  * @param {string} agentId - ID do agente
  * @param {Object} data - Dados a enviar
+ * @param {string} tenantId - Tenant autenticado do agente
  */
-function sendToAgent(agentId, data) {
+function sendToAgent(agentId, data, tenantId) {
+  const scopedTenantId = safeTrim(tenantId);
+  const scopedAgentId = safeTrim(agentId);
+  if (!scopedTenantId || !scopedAgentId) {
+    logger.error('[WebSocketService] Mensagem para agente descartada sem tenant/agent', {
+      hasTenantId: Boolean(scopedTenantId),
+      hasAgentId: Boolean(scopedAgentId),
+    });
+    return 0;
+  }
   const payload = JSON.stringify(data);
   let sent = 0;
-  for (const [clientId, client] of clients.entries()) {
-    if (client.agentId === agentId && client.ws.readyState === 1) {
+  const tenantSet = tenantClients.get(scopedTenantId);
+  if (tenantSet) {
+    for (const client of tenantSet) {
+      if (!client.authenticated || safeTrim(client.agentId) !== scopedAgentId || client.ws.readyState !== 1) continue;
       try {
         client.ws.send(payload);
         sent++;
       } catch (err) {
-        logger.error(`[WebSocketService] Erro ao enviar mensagem para agente ${agentId}:`, safeErrorMessage(err));
+        logger.error(`[WebSocketService] Erro ao enviar mensagem para agente ${scopedAgentId}:`, safeErrorMessage(err));
       }
     }
   }
-  logger.debug(`[WebSocketService] Mensagem enviada para ${sent} conexão(ões) do agente ${agentId}`);
+  logger.debug(`[WebSocketService] Mensagem enviada para ${sent} conexão(ões) do agente ${scopedAgentId}`);
+  return sent;
 }
 
 /**
@@ -425,10 +465,10 @@ function sendToAgent(agentId, data) {
  * 
  * @param {string} event - Nome do evento
  * @param {Object} payload - Dados do evento
- * @param {Object} options - Opções (tenantId, agentId)
+ * @param {Object} options - Opções (tenantId, agentId, executionId)
  */
 function emitEvent(event, payload, options = {}) {
-  const { tenantId, agentId, executionId, allowGlobal } = options;
+  const { tenantId, agentId, executionId } = options;
 
   const message = {
     type: 'event',
@@ -447,28 +487,17 @@ function emitEvent(event, payload, options = {}) {
         stages: payload?.stages ? Object.keys(payload.stages).filter((k) => payload.stages[k] === true) : [],
       });
     }
+    if (agentId) {
+      return sendToAgent(agentId, message, tenantId);
+    }
     if (executionId && typeof executionId === 'string' && safeTrim(executionId)) {
-      broadcastToExecution(tenantId, safeTrim(executionId), message);
+      return broadcastToExecution(tenantId, safeTrim(executionId), message);
     } else {
-      broadcastToTenant(tenantId, message);
+      return broadcastToTenant(tenantId, message);
     }
-  } else if (agentId) {
-    sendToAgent(agentId, message);
   } else {
-    // Broadcast para todos (cuidado!)
-    if (!allowGlobal) {
-      logger.warn('[WebSocketService] Emitindo evento sem tenantId ou agentId - broadcast global');
-    }
-    const globalPayload = JSON.stringify(message);
-    for (const [clientId, client] of clients.entries()) {
-      if (client.ws.readyState === 1) {
-        try {
-          client.ws.send(globalPayload);
-        } catch (err) {
-          logger.error(`[WebSocketService] Erro ao enviar evento para cliente ${clientId}:`, safeErrorMessage(err));
-        }
-      }
-    }
+    logger.error('[WebSocketService] Evento descartado por ausência de tenantId', { event });
+    return 0;
   }
 }
 
@@ -524,7 +553,7 @@ function getConnectionsInfo() {
     return {
       id: client.id,
       state: stateNames[readyState] || 'UNKNOWN',
-      authenticated: client.agentId !== null,
+      authenticated: client.authenticated === true && client.agentId !== null,
       tenantId: client.tenantId || null,
       agentId: client.agentId || null,
       username: client.username || null,

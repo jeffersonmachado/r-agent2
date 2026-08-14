@@ -124,7 +124,7 @@ describe('demo routes', () => {
 
     expect(response.status).toBe(200);
     expect(deps.demoOrchestrator.getState).toHaveBeenCalledWith(
-      expect.objectContaining({ vertical: 'beauty' })
+      expect.objectContaining({ vertical: 'beauty', tenantId: 'system' })
     );
     expect(response.body).toHaveProperty('demo.vertical', 'beauty');
   });
@@ -136,7 +136,7 @@ describe('demo routes', () => {
 
     expect(response.status).toBe(202);
     expect(deps.demoOrchestrator.runDemo).toHaveBeenCalledWith(
-      expect.objectContaining({ vertical: 'fitness' })
+      expect.objectContaining({ vertical: 'fitness', tenantId: 'system' })
     );
     expect(response.body).toHaveProperty('status', 'queued');
     expect(response.body).toHaveProperty('execution.executionId', 'meshq-demo-1');

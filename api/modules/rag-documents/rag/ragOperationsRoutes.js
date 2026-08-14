@@ -91,10 +91,23 @@ async function handleRagOperationsRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'update' })) return true;
 
     try {
+      const tenantId = deps.requireTenant(req, res);
+      if (!tenantId) return true;
       const documentId = decodeURIComponent(pathname.slice('/rag/documents/'.length).replace('/reindex', ''));
-      const result = await deps.reindexDocument(documentId);
+      const result = await deps.reindexDocument(documentId, tenantId);
 
       if (!result.success) {
+        if (result.errorCode === 'document_not_found') {
+          deps.sendJson(res, 404, { error: 'document_not_found', message: 'Documento não encontrado' });
+          return true;
+        }
+        if (result.errorCode === 'PERSISTENCE_REQUIRED') {
+          deps.sendJson(res, 503, {
+            error: 'persistence_required',
+            message: 'Persistência PostgreSQL indisponível',
+          });
+          return true;
+        }
         return sendRagApiError(req, res, deps, {
           code: result.errorCode || 'RAG_INDEX_FAILED',
           message: result.error || 'Falha ao reindexar documento no RAG',

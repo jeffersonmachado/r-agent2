@@ -6,7 +6,7 @@
  * Gera manuais operacionais ilustrados a partir de replays reais
  * (QA Waves / RPA). Cada manual é persistido em runtime root:
  *
- *   <RUNTIME_ROOT>/learning/manuals/<manualId>/
+ *   <runtime root>/learning/manuals/<manualId>/
  *     manual.md       — texto do manual (markdown)
  *     metadata.json   — metadados + steps (para renderização na UI)
  *     img/NN-<slug>.png — telas reais capturadas no replay

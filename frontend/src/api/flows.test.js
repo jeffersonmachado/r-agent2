@@ -139,6 +139,47 @@ describe('api/flows', () => {
     });
     expect(result).toEqual(replay);
   });
+
+  it('downloadRpaExecutionArtifact monta URL de screenshot sem segmento duplicado', async () => {
+    vi.doMock('./client', () => ({
+      fetchJson: vi.fn(),
+      fetchBlob: vi.fn().mockResolvedValue({
+        headers: { get: () => 'attachment; filename="shot.png"' },
+        blob: async () => new Blob(['x']),
+      }),
+    }));
+
+    const { downloadRpaExecutionArtifact } = await import('./flows');
+    const client = await import('./client');
+
+    const result = await downloadRpaExecutionArtifact('exec-1', 'screenshot', 2);
+
+    expect(vi.mocked(client.fetchBlob)).toHaveBeenCalledWith(
+      '/api/test-executions/exec-1/artifact/screenshot/2',
+      { method: 'GET' },
+    );
+    expect(result.filename).toBe('shot.png');
+  });
+
+  it('downloadRpaExecutionArtifact monta URL simples para kinds sem índice', async () => {
+    vi.doMock('./client', () => ({
+      fetchJson: vi.fn(),
+      fetchBlob: vi.fn().mockResolvedValue({
+        headers: { get: () => null },
+        blob: async () => new Blob(['x']),
+      }),
+    }));
+
+    const { downloadRpaExecutionArtifact } = await import('./flows');
+    const client = await import('./client');
+
+    await downloadRpaExecutionArtifact('exec-1', 'replay');
+
+    expect(vi.mocked(client.fetchBlob)).toHaveBeenCalledWith(
+      '/api/test-executions/exec-1/artifact/replay',
+      { method: 'GET' },
+    );
+  });
 });
 
 

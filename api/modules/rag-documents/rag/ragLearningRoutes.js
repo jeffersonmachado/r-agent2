@@ -121,22 +121,9 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'read' })) return true;
 
     try {
-      const serviceUrl = deps.ragService.getRagServiceUrl(req.tenantId);
-      deps.ragService.getRagTimeout(req.tenantId);
-
-      const response = await fetch(`${serviceUrl}/rag/learning/validation-rules`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`RAG learning service error: ${response.status} ${errorText}`);
-      }
-
-      const result = await response.json();
+      const tenantId = deps.requireTenant(req, res);
+      if (!tenantId) return true;
+      const result = await deps.ragService.getValidationRules(tenantId);
       deps.sendJson(res, 200, result);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao obter regras de validação:' });
@@ -151,22 +138,7 @@ async function handleRagLearningRoutes({ req, res, method, pathname, deps }) {
       const scope = resolveScopedTenantId({ req, res, deps, requestedTenantId: decodeURIComponent(pathname.slice('/rag/learning/validation-rules/adapt/'.length)) });
       if (scope.forbidden) return true;
       const tenantId = scope.tenantId;
-      const serviceUrl = deps.ragService.getRagServiceUrl(tenantId);
-      deps.ragService.getRagTimeout(tenantId);
-
-      const response = await fetch(`${serviceUrl}/rag/learning/validation-rules/adapt/${tenantId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`RAG learning service error: ${response.status} ${errorText}`);
-      }
-
-      const result = await response.json();
+      const result = await deps.ragService.adaptValidationRules(tenantId);
       deps.sendJson(res, 200, result);
     } catch (err) {
       return respondInternalError(err, { loggerMessage: 'Erro ao adaptar regras:' });

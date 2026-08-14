@@ -17,6 +17,18 @@ describe('RAG health inconsistency', () => {
     }));
 
     const updateCalls = [];
+    const rows = new Map();
+
+    const rowFor = (id) => {
+      const current = rows.get(id);
+      if (!current) return null;
+      return {
+        ...current,
+        dataValues: current,
+        toJSON: () => ({ ...rows.get(id) }),
+        update: async (payload) => rows.set(id, { ...rows.get(id), ...payload }),
+      };
+    };
 
     const RagDocumentModel = {
       count: jest.fn(async () => 0),
@@ -24,8 +36,18 @@ describe('RAG health inconsistency', () => {
         updateCalls.push(payload);
         return [6];
       }),
-      findByPk: jest.fn(async () => null),
-      create: jest.fn(async () => null),
+      findByPk: jest.fn(async (id) => rowFor(id)),
+      findOne: jest.fn(async ({ where }) => {
+        const row = rowFor(where.id);
+        return row && row.tenant_key === where.tenant_key ? row : null;
+      }),
+      findAll: jest.fn(async ({ where = {} } = {}) => Array.from(rows.keys())
+        .filter((id) => !where.tenant_key || rows.get(id).tenant_key === where.tenant_key)
+        .map(rowFor)),
+      create: jest.fn(async (payload) => {
+        rows.set(payload.id, { ...payload });
+        return rowFor(payload.id);
+      }),
       destroy: jest.fn(async () => 0),
     };
 
@@ -55,7 +77,7 @@ describe('RAG health inconsistency', () => {
     expect(createRes.success).toBe(true);
 
     // força estado indexed no cache
-    const reindexRes = await ragDocumentsService.reindexDocument('doc-1');
+    const reindexRes = await ragDocumentsService.reindexDocument('doc-1', 'tenant-1');
     expect(reindexRes.success).toBe(true);
 
     const health = await ragDocumentsService.getRagHealth('tenant-1', { autoRepair: false });
@@ -68,4 +90,3 @@ describe('RAG health inconsistency', () => {
     expect(updateCalls.some((p) => p && p.inconsistent === true)).toBe(true);
   });
 });
-

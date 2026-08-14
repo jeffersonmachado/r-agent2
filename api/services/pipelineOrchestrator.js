@@ -905,7 +905,7 @@ async function executeSeedGeneration(execution) {
       };
     })();
 
-    const seedPath = saveTemporaryRecording(recording);
+    const seedPath = saveTemporaryRecording(recording, execution.options?.tenantId);
     execution.seed = {
       id: recording.id,
       name: recording.name,
@@ -1030,4 +1030,3 @@ module.exports = {
   advancePipeline,
   executeStage,
 };
-

@@ -9,6 +9,12 @@ function dbAvailable() {
   return !!getSequelize();
 }
 
+function isUniqueViolation(error) {
+  return error?.name === 'SequelizeUniqueConstraintError'
+    || error?.original?.code === '23505'
+    || error?.parent?.code === '23505';
+}
+
 async function upsertTicketToDb(ticket, toDbPayload) {
   if (!dbAvailable()) return;
   const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
@@ -18,8 +24,23 @@ async function upsertTicketToDb(ticket, toDbPayload) {
   const existing = await TicketModel.findByPk(ticket.id);
   if (existing) {
     await existing.update({ ...payload, updated_at: now });
-  } else {
+    return;
+  }
+
+  try {
     await TicketModel.create({ ...payload, created_at: now, updated_at: now });
+  } catch (error) {
+    // Corrida de idempotência: createTicket e autoAssignTicket disparam
+    // persistBestEffort concorrentes para o mesmo ticket (mesmo id). Ambos
+    // passam pelo findByPk e o segundo insert colide com tickets_pkey (23505).
+    // Trata como upsert: re-fetch e update do registro já persistido.
+    if (!isUniqueViolation(error)) throw error;
+    const raced = await TicketModel.findByPk(ticket.id);
+    if (raced) {
+      await raced.update({ ...payload, updated_at: now });
+      return;
+    }
+    throw error;
   }
 }
 
@@ -36,6 +57,10 @@ function persistTicketBestEffort(ticket, toDbPayload) {
       logger.warn('[QueueService] Falha ao persistir ticket no PostgreSQL', {
         ticketId: ticket.id,
         error: safeErrorMessage(err),
+        errorName: err?.name || null,
+        errorConstraint: err?.original?.constraint || err?.parent?.constraint || null,
+        errorDetail: err?.original?.detail || null,
+        errorFields: err?.fields || null,
       });
     });
   });
@@ -100,4 +125,5 @@ module.exports = {
   persistTicketBestEffort,
   deleteTicketBestEffort,
   initializeRuntimeCache,
+  upsertTicketToDb,
 };

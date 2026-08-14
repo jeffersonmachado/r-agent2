@@ -1,5 +1,7 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../api/utils/runtimePaths');
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -72,7 +74,7 @@ const REPLAY_WAVE_UITRACE = {
 
 beforeAll(() => {
   runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'learning-trainer-test-'));
-  process.env.RUNTIME_ROOT = runtimeRoot;
+  configureRuntimeRoot(runtimeRoot);
   const replayDir = path.join(runtimeRoot, 'rpa', 'replay');
   fs.mkdirSync(replayDir, { recursive: true });
   fs.writeFileSync(path.join(replayDir, 'jornada-teste-1.json'), JSON.stringify(REPLAY_WITH_PII));
@@ -81,7 +83,7 @@ beforeAll(() => {
 
 afterAll(() => {
   fs.rmSync(runtimeRoot, { recursive: true, force: true });
-  delete process.env.RUNTIME_ROOT;
+  configureRuntimeRoot(null);
 });
 
 const {

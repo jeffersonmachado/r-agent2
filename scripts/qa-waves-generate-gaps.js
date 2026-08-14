@@ -11,7 +11,7 @@
  *   node scripts/qa-waves-generate-gaps.js --vertical=fitness [--journey=fitness_new_customer] [--dry-run]
  */
 
-process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime';
+require('../api/utils/runtimePaths').configureRuntimeRoot('/tmp/ragent2-runtime');
 
 const {
   analyzeCoverageGaps,

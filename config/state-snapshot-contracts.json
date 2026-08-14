@@ -35,6 +35,14 @@
       "db.booking.count:incremented"
     ]
   },
+  "agendamento": {
+    "before": [
+      "db.task.count"
+    ],
+    "after": [
+      "db.task.count:incremented"
+    ]
+  },
   "leads": {
     "before": [
       "crm.leads.count",

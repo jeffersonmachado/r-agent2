@@ -3,7 +3,7 @@
 ## Discovered credentials and bootstrap
 
 - Test username: `systemadmin`
-- Test password: `Admin123!`
+- Test password: `***`
 - Default tenant for browser validation: `system`
 - Official helper: `tests/helpers/playwrightAuth.js`
 - Login API: `POST /auth/login`

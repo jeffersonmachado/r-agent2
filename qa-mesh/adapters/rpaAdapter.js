@@ -56,6 +56,7 @@ function buildTerminalResult(status) {
 // Orientado a evento (sem polling): acorda a cada mudança de estado emitida
 // pelo rpaService; o orçamento de tempo é um único deadline.
 async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context = {}) {
+  const tenantId = context.tenantId || 'system';
   const notifyProgress = (status) => {
     if (!status || RPA_TERMINAL_STATUSES.includes(status.status)) return;
     context.onStepProgress?.({
@@ -77,7 +78,7 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context
     };
 
     const checkNow = () => {
-      const status = getExecutionStatus(executionId);
+      const status = getExecutionStatus(executionId, tenantId);
       if (!status) {
         finish({ success: false, logs: [], metrics: { status: 'missing' }, errors: ['Execução não encontrada'], artifacts: [] });
         return;
@@ -134,6 +135,7 @@ function isTransientRpaFailure(result) {
 }
 
 async function executeScenario(scenario, adapterContext = {}) {
+  const tenantId = adapterContext.tenantId || scenario.tenantId || scenario.tenant_id || 'system';
   // Configuração de vídeo para treinamento
   const recordVideo = scenario.recordVideo !== false && process.env.QA_MESH_RECORD_VIDEO !== '0';
   const videoDir = recordVideo
@@ -161,10 +163,12 @@ async function executeScenario(scenario, adapterContext = {}) {
         recordVideo,
         videoDir,
       },
-      scenario.data || {}
+      scenario.data || {},
+      null,
+      tenantId,
     );
 
-    const result = await waitForExecution(start.executionId, effectiveWaitTimeout, adapterContext);
+    const result = await waitForExecution(start.executionId, effectiveWaitTimeout, { ...adapterContext, tenantId });
     if (result?.success) {
       if (attempt > 1) {
         result.logs = [

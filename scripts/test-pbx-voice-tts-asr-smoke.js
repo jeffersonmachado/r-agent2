@@ -24,9 +24,15 @@ function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
 }
 
-async function reqJson(url, { method = 'GET', token = null, body = null } = {}) {
+// Tenant default do smoke: STRICT_TENANT_MODE exige X-Tenant-Id explícito
+// para super_admin; definido após o login e aplicado a todas as chamadas.
+let smokeTenantId = null;
+
+async function reqJson(url, { method = 'GET', token = null, body = null, tenantId = null } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
+  const effectiveTenantId = tenantId || smokeTenantId;
+  if (effectiveTenantId) headers['X-Tenant-Id'] = String(effectiveTenantId);
   const timeoutMs = Math.max(3000, Number(process.env.L03_HTTP_TIMEOUT_MS || 60000));
   const retries = Math.max(1, Number(process.env.L03_HTTP_RETRIES || 2));
   let lastErr = null;
@@ -422,6 +428,7 @@ async function originateRealCall({ baseUrl, token, tenantId, extension, callId }
 async function main() {
   const baseUrl = apiBaseUrl();
   const auth = await login(baseUrl);
+  smokeTenantId = auth.tenantId || null;
   const ts = Date.now();
   const flowId = `flow-voice-tts-asr-smoke-${ts}`;
   const callId = `call-voice-tts-asr-${ts}`;

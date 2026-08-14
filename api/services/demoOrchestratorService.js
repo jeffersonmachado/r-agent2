@@ -9,6 +9,7 @@ const { listLatestScenarios } = require('./qaWavesScenarioService');
 const { listReplayFiles, getReplayFile, createExecution } = require('./testExecutionService');
 const { listAllTickets, getMetrics } = require('./queueService');
 const { createWorkspaceService } = require('../modules/workspace/workspace.service');
+const { normalizeTenantKey } = require('../../lib/rpaSecurity');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const DEMO_SEEDS_DIR = path.join(ROOT_DIR, 'qa', 'demo-seeds');
@@ -223,18 +224,18 @@ function buildDemoIndicators({ crm, tickets, qa, seed, replay }) {
 
 function createDemoOrchestratorService() {
   return {
-    async getState({ vertical, auth }) {
+    async getState({ vertical, auth, tenantId: requestedTenantId }) {
       const selectedVertical = normalizeVertical(vertical);
-      const tenantId = auth?.agent?.tenantId || 'system';
+      const tenantId = normalizeTenantKey(requestedTenantId || auth?.agent?.tenantId || auth?.agent?.tenant_id);
       const seed = loadDemoSeed(selectedVertical);
 
       const [journeysPayload, journeyStatusPayload, scenariosPayload, replayList, ticketsPayload, queueMetrics, crmSnapshot, workspaceSnapshot] = await Promise.all([
-        Promise.resolve(listJourneys()),
-        Promise.resolve(listJourneyStatus()),
-        Promise.resolve(listLatestScenarios({ vertical: selectedVertical })),
-        Promise.resolve(listReplayFiles({ limit: 80, offset: 0, source: 'qa_waves' })),
+        Promise.resolve(listJourneys(tenantId)),
+        Promise.resolve(listJourneyStatus(tenantId)),
+        Promise.resolve(listLatestScenarios({ vertical: selectedVertical, tenantId })),
+        Promise.resolve(listReplayFiles({ limit: 80, offset: 0, source: 'qa_waves', tenantId })),
         Promise.resolve(listAllTickets({ tenantId, limit: 200, offset: 0 })),
-        Promise.resolve(getMetrics()),
+        Promise.resolve(getMetrics({ tenantId })),
         loadCrmSnapshot(tenantId, 5),
         loadWorkspaceSnapshot(tenantId, seed?.workspace?.entityId || null),
       ]);
@@ -242,14 +243,14 @@ function createDemoOrchestratorService() {
       const domain = resolveJourneyDomain(journeysPayload, selectedVertical);
       const selectedJourney = pickJourney(domain, seed?.journey?.id || null);
       const stepStatusPayload = selectedJourney
-        ? await Promise.resolve(listStepStatus({ journeyId: selectedJourney.journeyId }))
+        ? await Promise.resolve(listStepStatus({ journeyId: selectedJourney.journeyId, tenantId }))
         : { items: [] };
       const stepStatuses = mapStepStatuses(stepStatusPayload, selectedJourney?.journeyId || null);
 
       const selectedScenario = pickQaScenario(scenariosPayload, seed);
       const replaySummary = pickReplayForScenario(replayList, selectedScenario);
       const replayId = replaySummary?.replayId || null;
-      const replayDetails = replayId ? getReplayFile(`${replayId}.json`) : null;
+      const replayDetails = replayId ? getReplayFile(`${replayId}.json`, tenantId) : null;
       const firstTicket = Array.isArray(ticketsPayload?.tickets) ? ticketsPayload.tickets[0] : null;
       const firstLead = Array.isArray(crmSnapshot?.leads) ? crmSnapshot.leads[0] : null;
 
@@ -341,9 +342,10 @@ function createDemoOrchestratorService() {
       };
     },
 
-    async runDemo({ vertical, auth }) {
+    async runDemo({ vertical, auth, tenantId: requestedTenantId }) {
       const selectedVertical = normalizeVertical(vertical);
-      const state = await this.getState({ vertical: selectedVertical, auth });
+      const tenantId = normalizeTenantKey(requestedTenantId || auth?.agent?.tenantId || auth?.agent?.tenant_id);
+      const state = await this.getState({ vertical: selectedVertical, auth, tenantId });
 
       const scenarioId = state?.journey?.scenario?.id;
       if (!scenarioId) {
@@ -367,7 +369,7 @@ function createDemoOrchestratorService() {
         },
         {
           authToken: auth?.token || null,
-          tenantId: auth?.agent?.tenantId || state?.demo?.tenantId || null,
+          tenantId,
           agentId: auth?.agent?.id || null,
         }
       );

@@ -25,6 +25,22 @@ const {
   getRpaReplayReadDirs,
   getRpaReportReadDirs,
 } = require('../../lib/rpaPathResolver');
+const {
+  getExecutionManifest,
+  listExecutionManifests,
+  getRecording: getPersistedRecording,
+  getReplay: getPersistedReplay,
+  getTraceBuffer,
+  getScreenshotBuffer,
+} = require('./rpaArtifactPersistence');
+const {
+  belongsToTenant,
+  normalizeTenantKey,
+  redactDeep,
+  stripInternalFilesystemPaths,
+  tenantFromArtifact,
+} = require('../../lib/rpaSecurity');
+const { validateReplayIntegrity } = require('../../lib/replayIntegrity');
 
 // Cache de metadados para listReplayFiles com validação por mtime
 const REPLAY_LIST_PREFIX_BYTES = 16 * 1024;
@@ -194,6 +210,7 @@ function getReplayDurationMs(replay) {
 }
 
 function matchesReplayFilters(replay, filters) {
+  if (filters.tenantId && !belongsToTenant(replay, filters.tenantId)) return false;
   if (filters.search) {
     const haystacks = [
       replay.filename,
@@ -364,8 +381,9 @@ function mapQaWavesStatus(execution) {
     }
   }
 
-  return {
+  return stripInternalFilesystemPaths(redactDeep({
     executionId: execution.executionId,
+    tenantId: tenantFromArtifact(execution),
     source: 'qa_waves',
     status: inferQaWavesPublicStatus(execution),
     progress: Number.isFinite(execution.progress) ? execution.progress : 0,
@@ -376,7 +394,7 @@ function mapQaWavesStatus(execution) {
     currentStep: execution.currentStep || null,
     results: Array.isArray(execution.results) ? execution.results : [],
     errors: [],
-  };
+  }));
 }
 
 function mapRpaStatus(execution) {
@@ -386,8 +404,10 @@ function mapRpaStatus(execution) {
     ? Math.max(0, new Date(finishedAt).getTime() - new Date(startedAt).getTime())
     : 0;
 
-  return {
+  return stripInternalFilesystemPaths(redactDeep({
     executionId: execution.id || execution.executionId,
+    tenantId: tenantFromArtifact(execution),
+    recordingId: execution.recordingId || null,
     source: 'rpa_tests',
     status: normalizePublicStatus(execution.status),
     progress: Number.isFinite(execution.progress) ? execution.progress : 0,
@@ -400,7 +420,7 @@ function mapRpaStatus(execution) {
     errors: Array.isArray(execution.errors)
       ? execution.errors
       : (execution.error ? [{ error: execution.error }] : []),
-  };
+  }));
 }
 
 function ensureSafeJsonFilename(filename) {
@@ -411,11 +431,16 @@ function ensureSafeJsonFilename(filename) {
   return value;
 }
 
-function findFirstExistingFile(directories, filename) {
+function findOwnedJsonFile(directories, filename, tenantId) {
   for (const dirPath of directories) {
     const candidate = path.join(dirPath, filename);
-    if (fs.existsSync(candidate)) {
-      return candidate;
+    if (!fs.existsSync(candidate)) continue;
+    try {
+      const payload = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+      if (belongsToTenant(payload, tenantId)) return { filePath: candidate, payload };
+    } catch (_) {
+      // Um arquivo inválido ou de outro tenant não mascara uma cópia válida
+      // com o mesmo nome em outro diretório governado.
     }
   }
   return null;
@@ -694,6 +719,9 @@ function normalizeAndReconcileReplayPayload(payload = {}) {
 
 function persistReplayIfChanged(filePath, originalPayload, nextPayload) {
   try {
+    // Evidência assinada é imutável. Reconciliação de apresentação não pode
+    // sobrescrever o payload que originou hash/checksum/HMAC.
+    if (originalPayload?.replayHash || originalPayload?.governanceSignature) return;
     const before = JSON.stringify(originalPayload);
     const after = JSON.stringify(nextPayload);
     if (before !== after) {
@@ -742,7 +770,8 @@ async function createExecution(payload = {}, { authToken, tenantId = null } = {}
       recordingId,
       payload.config || {},
       payload.data || {},
-      authToken || null
+      authToken || null,
+      normalizeTenantKey(tenantId)
     );
 
     return {
@@ -757,26 +786,28 @@ async function createExecution(payload = {}, { authToken, tenantId = null } = {}
   throw makeError('source inválido. Use qa_waves ou rpa_tests', 'BAD_REQUEST');
 }
 
-function getExecutionStatus(executionId) {
+function getExecutionStatus(executionId, tenantId = 'system') {
   const cleanId = String(executionId || '').trim();
   if (!cleanId) return null;
+  const scopedTenantId = normalizeTenantKey(tenantId);
 
   const waveExecution = getQaWavesExecutionStatus(cleanId);
-  if (waveExecution) return mapQaWavesStatus(waveExecution);
+  if (waveExecution && belongsToTenant(waveExecution, scopedTenantId)) return mapQaWavesStatus(waveExecution);
 
-  const rpaExecution = getRpaExecutionStatus(cleanId);
+  const rpaExecution = getRpaExecutionStatus(cleanId, scopedTenantId);
   if (rpaExecution) return mapRpaStatus(rpaExecution);
 
   return null;
 }
 
-async function cancelUnifiedExecution(executionId) {
+async function cancelUnifiedExecution(executionId, tenantId = 'system') {
   const cleanId = String(executionId || '').trim();
   if (!cleanId) {
     throw makeError('executionId obrigatorio', 'BAD_REQUEST');
   }
 
-  const cancelled = await cancelExecution(cleanId);
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const cancelled = await cancelExecution(cleanId, scopedTenantId);
   if (cancelled?.success) {
     return {
       executionId: cleanId,
@@ -785,7 +816,7 @@ async function cancelUnifiedExecution(executionId) {
     };
   }
 
-  const existing = getExecutionStatus(cleanId);
+  const existing = getExecutionStatus(cleanId, scopedTenantId);
   if (existing && existing.source === 'qa_waves') {
     throw makeError('Cancelamento não suportado para execuções QA Waves no momento', 'NOT_SUPPORTED');
   }
@@ -793,30 +824,165 @@ async function cancelUnifiedExecution(executionId) {
   throw makeError('Execução não encontrada', 'NOT_FOUND');
 }
 
-function getExecutionArtifacts(executionId) {
-  const status = getExecutionStatus(executionId);
-  if (!status) return null;
+async function getExecutionArtifacts(executionId, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const status = getExecutionStatus(executionId, scopedTenantId);
+  const manifest = await getExecutionManifest(executionId, scopedTenantId);
+  if (!status && !manifest) return null;
 
   const artifacts = [];
-  const rpaResults = status.source === 'rpa_tests' && status.results && typeof status.results === 'object'
+  const rpaResults = status?.source === 'rpa_tests' && status.results && typeof status.results === 'object'
     ? status.results
     : null;
 
   if (rpaResults?.replayPath) {
-    artifacts.push({ type: 'replay', path: rpaResults.replayPath });
+    artifacts.push({ type: 'replay', available: true });
   }
 
   if (Array.isArray(rpaResults?.screenshots)) {
     for (const screenshot of rpaResults.screenshots) {
-      artifacts.push({ type: 'screenshot', path: screenshot });
+      artifacts.push({ type: 'screenshot', available: true });
     }
   }
 
+  // Artefatos persistidos no banco (roteiro + trace visual + replay) — sempre
+  // disponíveis após a execução, mesmo após restart do processo.
+  const recordingId = manifest?.recordingId || status?.recordingId || null;
+
+  if (manifest?.recording || recordingId) {
+    artifacts.push({
+      type: 'recording',
+      persisted: true,
+      recordingId: recordingId || null,
+      downloadUrl: `/api/test-executions/${encodeURIComponent(executionId)}/artifact/recording`,
+    });
+  }
+
+  if (manifest?.trace) {
+    artifacts.push({
+      type: 'trace',
+      persisted: true,
+      sizeBytes: manifest.traceSizeBytes || null,
+      downloadUrl: `/api/test-executions/${encodeURIComponent(executionId)}/artifact/trace`,
+    });
+  }
+
+  if (manifest?.replay) {
+    artifacts.push({
+      type: 'replay_persisted',
+      persisted: true,
+      downloadUrl: `/api/test-executions/${encodeURIComponent(executionId)}/artifact/replay`,
+    });
+  }
+
+  for (let index = 0; index < Number(manifest?.screenshots || 0); index += 1) {
+    artifacts.push({
+      type: 'screenshot_persisted',
+      persisted: true,
+      index,
+      downloadUrl: `/api/test-executions/${encodeURIComponent(executionId)}/artifact/screenshot/${index}`,
+    });
+  }
+
   return {
-    executionId: status.executionId,
-    source: status.source,
+    executionId: status?.executionId || manifest.executionId || String(executionId),
+    source: status?.source || 'rpa_tests',
+    recordingId: recordingId || null,
     artifacts,
   };
+}
+
+/**
+ * Recupera um artefato persistido de uma execução RPA (roteiro, replay, trace
+ * visual ou screenshot) para download/serialização.
+ *
+ * Retorna:
+ *  - { kind, contentType, filename, buffer } para binários (trace/screenshot)
+ *  - { kind, contentType: 'application/json', json } para roteiro/replay
+ *  - null quando o artefato não existe.
+ */
+async function getExecutionArtifact(executionId, kind, index = null, tenantId = 'system') {
+  const cleanId = String(executionId || '').trim();
+  const cleanKind = String(kind || '').trim().toLowerCase();
+  const scopedTenantId = normalizeTenantKey(tenantId);
+
+  if (cleanKind === 'recording') {
+    const manifest = await getExecutionManifest(cleanId, scopedTenantId);
+    const recordingId = manifest?.recordingId || getExecutionStatus(cleanId, scopedTenantId)?.recordingId || null;
+    if (!recordingId) return null;
+    const recording = await getPersistedRecording(recordingId, scopedTenantId);
+    if (!recording) return null;
+    return {
+      kind: 'recording',
+      contentType: 'application/json',
+      filename: `${recordingId}.recording.json`,
+      json: recording,
+    };
+  }
+
+  if (cleanKind === 'replay') {
+    const replay = await getPersistedReplay(cleanId, scopedTenantId);
+    if (!replay) return null;
+    return {
+      kind: 'replay',
+      contentType: 'application/json',
+      filename: `${cleanId}.replay.json`,
+      json: replay,
+    };
+  }
+
+  if (cleanKind === 'trace') {
+    const buffer = await getTraceBuffer(cleanId, scopedTenantId);
+    if (!buffer) return null;
+    return {
+      kind: 'trace',
+      contentType: 'application/zip',
+      filename: `${cleanId}.trace.zip`,
+      buffer,
+    };
+  }
+
+  if (cleanKind === 'screenshot') {
+    const screenshotIndex = Number.parseInt(String(index), 10);
+    if (!Number.isFinite(screenshotIndex) || screenshotIndex < 0) return null;
+    const buffer = await getScreenshotBuffer(`${cleanId}-${screenshotIndex}`, scopedTenantId);
+    if (!buffer) return null;
+    return {
+      kind: 'screenshot',
+      contentType: 'image/png',
+      filename: `${cleanId}.screenshot-${screenshotIndex}.png`,
+      buffer,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Lista as execuções RPA persistidas no banco (roteiro + trace + replay),
+ * com os campos necessários para a UI de consulta.
+ */
+async function listExecutionArtifacts(tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const manifests = await listExecutionManifests(scopedTenantId);
+  const items = [];
+  for (const meta of manifests) {
+    const manifest = await getExecutionManifest(meta.refId, scopedTenantId);
+    if (!manifest) continue;
+    items.push({
+      executionId: manifest.executionId || meta.refId,
+      recordingId: manifest.recordingId || null,
+      status: manifest.status || null,
+      hasRecording: !!manifest.recording,
+      hasTrace: !!manifest.trace,
+      hasReplay: !!manifest.replay,
+      screenshots: Number(manifest.screenshots || 0),
+      startedAt: manifest.startedAt || null,
+      finishedAt: manifest.finishedAt || null,
+      persistedAt: manifest.persistedAt || meta.createdAt || null,
+    });
+  }
+  return items;
 }
 
 function listReplayFiles({
@@ -833,8 +999,10 @@ function listReplayFiles({
   scenarioId = '',
   seedId = '',
   executionId = '',
+  tenantId = 'system',
 } = {}) {
-  const replayDirs = getAllReplayReadDirs().filter((dirPath) => fs.existsSync(dirPath));
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const replayDirs = getAllReplayReadDirs(scopedTenantId).filter((dirPath) => fs.existsSync(dirPath));
   const filters = {
     search: normalizeText(search).trim(),
     result: String(result || 'all'),
@@ -845,6 +1013,7 @@ function listReplayFiles({
     scenarioId: normalizeText(scenarioId).trim(),
     seedId: normalizeText(seedId).trim(),
     executionId: normalizeText(executionId).trim(),
+    tenantId: scopedTenantId,
   };
   const safeSortBy = String(sortBy || 'date');
   const safeSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
@@ -892,6 +1061,11 @@ function listReplayFiles({
       const replayType = extractJsonStringField(prefix, 'type');
       const explicitSource = extractJsonStringField(prefix, 'source');
       const replayMeta = {
+        tenantId: extractJsonStringField(prefix, 'tenantId')
+          || extractJsonStringField(prefix, 'tenantKey')
+          || extractJsonStringField(prefix, 'tenant_id')
+          || extractJsonStringField(prefix, 'tenant_key')
+          || 'system',
         replayId: extractJsonStringField(prefix, 'replayId') || extractJsonStringField(prefix, 'id') || entry.name.replace(/\.json$/i, ''),
         // Em artefatos legados finalizados, scenarioId/seedId ficavam após o
         // array journeySteps (fora do prefixo lido). Para replays QA Waves,
@@ -925,7 +1099,6 @@ function listReplayFiles({
 
       unique.set(entry.name, {
         filename: entry.name,
-        path: fullPath,
         size: stat.size,
         modifiedAt: stat.mtime.toISOString(),
         ...replayMeta,
@@ -951,31 +1124,43 @@ function listReplayFiles({
   return paginateResult(sorted);
 }
 
-function getReplayFile(filename) {
+function getReplayFile(filename, tenantId = 'system') {
   const safeName = ensureSafeJsonFilename(filename);
-  const replayPath = findFirstExistingFile(getAllReplayReadDirs(), safeName);
-  if (!replayPath) return null;
-  const parsed = JSON.parse(fs.readFileSync(replayPath, 'utf8'));
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const owned = findOwnedJsonFile(getAllReplayReadDirs(scopedTenantId), safeName, scopedTenantId);
+  if (!owned) return null;
+  const { filePath: replayPath, payload: parsed } = owned;
+  const signed = Boolean(parsed.replayHash || parsed.replayChecksum || parsed.governanceSignature);
+  if (signed || process.env.NODE_ENV === 'production') {
+    const integrity = validateReplayIntegrity(parsed, parsed.governance || parsed.governanceResult || {}, {
+      maxAgeMs: -1,
+    });
+    if (!integrity.valid) return null;
+  }
+  // Não transforme evidência assinada em memória: o objeto entregue pela API
+  // deve continuar verificável exatamente como foi persistido.
+  if (signed) return parsed;
   const normalized = normalizeAndReconcileReplayPayload(parsed);
   persistReplayIfChanged(replayPath, parsed, normalized);
-  return normalized;
+  return redactDeep(normalized);
 }
 
-function getReportFile(filename) {
+function getReportFile(filename, tenantId = 'system') {
   const safeName = ensureSafeJsonFilename(filename);
-  const reportPath = findFirstExistingFile(getRpaReportReadDirs(), safeName);
-  if (!reportPath) return null;
-  return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const owned = findOwnedJsonFile(getRpaReportReadDirs(scopedTenantId), safeName, scopedTenantId);
+  return owned ? redactDeep(owned.payload) : null;
 }
 
-function deleteReplayFile(filename) {
+function deleteReplayFile(filename, tenantId = 'system') {
   const safeName = ensureSafeJsonFilename(filename);
-  const replayPath = findFirstExistingFile(getAllReplayReadDirs(), safeName);
-  if (!replayPath) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const owned = findOwnedJsonFile(getAllReplayReadDirs(scopedTenantId), safeName, scopedTenantId);
+  if (!owned) {
     throw makeError('Replay não encontrado', 'NOT_FOUND');
   }
 
-  fs.unlinkSync(replayPath);
+  fs.unlinkSync(owned.filePath);
   replayListCache = null;
   replayListCacheMtimes = null;
 
@@ -986,8 +1171,9 @@ function deleteReplayFile(filename) {
   };
 }
 
-function deleteAllReplayFiles() {
-  const replayDirs = getAllReplayReadDirs().filter((dirPath) => fs.existsSync(dirPath));
+function deleteAllReplayFiles(tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const replayDirs = getAllReplayReadDirs(scopedTenantId).filter((dirPath) => fs.existsSync(dirPath));
 
   let deletedRoot = 0;
   let deletedSystem = 0;
@@ -995,8 +1181,15 @@ function deleteAllReplayFiles() {
     const rootEntries = fs.readdirSync(replayDir, { withFileTypes: true });
     for (const entry of rootEntries) {
       if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-      fs.unlinkSync(path.join(replayDir, entry.name));
-      deletedRoot += 1;
+      const filePath = path.join(replayDir, entry.name);
+      try {
+        const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        if (!belongsToTenant(parsed, scopedTenantId)) continue;
+        fs.unlinkSync(filePath);
+        deletedRoot += 1;
+      } catch (_) {
+        // Arquivo inválido não é apagado por uma operação tenant-scoped.
+      }
     }
 
     const systemDir = path.join(replayDir, 'system');
@@ -1004,8 +1197,15 @@ function deleteAllReplayFiles() {
     const systemEntries = fs.readdirSync(systemDir, { withFileTypes: true });
     for (const entry of systemEntries) {
       if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-      fs.unlinkSync(path.join(systemDir, entry.name));
-      deletedSystem += 1;
+      const filePath = path.join(systemDir, entry.name);
+      try {
+        const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        if (!belongsToTenant(parsed, scopedTenantId)) continue;
+        fs.unlinkSync(filePath);
+        deletedSystem += 1;
+      } catch (_) {
+        // Arquivo inválido não é apagado por uma operação tenant-scoped.
+      }
     }
   }
 
@@ -1026,6 +1226,8 @@ module.exports = {
   getExecutionStatus,
   cancelUnifiedExecution,
   getExecutionArtifacts,
+  getExecutionArtifact,
+  listExecutionArtifacts,
   listRecordings,
   startManualRecording,
   stopManualRecording,

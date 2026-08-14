@@ -18,6 +18,7 @@ const {
 const operationalReplayValidator = require('../../api/services/qa/operationalReplayValidator');
 const stateSnapshotService = require('../../api/services/qa/stateSnapshotService');
 const { signReplayArtifact } = require('../../api/services/qa/replayIntegrityService');
+const { writeJsonAtomic } = require('../../api/utils/atomicJsonFile');
 const {
   getOperationalStepContract,
   getExpectedMutationsForStep,
@@ -3130,11 +3131,11 @@ async function runFinalOperationalSmoke(options = {}) {
       const outDir = options.outDir || PROD_LIKE_SMOKE_DIR;
       fs.mkdirSync(outDir, { recursive: true });
       const outPath = path.join(outDir, 'qa-waves-operational-prod-like-smoke.json');
-      fs.writeFileSync(outPath, JSON.stringify(summary, null, 2) + '\n', 'utf8');
       summary.evidencePath = outPath;
+      writeJsonAtomic(outPath, summary);
       for (const flow of flows) {
         const replayPath = path.join(outDir, `${flow.journeyId}-replay.json`);
-        fs.writeFileSync(replayPath, JSON.stringify(flow.replay, null, 2) + '\n', 'utf8');
+        writeJsonAtomic(replayPath, flow.replay);
       }
       return summary;
     } finally {
@@ -3237,8 +3238,8 @@ async function runFinalOperationalSmoke(options = {}) {
     const outDir = options.outDir || path.join(process.cwd(), 'qa', 'smoke');
     fs.mkdirSync(outDir, { recursive: true });
     const outPath = path.join(outDir, 'qa-waves-operational-final-smoke.json');
-    fs.writeFileSync(outPath, JSON.stringify(summary, null, 2) + '\n', 'utf8');
     summary.evidencePath = outPath;
+    writeJsonAtomic(outPath, summary);
     return summary;
   } finally {
     await new Promise((resolve) => fixture.server.close(resolve));

@@ -325,39 +325,9 @@ if [ -f ".env" ]; then
     export $(grep -v '^#' .env | grep -v '^$' | xargs 2>/dev/null)
 fi
 
-# Garante runtime externo ao workspace para evitar crash da API
-PROJECT_ROOT_ABS="$(cd "$PROJECT_ROOT" && pwd -P)"
-
-if [ -z "$RUNTIME_ROOT" ]; then
-    RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
-    echo -e "${YELLOW}RUNTIME_ROOT não definido. Usando padrão: $RUNTIME_ROOT${NC}"
-fi
-
-mkdir -p "$RUNTIME_ROOT" 2>/dev/null || true
-RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" 2>/dev/null && pwd -P)"
-
-if [ -z "$RUNTIME_ROOT_ABS" ]; then
-    RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
-    mkdir -p "$RUNTIME_ROOT"
-    RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" && pwd -P)"
-fi
-
-case "$RUNTIME_ROOT_ABS" in
-    "$PROJECT_ROOT_ABS"|"$PROJECT_ROOT_ABS"/*)
-        RUNTIME_ROOT="/tmp/ragent2-runtime-dev"
-        mkdir -p "$RUNTIME_ROOT"
-        RUNTIME_ROOT_ABS="$(cd "$RUNTIME_ROOT" && pwd -P)"
-        echo -e "${YELLOW}RUNTIME_ROOT apontava para dentro do workspace. Ajustado para: $RUNTIME_ROOT_ABS${NC}"
-        ;;
-esac
-
-export RUNTIME_ROOT="$RUNTIME_ROOT_ABS"
-echo -e "${GREEN}✅ RUNTIME_ROOT ativo: $RUNTIME_ROOT${NC}"
+# Runtime root agora é resolvido pela aplicação (default OS-aware); sem env var.
 
 PGDATABASE=${PGDATABASE:-r_agent2}
-PGHOST=${PGHOST:-localhost}
-PGUSER=${PGUSER:-postgres}
-PGPASSWORD=${PGPASSWORD:-}
 PGPORT=${PGPORT:-5432}
 
 # Exporta PGPASSWORD para uso pelo psql

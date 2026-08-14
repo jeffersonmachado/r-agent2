@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
+const { runtimeAwarePath, resolveWorkspacePath, getRuntimeRoot } = require('./lib/runtime-paths');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const REPORT_PATH = runtimeAwarePath(ROOT_DIR, 'qa/reproducibility-report.json', 'REPRODUCIBILITY_REPORT_PATH');
@@ -124,7 +124,7 @@ function main() {
     startedAt,
     finishedAt: new Date().toISOString(),
     status: hasFailure ? 'NO_GO' : 'GO',
-    runtimeRoot: process.env.RUNTIME_ROOT || null,
+    runtimeRoot: getRuntimeRoot(ROOT_DIR),
     options: {
       installDeps: String(process.env.SYSTEM_REPRO_INSTALL_DEPS || '0') === '1',
       runBootstrapFull: String(process.env.SYSTEM_REPRO_RUN_BOOTSTRAP_FULL || '0') === '1',

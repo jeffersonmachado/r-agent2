@@ -10,7 +10,7 @@
  *   node scripts/qa-waves-generate-seeds.js --scenarioId=fitness_booking_experimental_class [--quantity=5]
  */
 
-process.env.RUNTIME_ROOT = process.env.RUNTIME_ROOT || '/tmp/ragent2-runtime';
+require('../api/utils/runtimePaths').configureRuntimeRoot('/tmp/ragent2-runtime');
 
 const { generateSeedsForScenario } = require('../api/services/qaWavesIntelligenceService');
 const { listLatestScenarios } = require('../api/services/qaWavesScenarioService');

@@ -170,7 +170,7 @@ describe('ragService', () => {
       ).rejects.toThrow('tenantId é obrigatório');
     });
 
-    it('deve enviar filtros corretamente', async () => {
+    it('ignora ACL forjada quando não há identidade autenticada', async () => {
       fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -194,10 +194,32 @@ describe('ragService', () => {
       const callArgs = fetch.mock.calls[fetch.mock.calls.length - 1];
       const body = JSON.parse(callArgs[1].body);
 
-      expect(body.filters.roles).toEqual(['admin']);
-      expect(body.filters.agentId).toBe('agent-001');
+      expect(body.filters.roles).toEqual([]);
+      expect(body.filters.agentId).toBeNull();
       expect(body.options.topK).toBe(10);
       expect(body.options.minScore).toBe(0.7);
+    });
+
+    it('deriva classificação e ACL da identidade autenticada', async () => {
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, response: 'Resposta', sources: [], confidence: 0.7 }),
+        text: async () => '{}',
+        status: 200,
+      });
+
+      await ragService.queryRag(
+        'Como investigar este incidente?',
+        'tenant-001',
+        { actor: { id: 'auditor-1', role: 'auditor' } },
+        { roles: ['forjada'], agentId: 'forjado' }
+      );
+
+      const callArgs = fetch.mock.calls[fetch.mock.calls.length - 1];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.scope.classifications).toEqual(['PRODUCTION', 'SUPPORT']);
+      expect(body.filters.roles).toEqual(['auditor']);
+      expect(body.filters.agentId).toBe('auditor-1');
     });
 
     it('deve tratar erro do serviço RAG', async () => {
@@ -245,7 +267,7 @@ describe('ragService', () => {
     });
 
     it('deve enviar header interno quando RAG_INTERNAL_TOKEN está configurado', async () => {
-      process.env.RAG_INTERNAL_TOKEN = 'token-teste';
+      process.env.RAG_INTERNAL_TOKEN = 'token-teste-com-pelo-menos-32-bytes';
 
       fetch.mockResolvedValueOnce({
         ok: true,
@@ -260,10 +282,10 @@ describe('ragService', () => {
       const callArgs = fetch.mock.calls[fetch.mock.calls.length - 1];
       expect(callArgs[0]).toBe('http://localhost:9000/rag/embeddings');
       expect(callArgs[1].headers['Content-Type']).toBe('application/json');
-      expect(callArgs[1].headers['X-RAG-Internal-Token']).toBe('token-teste');
+      expect(callArgs[1].headers['X-RAG-Internal-Token']).toBe('token-teste-com-pelo-menos-32-bytes');
     });
 
-    it('não deve enviar header interno quando RAG_INTERNAL_TOKEN não está configurado', async () => {
+    it('deve falhar fechado quando RAG_INTERNAL_TOKEN não está configurado', async () => {
       delete process.env.RAG_INTERNAL_TOKEN;
 
       fetch.mockResolvedValueOnce({
@@ -273,10 +295,17 @@ describe('ragService', () => {
         status: 200,
       });
 
-      await ragService.generateEmbeddingsBatch(['texto de teste'], 'tenant-001');
+      await expect(ragService.generateEmbeddingsBatch(['texto de teste'], 'tenant-001'))
+        .rejects.toMatchObject({ code: 'rag_internal_auth_misconfigured' });
+      expect(fetch).not.toHaveBeenCalled();
+    });
 
-      const callArgs = fetch.mock.calls[fetch.mock.calls.length - 1];
-      expect(callArgs[1].headers['X-RAG-Internal-Token']).toBeUndefined();
+    it('deve rejeitar RAG_INTERNAL_TOKEN curto ou placeholder', async () => {
+      process.env.RAG_INTERNAL_TOKEN = 'token-curto';
+
+      await expect(ragService.generateEmbeddingsBatch(['texto de teste'], 'tenant-001'))
+        .rejects.toMatchObject({ code: 'rag_internal_auth_misconfigured' });
+      expect(fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -309,7 +338,10 @@ describe('ragService', () => {
         'http://localhost:9000/rag/index',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-RAG-Internal-Token': expect.any(String),
+          }),
         })
       );
     });
@@ -590,4 +622,3 @@ describe('ragService', () => {
     });
   });
 });
-

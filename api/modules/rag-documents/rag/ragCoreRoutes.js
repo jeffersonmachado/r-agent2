@@ -7,6 +7,14 @@ const {
   logRagAction,
   resolveScopedTenantId,
 } = require('./ragRouteUtils');
+const { resolveRetrievalScope } = require('../../../../src/core/knowledge-plane');
+const { getClassificationForAgent } = require('../../agent-os/experience-segregation');
+
+const SENSITIVITY_BY_CLASSIFICATION = Object.freeze({
+  PRODUCTION: Object.freeze(['PUBLIC', 'INTERNAL']),
+  SUPPORT: Object.freeze(['PUBLIC', 'INTERNAL', 'CONFIDENTIAL']),
+  DEVELOPMENT: Object.freeze(['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'RESTRICTED']),
+});
 
 async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
   const respondInternalError = createInternalErrorResponder(req, res, deps, 'Erro ao processar rota core do RAG:');
@@ -84,7 +92,7 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
       if (!tenantId) return true;
 
       const documentId = decodeURIComponent(pathname.slice('/rag/documents/'.length));
-      const document = await deps.ragDocumentsService.getDocumentWithContent(documentId);
+      const document = await deps.ragDocumentsService.getDocumentWithContent(documentId, tenantId);
 
       if (!document || (document.tenantId && document.tenantId !== tenantId)) {
         deps.sendJson(res, 404, { error: 'document_not_found' });
@@ -125,6 +133,40 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
 
     try {
       const body = await deps.parseJsonBody(req);
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        deps.badRequest(res, 'Corpo JSON deve ser um objeto');
+        return true;
+      }
+      if (body && Object.prototype.hasOwnProperty.call(body, 'id')) {
+        deps.badRequest(res, 'O campo id é gerado pelo servidor e não pode ser informado');
+        return true;
+      }
+      const requestedDomain = String(body?.domain || 'OPERATIONAL').trim().toUpperCase();
+      const documentScope = resolveRetrievalScope({ actor: req.agent, requestedDomain });
+      if (!documentScope.allowed) {
+        deps.sendJson(res, 403, { error: 'domain_not_allowed', message: 'Domínio de conhecimento não autorizado para este perfil' });
+        return true;
+      }
+      const requestedClassification = String(
+        body?.classification || documentScope.scope.classifications[0]
+      ).trim().toUpperCase();
+      if (!documentScope.scope.classifications.includes(requestedClassification)) {
+        deps.sendJson(res, 403, { error: 'classification_not_allowed', message: 'Classificação do documento não autorizada para este perfil' });
+        return true;
+      }
+      const actorClassification = String(
+        req.agent?.classification || getClassificationForAgent(req.agent) || 'PRODUCTION'
+      ).toUpperCase();
+      const requestedSensitivity = String(body?.sensitivity || 'INTERNAL').trim().toUpperCase();
+      const allowedSensitivities = SENSITIVITY_BY_CLASSIFICATION[actorClassification]
+        || SENSITIVITY_BY_CLASSIFICATION.PRODUCTION;
+      if (!allowedSensitivities.includes(requestedSensitivity)) {
+        deps.sendJson(res, 403, { error: 'sensitivity_not_allowed', message: 'Sensibilidade do documento não autorizada para este perfil' });
+        return true;
+      }
+      body.domain = documentScope.scope.domain;
+      body.classification = requestedClassification;
+      body.sensitivity = requestedSensitivity;
       const requestTenantId = req.tenantId || req.agent?.tenantId || null;
       const isSuperAdminUser = deps.isSuperAdmin(req.agent);
 
@@ -156,7 +198,11 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
 
       const result = await deps.createDocument(body, finalTenantId);
       if (!result.success) {
-        deps.sendJson(res, 400, { error: 'creation_failed', message: result.error });
+        const persistenceUnavailable = result.errorCode === 'PERSISTENCE_REQUIRED';
+        deps.sendJson(res, persistenceUnavailable ? 503 : 400, {
+          error: persistenceUnavailable ? 'persistence_required' : (result.errorCode || 'creation_failed'),
+          message: persistenceUnavailable ? 'Persistência PostgreSQL indisponível' : result.error,
+        });
         return true;
       }
 
@@ -215,12 +261,61 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
     if (!ensureJsonRequest({ req, res, deps })) return true;
 
     try {
+      const tenantId = deps.requireTenant(req, res);
+      if (!tenantId) return true;
       const documentId = decodeURIComponent(pathname.slice('/rag/documents/'.length));
       const body = await deps.parseJsonBody(req);
-      const result = await deps.updateDocument(documentId, body);
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        deps.badRequest(res, 'Corpo JSON deve ser um objeto');
+        return true;
+      }
+      const currentDocument = await deps.ragDocumentsService.getDocumentWithContent(documentId, tenantId);
+      if (!currentDocument) {
+        deps.sendJson(res, 404, { error: 'document_not_found' });
+        return true;
+      }
+      const updatesPolicyFields = ['domain', 'classification', 'sensitivity']
+        .some((field) => Object.prototype.hasOwnProperty.call(body || {}, field));
+      if (updatesPolicyFields) {
+        const requestedDomain = String(body.domain || currentDocument.domain || 'OPERATIONAL').trim().toUpperCase();
+        const documentScope = resolveRetrievalScope({ actor: req.agent, requestedDomain });
+        if (!documentScope.allowed) {
+          deps.sendJson(res, 403, { error: 'domain_not_allowed', message: 'Domínio de conhecimento não autorizado para este perfil' });
+          return true;
+        }
+        const requestedClassification = String(
+          body.classification || currentDocument.classification || documentScope.scope.classifications[0]
+        ).trim().toUpperCase();
+        if (!documentScope.scope.classifications.includes(requestedClassification)) {
+          deps.sendJson(res, 403, { error: 'classification_not_allowed', message: 'Classificação do documento não autorizada para este perfil' });
+          return true;
+        }
+        const actorClassification = String(
+          req.agent?.classification || getClassificationForAgent(req.agent) || 'PRODUCTION'
+        ).toUpperCase();
+        const requestedSensitivity = String(
+          body.sensitivity || currentDocument.sensitivity || 'INTERNAL'
+        ).trim().toUpperCase();
+        const allowedSensitivities = SENSITIVITY_BY_CLASSIFICATION[actorClassification]
+          || SENSITIVITY_BY_CLASSIFICATION.PRODUCTION;
+        if (!allowedSensitivities.includes(requestedSensitivity)) {
+          deps.sendJson(res, 403, { error: 'sensitivity_not_allowed', message: 'Sensibilidade do documento não autorizada para este perfil' });
+          return true;
+        }
+        body.domain = documentScope.scope.domain;
+        body.classification = requestedClassification;
+        body.sensitivity = requestedSensitivity;
+      }
+      const result = await deps.updateDocument(documentId, body, tenantId);
 
       if (!result.success) {
-        deps.sendJson(res, 400, { error: 'update_failed', message: result.error });
+        const status = result.errorCode === 'document_not_found'
+          ? 404
+          : (result.errorCode === 'PERSISTENCE_REQUIRED' ? 503 : 500);
+        deps.sendJson(res, status, {
+          error: result.errorCode === 'PERSISTENCE_REQUIRED' ? 'persistence_required' : (result.errorCode || 'update_failed'),
+          message: result.errorCode === 'PERSISTENCE_REQUIRED' ? 'Persistência PostgreSQL indisponível' : result.error,
+        });
         return true;
       }
 
@@ -247,11 +342,19 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
     if (!ensureRagPermission({ req, res, deps, permission: 'delete' })) return true;
 
     try {
+      const tenantId = deps.requireTenant(req, res);
+      if (!tenantId) return true;
       const documentId = decodeURIComponent(pathname.slice('/rag/documents/'.length));
-      const result = await deps.deleteDocument(documentId);
+      const result = await deps.deleteDocument(documentId, tenantId);
 
       if (!result.success) {
-        deps.sendJson(res, 400, { error: 'delete_failed', message: result.error });
+        const status = result.errorCode === 'document_not_found'
+          ? 404
+          : (result.errorCode === 'PERSISTENCE_REQUIRED' ? 503 : 400);
+        deps.sendJson(res, status, {
+          error: result.errorCode === 'PERSISTENCE_REQUIRED' ? 'persistence_required' : (result.errorCode || 'delete_failed'),
+          message: result.errorCode === 'PERSISTENCE_REQUIRED' ? 'Persistência PostgreSQL indisponível' : result.error,
+        });
         return true;
       }
 

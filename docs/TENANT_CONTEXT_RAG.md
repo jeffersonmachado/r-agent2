@@ -160,14 +160,12 @@ O site é indexado **apenas para o tenant específico**, garantindo isolamento c
 - **Tenant Context**: Cada tenant possui seu próprio contexto cognitivo
 - **Documentos RAG**: Todos os documentos possuem `tenantId` e são filtrados antes da busca
 
-### 2. **Isolamento em Memória**
+### 2. **Persistência autoritativa e cache leve**
 
-O serviço Python mantém instâncias separadas em memória:
-
-```python
-_vector_stores: Dict[str, Any] = {}  # tenantId -> VectorStore
-_chunks_metadata: Dict[str, Dict[str, Chunk]] = {}  # tenantId -> {chunkId: Chunk}
-```
+Objetos `VectorStore` em memória são apenas wrappers vinculados ao tenant.
+Chunks, embeddings e metadados vivem no PostgreSQL/pgvector; não há fallback de
+persistência em Maps ou dicionários. O cache Node também é auxiliar e nunca
+substitui a fonte autoritativa.
 
 ### 3. **Validação de Isolamento**
 
@@ -178,8 +176,12 @@ Todas as operações RAG validam o `tenantId`:
 if not request.tenantId:
     raise HTTPException(status_code=400, detail="tenantId é obrigatório")
 
-vector_store = get_vector_store(request.tenantId)  # Isolado por tenant
+vector_store = get_vector_store(request.tenantId)  # wrapper vinculado ao tenant
 ```
+
+Na recuperação, o SQL aplica `tenant_key`, domínio, classificação,
+sensibilidade, ACL de roles/agent e documento pai ativo/indexado antes do
+cálculo de similaridade.
 
 ## 📝 Contratos JSON
 
@@ -393,4 +395,3 @@ npm test -- tests/tenant/tenantIsolation.test.js
 
 - [RAG por Tenant](./RAG_POR_TENANT.md) - Documentação sobre isolamento RAG
 - [Configuração RAG](./CONFIGURACAO_RAG_CENTRALIZADA.md) - Configuração do serviço RAG
-

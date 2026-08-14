@@ -87,6 +87,8 @@ export function QaWavesPage() {
   const [scenarioEditor, setScenarioEditor] = useState('');
   const [inferGoal, setInferGoal] = useState('aula experimental');
   const [inferenceJourneyId, setInferenceJourneyId] = useState('auto');
+  const [journeyReview, setJourneyReview] = useState(null);
+  const [loadingJourneyReview, setLoadingJourneyReview] = useState(false);
   const [runReplayId, setRunReplayId] = useState('');
   const [selectedSeedId, setSelectedSeedId] = useState('');
   const [currentExecutionId, setCurrentExecutionId] = useState('');
@@ -550,6 +552,93 @@ export function QaWavesPage() {
       notifySuccess('Cenário inferido por IA e normalizado para passos semânticos.');
     } catch (err) {
       notifyError(err?.message || 'Falha ao inferir cenário com IA');
+    }
+  }
+
+  // ─── Revisão de Jornada (inferir → desalinhamento → ajustar → re-inferir →
+  //      aprovar → atualizar) ───────────────────────────────────────────────
+
+  function resolveReviewJourneyId() {
+    return inferenceJourneyId !== 'auto' ? inferenceJourneyId : (selectedJourneyId || 'leads');
+  }
+
+  async function reviewJourney() {
+    const vertical = selectedDomainId || 'fitness';
+    const journeyId = resolveReviewJourneyId();
+    if (!journeyId) {
+      notifyError('Selecione uma jornada para revisar.');
+      return;
+    }
+    setLoadingJourneyReview(true);
+    setJourneyReview(null);
+    try {
+      const data = await fetchJson('/api/qa-waves/review-journey/infer', {
+        method: 'POST',
+        body: JSON.stringify({ vertical, journeyId, goal: inferGoal }),
+      });
+      setJourneyReview(data);
+      if (data.inferredScenario) {
+        setScenarioEditor(JSON.stringify(data.inferredScenario, null, 2));
+        setSelectedScenarioId(data.inferredScenario.id || '');
+        if (data.inferredScenario.vertical) setSelectedDomainId(data.inferredScenario.vertical);
+        if (data.inferredScenario.journeyId) setSelectedJourneyId(data.inferredScenario.journeyId);
+      }
+      notifySuccess(`Jornada revisada: ${(data.misalignment || []).length} desalinhamento(s), ${(data.suggestions || []).length} sugestão(ões).`);
+    } catch (err) {
+      notifyError(err?.message || 'Falha ao revisar a jornada');
+    } finally {
+      setLoadingJourneyReview(false);
+    }
+  }
+
+  async function reInferJourney() {
+    const vertical = selectedDomainId || 'fitness';
+    const journeyId = resolveReviewJourneyId();
+    let baseScenario = null;
+    try { baseScenario = JSON.parse(scenarioEditor); } catch (_) { baseScenario = null; }
+    setLoadingJourneyReview(true);
+    try {
+      const data = await fetchJson('/api/qa-waves/review-journey/infer', {
+        method: 'POST',
+        body: JSON.stringify({ vertical, journeyId, goal: inferGoal, baseScenario }),
+      });
+      setJourneyReview(data);
+      if (data.inferredScenario) {
+        setScenarioEditor(JSON.stringify(data.inferredScenario, null, 2));
+        setSelectedScenarioId(data.inferredScenario.id || '');
+      }
+      notifySuccess('Nova inferência concluída. Revise o resultado e aprove.');
+    } catch (err) {
+      notifyError(err?.message || 'Falha na nova inferência');
+    } finally {
+      setLoadingJourneyReview(false);
+    }
+  }
+
+  async function approveJourneyReview() {
+    let scenario;
+    try {
+      scenario = JSON.parse(scenarioEditor);
+    } catch (_) {
+      notifyError('Editor com JSON inválido. Corrija antes de aprovar.');
+      return;
+    }
+    try {
+      const data = await fetchJson('/api/qa-waves/review-journey/apply', {
+        method: 'POST',
+        body: JSON.stringify({
+          scenario,
+          approved: true,
+          reviewToken: journeyReview?.reviewToken,
+          changes: ['revisão de jornada aprovada'],
+        }),
+      });
+      setScenarioEditor(JSON.stringify(data.scenario, null, 2));
+      setSelectedScenarioId(data.scenario?.id || '');
+      await loadScenarios();
+      notifySuccess(`Jornada atualizada (versão ${data.scenario?.version}).`);
+    } catch (err) {
+      notifyError(err?.message || 'Falha ao aprovar e atualizar a jornada');
     }
   }
 
@@ -1073,6 +1162,16 @@ export function QaWavesPage() {
                 ))}
               </select>
               <button type="button" onClick={inferScenario}>✦ IA</button>
+              <button
+                type="button"
+                onClick={reviewJourney}
+                disabled={loadingJourneyReview}
+                className="qa-btn-primary"
+                data-testid="qa-waves-review-journey-button"
+                title="Inferir a jornada, mostrar desalinhamentos e sugerir correções"
+              >
+                {loadingJourneyReview ? 'Revisando…' : '🔍 Revisar jornada'}
+              </button>
               <button type="button" onClick={validateScenario}>✓ Validar</button>
               <button type="button" onClick={saveScenario}>⎘ Salvar</button>
               <button type="button" onClick={createBlankScenario}>+ Novo</button>
@@ -1080,6 +1179,80 @@ export function QaWavesPage() {
               <button type="button" onClick={() => setShowExecutionsModal(true)}>▣ Execuções</button>
             </div>
           </div>
+
+          {journeyReview && (
+            <div
+              data-testid="qa-waves-journey-review-panel"
+              style={{
+                border: '1px solid var(--color-border-default)',
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 16,
+                background: 'var(--color-bg-elevated)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                <h3 style={{ margin: 0, fontSize: 14 }}>🔍 Revisão da Jornada {journeyReview.journeyId}</h3>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button type="button" onClick={reInferJourney} disabled={loadingJourneyReview}>
+                    {loadingJourneyReview ? 'Inferindo…' : '↻ Nova inferência'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={approveJourneyReview}
+                    className="qa-btn-primary"
+                    disabled={loadingJourneyReview || !journeyReview.reviewToken}
+                  >
+                    ✓ Aprovar e atualizar jornada
+                  </button>
+                </div>
+              </div>
+
+              {(journeyReview.misalignment || []).length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <strong style={{ fontSize: 13 }}>Desalinhamentos ({journeyReview.misalignment.length})</strong>
+                  <ul style={{ margin: '4px 0 0 16px', fontSize: 12 }}>
+                    {journeyReview.misalignment.map((item, i) => (
+                      <li key={i} style={{ marginBottom: 3 }}>
+                        <span style={{
+                          color: item.severity === 'critical' ? 'var(--color-status-error)'
+                            : item.severity === 'warning' ? 'var(--color-status-warning)'
+                            : 'var(--color-text-secondary)',
+                          fontWeight: 600,
+                        }}>
+                          [{item.type}]
+                        </span>{' '}
+                        {item.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(journeyReview.suggestions || []).length > 0 && (
+                <details>
+                  <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                    Falhas/gaps e correções sugeridas ({journeyReview.suggestions.length})
+                  </summary>
+                  <ul style={{ margin: '4px 0 0 16px', fontSize: 12 }}>
+                    {journeyReview.suggestions.map((sug, i) => (
+                      <li key={i} style={{ marginBottom: 3 }}>
+                        <span style={{ color: 'var(--color-status-warning)', fontWeight: 600 }}>[{sug.source}]</span>{' '}
+                        {sug.message}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+
+              {journeyReview.inferredScenario && (
+                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 6 }}>
+                  Proposta no editor abaixo (id: {journeyReview.inferredScenario.id}). Ajuste, clique em "↻ Nova inferência" e depois aprove.
+                </div>
+              )}
+            </div>
+          )}
+
           <article className="qa-domain-summary-card">
             <h3>Resumo consolidado do domínio</h3>
             <div className="qa-domain-summary-metrics">

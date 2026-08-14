@@ -5,13 +5,45 @@ Testes do endpoint de consulta RAG.
 import pytest
 from fastapi.testclient import TestClient
 from main import app
+from api.routes import index as index_routes
+from api.routes import query as query_routes
 
-client = TestClient(app)
+client = TestClient(app, backend_options={"use_uvloop": True})
 
 # Token interno obrigatório quando configurado (auth serviço-a-serviço)
 import os as _os
 if _os.getenv("RAG_INTERNAL_TOKEN"):
     client.headers["X-RAG-Internal-Token"] = _os.environ["RAG_INTERNAL_TOKEN"]
+
+
+class _UnitVectorStore:
+    """Double sem corpus: suficiente para validar o contrato HTTP da query."""
+
+    def get_stats(self):
+        return {"documentCount": 0, "chunkCount": 0, "indexSize": 0}
+
+    def add_chunks(self, chunks, _embeddings):
+        return len(chunks)
+
+    def search(self, _embedding, **_kwargs):
+        return []
+
+
+@pytest.fixture(autouse=True)
+def isolate_embedding_and_vector_store(monkeypatch):
+    """Separa testes HTTP de modelo externo e de integração pgvector."""
+    store = _UnitVectorStore()
+    monkeypatch.setattr(query_routes, "generate_embedding", lambda _text: [0.0] * 384)
+    monkeypatch.setattr(query_routes, "get_vector_store", lambda _tenant_id: store)
+    monkeypatch.setattr(
+        index_routes,
+        "generate_embeddings_batch",
+        lambda texts: [
+            [1.0 if dimension == (index % 384) else 0.0 for dimension in range(384)]
+            for index, _text in enumerate(texts)
+        ],
+    )
+    monkeypatch.setattr(index_routes, "get_vector_store", lambda _tenant_id: store)
 
 
 @pytest.fixture
@@ -62,7 +94,8 @@ def test_query_empty_query():
     }
     
     response = client.post("/rag/query", json=request)
-    assert response.status_code == 400
+    # O contrato Pydantic rejeita min_length antes do handler.
+    assert response.status_code == 422
 
 
 def test_query_missing_tenant():
@@ -168,4 +201,3 @@ def test_query_sources_structure(indexed_document):
         assert "excerpt" in source
         assert isinstance(source["score"], (int, float))
         assert 0.0 <= source["score"] <= 1.0
-

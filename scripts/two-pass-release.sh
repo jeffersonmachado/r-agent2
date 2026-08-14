@@ -48,6 +48,10 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+node_with_workspace_env() {
+  node --env-file-if-exists="$PROJECT_ROOT/.env" "$@"
+}
 DIST_DIR="$PROJECT_ROOT/dist"
 source "$SCRIPT_DIR/release-payload-blocklist.sh"
 
@@ -444,7 +448,7 @@ fi
 
 # Materializar proof reports antes do primeiro ZIP
 step "Materializando proof reports..."
-node "$PROJECT_ROOT/tools/system/platform-readiness.js" 2>/dev/null \
+node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js" 2>/dev/null \
   && ok "platform-readiness OK" \
   || warn "platform-readiness retornou NO_GO (continuando)"
 
@@ -486,19 +490,19 @@ pass "PASS 2 — VINCULAÇÃO DE GOVERNANÇA AO PROVISIONAL (H_provisional)"
 # referenciam "${RELEASE_NAME}.zip" + H_provisional.
 
 step "Construindo cadeia de governança (chain)..."
-node "$PROJECT_ROOT/governance/governance-chain.js" 2>/dev/null \
+node_with_workspace_env "$PROJECT_ROOT/governance/governance-chain.js" 2>/dev/null \
   && ok "Chain construída" || warn "Chain build com avisos"
 
 step "Gerando assinaturas (governance.sig, release.sig, manifest.sig, replay.sig)..."
-node "$PROJECT_ROOT/governance/sign-governance.js" 2>/dev/null \
+node_with_workspace_env "$PROJECT_ROOT/governance/sign-governance.js" 2>/dev/null \
   && ok "Assinaturas geradas" || warn "Sign governance com avisos"
 
 step "Gerando replay integrity report..."
-node "$PROJECT_ROOT/governance/replay-integrity.js" 2>/dev/null \
+node_with_workspace_env "$PROJECT_ROOT/governance/replay-integrity.js" 2>/dev/null \
   && ok "Replay integrity OK" || warn "Replay integrity com avisos"
 
 step "Executando rebinding completo ao ZIP provisional..."
-node "$PROJECT_ROOT/governance/rebind-to-current-package.js" \
+node_with_workspace_env "$PROJECT_ROOT/governance/rebind-to-current-package.js" \
   && ok "Rebinding PASS 2 concluído — todos artefatos vinculados a H_provisional" \
   || fail "Rebinding PASS 2 falhou — não é possível prosseguir"
 
@@ -576,7 +580,7 @@ pass "PASS 4 — VINCULAÇÃO SIDECAR AO H_FINAL"
 
 # 4a. Validar ZIP contra manifest de provas (escreve governance/package-validation-report.json)
 step "Validando artefato final contra manifest de provas (pré-chain)..."
-node "$PROJECT_ROOT/governance/package-validator.js" --zip "$FINAL_ZIP" --audited-only 2>/dev/null \
+node_with_workspace_env "$PROJECT_ROOT/governance/package-validator.js" --zip "$FINAL_ZIP" --audited-only 2>/dev/null \
   && ok "Artefato validado — package-validation-report.json atualizado" \
   || warn "package-validator retornou alerta (continuando)"
 
@@ -593,7 +597,7 @@ ok "Manifest final: ${RELEASE_NAME}.manifest.json (sha256=$H_FINAL)"
 # 4c. Atualizar vinculação do pacote em final-consistency-report.json e relatórios cruzados
 # DEVE rodar antes do rebind — final-consistency-report.json é membro da chain
 step "Atualizando package binding (elimina refs stale históricas)..."
-node "$PROJECT_ROOT/governance/update-package-binding.js" 2>/dev/null \
+node_with_workspace_env "$PROJECT_ROOT/governance/update-package-binding.js" 2>/dev/null \
   && ok "Package binding atualizado — final-consistency-report.json limpo" \
   || warn "update-package-binding falhou (continuando)"
 
@@ -601,7 +605,7 @@ node "$PROJECT_ROOT/governance/update-package-binding.js" 2>/dev/null \
 step "Executando rebinding final (GOVERNANCE_STALE_HASH=$H_PROVISIONAL)..."
 # Injeta H_provisional como hash stale explícito para substituição por H_final
 export GOVERNANCE_STALE_HASH="$H_PROVISIONAL"
-node "$PROJECT_ROOT/governance/rebind-to-current-package.js" \
+node_with_workspace_env "$PROJECT_ROOT/governance/rebind-to-current-package.js" \
   && ok "Rebinding PASS 4 concluído — todos sidecar vinculados a H_final" \
   || fail "Rebinding PASS 4 falhou"
 unset GOVERNANCE_STALE_HASH

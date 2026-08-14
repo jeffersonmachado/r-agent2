@@ -151,7 +151,7 @@ async function handleSystemGenerationControlRoutes(ctx) {
       const { emitEvent } = require('../../../services/websocketService');
       const onProgress = (progress) => {
         if (agentId) {
-          emitEvent('generation.progress', progress, { agentId });
+          emitEvent('generation.progress', progress, { tenantId: finalTenantId, agentId });
         } else if (finalTenantId) {
           emitEvent('generation.progress', progress, { tenantId: finalTenantId });
         }

@@ -117,7 +117,8 @@
           "business-beauty-flow-lead",
           "business-beauty-flow-payment"
         ]
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "food-pedido-whatsapp",
@@ -226,7 +227,8 @@
       "updatedAt": "2026-07-22T00:02:12.397458+00:00",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "clinic-ticket-manutencao",
@@ -373,7 +375,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "services-ativacao-solucao",
@@ -460,7 +463,8 @@
       "updatedAt": "2026-07-22T00:02:12.397477+00:00",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "market-publicacao-no",
@@ -547,7 +551,8 @@
       "updatedAt": "2026-07-22T00:02:12.397489+00:00",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "fitness-matricula-leads",
@@ -945,7 +950,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "fitness-matricula-agendamento",
@@ -992,7 +998,8 @@
         "retencao"
       ],
       "reviewedBy": "batch-generator",
-      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store"
+      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store",
+      "tenantId": "system"
     },
     {
       "id": "fitness-matricula-checkout",
@@ -1039,7 +1046,8 @@
         "retencao"
       ],
       "reviewedBy": "batch-generator",
-      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store"
+      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store",
+      "tenantId": "system"
     },
     {
       "id": "fitness-matricula-onboarding",
@@ -1086,7 +1094,8 @@
         "retencao"
       ],
       "reviewedBy": "batch-generator",
-      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store"
+      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store",
+      "tenantId": "system"
     },
     {
       "id": "fitness-matricula-checkin",
@@ -1133,7 +1142,8 @@
         "retencao"
       ],
       "reviewedBy": "batch-generator",
-      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store"
+      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store",
+      "tenantId": "system"
     },
     {
       "id": "fitness-matricula-renovacao",
@@ -1180,7 +1190,8 @@
         "retencao"
       ],
       "reviewedBy": "batch-generator",
-      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store"
+      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store",
+      "tenantId": "system"
     },
     {
       "id": "fitness-matricula-cancelamento",
@@ -1227,7 +1238,8 @@
         "retencao"
       ],
       "reviewedBy": "batch-generator",
-      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store"
+      "deprecationReason": "Esqueleto sem steps substituído por cenário ativo materializado de draft (fitness_full_*); save-scenario rejeita skeleton inválido (sem steps), depreciação aplicada diretamente no store",
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-omnichannel_engagement",
@@ -1545,7 +1557,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-support_ticket_flow",
@@ -1904,7 +1917,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-fitness_customer_checkin",
@@ -2131,7 +2145,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-booking_flow",
@@ -2406,7 +2421,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-payment_charge_flow",
@@ -2641,7 +2657,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-omnichannel_whatsapp",
@@ -2743,7 +2760,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-omnichannel_webchat",
@@ -2891,7 +2909,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-omnichannel_pbx",
@@ -2993,7 +3012,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-omnichannel_email",
@@ -3095,7 +3115,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-support_ticket_flow",
@@ -3197,7 +3218,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-support_ticket_reply",
@@ -3345,7 +3367,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-support_ticket_flow-authenticated_agent",
@@ -3447,7 +3470,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-support_ticket_flow-tenant_loaded",
@@ -3549,7 +3573,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-support_ticket_flow-open_ticket_exists",
@@ -3651,7 +3676,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-support_ticket_flow-ticket_storage_accessible",
@@ -3753,7 +3779,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-customer_identification",
@@ -3847,7 +3874,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-membership_validation",
@@ -3987,7 +4015,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-access_decision",
@@ -4081,7 +4110,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-turnstile_release",
@@ -4225,7 +4255,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-attendance_record",
@@ -4367,7 +4398,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-crm_update",
@@ -4507,7 +4539,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_customer_checkin-crm_contact_exists",
@@ -4601,7 +4634,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_customer_checkin-membership_exists",
@@ -4695,7 +4729,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_customer_checkin-credential_exists",
@@ -4789,7 +4824,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_customer_checkin-device_available",
@@ -4883,7 +4919,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_customer_checkin-attendance_database_accessible",
@@ -4977,7 +5014,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "cap-billing_validation",
@@ -5079,7 +5117,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-omnichannel_engagement-whatsapp_channel_active",
@@ -5181,7 +5220,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-omnichannel_engagement-webchat_channel_active",
@@ -5283,7 +5323,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-omnichannel_engagement-pbx_trunk_active",
@@ -5385,7 +5426,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-omnichannel_engagement-email_gateway_active",
@@ -5487,7 +5529,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-booking_flow-schedule_service_available",
@@ -5589,7 +5632,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-booking_flow-calendar_writable",
@@ -5691,7 +5735,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-booking_flow-notification_service_active",
@@ -5793,7 +5838,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-payment_charge_flow-payment_gateway_available",
@@ -5895,7 +5941,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-payment_charge_flow-ledger_writable",
@@ -5997,7 +6044,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "precond-payment_charge_flow-invoice_service_active",
@@ -6099,7 +6147,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_whatsapp_checkout_pix_confirmacao_e2e",
@@ -6740,7 +6789,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_agendamento_whatsapp_e2e_pagamento_confirmacao",
@@ -7381,7 +7431,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_checkin_sem_reserva_com_pagamento_pendente_whatsapp",
@@ -7914,7 +7965,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_renovacao_whatsapp_pagamento_falha_recuperacao",
@@ -8627,7 +8679,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_cancelamento_assinatura_whatsapp_retentativa",
@@ -9232,7 +9285,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_whatsapp_checkout_pix_aprovacao_pospagamento",
@@ -9801,7 +9855,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_checkin_whatsapp_qr_com_biometria_e_trava_de_acesso",
@@ -10442,7 +10497,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_renovacao_whatsapp_plano_anual_cartao_expirado_com_recuperacao",
@@ -11011,7 +11067,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_cancelamento_plano_whatsapp_e2e_reembolso_acesso",
@@ -11652,7 +11709,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_agendamento_avaliacao_e_pagamento_whatsapp",
@@ -12365,7 +12423,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_whatsapp_checkout_pix_aprovacao_e2e",
@@ -13006,7 +13065,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness_full_onboarding_whatsapp_primeiro_acesso_e2e",
@@ -13719,7 +13779,8 @@
       ],
       "journeySource": "inferred",
       "baseTemplateId": "customer_lifecycle_v1",
-      "platformScenarioIds": []
+      "platformScenarioIds": [],
+      "tenantId": "system"
     },
     {
       "id": "fitness-matricula-agendamento-ui",
@@ -13976,7 +14037,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "support-inbox-nota-ui",
@@ -14233,7 +14295,8 @@
         }
       ],
       "validators": [],
-      "executionStatus": "queued"
+      "executionStatus": "queued",
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-beauty_booking",
@@ -14317,7 +14380,8 @@
       "updatedAt": "2026-07-27T01:02:32.059Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-scheduling",
@@ -14394,7 +14458,8 @@
       "updatedAt": "2026-07-27T01:02:32.059Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-payment",
@@ -14471,7 +14536,8 @@
       "updatedAt": "2026-07-27T01:02:32.059Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-crm_updates",
@@ -14548,7 +14614,8 @@
       "updatedAt": "2026-07-27T01:02:32.059Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-notifications",
@@ -14625,7 +14692,8 @@
       "updatedAt": "2026-07-27T01:02:32.059Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-beauty_booking-schedule_service_available",
@@ -14695,7 +14763,8 @@
       "updatedAt": "2026-07-27T01:02:32.059Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-beauty_booking-calendar_writable",
@@ -14765,7 +14834,8 @@
       "updatedAt": "2026-07-27T01:02:32.059Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-beauty_booking-payment_gateway_available",
@@ -14835,7 +14905,8 @@
       "updatedAt": "2026-07-27T01:02:32.060Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-beauty_new_customer",
@@ -14919,7 +14990,8 @@
       "updatedAt": "2026-07-27T01:02:32.060Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-beauty_new_customer-lead_capture_active",
@@ -14989,7 +15061,8 @@
       "updatedAt": "2026-07-27T01:02:32.060Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-beauty_new_customer-schedule_service_available",
@@ -15059,7 +15132,8 @@
       "updatedAt": "2026-07-27T01:02:32.060Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-beauty_new_customer-payment_gateway_available",
@@ -15129,7 +15203,8 @@
       "updatedAt": "2026-07-27T01:02:32.060Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-clinic_default_journey",
@@ -15213,7 +15288,8 @@
       "updatedAt": "2026-07-27T01:02:32.060Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-clinic_default_journey-customer_identification_active",
@@ -15283,7 +15359,8 @@
       "updatedAt": "2026-07-27T01:02:32.060Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-clinic_default_journey-schedule_service_available",
@@ -15353,7 +15430,8 @@
       "updatedAt": "2026-07-27T01:02:32.060Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-agendamento",
@@ -15437,7 +15515,8 @@
       "updatedAt": "2026-07-27T01:02:32.061Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agendamento-customer_identification_active",
@@ -15507,7 +15586,8 @@
       "updatedAt": "2026-07-27T01:02:32.061Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agendamento-schedule_service_available",
@@ -15577,7 +15657,8 @@
       "updatedAt": "2026-07-27T01:02:32.061Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agendamento-calendar_writable",
@@ -15647,7 +15728,8 @@
       "updatedAt": "2026-07-27T01:02:32.061Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-cancelamento",
@@ -15734,7 +15816,8 @@
       "updatedAt": "2026-07-27T01:02:32.061Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-cancelamento-customer_identification_active",
@@ -15804,7 +15887,8 @@
       "updatedAt": "2026-07-27T01:02:32.061Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-cancelamento-membership_validation_active",
@@ -15874,7 +15958,8 @@
       "updatedAt": "2026-07-27T01:02:32.061Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-cancelamento-billing_validation_active",
@@ -15944,7 +16029,8 @@
       "updatedAt": "2026-07-27T01:02:32.061Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-checkin",
@@ -16031,7 +16117,8 @@
       "updatedAt": "2026-07-27T01:02:32.062Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-checkin-customer_identification_active",
@@ -16101,7 +16188,8 @@
       "updatedAt": "2026-07-27T01:02:32.062Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-checkin-membership_validation_active",
@@ -16171,7 +16259,8 @@
       "updatedAt": "2026-07-27T01:02:32.062Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-checkin-access_decision_active",
@@ -16241,7 +16330,8 @@
       "updatedAt": "2026-07-27T01:02:32.062Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-checkout",
@@ -16328,7 +16418,8 @@
       "updatedAt": "2026-07-27T01:02:32.062Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-checkout-customer_identification_active",
@@ -16398,7 +16489,8 @@
       "updatedAt": "2026-07-27T01:02:32.062Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-checkout-billing_validation_active",
@@ -16468,7 +16560,8 @@
       "updatedAt": "2026-07-27T01:02:32.062Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-checkout-payment_gateway_available",
@@ -16538,7 +16631,8 @@
       "updatedAt": "2026-07-27T01:02:32.062Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-fitness_active_customer",
@@ -16625,7 +16719,8 @@
       "updatedAt": "2026-07-27T01:02:32.063Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_active_customer-customer_identification_active",
@@ -16695,7 +16790,8 @@
       "updatedAt": "2026-07-27T01:02:32.063Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_active_customer-membership_validation_active",
@@ -16765,7 +16861,8 @@
       "updatedAt": "2026-07-27T01:02:32.063Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_active_customer-access_decision_active",
@@ -16835,7 +16932,8 @@
       "updatedAt": "2026-07-27T01:02:32.063Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-fitness_new_customer",
@@ -16922,7 +17020,8 @@
       "updatedAt": "2026-07-27T01:02:32.063Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_new_customer-customer_identification_active",
@@ -16992,7 +17091,8 @@
       "updatedAt": "2026-07-27T01:02:32.063Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-fitness_new_customer-membership_validation_active",
@@ -17062,7 +17162,8 @@
       "updatedAt": "2026-07-27T01:02:32.064Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-leads",
@@ -17146,7 +17247,8 @@
       "updatedAt": "2026-07-27T01:02:32.064Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-lead_capture",
@@ -17223,7 +17325,8 @@
       "updatedAt": "2026-07-27T01:02:32.064Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-leads-lead_capture_active",
@@ -17293,7 +17396,8 @@
       "updatedAt": "2026-07-27T01:02:32.064Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-leads-customer_identification_active",
@@ -17363,7 +17467,8 @@
       "updatedAt": "2026-07-27T01:02:32.064Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-onboarding",
@@ -17447,7 +17552,8 @@
       "updatedAt": "2026-07-27T01:02:32.064Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-onboarding",
@@ -17524,7 +17630,8 @@
       "updatedAt": "2026-07-27T01:02:32.064Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-onboarding-customer_identification_active",
@@ -17594,7 +17701,8 @@
       "updatedAt": "2026-07-27T01:02:32.064Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-onboarding-onboarding_flow_active",
@@ -17664,7 +17772,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-renovacao",
@@ -17754,7 +17863,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-renovacao-customer_identification_active",
@@ -17824,7 +17934,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-renovacao-membership_validation_active",
@@ -17894,7 +18005,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-renovacao-billing_validation_active",
@@ -17964,7 +18076,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-renovacao-payment_gateway_available",
@@ -18034,7 +18147,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-food_customer_journey",
@@ -18115,7 +18229,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-food_customer_journey-customer_identification_active",
@@ -18185,7 +18300,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-food_customer_journey-order_service_available",
@@ -18255,7 +18371,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-food_customer_journey-payment_gateway_available",
@@ -18325,7 +18442,8 @@
       "updatedAt": "2026-07-27T01:02:32.065Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-food_order_flow",
@@ -18406,7 +18524,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-food_order_flow-order_service_available",
@@ -18476,7 +18595,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-food_order_flow-storefront_channel_active",
@@ -18546,7 +18666,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-food_order_flow-payment_gateway_available",
@@ -18616,7 +18737,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-market_default_journey",
@@ -18700,7 +18822,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-market_default_journey-customer_identification_active",
@@ -18770,7 +18893,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-market_default_journey-order_service_available",
@@ -18840,7 +18964,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-market_default_journey-payment_gateway_available",
@@ -18910,7 +19035,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-services_default_journey",
@@ -18997,7 +19123,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-services_default_journey-customer_identification_active",
@@ -19067,7 +19194,8 @@
       "updatedAt": "2026-07-27T01:02:32.066Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-services_default_journey-schedule_service_available",
@@ -19137,7 +19265,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-services_default_journey-payment_gateway_available",
@@ -19207,7 +19336,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-capability_scheduling",
@@ -19282,7 +19412,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-capability_scheduling-schedule_service_available",
@@ -19352,7 +19483,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-capability_scheduling-calendar_writable",
@@ -19422,7 +19554,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-capability_crm_updates",
@@ -19497,7 +19630,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-capability_crm_updates-crm_service_available",
@@ -19567,7 +19701,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-capability_crm_updates-database_writable",
@@ -19637,7 +19772,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-capability_lead_capture",
@@ -19712,7 +19848,8 @@
       "updatedAt": "2026-07-27T01:02:32.067Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-capability_lead_capture-lead_capture_active",
@@ -19782,7 +19919,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-capability_lead_capture-crm_service_available",
@@ -19852,7 +19990,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-orders",
@@ -19927,7 +20066,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-orders",
@@ -20004,7 +20144,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-orders-order_service_available",
@@ -20074,7 +20215,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-orders-payment_gateway_configured",
@@ -20144,7 +20286,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-projects",
@@ -20219,7 +20362,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-projects",
@@ -20296,7 +20440,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-projects-project_service_available",
@@ -20366,7 +20511,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-inbox",
@@ -20441,7 +20587,8 @@
       "updatedAt": "2026-07-27T01:02:32.068Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-inbox",
@@ -20518,7 +20665,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-inbox-inbox_service_available",
@@ -20588,7 +20736,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-inbox-agent_online",
@@ -20658,7 +20807,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-campaigns",
@@ -20733,7 +20883,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-campaigns",
@@ -20810,7 +20961,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-campaigns-campaign_engine_available",
@@ -20880,7 +21032,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-quick_replies",
@@ -20955,7 +21108,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-quick_replies",
@@ -21032,7 +21186,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-quick_replies-quick_replies_available",
@@ -21102,7 +21257,8 @@
       "updatedAt": "2026-07-27T01:02:32.069Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-webhooks",
@@ -21177,7 +21333,8 @@
       "updatedAt": "2026-07-27T01:02:32.070Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-webhooks",
@@ -21254,7 +21411,8 @@
       "updatedAt": "2026-07-27T01:02:32.070Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-webhooks-webhook_service_available",
@@ -21324,7 +21482,8 @@
       "updatedAt": "2026-07-27T01:02:32.070Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-tasks",
@@ -21399,7 +21558,8 @@
       "updatedAt": "2026-07-27T01:02:32.070Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-tasks",
@@ -21476,7 +21636,8 @@
       "updatedAt": "2026-07-27T01:02:32.070Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-tasks-task_service_available",
@@ -21546,7 +21707,8 @@
       "updatedAt": "2026-07-27T01:02:32.070Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-billing",
@@ -21621,7 +21783,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-billing",
@@ -21698,7 +21861,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-billing-billing_service_available",
@@ -21768,7 +21932,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-billing-payment_gateway_configured",
@@ -21838,7 +22003,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-marketing",
@@ -21913,7 +22079,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-marketing",
@@ -21990,7 +22157,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-marketing-marketing_module_available",
@@ -22060,7 +22228,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-automations",
@@ -22135,7 +22304,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-automations",
@@ -22212,7 +22382,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-automations-automation_engine_available",
@@ -22282,7 +22453,8 @@
       "updatedAt": "2026-07-27T01:02:32.071Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-sla",
@@ -22357,7 +22529,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-sla",
@@ -22434,7 +22607,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-sla-sla_policies_configured",
@@ -22504,7 +22678,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-deliveries",
@@ -22579,7 +22754,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-deliveries",
@@ -22656,7 +22832,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-deliveries-delivery_tracking_available",
@@ -22726,7 +22903,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-developer",
@@ -22801,7 +22979,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-developer",
@@ -22878,7 +23057,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-developer-developer_keys_enabled",
@@ -22948,7 +23128,8 @@
       "updatedAt": "2026-07-27T01:02:32.072Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-whatsapp_connections",
@@ -23023,7 +23204,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-whatsapp_connections",
@@ -23100,7 +23282,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-whatsapp_connections-whatsapp_gateway_available",
@@ -23170,7 +23353,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-analytics",
@@ -23245,7 +23429,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-analytics",
@@ -23322,7 +23507,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-analytics-analytics_service_available",
@@ -23392,7 +23578,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-operational_intelligence",
@@ -23467,7 +23654,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-operational_intelligence",
@@ -23544,7 +23732,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-operational_intelligence-intelligence_engine_available",
@@ -23614,7 +23803,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-calendar",
@@ -23689,7 +23879,8 @@
       "updatedAt": "2026-07-27T01:02:32.073Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-calendar",
@@ -23766,7 +23957,8 @@
       "updatedAt": "2026-07-27T01:02:32.074Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-calendar-calendar_service_available",
@@ -23836,7 +24028,8 @@
       "updatedAt": "2026-07-27T01:02:32.074Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-academy_learning",
@@ -23911,7 +24104,8 @@
       "updatedAt": "2026-07-27T05:27:59.636Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-academy_learning",
@@ -23988,7 +24182,8 @@
       "updatedAt": "2026-07-27T05:27:59.636Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-academy_learning-learning_core_available",
@@ -24058,7 +24253,8 @@
       "updatedAt": "2026-07-27T05:27:59.636Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-physical_queue_kiosk_station_panel_fila",
@@ -24133,7 +24329,8 @@
       "updatedAt": "2026-07-27T05:27:59.637Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-physical_queue_kiosk_station_panel_fila",
@@ -24210,7 +24407,8 @@
       "updatedAt": "2026-07-27T05:27:59.637Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-physical_queue_kiosk_station_panel_fila-physical_queue_available",
@@ -24280,7 +24478,8 @@
       "updatedAt": "2026-07-27T05:27:59.638Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-public_tokens",
@@ -24355,7 +24554,8 @@
       "updatedAt": "2026-07-27T05:27:59.638Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-public_tokens",
@@ -24432,7 +24632,8 @@
       "updatedAt": "2026-07-27T05:27:59.638Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-public_tokens-public_token_service_available",
@@ -24502,7 +24703,8 @@
       "updatedAt": "2026-07-27T05:27:59.639Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-process_runtime",
@@ -24577,7 +24779,8 @@
       "updatedAt": "2026-07-27T05:27:59.639Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-process_runtime",
@@ -24654,7 +24857,8 @@
       "updatedAt": "2026-07-27T05:27:59.639Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-process_runtime-process_runtime_available",
@@ -24724,7 +24928,8 @@
       "updatedAt": "2026-07-27T05:27:59.639Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-solutions",
@@ -24799,7 +25004,8 @@
       "updatedAt": "2026-07-27T05:27:59.640Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-solutions",
@@ -24876,7 +25082,8 @@
       "updatedAt": "2026-07-27T05:27:59.640Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-solutions-solution_packs_available",
@@ -24946,7 +25153,8 @@
       "updatedAt": "2026-07-27T05:27:59.640Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-rbac_access_control",
@@ -25021,7 +25229,8 @@
       "updatedAt": "2026-07-27T05:27:59.640Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-rbac_access_control",
@@ -25098,7 +25307,8 @@
       "updatedAt": "2026-07-27T05:27:59.641Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-rbac_access_control-rbac_service_available",
@@ -25168,7 +25378,8 @@
       "updatedAt": "2026-07-27T05:27:59.641Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-templates",
@@ -25243,7 +25454,8 @@
       "updatedAt": "2026-07-27T05:27:59.641Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-templates",
@@ -25320,7 +25532,8 @@
       "updatedAt": "2026-07-27T05:27:59.641Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-templates-template_service_available",
@@ -25390,7 +25603,8 @@
       "updatedAt": "2026-07-27T05:27:59.641Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-operations_dashboard",
@@ -25465,7 +25679,8 @@
       "updatedAt": "2026-07-27T05:27:59.642Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-operations_dashboard",
@@ -25542,7 +25757,8 @@
       "updatedAt": "2026-07-27T05:27:59.642Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-operations_dashboard-operations_dashboard_available",
@@ -25612,7 +25828,8 @@
       "updatedAt": "2026-07-27T05:27:59.642Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-cognitive_assistant",
@@ -25687,7 +25904,8 @@
       "updatedAt": "2026-07-27T05:27:59.642Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-cognitive_assistant",
@@ -25764,7 +25982,8 @@
       "updatedAt": "2026-07-27T05:27:59.643Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-cognitive_assistant-cognitive_core_available",
@@ -25834,7 +26053,8 @@
       "updatedAt": "2026-07-27T05:27:59.644Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-supervisor",
@@ -25909,7 +26129,8 @@
       "updatedAt": "2026-07-27T05:27:59.644Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-supervisor",
@@ -25986,7 +26207,8 @@
       "updatedAt": "2026-07-27T05:27:59.644Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-supervisor-supervisor_service_available",
@@ -26056,7 +26278,8 @@
       "updatedAt": "2026-07-27T05:27:59.645Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-queues",
@@ -26131,7 +26354,8 @@
       "updatedAt": "2026-07-27T05:27:59.645Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-queues",
@@ -26208,7 +26432,8 @@
       "updatedAt": "2026-07-27T05:27:59.645Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-queues-queue_service_available",
@@ -26278,7 +26503,8 @@
       "updatedAt": "2026-07-27T05:27:59.645Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-departments",
@@ -26353,7 +26579,8 @@
       "updatedAt": "2026-07-27T05:27:59.645Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-departments",
@@ -26430,7 +26657,8 @@
       "updatedAt": "2026-07-27T05:27:59.645Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-departments-department_service_available",
@@ -26500,7 +26728,8 @@
       "updatedAt": "2026-07-27T05:27:59.646Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-export",
@@ -26575,7 +26804,8 @@
       "updatedAt": "2026-07-27T05:27:59.646Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-export",
@@ -26652,7 +26882,8 @@
       "updatedAt": "2026-07-27T05:27:59.646Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-export-export_service_available",
@@ -26722,7 +26953,8 @@
       "updatedAt": "2026-07-27T05:27:59.646Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-demo",
@@ -26797,7 +27029,8 @@
       "updatedAt": "2026-07-27T05:27:59.646Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-demo",
@@ -26874,7 +27107,8 @@
       "updatedAt": "2026-07-27T05:27:59.646Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-demo-demo_orchestrator_available",
@@ -26944,7 +27178,8 @@
       "updatedAt": "2026-07-27T05:27:59.647Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260727052711",
@@ -27032,7 +27267,8 @@
       "updatedAt": "2026-07-27T05:27:59.943Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260727071027",
@@ -27120,7 +27356,8 @@
       "updatedAt": "2026-07-27T07:10:27.876Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260727153546",
@@ -27208,7 +27445,8 @@
       "updatedAt": "2026-07-27T15:35:47.076Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260727164517",
@@ -27296,7 +27534,8 @@
       "updatedAt": "2026-07-27T16:45:17.581Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260727182015",
@@ -27384,7 +27623,8 @@
       "updatedAt": "2026-07-27T18:20:15.529Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260727193409",
@@ -27472,7 +27712,8 @@
       "updatedAt": "2026-07-27T19:34:09.597Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260727213315",
@@ -27560,7 +27801,8 @@
       "updatedAt": "2026-07-27T21:33:16.216Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-agent_factory",
@@ -27635,7 +27877,8 @@
       "updatedAt": "2026-07-28T05:08:32.216Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-agent_factory",
@@ -27712,7 +27955,8 @@
       "updatedAt": "2026-07-28T05:08:32.217Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agent_factory-agent_registry_service_available",
@@ -27782,7 +28026,8 @@
       "updatedAt": "2026-07-28T05:08:32.217Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agent_factory-qa_waves_available",
@@ -27852,7 +28097,8 @@
       "updatedAt": "2026-07-28T05:08:32.217Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-agent_marketplace",
@@ -27927,7 +28173,8 @@
       "updatedAt": "2026-07-28T05:08:32.218Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-agent_marketplace",
@@ -28004,7 +28251,8 @@
       "updatedAt": "2026-07-28T05:08:32.218Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agent_marketplace-agent_marketplace_catalog_available",
@@ -28074,7 +28322,8 @@
       "updatedAt": "2026-07-28T05:08:32.218Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agent_marketplace-agent_registry_service_available",
@@ -28144,7 +28393,8 @@
       "updatedAt": "2026-07-28T05:08:32.219Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-agent_orchestrator",
@@ -28219,7 +28469,8 @@
       "updatedAt": "2026-07-28T05:08:32.219Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-agent_orchestration",
@@ -28296,7 +28547,8 @@
       "updatedAt": "2026-07-28T05:08:32.219Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agent_orchestrator-agent_orchestrator_available",
@@ -28366,7 +28618,8 @@
       "updatedAt": "2026-07-28T05:08:32.220Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agent_orchestrator-ai_governance_service_available",
@@ -28436,7 +28689,8 @@
       "updatedAt": "2026-07-28T05:08:32.221Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-agent_registry",
@@ -28511,7 +28765,8 @@
       "updatedAt": "2026-07-28T05:08:32.222Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-agent_registry",
@@ -28588,7 +28843,8 @@
       "updatedAt": "2026-07-28T05:08:32.222Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agent_registry-agent_registry_service_available",
@@ -28658,7 +28914,8 @@
       "updatedAt": "2026-07-28T05:08:32.223Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-journey_registry",
@@ -28733,7 +28990,8 @@
       "updatedAt": "2026-07-28T05:08:32.223Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-journey_registry",
@@ -28810,7 +29068,8 @@
       "updatedAt": "2026-07-28T05:08:32.223Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-journey_registry-journey_registry_service_available",
@@ -28880,7 +29139,8 @@
       "updatedAt": "2026-07-28T05:08:32.224Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-knowledge_graph",
@@ -28955,7 +29215,8 @@
       "updatedAt": "2026-07-28T05:08:32.224Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-knowledge_graph",
@@ -29032,7 +29293,8 @@
       "updatedAt": "2026-07-28T05:08:32.225Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-knowledge_graph-knowledge_graph_service_available",
@@ -29102,7 +29364,8 @@
       "updatedAt": "2026-07-28T05:08:32.225Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-knowledge_graph-database_writable",
@@ -29172,7 +29435,8 @@
       "updatedAt": "2026-07-28T05:08:32.226Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-rap_learn",
@@ -29247,7 +29511,8 @@
       "updatedAt": "2026-07-28T05:08:32.226Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-rap_learn",
@@ -29324,7 +29589,8 @@
       "updatedAt": "2026-07-28T05:08:32.226Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-rap_learn-rap_learn_service_available",
@@ -29394,7 +29660,8 @@
       "updatedAt": "2026-07-28T05:08:32.227Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-rap_learn-database_writable",
@@ -29464,7 +29731,8 @@
       "updatedAt": "2026-07-28T05:08:32.227Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-ai_governance",
@@ -29539,7 +29807,8 @@
       "updatedAt": "2026-07-28T05:08:32.228Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-ai_governance",
@@ -29616,7 +29885,8 @@
       "updatedAt": "2026-07-28T05:08:32.228Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-ai_governance-ai_governance_service_available",
@@ -29686,7 +29956,8 @@
       "updatedAt": "2026-07-28T05:08:32.228Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-ai_governance-database_writable",
@@ -29756,7 +30027,8 @@
       "updatedAt": "2026-07-28T05:08:32.229Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-flows_editor_rpa_replay",
@@ -29831,7 +30103,8 @@
       "updatedAt": "2026-07-28T05:08:32.229Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-flows_editor_rpa_replay",
@@ -29908,7 +30181,8 @@
       "updatedAt": "2026-07-28T05:08:32.230Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-flows_editor_rpa_replay-flow_runtime_available",
@@ -29978,7 +30252,8 @@
       "updatedAt": "2026-07-28T05:08:32.230Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-flows_editor_rpa_replay-frontend_available",
@@ -30048,7 +30323,8 @@
       "updatedAt": "2026-07-28T05:08:32.230Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-rag_documents",
@@ -30123,7 +30399,8 @@
       "updatedAt": "2026-07-28T05:08:32.231Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-rag_documents",
@@ -30200,7 +30477,8 @@
       "updatedAt": "2026-07-28T05:08:32.231Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-rag_documents-rag_documents_service_available",
@@ -30270,7 +30548,8 @@
       "updatedAt": "2026-07-28T05:08:32.232Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-rag_documents-database_writable",
@@ -30340,7 +30619,8 @@
       "updatedAt": "2026-07-28T05:08:32.232Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-rag_documents-frontend_available",
@@ -30410,7 +30690,8 @@
       "updatedAt": "2026-07-28T05:08:32.232Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-knowledge_base",
@@ -30485,7 +30766,8 @@
       "updatedAt": "2026-07-28T05:08:32.233Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-knowledge_base",
@@ -30562,7 +30844,8 @@
       "updatedAt": "2026-07-28T05:08:32.233Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-knowledge_base-frontend_available",
@@ -30632,7 +30915,8 @@
       "updatedAt": "2026-07-28T05:08:32.234Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-product_docs",
@@ -30707,7 +30991,8 @@
       "updatedAt": "2026-07-28T05:08:32.234Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-product_docs",
@@ -30784,7 +31069,8 @@
       "updatedAt": "2026-07-28T05:08:32.235Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-product_docs-frontend_available",
@@ -30854,7 +31140,8 @@
       "updatedAt": "2026-07-28T05:08:32.235Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-channel_accounts",
@@ -30929,7 +31216,8 @@
       "updatedAt": "2026-07-28T05:08:32.236Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-channel_accounts",
@@ -31006,7 +31294,8 @@
       "updatedAt": "2026-07-28T05:08:32.236Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-channel_accounts-channel_accounts_service_available",
@@ -31076,7 +31365,8 @@
       "updatedAt": "2026-07-28T05:08:32.236Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-channel_accounts-database_writable",
@@ -31146,7 +31436,8 @@
       "updatedAt": "2026-07-28T05:08:32.237Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-channel_accounts-frontend_available",
@@ -31216,7 +31507,8 @@
       "updatedAt": "2026-07-28T05:08:32.237Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-instagram_messenger",
@@ -31291,7 +31583,8 @@
       "updatedAt": "2026-07-28T05:08:32.238Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-instagram_messenger",
@@ -31368,7 +31661,8 @@
       "updatedAt": "2026-07-28T05:08:32.238Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-instagram_messenger-channel_webhook_available",
@@ -31438,7 +31732,8 @@
       "updatedAt": "2026-07-28T05:08:32.238Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-segmentation",
@@ -31513,7 +31808,8 @@
       "updatedAt": "2026-07-28T05:08:32.239Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-segmentation",
@@ -31590,7 +31886,8 @@
       "updatedAt": "2026-07-28T05:08:32.239Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-segmentation-segmentation_service_available",
@@ -31660,7 +31957,8 @@
       "updatedAt": "2026-07-28T05:08:32.239Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-segmentation-frontend_available",
@@ -31730,7 +32028,8 @@
       "updatedAt": "2026-07-28T05:08:32.240Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-tickets_tags",
@@ -31805,7 +32104,8 @@
       "updatedAt": "2026-07-28T05:08:32.240Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-tickets_tags",
@@ -31882,7 +32182,8 @@
       "updatedAt": "2026-07-28T05:08:32.241Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-tickets_tags-ticket_service_available",
@@ -31952,7 +32253,8 @@
       "updatedAt": "2026-07-28T05:08:32.242Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-tickets_tags-database_writable",
@@ -32022,7 +32324,8 @@
       "updatedAt": "2026-07-28T05:08:32.242Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-tenant_config",
@@ -32097,7 +32400,8 @@
       "updatedAt": "2026-07-28T05:08:32.243Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-tenant_config",
@@ -32174,7 +32478,8 @@
       "updatedAt": "2026-07-28T05:08:32.243Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-tenant_config-config_service_available",
@@ -32244,7 +32549,8 @@
       "updatedAt": "2026-07-28T05:08:32.243Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-tenant_config-config_file_readable",
@@ -32314,7 +32620,8 @@
       "updatedAt": "2026-07-28T05:08:32.244Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-tenant_config-frontend_available",
@@ -32384,7 +32691,8 @@
       "updatedAt": "2026-07-28T05:08:32.244Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-conversations_chat",
@@ -32459,7 +32767,8 @@
       "updatedAt": "2026-07-28T05:08:32.244Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-conversations_chat",
@@ -32536,7 +32845,8 @@
       "updatedAt": "2026-07-28T05:08:32.245Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-conversations_chat-conversation_service_available",
@@ -32606,7 +32916,8 @@
       "updatedAt": "2026-07-28T05:08:32.245Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-conversations_chat-frontend_available",
@@ -32676,7 +32987,8 @@
       "updatedAt": "2026-07-28T05:08:32.246Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-ai_tools",
@@ -32751,7 +33063,8 @@
       "updatedAt": "2026-07-28T05:08:32.246Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-ai_tools",
@@ -32828,7 +33141,8 @@
       "updatedAt": "2026-07-28T05:08:32.247Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-ai_tools-ai_suggestion_service_available",
@@ -32898,7 +33212,8 @@
       "updatedAt": "2026-07-28T05:08:32.247Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-ai_tools-frontend_available",
@@ -32968,7 +33283,8 @@
       "updatedAt": "2026-07-28T05:08:32.248Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-audio_transcribe",
@@ -33043,7 +33359,8 @@
       "updatedAt": "2026-07-28T05:08:32.248Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-audio_transcribe",
@@ -33120,7 +33437,8 @@
       "updatedAt": "2026-07-28T05:08:32.248Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-audio_transcribe-audio_transcription_route_available",
@@ -33190,7 +33508,8 @@
       "updatedAt": "2026-07-28T05:08:32.249Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-voice_event_ledger",
@@ -33265,7 +33584,8 @@
       "updatedAt": "2026-07-28T05:08:32.249Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-voice_event_ledger",
@@ -33342,7 +33662,8 @@
       "updatedAt": "2026-07-28T05:08:32.250Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-voice_event_ledger-voice_event_service_available",
@@ -33412,7 +33733,8 @@
       "updatedAt": "2026-07-28T05:08:32.250Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-voice_event_ledger-event_ledger_available",
@@ -33482,7 +33804,8 @@
       "updatedAt": "2026-07-28T05:08:32.250Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-voice_event_ledger-database_writable",
@@ -33552,7 +33875,8 @@
       "updatedAt": "2026-07-28T05:08:32.251Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-backup_restore",
@@ -33627,7 +33951,8 @@
       "updatedAt": "2026-07-28T05:08:32.251Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-backup_restore",
@@ -33704,7 +34029,8 @@
       "updatedAt": "2026-07-28T05:08:32.252Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-backup_restore-backup_service_available",
@@ -33774,7 +34100,8 @@
       "updatedAt": "2026-07-28T05:08:32.252Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-backup_restore-frontend_available",
@@ -33844,7 +34171,8 @@
       "updatedAt": "2026-07-28T05:08:32.252Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-web_scraping",
@@ -33919,7 +34247,8 @@
       "updatedAt": "2026-07-28T05:08:32.253Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-web_scraping",
@@ -33996,7 +34325,8 @@
       "updatedAt": "2026-07-28T05:08:32.253Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-web_scraping-web_scraping_service_available",
@@ -34066,7 +34396,8 @@
       "updatedAt": "2026-07-28T05:08:32.254Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-web_scraping-frontend_available",
@@ -34136,7 +34467,8 @@
       "updatedAt": "2026-07-28T05:08:32.254Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-agenda",
@@ -34211,7 +34543,8 @@
       "updatedAt": "2026-07-28T05:08:32.254Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-agenda",
@@ -34288,7 +34621,8 @@
       "updatedAt": "2026-07-28T05:08:32.255Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agenda-frontend_available",
@@ -34358,7 +34692,8 @@
       "updatedAt": "2026-07-28T05:08:32.255Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-agents",
@@ -34433,7 +34768,8 @@
       "updatedAt": "2026-07-28T05:08:32.256Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-agents",
@@ -34510,7 +34846,8 @@
       "updatedAt": "2026-07-28T05:08:32.256Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-agents-frontend_available",
@@ -34580,7 +34917,8 @@
       "updatedAt": "2026-07-28T05:08:32.256Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-bulk_messaging",
@@ -34655,7 +34993,8 @@
       "updatedAt": "2026-07-28T05:08:32.257Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-bulk_messaging",
@@ -34732,7 +35071,8 @@
       "updatedAt": "2026-07-28T05:08:32.257Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-bulk_messaging-frontend_available",
@@ -34802,7 +35142,8 @@
       "updatedAt": "2026-07-28T05:08:32.258Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-failed_messages",
@@ -34877,7 +35218,8 @@
       "updatedAt": "2026-07-28T05:08:32.259Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-failed_messages",
@@ -34954,7 +35296,8 @@
       "updatedAt": "2026-07-28T05:08:32.259Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-failed_messages-frontend_available",
@@ -35024,7 +35367,8 @@
       "updatedAt": "2026-07-28T05:08:32.260Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-kitchen_dispatch",
@@ -35099,7 +35443,8 @@
       "updatedAt": "2026-07-28T05:08:32.260Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-kitchen_dispatch",
@@ -35176,7 +35521,8 @@
       "updatedAt": "2026-07-28T05:08:32.260Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-kitchen_dispatch-frontend_available",
@@ -35246,7 +35592,8 @@
       "updatedAt": "2026-07-28T05:08:32.261Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-faq",
@@ -35321,7 +35668,8 @@
       "updatedAt": "2026-07-28T05:08:32.261Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-faq",
@@ -35398,7 +35746,8 @@
       "updatedAt": "2026-07-28T05:08:32.261Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-faq-frontend_available",
@@ -35468,7 +35817,8 @@
       "updatedAt": "2026-07-28T05:08:32.262Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-login",
@@ -35543,7 +35893,8 @@
       "updatedAt": "2026-07-28T05:08:32.262Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-login",
@@ -35620,7 +35971,8 @@
       "updatedAt": "2026-07-28T05:08:32.263Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-login-frontend_available",
@@ -35690,7 +36042,8 @@
       "updatedAt": "2026-07-28T05:08:32.263Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-login-qa_credentials_seeded",
@@ -35760,7 +36113,8 @@
       "updatedAt": "2026-07-28T05:08:32.263Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-mfa",
@@ -35835,7 +36189,8 @@
       "updatedAt": "2026-07-28T05:08:32.264Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-mfa",
@@ -35912,7 +36267,8 @@
       "updatedAt": "2026-07-28T05:08:32.264Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-mfa-frontend_available",
@@ -35982,7 +36338,8 @@
       "updatedAt": "2026-07-28T05:08:32.265Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-sso_scim",
@@ -36057,7 +36414,8 @@
       "updatedAt": "2026-07-28T05:08:32.265Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-sso_scim",
@@ -36134,7 +36492,8 @@
       "updatedAt": "2026-07-28T05:08:32.265Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-sso_scim-frontend_available",
@@ -36204,7 +36563,8 @@
       "updatedAt": "2026-07-28T05:08:32.266Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-maintenance",
@@ -36279,7 +36639,8 @@
       "updatedAt": "2026-07-28T05:08:32.266Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-maintenance",
@@ -36356,7 +36717,8 @@
       "updatedAt": "2026-07-28T05:08:32.267Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-maintenance-frontend_available",
@@ -36426,7 +36788,8 @@
       "updatedAt": "2026-07-28T05:08:32.267Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-plan_usage",
@@ -36501,7 +36864,8 @@
       "updatedAt": "2026-07-28T05:08:32.267Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-plan_usage",
@@ -36578,7 +36942,8 @@
       "updatedAt": "2026-07-28T05:08:32.268Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-plan_usage-frontend_available",
@@ -36648,7 +37013,8 @@
       "updatedAt": "2026-07-28T05:08:32.268Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-saas_storefront",
@@ -36723,7 +37089,8 @@
       "updatedAt": "2026-07-28T05:08:32.269Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-saas_storefront",
@@ -36800,7 +37167,8 @@
       "updatedAt": "2026-07-28T05:08:32.269Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-saas_storefront-frontend_available",
@@ -36870,7 +37238,8 @@
       "updatedAt": "2026-07-28T05:08:32.269Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "business-e2e-tenants",
@@ -36945,7 +37314,8 @@
       "updatedAt": "2026-07-28T05:08:32.270Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "cap-tenants",
@@ -37022,7 +37392,8 @@
       "updatedAt": "2026-07-28T05:08:32.270Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-tenants-frontend_available",
@@ -37092,7 +37463,8 @@
       "updatedAt": "2026-07-28T05:08:32.271Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "precond-tenants-tenant_service_available",
@@ -37162,7 +37534,8 @@
       "updatedAt": "2026-07-28T05:08:32.271Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260728050832",
@@ -37250,7 +37623,8 @@
       "updatedAt": "2026-07-28T05:08:32.584Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260731050857",
@@ -37338,7 +37712,8 @@
       "updatedAt": "2026-07-31T05:08:58.226Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260807020045",
@@ -37426,7 +37801,8 @@
       "updatedAt": "2026-08-07T02:00:45.661Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260807032531",
@@ -37514,7 +37890,8 @@
       "updatedAt": "2026-08-07T03:25:31.828Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260807044744",
@@ -37602,7 +37979,8 @@
       "updatedAt": "2026-08-07T04:47:45.267Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260809154334",
@@ -37690,7 +38068,8 @@
       "updatedAt": "2026-08-09T15:43:34.813Z",
       "platform": {
         "platformScenarioIds": []
-      }
+      },
+      "tenantId": "system"
     },
     {
       "id": "agent-validation-qa-agent-20260809165532",
@@ -37776,6 +38155,363 @@
       "executionStatus": "queued",
       "createdAt": "2026-08-09T16:55:32.341Z",
       "updatedAt": "2026-08-09T16:55:32.653Z",
+      "platform": {
+        "platformScenarioIds": []
+      },
+      "tenantId": "system"
+    },
+    {
+      "id": "agent-validation-qa-agent-20260813050825",
+      "waveId": "agent-os-qa-agent-20260813050825",
+      "vertical": "agent-os",
+      "journeyId": "c93863f0-dbc9-4ec0-932f-8a2f43363acf",
+      "name": "Agent Validation: QA Factory Agent 20260813050825",
+      "description": "Validação automatizada do agente qa-agent-20260813050825",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "journey": "c93863f0-dbc9-4ec0-932f-8a2f43363acf",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-08-13T05:08:25.811Z",
+      "updatedAt": "2026-08-13T05:08:26.121Z",
+      "platform": {
+        "platformScenarioIds": []
+      },
+      "tenantId": "system"
+    },
+    {
+      "id": "agent-validation-qa-agent-20260814145343",
+      "waveId": "agent-os-qa-agent-20260814145343",
+      "vertical": "agent-os",
+      "journeyId": "9908c942-c329-4b16-b0fd-e4420f2d8c5a",
+      "name": "Agent Validation: QA Factory Agent 20260814145343",
+      "description": "Validação automatizada do agente qa-agent-20260814145343",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "tenantId": "system",
+      "journey": "9908c942-c329-4b16-b0fd-e4420f2d8c5a",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-08-14T14:53:43.721Z",
+      "updatedAt": "2026-08-14T14:53:43.937Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
+    },
+    {
+      "id": "agent-validation-qa-agent-20260814160501",
+      "waveId": "agent-os-qa-agent-20260814160501",
+      "vertical": "agent-os",
+      "journeyId": "bdd5400d-2117-45c9-8e7a-bf218b0a31a3",
+      "name": "Agent Validation: QA Factory Agent 20260814160501",
+      "description": "Validação automatizada do agente qa-agent-20260814160501",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "tenantId": "system",
+      "journey": "bdd5400d-2117-45c9-8e7a-bf218b0a31a3",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-08-14T16:05:01.533Z",
+      "updatedAt": "2026-08-14T16:05:01.724Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
+    },
+    {
+      "id": "agent-validation-qa-agent-20260814162413",
+      "waveId": "agent-os-qa-agent-20260814162413",
+      "vertical": "agent-os",
+      "journeyId": "2611727e-fc9c-4795-bd23-80b98a84d716",
+      "name": "Agent Validation: QA Factory Agent 20260814162413",
+      "description": "Validação automatizada do agente qa-agent-20260814162413",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "tenantId": "system",
+      "journey": "2611727e-fc9c-4795-bd23-80b98a84d716",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-08-14T16:24:13.321Z",
+      "updatedAt": "2026-08-14T16:24:13.647Z",
       "platform": {
         "platformScenarioIds": []
       }
@@ -38799,7 +39535,85 @@
           "scenario upserted"
         ]
       }
+    ],
+    "fitness_leads_captacao_de_lead_via_whatsapp": [
+      {
+        "version": "v2",
+        "changedBy": "journey_review",
+        "changedAt": "2026-08-12T21:47:27.119Z",
+        "changes": [
+          "teste apply"
+        ]
+      }
+    ],
+    "agent-validation-qa-agent-20260813050825": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-08-13T05:08:25.811Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "changedBy": "system",
+        "changedAt": "2026-08-13T05:08:26.121Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
+    ],
+    "system::agent-validation-qa-agent-20260814145343": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-08-14T14:53:43.721Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "changedBy": "system",
+        "changedAt": "2026-08-14T14:53:43.937Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
+    ],
+    "system::agent-validation-qa-agent-20260814160501": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-08-14T16:05:01.534Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "changedBy": "system",
+        "changedAt": "2026-08-14T16:05:01.724Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
+    ],
+    "system::agent-validation-qa-agent-20260814162413": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-08-14T16:24:13.322Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      },
+      {
+        "changedBy": "system",
+        "changedAt": "2026-08-14T16:24:13.647Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
     ]
   },
-  "updatedAt": "2026-08-09T16:55:32.716Z"
+  "updatedAt": "2026-08-14T16:24:13.705Z"
 }

@@ -33,7 +33,7 @@ Escopo: implementação do RAP Cognitive Core como núcleo central de inteligên
 | `npm run test:flow` | ✅ (sem testes de fluxo registrados, `--passWithNoTests`) |
 | `npm run test:rpa:jest` | ✅ 3 suites, 7 passed / 4 skipped (browser tests desativados por env) |
 | `npm run lint` | n/a — script não existe no projeto |
-| `npm run build` | ✅ backend + frontend (Vite) com `RUNTIME_ROOT` configurado |
+| `npm run build` | ✅ backend + frontend (Vite) com runtime root resolvido |
 | `npm run zip:release` | ✅ Two-pass release `r-agent2-20260612-082128.zip`, Self-Proof PASS, Verifier offline PASS |
 | `npm run validate:governance-enforcement` (14 gates) | ✅ **TODOS verdes** — `reports/governance-score.json` com `overallGovernance: 100` |
 | `governance/final-readiness-report.json` | ✅ **AUTONOMOUS_READY_GO**, 0 blocking gaps, `noGoReasons: []` |
@@ -49,7 +49,7 @@ O readiness estava `NO_GO:ENTERPRISE_READY_GO` por três gaps anteriores ao Cogn
 
 1. **`gap-enterprise-omnichannel-unified-replay` / `gap-enterprise-replay-universalization`** — causa raiz: modificações locais **não commitadas** haviam sobrescrito as evidências canônicas validadas (`qa/enterprise/omnichannel-unified-replay.json` e `omnichannel-crm-mutations.json`, commit "atingir AUTONOMOUS_READY_GO" de 2026-05-12, `ok=true` com todos os sinais) com um formato antigo que o engine de readiness não reconhece. Correção: `git checkout` das evidências canônicas + revalidação real no host via `scripts/smoke/qa-waves-enterprise-proof-smoke.js` (handoff humano ok, l03/l04/l05 ok — l04 em modo `direct` com `PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct`; único sinal não reproduzível localmente é o CDR de chamada real, que exige Asterisk e permanece coberto pela evidência canônica do host PBX).
 2. **`gap-proof-package-validation`** — causa raiz: `governance/package-validator.js` assumia ZIP plano, mas o layout oficial de release migrou para **envelope+payload** (`architecture: envelope-payload-split`, manifest payload-centric); o validador inspecionava o envelope (fino, só governança/assinaturas) e não achava os proofs, que estão no payload. Correção: validador estendido para o modelo payload-centric **com binding estrito** — resolve o payload via `canonicalPath` do manifest, confere `sha256` contra o manifest e deriva o audit do verificador offline v2 (`dist/verifier/verify-result.json`) vinculado ao mesmo hash. Hash divergente ou verificador sem PASS ⇒ não auditado.
-3. **`gap-proof-governance-support`** — causa raiz: `cleanup-proof.json` com `runtimeClean=false` por resíduos não rastreados (`qa-mesh/meshEvidence`, `qa-mesh/meshHistory`) gravados no workspace pelo scheduler de mesh do stack dev sem `QA_MESH_EVIDENCE_DIR`/`QA_MESH_HISTORY_DIR`. Correção: `npm run runtime:clean` (caminho oficial) + stack dev reiniciado com os dirs de mesh apontando para o `RUNTIME_ROOT`.
+3. **`gap-proof-governance-support`** — causa raiz: `cleanup-proof.json` com `runtimeClean=false` por resíduos não rastreados (`qa-mesh/meshEvidence`, `qa-mesh/meshHistory`) gravados no workspace pelo scheduler de mesh do stack dev sem `QA_MESH_EVIDENCE_DIR`/`QA_MESH_HISTORY_DIR`. Correção: `npm run runtime:clean` (caminho oficial) + stack dev reiniciado com os dirs de mesh apontando para o runtime root.
 
 Resultado após as correções, re-release (`r-agent2-20260612-144302.zip`, Self-Proof PASS, Verifier offline PASS) e recálculo:
 

@@ -22,6 +22,7 @@ const ragDocumentsDeduplication = require('./rag/ragDocumentsDeduplication');
 const ragDocumentsHealth = require('./rag/ragDocumentsHealth');
 const ragDocumentsStats = require('./rag/ragDocumentsStats');
 const ragDocumentsLifecycle = require('./rag/ragDocumentsLifecycle');
+const ragResponseCache = require('./rag/ragResponseCache');
 const {
   safeToString,
   safeTrim,
@@ -29,14 +30,50 @@ const {
   safeErrorMessage,
 } = require('../utils/defensiveCoercion');
 
-// Cache em memória
+// Cache leve de leitura. PostgreSQL continua sendo a fonte autoritativa e
+// toda operação pública recarrega/valida o tenant antes de usar este mapa.
 let documents = new Map();
 
 // Funções deprecated removidas - dados agora estão no banco de dados PostgreSQL
 // Dados são carregados do banco de dados PostgreSQL - não precisa carregar de arquivo
 
 function dbAvailable() {
-  return !!getSequelize();
+  try {
+    return !!getSequelize();
+  } catch (_) {
+    return false;
+  }
+}
+
+function makePersistenceRequired(cause = null) {
+  const error = new Error('persistence_required');
+  error.code = 'PERSISTENCE_REQUIRED';
+  if (cause) error.cause = cause;
+  return error;
+}
+
+function requireDbAvailable() {
+  if (!dbAvailable()) throw makePersistenceRequired();
+}
+
+function requireTenantScope(tenantId) {
+  const scopedTenantId = safeTrim(tenantId);
+  if (!scopedTenantId) {
+    const error = new Error('tenant_required');
+    error.code = 'TENANT_REQUIRED';
+    throw error;
+  }
+  return scopedTenantId;
+}
+
+async function runPersistence(operation) {
+  requireDbAvailable();
+  try {
+    return await operation();
+  } catch (error) {
+    if (error?.code === 'PERSISTENCE_REQUIRED' || error?.code === 'document_tenant_conflict') throw error;
+    throw makePersistenceRequired(error);
+  }
 }
 
 async function getDbIndexedCount(tenantId) {
@@ -119,27 +156,54 @@ async function detectAndCleanOrphanedVectorDocuments(tenantId) {
 }
 
 async function upsertDocumentToDb(doc) {
-  if (!dbAvailable()) return;
+  requireDbAvailable();
   const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
   const payload = toDbPayload(doc);
   const now = new Date();
 
   const existing = await RagDocumentModel.findByPk(doc.id);
   if (existing) {
+    const existingTenantId = existing.tenant_key || existing.dataValues?.tenant_key || null;
+    if (existingTenantId && payload.tenant_key && existingTenantId !== payload.tenant_key) {
+      const ownershipError = new Error('document_id pertence a outro tenant');
+      ownershipError.code = 'document_tenant_conflict';
+      throw ownershipError;
+    }
     await existing.update({ ...payload, updated_at: now });
-  } else {
+    return;
+  }
+  try {
     await RagDocumentModel.create({ ...payload, created_at: now, updated_at: now });
+  } catch (error) {
+    const isUnique = error?.name === 'SequelizeUniqueConstraintError'
+      || error?.original?.code === '23505'
+      || error?.parent?.code === '23505';
+    if (!isUnique) throw error;
+    // Corrida de idempotência: insert concorrente do mesmo id. Re-fetch + update.
+    const raced = await RagDocumentModel.findByPk(doc.id);
+    if (raced) {
+      const racedTenantId = raced.tenant_key || raced.dataValues?.tenant_key || null;
+      if (racedTenantId && payload.tenant_key && racedTenantId !== payload.tenant_key) {
+        const ownershipError = new Error('document_id pertence a outro tenant');
+        ownershipError.code = 'document_tenant_conflict';
+        throw ownershipError;
+      }
+      await raced.update({ ...payload, updated_at: now });
+      return;
+    }
+    throw makePersistenceRequired(error);
   }
 }
 
-async function deleteDocumentFromDb(id) {
-  if (!dbAvailable()) return;
+async function deleteDocumentFromDb(id, tenantId = null) {
+  requireDbAvailable();
   const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
-  await RagDocumentModel.destroy({ where: { id } });
+  const where = tenantId ? { id, tenant_key: tenantId } : { id };
+  await RagDocumentModel.destroy({ where });
 }
 
 async function upsertDocumentFileToDb({ documentId, tenantId, filename, mimeType, sizeBytes, data }) {
-  if (!dbAvailable()) return;
+  requireDbAvailable();
   const RagDocumentFileModel = typeof RagDocumentFileGetter === 'function' ? RagDocumentFileGetter() : RagDocumentFileGetter;
   const now = new Date();
   const safeDocumentId = safeToString(documentId);
@@ -152,21 +216,46 @@ async function upsertDocumentFileToDb({ documentId, tenantId, filename, mimeType
     data,
     updated_at: now,
   };
-  const existing = await RagDocumentFileModel.findByPk(safeDocumentId);
+  const existing = await runPersistence(() => RagDocumentFileModel.findByPk(safeDocumentId));
   if (existing) {
-    await existing.update(payload);
-  } else {
+    const existingTenantId = existing.tenant_key || existing.dataValues?.tenant_key || null;
+    if (String(existingTenantId || '') !== String(payload.tenant_key || '')) {
+      const ownershipError = new Error('document_file pertence a outro tenant');
+      ownershipError.code = 'document_tenant_conflict';
+      throw ownershipError;
+    }
+    await runPersistence(() => existing.update(payload));
+    return;
+  }
+  try {
     await RagDocumentFileModel.create({ ...payload, created_at: now });
+  } catch (error) {
+    const isUnique = error?.name === 'SequelizeUniqueConstraintError'
+      || error?.original?.code === '23505'
+      || error?.parent?.code === '23505';
+    if (!isUnique) throw makePersistenceRequired(error);
+    const raced = await runPersistence(() => RagDocumentFileModel.findByPk(safeDocumentId));
+    if (raced) {
+      const racedTenantId = raced.tenant_key || raced.dataValues?.tenant_key || null;
+      if (String(racedTenantId || '') !== String(payload.tenant_key || '')) {
+        const ownershipError = new Error('document_file pertence a outro tenant');
+        ownershipError.code = 'document_tenant_conflict';
+        throw ownershipError;
+      }
+      await runPersistence(() => raced.update(payload));
+      return;
+    }
+    throw makePersistenceRequired(error);
   }
 }
 
 async function getDocumentFileFromDb(documentId, tenantId) {
-  if (!dbAvailable()) return null;
+  requireDbAvailable();
   const RagDocumentFileModel = typeof RagDocumentFileGetter === 'function' ? RagDocumentFileGetter() : RagDocumentFileGetter;
   const safeDocumentId = safeToString(documentId);
-  const row = await RagDocumentFileModel.findOne({
+  const row = await runPersistence(() => RagDocumentFileModel.findOne({
     where: { document_id: safeDocumentId, tenant_key: tenantId || null },
-  });
+  }));
   if (!row) return null;
   const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
   return {
@@ -180,29 +269,28 @@ async function getDocumentFileFromDb(documentId, tenantId) {
 }
 
 async function deleteDocumentFileFromDb(documentId, tenantId) {
-  if (!dbAvailable()) return;
+  requireDbAvailable();
   const RagDocumentFileModel = typeof RagDocumentFileGetter === 'function' ? RagDocumentFileGetter() : RagDocumentFileGetter;
-  await RagDocumentFileModel.destroy({
+  await runPersistence(() => RagDocumentFileModel.destroy({
     where: { document_id: safeToString(documentId), tenant_key: tenantId || null },
-  });
+  }));
 }
 
-function persistDocumentBestEffort(doc) {
-  if (!dbAvailable()) return;
-  setImmediate(() => {
-    upsertDocumentToDb(doc).catch((err) => {
-      logger.warn('[RAGDocuments] Falha ao persistir documento no PostgreSQL', { documentId: doc.id, error: safeErrorMessage(err) });
-    });
-  });
+async function persistDocumentRequired(doc) {
+  try {
+    await upsertDocumentToDb(doc);
+  } catch (error) {
+    if (error?.code === 'document_tenant_conflict') throw error;
+    throw error?.code === 'PERSISTENCE_REQUIRED' ? error : makePersistenceRequired(error);
+  }
 }
 
-function deleteDocumentBestEffort(id) {
-  if (!dbAvailable()) return;
-  setImmediate(() => {
-    deleteDocumentFromDb(id).catch((err) => {
-      logger.warn('[RAGDocuments] Falha ao remover documento no PostgreSQL', { documentId: id, error: safeErrorMessage(err) });
-    });
-  });
+async function deleteDocumentRequired(id, tenantId = null) {
+  try {
+    await deleteDocumentFromDb(id, tenantId);
+  } catch (error) {
+    throw error?.code === 'PERSISTENCE_REQUIRED' ? error : makePersistenceRequired(error);
+  }
 }
 
 /**
@@ -228,6 +316,27 @@ async function initialize() {
   }
 }
 
+async function refreshTenantDocuments(tenantId) {
+  requireDbAvailable();
+  const scopedTenantId = safeTrim(tenantId);
+  if (!scopedTenantId) {
+    const error = new Error('tenant_required');
+    error.code = 'TENANT_REQUIRED';
+    throw error;
+  }
+  const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+  const rows = await runPersistence(() => RagDocumentModel.findAll({
+    attributes: { exclude: ['content'] },
+    where: { tenant_key: scopedTenantId },
+  }));
+  for (const [id, document] of documents.entries()) {
+    if (document?.tenantId === scopedTenantId) documents.delete(id);
+  }
+  const refreshed = (rows || []).map(fromDbRow);
+  for (const document of refreshed) documents.set(document.id, document);
+  return refreshed;
+}
+
 /**
  * Escapa curingas de LIKE/ILIKE (\, %, _) para busca substring segura.
  */
@@ -244,6 +353,7 @@ function escapeLikePattern(term) {
  * @returns {Promise<Set<string>>} Ids que casam com o termo
  */
 async function findDocumentIdsMatchingSearch(searchLower, tenantId = null) {
+  requireDbAvailable();
   const sequelize = getSequelize();
   const replacements = { pattern: `%${escapeLikePattern(searchLower)}%` };
   let sql = "SELECT id FROM rag_documents WHERE (title ILIKE :pattern ESCAPE '\\' OR content ILIKE :pattern ESCAPE '\\')";
@@ -251,7 +361,7 @@ async function findDocumentIdsMatchingSearch(searchLower, tenantId = null) {
     sql += ' AND tenant_key = :tenantId';
     replacements.tenantId = tenantId;
   }
-  const [rows] = await sequelize.query(sql, { replacements });
+  const [rows] = await runPersistence(() => sequelize.query(sql, { replacements }));
   return new Set((rows || []).map((r) => r && r.id).filter(Boolean));
 }
 
@@ -262,9 +372,12 @@ async function findDocumentIdsMatchingSearch(searchLower, tenantId = null) {
  * @returns {Promise<string|null>} Content, '' se vazio, null se não encontrado/DB indisponível
  */
 async function loadDocumentContent(documentId) {
-  if (!dbAvailable()) return null;
+  requireDbAvailable();
   const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
-  const row = await RagDocumentModel.findByPk(safeToString(documentId), { attributes: ['id', 'content'] });
+  const row = await runPersistence(() => RagDocumentModel.findByPk(
+    safeToString(documentId),
+    { attributes: ['id', 'content'] },
+  ));
   if (!row) return null;
   const base = row.toJSON ? row.toJSON() : (row.dataValues || row);
   return base.content || '';
@@ -272,39 +385,41 @@ async function loadDocumentContent(documentId) {
 
 /**
  * Retorna (uma única query) os ids, dentre os informados, que têm content
- * não vazio no DB. Retorna null quando o DB está indisponível (caller decide
- * o fallback).
+ * não vazio no DB. Falha explicitamente quando o DB está indisponível; não
+ * existe fallback para estado transitório em memória.
  *
  * @param {string[]} ids
  * @returns {Promise<Set<string>|null>}
  */
 async function loadContentfulDocumentIds(ids) {
-  if (!dbAvailable() || !Array.isArray(ids) || ids.length === 0) return null;
+  requireDbAvailable();
+  if (!Array.isArray(ids) || ids.length === 0) return new Set();
   const sequelize = getSequelize();
-  const [rows] = await sequelize.query(
+  const [rows] = await runPersistence(() => sequelize.query(
     "SELECT id FROM rag_documents WHERE id IN (:ids) AND content IS NOT NULL AND btrim(content) <> ''",
     { replacements: { ids } }
-  );
+  ));
   return new Set((rows || []).map((r) => r && r.id).filter(Boolean));
 }
 
 /**
  * Hidrata o content de documentos leves (content === undefined) via uma única
  * query em lote. Retorna cópias — nunca muta as entradas do cache leve.
- * Sem DB disponível, retorna os documentos como estão (modo degradado).
+ * Sem DB disponível, falha com PERSISTENCE_REQUIRED.
  *
  * @param {Array} docs
  * @returns {Promise<Array>}
  */
 async function hydrateDocumentsWithContent(docs) {
-  if (!Array.isArray(docs) || docs.length === 0 || !dbAvailable()) return docs;
+  if (!Array.isArray(docs) || docs.length === 0) return docs;
+  requireDbAvailable();
   const missing = docs.filter((d) => d && d.content === undefined && d.id);
   if (missing.length === 0) return docs;
   const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
-  const rows = await RagDocumentModel.findAll({
+  const rows = await runPersistence(() => RagDocumentModel.findAll({
     attributes: ['id', 'content'],
     where: { id: missing.map((d) => d.id) },
-  });
+  }));
   const contentById = new Map(rows.map((r) => {
     const base = r.toJSON ? r.toJSON() : (r.dataValues || r);
     return [base.id, base.content];
@@ -333,8 +448,8 @@ function coerceLimit(raw) {
 /**
  * Lista documentos com filtros opcionais.
  *
- * O filtro `search` consulta o DB com ILIKE (título/content) quando o DB está
- * disponível; sem DB, cai no filtro em memória legado (cache degradado).
+ * O filtro `search` consulta o DB com ILIKE (título/content). PostgreSQL é
+ * obrigatório; o cache nunca autoriza resposta degradada.
  * Paginação opcional via limit/offset — sem limit informado, retorna tudo
  * (comportamento legado). Documentos leves têm o content hidratado na resposta
  * (uma query em lote), preservando os campos de antes.
@@ -343,11 +458,14 @@ function coerceLimit(raw) {
  * @returns {Promise<Array>} Lista de documentos
  */
 async function listDocuments(filters = {}) {
-  let result = Array.from(documents.values());
-
-  if (filters.tenantId) {
-    result = result.filter(doc => doc.tenantId === filters.tenantId);
+  requireDbAvailable();
+  const tenantId = safeTrim(filters.tenantId);
+  if (!tenantId) {
+    const error = new Error('tenant_required');
+    error.code = 'TENANT_REQUIRED';
+    throw error;
   }
+  let result = await refreshTenantDocuments(tenantId);
 
   if (filters.source) {
     result = result.filter(doc => doc.metadata?.source === filters.source);
@@ -423,11 +541,18 @@ function getDocument(documentId) {
  * @param {string} documentId - ID do documento
  * @returns {Promise<Object|null>} Documento (cópia, com content quando o DB está disponível) ou null
  */
-async function getDocumentWithContent(documentId) {
-  const document = documents.get(documentId) || null;
-  if (!document) return null;
-  const [hydrated] = await hydrateDocumentsWithContent([document]);
-  return hydrated || document;
+async function getDocumentWithContent(documentId, expectedTenantId = null) {
+  requireDbAvailable();
+  const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+  const row = await runPersistence(() => (expectedTenantId
+    ? RagDocumentModel.findOne({
+      where: { id: safeToString(documentId), tenant_key: expectedTenantId },
+    })
+    : RagDocumentModel.findByPk(safeToString(documentId))));
+  if (!row) return null;
+  const document = fromDbRow(row);
+  documents.set(document.id, { ...document, content: undefined });
+  return document;
 }
 
 /**
@@ -464,6 +589,28 @@ function findDocumentByFileName(fileName, tenantId, fileSize = null) {
 async function createDocument(documentData, tenantId, options = {}) {
   try {
     const finalTenantId = tenantId || documentData.tenantId || null;
+    if (!finalTenantId || !safeTrim(finalTenantId)) {
+      const tenantError = new Error('tenant_required');
+      tenantError.code = 'TENANT_REQUIRED';
+      throw tenantError;
+    }
+    requireDbAvailable();
+    const requestedId = documentData?.id ? safeToString(documentData.id) : null;
+    if (requestedId) {
+      const cachedOwner = documents.get(requestedId)?.tenantId || null;
+      if (cachedOwner && cachedOwner !== finalTenantId) {
+        return { success: false, document: null, errorCode: 'document_tenant_conflict', error: 'ID de documento já pertence a outro tenant' };
+      }
+      const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
+      const row = await runPersistence(() => RagDocumentModel.findByPk(
+        requestedId,
+        { attributes: ['tenant_key'] },
+      ));
+      const dbOwner = row?.tenant_key || row?.dataValues?.tenant_key || null;
+      if (dbOwner && dbOwner !== finalTenantId) {
+        return { success: false, document: null, errorCode: 'document_tenant_conflict', error: 'ID de documento já pertence a outro tenant' };
+      }
+    }
     
     // Verifica duplicação se não foi desabilitado
     if (!options.skipDuplicateCheck) {
@@ -471,7 +618,7 @@ async function createDocument(documentData, tenantId, options = {}) {
         documentData,
         finalTenantId,
         documentsCache: documents,
-        persistFn: persistDocumentBestEffort,
+        persistFn: persistDocumentRequired,
         generateContentHash: ragDeduplicationService.generateContentHash,
         reindexDocumentFn: reindexDocument,
         loadContentFn: loadDocumentContent,
@@ -491,12 +638,13 @@ async function createDocument(documentData, tenantId, options = {}) {
     
     const document = await ragDocumentsLifecycle.buildDocumentForCreate(documentData, finalTenantId);
 
+    await persistDocumentRequired(document);
     documents.set(document.id, document);
-    persistDocumentBestEffort(document);
+    ragResponseCache.invalidateTenant(document.tenantId);
 
     // Indexa automaticamente se solicitado
     if (documentData.autoIndex !== false) {
-      await ragDocumentsLifecycle.autoIndexDocument(document, persistDocumentBestEffort);
+      await ragDocumentsLifecycle.autoIndexDocument(document, persistDocumentRequired);
       documents.set(document.id, document);
     } else {
       logger.debug('[RAGDocuments] Auto-indexação desabilitada para documento', {
@@ -518,6 +666,7 @@ async function createDocument(documentData, tenantId, options = {}) {
     return {
       success: false,
       document: null,
+      errorCode: error?.code || null,
       error: safeErrorMessage(error),
     };
   }
@@ -528,26 +677,79 @@ async function createDocument(documentData, tenantId, options = {}) {
  * 
  * @param {string} documentId - ID do documento
  * @param {Object} updates - Atualizações
+ * @param {string} expectedTenantId - Tenant autoritativo (obrigatório)
  * @returns {Promise<{success: boolean, document: Object|null, error?: string}>}
  */
-async function updateDocument(documentId, updates) {
+async function updateDocument(documentId, updates, expectedTenantId = null) {
   try {
-    const document = documents.get(documentId);
+    requireDbAvailable();
+    const scopedTenantId = requireTenantScope(expectedTenantId);
+    const persisted = await getDocumentWithContent(documentId, scopedTenantId);
+    const document = persisted ? {
+      ...persisted,
+      metadata: { ...(persisted.metadata || {}) },
+      permissions: { ...(persisted.permissions || {}) },
+    } : null;
     if (!document) {
       return {
         success: false,
         document: null,
+        errorCode: 'document_not_found',
+        error: 'Documento não encontrado',
+      };
+    }
+    if (document.tenantId !== scopedTenantId) {
+      return {
+        success: false,
+        document: null,
+        errorCode: 'document_not_found',
         error: 'Documento não encontrado',
       };
     }
 
-    ragDocumentsLifecycle.applyDocumentUpdates(document, updates);
-    documents.set(documentId, document);
-    persistDocumentBestEffort(document);
+    const requiresVectorRefresh = [
+      'content',
+      'metadata',
+      'permissions',
+      'domain',
+      'classification',
+      'sensitivity',
+      'status',
+    ].some((field) => Object.prototype.hasOwnProperty.call(updates || {}, field));
 
-    // Reindexa se solicitado e conteúdo mudou
-    if (updates.reindex && updates.content !== undefined) {
-      await ragDocumentsLifecycle.reindexUpdatedDocument(document, persistDocumentBestEffort);
+    ragDocumentsLifecycle.applyDocumentUpdates(document, updates);
+    if (requiresVectorRefresh && document.status === 'active') {
+      // Bloqueia retrieval dos chunks antigos antes de persistir mudanças de
+      // ACL/domínio/sensibilidade/conteúdo. A consulta só aceita documentos
+      // com index_status=indexed.
+      setIndexState(document, 'indexing');
+    }
+    await persistDocumentRequired(document);
+    documents.set(documentId, document);
+    ragResponseCache.invalidateTenant(document.tenantId);
+
+    if (requiresVectorRefresh && document.status !== 'active') {
+      // Revogação é imediata: documento inativo não pode permanecer no corpus.
+      await postgresVectorStore.deleteDocumentVectors({ tenantId: document.tenantId, documentId: document.id });
+      setIndexState(document, 'pending');
+      await persistDocumentRequired(document);
+    } else if (requiresVectorRefresh) {
+      // Alterações de conteúdo, ACL, sensibilidade ou domínio exigem refresh do
+      // vector store; não dependem de uma flag reindex controlada pelo cliente.
+      const reindexResult = await ragDocumentsIndexing.reindexDocument(
+        documentId,
+        documents,
+        persistDocumentRequired,
+        loadDocumentContent
+      );
+      if (!reindexResult.success) {
+        return {
+          success: false,
+          document: null,
+          errorCode: reindexResult.errorCode || 'RAG_INDEX_FAILED',
+          error: reindexResult.error || 'Falha ao atualizar índice vetorial',
+        };
+      }
     }
 
     // Cache leve: resposta preserva o campo content (query pontual, cópia)
@@ -562,6 +764,7 @@ async function updateDocument(documentId, updates) {
     return {
       success: false,
       document: null,
+      errorCode: error?.code || null,
       error: safeErrorMessage(error),
     };
   }
@@ -571,42 +774,26 @@ async function updateDocument(documentId, updates) {
  * Deleta um documento.
  * 
  * @param {string} documentId - ID do documento
+ * @param {string} expectedTenantId - Tenant autoritativo (obrigatório)
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-async function deleteDocument(documentId) {
+async function deleteDocument(documentId, expectedTenantId = null) {
   try {
+    requireDbAvailable();
+    const scopedTenantId = requireTenantScope(expectedTenantId);
     const safeDocumentId = safeToString(documentId);
-    let document = documents.get(documentId);
-    if (!document && safeDocumentId) {
-      document = documents.get(safeDocumentId);
-    }
+    const document = safeDocumentId ? await getDocumentWithContent(safeDocumentId, scopedTenantId) : null;
     let tenantId = document?.tenantId || null;
-
-    // DELETE deve ser idempotente: se o documento já não existir, não deve falhar.
-    // Além disso, em cenários raros onde o cache em memória não tem o doc mas o DB tem,
-    // garantimos remoção do DB + cleanup best-effort do vector store e binário.
-    if (!document) {
-      if (dbAvailable()) {
-        const RagDocumentModel = typeof RagDocumentGetter === 'function' ? RagDocumentGetter() : RagDocumentGetter;
-        const row = await RagDocumentModel.findByPk(safeDocumentId);
-        if (row) {
-          const dbDoc = fromDbRow(row);
-          tenantId = dbDoc?.tenantId || null;
-          // Remove do banco imediatamente (idempotente)
-          await deleteDocumentFromDb(safeDocumentId);
-        } else {
-          return { success: true, alreadyDeleted: true };
-        }
-      } else {
-        return { success: true, alreadyDeleted: true };
-      }
-    } else {
-      documents.delete(documentId);
-      if (safeDocumentId && safeDocumentId !== documentId) {
-        documents.delete(safeDocumentId);
-      }
-      deleteDocumentBestEffort(documentId);
+    if (document && tenantId !== scopedTenantId) {
+      return { success: false, errorCode: 'document_not_found', error: 'Documento não encontrado' };
     }
+
+    // DELETE é idempotente. A existência foi consultada no PostgreSQL com
+    // tenant, e a linha autoritativa é removida antes das limpezas derivadas.
+    if (!document) return { success: true, alreadyDeleted: true };
+
+    await deleteDocumentRequired(safeDocumentId, scopedTenantId);
+    documents.delete(safeDocumentId);
 
     // Best-effort: remove também do vector store (Postgres) para evitar órfãos.
     try {
@@ -621,6 +808,8 @@ async function deleteDocument(documentId) {
       });
       // Não falha o delete do BD/cache se o vector store falhar
     }
+
+    ragResponseCache.invalidateTenant(tenantId);
 
     // Best-effort: remove binário do documento (se existir)
     try {
@@ -640,6 +829,7 @@ async function deleteDocument(documentId) {
     logger.error('[RAGDocuments] Erro ao deletar documento:', error);
     return {
       success: false,
+      errorCode: error?.code || null,
       error: safeErrorMessage(error),
     };
   }
@@ -649,10 +839,24 @@ async function deleteDocument(documentId) {
  * Reindexa um documento (delegado para ragDocumentsIndexing).
  * 
  * @param {string} documentId - ID do documento
+ * @param {string} expectedTenantId - Tenant autoritativo (obrigatório)
  * @returns {Promise<{success: boolean, chunksCreated: number, error?: string}>}
  */
-async function reindexDocument(documentId) {
-  return await ragDocumentsIndexing.reindexDocument(documentId, documents, persistDocumentBestEffort, loadDocumentContent);
+async function reindexDocument(documentId, expectedTenantId = null) {
+  requireDbAvailable();
+  const scopedTenantId = requireTenantScope(expectedTenantId);
+  const document = await getDocumentWithContent(documentId, scopedTenantId);
+  if (!document || document.tenantId !== scopedTenantId) {
+    return {
+      success: false,
+      chunksCreated: 0,
+      errorCode: 'document_not_found',
+      error: 'Documento não encontrado',
+    };
+  }
+  documents.set(document.id, document);
+  ragResponseCache.invalidateTenant(document.tenantId);
+  return await ragDocumentsIndexing.reindexDocument(documentId, documents, persistDocumentRequired, loadDocumentContent);
 }
 
 /**
@@ -663,12 +867,13 @@ async function reindexDocument(documentId) {
  * @returns {Promise<{success: boolean, total: number, indexed: number, failed: number, errors: Array}>}
  */
 async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false) {
+  await refreshTenantDocuments(tenantId);
   return await ragDocumentsIndexing.reindexAllNotIndexed(
     tenantId,
     includeInconsistent,
     documents,
-    persistDocumentBestEffort,
-    reindexDocument,
+    persistDocumentRequired,
+    (documentId) => reindexDocument(documentId, tenantId),
     loadContentfulDocumentIds
   );
 }
@@ -676,14 +881,16 @@ async function reindexAllNotIndexed(tenantId = null, includeInconsistent = false
 /**
  * Reindex completo de um tenant (single source of truth = Postgres).
  * 1) marca todos docs como pending
- * 2) apaga todos os rag_chunks do tenant
- * 3) reprocessa indexação
+ * 2) reprocessa cada documento por substituição transacional no serviço RAG
+ *
+ * O corpus do tenant nunca é apagado em bloco antes da nova indexação.
  */
 async function reindexAllTenant(tenantId) {
+  await refreshTenantDocuments(tenantId);
   return await ragDocumentsIndexing.reindexAllTenant(
     tenantId,
     documents,
-    persistDocumentBestEffort,
+    persistDocumentRequired,
     reindexAllNotIndexed
   );
 }
@@ -695,6 +902,7 @@ async function reindexAllTenant(tenantId) {
  * @returns {Object} Estatísticas
  */
 async function getDocumentsStats(tenantId = null) {
+  await refreshTenantDocuments(tenantId);
   return await ragDocumentsStats.getDocumentsStats(tenantId, documents);
 }
 
@@ -706,11 +914,12 @@ async function getDocumentsStats(tenantId = null) {
  * @returns {Promise<{ok: boolean, tenantId?: string, docs?: any, chunks?: any, warnings?: any[], error?: any}>}
  */
 async function getRagHealth(tenantId, options = {}) {
+  await refreshTenantDocuments(tenantId);
   return await ragDocumentsHealth.getRagHealth(
     tenantId,
     options,
     documents,
-    persistDocumentBestEffort,
+    persistDocumentRequired,
     markInconsistentDocuments,
     markConsistentForTenant
   );
@@ -749,4 +958,3 @@ module.exports = {
   getRagHealth,
   detectAndCleanOrphanedVectorDocuments,
 };
-

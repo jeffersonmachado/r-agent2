@@ -24,6 +24,12 @@ function assertAllowed(value, allowed, code) {
   }
 }
 
+function isUniqueViolation(error) {
+  return error?.name === 'SequelizeUniqueConstraintError'
+    || error?.original?.code === '23505'
+    || error?.parent?.code === '23505';
+}
+
 async function ensureSubject({ tenantId, subjectId, customerId, membershipId = null, verticalProfile = 'fitness', metadata = {} }) {
   if (subjectId) {
     const existing = await repository.findSubject({ tenantId, where: { id: String(subjectId) } });
@@ -34,35 +40,67 @@ async function ensureSubject({ tenantId, subjectId, customerId, membershipId = n
     if (existing) return existing;
   }
 
-  return repository.createSubject({
-    id: subjectId || makeId('acs'),
-    tenant_key: tenantId,
-    customer_id: customerId || null,
-    membership_id: membershipId || null,
-    status: 'active',
-    vertical_profile: verticalProfile || 'fitness',
-    metadata,
-  });
+  try {
+    return await repository.createSubject({
+      id: subjectId || makeId('acs'),
+      tenant_key: tenantId,
+      customer_id: customerId || null,
+      membership_id: membershipId || null,
+      status: 'active',
+      vertical_profile: verticalProfile || 'fitness',
+      metadata,
+    });
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    // Corrida de idempotência: request concorrente criou o subject entre o
+    // findSubject e o createSubject. Re-fetch e retorna o existente.
+    const raced = subjectId
+      ? await repository.findSubject({ tenantId, where: { id: String(subjectId) } })
+      : await repository.findSubject({ tenantId, where: { customer_id: String(customerId) } });
+    if (raced) {
+      logger.warn('[AccessControl] corrida de idempotência em ensureSubject, retornando subject existente', {
+        tenantId,
+        subjectId: raced.id,
+      });
+      return raced;
+    }
+    throw error;
+  }
 }
 
 async function upsertMembership({ tenantId, subjectId, membershipId, vertical = 'fitness', customerId = null, planName = null, billingStatus = 'active', status = 'active', unitScope = [], metadata = {} }) {
   if (!membershipId) return null;
   const existing = await repository.findMembership({ tenantId, where: { id: String(membershipId) } });
   if (existing) return existing;
-  const created = await repository.createMembership({
-    id: String(membershipId),
-    tenant_key: tenantId,
-    subject_id: String(subjectId),
-    customer_id: customerId || null,
-    vertical,
-    plan_name: planName,
-    billing_status: billingStatus,
-    status,
-    unit_scope: Array.isArray(unitScope) ? unitScope : [],
-    metadata,
-  });
-  emitMembershipCreated({ tenantId, membershipId: String(membershipId), vertical });
-  return created;
+  try {
+    const created = await repository.createMembership({
+      id: String(membershipId),
+      tenant_key: tenantId,
+      subject_id: String(subjectId),
+      customer_id: customerId || null,
+      vertical,
+      plan_name: planName,
+      billing_status: billingStatus,
+      status,
+      unit_scope: Array.isArray(unitScope) ? unitScope : [],
+      metadata,
+    });
+    emitMembershipCreated({ tenantId, membershipId: String(membershipId), vertical });
+    return created;
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    // Corrida de idempotência: request concorrente criou a membership entre o
+    // findMembership e o createMembership. Re-fetch e retorna a existente.
+    const raced = await repository.findMembership({ tenantId, where: { id: String(membershipId) } });
+    if (raced) {
+      logger.warn('[AccessControl] corrida de idempotência em upsertMembership, retornando membership existente', {
+        tenantId,
+        membershipId: String(membershipId),
+      });
+      return raced;
+    }
+    throw error;
+  }
 }
 
 async function listDevices({ tenantId }) {

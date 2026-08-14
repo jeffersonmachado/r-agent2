@@ -1,5 +1,5 @@
 const { createInternalErrorResponder, ensureJsonRequest, ensureRagPermission, isRouteMatch, logRagAction, resolveScopedTenantId } = require('./ragRouteUtils');
-const { resolveRetrievalScope } = require('../../../services/rag/domainRouter');
+const { createResolvedScope, resolveRetrievalScope } = require('../../../../src/core/knowledge-plane');
 
 async function handleRagQueryRoutes({ req, res, method, pathname, deps }) {
   const respondInternalError = createInternalErrorResponder(req, res, deps, 'Erro ao processar rota de consulta do RAG:');
@@ -13,10 +13,18 @@ async function handleRagQueryRoutes({ req, res, method, pathname, deps }) {
 
   try {
     const body = await deps.parseJsonBody(req);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      deps.sendJson(res, 400, { error: 'invalid_request', message: 'Corpo JSON deve ser um objeto' });
+      return true;
+    }
     const { query, tenantId, options = {} } = body;
 
-    if (!query || !query.trim()) {
+    if (typeof query !== 'string' || !query.trim()) {
       deps.sendJson(res, 400, { error: 'invalid_request', message: 'Query não pode ser vazia' });
+      return true;
+    }
+    if (query.trim().length > 2000) {
+      deps.sendJson(res, 400, { error: 'invalid_request', message: 'Query excede o limite de 2000 caracteres' });
       return true;
     }
 
@@ -37,11 +45,19 @@ async function handleRagQueryRoutes({ req, res, method, pathname, deps }) {
       return true;
     }
 
+    const resolvedScope = createResolvedScope({
+      domain: scopeResolution.scope.domain,
+      classifications: scopeResolution.scope.classifications,
+      retrievalPurpose: null,
+      knowledgeTypes: ['SEMANTIC'],
+      policy: scopeResolution.retrievalPolicy,
+      reason: scopeResolution.reason,
+    });
     const filters = {
       topK: options.topK || 6,
       minScore: options.minScore ?? 0.45,
       maxTokens: options.maxTokens || 1000,
-      scope: scopeResolution.scope,
+      scope: resolvedScope,
     };
 
     const result = await deps.ragService.queryRag(query, finalTenantId, { actor: req.agent }, filters);

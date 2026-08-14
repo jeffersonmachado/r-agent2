@@ -160,6 +160,9 @@ function getRequiredSources(journeyId) {
   if (normalized === 'leads') {
     return ['db', 'api', 'crm', 'audit'];
   }
+  if (normalized === 'agendamento') {
+    return ['db', 'api', 'audit'];
+  }
   return ['db', 'api'];
 }
 
@@ -314,6 +317,105 @@ async function collectLeadsSnapshot(ctx, models) {
       sourceErrors: [leads.reason, latestLead.reason, crmEvents.reason, auditEvents.reason, auditLogs.reason].filter(Boolean),
     },
   };
+}
+
+async function readAgendamentoTaskCount(ctx, models) {
+  // A jornada `agendamento` cria uma tarefa real via POST /api/tasks, que é
+  // persistida em `tenant_settings` (key 'tasks') — NÃO na tabela `tasks`
+  // (o model `Task` é usado por waves workspace-core). O `tenant_id` de
+  // `tenant_settings` é o UUID do tenant, então resolvemos a partir da key.
+  const tenantRaw = String(ctx.tenantId || 'system');
+  let tenantUuid = tenantRaw;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tenantRaw)) {
+    const tenantLookup = await findOneModel(models, 'Tenant', buildWhere({}, { tenant_key: tenantRaw }));
+    tenantUuid = tenantLookup.item?.id || tenantRaw;
+  }
+
+  const setting = await findOneModel(models, 'TenantSetting', buildWhere({}, { tenant_id: tenantUuid, key: 'tasks' }));
+  const settingRow = setting.item || {};
+  const settingValue = settingRow.value && typeof settingRow.value === 'object' ? settingRow.value : {};
+  const tasks = Array.isArray(settingValue.tasks) ? settingValue.tasks : [];
+  const latestTask = tasks.length > 0 ? tasks[tasks.length - 1] : {};
+  return {
+    count: tasks.length,
+    latestId: latestTask.id || null,
+    latestTitle: latestTask.title || null,
+    latestStatus: latestTask.status || null,
+    ok: setting.ok,
+    reason: setting.reason || null,
+  };
+}
+
+async function collectAgendamentoSnapshot(ctx, models) {
+  const task = await readAgendamentoTaskCount(ctx, models);
+  const auditEvents = await countModel(models, 'AuditEvent', { tenant_key: String(ctx.tenantId || 'system') });
+  const auditLogs = await countModel(models, 'AuditLog', {});
+
+  return {
+    state: task.count > 0 ? 'task_created' : null,
+    db: {
+      task: {
+        count: task.count,
+        latestId: task.latestId,
+        latestTitle: task.latestTitle,
+        latestStatus: task.latestStatus,
+      },
+    },
+    api: {
+      task: { latestId: task.latestId },
+    },
+    events: {
+      audit: {
+        count: auditEvents.count + auditLogs.count,
+        auditEventsAvailable: auditEvents.ok,
+        auditLogsAvailable: auditLogs.ok,
+      },
+    },
+    metadata: {
+      sources: {
+        db: task.ok,
+        api: true,
+        audit: auditEvents.ok || auditLogs.ok,
+        task: task.ok,
+        auditEvents: auditEvents.ok,
+        auditLogs: auditLogs.ok,
+      },
+      sourceErrors: [task.reason, auditEvents.reason, auditLogs.reason].filter(Boolean),
+    },
+  };
+}
+
+async function collectAgendamentoStepScopedSnapshot(ctx, models, stepId) {
+  const task = await readAgendamentoTaskCount(ctx, models);
+  const snapshot = {
+    state: task.count > 0 ? 'task_created' : null,
+    db: {},
+    api: {},
+    crm: {},
+    events: {},
+    devices: {},
+    metadata: {
+      sources: {},
+      sourceErrors: [task.reason].filter(Boolean),
+      entityScope: ['task'],
+      filterApplied: false,
+      collector: 'entity_scoped',
+      stepId,
+    },
+  };
+
+  // A mutação observável por step é a criação da tarefa (tenant_settings.tasks).
+  snapshot.db.task = {
+    count: task.count,
+    latestId: task.latestId,
+    latestTitle: task.latestTitle,
+    latestStatus: task.latestStatus,
+    created: task.count > 0,
+  };
+  snapshot.metadata.sources.task = task.ok;
+  snapshot.metadata.sources.db = task.ok;
+
+  return normalizeSnapshot(snapshot);
 }
 
 async function collectFitnessCheckinSnapshot(ctx, models) {
@@ -1077,6 +1179,8 @@ async function collectOperationalSnapshot(options = {}) {
     collected = await collectPaymentChargeSnapshot(ctx, models);
   } else if (ctx.journeyId === 'leads') {
     collected = await collectLeadsSnapshot(ctx, models);
+  } else if (ctx.journeyId === 'agendamento') {
+    collected = await collectAgendamentoSnapshot(ctx, models);
   } else {
     collected = {
       state: null,
@@ -1625,6 +1729,10 @@ async function collectEntityScopedSnapshot(options = {}) {
 
   if (stepContract.journeyId === 'payment_charge_flow') {
     return collectPaymentChargeStepScopedSnapshot(ctx, models, stepId);
+  }
+
+  if (stepContract.journeyId === 'agendamento') {
+    return collectAgendamentoStepScopedSnapshot(ctx, models, stepId);
   }
 
   return normalizeSnapshot({

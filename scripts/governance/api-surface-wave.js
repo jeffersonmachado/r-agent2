@@ -201,10 +201,13 @@ async function main() {
       });
     }
     if (policy.p3 && devToken) {
+      // P3 só roda em método seguro (GET/HEAD) — ver probePolicy. Rotas de
+      // governança global exigem o tenant system (enforceSystemTenant);
+      // o probe é read-only, então o tenant system é o correto aqui.
       probes.p3 = await probeWithRetry(method, url, {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${devToken}`,
-        'X-Tenant-Id': 'api-surface-wave',
+        'X-Tenant-Id': 'system',
       });
     }
 

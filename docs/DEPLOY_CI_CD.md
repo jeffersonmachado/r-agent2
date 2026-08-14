@@ -61,11 +61,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup RUNTIME_ROOT
+      - name: Setup runtime_root
         run: |
-          export RUNTIME_ROOT=/tmp/ragent2-ci-${{ github.run_id }}
-          mkdir -p $RUNTIME_ROOT
-          echo "RUNTIME_ROOT=$RUNTIME_ROOT" >> $GITHUB_ENV
+          export runtime_root=/tmp/ragent2-ci-${{ github.run_id }}
+          mkdir -p $runtime_root
+          echo "runtime_root=$runtime_root" >> $GITHUB_ENV
 
       - name: Setup database
         env:
@@ -91,14 +91,14 @@ jobs:
       - name: System Validate (Smoke Tests)
         env:
           NODE_ENV: test
-          RUNTIME_ROOT: /tmp/ragent2-ci-${{ github.run_id }}
+          runtime_root: /tmp/ragent2-ci-${{ github.run_id }}
           DB_HOST: localhost
           REDIS_HOST: localhost
         run: npm run system:validate
 
       - name: Check GO/NO-GO
         env:
-          RUNTIME_ROOT: /tmp/ragent2-ci-${{ github.run_id }}
+          runtime_root: /tmp/ragent2-ci-${{ github.run_id }}
         run: |
           npm run system:release-gate
           EXIT_CODE=$(npm run system:go-no-go || true)
@@ -284,7 +284,7 @@ pipeline {
 
   environment {
     REGISTRY = credentials('registry-credentials')
-    RUNTIME_ROOT = "/tmp/ragent2-ci-${BUILD_ID}"
+    runtime_root = "/tmp/ragent2-ci-${BUILD_ID}"
     NODE_ENV = 'test'
   }
 
@@ -295,7 +295,7 @@ pipeline {
           sh '''
             node --version
             npm --version
-            mkdir -p ${RUNTIME_ROOT}
+            mkdir -p ${runtime_root}
             npm ci
           '''
         }
@@ -332,7 +332,7 @@ pipeline {
     stage('System Validate') {
       steps {
         sh '''
-          export RUNTIME_ROOT=${RUNTIME_ROOT}
+          export runtime_root=${runtime_root}
            npm run db:migrate
           npm run system:validate
         '''
@@ -473,7 +473,7 @@ image: node:18-alpine
 variables:
   REGISTRY_HOST: "registry.gitlab.com"
   REGISTRY_IMAGE: "${REGISTRY_HOST}/seu-grupo/ragent2"
-  RUNTIME_ROOT: "/tmp/ragent2-ci-${CI_PIPELINE_ID}"
+  runtime_root: "/tmp/ragent2-ci-${CI_PIPELINE_ID}"
 
 stages:
   - build
@@ -533,8 +533,8 @@ system_validate:
     - postgres:14
     - redis:7-alpine
   script:
-    - mkdir -p ${RUNTIME_ROOT}
-    - export RUNTIME_ROOT=${RUNTIME_ROOT}
+    - mkdir -p ${runtime_root}
+    - export runtime_root=${runtime_root}
     - npm run db:migrate
     - npm run system:validate
   artifacts:
@@ -640,11 +640,11 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 
 # Runtime (isolated per build)
-RUNTIME_ROOT=/tmp/ragent2-ci-${BUILD_ID}
+runtime_root=/tmp/ragent2-ci-${BUILD_ID}
 
 # QA
-QA_MESH_SYSTEM_VALIDATE_DIR=${RUNTIME_ROOT}/qa-mesh/system-validate
-RELEASE_EVIDENCE_BASE_DIR=${RUNTIME_ROOT}/qa
+QA_MESH_SYSTEM_VALIDATE_DIR=${runtime_root}/qa-mesh/system-validate
+RELEASE_EVIDENCE_BASE_DIR=${runtime_root}/qa
 ```
 
 ---

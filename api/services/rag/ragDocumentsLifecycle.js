@@ -46,6 +46,9 @@ async function buildDocumentForCreate(documentData, tenantId) {
       roles: documentData.permissions?.roles || null,
       agents: documentData.permissions?.agents || null,
     },
+    domain: documentData.domain || 'OPERATIONAL',
+    classification: documentData.classification || 'PRODUCTION',
+    sensitivity: documentData.sensitivity || 'INTERNAL',
     status: documentData.status || 'active',
     indexed: false,
     indexedAt: null,
@@ -59,7 +62,7 @@ async function buildDocumentForCreate(documentData, tenantId) {
   };
 }
 
-async function autoIndexDocument(document, persistDocumentBestEffort) {
+async function autoIndexDocument(document, persistDocument) {
   try {
     logger.info('[RAGDocuments] Indexando documento automaticamente', {
       documentId: document.id,
@@ -74,14 +77,14 @@ async function autoIndexDocument(document, persistDocumentBestEffort) {
     });
 
     setIndexState(document, 'indexing');
-    persistDocumentBestEffort(document);
+    await persistDocument(document);
 
     const indexResult = await ragService.indexDocument(document, document.tenantId);
     const chunksCreated = indexResult.chunksCreated || 0;
 
     if (indexResult.success && chunksCreated > 0) {
       setIndexState(document, 'indexed', { chunksCount: chunksCreated });
-      persistDocumentBestEffort(document);
+      await persistDocument(document);
 
       logger.info('[RAGDocuments] Documento indexado com sucesso', {
         documentId: document.id,
@@ -102,7 +105,7 @@ async function autoIndexDocument(document, persistDocumentBestEffort) {
           : 'Indexação retornou 0 chunks (não persistido no vector store)')
         : (indexResult.error || 'Indexação retornou success=false'),
     });
-    persistDocumentBestEffort(document);
+    await persistDocument(document);
 
     logger.warn('[RAGDocuments] Indexação retornou success=false', {
       documentId: document.id,
@@ -116,7 +119,7 @@ async function autoIndexDocument(document, persistDocumentBestEffort) {
       errorCode: 'RAG_INDEX_FAILED',
       errorMessage: indexError.message,
     });
-    persistDocumentBestEffort(document);
+    await persistDocument(document);
 
     logger.error('[RAGDocuments] Erro ao indexar documento automaticamente', {
       error: safeErrorMessage(indexError),
@@ -147,6 +150,9 @@ function applyDocumentUpdates(document, updates) {
   if (updates.title !== undefined) document.title = updates.title;
   if (updates.content !== undefined) document.content = updates.content;
   if (updates.status !== undefined) document.status = updates.status;
+  if (updates.domain !== undefined) document.domain = updates.domain;
+  if (updates.classification !== undefined) document.classification = updates.classification;
+  if (updates.sensitivity !== undefined) document.sensitivity = updates.sensitivity;
 
   if (updates.metadata) {
     document.metadata = {
@@ -170,17 +176,17 @@ function applyDocumentUpdates(document, updates) {
   document.metadata.updatedAt = new Date().toISOString();
 }
 
-async function reindexUpdatedDocument(document, persistDocumentBestEffort) {
+async function reindexUpdatedDocument(document, persistDocument) {
   try {
     setIndexState(document, 'indexing');
-    persistDocumentBestEffort(document);
+    await persistDocument(document);
 
     const indexResult = await ragService.indexDocument(document, document.tenantId);
     const chunksCreated = indexResult.chunksCreated || 0;
 
     if (indexResult.success && chunksCreated > 0) {
       setIndexState(document, 'indexed', { chunksCount: chunksCreated });
-      persistDocumentBestEffort(document);
+      await persistDocument(document);
       return;
     }
 
@@ -190,13 +196,13 @@ async function reindexUpdatedDocument(document, persistDocumentBestEffort) {
         ? 'Indexação retornou 0 chunks (não persistido no vector store)'
         : (indexResult.error || 'Indexação retornou success=false'),
     });
-    persistDocumentBestEffort(document);
+    await persistDocument(document);
   } catch (indexError) {
     setIndexState(document, 'failed', {
       errorCode: 'RAG_INDEX_FAILED',
       errorMessage: safeErrorMessage(indexError),
     });
-    persistDocumentBestEffort(document);
+    await persistDocument(document);
     logger.warn('[RAGDocuments] Erro ao reindexar documento:', safeErrorMessage(indexError));
   }
 }

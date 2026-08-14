@@ -1,5 +1,7 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../api/utils/runtimePaths');
+
 /**
  * Regressão de segurança (falha observada em 2026-08-03): as rotas de
  * /templates em handleTemplatesRoutes destruturavam requireAuth/requirePermission
@@ -63,7 +65,7 @@ const SAMPLE = {
 
 beforeAll(() => {
   runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'templates-auth-'));
-  process.env.RUNTIME_ROOT = runtimeRoot;
+  configureRuntimeRoot(runtimeRoot);
 });
 
 afterAll(() => {

@@ -4,12 +4,11 @@ const logger = require('../../utils/logger');
 const uiStepInference = require('./uiStepInferenceService');
 const validatorInference = require('./validatorInferenceService');
 const seedInference = require('./seedInferenceService');
+const { getTenantRuntimeRpaDir } = require('../../../lib/rpaPathResolver');
+const { belongsToTenant, normalizeTenantKey } = require('../../../lib/rpaSecurity');
+const { writeJsonAtomic } = require('../../utils/atomicJsonFile');
 
 const SCENARIOS_STORE_PATH = path.join(__dirname, '../../../qa/qa-waves/scenario-store.json');
-const GENERATED_BASE_DIR = path.join(__dirname, '../../../qa/qa-waves');
-const GENERATED_SEEDS_DIR = path.join(GENERATED_BASE_DIR, 'generated-seeds');
-const GENERATED_VALIDATORS_DIR = path.join(GENERATED_BASE_DIR, 'generated-validators');
-const GENERATED_UI_STEPS_DIR = path.join(GENERATED_BASE_DIR, 'generated-ui-steps');
 
 /**
  * Carrega scenario store existente
@@ -34,7 +33,7 @@ function ensureDir(dirPath) {
 
 function writeJson(filePath, payload) {
   ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  writeJsonAtomic(filePath, payload);
 }
 
 /**
@@ -46,10 +45,11 @@ function persistScenarioStore(store) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(SCENARIOS_STORE_PATH, JSON.stringify(store, null, 2));
+    writeJsonAtomic(SCENARIOS_STORE_PATH, store);
     logger.info(`[AutoScenarioGenerator] Scenario store persistido com sucesso`);
   } catch (err) {
     logger.error(`[AutoScenarioGenerator] Falha ao persistir scenario-store: ${err.message}`);
+    throw err;
   }
 }
 
@@ -75,6 +75,7 @@ function generateScenarioForCapability(
   const capId = capability.id || capability.name || 'unknown';
   const capName = capability.name || capId;
   const journeyId = capability.journeyId || capability.journey || options.journeyId || capName;
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
 
   // 1. Gerar UI steps
   const uiSteps = uiStepInference.inferUIStepsForCapability(capability, frontendData);
@@ -90,6 +91,7 @@ function generateScenarioForCapability(
   const scenarioId = generateScenarioId(capId, seedType);
   const scenario = {
     id: scenarioId,
+    tenantId,
     name: `Auto: ${capName} (${seedType})`,
     version: '1.0',
     capabilityId: capId,
@@ -131,7 +133,7 @@ function generateScenarioForCapability(
 /**
  * Gera todos os seed types para uma capability
  */
-function generateAllScenariosForCapability(capability = {}, frontendData = {}) {
+function generateAllScenariosForCapability(capability = {}, frontendData = {}, options = {}) {
   const scenarios = [];
 
   // Prioridade: happy_path primeiro, depois edge cases, depois failures
@@ -146,7 +148,7 @@ function generateAllScenariosForCapability(capability = {}, frontendData = {}) {
 
   for (const seedType of seedTypes) {
     try {
-      const scenario = generateScenarioForCapability(capability, seedType, frontendData);
+      const scenario = generateScenarioForCapability(capability, seedType, frontendData, options);
       scenarios.push(scenario);
     } catch (err) {
       logger.warn(
@@ -158,11 +160,17 @@ function generateAllScenariosForCapability(capability = {}, frontendData = {}) {
   return scenarios;
 }
 
-function persistGeneratedArtifacts(scenario = {}) {
+function persistGeneratedArtifacts(scenario = {}, options = {}) {
   if (!scenario || !scenario.id) return;
 
+  const tenantId = normalizeTenantKey(options.tenantId || scenario.tenantId, { defaultValue: 'system' });
+  const generatedBaseDir = getTenantRuntimeRpaDir(tenantId, 'qa-waves-generated');
+  const generatedSeedsDir = path.join(generatedBaseDir, 'seeds');
+  const generatedValidatorsDir = path.join(generatedBaseDir, 'validators');
+  const generatedUiStepsDir = path.join(generatedBaseDir, 'ui-steps');
   const stamp = String(scenario.id).replace(/[^a-zA-Z0-9_-]/g, '_');
-  writeJson(path.join(GENERATED_SEEDS_DIR, `${stamp}.json`), {
+  writeJson(path.join(generatedSeedsDir, `${stamp}.json`), {
+    tenantId,
     scenarioId: scenario.id,
     capabilityId: scenario.capabilityId,
     journeyId: scenario.journeyId || scenario.journey || null,
@@ -171,7 +179,8 @@ function persistGeneratedArtifacts(scenario = {}) {
     generatedAt: new Date().toISOString(),
   });
 
-  writeJson(path.join(GENERATED_VALIDATORS_DIR, `${stamp}.json`), {
+  writeJson(path.join(generatedValidatorsDir, `${stamp}.json`), {
+    tenantId,
     scenarioId: scenario.id,
     capabilityId: scenario.capabilityId,
     validators: Array.isArray(scenario.validators) ? scenario.validators : [],
@@ -180,7 +189,8 @@ function persistGeneratedArtifacts(scenario = {}) {
     generatedAt: new Date().toISOString(),
   });
 
-  writeJson(path.join(GENERATED_UI_STEPS_DIR, `${stamp}.json`), {
+  writeJson(path.join(generatedUiStepsDir, `${stamp}.json`), {
+    tenantId,
     scenarioId: scenario.id,
     capabilityId: scenario.capabilityId,
     journeyId: scenario.journeyId || scenario.journey || null,
@@ -196,10 +206,15 @@ function persistGeneratedArtifacts(scenario = {}) {
 function generateScenariosForGaps(gappedCapabilities = [], frontendData = {}, options = {}) {
   const generated = [];
   const persist = options.persist !== false;
+  const tenantId = normalizeTenantKey(options.tenantId, { defaultValue: 'system' });
 
   // Filtrar capabilities que já têm scenarios
   const store = loadScenarioStore();
-  const existingCapIds = new Set(store.scenarios.map((s) => s.capabilityId));
+  const existingCapIds = new Set(
+    (store.scenarios || [])
+      .filter((scenario) => belongsToTenant(scenario, tenantId))
+      .map((scenario) => scenario.capabilityId),
+  );
 
   for (const capability of gappedCapabilities) {
     if (existingCapIds.has(capability.id)) {
@@ -207,7 +222,7 @@ function generateScenariosForGaps(gappedCapabilities = [], frontendData = {}, op
       continue;
     }
 
-    const scenarios = generateAllScenariosForCapability(capability, frontendData);
+    const scenarios = generateAllScenariosForCapability(capability, frontendData, { tenantId });
     generated.push(...scenarios);
   }
 
@@ -216,13 +231,18 @@ function generateScenariosForGaps(gappedCapabilities = [], frontendData = {}, op
     const store = loadScenarioStore();
     store.scenarios.push(...generated);
 
-    const knownJourneys = new Set((store.journeys || []).map((journey) => journey.id));
+    const knownJourneys = new Set(
+      (store.journeys || [])
+        .filter((journey) => belongsToTenant(journey, tenantId))
+        .map((journey) => journey.id),
+    );
     for (const scenario of generated) {
       const journeyId = scenario.journeyId || scenario.journey;
       if (!journeyId || knownJourneys.has(journeyId)) continue;
       store.journeys = Array.isArray(store.journeys) ? store.journeys : [];
       store.journeys.push({
         id: journeyId,
+        tenantId,
         source: 'autonomous-gap-closure',
         generatedAt: new Date().toISOString(),
       });
@@ -231,7 +251,7 @@ function generateScenariosForGaps(gappedCapabilities = [], frontendData = {}, op
 
     persistScenarioStore(store);
     for (const scenario of generated) {
-      persistGeneratedArtifacts(scenario);
+      persistGeneratedArtifacts(scenario, { tenantId });
     }
   }
 

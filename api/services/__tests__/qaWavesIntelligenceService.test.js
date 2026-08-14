@@ -92,4 +92,21 @@ describe('qaWavesIntelligenceService', () => {
     const savedDrafts = JSON.parse(fs.readFileSync(DRAFTS_STORE_PATH, 'utf8'));
     expect(savedDrafts.drafts[0].status).toBe('approved');
   });
+
+  test('drafts e aprovação ficam isolados por tenant mesmo com o mesmo id', () => {
+    const base = JSON.parse(fs.readFileSync(DRAFTS_STORE_PATH, 'utf8')).drafts[0];
+    intelligenceService.persistDraft({ ...base, tenantId: 'tenant-a', title: 'Draft A' });
+    intelligenceService.persistDraft({ ...base, tenantId: 'tenant-b', title: 'Draft B' });
+
+    expect(intelligenceService.listDrafts({ tenantId: 'tenant-a' }).map((item) => item.title)).toEqual(['Draft A']);
+    expect(intelligenceService.listDrafts({ tenantId: 'tenant-b' }).map((item) => item.title)).toEqual(['Draft B']);
+
+    const approved = intelligenceService.approveDraft(base.id, {
+      approvedBy: 'reviewer-b',
+      tenantId: 'tenant-b',
+    });
+    expect(approved.tenantId).toBe('tenant-b');
+    expect(intelligenceService.listDrafts({ tenantId: 'tenant-a' })[0].status).toBe('draft_ai');
+    expect(intelligenceService.listDrafts({ tenantId: 'tenant-b' })[0].status).toBe('approved');
+  });
 });

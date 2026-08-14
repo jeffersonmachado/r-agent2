@@ -5,6 +5,11 @@
 # - Frontend: http://localhost:${FRONTEND_TEST_PORT:-15173}
 # - RAG: http://localhost:${RAG_TEST_PORT:-18001} (mapeia para 8000 no container)
 
+# Isola labels, redes e volumes da stack oficial/prod. Sem um nome explícito,
+# o Compose deriva o projeto do diretório ("r-agent2") e pode reconciliar os
+# serviços de docker-compose.prod.yml como se pertencessem à stack de teste.
+name: r-agent2-test
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -51,6 +56,8 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 8000
+      RAG_ENVIRONMENT: test
+      RAG_INTERNAL_TOKEN: ${RAG_INTERNAL_TOKEN:-test-rag-internal-token-at-least-32-bytes}
       DEBUG: "false"
       VECTOR_STORE_TYPE: postgres
       RAG_DATA_ROOT: /var/lib/ragent2/rag
@@ -88,6 +95,7 @@ services:
       RATE_LIMIT_REDIS_URL: redis://redis:6379
       REDIS_URL: redis://redis:6379
       RAG_SERVICE_URL: http://rag-service:8000
+      RAG_INTERNAL_TOKEN: ${RAG_INTERNAL_TOKEN:-test-rag-internal-token-at-least-32-bytes}
       DATABASE_URL: postgresql://results_app:StrongPass@postgres:5432/results_saas_test
       PGHOST: postgres
       PGUSER: results_app
@@ -105,7 +113,6 @@ services:
       SYSTEMADMIN_USERNAME: systemadmin
       SYSTEMADMIN_NAME: System Admin
       RPA_TOKEN: ${RPA_TOKEN:-}
-      RUNTIME_ROOT: /var/lib/ragent2
       WWEBJS_AUTH_PATH: /var/lib/ragent2/whatsapp/auth
       QA_MESH_HISTORY_DIR: /var/lib/ragent2/qa-mesh/history
       QA_MESH_EVIDENCE_DIR: /var/lib/ragent2/qa-mesh/evidence

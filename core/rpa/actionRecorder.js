@@ -19,13 +19,19 @@ const {
   getRpaSeedReadDirs,
   getRpaSeedWriteDir,
 } = require('../../lib/rpaPathResolver');
+const {
+  isSensitiveSelector,
+  normalizeJsonName,
+  protectRecordingSecrets,
+  redactDeep,
+  resolveContainedJsonPath,
+  secretTemplateFor,
+} = require('../../lib/rpaSecurity');
 
-function getRecordingDirectories() {
-  return [...getRpaSeedReadDirs(), ...getRpaFlowReadDirs()]
+function getRecordingDirectories(tenantId = 'system') {
+  return [...getRpaSeedReadDirs(tenantId), ...getRpaFlowReadDirs(tenantId)]
     .filter((dirPath, index, all) => all.indexOf(dirPath) === index);
 }
-
-const SEEDS_DIR = getRpaSeedWriteDir();
 
 /**
  * ActionRecorder - Wrapper de compatibilidade
@@ -34,10 +40,12 @@ const SEEDS_DIR = getRpaSeedWriteDir();
  * Internamente usa RecordingSystem genérico.
  */
 class ActionRecorder {
-  constructor() {
+  constructor(options = {}) {
+    this.tenantId = options.tenantId || 'system';
+    this.seedsDir = getRpaSeedWriteDir(this.tenantId);
     // Usa RecordingSystem internamente
     this.recordingSystem = new RecordingSystem({
-      storagePath: SEEDS_DIR,
+      storagePath: this.seedsDir,
       context: 'rpa',
       enableTimestamps: false, // Seeds não devem ter timestamps
     });
@@ -50,6 +58,7 @@ class ActionRecorder {
       version: '1.0.0',
       createdAt: new Date().toISOString(),
       url: null,
+      tenantId: this.tenantId,
     };
     this.isRecording = false;
   }
@@ -70,6 +79,7 @@ class ActionRecorder {
       version: options.version || '1.0.0',
       createdAt: new Date().toISOString(),
       url: options.url || null,
+      tenantId: options.tenantId || this.tenantId,
     };
   }
 
@@ -144,10 +154,13 @@ class ActionRecorder {
     if (!this.isRecording) return;
 
     // Grava apenas dados neutros (sem delays ou velocidade)
+    const sensitive = options.sensitive === true || isSensitiveSelector(selector, options.inputType || options.autocomplete);
+    const persistedValue = sensitive ? secretTemplateFor(options.fieldName || selector) : value;
     const action = {
       type: 'fill', // ou 'type' - ação de digitação
       selector,
-      value, // Texto completo - será digitado caractere a caractere no replay
+      value: persistedValue,
+      sensitive,
       clear: options.clear !== false, // Por padrão limpa antes de preencher
       validate: options.validate || null,
       timeout: options.timeout || 30000, // Timeout é necessário para encontrar elemento
@@ -158,7 +171,7 @@ class ActionRecorder {
     this.actions.push(action);
     
     // Também registra no RecordingSystem
-    this.recordingSystem.recordFill(selector, value, options);
+    this.recordingSystem.recordFill(selector, persistedValue, { ...options, sensitive });
   }
 
   /**
@@ -316,6 +329,7 @@ class ActionRecorder {
    * @param {Object} data - Dados adicionais para incluir
    */
   save(filename, data = {}) {
+    const safeFilename = normalizeJsonName(filename || this.metadata.name);
     // Adiciona dados ao RecordingSystem
     if (data && Object.keys(data).length > 0) {
       this.recordingSystem.addData(data);
@@ -330,7 +344,7 @@ class ActionRecorder {
     const recordingSystemData = this.recordingSystem.getData();
     
     // UNIFICADO: Tudo salva em /seeds/ agora
-    const seedsDir = SEEDS_DIR;
+    const seedsDir = this.seedsDir;
     
     // Cria diretório se não existir
     if (!fs.existsSync(seedsDir)) {
@@ -339,28 +353,30 @@ class ActionRecorder {
 
     // Garante que metadata.name está definido (usa o nome do arquivo se não estiver definido)
     if (!this.metadata.name && filename) {
-      this.metadata.name = filename;
+      this.metadata.name = safeFilename;
     }
 
     // Garante que metadata.name está definido (usa o nome do arquivo se não estiver definido)
     if (!this.metadata.name && filename) {
-      this.metadata.name = filename;
+      this.metadata.name = safeFilename;
     }
 
     // Mantém formato compatível
-    const recording = {
+    const recording = protectRecordingSecrets({
       ...this.metadata,
-      name: this.metadata.name || filename, // Garante que name está definido
+      name: this.metadata.name || safeFilename, // Garante que name está definido
       steps: this.actions,
       data: {
-        ...data,
+        ...redactDeep(data),
       },
       // Adiciona flag de origem (manual ou automatic)
       source: data.source || this.metadata.source || 'manual',
-    };
+    });
 
-    const filepath = path.join(seedsDir, `${filename}.json`);
-    fs.writeFileSync(filepath, JSON.stringify(recording, null, 2), 'utf8');
+    const filepath = resolveContainedJsonPath(seedsDir, safeFilename);
+    const temporaryPath = `${filepath}.${process.pid}.${Date.now()}.tmp`;
+    fs.writeFileSync(temporaryPath, JSON.stringify(recording, null, 2), 'utf8');
+    fs.renameSync(temporaryPath, filepath);
 
     // NÃO chama recordingSystem.save() aqui porque ele sobrescreve o arquivo com dados vazios
     // O recordingSystem é usado apenas para gravação em tempo real, não para persistência
@@ -373,8 +389,8 @@ class ActionRecorder {
    * 
    * @param {string} filename - Nome do arquivo (sem extensão)
    */
-  static load(filename) {
-    for (const filePath of getRecordingSearchPaths(filename)) {
+  static load(filename, tenantId = 'system') {
+    for (const filePath of getRecordingSearchPaths(filename, tenantId)) {
       if (!fs.existsSync(filePath)) {
         continue;
       }
@@ -389,11 +405,11 @@ class ActionRecorder {
   /**
    * Lista todas as gravações disponíveis.
    */
-  static list() {
+  static list(tenantId = 'system') {
     const seen = new Set();
     const recordings = [];
 
-    for (const dirPath of getRecordingDirectories()) {
+    for (const dirPath of getRecordingDirectories(tenantId)) {
       if (!fs.existsSync(dirPath)) {
         continue;
       }
@@ -418,4 +434,3 @@ class ActionRecorder {
 }
 
 module.exports = { ActionRecorder };
-

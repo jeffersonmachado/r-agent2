@@ -79,12 +79,12 @@ A migração está completa. O sistema agora usa PostgreSQL como banco de dados 
 
 ```bash
 # Obter configuração de IA (requer autenticação)
-curl -H "Authorization: Bearer SEU_TOKEN" \
+curl -H "Authorization: Bearer <TOKEN>" \
   http://localhost:3000/tenants/tenant-acme/ai-config
 
 # Salvar configuração de IA
 curl -X PUT \
-  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"enabled": true, "provider": "openai", "model": "gpt-4"}' \
   http://localhost:3000/tenants/tenant-acme/ai-config

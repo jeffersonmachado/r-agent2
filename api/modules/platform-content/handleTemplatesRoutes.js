@@ -5,7 +5,7 @@ const { resolveRuntimePath } = require('../../utils/runtimePaths');
 
 // Templates embutidos (seeds versionados, somente leitura) ficam no frontend
 // real do repositório. Templates criados em runtime são escritos FORA do
-// repo, em RUNTIME_ROOT/templates — nunca dentro do worktree.
+// repo, no runtime root/templates — nunca dentro do worktree.
 function builtinTemplatesDir() {
   return path.join(__dirname, '..', '..', '..', 'frontend', 'public', 'templates');
 }
@@ -44,7 +44,7 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
 
   // Enforcement obrigatório (mesmo padrão de handleFlowTemplateMarketplaceRoutes):
   // nenhuma rota /templates é pública — templates de runtime são fluxos criados
-  // pelo tenant e as mutações gravam/removem arquivos em RUNTIME_ROOT.
+  // pelo tenant e as mutações gravam/removem arquivos no runtime root.
   // Chamado no início de CADA branch (o scanner de inventário analisa a
   // vizinhança de cada rota — helper central no topo da função ficaria fora
   // da janela de análise e a rota seria reportada sem auth).
@@ -191,7 +191,7 @@ async function handleTemplatesRoutes({ req, res, method, pathname, deps }) {
 
       // Sanitiza o ID do template (usado como nome do arquivo)
       const templateId = body.id.trim().replace(/[^a-z0-9-]/g, '-').toLowerCase();
-      // Escrita sempre em RUNTIME_ROOT — nunca dentro do repositório.
+      // Escrita sempre no runtime root — nunca dentro do repositório.
       const templatesDir = runtimeTemplatesDir();
       const templateFile = path.join(templatesDir, `${templateId}.json`);
 

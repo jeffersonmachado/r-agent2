@@ -9,6 +9,11 @@ const {
   createNetworkRecoveryTracker,
 } = require('../utils/transientNetworkRecovery');
 const logger = require('../utils/logger');
+const { resolveRuntimePath } = require('../utils/runtimePaths');
+const {
+  persistExecutionArtifacts,
+  indexExecutionInRag,
+} = require('./rpaArtifactPersistence');
 const {
   safeToString,
   safeTrim,
@@ -24,6 +29,14 @@ const {
   normalizeJsonName,
   uniquePaths,
 } = require('../../lib/rpaPathResolver');
+const {
+  belongsToTenant,
+  isSensitiveSelector,
+  normalizeTenantKey,
+  redactDeep,
+  redactUrl,
+  stripInternalFilesystemPaths,
+} = require('../../lib/rpaSecurity');
 
 // Importação lazy do overlayInjector (apenas quando necessário para evitar erros de sintaxe)
 let INJECTABLE_SCRIPT = null;
@@ -54,8 +67,9 @@ rpaExecutionEvents.setMaxListeners(200);
 
 function emitRpaExecutionEvent(execution) {
   if (!execution || !execution.id) return;
-  rpaExecutionEvents.emit('updated', {
+  rpaExecutionEvents.emit('updated', stripInternalFilesystemPaths(redactDeep({
     id: execution.id,
+    tenantId: execution.tenantId,
     status: execution.status,
     progress: execution.progress,
     currentStep: execution.currentStep,
@@ -63,12 +77,12 @@ function emitRpaExecutionEvent(execution) {
     error: execution.error || null,
     // Logs recentes mantêm a UI viva sem polling REST.
     logs: Array.isArray(execution.logs) ? execution.logs.slice(-50) : [],
-  });
+  })));
 }
 
 // Ponte WebSocket: propaga mudanças de estado em tempo real para o frontend,
-// eliminando polling. Execuções/gravações RPA não carregam tenant, então o
-// broadcast é global (allowGlobal) e os clientes filtram pelo executionId.
+// eliminando polling. Todo evento carrega tenant e o servidor WebSocket faz
+// a segregação; o cliente nunca é responsável por impedir vazamento.
 let wsEmitCached;
 function getWsEmit() {
   if (wsEmitCached === undefined) {
@@ -85,17 +99,29 @@ rpaExecutionEvents.on('updated', (event) => {
   const emit = getWsEmit();
   if (!emit) return;
   try {
-    emit('rpa.execution.updated', event, { allowGlobal: true });
+    if (!event.tenantId) {
+      logger.error('[RPA] Evento de execução descartado sem tenant', { executionId: event.id });
+      return;
+    }
+    emit('rpa.execution.updated', event, { tenantId: event.tenantId });
   } catch (error) {
     logger.warn('[RPA] Falha ao emitir evento WebSocket de execução', { error: safeErrorMessage(error) });
   }
 });
 
-function emitRecordingWsEvent(recordingId, status, extra = {}) {
+function emitRecordingWsEvent(recordingId, status, tenantId, extra = {}) {
   const emit = getWsEmit();
   if (!emit) return;
   try {
-    emit('rpa.recording.updated', { recordingId, status, ...extra }, { allowGlobal: true });
+    if (!tenantId) {
+      logger.error('[RPA] Evento de gravação descartado sem tenant', { recordingId });
+      return;
+    }
+    emit(
+      'rpa.recording.updated',
+      stripInternalFilesystemPaths(redactDeep({ recordingId, status, tenantId, ...extra })),
+      { tenantId }
+    );
   } catch (error) {
     logger.warn('[RPA] Falha ao emitir evento WebSocket de gravação', { error: safeErrorMessage(error) });
   }
@@ -107,11 +133,12 @@ const { isIgnorablePageNoise } = require('../utils/rpaPageNoiseFilters');
  * Lista todas as gravações RPA disponíveis.
  * UNIFICADO: Tudo está em /seeds/
  */
-function listRecordings() {
+function listRecordings(tenantId = 'system') {
   try {
+    const scopedTenantId = normalizeTenantKey(tenantId);
     const candidateDirs = uniquePaths([
-      ...getRpaSeedReadDirs(),
-      ...getRpaFlowReadDirs(),
+      ...getRpaSeedReadDirs(scopedTenantId),
+      ...getRpaFlowReadDirs(scopedTenantId),
     ]);
     const recordings = [];
 
@@ -122,6 +149,7 @@ function listRecordings() {
 
       const content = fs.readFileSync(filePath, 'utf8');
       const recording = JSON.parse(content);
+      if (!belongsToTenant(recording, scopedTenantId)) return;
       const fileNameId = file.replace('.json', '');
 
       recordings.push({
@@ -134,7 +162,6 @@ function listRecordings() {
         steps: recording.steps || [],
         data: recording.data || {},
         source: recording.source || source || 'manual',
-        filePath,
         recording,
       });
     }
@@ -210,7 +237,9 @@ function assertExecutableRecording(recording, recordingId) {
  * @param {Object} data - Dados adicionais
  * @returns {Promise<Object>} Resultado da execução
  */
-async function executeRecording(recordingId, config = {}, data = {}, authToken = null) {
+async function executeRecording(recordingId, config = {}, data = {}, authToken = null, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  recordingId = normalizeJsonName(recordingId);
   const executionId = `rpa-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   
   // Cria runner com configurações
@@ -218,17 +247,21 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
   // mas permitimos headless quando explicitamente solicitado (ex: validações automáticas/CI).
   const resolvedHeadless = config.headless !== undefined ? config.headless : false;
   const runner = new RpaTestRunner({
+    tenantId: scopedTenantId,
     headless: resolvedHeadless,
     slowMo: config.slowMo || 500,
     timeout: config.timeout || 30000,
     screenshotOnFailure: config.screenshotOnFailure !== undefined ? config.screenshotOnFailure : true,
     // Devtools em headless só atrapalha (e pode causar instabilidade)
     devtools: config.devtools !== undefined ? config.devtools : !resolvedHeadless,
+    // Trace visual SEMPRE gerado, em diretório de runtime fora do workspace.
+    traceDir: resolveRuntimePath('rpa', 'traces'),
   });
 
   // Armazena execução
   const execution = {
     id: executionId,
+    tenantId: scopedTenantId,
     recordingId,
     status: 'running',
     progress: 0,
@@ -249,12 +282,12 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
 
   // Função para adicionar log
   const addLog = (level, message, details = {}) => {
-    const logEntry = {
+    const logEntry = redactDeep({
       timestamp: new Date().toISOString(),
       level, // 'info', 'success', 'error', 'warning'
       message,
       ...details,
-    };
+    });
     execution.logs.push(logEntry);
     // Mantém apenas os últimos 1000 logs
     if (execution.logs.length > 1000) {
@@ -335,19 +368,24 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
       let recording;
       try {
         // Tenta carregar pelo ID primeiro
-        recording = ActionRecorder.load(recordingId);
+        recording = ActionRecorder.load(recordingId, scopedTenantId);
+        if (recording && !belongsToTenant(recording, scopedTenantId)) {
+          const forbidden = new Error(`Gravação não encontrada: ${recordingId}`);
+          forbidden.code = 'NOT_FOUND';
+          throw forbidden;
+        }
         if (!hasExecutableRecordingShape(recording)) {
           throw new Error(`Gravação inválida ou sem steps executáveis: ${recordingId}`);
         }
       } catch (error) {
         // Se não encontrar pelo ID, tenta encontrar pelo nome do arquivo
         // Lista todas as gravações e procura pelo ID
-        const recordings = listRecordings();
+        const recordings = listRecordings(scopedTenantId);
         const foundRecording = recordings.find((r) => r.id === recordingId || r.fileNameId === recordingId);
         if (foundRecording) {
           if (foundRecording.fileNameId) {
             try {
-              recording = ActionRecorder.load(foundRecording.fileNameId);
+              recording = ActionRecorder.load(foundRecording.fileNameId, scopedTenantId);
             } catch (_) {
               recording = foundRecording.recording || null;
             }
@@ -356,11 +394,9 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           }
 
           assertExecutableRecording(recording, recordingId);
-          {
-            addLog('info', `📦 Gravação resolvida via catálogo: ${foundRecording.filePath || foundRecording.fileNameId}`, {
-              step: 'init',
-            });
-          }
+          addLog('info', `📦 Gravação resolvida via catálogo: ${foundRecording.fileNameId}`, {
+            step: 'init',
+          });
         } else {
           throw error;
         }
@@ -373,6 +409,74 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
       
       execution.totalSteps = recording.steps?.length || 0;
       addLog('info', `📝 Total de ações: ${execution.totalSteps}`, { step: 'init' });
+
+      // Artefatos são parte do resultado, não telemetria opcional. Uma
+      // execução sem manifesto/replay verificável não pode permanecer verde.
+      const finalizeArtifacts = async (executionId, resultsObj, tracePath, finalStatus = execution.status) => {
+        try {
+          const outcome = await persistExecutionArtifacts({
+            recording,
+            recordingId,
+            executionId,
+            results: resultsObj,
+            tracePath,
+            tenantKey: scopedTenantId,
+            startedAt: execution.startTime,
+            finishedAt: execution.endTime || null,
+            status: finalStatus,
+          });
+          execution.artifactPersistence = outcome;
+          const incomplete = Boolean(outcome.error)
+            || outcome.executionManifest !== true
+            || (resultsObj != null && outcome.replay !== true);
+          if (incomplete) {
+            const persistenceError = outcome.error || 'rpa_artifact_persistence_incomplete';
+            execution.status = 'failed';
+            execution.error = persistenceError;
+            if (resultsObj) {
+              resultsObj.success = false;
+              resultsObj.errors = Array.isArray(resultsObj.errors) ? resultsObj.errors : [];
+              resultsObj.errors.push({
+                step: 'artifact_persistence',
+                action: 'persist_evidence',
+                error: persistenceError,
+              });
+            }
+            emitRpaExecutionEvent(execution);
+            return outcome;
+          }
+
+          execution.status = finalStatus;
+          emitRpaExecutionEvent(execution);
+
+          if (resultsObj != null) {
+            await indexExecutionInRag({
+              recording,
+              recordingId,
+              executionId,
+              results: resultsObj,
+              tenantKey: scopedTenantId,
+            });
+          }
+          return outcome;
+        } catch (error) {
+          const persistenceError = safeErrorMessage(error) || 'rpa_artifact_persistence_failed';
+          execution.status = 'failed';
+          execution.error = persistenceError;
+          execution.artifactPersistence = { error: persistenceError };
+          if (resultsObj) {
+            resultsObj.success = false;
+            resultsObj.errors = Array.isArray(resultsObj.errors) ? resultsObj.errors : [];
+            resultsObj.errors.push({
+              step: 'artifact_persistence',
+              action: 'persist_evidence',
+              error: persistenceError,
+            });
+          }
+          emitRpaExecutionEvent(execution);
+          return { error: persistenceError };
+        }
+      };
 
       // Mescla dados
       const mergedData = {
@@ -544,11 +648,15 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           
           let stepDetails = '';
           if (step.type === 'navigate') {
-            stepDetails = `URL: ${step.url || step.value || '(não especificada)'}`;
+            stepDetails = `URL: ${redactUrl(step.url || step.value || '(não especificada)')}`;
           } else if (step.selector) {
             stepDetails = `Seletor: ${step.selector}`;
-            if (step.value && !step.value.includes('***')) {
-              stepDetails += ` | Valor: ${step.value.substring(0, 50)}${step.value.length > 50 ? '...' : ''}`;
+            const rawStepValue = safeToString(step.value, '');
+            if (rawStepValue && !rawStepValue.includes('***')) {
+              const visibleValue = isSensitiveSelector(step.selector, step.inputType || step.autocomplete)
+                ? '[REDACTED]'
+                : rawStepValue;
+              stepDetails += ` | Valor: ${visibleValue.substring(0, 50)}${visibleValue.length > 50 ? '...' : ''}`;
             }
           } else if (step.condition) {
             stepDetails = `Condição: ${step.condition}`;
@@ -1374,7 +1482,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         }
 
         // Atualiza status
-        execution.status = results.success ? 'completed' : 'failed';
+        const finalStatus = results.success ? 'completed' : 'failed';
+        execution.status = 'finalizing';
         execution.progress = 100;
         execution.endTime = new Date().toISOString();
         execution.results = results;
@@ -1395,6 +1504,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
 
         await runner.close();
         addLog('info', '🔒 Browser fechado', { step: 'cleanup' });
+
+        await finalizeArtifacts(executionId, results, results.tracePath || null, finalStatus);
       } catch (stepError) {
         // Erro durante execução dos steps
         addLog('error', `💥 Erro durante execução: ${stepError.message}`, {
@@ -1429,6 +1540,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         } catch (closeError) {
           // Ignora erros ao fechar
         }
+
+        await finalizeArtifacts(executionId, results, results.tracePath || null);
       }
     } catch (error) {
       // Erro geral (init, load, etc)
@@ -1442,34 +1555,65 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
       execution.endTime = new Date().toISOString();
       execution.currentStep = null;
       emitRpaExecutionEvent(execution);
-      
+
+      // Finaliza trace em aberto e tenta materializar o manifesto da falha.
+      let fatalTracePath = null;
+      try {
+        if (runner.executor?.stopTracing) {
+          fatalTracePath = await runner.executor.stopTracing(`rpa-trace-${recordingId}-fatal-${Date.now()}`);
+        }
+      } catch (_) {
+        // noop
+      }
+
       try {
         await runner.close();
       } catch (closeError) {
         // Ignora erros ao fechar
       }
+
+      try {
+        execution.artifactPersistence = await persistExecutionArtifacts({
+          recording: null,
+          recordingId,
+          executionId,
+          results: null,
+          tracePath: fatalTracePath,
+          tenantKey: scopedTenantId,
+          startedAt: execution.startTime,
+          finishedAt: execution.endTime,
+          status: execution.status,
+        });
+      } catch (persistenceError) {
+        execution.artifactPersistence = {
+          error: safeErrorMessage(persistenceError) || 'rpa_artifact_persistence_failed',
+        };
+        emitRpaExecutionEvent(execution);
+      }
     }
   })();
 
-  return {
+  return stripInternalFilesystemPaths(redactDeep({
     executionId,
     status: 'running',
     message: 'Execução iniciada',
-  };
+  }));
 }
 
 /**
  * Obtém o status de uma execução.
  */
-function getExecutionStatus(executionId) {
+function getExecutionStatus(executionId, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const execution = activeExecutions.get(executionId);
   
-  if (!execution) {
+  if (!execution || execution.tenantId !== scopedTenantId) {
     return null;
   }
 
-  return {
+  return stripInternalFilesystemPaths(redactDeep({
     id: execution.id,
+    tenantId: execution.tenantId,
     recordingId: execution.recordingId,
     status: execution.status,
     progress: execution.progress,
@@ -1482,17 +1626,18 @@ function getExecutionStatus(executionId) {
     logs: execution.logs || [],
     paused: execution.paused || false,
     stepByStep: execution.stepByStep || false,
-  };
+  }));
 }
 
 /**
  * Continua uma execução pausada em modo step-by-step.
  * Se continueWithoutPause for true, desativa o modo step-by-step e continua sem pausas.
  */
-async function continueExecution(executionId, continueWithoutPause = false) {
+async function continueExecution(executionId, continueWithoutPause = false, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const execution = activeExecutions.get(executionId);
   
-  if (!execution) {
+  if (!execution || execution.tenantId !== scopedTenantId) {
     return { success: false, error: 'Execução não encontrada' };
   }
 
@@ -1544,17 +1689,18 @@ async function continueExecution(executionId, continueWithoutPause = false) {
 /**
  * Executa apenas o próximo step e pausa novamente.
  */
-function nextStep(executionId) {
-  return continueExecution(executionId, false);
+function nextStep(executionId, tenantId = 'system') {
+  return continueExecution(executionId, false, tenantId);
 }
 
 /**
  * Cancela uma execução.
  */
-async function cancelExecution(executionId) {
+async function cancelExecution(executionId, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const execution = activeExecutions.get(executionId);
   
-  if (!execution) {
+  if (!execution || execution.tenantId !== scopedTenantId) {
     return { success: false, error: 'Execução não encontrada' };
   }
 
@@ -1606,7 +1752,7 @@ async function cancelExecution(executionId) {
  * @param {string} recordingId - ID da gravação a ser removida
  * @returns {{success: boolean, message: string, deletedId?: string}}
  */
-function deleteRecording(recordingId) {
+function deleteRecording(recordingId, tenantId = 'system') {
   if (!recordingId || typeof recordingId !== 'string' || safeTrim(recordingId) === '') {
     return {
       success: false,
@@ -1615,8 +1761,9 @@ function deleteRecording(recordingId) {
   }
 
   const sanitizedId = normalizeJsonName(safeTrim(recordingId));
-  const writableSeedsDir = getRpaSeedWriteDir();
-  const legacySearchDirs = getRpaSeedReadDirs().filter((dirPath) => dirPath !== writableSeedsDir);
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const writableSeedsDir = getRpaSeedWriteDir(scopedTenantId);
+  const legacySearchDirs = getRpaSeedReadDirs(scopedTenantId).filter((dirPath) => dirPath !== writableSeedsDir);
   
   // Tenta primeiro pelo nome do arquivo (caso mais comum)
   let recordingFile = null;
@@ -1634,13 +1781,8 @@ function deleteRecording(recordingId) {
   if (!recordingFile) {
     const searchDirs = legacySearchDirs.filter((dirPath) => fs.existsSync(dirPath));
 
-    // eslint-disable-next-line no-console
-    console.log(`[deleteRecording] Procurando legado por UUID: ${sanitizedId} (original: ${recordingId})`);
-    
     for (const dir of searchDirs) {
       const files = fs.readdirSync(dir);
-      // eslint-disable-next-line no-console
-      console.log(`[deleteRecording] Procurando em ${dir}, ${files.length} arquivos`);
       
       for (const file of files) {
         if (file.endsWith('.json')) {
@@ -1654,9 +1796,8 @@ function deleteRecording(recordingId) {
             const searchIdNormalized = safeTrimLower(sanitizedId);
             const originalIdNormalized = safeTrimLower(recordingId);
             
-            if (recordingIdNormalized === searchIdNormalized || recordingIdNormalized === originalIdNormalized) {
-              // eslint-disable-next-line no-console
-              console.log(`[deleteRecording] Arquivo encontrado pelo UUID: ${filePath} (recording.id: ${recording.id})`);
+            if ((recordingIdNormalized === searchIdNormalized || recordingIdNormalized === originalIdNormalized)
+                && belongsToTenant(recording, scopedTenantId)) {
               recordingFile = filePath;
               foundFileName = file.replace('.json', '');
               break;
@@ -1670,13 +1811,9 @@ function deleteRecording(recordingId) {
       if (recordingFile) break;
     }
     
-    if (!recordingFile) {
-      // eslint-disable-next-line no-console
-      console.log(`[deleteRecording] UUID não encontrado em nenhum arquivo`);
-    }
   }
 
-  // Verifica se o arquivo existe
+  // Verifica se o arquivo existe antes de tentar ler seu conteúdo.
   if (!recordingFile) {
     return {
       success: false,
@@ -1685,11 +1822,17 @@ function deleteRecording(recordingId) {
   }
 
   try {
+    const candidate = JSON.parse(fs.readFileSync(recordingFile, 'utf8'));
+    if (!belongsToTenant(candidate, scopedTenantId)) {
+      return { success: false, message: `Gravação "${sanitizedId}" não encontrada` };
+    }
+  } catch (error) {
+    return { success: false, message: `Gravação "${sanitizedId}" inválida` };
+  }
+
+  try {
     // Remove o arquivo
     fs.unlinkSync(recordingFile);
-    
-    // eslint-disable-next-line no-console
-    console.log(`Gravação removida: ${recordingFile}`);
     
     return {
       success: true,
@@ -1732,7 +1875,11 @@ if (typeof cleanupInterval.unref === 'function') {
  * @param {string} initialUrl - URL inicial para navegação
  * @returns {Promise<{success: boolean, recordingId: string, message: string}>}
  */
-async function startManualRecording(seedName, initialUrl) {
+function activeRecordingKey(recordingId, tenantId) {
+  return `${normalizeTenantKey(tenantId)}\u0000${normalizeJsonName(recordingId)}`;
+}
+
+async function startManualRecording(seedName, initialUrl, tenantId = 'system') {
   try {
     if (!seedName || safeTrim(seedName) === '') {
       return {
@@ -1741,8 +1888,12 @@ async function startManualRecording(seedName, initialUrl) {
       };
     }
 
-    // Verifica se já existe uma gravação com esse nome
-    if (activeRecordings.has(seedName)) {
+    const scopedTenantId = normalizeTenantKey(tenantId);
+    const safeSeedName = normalizeJsonName(seedName);
+    const mapKey = activeRecordingKey(safeSeedName, scopedTenantId);
+
+    // Verifica se já existe uma gravação com esse nome no mesmo tenant
+    if (activeRecordings.has(mapKey)) {
       return {
         success: false,
         error: `Gravação "${seedName}" já está em andamento`,
@@ -1756,27 +1907,29 @@ async function startManualRecording(seedName, initialUrl) {
     
     const recorder = new RpaRecorder({
       mode: 'record',
-      seedName,
+      seedName: safeSeedName,
+      tenantId: scopedTenantId,
     });
 
     await recorder.init();
     await recorder.startRecording(url);
 
     // Armazena o recorder
-    activeRecordings.set(seedName, {
+    activeRecordings.set(mapKey, {
       recorder,
-      seedName,
+      seedName: safeSeedName,
+      tenantId: scopedTenantId,
       startTime: new Date().toISOString(),
       status: 'recording',
     });
 
-    logger.info('Gravação manual iniciada', { seedName, url });
-    emitRecordingWsEvent(seedName, 'recording', { seedName });
+    logger.info('Gravação manual iniciada', { seedName: safeSeedName, tenantId: scopedTenantId, url });
+    emitRecordingWsEvent(safeSeedName, 'recording', scopedTenantId, { seedName: safeSeedName });
 
     return {
       success: true,
-      recordingId: seedName,
-      message: `Gravação "${seedName}" iniciada. Interaja com o navegador e chame /rpa/record/stop quando terminar.`,
+      recordingId: safeSeedName,
+      message: `Gravação "${safeSeedName}" iniciada. Interaja com o navegador e chame /rpa/record/stop quando terminar.`,
     };
   } catch (error) {
     logger.error('Erro ao iniciar gravação manual', { error: safeErrorMessage(error), stack: error.stack });
@@ -1793,7 +1946,7 @@ async function startManualRecording(seedName, initialUrl) {
  * @param {string} recordingId - ID da gravação (nome do seed)
  * @returns {Promise<{success: boolean, seedPath?: string, replayPath?: string, message?: string, error?: string}>}
  */
-async function stopManualRecording(recordingId) {
+async function stopManualRecording(recordingId, tenantId = 'system') {
   try {
     if (!recordingId || safeTrim(recordingId) === '') {
       return {
@@ -1802,7 +1955,10 @@ async function stopManualRecording(recordingId) {
       };
     }
 
-    const recording = activeRecordings.get(recordingId);
+    const scopedTenantId = normalizeTenantKey(tenantId);
+    const safeRecordingId = normalizeJsonName(recordingId);
+    const mapKey = activeRecordingKey(safeRecordingId, scopedTenantId);
+    const recording = activeRecordings.get(mapKey);
     if (!recording) {
       return {
         success: false,
@@ -1817,24 +1973,33 @@ async function stopManualRecording(recordingId) {
     await recorder.close();
 
     // Remove da lista de gravações ativas
-    activeRecordings.delete(recordingId);
+    activeRecordings.delete(mapKey);
 
-    logger.info('Gravação manual finalizada', { recordingId, seedPath: result.seedPath });
-    emitRecordingWsEvent(recordingId, 'completed', { seedPath: result.seedPath || null });
+    logger.info('Gravação manual finalizada', {
+      recordingId: safeRecordingId,
+      tenantId: scopedTenantId,
+      seedId: result.seedId || safeRecordingId,
+      replayId: result.replayId || null,
+    });
+    emitRecordingWsEvent(safeRecordingId, 'completed', scopedTenantId, {
+      seedId: result.seedId || safeRecordingId,
+      replayId: result.replayId || null,
+    });
 
     return {
       success: true,
-      seedPath: result.seedPath,
-      replayPath: result.replayPath,
       seedId: result.seedId,
+      replayId: result.replayId || null,
       message: `Gravação "${recordingId}" salva com sucesso`,
     };
   } catch (error) {
     logger.error('Erro ao parar gravação manual', { error: safeErrorMessage(error), stack: error.stack });
     
     // Remove da lista mesmo em caso de erro
-    activeRecordings.delete(recordingId);
-    emitRecordingWsEvent(recordingId, 'failed', { error: safeErrorMessage(error) || null });
+    const safeTenantId = (() => { try { return normalizeTenantKey(tenantId); } catch (_) { return null; } })();
+    const safeId = (() => { try { return normalizeJsonName(recordingId); } catch (_) { return null; } })();
+    if (safeTenantId && safeId) activeRecordings.delete(activeRecordingKey(safeId, safeTenantId));
+    if (safeTenantId) emitRecordingWsEvent(safeId || String(recordingId), 'failed', safeTenantId, { error: safeErrorMessage(error) || null });
     
     return {
       success: false,
@@ -1849,7 +2014,7 @@ async function stopManualRecording(recordingId) {
  * @param {string} recordingId - ID da gravação
  * @returns {{success: boolean, status?: string, seedName?: string, startTime?: string, error?: string}}
  */
-function getRecordingStatus(recordingId) {
+function getRecordingStatus(recordingId, tenantId = 'system') {
   try {
     if (!recordingId || safeTrim(recordingId) === '') {
       return {
@@ -1858,7 +2023,9 @@ function getRecordingStatus(recordingId) {
       };
     }
 
-    const recording = activeRecordings.get(recordingId);
+    const scopedTenantId = normalizeTenantKey(tenantId);
+    const safeRecordingId = normalizeJsonName(recordingId);
+    const recording = activeRecordings.get(activeRecordingKey(safeRecordingId, scopedTenantId));
     if (!recording) {
       return {
         success: false,

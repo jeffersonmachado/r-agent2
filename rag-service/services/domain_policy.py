@@ -25,6 +25,13 @@ DEFAULT_SENSITIVITY = "INTERNAL"
 DEFAULT_SCOPE: Dict[str, Any] = {
     "domain": DEFAULT_DOMAIN,
     "classifications": [DEFAULT_CLASSIFICATION],
+    "sensitivities": ["PUBLIC", "INTERNAL"],
+}
+
+SENSITIVITY_CLEARANCE: Dict[str, List[str]] = {
+    "PRODUCTION": ["PUBLIC", "INTERNAL"],
+    "SUPPORT": ["PUBLIC", "INTERNAL", "CONFIDENTIAL"],
+    "DEVELOPMENT": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"],
 }
 
 # Padrões de secrets/credenciais que NUNCA podem ser indexados.
@@ -152,4 +159,14 @@ def resolve_query_scope(scope: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     if domain == "OPERATIONAL":
         classifications = [c for c in classifications if c != "DEVELOPMENT"] or [DEFAULT_CLASSIFICATION]
 
-    return {"domain": domain, "classifications": classifications}
+    highest_clearance = "PRODUCTION"
+    if "DEVELOPMENT" in classifications:
+        highest_clearance = "DEVELOPMENT"
+    elif "SUPPORT" in classifications:
+        highest_clearance = "SUPPORT"
+
+    return {
+        "domain": domain,
+        "classifications": classifications,
+        "sensitivities": list(SENSITIVITY_CLEARANCE[highest_clearance]),
+    }

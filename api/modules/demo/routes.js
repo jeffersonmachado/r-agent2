@@ -15,15 +15,27 @@ function createDemoRoutes({ buildDeps }) {
     return auth;
   }
 
+  function requireTenant(deps, req, res, auth) {
+    const tenantId = req.tenantId || auth?.agent?.tenantId || auth?.agent?.tenant_id || null;
+    if (!tenantId || !String(tenantId).trim()) {
+      deps.sendJson(res, 400, { error: 'tenant_required', message: 'Selecione um tenant para esta operação' });
+      return null;
+    }
+    return String(tenantId).trim();
+  }
+
   router.get('/api/demo/state', async (req, res) => {
     const deps = buildDeps(req, res);
     const auth = ensureAuth(deps, req, res);
     if (!auth) return;
+    const tenantId = requireTenant(deps, req, res, auth);
+    if (!tenantId) return;
 
     try {
       const vertical = normalizeVertical(req.query?.vertical);
       const state = await deps.demoOrchestrator.getState({
         vertical,
+        tenantId,
         auth: {
           token: req.token || null,
           agent: auth.agent || null,
@@ -40,6 +52,8 @@ function createDemoRoutes({ buildDeps }) {
     const deps = buildDeps(req, res);
     const auth = ensureAuth(deps, req, res);
     if (!auth) return;
+    const tenantId = requireTenant(deps, req, res, auth);
+    if (!tenantId) return;
 
     if (!deps.hasJsonContentType(req)) {
       deps.badRequest(res, 'Content-Type must be application/json');
@@ -51,6 +65,7 @@ function createDemoRoutes({ buildDeps }) {
       const vertical = normalizeVertical(body?.vertical || req.query?.vertical);
       const result = await deps.demoOrchestrator.runDemo({
         vertical,
+        tenantId,
         auth: {
           token: req.token || null,
           agent: auth.agent || null,

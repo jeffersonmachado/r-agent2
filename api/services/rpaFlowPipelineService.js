@@ -15,11 +15,15 @@ const rpaDependencyResolver = require('../../engine/rpaDependencyResolver');
 const flowToRpaConverter = require('../../engine/flowToRpaConverter');
 const rpaService = require('./rpaService');
 const fs = require('fs');
-const path = require('path');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');
 const { resolveRuntimePath } = require('../utils/runtimePaths');
-const { getRpaSeedWriteDir } = require('../../lib/rpaPathResolver');
+const {
+  getRpaSeedWriteDir,
+  normalizeJsonName,
+  resolveContainedJsonPath,
+} = require('../../lib/rpaPathResolver');
+const { normalizeTenantKey, protectRecordingSecrets } = require('../../lib/rpaSecurity');
 const { logAction } = require('./auditService');
 
 function safeToString(value, fallback = '') {
@@ -320,7 +324,7 @@ async function executeRpaFlowPipeline(flow, options = {}) {
       });
       
       const saveStartTime = new Date().toISOString();
-      await saveRpaRecording(rpaRecording);
+      await saveRpaRecording(rpaRecording, tenantId);
       const saveEndTime = new Date().toISOString();
       
       replay.recordAction(
@@ -445,7 +449,7 @@ async function executeRequiredSeeds(requiredSeeds, tenantId) {
       logger.info('[RpaFlowPipeline] Executando seed RPA', { seedName });
 
       // Tenta encontrar a gravação RPA correspondente ao seed
-      const recordings = rpaService.listRecordings();
+      const recordings = rpaService.listRecordings(tenantId);
       const seedRecording = recordings.find(r => 
         r.name === seedName || 
         r.name.includes(seedName) ||
@@ -462,7 +466,7 @@ async function executeRequiredSeeds(requiredSeeds, tenantId) {
         headless: true,
         slowMo: 100,
         timeout: 30000,
-      }, {}, null);
+      }, {}, null, tenantId);
 
       if (executionResult.success) {
         result.executedSeeds.push(seedName);
@@ -514,9 +518,10 @@ async function validateSystemState(flow, tenantId) {
 /**
  * Salva uma gravação RPA em arquivo.
  */
-async function saveRpaRecording(recording) {
+async function saveRpaRecording(recording, tenantId) {
+  const scopedTenantId = normalizeTenantKey(tenantId || recording?.tenantId);
   // UNIFICADO: Tudo salva em /seeds/ agora
-  const seedsDir = getRpaSeedWriteDir();
+  const seedsDir = getRpaSeedWriteDir(scopedTenantId);
   
   // Garante que o diretório existe
   if (!fs.existsSync(seedsDir)) {
@@ -528,14 +533,21 @@ async function saveRpaRecording(recording) {
     recording.source = 'automatic';
   }
 
-  const filename = `${recording.id}.json`;
-  const filepath = path.join(seedsDir, filename);
+  const recordingId = normalizeJsonName(recording.id);
+  const filepath = resolveContainedJsonPath(seedsDir, recordingId);
+  const safeRecording = protectRecordingSecrets({
+    ...recording,
+    id: recordingId,
+    tenantId: scopedTenantId,
+  });
 
-  fs.writeFileSync(filepath, JSON.stringify(recording, null, 2), 'utf8');
+  const temporaryPath = `${filepath}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(temporaryPath, JSON.stringify(safeRecording, null, 2), 'utf8');
+  fs.renameSync(temporaryPath, filepath);
 
   logger.info('[RpaFlowPipeline] Gravação salva', {
-    filepath,
-    recordingId: recording.id,
+    tenantId: scopedTenantId,
+    recordingId,
     source: recording.source,
   });
 }

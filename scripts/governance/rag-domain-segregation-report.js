@@ -13,11 +13,8 @@
  * - operationalAccessToSystemDomain: chamadas sem token interno que NÃO levam 401.
  *
  * Saída: reports/rag-domain-segregation-report.json
- * Exit 1 quando qualquer métrica > 0 (bloqueante), 0 caso contrário.
- *
- * Se o rag-service estiver inalcançável, os probes são marcados como
- * 'skipped' (falha de ambiente, não de código) e não contam violação;
- * as checagens de DB continuam valendo.
+ * Exit 1 quando houver violação OU quando qualquer prova obrigatória não
+ * puder ser executada. Evidência ausente nunca equivale a PASS.
  */
 
 const fs = require('fs');
@@ -50,7 +47,9 @@ const SECRET_PATTERNS = [
 
 async function getSequelize() {
   const { connect, getSequelize: get } = require('../../api/db/sequelize');
-  if (!get()) await connect();
+  // Gate/probe não é processo de longa duração: uma indisponibilidade deve
+  // virar evidência FAIL imediatamente, não 30 retries que mascaram o estado.
+  if (!get()) await connect(1, 0);
   return get();
 }
 
@@ -139,7 +138,7 @@ async function runProbes() {
   }).catch(() => null);
 
   if (!anon) {
-    probes.details.push('rag-service inalcançável: probes de runtime pulados (falha de ambiente, não de código)');
+    probes.details.push('rag-service inalcançável: provas obrigatórias de runtime não executadas');
     return probes;
   }
   probes.serviceReachable = true;
@@ -150,8 +149,9 @@ async function runProbes() {
       probes.details.push(`chamada sem token retornou HTTP ${anon.status} (esperado 401)`);
     }
   } else {
-    probes.details.push('RAG_INTERNAL_TOKEN ausente neste ambiente: probe de auth não se aplica');
+    probes.details.push('RAG_INTERNAL_TOKEN ausente: não é possível executar probes autenticados');
     probes.operationalAccessToSystemDomain = 'skipped';
+    return probes;
   }
 
   // 2) Canários: um doc SYSTEM/DEVELOPMENT e um OPERATIONAL no tenant canário.
@@ -243,6 +243,9 @@ async function main() {
       incoherentDocuments: 0,
       indexedSecrets: 0,
       operationalAccessToSystemDomain: 0,
+      dbChecksFailed: 0,
+      runtimeChecksFailed: 0,
+      internalTokenMissing: 0,
     },
     probes: {},
     distribution: [],
@@ -260,11 +263,22 @@ async function main() {
       report.details.push(`secrets indexados: ${JSON.stringify(db.secretHits)}`);
     }
   } catch (err) {
-    report.details.push(`checagens de DB falharam (ambiente): ${err.message}`);
+    report.details.push(`checagens obrigatórias de DB falharam: ${err.message}`);
     report.metrics.dbChecksFailed = 1;
   }
 
-  const probes = await runProbes();
+  let probes;
+  try {
+    probes = await runProbes();
+  } catch (err) {
+    probes = {
+      serviceReachable: false,
+      crossDomainLeakage: 'skipped',
+      crossTenantLeakage: 'skipped',
+      operationalAccessToSystemDomain: 'skipped',
+      details: [`probes obrigatórios falharam: ${err.message}`],
+    };
+  }
   report.probes = probes;
   for (const key of ['crossDomainLeakage', 'crossTenantLeakage', 'operationalAccessToSystemDomain']) {
     if (typeof probes[key] === 'number') {
@@ -273,7 +287,18 @@ async function main() {
   }
   report.details.push(...probes.details);
 
-  const violations = Object.entries(report.metrics).filter(([, v]) => v > 0);
+  const requiredRuntimeMetrics = [
+    'crossDomainLeakage',
+    'crossTenantLeakage',
+    'operationalAccessToSystemDomain',
+  ];
+  const runtimeComplete = probes.serviceReachable === true
+    && requiredRuntimeMetrics.every((key) => typeof probes[key] === 'number');
+  if (!runtimeComplete) report.metrics.runtimeChecksFailed = 1;
+  if (!INTERNAL_TOKEN) report.metrics.internalTokenMissing = 1;
+
+  const violations = Object.entries(report.metrics)
+    .filter(([, value]) => typeof value !== 'number' || value > 0);
   report.status = violations.length === 0 ? 'PASS' : 'FAIL';
 
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
@@ -289,7 +314,11 @@ async function main() {
   process.exit(report.status === 'PASS' ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error('[rag-domain-segregation] erro fatal:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('[rag-domain-segregation] erro fatal:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { checkDatabase, runProbes, main };

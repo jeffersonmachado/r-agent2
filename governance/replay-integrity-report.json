@@ -1,14 +1,95 @@
 {
-  "generatedAt": "2026-08-09T19:15:43.690Z",
+  "generatedAt": "2026-08-14T07:44:19.804Z",
   "artifact": "r-agent2-20260809-161322.zip",
-  "pass": true,
+  "pass": false,
   "totalReplays": 7,
   "physicalHashes": 7,
   "declaredOnly": 0,
-  "replayRoot": "c9c49df00678a0e7a75ad9d79c60971b…",
-  "replaySigValid": true,
-  "issues": [],
-  "criticalIssues": 0,
+  "replayRoot": "c9c49df00678a0e7a75ad9d79c60971bc1babafd9c257149760b357cf3e78a16",
+  "replaySigValid": false,
+  "enterpriseGovernanceValid": false,
+  "enterpriseGovernanceReasons": [
+    "qa_waves_status_not_go",
+    "qa_waves_replay_integrity_invalid",
+    "qa_waves_governance_signature_invalid",
+    "qa_waves_active_blockers",
+    "qa_waves_continuous_smoke_degraded",
+    "qa_waves_operational_confidence_degraded"
+  ],
+  "proofBindingValid": false,
+  "signatureAuditValid": false,
+  "signatureAlgorithmsValid": false,
+  "sourceGeneratedAt": "2026-08-09T19:14:28.417Z",
+  "issues": [
+    {
+      "type": "invalid_governance_signatures",
+      "severity": "CRITICAL",
+      "journeys": [
+        "support_ticket_flow",
+        "fitness_customer_checkin",
+        "booking_flow",
+        "payment_charge_flow",
+        "food_order_status_flow",
+        "market_node_publish_flow",
+        "clinic_calendar_block_flow"
+      ]
+    },
+    {
+      "type": "unsupported_replay_governance_signature",
+      "severity": "CRITICAL",
+      "index": 0,
+      "journeyId": "support_ticket_flow"
+    },
+    {
+      "type": "unsupported_replay_governance_signature",
+      "severity": "CRITICAL",
+      "index": 1,
+      "journeyId": "fitness_customer_checkin"
+    },
+    {
+      "type": "unsupported_replay_governance_signature",
+      "severity": "CRITICAL",
+      "index": 2,
+      "journeyId": "booking_flow"
+    },
+    {
+      "type": "unsupported_replay_governance_signature",
+      "severity": "CRITICAL",
+      "index": 3,
+      "journeyId": "payment_charge_flow"
+    },
+    {
+      "type": "unsupported_replay_governance_signature",
+      "severity": "CRITICAL",
+      "index": 4,
+      "journeyId": "food_order_status_flow"
+    },
+    {
+      "type": "unsupported_replay_governance_signature",
+      "severity": "CRITICAL",
+      "index": 5,
+      "journeyId": "market_node_publish_flow"
+    },
+    {
+      "type": "unsupported_replay_governance_signature",
+      "severity": "CRITICAL",
+      "index": 6,
+      "journeyId": "clinic_calendar_block_flow"
+    },
+    {
+      "type": "enterprise_replay_governance_invalid",
+      "severity": "CRITICAL",
+      "reasons": [
+        "qa_waves_status_not_go",
+        "qa_waves_replay_integrity_invalid",
+        "qa_waves_governance_signature_invalid",
+        "qa_waves_active_blockers",
+        "qa_waves_continuous_smoke_degraded",
+        "qa_waves_operational_confidence_degraded"
+      ]
+    }
+  ],
+  "criticalIssues": 9,
   "chain": [
     {
       "index": 0,
@@ -103,6 +184,5 @@
     }
   ],
   "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
-  "summary": "Todos os 7 replays têm integridade verificada.",
-  "reboundAt": "2026-08-09T19:15:43.691Z"
+  "summary": "9 problema(s) de integridade detectado(s) nos replays."
 }

@@ -13,6 +13,8 @@ const {
   getExecutionStatus,
   cancelUnifiedExecution,
   getExecutionArtifacts,
+  getExecutionArtifact,
+  listExecutionArtifacts,
   listRecordings,
   startManualRecording,
   stopManualRecording,
@@ -44,6 +46,8 @@ function buildTestExecutionsRouteDeps() {
     getExecutionStatus,
     cancelUnifiedExecution,
     getExecutionArtifacts,
+    getExecutionArtifact,
+    listExecutionArtifacts,
     listRecordings,
     startManualRecording,
     stopManualRecording,
@@ -56,9 +60,10 @@ function buildTestExecutionsRouteDeps() {
     listQaWaveJourneys: listJourneys,
     listQaWaveJourneyStatus: listJourneyStatus,
     listQaWaveStepStatus: listStepStatus,
-    listQaWaveScenarios: (filters) => {
+    listQaWaveScenarios: (filters = {}) => {
+      const tenantId = filters.tenantId;
       const result = listLatestScenarios(filters);
-      const stats = collectScenarioLatestStats();
+      const stats = collectScenarioLatestStats(250, tenantId);
       const enriched = (Array.isArray(result.items) ? result.items : []).map((item) => {
         const baseId = String(item.id || '').replace(/@v\d+$/i, '');
         const stat = stats.get(item.id) || stats.get(baseId);

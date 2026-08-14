@@ -65,8 +65,13 @@ function makeDeps({ body = {}, isSuperAdmin = false, ragService = {}, ragDocumen
     ragDocumentsService: {
       getRagHealth: jest.fn(async () => ({ status: 'healthy' })),
       reindexAllTenant: jest.fn(async () => ({})),
+      getDocument: jest.fn(() => null),
+      getDocumentWithContent: jest.fn(async () => null),
       ...ragDocumentsService,
     },
+    createDocument: jest.fn(async () => ({ success: true, document: { id: 'server-id' } })),
+    updateDocument: jest.fn(async () => ({ success: true, document: {} })),
+    deleteDocument: jest.fn(async () => ({ success: true })),
     reindexAllNotIndexed: jest.fn(async () => ({})),
     reindexDocument: jest.fn(async () => ({ success: true })),
     ragDeduplicationService: { getDeduplicationStats: jest.fn(() => ({})) },
@@ -141,6 +146,38 @@ describe('RAG tenant scope guard — usuário operacional (não super-admin)', (
     await handleRagOperationsRoutes({ req: makeReq({ method: 'POST', url: '/rag/documents/reindex-all' }), res, method: 'POST', pathname: '/rag/documents/reindex-all', deps });
     expect(res.status).toBe(403);
     expect(deps.reindexAllNotIndexed).not.toHaveBeenCalled();
+  });
+
+  test('POST /rag/documents rejeita id escolhido pelo cliente', async () => {
+    const { deps, res } = makeDeps({ body: { id: 'doc-de-outro-tenant', content: 'conteúdo' } });
+    await handleRagCoreRoutes({ req: makeReq({ method: 'POST', url: '/rag/documents' }), res, method: 'POST', pathname: '/rag/documents', deps });
+    expect(res.status).toBe(400);
+    expect(deps.createDocument).not.toHaveBeenCalled();
+  });
+
+  test('PUT /rag/documents/:id oculta documento de outro tenant', async () => {
+    const { deps, res } = makeDeps({
+      body: { title: 'tentativa' },
+      ragDocumentsService: { getDocumentWithContent: jest.fn(async () => null) },
+    });
+    await handleRagCoreRoutes({ req: makeReq({ method: 'PUT', url: '/rag/documents/doc-b' }), res, method: 'PUT', pathname: '/rag/documents/doc-b', deps });
+    expect(res.status).toBe(404);
+    expect(deps.ragDocumentsService.getDocumentWithContent).toHaveBeenCalledWith('doc-b', 'tenantA');
+    expect(deps.updateDocument).not.toHaveBeenCalled();
+  });
+
+  test('DELETE /rag/documents/:id sempre passa tenant autenticado ao serviço', async () => {
+    const { deps, res } = makeDeps();
+    await handleRagCoreRoutes({ req: makeReq({ method: 'DELETE', url: '/rag/documents/doc-a' }), res, method: 'DELETE', pathname: '/rag/documents/doc-a', deps });
+    expect(res.status).toBe(200);
+    expect(deps.deleteDocument).toHaveBeenCalledWith('doc-a', 'tenantA');
+  });
+
+  test('POST /rag/documents/:id/reindex passa tenant autenticado ao serviço', async () => {
+    const { deps, res } = makeDeps();
+    await handleRagOperationsRoutes({ req: makeReq({ method: 'POST', url: '/rag/documents/doc-a/reindex' }), res, method: 'POST', pathname: '/rag/documents/doc-a/reindex', deps });
+    expect(res.status).toBe(200);
+    expect(deps.reindexDocument).toHaveBeenCalledWith('doc-a', 'tenantA');
   });
 });
 

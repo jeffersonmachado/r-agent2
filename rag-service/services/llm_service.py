@@ -40,7 +40,12 @@ def reset_openai_client():
     _openai_client_key = None
 
 
-def generate_response(prompt: str, max_tokens: int = 1000, temperature: float = 0.7) -> str:
+def generate_response(
+    prompt: str,
+    max_tokens: int = 1000,
+    temperature: float = 0.7,
+    system_prompt: Optional[str] = None,
+) -> str:
     """
     Gera resposta usando LLM.
     
@@ -67,7 +72,10 @@ def generate_response(prompt: str, max_tokens: int = 1000, temperature: float = 
             response = client.chat.completions.create(
                 model=settings.llm_model,
                 messages=[
-                    {"role": "system", "content": "Você é um assistente especializado em atendimento ao cliente."},
+                    {
+                        "role": "system",
+                        "content": system_prompt or "Você é um assistente especializado em atendimento ao cliente.",
+                    },
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=max_tokens,
@@ -93,4 +101,3 @@ def generate_response(prompt: str, max_tokens: int = 1000, temperature: float = 
             error_msg += " Biblioteca 'openai' não está instalada."
         logger.error(error_msg)
         raise ValueError(error_msg)
-

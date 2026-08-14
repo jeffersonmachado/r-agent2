@@ -1,4 +1,4 @@
-import { fetchJson } from './client';
+import { fetchJson, fetchBlob } from './client';
 import logger from '../utils/logger';
 
 /**
@@ -245,6 +245,43 @@ export function deleteAllRpaReplays() {
       throw error;
     }
   );
+}
+
+/**
+ * Lista as execuções RPA persistidas no banco (roteiro + trace visual + replay).
+ *
+ * @returns {Promise<{items: Array<{executionId: string, recordingId: string, status: string, hasRecording: boolean, hasTrace: boolean, hasReplay: boolean, screenshots: number, startedAt: string, finishedAt: string, persistedAt: string}>}>}
+ */
+export function listRpaExecutionArtifacts() {
+  return fetchJson('/api/test-executions/artifacts', {
+    method: 'GET',
+  });
+}
+
+/**
+ * Baixa um artefato de execução RPA persistido (roteiro, replay, trace ou
+ * screenshot).
+ *
+ * @param {string} executionId
+ * @param {'recording'|'replay'|'trace'|'screenshot'} kind
+ * @param {number} [index] - índice do screenshot
+ * @returns {Promise<{blob: Blob, filename: string}>}
+ */
+export async function downloadRpaExecutionArtifact(executionId, kind, index = null) {
+  if (!executionId) {
+    throw new Error('downloadRpaExecutionArtifact: executionId é obrigatório');
+  }
+  const suffix = kind === 'screenshot' && Number.isFinite(Number(index))
+    ? `/${Number(index)}`
+    : '';
+  const url = `/api/test-executions/${encodeURIComponent(executionId)}/artifact/${encodeURIComponent(kind)}${suffix}`;
+
+  const response = await fetchBlob(url, { method: 'GET' });
+  const contentDisposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename="([^"]+)"/i.exec(contentDisposition);
+  const filename = match ? match[1] : `${executionId}.${kind}.bin`;
+  const blob = await response.blob();
+  return { blob, filename };
 }
 
 /**

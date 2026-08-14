@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { executeScenarioWithFallback } = require('../meshRunner');
+const { buildRegistry, executeScenarioWithFallback } = require('../meshRunner');
 
 /**
  * Regressão: cenário de jornada blocking executado pelo mesh sem browser
@@ -22,13 +22,13 @@ function writeEvidence(payload) {
   return file;
 }
 
-function evidenceSummary(generatedAt) {
+function evidenceSummary(generatedAt, journeyId = 'support_ticket_flow') {
   return {
     generatedAt,
     status: 'GO',
     flows: [
       {
-        journeyId: 'support_ticket_flow',
+        journeyId,
         replay: { id: 'replay-1', status: 'GO', screenshots: [{ id: 's1' }] },
         audit: { valid: true },
         strictGovernance: { status: 'GO' },
@@ -102,5 +102,33 @@ describe('meshRunner — jornada blocking consome evidência operacional do smok
     );
 
     expect(result.status).toBe('passed');
+  });
+
+  test('seed RPA preserva journeyId e criticality bloqueante do scenario store', () => {
+    const scenario = buildRegistry().find((item) => item.id === 'fitness-matricula-agendamento-ui');
+
+    expect(scenario).toBeDefined();
+    expect(scenario.journeyId).toBe('agendamento');
+    expect(scenario.criticality).toBe('blocking');
+    expect(scenario.scenarioStatus).toBe('approved');
+  });
+
+  test('agendamento sem evidência operacional válida falha fechado', async () => {
+    process.env.MESH_BLOCKING_EVIDENCE_PATH = writeEvidence(
+      evidenceSummary(new Date().toISOString(), 'support_ticket_flow'),
+    );
+
+    const result = await executeScenarioWithFallback(
+      { ...blockingScenario(), id: 'fitness-matricula-agendamento-ui', journeyId: 'agendamento' },
+      { executionMode: 'operational_go' },
+    );
+
+    expect(result.status).toBe('failed');
+    expect(result.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        message: 'blocking_journey_requires_browser_operational_runner',
+        evidenceStatus: 'missing',
+      }),
+    ]));
   });
 });

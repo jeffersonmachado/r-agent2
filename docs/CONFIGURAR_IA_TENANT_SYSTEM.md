@@ -21,7 +21,7 @@ O tenant "system" é um tenant especial usado para operações administrativas e
 ```bash
 curl -X PUT http://localhost:3000/tenants/system/ai-config \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN_JWT" \
+  -H "Authorization: Bearer <TOKEN>" \
   -d '{
     "primary": "openai",
     "secondary": "anthropic",
@@ -86,7 +86,7 @@ As credenciais (API keys) são salvas separadamente e criptografadas:
 ```bash
 curl -X PUT http://localhost:3000/tenants/system/ai-credentials \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer SEU_TOKEN_JWT" \
+  -H "Authorization: Bearer <TOKEN>" \
   -d '{
     "provider": "openai",
     "apiKey": "sk-..."
@@ -101,7 +101,7 @@ curl -X PUT http://localhost:3000/tenants/system/ai-credentials \
 
 ```bash
 curl -X GET http://localhost:3000/tenants/system/ai-config \
-  -H "Authorization: Bearer SEU_TOKEN_JWT"
+  -H "Authorization: Bearer <TOKEN>"
 ```
 
 ### Via JavaScript:

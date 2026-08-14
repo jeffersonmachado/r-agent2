@@ -7,7 +7,7 @@ O super admin já está criado no sistema com as seguintes credenciais:
 ```
 Username: systemadmin
 Email: systemadmin@exemplo.com
-Senha: Admin123!
+Senha: ***
 Tenant: system
 Role: owner
 ```
@@ -19,7 +19,7 @@ Role: owner
 1. Acesse a página de login: `http://localhost:5173/login`
 2. Use as credenciais acima:
    - **Username:** `systemadmin`
-   - **Senha:** `Admin123!`
+   - **Senha:** `***`
 
 ### 2. Acessar Área de Super Admin
 

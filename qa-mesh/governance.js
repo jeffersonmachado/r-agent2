@@ -1,5 +1,7 @@
 'use strict';
 
+const { getBlockingJourneys } = require('../qa/contracts/journeyCriticality');
+
 const MIN_EXECUTION_RATIO = 0.7;
 
 const CHECK_SEVERITY = {
@@ -176,10 +178,9 @@ function summarizeResults(results = [], registryTotal = results.length) {
 function evaluateGoNoGo(results = [], options = {}) {
   const criticalDomains = new Set(options.criticalDomains || ['core', 'pbx', 'omnichannel']);
   const strictMode = options.strictMode !== false;
-  const blockingJourneys = new Set(options.blockingJourneys || [
-    'support_ticket_flow',
-    'fitness_customer_checkin',
-  ]);
+  // Jornadas blocking: default vem do registry declarativo
+  // (config/journey-criticality.json); options.blockingJourneys sobrescreve.
+  const blockingJourneys = new Set(options.blockingJourneys || getBlockingJourneys());
   const maxFailureRate = Number.isFinite(options.maxFailureRate) ? options.maxFailureRate : 0.2;
   const registryTotal = Number.isFinite(options.registryTotal) ? options.registryTotal : results.length;
   const summary = summarizeResults(results, registryTotal);

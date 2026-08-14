@@ -9,9 +9,9 @@ const { chromium } = require('playwright');
 const { ActionRecorder } = require('../actionRecorder');
 const { getModeConfig } = require('../rpaConfig');
 const { ReplaySystem } = require('../replaySystem');
-const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
+const { normalizeTenantKey } = require('../../../lib/rpaSecurity');
+const { getRpaReplayDir } = require('../../../lib/rpaPathResolver');
 
 class RpaRecorder {
   constructor(options = {}) {
@@ -20,8 +20,13 @@ class RpaRecorder {
     this.browser = null;
     this.page = null;
     this.context = null;
-    this.recorder = new ActionRecorder();
-    this.replaySystem = new ReplaySystem();
+    this.tenantId = normalizeTenantKey(options.tenantId || 'system');
+    this.recorder = new ActionRecorder({ tenantId: this.tenantId });
+    this.replaySystem = new ReplaySystem({
+      tenantId: this.tenantId,
+      storagePath: getRpaReplayDir(this.tenantId),
+      storagePathIsTenantScoped: true,
+    });
     this.isRecording = false;
     this.seedName = options.seedName || `seed-${Date.now()}`;
     this.screenshots = [];
@@ -232,10 +237,11 @@ class RpaRecorder {
     this.recorder.start({
       name: this.seedName,
       url: initialUrl,
+      tenantId: this.tenantId,
     });
 
     // REPLAY OBRIGATÓRIO: Inicia replay para gravação
-    this.replaySystem.start(this.seedName);
+    this.replaySystem.start(this.seedName, { tenantId: this.tenantId });
 
     if (initialUrl) {
       await this.page.goto(initialUrl);
@@ -267,17 +273,13 @@ class RpaRecorder {
     this.isRecording = false;
     this.recorder.stop();
 
-    const seedsDir = path.join(__dirname, '..', 'seeds');
-    if (!fs.existsSync(seedsDir)) {
-      fs.mkdirSync(seedsDir, { recursive: true });
-    }
-
     // Salva seed SEM incluir config (config não faz parte do seed)
     const seedPath = this.recorder.save(this.seedName, {
       // NÃO inclui modeConfig - isso é config, não seed
       // NÃO inclui delays ou velocidade
       screenshots: this.screenshots,
       source: 'manual', // Flag para identificar gravação manual
+      tenantId: this.tenantId,
     });
 
     // REPLAY OBRIGATÓRIO: Para e salva replay da gravação
@@ -313,4 +315,3 @@ class RpaRecorder {
 }
 
 module.exports = { RpaRecorder };
-

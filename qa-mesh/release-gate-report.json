@@ -1,10 +1,10 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-08-09T16-47-06-616Z",
+  "executionId": "mesh-2026-08-14T14-45-26-875Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "gate": "GO",
+  "gate": "NO_GO",
   "thresholds": {
     "maxFailureRate": 0.2,
     "minExecutionRatio": 0.7,
@@ -16,12 +16,14 @@
     "strictMode": true,
     "blockingJourneys": [
       "support_ticket_flow",
-      "fitness_customer_checkin"
+      "fitness_customer_checkin",
+      "agendamento"
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-08-09T16-47-06-616Z",
-    "timestamp": "2026-08-09T16:47:06.616Z",
+    "executionId": "mesh-2026-08-14T14-45-26-875Z",
+    "tenantId": "system",
+    "timestamp": "2026-08-14T14:45:26.876Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -29,9 +31,9 @@
     "attempted": 131,
     "executed": 131,
     "total": 131,
-    "passed": 131,
+    "passed": 111,
     "fallbackPassed": 0,
-    "failed": 0,
+    "failed": 20,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
@@ -69,9 +71,9 @@
         "total": 2
       },
       "core": {
-        "passed": 84,
+        "passed": 77,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 7,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -79,9 +81,9 @@
         "total": 84
       },
       "fitness": {
-        "passed": 15,
+        "passed": 9,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 6,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -129,9 +131,9 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 4,
+        "passed": 0,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 4,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -149,9 +151,9 @@
         "total": 1
       },
       "pbx": {
-        "passed": 3,
+        "passed": 0,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 3,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -169,10 +171,49 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "BLOCKING_SCENARIO_FAILED",
+      "CRITICAL_DOMAIN_FAILED:core",
+      "CRITICAL_DOMAIN_FAILED:omnichannel",
+      "CRITICAL_DOMAIN_FAILED:pbx",
+      "BASELINE_PASS_RATE_REGRESSION",
+      "BASELINE_BLOCKING_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "core": {
+        "total": 7,
+        "blocking": 2,
+        "byType": {
+          "functional_failure": 7
+        },
+        "successRate": 0.9166666666666666
+      },
+      "fitness": {
+        "total": 6,
+        "blocking": 1,
+        "byType": {
+          "functional_failure": 6
+        },
+        "successRate": 0.6
+      },
+      "omnichannel": {
+        "total": 4,
+        "blocking": 2,
+        "byType": {
+          "functional_failure": 4
+        },
+        "successRate": 0
+      },
+      "pbx": {
+        "total": 3,
+        "blocking": 3,
+        "byType": {
+          "functional_failure": 3
+        },
+        "successRate": 0
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -180,18 +221,6 @@
         "successRate": 1
       },
       "clinica": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "core": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "fitness": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -221,19 +250,7 @@
         "byType": {},
         "successRate": 1
       },
-      "omnichannel": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
       "bpmn": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "pbx": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -246,31 +263,86 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
-    "blockingDomains": [],
+    "failuresByType": {
+      "functional_failure": 20
+    },
+    "topErrors": [
+      {
+        "message": "1 erro(s) de console detectados",
+        "count": 9
+      },
+      {
+        "message": "Tutor não respondeu com conteúdo disponível",
+        "count": 1
+      },
+      {
+        "message": "Execução não gravou evento execute na trilha de governança",
+        "count": 1
+      },
+      {
+        "message": "500 Internal Server Error: internal_error",
+        "count": 1
+      },
+      {
+        "message": "Plano RPA não foi aceito: {\"success\":true,\"testId\":\"qa-rpa-plan-20260814150336\",\"message\":\"Teste RPA salvo com sucesso\"}",
+        "count": 1
+      },
+      {
+        "message": "Nenhuma conversa elegível encontrada na inbox",
+        "count": 1
+      },
+      {
+        "message": "Documento não foi indexado dentro do tempo esperado",
+        "count": 1
+      },
+      {
+        "message": "Agente supervisor seed não encontrado para atribuição de role",
+        "count": 1
+      },
+      {
+        "message": "[inbox-smoke] evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+        "count": 1
+      },
+      {
+        "message": "[pbx-call-events-runtime-smoke] FAIL flow_create_failed:403",
+        "count": 1
+      }
+    ],
+    "blockingDomains": [
+      "core",
+      "fitness",
+      "omnichannel",
+      "pbx"
+    ],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-08-09T16-47-06-616Z",
-      "startedAt": "2026-08-09T16:47:06.616Z",
+      "executionId": "mesh-2026-08-14T14-45-26-875Z",
+      "startedAt": "2026-08-14T14:45:26.876Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-08-09T17:52:02.397Z",
+      "promotedAt": "2026-08-14T15:46:44.784Z",
       "registryTotal": 131,
-      "goNoGo": "GO",
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "reasons": [],
+  "reasons": [
+    "BLOCKING_SCENARIO_FAILED",
+    "CRITICAL_DOMAIN_FAILED:core",
+    "CRITICAL_DOMAIN_FAILED:omnichannel",
+    "CRITICAL_DOMAIN_FAILED:pbx",
+    "BASELINE_PASS_RATE_REGRESSION",
+    "BASELINE_BLOCKING_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-08-09T16-47-06-616Z",
-    "startedAt": "2026-08-09T16:47:06.616Z",
+    "executionId": "mesh-2026-08-14T14-45-26-875Z",
+    "startedAt": "2026-08-14T14:45:26.876Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-08-09T17:52:02.397Z",
+    "promotedAt": "2026-08-14T15:46:44.784Z",
     "registryTotal": 131,
-    "goNoGo": "GO",
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
-  "generatedAt": "2026-08-09T17:52:02.398Z"
+  "generatedAt": "2026-08-14T15:46:44.786Z"
 }

@@ -8,7 +8,7 @@ Validated with Playwright on 2026-05-16 against `http://127.0.0.1:5173`, API pro
 |---|---|---|---|---|---|
 | `/support` | `/support` | none | `SupportPage` | VALIDATED | Uses support/ticket APIs; rendered ticket list and actions. |
 | `/rpa-replays` | `/dev/rpa-replays` | Alias adicionado 2026-05-27 em `main.jsx` (`isRpaReplaysAlias`) | `RpaReplaysPage` | ALIAS_FIXED | Rota canonica `/dev/rpa-replays` renderiza. Alias `/rpa-replays` agora mapeia diretamente. |
-| `/rag-documents` | `/rag-documents` | none | `RAGDocumentsPage` | VALIDATED_WITH_WARNINGS | RAG document UI rendered; inspect API aborts when changing RAG behavior. |
+| `/rag-documents` | `/rag-documents` | none | `RAGDocumentsPage` | VALIDATED | Rendered in authenticated runtime; no console/network failures in the 2026-08-14 run. |
 | `/system-status` | `/dev/system-status` | Alias adicionado 2026-05-27 em `main.jsx` (`isSystemStatusAlias`) | `SystemStatusPage` | ALIAS_FIXED | Rota canonica `/dev/system-status` renderiza. Alias `/system-status` agora mapeia diretamente. |
 | `/channel-accounts` | `/channel-accounts` | none | `ChannelAccountsPage` | ROUTING_GAP | Router/menu define it; direct browser navigation returned backend 401 JSON. |
 | `/channel-health` | `/channel-health` | none | `ChannelHealthPage` | VALIDATED | Rendered operational channel health page. |
@@ -52,4 +52,3 @@ Store future screenshots/traces under governed evidence folders such as `AI_MEMO
 - `.env` changes are NOT picked up by `touch api/server.js`: `scripts/start-dev-nodemon.sh` loads `.env` when the wrapper starts and exports vars (e.g. `REDIS_URL`) into the nodemon environment; dotenv does not override an already-set env, so every respawned child keeps the stale value. Changing `.env` requires restarting the whole `npm run dev:api` wrapper, not just touching a watched file.
 - Redis local roda via systemd na porta **6379** (`redis-server.service`); apontar `REDIS_URL` para outra porta (ex.: 6380) derruba rate limit para "modo memória" após 10 tentativas e marca o serviço UNHEALTHY em `/system/status`.
 - Cuidado com `pkill -f "node api/server.js"`: o padrão casa com o próprio shell que executa o comando (self-match) e pode derrubar wrappers irmãos; matar por PID.
-

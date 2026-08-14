@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from main import app
 from services.adaptive_learning import AdaptiveLearningService, get_adaptive_learning_service
 
-client = TestClient(app)
+client = TestClient(app, backend_options={"use_uvloop": True})
 
 # Token interno obrigatório quando configurado (auth serviço-a-serviço)
 import os as _os
@@ -116,6 +116,12 @@ def test_validation_rules_loading(temp_validation_rules_file, learning_service):
     assert rules is not None
     assert "rules" in rules
     assert "adaptation" in rules
+
+
+@pytest.mark.parametrize("tenant_id", ["../tenant-b", "tenant/a", "", "a" * 129])
+def test_learning_path_rejeita_tenant_id_inseguro(learning_service, tenant_id):
+    with pytest.raises(ValueError, match="tenant_id inválido"):
+        learning_service.get_learning_file_path(tenant_id)
 
 
 def test_is_valid_query_valid_question(learning_service):
@@ -346,4 +352,3 @@ def test_adaptation_stops_at_target_accuracy(learning_service):
     
     # Pode retornar False se já atingiu acurácia
     assert isinstance(adapted, bool)
-

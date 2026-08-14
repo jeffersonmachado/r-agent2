@@ -194,21 +194,25 @@ class VectorStore:
                 cur.execute(
                     """
                     INSERT INTO rag_documents
-                      (id, tenant_key, title, content, metadata, permissions, status, indexed, indexed_at, chunks_count, created_at, updated_at, domain, classification, sensitivity)
+                      (id, tenant_key, title, content, metadata, permissions, status, indexed, indexed_at, chunks_count, created_at, updated_at, domain, classification, sensitivity, index_status)
                     VALUES
-                      (%s, %s, %s, %s, '{}'::jsonb, '{}'::jsonb, 'active', true, NOW(), %s, NOW(), NOW(), %s, %s, %s)
+                      (%s, %s, %s, %s, '{}'::jsonb, '{}'::jsonb, 'active', true, NOW(), %s, NOW(), NOW(), %s, %s, %s, 'indexed')
                     ON CONFLICT (id) DO UPDATE SET
-                      tenant_key = EXCLUDED.tenant_key,
+                      status = EXCLUDED.status,
                       indexed = true,
+                      index_status = 'indexed',
                       indexed_at = NOW(),
                       chunks_count = EXCLUDED.chunks_count,
                       updated_at = NOW(),
                       domain = EXCLUDED.domain,
                       classification = EXCLUDED.classification,
                       sensitivity = EXCLUDED.sensitivity
+                    WHERE rag_documents.tenant_key = EXCLUDED.tenant_key
                     """,
                     (doc_id, self.tenant_id, doc_id, "", len(rows), doc_domain, doc_classification, doc_sensitivity),
                 )
+                if cur.rowcount == 0:
+                    raise PermissionError("document_id pertence a outro tenant")
 
                 # reindex consistente: remove chunks antigos do documento e reinsere
                 cur.execute(
@@ -253,25 +257,32 @@ class VectorStore:
         roles = [str(r) for r in (roles or []) if str(r).strip()] if isinstance(roles, (list, tuple)) else []
         agent_id = str(filters.get("agentId")).strip() if filters.get("agentId") else ""
 
-        where_clauses = ["tenant_key = %s", "domain = %s", "classification = ANY(%s)"]
-        params: List[Any] = [qv, self.tenant_id, resolved_scope["domain"], resolved_scope["classifications"]]
-        if roles:
-            where_clauses.append(
-                "(permissions->'roles' IS NULL OR permissions->'roles' = '[]'::jsonb"
-                " OR permissions->'roles' ?| %s)"
-            )
-            params.append(roles)
-        if agent_id:
-            where_clauses.append(
-                "(permissions->'agents' IS NULL OR permissions->'agents' = '[]'::jsonb"
-                " OR permissions->'agents' ? %s)"
-            )
-            params.append(agent_id)
+        where_clauses = [
+            "c.tenant_key = %s",
+            "c.domain = %s",
+            "c.classification = ANY(%s)",
+            "c.sensitivity = ANY(%s)",
+            "(c.permissions->'roles' IS NULL OR c.permissions->'roles' = 'null'::jsonb"
+            " OR c.permissions->'roles' = '[]'::jsonb OR c.permissions->'roles' ?| %s)",
+            "(c.permissions->'agents' IS NULL OR c.permissions->'agents' = 'null'::jsonb"
+            " OR c.permissions->'agents' = '[]'::jsonb OR c.permissions->'agents' ? %s)",
+            "EXISTS (SELECT 1 FROM rag_documents d"
+            " WHERE d.id = c.document_id AND d.tenant_key = c.tenant_key AND d.status = 'active'"
+            " AND COALESCE(d.index_status, CASE WHEN d.indexed THEN 'indexed' ELSE 'pending' END) = 'indexed')",
+        ]
+        params: List[Any] = [
+            qv,
+            self.tenant_id,
+            resolved_scope["domain"],
+            resolved_scope["classifications"],
+            resolved_scope["sensitivities"],
+            roles,
+            agent_id,
+        ]
 
-        # Com filtro no SQL não há descarte em Python: fetch_k = k. Sem filtro,
-        # mantém o overscan histórico (inócuo, mas preserva o comportamento).
-        has_sql_filter = bool(roles or agent_id)
-        fetch_k = k if has_sql_filter else min(200, k * 6)
+        # ACL e sensitivity são sempre aplicadas no SQL; não existe modo de
+        # recuperação sem filtro de autorização.
+        fetch_k = k
         params.extend([qv, fetch_k])
 
         with _get_conn() as conn:
@@ -281,9 +292,9 @@ class VectorStore:
                     SELECT id, document_id, chunk_index, content, metadata, permissions,
                            domain, classification, sensitivity,
                            (embedding <=> (%s)::vector) AS distance
-                    FROM rag_chunks
+                    FROM rag_chunks c
                     WHERE {' AND '.join(where_clauses)}
-                    ORDER BY embedding <=> (%s)::vector
+                    ORDER BY c.embedding <=> (%s)::vector
                     LIMIT %s
                     """,
                     tuple(params)

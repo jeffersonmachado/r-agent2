@@ -9,13 +9,13 @@ Referência rápida de comandos e decisões operacionais para r-agent2.
 ```bash
 # Variáveis universais OBRIGATÓRIAS
 export NODE_ENV=production           # ou development/test
-export RUNTIME_ROOT=/var/lib/ragent2 # ou ~/.local/share/ragent2-runtime (dev)
+export runtime_root=/var/lib/ragent2 # ou ~/.local/share/ragent2-runtime (dev)
 export LOG_LEVEL=info                # ou debug/warn/error
 
 # Verificação rápida
-echo "RUNTIME_ROOT=$RUNTIME_ROOT"
+echo "runtime_root=$runtime_root"
 echo "NODE_ENV=$NODE_ENV"
-mkdir -p "$RUNTIME_ROOT"
+mkdir -p "$runtime_root"
 ```
 
 ---
@@ -25,10 +25,10 @@ mkdir -p "$RUNTIME_ROOT"
 ```bash
 # Start rápido
 npm ci
-export RUNTIME_ROOT=~/.local/share/ragent2-runtime
+export runtime_root=~/.local/share/ragent2-runtime
 npm run dev
 
-# Smoke testes isolados (respeitam RUNTIME_ROOT automaticamente)
+# Smoke testes isolados (respeitam runtime_root automaticamente)
 node scripts/test-physical-queue-smoke.js        # L-01
 node scripts/test-ura-publish-rollback-smoke.js  # L-02
 node scripts/test-bpmn-editor-smoke.js           # L-06
@@ -48,9 +48,9 @@ npm run runtime:clean
 
 ```bash
 # 1️⃣ Environment Setup
-export RUNTIME_ROOT=/var/lib/r-agent2-release
+export runtime_root=/var/lib/r-agent2-release
 export NODE_ENV=production
-mkdir -p "$RUNTIME_ROOT/qa-mesh" "$RUNTIME_ROOT/release-evidence"
+mkdir -p "$runtime_root/qa-mesh" "$runtime_root/release-evidence"
 
 # 2️⃣ Bootstrap & Validate
 npm ci
@@ -84,10 +84,10 @@ ls -lh dist/r-agent2-*.zip
 
 | Problema | Comando | Solução |
 |----------|---------|---------|
-| "Path not found in RUNTIME_ROOT" | `echo $RUNTIME_ROOT` | Defina ou crie diretório |
+| "Path not found in runtime_root" | `echo $runtime_root` | Defina ou crie diretório |
 | Evidência em workspace (ruim) | `npm run runtime:clean:check` | Execute `npm run runtime:clean` |
-| Validação falha | `npm run system:validate` | Verifique logs em `$RUNTIME_ROOT/qa-mesh/` |
-| Gate rejeita | `npm run system:release-gate` | Revise verdicts em `$RUNTIME_ROOT/qa/` |
+| Validação falha | `npm run system:validate` | Verifique logs em `$runtime_root/qa-mesh/` |
+| Gate rejeita | `npm run system:release-gate` | Revise verdicts em `$runtime_root/qa/` |
 | Cleanup não remove | `sudo npm run runtime:clean` | Pode precisar elevação de privilégio |
 
 ---
@@ -96,7 +96,7 @@ ls -lh dist/r-agent2-*.zip
 
 ### Docker Production
 ```bash
-RUNTIME_ROOT=/var/lib/ragent2
+runtime_root=/var/lib/ragent2
 NODE_ENV=production
 LOG_LEVEL=info
 FRONTEND_URL=https://your-domain.com
@@ -105,16 +105,16 @@ TEST_BASE_URL=http://localhost:3001
 
 ### CI/CD (GitHub Actions / Jenkins)
 ```bash
-RUNTIME_ROOT=/tmp/r-agent2-${GITHUB_RUN_ID}
+runtime_root=/tmp/r-agent2-${GITHUB_RUN_ID}
 NODE_ENV=test
 LOG_LEVEL=debug
 TEST_BASE_URL=http://localhost:3001
-VECTOR_STORE_PATH=${RUNTIME_ROOT}/rag/vector_store
+VECTOR_STORE_PATH=${runtime_root}/rag/vector_store
 ```
 
 ### Development Local
 ```bash
-RUNTIME_ROOT=~/.local/share/ragent2-runtime
+runtime_root=~/.local/share/ragent2-runtime
 NODE_ENV=development
 LOG_LEVEL=debug
 # Restante pode usar defaults
@@ -125,7 +125,7 @@ LOG_LEVEL=debug
 ## Decision Matrix
 
 ```
-┌─ RUNTIME_ROOT definido? ────┐
+┌─ runtime_root definido? ────┐
 │   ├─ SIM → Use para evidências/reports
 │   └─ NÃO → Use workspace defaults (desaconselhado em prod)
 │
@@ -143,7 +143,7 @@ LOG_LEVEL=debug
 
 ## Checklist Pré-Release (5 min)
 
-- [ ] `echo $RUNTIME_ROOT` (não-vazio)
+- [ ] `echo $runtime_root` (não-vazio)
 - [ ] `npm ci` ✓
 - [ ] `npm run system:bootstrap` ✓
 - [ ] `npm run system:validate` retorna **GO** ✓  
@@ -159,26 +159,26 @@ LOG_LEVEL=debug
 
 ```bash
 # System validate report
-cat $RUNTIME_ROOT/qa-mesh/system-validate/meshReport.json
+cat $runtime_root/qa-mesh/system-validate/meshReport.json
 
 # Release gate decision
-cat $RUNTIME_ROOT/qa-mesh/release-gate-report.json
+cat $runtime_root/qa-mesh/release-gate-report.json
 
 # Go/no-go evidence
-cat $RUNTIME_ROOT/qa-mesh/go-no-go-report.json
+cat $runtime_root/qa-mesh/go-no-go-report.json
 
 # Canonical promotion metadata
-cat $RUNTIME_ROOT/qa-mesh/canonical-promotion.json
+cat $runtime_root/qa-mesh/canonical-promotion.json
 
 # Canonical execution lock (deve existir apenas durante a execução full-registry)
-cat $RUNTIME_ROOT/qa-mesh/canonical.lock.json
+cat $runtime_root/qa-mesh/canonical.lock.json
 
 # Smoke test evidence
-cat $RUNTIME_ROOT/qa/l01-physical-queue-evidence.json
-cat $RUNTIME_ROOT/qa/l06-bpmn-editor-evidence.json
+cat $runtime_root/qa/l01-physical-queue-evidence.json
+cat $runtime_root/qa/l06-bpmn-editor-evidence.json
 
 # Release summary
-cat $RUNTIME_ROOT/qa-mesh/release-summary.json
+cat $runtime_root/qa-mesh/release-summary.json
 ```
 
 ### QA Mesh canônico
@@ -198,21 +198,21 @@ NODE_ENV=production
 LOG_LEVEL=info
 
 # Paths (OBRIGATÓRIO)
-RUNTIME_ROOT=/var/lib/ragent2
-RELEASE_EVIDENCE_BASE_DIR=${RUNTIME_ROOT}/release-evidence
-QA_MESH_SYSTEM_VALIDATE_DIR=${RUNTIME_ROOT}/qa-mesh/system-validate
+runtime_root=/var/lib/ragent2
+RELEASE_EVIDENCE_BASE_DIR=${runtime_root}/release-evidence
+QA_MESH_SYSTEM_VALIDATE_DIR=${runtime_root}/qa-mesh/system-validate
 
 # API
 TEST_BASE_URL=http://localhost:3001
 FRONTEND_URL=https://your-production-domain.com
 
 # RAG
-RAG_DATA_ROOT=${RUNTIME_ROOT}/rag
+RAG_DATA_ROOT=${runtime_root}/rag
 VECTOR_STORE_PATH=${VECTOR_STORE_PATH:-${RAG_DATA_ROOT}/vector_store}
 ADAPTIVE_LEARNING_DATA_PATH=${ADAPTIVE_LEARNING_DATA_PATH:-${RAG_DATA_ROOT}/adaptive_learning}
 
 # WhatsApp
-WWEBJS_AUTH_PATH=${RUNTIME_ROOT}/whatsapp/auth
+WWEBJS_AUTH_PATH=${runtime_root}/whatsapp/auth
 
 # Database / External Services
 DATABASE_URL=postgresql://...
@@ -230,7 +230,7 @@ npm run runtime:clean:check
 # Weekly cleanup (se necessário)
 npm run runtime:clean
 
-# Pre-release gate (requer RUNTIME_ROOT)
+# Pre-release gate (requer runtime_root)
 npm run system:release-gate
 
 # Evidence retention (mantém últimos 10 releases)
@@ -245,7 +245,7 @@ npm run system:release-evidence-prune --keep=10
 |------|-----------|------|
 | 0 | SUCCESS / GO | Proceder com release |
 | 1 | FAILURE / NO_GO | Revisar evidências, correção necessária |
-| 2 | SETUP ERROR | Verificar RUNTIME_ROOT, variáveis |
+| 2 | SETUP ERROR | Verificar runtime_root, variáveis |
 | 3+ | INFRA ERROR | Verificar serviços, conectividade |
 
 ---
@@ -262,7 +262,7 @@ npm run system:release-gate          # Check release criteria
 npm run system:go-no-go              # Decision maker
 npm run check:green                  # Quick verdict check
 
-# Utilities (respeitam RUNTIME_ROOT)
+# Utilities (respeitam runtime_root)
 npm run test:physical:smoke          # L-01
 npm run test:bpmn:smoke              # L-06
 npm run system:release-summary       # Document approval

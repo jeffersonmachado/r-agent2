@@ -149,12 +149,17 @@ function getRagQueryTimeout(tenantId) {
 /**
  * Headers de autenticação serviço-a-serviço (backend Node -> rag-service).
  * O token é lido de RAG_INTERNAL_TOKEN a cada chamada (sem cache) para
- * permitir rotação sem restart. Quando não configurado, retorna objeto vazio
- * (o serviço Python aceita apenas se também estiver sem token — modo dev).
+ * permitir rotação sem restart. Ausência da credencial é erro de configuração:
+ * nunca degradamos para uma chamada interna anônima, nem em desenvolvimento.
  */
 function getRagInternalHeaders() {
-  const token = process.env.RAG_INTERNAL_TOKEN;
-  return token ? { 'X-RAG-Internal-Token': token } : {};
+  const token = String(process.env.RAG_INTERNAL_TOKEN || '').trim();
+  if (Buffer.byteLength(token, 'utf8') < 32) {
+    const error = new Error('RAG_INTERNAL_TOKEN ausente ou menor que 32 bytes');
+    error.code = 'rag_internal_auth_misconfigured';
+    throw error;
+  }
+  return { 'X-RAG-Internal-Token': token };
 }
 
 function getRagDomains(tenantId) {

@@ -76,7 +76,7 @@ def _patch_conn(monkeypatch, rows=None):
 # search: filtro de roles/agentId no SQL
 # ---------------------------------------------------------------------------
 
-def test_search_sem_filtros_nao_toca_permissions_e_mantem_overscan(monkeypatch):
+def test_search_sem_identidade_aplica_acl_fail_closed_e_sensitivity(monkeypatch):
     cursor = _patch_conn(monkeypatch)
     store = _make_store()
 
@@ -84,9 +84,16 @@ def test_search_sem_filtros_nao_toca_permissions_e_mantem_overscan(monkeypatch):
 
     assert len(cursor.queries) == 1
     sql, params = cursor.queries[0]
-    assert "permissions->" not in sql
-    # Sem filtro no SQL: overscan histórico k*6
-    assert params == (params[0], 'tenant-a', 'OPERATIONAL', ['PRODUCTION'], params[0], 30)
+    assert "sensitivity = ANY(%s)" in sql
+    assert "d.status = 'active'" in sql
+    assert "COALESCE(d.index_status" in sql
+    assert "= 'indexed'" in sql
+    assert "permissions->'roles'" in sql
+    assert "permissions->'agents'" in sql
+    assert params == (
+        params[0], 'tenant-a', 'OPERATIONAL', ['PRODUCTION'],
+        ['PUBLIC', 'INTERNAL'], [], '', params[0], 5,
+    )
 
 
 def test_search_filtro_roles_no_sql(monkeypatch):
@@ -100,8 +107,9 @@ def test_search_filtro_roles_no_sql(monkeypatch):
     assert "permissions->'roles' IS NULL" in sql
     assert "permissions->'roles' = '[]'::jsonb" in sql
     assert "permissions->'roles' ?| %s" in sql
-    # Params: qv, tenant, domain, classifications, roles, qv, fetch_k
-    assert params[4] == ['admin', 'agent']
+    # Params: qv, tenant, domain, classifications, sensitivities, roles,
+    # agentId, qv, fetch_k
+    assert params[5] == ['admin', 'agent']
     assert params[1] == 'tenant-a'
     # Com filtro no SQL não há descarte em Python: fetch_k = k
     assert params[-1] == 5
@@ -117,8 +125,8 @@ def test_search_filtro_agent_id_no_sql(monkeypatch):
     assert "permissions->'agents' IS NULL" in sql
     assert "permissions->'agents' = '[]'::jsonb" in sql
     assert "permissions->'agents' ? %s" in sql
-    assert "permissions->'roles'" not in sql
-    assert params[4] == 'agent-001'
+    assert "permissions->'roles'" in sql
+    assert params[6] == 'agent-001'
     assert params[-1] == 3
 
 
@@ -131,8 +139,8 @@ def test_search_roles_e_agent_id_combinados(monkeypatch):
     sql, params = cursor.queries[0]
     assert "permissions->'roles' ?| %s" in sql
     assert "permissions->'agents' ? %s" in sql
-    assert params[4] == ['admin']
-    assert params[5] == 'agent-9'
+    assert params[5] == ['admin']
+    assert params[6] == 'agent-9'
     assert params[-1] == 7
 
 
@@ -144,18 +152,21 @@ def test_search_roles_string_coagida_para_lista(monkeypatch):
 
     sql, params = cursor.queries[0]
     assert "permissions->'roles' ?| %s" in sql
-    assert params[4] == ['admin']
+    assert params[5] == ['admin']
 
 
-def test_search_filtros_vazios_nao_geram_condicao(monkeypatch):
+def test_search_filtros_vazios_nao_liberam_documentos_restritos(monkeypatch):
     cursor = _patch_conn(monkeypatch)
     store = _make_store()
 
     store.search(_embedding(store), top_k=5, filters={'roles': [], 'agentId': ''})
 
     sql, params = cursor.queries[0]
-    assert "permissions->" not in sql
-    assert params[-1] == 30  # sem filtro efetivo: overscan k*6
+    assert "permissions->'roles'" in sql
+    assert "permissions->'agents'" in sql
+    assert params[5] == []
+    assert params[6] == ''
+    assert params[-1] == 5
 
 
 # ---------------------------------------------------------------------------

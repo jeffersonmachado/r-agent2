@@ -7,13 +7,13 @@ Este projeto separa produto e estado mutável por meio de paths de runtime expl�
 - Código, contratos e documentação vivem no repositório.
 - Sessões, stores vetoriais, aprendizado adaptativo, artefatos transitórios de QA e evidências de release vivem fora do repositório.
 - Quando um path não for informado explicitamente, o runtime deve preferir diretórios externos do ambiente em vez de gravar no workspace.
-- O `system:validate` segue essa regra: com `RUNTIME_ROOT` definido e sem overrides específicos, escreve saídas em `<RUNTIME_ROOT>/qa/...` e `<RUNTIME_ROOT>/qa-mesh/...`.
-- O mesmo padrão vale para a cadeia oficial de release/deploy: manifest, gate, go/no-go, launch plan, rollback drill, summary e deploy report passam a respeitar `RUNTIME_ROOT` quando não houver override explícito.
-- Scripts utilitários e smokes executáveis isoladamente também seguem o mesmo padrão quando não recebem um path explícito: `generate-runtime-report`, `check-green`, `validate-go-technical`, `validate-ia-rollout-internal` e as evidências `L-01` a `L-07` passam a cair em `<RUNTIME_ROOT>/qa/...` por default.
+- O `system:validate` segue essa regra: sem overrides específicos, escreve saídas em `<runtime root>/qa/...` e `<runtime root>/qa-mesh/...`.
+- O mesmo padrão vale para a cadeia oficial de release/deploy: manifest, gate, go/no-go, launch plan, rollback drill, summary e deploy report passam a respeitar o runtime root quando não houver override explícito.
+- Scripts utilitários e smokes executáveis isoladamente também seguem o mesmo padrão quando não recebem um path explícito: `generate-runtime-report`, `check-green`, `validate-go-technical`, `validate-ia-rollout-internal` e as evidências `L-01` a `L-07` passam a cair em `<runtime root>/qa/...` por default.
 
 ## Variáveis oficiais
 
-- `RUNTIME_ROOT`: raiz única de runtime mutável da API para replay/recording e estados transitórios.
+- Runtime root: resolvido automaticamente pela aplicação — `/var/lib/ragent2` em produção, `~/.local/share/ragent2-runtime` em dev (fallback `os.tmpdir()/ragent2-runtime` sem `HOME`). Override in-process apenas via `configureRuntimeRoot` (isolamento de testes); não existe mais a env var `RUNTIME_ROOT`.
 - `WWEBJS_AUTH_PATH`: diretório de autenticação do `whatsapp-web.js`.
 - `RAG_DATA_ROOT`: raiz mutável do serviço RAG.
 - `VECTOR_STORE_PATH`: store vetorial persistente.

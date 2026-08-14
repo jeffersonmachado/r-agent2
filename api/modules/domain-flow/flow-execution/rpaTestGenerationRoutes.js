@@ -209,6 +209,18 @@ async function handleRpaTestGenerationRoutes(ctx) {
       sendJson(res, 401, { error: 'unauthorized', message: authResult.error });
       return true;
     }
+    const { checkClassification } = require('../../../middleware/requireClassification');
+    const classification = checkClassification(req, 'SUPPORT');
+    if (!classification.allowed) {
+      sendJson(res, 403, {
+        error: 'classification_required',
+        required: classification.required,
+        classification: classification.classification,
+      });
+      return true;
+    }
+    const tenantId = requireTenant(req, res);
+    if (!tenantId) return true;
 
     if (!hasJsonContentType(req)) {
       badRequest(res, 'Content-Type deve ser application/json');
@@ -237,9 +249,13 @@ async function handleRpaTestGenerationRoutes(ctx) {
       }
 
       const fs = require('fs');
-      const path = require('path');
-      const { getRpaSeedWriteDir } = require('../../../../lib/rpaPathResolver');
-      const seedsDir = getRpaSeedWriteDir();
+      const {
+        getRpaSeedWriteDir,
+        normalizeJsonName,
+        resolveContainedJsonPath,
+      } = require('../../../../lib/rpaPathResolver');
+      const { protectRecordingSecrets } = require('../../../../lib/rpaSecurity');
+      const seedsDir = getRpaSeedWriteDir(tenantId);
 
       if (!fs.existsSync(seedsDir)) {
         fs.mkdirSync(seedsDir, { recursive: true });
@@ -248,16 +264,20 @@ async function handleRpaTestGenerationRoutes(ctx) {
       if (!rpaTest.source) {
         rpaTest.source = 'automatic';
       }
+      rpaTest.tenantId = tenantId;
 
-      const testFilePath = path.join(seedsDir, `${rpaTest.id}.json`);
-      fs.writeFileSync(testFilePath, JSON.stringify(rpaTest, null, 2), 'utf8');
+      const safeTestId = normalizeJsonName(rpaTest.id);
+      const safeRpaTest = protectRecordingSecrets({ ...rpaTest, id: safeTestId, tenantId });
+      const testFilePath = resolveContainedJsonPath(seedsDir, safeTestId);
+      const temporaryPath = `${testFilePath}.${process.pid}.${Date.now()}.tmp`;
+      fs.writeFileSync(temporaryPath, JSON.stringify(safeRpaTest, null, 2), 'utf8');
+      fs.renameSync(temporaryPath, testFilePath);
 
-      logger.info('Teste RPA salvo com sucesso', { testId: rpaTest.id, filePath: testFilePath });
+      logger.info('Teste RPA salvo com sucesso', { testId: safeTestId, tenantId });
 
       sendJson(res, 200, {
         success: true,
-        testId: rpaTest.id,
-        filePath: testFilePath,
+        testId: safeTestId,
         message: 'Teste RPA salvo com sucesso',
       });
     } catch (err) {

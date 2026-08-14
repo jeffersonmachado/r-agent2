@@ -71,6 +71,8 @@ const {
   executeFullGenerationBot,
   applyAutoRemediations,
 } = require('../../services/qa/autoGenerationBot');
+const { reviewVertical } = require('../../services/verticalReviewService');
+const { inferJourneyReview, applyJourneyReview } = require('../../services/journeyReviewService');
 const { createQaWavesRoutes } = require('../../modules/qa-waves/routes');
 
 function buildQaWavesRouteDeps() {
@@ -151,6 +153,11 @@ function buildQaWavesRouteDeps() {
     validatePreflightForCapabilities,
     executeFullGenerationBot,
     applyAutoRemediations,
+    // Vertical Review (botão "Revisar vertical")
+    reviewVertical,
+    // Journey Review (fluxo interativo de revisão de jornada)
+    reviewJourneyInfer: inferJourneyReview,
+    reviewJourneyApply: applyJourneyReview,
     // WS
     emitWavesEvent: (event, payload, options) => emitEvent(event, payload, options),
   };

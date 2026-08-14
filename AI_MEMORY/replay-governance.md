@@ -29,5 +29,8 @@ Replay artifacts are provenance records for operational journeys. They must be t
 
 ## Current state
 
-`docs/governance/REPLAY_OPERATIONAL_STATUS.md` says support and fitness prod-like replays are valid and signed, but full WhatsApp -> AI -> handoff -> human -> backend mutation chronology is still a gap.
+Observed on 2026-08-14: **NO_GO**. Existing promoted prod-like artifacts use the legacy public `gov-sha256` format and do not satisfy the current keyed signature contract. The validators accept only fresh `hmac-sha256` signatures bound to the exact enterprise report/subjects and fail closed when the signing key, proof binding or current seal is absent.
 
+RPA/replay runtime controls now require authenticated tenant scope for list/get/delete/cancel/download, tenant-specific runtime/artifact keys and WebSocket delivery only to authenticated clients of the same tenant. Replays and manifests are redacted before persistence, signed with `REPLAY_SIGNING_KEY`/`ENCRYPTION_KEY` (minimum 32 bytes) and rejected on tamper. The tenant supplied by the trusted boundary overrides any tenant embedded in an artifact before signing.
+
+Do not infer current validity from `docs/governance/REPLAY_OPERATIONAL_STATUS.md`; use `npm run validate:replay-governance` and `governance/replay-integrity-report.json`.

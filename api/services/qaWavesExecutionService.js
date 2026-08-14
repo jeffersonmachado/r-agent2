@@ -3,7 +3,15 @@
 const fs = require('fs');
 const path = require('path');
 const qaMeshService = require('./qaMeshService');
-const { getRpaReplayDir } = require('../../lib/rpaPathResolver');
+const { getRpaReplayDir, getRpaReplayReadDirs } = require('../../lib/rpaPathResolver');
+const {
+  belongsToTenant,
+  normalizeTenantKey,
+  redactDeep,
+  stripInternalFilesystemPaths,
+} = require('../../lib/rpaSecurity');
+const { signReplayArtifact } = require('../../lib/replayIntegrity');
+const { isBlockingJourney: isJourneyCriticalityBlocking } = require('../../qa/contracts/journeyCriticality');
 const { clearExecutions, waitForQueuedExecution } = require('../../qa-mesh/executionQueue');
 const logger = require('../utils/logger');
 const config = require('../utils/config');
@@ -26,6 +34,7 @@ const {
 } = require('../../qa/contracts/operationalStepRegistry');
 const { buildSupportTicketFlowSteps } = require('./qa/journeyStepDefinitions/supportTicketFlowSteps');
 const { buildFitnessCheckinFlowSteps } = require('./qa/journeyStepDefinitions/fitnessCheckinFlowSteps');
+const { buildAgendamentoFlowSteps } = require('./qa/journeyStepDefinitions/agendamentoFlowSteps');
 const {
   buildSupportOperationalSeedSpec,
   provisionSupportSeed,
@@ -36,6 +45,11 @@ const {
   provisionFitnessSeed,
   validateFitnessSeedPostExecution,
 } = require('./qa/seeds/fitnessOperationalSeed');
+const {
+  buildAgendamentoOperationalSeedSpec,
+  provisionAgendamentoSeed,
+  validateAgendamentoSeedPostExecution,
+} = require('./qa/seeds/agendamentoOperationalSeed');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const EVIDENCE_ROOT = path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence');
@@ -144,6 +158,7 @@ function buildReplayArtifactMeta(replay) {
   if (!executionId) return null;
   return {
     executionId,
+    tenantId: replay.tenantId || replay.tenantKey || replay.tenant_id || replay.tenant_key || 'system',
     replayId: replay.replayId || replay.id || null,
     waveId: replay.waveId || null,
     journeyId: replay.journeyId || null,
@@ -171,6 +186,11 @@ function extractReplayArtifactMeta(filePath) {
   const prefix = readFilePrefix(filePath);
   const fastMeta = buildReplayArtifactMeta({
     executionId: extractJsonStringField(prefix, 'executionId'),
+    tenantId: extractJsonStringField(prefix, 'tenantId')
+      || extractJsonStringField(prefix, 'tenantKey')
+      || extractJsonStringField(prefix, 'tenant_id')
+      || extractJsonStringField(prefix, 'tenant_key')
+      || 'system',
     replayId: extractJsonStringField(prefix, 'replayId') || extractJsonStringField(prefix, 'id'),
     waveId: extractJsonStringField(prefix, 'waveId'),
     journeyId: extractJsonStringField(prefix, 'journeyId'),
@@ -190,11 +210,28 @@ function extractReplayArtifactMeta(filePath) {
 
 function safeWriteJson(filePath, payload) {
   ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  const safePayload = redactDeep(payload);
+  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(temporaryPath, `${JSON.stringify(safePayload, null, 2)}\n`, 'utf8');
+  fs.renameSync(temporaryPath, filePath);
+  return safePayload;
 }
 
-function writeReplayArtifact({ executionId, replayId, scenario, seed, status = 'running', platformScenarioIds = [] }) {
-  const replayDir = getRpaReplayDir();
+function publicPayload(value) {
+  return stripInternalFilesystemPaths(redactDeep(value));
+}
+
+function writeReplayArtifact({
+  executionId,
+  replayId,
+  scenario,
+  seed,
+  status = 'running',
+  platformScenarioIds = [],
+  tenantId = 'system',
+}) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const replayDir = getRpaReplayDir(scopedTenantId);
   ensureDir(replayDir);
   const startedAt = nowIso();
   const scenarioName = scenario.name || scenario.title || scenario.id;
@@ -206,6 +243,7 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
     recordingId: scenario.id,
     type: 'qa_wave_rpa_replay',
     executionId,
+    tenantId: scopedTenantId,
     executionStatus: 'running',
     waveId: scenario.waveId,
     journeyId,
@@ -265,8 +303,8 @@ function writeReplayArtifact({ executionId, replayId, scenario, seed, status = '
   };
 
   const fullPath = path.join(replayDir, `${replayId}.json`);
-  safeWriteJson(fullPath, payload);
-  return { replayId, path: fullPath, payload, scenario, seed };
+  const persistedPayload = safeWriteJson(fullPath, payload);
+  return { replayId, path: fullPath, payload: persistedPayload, scenario, seed };
 }
 
 function buildSnapshotContext(replayArtifact, phase, replay = {}) {
@@ -406,7 +444,7 @@ function normalizeOperationalJourneyId(value = '') {
 }
 
 function isBlockingOperationalJourney(journeyId = '') {
-  return ['support_ticket_flow', 'fitness_customer_checkin'].includes(normalizeOperationalJourneyId(journeyId));
+  return isJourneyCriticalityBlocking(normalizeOperationalJourneyId(journeyId));
 }
 
 function createInternalHttpClient() {
@@ -497,7 +535,7 @@ async function prepareOperationalSeedEntry(entry = {}, tenantId = null, httpClie
     tenantId: tenantId || baseSeed?.data?.tenantId || null,
   };
 
-  if (!httpClient) {
+  if (!httpClient && journeyId !== 'agendamento') {
     return {
       ...entry,
       seed: {
@@ -598,6 +636,47 @@ async function prepareOperationalSeedEntry(entry = {}, tenantId = null, httpClie
         preExecutionBlockers: [],
       };
     }
+
+    if (journeyId === 'agendamento') {
+      const seedSpec = buildAgendamentoOperationalSeedSpec({ ...mergedData, tenantId });
+      const provision = await provisionAgendamentoSeed(seedSpec, httpClient);
+      if (!provision.ok) {
+        return {
+          ...entry,
+          seed: {
+            ...baseSeed,
+            data: mergedData,
+            operationalSeedStatus: 'missing',
+            seedEvidence: { journeyId, status: 'missing', provision },
+          },
+          preExecutionBlockers: [{ reason: 'agendamento_operational_seed_missing', journeyId, details: provision.reason || null }],
+        };
+      }
+
+      return {
+        ...entry,
+        seed: {
+          ...baseSeed,
+          status: 'approved',
+          data: {
+            ...mergedData,
+            taskTitle: seedSpec.taskTitle,
+            taskDueDate: seedSpec.taskDueDate,
+            scheduleStartAt: seedSpec.scheduleStartAt,
+            schedulePurpose: seedSpec.schedulePurpose,
+            scheduleNotes: seedSpec.scheduleNotes,
+          },
+          operationalSeedStatus: 'ready',
+          seedEvidence: {
+            journeyId,
+            status: 'ready',
+            beforeSnapshot: provision.beforeSnapshot || null,
+            provision,
+          },
+        },
+        preExecutionBlockers: [],
+      };
+    }
   } catch (error) {
     return {
       ...entry,
@@ -668,6 +747,9 @@ function resolveJourneyStepSpecs(journeyId, runtimeSteps, seedData = {}) {
         timestamp: new Date().toISOString(),
       }];
     }
+  }
+  if (journeyId === 'agendamento') {
+    return buildAgendamentoFlowSteps(seedData);
   }
   return runtimeSteps;
 }
@@ -792,6 +874,11 @@ function validateOperationalSeedOutcome({ scenario, seed, replay }) {
 
   if (journeyId === 'fitness_customer_checkin') {
     const result = validateFitnessSeedPostExecution(replay?.beforeSnapshot || {}, replay?.afterSnapshot || {});
+    return { ok: result.ok, blockers: result.ok ? [] : result.blockers };
+  }
+
+  if (journeyId === 'agendamento') {
+    const result = validateAgendamentoSeedPostExecution(replay?.beforeSnapshot || {}, replay?.afterSnapshot || {});
     return { ok: result.ok, blockers: result.ok ? [] : result.blockers };
   }
 
@@ -959,13 +1046,16 @@ function buildOperationalTimeline({ replay = {}, beforeSnapshot = {}, afterSnaps
 
 function updateReplayArtifact(replayArtifact, patch = {}) {
   const current = safeReadJson(replayArtifact.path, replayArtifact.payload) || replayArtifact.payload;
+  if (current.replayHash || current.governanceSignature) {
+    throw new Error('signed_replay_immutable');
+  }
   const merged = {
     ...current,
     ...patch,
   };
-  safeWriteJson(replayArtifact.path, merged);
-  replayArtifact.payload = merged;
-  return merged;
+  const persisted = safeWriteJson(replayArtifact.path, merged);
+  replayArtifact.payload = persisted;
+  return persisted;
 }
 
 function buildResultLatency(result, execution) {
@@ -1285,8 +1375,8 @@ function writeEvidenceArtifact(replayArtifact, execution) {
     historyPath: execution?.historyPath || null,
   };
 
-  safeWriteJson(fullPath, payload);
-  return { filePath: fullPath, payload };
+  const persistedPayload = safeWriteJson(fullPath, payload);
+  return { filePath: fullPath, payload: persistedPayload };
 }
 
 async function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
@@ -1425,6 +1515,23 @@ async function finalizeExecutionArtifacts(execution, replayArtifacts = []) {
         governanceBlockers: [{ reason: 'snapshot_absent', error: error.message }],
       });
     }
+    const governance = {
+      goNoGo: currentReplay.governanceStatus === 'GO' ? 'GO' : 'NO_GO',
+      isOperational: currentReplay.governanceStatus === 'GO'
+        && currentReplay.operationalValidation?.isOperational === true,
+      blockers: Array.isArray(currentReplay.governanceBlockers)
+        ? currentReplay.governanceBlockers
+        : [],
+    };
+    const signedReplay = signReplayArtifact(currentReplay, {
+      governance,
+      tenantId: currentReplay.tenantId || 'system',
+      generatedAt: currentReplay.finishedAt || nowIso(),
+      environment: process.env.NODE_ENV || 'development',
+      smokeExecutionId: currentReplay.executionId || null,
+    });
+    currentReplay = safeWriteJson(replayArtifact.path, signedReplay);
+    replayArtifact.payload = currentReplay;
     const replay = currentReplay;
     const evidence = writeEvidenceArtifact(replayArtifact, execution);
     finalized.push({ replay, evidence, currentReplay });
@@ -1528,6 +1635,7 @@ async function executePreparedWaveScenarios({ expanded, platformScenarioIds, gov
       seed,
       status: 'running',
       platformScenarioIds,
+      tenantId: tenantId || 'system',
     });
     if (Array.isArray(preExecutionBlockers) && preExecutionBlockers.length > 0) {
       updateReplayArtifact(artifact, {
@@ -1571,7 +1679,7 @@ async function executePreparedWaveScenarios({ expanded, platformScenarioIds, gov
     executionId: queued.executionId,
     replayId: primaryReplayId,
     replayIds,
-    replayDir: getRpaReplayDir(),
+    replayDir: getRpaReplayDir(normalizeTenantKey(tenantId || 'system')),
   });
 
   emitEvent('qa-waves.execution.started', {
@@ -1593,23 +1701,18 @@ async function executePreparedWaveScenarios({ expanded, platformScenarioIds, gov
   };
 }
 
-function buildReplayArtifactsIndex(executionIds = null) {
-  const replayDir = getRpaReplayDir();
+function buildReplayArtifactsIndex(executionIds = null, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const replayDirs = getRpaReplayReadDirs(scopedTenantId).filter((dirPath) => fs.existsSync(dirPath));
   const byExecutionId = new Map();
-  
-  if (!fs.existsSync(replayDir)) {
+
+  if (replayDirs.length === 0) {
     return { byExecutionId, scannedFiles: 0, indexedFiles: 0 };
   }
 
-  // Validar cache com mtime do diretório
-  let dirStats;
-  try {
-    dirStats = fs.statSync(replayDir);
-  } catch (_) {
-    return { byExecutionId, scannedFiles: 0, indexedFiles: 0 };
-  }
-  
-  const dirCacheKey = `${replayDir}:${dirStats.mtimeMs}`;
+  const dirCacheKey = replayDirs.map((dirPath) => {
+    try { return `${dirPath}:${fs.statSync(dirPath).mtimeMs}`; } catch (_) { return `${dirPath}:missing`; }
+  }).join('|');
   if (
     replayArtifactsIndexCache &&
     replayArtifactsIndexCacheMtime === dirCacheKey &&
@@ -1627,12 +1730,14 @@ function buildReplayArtifactsIndex(executionIds = null) {
   let scannedFiles = 0;
   let indexedFiles = 0;
 
-  fs.readdirSync(replayDir)
-    .filter((fileName) => fileName.endsWith('.json'))
-    .forEach((fileName) => {
+  for (const replayDir of replayDirs) {
+    fs.readdirSync(replayDir)
+      .filter((fileName) => fileName.endsWith('.json'))
+      .forEach((fileName) => {
       scannedFiles += 1;
       const replay = extractReplayArtifactMeta(path.join(replayDir, fileName));
       if (!replay) return;
+      if (!belongsToTenant(replay, scopedTenantId)) return;
       const executionId = replay.executionId;
       if (!executionId) return;
       if (targetExecutionIds && !targetExecutionIds.has(executionId)) return;
@@ -1651,6 +1756,7 @@ function buildReplayArtifactsIndex(executionIds = null) {
       byExecutionId.set(executionId, existing);
       indexedFiles += 1;
     });
+  }
 
   const result = { byExecutionId, scannedFiles, indexedFiles };
   
@@ -1663,25 +1769,35 @@ function buildReplayArtifactsIndex(executionIds = null) {
   return result;
 }
 
-function listWaveExecutions(limit = 20) {
-  const liveExecutions = qaMeshService.getAllExecutions(limit)
-    .filter((execution) => execution?.payload?.executionOrigin === 'qa_waves_real')
+function listWaveExecutions(limit = 20, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const liveExecutions = qaMeshService.getAllExecutions(limit, { tenantId: scopedTenantId })
+    .filter((execution) => execution?.payload?.executionOrigin === 'qa_waves_real'
+      && belongsToTenant(execution, scopedTenantId));
   const liveIds = new Set(liveExecutions.map((execution) => execution.executionId).filter(Boolean));
 
   // Histórico persistido (qa-mesh/meshHistory): registros em disco usam
   // `executionOrigin` no topo (in-memory usa payload.executionOrigin).
   // Sem este merge o endpoint ficava vazio após restart da API.
   const persistedExecutions = (typeof qaMeshService.getMeshHistory === 'function'
-    ? qaMeshService.getMeshHistory({ limit: Math.max(limit * 5, 50) })
+    ? qaMeshService.getMeshHistory({
+      limit: Math.max(limit * 5, 50),
+      tenantId: scopedTenantId,
+    })
     : [])
-    .filter((item) => item?.executionOrigin === 'qa_waves_real' && !liveIds.has(item.executionId));
+    .filter((item) => item?.executionOrigin === 'qa_waves_real'
+      && belongsToTenant(item, scopedTenantId)
+      && !liveIds.has(item.executionId));
 
   const executions = [...liveExecutions, ...persistedExecutions]
     .sort((a, b) => String(b.finishedAt || b.createdAt || '').localeCompare(String(a.finishedAt || a.createdAt || '')))
     .slice(0, limit);
   const executionIds = new Set(executions.map((execution) => execution.executionId).filter(Boolean));
   const startedAt = Date.now();
-  const { byExecutionId: replayArtifactsIndex, scannedFiles, indexedFiles } = buildReplayArtifactsIndex(executionIds);
+  const { byExecutionId: replayArtifactsIndex, scannedFiles, indexedFiles } = buildReplayArtifactsIndex(
+    executionIds,
+    scopedTenantId,
+  );
   const elapsedMs = Date.now() - startedAt;
 
   if (elapsedMs >= 1000) {
@@ -1695,41 +1811,46 @@ function listWaveExecutions(limit = 20) {
   }
 
   return executions
-    .map((execution) => ({
+    .map((execution) => publicPayload({
       ...execution,
       replayArtifacts: replayArtifactsIndex.get(execution.executionId) || [],
     }));
 }
 
-function clearWaveExecutions() {
-  // 1. Limpa a fila em memória
-  clearExecutions();
+function clearWaveExecutions(tenantId) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  const result = clearExecutions({ tenantId: scopedTenantId });
 
-  // 2. Remove arquivos de meshHistory
-  const meshHistoryDir = path.join(ROOT_DIR, 'qa-mesh', 'meshHistory');
-  if (fs.existsSync(meshHistoryDir)) {
-    for (const file of fs.readdirSync(meshHistoryDir)) {
-      try {
-        fs.unlinkSync(path.join(meshHistoryDir, file));
-      } catch (_) { /* ignora */ }
-    }
-  }
-
-  return { cleared: true };
+  // QA/replay evidence is append-only.  "Clear" only removes terminal
+  // process-local queue entries belonging to the authenticated tenant; history,
+  // signed replays and the integrity chain remain available after restart.
+  return {
+    cleared: true,
+    clearedInMemory: result.cleared,
+    skippedActive: result.skippedActive,
+    historyPreserved: true,
+  };
 }
 
 /**
  * Histórico imutável de execuções (cadeia append-only com hash chain):
  * itens do mais recente para o mais antigo + verificação de integridade.
  */
-function getWaveExecutionHistory(limit = 50) {
+function getWaveExecutionHistory(limit = 50, tenantId) {
   const chain = require('../../qa-mesh/executionHistoryChain');
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const parsed = Number.parseInt(String(limit), 10);
   const safeLimit = Number.isFinite(parsed) ? parsed : 50;
   return {
-    items: chain.readChain(safeLimit),
+    items: chain.readChain(Number.POSITIVE_INFINITY)
+      .filter((item) => belongsToTenant(item, scopedTenantId))
+      .slice(0, Math.max(1, Math.min(500, safeLimit)))
+      .map((item) => {
+        const { historyPath: _historyPath, ...publicItem } = item;
+        return publicItem;
+      }),
     verification: chain.verifyChain(),
-    chainPath: chain.CHAIN_PATH,
+    immutable: true,
   };
 }
 

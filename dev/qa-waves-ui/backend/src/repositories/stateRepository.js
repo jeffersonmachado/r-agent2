@@ -1,5 +1,6 @@
 import { baseWaves, baseWaveItems, baseReplays } from '../data/mockData.js';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -12,7 +13,7 @@ const QA_MESH_EVIDENCE_ROOT = path.join(ROOT_DIR, 'qa-mesh', 'system-validate', 
 const QA_MESH_REPORT_PATH = path.join(ROOT_DIR, 'qa-mesh', 'system-validate', 'meshReport.json');
 const QA_MESH_HISTORY_ROOT = path.join(ROOT_DIR, 'qa-mesh', 'system-validate', 'meshHistory');
 const RPA_REPLAY_DIR_CANDIDATES = [
-  process.env.RUNTIME_ROOT ? path.join(process.env.RUNTIME_ROOT, 'rpa', 'replay') : null,
+  path.join(os.homedir(), '.local', 'share', 'ragent2-runtime', 'rpa', 'replay'),
   path.join(MONOREPO_ROOT, 'tests', 'rpa', 'replay'),
   path.join(MONOREPO_ROOT, 'rpa', 'replay')
 ].filter(Boolean);

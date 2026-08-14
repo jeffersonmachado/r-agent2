@@ -5,7 +5,7 @@
  *
  * Pipeline: Replay real → Anonimização → Treinamento (markdown) → RAG.
  *
- *  1. Carrega um replay RPA real do runtime (RUNTIME_ROOT/rpa/replay).
+ *  1. Carrega um replay RPA real do runtime (runtime root/rpa/replay).
  *  2. Anonimiza TODOS os dados do replay (src/core/learning/anonymizer) —
  *     nenhum dado real de cliente/usuário entra no treinamento.
  *  3. Gera o roteiro de treinamento em markdown (passo a passo com telas,

@@ -98,7 +98,7 @@ async function handleSystemSuggestDescriptionRoute(ctx) {
         urlsCount: Array.isArray(urls) ? urls.length : 0,
       });
 
-      const ragResult = await ragService.queryRag(ragQuery, tenantIdForAI, {}, {
+      const ragResult = await ragService.queryRag(ragQuery, tenantIdForAI, { actor: req.agent }, {
         topK: 10, // Aumenta para pegar mais contexto
         minScore: 0.25, // Score ainda mais baixo para pegar mais contexto
         maxTokens: 3000, // Mais tokens para ter mais informações

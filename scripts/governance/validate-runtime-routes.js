@@ -46,6 +46,19 @@ async function main() {
         if (/Failed to fetch/i.test(text) && /\/auth\/me/i.test(text)) {
           return;
         }
+        // ChannelHealthPage dispara GET /system/channel-health no mount; ao
+        // navegar para a rota seguinte o browser aborta o fetch em voo
+        // (ERR_ABORTED) e a página loga "Failed to fetch" + toast — ruído de
+        // navegação, não falha funcional da rota alvo.
+        if (/Failed to fetch/i.test(text) && /\/system\/channel-health/i.test(text)) {
+          return;
+        }
+        if (/\[ChannelHealth\] Erro ao buscar health/i.test(text)) {
+          return;
+        }
+        if (/API não acessível/i.test(text) && /\/system\/channel-health/i.test(text)) {
+          return;
+        }
         consoleErrors.push({ text, location: message.location() });
       }
     });
@@ -60,6 +73,11 @@ async function main() {
       // navegação, mas o ingest é entregue (sendBeacon/keepalive) — mesmo caso
       // de /auth/me: ruído de navegação, não falha funcional.
       if (url.includes('/api/learning/interactions') && /ERR_ABORTED/i.test(failure)) {
+        return;
+      }
+      // ChannelHealthPage: fetch de /system/channel-health abortado na troca de
+      // rota (mesma classe de ruído de /auth/me).
+      if (url.includes('/system/channel-health') && /ERR_ABORTED/i.test(failure)) {
         return;
       }
       // Chunks lazy de páginas (code splitting, main.jsx): o validador navega
@@ -81,6 +99,13 @@ async function main() {
       password,
       tenantId,
     });
+
+    // O login redireciona para o workspace, que carrega /config em paralelo.
+    // Se a primeira rota for aberta imediatamente, o Chromium aborta esse
+    // request válido e o atribui incorretamente à rota /support. Aguarde o
+    // pós-login estabilizar antes de zerar os contadores por rota.
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null);
+    await page.waitForTimeout(250);
 
     const authState = await page.evaluate(() => ({
       hasToken: Boolean(localStorage.getItem('auth_token')),

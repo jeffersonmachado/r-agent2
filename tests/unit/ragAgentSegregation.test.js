@@ -69,7 +69,19 @@ describe('RAG segregation — agentes e cross-domain', () => {
       actor: { classification: 'DEVELOPMENT', permissions: ['qa.waves'] },
     });
     expect(result.success).toBe(true);
-    expect(qaWavesService.getExecutionStatus).toHaveBeenCalledWith('exec-1');
+    expect(qaWavesService.getExecutionStatus).toHaveBeenCalledWith('exec-1', 't1');
+  });
+
+  test('audit.listReplays sobrescreve tenant controlado pelo input com o tenant cognitivo', async () => {
+    const testExecutionService = { listReplayFiles: jest.fn(() => ({ total: 0, files: [] })) };
+    const registry = registerDefaultTools(createToolRegistry({ logger: silent }), { testExecutionService });
+
+    await registry.execute('audit.listReplays', { query: { tenantId: 'tenant-b', limit: 5 } }, {
+      tenantId: 'tenant-a',
+      actor: { classification: 'SUPPORT', permissions: ['audit.replay'] },
+    });
+
+    expect(testExecutionService.listReplayFiles).toHaveBeenCalledWith({ tenantId: 'tenant-a', limit: 5 });
   });
 
   test('knowledge.searchOperational usa o Domain Router (scope vem do ator, não do input)', async () => {

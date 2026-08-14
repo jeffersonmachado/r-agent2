@@ -175,7 +175,10 @@ function createEvidenceStore({ filePath }) {
 module.exports = {
   createEvidenceStore,
   redactSensitive,
+  validateEvidence,
+  computeRecordHash,
   REQUIRED_FIELDS,
   SENSITIVE_KEY_PATTERN,
   REDACTED,
+  GENESIS,
 };

@@ -15,9 +15,14 @@ const { normalizeRpaTestUrls } = require('./utils/urlNormalizer');
 const { autoLoginBeforeSteps } = require('./utils/autoLoginFlow');
 const { createDeterministicExecution } = require('./deterministic');
 const { resolveSemanticStep } = require('./screen-models');
-const { getRpaReportDir } = require('../../lib/rpaPathResolver');
-
-const RPA_REPORTS_DIR = getRpaReportDir();
+const { getRpaReportDir, getRpaReplayDir } = require('../../lib/rpaPathResolver');
+const {
+  normalizeJsonName,
+  normalizeTenantKey,
+  redactDeep,
+  resolveContainedJsonPath,
+} = require('../../lib/rpaSecurity');
+const { writeJsonAtomic } = require('../../api/utils/atomicJsonFile');
 
 function isIgnorableOnboardingNetworkNoise(entry) {
   if (!entry || typeof entry !== 'object') return false;
@@ -39,10 +44,15 @@ function isIgnorableOnboardingNetworkNoise(entry) {
 
 class RpaTestRunner {
   constructor(options = {}) {
+    this.tenantId = normalizeTenantKey(options.tenantId || 'system');
     this.executor = null;
-    this.recorder = new ActionRecorder();
+    this.recorder = new ActionRecorder({ tenantId: this.tenantId });
     this.dataPopulator = new DataPopulator();
-    this.replaySystem = new ReplaySystem();
+    this.replaySystem = new ReplaySystem({
+      tenantId: this.tenantId,
+      storagePath: getRpaReplayDir(this.tenantId),
+      storagePathIsTenantScoped: true,
+    });
     this.options = {
       headless: options.headless !== undefined ? options.headless : config.playwright.headless,
       slowMo: options.slowMo || config.playwright.slowMo,
@@ -52,6 +62,7 @@ class RpaTestRunner {
         : config.playwright.screenshot.onFailure,
       enableReplay: options.enableReplay !== undefined ? options.enableReplay : true,
       devtools: options.devtools !== undefined ? options.devtools : false,
+      traceDir: options.traceDir || null,
     };
     this.results = [];
   }
@@ -67,6 +78,7 @@ class RpaTestRunner {
       slowMo: this.options.slowMo,
       timeout: this.options.timeout,
       devtools: this.options.devtools,
+      traceDir: this.options.traceDir || undefined,
     });
 
     await this.executor.init();
@@ -93,7 +105,7 @@ class RpaTestRunner {
 
     // Carrega gravação se for string
     if (typeof recording === 'string') {
-      recordingData = ActionRecorder.load(recording);
+      recordingData = ActionRecorder.load(recording, this.tenantId);
     } else {
       recordingData = recording;
     }
@@ -118,7 +130,12 @@ class RpaTestRunner {
       tenantId: data.tenantId || recordingData?.metadata?.tenantId,
     });
 
-    this.replaySystem = new ReplaySystem({ clock: deterministic.clock });
+    this.replaySystem = new ReplaySystem({
+      clock: deterministic.clock,
+      tenantId: this.tenantId,
+      storagePath: getRpaReplayDir(this.tenantId),
+      storagePathIsTenantScoped: true,
+    });
 
     // Valida dados
     if (config.dataPopulation.validateBeforeUse) {
@@ -520,6 +537,8 @@ class RpaTestRunner {
     const failed = total - passed;
 
     const report = {
+      tenantId: this.tenantId,
+      generatedAt: new Date().toISOString(),
       summary: {
         total,
         passed,
@@ -534,7 +553,7 @@ class RpaTestRunner {
         errorsCount: r.errors.length,
         duration: r.duration,
       })),
-      details: this.results,
+      details: redactDeep(this.results),
     };
 
     return report;
@@ -547,14 +566,14 @@ class RpaTestRunner {
    */
   saveReport(filename) {
     const report = this.generateReport();
-    const reportsDir = RPA_REPORTS_DIR;
+    const reportsDir = getRpaReportDir(this.tenantId);
     
     if (!fs.existsSync(reportsDir)) {
       fs.mkdirSync(reportsDir, { recursive: true });
     }
 
-    const filepath = path.join(reportsDir, `${filename}.json`);
-    fs.writeFileSync(filepath, JSON.stringify(report, null, 2), 'utf8');
+    const filepath = resolveContainedJsonPath(reportsDir, normalizeJsonName(filename));
+    writeJsonAtomic(filepath, redactDeep(report));
 
     return filepath;
   }

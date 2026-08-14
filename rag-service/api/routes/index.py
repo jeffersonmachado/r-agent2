@@ -26,13 +26,21 @@ from services.deduplication_service import (
     check_structural_duplicate,
     check_semantic_duplicate,
     register_chunk,
-    deactivate_previous_versions,
     get_current_source_version,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def generate_tenant_chunk_id(
+    tenant_id: str, document_id: str, section_title: str = "", chunk_index: int = 0
+) -> str:
+    """Gera PK determinística sem colisão entre tenants."""
+    return generate_chunk_id(
+        f"{normalize_tenant_id(tenant_id)}:{document_id}", section_title, chunk_index
+    )
 
 
 class IndexRequest(BaseModel):
@@ -65,6 +73,8 @@ def index_document(request: IndexRequest):
             raise HTTPException(status_code=400, detail="Documento deve ter 'tenantId'")
         if not doc_data.get('content'):
             raise HTTPException(status_code=400, detail="Documento deve ter 'content'")
+        if str(doc_data.get('status') or 'active').strip().lower() != 'active':
+            raise HTTPException(status_code=409, detail="Apenas documentos ativos podem ser indexados")
 
         # Segregação de domínios: documento sem domain/classification explícitos
         # e válidos é REJEITADO — nunca indexado automaticamente.
@@ -146,9 +156,9 @@ def index_document(request: IndexRequest):
         current_version = get_current_source_version(tenant_id, source_id)
         source_version = doc_data.get('metadata', {}).get('source_version') or (current_version + 1)
         
-        # Se é nova versão, desativa versões anteriores
-        if source_version > current_version:
-            deactivate_previous_versions(tenant_id, source_id, source_version)
+        # Não desativar a versão anterior antes da transação que grava a
+        # nova. VectorStore.add_chunks substitui o documento atomicamente; se
+        # embedding/persistência falhar, a versão anterior continua ativa.
         
         # ETAPA 5: Cria documento com conteúdo normalizado
         document = Document(
@@ -179,7 +189,11 @@ def index_document(request: IndexRequest):
         for idx, chunk in enumerate(chunks):
             # Gera chunk_id determinístico
             section_title = getattr(chunk.metadata, 'sectionTitle', '') if hasattr(chunk.metadata, 'sectionTitle') else ''
-            chunk_deterministic_id = generate_chunk_id(document_id, section_title, idx)
+            # A PK de rag_chunks é global; incluir tenant evita colisão entre
+            # documentos com o mesmo id lógico em tenants diferentes.
+            chunk_deterministic_id = generate_tenant_chunk_id(
+                tenant_id, document_id, section_title, idx
+            )
             chunk.id = chunk_deterministic_id
             
             # Adiciona metadados obrigatórios ao chunk usando dict para Pydantic
@@ -323,33 +337,9 @@ def index_document(request: IndexRequest):
                 'chunkCountDelta': stats_after.get('chunkCount', 0) - stats_before.get('chunkCount', 0)
             })
         except Exception as e:
-            # Em ambiente sem Postgres (não configurado/indisponível), não quebra
-            # o contrato HTTP da indexação durante testes locais.
-            error_text = str(e)
-            fallback_errors = (
-                "Postgres DSN não configurado",
-                "could not connect to server",
-                "connection refused",
-                "timeout expired",
-            )
-            if not any(marker.lower() in error_text.lower() for marker in fallback_errors):
-                raise
-            chunks_added = len(valid_chunks)
-            stats_after = {
-                'documentCount': 0,
-                'chunkCount': 0,
-                'indexSize': 0,
-                'vectorStore': 'unavailable',
-                'embeddingDimension': None,
-            }
-            logger.warning(
-                "[INDEX] Postgres não configurado; retornando sucesso em modo degradado",
-                extra={
-                    'documentId': document.id,
-                    'tenantId': document.tenantId,
-                    'chunksAddedFallback': chunks_added,
-                }
-            )
+            # Postgres/pgvector é a fonte única. Nunca declarar chunks criados
+            # quando a persistência falhou.
+            raise RuntimeError(f"persistence_required: {e}") from e
         
         logger.info(f"[INDEX] Documento indexado: {document.id}, chunks criados: {len(chunks)}, duplicados descartados: {duplicate_count}, chunks válidos: {len(valid_chunks)}, chunks adicionados: {chunks_added}", {
             'documentId': document.id,

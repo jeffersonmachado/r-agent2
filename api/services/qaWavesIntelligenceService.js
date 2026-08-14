@@ -30,6 +30,9 @@ const {
 } = require('./qaWavesScenarioService');
 const { normalizeAiOutput } = require('../modules/qa-waves/aiScenarioAdapter');
 const { getAllReplayReadDirs } = require('../../lib/rpaPathResolver');
+const { belongsToTenant, normalizeTenantKey } = require('../../lib/rpaSecurity');
+const { getBlockingJourneys, getSeverityByJourney } = require('../../qa/contracts/journeyCriticality');
+const { writeJsonAtomic } = require('../utils/atomicJsonFile');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const COVERAGE_MAP_PATH = path.join(ROOT_DIR, 'qa', 'qa-waves', 'coverage-map.json');
@@ -61,7 +64,7 @@ function safeReadJson(filePath, fallback) {
 
 function safeWriteJson(filePath, data) {
   ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  writeJsonAtomic(filePath, data);
 }
 
 // ─── Coverage Map ─────────────────────────────────────────────────────────────
@@ -97,9 +100,10 @@ const REPLAY_FRESHNESS_DAYS = 7;
  * Lê todos os arquivos de replay disponíveis e retorna um índice
  * {scenarioId -> { latestAt, hasFailure, count }}
  */
-function buildReplayIndex() {
+function buildReplayIndex(tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const index = {};
-  const dirs = getAllReplayReadDirs().filter((d) => fs.existsSync(d));
+  const dirs = getAllReplayReadDirs(scopedTenantId).filter((d) => fs.existsSync(d));
   const now = Date.now();
   const freshnessMs = REPLAY_FRESHNESS_DAYS * 24 * 60 * 60 * 1000;
 
@@ -115,6 +119,7 @@ function buildReplayIndex() {
       if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
       try {
         const raw = JSON.parse(fs.readFileSync(path.join(dir, entry.name), 'utf8'));
+        if (!belongsToTenant(raw, scopedTenantId)) continue;
         const scenarioId = raw.scenarioId || raw.recordingId || null;
         if (!scenarioId) continue;
 
@@ -163,16 +168,17 @@ function buildReplayIndex() {
  *   stageBreakdown: object[]
  * }}
  */
-function analyzeCoverageGaps({ vertical, journey = null }, existingScenarios = [], prebuiltReplayIndex = null) {
+function analyzeCoverageGaps({ vertical, journey = null, tenantId = 'system' }, existingScenarios = [], prebuiltReplayIndex = null) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   // scenario-store é a fonte primária de cenários requeridos
   const storeData = loadScenarioStore();
   const storeScenarios = storeData.scenarios || storeData || [];
-  const replayIndex = prebuiltReplayIndex || buildReplayIndex();
+  const replayIndex = prebuiltReplayIndex || buildReplayIndex(scopedTenantId);
 
   // Filtra pelo vertical; usa waveId como fallback quando vertical não está preenchido
-  let relevantScenarios = storeScenarios.filter(
-    (s) => s.vertical === vertical || (s.waveId && String(s.waveId).startsWith(vertical)),
-  );
+  let relevantScenarios = storeScenarios
+    .filter((scenario) => belongsToTenant(scenario, scopedTenantId))
+    .filter((s) => s.vertical === vertical || (s.waveId && String(s.waveId).startsWith(vertical)));
   if (journey) {
     relevantScenarios = relevantScenarios.filter(
       (s) => s.journeyId === journey || s.journey === journey,
@@ -180,10 +186,11 @@ function analyzeCoverageGaps({ vertical, journey = null }, existingScenarios = [
   }
 
   // Mescla com cenários fornecidos explicitamente (overrides pontuais)
-  const overrideById = new Map(existingScenarios.map((s) => [s.id || s.scenarioId, s]));
+  const tenantScenarios = existingScenarios.filter((scenario) => belongsToTenant(scenario, scopedTenantId));
+  const overrideById = new Map(tenantScenarios.map((s) => [s.id || s.scenarioId, s]));
   const allRelevant = relevantScenarios.map((s) => overrideById.get(s.id) || s);
   // Adiciona qualquer cenário extra não presente no store (e.g. drafts passados manualmente)
-  for (const extra of existingScenarios) {
+  for (const extra of tenantScenarios) {
     const extraId = extra.id || extra.scenarioId;
     if (extraId && !allRelevant.find((r) => r.id === extraId)) {
       allRelevant.push(extra);
@@ -310,7 +317,8 @@ function buildReplayIndexSummary(index) {
  * @param {{ vertical: string, journey: string, stage: string, gap: string, context?: object }} opts
  * @returns {Promise<object>} scenario draft
  */
-async function generateScenarioDraft({ vertical, journey, stage, gap, context = {} }) {
+async function generateScenarioDraft({ vertical, journey, stage, gap, context = {}, tenantId = 'system' }) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const prompt = buildScenarioDraftPrompt({ vertical, journey, stage, gap, context });
 
   let scenarioJson = null;
@@ -318,7 +326,7 @@ async function generateScenarioDraft({ vertical, journey, stage, gap, context = 
   try {
     const aiResponse = await generateAiResponse(
       `${SCENARIO_SYSTEM_PROMPT}\n\n${prompt}`,
-      'system',
+      scopedTenantId,
       { source: 'qa_waves_intelligence', caller: 'generateScenarioDraft' },
     );
 
@@ -334,6 +342,7 @@ async function generateScenarioDraft({ vertical, journey, stage, gap, context = 
   const now = nowIso();
   const draft = {
     id: scenarioJson.id || makeId(`${vertical}_${stage}`),
+    tenantId: scopedTenantId,
     waveId: scenarioJson.waveId || `${vertical}-${journey}`,
     title: scenarioJson.title || `[IA] ${gap}`,
     vertical,
@@ -441,7 +450,8 @@ function extractJsonFromAiResponse(text) {
  * @param {{ scenarioId: string, quantity?: number, scenarioContext?: object }} opts
  * @returns {Promise<object[]>}
  */
-async function generateSeedsForScenario({ scenarioId, quantity = 5, scenarioContext = {} }) {
+async function generateSeedsForScenario({ scenarioId, quantity = 5, scenarioContext = {}, tenantId = 'system' }) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const prompt = buildSeedGenerationPrompt({ scenarioId, quantity, scenarioContext });
 
   let seeds = null;
@@ -449,7 +459,7 @@ async function generateSeedsForScenario({ scenarioId, quantity = 5, scenarioCont
   try {
     const aiResponse = await generateAiResponse(
       `${SEED_SYSTEM_PROMPT}\n\n${prompt}`,
-      'system',
+      scopedTenantId,
       { source: 'qa_waves_intelligence', caller: 'generateSeedsForScenario' },
     );
 
@@ -467,6 +477,7 @@ async function generateSeedsForScenario({ scenarioId, quantity = 5, scenarioCont
   const now = nowIso();
   return seeds.map((seed, i) => ({
     id: seed.id || makeId(`seed_${scenarioId}_${i}`),
+    tenantId: scopedTenantId,
     scenarioId,
     profile: seed.profile || 'cliente_generico',
     channel: seed.channel || 'whatsapp',
@@ -538,20 +549,24 @@ function loadDrafts() {
 }
 
 function persistDraft(draft) {
+  const scopedTenantId = normalizeTenantKey(draft?.tenantId || 'system');
+  const scopedDraft = { ...draft, tenantId: scopedTenantId };
   const store = loadDrafts();
-  const existing = store.drafts.findIndex((d) => d.id === draft.id);
+  const existing = store.drafts.findIndex((d) => d.id === scopedDraft.id
+    && belongsToTenant(d, scopedTenantId));
   if (existing >= 0) {
-    store.drafts[existing] = draft;
+    store.drafts[existing] = scopedDraft;
   } else {
-    store.drafts.push(draft);
+    store.drafts.push(scopedDraft);
   }
   store.updatedAt = nowIso();
   safeWriteJson(DRAFTS_STORE_PATH, store);
 }
 
-function listDrafts({ status = null, vertical = null, journey = null } = {}) {
+function listDrafts({ status = null, vertical = null, journey = null, tenantId = 'system' } = {}) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const store = loadDrafts();
-  let drafts = store.drafts || [];
+  let drafts = (store.drafts || []).filter((draft) => belongsToTenant(draft, scopedTenantId));
 
   if (status) drafts = drafts.filter((d) => d.status === status);
   if (vertical) drafts = drafts.filter((d) => d.vertical === vertical);
@@ -560,8 +575,10 @@ function listDrafts({ status = null, vertical = null, journey = null } = {}) {
   return drafts;
 }
 
-function findDraft(store, draftId) {
-  return (store.drafts || []).find((draft) => draft.id === draftId) || null;
+function findDraft(store, draftId, tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  return (store.drafts || []).find((draft) => draft.id === draftId
+    && belongsToTenant(draft, scopedTenantId)) || null;
 }
 
 function toScenarioValidators(draft) {
@@ -633,6 +650,7 @@ function convertDraftToScenario(draft) {
 
   return normalizeScenarioRecord({
     ...normalizedAiScenario,
+    tenantId: normalizeTenantKey(draft.tenantId || 'system'),
     validators: toScenarioValidators(draft),
     semanticSteps: normalizedAiScenario.steps,
     executionStatus: 'queued',
@@ -691,9 +709,10 @@ function validateCoverageAlignment(existingScenarios = null) {
  * Aprova um cenário draft_ai.
  * Apenas cenários aprovados podem ser executados.
  */
-function approveDraft(draftId, { approvedBy = 'unknown' } = {}) {
+function approveDraft(draftId, { approvedBy = 'unknown', tenantId = 'system' } = {}) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const store = loadDrafts();
-  const draft = findDraft(store, draftId);
+  const draft = findDraft(store, draftId, scopedTenantId);
   if (!draft) {
     const err = new Error(`Draft não encontrado: ${draftId}`);
     err.code = 'NOT_FOUND';
@@ -728,9 +747,10 @@ function approveDraft(draftId, { approvedBy = 'unknown' } = {}) {
 /**
  * Rejeita um cenário draft_ai.
  */
-function rejectDraft(draftId, { rejectedBy = 'unknown', reason = '' } = {}) {
+function rejectDraft(draftId, { rejectedBy = 'unknown', reason = '', tenantId = 'system' } = {}) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const store = loadDrafts();
-  const draft = store.drafts.find((d) => d.id === draftId);
+  const draft = store.drafts.find((d) => d.id === draftId && belongsToTenant(d, scopedTenantId));
   if (!draft) {
     const err = new Error(`Draft não encontrado: ${draftId}`);
     err.code = 'NOT_FOUND';
@@ -756,13 +776,24 @@ function rejectDraft(draftId, { rejectedBy = 'unknown', reason = '' } = {}) {
  * Retorna resumo de cobertura derivado do scenario-store (fonte primária).
  * Cobertura = cenários com pelo menos um replay fresco / total de cenários no store.
  */
-function getCoverageSummary(existingScenarios = null) {
+function getCoverageSummary(existingScenarios = null, options = {}) {
+  let filters = options || {};
+  if (existingScenarios && !Array.isArray(existingScenarios) && typeof existingScenarios === 'object') {
+    filters = existingScenarios;
+    existingScenarios = null;
+  }
+  const scopedTenantId = normalizeTenantKey(filters.tenantId || 'system');
   const storeData = loadScenarioStore();
-  const scenarios = Array.isArray(existingScenarios)
+  let scenarios = Array.isArray(existingScenarios)
     ? existingScenarios
     : (storeData.scenarios || storeData || []).map((s) => normalizeScenarioRecord(s));
+  scenarios = scenarios.filter((scenario) => belongsToTenant(scenario, scopedTenantId));
+  if (filters.vertical) scenarios = scenarios.filter((scenario) => scenario.vertical === filters.vertical);
+  if (filters.journey) {
+    scenarios = scenarios.filter((scenario) => scenario.journeyId === filters.journey || scenario.journey === filters.journey);
+  }
 
-  const replayIndex = buildReplayIndex();
+  const replayIndex = buildReplayIndex(scopedTenantId);
   const results = [];
 
   // Agrupa por vertical → jornada
@@ -815,18 +846,14 @@ function getCoverageSummary(existingScenarios = null) {
 
 // ─── Governance ───────────────────────────────────────────────────────────────
 
+// blockingJourneys e severityByJourney NÃO ficam mais aqui: vêm do registry
+// declarativo config/journey-criticality.json (ver evaluateWaveGovernance).
 const GOVERNANCE_DEFAULTS = {
   minCoverage: 0.7,
   minQuality: 0.8,
   maxCriticalFailures: 0,
   replayRequired: true,
   strictMode: true,
-  blockingJourneys: ['support_ticket_flow', 'fitness_customer_checkin'],
-  severityByJourney: {
-    support_ticket_flow: 'critical',
-    fitness_customer_checkin: 'critical',
-    booking_flow: 'high',
-  },
 };
 
 /**
@@ -835,9 +862,17 @@ const GOVERNANCE_DEFAULTS = {
  * @param {{ waveId: string, scenarios: object[], meshExecution?: object }} opts
  * @returns {{ waveId, status, coverage, quality, criticalFailures, reasons, details }}
  */
-function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, policy = {} }) {
-  const rules = { ...GOVERNANCE_DEFAULTS, ...policy };
-  const replayIndex = buildReplayIndex();
+function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, policy = {}, tenantId = 'system' }) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
+  // Defaults de blocking/severity vêm do registry declarativo; `policy`
+  // continua podendo sobrescrever explicitamente.
+  const rules = {
+    ...GOVERNANCE_DEFAULTS,
+    blockingJourneys: getBlockingJourneys(),
+    severityByJourney: getSeverityByJourney(),
+    ...policy,
+  };
+  const replayIndex = buildReplayIndex(scopedTenantId);
   const blockingJourneys = new Set(Array.isArray(rules.blockingJourneys) ? rules.blockingJourneys : []);
 
   let totalScenarios = 0;
@@ -937,6 +972,7 @@ function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, 
 
   const report = {
     waveId,
+    tenantId: scopedTenantId,
     status: goNoGo ? 'GO' : 'NO_GO',
     coverage: Math.round(coverage * 100) / 100,
     quality: Math.round(quality * 100) / 100,
@@ -953,7 +989,8 @@ function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, 
   try {
     const existing = safeReadJson(GOVERNANCE_REPORT_PATH, { reports: [] });
     if (!Array.isArray(existing.reports)) existing.reports = [];
-    const idx = existing.reports.findIndex((r) => r.waveId === waveId);
+    const idx = existing.reports.findIndex((r) => r.waveId === waveId
+      && belongsToTenant(r, scopedTenantId));
     if (idx >= 0) existing.reports[idx] = report;
     else existing.reports.push(report);
     existing.updatedAt = nowIso();
@@ -968,9 +1005,10 @@ function evaluateWaveGovernance({ waveId, scenarios = [], meshExecution = null, 
 /**
  * Lista todos os relatórios de governança.
  */
-function listGovernanceReports() {
+function listGovernanceReports(tenantId = 'system') {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const store = safeReadJson(GOVERNANCE_REPORT_PATH, { reports: [] });
-  return store.reports || [];
+  return (store.reports || []).filter((report) => belongsToTenant(report, scopedTenantId));
 }
 
 /**
@@ -1007,11 +1045,14 @@ function suggestMeshLinks(waveScenarios = [], meshRegistry = []) {
  * Returns business-level gap analysis suitable for UI display.
  * Cross-references journey-contracts.json × journey-coverage × scenario-store.
  */
-function getBusinessGaps({ vertical = null, journey = null } = {}) {
+function getBusinessGaps({ vertical = null, journey = null, tenantId = 'system' } = {}) {
+  const scopedTenantId = normalizeTenantKey(tenantId);
   const contractsPath = path.join(ROOT_DIR, 'config', 'journey-contracts.json');
   const coverageDir = path.join(ROOT_DIR, 'qa-waves', 'journey-coverage');
   const storeData = loadScenarioStore();
-  const scenarios = (storeData.scenarios || storeData || []).map((s) => normalizeScenarioRecord(s));
+  const scenarios = (storeData.scenarios || storeData || [])
+    .map((s) => normalizeScenarioRecord(s))
+    .filter((scenario) => belongsToTenant(scenario, scopedTenantId));
 
   // Load contracts
   let contracts = { journeys: {} };

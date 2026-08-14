@@ -31,7 +31,7 @@ describe('test-executions replay routes', () => {
 
     await handler({ query: {} }, {});
 
-    expect(deps.listQaWaveJourneys).toHaveBeenCalledTimes(1);
+    expect(deps.listQaWaveJourneys).toHaveBeenCalledWith('tenant-x');
     expect(deps.sendJson).toHaveBeenCalledWith(
       expect.anything(),
       200,
@@ -57,7 +57,7 @@ describe('test-executions replay routes', () => {
 
     await handler({ query: {} }, {});
 
-    expect(deps.listQaWaveJourneyStatus).toHaveBeenCalledTimes(1);
+    expect(deps.listQaWaveJourneyStatus).toHaveBeenCalledWith('tenant-x');
     expect(deps.sendJson).toHaveBeenCalledWith(
       expect.anything(),
       200,
@@ -86,7 +86,13 @@ describe('test-executions replay routes', () => {
 
     await handler(req, res);
 
-    expect(deps.listQaWaveScenarios).toHaveBeenCalledWith({ waveId: 'wave-01', journey: 'leads', status: 'active', source: 'manual' });
+    expect(deps.listQaWaveScenarios).toHaveBeenCalledWith({
+      waveId: 'wave-01',
+      journey: 'leads',
+      status: 'active',
+      source: 'manual',
+      tenantId: 'tenant-x',
+    });
     expect(deps.sendJson).toHaveBeenCalledWith(
       res,
       200,
@@ -115,7 +121,7 @@ describe('test-executions replay routes', () => {
 
     await handler(req, res);
 
-    expect(deps.listQaWaveStepStatus).toHaveBeenCalledWith({ journeyId: 'leads' });
+    expect(deps.listQaWaveStepStatus).toHaveBeenCalledWith({ journeyId: 'leads', tenantId: 'tenant-x' });
     expect(deps.sendJson).toHaveBeenCalledWith(
       res,
       200,
@@ -180,6 +186,7 @@ describe('test-executions replay routes', () => {
       scenarioId: 'scenario-01',
       seedId: 'seed-01',
       executionId: 'exec-01',
+      tenantId: 'tenant-x',
     });
 
     expect(deps.sendJson).toHaveBeenCalledWith(
@@ -236,7 +243,7 @@ describe('test-executions replay routes', () => {
 
     await handler(req, res);
 
-    expect(deps.deleteReplayFile).toHaveBeenCalledWith('replay-1.json');
+    expect(deps.deleteReplayFile).toHaveBeenCalledWith('replay-1.json', 'tenant-x');
     expect(deps.sendJson).toHaveBeenCalledWith(
       res,
       200,

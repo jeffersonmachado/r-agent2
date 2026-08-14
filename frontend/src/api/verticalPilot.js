@@ -54,6 +54,13 @@ export function searchFitnessStudents(params = {}) {
   return fetchJson(`/api/fitness/students/search${toQuery(params)}`);
 }
 
+export function createFitnessStudent(payload = {}) {
+  return fetchJson('/api/fitness/student', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
 export function getFitnessStudentDetail(subjectId, params = {}) {
   return fetchJson(`/api/fitness/student/${encodeURIComponent(subjectId)}/detail${toQuery(params)}`);
 }

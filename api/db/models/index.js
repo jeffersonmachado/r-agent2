@@ -157,6 +157,8 @@ const getUserCertification = require('./UserCertification');
 const getLearningMentorPlan = require('./LearningMentorPlan');
 const getAiGovernanceRecord = require('./AiGovernanceRecord');
 const getVerticalTemplate = require('./VerticalTemplate');
+const getRuntimeArtifact = require('./RuntimeArtifact');
+const getCoverageEvidence = require('./CoverageEvidence');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -313,6 +315,8 @@ const UserCertification = () => getUserCertification();
 const LearningMentorPlan = () => getLearningMentorPlan();
 const AiGovernanceRecord = () => getAiGovernanceRecord();
 const VerticalTemplate = () => getVerticalTemplate();
+const RuntimeArtifact = () => getRuntimeArtifact();
+const CoverageEvidence = () => getCoverageEvidence();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -927,6 +931,8 @@ module.exports = {
   LearningMentorPlan,
   AiGovernanceRecord,
   VerticalTemplate,
+  RuntimeArtifact,
+  CoverageEvidence,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -1083,4 +1089,6 @@ module.exports = {
   getLearningMentorPlan,
   getAiGovernanceRecord,
   getVerticalTemplate,
+  getRuntimeArtifact,
+  getCoverageEvidence,
 };

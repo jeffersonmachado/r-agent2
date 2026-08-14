@@ -1,10 +1,12 @@
 'use strict';
 
+const { configureRuntimeRoot } = require('../../api/utils/runtimePaths');
+
 /**
  * Regressão: POST /templates gravava templates de runtime DENTRO do
  * repositório (api/frontend/public/templates) — sujava o worktree, disparava
  * restart do nodemon e violava a política de que escrita de runtime vai para
- * RUNTIME_ROOT. Adicionalmente, GET /templates lia os seeds embutidos do
+ * runtime root. Adicionalmente, GET /templates lia os seeds embutidos do
  * caminho errado (api/frontend/... inexistente) em vez do diretório
  * versionado frontend/public/templates.
  *
@@ -66,11 +68,11 @@ const SAMPLE = {
 
 beforeEach(() => {
   runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'templates-runtime-'));
-  process.env.RUNTIME_ROOT = runtimeRoot;
+  configureRuntimeRoot(runtimeRoot);
 });
 
 afterEach(() => {
-  delete process.env.RUNTIME_ROOT;
+  configureRuntimeRoot(null);
   fs.rmSync(runtimeRoot, { recursive: true, force: true });
   // Garante que o teste não deixou vazamento dentro do repositório.
   fs.rmSync(REPO_RUNTIME_LEAK_DIR, { recursive: true, force: true });

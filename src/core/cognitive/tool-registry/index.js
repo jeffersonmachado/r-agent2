@@ -844,7 +844,11 @@ function registerDefaultTools(registry, deps = {}) {
     idempotencyPolicy: 'none',
     execute: async (input, context) => {
       const testExecution = svc.testExecution();
-      const replays = await testExecution.listReplayFiles(input.query || input || {});
+      const requestedFilters = input.query || input || {};
+      const replays = await testExecution.listReplayFiles({
+        ...(requestedFilters && typeof requestedFilters === 'object' ? requestedFilters : {}),
+        tenantId: context.tenantId,
+      });
       return { replays };
     },
   });
@@ -867,7 +871,7 @@ function registerDefaultTools(registry, deps = {}) {
     },
     execute: async (input, context) => {
       const qaWaves = svc.qaWaves();
-      return { waveStatus: await qaWaves.getExecutionStatus(input.executionId) };
+      return { waveStatus: await qaWaves.getExecutionStatus(input.executionId, context.tenantId) };
     },
   });
 

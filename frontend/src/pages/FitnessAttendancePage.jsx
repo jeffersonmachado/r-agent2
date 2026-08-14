@@ -52,7 +52,13 @@ export function FitnessAttendancePage() {
   return (
     <div className="support-content-wrapper" style={{ padding: '1rem' }}>
       <div className="support-header"><h1>Presença Fitness</h1></div>
-      <button className="support-button" onClick={loadData} disabled={loading}>{loading ? 'Atualizando...' : 'Atualizar'}</button>
+      <button
+        className="support-button"
+        data-testid="refresh-button"
+        aria-label="Atualizar attendance"
+        onClick={loadData}
+        disabled={loading}
+      >{loading ? 'Atualizando...' : 'Atualizar'}</button>
       <div className="support-details-panel" style={{ marginTop: '1rem' }}>
         <table className="support-table">
           <thead>
