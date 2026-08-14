@@ -293,6 +293,7 @@
     "@anthropic-ai/sdk": "^0.80.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@results/auth": "file:../../packages/auth",
+    "@results/whatsapp-qr-bridge": "file:../packages/whatsapp-qr-bridge",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "browser-image-compression": "^2.0.2",

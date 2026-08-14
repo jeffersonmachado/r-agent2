@@ -6,6 +6,16 @@ const path = require('path');
 /**
  * Bridge opcional para provedores WhatsApp QR (ex.: whatsapp-web.js).
  *
+ * Adaptador fino sobre o pacote compartilhado `@results/whatsapp-qr-bridge`
+ * (../../packages/whatsapp-qr-bridge): o pacote gerencia o ciclo de vida dos
+ * clientes whatsapp-web.js (multi-conexão, QR, status, envio de texto, sync de
+ * locks); este serviço mantém tudo que é específico do r-agent2:
+ * - persistência em tenant_settings (via whatsappQrService.ingestConnectionEvent);
+ * - inbound → tickets/mídia/WebSocket;
+ * - recuperação de mensagens não-lidas no ready;
+ * - reconciliação periódica contra tenant_settings (sync do pacote desligado);
+ * - resolução de Chrome/puppeteer e clientId/sessão no formato legado.
+ *
  * Objetivo:
  * - Inicializar clientes por conexão cadastrada.
  * - Converter eventos do provider em eventos internos de conexão:
@@ -21,7 +31,13 @@ const { storeTicketMedia, getTicketMediaById } = require('./ticketMediaService')
 const { emitEvent } = require('./websocketService');
 const { resolveRuntimePath } = require('../utils/runtimePaths');
 
+// Instância do bridge do pacote (criada lazy, no primeiro uso).
+let bridgeRef = null;
+// key (`tenantId:connectionId`) → { tenantId, connectionId, client, ready, createdAt }
 const activeClients = new Map();
+// key → { tenantId, connectionId } — resolve o connectionId plano do pacote
+// de volta para o par tenant/conexão do r-agent2.
+const connectionRefs = new Map();
 let started = false;
 let syncTimer = null;
 
@@ -159,8 +175,8 @@ function classifyInitializeFailure(err) {
  * Remove arquivos de lock do Chrome (SingletonLock, SingletonSocket) que ficam
  * quando o processo crasheia abruptamente, impedindo nova inicialização.
  */
-function clearChromeLocks(clientId) {
-  const wwebjsAuthDir = resolveWwebjsAuthPath();
+function clearChromeLocks(clientId, dataPath) {
+  const wwebjsAuthDir = dataPath || resolveWwebjsAuthPath();
   const sessionDir = path.join(wwebjsAuthDir, `session-${clientId}`);
   const locks = ['SingletonLock', 'SingletonSocket', 'SingletonCookie', 'DevToolsActivePort'];
 
@@ -261,13 +277,12 @@ function extractExternalMessageId(sent) {
 }
 
 async function destroyClient(key) {
-  const entry = activeClients.get(key);
-  if (!entry) return;
   activeClients.delete(key);
+  if (!bridgeRef) return;
   try {
-    if (entry.client && typeof entry.client.destroy === 'function') {
-      await entry.client.destroy();
-    }
+    // removeConnection faz destroy sem logout — mesmo efeito do destroy local
+    // que o adaptador sempre fez; o pacote não a reinicia (sync dele desligado).
+    await bridgeRef.removeConnection(key);
   } catch (_) {}
 }
 
@@ -457,104 +472,164 @@ async function recoverRecentInboundMessages({ tenantId, connectionId, client }) 
   }
 }
 
-async function ensureClient({ tenantId, connection }) {
-  const key = clientKey(tenantId, connection.id);
-  if (activeClients.has(key)) return { ok: true, alreadyActive: true };
-
-  const wa = loadWhatsappWebJs(); // Lança erro se não instalada
-
+/**
+ * clientFactory injetada no pacote: o require('whatsapp-web.js') precisa
+ * resolver a partir do node_modules do r-agent2 (o path real do pacote
+ * instalado via file: fica fora do node_modules e não acharia a lib), e o
+ * clientId/dataPath precisam manter o formato legado (`ria_<tenant>_<conn>`)
+ * para reutilizar as sessões já pareadas em disco.
+ */
+function bridgeClientFactory({ dataPath, connectionId }) {
+  const wa = loadWhatsappWebJs();
   const { Client, LocalAuth } = wa;
-  const clientId = sanitizeClientId(tenantId, connection.id);
-  const authPath = resolveWwebjsAuthPath();
-  try { fs.mkdirSync(authPath, { recursive: true }); } catch (_) {}
+  const ref = connectionRefs.get(connectionId) || {};
+  const clientId = sanitizeClientId(ref.tenantId, ref.connectionId);
+  clearChromeLocks(clientId, dataPath);
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId, dataPath: authPath }),
+    authStrategy: new LocalAuth({ clientId, dataPath }),
     puppeteer: buildPuppeteerOptions(),
   });
-
-  client.on('qr', async (qr) => {
-    try {
-      await ingestConnectionEvent(tenantId, connection.id, {
-        eventType: 'qr',
-        qr: {
-          text: safeToString(qr),
-          token: '',
-          expiresAt: new Date(Date.now() + 2 * 60 * 1000).toISOString(),
-        },
-        metadata: { bridge: 'whatsapp-web.js' },
-      });
-    } catch (_) {}
+  activeClients.set(connectionId, {
+    tenantId: ref.tenantId,
+    connectionId: ref.connectionId,
+    client,
+    ready: false,
+    createdAt: new Date().toISOString(),
   });
+  return client;
+}
 
-  client.on('ready', async () => {
-    const entry = activeClients.get(key);
-    if (entry) entry.ready = true;
-    try {
-      await ingestConnectionEvent(tenantId, connection.id, {
-        eventType: 'ready',
-        metadata: { bridge: 'whatsapp-web.js' },
-      });
-    } catch (_) {}
-    await recoverRecentInboundMessages({ tenantId, connectionId: connection.id, client });
-  });
+// Handlers de eventos do pacote → ingest em tenant_settings (mesmos payloads
+// de antes; `dataUrl` é aditivo no evento de QR).
+async function handleBridgeQr({ connectionId, qrText, qrDataUrl, expiresAt }) {
+  const ref = connectionRefs.get(connectionId);
+  if (!ref) return;
+  try {
+    await ingestConnectionEvent(ref.tenantId, ref.connectionId, {
+      eventType: 'qr',
+      qr: {
+        text: safeToString(qrText),
+        token: '',
+        expiresAt: safeTrim(expiresAt) || new Date(Date.now() + 2 * 60 * 1000).toISOString(),
+        dataUrl: safeToString(qrDataUrl),
+      },
+      metadata: { bridge: 'whatsapp-web.js' },
+    });
+  } catch (_) {}
+}
 
-  client.on('authenticated', async () => {
-    try {
-      await ingestConnectionEvent(tenantId, connection.id, {
+async function handleBridgeStatus({ connectionId, status, reason }) {
+  const ref = connectionRefs.get(connectionId);
+  if (!ref) return;
+  // 'ready' e 'error' têm eventos próprios no pacote (ingeridos lá); 'pairing'
+  // é coberto pelo evento 'qr'. Aqui só connected/disconnected, para não
+  // duplicar ingest.
+  try {
+    if (status === 'connected') {
+      await ingestConnectionEvent(ref.tenantId, ref.connectionId, {
         eventType: 'connected',
         metadata: { bridge: 'whatsapp-web.js', phase: 'authenticated' },
       });
-    } catch (_) {}
-  });
+    } else if (status === 'disconnected') {
+      try {
+        await ingestConnectionEvent(ref.tenantId, ref.connectionId, {
+          eventType: 'disconnected',
+          metadata: { reason: reason ? safeToString(reason) : null, bridge: 'whatsapp-web.js' },
+        });
+      } catch (_) {}
+      activeClients.delete(connectionId);
+    }
+  } catch (_) {}
+}
 
-  client.on('disconnected', async (reason) => {
-    try {
-      await ingestConnectionEvent(tenantId, connection.id, {
-        eventType: 'disconnected',
-        metadata: { reason: reason ? safeToString(reason) : null, bridge: 'whatsapp-web.js' },
-      });
-    } catch (_) {}
-    await destroyClient(key);
-  });
-
-  client.on('auth_failure', async (msg) => {
-    try {
-      await ingestConnectionEvent(tenantId, connection.id, {
-        eventType: 'error',
-        metadata: { reason: msg ? safeToString(msg) : 'auth_failure', bridge: 'whatsapp-web.js' },
-      });
-    } catch (_) {}
-  });
-
-  client.on('message', async (message) => {
-    await processInboundMessage({ tenantId, connectionId: connection.id, message, source: 'live' });
-  });
-
-  // Registra antes de initialize() para que o handler de 'ready' consiga marcar ready=true.
-  // O campo ready=false impede envios até o evento 'ready' disparar.
-  activeClients.set(key, { tenantId, connectionId: connection.id, client, ready: false, createdAt: new Date().toISOString() });
-
+async function handleBridgeReady({ connectionId }) {
+  const ref = connectionRefs.get(connectionId);
+  if (!ref) return;
+  const entry = activeClients.get(connectionId);
+  if (entry) entry.ready = true;
   try {
-    clearChromeLocks(clientId);
-    await client.initialize();
-    logger.info('[WhatsAppQRBridge] Cliente inicializado', { tenantId, connectionId: connection.id });
-    return { ok: true, started: true };
-  } catch (err) {
-    const failure = classifyInitializeFailure(err);
+    await ingestConnectionEvent(ref.tenantId, ref.connectionId, {
+      eventType: 'ready',
+      metadata: { bridge: 'whatsapp-web.js' },
+    });
+  } catch (_) {}
+  await recoverRecentInboundMessages({ tenantId: ref.tenantId, connectionId: ref.connectionId, client: entry?.client });
+}
+
+async function handleBridgeMessage({ connectionId, raw }) {
+  const ref = connectionRefs.get(connectionId);
+  if (!ref || !raw) return;
+  await processInboundMessage({ tenantId: ref.tenantId, connectionId: ref.connectionId, message: raw, source: 'live' });
+}
+
+async function handleBridgeError({ connectionId, error }) {
+  const ref = connectionRefs.get(connectionId);
+  if (!ref) return;
+  const failure = classifyInitializeFailure(error);
+  try {
+    await ingestConnectionEvent(ref.tenantId, ref.connectionId, {
+      eventType: 'error',
+      metadata: { reason: failure.message, bridge: 'whatsapp-web.js', code: failure.error },
+    });
+  } catch (_) {}
+}
+
+function getBridge() {
+  if (bridgeRef) return bridgeRef;
+  // Lazy: o pacote exige `qrcode` no carregamento; adiar o require evita
+  // quebrar o boot/módulos consumidores se a dependência faltar.
+  // eslint-disable-next-line global-require
+  const { createBridge } = require('@results/whatsapp-qr-bridge');
+  const bridge = createBridge({
+    authDataPath: resolveWwebjsAuthPath(),
+    // Reconciliação contra tenant_settings fica no adaptador (syncConnections);
+    // o sync interno do pacote fica desligado para não haver dois reconciliadores.
+    syncIntervalMs: 0,
+    clientFactory: bridgeClientFactory,
+    logger: {
+      info: (msg, extra) => logger.info(msg, extra),
+      warn: (msg, extra) => logger.warn(msg, extra),
+      error: (msg, extra) => logger.error(msg, extra),
+      debug: (msg, extra) => logger.debug(msg, extra),
+    },
+  });
+  // Listeners síncronos que despacham handlers async — nunca propagam exceção
+  // para o EventEmitter do pacote.
+  bridge.on('qr', (evt) => { handleBridgeQr(evt).catch(() => {}); });
+  bridge.on('status', (evt) => { handleBridgeStatus(evt).catch(() => {}); });
+  bridge.on('ready', (evt) => { handleBridgeReady(evt).catch(() => {}); });
+  bridge.on('message', (evt) => { handleBridgeMessage(evt).catch(() => {}); });
+  bridge.on('error', (evt) => { handleBridgeError(evt).catch(() => {}); });
+  bridgeRef = bridge;
+  return bridge;
+}
+
+async function ensureClient({ tenantId, connection }) {
+  const key = clientKey(tenantId, connection.id);
+  connectionRefs.set(key, { tenantId: safeToString(tenantId), connectionId: safeToString(connection.id) });
+
+  const existing = activeClients.get(key);
+  if (existing && existing.client) return { ok: true, alreadyActive: true };
+
+  loadWhatsappWebJs(); // Lança erro se não instalada
+
+  const added = await getBridge().addConnection({ id: key });
+  if (!added?.ok) {
+    const failure = classifyInitializeFailure(added?.message || added?.error);
     logger.error('[WhatsAppQRBridge] Falha ao inicializar cliente', {
       tenantId,
       connectionId: connection.id,
       error: failure.message,
       code: failure.error,
     });
-    await ingestConnectionEvent(tenantId, connection.id, {
-      eventType: 'error',
-      metadata: { reason: failure.message, bridge: 'whatsapp-web.js', code: failure.error },
-    }).catch(() => null);
+    // O pacote já destruiu o cliente; limpa o registro local (o evento 'error'
+    // do pacote já foi ingerido pelo listener).
     activeClients.delete(key);
-    try { await client.destroy(); } catch (_) {}
     return { ok: false, error: failure.error, message: failure.message };
   }
+
+  logger.info('[WhatsAppQRBridge] Cliente inicializado', { tenantId, connectionId: connection.id });
+  return { ok: true, started: true };
 }
 
 async function requestConnectionQr(tenantId, connectionId) {
@@ -628,20 +703,19 @@ async function sendTextViaConnection({ tenantId, to, text, connectionId = null }
     return { ok: false, error: 'client_not_ready', message: 'Aguardando sessão WhatsApp ficar pronta' };
   }
 
-  try {
-    const sent = await client.sendMessage(destination, messageText);
-    return {
-      ok: true,
-      connectionId: safeToString(connection.id),
-      externalMessageId: extractExternalMessageId(sent),
-    };
-  } catch (err) {
+  const sent = await getBridge().sendText(key, destination, messageText);
+  if (!sent?.ok) {
     return {
       ok: false,
-      error: 'qr_send_failed',
-      message: safeErrorMessage(err, 'qr_send_failed'),
+      error: sent?.error || 'qr_send_failed',
+      message: sent?.message || null,
     };
   }
+  return {
+    ok: true,
+    connectionId: safeToString(connection.id),
+    externalMessageId: sent.externalMessageId || null,
+  };
 }
 
 async function sendMediaViaConnection({ tenantId, to, mediaId, mimeType, fileName, caption = '', connectionId = null } = {}) {
@@ -702,6 +776,9 @@ async function sendMediaViaConnection({ tenantId, to, mediaId, mimeType, fileNam
       ? mediaRecord.data.toString('base64')
       : Buffer.from(mediaRecord.data).toString('base64');
 
+    // MessageMedia construído aqui (não via pacote): o require('whatsapp-web.js')
+    // do pacote falha em instalação file: (path real fora do node_modules) e o
+    // fallback de objeto simples não é reconhecido como mídia pelo Client.
     const wa = loadWhatsappWebJs();
     const msgMedia = new wa.MessageMedia(mime, b64, name);
 
@@ -764,8 +841,11 @@ async function syncConnections() {
     }
   }
 
-  for (const key of Array.from(activeClients.keys())) {
-    if (key === '__missing_lib__') continue;
+  const knownKeys = new Set(activeClients.keys());
+  if (bridgeRef) {
+    for (const conn of bridgeRef.listConnections()) knownKeys.add(conn.id);
+  }
+  for (const key of Array.from(knownKeys)) {
     if (!desired.has(key)) {
       // eslint-disable-next-line no-await-in-loop
       await destroyClient(key);
@@ -806,20 +886,20 @@ async function stopWhatsAppQrBridge() {
     clearInterval(syncTimer);
     syncTimer = null;
   }
-  for (const key of Array.from(activeClients.keys())) {
-    if (key === '__missing_lib__') continue;
-    // eslint-disable-next-line no-await-in-loop
-    await destroyClient(key);
+  if (bridgeRef) {
+    try { await bridgeRef.stop(); } catch (_) {}
+    bridgeRef = null;
   }
-  activeClients.delete('__missing_lib__');
+  activeClients.clear();
+  connectionRefs.clear();
   return { ok: true };
 }
 
 function getWhatsAppQrBridgeStats() {
   return {
     started,
-    totalClients: Array.from(activeClients.keys()).filter((k) => k !== '__missing_lib__').length,
-    missingLibrary: activeClients.has('__missing_lib__'),
+    totalClients: activeClients.size,
+    missingLibrary: false,
   };
 }
 

@@ -27,6 +27,13 @@ COPY package.json package-lock.json* ./
 # Materializa o pacote irmão ../../packages/auth (link do package-lock)
 COPY vendor/auth/ /build/packages/auth/
 
+# Materializa o pacote irmão ../packages/whatsapp-qr-bridge (link do package-lock).
+# O npm ci do pacote é obrigatório: o require('qrcode') do pacote resolve a partir
+# do path real (/build/packages/whatsapp-qr-bridge), fora do node_modules da API,
+# e o .dockerignore exclui node_modules do contexto de build.
+COPY vendor/whatsapp-qr-bridge/ /build/packages/whatsapp-qr-bridge/
+RUN npm --prefix /build/packages/whatsapp-qr-bridge ci --omit=dev && npm cache clean --force
+
 # Instala apenas dependências de produção no builder
 RUN npm ci --omit=dev && \
     npm exec -- puppeteer browsers install chrome && \
@@ -63,6 +70,12 @@ WORKDIR /app
 # Materializa o pacote irmão: node_modules/@results/auth é um symlink
 # relativo (../../../../packages/auth) que resolve para /packages/auth.
 COPY vendor/auth/ /packages/auth/
+
+# Idem para @results/whatsapp-qr-bridge: o symlink
+# node_modules/@results/whatsapp-qr-bridge (../../../packages/whatsapp-qr-bridge)
+# resolve para /packages/whatsapp-qr-bridge. Vem do builder para incluir o
+# node_modules do pacote (qrcode), que o .dockerignore exclui do contexto.
+COPY --from=builder /build/packages/whatsapp-qr-bridge /packages/whatsapp-qr-bridge
 
 # Copia apenas artefatos do builder
 COPY --from=builder /build/r-agent2/package.json /build/r-agent2/package-lock.json* ./

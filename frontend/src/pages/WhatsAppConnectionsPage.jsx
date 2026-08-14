@@ -409,9 +409,12 @@ export function WhatsAppConnectionsPage() {
     ? PROVIDER_OPTIONS
     : [{ value: form.provider, label: `${form.provider} (atual)` }, ...PROVIDER_OPTIONS];
 
-  const waQrImageUrl = qrState?.qr?.text
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrState.qr.text)}`
-    : null;
+  // Prefere o data URL gerado localmente pelo bridge (sem serviço externo);
+  // fallback para o texto do QR via api.qrserver.com (conexões antigas).
+  const waQrImageUrl = qrState?.qr?.dataUrl
+    || (qrState?.qr?.text
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrState.qr.text)}`
+      : null);
 
   return (
     <CrudPageBase hideHeader>

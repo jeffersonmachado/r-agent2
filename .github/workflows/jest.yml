@@ -42,11 +42,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION_LTS }}
           cache: 'npm'
 
-      - name: Materializar @results/auth (pacote irmão fora do checkout)
+      - name: Materializar pacotes irmãos @results (fora do checkout)
         run: |
-          mkdir -p ../../packages
-          rm -rf ../../packages/auth
+          mkdir -p ../../packages ../packages
+          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
           cp -r vendor/auth ../../packages/auth
+          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
+          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
 
       - name: Install dependencies
         run: npm ci
@@ -101,11 +103,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION_LTS }}
           cache: 'npm'
 
-      - name: Materializar @results/auth (pacote irmão fora do checkout)
+      - name: Materializar pacotes irmãos @results (fora do checkout)
         run: |
-          mkdir -p ../../packages
-          rm -rf ../../packages/auth
+          mkdir -p ../../packages ../packages
+          rm -rf ../../packages/auth ../packages/whatsapp-qr-bridge
           cp -r vendor/auth ../../packages/auth
+          cp -r vendor/whatsapp-qr-bridge ../packages/whatsapp-qr-bridge
+          npm --prefix ../packages/whatsapp-qr-bridge ci --omit=dev --no-audit --no-fund
 
       - name: Install dependencies
         run: npm ci

@@ -60,8 +60,10 @@ describe('whatsappQrBridgeService coercion hardening', () => {
     const hostile = { toString() { throw new Error('boom-hostile'); } };
 
     await expect(handlers.qr(hostile)).resolves.not.toThrow();
-    await expect(handlers.auth_failure(hostile)).resolves.not.toThrow();
-    await expect(handlers.disconnected(hostile)).resolves.not.toThrow();
+    // auth_failure/disconnected podem ser handlers síncronos no pacote (retornam
+    // undefined): Promise.resolve cobre ambos os casos sem perder a afirmação.
+    await expect(Promise.resolve(handlers.auth_failure(hostile))).resolves.not.toThrow();
+    await expect(Promise.resolve(handlers.disconnected(hostile))).resolves.not.toThrow();
 
     expect(ingestConnectionEvent).toHaveBeenCalled();
     await svc.stopWhatsAppQrBridge();

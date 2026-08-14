@@ -379,12 +379,16 @@ async function ingestConnectionEvent(tenantId, connectionId, input = {}) {
     const token = input?.qr?.token != null ? safeTrim(input.qr.token) : '';
     const expiresAtRaw = input?.qr?.expiresAt || input?.qr?.expires_at || null;
     const expiresAt = safeIsoDate(expiresAtRaw, new Date(now.getTime() + 2 * 60 * 1000).toISOString());
+    // dataUrl (PNG local gerado pelo bridge) é aditivo: permite ao frontend
+    // renderizar o QR sem depender de serviço externo de geração de imagem.
+    const dataUrl = input?.qr?.dataUrl != null ? safeToString(input.qr.dataUrl) : '';
     next.status = 'pairing';
     next.lastQrAt = nowIso;
     next.qr = {
       text: qrText || (prev.qr && prev.qr.text ? prev.qr.text : ''),
       token: token || (prev.qr && prev.qr.token ? prev.qr.token : ''),
       expiresAt,
+      dataUrl: dataUrl || (prev.qr && prev.qr.dataUrl ? prev.qr.dataUrl : ''),
     };
   } else if (eventType === 'connected' || eventType === 'ready') {
     next.status = 'connected';

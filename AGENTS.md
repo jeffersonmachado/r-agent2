@@ -31,6 +31,7 @@ O **Cognitive Core** (2026-06-12) é o núcleo obrigatório de inteligência da 
 - **Mobile:** `apps/mobile/` existe mas está vazio (apenas `node_modules`).
 - **Infra:** Docker Compose (produção), systemd (redis + rag-service), Apache como reverse proxy. **Nunca introduzir PM2.**
 - **Dependência externa de pacote:** `@results/auth` é dependência `file:../../packages/auth`; o Jest inclui `/opt/results/packages` em `roots` (ver `jest.config.cjs`). Em clones fora de `/opt/results/ria/`, garantir que o diretório irmão `packages/` exista. `vendor/auth/` é a cópia versionada desse pacote usada pelo CI (o workflow copia `vendor/auth` → `../../packages/auth` antes do `npm ci`); ao alterar o pacote em `/opt/results/packages/auth`, sincronizar `vendor/auth/`.
+- **Pacote `@results/whatsapp-qr-bridge`:** núcleo do bridge WhatsApp QR (`api/services/whatsappQrBridgeService.js` é apenas o adaptador: tenant_settings, tickets/mídia, WS, sync contra settings). Dependência `file:../packages/whatsapp-qr-bridge` (fonte em `/opt/results/ria/packages/whatsapp-qr-bridge`); `vendor/whatsapp-qr-bridge/` é a cópia versionada usada pelo CI/Docker — ao alterar o pacote, sincronizar o vendor. O `npm ci` do pacote (dependência `qrcode`) é feito no workflow e no `api/Dockerfile` porque o require do pacote resolve a partir do path real, fora do `node_modules` da API.
 
 ## Organização do código e camadas estritas
 

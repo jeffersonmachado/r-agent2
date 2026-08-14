@@ -211,6 +211,10 @@ describe('whatsappQrBridgeService', () => {
       id: { _serialized: 'wamid.abc' },
       _data: { notifyName: 'Cliente X' },
     });
+    // O handler do pacote é síncrono (fire-and-forget): o processamento inbound
+    // do adaptador continua em microtasks após o emit. Drena a fila antes de
+    // afirmar (antes o await na promise do handler cobria a cadeia inteira).
+    await new Promise((resolve) => setImmediate(resolve));
 
     expect(resolveOrCreateTicketFromIncomingMessage).toHaveBeenCalledWith(
       'tenant-1',
