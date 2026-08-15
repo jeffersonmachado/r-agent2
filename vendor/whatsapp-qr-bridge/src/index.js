@@ -21,6 +21,8 @@ const STATUS = Object.freeze(['pairing', 'connected', 'ready', 'disconnected', '
 
 const DEFAULT_SYNC_INTERVAL_MS = 30000;
 const DEFAULT_QR_EXPIRES_IN_MS = 2 * 60 * 1000;
+const DEFAULT_READY_WATCHDOG_MS = 60 * 1000;
+const READY_WATCHDOG_MAX_ATTEMPTS = 3;
 
 /**
  * Suporte a pin de versão do WhatsApp Web (workaround para quebras da lib
@@ -241,6 +243,18 @@ function createBridge(options = {}) {
     ? Number(options.qrExpiresInMs)
     : DEFAULT_QR_EXPIRES_IN_MS;
 
+  // Watchdog anti-race do wwebjs: `authenticated` dispara mas a injeção do
+  // WWebJS (LoadUtils) falha uma única vez no meio do sync e a lib não tenta
+  // de novo — a sessão fica presa em 'connected' para sempre (visto em prod
+  // ago/2026, WA Web 2.3000.1045288154 + wwebjs main 942d236). O kick chama
+  // window.onAppStateHasSyncedEvent(), que refaz o fluxo de injeção da lib.
+  // 0 desliga. Default: DEFAULT_READY_WATCHDOG_MS.
+  let readyWatchdogMs = DEFAULT_READY_WATCHDOG_MS;
+  if (options.readyWatchdogMs != null) {
+    const n = Number(options.readyWatchdogMs);
+    readyWatchdogMs = Number.isFinite(n) && n >= 0 ? n : DEFAULT_READY_WATCHDOG_MS;
+  }
+
   let syncIntervalMs = DEFAULT_SYNC_INTERVAL_MS;
   if (options.syncIntervalMs != null) {
     const n = Number(options.syncIntervalMs);
@@ -249,7 +263,7 @@ function createBridge(options = {}) {
 
   const emitter = new EventEmitter();
   // Map<connectionId, entry>
-  // entry: { id, sessionPath, clientId, status, client, ready, desiredActive, createdAt, updatedAt }
+  // entry: { id, sessionPath, clientId, status, client, ready, desiredActive, createdAt, updatedAt, readyWatchdogTimer, readyWatchdogAttempts }
   const connections = new Map();
   let syncTimer = null;
   let starting = null; // Map<connectionId, Promise> — evita inicializações concorrentes
@@ -274,12 +288,61 @@ function createBridge(options = {}) {
   }
 
   async function destroyClient(entry) {
+    clearReadyWatchdog(entry);
     const client = entry.client;
     entry.client = null;
     entry.ready = false;
     if (client && typeof client.destroy === 'function') {
       try { await client.destroy(); } catch (_) {}
     }
+  }
+
+  function clearReadyWatchdog(entry) {
+    if (entry.readyWatchdogTimer) {
+      clearTimeout(entry.readyWatchdogTimer);
+      entry.readyWatchdogTimer = null;
+    }
+    entry.readyWatchdogAttempts = 0;
+  }
+
+  function armReadyWatchdog(entry, client) {
+    clearReadyWatchdog(entry);
+    if (!readyWatchdogMs) return;
+    const tick = async () => {
+      entry.readyWatchdogTimer = null;
+      if (entry.ready || entry.client !== client) return;
+      entry.readyWatchdogAttempts += 1;
+      if (entry.readyWatchdogAttempts > READY_WATCHDOG_MAX_ATTEMPTS) {
+        logger.warn('[whatsapp-qr-bridge] ready não disparou após authenticated; tentativas de re-injeção esgotadas', {
+          connectionId: entry.id,
+          attempts: READY_WATCHDOG_MAX_ATTEMPTS,
+        });
+        return;
+      }
+      logger.warn('[whatsapp-qr-bridge] ready não disparou após authenticated; forçando re-injeção do WWebJS', {
+        connectionId: entry.id,
+        attempt: entry.readyWatchdogAttempts,
+      });
+      try {
+        const page = client.pupPage;
+        if (page && typeof page.evaluate === 'function') {
+          await page.evaluate(() => {
+            if (typeof window.onAppStateHasSyncedEvent === 'function') {
+              return window.onAppStateHasSyncedEvent();
+            }
+            return null;
+          });
+        }
+      } catch (err) {
+        logger.warn('[whatsapp-qr-bridge] Falha no kick de re-injeção', { connectionId: entry.id, error: safeErrorMessage(err) });
+      }
+      if (!entry.ready && entry.client === client) {
+        entry.readyWatchdogTimer = setTimeout(tick, readyWatchdogMs);
+        if (entry.readyWatchdogTimer.unref) entry.readyWatchdogTimer.unref();
+      }
+    };
+    entry.readyWatchdogTimer = setTimeout(tick, readyWatchdogMs);
+    if (entry.readyWatchdogTimer.unref) entry.readyWatchdogTimer.unref();
   }
 
   function wireClientEvents(entry, client) {
@@ -301,9 +364,11 @@ function createBridge(options = {}) {
 
     client.on('authenticated', () => {
       setStatus(entry, 'connected');
+      armReadyWatchdog(entry, client);
     });
 
     client.on('ready', () => {
+      clearReadyWatchdog(entry);
       entry.ready = true;
       setStatus(entry, 'ready');
       // Recuperação de não-lidas é acoplada a tickets e fica fora do núcleo:
@@ -464,6 +529,8 @@ function createBridge(options = {}) {
         status: 'pairing',
         client: null,
         ready: false,
+        readyWatchdogTimer: null,
+        readyWatchdogAttempts: 0,
         desiredActive: true,
         createdAt: now,
         updatedAt: now,

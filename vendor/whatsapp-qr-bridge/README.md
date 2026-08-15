@@ -123,6 +123,18 @@ Por isso o pacote resolve o `userAgent` assim:
 `resolveUserAgent({ userAgent, executablePath })` é exportada para que
 `clientFactory` customizadas apliquem a mesma lógica.
 
+## Watchdog de `ready` (anti-race de injeção)
+
+Há um race no whatsapp-web.js em que `authenticated` dispara mas a injeção do
+`window.WWebJS` (LoadUtils) falha uma única vez no meio do sync inicial e a
+lib não tenta de novo — a sessão fica presa em `connected` para sempre
+(observado em prod ago/2026, WA Web 2.3000.1045288154 + wwebjs main 942d236).
+
+O bridge arma um watchdog a cada `authenticated`: se `ready` não disparar em
+`readyWatchdogMs` (default **60s**, `0` desliga), ele chama
+`window.onAppStateHasSyncedEvent()` na página, o que refaz o fluxo de injeção
+da própria lib. Até 3 tentativas, com log a cada kick.
+
 ## API
 
 `createBridge(options)` → bridge (EventEmitter + métodos):
