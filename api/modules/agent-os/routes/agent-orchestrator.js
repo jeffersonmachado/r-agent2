@@ -245,6 +245,25 @@ async function handleAgentOrchestratorRoutes(ctx) {
 
     const totalDurationMs = Date.now() - overallStartTime;
 
+    // Trilha de governança (contrato CORE-BIZ-AGENT-ORCHESTRATOR): cada step
+    // executado grava um evento 'execute' em ai_governance_records. Falha de
+    // log nunca bloqueia a resposta da orquestração.
+    for (const step of executionSteps) {
+      await governanceService.logGovernanceEvent({
+        tenantId,
+        agentId: null,
+        eventType: 'execute',
+        actor: req.agent?.username || 'system',
+        description: `Orchestrator executed capability ${step.capability} via agent ${step.agent} for intent: ${body.intent}`,
+        toolsUsed: [step.capability],
+        dataAccessed: [],
+        cost: 0.01,
+        riskLevel: 'low',
+      }).catch((err) => {
+        logger.warn('[AgentOrchestrator] Governance log failed (non-blocking)', { error: err.message });
+      });
+    }
+
     sendJson({
       orchestration: {
         intent: body.intent,

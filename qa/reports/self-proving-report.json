@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-08-09T19:15:57.691Z",
+  "generatedAt": "2026-08-14T21:37:32.551Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260809-161322.zip",
+  "artifact": "r-agent2-20260814-183620.zip",
   "verifierExecuted": true,
   "verifierPassed": false,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/r-agent2-20260809-161322.zip",
+  "packageInsideDistPath": "dist/r-agent2-20260814-183620.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/r-agent2-20260809-161322.manifest.json",
+  "manifestInsideDistPath": "dist/r-agent2-20260814-183620.manifest.json",
   "staleReferencesFound": 1,
   "staleHashesFound": 0,
   "staleFilesAffected": [
@@ -45,7 +45,7 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "c82a4e4d463be505ae35d92c7edfb9e1",
+    "chainRoot": "5433028904ae0c1d6da277b610bd9128",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
@@ -53,7 +53,7 @@
   },
   "replayValidation": {
     "pass": true,
-    "replayCount": 7,
+    "replayCount": 8,
     "allSigned": true,
     "allSignaturesValid": true,
     "replaySigPresent": true,
@@ -65,7 +65,8 @@
       "payment_charge_flow",
       "food_order_status_flow",
       "market_node_publish_flow",
-      "clinic_calendar_block_flow"
+      "clinic_calendar_block_flow",
+      "agendamento"
     ]
   },
   "offlineAuditability": {
@@ -80,8 +81,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "12a40a9753178d6ff819c395cb3271a0da1a5044d7e44ebab91f2e544cd2ef2e",
-    "zipName": "r-agent2-20260809-161322.zip",
+    "sidecarHash": "d20cc24f1f9bb0eb01acc89dcc818a2df89e6ce390bd3ed5e9941b6d1691b15b",
+    "zipName": "r-agent2-20260814-183620.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -118,5 +119,5 @@
   "pass": false,
   "passCount": 9,
   "totalDimensions": 10,
-  "summary": "Pacote r-agent2-20260809-161322.zip FALHOU na auto-prova. Falhas: [verifierPassed, staleReferencesFound]. Score: 70/100."
+  "summary": "Pacote r-agent2-20260814-183620.zip FALHOU na auto-prova. Falhas: [verifierPassed, staleReferencesFound]. Score: 70/100."
 }

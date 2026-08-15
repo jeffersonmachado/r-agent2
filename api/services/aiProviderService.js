@@ -104,7 +104,13 @@ function createOpenAIProvider() {
         }
 
         if (!apiKey) {
-          throw new Error(`OpenAI API key não configurada para o tenant: ${tenantId}`);
+          // Provider sem credencial configurada é erro de configuração do
+          // tenant (cliente), não falha interna: as rotas de geração mapeiam
+          // AI_PROVIDER_NOT_CONFIGURED para 400 estruturado.
+          throw Object.assign(
+            new Error(`OpenAI API key não configurada para o tenant: ${tenantId}`),
+            { code: 'AI_PROVIDER_NOT_CONFIGURED' },
+          );
         }
 
         const model = config.get('ai.openai.model', 'gpt-5.2');
@@ -253,7 +259,10 @@ function createAnthropicProvider() {
         }
 
         if (!apiKey) {
-          throw new Error(`Anthropic API key não configurada para o tenant: ${tenantId}`);
+          throw Object.assign(
+            new Error(`Anthropic API key não configurada para o tenant: ${tenantId}`),
+            { code: 'AI_PROVIDER_NOT_CONFIGURED' },
+          );
         }
 
         const model = config.get('ai.anthropic.model', 'claude-3-sonnet-20240229');
@@ -399,7 +408,10 @@ function createDeepSeekProvider() {
         }
 
         if (!apiKey) {
-          throw new Error(`DeepSeek API key não configurada para o tenant: ${tenantId}`);
+          throw Object.assign(
+            new Error(`DeepSeek API key não configurada para o tenant: ${tenantId}`),
+            { code: 'AI_PROVIDER_NOT_CONFIGURED' },
+          );
         }
 
         const model = config.get('ai.deepseek.model', 'deepseek-chat');

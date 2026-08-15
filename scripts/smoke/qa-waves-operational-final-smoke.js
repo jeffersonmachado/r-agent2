@@ -27,6 +27,8 @@ const {
 } = require('../../qa/contracts/operationalStepRegistry');
 const { buildSupportTicketFlowSteps } = require('../../api/services/qa/journeyStepDefinitions/supportTicketFlowSteps');
 const { buildFitnessCheckinFlowSteps } = require('../../api/services/qa/journeyStepDefinitions/fitnessCheckinFlowSteps');
+const { buildAgendamentoFlowSteps } = require('../../api/services/qa/journeyStepDefinitions/agendamentoFlowSteps');
+const { buildAgendamentoOperationalSeedSpec } = require('../../api/services/qa/seeds/agendamentoOperationalSeed');
 
 const PROD_LIKE_SMOKE_DIR = path.join(process.cwd(), 'qa', 'smoke', 'prod-like');
 const DEFAULT_FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:15173';
@@ -1966,6 +1968,31 @@ async function seedClinicFlowReal(page, baseUrl, tenantName) {
   };
 }
 
+async function seedAgendamentoFlowReal(page, baseUrl, tenantName) {
+  await page.goto(`${baseUrl}/workspace`, { waitUntil: 'domcontentloaded' });
+  await ensureAuthenticated(page, baseUrl);
+  await ensureTenantSelected(page, tenantName);
+
+  const browserContext = await getBrowserContext(page);
+  const suffix = String(Date.now());
+  const seedSpec = buildAgendamentoOperationalSeedSpec({
+    tenantId: browserContext.tenantId,
+    suffix,
+    taskTitle: `Aula experimental QA ${suffix}`,
+  });
+
+  return {
+    tenantId: browserContext.tenantId,
+    taskTitle: seedSpec.taskTitle,
+    taskDueDate: seedSpec.taskDueDate,
+    scheduleStartAt: seedSpec.scheduleStartAt,
+    schedulePurpose: seedSpec.schedulePurpose,
+    scheduleNotes: seedSpec.scheduleNotes,
+    status: 'ready',
+    cleanup: { type: 'task_complete', taskTitle: seedSpec.taskTitle },
+  };
+}
+
 function buildProdLikeBookingFlowSteps({ baseUrl, resourceId, seedEvidence }) {
   return [
     {
@@ -2797,6 +2824,27 @@ async function cleanupProdLikeFlow(page, flow) {
     return { attempted: true, success: Boolean(deleted?.ok) };
   }
 
+  if (flow.cleanup.type === 'task_complete' && flow.cleanup.taskTitle) {
+    const listed = await browserApiFetch(page, '/api/tasks', { method: 'GET' }).catch(() => null);
+    const tasks = Array.isArray(listed?.body?.tasks) ? listed.body.tasks : [];
+    const pending = tasks.filter((task) =>
+      String(task?.title || '') === String(flow.cleanup.taskTitle)
+      && String(task?.status || '').toLowerCase() !== 'completed');
+    const results = [];
+    for (const task of pending) {
+      const completed = await browserApiFetch(page, `/api/tasks/${encodeURIComponent(String(task.id))}/complete`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: 'qa_waves_prod_like_smoke_cleanup' }),
+      }).catch(() => null);
+      results.push(Boolean(completed?.ok));
+    }
+    return {
+      attempted: true,
+      success: pending.length > 0 && results.every(Boolean),
+      completedCount: results.length,
+    };
+  }
+
   return { attempted: true, success: false, reason: 'cleanup_manifest_only' };
 }
 
@@ -3103,11 +3151,32 @@ async function runFinalOperationalSmoke(options = {}) {
         ? { type: 'calendar_block_delete', resourceId: clinicSeed.resourceId, blockId: clinicSeedEvidence.blockId }
         : null;
 
+      page = await ensureActivePage();
+      const agendamentoSeed = await seedAgendamentoFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
+      const agendamentoSeedEvidence = {
+        ...agendamentoSeed,
+        page,
+        status: 'ready',
+      };
+      const agendamento = await runRealFlow({
+        journeyId: 'agendamento',
+        seedEvidence: agendamentoSeedEvidence,
+        steps: buildAgendamentoFlowSteps({
+          baseUrl: DEFAULT_FRONTEND_URL,
+          taskTitle: agendamentoSeed.taskTitle,
+          taskDueDate: agendamentoSeed.taskDueDate,
+          scheduleStartAt: agendamentoSeed.scheduleStartAt,
+          schedulePurpose: agendamentoSeed.schedulePurpose,
+          scheduleNotes: agendamentoSeed.scheduleNotes,
+        }),
+      });
+
       cleanupResults.push({ journeyId: 'support_ticket_flow', result: await cleanupProdLikeFlow(page, support) });
       cleanupResults.push({ journeyId: 'fitness_customer_checkin', result: await cleanupProdLikeFlow(page, fitness) });
       cleanupResults.push({ journeyId: 'clinic_calendar_block_flow', result: await cleanupProdLikeFlow(page, clinic) });
+      cleanupResults.push({ journeyId: 'agendamento', result: await cleanupProdLikeFlow(page, agendamento) });
 
-      const flows = [support, fitness, booking, payment, food, market, clinic];
+      const flows = [support, fitness, booking, payment, food, market, clinic, agendamento];
       const environment = {
         mode,
         frontendUrl: DEFAULT_FRONTEND_URL,

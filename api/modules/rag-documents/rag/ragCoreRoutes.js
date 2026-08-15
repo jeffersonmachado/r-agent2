@@ -7,7 +7,6 @@ const {
   logRagAction,
   resolveScopedTenantId,
 } = require('./ragRouteUtils');
-const { resolveRetrievalScope } = require('../../../../src/core/knowledge-plane');
 const { getClassificationForAgent } = require('../../agent-os/experience-segregation');
 
 const SENSITIVITY_BY_CLASSIFICATION = Object.freeze({
@@ -141,19 +140,11 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
         deps.badRequest(res, 'O campo id é gerado pelo servidor e não pode ser informado');
         return true;
       }
-      const requestedDomain = String(body?.domain || 'OPERATIONAL').trim().toUpperCase();
-      const documentScope = resolveRetrievalScope({ actor: req.agent, requestedDomain });
-      if (!documentScope.allowed) {
-        deps.sendJson(res, 403, { error: 'domain_not_allowed', message: 'Domínio de conhecimento não autorizado para este perfil' });
-        return true;
-      }
-      const requestedClassification = String(
-        body?.classification || documentScope.scope.classifications[0]
-      ).trim().toUpperCase();
-      if (!documentScope.scope.classifications.includes(requestedClassification)) {
-        deps.sendJson(res, 403, { error: 'classification_not_allowed', message: 'Classificação do documento não autorizada para este perfil' });
-        return true;
-      }
+      // Segregação de domínios (docs/rag/domain-segregation.md §6): esta rota
+      // é o pipeline OPERACIONAL — o cliente nunca declara domínio nem
+      // classificação; qualquer valor forjado no payload é ignorado e o
+      // servidor fixa OPERATIONAL/PRODUCTION. Ingestão SYSTEM só acontece
+      // via endpoint interno do rag-service (token serviço-a-serviço).
       const actorClassification = String(
         req.agent?.classification || getClassificationForAgent(req.agent) || 'PRODUCTION'
       ).toUpperCase();
@@ -164,8 +155,8 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
         deps.sendJson(res, 403, { error: 'sensitivity_not_allowed', message: 'Sensibilidade do documento não autorizada para este perfil' });
         return true;
       }
-      body.domain = documentScope.scope.domain;
-      body.classification = requestedClassification;
+      body.domain = 'OPERATIONAL';
+      body.classification = 'PRODUCTION';
       body.sensitivity = requestedSensitivity;
       const requestTenantId = req.tenantId || req.agent?.tenantId || null;
       const isSuperAdminUser = deps.isSuperAdmin(req.agent);
@@ -274,22 +265,13 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
         deps.sendJson(res, 404, { error: 'document_not_found' });
         return true;
       }
-      const updatesPolicyFields = ['domain', 'classification', 'sensitivity']
-        .some((field) => Object.prototype.hasOwnProperty.call(body || {}, field));
-      if (updatesPolicyFields) {
-        const requestedDomain = String(body.domain || currentDocument.domain || 'OPERATIONAL').trim().toUpperCase();
-        const documentScope = resolveRetrievalScope({ actor: req.agent, requestedDomain });
-        if (!documentScope.allowed) {
-          deps.sendJson(res, 403, { error: 'domain_not_allowed', message: 'Domínio de conhecimento não autorizado para este perfil' });
-          return true;
-        }
-        const requestedClassification = String(
-          body.classification || currentDocument.classification || documentScope.scope.classifications[0]
-        ).trim().toUpperCase();
-        if (!documentScope.scope.classifications.includes(requestedClassification)) {
-          deps.sendJson(res, 403, { error: 'classification_not_allowed', message: 'Classificação do documento não autorizada para este perfil' });
-          return true;
-        }
+      // Segregação de domínios (docs/rag/domain-segregation.md §6): domain e
+      // classification nunca são alterados por esta rota (pipeline OPERACIONAL;
+      // promoção SYSTEM → OPERATIONAL exige novo artefato, nunca troca de
+      // metadado in-place). Valores forjados no payload são descartados.
+      try { delete body.domain; } catch {}
+      try { delete body.classification; } catch {}
+      if (Object.prototype.hasOwnProperty.call(body || {}, 'sensitivity')) {
         const actorClassification = String(
           req.agent?.classification || getClassificationForAgent(req.agent) || 'PRODUCTION'
         ).toUpperCase();
@@ -302,8 +284,6 @@ async function handleRagCoreRoutes({ req, res, method, pathname, deps }) {
           deps.sendJson(res, 403, { error: 'sensitivity_not_allowed', message: 'Sensibilidade do documento não autorizada para este perfil' });
           return true;
         }
-        body.domain = documentScope.scope.domain;
-        body.classification = requestedClassification;
         body.sensitivity = requestedSensitivity;
       }
       const result = await deps.updateDocument(documentId, body, tenantId);

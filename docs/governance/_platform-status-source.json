@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-09T19:17:21.186Z",
+  "generatedAt": "2026-08-15T10:27:07.814Z",
   "finalDecision": "AUTONOMOUS_READY_GO",
   "platformMaturity": "autonomous-ready",
-  "canonicalMeshExecutionId": "mesh-2026-08-09T16-47-06-616Z",
+  "canonicalMeshExecutionId": "mesh-2026-08-15T09-14-51-308Z",
   "canonicalMeshArtifacts": {
-    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-08-09T16-47-06-616Z.json",
+    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-08-15T09-14-51-308Z.json",
     "summaryPath": "/opt/results/ria/r-agent2/qa-mesh/meshReport.json",
     "goNoGoPath": "/opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json",
     "metricsPath": "/opt/results/ria/r-agent2/qa-mesh/metrics.json"
@@ -19,7 +19,7 @@
     "readinessScore": 98.5
   },
   "qaCoverage": {
-    "executionId": "mesh-2026-08-09T16-47-06-616Z",
+    "executionId": "mesh-2026-08-15T09-14-51-308Z",
     "percent": 100,
     "observedFailureFreePercent": 100,
     "registryDeclaredTotal": 131,
@@ -28,8 +28,8 @@
     "status": "GO"
   },
   "replayCoverage": {
-    "percent": 116.67,
-    "supportedJourneys": [
+    "percent": 100,
+    "requiredJourneys": [
       "support_ticket_flow",
       "fitness_customer_checkin",
       "booking_flow",
@@ -37,6 +37,16 @@
       "food_order_status_flow",
       "market_node_publish_flow",
       "clinic_calendar_block_flow"
+    ],
+    "supportedJourneys": [
+      "support_ticket_flow",
+      "fitness_customer_checkin",
+      "booking_flow",
+      "payment_charge_flow",
+      "food_order_status_flow",
+      "market_node_publish_flow",
+      "clinic_calendar_block_flow",
+      "agendamento"
     ],
     "findings": [
       "Support and fitness prod-like replays are valid and signed.",
@@ -75,7 +85,7 @@
     "pillars": {
       "chatpro": {
         "ok": true,
-        "ticketId": "default-1776705300806-cd9hnz7"
+        "ticketId": "default-1776702133176-ux36jf4"
       },
       "queue": {
         "ok": true,
@@ -101,8 +111,8 @@
     }
   },
   "docsValidation": {
-    "generatedAt": "2026-08-09T19:17:21.186Z",
-    "filesScanned": 356,
+    "generatedAt": "2026-08-15T10:27:07.814Z",
+    "filesScanned": 357,
     "totalMarkdownLinks": 245,
     "brokenMarkdownLinks": [],
     "knownBareReferences": [],
@@ -321,7 +331,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 38,
+      "scenarioCount": 46,
       "blocker": false
     },
     {
@@ -395,7 +405,7 @@
     "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-08-09T19:17:40.498Z",
+    "generatedAt": "2026-08-15T10:27:20.083Z",
     "proofCoverage": {
       "total": 20,
       "valid": 20,
@@ -406,8 +416,8 @@
     "blockerCount": 0,
     "replayCoverage": {
       "required": 6,
-      "found": 7,
-      "percent": 116.67
+      "found": 8,
+      "percent": 133.33
     },
     "prodLikeCoverage": {
       "required": 6,
@@ -2979,7 +2989,7 @@
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-08-09T19:17:40.015Z",
+      "generatedAt": "2026-08-15T10:27:19.847Z",
       "expectedZipName": null,
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
@@ -2992,15 +3002,15 @@
       "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-08-09T19:17:40.496Z",
-      "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260809-161322.payload.zip",
-      "zipName": "r-agent2-20260809-161322.payload.zip",
-      "zipSha256": "400a4bdb33023d837bddbf4592b982682fb10088fa83d71f41721b069c4c22b9",
+      "generatedAt": "2026-08-15T10:27:20.083Z",
+      "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260814-183620.payload.zip",
+      "zipName": "r-agent2-20260814-183620.payload.zip",
+      "zipSha256": "5077ca7b0e0a0d657d6a33c74c31dd45c70c37a4135bcb940fa500b707c921b6",
       "payloadCentric": true,
-      "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260809-161322.zip",
+      "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260814-183620.zip",
       "selectionMode": "audited",
       "candidateFallbackUsed": false,
-      "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260809-161322.manifest.json",
+      "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260814-183620.manifest.json",
       "manifestAudit": "passed",
       "auditSatisfied": true,
       "selfContainmentCheck": {
@@ -3033,33 +3043,33 @@
         "governance/cleanup-proof.json",
         "governance/final-readiness-report.json"
       ],
-      "entryCount": 5481,
+      "entryCount": 5600,
       "missingEntries": [],
       "ok": true,
       "error": null,
       "packageBinding": {
-        "boundTo": "r-agent2-20260809-161322.payload.zip",
-        "sha256": "400a4bdb33023d837bddbf4592b982682fb10088fa83d71f41721b069c4c22b9",
+        "boundTo": "r-agent2-20260814-183620.payload.zip",
+        "sha256": "5077ca7b0e0a0d657d6a33c74c31dd45c70c37a4135bcb940fa500b707c921b6",
         "immutable": true,
         "selfProving": true,
         "offlineAuditable": true
       }
     },
     "evidenceManifest": {
-      "generatedAt": "2026-08-09T19:17:40.016Z",
-      "runtimeRoot": "/var/lib/ragent2",
+      "generatedAt": "2026-08-15T10:27:19.847Z",
+      "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
       "artifacts": [
         {
           "id": "smoke_summary",
           "domain": "foundation",
           "path": "qa/smoke-evidence.json",
-          "sourcePath": "/var/lib/ragent2/qa/smoke-evidence.json",
-          "resolvedPath": "/var/lib/ragent2/qa/smoke-evidence.json",
+          "sourcePath": "/opt/results/ria/r-agent2/qa/smoke-evidence.json",
+          "resolvedPath": "/opt/results/ria/r-agent2/qa/smoke-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "2861badaa1385ef78c7f2e360e0ceea5246f636e26e30e3d822031d69f2afd56",
-          "checksum": "2861badaa1385ef78c7f2e360e0ceea5246f636e26e30e3d822031d69f2afd56",
-          "timestamp": "2026-08-09T18:54:39.154Z",
+          "hash": "a917a5813c10e10cc86c22f3e398754874ed7b7cd89327addf8be05081191171",
+          "checksum": "a917a5813c10e10cc86c22f3e398754874ed7b7cd89327addf8be05081191171",
+          "timestamp": "2026-04-20T16:23:48.414Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3071,13 +3081,13 @@
           "id": "smoke_l01",
           "domain": "foundation",
           "path": "qa/l01-physical-queue-evidence.json",
-          "sourcePath": "/var/lib/ragent2/qa/l01-physical-queue-evidence.json",
-          "resolvedPath": "/var/lib/ragent2/qa/l01-physical-queue-evidence.json",
+          "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l01-physical-queue-evidence.json",
+          "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l01-physical-queue-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "9af5fd955757abe9e2d1205338348b495e6c41a3b4ef8ad1bfc988e239a0005b",
-          "checksum": "9af5fd955757abe9e2d1205338348b495e6c41a3b4ef8ad1bfc988e239a0005b",
-          "timestamp": "2026-08-09T18:54:08.125Z",
+          "hash": "be6c3f1de8031edb3fe26eba437a58e05ad3073301cac3753fd0bb184dcb071f",
+          "checksum": "be6c3f1de8031edb3fe26eba437a58e05ad3073301cac3753fd0bb184dcb071f",
+          "timestamp": "2026-08-15T10:12:31.290Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3089,13 +3099,13 @@
           "id": "smoke_l02",
           "domain": "foundation",
           "path": "qa/l02-ura-publish-rollback-evidence.json",
-          "sourcePath": "/var/lib/ragent2/qa/l02-ura-publish-rollback-evidence.json",
-          "resolvedPath": "/var/lib/ragent2/qa/l02-ura-publish-rollback-evidence.json",
+          "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l02-ura-publish-rollback-evidence.json",
+          "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l02-ura-publish-rollback-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "dea762e14cc2d88917c01ff339d5090514a01cf16b922bf447000c52c3fdffe1",
-          "checksum": "dea762e14cc2d88917c01ff339d5090514a01cf16b922bf447000c52c3fdffe1",
-          "timestamp": "2026-08-09T18:54:39.056Z",
+          "hash": "9e58eb6d19c7bee3b714c5b48ad381309c284fa95d805a643cbf6aed1685c0d4",
+          "checksum": "9e58eb6d19c7bee3b714c5b48ad381309c284fa95d805a643cbf6aed1685c0d4",
+          "timestamp": "2026-08-15T10:12:38.753Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3107,13 +3117,13 @@
           "id": "smoke_l03",
           "domain": "foundation",
           "path": "qa/l03-pbx-voice-tts-asr-evidence.json",
-          "sourcePath": "/var/lib/ragent2/qa/l03-pbx-voice-tts-asr-evidence.json",
-          "resolvedPath": "/var/lib/ragent2/qa/l03-pbx-voice-tts-asr-evidence.json",
+          "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+          "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e1fabc78f49d2aded955928dd42c1c7d3cd7078c47f70fc65f521adf036ed5cd",
-          "checksum": "e1fabc78f49d2aded955928dd42c1c7d3cd7078c47f70fc65f521adf036ed5cd",
-          "timestamp": "2026-08-09T18:54:07.465Z",
+          "hash": "684e7f31818e9fd2217df26200911b99942e8768f33bbe70598b67d96b6588dd",
+          "checksum": "684e7f31818e9fd2217df26200911b99942e8768f33bbe70598b67d96b6588dd",
+          "timestamp": "2026-08-15T10:12:30.633Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3125,13 +3135,13 @@
           "id": "smoke_l04",
           "domain": "foundation",
           "path": "qa/l04-pbx-call-events-runtime-evidence.json",
-          "sourcePath": "/var/lib/ragent2/qa/l04-pbx-call-events-runtime-evidence.json",
-          "resolvedPath": "/var/lib/ragent2/qa/l04-pbx-call-events-runtime-evidence.json",
+          "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
+          "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "53e046f95d3c020d30a0d75e1363ecf5f8dc47f0cfa50be6bc2b748e9652b4d0",
-          "checksum": "53e046f95d3c020d30a0d75e1363ecf5f8dc47f0cfa50be6bc2b748e9652b4d0",
-          "timestamp": "2026-08-09T18:53:41.636Z",
+          "hash": "d2241f331195d44db7eef536300effbe491a6e33d5e6829440fc1b443a3f52c8",
+          "checksum": "d2241f331195d44db7eef536300effbe491a6e33d5e6829440fc1b443a3f52c8",
+          "timestamp": "2026-08-15T10:12:29.643Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3143,13 +3153,13 @@
           "id": "smoke_l05",
           "domain": "foundation",
           "path": "qa/l05-chatpro-omnichannel-evidence.json",
-          "sourcePath": "/var/lib/ragent2/qa/l05-chatpro-omnichannel-evidence.json",
-          "resolvedPath": "/var/lib/ragent2/qa/l05-chatpro-omnichannel-evidence.json",
+          "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+          "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "49554c5f30700e7620ea6b5c16c9883788795122a6735ce9ef41ef583891e901",
-          "checksum": "49554c5f30700e7620ea6b5c16c9883788795122a6735ce9ef41ef583891e901",
-          "timestamp": "2026-08-09T19:16:56.231Z",
+          "hash": "7bc32d45a46ff324eb3696a28becd3286f163e84967c3a49ed719d6de1b3fa1f",
+          "checksum": "7bc32d45a46ff324eb3696a28becd3286f163e84967c3a49ed719d6de1b3fa1f",
+          "timestamp": "2026-08-15T10:11:23.624Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3165,9 +3175,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "7e973f5c22f84329b37234660bb9a3db27f503d99e604cfe44706515f1f6a2b7",
-          "checksum": "7e973f5c22f84329b37234660bb9a3db27f503d99e604cfe44706515f1f6a2b7",
-          "timestamp": "2026-08-09T17:53:31.330Z",
+          "hash": "5b3b4e2899412ef430686e96017680cf527040f3e9051d5f3ab62cdde6358dbb",
+          "checksum": "5b3b4e2899412ef430686e96017680cf527040f3e9051d5f3ab62cdde6358dbb",
+          "timestamp": "2026-08-14T21:30:31.745Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3205,9 +3215,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-screenshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "102050a910b1d697a442c49a4f8cebd898fcb06652247b98f5a87c786bf9f25a",
-          "checksum": "102050a910b1d697a442c49a4f8cebd898fcb06652247b98f5a87c786bf9f25a",
-          "timestamp": "2026-08-09T19:14:28.414Z",
+          "hash": "aeb9dcc5801387d292989012ff411b1c45011f95d2462df802723a0127c820c3",
+          "checksum": "aeb9dcc5801387d292989012ff411b1c45011f95d2462df802723a0127c820c3",
+          "timestamp": "2026-08-15T10:27:07.842Z",
           "proofStatus": "present",
           "replayLinkage": [
             "human_handoff_full_validation"
@@ -3249,9 +3259,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "cf15570fd88c014ec7fad2200ee551e4397fdf1c7000c9925fee6d30b6699786",
-          "checksum": "cf15570fd88c014ec7fad2200ee551e4397fdf1c7000c9925fee6d30b6699786",
-          "timestamp": "2026-08-09T19:14:28.380Z",
+          "hash": "f3a79fa2a3c4af33a0c9121dfdd37ab31910e9341fde6ef584779cb1d89f3373",
+          "checksum": "f3a79fa2a3c4af33a0c9121dfdd37ab31910e9341fde6ef584779cb1d89f3373",
+          "timestamp": "2026-08-15T10:27:07.824Z",
           "proofStatus": "present",
           "replayLinkage": [
             "pbx_voice_flow_prod_like"
@@ -3271,9 +3281,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "8b939267349039e65a2baba99565c805e12bc6a6b9fb478549aca1706150f8f3",
-          "checksum": "8b939267349039e65a2baba99565c805e12bc6a6b9fb478549aca1706150f8f3",
-          "timestamp": "2026-08-09T19:14:28.381Z",
+          "hash": "300db9a2eda584a8f4e2e168c9dd791ac59ae07525b5bc651d12716e50646d6f",
+          "checksum": "300db9a2eda584a8f4e2e168c9dd791ac59ae07525b5bc651d12716e50646d6f",
+          "timestamp": "2026-08-15T10:27:07.824Z",
           "proofStatus": "present",
           "replayLinkage": [
             "pbx_voice_flow_prod_like"
@@ -3293,9 +3303,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ae14353b4ad6991ccca57bf2fae5caf0b85fe03b305a4775bb83ca50948b4a46",
-          "checksum": "ae14353b4ad6991ccca57bf2fae5caf0b85fe03b305a4775bb83ca50948b4a46",
-          "timestamp": "2026-08-09T19:14:28.381Z",
+          "hash": "21af775898a463ccbaf9f4bc672a9001b3421e0a557665997066ef184b36c929",
+          "checksum": "21af775898a463ccbaf9f4bc672a9001b3421e0a557665997066ef184b36c929",
+          "timestamp": "2026-08-15T10:27:07.824Z",
           "proofStatus": "present",
           "replayLinkage": [
             "pbx_voice_flow_prod_like"
@@ -3337,9 +3347,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-crm-mutations.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "5410fa403435e60732a12e97c4aee3f202ba41ffda44d4f7e4980b638dfe39f6",
-          "checksum": "5410fa403435e60732a12e97c4aee3f202ba41ffda44d4f7e4980b638dfe39f6",
-          "timestamp": "2026-08-09T19:14:28.389Z",
+          "hash": "1bb090c78a55015ecb98d62cd1b795df2c7faad845444d300b1905487de2e249",
+          "checksum": "1bb090c78a55015ecb98d62cd1b795df2c7faad845444d300b1905487de2e249",
+          "timestamp": "2026-08-15T10:27:07.828Z",
           "proofStatus": "present",
           "replayLinkage": [
             "omnichannel_unified_replay"
@@ -3359,9 +3369,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/digital-twin-snapshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "cb1d028636612170969d98df7c83c9686bcf03ba7b76e30059ba455a87a7248c",
-          "checksum": "cb1d028636612170969d98df7c83c9686bcf03ba7b76e30059ba455a87a7248c",
-          "timestamp": "2026-08-09T19:14:28.396Z",
+          "hash": "e3b34b0986045a63026af90aa0193af7ec68012e2511048cc28fb10778c717cf",
+          "checksum": "e3b34b0986045a63026af90aa0193af7ec68012e2511048cc28fb10778c717cf",
+          "timestamp": "2026-08-15T10:27:07.832Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3373,13 +3383,13 @@
           "id": "qa_waves_governance",
           "domain": "governance",
           "path": "qa/qa-waves-enterprise-governance.json",
-          "sourcePath": "/var/lib/ragent2/qa/qa-waves-enterprise-governance.json",
-          "resolvedPath": "/var/lib/ragent2/qa/qa-waves-enterprise-governance.json",
+          "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/qa-waves-enterprise-governance.json",
+          "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/qa-waves-enterprise-governance.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "a32d7320eaeab18c2c11ed85becf5b63676181e65ecb3d494cdfc82f9aea564f",
-          "checksum": "a32d7320eaeab18c2c11ed85becf5b63676181e65ecb3d494cdfc82f9aea564f",
-          "timestamp": "2026-08-09T19:17:20.759Z",
+          "hash": "f8ceec212f573799f2648902b3dc782aee96164d940e7c5cb31cbcdfb5a36352",
+          "checksum": "f8ceec212f573799f2648902b3dc782aee96164d940e7c5cb31cbcdfb5a36352",
+          "timestamp": "2026-08-14T21:31:17.173Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3395,9 +3405,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "a5b0a8af0e912141147c25ea9ca3e02e57321c92a1824d84f4bbf271519b33ab",
-          "checksum": "a5b0a8af0e912141147c25ea9ca3e02e57321c92a1824d84f4bbf271519b33ab",
-          "timestamp": "2026-08-09T19:15:43.254Z",
+          "hash": "b0715dc76ce9fbd473243d9e86b5fefa29f080e9c9265b7f9c6bd805e02b686f",
+          "checksum": "b0715dc76ce9fbd473243d9e86b5fefa29f080e9c9265b7f9c6bd805e02b686f",
+          "timestamp": "2026-08-15T10:27:07.843Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3413,9 +3423,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "28ebc4a431388d53c0c32c74c6b8bc799a67c42fc2bcbe33b326957693fb1e21",
-          "checksum": "28ebc4a431388d53c0c32c74c6b8bc799a67c42fc2bcbe33b326957693fb1e21",
-          "timestamp": "2026-08-09T19:14:28.510Z",
+          "hash": "9f1957eb49c51b0d5b41b7ef0e36702f6508ffcb163cb6f4c11d9e825994b800",
+          "checksum": "9f1957eb49c51b0d5b41b7ef0e36702f6508ffcb163cb6f4c11d9e825994b800",
+          "timestamp": "2026-08-15T10:27:07.973Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3431,9 +3441,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "a0d66cc3ae23893456cc32a99dfeb06002ffca5ba7eb8891baced02453f392de",
-          "checksum": "a0d66cc3ae23893456cc32a99dfeb06002ffca5ba7eb8891baced02453f392de",
-          "timestamp": "2026-08-09T19:15:43.249Z",
+          "hash": "924252ec75a6a3635326a3265f71058d29be0b79fa2bb84daa5ca367cd762821",
+          "checksum": "924252ec75a6a3635326a3265f71058d29be0b79fa2bb84daa5ca367cd762821",
+          "timestamp": "2026-08-15T10:20:51.020Z",
           "proofStatus": "present",
           "replayLinkage": [],
           "journeyLinkage": [],
@@ -3601,22 +3611,29 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 412,
-    "executableScenarioCount": 103,
+    "scenarioCount": 420,
+    "executableScenarioCount": 111,
     "executableJourneyIds": [
+      "0cf4b599-167e-419a-907d-20104fa295c8",
+      "0e4ca104-adfe-473d-89ad-785c5e8f24d7",
       "1948906a-39f5-4c86-9b15-00dba4928f2d",
       "1eb1b866-3d5c-445a-9c35-84ab7c465dce",
+      "2611727e-fc9c-4795-bd23-80b98a84d716",
       "613991c3-b21f-4479-b0cf-2dccbf124c12",
       "63387172-eef1-475c-a3f6-8dda5e03f186",
       "72740162-92eb-466b-9330-589566a0eab0",
       "7f505a9c-012f-4b16-bbd7-64e35fe80b9e",
+      "9908c942-c329-4b16-b0fd-e4420f2d8c5a",
       "9e8e0cda-2bc7-4b70-ab9b-29eee10ff06f",
+      "a5344dd6-21e4-45f2-8dba-212121f5d8f0",
       "a6f78e44-1bf6-4d6c-b107-b95d4bcb0a47",
       "afc175ab-ecdc-433b-b8e3-bc62ff42dc00",
       "agendamento",
+      "bdd5400d-2117-45c9-8e7a-bf218b0a31a3",
       "beauty_booking",
       "beauty_new_customer",
       "booking_flow",
+      "c93863f0-dbc9-4ec0-932f-8a2f43363acf",
       "cancelamento",
       "checkin",
       "checkout",
@@ -3624,6 +3641,7 @@
       "d4310a17-a2c2-4110-924a-6ba03ee02fe8",
       "e28b4c55-d9e3-46b0-b2c7-9f5b0c15f043",
       "e5901391-e816-4df6-8a4c-8dc1f7efc28e",
+      "f1bac2f9-b6c9-4e6f-b245-3649cdf552b5",
       "feb8dcd4-9937-4e8c-b3be-9fb6f2a5873d",
       "fffe6546-30fe-4a46-bb26-e8e1b050e122",
       "fitness_active_customer",
@@ -3693,7 +3711,7 @@
   "automaticGapBacklog": [],
   "journeyCoverage": {
     "beauty": {
-      "generatedAt": "2026-08-09T19:17:21.186Z",
+      "generatedAt": "2026-08-15T10:27:07.814Z",
       "vertical": "beauty",
       "maturity": "production-like",
       "replaySupported": true,
@@ -3871,7 +3889,7 @@
       ]
     },
     "fitness": {
-      "generatedAt": "2026-08-09T19:17:21.186Z",
+      "generatedAt": "2026-08-15T10:27:07.814Z",
       "vertical": "fitness",
       "maturity": "production-like",
       "replaySupported": true,
@@ -5866,7 +5884,7 @@
       ]
     },
     "food": {
-      "generatedAt": "2026-08-09T19:17:21.186Z",
+      "generatedAt": "2026-08-15T10:27:07.814Z",
       "vertical": "food",
       "maturity": "production-like",
       "replaySupported": true,
@@ -5966,7 +5984,7 @@
       ]
     },
     "services": {
-      "generatedAt": "2026-08-09T19:17:21.186Z",
+      "generatedAt": "2026-08-15T10:27:07.814Z",
       "vertical": "services",
       "maturity": "production-like",
       "replaySupported": true,
@@ -6029,7 +6047,7 @@
       ]
     },
     "clinic": {
-      "generatedAt": "2026-08-09T19:17:21.186Z",
+      "generatedAt": "2026-08-15T10:27:07.814Z",
       "vertical": "clinic",
       "maturity": "production-like",
       "replaySupported": true,
@@ -6100,7 +6118,7 @@
       ]
     },
     "market": {
-      "generatedAt": "2026-08-09T19:17:21.186Z",
+      "generatedAt": "2026-08-15T10:27:07.814Z",
       "vertical": "market",
       "maturity": "production-like",
       "replaySupported": true,
@@ -6173,7 +6191,7 @@
       ]
     },
     "core": {
-      "generatedAt": "2026-08-09T19:17:21.186Z",
+      "generatedAt": "2026-08-15T10:27:07.814Z",
       "vertical": "core",
       "kind": "system",
       "maturity": "system",
@@ -6912,6 +6930,188 @@
         },
         {
           "vertical": "core",
+          "journey": "leads",
+          "replaySupport": false,
+          "qaSupport": true,
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-leads",
+              "scenario": "Fitness Matrícula — Captação de Lead via WhatsApp",
+              "status": "active",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [
+                {
+                  "id": "step_001",
+                  "order": 1,
+                  "type": "send_message",
+                  "category": "CLIENT_ACTION",
+                  "actor": "customer",
+                  "name": "Cliente envia mensagem WhatsApp",
+                  "description": "Lead envia mensagem inicial consultando planos da academia",
+                  "adapter": "whatsapp",
+                  "channel": "whatsapp",
+                  "input": {
+                    "variants": [
+                      "Oi, quero saber sobre planos",
+                      "Olá, quais são os planos disponíveis?",
+                      "Bom dia, tenho interesse em me matricular"
+                    ]
+                  },
+                  "expected": {
+                    "delivered": true
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_002",
+                  "order": 2,
+                  "type": "trigger_channel_event",
+                  "category": "SYSTEM_EVENT",
+                  "actor": "system",
+                  "name": "Sistema recebe inbound WhatsApp",
+                  "description": "Plataforma registra inbound e cria ou atualiza conversa",
+                  "adapter": "whatsapp",
+                  "channel": "whatsapp",
+                  "expected": {
+                    "eventType": "inbound_received",
+                    "conversationCreated": true
+                  },
+                  "timeoutMs": 10000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_003",
+                  "order": 3,
+                  "type": "validate_intent",
+                  "category": "AI_DECISION",
+                  "actor": "ai",
+                  "name": "IA classifica intenção do cliente",
+                  "description": "Serviço de IA analisa a mensagem e classifica a intenção como lead de fitness",
+                  "adapter": "aiIntentService",
+                  "channel": "whatsapp",
+                  "expected": {
+                    "intent": "fitness_lead",
+                    "confidenceMin": 0.6
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_004",
+                  "order": 4,
+                  "type": "validate_flow_transition",
+                  "category": "AI_DECISION",
+                  "actor": "ai",
+                  "name": "Sistema decide roteamento: bot ou humano",
+                  "description": "Engine de fluxo decide se responde via bot automático ou encaminha para agente humano",
+                  "adapter": "flowEngine",
+                  "channel": "whatsapp",
+                  "expected": {
+                    "routingDecision": [
+                      "bot",
+                      "human"
+                    ],
+                    "nextNode": "bot_response"
+                  },
+                  "timeoutMs": 10000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_005",
+                  "order": 5,
+                  "type": "validate_response",
+                  "category": "BOT_ACTION",
+                  "actor": "bot",
+                  "name": "Bot gera e envia resposta ao cliente",
+                  "description": "Bot automático gera resposta contextualizada sobre planos e envia ao cliente",
+                  "adapter": "ragService",
+                  "channel": "whatsapp",
+                  "expected": {
+                    "semantic": "planos academia",
+                    "responseDelivered": true
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_006",
+                  "order": 6,
+                  "type": "validate_backend",
+                  "category": "VALIDATION",
+                  "actor": "system",
+                  "name": "Validar criação do lead no backend",
+                  "description": "Confirmar que o lead foi registrado corretamente no CRM/backend",
+                  "adapter": "api",
+                  "channel": "whatsapp",
+                  "expected": {
+                    "backendEntity": "lead",
+                    "leadCreated": true,
+                    "fields": [
+                      "name",
+                      "phone",
+                      "channel",
+                      "intent"
+                    ]
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_007",
+                  "order": 7,
+                  "type": "validate_sla",
+                  "category": "VALIDATION",
+                  "actor": "system",
+                  "name": "Validar SLA de resposta ao lead",
+                  "description": "Garantir que o tempo total de resposta ao cliente não excede o SLA definido",
+                  "adapter": "meshValidator",
+                  "channel": "whatsapp",
+                  "expected": {
+                    "withinSla": true
+                  },
+                  "data": {
+                    "maxMs": 15000
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "vertical": "core",
           "journey": "login",
           "replaySupport": false,
           "qaSupport": true,
@@ -7461,6 +7661,117 @@
               "integrations": [],
               "steps": [
                 "Tenant autenticado"
+              ]
+            },
+            {
+              "scenarioId": "support-inbox-nota-ui",
+              "scenario": "Support — Nota Interna em Ticket da Caixa de Entrada via UI",
+              "status": "active",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [
+                {
+                  "id": "step_001",
+                  "order": 1,
+                  "type": "trigger_channel_event",
+                  "category": "CLIENT_ACTION",
+                  "actor": "customer",
+                  "name": "Usuário abre menu Atendimento → Caixa de Entrada",
+                  "description": "Usuário autenticado navega pelo rail Atendimento até a Caixa de Entrada",
+                  "adapter": "chat",
+                  "channel": "chat",
+                  "expected": {
+                    "page": "/inbox"
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_002",
+                  "order": 2,
+                  "type": "provide_data",
+                  "category": "CLIENT_ACTION",
+                  "actor": "customer",
+                  "name": "Usuário seleciona um ticket da lista",
+                  "description": "Clica no primeiro card de ticket da inbox e abre o painel de detalhes",
+                  "adapter": "chat",
+                  "channel": "chat",
+                  "expected": {
+                    "page": "/inbox"
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_003",
+                  "order": 3,
+                  "type": "provide_data",
+                  "category": "CLIENT_ACTION",
+                  "actor": "customer",
+                  "name": "Usuário escreve a nota interna",
+                  "description": "Preenche o textarea de nota interna no painel do ticket",
+                  "adapter": "chat",
+                  "channel": "chat",
+                  "expected": {
+                    "page": "/inbox"
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_004",
+                  "order": 4,
+                  "type": "validate_backend",
+                  "category": "SYSTEM_EVENT",
+                  "actor": "system",
+                  "name": "Sistema persiste a nota interna",
+                  "description": "Backend persiste a nota via POST /api/support/tickets/:id/notes",
+                  "adapter": "api",
+                  "channel": "api",
+                  "expected": {
+                    "backendEntity": "ticket",
+                    "created": true
+                  },
+                  "timeoutMs": 15000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                },
+                {
+                  "id": "step_005",
+                  "order": 5,
+                  "type": "validate_response",
+                  "category": "VALIDATION",
+                  "actor": "system",
+                  "name": "UI confirma Nota adicionada",
+                  "description": "Toast de sucesso 'Nota adicionada' é exibido ao usuário",
+                  "adapter": "semanticValidator",
+                  "channel": "chat",
+                  "expected": {
+                    "toast": "Nota adicionada"
+                  },
+                  "timeoutMs": 20000,
+                  "enabled": true,
+                  "evidence": null,
+                  "startedAt": null,
+                  "finishedAt": null,
+                  "durationMs": null
+                }
               ]
             }
           ]

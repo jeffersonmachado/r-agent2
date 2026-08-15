@@ -256,10 +256,15 @@ function generateReplayIntegrityReport() {
   const criticals    = issues.filter((i) => i.severity === 'CRITICAL');
   const replayRoot   = chain.length > 0 ? chain[chain.length - 1].cumulativeHash : GENESIS_HASH;
 
-  // Verificar que o replay.sig em dist/governance-artifacts cobre este root
+  // Verificar que o replay.sig cobre este root. Layout legado (mid-pipeline,
+  // pré-normalização): HMAC seal v2 em dist/governance-artifacts/ ou dist/ raiz.
+  // Layout normalizado (two-pass, pós-release): manifest-style em dist/signatures/,
+  // verificado deterministicamente contra o sha256 do payload — mesma regra de
+  // dist/verifier/verify-enterprise-governance-v2.sh.
   let replaySigValid = false;
   const replaySigPath = path.join(GOV_ARTS, 'replay.sig');
   const replaySigFallback = path.join(ROOT, 'dist', 'replay.sig');
+  const replaySigNormalized = path.join(ROOT, 'dist', 'signatures', 'replay.sig');
   const { verifySeal } = require('./sign-governance');
   for (const p of [replaySigPath, replaySigFallback]) {
     if (fs.existsSync(p)) {
@@ -269,6 +274,24 @@ function generateReplayIntegrityReport() {
       } catch (_) {}
       break;
     }
+  }
+  if (!replaySigValid && fs.existsSync(replaySigNormalized)) {
+    try {
+      const sig = JSON.parse(fs.readFileSync(replaySigNormalized, 'utf8'));
+      // O sig é vinculado ao payload saneado (dist/release/*.payload.zip),
+      // não ao envelope resolvido por resolveArtifact.
+      const payloadRef = sig.payloadRef || sig.artifact;
+      const payloadPath = path.join(ROOT, 'dist', 'release', path.basename(String(payloadRef || '')));
+      const payloadSha = fs.existsSync(payloadPath) ? sha256File(payloadPath) : sha256File(artifact.zipPath);
+      const expected = sha256String(`${payloadSha}:replay.sig:${sig.releaseId || ''}`);
+      replaySigValid = sig.placeholder === false
+        && sig.transitional === false
+        && (sig.status === 'valid' || sig.status === 'final')
+        && Boolean(sig.artifact)
+        && sig.algorithm === 'sha256'
+        && (sig.payloadSha256 === payloadSha || sig.artifactSha256 === payloadSha)
+        && sig.signature === expected;
+    } catch (_) {}
   }
 
   const pass = criticals.length === 0 && replaySigValid;

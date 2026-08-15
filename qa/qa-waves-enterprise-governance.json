@@ -1,113 +1,78 @@
 {
-  "generatedAt": "2026-08-14T08:42:27.677Z",
-  "status": "NO_GO",
-  "governanceStatus": "NO_GO",
+  "generatedAt": "2026-08-14T21:31:17.164Z",
+  "status": "GO",
+  "governanceStatus": "GO",
   "threshold": 95,
   "replayIntegrity": {
-    "valid": false,
-    "rate": 0,
+    "valid": true,
+    "rate": 100,
     "artifacts": [
       {
         "journeyId": "support_ticket_flow",
-        "replayHash": "8b844c77cecc418880f87c945128a710bb66e53067ed62afe8af5a5b9dc923e6",
-        "replayChecksum": "sha256:8b844c77cecc418880f87c945128a710bb66e53067ed62afe8af5a5b9dc923e6",
-        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "replayHash": "e7f2e8b1ae21b3e6776e88d35b75b758bdafed8f6f5674547ca8f4e9176fef38",
+        "replayChecksum": "sha256:e7f2e8b1ae21b3e6776e88d35b75b758bdafed8f6f5674547ca8f4e9176fef38",
+        "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-support_ticket_flow-1786360408062"
+        "smokeExecutionId": "prod-like-replay-support_ticket_flow-1786743009631"
       },
       {
         "journeyId": "fitness_customer_checkin",
-        "replayHash": "78f06f463fe58e92fa0341bcc1dffa1069801fbbedbd9cd150847d2f32d1bebf",
-        "replayChecksum": "sha256:78f06f463fe58e92fa0341bcc1dffa1069801fbbedbd9cd150847d2f32d1bebf",
-        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "replayHash": "3da77731d9ae92aa3d8e05cbfd2b9eaf6605922807e6ca2df234d949378327fb",
+        "replayChecksum": "sha256:3da77731d9ae92aa3d8e05cbfd2b9eaf6605922807e6ca2df234d949378327fb",
+        "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1786360414180"
+        "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1786743012115"
       },
       {
         "journeyId": "booking_flow",
-        "replayHash": "18b00e3b4f9702ba8a5afd8d328a5f94d43b7b52b4001fca3c4b85cf8812d85c",
-        "replayChecksum": "sha256:18b00e3b4f9702ba8a5afd8d328a5f94d43b7b52b4001fca3c4b85cf8812d85c",
-        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "replayHash": "265e1470ab75bbc8573178fd0e581f23f37ff01bc35788cfd4b9b32ce456ed24",
+        "replayChecksum": "sha256:265e1470ab75bbc8573178fd0e581f23f37ff01bc35788cfd4b9b32ce456ed24",
+        "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-booking_flow-1786360418134"
+        "smokeExecutionId": "prod-like-replay-booking_flow-1786743015189"
       },
       {
         "journeyId": "payment_charge_flow",
-        "replayHash": "05512f47399ebbfa9128c028f017921ad0ec2dbda04f4fdeabdefa4d230fd8aa",
-        "replayChecksum": "sha256:05512f47399ebbfa9128c028f017921ad0ec2dbda04f4fdeabdefa4d230fd8aa",
-        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "replayHash": "5f5cc835c2b5942127521c9d41211a0cf2fc9d57506a75d96b501ddd3c0b28c9",
+        "replayChecksum": "sha256:5f5cc835c2b5942127521c9d41211a0cf2fc9d57506a75d96b501ddd3c0b28c9",
+        "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-payment_charge_flow-1786360430280"
+        "smokeExecutionId": "prod-like-replay-payment_charge_flow-1786743018150"
       },
       {
         "journeyId": "food_order_status_flow",
-        "replayHash": "0a6959ac1751f6f3a4809f3404095a5c406e943e92f0904ad8b0412c575bde4b",
-        "replayChecksum": "sha256:0a6959ac1751f6f3a4809f3404095a5c406e943e92f0904ad8b0412c575bde4b",
-        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "replayHash": "5af369f15d5268b2abec09c47f53396e46ea997f8182fe63d6778cb6a0c912a8",
+        "replayChecksum": "sha256:5af369f15d5268b2abec09c47f53396e46ea997f8182fe63d6778cb6a0c912a8",
+        "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-food_order_status_flow-1786360433562"
+        "smokeExecutionId": "prod-like-replay-food_order_status_flow-1786743020752"
       },
       {
         "journeyId": "market_node_publish_flow",
-        "replayHash": "58341d34b412eb5342c2f3e30d570ac5cbe496058633ffe36ede8c52caf9dee2",
-        "replayChecksum": "sha256:58341d34b412eb5342c2f3e30d570ac5cbe496058633ffe36ede8c52caf9dee2",
-        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "replayHash": "87a794485e4a653c31b6c1dbf73e7e7cacffce0ec5c7a880e105bb039398bec3",
+        "replayChecksum": "sha256:87a794485e4a653c31b6c1dbf73e7e7cacffce0ec5c7a880e105bb039398bec3",
+        "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1786360436437"
+        "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1786743022747"
       },
       {
         "journeyId": "clinic_calendar_block_flow",
-        "replayHash": "7b188301169751e7f569221f82c6cd8e3180a034572ec06e6506313e9a7aa59f",
-        "replayChecksum": "sha256:7b188301169751e7f569221f82c6cd8e3180a034572ec06e6506313e9a7aa59f",
-        "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+        "replayHash": "5228d751293186cc8a044a60757d8e27a619f3477addab845fbb9b93e01da8a9",
+        "replayChecksum": "sha256:5228d751293186cc8a044a60757d8e27a619f3477addab845fbb9b93e01da8a9",
+        "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1786360439898"
+        "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1786743025169"
+      },
+      {
+        "journeyId": "agendamento",
+        "replayHash": "f3dba506e6b8c34dd100f19bb2b629028c2b82dc988e47fb10aafe46b1a42dd5",
+        "replayChecksum": "sha256:f3dba506e6b8c34dd100f19bb2b629028c2b82dc988e47fb10aafe46b1a42dd5",
+        "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "tenantId": "system",
+        "smokeExecutionId": "prod-like-replay-agendamento-1786743030343"
       }
     ],
-    "blockers": [
-      {
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "reason": "governance_signature_mismatch"
-      }
-    ]
+    "blockers": []
   },
   "smokeHealth": {
     "status": "GO",
@@ -115,194 +80,127 @@
     "healthy": true,
     "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
   },
-  "operationalConfidence": 79.2,
-  "confidenceGrade": "D",
-  "riskLevel": "CRITICAL",
+  "operationalConfidence": 100,
+  "confidenceGrade": "A+",
+  "riskLevel": "LOW",
   "failedProofs": [],
-  "activeBlockers": [
-    {
-      "journeyId": "support_ticket_flow",
-      "reason": "governance_signature_algorithm_unsupported"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "reason": "governance_signature_mismatch"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "reason": "governance_signature_algorithm_unsupported"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "reason": "governance_signature_mismatch"
-    },
-    {
-      "journeyId": "booking_flow",
-      "reason": "governance_signature_algorithm_unsupported"
-    },
-    {
-      "journeyId": "booking_flow",
-      "reason": "governance_signature_mismatch"
-    },
-    {
-      "journeyId": "payment_charge_flow",
-      "reason": "governance_signature_algorithm_unsupported"
-    },
-    {
-      "journeyId": "payment_charge_flow",
-      "reason": "governance_signature_mismatch"
-    },
-    {
-      "journeyId": "food_order_status_flow",
-      "reason": "governance_signature_algorithm_unsupported"
-    },
-    {
-      "journeyId": "food_order_status_flow",
-      "reason": "governance_signature_mismatch"
-    },
-    {
-      "journeyId": "market_node_publish_flow",
-      "reason": "governance_signature_algorithm_unsupported"
-    },
-    {
-      "journeyId": "market_node_publish_flow",
-      "reason": "governance_signature_mismatch"
-    },
-    {
-      "journeyId": "clinic_calendar_block_flow",
-      "reason": "governance_signature_algorithm_unsupported"
-    },
-    {
-      "journeyId": "clinic_calendar_block_flow",
-      "reason": "governance_signature_mismatch"
-    },
-    {
-      "reason": "continuous_smoke_degraded",
-      "status": "GO",
-      "evidenceReasons": [
-        "scheduled_mode_not_release_eligible",
-        "scheduled_evidence_stale",
-        "scheduled_evidence_path_invalid",
-        "scheduled_evidence_path_not_canonical",
-        "scheduled_source_evidence_invalid",
-        "scheduled_evidence_hash_missing",
-        "scheduled_source_generated_at_invalid",
-        "scheduled_source_evidence_not_go",
-        "scheduled_source_environment_not_prod_like",
-        "scheduled_required_journeys_missing",
-        "scheduled_source_required_journeys_missing",
-        "scheduled_flow_not_in_source:support_ticket_flow",
-        "scheduled_flow_not_in_source:fitness_customer_checkin"
-      ]
-    },
-    {
-      "reason": "operational_confidence_degraded",
-      "threshold": 95,
-      "operationalConfidence": 79.2
-    }
-  ],
+  "activeBlockers": [],
   "replayArtifacts": [
     {
       "journeyId": "support_ticket_flow",
-      "replayHash": "8b844c77cecc418880f87c945128a710bb66e53067ed62afe8af5a5b9dc923e6",
-      "replayChecksum": "sha256:8b844c77cecc418880f87c945128a710bb66e53067ed62afe8af5a5b9dc923e6",
-      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "replayHash": "e7f2e8b1ae21b3e6776e88d35b75b758bdafed8f6f5674547ca8f4e9176fef38",
+      "replayChecksum": "sha256:e7f2e8b1ae21b3e6776e88d35b75b758bdafed8f6f5674547ca8f4e9176fef38",
+      "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-support_ticket_flow-1786360408062"
+      "smokeExecutionId": "prod-like-replay-support_ticket_flow-1786743009631"
     },
     {
       "journeyId": "fitness_customer_checkin",
-      "replayHash": "78f06f463fe58e92fa0341bcc1dffa1069801fbbedbd9cd150847d2f32d1bebf",
-      "replayChecksum": "sha256:78f06f463fe58e92fa0341bcc1dffa1069801fbbedbd9cd150847d2f32d1bebf",
-      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "replayHash": "3da77731d9ae92aa3d8e05cbfd2b9eaf6605922807e6ca2df234d949378327fb",
+      "replayChecksum": "sha256:3da77731d9ae92aa3d8e05cbfd2b9eaf6605922807e6ca2df234d949378327fb",
+      "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1786360414180"
+      "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1786743012115"
     },
     {
       "journeyId": "booking_flow",
-      "replayHash": "18b00e3b4f9702ba8a5afd8d328a5f94d43b7b52b4001fca3c4b85cf8812d85c",
-      "replayChecksum": "sha256:18b00e3b4f9702ba8a5afd8d328a5f94d43b7b52b4001fca3c4b85cf8812d85c",
-      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "replayHash": "265e1470ab75bbc8573178fd0e581f23f37ff01bc35788cfd4b9b32ce456ed24",
+      "replayChecksum": "sha256:265e1470ab75bbc8573178fd0e581f23f37ff01bc35788cfd4b9b32ce456ed24",
+      "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-booking_flow-1786360418134"
+      "smokeExecutionId": "prod-like-replay-booking_flow-1786743015189"
     },
     {
       "journeyId": "payment_charge_flow",
-      "replayHash": "05512f47399ebbfa9128c028f017921ad0ec2dbda04f4fdeabdefa4d230fd8aa",
-      "replayChecksum": "sha256:05512f47399ebbfa9128c028f017921ad0ec2dbda04f4fdeabdefa4d230fd8aa",
-      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "replayHash": "5f5cc835c2b5942127521c9d41211a0cf2fc9d57506a75d96b501ddd3c0b28c9",
+      "replayChecksum": "sha256:5f5cc835c2b5942127521c9d41211a0cf2fc9d57506a75d96b501ddd3c0b28c9",
+      "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-payment_charge_flow-1786360430280"
+      "smokeExecutionId": "prod-like-replay-payment_charge_flow-1786743018150"
     },
     {
       "journeyId": "food_order_status_flow",
-      "replayHash": "0a6959ac1751f6f3a4809f3404095a5c406e943e92f0904ad8b0412c575bde4b",
-      "replayChecksum": "sha256:0a6959ac1751f6f3a4809f3404095a5c406e943e92f0904ad8b0412c575bde4b",
-      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "replayHash": "5af369f15d5268b2abec09c47f53396e46ea997f8182fe63d6778cb6a0c912a8",
+      "replayChecksum": "sha256:5af369f15d5268b2abec09c47f53396e46ea997f8182fe63d6778cb6a0c912a8",
+      "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-food_order_status_flow-1786360433562"
+      "smokeExecutionId": "prod-like-replay-food_order_status_flow-1786743020752"
     },
     {
       "journeyId": "market_node_publish_flow",
-      "replayHash": "58341d34b412eb5342c2f3e30d570ac5cbe496058633ffe36ede8c52caf9dee2",
-      "replayChecksum": "sha256:58341d34b412eb5342c2f3e30d570ac5cbe496058633ffe36ede8c52caf9dee2",
-      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "replayHash": "87a794485e4a653c31b6c1dbf73e7e7cacffce0ec5c7a880e105bb039398bec3",
+      "replayChecksum": "sha256:87a794485e4a653c31b6c1dbf73e7e7cacffce0ec5c7a880e105bb039398bec3",
+      "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1786360436437"
+      "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1786743022747"
     },
     {
       "journeyId": "clinic_calendar_block_flow",
-      "replayHash": "7b188301169751e7f569221f82c6cd8e3180a034572ec06e6506313e9a7aa59f",
-      "replayChecksum": "sha256:7b188301169751e7f569221f82c6cd8e3180a034572ec06e6506313e9a7aa59f",
-      "governanceSignature": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012",
+      "replayHash": "5228d751293186cc8a044a60757d8e27a619f3477addab845fbb9b93e01da8a9",
+      "replayChecksum": "sha256:5228d751293186cc8a044a60757d8e27a619f3477addab845fbb9b93e01da8a9",
+      "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1786360439898"
+      "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1786743025169"
+    },
+    {
+      "journeyId": "agendamento",
+      "replayHash": "f3dba506e6b8c34dd100f19bb2b629028c2b82dc988e47fb10aafe46b1a42dd5",
+      "replayChecksum": "sha256:f3dba506e6b8c34dd100f19bb2b629028c2b82dc988e47fb10aafe46b1a42dd5",
+      "governanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+      "tenantId": "system",
+      "smokeExecutionId": "prod-like-replay-agendamento-1786743030343"
     }
   ],
   "governanceSignature": {
-    "valid": false,
+    "valid": true,
     "signatures": [
       {
         "journeyId": "support_ticket_flow",
-        "valid": false,
-        "expected": "hmac-sha256:436e185de45dcff115b059a8ef2dd460d29515a386531a4f3f775870dec00ecd",
-        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+        "valid": true,
+        "expected": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "actual": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117"
       },
       {
         "journeyId": "fitness_customer_checkin",
-        "valid": false,
-        "expected": "hmac-sha256:436e185de45dcff115b059a8ef2dd460d29515a386531a4f3f775870dec00ecd",
-        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+        "valid": true,
+        "expected": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "actual": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117"
       },
       {
         "journeyId": "booking_flow",
-        "valid": false,
-        "expected": "hmac-sha256:436e185de45dcff115b059a8ef2dd460d29515a386531a4f3f775870dec00ecd",
-        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+        "valid": true,
+        "expected": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "actual": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117"
       },
       {
         "journeyId": "payment_charge_flow",
-        "valid": false,
-        "expected": "hmac-sha256:436e185de45dcff115b059a8ef2dd460d29515a386531a4f3f775870dec00ecd",
-        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+        "valid": true,
+        "expected": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "actual": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117"
       },
       {
         "journeyId": "food_order_status_flow",
-        "valid": false,
-        "expected": "hmac-sha256:436e185de45dcff115b059a8ef2dd460d29515a386531a4f3f775870dec00ecd",
-        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+        "valid": true,
+        "expected": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "actual": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117"
       },
       {
         "journeyId": "market_node_publish_flow",
-        "valid": false,
-        "expected": "hmac-sha256:436e185de45dcff115b059a8ef2dd460d29515a386531a4f3f775870dec00ecd",
-        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+        "valid": true,
+        "expected": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "actual": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117"
       },
       {
         "journeyId": "clinic_calendar_block_flow",
-        "valid": false,
-        "expected": "hmac-sha256:436e185de45dcff115b059a8ef2dd460d29515a386531a4f3f775870dec00ecd",
-        "actual": "gov-sha256:38fc2270f8a3ef064fe942bacfeff5e27dc99734eaa479c856507f101a96e012"
+        "valid": true,
+        "expected": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "actual": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117"
+      },
+      {
+        "journeyId": "agendamento",
+        "valid": true,
+        "expected": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+        "actual": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117"
       }
     ]
   },
@@ -311,23 +209,23 @@
     "algorithm": "hmac-sha256"
   },
   "lastSmokeExecution": {
-    "generatedAt": "2026-08-10T11:14:00.095Z",
+    "generatedAt": "2026-08-14T21:30:30.679Z",
     "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
     "tenantId": "system"
   },
   "continuousValidationStatus": {
     "status": "GO",
-    "healthy": false,
+    "healthy": true,
     "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/qa-waves-scheduled-operational-smoke.json",
-    "mode": "nightly_full_replay",
-    "generatedAt": "2026-07-20T00:00:00.000Z",
-    "ageHours": 608.71,
+    "mode": "pre_release_governance",
+    "generatedAt": "2026-08-14T21:30:33.997Z",
+    "ageHours": 0.01,
     "maxAgeHours": 48,
-    "evidenceValid": false,
-    "evidenceBound": false,
-    "evidenceSha256": null,
-    "sourceGeneratedAt": null,
-    "evidenceArtifactPath": null,
+    "evidenceValid": true,
+    "evidenceBound": true,
+    "evidenceSha256": "5b3b4e2899412ef430686e96017680cf527040f3e9051d5f3ab62cdde6358dbb",
+    "sourceGeneratedAt": "2026-08-14T21:30:30.679Z",
+    "evidenceArtifactPath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
     "requiredJourneys": [
       "support_ticket_flow",
       "fitness_customer_checkin",
@@ -335,126 +233,35 @@
     ],
     "presentJourneys": [
       "support_ticket_flow",
-      "fitness_customer_checkin"
+      "fitness_customer_checkin",
+      "booking_flow",
+      "payment_charge_flow",
+      "food_order_status_flow",
+      "market_node_publish_flow",
+      "clinic_calendar_block_flow",
+      "agendamento"
     ],
-    "missingJourneys": [
-      "booking_flow"
-    ],
-    "reasons": [
-      "scheduled_mode_not_release_eligible",
-      "scheduled_evidence_stale",
-      "scheduled_evidence_path_invalid",
-      "scheduled_evidence_path_not_canonical",
-      "scheduled_source_evidence_invalid",
-      "scheduled_evidence_hash_missing",
-      "scheduled_source_generated_at_invalid",
-      "scheduled_source_evidence_not_go",
-      "scheduled_source_environment_not_prod_like",
-      "scheduled_required_journeys_missing",
-      "scheduled_source_required_journeys_missing",
-      "scheduled_flow_not_in_source:support_ticket_flow",
-      "scheduled_flow_not_in_source:fitness_customer_checkin"
-    ]
+    "missingJourneys": [],
+    "reasons": []
   },
   "releaseReadiness": {
-    "go": false,
+    "go": true,
     "reasons": []
   },
   "deploymentSafety": {
-    "deployAllowed": false,
+    "deployAllowed": true,
     "threshold": 95,
-    "operationalConfidence": 79.2,
-    "blockers": [
-      {
-        "journeyId": "support_ticket_flow",
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "journeyId": "support_ticket_flow",
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "journeyId": "fitness_customer_checkin",
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "journeyId": "fitness_customer_checkin",
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "journeyId": "booking_flow",
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "journeyId": "booking_flow",
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "journeyId": "payment_charge_flow",
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "journeyId": "payment_charge_flow",
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "journeyId": "food_order_status_flow",
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "journeyId": "food_order_status_flow",
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "journeyId": "market_node_publish_flow",
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "journeyId": "market_node_publish_flow",
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "journeyId": "clinic_calendar_block_flow",
-        "reason": "governance_signature_algorithm_unsupported"
-      },
-      {
-        "journeyId": "clinic_calendar_block_flow",
-        "reason": "governance_signature_mismatch"
-      },
-      {
-        "reason": "continuous_smoke_degraded",
-        "status": "GO",
-        "evidenceReasons": [
-          "scheduled_mode_not_release_eligible",
-          "scheduled_evidence_stale",
-          "scheduled_evidence_path_invalid",
-          "scheduled_evidence_path_not_canonical",
-          "scheduled_source_evidence_invalid",
-          "scheduled_evidence_hash_missing",
-          "scheduled_source_generated_at_invalid",
-          "scheduled_source_evidence_not_go",
-          "scheduled_source_environment_not_prod_like",
-          "scheduled_required_journeys_missing",
-          "scheduled_source_required_journeys_missing",
-          "scheduled_flow_not_in_source:support_ticket_flow",
-          "scheduled_flow_not_in_source:fitness_customer_checkin"
-        ]
-      },
-      {
-        "reason": "operational_confidence_degraded",
-        "threshold": 95,
-        "operationalConfidence": 79.2
-      }
-    ]
+    "operationalConfidence": 100,
+    "blockers": []
   },
-  "enterpriseGovernanceSignature": "hmac-sha256:3ff117be4b2b4774d376011e662812d61b14a80c70977e28e902981a36b16660",
-  "reportHash": "76c33fa04cd49ed494a0facdca33b0f9343055cca77a7965682cfe40ebb4aecf",
+  "enterpriseGovernanceSignature": "hmac-sha256:a5672b2720b831ac667518cecc21c0c309662b379b2a3e8bb8a654c657784117",
+  "reportHash": "3835b1d3f8be27ca686ff1e931b5803d8da726dea9c9200c24740bb1cc4977ef",
   "auditTrail": {
     "path": "/opt/results/ria/r-agent2/qa/qa-waves-governance-audit.jsonl",
-    "latestEntryHash": "2095aa5b5815b8292bf58cf640ca92ad17e93e1cddf6eea5e2fa254f2c7af6bc",
+    "latestEntryHash": "cd5abd7e32f44263bd3d5f01dfb6c478a94793e2b3e301c7c316377e7c9ac066",
     "immutable": true,
     "valid": true,
-    "entries": 55,
+    "entries": 57,
     "reasons": []
   }
 }

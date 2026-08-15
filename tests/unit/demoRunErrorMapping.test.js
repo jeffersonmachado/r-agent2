@@ -97,20 +97,24 @@ describe('demo routes — mapeamento de erros do /api/demo/run', () => {
 });
 
 describe('qaWavesScenarioService — inferPlatformScenarioIds', () => {
-  const STORE_PATH = require('path').join(__dirname, '../../qa/qa-waves/scenario-store.json');
-  let storeBackup = null;
+  const os = require('os');
+  const path = require('path');
+  // Store temporário por processo: o store real (qa/qa-waves/scenario-store.json)
+  // é compartilhado e sofre corrida entre workers paralelos do Jest — o serviço
+  // já suporta override via QA_WAVES_SCENARIO_STORE_PATH exatamente para isso.
+  const TMP_STORE = path.join(os.tmpdir(), `qa-waves-scenario-store-test-${process.pid}.json`);
 
   beforeEach(() => {
+    process.env.QA_WAVES_SCENARIO_STORE_PATH = TMP_STORE;
     jest.resetModules();
     const realFs = jest.requireActual('fs');
-    storeBackup = realFs.existsSync(STORE_PATH) ? realFs.readFileSync(STORE_PATH, 'utf8') : null;
+    if (realFs.existsSync(TMP_STORE)) realFs.unlinkSync(TMP_STORE);
   });
 
   afterEach(() => {
-    if (storeBackup !== null) {
-      const realFs = jest.requireActual('fs');
-      realFs.writeFileSync(STORE_PATH, storeBackup, 'utf8');
-    }
+    delete process.env.QA_WAVES_SCENARIO_STORE_PATH;
+    const realFs = jest.requireActual('fs');
+    if (realFs.existsSync(TMP_STORE)) realFs.unlinkSync(TMP_STORE);
   });
 
   function loadServiceWithRegistry(registry) {

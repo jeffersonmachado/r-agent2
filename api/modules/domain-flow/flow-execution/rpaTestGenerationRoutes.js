@@ -278,6 +278,7 @@ async function handleRpaTestGenerationRoutes(ctx) {
       sendJson(res, 200, {
         success: true,
         testId: safeTestId,
+        filePath: testFilePath,
         message: 'Teste RPA salvo com sucesso',
       });
     } catch (err) {

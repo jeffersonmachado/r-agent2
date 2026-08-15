@@ -489,6 +489,10 @@ function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCac
   clearChromeLocks(clientId, dataPath);
   const client = new Client({
     authStrategy: new LocalAuth({ clientId, dataPath }),
+    // O default do whatsapp-web.js é 30s (authTimeoutMs): em container com
+    // CPU limitada o boot+injeção do WA Web passa disso e o pareamento morre
+    // em "auth timeout" antes de gerar o QR.
+    authTimeoutMs: 120000,
     puppeteer: buildPuppeteerOptions(),
     // Pin do build do WA Web (workaround wwebjs#127084): undefined → default
     // do pacote; null → latest. Configurável via WHATSAPP_QR_WEB_VERSION.

@@ -117,7 +117,7 @@ Documentação não é suficiente. Use os validadores bloqueantes em `scripts/go
 - Caminho oficial de release: `npm run system:validate` → `npm run zip:release` → `npm run system:release`.
 - Caminho AI-native: `npm run validate:governance-enforcement` seguido de `npm run zip:release` quando packaging está em escopo.
 - `npm run zip:release` (`scripts/release-package.sh`) gera ZIP auditado + manifesto SHA-256 em `dist/`; **bloqueia** se detectar `.env`, `.token.env`, dumps ou backups; mantém apenas os 3 ZIPs mais recentes.
-- `npm run runtime:clean` limpa estado transitório antes do pacote (`runtime:clean:check` falha se restar resíduo).
+- `npm run runtime:clean` limpa estado transitório antes do pacote (`runtime:clean:check` falha se restar resíduo). `qa-mesh/meshHistory/` **não** é resíduo: é evidência governada exigida por `validate:qa-governance` (execução canônica), com retenção própria do mesh — o cleaner a preserva desde 2026-08-15.
 - Deploy apenas a partir de artefato aprovado: `npm run system:deploy`; gate pré-deploy `npm run deploy:gate:official` (dry-run por padrão). Deploy real exige `SYSTEM_DEPLOY_EXECUTE=1` e manifesto com `audit: passed` + `goNoGo: GO`.
 - Produção via Docker Compose: `docker-compose.prod.yml` (serviços: api, frontend, rag-service, postgres/pgvector, redis, asterisk). Comandos `deploy:build`, `deploy:up`, `deploy:full` etc. CI de release: `.github/workflows/release-governance.yml`.
 

@@ -35,6 +35,42 @@
       "tenantId": "system",
       "publishedAt": "2026-08-10T11:13:55.729Z",
       "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
+    },
+    {
+      "id": "qa-market-node-1786737729029",
+      "label": "QA Market Node 1786737729029",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-08-14T20:02:10.058Z",
+      "publishedBy": "a102439f-f055-4a8f-98dd-3121cb478165"
+    },
+    {
+      "id": "qa-market-node-1786742319465",
+      "label": "QA Market Node 1786742319465",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-08-14T21:18:40.828Z",
+      "publishedBy": "a102439f-f055-4a8f-98dd-3121cb478165"
+    },
+    {
+      "id": "qa-market-node-1786743021081",
+      "label": "QA Market Node 1786743021081",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-08-14T21:30:22.410Z",
+      "publishedBy": "a102439f-f055-4a8f-98dd-3121cb478165"
     }
   ]
 }

@@ -46,7 +46,10 @@ RUNTIME_DIRS=(
   "frontend/test-results"
   "qa/release-evidence"
   "qa-mesh/meshEvidence"
-  "qa-mesh/meshHistory"
+  # qa-mesh/meshHistory NÃO é resíduo: é evidência governada exigida por
+  # validate:qa-governance (execução canônica). A retenção é do próprio mesh
+  # (5 canônicos + 5 não-canônicos), policiada por validate:cleanup, e o
+  # packaging já a exclui do ZIP (release-package.sh / generate-zip.sh).
   "qa-mesh/system-validate"
   "rag-service/data/vector_store"
   "rag-service/test-results"

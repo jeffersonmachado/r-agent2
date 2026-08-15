@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-09T19:17:21.186Z",
+  "generatedAt": "2026-08-15T10:27:07.814Z",
   "vertical": "core",
   "kind": "system",
   "maturity": "system",
@@ -738,6 +738,188 @@
     },
     {
       "vertical": "core",
+      "journey": "leads",
+      "replaySupport": false,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "fitness-matricula-leads",
+          "scenario": "Fitness Matrícula — Captação de Lead via WhatsApp",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            {
+              "id": "step_001",
+              "order": 1,
+              "type": "send_message",
+              "category": "CLIENT_ACTION",
+              "actor": "customer",
+              "name": "Cliente envia mensagem WhatsApp",
+              "description": "Lead envia mensagem inicial consultando planos da academia",
+              "adapter": "whatsapp",
+              "channel": "whatsapp",
+              "input": {
+                "variants": [
+                  "Oi, quero saber sobre planos",
+                  "Olá, quais são os planos disponíveis?",
+                  "Bom dia, tenho interesse em me matricular"
+                ]
+              },
+              "expected": {
+                "delivered": true
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_002",
+              "order": 2,
+              "type": "trigger_channel_event",
+              "category": "SYSTEM_EVENT",
+              "actor": "system",
+              "name": "Sistema recebe inbound WhatsApp",
+              "description": "Plataforma registra inbound e cria ou atualiza conversa",
+              "adapter": "whatsapp",
+              "channel": "whatsapp",
+              "expected": {
+                "eventType": "inbound_received",
+                "conversationCreated": true
+              },
+              "timeoutMs": 10000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_003",
+              "order": 3,
+              "type": "validate_intent",
+              "category": "AI_DECISION",
+              "actor": "ai",
+              "name": "IA classifica intenção do cliente",
+              "description": "Serviço de IA analisa a mensagem e classifica a intenção como lead de fitness",
+              "adapter": "aiIntentService",
+              "channel": "whatsapp",
+              "expected": {
+                "intent": "fitness_lead",
+                "confidenceMin": 0.6
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_004",
+              "order": 4,
+              "type": "validate_flow_transition",
+              "category": "AI_DECISION",
+              "actor": "ai",
+              "name": "Sistema decide roteamento: bot ou humano",
+              "description": "Engine de fluxo decide se responde via bot automático ou encaminha para agente humano",
+              "adapter": "flowEngine",
+              "channel": "whatsapp",
+              "expected": {
+                "routingDecision": [
+                  "bot",
+                  "human"
+                ],
+                "nextNode": "bot_response"
+              },
+              "timeoutMs": 10000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_005",
+              "order": 5,
+              "type": "validate_response",
+              "category": "BOT_ACTION",
+              "actor": "bot",
+              "name": "Bot gera e envia resposta ao cliente",
+              "description": "Bot automático gera resposta contextualizada sobre planos e envia ao cliente",
+              "adapter": "ragService",
+              "channel": "whatsapp",
+              "expected": {
+                "semantic": "planos academia",
+                "responseDelivered": true
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_006",
+              "order": 6,
+              "type": "validate_backend",
+              "category": "VALIDATION",
+              "actor": "system",
+              "name": "Validar criação do lead no backend",
+              "description": "Confirmar que o lead foi registrado corretamente no CRM/backend",
+              "adapter": "api",
+              "channel": "whatsapp",
+              "expected": {
+                "backendEntity": "lead",
+                "leadCreated": true,
+                "fields": [
+                  "name",
+                  "phone",
+                  "channel",
+                  "intent"
+                ]
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_007",
+              "order": 7,
+              "type": "validate_sla",
+              "category": "VALIDATION",
+              "actor": "system",
+              "name": "Validar SLA de resposta ao lead",
+              "description": "Garantir que o tempo total de resposta ao cliente não excede o SLA definido",
+              "adapter": "meshValidator",
+              "channel": "whatsapp",
+              "expected": {
+                "withinSla": true
+              },
+              "data": {
+                "maxMs": 15000
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "core",
       "journey": "login",
       "replaySupport": false,
       "qaSupport": true,
@@ -1287,6 +1469,117 @@
           "integrations": [],
           "steps": [
             "Tenant autenticado"
+          ]
+        },
+        {
+          "scenarioId": "support-inbox-nota-ui",
+          "scenario": "Support — Nota Interna em Ticket da Caixa de Entrada via UI",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            {
+              "id": "step_001",
+              "order": 1,
+              "type": "trigger_channel_event",
+              "category": "CLIENT_ACTION",
+              "actor": "customer",
+              "name": "Usuário abre menu Atendimento → Caixa de Entrada",
+              "description": "Usuário autenticado navega pelo rail Atendimento até a Caixa de Entrada",
+              "adapter": "chat",
+              "channel": "chat",
+              "expected": {
+                "page": "/inbox"
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_002",
+              "order": 2,
+              "type": "provide_data",
+              "category": "CLIENT_ACTION",
+              "actor": "customer",
+              "name": "Usuário seleciona um ticket da lista",
+              "description": "Clica no primeiro card de ticket da inbox e abre o painel de detalhes",
+              "adapter": "chat",
+              "channel": "chat",
+              "expected": {
+                "page": "/inbox"
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_003",
+              "order": 3,
+              "type": "provide_data",
+              "category": "CLIENT_ACTION",
+              "actor": "customer",
+              "name": "Usuário escreve a nota interna",
+              "description": "Preenche o textarea de nota interna no painel do ticket",
+              "adapter": "chat",
+              "channel": "chat",
+              "expected": {
+                "page": "/inbox"
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_004",
+              "order": 4,
+              "type": "validate_backend",
+              "category": "SYSTEM_EVENT",
+              "actor": "system",
+              "name": "Sistema persiste a nota interna",
+              "description": "Backend persiste a nota via POST /api/support/tickets/:id/notes",
+              "adapter": "api",
+              "channel": "api",
+              "expected": {
+                "backendEntity": "ticket",
+                "created": true
+              },
+              "timeoutMs": 15000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            },
+            {
+              "id": "step_005",
+              "order": 5,
+              "type": "validate_response",
+              "category": "VALIDATION",
+              "actor": "system",
+              "name": "UI confirma Nota adicionada",
+              "description": "Toast de sucesso 'Nota adicionada' é exibido ao usuário",
+              "adapter": "semanticValidator",
+              "channel": "chat",
+              "expected": {
+                "toast": "Nota adicionada"
+              },
+              "timeoutMs": 20000,
+              "enabled": true,
+              "evidence": null,
+              "startedAt": null,
+              "finishedAt": null,
+              "durationMs": null
+            }
           ]
         }
       ]
