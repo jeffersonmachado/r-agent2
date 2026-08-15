@@ -94,3 +94,25 @@ export function manualPdfUrl(manualId) {
 export async function fetchManualPdfBlob(manualId) {
   return fetchBlob(manualPdfUrl(manualId));
 }
+
+export async function getJourneyFaqSummary() {
+  return fetchJson('/api/learning/journey-faq/summary');
+}
+
+export async function getJourneyFaq(journeyKey) {
+  return fetchJson(`/api/learning/journey-faq?journeyKey=${encodeURIComponent(journeyKey)}`);
+}
+
+export async function generateJourneyFaq(journeyKey) {
+  return fetchJson('/api/learning/journey-faq/generate', {
+    method: 'POST',
+    body: JSON.stringify({ journeyKey }),
+  });
+}
+
+export async function setJourneyFaqStatus(itemId, status) {
+  return fetchJson(`/api/learning/journey-faq/${encodeURIComponent(itemId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}

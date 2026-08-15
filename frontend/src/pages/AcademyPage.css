@@ -328,3 +328,11 @@
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
   margin-top: 0.5rem;
 }
+
+/* ── Perguntas & Respostas por jornada ──────────────────────────────────── */
+
+.academy-faq-answer {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  white-space: pre-line;
+}

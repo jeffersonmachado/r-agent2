@@ -16,6 +16,10 @@ const mockGetManuals = vi.fn();
 const mockGetReplays = vi.fn();
 const mockGenerateManual = vi.fn();
 const mockFetchManualImageBlob = vi.fn();
+const mockGetJourneyFaqSummary = vi.fn();
+const mockGetJourneyFaq = vi.fn();
+const mockGenerateJourneyFaq = vi.fn();
+const mockSetJourneyFaqStatus = vi.fn();
 
 vi.mock('../api/academy', () => ({
   getMyCompetencies: (...args) => mockGetMyCompetencies(...args),
@@ -37,6 +41,10 @@ vi.mock('../api/academy', () => ({
   fetchManualImageBlob: (...args) => mockFetchManualImageBlob(...args),
   fetchManualMarkdownBlob: vi.fn(async () => new Blob(['# manual'])),
   fetchManualPdfBlob: vi.fn(async () => new Blob(['%PDF'])),
+  getJourneyFaqSummary: (...args) => mockGetJourneyFaqSummary(...args),
+  getJourneyFaq: (...args) => mockGetJourneyFaq(...args),
+  generateJourneyFaq: (...args) => mockGenerateJourneyFaq(...args),
+  setJourneyFaqStatus: (...args) => mockSetJourneyFaqStatus(...args),
 }));
 
 vi.mock('../context/authContext', () => ({
@@ -85,6 +93,8 @@ describe('AcademyPage', () => {
     mockGetMentorPlan.mockResolvedValue({ plan: null });
     mockGetManuals.mockResolvedValue({ manuals: [] });
     mockGetReplays.mockResolvedValue({ replays: [] });
+    mockGetJourneyFaqSummary.mockResolvedValue({ journeys: [] });
+    mockGetJourneyFaq.mockResolvedValue({ items: [] });
     mockGetSkillGraph.mockResolvedValue({
       skills: [
         { key: 'tickets', label: 'tickets' },
@@ -304,5 +314,46 @@ describe('AcademyPage', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Visualizar' })[0]);
     await waitFor(() => expect(screen.getByText(/Passo 1 — Abrir Caixa de Entrada/)).toBeTruthy());
     await waitFor(() => expect(mockFetchManualImageBlob).toHaveBeenCalledWith('manual-2', 'img/01.png'));
+  });
+
+  it('tab Perguntas & Respostas lista FAQ da jornada e admin cura incluir/excluir', async () => {
+    const faqItem = {
+      id: 'faq-1',
+      journeyKey: 'support_ticket_flow',
+      category: 'pre_condicoes',
+      question: 'Quais pré-condições são necessárias para executar a jornada?',
+      answer: 'Obrigatórias: authenticated_agent, tenant_loaded.',
+      sources: ['config/journey-preconditions.json'],
+      status: 'suggested',
+      current: true,
+      createdAt: '2026-07-24T12:00:00.000Z',
+    };
+    mockGetJourneyFaqSummary.mockResolvedValue({
+      journeys: [{ journeyKey: 'support_ticket_flow', total: 1, suggested: 1, included: 0, excluded: 0 }],
+    });
+    mockGetJourneyFaq.mockResolvedValue({ journeyKey: 'support_ticket_flow', items: [faqItem] });
+    mockGenerateJourneyFaq.mockResolvedValue({
+      journeyKey: 'support_ticket_flow', generated: 1, created: 0, items: [faqItem],
+    });
+    mockSetJourneyFaqStatus.mockResolvedValue({ item: { ...faqItem, status: 'included', curatedBy: 'qa' } });
+
+    render(<AcademyPage />);
+
+    await waitFor(() => expect(screen.getByTestId('skill-card-tickets')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Perguntas & Respostas/ }));
+
+    // item sugerido listado com fonte citada
+    await waitFor(() => expect(screen.getByTestId('faq-faq-1')).toBeTruthy());
+    expect(screen.getByText(/authenticated_agent/)).toBeTruthy();
+    expect(screen.getByText(/journey-preconditions\.json/)).toBeTruthy();
+
+    // admin gera/atualiza a partir das fontes governadas
+    fireEvent.click(screen.getByRole('button', { name: /Gerar\/atualizar perguntas/ }));
+    await waitFor(() => expect(mockGenerateJourneyFaq).toHaveBeenCalledWith('support_ticket_flow'));
+
+    // admin inclui a pergunta (curadoria)
+    fireEvent.click(screen.getByRole('button', { name: 'Incluir' }));
+    await waitFor(() => expect(mockSetJourneyFaqStatus).toHaveBeenCalledWith('faq-1', 'included'));
+    await waitFor(() => expect(screen.getByText(/Incluída/)).toBeTruthy());
   });
 });

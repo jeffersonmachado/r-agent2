@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import * as academyApi from '../api/academy';
 import { ManualsTab } from '../components/academy/ManualsTab';
+import { JourneyFaqTab } from '../components/academy/JourneyFaqTab';
 import { Button } from '../styles/Button';
 import logger from '../utils/logger';
 import './AcademyPage.css';
@@ -215,6 +216,7 @@ export function AcademyPage() {
               ['certificacoes', `Certificações${certifications ? ` (${certifications.filter((c) => c.status === 'active').length})` : ''}`],
               ['plano', 'Plano de evolução'],
               ['manuais', 'Manuais'],
+              ['faq', 'Perguntas & Respostas'],
               ...(isAdmin ? [['analytics', 'Analytics']] : []),
             ].map(([key, label]) => (
               <button
@@ -523,6 +525,10 @@ export function AcademyPage() {
 
           {activeTab === 'manuais' && (
             <ManualsTab isAdmin={isAdmin} />
+          )}
+
+          {activeTab === 'faq' && (
+            <JourneyFaqTab isAdmin={isAdmin} />
           )}
 
           {activeTab === 'analytics' && isAdmin && (

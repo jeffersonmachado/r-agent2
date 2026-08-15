@@ -26,6 +26,12 @@ jest.mock('../../api/db/models/LearningSimulation', () => () => ({
   findAll: (...args) => mockSimulationFindAll(...args),
 }));
 
+const mockFindCuratedFaq = jest.fn();
+
+jest.mock('../../api/modules/learning-core/journeyFaqService', () => ({
+  findCuratedFaqForRoute: (...args) => mockFindCuratedFaq(...args),
+}));
+
 jest.mock('../../api/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -40,6 +46,7 @@ describe('learning tutorService — requestTutorHelp (níveis 2-4)', () => {
     jest.clearAllMocks();
     mockHintCreate.mockImplementation(async (values) => ({ id: 'hint-1', ...values }));
     mockHintFindAll.mockResolvedValue([]);
+    mockFindCuratedFaq.mockResolvedValue(null);
   });
 
   it('rejeita level inválido e route ausente', async () => {
@@ -81,6 +88,39 @@ describe('learning tutorService — requestTutorHelp (níveis 2-4)', () => {
     expect(result.available).toBe(false);
     expect(result.reason).toBe('ai_unavailable');
     expect(mockHintCreate).not.toHaveBeenCalled();
+  });
+
+  it('nível 2: FAQ curado da jornada tem prioridade sobre o RAG (source curated_faq)', async () => {
+    mockFindCuratedFaq.mockResolvedValue({
+      journeyKeys: ['support_ticket_flow'],
+      match: {
+        id: 'faq-1',
+        question: 'Quais pré-condições são necessárias para executar a jornada?',
+        answer: 'Obrigatórias: authenticated_agent, tenant_loaded.',
+      },
+      score: 0.8,
+    });
+
+    const result = await requestTutorHelp({
+      tenantId: 't1', agentId: 'a1', route: '/support', level: 2,
+      question: 'quais pre-condicoes da jornada?',
+    });
+
+    expect(result.available).toBe(true);
+    expect(result.source).toBe('curated_faq');
+    expect(result.content.text).toContain('authenticated_agent');
+    expect(mockQueryRag).not.toHaveBeenCalled();
+    expect(mockHintCreate.mock.calls[0][0].source).toBe('curated_faq');
+  });
+
+  it('nível 2: FAQ curado lançando erro não quebra o fluxo (cai para RAG)', async () => {
+    mockFindCuratedFaq.mockRejectedValue(new Error('db down'));
+    mockQueryRag.mockResolvedValue({ success: true, response: 'Explicação via RAG.' });
+
+    const result = await requestTutorHelp({ tenantId: 't1', agentId: 'a1', route: '/inbox', level: 2 });
+
+    expect(result.available).toBe(true);
+    expect(result.source).toBe('rag_explain');
   });
 
   it('nível 4: demonstração determinística com simulações sintéticas', async () => {

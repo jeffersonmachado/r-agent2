@@ -27,6 +27,7 @@ const getLearningTutorHintModel = require('../../db/models/LearningTutorHint');
 const getLearningSimulationModel = require('../../db/models/LearningSimulation');
 const { queryRag } = require('../../services/ragService');
 const { emitEvent } = require('../../services/websocketService');
+const journeyFaqService = require('./journeyFaqService');
 const logger = require('../../utils/logger');
 
 const MIN_ERROR_EVENTS = 2;
@@ -243,10 +244,26 @@ async function findAgentRecentErrors({ tenantId, agentId, route }) {
 }
 
 /**
- * Nível 2 (explica): explicação detalhada da tela/processo via RAG,
- * contextualizada com os erros recorrentes do próprio usuário na rota.
+ * Nível 2 (explica): explicação detalhada da tela/processo. Prioriza o FAQ
+ * curado da jornada (perguntas incluídas pelo admin — fonte `curated_faq`);
+ * sem match curado, cai no RAG contextualizado com os erros recorrentes do
+ * próprio usuário na rota.
  */
-async function buildExplanation({ tenantId, agentId, route }) {
+async function buildExplanation({ tenantId, agentId, route, question }) {
+  try {
+    const curated = await journeyFaqService.findCuratedFaqForRoute({ tenantId, route, question });
+    if (curated && curated.match) {
+      const text = `${curated.match.question}\n\n${curated.match.answer}`.slice(0, MAX_EXPLAIN_CHARS);
+      return { text, source: 'curated_faq' };
+    }
+  } catch (error) {
+    logger.warn('[learning-core] Tutor: FAQ curado indisponivel, seguindo para RAG', {
+      tenantId,
+      route,
+      error: error.message,
+    });
+  }
+
   const recentTriggers = await findAgentRecentErrors({ tenantId, agentId, route });
   const errorCodes = Array.from(new Set(
     recentTriggers.flatMap((t) => (Array.isArray(t.errorCodes) ? t.errorCodes : [])),
@@ -316,7 +333,7 @@ async function buildDemonstration({ tenantId }) {
  *
  * @returns {Promise<{level, route, available, content?, source?, reason?}>}
  */
-async function requestTutorHelp({ tenantId, agentId, route, level }) {
+async function requestTutorHelp({ tenantId, agentId, route, level, question }) {
   const numericLevel = Number(level);
   if (!route || typeof route !== 'string') {
     const error = new Error('route obrigatorio');
@@ -348,7 +365,7 @@ async function requestTutorHelp({ tenantId, agentId, route, level }) {
   let built = null;
   try {
     built = numericLevel === 2
-      ? await buildExplanation({ tenantId, agentId, route })
+      ? await buildExplanation({ tenantId, agentId, route, question })
       : await buildStepGuide({ tenantId, route });
   } catch (error) {
     logger.warn('[learning-core] Tutor: RAG indisponivel na ajuda explicita (ai_unavailable)', {
@@ -364,7 +381,7 @@ async function requestTutorHelp({ tenantId, agentId, route, level }) {
     return { level: numericLevel, route, available: false, reason: 'ai_unavailable' };
   }
 
-  const source = numericLevel === 2 ? 'rag_explain' : 'rag_guide';
+  const source = built.source || (numericLevel === 2 ? 'rag_explain' : 'rag_guide');
   await persistHelpRecord({
     tenantId,
     agentId,

@@ -14,6 +14,7 @@ const certificationService = require('./certificationService');
 const mentorService = require('./mentorService');
 const adaptiveService = require('./adaptiveService');
 const analyticsService = require('./analyticsService');
+const journeyFaqService = require('./journeyFaqService');
 
 const ADMIN_ROLES = new Set(['owner', 'admin', 'super_admin']);
 
@@ -280,6 +281,7 @@ async function handleLearningCoreRoutes(ctx) {
         agentId: req.agent?.id,
         route: body.route,
         level: body.level,
+        question: typeof body.question === 'string' ? body.question : undefined,
       });
       sendJson(result);
     } catch (error) {
@@ -489,6 +491,86 @@ async function handleLearningCoreRoutes(ctx) {
       });
       res.writeHead(200, { 'content-type': contentType, 'cache-control': 'private, max-age=300' });
       fs.createReadStream(filePath).pipe(res);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  // ── Journey FAQ: perguntas e respostas por jornada com curadoria admin ──
+
+  if (method === 'GET' && pathname === '/api/learning/journey-faq/summary') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const journeys = await journeyFaqService.listJourneyFaqSummary({ tenantId });
+    sendJson({ journeys });
+    return true;
+  }
+
+  if (method === 'GET' && pathname === '/api/learning/journey-faq') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const journeyKey = new URL(req.url, 'http://localhost').searchParams.get('journeyKey');
+    try {
+      // usuário comum vê apenas o FAQ curado (included); admin vê tudo
+      const statuses = ADMIN_ROLES.has(req.agent?.role) ? null : ['included'];
+      const items = await journeyFaqService.listJourneyFaq({ tenantId, journeyKey, statuses });
+      sendJson({ journeyKey, items });
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  if (method === 'POST' && pathname === '/api/learning/journey-faq/generate') {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+
+    const body = await parseJsonBody(req);
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const result = await journeyFaqService.generateJourneyFaq({
+        tenantId,
+        journeyKey: body.journeyKey,
+        createdBy: req.agent?.username || req.agent?.id,
+      });
+      sendJson(result, 201);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  const faqItemMatch = method === 'PATCH'
+    ? pathname.match(/^\/api\/learning\/journey-faq\/([^/]+)$/)
+    : null;
+  if (faqItemMatch) {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+
+    const body = await parseJsonBody(req);
+    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    try {
+      const item = await journeyFaqService.setJourneyFaqStatus({
+        tenantId,
+        id: decodeURIComponent(faqItemMatch[1]),
+        status: body.status,
+        curatedBy: req.agent?.username || req.agent?.id,
+      });
+      sendJson({ item });
     } catch (error) {
       if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
       if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
