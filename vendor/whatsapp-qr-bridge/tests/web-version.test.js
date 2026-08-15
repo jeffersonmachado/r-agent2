@@ -9,30 +9,30 @@ const path = require('path');
 const {
   createBridge,
   resolveWebVersionOptions,
-  PINNED_WEB_VERSION,
-  WA_WEB_CACHE_DIR,
 } = require('../src/index');
 
-test('resolveWebVersionOptions: default pin para build pré-quebra com cache local do pacote', () => {
-  const opts = resolveWebVersionOptions();
-  assert.equal(opts.webVersion, PINNED_WEB_VERSION);
-  assert.equal(opts.webVersionCache.type, 'local');
-  assert.equal(opts.webVersionCache.path, path.resolve(WA_WEB_CACHE_DIR));
-  // O HTML pinado precisa existir no pacote — sem ele o Client cai no
-  // comportamento quebrado silenciosamente.
-  assert.ok(fs.existsSync(path.join(opts.webVersionCache.path, `${opts.webVersion}.html`)));
-});
-
-test('resolveWebVersionOptions: null/false/vazio desliga o pin', () => {
+test('resolveWebVersionOptions: default é SEM pin (WA Web latest)', () => {
+  // Pin de build antigo só funciona enquanto o WhatsApp mantém os assets no
+  // CDN — builds removidos morrem no boot ('auth timeout'). O default precisa
+  // ser o comportamento nativo da lib.
+  assert.deepEqual(resolveWebVersionOptions(), {});
   assert.deepEqual(resolveWebVersionOptions({ webVersion: null }), {});
   assert.deepEqual(resolveWebVersionOptions({ webVersion: false }), {});
   assert.deepEqual(resolveWebVersionOptions({ webVersion: '' }), {});
+  assert.deepEqual(resolveWebVersionOptions({ webVersion: '   ' }), {});
 });
 
-test('resolveWebVersionOptions: versão e diretório customizados', () => {
+test('resolveWebVersionOptions: pin custom com versão e diretório', () => {
   const opts = resolveWebVersionOptions({ webVersion: '9.9.9-test', webVersionCacheDir: '/tmp/wa-cache' });
   assert.equal(opts.webVersion, '9.9.9-test');
   assert.deepEqual(opts.webVersionCache, { type: 'local', path: '/tmp/wa-cache' });
+});
+
+test('resolveWebVersionOptions: pin custom sem diretório cai no default do pacote', () => {
+  const opts = resolveWebVersionOptions({ webVersion: '9.9.9-test' });
+  assert.equal(opts.webVersion, '9.9.9-test');
+  assert.equal(opts.webVersionCache.type, 'local');
+  assert.ok(opts.webVersionCache.path.endsWith('wa-web'));
 });
 
 test('createBridge repassa webVersion/webVersionCacheDir à clientFactory', async () => {

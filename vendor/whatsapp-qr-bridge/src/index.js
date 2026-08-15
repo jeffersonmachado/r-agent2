@@ -23,30 +23,29 @@ const DEFAULT_SYNC_INTERVAL_MS = 30000;
 const DEFAULT_QR_EXPIRES_IN_MS = 2 * 60 * 1000;
 
 /**
- * Workaround para o bug wwebjs#127084: a partir de 2026-06-20 os builds
- * 2.3000.1041xxx+ do WhatsApp Web quebram o whatsapp-web.js — `authenticated`
- * dispara, mas `ready` nunca (loading chega a 100% e trava). O remédio
- * validado é pinar um build anterior à quebra, servido de cache LOCAL (o
- * wa-version poda builds antigos, então `type: 'remote'` daria 404).
- * O HTML pinado fica em `wa-web/<versao>.html` dentro do próprio pacote.
+ * Suporte a pin de versão do WhatsApp Web (workaround para quebras da lib
+ * como o wwebjs#127084, em que `authenticated` dispara mas `ready` nunca).
+ *
+ * ATENÇÃO: pin só funciona enquanto o WhatsApp mantiver os assets do build
+ * no CDN — builds antigos são removidos e a página morre no boot (sem CSS,
+ * `auth timeout`). Por isso o default é NÃO pinar: usa o WA Web mais recente
+ * e cabe à dependência whatsapp-web.js estar atualizada (usamos o main).
+ *
+ *   - webVersion undefined/null/false/'' → sem pin (WA Web latest; default);
+ *   - webVersion '<versao>'              → pin custom; exige `<versao>.html`
+ *                                          em webVersionCacheDir (default:
+ *                                          wa-web/ do pacote, se existir).
  */
-const PINNED_WEB_VERSION = '2.3000.1037753511-alpha';
 const WA_WEB_CACHE_DIR = path.join(__dirname, '..', 'wa-web');
 
 /**
  * Resolve as opções `webVersion`/`webVersionCache` para o Client do
- * whatsapp-web.js.
- *   - webVersion undefined        → pin default (PINNED_WEB_VERSION + cache
- *                                   local do pacote);
- *   - webVersion null/false/''    → sem pin (WA Web mais recente; comportamento
- *                                   nativo da lib);
- *   - webVersion '<versao>'       → pin custom; o arquivo `<versao>.html` deve
- *                                   existir em webVersionCacheDir (default:
- *                                   wa-web/ do pacote).
+ * whatsapp-web.js. Retorna {} quando não há pin (comportamento nativo da lib).
  */
 function resolveWebVersionOptions({ webVersion, webVersionCacheDir } = {}) {
-  if (webVersion === null || webVersion === false || webVersion === '') return {};
-  const version = safeTrim(webVersion) || PINNED_WEB_VERSION;
+  if (webVersion === null || webVersion === false) return {};
+  const version = safeTrim(webVersion);
+  if (!version) return {};
   const cacheDir = path.resolve(safeTrim(webVersionCacheDir) || WA_WEB_CACHE_DIR);
   return { webVersion: version, webVersionCache: { type: 'local', path: cacheDir } };
 }
@@ -553,7 +552,6 @@ module.exports = {
   normalizeDestination,
   sanitizeClientId,
   resolveWebVersionOptions,
-  PINNED_WEB_VERSION,
   WA_WEB_CACHE_DIR,
   STATUS,
 };

@@ -39,7 +39,7 @@ const bridge = createBridge({
   syncIntervalMs: 30000,                          // default 30000; 0 desliga
   // clientFactory: ({ clientId, dataPath, connectionId, puppeteer, webVersion, webVersionCacheDir }) => client,
   // puppeteer: { headless: true, args: [...] },
-  // webVersion: undefined → pin default (ver abaixo); null → WA Web latest; '<versao>' → pin custom
+  // webVersion: undefined/null → sem pin (WA Web latest, default); '<versao>' → pin custom
   // webVersionCacheDir: '/dir/com/<versao>.html',  // default: wa-web/ do pacote
   // logger: console,
 });
@@ -73,28 +73,23 @@ await bridge.removeConnection('conn-1');                 // remove do bridge
 await bridge.stop();                                     // para sync e destrói tudo
 ```
 
-## Pin de versão do WhatsApp Web (workaround wwebjs#127084)
+## Pin de versão do WhatsApp Web (escape hatch)
 
-Desde 2026-06-20, os builds `2.3000.1041xxx+` do WhatsApp Web quebram o
-whatsapp-web.js: `authenticated` dispara, mas `ready` nunca (o loading chega a
-100% e trava — pareamento e restore de sessão ficam em "aguardando"). O
-remédio validado pela comunidade é pinar um build anterior à quebra servido de
-cache **local** (o repositório `wppconnect-team/wa-version` poda builds
-antigos, então `type: 'remote'` daria 404).
+O whatsapp-web.js já sofreu quebras por rollout de builds novos do WhatsApp
+Web (ex.: wwebjs#127084 — `authenticated` dispara, `ready` nunca). Para esses
+casos o pacote permite pinar um build específico:
 
-Por isso o pacote **pina por default** o build `2.3000.1037753511-alpha`,
-cujo HTML fica em `wa-web/2.3000.1037753511-alpha.html` dentro do próprio
-pacote. Comportamento:
-
-- `webVersion` **não informado** → pin default (recomendado enquanto o bug
-  estiver aberto);
-- `webVersion: null` → sem pin, usa o WA Web mais recente (volta ao
-  comportamento nativo da lib — útil para testar se o bug foi corrigido);
+- `webVersion` **não informado** → **sem pin** (default; WA Web mais recente);
 - `webVersion: '<versao>'` → pin custom; exige `<versao>.html` em
   `webVersionCacheDir` (default: `wa-web/` do pacote).
 
+ATENÇÃO: pin só funciona enquanto o WhatsApp mantiver os assets do build no
+CDN. Builds antigos são removidos e a página morre no boot (sem CSS, o
+initialize falha com `auth timeout`). Use pin apenas como medida temporária,
+com um build recente o bastante para ainda estar no ar.
+
 `resolveWebVersionOptions({ webVersion, webVersionCacheDir })` é exportada
-para que `clientFactory` customizadas apliquem o mesmo pin:
+para que `clientFactory` customizadas apliquem a mesma lógica:
 
 ```js
 const { resolveWebVersionOptions } = require('@results/whatsapp-qr-bridge');
