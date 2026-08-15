@@ -479,7 +479,7 @@ async function recoverRecentInboundMessages({ tenantId, connectionId, client }) 
  * clientId/dataPath precisam manter o formato legado (`ria_<tenant>_<conn>`)
  * para reutilizar as sessões já pareadas em disco.
  */
-function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCacheDir }) {
+function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCacheDir, userAgent }) {
   const wa = loadWhatsappWebJs();
   const { Client, LocalAuth } = wa;
   // eslint-disable-next-line global-require
@@ -493,6 +493,10 @@ function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCac
     // CPU limitada o boot+injeção do WA Web passa disso e o pareamento morre
     // em "auth timeout" antes de gerar o QR.
     authTimeoutMs: 120000,
+    // userAgent resolvido pelo bridge (default: UA real do Chrome — o spoof
+    // nativo da lib, Chrome 101/macOS 10.14, derruba a sessão minutos após
+    // o pareamento desde o endurecimento anti-automação da Meta).
+    ...(userAgent !== undefined ? { userAgent } : {}),
     puppeteer: buildPuppeteerOptions(),
     // Pin do build do WA Web (workaround wwebjs#127084): undefined → default
     // do pacote; null → latest. Configurável via WHATSAPP_QR_WEB_VERSION.
@@ -601,6 +605,9 @@ function getBridge() {
       if (!raw) return undefined;
       return raw.toLowerCase() === 'latest' ? null : raw;
     })(),
+    // undefined/'auto' → UA real do Chrome (resolvido no pacote);
+    // 'default' → spoof nativo da lib; outra string → usada como está.
+    userAgent: safeTrim(process.env.WHATSAPP_QR_USER_AGENT || '') || undefined,
     logger: {
       info: (msg, extra) => logger.info(msg, extra),
       warn: (msg, extra) => logger.warn(msg, extra),

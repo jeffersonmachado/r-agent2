@@ -41,6 +41,8 @@ const bridge = createBridge({
   // puppeteer: { headless: true, args: [...] },
   // webVersion: undefined/null → sem pin (WA Web latest, default); '<versao>' → pin custom
   // webVersionCacheDir: '/dir/com/<versao>.html',  // default: wa-web/ do pacote
+  // userAgent: undefined/'auto' → UA com a versão real do Chrome (default);
+  //   'default' → spoof nativo da lib; false → UA genuíno do binário; string → como está
   // logger: console,
 });
 
@@ -98,6 +100,28 @@ const client = new Client({
   ...resolveWebVersionOptions({ webVersion, webVersionCacheDir }),
 });
 ```
+
+## User-Agent do Chrome (anti-LOGOUT da Meta)
+
+O default do whatsapp-web.js é um fingerprint congelado (Chrome 101 em macOS
+10.14, de 2022). Desde o endurecimento anti-automação da Meta (2025-11 em
+diante), sessões pareadas com esse UA impossível (binário real Chrome 14x + UA
+Chrome 101) são derrubadas com LOGOUT minutos após o pareamento — verificado
+em prod e local (ago/2026), enquanto o WA Web oficial (UA real do browser)
+permanece estável.
+
+Por isso o pacote resolve o `userAgent` assim:
+
+- `userAgent` **não informado** ou `'auto'` → **detecta a versão real** do
+  binário do Chrome (`--version`) e monta um UA coerente com a plataforma
+  (default); se nenhum binário for encontrado, usa `false` (UA genuíno do
+  binário, sem spoof da lib);
+- `userAgent: 'default'` → spoof nativo da lib (escape hatch p/ comparar);
+- `userAgent: false` → desliga o spoof da lib;
+- qualquer outra string → usada como está.
+
+`resolveUserAgent({ userAgent, executablePath })` é exportada para que
+`clientFactory` customizadas apliquem a mesma lógica.
 
 ## API
 

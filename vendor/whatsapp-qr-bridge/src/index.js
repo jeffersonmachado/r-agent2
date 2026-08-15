@@ -50,6 +50,69 @@ function resolveWebVersionOptions({ webVersion, webVersionCacheDir } = {}) {
   return { webVersion: version, webVersionCache: { type: 'local', path: cacheDir } };
 }
 
+/**
+ * Resolve o user-agent do Client do whatsapp-web.js.
+ *
+ * Motivo: o default da lib é um fingerprint congelado (Chrome 101 em
+ * macOS 10.14, de 2022). Desde o endurecimento anti-automação da Meta
+ * (2025-11 em diante), sessões pareadas com esse UA impossível (binário
+ * real Chrome 14x + UA Chrome 101) são derrubadas com LOGOUT minutos após
+ * o pareamento — verificado em prod e local (ago/2026), enquanto o WA Web
+ * oficial (UA real do browser) permanece estável.
+ *
+ *   - userAgent undefined/'auto' → detecta a versão real do binário do
+ *     Chrome (`--version`) e monta um UA coerente com a plataforma;
+ *     fallback: false (UA genuíno do binário, sem spoof da lib);
+ *   - userAgent 'default'        → undefined (spoof nativo da lib — escape
+ *                                  hatch para comparar comportamento);
+ *   - userAgent false            → false (desliga o spoof da lib);
+ *   - qualquer outra string      → usada como está.
+ */
+function resolveUserAgent({ userAgent, executablePath } = {}) {
+  if (userAgent === false) return false;
+  const raw = safeTrim(userAgent);
+  if (raw && raw.toLowerCase() === 'default') return undefined;
+  if (raw && raw.toLowerCase() !== 'auto') return raw;
+  const detected = detectChromeVersion(executablePath);
+  if (!detected) return false;
+  const platform = {
+    linux: 'X11; Linux x86_64',
+    darwin: 'Macintosh; Intel Mac OS X 10_15_7',
+    win32: 'Windows NT 10.0; Win64; x64',
+  }[process.platform] || 'X11; Linux x86_64';
+  return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${detected} Safari/537.36`;
+}
+
+/**
+ * Descobre a versão real do Chrome/Chromium: primeiro o executablePath
+ * informado, depois o cache do puppeteer (PUPPETEER_CACHE_DIR ou
+ * ~/.cache/puppeteer) e por fim binários comuns do sistema.
+ */
+function detectChromeVersion(executablePath) {
+  const candidates = [];
+  const explicit = safeTrim(executablePath);
+  if (explicit) candidates.push(explicit);
+  const cacheDir = safeTrim(process.env.PUPPETEER_CACHE_DIR) || path.join(process.env.HOME || '/root', '.cache', 'puppeteer');
+  const globDirs = [path.join(cacheDir, 'chrome'), path.join(cacheDir, 'chrome-headless-shell')];
+  for (const base of globDirs) {
+    try {
+      for (const entry of fs.readdirSync(base).sort().reverse()) {
+        candidates.push(path.join(base, entry, 'chrome-linux64', 'chrome'));
+        candidates.push(path.join(base, entry, 'chrome-headless-shell-linux64', 'chrome-headless-shell'));
+      }
+    } catch (_) {}
+  }
+  candidates.push('/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser');
+  for (const bin of candidates) {
+    try {
+      const out = require('child_process').execFileSync(bin, ['--version'], { timeout: 5000, stdio: ['ignore', 'pipe', 'ignore'] });
+      const m = safeToString(out).match(/(\d+\.\d+\.\d+\.\d+)/);
+      if (m) return m[1];
+    } catch (_) {}
+  }
+  return null;
+}
+
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
   try { return String(value); } catch (_) { return fallback; }
@@ -151,11 +214,12 @@ function normalizeLogger(logger) {
  * O require é lazy para que testes (com clientFactory injetado) não puxem
  * puppeteer/Chrome.
  */
-function defaultClientFactory({ clientId, dataPath, puppeteer, webVersion, webVersionCacheDir }) {
+function defaultClientFactory({ clientId, dataPath, puppeteer, webVersion, webVersionCacheDir, userAgent }) {
   const wa = loadWhatsappWebJs();
   const { Client, LocalAuth } = wa;
   return new Client({
     authStrategy: new LocalAuth({ clientId, dataPath }),
+    ...(userAgent !== undefined ? { userAgent } : {}),
     puppeteer: puppeteer || {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
@@ -168,6 +232,11 @@ function createBridge(options = {}) {
   const logger = normalizeLogger(options.logger);
   const authDataPath = path.resolve(safeTrim(options.authDataPath) || '.wwebjs_auth');
   const clientFactory = typeof options.clientFactory === 'function' ? options.clientFactory : defaultClientFactory;
+  // Resolvido uma vez: a detecção executa o binário do Chrome (--version).
+  const resolvedUserAgent = resolveUserAgent({
+    userAgent: options.userAgent,
+    executablePath: options.puppeteer && options.puppeteer.executablePath,
+  });
   const qrExpiresInMs = Number.isFinite(Number(options.qrExpiresInMs)) && Number(options.qrExpiresInMs) > 0
     ? Number(options.qrExpiresInMs)
     : DEFAULT_QR_EXPIRES_IN_MS;
@@ -282,6 +351,7 @@ function createBridge(options = {}) {
           puppeteer: options.puppeteer,
           webVersion: options.webVersion,
           webVersionCacheDir: options.webVersionCacheDir,
+          userAgent: resolvedUserAgent,
         });
       } catch (err) {
         const message = safeErrorMessage(err, 'client_factory_failed');
@@ -552,6 +622,7 @@ module.exports = {
   normalizeDestination,
   sanitizeClientId,
   resolveWebVersionOptions,
+  resolveUserAgent,
   WA_WEB_CACHE_DIR,
   STATUS,
 };
