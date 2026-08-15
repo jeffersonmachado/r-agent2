@@ -101,6 +101,13 @@ const client = new Client({
 });
 ```
 
+Sem pin, passe também o `dataPath`
+(`resolveWebVersionOptions({ dataPath })`): o default da lib é persistir o
+`index.html` servido em `./.wwebjs_cache` (relativo ao CWD) — em container
+com CWD read-only o persist morre com EACCES no meio do handler de
+`authenticated` e a sessão fica presa em `connected` sem erro (prod,
+ago/2026). Com `dataPath` o cache vai para `<dataPath>/.wwebjs_cache`.
+
 ## User-Agent do Chrome (anti-LOGOUT da Meta)
 
 O default do whatsapp-web.js é um fingerprint congelado (Chrome 101 em macOS

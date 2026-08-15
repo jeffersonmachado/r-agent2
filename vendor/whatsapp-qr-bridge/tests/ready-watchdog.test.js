@@ -9,16 +9,24 @@ const { EventEmitter } = require('events');
 
 const { createBridge } = require('../src/index');
 
-function fakeClient({ withHandler = false } = {}) {
+function fakeClient({ withHandler = false, echoAuthenticated = false } = {}) {
   const client = new EventEmitter();
   client.initialize = async () => {};
   client.destroy = async () => {};
   client.evaluateCalls = 0;
+  client.evaluateTimestamps = [];
   // Simula a página: com handler, o kick chama window.onAppStateHasSyncedEvent
   // e a lib (aqui, o mock) completa o fluxo emitindo 'ready'.
   client.pupPage = {
     evaluate: async (fn) => {
       client.evaluateCalls += 1;
+      client.evaluateTimestamps.push(Date.now());
+      if (echoAuthenticated) {
+        // A lib re-emite 'authenticated' de dentro do handler exposto —
+        // no meio do evaluate do kick. Sem guarda, cada eco arma um timer
+        // novo e os kicks se multiplicam.
+        setImmediate(() => client.emit('authenticated'));
+      }
       if (!withHandler) return null;
       const fakeWindow = {
         onAppStateHasSyncedEvent: () => {
@@ -115,6 +123,31 @@ test('watchdog: readyWatchdogMs=0 desliga', async () => {
   await sleep(120);
 
   assert.equal(client.evaluateCalls, 0, 'watchdog desligado não deveria chutar');
+
+  await bridge.stop();
+});
+
+test('watchdog: eco de authenticated durante o kick não multiplica timers', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqr-wd-'));
+  const client = fakeClient({ echoAuthenticated: true });
+  const bridge = createBridge({
+    authDataPath: dir,
+    syncIntervalMs: 0,
+    readyWatchdogMs: 40,
+    clientFactory: () => client,
+  });
+
+  await bridge.addConnection({ id: 'conn-wd-echo' });
+  client.emit('authenticated');
+  await sleep(450); // ~11 janelas de 40ms
+
+  // Sem a guarda, cada kick ecoa authenticated e arma timers paralelos:
+  // evaluateCalls explodiria (visto em prod: 3 kicks no mesmo segundo).
+  assert.equal(client.evaluateCalls, 3, `esperava 3 kicks espaçados, veio ${client.evaluateCalls}`);
+  for (let i = 1; i < client.evaluateTimestamps.length; i++) {
+    const gap = client.evaluateTimestamps[i] - client.evaluateTimestamps[i - 1];
+    assert.ok(gap >= 30, `kicks colados (${gap}ms) — timer duplicado`);
+  }
 
   await bridge.stop();
 });

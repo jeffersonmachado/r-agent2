@@ -28,6 +28,22 @@ test('resolveWebVersionOptions: pin custom com versão e diretório', () => {
   assert.deepEqual(opts.webVersionCache, { type: 'local', path: '/tmp/wa-cache' });
 });
 
+test('resolveWebVersionOptions: sem pin + dataPath → cache local gravável ao lado da sessão', () => {
+  // Sem isto a lib usa './.wwebjs_cache' (relativo ao CWD) e o persist
+  // pós-authenticated morre com EACCES em CWD read-only de container,
+  // abortando o handler antes do LoadUtils (sessão presa em 'connected').
+  const opts = resolveWebVersionOptions({ dataPath: '/var/lib/wa/auth' });
+  assert.deepEqual(opts, { webVersionCache: { type: 'local', path: '/var/lib/wa/auth/.wwebjs_cache' } });
+  const nullPin = resolveWebVersionOptions({ webVersion: null, dataPath: '/var/lib/wa/auth' });
+  assert.deepEqual(nullPin, opts);
+});
+
+test('resolveWebVersionOptions: pin explícito ignora dataPath (cache do pin manda)', () => {
+  const opts = resolveWebVersionOptions({ webVersion: '9.9.9-test', webVersionCacheDir: '/tmp/wa-cache', dataPath: '/var/lib/wa/auth' });
+  assert.equal(opts.webVersion, '9.9.9-test');
+  assert.deepEqual(opts.webVersionCache, { type: 'local', path: '/tmp/wa-cache' });
+});
+
 test('resolveWebVersionOptions: pin custom sem diretório cai no default do pacote', () => {
   const opts = resolveWebVersionOptions({ webVersion: '9.9.9-test' });
   assert.equal(opts.webVersion, '9.9.9-test');

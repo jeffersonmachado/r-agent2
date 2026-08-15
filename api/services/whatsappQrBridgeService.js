@@ -500,7 +500,7 @@ function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCac
     puppeteer: buildPuppeteerOptions(),
     // Pin do build do WA Web (workaround wwebjs#127084): undefined → default
     // do pacote; null → latest. Configurável via WHATSAPP_QR_WEB_VERSION.
-    ...resolveWebVersionOptions({ webVersion, webVersionCacheDir }),
+    ...resolveWebVersionOptions({ webVersion, webVersionCacheDir, dataPath }),
   });
   activeClients.set(connectionId, {
     tenantId: ref.tenantId,

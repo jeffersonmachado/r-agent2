@@ -43,11 +43,23 @@ const WA_WEB_CACHE_DIR = path.join(__dirname, '..', 'wa-web');
 /**
  * Resolve as opções `webVersion`/`webVersionCache` para o Client do
  * whatsapp-web.js. Retorna {} quando não há pin (comportamento nativo da lib).
+ *
+ * Com `dataPath` informado e SEM pin, retorna apenas um `webVersionCache`
+ * local em diretório gravável ao lado da sessão: sem isso a lib usa
+ * './.wwebjs_cache' (relativo ao CWD) e o persist pós-authenticated morre
+ * com EACCES em container (CWD read-only), abortando o handler ANTES do
+ * LoadUtils — sessão presa em 'connected' sem erro (prod, ago/2026). O
+ * resolve() interno da lib continua sem pin: pede a versão default antiga,
+ * não acha no cache e serve a latest.
  */
-function resolveWebVersionOptions({ webVersion, webVersionCacheDir } = {}) {
-  if (webVersion === null || webVersion === false) return {};
+function resolveWebVersionOptions({ webVersion, webVersionCacheDir, dataPath } = {}) {
+  if (webVersion === null || webVersion === false) {
+    return dataPath ? { webVersionCache: { type: 'local', path: path.join(path.resolve(safeTrim(dataPath)), '.wwebjs_cache') } } : {};
+  }
   const version = safeTrim(webVersion);
-  if (!version) return {};
+  if (!version) {
+    return dataPath ? { webVersionCache: { type: 'local', path: path.join(path.resolve(safeTrim(dataPath)), '.wwebjs_cache') } } : {};
+  }
   const cacheDir = path.resolve(safeTrim(webVersionCacheDir) || WA_WEB_CACHE_DIR);
   return { webVersion: version, webVersionCache: { type: 'local', path: cacheDir } };
 }
@@ -226,7 +238,10 @@ function defaultClientFactory({ clientId, dataPath, puppeteer, webVersion, webVe
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     },
-    ...resolveWebVersionOptions({ webVersion, webVersionCacheDir }),
+    // dataPath: sem pin, garante webVersionCache em dir gravável (sem isso o
+    // persist pós-authenticated morre com EACCES em CWD read-only e a sessão
+    // fica presa em 'connected' — ver resolveWebVersionOptions).
+    ...resolveWebVersionOptions({ webVersion, webVersionCacheDir, dataPath }),
   });
 }
 
@@ -302,23 +317,26 @@ function createBridge(options = {}) {
       clearTimeout(entry.readyWatchdogTimer);
       entry.readyWatchdogTimer = null;
     }
-    entry.readyWatchdogAttempts = 0;
   }
 
   function armReadyWatchdog(entry, client) {
-    clearReadyWatchdog(entry);
+    // Já armado: sai. O kick chama onAppStateHasSyncedEvent, que faz a lib
+    // re-emitir 'authenticated' no meio do evaluate do tick — sem esta guarda
+    // (e sem a do fim do tick) cada eco arma um timer novo e os kicks se
+    // multiplicam (visto em prod: 3 kicks no mesmo segundo).
+    if (entry.readyWatchdogTimer) return;
     if (!readyWatchdogMs) return;
     const tick = async () => {
       entry.readyWatchdogTimer = null;
       if (entry.ready || entry.client !== client) return;
-      entry.readyWatchdogAttempts += 1;
-      if (entry.readyWatchdogAttempts > READY_WATCHDOG_MAX_ATTEMPTS) {
+      if (entry.readyWatchdogAttempts >= READY_WATCHDOG_MAX_ATTEMPTS) {
         logger.warn('[whatsapp-qr-bridge] ready não disparou após authenticated; tentativas de re-injeção esgotadas', {
           connectionId: entry.id,
           attempts: READY_WATCHDOG_MAX_ATTEMPTS,
         });
         return;
       }
+      entry.readyWatchdogAttempts += 1;
       logger.warn('[whatsapp-qr-bridge] ready não disparou após authenticated; forçando re-injeção do WWebJS', {
         connectionId: entry.id,
         attempt: entry.readyWatchdogAttempts,
@@ -336,7 +354,7 @@ function createBridge(options = {}) {
       } catch (err) {
         logger.warn('[whatsapp-qr-bridge] Falha no kick de re-injeção', { connectionId: entry.id, error: safeErrorMessage(err) });
       }
-      if (!entry.ready && entry.client === client) {
+      if (!entry.ready && entry.client === client && !entry.readyWatchdogTimer) {
         entry.readyWatchdogTimer = setTimeout(tick, readyWatchdogMs);
         if (entry.readyWatchdogTimer.unref) entry.readyWatchdogTimer.unref();
       }
@@ -429,6 +447,7 @@ function createBridge(options = {}) {
       // Registra antes do initialize() para que o handler de 'ready' marque ready=true.
       entry.client = client;
       entry.ready = false;
+      entry.readyWatchdogAttempts = 0;
       if (!STATUS.includes(entry.status) || entry.status === 'disconnected' || entry.status === 'error') {
         setStatus(entry, 'pairing');
       }
