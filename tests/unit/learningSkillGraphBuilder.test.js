@@ -111,6 +111,37 @@ describe('learning skill-graph builder (buildSkillGraphData)', () => {
     expect(artifact.routeSkillMap['/fitness/attendance']).toBeUndefined();
   });
 
+  test('skills de domínio scheduling e billing cobrem agenda e plano/cobrança', () => {
+    const inputs = buildInputs();
+    inputs.menuEntries.push({ path: '/onboarding', permission: { resource: 'tenant', action: 'read' } });
+    inputs.capabilities.push(
+      { id: 'scheduling' },
+      { id: 'notifications' },
+      { id: 'billing_validation' },
+      { id: 'payment' },
+      { id: 'lead_capture' },
+      { id: 'crm_updates' },
+      { id: 'onboarding' },
+    );
+    const { artifact, report } = buildSkillGraphData(inputs);
+
+    const scheduling = artifact.skills.find((s) => s.key === 'scheduling');
+    expect(scheduling.routes).toEqual(['/agenda']);
+    expect(scheduling.capabilities).toEqual(['notifications', 'scheduling']);
+
+    const billing = artifact.skills.find((s) => s.key === 'billing');
+    expect(billing.routes).toEqual(['/plan-usage']);
+    expect(billing.capabilities).toEqual(['billing_validation', 'payment']);
+
+    const crm = artifact.skills.find((s) => s.key === 'crm');
+    expect(crm.capabilities).toEqual(expect.arrayContaining(['crm_update', 'crm_updates', 'lead_capture']));
+
+    const tenant = artifact.skills.find((s) => s.key === 'tenant');
+    expect(tenant.capabilities).toContain('onboarding');
+
+    expect(report.unmappedCapabilities).toEqual(['mystery_capability']);
+  });
+
   test('artefato é determinístico e versionado', () => {
     const { artifact } = buildSkillGraphData(buildInputs());
     expect(artifact.version).toBe(1);

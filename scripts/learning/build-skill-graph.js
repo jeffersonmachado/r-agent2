@@ -49,11 +49,18 @@ const CAPABILITY_SKILL_MAP = Object.freeze({
   support_ticket_flow: 'tickets',
   support_ticket_reply: 'tickets',
   crm_update: 'crm',
+  crm_updates: 'crm',
+  lead_capture: 'crm',
+  onboarding: 'tenant',
   access_decision: 'access_control',
   membership_validation: 'access_control',
   turnstile_release: 'access_control',
   customer_identification: 'access_control',
   attendance_record: 'access_control',
+  scheduling: 'scheduling',
+  notifications: 'scheduling',
+  billing_validation: 'billing',
+  payment: 'billing',
 });
 
 /**
@@ -73,6 +80,20 @@ const DOMAIN_SKILLS = Object.freeze({
     label: 'access_control',
     kind: 'domain',
     routes: ['/access-control', '/fitness/attendance'],
+  },
+  scheduling: {
+    key: 'scheduling',
+    label: 'scheduling',
+    kind: 'domain',
+    // agenda é registrada no menu como resource genérico 'reports'
+    routes: ['/agenda'],
+  },
+  billing: {
+    key: 'billing',
+    label: 'billing',
+    kind: 'domain',
+    // única tela de plano/cobrança exposta no menu (resource 'config')
+    routes: ['/plan-usage'],
   },
 });
 

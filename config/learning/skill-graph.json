@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-16T03:21:12.887Z",
+  "generatedAt": "2026-08-16T03:33:43.007Z",
   "skills": [
     {
       "key": "access_control",
@@ -36,6 +36,18 @@
         "/audit"
       ],
       "capabilities": []
+    },
+    {
+      "key": "billing",
+      "label": "billing",
+      "kind": "domain",
+      "routes": [
+        "/plan-usage"
+      ],
+      "capabilities": [
+        "billing_validation",
+        "payment"
+      ]
     },
     {
       "key": "bulk_messaging",
@@ -116,7 +128,9 @@
         "/crm/webhooks"
       ],
       "capabilities": [
-        "crm_update"
+        "crm_update",
+        "crm_updates",
+        "lead_capture"
       ]
     },
     {
@@ -231,6 +245,18 @@
       "capabilities": []
     },
     {
+      "key": "scheduling",
+      "label": "scheduling",
+      "kind": "domain",
+      "routes": [
+        "/agenda"
+      ],
+      "capabilities": [
+        "notifications",
+        "scheduling"
+      ]
+    },
+    {
       "key": "tenant",
       "label": "tenant",
       "kind": "resource",
@@ -238,7 +264,9 @@
         "/onboarding",
         "/tenants"
       ],
-      "capabilities": []
+      "capabilities": [
+        "onboarding"
+      ]
     },
     {
       "key": "tickets",
