@@ -8,10 +8,13 @@
  * rota dentro do lote recente (erro = type `error`/`flow_abandoned` ou
  * `api_call` com status >= 400 / errorCode).
  *
- * Nível 1 (dica): com dificuldade detectada, busca UMA dica contextual via
- * RAG (`queryRag`) e emite `tutor.hint` por WebSocket somente para o agente
- * afetado. Sem fallback heurístico: RAG indisponível/sem resposta => nenhum
- * hint é emitido e o motivo fica explícito no log (`ai_unavailable`).
+ * Nível 1 (dica): com dificuldade detectada, busca UMA dica contextual —
+ * primeiro no FAQ curado da jornada (perguntas incluídas pelo admin, casadas
+ * com os códigos de erro observados; fonte `curated_faq`), depois via RAG
+ * (`queryRag`) — e emite `tutor.hint` por WebSocket somente para o agente
+ * afetado. Sem fallback heurístico: FAQ sem match e RAG indisponível/sem
+ * resposta => nenhum hint é emitido e o motivo fica explícito no log
+ * (`ai_unavailable`).
  *
  * Governança:
  * - Todo hint emitido é persistido em `learning_tutor_hints` (auditoria).
@@ -122,6 +125,28 @@ async function buildHintText({ tenantId, route, errorEvents }) {
   const errorCodes = Array.from(new Set(
     errorEvents.map((e) => e && e.payload && (e.payload.errorCode || e.payload.status)).filter(Boolean),
   )).slice(0, 5);
+
+  // FAQ curado da jornada (incluído pelo admin) tem prioridade sobre o RAG:
+  // casa os códigos de erro observados com as perguntas incluídas da rota.
+  try {
+    const curated = await journeyFaqService.findCuratedFaqForRoute({
+      tenantId,
+      route,
+      question: errorCodes.join(' '),
+    });
+    if (curated && curated.match) {
+      return {
+        hintText: `${curated.match.question} ${curated.match.answer}`.slice(0, MAX_HINT_CHARS),
+        source: 'curated_faq',
+      };
+    }
+  } catch (error) {
+    logger.warn('[learning-core] Tutor: FAQ curado indisponivel na dica, seguindo para RAG', {
+      tenantId,
+      route,
+      error: error.message,
+    });
+  }
 
   const query = [
     `Explique de forma breve e pratica como usar corretamente a tela "${route}" da plataforma,`,

@@ -276,10 +276,11 @@ Assessment + Certification + Mentor + Adaptive + Analytics + Tutor níveis 2-4.
 - **Persistência**: tabela `learning_journey_faqs` (migration
   `20260724120000-create-learning-journey-faq.js`, model
   `api/db/models/LearningJourneyFaq.js`).
-- **Consumo**: Tutor nível 2 prioriza FAQ `included`+`current` da jornada
-  (fonte `curated_faq`) via mapa rota→jornada do skill graph; sem match ≥ 0.5
-  de sobreposição de tokens, segue o fluxo RAG normal. Falha do FAQ nunca
-  quebra o Tutor (try/catch → RAG).
+- **Consumo**: Tutor níveis 1 (dica proativa, casa códigos de erro) e 2
+  (explicação, casa a pergunta do usuário) priorizam FAQ `included`+`current`
+  da jornada (fonte `curated_faq`) via mapa rota→jornada do skill graph; sem
+  match ≥ 0.5 de sobreposição de tokens, segue o fluxo RAG normal. Falha do
+  FAQ nunca quebra o Tutor (try/catch → RAG).
 - **UI**: aba "Perguntas & Respostas" no Academy
   (`frontend/src/components/academy/JourneyFaqTab.jsx`); usuário comum vê só
   `included`, admin gera e cura.

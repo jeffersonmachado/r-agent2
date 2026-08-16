@@ -18,6 +18,12 @@ jest.mock('../../api/services/websocketService', () => ({
   emitEvent: (...args) => mockEmitEvent(...args),
 }));
 
+const mockFindCuratedFaq = jest.fn();
+
+jest.mock('../../api/modules/learning-core/journeyFaqService', () => ({
+  findCuratedFaqForRoute: (...args) => mockFindCuratedFaq(...args),
+}));
+
 jest.mock('../../api/utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
@@ -55,6 +61,7 @@ describe('learning-core tutorService', () => {
     mockHintFindOne.mockResolvedValue(null);
     mockHintCreate.mockImplementation(async (values) => ({ id: 'hint-1', createdAt: new Date(), ...values }));
     mockQueryRag.mockResolvedValue({ success: true, response: 'Use a caixa de entrada assim.' });
+    mockFindCuratedFaq.mockResolvedValue(null);
   });
 
   describe('detectDifficulty (nível 0)', () => {
@@ -152,6 +159,44 @@ describe('learning-core tutorService', () => {
         expect.objectContaining({ route: '/inbox', level: 1, hint: 'Use a caixa de entrada assim.' }),
         { agentId: 42 },
       );
+    });
+
+    test('FAQ curado casa com códigos de erro e evita RAG (source curated_faq)', async () => {
+      mockFindCuratedFaq.mockResolvedValue({
+        journeyKeys: ['support_ticket_flow'],
+        match: {
+          id: 'faq-9',
+          question: 'Quais pré-condições são necessárias?',
+          answer: 'Obrigatórias: authenticated_agent, tenant_loaded.',
+        },
+        score: 0.7,
+      });
+
+      const result = await evaluateAndMaybeHint(baseArgs());
+
+      expect(result).toEqual({ hintEmitted: true });
+      expect(mockFindCuratedFaq).toHaveBeenCalledWith(expect.objectContaining({
+        tenantId: 'system',
+        route: '/inbox',
+        question: 'http_500 http_404',
+      }));
+      expect(mockQueryRag).not.toHaveBeenCalled();
+      expect(mockHintCreate).toHaveBeenCalledWith(expect.objectContaining({ source: 'curated_faq' }));
+      expect(mockEmitEvent).toHaveBeenCalledWith(
+        'tutor.hint',
+        expect.objectContaining({ source: 'curated_faq' }),
+        { agentId: 42 },
+      );
+    });
+
+    test('FAQ curado falhando não quebra o nível 1 (cai para RAG)', async () => {
+      mockFindCuratedFaq.mockRejectedValue(new Error('db down'));
+
+      const result = await evaluateAndMaybeHint(baseArgs());
+
+      expect(result).toEqual({ hintEmitted: true });
+      expect(mockQueryRag).toHaveBeenCalledTimes(1);
+      expect(mockHintCreate).toHaveBeenCalledWith(expect.objectContaining({ source: 'rag' }));
     });
   });
 });
