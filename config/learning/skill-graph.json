@@ -1,14 +1,19 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-23T17:10:33.405Z",
+  "generatedAt": "2026-08-16T03:21:12.887Z",
   "skills": [
     {
       "key": "access_control",
       "label": "access control",
       "kind": "domain",
-      "routes": [],
+      "routes": [
+        "/access-control",
+        "/fitness/attendance"
+      ],
       "capabilities": [
         "access_decision",
+        "attendance_record",
+        "customer_identification",
         "membership_validation",
         "turnstile_release"
       ]
@@ -53,6 +58,7 @@
         "/channel-accounts",
         "/channel-health",
         "/config",
+        "/dev/stack-versions",
         "/dev/system-status",
         "/developer-keys",
         "/generate-system",
@@ -205,17 +211,6 @@
         "/dev/qa-waves",
         "/dev/qa-waves/enterprise-governance",
         "/dev/qa-waves/operational-health",
-        "/dev/work-management",
-        "/dev/work-management/ai-suggestions",
-        "/dev/work-management/board",
-        "/dev/work-management/deliverables",
-        "/dev/work-management/documents",
-        "/dev/work-management/metrics",
-        "/dev/work-management/operations",
-        "/dev/work-management/projects",
-        "/dev/work-management/qa-validation",
-        "/dev/work-management/team",
-        "/dev/work-management/timeline",
         "/dispatch",
         "/export",
         "/fila-fisica",
@@ -286,6 +281,7 @@
       "label": "workspace",
       "kind": "resource",
       "routes": [
+        "/academy",
         "/workspace"
       ],
       "capabilities": []
@@ -293,12 +289,90 @@
   ],
   "journeys": [
     {
+      "key": "academy_learning",
+      "requiredCapabilities": [
+        "academy_learning"
+      ]
+    },
+    {
+      "key": "agenda",
+      "requiredCapabilities": [
+        "agenda"
+      ]
+    },
+    {
       "key": "agendamento",
       "requiredCapabilities": [
         "customer_identification",
         "scheduling",
         "notifications",
         "crm_update"
+      ]
+    },
+    {
+      "key": "agent_factory",
+      "requiredCapabilities": [
+        "agent_factory"
+      ]
+    },
+    {
+      "key": "agent_marketplace",
+      "requiredCapabilities": [
+        "agent_marketplace"
+      ]
+    },
+    {
+      "key": "agent_orchestrator",
+      "requiredCapabilities": [
+        "agent_orchestration"
+      ]
+    },
+    {
+      "key": "agent_registry",
+      "requiredCapabilities": [
+        "agent_registry"
+      ]
+    },
+    {
+      "key": "agents",
+      "requiredCapabilities": [
+        "agents"
+      ]
+    },
+    {
+      "key": "ai_governance",
+      "requiredCapabilities": [
+        "ai_governance"
+      ]
+    },
+    {
+      "key": "ai_tools",
+      "requiredCapabilities": [
+        "ai_tools"
+      ]
+    },
+    {
+      "key": "analytics",
+      "requiredCapabilities": [
+        "analytics"
+      ]
+    },
+    {
+      "key": "audio_transcribe",
+      "requiredCapabilities": [
+        "audio_transcribe"
+      ]
+    },
+    {
+      "key": "automations",
+      "requiredCapabilities": [
+        "automations"
+      ]
+    },
+    {
+      "key": "backup_restore",
+      "requiredCapabilities": [
+        "backup_restore"
       ]
     },
     {
@@ -320,9 +394,33 @@
       ]
     },
     {
+      "key": "billing",
+      "requiredCapabilities": [
+        "billing"
+      ]
+    },
+    {
       "key": "booking_flow",
       "requiredCapabilities": [
         "support_ticket_flow"
+      ]
+    },
+    {
+      "key": "bulk_messaging",
+      "requiredCapabilities": [
+        "bulk_messaging"
+      ]
+    },
+    {
+      "key": "calendar",
+      "requiredCapabilities": [
+        "calendar"
+      ]
+    },
+    {
+      "key": "campaigns",
+      "requiredCapabilities": [
+        "campaigns"
       ]
     },
     {
@@ -333,6 +431,30 @@
         "billing_validation",
         "crm_update",
         "notifications"
+      ]
+    },
+    {
+      "key": "capability_crm_updates",
+      "requiredCapabilities": [
+        "crm_updates"
+      ]
+    },
+    {
+      "key": "capability_lead_capture",
+      "requiredCapabilities": [
+        "lead_capture"
+      ]
+    },
+    {
+      "key": "capability_scheduling",
+      "requiredCapabilities": [
+        "scheduling"
+      ]
+    },
+    {
+      "key": "channel_accounts",
+      "requiredCapabilities": [
+        "channel_accounts"
       ]
     },
     {
@@ -362,6 +484,60 @@
         "scheduling",
         "crm_updates",
         "notifications"
+      ]
+    },
+    {
+      "key": "cognitive_assistant",
+      "requiredCapabilities": [
+        "cognitive_assistant"
+      ]
+    },
+    {
+      "key": "conversations_chat",
+      "requiredCapabilities": [
+        "conversations_chat"
+      ]
+    },
+    {
+      "key": "deliveries",
+      "requiredCapabilities": [
+        "deliveries"
+      ]
+    },
+    {
+      "key": "demo",
+      "requiredCapabilities": [
+        "demo"
+      ]
+    },
+    {
+      "key": "departments",
+      "requiredCapabilities": [
+        "departments"
+      ]
+    },
+    {
+      "key": "developer",
+      "requiredCapabilities": [
+        "developer"
+      ]
+    },
+    {
+      "key": "export",
+      "requiredCapabilities": [
+        "export"
+      ]
+    },
+    {
+      "key": "failed_messages",
+      "requiredCapabilities": [
+        "failed_messages"
+      ]
+    },
+    {
+      "key": "faq",
+      "requiredCapabilities": [
+        "faq"
       ]
     },
     {
@@ -396,6 +572,12 @@
       ]
     },
     {
+      "key": "flows_editor_rpa_replay",
+      "requiredCapabilities": [
+        "flows_editor_rpa_replay"
+      ]
+    },
+    {
       "key": "food_customer_journey",
       "requiredCapabilities": [
         "customer_identification",
@@ -412,6 +594,42 @@
       ]
     },
     {
+      "key": "inbox",
+      "requiredCapabilities": [
+        "inbox"
+      ]
+    },
+    {
+      "key": "instagram_messenger",
+      "requiredCapabilities": [
+        "instagram_messenger"
+      ]
+    },
+    {
+      "key": "journey_registry",
+      "requiredCapabilities": [
+        "journey_registry"
+      ]
+    },
+    {
+      "key": "kitchen_dispatch",
+      "requiredCapabilities": [
+        "kitchen_dispatch"
+      ]
+    },
+    {
+      "key": "knowledge_base",
+      "requiredCapabilities": [
+        "knowledge_base"
+      ]
+    },
+    {
+      "key": "knowledge_graph",
+      "requiredCapabilities": [
+        "knowledge_graph"
+      ]
+    },
+    {
       "key": "leads",
       "requiredCapabilities": [
         "lead_capture",
@@ -421,12 +639,36 @@
       ]
     },
     {
+      "key": "login",
+      "requiredCapabilities": [
+        "login"
+      ]
+    },
+    {
+      "key": "maintenance",
+      "requiredCapabilities": [
+        "maintenance"
+      ]
+    },
+    {
       "key": "market_default_journey",
       "requiredCapabilities": [
         "customer_identification",
         "payment",
         "notifications",
         "crm_updates"
+      ]
+    },
+    {
+      "key": "marketing",
+      "requiredCapabilities": [
+        "marketing"
+      ]
+    },
+    {
+      "key": "mfa",
+      "requiredCapabilities": [
+        "mfa"
       ]
     },
     {
@@ -448,9 +690,93 @@
       ]
     },
     {
+      "key": "operational_intelligence",
+      "requiredCapabilities": [
+        "operational_intelligence"
+      ]
+    },
+    {
+      "key": "operations_dashboard",
+      "requiredCapabilities": [
+        "operations_dashboard"
+      ]
+    },
+    {
+      "key": "orders",
+      "requiredCapabilities": [
+        "orders"
+      ]
+    },
+    {
       "key": "payment_charge_flow",
       "requiredCapabilities": [
         "billing_validation"
+      ]
+    },
+    {
+      "key": "physical_queue_kiosk_station_panel_fila",
+      "requiredCapabilities": [
+        "physical_queue_kiosk_station_panel_fila"
+      ]
+    },
+    {
+      "key": "plan_usage",
+      "requiredCapabilities": [
+        "plan_usage"
+      ]
+    },
+    {
+      "key": "process_runtime",
+      "requiredCapabilities": [
+        "process_runtime"
+      ]
+    },
+    {
+      "key": "product_docs",
+      "requiredCapabilities": [
+        "product_docs"
+      ]
+    },
+    {
+      "key": "projects",
+      "requiredCapabilities": [
+        "projects"
+      ]
+    },
+    {
+      "key": "public_tokens",
+      "requiredCapabilities": [
+        "public_tokens"
+      ]
+    },
+    {
+      "key": "queues",
+      "requiredCapabilities": [
+        "queues"
+      ]
+    },
+    {
+      "key": "quick_replies",
+      "requiredCapabilities": [
+        "quick_replies"
+      ]
+    },
+    {
+      "key": "rag_documents",
+      "requiredCapabilities": [
+        "rag_documents"
+      ]
+    },
+    {
+      "key": "rap_learn",
+      "requiredCapabilities": [
+        "rap_learn"
+      ]
+    },
+    {
+      "key": "rbac_access_control",
+      "requiredCapabilities": [
+        "rbac_access_control"
       ]
     },
     {
@@ -465,6 +791,18 @@
       ]
     },
     {
+      "key": "saas_storefront",
+      "requiredCapabilities": [
+        "saas_storefront"
+      ]
+    },
+    {
+      "key": "segmentation",
+      "requiredCapabilities": [
+        "segmentation"
+      ]
+    },
+    {
       "key": "services_default_journey",
       "requiredCapabilities": [
         "customer_identification",
@@ -475,14 +813,93 @@
       ]
     },
     {
+      "key": "sla",
+      "requiredCapabilities": [
+        "sla"
+      ]
+    },
+    {
+      "key": "solutions",
+      "requiredCapabilities": [
+        "solutions"
+      ]
+    },
+    {
+      "key": "sso_scim",
+      "requiredCapabilities": [
+        "sso_scim"
+      ]
+    },
+    {
+      "key": "supervisor",
+      "requiredCapabilities": [
+        "supervisor"
+      ]
+    },
+    {
       "key": "support_ticket_flow",
       "requiredCapabilities": [
         "support_ticket_flow",
         "support_ticket_reply"
       ]
+    },
+    {
+      "key": "tasks",
+      "requiredCapabilities": [
+        "tasks"
+      ]
+    },
+    {
+      "key": "templates",
+      "requiredCapabilities": [
+        "templates"
+      ]
+    },
+    {
+      "key": "tenant_config",
+      "requiredCapabilities": [
+        "tenant_config"
+      ]
+    },
+    {
+      "key": "tenants",
+      "requiredCapabilities": [
+        "tenants"
+      ]
+    },
+    {
+      "key": "tickets_tags",
+      "requiredCapabilities": [
+        "tickets_tags"
+      ]
+    },
+    {
+      "key": "voice_event_ledger",
+      "requiredCapabilities": [
+        "voice_event_ledger"
+      ]
+    },
+    {
+      "key": "web_scraping",
+      "requiredCapabilities": [
+        "web_scraping"
+      ]
+    },
+    {
+      "key": "webhooks",
+      "requiredCapabilities": [
+        "webhooks"
+      ]
+    },
+    {
+      "key": "whatsapp_connections",
+      "requiredCapabilities": [
+        "whatsapp_connections"
+      ]
     }
   ],
   "routeSkillMap": {
+    "/academy": "workspace",
     "/access-control": "config",
     "/agenda": "reports",
     "/agents": "agents",
@@ -528,18 +945,8 @@
     "/dev/rpa-replays": "flows",
     "/dev/rpa-seeds": "flows",
     "/dev/rpa-test": "flows",
+    "/dev/stack-versions": "config",
     "/dev/system-status": "config",
-    "/dev/work-management": "reports",
-    "/dev/work-management/ai-suggestions": "reports",
-    "/dev/work-management/board": "reports",
-    "/dev/work-management/deliverables": "reports",
-    "/dev/work-management/documents": "reports",
-    "/dev/work-management/metrics": "reports",
-    "/dev/work-management/operations": "reports",
-    "/dev/work-management/projects": "reports",
-    "/dev/work-management/qa-validation": "reports",
-    "/dev/work-management/team": "reports",
-    "/dev/work-management/timeline": "reports",
     "/developer-keys": "config",
     "/dispatch": "reports",
     "/editor": "flows",

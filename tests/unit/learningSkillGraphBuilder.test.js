@@ -91,6 +91,26 @@ describe('learning skill-graph builder (buildSkillGraphData)', () => {
     expect(report.unmappedRoutes).toEqual(['/dev']);
   });
 
+  test('skill de domínio access_control tem rotas declaradas e capabilities de acesso/presença', () => {
+    const inputs = buildInputs();
+    inputs.capabilities.push(
+      { id: 'access_decision' },
+      { id: 'customer_identification' },
+      { id: 'attendance_record' },
+    );
+    const { artifact } = buildSkillGraphData(inputs);
+
+    const accessControl = artifact.skills.find((s) => s.key === 'access_control');
+    expect(accessControl).toBeDefined();
+    expect(accessControl.kind).toBe('domain');
+    expect(accessControl.routes).toEqual(['/access-control', '/fitness/attendance']);
+    expect(accessControl.capabilities).toEqual(['access_decision', 'attendance_record', 'customer_identification']);
+
+    // rotas declaradas NÃO entram no routeSkillMap (atribuição via menu)
+    expect(artifact.routeSkillMap['/access-control']).toBeUndefined();
+    expect(artifact.routeSkillMap['/fitness/attendance']).toBeUndefined();
+  });
+
   test('artefato é determinístico e versionado', () => {
     const { artifact } = buildSkillGraphData(buildInputs());
     expect(artifact.version).toBe(1);

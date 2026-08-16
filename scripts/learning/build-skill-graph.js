@@ -52,14 +52,28 @@ const CAPABILITY_SKILL_MAP = Object.freeze({
   access_decision: 'access_control',
   membership_validation: 'access_control',
   turnstile_release: 'access_control',
+  customer_identification: 'access_control',
+  attendance_record: 'access_control',
 });
 
 /**
  * Skills de domínio declaradas estaticamente (não existem como resource de
  * menu nem como canal omnichannel). Referenciadas por CAPABILITY_SKILL_MAP.
+ *
+ * `routes` é metadado explícito e opcional: telas onde a competência do
+ * domínio é exercida, mas que o menu registra sob resources genéricos
+ * (ex.: /access-control é resource 'config'; /fitness/attendance é
+ * resource 'reports'). Declaradas aqui, a jornada se torna alcançável pelo
+ * Tutor/FAQ nessas telas. NÃO alimentam o routeSkillMap (a atribuição de
+ * competência por rota continua vindo do menu).
  */
 const DOMAIN_SKILLS = Object.freeze({
-  access_control: { key: 'access_control', label: 'access_control', kind: 'domain' },
+  access_control: {
+    key: 'access_control',
+    label: 'access_control',
+    kind: 'domain',
+    routes: ['/access-control', '/fitness/attendance'],
+  },
 });
 
 /**
@@ -114,9 +128,13 @@ function buildSkillGraphData({ capabilities, journeys, menuEntries, now }) {
     routeSkillMap[entry.path] = resource;
   }
 
-  // 2. Skills de domínio declaradas estaticamente.
+  // 2. Skills de domínio declaradas estaticamente (rotas declaradas são
+  //    unidas às do skill, sem tocar o routeSkillMap).
   for (const domainSkill of Object.values(DOMAIN_SKILLS)) {
-    ensureSkill(domainSkill.key, domainSkill.kind);
+    const skill = ensureSkill(domainSkill.key, domainSkill.kind);
+    for (const route of domainSkill.routes || []) {
+      if (!skill.routes.includes(route)) skill.routes.push(route);
+    }
   }
 
   // 3. Capabilities -> skills (canal por prefixo; mapa estático explícito).
