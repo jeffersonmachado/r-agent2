@@ -260,6 +260,34 @@ Assessment + Certification + Mentor + Adaptive + Analytics + Tutor níveis 2-4.
   — telemetria é best-effort por desenho; o console.warn de ingest
   indisponível só dispara no caminho fetch.
 
+## Journey FAQ — perguntas & respostas por jornada (entregue 2026-08-15)
+
+- **Serviço**: `api/modules/learning-core/journeyFaqService.js` — geração
+  determinística por jornada a partir SOMENTE de fontes governadas:
+  `config/journey-contracts.json` (capacidades), `config/journey-preconditions.json`
+  (pré-condições), `config/journey-criticality.json` (regra de negócio),
+  `config/learning/skill-graph.json` (telas) e `qa/qa-waves/scenario-store.json`
+  (objetivo/passos aprovados). Sem inferência livre de IA; cada item cita
+  `sources`.
+- **Curadoria**: itens nascem `suggested`; admin do tenant faz
+  include/exclude (`PATCH /api/learning/journey-faq/:id`). Regeneração faz
+  upsert por `fingerprint` (sha1 journeyKey+pergunta), preserva curadoria e
+  marca obsoletos como `current=false` (nunca apaga).
+- **Persistência**: tabela `learning_journey_faqs` (migration
+  `20260724120000-create-learning-journey-faq.js`, model
+  `api/db/models/LearningJourneyFaq.js`).
+- **Consumo**: Tutor nível 2 prioriza FAQ `included`+`current` da jornada
+  (fonte `curated_faq`) via mapa rota→jornada do skill graph; sem match ≥ 0.5
+  de sobreposição de tokens, segue o fluxo RAG normal. Falha do FAQ nunca
+  quebra o Tutor (try/catch → RAG).
+- **UI**: aba "Perguntas & Respostas" no Academy
+  (`frontend/src/components/academy/JourneyFaqTab.jsx`); usuário comum vê só
+  `included`, admin gera e cura.
+- **Distinção importante**: NÃO confundir com o FAQ do chatbot do tenant
+  (`api/services/faq*.js` + `FaqManagementPage.jsx`), que é conteúdo de
+  negócio gerado de documentos do tenant. Journey FAQ é help da plataforma
+  por jornada, derivado de contratos.
+
 ## Ciclo-alvo (fases futuras)
 
 OBSERVAR → ENTENDER → MEDIR → ENSINAR → SIMULAR → VALIDAR → CERTIFICAR →
