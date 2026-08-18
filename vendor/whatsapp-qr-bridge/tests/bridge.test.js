@@ -218,6 +218,30 @@ test('evento message: emite inbound e ignora fromMe', async () => {
   await bridge.stop();
 });
 
+test('evento ack: emite messageId serializado e ignora mensagem sem id', async () => {
+  const { bridge, clients } = makeBridge();
+  const acks = [];
+  bridge.on('ack', (p) => acks.push(p));
+
+  await bridge.addConnection({ id: 'conn-ack' });
+  const client = clients[0];
+
+  client.emit('message_ack', { id: { _serialized: 'true_5511@c.us_ABC' }, to: '5511@c.us' }, 2);
+  client.emit('message_ack', { id: { _serialized: 'true_5511@c.us_ABC' }, to: '5511@c.us' }, 3);
+  client.emit('message_ack', { to: '5511@c.us' }, 2); // sem id → ignorado
+
+  assert.equal(acks.length, 2);
+  assert.deepEqual(acks[0], {
+    connectionId: 'conn-ack',
+    messageId: 'true_5511@c.us_ABC',
+    ack: 2,
+    to: '5511@c.us',
+  });
+  assert.equal(acks[1].ack, 3);
+
+  await bridge.stop();
+});
+
 test('sendMedia envia payload com mime/fileName/caption quando ready', async () => {
   const { bridge, clients } = makeBridge();
   await bridge.addConnection({ id: 'conn-media' });

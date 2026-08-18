@@ -428,6 +428,23 @@ function createBridge(options = {}) {
         raw: message,
       });
     });
+
+    // Recibos de entrega/leitura das mensagens enviadas pela sessão.
+    // ack numérico do wwebjs: 1=sent, 2=delivered, 3=read, 4=played.
+    // O messageId é o id serializado (id._serialized) — o mesmo devolvido
+    // como externalMessageId no sendText/sendMedia, permitindo correlacionar.
+    client.on('message_ack', (message, ack) => {
+      const messageId = message && message.id && message.id._serialized
+        ? String(message.id._serialized)
+        : null;
+      if (!messageId) return;
+      emitter.emit('ack', {
+        connectionId: entry.id,
+        messageId,
+        ack: Number(ack),
+        to: safeTrim(message?.to || ''),
+      });
+    });
   }
 
   async function startClient(entry) {
