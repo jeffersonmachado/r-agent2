@@ -97,6 +97,16 @@ function ensureLocalSecrets(rootDir) {
     ragToken = crypto.randomBytes(32).toString('hex');
     rootContent = upsertEnvValue(rootContent, 'RAG_INTERNAL_TOKEN', ragToken);
   }
+
+  // Chave dedicada de assinatura HMAC dos artefatos de replay (QA Waves).
+  // Sem ela, a governança enterprise usa ENCRYPTION_KEY como fallback e os
+  // artefatos assinados em ambientes anteriores falham na validação.
+  let replaySigningKey = readEnvValue(rootContent, 'REPLAY_SIGNING_KEY');
+  const replaySigningKeyGenerated = !isValidInternalToken(replaySigningKey);
+  if (replaySigningKeyGenerated) {
+    replaySigningKey = crypto.randomBytes(32).toString('hex');
+    rootContent = upsertEnvValue(rootContent, 'REPLAY_SIGNING_KEY', replaySigningKey);
+  }
   writeAtomic(rootEnvPath, rootContent);
 
   let ragContent = fs.existsSync(ragEnvPath) ? fs.readFileSync(ragEnvPath, 'utf8') : '';
@@ -106,7 +116,7 @@ function ensureLocalSecrets(rootDir) {
   }
   writeAtomic(ragEnvPath, ragContent);
 
-  return { encryptionGenerated, ragTokenGenerated, ragTokenSynchronized };
+  return { encryptionGenerated, ragTokenGenerated, ragTokenSynchronized, replaySigningKeyGenerated };
 }
 
 if (require.main === module) {

@@ -30,31 +30,40 @@ describe('bootstrap local secrets', () => {
     const ragContent = fs.readFileSync(path.join(root, 'rag-service', '.env'), 'utf8');
     const encryptionKey = readEnvValue(rootContent, 'ENCRYPTION_KEY');
     const ragToken = readEnvValue(rootContent, 'RAG_INTERNAL_TOKEN');
+    const replaySigningKey = readEnvValue(rootContent, 'REPLAY_SIGNING_KEY');
 
     expect(result).toEqual({
       encryptionGenerated: true,
       ragTokenGenerated: true,
       ragTokenSynchronized: true,
+      replaySigningKeyGenerated: true,
     });
     expect(isValidEncryptionKey(encryptionKey)).toBe(true);
     expect(isValidInternalToken(ragToken)).toBe(true);
+    expect(isValidInternalToken(replaySigningKey)).toBe(true);
+    // separação de chaves: a de assinatura de replay NÃO é a de criptografia
+    expect(replaySigningKey).not.toBe(encryptionKey);
     expect(readEnvValue(ragContent, 'RAG_INTERNAL_TOKEN')).toBe(ragToken);
     expect(JSON.stringify(result)).not.toContain(encryptionKey);
     expect(JSON.stringify(result)).not.toContain(ragToken);
+    expect(JSON.stringify(result)).not.toContain(replaySigningKey);
   });
 
   test('preserva valores válidos e é idempotente', () => {
     const encryptionKey = 'a'.repeat(64);
     const ragToken = 'b'.repeat(64);
-    fs.writeFileSync(path.join(root, '.env'), `ENCRYPTION_KEY=${encryptionKey}\nRAG_INTERNAL_TOKEN=${ragToken}\n`);
+    const replaySigningKey = 'c'.repeat(64);
+    fs.writeFileSync(path.join(root, '.env'), `ENCRYPTION_KEY=${encryptionKey}\nRAG_INTERNAL_TOKEN=${ragToken}\nREPLAY_SIGNING_KEY=${replaySigningKey}\n`);
     fs.writeFileSync(path.join(root, 'rag-service', '.env'), `RAG_INTERNAL_TOKEN=${ragToken}\n`);
 
     expect(ensureLocalSecrets(root)).toEqual({
       encryptionGenerated: false,
       ragTokenGenerated: false,
       ragTokenSynchronized: false,
+      replaySigningKeyGenerated: false,
     });
     expect(readEnvValue(fs.readFileSync(path.join(root, '.env'), 'utf8'), 'ENCRYPTION_KEY')).toBe(encryptionKey);
     expect(readEnvValue(fs.readFileSync(path.join(root, '.env'), 'utf8'), 'RAG_INTERNAL_TOKEN')).toBe(ragToken);
+    expect(readEnvValue(fs.readFileSync(path.join(root, '.env'), 'utf8'), 'REPLAY_SIGNING_KEY')).toBe(replaySigningKey);
   });
 });
