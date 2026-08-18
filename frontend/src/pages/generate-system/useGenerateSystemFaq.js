@@ -43,6 +43,7 @@ export function useGenerateSystemFaq({
   useInlineChunksForSuggestRef,
   ephemeralChunksRef,
   questionGenerationRules,
+  inferQuestions,
   questionsText,
   questionsList,
   setQuestionsText,
@@ -125,6 +126,7 @@ export function useGenerateSystemFaq({
             executionId: pipelineExecutionIdRef.current,
             pipelineStage: 'questionsGenerated',
             contextMode: executionMode === 'dry-run' ? 'ephemeral' : 'auto',
+            questionMode: inferQuestions ? 'inferential' : 'extractive',
             ...(executionMode === 'dry-run' && useInlineChunksForSuggestRef.current
               ? { chunks: (ephemeralChunksRef.current || []).slice(0, 30).map((chunk) => ({ ...chunk, text: (chunk?.text || '').slice(0, 5000) })) }
               : {}),

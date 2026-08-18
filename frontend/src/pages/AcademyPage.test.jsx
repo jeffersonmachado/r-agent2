@@ -333,7 +333,17 @@ describe('AcademyPage', () => {
     });
     mockGetJourneyFaq.mockResolvedValue({ journeyKey: 'support_ticket_flow', items: [faqItem] });
     mockGenerateJourneyFaq.mockResolvedValue({
-      journeyKey: 'support_ticket_flow', generated: 1, created: 0, items: [faqItem],
+      journeyKey: 'support_ticket_flow',
+      generated: 1,
+      created: 0,
+      items: [faqItem],
+      meta: {
+        inference: { requested: false, status: 'not_requested' },
+        businessNeedsCoverage: {
+          precondicao: { total: 2, covered: 2, uncovered: [] },
+          passo: { total: 5, covered: 3, uncovered: ['passo x', 'passo y'] },
+        },
+      },
     });
     mockSetJourneyFaqStatus.mockResolvedValue({ item: { ...faqItem, status: 'included', curatedBy: 'qa' } });
 
@@ -347,9 +357,18 @@ describe('AcademyPage', () => {
     expect(screen.getByText(/authenticated_agent/)).toBeTruthy();
     expect(screen.getByText(/journey-preconditions\.json/)).toBeTruthy();
 
-    // admin gera/atualiza a partir das fontes governadas
+    // admin gera/atualiza a partir das fontes governadas (sem inferência por padrão)
     fireEvent.click(screen.getByRole('button', { name: /Gerar\/atualizar perguntas/ }));
-    await waitFor(() => expect(mockGenerateJourneyFaq).toHaveBeenCalledWith('support_ticket_flow'));
+    await waitFor(() => expect(mockGenerateJourneyFaq).toHaveBeenCalledWith('support_ticket_flow', false));
+
+    // cobertura de necessidades de negócio exibida após a geração
+    await waitFor(() => expect(screen.getByTestId('journey-faq-coverage')).toBeTruthy());
+    expect(screen.getByText(/passo 3\/5/)).toBeTruthy();
+
+    // admin liga a inferência e regenera
+    fireEvent.click(screen.getByRole('checkbox', { name: /Incluir perguntas inferidas \(IA\)/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Gerar\/atualizar perguntas/ }));
+    await waitFor(() => expect(mockGenerateJourneyFaq).toHaveBeenCalledWith('support_ticket_flow', true));
 
     // admin inclui a pergunta (curadoria)
     fireEvent.click(screen.getByRole('button', { name: 'Incluir' }));

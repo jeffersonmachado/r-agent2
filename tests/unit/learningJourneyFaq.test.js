@@ -3,6 +3,16 @@
 const mockFindAll = jest.fn();
 const mockFindOne = jest.fn();
 const mockCreate = jest.fn();
+const mockInfer = jest.fn();
+const mockQueryRag = jest.fn();
+
+jest.mock('../../api/utils/inferQuestionsWithAI', () => ({
+  inferQuestionsWithAI: (...args) => mockInfer(...args),
+}));
+
+jest.mock('../../api/services/ragService', () => ({
+  queryRag: (...args) => mockQueryRag(...args),
+}));
 
 jest.mock('../../api/db/models/LearningJourneyFaq', () => () => ({
   findAll: (...args) => mockFindAll(...args),
@@ -154,6 +164,125 @@ describe('journeyFaqService — persistência e curadoria', () => {
     expect(row.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'excluded', curatedBy: 'admin' }));
     expect(mockFindOne.mock.calls[1][0].where.tenant_id).toBe('t');
     expect(result.status).toBe('suggested'); // serialize lê o objeto original; update foi aplicado via ORM
+  });
+});
+
+describe('journeyFaqService — inferência e cobertura de necessidades', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  const setupModelCapture = () => {
+    mockFindAll.mockResolvedValueOnce([]);
+    mockCreate.mockImplementation(async (values) => ({ id: `id-${values.fingerprint}`, ...values }));
+    mockFindAll.mockImplementation(async () => mockCreate.mock.calls.map((call) => ({
+      id: `id-${call[0].fingerprint}`,
+      createdAt: '2026-07-24T00:00:00Z',
+      ...call[0],
+    })));
+  };
+
+  test('inference:true cria item inferido vinculado, respondido via RAG, como suggested', async () => {
+    setupModelCapture();
+    // pergunta vinculada: o passo 3 do cenário ("Usuário escreve a nota interna")
+    // compartilha os tokens "nota"/"interna" com a pergunta
+    mockInfer.mockResolvedValue(['Como editar uma nota interna salva?']);
+    mockQueryRag.mockResolvedValue({
+      success: true,
+      response: 'Para editar uma nota interna salva, abra o ticket na Caixa de Entrada e clique na nota.',
+    });
+
+    const result = await generateJourneyFaq({
+      tenantId: 'system',
+      journeyKey: 'support_ticket_flow',
+      inference: true,
+      createdBy: 'admin',
+    });
+
+    const inferredCall = mockCreate.mock.calls.find((call) => call[0].category === 'inferida');
+    expect(inferredCall).toBeDefined();
+    expect(inferredCall[0].question).toBe('Como editar uma nota interna salva?');
+    expect(inferredCall[0].sources).toEqual(['ai-inference', 'rag']);
+    expect(inferredCall[0].status).toBe('suggested');
+    expect(result.meta.inference).toMatchObject({
+      requested: true,
+      status: 'ok',
+      questionsInferred: 1,
+      linked: 1,
+      answersUnavailable: 0,
+    });
+  });
+
+  test('pergunta inferida fora do escopo de negócio é descartada antes da resposta', async () => {
+    setupModelCapture();
+    mockInfer.mockResolvedValue(['Qual a previsão do tempo para amanhã?']);
+
+    const result = await generateJourneyFaq({
+      tenantId: 'system',
+      journeyKey: 'support_ticket_flow',
+      inference: true,
+    });
+
+    expect(mockCreate.mock.calls.every((call) => call[0].category !== 'inferida')).toBe(true);
+    expect(mockQueryRag).not.toHaveBeenCalled();
+    expect(result.meta.inference).toMatchObject({ status: 'ok', questionsInferred: 1, linked: 0 });
+  });
+
+  test('sem resposta RAG utilizável a candidata é descartada (answersUnavailable)', async () => {
+    setupModelCapture();
+    mockInfer.mockResolvedValue(['Como editar uma nota interna salva?']);
+    mockQueryRag.mockResolvedValue({ success: false, error: 'rag indisponível' });
+
+    const result = await generateJourneyFaq({
+      tenantId: 'system',
+      journeyKey: 'support_ticket_flow',
+      inference: true,
+    });
+
+    expect(mockCreate.mock.calls.every((call) => call[0].category !== 'inferida')).toBe(true);
+    expect(result.meta.inference).toMatchObject({ linked: 1, answersUnavailable: 1 });
+  });
+
+  test('falha da IA é explícita (ai_unavailable) e não bloqueia a geração determinística', async () => {
+    setupModelCapture();
+    mockInfer.mockRejectedValue(new Error('provider indisponível'));
+
+    const result = await generateJourneyFaq({
+      tenantId: 'system',
+      journeyKey: 'support_ticket_flow',
+      inference: true,
+    });
+
+    expect(result.meta.inference.status).toBe('ai_unavailable');
+    expect(result.created).toBeGreaterThan(0); // itens determinísticos continuam gerados
+  });
+
+  test('sem inference, meta.inference é not_requested e a IA não é chamada', async () => {
+    setupModelCapture();
+
+    const result = await generateJourneyFaq({ tenantId: 'system', journeyKey: 'support_ticket_flow' });
+
+    expect(result.meta.inference).toEqual({ requested: false, status: 'not_requested' });
+    expect(mockInfer).not.toHaveBeenCalled();
+    expect(mockQueryRag).not.toHaveBeenCalled();
+  });
+
+  test('meta.businessNeedsCoverage expõe buckets por tipo com uncovered rastreável', async () => {
+    setupModelCapture();
+
+    const result = await generateJourneyFaq({ tenantId: 'system', journeyKey: 'support_ticket_flow' });
+    const coverage = result.meta.businessNeedsCoverage;
+
+    expect(coverage).toBeDefined();
+    expect(coverage.capability.total).toBeGreaterThan(0);
+    expect(coverage.precondicao.total).toBeGreaterThan(0);
+    expect(coverage.passo.total).toBe(5); // 5 passos do cenário aprovado
+    expect(coverage.regra.total).toBe(1);
+    for (const bucket of Object.values(coverage)) {
+      expect(bucket.covered).toBeLessThanOrEqual(bucket.total);
+      expect(Array.isArray(bucket.uncovered)).toBe(true);
+      expect(bucket.uncovered.length).toBe(bucket.total - bucket.covered);
+    }
   });
 });
 

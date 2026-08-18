@@ -177,4 +177,34 @@ describe('POST /system/generate-faq', () => {
       })
     );
   });
+
+  test('repassa questionMode=inferential ao service; default extractive', async () => {
+    const { server, mocks } = startServerWithMocks();
+    const listenResult = await listenOrSkip(server);
+    if (listenResult.skip) {
+      return;
+    }
+
+    const inferential = await httpPostJson({
+      port: listenResult.port,
+      path: '/system/generate-faq',
+      body: { tenantId: 'system', name: 'Tenant Teste', questionMode: 'inferential' },
+    });
+    expect(inferential.status).toBe(200);
+    expect(mocks.generateFaq).toHaveBeenLastCalledWith(
+      expect.objectContaining({ questionMode: 'inferential' })
+    );
+
+    const padrao = await httpPostJson({
+      port: listenResult.port,
+      path: '/system/generate-faq',
+      body: { tenantId: 'system', name: 'Tenant Teste' },
+    });
+    expect(padrao.status).toBe(200);
+    expect(mocks.generateFaq).toHaveBeenLastCalledWith(
+      expect.objectContaining({ questionMode: 'extractive' })
+    );
+
+    await new Promise((resolve) => server.close(resolve));
+  });
 });

@@ -12,6 +12,7 @@ const exclusionsService = require('./exclusions.service');
 const questionGenerationRulesService = require('./questionGenerationRules.service');
 const { resolveContextSources } = require('./contextSourceResolver');
 const { extractSemanticContext, detectBusinessType } = require('./semanticContextService');
+const { inferQuestionsWithAI } = require('../utils/inferQuestionsWithAI');
 
 function safeString(v, fallback = '') {
   if (v === null || v === undefined) return fallback;
@@ -389,6 +390,48 @@ async function generateFaq(input) {
     if (Array.isArray(local) && local.length > 0) suggested.push(...local);
   }
 
+  // 1.5) Inferência (opcional, questionMode='inferential'): a IA PROPÕE perguntas
+  // plausíveis além do texto, ancorada no contexto do negócio. Regras duras no
+  // helper (só formula perguntas, nunca afirma fatos). Falha da IA é explícita
+  // em meta.inference — nunca fallback silencioso.
+  const questionMode = input?.questionMode === 'inferential' ? 'inferential' : 'extractive';
+  let inferredQuestions = [];
+  let inferenceMeta = { requested: questionMode === 'inferential', status: 'not_requested' };
+  if (questionMode === 'inferential') {
+    inferenceMeta = { requested: true, status: 'pending' };
+    const inferenceBase = safeString(
+      (semantic && semantic.cleanText) || sanitizedAggregatedText || fallbackDescription,
+    ).trim();
+    if (inferenceBase.length < 50) {
+      inferenceMeta = { requested: true, status: 'insufficient_context' };
+    } else {
+      try {
+        const anchor = semantic && typeof semantic === 'object'
+          ? JSON.stringify({
+            businessType: detectBusinessType(semantic),
+            services: (semantic.services || []).slice(0, 12),
+            keyPhrases: (semantic.keyPhrases || []).slice(0, 12),
+            entities: (semantic.entities || []).slice(0, 12),
+          })
+          : `tenant: ${safeString(input?.name || '').trim()}`;
+        inferredQuestions = await inferQuestionsWithAI({
+          tenantId,
+          contextText: inferenceBase,
+          anchor,
+          existingQuestions: suggested,
+        });
+        if (inferredQuestions.length > 0) suggested.push(...inferredQuestions);
+        inferenceMeta = { requested: true, status: 'ok', questionsInferred: inferredQuestions.length };
+      } catch (err) {
+        logger.warn('[FAQ] Inferência de perguntas indisponível (ai_unavailable); seguindo apenas extrativo', {
+          tenantId,
+          error: safeErrorMessage(err),
+        });
+        inferenceMeta = { requested: true, status: 'ai_unavailable', reason: safeErrorMessage(err) };
+      }
+    }
+  }
+
   // Aumenta o teto para permitir "perguntas reais" (30–90) antes da dedup semântica/clusterização.
   const rawQuestions = mergeUniqueQuestions([], suggested, 160).slice(0, 90);
   const filteredQuestions = exclusionsService.filterQuestions(rawQuestions, exclusions);
@@ -403,7 +446,8 @@ async function generateFaq(input) {
       flatQuestions: [],
       coverage: 0,
       exclusions,
-      meta: { usedContext: used, chunks: sources.length, exclusions },
+      inferredQuestions,
+      meta: { usedContext: used, chunks: sources.length, exclusions, questionMode, inference: inferenceMeta },
     };
   }
 
@@ -505,6 +549,7 @@ async function generateFaq(input) {
       flatQuestions: questionsForPipeline,
       coverage: 0,
       exclusions,
+      inferredQuestions,
       meta: {
         usedContext: used,
         chunks: sources.length,
@@ -517,6 +562,8 @@ async function generateFaq(input) {
         coverageBoost: coverageBoostMeta,
         degraded: true,
         exclusions,
+        questionMode,
+        inference: inferenceMeta,
       },
     };
   }
@@ -607,6 +654,7 @@ async function generateFaq(input) {
     flatQuestions: flattenFaq(faq),
     coverage,
     exclusions,
+    inferredQuestions,
     meta: {
       usedContext: used,
       chunks: sources.length,
@@ -622,6 +670,8 @@ async function generateFaq(input) {
       questionsAfterDedup: keptQuestions.length,
       k,
       exclusions,
+      questionMode,
+      inference: inferenceMeta,
     },
   };
 }

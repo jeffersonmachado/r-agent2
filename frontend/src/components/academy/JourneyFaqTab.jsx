@@ -20,6 +20,7 @@ const CATEGORY_LABELS = {
   capacidades: 'Capacidades',
   regra_negocio: 'Regra de negócio',
   rotas: 'Telas',
+  inferida: 'Inferida (IA)',
 };
 
 const STATUS_LABELS = {
@@ -66,6 +67,8 @@ export function JourneyFaqTab({ isAdmin }) {
   const [journeys, setJourneys] = useState(null);
   const [selectedJourney, setSelectedJourney] = useState('');
   const [items, setItems] = useState(null);
+  const [withInference, setWithInference] = useState(false);
+  const [coverage, setCoverage] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
@@ -112,9 +115,10 @@ export function JourneyFaqTab({ isAdmin }) {
     setGenerating(true);
     setError(null);
     try {
-      const result = await academyApi.generateJourneyFaq(selectedJourney);
+      const result = await academyApi.generateJourneyFaq(selectedJourney, withInference);
       if (mountedRef.current) {
         setItems(result.items || []);
+        setCoverage(result.meta && result.meta.businessNeedsCoverage ? result.meta.businessNeedsCoverage : null);
         setJourneys((current) => (current || []).map((journey) => (journey.journeyKey === selectedJourney
           ? { ...journey, total: result.generated, suggested: (journey.suggested || 0) + result.created }
           : journey)));
@@ -125,7 +129,7 @@ export function JourneyFaqTab({ isAdmin }) {
     } finally {
       if (mountedRef.current) setGenerating(false);
     }
-  }, [selectedJourney]);
+  }, [selectedJourney, withInference]);
 
   const handleSetStatus = useCallback(async (itemId, status) => {
     setUpdating(true);
@@ -172,13 +176,35 @@ export function JourneyFaqTab({ isAdmin }) {
               </select>
             </label>
             {isAdmin && (
-              <Button onClick={handleGenerate} disabled={generating || !selectedJourney}>
-                {generating ? 'Gerando…' : 'Gerar/atualizar perguntas'}
-              </Button>
+              <>
+                <label className="academy-muted">
+                  <input
+                    type="checkbox"
+                    checked={withInference}
+                    onChange={(event) => setWithInference(event.target.checked)}
+                  />
+                  {' '}Incluir perguntas inferidas (IA) — miram as necessidades de negócio
+                  ainda sem cobertura; nascem como sugeridas para curadoria
+                </label>
+                <Button onClick={handleGenerate} disabled={generating || !selectedJourney}>
+                  {generating ? 'Gerando…' : 'Gerar/atualizar perguntas'}
+                </Button>
+              </>
             )}
           </div>
         )}
       </div>
+
+      {coverage && (
+        <p className="academy-muted" data-testid="journey-faq-coverage">
+          Cobertura de necessidades:{' '}
+          {Object.entries(coverage).map(([kind, bucket]) => (
+            <span key={kind}>
+              {kind} {bucket.covered}/{bucket.total}{'; '}
+            </span>
+          ))}
+        </p>
+      )}
 
       {error && (
         <p className="academy-state academy-state-error">

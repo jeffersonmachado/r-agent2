@@ -19,6 +19,8 @@ export function GenerateSystemFormSection({
   setGenerateSeed,
   includeQuestions,
   setIncludeQuestions,
+  inferQuestions,
+  setInferQuestions,
   executeFullValidation,
   setExecuteFullValidation,
   // Dados Básicos
@@ -98,6 +100,21 @@ export function GenerateSystemFormSection({
                 />
                 <span>Incluir perguntas (FAQ) no fluxo</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer text-text-primary">
+                <input
+                  type="checkbox"
+                  checked={inferQuestions}
+                  onChange={(e) => setInferQuestions(e.target.checked)}
+                  className="w-4 h-4 text-accent-primary border-border-default rounded focus:ring-accent-primary"
+                />
+                <span>Gerar perguntas por inferência (IA)</span>
+              </label>
+              {inferQuestions && (
+                <p className="ml-6 text-xs text-text-secondary">
+                  A IA sugere perguntas plausíveis além do que está nos documentos. Você revisa
+                  cada pergunta antes de gerar respostas — as respostas sempre saem das fontes oficiais.
+                </p>
+              )}
             <label className="flex items-center gap-2 cursor-pointer text-text-primary">
               <input
                 type="checkbox"

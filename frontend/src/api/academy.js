@@ -103,10 +103,10 @@ export async function getJourneyFaq(journeyKey) {
   return fetchJson(`/api/learning/journey-faq?journeyKey=${encodeURIComponent(journeyKey)}`);
 }
 
-export async function generateJourneyFaq(journeyKey) {
+export async function generateJourneyFaq(journeyKey, inference) {
   return fetchJson('/api/learning/journey-faq/generate', {
     method: 'POST',
-    body: JSON.stringify({ journeyKey }),
+    body: JSON.stringify({ journeyKey, inference: inference === true }),
   });
 }
 

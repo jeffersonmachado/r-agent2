@@ -542,6 +542,7 @@ async function handleLearningCoreRoutes(ctx) {
         tenantId,
         journeyKey: body.journeyKey,
         createdBy: req.agent?.username || req.agent?.id,
+        inference: body.inference === true,
       });
       sendJson(result, 201);
     } catch (error) {

@@ -169,6 +169,7 @@ export function GenerateSystemPage() {
 
   // BLOCO 3 - Perguntas (FAQ / Aprendizado Adaptivo)
   const [includeQuestions, setIncludeQuestions] = useState(false);
+  const [inferQuestions, setInferQuestions] = useState(false);
   const [questionsText, setQuestionsText] = useState('');
   const [questionsList, setQuestionsList] = useState([]);
   const [questionGenerationRules, setQuestionGenerationRules] = useState(null);
@@ -560,6 +561,7 @@ export function GenerateSystemPage() {
     useInlineChunksForSuggestRef,
     ephemeralChunksRef,
     questionGenerationRules,
+    inferQuestions,
     questionsText,
     questionsList,
     setQuestionsText,
@@ -703,6 +705,8 @@ export function GenerateSystemPage() {
           setGenerateSeed={setGenerateSeed}
           includeQuestions={includeQuestions}
           setIncludeQuestions={setIncludeQuestions}
+          inferQuestions={inferQuestions}
+          setInferQuestions={setInferQuestions}
           executeFullValidation={executeFullValidation}
           setExecuteFullValidation={setExecuteFullValidation}
           name={name}

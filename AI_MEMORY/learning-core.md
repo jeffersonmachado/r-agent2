@@ -286,6 +286,23 @@ Assessment + Certification + Mentor + Adaptive + Analytics + Tutor níveis 2-4.
   porque `booking_flow` exige a capability `support_ticket_flow`), o match
   favorece a jornada "dona" da rota — aquela cujo próprio nome é uma das
   capabilities da skill da rota (bônus 0.001 sobre o score, só desempate).
+- **Inferência + cobertura de necessidades** (2026-08-20): `generateJourneyFaq`
+  aceita `inference: true` (rota repassa `body.inference === true`). O quadro
+  de necessidades de negócio (`buildBusinessNeedsFrame`: capability, gap,
+  precondicao, passo, regra — das mesmas fontes governadas) alimenta a IA via
+  helper compartilhado `api/utils/inferQuestionsWithAI.js` (teto env
+  `FAQ_INFERENTIAL_MAX_QUESTIONS`, default 24). Cada candidata passa por
+  validação de vínculo (`isLinkedToBusinessNeeds`: ≥1 token ≥4 chars com alguma
+  necessidade declarada; fora do escopo = descartada) e a RESPOSTA vem do RAG
+  sobre o material oficial da jornada (`answerInferredQuestion`; sem resposta
+  utilizável = descartada, `answersUnavailable`). Itens inferidos nascem
+  `suggested` com `category: 'inferida'` e `sources: ['ai-inference','rag']`.
+  `meta.inference` (`ok`/`not_requested`/`ai_unavailable` explícito, nunca
+  silencioso) e `meta.businessNeedsCoverage` (buckets por kind com
+  `total/covered/uncovered`) saem no retorno e a UI mostra a cobertura
+  (`data-testid="journey-faq-coverage"`). O mesmo helper também serve o FAQ do
+  chatbot do tenant: `POST /system/generate-faq` com `questionMode:
+  'inferential'` (UI: checkbox em GenerateSystemFormSection).
 - **UI**: aba "Perguntas & Respostas" no Academy
   (`frontend/src/components/academy/JourneyFaqTab.jsx`); usuário comum vê só
   `included`, admin gera e cura.

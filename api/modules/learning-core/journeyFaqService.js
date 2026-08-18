@@ -25,6 +25,8 @@
 const crypto = require('crypto');
 
 const getLearningJourneyFaqModel = require('../../db/models/LearningJourneyFaq');
+const { inferQuestionsWithAI } = require('../../utils/inferQuestionsWithAI');
+const { queryRag } = require('../../services/ragService');
 const logger = require('../../utils/logger');
 
 const JOURNEY_KEY_PATTERN = /^[\w.-]{1,120}$/;
@@ -203,14 +205,145 @@ function buildJourneyFaqItems(journeyKey) {
   return items;
 }
 
+// ── Necessidades de negócio da jornada (quadro N) ─────────────────────────
+
+/**
+ * Monta o quadro de necessidades de negócio declaradas da jornada, a partir
+ * das mesmas fontes governadas da geração determinística. Cada necessidade:
+ * { kind, key, label } — kind ∈ capability|gap|precondicao|passo|regra.
+ */
+function buildBusinessNeedsFrame(journeyKey) {
+  const sources = loadGovernedSources();
+  const entry = (sources.contracts.journeys || {})[journeyKey];
+  if (!entry) {
+    const error = new Error('Jornada nao encontrada nos contratos');
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  const needs = [];
+  for (const cap of entry.requiredCapabilities || []) {
+    needs.push({ kind: 'capability', key: cap, label: `capacidade ${humanize(cap)}` });
+  }
+  for (const cap of entry.missingCapabilities || []) {
+    needs.push({ kind: 'gap', key: cap, label: `gap conhecido ${humanize(cap)} (capacidade ainda não implementada)` });
+  }
+
+  const pre = sources.preconditions[journeyKey] || null;
+  for (const req of (pre && Array.isArray(pre.required) ? pre.required : [])) {
+    needs.push({ kind: 'precondicao', key: req, label: `pré-condição ${humanize(req)}` });
+  }
+
+  const scenario = latestApprovedScenario(sources.scenarioStore, journeyKey);
+  const steps = scenario && Array.isArray(scenario.steps) ? scenario.steps : [];
+  for (const step of steps.slice().sort((a, b) => (a.order || 0) - (b.order || 0))) {
+    const text = String(step.name || step.description || '').trim();
+    if (text) needs.push({ kind: 'passo', key: `step-${step.order}`, label: text.slice(0, 120) });
+  }
+
+  const crit = (sources.criticality.journeys || sources.criticality)[journeyKey] || null;
+  if (crit && crit.criticality) {
+    needs.push({
+      kind: 'regra',
+      key: 'criticality',
+      label: `criticidade ${crit.criticality} (severidade ${crit.severity || 'não classificada'})`,
+    });
+  }
+
+  const frame = [
+    `jornada: ${journeyKey} (${humanize(journeyKey)})`,
+    scenario ? `cenário aprovado: ${scenario.name || ''} — ${scenario.description || ''}` : null,
+    needs.length > 0 ? `necessidades de negócio:\n${needs.map((n) => `- ${n.label}`).join('\n')}` : null,
+  ].filter(Boolean).join('\n');
+
+  return { needs, frame, scenario };
+}
+
+/**
+ * Cobertura determinística: uma necessidade está coberta se TODOS os seus
+ * tokens aparecem em pelo menos um item (pergunta+resposta). As chaves
+ * técnicas (ex.: authenticated_agent) aparecem em texto bruto nos itens
+ * determinísticos, então a cobertura é verificável e estável.
+ */
+function computeBusinessNeedsCoverage(needs, items) {
+  const itemTokens = (Array.isArray(items) ? items : [])
+    .map((item) => new Set([...tokenize(item.question), ...tokenize(item.answer)]));
+
+  const byKind = {};
+  for (const need of needs) {
+    if (!byKind[need.kind]) byKind[need.kind] = { total: 0, covered: 0, uncovered: [] };
+    byKind[need.kind].total += 1;
+    const needTokens = tokenize(need.key.includes('step-') ? need.label : need.key);
+    const isCovered = needTokens.length > 0 && itemTokens.some((tokens) => needTokens.every((t) => tokens.has(t)));
+    if (isCovered) byKind[need.kind].covered += 1;
+    else byKind[need.kind].uncovered.push(need.label);
+  }
+
+  const coverage = {};
+  for (const [kind, bucket] of Object.entries(byKind)) {
+    coverage[kind] = { total: bucket.total, covered: bucket.covered, uncovered: bucket.uncovered };
+  }
+  return coverage;
+}
+
+function uncoveredNeedLabels(coverage) {
+  const labels = [];
+  for (const bucket of Object.values(coverage || {})) {
+    for (const label of bucket.uncovered || []) labels.push(label);
+  }
+  return labels;
+}
+
+/**
+ * Validação de vínculo: pergunta inferida só é candidata se compartilhar ao
+ * menos um token significativo (>= 4 chars) com alguma necessidade declarada
+ * da jornada. Fora do escopo de negócio => descartada antes da curadoria.
+ */
+function isLinkedToBusinessNeeds(question, needs) {
+  const questionTokens = tokenize(question).filter((t) => t.length >= 4);
+  if (questionTokens.length === 0) return false;
+  const needTokens = new Set();
+  for (const need of needs) {
+    for (const t of tokenize(`${need.key} ${need.label}`)) needTokens.add(t);
+  }
+  return questionTokens.some((t) => needTokens.has(t));
+}
+
+/**
+ * Resposta ancorada: a pergunta é inferida, mas a resposta vem do material
+ * oficial da jornada via RAG (roteiros/manuais/treinamentos indexados).
+ * Sem resposta utilizável => null (candidata descartada, sem heurística).
+ */
+async function answerInferredQuestion({ tenantId, journeyKey, question }) {
+  const query = [
+    `Com base no material oficial da jornada "${humanize(journeyKey)}" da plataforma`,
+    '(roteiros operacionais, manuais ilustrados e treinamentos gerados de replays),',
+    `responda de forma breve e pratica, em portugues, em no maximo 4 frases: ${question}`,
+    ' Se o material nao cobrir a pergunta, responda exatamente: SEM_COBERTURA',
+  ].join('');
+
+  const result = await queryRag(query, tenantId, { source: 'learning-core-journey-faq-inference' });
+  const text = result && result.success && typeof result.response === 'string'
+    ? result.response.trim()
+    : null;
+  if (!text || text.includes('SEM_COBERTURA') || text.length < 20) return null;
+  return text.slice(0, 1200);
+}
+
 // ── Geração persistida (admin) ────────────────────────────────────────────
 
 /**
  * Gera/atualiza o FAQ de uma jornada para o tenant. Upsert por fingerprint:
  * itens já curados (included/excluded) preservam status e curadoria; itens
  * que deixaram de ser gerados são marcados current=false (nunca apagados).
+ *
+ * Com `inference: true`, após os itens determinísticos a IA propõe perguntas
+ * mirando as necessidades de negócio NÃO cobertas; cada candidata é validada
+ * (vínculo com necessidade declarada) e respondida via RAG sobre o material
+ * oficial da jornada — sem resposta ancorada, a candidata é descartada.
+ * Itens inferidos nascem `suggested` com sources incluindo 'ai-inference'.
  */
-async function generateJourneyFaq({ tenantId, journeyKey, createdBy }) {
+async function generateJourneyFaq({ tenantId, journeyKey, createdBy, inference }) {
   if (!JOURNEY_KEY_PATTERN.test(String(journeyKey || ''))) {
     const error = new Error('journeyKey invalido');
     error.code = 'BAD_REQUEST';
@@ -221,6 +354,58 @@ async function generateJourneyFaq({ tenantId, journeyKey, createdBy }) {
     const error = new Error('Jornada sem fontes governadas suficientes para gerar FAQ');
     error.code = 'BAD_REQUEST';
     throw error;
+  }
+
+  const { needs, frame } = buildBusinessNeedsFrame(journeyKey);
+  let coverage = computeBusinessNeedsCoverage(needs, items);
+
+  let inferenceMeta = { requested: inference === true, status: inference === true ? 'pending' : 'not_requested' };
+  if (inference === true) {
+    try {
+      const uncovered = uncoveredNeedLabels(coverage);
+      const candidates = await inferQuestionsWithAI({
+        tenantId,
+        contextText: frame,
+        anchor: `necessidades de negócio da jornada ${journeyKey}`,
+        existingQuestions: items.map((item) => item.question),
+        extraInstructions: uncovered.length > 0
+          ? `Priorize perguntas que cubram estas necessidades ainda sem pergunta: ${uncovered.slice(0, 12).join('; ')}`
+          : null,
+      });
+
+      let linked = 0;
+      let answersUnavailable = 0;
+      for (const question of candidates) {
+        if (!isLinkedToBusinessNeeds(question, needs)) continue;
+        linked += 1;
+        const answer = await answerInferredQuestion({ tenantId, journeyKey, question });
+        if (!answer) { answersUnavailable += 1; continue; }
+        items.push({
+          fingerprint: fingerprint(journeyKey, question),
+          category: 'inferida',
+          question,
+          answer,
+          sources: ['ai-inference', 'rag'],
+        });
+      }
+
+      inferenceMeta = {
+        requested: true,
+        status: 'ok',
+        questionsInferred: candidates.length,
+        linked,
+        answersUnavailable,
+        targetedUncovered: uncovered.length,
+      };
+      if (candidates.length > 0) coverage = computeBusinessNeedsCoverage(needs, items);
+    } catch (err) {
+      logger.warn('[learning-core] Journey FAQ: inferência indisponível (ai_unavailable); seguindo determinístico', {
+        tenantId: String(tenantId),
+        journeyKey,
+        error: err.message,
+      });
+      inferenceMeta = { requested: true, status: 'ai_unavailable', reason: err.message };
+    }
   }
 
   const Model = getLearningJourneyFaqModel();
@@ -284,6 +469,10 @@ async function generateJourneyFaq({ tenantId, journeyKey, createdBy }) {
     preserved,
     stale,
     items: fresh.map(serializeFaqItem),
+    meta: {
+      inference: inferenceMeta,
+      businessNeedsCoverage: coverage,
+    },
   };
 }
 
@@ -473,6 +662,9 @@ module.exports = {
   setJourneyFaqStatus,
   findCuratedFaqForRoute,
   buildJourneyFaqItems,
+  buildBusinessNeedsFrame,
+  computeBusinessNeedsCoverage,
+  isLinkedToBusinessNeeds,
   resolveJourneysForRoute,
   resolveRouteCapabilities,
   resetGovernedSourcesCache,

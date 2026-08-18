@@ -69,6 +69,7 @@ async function handleSystemGenerationContentRoutes(ctx) {
         contextMode: body?.contextMode ?? 'auto',
         rules: body?.rules ?? null,
         dryRun: body?.dryRun === true,
+        questionMode: body?.questionMode === 'inferential' ? 'inferential' : 'extractive',
       });
 
       if (execution && pipelineStage) {
