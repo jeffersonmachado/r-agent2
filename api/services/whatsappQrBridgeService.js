@@ -479,7 +479,7 @@ async function recoverRecentInboundMessages({ tenantId, connectionId, client }) 
  * clientId/dataPath precisam manter o formato legado (`ria_<tenant>_<conn>`)
  * para reutilizar as sessões já pareadas em disco.
  */
-function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCacheDir, userAgent }) {
+function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCacheDir, userAgent, deviceName }) {
   const wa = loadWhatsappWebJs();
   const { Client, LocalAuth } = wa;
   // eslint-disable-next-line global-require
@@ -497,6 +497,10 @@ function bridgeClientFactory({ dataPath, connectionId, webVersion, webVersionCac
     // nativo da lib, Chrome 101/macOS 10.14, derruba a sessão minutos após
     // o pareamento desde o endurecimento anti-automação da Meta).
     ...(userAgent !== undefined ? { userAgent } : {}),
+    // Nome do aparelho sugerido no pareamento (o WhatsApp não devolve à
+    // sessão o nome exibido em "Aparelhos conectados"). Só vale para NOVOS
+    // pareamentos; default resolvido no getBridge (env WHATSAPP_QR_DEVICE_NAME).
+    ...(deviceName ? { deviceName } : {}),
     puppeteer: buildPuppeteerOptions(),
     // Pin do build do WA Web (workaround wwebjs#127084): undefined → default
     // do pacote; null → latest. Configurável via WHATSAPP_QR_WEB_VERSION.
@@ -608,6 +612,9 @@ function getBridge() {
     // undefined/'auto' → UA real do Chrome (resolvido no pacote);
     // 'default' → spoof nativo da lib; outra string → usada como está.
     userAgent: safeTrim(process.env.WHATSAPP_QR_USER_AGENT || '') || undefined,
+    // Nome do aparelho exibido no pareamento (env WHATSAPP_QR_DEVICE_NAME;
+    // default 'R-Agent2'). Vale apenas para novos pareamentos.
+    deviceName: safeTrim(process.env.WHATSAPP_QR_DEVICE_NAME || '') || 'R-Agent2',
     logger: {
       info: (msg, extra) => logger.info(msg, extra),
       warn: (msg, extra) => logger.warn(msg, extra),

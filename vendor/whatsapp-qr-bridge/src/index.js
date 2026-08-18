@@ -228,12 +228,16 @@ function normalizeLogger(logger) {
  * O require é lazy para que testes (com clientFactory injetado) não puxem
  * puppeteer/Chrome.
  */
-function defaultClientFactory({ clientId, dataPath, puppeteer, webVersion, webVersionCacheDir, userAgent }) {
+function defaultClientFactory({ clientId, dataPath, puppeteer, webVersion, webVersionCacheDir, userAgent, deviceName }) {
   const wa = loadWhatsappWebJs();
   const { Client, LocalAuth } = wa;
   return new Client({
     authStrategy: new LocalAuth({ clientId, dataPath }),
     ...(userAgent !== undefined ? { userAgent } : {}),
+    // deviceName: nome do aparelho sugerido no pareamento (a lista de
+    // "Aparelhos conectados" do WhatsApp não devolve esse nome ao cliente,
+    // então fixá-lo é a única forma de a sessão ser auto-identificável).
+    ...(deviceName ? { deviceName } : {}),
     puppeteer: puppeteer || {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
@@ -435,6 +439,7 @@ function createBridge(options = {}) {
           webVersion: options.webVersion,
           webVersionCacheDir: options.webVersionCacheDir,
           userAgent: resolvedUserAgent,
+          deviceName: safeTrim(options.deviceName) || undefined,
         });
       } catch (err) {
         const message = safeErrorMessage(err, 'client_factory_failed');

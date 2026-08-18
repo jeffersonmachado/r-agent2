@@ -37,12 +37,16 @@ const { createBridge } = require('@results/whatsapp-qr-bridge');
 const bridge = createBridge({
   authDataPath: '/var/lib/meuapp/whatsapp/auth', // dataPath do LocalAuth
   syncIntervalMs: 30000,                          // default 30000; 0 desliga
-  // clientFactory: ({ clientId, dataPath, connectionId, puppeteer, webVersion, webVersionCacheDir }) => client,
+  // clientFactory: ({ clientId, dataPath, connectionId, puppeteer, webVersion, webVersionCacheDir, userAgent, deviceName }) => client,
   // puppeteer: { headless: true, args: [...] },
   // webVersion: undefined/null → sem pin (WA Web latest, default); '<versao>' → pin custom
   // webVersionCacheDir: '/dir/com/<versao>.html',  // default: wa-web/ do pacote
   // userAgent: undefined/'auto' → UA com a versão real do Chrome (default);
   //   'default' → spoof nativo da lib; false → UA genuíno do binário; string → como está
+  // deviceName: 'R-Observe',  // nome do aparelho sugerido no pareamento (só
+  //   vale para NOVOS pareamentos; o WhatsApp não devolve à sessão o nome
+  //   exibido em "Aparelhos conectados", então fixá-lo é a única forma de a
+  //   sessão ser auto-identificável)
   // logger: console,
 });
 
