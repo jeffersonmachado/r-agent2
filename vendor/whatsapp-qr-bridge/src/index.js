@@ -21,6 +21,7 @@ const STATUS = Object.freeze(['pairing', 'connected', 'ready', 'disconnected', '
 
 const DEFAULT_SYNC_INTERVAL_MS = 30000;
 const DEFAULT_QR_EXPIRES_IN_MS = 2 * 60 * 1000;
+const DEFAULT_SEND_TIMEOUT_MS = 60 * 1000;
 const DEFAULT_READY_WATCHDOG_MS = 60 * 1000;
 const READY_WATCHDOG_MAX_ATTEMPTS = 3;
 
@@ -261,6 +262,14 @@ function createBridge(options = {}) {
   const qrExpiresInMs = Number.isFinite(Number(options.qrExpiresInMs)) && Number(options.qrExpiresInMs) > 0
     ? Number(options.qrExpiresInMs)
     : DEFAULT_QR_EXPIRES_IN_MS;
+  // Timeout de envio (default 60s; 0 desliga). Sessão morta remotamente (ex.:
+  // aparelho removido em "Aparelhos conectados") pode não disparar evento —
+  // o cliente fica zumbi, pronto na tela, e o sendMessage trava para sempre
+  // (verificado em prod, ago/2026). No timeout o cliente é destruído e o sync
+  // o reinicia: sessão inválida gera QR novo, sessão válida volta ao ready.
+  const sendTimeoutMs = options.sendTimeoutMs === undefined
+    ? DEFAULT_SEND_TIMEOUT_MS
+    : Math.max(0, Number(options.sendTimeoutMs) || 0);
 
   // Watchdog anti-race do wwebjs: `authenticated` dispara mas a injeção do
   // WWebJS (LoadUtils) falha uma única vez no meio do sync e a lib não tenta
@@ -498,6 +507,33 @@ function createBridge(options = {}) {
     return { ok: true, entry, client: entry.client };
   }
 
+  /**
+   * Envolve client.sendMessage com timeout anti-zumbi: se a sessão foi morta
+   * remotamente sem evento, o envio trava indefinidamente — no timeout o
+   * cliente é destruído (o sync o reinicia; sessão inválida gera QR novo).
+   */
+  function withSendTimeout(entry, sendPromise) {
+    if (!sendTimeoutMs) return sendPromise;
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        const message = `send_timeout_${sendTimeoutMs}ms`;
+        logger.warn('[whatsapp-qr-bridge] Envio travado — possível sessão zumbi, reiniciando cliente', { connectionId: entry.id, sendTimeoutMs });
+        setStatus(entry, 'error', { reason: message });
+        emitter.emit('error', { connectionId: entry.id, error: message });
+        destroyClient(entry).catch(() => {});
+        reject(new Error(message));
+      }, sendTimeoutMs);
+      if (typeof timer.unref === 'function') timer.unref();
+      sendPromise.then(
+        (value) => { if (!settled) { settled = true; clearTimeout(timer); resolve(value); } },
+        (err) => { if (!settled) { settled = true; clearTimeout(timer); reject(err); } },
+      );
+    });
+  }
+
   async function syncConnections() {
     for (const entry of connections.values()) {
       if (entry.desiredActive && !entry.client && !(starting && starting.has(entry.id))) {
@@ -627,7 +663,7 @@ function createBridge(options = {}) {
       if (!ready.ok) return ready;
 
       try {
-        const sent = await ready.client.sendMessage(destination, messageText);
+        const sent = await withSendTimeout(ready.entry, ready.client.sendMessage(destination, messageText));
         return { ok: true, connectionId: ready.entry.id, externalMessageId: extractExternalMessageId(sent) };
       } catch (err) {
         return { ok: false, error: 'qr_send_failed', message: safeErrorMessage(err, 'qr_send_failed') };
@@ -663,7 +699,7 @@ function createBridge(options = {}) {
       const sendOpts = captionText ? { caption: captionText } : undefined;
 
       try {
-        const sent = await ready.client.sendMessage(destination, media, sendOpts);
+        const sent = await withSendTimeout(ready.entry, ready.client.sendMessage(destination, media, sendOpts));
         return { ok: true, connectionId: ready.entry.id, externalMessageId: extractExternalMessageId(sent) };
       } catch (err) {
         return { ok: false, error: 'qr_send_failed', message: safeErrorMessage(err, 'qr_send_failed') };

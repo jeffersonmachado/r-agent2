@@ -47,6 +47,7 @@ const bridge = createBridge({
   //   vale para NOVOS pareamentos; o WhatsApp não devolve à sessão o nome
   //   exibido em "Aparelhos conectados", então fixá-lo é a única forma de a
   //   sessão ser auto-identificável)
+  // sendTimeoutMs: 60000,     // timeout anti-zumbi de envio (0 desliga)
   // logger: console,
 });
 
@@ -145,6 +146,21 @@ O bridge arma um watchdog a cada `authenticated`: se `ready` não disparar em
 `readyWatchdogMs` (default **60s**, `0` desliga), ele chama
 `window.onAppStateHasSyncedEvent()` na página, o que refaz o fluxo de injeção
 da própria lib. Até 3 tentativas, com log a cada kick.
+
+## Timeout de envio (anti-sessão-zumbi)
+
+Uma sessão morta remotamente (ex.: aparelho removido em "Aparelhos
+conectados" do celular) pode **não disparar evento algum** — o cliente segue
+`ready` na tela, mas `sendMessage` trava para sempre (verificado em prod,
+ago/2026: remoção do aparelho → `sendText` pendente por 10min+, sem erro).
+
+O bridge envolve `sendText`/`sendMedia` com `sendTimeoutMs` (default **60s**,
+`0` desliga). No timeout:
+
+1. o envio falha com `qr_send_failed` / `send_timeout_<ms>ms`;
+2. a conexão vai para status `error` e o cliente é destruído;
+3. o sync periódico o reinicia: sessão ainda válida volta ao `ready`; sessão
+   invalidada pela Meta gera **QR novo** automaticamente.
 
 ## API
 
