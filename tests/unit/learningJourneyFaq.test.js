@@ -213,4 +213,31 @@ describe('journeyFaqService — consumo pelo Tutor', () => {
     const empty = await findCuratedFaqForRoute({ tenantId: 't', route: '/support', question: 'passos' });
     expect(empty).toBeNull();
   });
+
+  test('desempate favorece a jornada dona da capability da rota', async () => {
+    // /support mapeia para support_ticket_flow (dona) e booking_flow (só
+    // exige a capability support_ticket_flow). Com score idêntico, a dona vence.
+    const item = (id, journeyKey) => ({
+      id,
+      journeyKey,
+      category: 'execucao',
+      question: `Quais são os passos para executar a jornada "${journeyKey.replace(/_/g, ' ')}"?`,
+      answer: '1. Abrir a tela.',
+      status: 'included',
+      current: true,
+      createdAt: '1',
+    });
+    mockFindAll.mockResolvedValue([
+      item('f-booking', 'booking_flow'),
+      item('f-support', 'support_ticket_flow'),
+    ]);
+
+    const result = await findCuratedFaqForRoute({
+      tenantId: 't',
+      route: '/support',
+      question: 'quais são os passos para executar a jornada?',
+    });
+    expect(result).not.toBeNull();
+    expect(result.match.id).toBe('f-support');
+  });
 });

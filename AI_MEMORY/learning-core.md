@@ -281,6 +281,11 @@ Assessment + Certification + Mentor + Adaptive + Analytics + Tutor níveis 2-4.
   da jornada (fonte `curated_faq`) via mapa rota→jornada do skill graph; sem
   match ≥ 0.5 de sobreposição de tokens, segue o fluxo RAG normal. Falha do
   FAQ nunca quebra o Tutor (try/catch → RAG).
+- **Desempate de jornada** (2026-08-18): quando mais de uma jornada mapeia
+  para a mesma rota (ex.: `/support` → `support_ticket_flow` + `booking_flow`,
+  porque `booking_flow` exige a capability `support_ticket_flow`), o match
+  favorece a jornada "dona" da rota — aquela cujo próprio nome é uma das
+  capabilities da skill da rota (bônus 0.001 sobre o score, só desempate).
 - **UI**: aba "Perguntas & Respostas" no Academy
   (`frontend/src/components/academy/JourneyFaqTab.jsx`); usuário comum vê só
   `included`, admin gera e cura.

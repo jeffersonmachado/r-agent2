@@ -30,6 +30,7 @@ const logger = require('../../utils/logger');
 const JOURNEY_KEY_PATTERN = /^[\w.-]{1,120}$/;
 const FAQ_STATUSES = Object.freeze(['suggested', 'included', 'excluded']);
 const MATCH_THRESHOLD = 0.5;
+const PRIMARY_JOURNEY_BONUS = 0.001;
 
 const STOPWORDS = new Set([
   'a', 'o', 'e', 'de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas',
@@ -372,22 +373,31 @@ async function setJourneyFaqStatus({ tenantId, id, status, curatedBy }) {
 // ── Consumo pelo Tutor (somente FAQ curado: included + current) ──────────
 
 /**
- * Mapeia uma rota de UI para as jornadas que a utilizam, via skill graph
- * (skill contém a rota → capabilities da skill → jornadas que as exigem).
+ * Capabilities associadas a uma rota de UI, via skill graph (skill contém a
+ * rota → capabilities da skill).
  */
-function resolveJourneysForRoute(route) {
+function resolveRouteCapabilities(route) {
   const sources = loadGovernedSources();
   const normalized = String(route || '').split('?')[0];
-  if (!normalized) return [];
-
   const capabilities = new Set();
+  if (!normalized) return capabilities;
   for (const skill of sources.skillGraph.skills || []) {
     if ((skill.routes || []).includes(normalized)) {
       for (const cap of skill.capabilities || []) capabilities.add(cap);
     }
   }
+  return capabilities;
+}
+
+/**
+ * Mapeia uma rota de UI para as jornadas que a utilizam, via skill graph
+ * (skill contém a rota → capabilities da skill → jornadas que as exigem).
+ */
+function resolveJourneysForRoute(route) {
+  const capabilities = resolveRouteCapabilities(route);
   if (capabilities.size === 0) return [];
 
+  const sources = loadGovernedSources();
   const journeys = [];
   for (const [key, entry] of Object.entries(sources.contracts.journeys || {})) {
     if ((entry.requiredCapabilities || []).some((cap) => capabilities.has(cap))) {
@@ -416,10 +426,19 @@ function scoreMatch(questionTokens, item) {
 /**
  * Busca o melhor item de FAQ curado para (rota, pergunta). Retorna null se
  * não houver match acima do limiar — o chamador segue o fluxo normal (RAG).
+ *
+ * Desempate determinístico: a jornada "dona" da rota (cujo próprio nome é
+ * uma das capabilities da skill da rota — ex.: support_ticket_flow em
+ * /support) recebe um bônus mínimo. Jornadas associadas indiretamente
+ * (ex.: booking_flow, que apenas exige a capability support_ticket_flow)
+ * perdem o empate para a dona.
  */
 async function findCuratedFaqForRoute({ tenantId, route, question }) {
   const journeyKeys = resolveJourneysForRoute(route);
   if (journeyKeys.length === 0) return null;
+
+  const routeCapabilities = resolveRouteCapabilities(route);
+  const primaryJourneys = new Set(journeyKeys.filter((key) => routeCapabilities.has(key)));
 
   const Model = getLearningJourneyFaqModel();
   const rows = await Model.findAll({
@@ -438,8 +457,9 @@ async function findCuratedFaqForRoute({ tenantId, route, question }) {
   let best = null;
   for (const item of candidates) {
     const score = scoreMatch(questionTokens, item);
-    if (score >= MATCH_THRESHOLD && (!best || score > best.score)) {
-      best = { item, score };
+    const effective = score + (primaryJourneys.has(item.journeyKey) ? PRIMARY_JOURNEY_BONUS : 0);
+    if (score >= MATCH_THRESHOLD && (!best || effective > best.effective)) {
+      best = { item, score, effective };
     }
   }
   if (!best) return null;
@@ -454,6 +474,7 @@ module.exports = {
   findCuratedFaqForRoute,
   buildJourneyFaqItems,
   resolveJourneysForRoute,
+  resolveRouteCapabilities,
   resetGovernedSourcesCache,
   FAQ_STATUSES,
 };
