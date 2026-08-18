@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-15T10:28:35.304Z",
-  "ragServiceUrl": "http://localhost:18001",
+  "generatedAt": "2026-08-18T15:07:39.283Z",
+  "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
     "crossTenantLeakage": 0,
@@ -9,38 +9,42 @@
     "indexedSecrets": 0,
     "operationalAccessToSystemDomain": 0,
     "dbChecksFailed": 0,
-    "runtimeChecksFailed": 0,
-    "internalTokenMissing": 0
+    "runtimeChecksFailed": 1,
+    "internalTokenMissing": 1
   },
   "probes": {
     "serviceReachable": true,
-    "crossDomainLeakage": 0,
-    "crossTenantLeakage": 0,
-    "operationalAccessToSystemDomain": 0,
-    "details": []
+    "crossDomainLeakage": "skipped",
+    "crossTenantLeakage": "skipped",
+    "operationalAccessToSystemDomain": "skipped",
+    "details": [
+      "RAG_INTERNAL_TOKEN ausente: não é possível executar probes autenticados"
+    ]
   },
   "distribution": [
     {
       "domain": "OPERATIONAL",
       "classification": "PRODUCTION",
-      "count": 405
+      "count": 450
     },
     {
       "domain": "OPERATIONAL",
       "classification": "SUPPORT",
-      "count": 64
+      "count": 37
     },
     {
       "domain": "SYSTEM",
       "classification": "DEVELOPMENT",
-      "count": 3144
+      "count": 3118
     },
     {
       "domain": "SYSTEM",
       "classification": "SUPPORT",
-      "count": 116
+      "count": 133
     }
   ],
-  "details": [],
-  "status": "PASS"
+  "details": [
+    "RAG_INTERNAL_TOKEN ausente: não é possível executar probes autenticados"
+  ],
+  "status": "FAIL"
 }
