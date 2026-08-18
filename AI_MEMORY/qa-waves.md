@@ -87,7 +87,7 @@ Do not infer release readiness from `PLATFORM_STATUS.md` alone. The executable g
 
 - `qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json`: observed generated 2026-08-10, but its replay signatures are legacy and do not satisfy the current HMAC contract. Regenerate with the real runtime and configured signing key before release.
 - `qa/qa-waves/operational-gaps-report.json`: last generated 2026-05-12. Regenerate via `POST /api/qa-waves/operational/recompute` (requires API running). Recommended cadence: weekly or pre-release.
-- `qa/smoke/qa-waves-scheduled-operational-smoke.json`: observed generated 2026-07-20 and invalid/stale on 2026-08-14. Regenerate daily via cron/CI from a real source artifact; the report must bind `evidencePath`, SHA-256, source timestamp and all required journeys.
+- `qa/smoke/qa-waves-scheduled-operational-smoke.json`: observed generated 2026-07-20 and invalid/stale on 2026-08-14. Regenerate daily via cron/CI from a real source artifact; the report must bind `evidencePath`, SHA-256, source timestamp and all required journeys. **Automação instalada (2026-08-18)**: `scripts/smoke/run-scheduled-production-health-smoke.sh` roda diariamente às 04:23 via crontab do usuário (modo `production_health`, stack viva :3001/:5173, log em `logs/qa/scheduled-production-health-smoke.log`); se a stack estiver fora, registra SKIP e sai 0 — nunca gera evidência falsa.
 - Lightweight scheduled diagnostics use a mode-specific file and are never release evidence; do not copy or rename them into the canonical path.
 
 ## qa:waves scripts (Gap 3)
