@@ -18,6 +18,13 @@
   },
   "history": [
     {
+      "executionId": "mesh-2026-08-18T21-30-00-157Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-18T21:38:30.987Z"
+    },
+    {
       "executionId": "mesh-2026-08-18T21-15-00-107Z",
       "passRate": 1,
       "blockingFailures": 0,
@@ -149,13 +156,6 @@
       "blockingFailures": 0,
       "infraErrors": 0,
       "at": "2026-08-16T23:07:04.030Z"
-    },
-    {
-      "executionId": "mesh-2026-08-16T22-45-00-413Z",
-      "passRate": 1,
-      "blockingFailures": 0,
-      "infraErrors": 0,
-      "at": "2026-08-16T22:52:06.601Z"
     }
   ]
 }
