@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-14T08:41:52.782Z",
+  "generatedAt": "2026-08-18T21:24:58.393Z",
   "counts": {
-    "total": 2741,
+    "total": 2760,
     "byKind": {
-      "api": 771,
-      "field": 1508,
-      "model": 157,
+      "api": 774,
+      "field": 1522,
+      "model": 158,
       "page": 139,
       "relation": 9,
-      "table": 157
+      "table": 158
     },
     "byClassification": {
-      "PRODUCTION": 2523,
+      "PRODUCTION": 2542,
       "DEVELOPMENT": 133,
       "SUPPORT": 85
     },
@@ -2403,6 +2403,48 @@
       ],
       "linkedDomains": [],
       "fingerprint": "2f15bd6a93b625923706fb59aa4b52482d66449394817221b22eb4be0af1fb59"
+    },
+    {
+      "id": "api:GET:/api/learning/journey-faq",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/learning/journey-faq",
+      "module": "learning-core",
+      "source": "api/modules/learning-core/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "36c0b4cfc12668e2294dff7c2761d38fc310fcc8acd14e3ad7ccdc912f96b7bf"
+    },
+    {
+      "id": "api:GET:/api/learning/journey-faq/summary",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/learning/journey-faq/summary",
+      "module": "learning-core",
+      "source": "api/modules/learning-core/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d73ff229a7ac0a10c3cc1b4970adf2e61171c144b0488f477839a84e46de08be"
     },
     {
       "id": "api:GET:/api/learning/manuals",
@@ -5625,14 +5667,16 @@
       "path": "/health",
       "module": "public-system",
       "source": "api/modules/public-system/publicHealthRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "handlePublicHealthRoutes"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "ed0b18041a5f0918a271a4214532ffa5a203a41a0acd32374580c45f74459c3b"
+      "fingerprint": "243f1f41a256e30069f33f348e3cbf72ade58779950f4783fa232cf7d45c9fbb"
     },
     {
       "id": "api:GET:/health/db",
@@ -5657,14 +5701,16 @@
       "path": "/health/live",
       "module": "public-system",
       "source": "api/modules/public-system/publicHealthRoutes.js",
-      "authRequired": false,
-      "authorization": [],
+      "authRequired": true,
+      "authorization": [
+        "handlePublicHealthRoutes"
+      ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "c02edf95dddd747b929b4d0b4db5096f6a8817cf80d07babedc5fb60113a8502"
+      "fingerprint": "9fb1d430ced7730e20516beb23fa508cc7f515046fc54e865b4ea28d028a0ab8"
     },
     {
       "id": "api:GET:/inbox/conversations",
@@ -9938,6 +9984,27 @@
       ],
       "linkedDomains": [],
       "fingerprint": "b003c4bd003d0c09b302365b33d7f06c2711068af3d5d39ed62ff7efaa791b52"
+    },
+    {
+      "id": "api:POST:/api/learning/journey-faq/generate",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/learning/journey-faq/generate",
+      "module": "learning-core",
+      "source": "api/modules/learning-core/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "affaba660a7666882651b5b2e6a3567e55c95502e58646e17059730d8361848d"
     },
     {
       "id": "api:POST:/api/learning/manuals/from-replay",
@@ -23596,6 +23663,300 @@
       ],
       "linkedDomains": [],
       "fingerprint": "14c827a427b4a269291459dd5d7598abff009f0ae5b069b69c2f3019789138b8"
+    },
+    {
+      "id": "field:LearningJourneyFaq.answer",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "answer",
+      "type": "TEXT",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "13a66e7e1560eebe6eacf74aff8e627b85ce3b23619ef9bd68879739d56ffe1d"
+    },
+    {
+      "id": "field:LearningJourneyFaq.category",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "category",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "48785ddd9619391a9008e5fd67be95e656dff6d61e2065145687d06d00251688"
+    },
+    {
+      "id": "field:LearningJourneyFaq.createdAt",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "createdAt",
+      "type": "DATE",
+      "allowNull": false,
+      "default": "DataTypes.NOW",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d341a74f9486da814f7e0c1cc225b60d2b1639a8de2bfac46980a1e45619d4bc"
+    },
+    {
+      "id": "field:LearningJourneyFaq.curatedAt",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "curatedAt",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "c179be86f4764fe358045e69998dec29ca532915bec3fa4325e4719b1f5f10a2"
+    },
+    {
+      "id": "field:LearningJourneyFaq.curatedBy",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "curatedBy",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "fbd339339eb6ec5e2632dd9c2dd3ca2e7a6d34ed8a40a5783a9e58e764542b3d"
+    },
+    {
+      "id": "field:LearningJourneyFaq.current",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "current",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "true",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "63d5ea104c9e7c6036ab0ca39858fa3ba261edb0465ddc4bde63629851b6ad8b"
+    },
+    {
+      "id": "field:LearningJourneyFaq.fingerprint",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "fingerprint",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2455f20235f0df9bd340bfbbe024ec95d8285f3c32755427b7c7d7ff99550d30"
+    },
+    {
+      "id": "field:LearningJourneyFaq.id",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "id",
+      "type": "UUID",
+      "allowNull": null,
+      "default": "DataTypes.UUIDV4",
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ab029845e545b1222dd8a1314c09c1cc3b194a258b93f3069b48a39c7b2518d2"
+    },
+    {
+      "id": "field:LearningJourneyFaq.journeyKey",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "journeyKey",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8f0ac3fb4e3f72f44d0b78c906819efb5576106f9c3d157028ffae82c11b0cfb"
+    },
+    {
+      "id": "field:LearningJourneyFaq.question",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "question",
+      "type": "TEXT",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "64acd46410317edd674d94731eb8c0746fd7c5c9d2b89252f4d56fa9ca517655"
+    },
+    {
+      "id": "field:LearningJourneyFaq.sources",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "sources",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b24aabb7a9b0c544305f0c7d4bafb1bb4b4723bbb811749fe7e6b7928cbedf08"
+    },
+    {
+      "id": "field:LearningJourneyFaq.status",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'suggested'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "45d7b0a854fad1e59b4e68863a4bde7f057cce874c47b4a80d33b6ab5c26696d"
+    },
+    {
+      "id": "field:LearningJourneyFaq.tenant_id",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "tenant_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'system'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6f438a2e169e7f128f4226f6d4a77b883255b209842d6bb511e91bb3e440249c"
+    },
+    {
+      "id": "field:LearningJourneyFaq.updatedAt",
+      "kind": "field",
+      "model": "LearningJourneyFaq",
+      "field": "updatedAt",
+      "type": "DATE",
+      "allowNull": false,
+      "default": "DataTypes.NOW",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "70defdb98c2cf176479a54df6e73c4e471df53d2cf1883730e66f26ae33f4d31"
     },
     {
       "id": "field:LearningMentorPlan.agentId",
@@ -46179,6 +46540,24 @@
       "fingerprint": "c3eba7d98c58b8686b6bf8d90864a86c4d3aaabbd62081f22d754467f4eab8f0"
     },
     {
+      "id": "model:LearningJourneyFaq",
+      "kind": "model",
+      "model": "LearningJourneyFaq",
+      "tableName": "learning_journey_faqs",
+      "fieldCount": 14,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3684f4189b801c7b24a5005da29a4acfba1d1a7f33973789f45fccf353ea76f9"
+    },
+    {
       "id": "model:LearningMentorPlan",
       "kind": "model",
       "model": "LearningMentorPlan",
@@ -52843,6 +53222,51 @@
       ],
       "linkedDomains": [],
       "fingerprint": "60bed35eb2c4dfbcfa6b993823c2848b09a129571dd3d03c3d33bbcf5236a0a0"
+    },
+    {
+      "id": "table:learning_journey_faqs",
+      "kind": "table",
+      "table": "learning_journey_faqs",
+      "model": "LearningJourneyFaq",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_id",
+            "journey_key"
+          ],
+          "name": "ljf_tenant_journey_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_id",
+            "journey_key",
+            "status"
+          ],
+          "name": "ljf_tenant_journey_status_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_id",
+            "journey_key",
+            "fingerprint"
+          ],
+          "name": "ljf_tenant_journey_fingerprint_uk",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/LearningJourneyFaq.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "academy_learning",
+        "faq"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "0104f952620607789ea90a635a702e99e56b875fb58e4638cafb9e880486f9d4"
     },
     {
       "id": "table:learning_mentor_plans",
