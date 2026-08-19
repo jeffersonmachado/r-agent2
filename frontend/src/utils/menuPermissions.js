@@ -347,9 +347,11 @@ export function filterNavigationTree(agent, nodes = []) {
  * exigem super_admin, inclusive para paths sem mapeamento explícito no menu
  * (allowUnknown não se aplica a esses prefixos).
  * Inclui aliases legados fora de /dev que renderizam páginas de engenharia
- * (ver main.jsx): '/rpa-replays', '/rpa-seeds', '/system-status'.
+ * (ver main.jsx): '/rpa-seeds', '/system-status'.
+ * '/rpa-replays' NÃO está aqui: é ferramenta de investigação SUPPORT — o acesso
+ * é decidido pelo item de menu (roles super_admin + auditor) em canAccessPath.
  */
-const PROTECTED_PATH_PREFIXES = ['/dev', '/qa', '/qa-mesh', '/rpa', '/rpa-replays', '/rpa-seeds', '/system-status'];
+const PROTECTED_PATH_PREFIXES = ['/dev', '/qa', '/qa-mesh', '/rpa', '/rpa-seeds', '/system-status'];
 
 function isProtectedPath(targetPath) {
   return PROTECTED_PATH_PREFIXES.some(

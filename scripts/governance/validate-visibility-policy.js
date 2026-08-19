@@ -9,7 +9,8 @@
  *
  * 1. Todo item de `frontend/src/navigation/menu.js` cujo path comece com
  *    /dev, /qa, /qa-mesh ou /rpa deve ter roles ⊆ ['super_admin'] (item e
- *    seções ancestrais que definam roles).
+ *    seções ancestrais que definam roles). Exceção SUPPORT documentada:
+ *    '/rpa-replays' (replay/leitura) admite roles ⊆ ['super_admin', 'auditor'].
  * 2. Nenhum path de PRODUCTION_HIDDEN_ROUTES (fonte única:
  *    api/modules/agent-os/experience-segregation.js) pode aparecer em seção
  *    de menu visível a roles operacionais.
@@ -34,6 +35,12 @@ const {
 
 const PROTECTED_PREFIXES = ['/dev', '/qa', '/qa-mesh', '/rpa'];
 const SUPER_ADMIN_ONLY = ['super_admin'];
+
+// Exceções SUPPORT (revisão 2026-08-18, segregação Replay×RPA): replay/leitura
+// é ferramenta de investigação de SUPPORT — a página de replays pode expor o
+// papel auditor além de super_admin. Gravação/execução RPA seguem DEVELOPMENT.
+const SUPPORT_ALLOWED_MENU_ROUTES = ['/rpa-replays'];
+const SUPPORT_ALLOWED_ROLES = ['super_admin', 'auditor'];
 
 const API_SURFACES = [
   { label: 'api/modules/qa-waves/routes.js', files: ['api/modules/qa-waves/routes.js'] },
@@ -74,6 +81,21 @@ function isSuperAdminOnly(roles) {
   );
 }
 
+function isSupportAllowedRoute(routePath) {
+  return SUPPORT_ALLOWED_MENU_ROUTES.some((allowed) => matchesPrefix(routePath, allowed));
+}
+
+function hasAllowedRoles(routePath, roles) {
+  if (isSupportAllowedRoute(routePath)) {
+    return (
+      Array.isArray(roles) &&
+      roles.length > 0 &&
+      roles.every((role) => SUPPORT_ALLOWED_ROLES.includes(role))
+    );
+  }
+  return isSuperAdminOnly(roles);
+}
+
 function collectMenuViolations(navigationMenu) {
   const violations = [];
 
@@ -84,26 +106,27 @@ function collectMenuViolations(navigationMenu) {
 
       if (routePath && (isProtectedPath(routePath) || isProductionHidden(routePath))) {
         const policy = isProtectedPath(routePath) ? 'protected_prefix' : 'production_hidden_route';
+        const expectedRoles = isSupportAllowedRoute(routePath) ? SUPPORT_ALLOWED_ROLES : SUPER_ADMIN_ONLY;
 
-        if (!isSuperAdminOnly(node.roles)) {
+        if (!hasAllowedRoles(routePath, node.roles)) {
           violations.push({
             type: `menu_item_exposed_${policy}`,
             id: node.id || null,
             path: routePath,
             roles: node.roles || null,
-            expected: SUPER_ADMIN_ONLY,
+            expected: expectedRoles,
           });
         }
 
         for (const ancestor of ancestors) {
-          if (ancestor.roles && !isSuperAdminOnly(ancestor.roles)) {
+          if (ancestor.roles && !hasAllowedRoles(routePath, ancestor.roles)) {
             violations.push({
               type: `menu_section_exposed_${policy}`,
               id: node.id || null,
               path: routePath,
               section: ancestor.id || ancestor.label || null,
               sectionRoles: ancestor.roles,
-              expected: SUPER_ADMIN_ONLY,
+              expected: expectedRoles,
             });
           }
         }
@@ -158,6 +181,8 @@ async function main() {
       protectedPrefixes: PROTECTED_PREFIXES,
       productionHiddenRoutes: PRODUCTION_HIDDEN_ROUTES,
       expectedRoles: SUPER_ADMIN_ONLY,
+      supportAllowedRoutes: SUPPORT_ALLOWED_MENU_ROUTES,
+      supportAllowedRoles: SUPPORT_ALLOWED_ROLES,
       apiSurfaces: API_SURFACES.map((surface) => surface.label),
     },
     violationCount: violations.length,

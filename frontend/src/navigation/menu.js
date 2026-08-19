@@ -366,7 +366,7 @@ export const navigationMenu = [
               { id: 'dev-qa-waves-enterprise-governance', label: 'QA Waves Enterprise', path: '/dev/qa-waves/enterprise-governance', permission: { resource: 'reports', action: 'read' }, roles: ['super_admin'] },
               { id: 'dev-qa-gaps', label: 'QA Gaps', path: '/dev/qa-gaps', permission: { resource: 'reports', action: 'read' }, roles: ['super_admin'] },
               { id: 'rpa-test', label: 'Teste RPA', path: '/dev/rpa-test', permission: { resource: 'flows', action: 'read' }, roles: ['super_admin'] },
-              { id: 'rpa-replays', label: 'Replays RPA', path: '/dev/rpa-replays', permission: { resource: 'flows', action: 'read' }, roles: ['super_admin'] },
+              { id: 'rpa-replays', label: 'Replays RPA', path: '/rpa-replays', permission: { resource: 'reports', action: 'read' }, roles: ['super_admin', 'auditor'] },
               { id: 'rpa-seeds', label: 'Seeds RPA', path: '/dev/rpa-seeds', permission: { resource: 'flows', action: 'read' }, roles: ['super_admin'] },
             ],
           },

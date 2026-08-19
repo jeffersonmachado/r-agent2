@@ -95,4 +95,19 @@ describe('menuPermissions', () => {
     }
     expect(canAccessPath(superAdminAgent, '/system-status')).toBe(true);
   });
+
+  it('permite auditor (SUPPORT) na página de replays /rpa-replays, mas não em /dev/* nem seeds', () => {
+    // Segregação Replay×RPA (W2-B): replay/leitura é ferramenta de investigação
+    // SUPPORT; gravação, seeds e páginas /dev seguem DEVELOPMENT (super_admin).
+    const auditorAgent = { id: 'agent-au', username: 'au', role: 'auditor', tenantId: 'demo-tenant' };
+
+    expect(canAccessPath(auditorAgent, '/rpa-replays')).toBe(true);
+    expect(canAccessPath(auditorAgent, '/dev/rpa-replays')).toBe(false);
+    expect(canAccessPath(auditorAgent, '/dev/rpa-test')).toBe(false);
+    expect(canAccessPath(auditorAgent, '/rpa-seeds')).toBe(false);
+    expect(canAccessPath(auditorAgent, '/dev/rpa-seeds')).toBe(false);
+
+    expect(canAccessPath(superAdminAgent, '/rpa-replays')).toBe(true);
+    expect(canAccessPath(superAdminAgent, '/dev/rpa-replays')).toBe(true);
+  });
 });

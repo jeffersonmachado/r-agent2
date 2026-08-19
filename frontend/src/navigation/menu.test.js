@@ -52,7 +52,7 @@ describe('QA & RPA navigation structure', () => {
       '/dev/qa-waves/enterprise-governance',
       '/dev/qa-gaps',
       '/dev/rpa-test',
-      '/dev/rpa-replays',
+      '/rpa-replays',
       '/dev/rpa-seeds',
     ]);
   });

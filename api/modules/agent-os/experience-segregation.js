@@ -74,8 +74,10 @@ const PRODUCTION_HIDDEN_ROUTES = [
   '/dev', '/admin/agents',
 ];
 
+// /rpa-replays (alias que renderiza a página de replays) é acessível a SUPPORT
+// no frontend; /dev/rpa-replays permanece DEVELOPMENT-only (prefixo /dev).
 const SUPPORT_VISIBLE_ROUTES = [
-  '/dev/rpa-replays', '/rpa-replays', '/support', '/audit',
+  '/rpa-replays', '/support', '/audit',
   '/workspace', '/inbox',
 ];
 

@@ -1,5 +1,6 @@
 const {
   ensureSupportAccess,
+  ensureRpaDevelopmentAccess,
   getPathSuffix,
   getExecutionIdFromActionPath,
   resolveRequestTenant,
@@ -22,7 +23,7 @@ async function handleRpaExecutionRoutes(ctx) {
   } = deps;
 
   if (method === 'POST' && pathname.startsWith('/rpa/execute/')) {
-    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    if (!ensureRpaDevelopmentAccess(req, res, requireAuth, sendJson)) return true;
     const tenantId = resolveRequestTenant(req, res, sendJson);
     if (!tenantId) return true;
 
@@ -82,7 +83,7 @@ async function handleRpaExecutionRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/cancel')) {
-    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    if (!ensureRpaDevelopmentAccess(req, res, requireAuth, sendJson)) return true;
     const tenantId = resolveRequestTenant(req, res, sendJson);
     if (!tenantId) return true;
 
@@ -108,7 +109,7 @@ async function handleRpaExecutionRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/continue')) {
-    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    if (!ensureRpaDevelopmentAccess(req, res, requireAuth, sendJson)) return true;
     const tenantId = resolveRequestTenant(req, res, sendJson);
     if (!tenantId) return true;
 
@@ -134,7 +135,7 @@ async function handleRpaExecutionRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname.includes('/rpa/execution/') && pathname.endsWith('/next')) {
-    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    if (!ensureRpaDevelopmentAccess(req, res, requireAuth, sendJson)) return true;
     const tenantId = resolveRequestTenant(req, res, sendJson);
     if (!tenantId) return true;
 

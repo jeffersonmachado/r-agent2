@@ -1,5 +1,6 @@
 const {
   ensureSupportAccess,
+  ensureRpaDevelopmentAccess,
   getPathSuffix,
   resolveRequestTenant,
 } = require('./rpaRouteUtils');
@@ -78,7 +79,7 @@ async function handleRpaRecordingsRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname === '/rpa/record/start') {
-    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    if (!ensureRpaDevelopmentAccess(req, res, requireAuth, sendJson)) return true;
     const tenantId = resolveRequestTenant(req, res, sendJson);
     if (!tenantId) return true;
 
@@ -115,7 +116,7 @@ async function handleRpaRecordingsRoutes(ctx) {
   }
 
   if (method === 'POST' && pathname.startsWith('/rpa/record/stop/')) {
-    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    if (!ensureRpaDevelopmentAccess(req, res, requireAuth, sendJson)) return true;
     const tenantId = resolveRequestTenant(req, res, sendJson);
     if (!tenantId) return true;
 
@@ -144,7 +145,7 @@ async function handleRpaRecordingsRoutes(ctx) {
   }
 
   if (method === 'GET' && pathname.startsWith('/rpa/record/status/')) {
-    if (!ensureSupportAccess(req, res, requireAuth, sendJson)) return true;
+    if (!ensureRpaDevelopmentAccess(req, res, requireAuth, sendJson)) return true;
     const tenantId = resolveRequestTenant(req, res, sendJson);
     if (!tenantId) return true;
 
