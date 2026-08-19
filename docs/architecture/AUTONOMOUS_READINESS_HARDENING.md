@@ -125,7 +125,7 @@ Estado final comprovado (2026-08-19, commit pós-`51599c1f`):
 - **QA Mesh canônico: GO** — 131/131 passed, 0 failed, 0 flaky, isCanonicalExecution=true, executionId `mesh-2026-08-19T11-15-13-868Z`. Re-run dirigido do cenário RPA fitness pós-HARD-026: passed/GO (`mesh-2026-08-19T17-07-01-299Z`).
 - **Prod-like smoke (stack real): GO** — 8/8 jornadas (support, fitness, booking, payment, food, market, clinic, agendamento) com productionReadiness GO e 0 blockers; scheduled production_health GO (0 blockers).
 - **QA Waves enterprise governance (live rebuild): GO** — confidence 100, replayIntegrity válida, continuous smoke healthy e vinculado ao hash da evidência atual.
-- **Testes:** unit 3035+8 (HARD-026: 3, HARD-027: 6, fingerprintChain 18/18) passando; test:system 84/84; FASE 24 integrações 7/7; frontend vitest 661/661.
+- **Testes:** unit 3044/3044 (543 suites; +9 neste ciclo — HARD-026: 3, HARD-027: 6) passando; test:system 84/84; FASE 24 integrações 7/7; frontend vitest 661/661.
 - **Pacote:** `dist/r-agent2-20260819-102810.zip` — two-pass release self-proving, verifier offline PASS, vinculado ao commit `51599c1f`.
 
 ### Classificação final
