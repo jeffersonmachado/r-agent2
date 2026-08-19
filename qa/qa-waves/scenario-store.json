@@ -233,7 +233,7 @@
     {
       "id": "clinic-ticket-manutencao",
       "waveId": "wave-clinic-core",
-      "vertical": "clinica",
+      "vertical": "clinic",
       "journey": "clinic_default_journey",
       "name": "Clinic abertura e resolução de ticket de manutenção",
       "description": "Ticket criado, atribuído ao atendente, resolvido e fechado com audit trail",
@@ -300,7 +300,7 @@
         "requireReplay": true
       },
       "tags": {
-        "vertical": "clinica",
+        "vertical": "clinic",
         "journey": "clinic_default_journey",
         "source": "catalog"
       },
@@ -381,7 +381,7 @@
     {
       "id": "services-ativacao-solucao",
       "waveId": "wave-services-core",
-      "vertical": "servicos",
+      "vertical": "services",
       "journey": "services_default_journey",
       "name": "Services ativação de pacote de soluções",
       "description": "Pacote selecionado, ativação registrada no backend, status de cobertura atualizado",
@@ -469,7 +469,7 @@
     {
       "id": "market-publicacao-no",
       "waveId": "wave-market-core",
-      "vertical": "mercado",
+      "vertical": "market",
       "journey": "market_default_journey",
       "name": "Market publicação de nó no marketplace",
       "description": "Nó submetido ao marketplace, publicação refletida, metadados validados",

@@ -18,6 +18,9 @@
  *
  * Mapeamento de status de execução → estado:
  *   passed                → VALIDATED
+ *   passed_unverified     → VISITED (executou, mas sem assertions registradas)
+ *   inferred_passed       → VISITED (inferência por afinidade de domínio —
+ *                           nunca VALIDATED: só execução real valida)
  *   passed_via_fallback   → VISITED (não conta como validado)
  *   failed | flaky        → FAILED
  *   skipped | environment_missing | infra_error → BLOCKED
@@ -78,6 +81,8 @@ const KIND_TO_DIMENSION = Object.freeze({
 /** Status de execução → estado de cobertura. */
 const EXECUTION_STATUS_TO_STATE = Object.freeze({
   passed: COVERAGE_STATES.VALIDATED,
+  passed_unverified: COVERAGE_STATES.VISITED,
+  inferred_passed: COVERAGE_STATES.VISITED,
   passed_via_fallback: COVERAGE_STATES.VISITED,
   failed: COVERAGE_STATES.FAILED,
   flaky: COVERAGE_STATES.FAILED,
@@ -317,7 +322,9 @@ function formatReason(check, threshold, actual, items) {
  * @param {object[]} input.inventoryItems itens de config/system-inventory.json
  * @param {object[]} input.scenarios cenários do meshRegistry
  * @param {Array<{scenarioId:string,status:string}>} input.executions
- *   resultado da última execução por cenário.
+ *   resultado da última execução por cenário. Execuções de scenarioIds que
+ *   NÃO constam em `scenarios` são ignoradas nas métricas e reportadas à
+ *   parte em `unexpectedExecutions` (nunca inflam o numerador).
  * @param {string[]} [input.journeys] ids de jornadas (default: derivado dos
  *   linkedJourneys do inventário).
  * @param {string[]} [input.staleItemIds] itens com fingerprint alterado desde
@@ -373,7 +380,23 @@ function evaluateCoverageGate(input = {}) {
 
   const orphaned = items.filter((item) => item.state === COVERAGE_STATES.ORPHANED);
 
-  const gateExecutions = (executions || []).map((execution) => ({
+  // Invariante de conjuntos: apenas execuções de cenários que CONSTAM no
+  // registry entram no numerador das métricas. Execuções de scenarioIds
+  // desconhecidos (ex.: cenário removido do registry) são reportadas à
+  // parte em `unexpectedExecutions` e nunca inflam sucesso/cobertura.
+  const knownScenarioIds = new Set(
+    (scenarios || []).filter((scenario) => scenario && scenario.id).map((scenario) => scenario.id),
+  );
+  const knownExecutions = [];
+  const unexpectedExecutions = [];
+  for (const execution of executions || []) {
+    if (execution && knownScenarioIds.has(execution.scenarioId)) {
+      knownExecutions.push(execution);
+    } else {
+      unexpectedExecutions.push(execution && execution.scenarioId);
+    }
+  }
+  const gateExecutions = knownExecutions.map((execution) => ({
     status: successRateStatus(execution && execution.status),
   }));
 
@@ -460,6 +483,10 @@ function evaluateCoverageGate(input = {}) {
     dimensions,
     critical: criticalSummaryResult,
     orphaned: { count: orphaned.length, items: orphaned.map((item) => item.id).slice(0, REASON_ITEMS_LIMIT) },
+    unexpectedExecutions: {
+      count: unexpectedExecutions.length,
+      items: unexpectedExecutions.filter(Boolean).slice(0, REASON_ITEMS_LIMIT),
+    },
     visibilityViolations: visibility,
     tenantIsolationViolations: tenantIsolation,
     ragDomainSegregationViolations: ragDomainSegregation,

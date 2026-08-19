@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-27T22:39:52.978Z",
+  "generatedAt": "2026-08-19T03:32:12.704Z",
   "scenarios": [
     {
       "id": "business-b1",
@@ -227,7 +227,11 @@
       "steps": [
         "Campanha baseline seeded"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /beauty/campaigns carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -259,7 +263,11 @@
       "steps": [
         "Lead baseline seeded"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /beauty/leads carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -291,7 +299,11 @@
       "steps": [
         "Cliente beauty seeded"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /beauty/customers carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -323,7 +335,11 @@
       "steps": [
         "Agendamento baseline disponível"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /beauty/schedule carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -355,7 +371,11 @@
       "steps": [
         "Serviços beauty publicados"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /beauty/services carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "medium",
       "adapter": "api",
@@ -387,7 +407,11 @@
       "steps": [
         "Cobrança beauty criada"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /beauty/payments carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -412,7 +436,7 @@
     },
     {
       "id": "business-clinic-flow-ticket",
-      "domain": "clinica",
+      "domain": "clinic",
       "type": "regression",
       "source": "qa",
       "flow": "Clinic abertura e resolução de ticket de manutenção",
@@ -429,7 +453,7 @@
       "criticality": "high",
       "adapter": "api",
       "impactScopes": [
-        "clinica",
+        "clinic",
         "ci",
         "telemetry"
       ],
@@ -449,19 +473,22 @@
     },
     {
       "id": "business-clinic-scr-01",
-      "domain": "clinica",
+      "domain": "clinic",
       "type": "smoke",
       "source": "hybrid",
       "flow": "Clinic maintenance screen smoke",
       "steps": [
         "Operação autenticada com acesso à manutenção"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /maintenance carregada e validada (título/estado)",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
       "impactScopes": [
-        "clinica",
+        "clinic",
         "ci",
         "telemetry"
       ],
@@ -2259,6 +2286,44 @@
       "scenarioCode": "CORE-BIZ-RAG-DOCUMENTS"
     },
     {
+      "id": "business-core-biz-rag-segregation",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core rag segregation: domínio declarado pelo cliente é ignorado, escopo aplicado por domínio e metadata de escopo presente",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Documento criado com domain SYSTEM forjado no payload é indexado como OPERATIONAL (cliente nunca declara domínio)",
+        "Query no escopo OPERATIONAL encontra o documento e reporta metadata.domain=OPERATIONAL",
+        "Query no escopo SYSTEM (super_admin) NÃO encontra o documento operacional",
+        "metadata.classificationsApplied presente nas respostas (evidência de escopo aplicado)",
+        "Documento removido no cleanup"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "rag_documents",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-RAG-SEGREGATION"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-RAG-SEGREGATION"
+    },
+    {
       "id": "business-core-biz-rap-learn",
       "domain": "core",
       "type": "regression",
@@ -2661,12 +2726,12 @@
       "domain": "core",
       "type": "regression",
       "source": "qa",
-      "flow": "Core tenants: página renderiza autenticada, ai-config do tenant atual e teste de credencial com contrato estruturado",
+      "flow": "Core tenants: guarda RBAC da página, ai-config do tenant atual e teste de credencial com contrato estruturado",
       "steps": [
         "Tenant autenticado"
       ],
       "assertions": [
-        "Página /tenants renderiza autenticada sem console errors",
+        "Página /tenants nega acesso ao papel sem tenant:read (guarda RBAC por URL direta)",
         "GET /tenants/current/ai-config responde config ou 404 estruturado",
         "POST /tenants/current/ai-credentials/test responde valid:false/true estruturado"
       ],
@@ -2741,7 +2806,7 @@
       "assertions": [
         "Evento ringing registrado com ok=true",
         "Evento visível no event-ledger filtrado por correlationId",
-        "voice/metrics sem X-Tenant-Id retorna 400 tenant_required",
+        "voice/metrics sem X-Tenant-Id retorna 403 tenant_required",
         "voice/metrics com tenant responde com totais"
       ],
       "rpaRecordingId": null,
@@ -3549,7 +3614,11 @@
         "Tenant autenticado",
         "Aluno baseline seeded"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /fitness/students carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -3581,7 +3650,11 @@
       "steps": [
         "Membership baseline seeded"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /fitness/memberships carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -3613,7 +3686,11 @@
       "steps": [
         "Attendance route ativa"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /fitness/attendance carregada e validada (título/estado)",
+        "Interações de tela executadas sem erro",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -3763,7 +3840,10 @@
       "steps": [
         "Módulo de pedidos disponível"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /orders carregada e validada (título/estado)",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "high",
       "adapter": "api",
@@ -3788,7 +3868,7 @@
     },
     {
       "id": "business-market-flow-node",
-      "domain": "mercado",
+      "domain": "market",
       "type": "regression",
       "source": "qa",
       "flow": "Market publicação de nó no marketplace",
@@ -3805,7 +3885,7 @@
       "criticality": "medium",
       "adapter": "api",
       "impactScopes": [
-        "mercado",
+        "market",
         "ci",
         "telemetry"
       ],
@@ -3862,19 +3942,22 @@
     },
     {
       "id": "business-market-scr-01",
-      "domain": "mercado",
+      "domain": "market",
       "type": "smoke",
       "source": "hybrid",
       "flow": "Market node marketplace screen smoke",
       "steps": [
         "Marketplace carregável no tenant"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /node-marketplace carregada e validada (título/estado)",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "medium",
       "adapter": "api",
       "impactScopes": [
-        "mercado",
+        "market",
         "ci",
         "telemetry"
       ],
@@ -3894,7 +3977,7 @@
     },
     {
       "id": "business-serv-flow-solution",
-      "domain": "servicos",
+      "domain": "services",
       "type": "regression",
       "source": "qa",
       "flow": "Services ativação de pacote de soluções",
@@ -3911,7 +3994,7 @@
       "criticality": "medium",
       "adapter": "api",
       "impactScopes": [
-        "servicos",
+        "services",
         "ci",
         "telemetry"
       ],
@@ -3931,19 +4014,22 @@
     },
     {
       "id": "business-serv-scr-01",
-      "domain": "servicos",
+      "domain": "services",
       "type": "smoke",
       "source": "hybrid",
       "flow": "Services solutions screen smoke",
       "steps": [
         "Catálogo de soluções publicado"
       ],
-      "assertions": [],
+      "assertions": [
+        "Tela /solutions carregada e validada (título/estado)",
+        "Evidências de tela capturadas (screenshot/log)"
+      ],
       "rpaRecordingId": null,
       "criticality": "medium",
       "adapter": "api",
       "impactScopes": [
-        "servicos",
+        "services",
         "ci",
         "telemetry"
       ],
@@ -4074,7 +4160,7 @@
         "execução RPA seed concluída sem erro crítico"
       ],
       "rpaRecordingId": "fitness-matricula-agendamento-ui",
-      "criticality": "standard",
+      "criticality": "blocking",
       "adapter": "rpa",
       "impactScopes": [
         "fitness",
@@ -4186,6 +4272,8 @@
         }
       ],
       "wave": "wave-fitness-matricula",
+      "journeyId": "agendamento",
+      "scenarioStatus": "approved",
       "executionMode": "semantic"
     },
     {
@@ -4215,6 +4303,8 @@
       "scenarioId": "fitness-matricula-cancelamento",
       "semanticSteps": [],
       "wave": "wave-fitness-matricula",
+      "journeyId": "cancelamento",
+      "scenarioStatus": "deprecated",
       "executionMode": "semantic"
     },
     {
@@ -4244,6 +4334,8 @@
       "scenarioId": "fitness-matricula-checkin",
       "semanticSteps": [],
       "wave": "wave-fitness-matricula",
+      "journeyId": "checkin",
+      "scenarioStatus": "deprecated",
       "executionMode": "semantic"
     },
     {
@@ -4273,6 +4365,8 @@
       "scenarioId": "fitness-matricula-checkout",
       "semanticSteps": [],
       "wave": "wave-fitness-matricula",
+      "journeyId": "checkout",
+      "scenarioStatus": "deprecated",
       "executionMode": "semantic"
     },
     {
@@ -4626,6 +4720,8 @@
         }
       ],
       "wave": "wave-fitness-matricula",
+      "journeyId": "leads",
+      "scenarioStatus": "approved",
       "executionMode": "semantic"
     },
     {
@@ -4655,6 +4751,8 @@
       "scenarioId": "fitness-matricula-onboarding",
       "semanticSteps": [],
       "wave": "wave-fitness-matricula",
+      "journeyId": "onboarding",
+      "scenarioStatus": "deprecated",
       "executionMode": "semantic"
     },
     {
@@ -4684,6 +4782,8 @@
       "scenarioId": "fitness-matricula-renovacao",
       "semanticSteps": [],
       "wave": "wave-fitness-matricula",
+      "journeyId": "renovacao",
+      "scenarioStatus": "deprecated",
       "executionMode": "semantic"
     },
     {
@@ -5098,7 +5198,7 @@
         "execução RPA seed concluída sem erro crítico"
       ],
       "rpaRecordingId": "support-inbox-nota-ui",
-      "criticality": "standard",
+      "criticality": "blocking",
       "adapter": "rpa",
       "impactScopes": [
         "omnichannel",
@@ -5210,6 +5310,8 @@
         }
       ],
       "wave": "wave-support-inbox-nota",
+      "journeyId": "support_ticket_flow",
+      "scenarioStatus": "approved",
       "executionMode": "semantic"
     },
     {
@@ -5520,6 +5622,10 @@
     },
     {
       "scenarioId": "business-core-biz-rag-documents",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-rag-segregation",
       "status": "passed"
     },
     {

@@ -13,8 +13,17 @@
  *
  * Fontes de execução:
  * - go-no-go-report.json (execução canônica): atribui status por domínio
- *   apenas quando o domínio é homogêneo (ex.: todos passed).
+ *   apenas quando o domínio é homogêneo (ex.: todos passed) E o cenário
+ *   consta nos results da execução canônica referenciada pelo relatório
+ *   (qa-mesh/meshHistory/<executionId>.json). Status derivado por essa
+ *   afinidade de domínio é inferência: `passed` vira `inferred_passed`
+ *   (VISITED, nunca VALIDATED — ver qa/coverage/coverageGate.js).
  * - meshHistory/*.json: resultados por cenário; o mais recente vence.
+ *   `passed` sem assertions registradas vira `passed_unverified` (VISITED).
+ *   Antes de consumir o meshHistory, a integridade da cadeia append-only
+ *   (qa-mesh/executionHistoryChain.verifyChain) é verificada — cadeia
+ *   ausente/quebrada derruba o gate (fail-closed: NO EVIDENCE → NO
+ *   VALIDATED COVERAGE).
  * - reports/db-integrity-report.json (Database Integrity Wave, opcional):
  *   estados VALIDATED/VISITED/FAILED por model, aplicados aos itens
  *   model:/table:/field: sem domínio ligado como technicalExecutions.
@@ -58,7 +67,7 @@ const { execFileSync } = require('child_process');
 
 const { evaluateCoverageGate, buildGateItems } = require('../../qa/coverage/coverageGate');
 const { resolveThresholds } = require('../../qa/coverage/gateThresholds');
-const { resolveDomainAliases, buildJourneyScenarioLinks } = require('../../qa/coverage/journeyLinks');
+const { resolveDomainAliases, canonicalDomain, buildJourneyScenarioLinks } = require('../../qa/coverage/journeyLinks');
 const { buildInventory, diffInventories } = require('../../api/services/qa/inventory/inventoryEngine');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
@@ -131,13 +140,15 @@ function loadJsonIfExists(filePath) {
 /**
  * Extrai execuções por cenário da execução canônica (go-no-go-report).
  * Só atribui status quando o domínio é homogêneo (um único status agregado).
+ * Domínios legados (ex.: `clinica`) são canonicalizados via aliases para
+ * casar com o registry normalizado.
  */
-function executionsFromGoNoGo(report) {
+function executionsFromGoNoGo(report, aliases) {
   const executions = [];
   const totals = report && report.totals;
   if (!totals || !totals.domains) return executions;
 
-  for (const [domain, counts] of Object.entries(totals.domains)) {
+  for (const [rawDomain, counts] of Object.entries(totals.domains)) {
     const total = counts.total || 0;
     if (total === 0) continue;
     let status = null;
@@ -146,12 +157,33 @@ function executionsFromGoNoGo(report) {
     else if ((counts.failed || 0) === total) status = 'failed';
     else if ((counts.skipped || 0) === total) status = 'skipped';
     if (!status) continue; // domínio heterogêneo: sem atribuição confiável
-    executions.push({ domain, status, source: 'go-no-go-report' });
+    executions.push({ domain: canonicalDomain(rawDomain, aliases), status, source: 'go-no-go-report' });
   }
   return executions;
 }
 
-/** Último resultado por cenário a partir do histórico do mesh. */
+/**
+ * Cenários com execução REAL na execução canônica referenciada pelo
+ * go-no-go report (qa-mesh/meshHistory/<executionId>.json). O broadcast por
+ * domínio só pode valer para esses scenarioIds; sem o arquivo de resultados
+ * da execução canônica, o conjunto é vazio e o broadcast é desativado
+ * (NO EVIDENCE → NO VALIDATED COVERAGE).
+ */
+function realExecutionScenarioIds(report, historyDir = MESH_HISTORY_DIR) {
+  const executionId = (report && (report.executionId || (report.totals && report.totals.executionId))) || null;
+  if (!executionId) return new Set();
+  const historyFile = path.join(historyDir, `${executionId}.json`);
+  const run = loadJsonIfExists(historyFile);
+  if (!run || !Array.isArray(run.results)) return new Set();
+  return new Set(run.results.filter((r) => r && r.id).map((r) => r.id));
+}
+
+/**
+ * Último resultado por cenário a partir do histórico do mesh.
+ * `passed` só permanece `passed` quando o cenário tem assertions registradas
+ * na execução; sem assertions registradas vira `passed_unverified`
+ * (VISITED — executou, mas sem validação de assertivas).
+ */
 function executionsFromHistory(historyDir) {
   const executions = [];
   if (!fs.existsSync(historyDir)) return executions;
@@ -173,35 +205,125 @@ function executionsFromHistory(historyDir) {
   for (const run of runs) {
     for (const result of run.results) {
       if (result && result.id && result.status) {
-        latestByScenario.set(result.id, result.status);
+        latestByScenario.set(result.id, {
+          status: result.status,
+          hasAssertions: Array.isArray(result.assertions) && result.assertions.length > 0,
+        });
       }
     }
   }
-  for (const [scenarioId, status] of latestByScenario) {
+  for (const [scenarioId, entry] of latestByScenario) {
+    const status = entry.status === 'passed' && !entry.hasAssertions
+      ? 'passed_unverified'
+      : entry.status;
     executions.push({ scenarioId, status, source: 'meshHistory' });
   }
   return executions;
 }
 
-/** Combina as fontes: canônica por domínio + histórico por cenário (vence). */
-function buildExecutions(scenarios) {
+/** Status de broadcast por afinidade de domínio: inferência nunca valida. */
+function capBroadcastStatus(status) {
+  return status === 'passed' ? 'inferred_passed' : status;
+}
+
+/**
+ * Combina as fontes: canônica por domínio + histórico por cenário (vence).
+ * O broadcast por domínio é restrito aos scenarioIds com execução real na
+ * execução canônica do go-no-go report e nunca produz VALIDATED.
+ */
+function buildExecutions(scenarios, options = {}) {
+  const historyDir = options.historyDir || MESH_HISTORY_DIR;
+  const goNoGoPath = options.goNoGoPath || GO_NO_GO_PATH;
+  const aliases = options.aliases
+    || resolveDomainAliases(loadJsonIfExists(options.registryConfigPath || QA_WAVES_REGISTRY_PATH));
   const byScenario = new Map();
 
+  const report = loadJsonIfExists(goNoGoPath);
   const domainStatus = new Map();
-  for (const entry of executionsFromGoNoGo(loadJsonIfExists(GO_NO_GO_PATH))) {
+  for (const entry of executionsFromGoNoGo(report, aliases)) {
     domainStatus.set(entry.domain, entry.status);
   }
+  const executedIds = realExecutionScenarioIds(report, historyDir);
   for (const scenario of scenarios) {
-    if (scenario && scenario.id && scenario.domain && domainStatus.has(scenario.domain)) {
-      byScenario.set(scenario.id, domainStatus.get(scenario.domain));
+    if (scenario && scenario.id && scenario.domain && executedIds.has(scenario.id)
+      && domainStatus.has(scenario.domain)) {
+      byScenario.set(scenario.id, capBroadcastStatus(domainStatus.get(scenario.domain)));
     }
   }
 
-  for (const entry of executionsFromHistory(MESH_HISTORY_DIR)) {
+  for (const entry of executionsFromHistory(historyDir)) {
     byScenario.set(entry.scenarioId, entry.status);
   }
 
   return [...byScenario.entries()].map(([scenarioId, status]) => ({ scenarioId, status }));
+}
+
+/**
+ * Integridade da cadeia append-only do histórico do mesh
+ * (qa-mesh/executionHistoryChain.verifyChain). Fail-closed: se o gate vai
+ * consumir meshHistory (há arquivos de histórico), a cadeia precisa existir
+ * e verificar íntegra; cadeia ausente ou quebrada invalida a evidência.
+ * Sem meshHistory (modo snapshot, ex.: CI) a verificação não se aplica.
+ *
+ * `options.verifyChain`/`options.chainPath` existem para testes.
+ */
+function checkMeshHistoryChain(options = {}) {
+  const historyDir = options.historyDir || MESH_HISTORY_DIR;
+  const hasHistory = fs.existsSync(historyDir)
+    && fs.readdirSync(historyDir).some((name) => name.endsWith('.json'));
+  if (!hasHistory) {
+    return { applicable: false, valid: true, source: 'meshHistory ausente (não consumido)' };
+  }
+  const source = 'qa-mesh/execution-history/index.jsonl';
+  let chainPath = options.chainPath;
+  let verify = options.verifyChain;
+  if (!chainPath || !verify) {
+    // Lazy: só carrega o módulo (que resolve CHAIN_PATH via env) quando o
+    // teste não injetou as dependências.
+    const chain = require('../../qa-mesh/executionHistoryChain');
+    chainPath = chainPath || chain.CHAIN_PATH;
+    verify = verify || chain.verifyChain;
+  }
+  if (!fs.existsSync(chainPath)) {
+    return { applicable: true, valid: false, reason: 'mesh_history_chain_missing', source };
+  }
+  let result;
+  try {
+    result = verify();
+  } catch (error) {
+    return { applicable: true, valid: false, reason: `mesh_history_chain_verify_error: ${error.message}`, source };
+  }
+  if (!result || result.valid !== true) {
+    return {
+      applicable: true,
+      valid: false,
+      reason: 'mesh_history_chain_broken',
+      brokenAt: result ? result.brokenAt : null,
+      source,
+    };
+  }
+  return { applicable: true, valid: true, source };
+}
+
+/**
+ * Aplica o resultado da verificação da cadeia ao resultado do gate:
+ * cadeia inválida adiciona reason bloqueante e força NO_GO (fail-closed).
+ */
+function applyMeshHistoryChainCheck(result, chainCheck) {
+  if (!chainCheck || chainCheck.applicable !== true || chainCheck.valid === true) {
+    return result;
+  }
+  const actual = chainCheck.brokenAt !== null && chainCheck.brokenAt !== undefined
+    ? `${chainCheck.reason} (brokenAt=${chainCheck.brokenAt})`
+    : chainCheck.reason;
+  result.releaseGate.reasons.push({
+    check: 'meshHistoryChainIntegrity',
+    threshold: 'valid',
+    actual,
+  });
+  result.releaseGate.decision = 'NO_GO';
+  result.status = 'NO_GO';
+  return result;
 }
 
 /**
@@ -497,9 +619,14 @@ function main() {
   let scenarios;
   let executions;
   let registrySource = path.relative(ROOT_DIR, MESH_REGISTRY_PATH);
+  let meshHistoryChain = { applicable: false, valid: true, source: 'snapshot mode (meshHistory não consumido)' };
   if (fs.existsSync(MESH_REGISTRY_PATH)) {
     scenarios = loadJson(MESH_REGISTRY_PATH);
     executions = buildExecutions(scenarios);
+    meshHistoryChain = checkMeshHistoryChain();
+    if (meshHistoryChain.applicable && !meshHistoryChain.valid) {
+      console.error(`[coverage-gate] FALHA: cadeia de integridade do meshHistory inválida — ${meshHistoryChain.reason}`);
+    }
   } else {
     const snapshot = loadJsonIfExists(SNAPSHOT_PATH);
     if (!snapshot || !Array.isArray(snapshot.scenarios) || !Array.isArray(snapshot.executions)) {
@@ -551,6 +678,7 @@ function main() {
     thresholds,
     waveId: 'system-coverage',
   });
+  applyMeshHistoryChainCheck(result, meshHistoryChain);
 
   const gateItems = buildGateItems({
     inventoryItems: inventory.items,
@@ -581,6 +709,7 @@ function main() {
       meshRegistry: registrySource,
       executionsMode: fs.existsSync(MESH_REGISTRY_PATH) ? 'live' : 'snapshot',
       executionsSources: ['qa-mesh/go-no-go-report.json', 'qa-mesh/meshHistory/'],
+      meshHistoryChain,
       visibilitySource: visibility.source,
       fingerprintCheck: checkFingerprints,
       tenantIsolationSource: tenantIsolation.source,
@@ -629,4 +758,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { buildExecutions, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, loadApiSurfaceTechnicalExecutions, loadPageSurfaceTechnicalExecutions, evaluateRagDomainSegregationReport, loadRagDomainSegregationViolations, applyWaveReportStaleness, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };
+module.exports = { buildExecutions, executionsFromGoNoGo, executionsFromHistory, realExecutionScenarioIds, checkMeshHistoryChain, applyMeshHistoryChainCheck, loadJourneyLinkInputs, loadDbIntegrityTechnicalExecutions, loadApiSurfaceTechnicalExecutions, loadPageSurfaceTechnicalExecutions, evaluateRagDomainSegregationReport, loadRagDomainSegregationViolations, applyWaveReportStaleness, MESH_REGISTRY_PATH, SNAPSHOT_PATH, ROOT_DIR };

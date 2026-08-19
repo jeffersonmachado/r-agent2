@@ -191,12 +191,15 @@
     "e_commerce":     "market",
     "e_comércio":     "market",
     "varejo":         "market",
+    "mercado":        "market",
+    "retail":         "market",
     "servicos":       "services",
     "servicos_gerais":"services",
     "serviço":        "services",
     "serviços":       "services",
     "clinica":        "clinic",
-    "saude":          "clinic"
+    "saude":          "clinic",
+    "saúde":          "clinic"
   },
 
   "domainInferenceRules": [

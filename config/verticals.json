@@ -1,0 +1,125 @@
+{
+  "_comment": "Registry canônico de verticais e domínios da plataforma (HARD-009 / FASE 9). Fonte única de IDs: o backend usa sempre o ID canônico (chave de `domains`); aliases existem apenas para resolver dados legados/localizados (ex.: mercado→market). A UI pode traduzir via `label` (pt-BR). Validado por scripts/governance/validate-vertical-registry.js (npm run validate:vertical-registry).",
+
+  "version": "1.0.0",
+
+  "domains": {
+    "beauty": {
+      "kind": "vertical",
+      "label": "Beleza e Estética",
+      "aliases": ["beleza"]
+    },
+    "fitness": {
+      "kind": "vertical",
+      "label": "Fitness e Academias",
+      "aliases": ["academia"]
+    },
+    "food": {
+      "kind": "vertical",
+      "label": "Alimentação e Restaurantes",
+      "aliases": ["restaurante", "restaurantes"]
+    },
+    "services": {
+      "kind": "vertical",
+      "label": "Serviços",
+      "aliases": ["servicos", "servicos_gerais", "serviço", "serviços"]
+    },
+    "bakery": {
+      "kind": "vertical",
+      "label": "Padaria e Confeitaria",
+      "aliases": ["padaria"]
+    },
+    "clinic": {
+      "kind": "vertical",
+      "label": "Clínicas e Saúde",
+      "aliases": ["clinica", "saude", "saúde"]
+    },
+    "market": {
+      "kind": "vertical",
+      "label": "Mercado e Varejo",
+      "aliases": ["mercado", "varejo", "ecommerce", "e_commerce", "e_comércio", "retail"]
+    },
+
+    "core": {
+      "kind": "platform",
+      "label": "Núcleo da Plataforma",
+      "aliases": []
+    },
+    "pbx": {
+      "kind": "platform",
+      "label": "PBX / Voz",
+      "aliases": []
+    },
+    "omnichannel": {
+      "kind": "platform",
+      "label": "Omnichannel",
+      "aliases": []
+    },
+    "bpmn": {
+      "kind": "platform",
+      "label": "BPMN",
+      "aliases": []
+    },
+    "workspace": {
+      "kind": "platform",
+      "label": "Workspace",
+      "aliases": []
+    },
+    "agent-os": {
+      "kind": "platform",
+      "label": "Agent OS",
+      "aliases": []
+    },
+    "support": {
+      "kind": "platform",
+      "label": "Suporte",
+      "aliases": []
+    },
+    "unmapped": {
+      "kind": "platform",
+      "label": "Não Mapeado",
+      "aliases": []
+    },
+
+    "campaign": {
+      "kind": "capability",
+      "label": "Campanhas",
+      "aliases": []
+    },
+    "crm": {
+      "kind": "capability",
+      "label": "CRM",
+      "aliases": []
+    },
+    "knowledge": {
+      "kind": "capability",
+      "label": "Conhecimento",
+      "aliases": []
+    },
+    "messaging": {
+      "kind": "capability",
+      "label": "Mensageria",
+      "aliases": []
+    },
+    "schedule": {
+      "kind": "capability",
+      "label": "Agendamento",
+      "aliases": []
+    },
+    "voice": {
+      "kind": "capability",
+      "label": "Voz",
+      "aliases": []
+    },
+    "platform_support": {
+      "kind": "capability",
+      "label": "Suporte à Plataforma",
+      "aliases": []
+    },
+    "qa": {
+      "kind": "capability",
+      "label": "QA",
+      "aliases": []
+    }
+  }
+}

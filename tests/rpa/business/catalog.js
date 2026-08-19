@@ -14,6 +14,7 @@ const SCREEN_SCENARIOS = [
       { kind: 'fill', target: 'search_input', value: 'Aluno QA' },
       { kind: 'click', target: 'search_button' },
     ],
+    assertions: ['Tela /fitness/students carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log', 'screen-state'],
   },
   {
@@ -31,6 +32,7 @@ const SCREEN_SCENARIOS = [
       { kind: 'select', target: 'status_filter', value: 'active' },
       { kind: 'click', target: 'refresh_button' },
     ],
+    assertions: ['Tela /fitness/memberships carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
@@ -47,6 +49,7 @@ const SCREEN_SCENARIOS = [
     actions: [
       { kind: 'click', target: 'refresh_button' },
     ],
+    assertions: ['Tela /fitness/attendance carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
@@ -64,6 +67,7 @@ const SCREEN_SCENARIOS = [
       { kind: 'fill', target: 'first_input', valueTemplate: 'Campanha Tela {timestamp}' },
       { kind: 'click', target: 'create_campaign' },
     ],
+    assertions: ['Tela /beauty/campaigns carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
@@ -82,6 +86,7 @@ const SCREEN_SCENARIOS = [
       { kind: 'fill', target: 'email_input', valueTemplate: 'lead-tela-{timestamp}@example.com' },
       { kind: 'click', target: 'create_lead' },
     ],
+    assertions: ['Tela /beauty/leads carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
@@ -99,6 +104,7 @@ const SCREEN_SCENARIOS = [
       { kind: 'fill', target: 'search_input', value: 'Cliente QA' },
       { kind: 'click', target: 'search_button' },
     ],
+    assertions: ['Tela /beauty/customers carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
@@ -115,6 +121,7 @@ const SCREEN_SCENARIOS = [
     actions: [
       { kind: 'click', target: 'refresh_button' },
     ],
+    assertions: ['Tela /beauty/schedule carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
@@ -131,6 +138,7 @@ const SCREEN_SCENARIOS = [
     actions: [
       { kind: 'click', target: 'refresh_button' },
     ],
+    assertions: ['Tela /beauty/services carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
@@ -147,6 +155,7 @@ const SCREEN_SCENARIOS = [
     actions: [
       { kind: 'click', target: 'refresh_button' },
     ],
+    assertions: ['Tela /beauty/payments carregada e validada (título/estado)', 'Interações de tela executadas sem erro', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
@@ -160,45 +169,49 @@ const SCREEN_SCENARIOS = [
     intent: 'food_orders',
     pageTitle: 'Pedidos',
     preconditions: ['Módulo de pedidos disponível'],
+    assertions: ['Tela /orders carregada e validada (título/estado)', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
     code: 'CLINIC-SCR-01',
     journey: 'clinic_default_journey',
     name: 'Clinic maintenance screen smoke',
-    vertical: 'clinica',
+    vertical: 'clinic',
     type: 'screen',
     criticality: 'high',
     path: '/maintenance',
     intent: 'maintenance',
     readySelector: '[data-testid="ticket-maintenance-page"]',
     preconditions: ['Operação autenticada com acesso à manutenção'],
+    assertions: ['Tela /maintenance carregada e validada (título/estado)', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log', 'screen-state'],
   },
   {
     code: 'SERV-SCR-01',
     journey: 'services_default_journey',
     name: 'Services solutions screen smoke',
-    vertical: 'servicos',
+    vertical: 'services',
     type: 'screen',
     criticality: 'medium',
     path: '/solutions',
     intent: 'solutions',
     pageTitle: 'Solutions Packs',
     preconditions: ['Catálogo de soluções publicado'],
+    assertions: ['Tela /solutions carregada e validada (título/estado)', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
   {
     code: 'MARKET-SCR-01',
     journey: 'market_default_journey',
     name: 'Market node marketplace screen smoke',
-    vertical: 'mercado',
+    vertical: 'market',
     type: 'screen',
     criticality: 'medium',
     path: '/node-marketplace',
     intent: 'node_marketplace',
     pageTitle: 'Mercado de Nós|Node Marketplace',
     preconditions: ['Marketplace carregável no tenant'],
+    assertions: ['Tela /node-marketplace carregada e validada (título/estado)', 'Evidências de tela capturadas (screenshot/log)'],
     expectedEvidence: ['screenshot', 'structured-log'],
   },
 ];
@@ -220,7 +233,7 @@ const FLOW_SCENARIOS = [
     code: 'CLINIC-FLOW-TICKET',
     journey: 'clinic_default_journey',
     name: 'Clinic abertura e resolução de ticket de manutenção',
-    vertical: 'clinica',
+    vertical: 'clinic',
     type: 'flow',
     criticality: 'high',
     preconditions: ['Operação autenticada', 'Módulo de manutenção ativo'],
@@ -232,7 +245,7 @@ const FLOW_SCENARIOS = [
     code: 'SERV-FLOW-SOLUTION',
     journey: 'services_default_journey',
     name: 'Services ativação de pacote de soluções',
-    vertical: 'servicos',
+    vertical: 'services',
     type: 'flow',
     criticality: 'medium',
     preconditions: ['Catálogo de soluções publicado', 'Tenant autenticado'],
@@ -244,7 +257,7 @@ const FLOW_SCENARIOS = [
     code: 'MARKET-FLOW-NODE',
     journey: 'market_default_journey',
     name: 'Market publicação de nó no marketplace',
-    vertical: 'mercado',
+    vertical: 'market',
     type: 'flow',
     criticality: 'medium',
     preconditions: ['Marketplace carregável no tenant', 'Nó disponível para publicação'],
