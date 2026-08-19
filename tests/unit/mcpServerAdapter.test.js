@@ -123,8 +123,8 @@ describe('MCP Server Adapter', () => {
 
   test('23. MCP externo inexistente não produz fake success', async () => {
     const hub = createMcpClientHub({ connections: [], logger: silent });
-    await expect(hub.connect('erp-legacy')).rejects.toThrow('no_configured_mcp_connection');
-    await expect(hub.callTool('erp-legacy', 'createOrder', {})).rejects.toThrow('no_configured_mcp_connection');
+    await expect(hub.connect('erp-legacy', { tenantId: 'tenant-a' })).rejects.toThrow('no_configured_mcp_connection');
+    await expect(hub.callTool('erp-legacy', 'createOrder', {}, { tenantId: 'tenant-a' })).rejects.toThrow('no_configured_mcp_connection');
   });
 
   test('authorization: contexto incompleto falha fechado', () => {
@@ -167,7 +167,7 @@ describe('MCP Server Adapter', () => {
   });
 
   test('external adapter registra proxy governado que passa pelo Tool Registry', async () => {
-    const { registerExternalMcpTools } = require('../../src/core/mcp/external-tool-adapter');
+    const { registerExternalMcpTools, externalMcpTenantToken } = require('../../src/core/mcp/external-tool-adapter');
 
     // MCP server externo fake PORÉM via SDK real (in-memory): simula um servidor
     // externo de verdade no protocolo, sem mocks de negócio.
@@ -206,12 +206,16 @@ describe('MCP Server Adapter', () => {
 
     const registry = registerDefaultTools(createToolRegistry({ logger: silent }));
     const { registered } = await registerExternalMcpTools({ toolRegistry: registry, hub, logger: silent });
-    expect(registered).toContain('mcp.erp.legacy.createOrder');
+    // toolId escopado por tenant (hash opaco, determinístico) — sem vazar tenantId.
+    const tenantToken = externalMcpTenantToken('tenant-a');
+    const toolId = `mcp.t${tenantToken}.erp.legacy.createOrder`;
+    expect(toolId).not.toContain('tenant-a');
+    expect(registered).toContain(toolId);
 
     // Agente chama via Tool Registry (governado) — nunca direto.
-    const result = await registry.execute('mcp.erp.legacy.createOrder', { sku: 'ABC' }, {
+    const result = await registry.execute(toolId, { sku: 'ABC' }, {
       tenantId: 'tenant-a',
-      actor: { classification: 'PRODUCTION', permissions: ['mcp.erp'] },
+      actor: { classification: 'PRODUCTION', permissions: [`mcp.t${tenantToken}.erp`] },
       idempotencyKey: 'k1',
       confirmed: true,
     });
@@ -219,7 +223,7 @@ describe('MCP Server Adapter', () => {
     expect(result.output.text).toContain('ord-1');
 
     // PRODUCTION sem a permissão da conexão é negado no registry.
-    await expect(registry.execute('mcp.erp.legacy.createOrder', { sku: 'ABC' }, {
+    await expect(registry.execute(toolId, { sku: 'ABC' }, {
       tenantId: 'tenant-a',
       actor: { classification: 'PRODUCTION', permissions: [] },
       idempotencyKey: 'k2',

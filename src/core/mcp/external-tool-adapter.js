@@ -10,10 +10,21 @@
  * Isso preserva permissions, audit, tenant, idempotência, risco, validação e
  * learning: o agente nunca chama MCP externo diretamente.
  *
- * Cada tool externa vira uma tool canônica `mcp.<connection>.<tool>` cuja
- * visibility/permissions vêm da conexão REGISTRADA (Client Hub) — nunca de
- * configuração fornecida pelo agente em runtime.
+ * Cada tool externa vira uma tool canônica
+ * `mcp.t<tenantToken>.<connection>.<tool>` cuja visibility/permissions vêm da
+ * conexão REGISTRADA (Client Hub) — nunca de configuração fornecida pelo
+ * agente em runtime.
+ *
+ * `tenantToken` é um hash SHA-256 truncado (12 hex) do tenantId: determinístico,
+ * evita colisão silenciosa de toolId entre tenants com conexão de mesmo nome
+ * (o segundo registro virava `skipped` via cognitive_tool_duplicate) e não
+ * expõe o tenantId em ids listados para outros tenants. A permissão exigida
+ * (`mcp.t<tenantToken>.<connection>`) é igualmente escopada, então um ator de
+ * outro tenant não lista nem executa a tool no registry — e a execução ainda
+ * valida que o tenant do contexto governado é o tenant da conexão.
  */
+
+const crypto = require('crypto');
 
 function defaultLogger() {
   return require('../../../api/utils/logger');
@@ -21,6 +32,14 @@ function defaultLogger() {
 
 function sanitizeToolIdPart(value) {
   return String(value || '').replace(/[^a-zA-Z0-9_.-]/g, '_');
+}
+
+/**
+ * Token opaco e determinístico do tenant para ids/permissões de tools
+ * externas (não reversível, não vaza tenantId).
+ */
+function externalMcpTenantToken(tenantId) {
+  return crypto.createHash('sha256').update(String(tenantId)).digest('hex').slice(0, 12);
 }
 
 /**
@@ -85,13 +104,14 @@ async function registerExternalMcpTools({ toolRegistry, hub, logger } = {}) {
         continue;
       }
 
-      const toolId = `mcp.${sanitizeToolIdPart(connection.name)}.${sanitizeToolIdPart(remoteTool.name)}`;
+      const tenantToken = externalMcpTenantToken(connection.tenant);
+      const toolId = `mcp.t${tenantToken}.${sanitizeToolIdPart(connection.name)}.${sanitizeToolIdPart(remoteTool.name)}`;
       try {
         toolRegistry.register({
           id: toolId,
           capability,
           visibility: connection.classification,
-          permissions: [`mcp.${connection.name}`],
+          permissions: [`mcp.t${tenantToken}.${sanitizeToolIdPart(connection.name)}`],
           description: `[MCP externo: ${connection.name}] ${remoteTool.description || remoteTool.name}`,
           inputSchema: remoteTool.inputSchema && typeof remoteTool.inputSchema === 'object'
             ? remoteTool.inputSchema
@@ -104,6 +124,12 @@ async function registerExternalMcpTools({ toolRegistry, hub, logger } = {}) {
           version: '1.0.0',
           execute: async (input, context) => {
             // Tenant e correlação vêm do contexto governado, nunca do input.
+            // A tool pertence à conexão registrada DESTE tenant: se o tenant
+            // do contexto não é o da conexão, fail closed (mesmo com '*'),
+            // sem revelar qual tenant é o dono.
+            if (String(context?.tenantId || '') !== connection.tenant) {
+              throw new Error(`mcp_connection_tenant_mismatch: ${connection.name} não pertence ao tenant do contexto`);
+            }
             const result = await hub.callTool(connection.name, remoteTool.name, input, {
               tenantId: context.tenantId,
             });
@@ -130,4 +156,4 @@ async function registerExternalMcpTools({ toolRegistry, hub, logger } = {}) {
   return { registered, skipped };
 }
 
-module.exports = { registerExternalMcpTools };
+module.exports = { registerExternalMcpTools, externalMcpTenantToken };

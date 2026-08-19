@@ -1,104 +1,202 @@
 'use strict';
 
 /**
- * MCP Server Runtime Bootstrap — integra o MCP Server Adapter no runtime real.
+ * MCP Server HTTP Boundary — expõe o RAP como MCP Server (Streamable HTTP).
  *
- * Fluxo:
- *   1. Obtém o Cognitive Tool Registry (fonte da verdade)
- *   2. Cria o MCP Server Adapter com transport Streamable HTTP
- *   3. Expõe o endpoint /mcp no Express
- *   4. Health check + graceful shutdown
+ * Montagem: api/app/registerRoutes.js chama mountMcpRoutes(app) DEPOIS dos
+ * routers de domínio e ANTES dos error handlers e do fallback terminal 404
+ * (montar depois do fallback tornaria /mcp inalcançável; montar num
+ * http.Server separado — sem `.post` — nunca registrava a rota de fato).
  *
- * Transport: Streamable HTTP (SDK oficial @modelcontextprotocol/sdk).
- * Autenticação: deriva principal da sessão Express (req.agent/req.user).
+ * Segurança (fail closed):
+ *  - requireAuth real (api/middleware/auth): sem sessão válida → 401
+ *    `mcp_authentication_required`.
+ *  - Tenant SEMPRE da sessão autenticada (req.tenantId || agent.tenantId),
+ *    sem fallback para 'system'. Ausente → 400 `tenant_required`.
+ *  - Principal sem fallback ('unknown' proibido): ausente → 401.
+ *  - Classificação via mapeamento canônico role→classificação
+ *    (api/modules/agent-os/experience-segregation.js).
+ *  - Permissões de tools derivadas do RBAC real
+ *    (api/utils/actorToolPermissions.js) — nunca `agent.permissions` cru.
+ *  - Delegação ao MCP Server Adapter inalterada: um MCP Server por principal;
+ *    tools/list e tools/call passam pelo Canonical Tool Registry com o
+ *    principal da sessão.
  */
 
 const logger = require('../utils/logger');
-
-let mcpServer = null;
-let mcpTransport = null;
+const { requireAuth } = require('../middleware/auth');
+const { getClassificationForAgent } = require('../modules/agent-os/experience-segregation');
+const { resolveActorToolPermissions } = require('../utils/actorToolPermissions');
 
 /**
- * Inicializa o MCP Server no runtime Express.
+ * Middleware Express de autenticação do boundary MCP.
+ * requireAuth popula req.agent/req.session/req.tenantId (fail closed).
+ */
+function mcpRequireAuth(req, res, next) {
+  const authResult = requireAuth(req);
+  if (!authResult.valid) {
+    res.status(401).json({ error: 'mcp_authentication_required' });
+    return;
+  }
+  next();
+}
+
+/**
+ * Deriva o contexto autenticado MCP do request Express — SEM fallbacks.
+ * Erros carregam `statusCode` + mensagem = código de erro explícito.
+ *
+ * @param {Object} req - request já autenticado (req.agent/req.tenantId)
+ * @returns {Object} authContext para o MCP Server Adapter
+ */
+function buildMcpAuthContext(req) {
+  const agent = req.agent || null;
+  if (!agent) {
+    const err = new Error('mcp_authentication_required');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  const tenantId = String(req.tenantId || agent.tenantId || '').trim();
+  if (!tenantId) {
+    const err = new Error('tenant_required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const principalId = String(agent.username || agent.id || '').trim();
+  if (!principalId) {
+    const err = new Error('mcp_authentication_required');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  return {
+    tenantId,
+    principalId,
+    principalType: agent.type || 'user',
+    classification: getClassificationForAgent(agent),
+    permissions: resolveActorToolPermissions(agent),
+    capabilities: Array.isArray(agent.capabilities) ? [...agent.capabilities] : [],
+    sessionId: req.session?.id || req.id || null,
+    correlationId: req.headers?.['x-correlation-id'] || null,
+  };
+}
+
+/**
+ * Monta as rotas MCP no Express app real. Síncrono: o adapter/tool registry
+ * são resolvidos lazy na primeira requisição (o orchestrator pode ainda não
+ * estar pronto no momento da montagem).
  *
  * @param {Object} app - Express app
- * @param {Object} [deps] - dependências
+ * @param {Object} [deps]
+ * @param {Object} [deps.orchestrator] - Cognitive Orchestrator (testes)
+ */
+function mountMcpRoutes(app, deps = {}) {
+  if (!app || typeof app.post !== 'function') {
+    throw new Error('mcp_server_mount_requires_express_app');
+  }
+
+  let adapterCache = null;
+  let adapterResolved = false;
+
+  function resolveAdapter() {
+    if (adapterResolved) return adapterCache;
+    adapterResolved = true;
+    try {
+      const { createMcpServerAdapter } = require('../../src/core/mcp/server-adapter');
+      const { getCognitiveOrchestrator } = require('../../src/core/cognitive/cognitive-orchestrator');
+
+      const orchestrator = deps.orchestrator || getCognitiveOrchestrator();
+      const toolRegistry = orchestrator.toolRegistry;
+
+      if (!toolRegistry) {
+        logger.warn('[McpRuntime] Tool Registry não disponível — MCP Server indisponível');
+        return null;
+      }
+
+      adapterCache = createMcpServerAdapter({
+        toolRegistry,
+        logger,
+        serverInfo: {
+          name: 'rap-agent-runtime',
+          version: process.env.npm_package_version || '1.0.0',
+        },
+      });
+    } catch (error) {
+      logger.error('[McpRuntime] MCP Server adapter falhou', { error: error.message });
+      adapterCache = null;
+    }
+    return adapterCache;
+  }
+
+  // Endpoint MCP — autenticação obrigatória, principal derivado da sessão.
+  app.post('/mcp', mcpRequireAuth, async (req, res) => {
+    try {
+      const authContext = buildMcpAuthContext(req);
+
+      const adapter = resolveAdapter();
+      if (!adapter) {
+        res.status(503).json({ error: 'mcp_unavailable' });
+        return;
+      }
+
+      const server = adapter.createServerForPrincipal(authContext);
+
+      // Streamable HTTP transport (SDK oficial) em modo STATELESS:
+      // servidor+transport são criados por request com o principal da sessão —
+      // um transport stateful novo por request rejeitaria qualquer request
+      // não-initialize ("Server not initialized"/"Session not found").
+      const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
+
+      await server.connect(transport);
+
+      // Stateless: encerra transport+servidor ao fim da resposta (ciclo de
+      // vida é o da request; o principal nunca vaza entre requests).
+      res.on('close', () => {
+        transport.close?.().catch(() => {});
+        server.close?.().catch(() => {});
+      });
+
+      // express.json() já consumiu o stream: o body parseado precisa ser
+      // passado ao transport, senão ele relê o stream vazio (parse error).
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      if (error.statusCode) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      logger.error('[McpRuntime] MCP request error', { error: error.message });
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'mcp_internal_error', detail: error.message });
+      }
+    }
+  });
+
+  // Health endpoint (público, sem dados de tenant)
+  app.get('/mcp/health', (req, res) => {
+    const adapter = resolveAdapter();
+    res.json({
+      status: adapter ? 'ok' : 'unavailable',
+      name: 'rap-mcp-server',
+      version: process.env.npm_package_version || '1.0.0',
+    });
+  });
+
+  logger.info('[McpRuntime] MCP Server montado em /mcp (auth obrigatória)');
+  return { endpoint: '/mcp' };
+}
+
+/**
+ * Compat: entrada assíncrona histórica. A montagem é síncrona via
+ * mountMcpRoutes (chamada por registerRoutes); esta função existe apenas
+ * para callers legados que aguardavam uma Promise.
  */
 async function startMcpServer(app, deps = {}) {
   try {
-    const { createMcpServerAdapter } = require('../../src/core/mcp/server-adapter');
-    const { getCognitiveOrchestrator } = require('../../src/core/cognitive/cognitive-orchestrator');
-
-    const orchestrator = deps.orchestrator || getCognitiveOrchestrator();
-    const toolRegistry = orchestrator.toolRegistry;
-
-    if (!toolRegistry) {
-      logger.warn('[McpRuntime] Tool Registry não disponível — MCP Server não iniciado');
-      return null;
-    }
-
-    const adapter = createMcpServerAdapter({
-      toolRegistry,
-      logger,
-      serverInfo: {
-        name: 'rap-agent-runtime',
-        version: process.env.npm_package_version || '1.0.0',
-      },
-    });
-
-    // Endpoint MCP via Express — autenticação derivada da sessão.
-    app.post('/mcp', async (req, res) => {
-      try {
-        // Deriva principal da sessão autenticada (fail closed).
-        const agent = req.agent || req.user || null;
-        if (!agent) {
-          return res.status(401).json({ error: 'mcp_authentication_required' });
-        }
-
-        const tenantId = req.tenant_id || agent.tenant_id || 'system';
-        const principalId = agent.id || agent.username || 'unknown';
-        const classification = agent.classification
-          || (agent.role === 'super_admin' ? 'DEVELOPMENT' : agent.role === 'auditor' ? 'SUPPORT' : 'PRODUCTION');
-
-        const authContext = {
-          tenantId,
-          principalId,
-          principalType: agent.type || 'user',
-          classification,
-          permissions: agent.permissions || [],
-          capabilities: agent.capabilities || [],
-          sessionId: req.id || null,
-          correlationId: req.headers['x-correlation-id'] || null,
-        };
-
-        const server = adapter.createServerForPrincipal(authContext);
-
-        // Streamable HTTP transport
-        const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => req.id || `mcp-${Date.now()}`,
-        });
-
-        await server.connect(transport);
-        await transport.handleRequest(req, res);
-      } catch (error) {
-        logger.error('[McpRuntime] MCP request error', { error: error.message });
-        res.status(500).json({ error: 'mcp_internal_error', detail: error.message });
-      }
-    });
-
-    // Health endpoint
-    app.get('/mcp/health', (req, res) => {
-      res.json({
-        status: 'ok',
-        name: 'rap-mcp-server',
-        version: process.env.npm_package_version || '1.0.0',
-        toolsCount: toolRegistry.size(),
-      });
-    });
-
-    logger.info('[McpRuntime] MCP Server montado em /mcp');
-    return { adapter, endpoint: '/mcp' };
+    return mountMcpRoutes(app, deps);
   } catch (error) {
     logger.warn('[McpRuntime] MCP Server bootstrap falhou (não-bloqueante)', { error: error.message });
     return null;
@@ -106,17 +204,11 @@ async function startMcpServer(app, deps = {}) {
 }
 
 /**
- * Graceful shutdown do MCP Server.
+ * Graceful shutdown do MCP Server (servidores são por request/sessão;
+ * o encerramento do processo drena os transports via shutdown do HTTP).
  */
 async function stopMcpServer() {
-  try {
-    if (mcpServer && typeof mcpServer.close === 'function') {
-      await mcpServer.close();
-    }
-    logger.info('[McpRuntime] MCP Server stopped');
-  } catch (error) {
-    logger.warn('[McpRuntime] MCP Server shutdown error', { error: error.message });
-  }
+  logger.info('[McpRuntime] MCP Server stopped');
 }
 
-module.exports = { startMcpServer, stopMcpServer };
+module.exports = { mountMcpRoutes, startMcpServer, stopMcpServer, buildMcpAuthContext };

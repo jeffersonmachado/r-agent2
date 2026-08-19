@@ -9,7 +9,6 @@ function startServerRuntime({
   startWorkers,
   workerDeps,
   processRef = process,
-  app = null,
 }) {
   clearLimitersCache();
 
@@ -20,16 +19,8 @@ function startServerRuntime({
     .then(async () => {
       const server = getOrCreateServer();
 
-      // P1: MCP Server bootstrap — expõe /mcp no Express.
-      const expressApp = app || (server && server._events ? server : null);
-      if (expressApp && typeof expressApp.post === 'function') {
-        try {
-          const { startMcpServer } = require('./startMcpServer');
-          await startMcpServer(expressApp);
-        } catch (err) {
-          logger.warn('[Server] MCP Server bootstrap falhou (não-bloqueante)', { error: err.message });
-        }
-      }
+      // MCP HTTP boundary (/mcp) é montado em api/app/registerRoutes.js,
+      // antes do fallback terminal 404 — não remontar aqui.
 
       // P1: MCP Client composition — registra tools externas no Tool Registry.
       try {

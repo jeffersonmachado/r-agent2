@@ -81,6 +81,7 @@ const { createAgentOsExpressRouter } = require('../composition/agent-os');
 const { createLearningCoreExpressRouter } = require('../composition/learning-core');
 const { createCognitiveExpressRouter } = require('../composition/cognitive');
 const { createRouteRegistry } = require('./routeRegistry');
+const { mountMcpRoutes } = require('../runtime/startMcpServer');
 
 // ---------------------------------------------------------------------------
 // registerRoutes — único ponto de montagem de todas as rotas
@@ -231,6 +232,12 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     }
     app.use(entry.router);
   }
+
+  // --- MCP HTTP boundary (Streamable HTTP) ---
+  // Montado DEPOIS dos routers de domínio e ANTES dos error handlers e do
+  // fallback terminal 404 — montar depois do fallback tornaria /mcp
+  // inalcançável. A rota exige autenticação real (ver api/runtime/startMcpServer.js).
+  mountMcpRoutes(app);
 
   // --- Error handlers ---
   app.use((err, req, res, next) => {

@@ -59,16 +59,12 @@ function createMcpClientHub({ connections = [], transportFactory, clientFactory,
   }
 
   function getConnection(name, { tenantId = null } = {}) {
-    const tenant = String(tenantId || '');
-    const key = tenant ? _key(tenant, String(name || '')) : null;
-    if (key && registry.has(key)) return registry.get(key);
-    // Fallback: busca por nome apenas (backward compat).
-    if (!tenant) {
-      for (const [k, v] of registry) {
-        if (k.endsWith(`:${String(name || '')}`)) return v;
-      }
-    }
-    return null;
+    const tenant = String(tenantId || '').trim();
+    // Fail closed: conexão é sempre endereçada por (tenant, name). Nunca
+    // resolver por sufixo de nome — isso cruzaria tenants com conexões de
+    // mesmo nome (ex.: 'erp' do tenant A vs. tenant B).
+    if (!tenant) throw new Error(`mcp_connection_tenant_required: ${name}`);
+    return registry.get(_key(tenant, String(name || ''))) || null;
   }
 
   function listConnections({ tenantId = null, classification = null } = {}) {
