@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-14T21:11:50.170Z",
-  "commit": "2191b0927f3aa9640f3f83b0e8f375fe0b441917",
+  "generatedAt": "2026-08-19T09:00:49.778Z",
+  "commit": "ec923b04082266b1cc0bc3cae48118ee68e8b681",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
@@ -1984,11 +1984,6 @@
       "id": "page:/dev/rpa-replays",
       "state": "VALIDATED",
       "assertions": [
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "anônimo barrado (superfície de login exibida)"
-        },
         {
           "name": "classificationEnforced",
           "passed": true,
@@ -4243,6 +4238,11 @@
       "id": "page:/rpa-replays",
       "state": "VALIDATED",
       "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
         {
           "name": "classificationEnforced",
           "passed": true,

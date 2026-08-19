@@ -63,7 +63,7 @@
     "test:system": "jest tests/contracts tests/governance tests/ci tests/runtime tests/organizational tests/stress tests/rate-limit",
     "qa": "node qa/qaRunner.js",
     "learning:skill-graph:build": "node scripts/learning/build-skill-graph.js",
-    "qa:mesh": "node pipeline/entrypoints/runQaMesh.js",
+    "qa:mesh": "node --env-file-if-exists=.env pipeline/entrypoints/runQaMesh.js",
     "qa:mesh:refresh": "PIPELINE_BYPASS=1 node pipeline/entrypoints/runQaMesh.js --refresh-registry",
     "qa:mesh:impact": "PIPELINE_BYPASS=1 node pipeline/entrypoints/runQaMesh.js --impact-only",
     "qa:mesh:history:reclassify-pipeline": "node scripts/reclassify-qa-mesh-pipeline-history.js",

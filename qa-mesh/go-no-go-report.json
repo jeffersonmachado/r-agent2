@@ -1,25 +1,25 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-08-15T09-14-51-308Z",
+  "executionId": "mesh-2026-08-19T11-15-13-868Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "GO",
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-08-15T09-14-51-308Z",
-    "startedAt": "2026-08-15T09:14:51.308Z",
+    "executionId": "mesh-2026-08-19T11-15-13-868Z",
+    "startedAt": "2026-08-19T11:15:13.868Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-08-15T10:16:42.171Z",
+    "promotedAt": "2026-08-19T12:19:19.996Z",
     "registryTotal": 131,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-08-15T09-14-51-308Z",
+    "executionId": "mesh-2026-08-19T11-15-13-868Z",
     "tenantId": "system",
-    "timestamp": "2026-08-15T09:14:51.308Z",
+    "timestamp": "2026-08-19T11:15:13.868Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -56,7 +56,7 @@
         "flaky": 0,
         "total": 12
       },
-      "clinica": {
+      "clinic": {
         "passed": 2,
         "fallbackPassed": 0,
         "failed": 0,
@@ -96,27 +96,17 @@
         "flaky": 0,
         "total": 4
       },
-      "mercado": {
-        "passed": 2,
-        "fallbackPassed": 0,
-        "failed": 0,
-        "skipped": 0,
-        "infra_error": 0,
-        "environment_missing": 0,
-        "flaky": 0,
-        "total": 2
-      },
       "market": {
-        "passed": 1,
+        "passed": 3,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 1
+        "total": 3
       },
-      "servicos": {
+      "services": {
         "passed": 2,
         "fallbackPassed": 0,
         "failed": 0,
@@ -177,7 +167,7 @@
         "byType": {},
         "successRate": 1
       },
-      "clinica": {
+      "clinic": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -201,19 +191,13 @@
         "byType": {},
         "successRate": 1
       },
-      "mercado": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
       "market": {
         "total": 0,
         "blocking": 0,
         "byType": {},
         "successRate": 1
       },
-      "servicos": {
+      "services": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -249,15 +233,15 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-08-15T09-14-51-308Z",
-      "startedAt": "2026-08-15T09:14:51.308Z",
+      "executionId": "mesh-2026-08-19T11-15-13-868Z",
+      "startedAt": "2026-08-19T11:15:13.868Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-08-15T10:16:42.171Z",
+      "promotedAt": "2026-08-19T12:19:19.996Z",
       "registryTotal": 131,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "generatedAt": "2026-08-15T10:16:42.172Z"
+  "generatedAt": "2026-08-19T12:19:19.996Z"
 }

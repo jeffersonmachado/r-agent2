@@ -15,9 +15,9 @@ async function handleAiGovernanceRoutes(ctx) {
   // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
   // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
   // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
-  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const resolveTenantId = () => req.tenantId || req.agent?.tenantId || null; // lazy: requireAuth popula req dentro de cada branch
   const tenantGuard = () => {
-    if (tenantId) return true;
+    if (resolveTenantId()) return true;
     sendJson({ error: 'tenant_required' }, 400);
     return false;
   };
@@ -30,7 +30,7 @@ async function handleAiGovernanceRoutes(ctx) {
 
     const eventTypes = req.query.eventTypes ? req.query.eventTypes.split(',') : null;
     const trail = await governanceService.getAuditTrail({
-      tenantId,
+      tenantId: resolveTenantId(),
       agentId: req.query.agentId || null,
       eventTypes,
       limit: parseInt(req.query.limit) || 100,
@@ -45,7 +45,7 @@ async function handleAiGovernanceRoutes(ctx) {
     if (!tenantGuard()) return true;
 
     const log = await governanceService.getDecisionLog({
-      tenantId,
+      tenantId: resolveTenantId(),
       agentId: req.query.agentId || null,
       limit: parseInt(req.query.limit) || 100,
     });
@@ -59,7 +59,7 @@ async function handleAiGovernanceRoutes(ctx) {
     if (!tenantGuard()) return true;
 
     const report = await governanceService.generateComplianceReport({
-      tenantId,
+      tenantId: resolveTenantId(),
       startDate: req.query.startDate || null,
       endDate: req.query.endDate || null,
     });
@@ -81,7 +81,7 @@ async function handleAiGovernanceRoutes(ctx) {
     }
 
     const record = await governanceService.logGovernanceEvent({
-      tenantId,
+      tenantId: resolveTenantId(),
       agentId: body.agentId,
       eventType: body.eventType,
       // requireAuth popula req.agent (nunca req.user): derivar o ator do

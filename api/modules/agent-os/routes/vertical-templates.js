@@ -12,9 +12,9 @@ async function handleVerticalTemplateRoutes(ctx) {
   // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
   // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
   // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
-  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const resolveTenantId = () => req.tenantId || req.agent?.tenantId || null; // lazy: requireAuth popula req dentro de cada branch
   const tenantGuard = () => {
-    if (tenantId) return true;
+    if (resolveTenantId()) return true;
     sendJson({ error: 'tenant_required' }, 400);
     return false;
   };
@@ -29,7 +29,7 @@ async function handleVerticalTemplateRoutes(ctx) {
     if (req.query.category) filters.category = req.query.category;
     if (req.query.status) filters.status = req.query.status;
 
-    const templates = await templateService.listTemplates({ tenantId, filters });
+    const templates = await templateService.listTemplates({ tenantId: resolveTenantId(), filters });
     sendJson({ templates });
   }
 
@@ -40,7 +40,7 @@ async function handleVerticalTemplateRoutes(ctx) {
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
     if (!tenantGuard()) return true;
 
-    const template = await templateService.getTemplateById(idMatch[1], tenantId);
+    const template = await templateService.getTemplateById(idMatch[1], resolveTenantId());
     if (!template) return sendJson({ error: 'Template not found' }, 404);
     sendJson({ template });
   }
@@ -56,7 +56,7 @@ async function handleVerticalTemplateRoutes(ctx) {
 
     if (!body.name || !body.slug || !body.category) return badRequest('name, slug and category are required');
 
-    const template = await templateService.createTemplate({ ...body, tenantId });
+    const template = await templateService.createTemplate({ ...body, tenantId: resolveTenantId() });
     await logAction('vertical_template.create', { templateId: template.id, slug: template.slug });
     sendJson({ template }, 201);
   }
@@ -71,7 +71,7 @@ async function handleVerticalTemplateRoutes(ctx) {
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
 
-    const template = await templateService.updateTemplate(putMatch[1], body, tenantId);
+    const template = await templateService.updateTemplate(putMatch[1], body, resolveTenantId());
     if (!template) return sendJson({ error: 'Template not found' }, 404);
     sendJson({ template });
   }
@@ -82,7 +82,7 @@ async function handleVerticalTemplateRoutes(ctx) {
     const permCheck = requirePermission(req, 'agents', 'create'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
     if (!tenantGuard()) return true;
 
-    const templates = await templateService.seedDefaultTemplates(tenantId);
+    const templates = await templateService.seedDefaultTemplates(resolveTenantId());
     sendJson({ templates, count: templates.length });
   }
 

@@ -276,7 +276,10 @@ function checkWiring() {
     const route = readText('api/modules/public-system/publicHealthRoutes.js');
     const hasVersionRoute = route.includes("pathname === '/version'");
     const hasVersionField = route.includes('version: packageVersion');
-    const hasRuntime = route.includes('runtime: {');
+    // Aceita tanto objeto literal `runtime: {` quanto atribuição
+    // `payload.runtime = {` — o handler enriquece o payload só para
+    // principal privilegiado (super_admin) por segurança.
+    const hasRuntime = route.includes('runtime: {') || route.includes('.runtime = {');
     add('backend.version', hasVersionRoute && hasVersionField && hasRuntime ? 'PASS' : 'FAIL', hasVersionRoute && hasVersionField && hasRuntime
       ? 'handler GET /version enriquecido (version + runtime) em publicHealthRoutes.js'
       : `handler /version incompleto (route=${hasVersionRoute} version=${hasVersionField} runtime=${hasRuntime})`);

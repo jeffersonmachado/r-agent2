@@ -458,7 +458,9 @@ function buildSupportTicketFlowSteps(seedData = {}) {
       selectorUsed: 'button[aria-label="Atualizar chamados"]',
       journeyId: JOURNEY_ID,
       snapshotDiff: {
-        expectedMutations: ['ticket_status_changed', 'ticket_reply_persisted'],
+        // Expectativas cumulativas da jornada até este assert (nomes canônicos
+        // do CANONICAL_MUTATION_RULES: reply persiste como 'message_created').
+        expectedMutations: ['ticket_status_changed', 'message_created'],
         // crm_updated removido: suporte não escreve atividade CRM
         // (VerticalJourneyEvent é exclusivo das verticais) — ver supportOperationalSeed.
         expectedSideEffects: ['audit_log_created'],

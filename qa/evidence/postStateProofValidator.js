@@ -83,6 +83,8 @@ const CANONICAL_SIDE_EFFECT_RULES = [
   { stepId: 'step_create_resource_booking', path: 'api.booking.id', op: 'appeared', sideEffect: 'booking_created' },
   { stepId: 'step_create_membership_charge', path: 'events.notifications.count', op: 'incremented', sideEffect: 'notification_sent' },
   { stepId: 'step_create_membership_charge', path: 'events.notifications.sent', op: 'incremented', sideEffect: 'notification_sent' },
+  { stepId: 'step_confirm_membership_payment', path: 'events.notifications.count', op: 'incremented', sideEffect: 'notification_sent' },
+  { stepId: 'step_confirm_membership_payment', path: 'events.notifications.sent', op: 'incremented', sideEffect: 'notification_sent' },
   { stepId: 'step_update_order_status', path: 'events.order_status.count', op: 'incremented', sideEffect: 'event_ledger_recorded' },
   { stepId: 'step_publish_marketplace_node', path: 'db.nodeMarketplace.catalog.count', op: 'incremented', sideEffect: 'catalog_updated' },
   { stepId: 'step_publish_marketplace_node', path: 'api.nodeMarketplace.catalog.count', op: 'incremented', sideEffect: 'catalog_updated' },

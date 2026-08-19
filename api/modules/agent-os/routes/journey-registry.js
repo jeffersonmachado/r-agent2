@@ -12,9 +12,9 @@ async function handleJourneyRegistryRoutes(ctx) {
   // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
   // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
   // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
-  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const resolveTenantId = () => req.tenantId || req.agent?.tenantId || null; // lazy: requireAuth popula req dentro de cada branch
   const tenantGuard = () => {
-    if (tenantId) return true;
+    if (resolveTenantId()) return true;
     sendJson({ error: 'tenant_required' }, 400);
     return false;
   };
@@ -30,7 +30,7 @@ async function handleJourneyRegistryRoutes(ctx) {
     if (req.query.status) filters.status = req.query.status;
     if (req.query.criticality) filters.criticality = req.query.criticality;
 
-    const journeys = await journeyService.listJourneys({ tenantId, filters });
+    const journeys = await journeyService.listJourneys({ tenantId: resolveTenantId(), filters });
     sendJson({ journeys });
   }
 
@@ -41,7 +41,7 @@ async function handleJourneyRegistryRoutes(ctx) {
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
     if (!tenantGuard()) return true;
 
-    const journey = await journeyService.getJourneyById(idMatch[1], tenantId);
+    const journey = await journeyService.getJourneyById(idMatch[1], resolveTenantId());
     if (!journey) return sendJson({ error: 'Journey not found' }, 404);
     sendJson({ journey });
   }
@@ -57,7 +57,7 @@ async function handleJourneyRegistryRoutes(ctx) {
 
     if (!body.domain || !body.name || !body.slug) return badRequest('domain, name and slug are required');
 
-    const journey = await journeyService.createJourney({ ...body, tenantId });
+    const journey = await journeyService.createJourney({ ...body, tenantId: resolveTenantId() });
     await logAction('journey_registry.create', { journeyId: journey.id, slug: journey.slug });
     sendJson({ journey }, 201);
   }
@@ -72,7 +72,7 @@ async function handleJourneyRegistryRoutes(ctx) {
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
 
-    const journey = await journeyService.updateJourney(putMatch[1], body, tenantId);
+    const journey = await journeyService.updateJourney(putMatch[1], body, resolveTenantId());
     if (!journey) return sendJson({ error: 'Journey not found' }, 404);
     sendJson({ journey });
   }
@@ -83,7 +83,7 @@ async function handleJourneyRegistryRoutes(ctx) {
     const permCheck = requirePermission(req, 'agents', 'create'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
     if (!tenantGuard()) return true;
 
-    const journeys = await journeyService.seedDefaultJourneys(tenantId);
+    const journeys = await journeyService.seedDefaultJourneys(resolveTenantId());
     sendJson({ journeys, count: journeys.length });
   }
 

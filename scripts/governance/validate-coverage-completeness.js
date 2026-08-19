@@ -24,6 +24,30 @@ function normalizeId(str) {
   return String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 
+// ── Domínios canônicos (HARD-009 / FASE 9) ──────────────────────────
+// config/verticals.json é a fonte única de IDs de domínio/vertical.
+// IDs legados/localizados (mercado, clinica, servicos, retail...) são
+// resolvidos para o ID canônico via aliases — nunca convivem como
+// domínios distintos neste relatório.
+const VERTICALS_REGISTRY = readJson('config/verticals.json', null);
+const DOMAIN_ALIAS_TO_CANONICAL = (() => {
+  const map = new Map();
+  if (VERTICALS_REGISTRY && VERTICALS_REGISTRY.domains) {
+    for (const [canonical, def] of Object.entries(VERTICALS_REGISTRY.domains)) {
+      map.set(canonical, canonical);
+      for (const alias of (def.aliases || [])) {
+        map.set(String(alias).toLowerCase(), canonical);
+      }
+    }
+  }
+  return map;
+})();
+
+function canonicalDomain(domain) {
+  const key = String(domain || 'core').toLowerCase();
+  return DOMAIN_ALIAS_TO_CANONICAL.get(key) || key;
+}
+
 // ── 1. Extrair rotas do frontend ────────────────────────────────────
 function extractFrontendRoutes() {
   if (!exists('frontend/src/main.jsx')) return [];
@@ -140,7 +164,7 @@ function extractCapabilities() {
 
   return reg.capabilities.map(c => ({
     id: c.id,
-    domain: c.domain || 'core',
+    domain: canonicalDomain(c.domain || 'core'),
     type: c.type || 'operational',
     required: c.required !== false,
     confidence: c.confidence || 0,
@@ -156,7 +180,7 @@ function extractQaScenarios() {
 
   return reg.map(s => ({
     id: s.id,
-    domain: s.domain || 'core',
+    domain: canonicalDomain(s.domain || 'core'),
     type: s.type || 'technical',
     adapter: s.adapter || 'api',
     criticality: s.criticality || 'medium',
@@ -375,7 +399,7 @@ function mapPathToDomain(routePath) {
     '/beauty': 'beauty', '/fitness': 'fitness',
     '/pbx': 'pbx', '/whatsapp': 'omnichannel', '/chat': 'omnichannel', '/chat-humano': 'omnichannel',
     '/orders': 'food', '/kitchen': 'food', '/dispatch': 'food',
-    '/crm': 'core', '/marketing': 'core', '/solutions': 'servicos',
+    '/crm': 'core', '/marketing': 'core', '/solutions': 'services',
     '/qa': 'core', '/qa-mesh': 'core', '/dev/qa-waves': 'core',
     '/dev/rpa-replays': 'core', '/dev/rpa-test': 'core', '/rpa-seeds': 'core',
     '/channel-health': 'omnichannel', '/channel-accounts': 'omnichannel',
@@ -401,9 +425,9 @@ function mapModuleToDomain(moduleName) {
   if (name.includes('pbx') || name.includes('voice')) return 'pbx';
   if (name.includes('whatsapp') || name.includes('channel') || name.includes('omnichannel')) return 'omnichannel';
   if (name.includes('food') || name.includes('order') || name.includes('kitchen')) return 'food';
-  if (name.includes('market')) return 'mercado';
-  if (name.includes('clinic')) return 'clinica';
-  if (name.includes('serv') || name.includes('solution')) return 'servicos';
+  if (name.includes('market')) return 'market';
+  if (name.includes('clinic')) return 'clinic';
+  if (name.includes('serv') || name.includes('solution')) return 'services';
   if (name.includes('bpmn') || name.includes('flow')) return 'bpmn';
   if (name.includes('workspace')) return 'workspace';
   return 'core';

@@ -171,30 +171,49 @@ function buildSnapshotDiff(step = {}, options = {}) {
   const explicit = step?.snapshotDiff || options?.snapshotDiff || null;
   if (explicit) return explicit;
 
+  const stepId = step?.id || step?.stepId || null;
+  const expectedMutations = getExpectedMutationsForStep(stepId);
+
+  // Semântica de validade do diff: um snapshot só é inválido quando viola
+  // expectativa — mutação esperada ausente OU mutação observada fora do
+  // contrato do step (unexpected). Steps read-only/navegação não têm
+  // expectativa de mutação: changed=false é estado válido, não falha
+  // (HARD-021 — antes: valid=Boolean(changed), o que marcava steps de
+  // navegação como inválidos e derrubava o digital twin no proof engine).
+  const finalize = (base, observedMutations) => {
+    const observed = Array.isArray(observedMutations) ? observedMutations : [];
+    const missingMutations = expectedMutations.filter((mutation) => !observed.includes(mutation));
+    const unexpectedMutations = observed.filter((mutation) => !expectedMutations.includes(mutation));
+    return {
+      ...base,
+      expectedMutations,
+      unexpectedMutations,
+      valid: missingMutations.length === 0 && unexpectedMutations.length === 0,
+    };
+  };
+
   const incremental = options?.incrementalDiff || step?.incrementalDiff || null;
   if (incremental?.diff) {
-    return {
+    return finalize({
       changed: Boolean(incremental?.changed),
       details: Array.isArray(incremental?.diff?.details) ? incremental.diff.details : [],
       observedMutations: Array.isArray(incremental?.observedMutations) ? incremental.observedMutations : [],
       observedSideEffects: Array.isArray(incremental?.observedSideEffects) ? incremental.observedSideEffects : [],
       mutationCount: Number(incremental?.mutationCount || 0),
-      valid: Boolean(incremental?.changed),
-    };
+    }, incremental?.observedMutations);
   }
 
   if (options?.beforeStepSnapshot != null && options?.afterStepSnapshot != null) {
     const diff = computeRealSnapshotDiff(options.beforeStepSnapshot, options.afterStepSnapshot);
     const observedMutations = deriveObservedMutations(diff, step);
     const observedSideEffects = deriveObservedSideEffects(diff, step);
-    return {
+    return finalize({
       changed: Boolean(diff?.changed),
       details: Array.isArray(diff?.details) ? diff.details : [],
       observedMutations,
       observedSideEffects,
       mutationCount: observedMutations.length,
-      valid: Boolean(diff?.changed),
-    };
+    }, observedMutations);
   }
 
   return null;
@@ -1157,4 +1176,5 @@ module.exports = {
   deriveObservedMutations,
   deriveObservedSideEffects,
   appendProofChainToReplay,
+  buildSnapshotDiff,
 };

@@ -135,38 +135,67 @@ function renderSupportPage(state) {
   return `<!doctype html>
 <html>
 <body data-testid="support-page">
-  <div data-testid="ticket-list">
-    <button data-testid="ticket-card-${state.support.ticketId}" onclick="openTicket()">Open ticket</button>
-    <button data-testid="ticket-card" onclick="openTicket()">Open fallback</button>
+  <button aria-label="Atualizar chamados" onclick="refreshTickets()">Atualizar chamados</button>
+  <div data-testid="ticket-list" id="ticket-list">
+    <button data-testid="ticket-card" data-ticket-id="${state.support.ticketId}" id="ticket-card" onclick="openTicket()">Open ticket</button>
   </div>
   <section id="detail" data-testid="ticket-detail" style="display:none">
+    <div data-testid="ticket-message-list" id="message-list"><div data-testid="message-received">mensagem do cliente</div></div>
     <textarea data-testid="ticket-reply-input"></textarea>
     <button data-testid="ticket-send-button" onclick="replyTicket()">Send</button>
-    <select data-testid="ticket-status-select" onchange="changeStatus(this.value)">
-      <option value="open">open</option>
-      <option value="resolved">resolved</option>
-    </select>
-    <div data-testid="ticket-status">${state.support.status}</div>
-    <div data-testid="ticket-backend-state">${state.support.status}</div>
+    <button data-testid="ticket-close-button" onclick="openCloseModal()">Fechar ticket</button>
   </section>
+  <div id="close-modal" class="support-modal-content" style="display:none">
+    <input class="support-form-input" id="close-reason" />
+    <button onclick="requestClose()">Fechar</button>
+  </div>
+  <div id="confirm-dialog" class="fixed inset-0" style="display:none">
+    <p>Deseja realmente fechar este ticket?</p>
+    <button onclick="confirmClose()">Fechar</button>
+  </div>
   <script>
     function openTicket() {
       document.querySelector('#detail').style.display = 'block';
     }
+    function refreshTickets() {
+      // no-op: a lista do fixture já reflete o estado do backend (card removido no close)
+    }
     async function replyTicket() {
-      await fetch('/api/tickets/${state.support.ticketId}/reply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: document.querySelector('[data-testid="ticket-reply-input"]').value }) });
+      await fetch('/tickets/${state.support.ticketId}/reply', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: document.querySelector('[data-testid="ticket-reply-input"]').value }) });
+      const el = document.createElement('div');
+      el.setAttribute('data-testid', 'message-sent');
+      el.textContent = 'sent';
+      document.querySelector('#message-list').appendChild(el);
       if (!document.querySelector('[data-testid="message-sent-confirmation"]')) {
-        const el = document.createElement('div');
-        el.setAttribute('data-testid', 'message-sent-confirmation');
-        el.textContent = 'sent';
-        document.body.appendChild(el);
+        const conf = document.createElement('div');
+        conf.setAttribute('data-testid', 'message-sent-confirmation');
+        conf.textContent = 'sent';
+        document.body.appendChild(conf);
       }
     }
-    async function changeStatus(value) {
-      const res = await fetch('/api/tickets/${state.support.ticketId}/status', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: value }) });
+    function openCloseModal() {
+      document.querySelector('#close-modal').style.display = 'block';
+    }
+    function requestClose() {
+      document.querySelector('#close-modal').style.display = 'none';
+      document.querySelector('#confirm-dialog').style.display = 'block';
+    }
+    async function confirmClose() {
+      const res = await fetch('/api/tickets/${state.support.ticketId}/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'closed' }) });
       const body = await res.json();
-      document.querySelector('[data-testid="ticket-status"]').textContent = body.status;
-      document.querySelector('[data-testid="ticket-backend-state"]').textContent = body.status;
+      if (body.status === 'closed') {
+        const card = document.querySelector('#ticket-card');
+        if (card) card.remove();
+        const list = document.querySelector('#ticket-list');
+        if (list && !list.children.length) {
+          const empty = document.createElement('div');
+          empty.setAttribute('data-testid', 'ticket-list-empty');
+          empty.textContent = 'Nenhum chamado na fila';
+          list.appendChild(empty);
+        }
+        document.querySelector('#detail').style.display = 'none';
+        document.querySelector('#confirm-dialog').style.display = 'none';
+      }
     }
   </script>
 </body>
@@ -212,7 +241,47 @@ function createFixtureServer(state) {
       return;
     }
 
-    if (method === 'POST' && /^\/api\/tickets\/[^/]+\/reply$/.test(url)) {
+    if (method === 'POST' && /^\/?(api\/)?tickets\/[^/]+\/takeover$/.test(url)) {
+      state.support.status = 'in_progress';
+      state.support.auditCount += 1;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, status: state.support.status }));
+      return;
+    }
+
+    if (method === 'POST' && /^\/?(api\/)?tickets\/[^/]+\/assign$/.test(url)) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
+    if (method === 'GET' && /^\/?(api\/)?tickets\/[^/]+\/messages$/.test(url)) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ messages: [{ id: 'msg-1', deliveryStatus: 'sent' }] }));
+      return;
+    }
+
+    if (method === 'GET' && /^\/?(api\/)?tickets\/[^/]+\/delivery-failures$/.test(url)) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ failures: [] }));
+      return;
+    }
+
+    if (method === 'GET' && /^\/?(api\/)?tickets\/[^/]+$/.test(url)) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: state.support.status, ticket: { status: state.support.status } }));
+      return;
+    }
+
+    if ((method === 'POST' || method === 'PATCH') && /^\/?(api\/)?tickets\/[^/]+\/status$/.test(url)) {
+      state.support.status = 'closed';
+      state.support.auditCount += 1;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, status: state.support.status }));
+      return;
+    }
+
+    if (method === 'POST' && /^\/?(api\/)?tickets\/[^/]+\/reply$/.test(url)) {
       state.support.messagesCount += 1;
       state.support.auditCount += 1;
       state.support.crmCount += 1;
@@ -222,11 +291,9 @@ function createFixtureServer(state) {
       return;
     }
 
-    if (method === 'PATCH' && /^\/api\/tickets\/[^/]+\/status$/.test(url)) {
-      state.support.status = 'resolved';
-      state.support.auditCount += 1;
+    if (method === 'POST' && url === '/webhooks/whatsapp') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, status: state.support.status }));
+      res.end(JSON.stringify({ ok: true }));
       return;
     }
 
@@ -2716,11 +2783,20 @@ async function runRealFlow({ journeyId, steps, seedEvidence }) {
     ...step,
     beforeStepSnapshot: step.beforeStepSnapshot || beforeSnapshot,
     afterStepSnapshot: step.afterStepSnapshot || afterSnapshot,
-    snapshotDiff: step.snapshotDiff || step.incrementalDiff?.diff || {
-      changed: JSON.stringify(beforeSnapshot) !== JSON.stringify(afterSnapshot),
-      details: [],
-      valid: JSON.stringify(beforeSnapshot) !== JSON.stringify(afterSnapshot),
-    },
+    snapshotDiff: step.snapshotDiff || step.incrementalDiff?.diff || (() => {
+      // Fallback semântico (HARD-021): valid não é "houve mudança" — é
+      // "nenhuma mutação esperada ficou faltando". Steps read-only sem
+      // expectativa são válidos mesmo sem mudança observada.
+      const changed = JSON.stringify(beforeSnapshot) !== JSON.stringify(afterSnapshot);
+      const expectedMutations = getExpectedMutationsForStep(step.id || step.stepId);
+      return {
+        changed,
+        details: [],
+        expectedMutations,
+        unexpectedMutations: [],
+        valid: expectedMutations.length === 0 || changed,
+      };
+    })(),
   }));
 
   const postState = validateJourneyPostStateProofs({
@@ -2892,11 +2968,20 @@ async function runFlow({ journeyId, steps, state, baseUrl, seedEvidence }) {
     ...step,
     beforeStepSnapshot: step.beforeStepSnapshot || beforeSnapshot,
     afterStepSnapshot: step.afterStepSnapshot || afterSnapshot,
-    snapshotDiff: step.snapshotDiff || step.incrementalDiff?.diff || {
-      changed: JSON.stringify(beforeSnapshot) !== JSON.stringify(afterSnapshot),
-      details: [],
-      valid: JSON.stringify(beforeSnapshot) !== JSON.stringify(afterSnapshot),
-    },
+    snapshotDiff: step.snapshotDiff || step.incrementalDiff?.diff || (() => {
+      // Fallback semântico (HARD-021): valid não é "houve mudança" — é
+      // "nenhuma mutação esperada ficou faltando". Steps read-only sem
+      // expectativa são válidos mesmo sem mudança observada.
+      const changed = JSON.stringify(beforeSnapshot) !== JSON.stringify(afterSnapshot);
+      const expectedMutations = getExpectedMutationsForStep(step.id || step.stepId);
+      return {
+        changed,
+        details: [],
+        expectedMutations,
+        unexpectedMutations: [],
+        valid: expectedMutations.length === 0 || changed,
+      };
+    })(),
   }));
   const postState = validateJourneyPostStateProofs({
     beforeSnapshot,

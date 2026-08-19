@@ -1,16 +1,17 @@
 {
-  "generatedAt": "2026-08-14T21:08:46.360Z",
-  "commit": "2191b0927f3aa9640f3f83b0e8f375fe0b441917",
+  "generatedAt": "2026-08-19T09:14:34.734Z",
+  "commit": "ec923b04082266b1cc0bc3cae48118ee68e8b681",
   "baseUrl": "http://localhost:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 771,
+    "items": 774,
     "byState": {
       "VALIDATED": 750,
-      "NOT_APPLICABLE": 21
+      "NOT_APPLICABLE": 21,
+      "VISITED": 3
     }
   },
   "exemptions": [
@@ -20,6 +21,20 @@
       "reason": "Health check público intencional do módulo QA Waves (probe de infraestrutura, payload mínimo sem dados de negócio nem de evidência). Comportamento coberto por api/server.test.js ('GET /api/qa-waves/health deve retornar status ok do modulo'). Demais endpoints do módulo exigem DEVELOPMENT normalmente.",
       "approvedBy": "jeffersonmachado",
       "date": "2026-07-28"
+    },
+    {
+      "item": "api:GET:/health",
+      "assertion": "authEnforced",
+      "reason": "Liveness probe público intencional (api/modules/public-system/publicHealthRoutes.js): responde apenas {status:'ok'}, sem dados de tenant/negócio. Destinado a healthchecks de load balancer/Docker Compose, que não carregam credenciais. Cobertura de comportamento em api/server.test.js.",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-19"
+    },
+    {
+      "item": "api:GET:/health/live",
+      "assertion": "authEnforced",
+      "reason": "Liveness probe público intencional (mesmo handler de /health): status/timestamp/uptimeSec apenas — sem dados de tenant. Necessário anônimo para probes de orquestrador; coberto por api/server.test.js ('GET /health/live deve retornar 200 com status ok, timestamp e uptimeSec').",
+      "approvedBy": "jeffersonmachado",
+      "date": "2026-08-19"
     },
     {
       "item": "api:GET:/system/status",
@@ -1563,7 +1578,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 400,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -1590,7 +1605,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 400,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -1617,7 +1632,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 400,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -3042,7 +3057,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 400,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -3069,7 +3084,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 400,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -3158,6 +3173,60 @@
     },
     {
       "id": "api:GET:/api/learning/competencies/me",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 200,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/learning/journey-faq",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 400,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/learning/journey-faq/summary",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -6183,7 +6252,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 400,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -6210,7 +6279,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 400,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -7094,7 +7163,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 400,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -8064,8 +8133,21 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo recebeu 200 — endpoint protegido respondeu sem credencial | NOT_APPLICABLE — isenção justificada: Liveness probe público intencional (api/modules/public-system/publicHealthRoutes.js): responde apenas {status:'ok'}, sem dados de tenant/negócio. Destinado a healthchecks de load balancer/Docker Compose, que não carregam credenciais. Cobertura de comportamento em api/server.test.js. (aprovada por jeffersonmachado em 2026-08-19)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:GET:/health",
+        "assertion": "authEnforced",
+        "reason": "Liveness probe público intencional (api/modules/public-system/publicHealthRoutes.js): responde apenas {status:'ok'}, sem dados de tenant/negócio. Destinado a healthchecks de load balancer/Docker Compose, que não carregam credenciais. Cobertura de comportamento em api/server.test.js.",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-19"
+      },
       "probes": {
         "p1": {
           "status": 200,
@@ -8108,8 +8190,21 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo recebeu 200 — endpoint protegido respondeu sem credencial | NOT_APPLICABLE — isenção justificada: Liveness probe público intencional (mesmo handler de /health): status/timestamp/uptimeSec apenas — sem dados de tenant. Necessário anônimo para probes de orquestrador; coberto por api/server.test.js ('GET /health/live deve retornar 200 com status ok, timestamp e uptimeSec'). (aprovada por jeffersonmachado em 2026-08-19)",
+          "notApplicable": true
         }
       ],
+      "exemption": {
+        "item": "api:GET:/health/live",
+        "assertion": "authEnforced",
+        "reason": "Liveness probe público intencional (mesmo handler de /health): status/timestamp/uptimeSec apenas — sem dados de tenant. Necessário anônimo para probes de orquestrador; coberto por api/server.test.js ('GET /health/live deve retornar 200 com status ok, timestamp e uptimeSec').",
+        "approvedBy": "jeffersonmachado",
+        "date": "2026-08-19"
+      },
       "probes": {
         "p1": {
           "status": 200,
@@ -10311,11 +10406,6 @@
           "name": "routeRegistered",
           "passed": true,
           "detail": "rota respondeu no runtime"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "anônimo rejeitado com 401"
         },
         {
           "name": "classificationEnforced",
@@ -13803,6 +13893,30 @@
     },
     {
       "id": "api:POST:/api/learning/interactions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/api/learning/journey-faq/generate",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -19711,22 +19825,19 @@
     },
     {
       "id": "api:POST:/rpa/execute/:id",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "rota respondeu no runtime"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "anônimo rejeitado com 401"
+          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
+          "notEvaluated": true
         },
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+          "detail": "P2 não executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
+          "notEvaluated": true
         },
         {
           "name": "developmentReachable",
@@ -19736,35 +19847,26 @@
         }
       ],
       "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
-        "p2": {
-          "status": 403,
-          "notFoundFallback": false
-        },
+        "p1": "skipped",
+        "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rpa/record/start",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "rota respondeu no runtime"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "anônimo rejeitado com 401"
+          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
+          "notEvaluated": true
         },
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+          "detail": "P2 não executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
+          "notEvaluated": true
         },
         {
           "name": "developmentReachable",
@@ -19774,35 +19876,26 @@
         }
       ],
       "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
-        "p2": {
-          "status": 403,
-          "notFoundFallback": false
-        },
+        "p1": "skipped",
+        "p2": "skipped",
         "p3": "skipped"
       }
     },
     {
       "id": "api:POST:/rpa/record/stop/:id",
-      "state": "VALIDATED",
+      "state": "VISITED",
       "assertions": [
         {
           "name": "routeRegistered",
           "passed": true,
-          "detail": "rota respondeu no runtime"
-        },
-        {
-          "name": "authEnforced",
-          "passed": true,
-          "detail": "anônimo rejeitado com 401"
+          "detail": "nenhum probe executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
+          "notEvaluated": true
         },
         {
           "name": "classificationEnforced",
           "passed": true,
-          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+          "detail": "P2 não executado (método mutável sem auth declarada: probe pulado (risco de efeito colateral))",
+          "notEvaluated": true
         },
         {
           "name": "developmentReachable",
@@ -19812,14 +19905,8 @@
         }
       ],
       "probes": {
-        "p1": {
-          "status": 401,
-          "notFoundFallback": false
-        },
-        "p2": {
-          "status": 403,
-          "notFoundFallback": false
-        },
+        "p1": "skipped",
+        "p2": "skipped",
         "p3": "skipped"
       }
     },

@@ -78,7 +78,7 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(summary.linksSource).toMatch(/ausente\/inválido/);
   });
 
-  test('config real versionado produz os 89 links esperados contra o snapshot real (modo CI)', () => {
+  test('config real versionado produz os 90 links esperados contra o snapshot real (modo CI)', () => {
     // Reproduz exatamente o modo snapshot do CI: cenários do baseline
     // versionado, sem qa-mesh/meshRegistry.json. Antes da correção este
     // cenário rendia apenas 7 links (2 diretos) com os arquivos verticais
@@ -88,8 +88,8 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
       linksConfigPath: REAL_LINKS_CONFIG_PATH,
     });
 
-    expect(summary.total).toBe(89);
-    expect(summary.bySource['journey-coverage']).toBe(84);
+    expect(summary.total).toBe(90);
+    expect(summary.bySource['journey-coverage']).toBe(85);
     expect(summary.bySource['scenario-name']).toBe(5);
 
     // Links diretos críticos que sumiram no CI antes da correção:
@@ -98,6 +98,10 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(links.clinic_default_journey.scenarioIds).toContain('business-clinic-flow-ticket');
     expect(links.food_customer_journey.scenarioIds).toContain('business-food-flow-order');
     expect(links.services_default_journey.scenarioIds).toContain('business-serv-flow-solution');
+
+    // HARD-016: jornada crítica fitness_customer_checkin religada a cenário
+    // real do mesh (IDs sintéticos auto-gerados nunca existiram no registry).
+    expect(links.fitness_customer_checkin.scenarioIds).toEqual(['business-fit-flow-checkin']);
 
     // Jornadas core (declaração manual): antes UNCOVERED, hoje ligadas aos
     // cenários executáveis business-core-flow-* do QA mesh.

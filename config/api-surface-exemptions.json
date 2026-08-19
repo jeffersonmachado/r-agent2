@@ -1,4 +1,16 @@
 {
+  "api:GET:/health": {
+    "assertion": "authEnforced",
+    "reason": "Liveness probe público intencional (api/modules/public-system/publicHealthRoutes.js): responde apenas {status:'ok'}, sem dados de tenant/negócio. Destinado a healthchecks de load balancer/Docker Compose, que não carregam credenciais. Cobertura de comportamento em api/server.test.js.",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-19"
+  },
+  "api:GET:/health/live": {
+    "assertion": "authEnforced",
+    "reason": "Liveness probe público intencional (mesmo handler de /health): status/timestamp/uptimeSec apenas — sem dados de tenant. Necessário anônimo para probes de orquestrador; coberto por api/server.test.js ('GET /health/live deve retornar 200 com status ok, timestamp e uptimeSec').",
+    "approvedBy": "jeffersonmachado",
+    "date": "2026-08-19"
+  },
   "api:GET:/system/status": {
     "assertion": "authEnforced",
     "reason": "Endpoint público intencional: status agregado de infra sem dados de tenant (decisão documentada em api/services/systemStatusService.js — '/system/status é público, então NÃO usa tenantId (agregado)'). O requireAuth no handler é opcional e só enriquece a resposta (emit de websocket) quando o chamador já está autenticado; o inventário marca authRequired=true por detectar esse requireAuth condicional.",

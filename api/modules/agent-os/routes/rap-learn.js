@@ -12,9 +12,9 @@ async function handleRapLearnRoutes(ctx) {
   // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
   // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
   // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
-  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const resolveTenantId = () => req.tenantId || req.agent?.tenantId || null; // lazy: requireAuth popula req dentro de cada branch
   const tenantGuard = () => {
-    if (tenantId) return true;
+    if (resolveTenantId()) return true;
     sendJson({ error: 'tenant_required' }, 400);
     return false;
   };
@@ -30,7 +30,7 @@ async function handleRapLearnRoutes(ctx) {
     if (req.query.status) filters.status = req.query.status;
     if (req.query.classification) filters.classification = req.query.classification;
 
-    const records = await learningService.listLearningRecords({ tenantId, filters });
+    const records = await learningService.listLearningRecords({ tenantId: resolveTenantId(), filters });
     sendJson({ records });
   }
 
@@ -41,7 +41,7 @@ async function handleRapLearnRoutes(ctx) {
     if (!tenantGuard()) return true;
 
     const windowHours = parseInt(req.query.windowHours) || 24;
-    const regressions = await learningService.detectRegressions({ tenantId, windowHours });
+    const regressions = await learningService.detectRegressions({ tenantId: resolveTenantId(), windowHours });
     sendJson({ regressions, windowHours });
   }
 
@@ -55,7 +55,7 @@ async function handleRapLearnRoutes(ctx) {
     const body = await parseJsonBody(req);
 
     const record = await learningService.recordFailure({
-      tenantId,
+      tenantId: resolveTenantId(),
       source: body.source,
       sourceRef: body.sourceRef,
       classification: body.classification,
@@ -74,7 +74,7 @@ async function handleRapLearnRoutes(ctx) {
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
 
-    const record = await learningService.classifyFailure(classifyMatch[1], body.classification, body.rootCause, tenantId);
+    const record = await learningService.classifyFailure(classifyMatch[1], body.classification, body.rootCause, resolveTenantId());
     if (!record) return sendJson({ error: 'Record not found' }, 404);
     sendJson({ record });
   }
@@ -89,7 +89,7 @@ async function handleRapLearnRoutes(ctx) {
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
 
-    const record = await learningService.generateSuggestion(suggestMatch[1], body.suggestion, tenantId);
+    const record = await learningService.generateSuggestion(suggestMatch[1], body.suggestion, resolveTenantId());
     if (!record) return sendJson({ error: 'Record not found' }, 404);
     sendJson({ record });
   }
@@ -104,7 +104,7 @@ async function handleRapLearnRoutes(ctx) {
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
 
-    const record = await learningService.validateSuggestion(validateMatch[1], body.validationResult, tenantId);
+    const record = await learningService.validateSuggestion(validateMatch[1], body.validationResult, resolveTenantId());
     if (!record) return sendJson({ error: 'Record not found' }, 404);
     sendJson({ record });
   }
@@ -121,7 +121,7 @@ async function handleRapLearnRoutes(ctx) {
     // agente autenticado; ausente → principal_required (não criar actor fictício).
     const promotedBy = body.promotedBy || req.agent?.username || req.agent?.id || null;
     if (!promotedBy) { sendJson({ error: 'principal_required' }, 400); return true; }
-    const record = await learningService.promoteToProduction(promoteMatch[1], promotedBy, tenantId);
+    const record = await learningService.promoteToProduction(promoteMatch[1], promotedBy, resolveTenantId());
     if (!record) return sendJson({ error: 'Record not found' }, 404);
     sendJson({ record });
   }

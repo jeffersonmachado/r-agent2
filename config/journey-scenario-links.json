@@ -878,53 +878,10 @@
         },
         {
           "journey": "fitness_customer_checkin",
+          "manual": true,
           "scenarios": [
             {
-              "scenarioId": "business-e2e-fitness_customer_checkin",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "cap-customer_identification",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "cap-membership_validation",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "cap-access_decision",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "cap-turnstile_release",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "cap-attendance_record",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "cap-crm_update",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "precond-fitness_customer_checkin-crm_contact_exists",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "precond-fitness_customer_checkin-membership_exists",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "precond-fitness_customer_checkin-credential_exists",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "precond-fitness_customer_checkin-device_available",
-              "status": "approved"
-            },
-            {
-              "scenarioId": "precond-fitness_customer_checkin-attendance_database_accessible",
+              "scenarioId": "business-fit-flow-checkin",
               "status": "approved"
             }
           ]

@@ -341,7 +341,10 @@ describe('API server (api/server.js)', () => {
     // QA Waves é classificação DEVELOPMENT: apenas super_admin (systemadmin)
     // tem acesso. Token RPA (role admin) é PRODUCTION e recebe 403 por design —
     // cobertura do fluxo rpa/login: tests/unit/authRoutes.test.js e tests/rpa/.
-    const authHeaders = await loginAuthHeaders();
+    // Super-admin deve selecionar o tenant explicitamente via X-Tenant-Id
+    // (hardening fail-closed de api/middleware/auth.js: sem header, req.tenantId
+    // fica null e as rotas QA Waves respondem 400 tenant_required).
+    const authHeaders = await loginAuthHeaders('system');
 
     const journeysRes = await request(port, 'GET', '/api/qa-waves/journeys', undefined, authHeaders);
     const journeyStatusRes = await request(port, 'GET', '/api/qa-waves/journey-status', undefined, authHeaders);

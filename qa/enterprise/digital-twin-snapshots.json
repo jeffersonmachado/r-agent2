@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-18T20:11:28.566Z",
+  "generatedAt": "2026-08-19T13:26:14.209Z",
   "sourceArtifact": "qa/smoke/qa-waves-operational-final-smoke.json",
   "snapshots": [
     {
       "journeyId": "support_ticket_flow",
-      "stepId": "step_access_support_module",
+      "stepId": "step_takeover_ticket",
       "before": {
         "db": {
           "messages": {
@@ -35,13 +35,13 @@
             "count": 1
           },
           "ticket": {
-            "status": "open"
+            "status": "in_progress"
           },
-          "ticketStatus": "open"
+          "ticketStatus": "in_progress"
         },
         "events": {
           "audit": {
-            "count": 0
+            "count": 1
           },
           "notifications": {
             "count": 0
@@ -54,146 +54,54 @@
         }
       },
       "diff": {
-        "changed": false,
-        "details": [],
-        "valid": false
-      },
-      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_wait_ticket_list",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "diff": {
-        "changed": false,
-        "details": [],
-        "valid": false
-      },
-      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_open_ticket",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "diff": {
-        "changed": false,
+        "changed": true,
         "mutations": [],
         "sideEffects": [],
         "mutationCount": 0,
-        "details": []
+        "details": [
+          {
+            "field": "db.ticket.status",
+            "before": "open",
+            "after": "in_progress"
+          },
+          {
+            "field": "db.ticketStatus",
+            "before": "open",
+            "after": "in_progress"
+          },
+          {
+            "field": "events.audit.count",
+            "before": 0,
+            "after": 1
+          }
+        ]
       },
-      "hash": "54acbc55b8f562672d8cc5be2ebc9f73d5d33f020b82140b4b44e066b772d434"
+      "hash": "f6a2ace4924df4fd7467a7028065e29d5d844fe10d9181157836d70b04defd1d"
     },
     {
       "journeyId": "support_ticket_flow",
-      "stepId": "step_access_support_module",
+      "stepId": null,
+      "before": null,
+      "after": null,
+      "diff": true,
+      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
       "before": {
         "db": {
           "messages": {
             "count": 1
           },
           "ticket": {
-            "status": "open"
+            "status": "in_progress"
           },
-          "ticketStatus": "open"
+          "ticketStatus": "in_progress"
         },
         "events": {
           "audit": {
-            "count": 0
+            "count": 1
           },
           "notifications": {
             "count": 0
@@ -208,151 +116,170 @@
       "after": {
         "db": {
           "messages": {
-            "count": 1
+            "count": 2
           },
           "ticket": {
-            "status": "open"
+            "status": "in_progress"
           },
-          "ticketStatus": "open"
+          "ticketStatus": "in_progress"
         },
         "events": {
           "audit": {
-            "count": 0
+            "count": 2
           },
           "notifications": {
-            "count": 0
+            "count": 1
           }
         },
         "crm": {
           "activities": {
-            "count": 0
+            "count": 1
           }
         }
       },
       "diff": {
-        "changed": false,
-        "details": [],
-        "valid": false
-      },
-      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_wait_ticket_list",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "diff": {
-        "changed": false,
-        "details": [],
-        "valid": false
-      },
-      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
-    },
-    {
-      "journeyId": "support_ticket_flow",
-      "stepId": "step_open_ticket",
-      "before": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "after": {
-        "db": {
-          "messages": {
-            "count": 1
-          },
-          "ticket": {
-            "status": "open"
-          },
-          "ticketStatus": "open"
-        },
-        "events": {
-          "audit": {
-            "count": 0
-          },
-          "notifications": {
-            "count": 0
-          }
-        },
-        "crm": {
-          "activities": {
-            "count": 0
-          }
-        }
-      },
-      "diff": {
-        "changed": false,
+        "changed": true,
         "mutations": [],
         "sideEffects": [],
         "mutationCount": 0,
-        "details": []
+        "details": [
+          {
+            "field": "db.messages.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.audit.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.notifications.count",
+            "before": 0,
+            "after": 1
+          },
+          {
+            "field": "crm.activities.count",
+            "before": 0,
+            "after": 1
+          }
+        ]
       },
-      "hash": "54acbc55b8f562672d8cc5be2ebc9f73d5d33f020b82140b4b44e066b772d434"
+      "hash": "2bfb99fea8595ef6ca1fcab8354c5454739ad4453d18787e98b5c65d08b7dfd5"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_change_status",
+      "before": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 2
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "after": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "closed"
+          },
+          "ticketStatus": "closed"
+        },
+        "events": {
+          "audit": {
+            "count": 3
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "diff": {
+        "changed": true,
+        "mutations": [],
+        "sideEffects": [],
+        "mutationCount": 0,
+        "details": [
+          {
+            "field": "db.ticket.status",
+            "before": "in_progress",
+            "after": "closed"
+          },
+          {
+            "field": "db.ticketStatus",
+            "before": "in_progress",
+            "after": "closed"
+          },
+          {
+            "field": "events.audit.count",
+            "before": 2,
+            "after": 3
+          }
+        ]
+      },
+      "hash": "22e6b00249f617462a6ab3ba6950eca8900014b64fcbea2edffb4a6746395055"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_assert_ticket_ui",
+      "before": null,
+      "after": null,
+      "diff": {
+        "expectedMutations": [
+          "ticket_status_changed",
+          "message_created"
+        ],
+        "expectedSideEffects": [
+          "audit_log_created"
+        ],
+        "observedMutations": [
+          "ticket_status_changed",
+          "message_created"
+        ],
+        "observedSideEffects": [
+          "audit_log_created",
+          "notification_sent",
+          "crm_updated"
+        ],
+        "cumulativeObservation": true
+      },
+      "hash": "389530259b9d9f2de06ccddaf426db2e26db91ea3ad0f4c8fb19c665202366a1"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_assert_ticket_backend",
+      "before": null,
+      "after": null,
+      "diff": {
+        "changed": true,
+        "details": [],
+        "valid": true
+      },
+      "hash": "d73890c68836d110e53c195884c332dc57d1ef54f4f617b44d3a8f537e4f2f0d"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -384,33 +311,35 @@
       "after": {
         "db": {
           "messages": {
-            "count": 1
+            "count": 2
           },
           "ticket": {
-            "status": "open"
+            "status": "closed"
           },
-          "ticketStatus": "open"
+          "ticketStatus": "closed"
         },
         "events": {
           "audit": {
-            "count": 0
+            "count": 3
           },
           "notifications": {
-            "count": 0
+            "count": 1
           }
         },
         "crm": {
           "activities": {
-            "count": 0
+            "count": 1
           }
         }
       },
       "diff": {
-        "changed": false,
+        "changed": true,
         "details": [],
-        "valid": false
+        "expectedMutations": [],
+        "unexpectedMutations": [],
+        "valid": true
       },
-      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
+      "hash": "e5bd19042e4ecd0211f84479f22e4df1a95d4cc9b0aa9fbcfe1883a88d146b35"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -442,33 +371,35 @@
       "after": {
         "db": {
           "messages": {
-            "count": 1
+            "count": 2
           },
           "ticket": {
-            "status": "open"
+            "status": "closed"
           },
-          "ticketStatus": "open"
+          "ticketStatus": "closed"
         },
         "events": {
           "audit": {
-            "count": 0
+            "count": 3
           },
           "notifications": {
-            "count": 0
+            "count": 1
           }
         },
         "crm": {
           "activities": {
-            "count": 0
+            "count": 1
           }
         }
       },
       "diff": {
-        "changed": false,
+        "changed": true,
         "details": [],
-        "valid": false
+        "expectedMutations": [],
+        "unexpectedMutations": [],
+        "valid": true
       },
-      "hash": "1eea5d5ac3c75035fa04f3d2fee7f5d1572844f3fb7f3f68538f5c73812bbf8a"
+      "hash": "e5bd19042e4ecd0211f84479f22e4df1a95d4cc9b0aa9fbcfe1883a88d146b35"
     },
     {
       "journeyId": "support_ticket_flow",
@@ -500,6 +431,42 @@
       "after": {
         "db": {
           "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "closed"
+          },
+          "ticketStatus": "closed"
+        },
+        "events": {
+          "audit": {
+            "count": 3
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "diff": {
+        "changed": true,
+        "details": [],
+        "expectedMutations": [],
+        "unexpectedMutations": [],
+        "valid": true
+      },
+      "hash": "e5bd19042e4ecd0211f84479f22e4df1a95d4cc9b0aa9fbcfe1883a88d146b35"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_whatsapp_read_status",
+      "before": {
+        "db": {
+          "messages": {
             "count": 1
           },
           "ticket": {
@@ -521,14 +488,228 @@
           }
         }
       },
-      "diff": {
-        "changed": false,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": []
+      "after": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "closed"
+          },
+          "ticketStatus": "closed"
+        },
+        "events": {
+          "audit": {
+            "count": 3
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
       },
-      "hash": "54acbc55b8f562672d8cc5be2ebc9f73d5d33f020b82140b4b44e066b772d434"
+      "diff": {
+        "changed": true,
+        "details": [],
+        "expectedMutations": [],
+        "unexpectedMutations": [],
+        "valid": true
+      },
+      "hash": "e5bd19042e4ecd0211f84479f22e4df1a95d4cc9b0aa9fbcfe1883a88d146b35"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_assert_whatsapp_delivery",
+      "before": {
+        "db": {
+          "messages": {
+            "count": 1
+          },
+          "ticket": {
+            "status": "open"
+          },
+          "ticketStatus": "open"
+        },
+        "events": {
+          "audit": {
+            "count": 0
+          },
+          "notifications": {
+            "count": 0
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 0
+          }
+        }
+      },
+      "after": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "closed"
+          },
+          "ticketStatus": "closed"
+        },
+        "events": {
+          "audit": {
+            "count": 3
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "diff": {
+        "changed": true,
+        "details": [],
+        "expectedMutations": [],
+        "unexpectedMutations": [],
+        "valid": true
+      },
+      "hash": "e5bd19042e4ecd0211f84479f22e4df1a95d4cc9b0aa9fbcfe1883a88d146b35"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_assert_ticket_ui",
+      "before": {
+        "db": {
+          "messages": {
+            "count": 1
+          },
+          "ticket": {
+            "status": "open"
+          },
+          "ticketStatus": "open"
+        },
+        "events": {
+          "audit": {
+            "count": 0
+          },
+          "notifications": {
+            "count": 0
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 0
+          }
+        }
+      },
+      "after": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "closed"
+          },
+          "ticketStatus": "closed"
+        },
+        "events": {
+          "audit": {
+            "count": 3
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "diff": {
+        "expectedMutations": [
+          "ticket_status_changed",
+          "message_created"
+        ],
+        "expectedSideEffects": [
+          "audit_log_created"
+        ],
+        "observedMutations": [
+          "ticket_status_changed",
+          "message_created"
+        ],
+        "observedSideEffects": [
+          "audit_log_created",
+          "notification_sent",
+          "crm_updated"
+        ],
+        "cumulativeObservation": true
+      },
+      "hash": "dd9c11c035e23487ebf1389f0ddf0a1bab01bd7bc6f50a73def25c1323fc97e1"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_assert_ticket_backend",
+      "before": {
+        "db": {
+          "messages": {
+            "count": 1
+          },
+          "ticket": {
+            "status": "open"
+          },
+          "ticketStatus": "open"
+        },
+        "events": {
+          "audit": {
+            "count": 0
+          },
+          "notifications": {
+            "count": 0
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 0
+          }
+        }
+      },
+      "after": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "closed"
+          },
+          "ticketStatus": "closed"
+        },
+        "events": {
+          "audit": {
+            "count": 3
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "diff": {
+        "changed": true,
+        "details": [],
+        "valid": true
+      },
+      "hash": "709afbf675397bd18ccbfbfdaa78e0af4fe83d740780d4727b653526f27f7aed"
     },
     {
       "journeyId": "fitness_customer_checkin",
@@ -660,134 +841,6 @@
     },
     {
       "journeyId": "fitness_customer_checkin",
-      "stepId": "step_validate_membership",
-      "before": null,
-      "after": null,
-      "diff": {
-        "changed": false,
-        "details": [],
-        "valid": true
-      },
-      "hash": "31e4f60d7b30bf5c59fad17d99366e611bf097979bc427e2cd8558d2ba5b84bc"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_submit_checkin",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.attendance.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "api.access.decision.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "api.access.decision.allow",
-            "before": false,
-            "after": true
-          },
-          {
-            "field": "devices.access.events",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.presenceActivity.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
-      },
-      "hash": "b2773d787d4456045e1f06b6ceed138b21b53987885f49646e807578ad63ecc4"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_confirm_attendance",
-      "before": null,
-      "after": null,
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "d73890c68836d110e53c195884c332dc57d1ef54f4f617b44d3a8f537e4f2f0d"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
       "stepId": "step_access_checkin_module",
       "before": {
         "db": {
@@ -850,9 +903,11 @@
       "diff": {
         "changed": true,
         "details": [],
+        "expectedMutations": [],
+        "unexpectedMutations": [],
         "valid": true
       },
-      "hash": "5f4949697ff55bdf2576c1fb126344a6453ce0adab80665c8ed77f7fdafc906c"
+      "hash": "ac03f0796f31f4f329a1a20fed9b294113e8bee579158598d247dcd1d6fc4950"
     },
     {
       "journeyId": "fitness_customer_checkin",
@@ -918,9 +973,11 @@
       "diff": {
         "changed": true,
         "details": [],
+        "expectedMutations": [],
+        "unexpectedMutations": [],
         "valid": true
       },
-      "hash": "5f4949697ff55bdf2576c1fb126344a6453ce0adab80665c8ed77f7fdafc906c"
+      "hash": "ac03f0796f31f4f329a1a20fed9b294113e8bee579158598d247dcd1d6fc4950"
     },
     {
       "journeyId": "fitness_customer_checkin",
@@ -989,862 +1046,6 @@
         "valid": true
       },
       "hash": "b9f84a2449198a52d2beb7d7a6af3e52662347fef84d25666c31ec64d06b4f84"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_submit_checkin",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.attendance.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "api.access.decision.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "api.access.decision.allow",
-            "before": false,
-            "after": true
-          },
-          {
-            "field": "devices.access.events",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.presenceActivity.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
-      },
-      "hash": "b2773d787d4456045e1f06b6ceed138b21b53987885f49646e807578ad63ecc4"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_confirm_attendance",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "5f4949697ff55bdf2576c1fb126344a6453ce0adab80665c8ed77f7fdafc906c"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_access_checkin_module",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "5f4949697ff55bdf2576c1fb126344a6453ce0adab80665c8ed77f7fdafc906c"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_identify_customer",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "5f4949697ff55bdf2576c1fb126344a6453ce0adab80665c8ed77f7fdafc906c"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_validate_membership",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": false,
-        "details": [],
-        "valid": true
-      },
-      "hash": "b9f84a2449198a52d2beb7d7a6af3e52662347fef84d25666c31ec64d06b4f84"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_submit_checkin",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.attendance.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "api.access.decision.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "api.access.decision.allow",
-            "before": false,
-            "after": true
-          },
-          {
-            "field": "devices.access.events",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.presenceActivity.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
-      },
-      "hash": "b2773d787d4456045e1f06b6ceed138b21b53987885f49646e807578ad63ecc4"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_confirm_attendance",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "5f4949697ff55bdf2576c1fb126344a6453ce0adab80665c8ed77f7fdafc906c"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_access_checkin_module",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "5f4949697ff55bdf2576c1fb126344a6453ce0adab80665c8ed77f7fdafc906c"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_identify_customer",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "details": [],
-        "valid": true
-      },
-      "hash": "5f4949697ff55bdf2576c1fb126344a6453ce0adab80665c8ed77f7fdafc906c"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_validate_membership",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": false,
-        "details": [],
-        "valid": true
-      },
-      "hash": "b9f84a2449198a52d2beb7d7a6af3e52662347fef84d25666c31ec64d06b4f84"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": "step_submit_checkin",
-      "before": {
-        "db": {
-          "attendance": {
-            "count": 0
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 0,
-              "allow": false
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 0
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 0
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "after": {
-        "db": {
-          "attendance": {
-            "count": 1
-          }
-        },
-        "api": {
-          "access": {
-            "decision": {
-              "count": 1,
-              "allow": true
-            }
-          }
-        },
-        "devices": {
-          "access": {
-            "events": 1
-          }
-        },
-        "crm": {
-          "presenceActivity": {
-            "count": 1
-          }
-        },
-        "membership": {
-          "active": true,
-          "credentialId": "credential-qa-final"
-        }
-      },
-      "diff": {
-        "changed": true,
-        "mutations": [],
-        "sideEffects": [],
-        "mutationCount": 0,
-        "details": [
-          {
-            "field": "db.attendance.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "api.access.decision.count",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "api.access.decision.allow",
-            "before": false,
-            "after": true
-          },
-          {
-            "field": "devices.access.events",
-            "before": 0,
-            "after": 1
-          },
-          {
-            "field": "crm.presenceActivity.count",
-            "before": 0,
-            "after": 1
-          }
-        ]
-      },
-      "hash": "b2773d787d4456045e1f06b6ceed138b21b53987885f49646e807578ad63ecc4"
-    },
-    {
-      "journeyId": "fitness_customer_checkin",
-      "stepId": null,
-      "before": null,
-      "after": null,
-      "diff": true,
-      "hash": "4af0a1ad57a42e5dd0becbe4ba75f26662fd99df2571bba3942d70982a2db89b"
     },
     {
       "journeyId": "fitness_customer_checkin",

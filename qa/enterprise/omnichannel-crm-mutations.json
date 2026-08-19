@@ -1,7 +1,749 @@
 {
-  "generatedAt": "2026-08-18T20:11:28.562Z",
+  "generatedAt": "2026-08-19T13:26:14.202Z",
   "sourceArtifact": "qa/smoke/qa-waves-operational-final-smoke.json",
   "mutations": [
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": {
+        "changed": true,
+        "mutations": [],
+        "sideEffects": [],
+        "mutationCount": 0,
+        "details": [
+          {
+            "field": "db.messages.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.audit.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.notifications.count",
+            "before": 0,
+            "after": 1
+          },
+          {
+            "field": "crm.activities.count",
+            "before": 0,
+            "after": 1
+          }
+        ]
+      },
+      "beforeSnapshot": {
+        "db": {
+          "messages": {
+            "count": 1
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 1
+          },
+          "notifications": {
+            "count": 0
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 0
+          }
+        }
+      },
+      "afterSnapshot": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 2
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "hash": "0d8aa7d59ff55c9acfcc594327043580dd8595666758e2a3417a295967824caa"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": true,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "5eaf169a94f97a2a30cc5263e04927b13dece8c9aae154ac01981badbc70cb13"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": {
+        "changed": true,
+        "mutations": [],
+        "sideEffects": [],
+        "mutationCount": 0,
+        "details": [
+          {
+            "field": "db.messages.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.audit.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.notifications.count",
+            "before": 0,
+            "after": 1
+          },
+          {
+            "field": "crm.activities.count",
+            "before": 0,
+            "after": 1
+          }
+        ]
+      },
+      "beforeSnapshot": {
+        "db": {
+          "messages": {
+            "count": 1
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 1
+          },
+          "notifications": {
+            "count": 0
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 0
+          }
+        }
+      },
+      "afterSnapshot": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 2
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "hash": "0d8aa7d59ff55c9acfcc594327043580dd8595666758e2a3417a295967824caa"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": true,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "5eaf169a94f97a2a30cc5263e04927b13dece8c9aae154ac01981badbc70cb13"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": {
+        "changed": true,
+        "mutations": [],
+        "sideEffects": [],
+        "mutationCount": 0,
+        "details": [
+          {
+            "field": "db.messages.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.audit.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.notifications.count",
+            "before": 0,
+            "after": 1
+          },
+          {
+            "field": "crm.activities.count",
+            "before": 0,
+            "after": 1
+          }
+        ]
+      },
+      "beforeSnapshot": {
+        "db": {
+          "messages": {
+            "count": 1
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 1
+          },
+          "notifications": {
+            "count": 0
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 0
+          }
+        }
+      },
+      "afterSnapshot": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 2
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "hash": "0d8aa7d59ff55c9acfcc594327043580dd8595666758e2a3417a295967824caa"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": true,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "5eaf169a94f97a2a30cc5263e04927b13dece8c9aae154ac01981badbc70cb13"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": {
+        "changed": true,
+        "mutations": [],
+        "sideEffects": [],
+        "mutationCount": 0,
+        "details": [
+          {
+            "field": "db.messages.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.audit.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.notifications.count",
+            "before": 0,
+            "after": 1
+          },
+          {
+            "field": "crm.activities.count",
+            "before": 0,
+            "after": 1
+          }
+        ]
+      },
+      "beforeSnapshot": {
+        "db": {
+          "messages": {
+            "count": 1
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 1
+          },
+          "notifications": {
+            "count": 0
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 0
+          }
+        }
+      },
+      "afterSnapshot": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 2
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "hash": "0d8aa7d59ff55c9acfcc594327043580dd8595666758e2a3417a295967824caa"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": true,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "5eaf169a94f97a2a30cc5263e04927b13dece8c9aae154ac01981badbc70cb13"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": {
+        "changed": true,
+        "mutations": [],
+        "sideEffects": [],
+        "mutationCount": 0,
+        "details": [
+          {
+            "field": "db.messages.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.audit.count",
+            "before": 1,
+            "after": 2
+          },
+          {
+            "field": "events.notifications.count",
+            "before": 0,
+            "after": 1
+          },
+          {
+            "field": "crm.activities.count",
+            "before": 0,
+            "after": 1
+          }
+        ]
+      },
+      "beforeSnapshot": {
+        "db": {
+          "messages": {
+            "count": 1
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 1
+          },
+          "notifications": {
+            "count": 0
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 0
+          }
+        }
+      },
+      "afterSnapshot": {
+        "db": {
+          "messages": {
+            "count": 2
+          },
+          "ticket": {
+            "status": "in_progress"
+          },
+          "ticketStatus": "in_progress"
+        },
+        "events": {
+          "audit": {
+            "count": 2
+          },
+          "notifications": {
+            "count": 1
+          }
+        },
+        "crm": {
+          "activities": {
+            "count": 1
+          }
+        }
+      },
+      "hash": "0d8aa7d59ff55c9acfcc594327043580dd8595666758e2a3417a295967824caa"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": "step_reply_ticket",
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": null,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "b85dfa6dfbba3f4e2f3e6e3786ea40c210b6ddfec649a7c42ae25a5e66e966f3"
+    },
+    {
+      "journeyId": "support_ticket_flow",
+      "stepId": null,
+      "observedSideEffects": [
+        "audit_log_created",
+        "notification_sent",
+        "crm_updated"
+      ],
+      "snapshotDiff": true,
+      "beforeSnapshot": null,
+      "afterSnapshot": null,
+      "hash": "5eaf169a94f97a2a30cc5263e04927b13dece8c9aae154ac01981badbc70cb13"
+    },
     {
       "journeyId": "fitness_customer_checkin",
       "stepId": "step_submit_checkin",

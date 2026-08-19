@@ -2998,8 +2998,10 @@ async function runFlowScenario(definition, ctx) {
       }
 
       // Approve exige gates de governança (qa_wave, replay, evidence,
-      // approval, risk): para agente recém-criado o bloqueio estruturado
-      // (400 governance_gates_failed) é resposta legítima de contrato.
+      // approval, risk) e lifecycle 'validated' (W2-A: approve não transiciona
+      // agente cuja QA wave deu NO_GO — lifecycle fica 'validation'). Ambos os
+      // bloqueios estruturados 400 (governance_gates_failed, agent_not_validated)
+      // são respostas legítimas de contrato.
       let approveOutcome = null;
       try {
         const approved = await api.post('/api/agent-factory/approve', { id: agentId, riskLevel: 'low' });
@@ -3008,15 +3010,27 @@ async function runFlowScenario(definition, ctx) {
         }
         approveOutcome = 'approved';
       } catch (err) {
-        if (err.status !== 400 || err.body?.error !== 'governance_gates_failed') throw err;
-        if (!Array.isArray(err.body?.governance?.checks) || !Array.isArray(err.body?.governance?.blockers)) {
-          throw new Error(`governance_gates_failed sem checks/blockers: ${JSON.stringify(err.body)}`);
+        const code = err.body?.error;
+        if (err.status === 400 && code === 'agent_not_validated') {
+          // Lifecycle enforcement (W2-A): corpo deve trazer o lifecycle atual.
+          if (!('lifecycle' in (err.body || {}))) {
+            throw new Error(`agent_not_validated sem lifecycle no corpo: ${JSON.stringify(err.body)}`);
+          }
+          approveOutcome = 'agent_not_validated';
+        } else if (err.status === 400 && code === 'governance_gates_failed') {
+          if (!Array.isArray(err.body?.governance?.checks) || !Array.isArray(err.body?.governance?.blockers)) {
+            throw new Error(`governance_gates_failed sem checks/blockers: ${JSON.stringify(err.body)}`);
+          }
+          approveOutcome = 'governance_gates_failed';
+        } else {
+          throw err;
         }
-        approveOutcome = 'governance_gates_failed';
       }
 
       // Publish de agente recém-criado pode retornar 400 publish_blocked
-      // (NO_GO legítimo da QA Wave): assert no contrato, não em GO.
+      // (NO_GO legítimo da QA Wave) ou agent_not_approved (W2-A: publish exige
+      // lifecycle 'approved'; sem approve prévio o bloqueio é estruturado).
+      // Assert no contrato, não em GO.
       let publishOutcome = null;
       try {
         const published = await api.post('/api/agent-factory/publish', { id: agentId });
@@ -3025,12 +3039,21 @@ async function runFlowScenario(definition, ctx) {
         }
         publishOutcome = 'published';
       } catch (err) {
-        if (err.status !== 400 || err.body?.error !== 'publish_blocked') throw err;
-        const blocked = err.body;
-        if (!blocked.status || !blocked.waveResult || !blocked.evidence || !blocked.replay || !blocked.workflow) {
-          throw new Error(`publish_blocked sem contrato completo: ${JSON.stringify(blocked)}`);
+        const code = err.body?.error;
+        if (err.status === 400 && code === 'agent_not_approved') {
+          // Lifecycle enforcement (W2-A): corpo deve trazer lifecycle atual.
+          if (!('lifecycle' in (err.body || {}))) {
+            throw new Error(`agent_not_approved sem lifecycle no corpo: ${JSON.stringify(err.body)}`);
+          }
+          publishOutcome = 'agent_not_approved';
+        } else {
+          if (err.status !== 400 || code !== 'publish_blocked') throw err;
+          const blocked = err.body;
+          if (!blocked.status || !blocked.waveResult || !blocked.evidence || !blocked.replay || !blocked.workflow) {
+            throw new Error(`publish_blocked sem contrato completo: ${JSON.stringify(blocked)}`);
+          }
+          publishOutcome = 'publish_blocked';
         }
-        publishOutcome = 'publish_blocked';
       }
 
       return {

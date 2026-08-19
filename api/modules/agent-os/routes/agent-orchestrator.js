@@ -142,11 +142,11 @@ async function handleAgentOrchestratorRoutes(ctx) {
   // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
   // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
   // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
-  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const resolveTenantId = () => req.tenantId || req.agent?.tenantId || null; // lazy: requireAuth popula req dentro de cada branch
   const sendJson = (d, c) => _s(res, c || 200, d);
   const badRequest = (m) => _b(res, m);
   const tenantGuard = () => {
-    if (tenantId) return true;
+    if (resolveTenantId()) return true;
     sendJson({ error: 'tenant_required' }, 400);
     return false;
   };
@@ -210,7 +210,7 @@ async function handleAgentOrchestratorRoutes(ctx) {
       const orchestrator = getCognitiveOrchestrator();
 
       const cognitiveResult = await orchestrator.process({
-        tenantId,
+        tenantId: resolveTenantId(),
         channel: 'api',
         message: body.message || body.intent,
         eventType: body.intent,
@@ -238,7 +238,7 @@ async function handleAgentOrchestratorRoutes(ctx) {
     } catch (error) {
       // P1: CognitiveOrchestrator falhou → erro explícito. NUNCA fallback para execução direta.
       logger.error('[AgentOrchestrator] CognitiveOrchestrator failed — no fallback', {
-        tenantId, intent: body.intent, error: error.message,
+        tenantId: resolveTenantId(), intent: body.intent, error: error.message,
       });
 
       executionSteps.push({
@@ -260,10 +260,10 @@ async function handleAgentOrchestratorRoutes(ctx) {
     // log nunca bloqueia a resposta da orquestração.
     for (const step of executionSteps) {
       await governanceService.logGovernanceEvent({
-        tenantId,
+        tenantId: resolveTenantId(),
         agentId: null,
         eventType: 'execute',
-        actor: req.agent?.username || 'system',
+        actor: req.agent.username || req.agent.id,
         description: `Orchestrator executed capability ${step.capability} via agent ${step.agent} for intent: ${body.intent}`,
         toolsUsed: [step.capability],
         dataAccessed: [],

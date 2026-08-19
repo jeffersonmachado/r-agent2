@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-18T21:24:58.393Z",
+  "generatedAt": "2026-08-19T04:04:51.585Z",
   "counts": {
     "total": 2760,
     "byKind": {
@@ -1078,7 +1078,6 @@
       "source": "api/modules/agent-os/routes/ai-governance.js",
       "authRequired": true,
       "authorization": [
-        "handleAiGovernanceRoutes",
         "requireAuth",
         "requirePermission:agents:read"
       ],
@@ -1094,7 +1093,7 @@
         "ai_tools"
       ],
       "linkedDomains": [],
-      "fingerprint": "4b20e1b46fe6d3a8abc23bae9e5feaaf088388e6f421c49b49d4aaaa05b5df10"
+      "fingerprint": "b949c8b04f6d3e0dcad603dee224f64d0330902094874097e888b58d3ce2dcc7"
     },
     {
       "id": "api:GET:/api/ai-governance/compliance-report",
@@ -2279,7 +2278,6 @@
       "source": "api/modules/agent-os/routes/journey-registry.js",
       "authRequired": true,
       "authorization": [
-        "handleJourneyRegistryRoutes",
         "requireAuth",
         "requirePermission:agents:read"
       ],
@@ -2294,7 +2292,7 @@
         "journey_registry"
       ],
       "linkedDomains": [],
-      "fingerprint": "91fbfafdeb172d10665868a34d31f90d494e6b0ed71ce455ea5032d864078405"
+      "fingerprint": "00e6b8feee39905038913f996a20d817df383178430394c33d36be76bd26d9a7"
     },
     {
       "id": "api:GET:/api/knowledge-graph",
@@ -2305,7 +2303,6 @@
       "source": "api/modules/agent-os/routes/knowledge-graph.js",
       "authRequired": true,
       "authorization": [
-        "handleKnowledgeGraphRoutes",
         "requireAuth",
         "requirePermission:agents:read"
       ],
@@ -2321,7 +2318,7 @@
         "knowledge_graph"
       ],
       "linkedDomains": [],
-      "fingerprint": "5f7753d18f15fd1d1a562c9d6992de88e457b52b42bd6911a6e809807e4beaf8"
+      "fingerprint": "f62c53f9c64957017f26ea91ee1850745d7ad98fb5fcf540241fe50809e4fd08"
     },
     {
       "id": "api:GET:/api/learning/adaptive/signals",
@@ -4396,7 +4393,6 @@
       "source": "api/modules/agent-os/routes/rap-learn.js",
       "authRequired": true,
       "authorization": [
-        "handleRapLearnRoutes",
         "requireAuth",
         "requirePermission:agents:read"
       ],
@@ -4411,7 +4407,7 @@
         "rap_learn"
       ],
       "linkedDomains": [],
-      "fingerprint": "c9137cbfe8da623c473457e6766a4c8907d41d57e83b802fdf6bcbf402623c5e"
+      "fingerprint": "b1110bfd70f91b9533cb89c8e62dd71a862a8e82298afefa437eeaa61479a16b"
     },
     {
       "id": "api:GET:/api/rap-learn/regressions",
@@ -4945,7 +4941,6 @@
       "source": "api/modules/agent-os/routes/vertical-templates.js",
       "authRequired": true,
       "authorization": [
-        "handleVerticalTemplateRoutes",
         "requireAuth",
         "requirePermission:agents:read"
       ],
@@ -4960,7 +4955,7 @@
         "templates"
       ],
       "linkedDomains": [],
-      "fingerprint": "5b26fff1192dc77e806abc4beb2d4070f391d2c7efe50920ccd7c218ff861bb5"
+      "fingerprint": "fcbb655faff0e32650a45cdf9f03fa2e16241885f747b689faea066bf030f133"
     },
     {
       "id": "api:GET:/api/voice/metrics",
@@ -7113,16 +7108,14 @@
       "path": "/rpa/record/status/:id",
       "module": "rpa-tests",
       "source": "api/modules/rpa-tests/handleRpaRecordingsRoutes.js",
-      "authRequired": true,
-      "authorization": [
-        "requireAuth"
-      ],
+      "authRequired": false,
+      "authorization": [],
       "classification": "DEVELOPMENT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "96f0c3d4d410e754b87d6321a6c46c3d8b4a09d652e05fa4005ac764d77d5681"
+      "fingerprint": "8042d40c3333333c68db32ee088179df350494497a474db910cfa0df2f528f5f"
     },
     {
       "id": "api:GET:/rpa/recordings",
@@ -8800,8 +8793,7 @@
       "authRequired": true,
       "authorization": [
         "requireAuth",
-        "requirePermission:agents:create",
-        "requirePermission:agents:read"
+        "requirePermission:agents:create"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -8816,7 +8808,7 @@
         "voice_event_ledger"
       ],
       "linkedDomains": [],
-      "fingerprint": "18af3c06ddd00982054bdffa65348d23b8ff8239cabbf9e70408e40e1d48ad3f"
+      "fingerprint": "5e124f0d19bdcabfc6ff6ae4db48144c0db3b9ca06dd3533fa70d86bc3476595"
     },
     {
       "id": "api:POST:/api/ask-ai",
@@ -11706,8 +11698,7 @@
       "authRequired": true,
       "authorization": [
         "requireAuth",
-        "requirePermission:agents:create",
-        "requirePermission:agents:read"
+        "requirePermission:agents:create"
       ],
       "classification": "PRODUCTION",
       "linkStatus": "LINKED",
@@ -11720,7 +11711,7 @@
         "rap_learn"
       ],
       "linkedDomains": [],
-      "fingerprint": "e030c3433c8b7ea42b30a6eddaf2d634da36eb4e8ab896e581e821876c9220fd"
+      "fingerprint": "accd653701cf2d5a4c32b9995f26071de77fd3095e90aec12885480bfbf3932a"
     },
     {
       "id": "api:POST:/api/schedules",
@@ -14328,16 +14319,14 @@
       "path": "/rpa/execute/:id",
       "module": "rpa-tests",
       "source": "api/modules/rpa-tests/handleRpaExecutionRoutes.js",
-      "authRequired": true,
-      "authorization": [
-        "requireAuth"
-      ],
+      "authRequired": false,
+      "authorization": [],
       "classification": "DEVELOPMENT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "954b812a978955c0f20371d32abd9584d744084b269ba92338e5faeb67003381"
+      "fingerprint": "d93321d66d28188bc596dbf36d992e14376f263190bcc34ce77c5282f9b0d813"
     },
     {
       "id": "api:POST:/rpa/record/start",
@@ -14346,16 +14335,14 @@
       "path": "/rpa/record/start",
       "module": "rpa-tests",
       "source": "api/modules/rpa-tests/handleRpaRecordingsRoutes.js",
-      "authRequired": true,
-      "authorization": [
-        "requireAuth"
-      ],
+      "authRequired": false,
+      "authorization": [],
       "classification": "DEVELOPMENT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "f0af131c7aecdac2be3ae3d48c8071a715a44bcd32c755ef40a1d437864b3bd7"
+      "fingerprint": "aca01404af314aedab580fd12a60fa6232e767e00d084c516f2ebfa4850ffb38"
     },
     {
       "id": "api:POST:/rpa/record/stop/:id",
@@ -14364,16 +14351,14 @@
       "path": "/rpa/record/stop/:id",
       "module": "rpa-tests",
       "source": "api/modules/rpa-tests/handleRpaRecordingsRoutes.js",
-      "authRequired": true,
-      "authorization": [
-        "requireAuth"
-      ],
+      "authRequired": false,
+      "authorization": [],
       "classification": "DEVELOPMENT",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "b144b7bbe69cd905c36228a2808a3806205f6315eec58cf8c1dd77f3a3efa31d"
+      "fingerprint": "b5bf0b5596a8a16357c5c758bbc1c4eca22367e4b6695149362eefebeea38c15"
     },
     {
       "id": "api:POST:/server/restart",
@@ -49662,19 +49647,17 @@
       "id": "page:/dev/rpa-replays",
       "kind": "page",
       "path": "/dev/rpa-replays",
-      "roles": [
-        "super_admin"
-      ],
-      "permission": "flows:read",
-      "section": "plataforma",
-      "guarded": true,
+      "roles": null,
+      "permission": null,
+      "section": null,
+      "guarded": false,
       "classification": "DEVELOPMENT",
       "source": "frontend/src/main.jsx",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "687ebb10d262a52765005113022feb7c3b6cf16e48f6032a4d88b32990fa4e9e"
+      "fingerprint": "99cdeb0b15a5915c5a0ff94c4f8e7242c33b84657d45288b64eec0ca41daaf3d"
     },
     {
       "id": "page:/dev/rpa-seeds",
@@ -51010,17 +50993,20 @@
       "id": "page:/rpa-replays",
       "kind": "page",
       "path": "/rpa-replays",
-      "roles": null,
-      "permission": null,
-      "section": null,
-      "guarded": false,
+      "roles": [
+        "super_admin",
+        "auditor"
+      ],
+      "permission": "reports:read",
+      "section": "plataforma",
+      "guarded": true,
       "classification": "DEVELOPMENT",
       "source": "frontend/src/main.jsx",
       "linkStatus": "LINKED",
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "29650cd43a16d3107e8018eed7a3e2c88b10c2ffc7e5219b901596b50ee83f7b"
+      "fingerprint": "95340b028987340fb8609b3b738870b615d302b8dd17ac60602729159d0388ba"
     },
     {
       "id": "page:/rpa-seeds",

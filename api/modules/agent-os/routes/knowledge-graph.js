@@ -15,9 +15,9 @@ async function handleKnowledgeGraphRoutes(ctx) {
   // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
   // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
   // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
-  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const resolveTenantId = () => req.tenantId || req.agent?.tenantId || null; // lazy: requireAuth popula req dentro de cada branch
   const tenantGuard = () => {
-    if (tenantId) return true;
+    if (resolveTenantId()) return true;
     sendJson({ error: 'tenant_required' }, 400);
     return false;
   };
@@ -29,7 +29,7 @@ async function handleKnowledgeGraphRoutes(ctx) {
     if (!tenantGuard()) return true;
 
     const nodeTypes = req.query.types ? req.query.types.split(',') : null;
-    const result = await kgService.queryGraph({ tenantId, nodeTypes, maxDepth: parseInt(req.query.depth) || 3 });
+    const result = await kgService.queryGraph({ tenantId: resolveTenantId(), nodeTypes, maxDepth: parseInt(req.query.depth) || 3 });
     sendJson(result);
   }
 
@@ -41,7 +41,7 @@ async function handleKnowledgeGraphRoutes(ctx) {
     if (!tenantGuard()) return true;
 
     const result = await kgService.findRelated({
-      tenantId,
+      tenantId: resolveTenantId(),
       nodeId: relatedMatch[1],
       relationship: req.query.relationship || null,
       direction: req.query.direction || 'both',
@@ -64,7 +64,7 @@ async function handleKnowledgeGraphRoutes(ctx) {
     }
 
     const node = await kgService.upsertNode({
-      tenantId,
+      tenantId: resolveTenantId(),
       type: body.type,
       label: body.label,
       properties: body.properties || {},
@@ -88,7 +88,7 @@ async function handleKnowledgeGraphRoutes(ctx) {
     }
 
     const edge = await kgService.createEdge({
-      tenantId,
+      tenantId: resolveTenantId(),
       sourceNodeId: body.sourceNodeId,
       targetNodeId: body.targetNodeId,
       relationship: body.relationship,

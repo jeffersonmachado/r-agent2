@@ -27,16 +27,20 @@ async function handleAgentMarketplaceRoutes(ctx) {
   // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
   // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
   // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
-  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  // LAZY: resolvido por função porque requireAuth (que popula req.agent e
+  // req.tenantId) roda dentro de cada branch, depois deste ponto.
+  const resolveTenantId = () => req.tenantId || req.agent?.tenantId || null;
 
-  // P1: Resolve classificação do ator autenticado.
-  const actorClassification = getClassificationForAgent(req.agent);
+  // P1: Resolve classificação do ator autenticado (lazy: req.agent só existe
+  // após requireAuth no branch).
+  const resolveActorClassification = () => getClassificationForAgent(req.agent);
 
   // GET /api/agent-marketplace/catalog
   if (method === 'GET' && pathname === '/api/agent-marketplace/catalog') {
     const a = requireAuth(req); if (!a.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const p = requirePermission(req, 'agents', 'read'); if (!p.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
     const category = req.query.category || null;
+    const actorClassification = resolveActorClassification();
     let catalog = marketplaceService.getAgentsByCategory(category);
     // P1: Filtra catálogo pela classificação do ator.
     catalog = filterCatalogByClassification(catalog, actorClassification);
@@ -51,7 +55,7 @@ async function handleAgentMarketplaceRoutes(ctx) {
     const agent = marketplaceService.getAgentBySlug(catalogMatch[1]);
     if (!agent) { sendJson({ error: 'Agent not found in catalog' }, 404); return true; }
     // P1: Verifica se ator pode ver este agente.
-    if (!canAccess(actorClassification, agent.classification || 'PRODUCTION')) {
+    if (!canAccess(resolveActorClassification(), agent.classification || 'PRODUCTION')) {
       sendJson({ error: 'forbidden: agent classification not accessible' }, 403); return true;
     }
     sendJson({ agent }); return true;
@@ -61,6 +65,8 @@ async function handleAgentMarketplaceRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/agent-marketplace/install') {
     const a = requireAuth(req); if (!a.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const p = requirePermission(req, 'agents', 'create'); if (!p.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    const tenantId = resolveTenantId();
+    const actorClassification = resolveActorClassification();
     if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
     try {

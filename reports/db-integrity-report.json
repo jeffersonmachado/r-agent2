@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-14T21:08:28.694Z",
-  "commit": "2191b0927f3aa9640f3f83b0e8f375fe0b441917",
+  "generatedAt": "2026-08-19T08:57:10.741Z",
+  "commit": "ec923b04082266b1cc0bc3cae48118ee68e8b681",
   "dbAvailable": true,
   "totals": {
-    "models": 157,
-    "validated": 157,
+    "models": 158,
+    "validated": 158,
     "visited": 0,
     "failed": 0,
     "warnings": 16
@@ -2142,6 +2142,58 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "9 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:LearningJourneyFaq",
+      "table": "learning_journey_faqs",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/LearningJourneyFaq.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=learning_journey_faqs"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260724120000-create-learning-journey-faq.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "campos de timestamp declarados"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'learning_journey_faqs' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "14 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",

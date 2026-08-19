@@ -617,7 +617,9 @@ const PAYMENT_CHARGE_FLOW = {
     journeyId: 'payment_charge_flow',
     mutationExpected: true,
     expectedMutations: ['payment_status_changed'],
-    expectedSideEffects: [],
+    // O webhook de confirmação notifica o membro (recibo) — observado no diff
+    // incremental como events.notifications.count/sent incrementados.
+    expectedSideEffects: ['notification_sent'],
     snapshotRequired: true,
     snapshotScope: 'entity',
     entityScope: ['billing', 'notifications'],

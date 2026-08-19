@@ -140,7 +140,7 @@
       "page": {
         "landmarks": [
           {
-            "selector": ".rap-toast--success",
+            "selector": "div.p-3:has-text(\"Aula experimental QA\")",
             "exists": true
           }
         ]

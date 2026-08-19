@@ -1667,13 +1667,18 @@ function buildSyntheticReplay(scenario, result, baseDir) {
 }
 
 function writeScenarioEvidence(baseDir, result) {
+  // ensureDir no alvo: a retenção (pruneOldEvidence) ou limpezas paralelas
+  // podem remover subdiretórios entre o início do run e a escrita — evidência
+  // nunca pode derrubar a execução com ENOENT.
   const target = path.join(baseDir, 'scenarios', `${result.id}.json`);
+  ensureDir(path.dirname(target));
   writeJson(target, result);
   return target;
 }
 
 function writeSummary(baseDir, summary) {
   const target = path.join(baseDir, 'summary.json');
+  ensureDir(path.dirname(target));
   writeJson(target, summary);
   return target;
 }

@@ -132,25 +132,77 @@ function buildScreenshotArtifacts(finalSmoke) {
   ];
 }
 
-function buildDigitalTwinArtifacts(finalSmoke) {
+function buildDigitalTwinSnapshots(finalSmoke) {
   const snapshots = [];
+  const seen = new Set();
+  // Observações acumuladas por jornada, na ordem de execução dos steps.
+  // Steps de asserção (assert_*) declaram expectedMutations CUMULATIVAS da
+  // jornada no snapshotDiff; o proof engine compara contra observedMutations
+  // do diff, então o twin materializado reflete o que a jornada observou até
+  // aquele ponto — preenchido a partir das observações reais dos steps
+  // anteriores, nunca inventado.
+  const cumulativeByJourney = new Map();
+
   walkProofSteps(finalSmoke, (step, context) => {
-    if (step.beforeStepSnapshot || step.afterStepSnapshot || step.snapshotDiff) {
-      snapshots.push({
-        journeyId: context.journeyId,
-        stepId: step.id || step.stepId || null,
+    const journeyId = context.journeyId || 'unknown';
+    if (!cumulativeByJourney.has(journeyId)) {
+      cumulativeByJourney.set(journeyId, { mutations: new Set(), sideEffects: new Set() });
+    }
+    const cumulative = cumulativeByJourney.get(journeyId);
+
+    let diff = step.snapshotDiff || null;
+    if (diff && typeof diff === 'object' && !Array.isArray(diff)
+      && Array.isArray(diff.expectedMutations) && diff.expectedMutations.length > 0
+      && !Array.isArray(diff.observedMutations)) {
+      diff = {
+        ...diff,
+        observedMutations: Array.from(cumulative.mutations),
+        observedSideEffects: Array.from(cumulative.sideEffects),
+        cumulativeObservation: true,
+      };
+    }
+
+    // Acumula as observações do próprio step DEPOIS de materializar seu diff:
+    // um step só prova expectativas cumulativas com o que veio antes dele.
+    for (const mutation of (Array.isArray(step.observedMutations) ? step.observedMutations : [])) {
+      cumulative.mutations.add(mutation);
+    }
+    for (const sideEffect of (Array.isArray(step.observedSideEffects) ? step.observedSideEffects : [])) {
+      cumulative.sideEffects.add(sideEffect);
+    }
+
+    if (step.beforeStepSnapshot || step.afterStepSnapshot || diff) {
+      const stepId = step.id || step.stepId || null;
+      const hash = sha256({
         before: step.beforeStepSnapshot || null,
         after: step.afterStepSnapshot || null,
-        diff: step.snapshotDiff || null,
-        hash: sha256({
-          before: step.beforeStepSnapshot || null,
-          after: step.afterStepSnapshot || null,
-          diff: step.snapshotDiff || null,
-        }),
+        diff,
+      });
+      // O smoke replica cada step em browserResult/stepResults/postState/replay —
+      // o twin guarda uma única entrada por (jornada, step, conteúdo).
+      const dedupeKey = `${journeyId}:${stepId}:${hash}`;
+      if (seen.has(dedupeKey)) return;
+      seen.add(dedupeKey);
+      snapshots.push({
+        journeyId: context.journeyId,
+        stepId,
+        before: step.beforeStepSnapshot || null,
+        after: step.afterStepSnapshot || null,
+        diff,
+        hash,
       });
     }
   });
 
+  if (snapshots.length === 0) {
+    return [];
+  }
+
+  return snapshots;
+}
+
+function buildDigitalTwinArtifacts(finalSmoke) {
+  const snapshots = buildDigitalTwinSnapshots(finalSmoke);
   if (snapshots.length === 0) {
     return [];
   }
@@ -286,4 +338,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { main };
+module.exports = { main, buildDigitalTwinArtifacts, buildDigitalTwinSnapshots };

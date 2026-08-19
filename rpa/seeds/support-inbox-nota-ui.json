@@ -94,7 +94,7 @@
       "page": {
         "landmarks": [
           {
-            "selector": ".rap-toast--success",
+            "selector": "div.mb-2:has-text(\"Nota interna registrada via RPA QA\")",
             "exists": true
           }
         ]
