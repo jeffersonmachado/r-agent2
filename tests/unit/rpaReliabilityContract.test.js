@@ -121,4 +121,94 @@ describe('RPA reliability contract', () => {
       }),
     );
   });
+
+  test('falha em step não-crítico vira warning e não derruba a execução', async () => {
+    // Regressão: um wait soft de toast efêmero que expirava sob contenção
+    // marcava results.success=false e derrubava o cenário do QA mesh para
+    // infra_error, mesmo com todos os landmarks críticos passando.
+    const executeAction = jest
+      .fn()
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: false, error: 'timeout esperando toast efêmero' })
+      .mockResolvedValueOnce({ success: true });
+
+    const runner = buildRunnerWithMockedExecutor(executeAction);
+
+    const recording = {
+      id: 'recording-non-critical-failure',
+      name: 'non-critical-failure',
+      version: '1.0.0',
+      data: {},
+      steps: [
+        { type: 'click', selector: '.submit' },
+        { type: 'wait', selector: '.rap-toast--success', critical: false },
+        { type: 'assert', selector: '.landmark-persistente' },
+      ],
+    };
+
+    const out = await runner.playback(recording, {});
+
+    expect(out.success).toBe(true);
+    expect(out.errors).toHaveLength(0);
+    expect(out.warnings).toHaveLength(1);
+    expect(out.warnings[0]).toEqual(
+      expect.objectContaining({
+        step: 2,
+        action: 'wait',
+        severity: 'non_critical_step_failure',
+      }),
+    );
+    expect(out.steps).toHaveLength(3);
+    expect(out.steps[1].success).toBe(false);
+    expect(executeAction).toHaveBeenCalledTimes(3);
+  });
+
+  test('falha em step crítico interrompe a execução e marca erro', async () => {
+    const executeAction = jest
+      .fn()
+      .mockResolvedValueOnce({ success: false, error: 'element not found' })
+      .mockResolvedValueOnce({ success: true });
+
+    const runner = buildRunnerWithMockedExecutor(executeAction);
+
+    const recording = {
+      id: 'recording-critical-failure',
+      name: 'critical-failure',
+      version: '1.0.0',
+      data: {},
+      steps: [
+        { type: 'click', selector: '.missing-button' },
+        { type: 'click', selector: '.never-reached' },
+      ],
+    };
+
+    const out = await runner.playback(recording, {});
+
+    expect(out.success).toBe(false);
+    expect(out.errors).toHaveLength(1);
+    expect(out.warnings).toHaveLength(0);
+    expect(out.steps).toHaveLength(1);
+    expect(executeAction).toHaveBeenCalledTimes(1);
+  });
+
+  test('step sem flag critical é tratado como crítico (fail-closed)', async () => {
+    const executeAction = jest
+      .fn()
+      .mockResolvedValueOnce({ success: false, error: 'boom' });
+
+    const runner = buildRunnerWithMockedExecutor(executeAction);
+
+    const recording = {
+      id: 'recording-default-critical',
+      name: 'default-critical',
+      version: '1.0.0',
+      data: {},
+      steps: [{ type: 'wait', selector: '.x' }],
+    };
+
+    const out = await runner.playback(recording, {});
+
+    expect(out.success).toBe(false);
+    expect(out.errors).toHaveLength(1);
+  });
 });

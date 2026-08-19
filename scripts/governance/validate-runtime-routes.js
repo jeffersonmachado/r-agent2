@@ -59,6 +59,25 @@ async function main() {
         if (/API não acessível/i.test(text) && /\/system\/channel-health/i.test(text)) {
           return;
         }
+        // Toast da ChannelHealthPage: o fetch de /system/channel-health é
+        // abortado quando o validador navega (page.goto = reload completo) e o
+        // catch dispara o toast já na rota seguinte — ruído de navegação.
+        if (/Toast \[error\]: Erro ao buscar saúde de canais/i.test(text)) {
+          return;
+        }
+        // UserMenu (badge de tickets ativos) dispara GET /tickets?status=in_progress
+        // no mount de toda página; a navegação full-page do validador aborta o
+        // fetch em voo (ERR_ABORTED) e o catch loga erro + hint — mesma classe
+        // de ruído de /auth/me, não falha funcional da rota alvo.
+        if (/Failed to fetch/i.test(text) && /\/tickets\?/i.test(text)) {
+          return;
+        }
+        if (/Erro capturado no catch/i.test(text) && /\/tickets\?/i.test(text)) {
+          return;
+        }
+        if (/API não acessível/i.test(text) && /\/tickets\?/i.test(text)) {
+          return;
+        }
         consoleErrors.push({ text, location: message.location() });
       }
     });
@@ -78,6 +97,11 @@ async function main() {
       // ChannelHealthPage: fetch de /system/channel-health abortado na troca de
       // rota (mesma classe de ruído de /auth/me).
       if (url.includes('/system/channel-health') && /ERR_ABORTED/i.test(failure)) {
+        return;
+      }
+      // UserMenu: badge de tickets ativos (GET /tickets?status=in_progress&limit=1000)
+      // abortado na navegação full-page — ruído de navegação.
+      if (url.includes('/tickets?') && /ERR_ABORTED/i.test(failure)) {
         return;
       }
       // Chunks lazy de páginas (code splitting, main.jsx): o validador navega

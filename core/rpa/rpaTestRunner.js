@@ -15,6 +15,7 @@ const { normalizeRpaTestUrls } = require('./utils/urlNormalizer');
 const { autoLoginBeforeSteps } = require('./utils/autoLoginFlow');
 const { createDeterministicExecution } = require('./deterministic');
 const { resolveSemanticStep } = require('./screen-models');
+const { recordStepFailure } = require('./stepFailurePolicy');
 const { getRpaReportDir, getRpaReplayDir } = require('../../lib/rpaPathResolver');
 const {
   normalizeJsonName,
@@ -156,6 +157,7 @@ class RpaTestRunner {
       finalDecision: 'PASS',
       steps: [],
       errors: [],
+      warnings: [],
       screenshots: [],
       startTime: new Date().toISOString(),
       replayId: null,
@@ -286,16 +288,14 @@ class RpaTestRunner {
         });
 
         if (!stepResult.success) {
-          results.success = false;
-          const errorInfo = {
-            step: i + 1,
-            action: step.type,
+          const failure = recordStepFailure(results, {
+            step,
+            stepNumber: i + 1,
             error: stepResult.error,
-          };
-          results.errors.push(errorInfo);
+          });
 
-          // Registra erro no replay
-          if (this.options.enableReplay) {
+          if (failure.critical && this.options.enableReplay) {
+            // Registra erro no replay
             this.replaySystem.recordError(
               new Error(stepResult.error),
               `step-${i + 1}`
@@ -313,7 +313,7 @@ class RpaTestRunner {
           }
 
           // Para execução se erro crítico
-          if (step.critical !== false) {
+          if (failure.critical) {
             break;
           }
         }

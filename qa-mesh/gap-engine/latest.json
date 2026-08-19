@@ -1,23 +1,8 @@
 {
-  "generatedAt": "2026-08-19T13:26:14.169Z",
-  "status": "NO_GO:ENTERPRISE_READY_GO",
-  "platformMaturity": "enterprise-partial",
-  "backlog": [
-    {
-      "id": "gap-cross-report-package_mismatch",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: package_mismatch",
-      "evidence": {
-        "type": "package_mismatch",
-        "reportedZip": "r-agent2-20260814-183620.payload.zip",
-        "expectedZip": "r-agent2-20260818-175227.zip",
-        "blocker": true,
-        "message": "Relatório de validação aponta para 'r-agent2-20260814-183620.payload.zip' mas o pacote atual é 'r-agent2-20260818-175227.zip'. Governance vinculada a pacote errado — relatório inválido."
-      },
-      "suggestedFix": "Relatório de validação aponta para 'r-agent2-20260814-183620.payload.zip' mas o pacote atual é 'r-agent2-20260818-175227.zip'. Governance vinculada a pacote errado — relatório inválido."
-    }
-  ],
-  "blocking": 1,
+  "generatedAt": "2026-08-19T17:29:06.278Z",
+  "status": "AUTONOMOUS_READY_GO",
+  "platformMaturity": "autonomous-ready",
+  "backlog": [],
+  "blocking": 0,
   "nonBlocking": 0
 }

@@ -867,8 +867,11 @@ function buildFinalProofReport(context = {}) {
   // ─── FASE 11 — Fingerprint chain: CHANGED CODE → STALE PROOF ──────────────
   // A cadeia registrada no evidence-manifest anterior é comparada com a cadeia
   // atual (conteúdo, nunca timestamps). Divergência → proof STALE (nunca GO).
+  // resolveWorkspacePath aceita UM targetPath — passar segmentos separados
+  // resolveria para o diretório 'governance' e o manifest nunca seria lido
+  // (registered=null → UNREGISTERED permanente, STALE jamais dispararia).
   const fingerprintChain = computeFingerprintChain(ROOT);
-  const previousManifest = readJsonMaybe(resolveWorkspacePath(ROOT, 'governance', 'evidence-manifest.json'));
+  const previousManifest = readJsonMaybe(resolveWorkspacePath(ROOT, 'governance/evidence-manifest.json'));
   const registeredFingerprints = previousManifest && previousManifest.fingerprints
     ? previousManifest.fingerprints
     : null;

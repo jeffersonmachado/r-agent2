@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-08-14T21:37:32.551Z",
+  "generatedAt": "2026-08-19T13:29:22.350Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260814-183620.zip",
+  "artifact": "r-agent2-20260819-102810.zip",
   "verifierExecuted": true,
   "verifierPassed": false,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/r-agent2-20260814-183620.zip",
+  "packageInsideDistPath": "dist/r-agent2-20260819-102810.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/r-agent2-20260814-183620.manifest.json",
+  "manifestInsideDistPath": "dist/r-agent2-20260819-102810.manifest.json",
   "staleReferencesFound": 1,
   "staleHashesFound": 0,
   "staleFilesAffected": [
@@ -45,7 +45,7 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "5433028904ae0c1d6da277b610bd9128",
+    "chainRoot": "82ce3c2520d8d33a7202d32d5f207860",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
@@ -81,8 +81,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "d20cc24f1f9bb0eb01acc89dcc818a2df89e6ce390bd3ed5e9941b6d1691b15b",
-    "zipName": "r-agent2-20260814-183620.zip",
+    "sidecarHash": "28941835a9157170e3f5781c49265c35d4ba91fffe4c87ae59f22f92ae8ffe41",
+    "zipName": "r-agent2-20260819-102810.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -119,5 +119,5 @@
   "pass": false,
   "passCount": 9,
   "totalDimensions": 10,
-  "summary": "Pacote r-agent2-20260814-183620.zip FALHOU na auto-prova. Falhas: [verifierPassed, staleReferencesFound]. Score: 70/100."
+  "summary": "Pacote r-agent2-20260819-102810.zip FALHOU na auto-prova. Falhas: [verifierPassed, staleReferencesFound]. Score: 70/100."
 }

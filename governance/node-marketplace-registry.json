@@ -131,6 +131,18 @@
       "tenantId": "system",
       "publishedAt": "2026-08-19T13:24:41.158Z",
       "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
+    },
+    {
+      "id": "qa-market-node-1787147056432",
+      "label": "QA Market Node 1787147056432",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-08-19T13:44:17.898Z",
+      "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
     }
   ]
 }

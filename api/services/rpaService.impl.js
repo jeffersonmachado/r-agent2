@@ -1,6 +1,7 @@
 const { RpaTestRunner } = require('../../core/rpa/rpaTestRunner');
 const { ActionRecorder } = require('../../core/rpa/actionRecorder');
 const { autoLoginBeforeSteps } = require('../../core/rpa/utils/autoLoginFlow');
+const { recordStepFailure } = require('../../core/rpa/stepFailurePolicy');
 // Usa versão de produção do normalizador, que vive em `api/utils`
 const { normalizeRpaTestUrls } = require('../utils/urlNormalizer');
 const {
@@ -618,6 +619,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         finalDecision: 'PASS',
         steps: [],
         errors: [],
+        warnings: [],
         screenshots: [],
         startTime: new Date().toISOString(),
         reliabilityMetrics: null,
@@ -1309,10 +1311,22 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
               action: step.type,
             });
           } else {
-            addLog('error', `❌ Ação ${stepNumber} falhou: ${stepResult.error}`, {
+            // Política canônica (core/rpa/stepFailurePolicy): falha em step
+            // não-crítico (ex.: wait soft de toast efêmero) é evidência, não
+            // erro fatal — vira warning e a execução segue. A prova durável
+            // fica nos asserts/landmarks críticos subsequentes.
+            const failure = recordStepFailure(results, {
+              step,
+              stepNumber,
+              error: stepResult.error,
+              debug: stepResult.debug || null,
+            });
+            const isCritical = failure.critical;
+            addLog(isCritical ? 'error' : 'warning', `${isCritical ? '❌ Ação' : '⚠️ Ação (não-crítica)'} ${stepNumber} falhou: ${stepResult.error}`, {
               step: stepNumber,
               action: step.type,
               error: stepResult.error,
+              critical: isCritical,
               // Log detalhado vai no payload do results.steps para não explodir execution.logs,
               // mas deixamos um resumo aqui quando disponível.
               debugSummary: stepResult?.debug?.diagnostics
@@ -1321,14 +1335,6 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                     selectorsTried: stepResult.debug.diagnostics.selectorsTried,
                   }
                 : null,
-            });
-            
-            results.success = false;
-            results.errors.push({
-              step: stepNumber,
-              action: step.type,
-              error: stepResult.error,
-              debug: stepResult.debug || null,
             });
 
             // Captura screenshot em caso de erro
@@ -1346,7 +1352,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             }
 
             // Para execução se erro crítico
-            if (step.critical !== false) {
+            if (isCritical) {
               addLog('error', '🛑 Execução interrompida devido a erro crítico', {
                 step: stepNumber,
               });

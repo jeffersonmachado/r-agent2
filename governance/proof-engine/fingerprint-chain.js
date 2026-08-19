@@ -11,10 +11,28 @@
  * Componentes da cadeia:
  *   - sourceFingerprint           routes (api/app, api/modules), models e
  *                                 migrations (api/db, migrations/), tools
- *                                 (tools/system), engine determinística e
- *                                 contracts — o mesmo universo que o System
- *                                 Inventory fingerprinta (ver
- *                                 api/services/qa/inventory/).
+ *                                 (tools/system), engine determinística,
+ *                                 contracts, serviços de domínio
+ *                                 (api/services), middleware, runtime,
+ *                                 Cognitive Core (src/), RPA (core/),
+ *                                 camada de replay (lib/), infra, pipeline,
+ *                                 Cognitive/QA mesh runners, QA waves
+ *                                 services e páginas do frontend
+ *                                 (frontend/src) — MAIS a superfície de
+ *                                 PROVA: o próprio proof engine
+ *                                 (governance/proof-engine), os contratos de
+ *                                 steps (qa/contracts), os validadores de
+ *                                 evidência (qa/evidence), os executores/
+ *                                 definições de jornada (api/services/qa) e os
+ *                                 smokes geradores de evidência
+ *                                 (scripts/smoke). Mudança na semântica de
+ *                                 prova invalida proofs anteriores.
+ *                                 Artefatos GERADOS (reports .json de
+ *                                 governance/qa-mesh, meshHistory,
+ *                                 meshEvidence, config bootstrap, credencial
+ *                                 de runtime) são excluídos — ver
+ *                                 FILTERED_SOURCE_ROOTS, SKIP_REL_DIRS e
+ *                                 SKIP_REL_FILES.
  *   - inventoryFingerprint        config/system-inventory.json (pares
  *                                 id+fingerprint dos itens, ordenados).
  *   - scenarioRegistryFingerprint qa/qa-waves/scenario-store.json +
@@ -41,13 +59,84 @@ const SOURCE_ROOTS = [
   'tools/system',
   'engine',
   'contracts',
+  // Superfície de prova: quem define/valida evidência também invalida proof.
+  'governance/proof-engine',
+  'scripts/governance',
+  'qa/contracts',
+  'qa/evidence',
+  'api/services/qa',
+  'scripts/smoke',
+  // HARD-027 — INVARIANTE 6 cobre TODA a superfície provada, não só rotas/
+  // models: serviços de domínio (ex.: rpaService.impl.js), middleware,
+  // Cognitive Core, RPA, camada de replay, QA mesh/waves e pipeline.
+  'api/services',
+  'api/middleware',
+  'api/utils',
+  'api/constants',
+  'api/composition',
+  'api/events',
+  'api/runtime',
+  'api/core',
+  'api/bootstrap',
+  'api/express',
+  'api/models',
+  'api/routing',
+  'api/integrations',
+  'api/ws',
+  'src',
+  'core',
+  'lib',
+  'infra',
+  'pipeline',
+  'qa/coverage',
+  'qa/policies',
+  'qa/seeds',
+  'qa/stability',
+  'qa/mesh',
+  'qa/qa-waves/services',
+  'qa-mesh/adapters',
+];
+
+/**
+ * Raízes que misturam fonte e artefatos GERADOS no mesmo nível (ex.:
+ * governance/*.json são reports regerados a cada run; qa-mesh/*.json idem).
+ * Entram com filtro de extensão próprio para cobrir o código sem capturar
+ * saída gerada — do contrário todo run invalidaria o proof (STALE perpétuo).
+ */
+const FILTERED_SOURCE_ROOTS = [
+  { path: 'qa', pattern: /\.js$/ }, // runners da raiz (qaRunner.js etc.)
+  { path: 'qa-mesh', pattern: /\.js$/ }, // meshRunner/scheduler/engines .js
+  { path: 'governance', pattern: /\.js$/ }, // engines; reports .json fora
+  { path: 'scripts', pattern: /\.(js|cjs|sh)$/ },
+  // Páginas do frontend fazem parte da superfície provada (INVARIANTE 6).
+  { path: 'frontend/src', pattern: /\.(js|jsx|ts|tsx)$/ },
 ];
 
 const SOURCE_FILE_PATTERN = /\.(js|cjs|json|sql)$/;
 
 /** Diretórios/arquivos de teste não fazem parte da superfície provada. */
 const SKIP_DIR_NAMES = new Set(['node_modules', '__tests__', '__snapshots__', '__mocks__']);
-const SKIP_FILE_PATTERN = /\.(test|spec)\.js$/;
+const SKIP_FILE_PATTERN = /\.(test|spec)\.(js|jsx|ts|tsx|cjs)$/;
+
+/**
+ * Diretórios de artefatos GERADOS/runtime dentro de raízes-fonte
+ * (caminhos relativos ao rootDir). Nunca entram no fingerprint.
+ */
+const SKIP_REL_DIRS = new Set([
+  'api/data', // config.json gerado pelo bootstrap + knowledge data
+  'qa-mesh/meshHistory',
+  'qa-mesh/meshEvidence',
+  'qa-mesh/gap-engine', // backlog/latest gerados
+  'qa/mesh/intelligence/history', // snapshots diários gerados
+  'qa/qa-waves/generated-seeds',
+  'qa/qa-waves/generated-ui-steps',
+  'qa/qa-waves/generated-validators',
+]);
+
+/** Arquivos gerados/credenciais dentro de raízes-fonte. */
+const SKIP_REL_FILES = new Set([
+  'core/rpa/config/rpa-token.json', // credencial de runtime — nunca prova
+]);
 
 /** Políticas e contratos de jornada versionados (policyFingerprint). */
 const POLICY_FILES = [
@@ -74,24 +163,33 @@ function sha256FileContent(absPath) {
   return sha256(fs.readFileSync(absPath));
 }
 
-function walkSourceFiles(rootDir, collector = []) {
+function walkSourceFiles(rootDir) {
+  const collected = new Set();
   for (const relRoot of SOURCE_ROOTS) {
     const absRoot = path.join(rootDir, relRoot);
     if (!fs.existsSync(absRoot)) continue;
-    walkDir(rootDir, absRoot, collector);
+    walkDir(rootDir, absRoot, collected, SOURCE_FILE_PATTERN);
   }
-  return collector.sort();
+  for (const filtered of FILTERED_SOURCE_ROOTS) {
+    const absRoot = path.join(rootDir, filtered.path);
+    if (!fs.existsSync(absRoot)) continue;
+    walkDir(rootDir, absRoot, collected, filtered.pattern);
+  }
+  return [...collected].sort();
 }
 
-function walkDir(rootDir, dir, collector) {
+function walkDir(rootDir, dir, collected, filePattern) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const absPath = path.join(dir, entry.name);
+    const relPath = path.relative(rootDir, absPath).replace(/\\/g, '/');
     if (entry.isDirectory()) {
-      if (SKIP_DIR_NAMES.has(entry.name)) continue;
-      walkDir(rootDir, path.join(dir, entry.name), collector);
+      if (SKIP_DIR_NAMES.has(entry.name) || SKIP_REL_DIRS.has(relPath)) continue;
+      walkDir(rootDir, absPath, collected, filePattern);
       continue;
     }
-    if (!SOURCE_FILE_PATTERN.test(entry.name) || SKIP_FILE_PATTERN.test(entry.name)) continue;
-    collector.push(path.relative(rootDir, path.join(dir, entry.name)).replace(/\\/g, '/'));
+    if (!filePattern.test(entry.name) || SKIP_FILE_PATTERN.test(entry.name)) continue;
+    if (SKIP_REL_FILES.has(relPath)) continue;
+    collected.add(relPath);
   }
 }
 
@@ -200,7 +298,11 @@ module.exports = {
   computeInventoryFingerprint,
   computeScenarioRegistryFingerprint,
   computePolicyFingerprint,
+  walkSourceFiles,
   SOURCE_ROOTS,
+  FILTERED_SOURCE_ROOTS,
+  SKIP_REL_DIRS,
+  SKIP_REL_FILES,
   POLICY_FILES,
   SCENARIO_REGISTRY_FILES,
   INVENTORY_FILE,
