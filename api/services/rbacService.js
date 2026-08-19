@@ -62,6 +62,9 @@ const ROLE_PERMISSIONS = {
     { resource: 'agents', action: 'delete' },
     { resource: 'agents', action: 'list_all' },
     { resource: 'agents', action: 'invite' },
+    // Governança de agentes (Agent Factory: approve/publish exigem papel explícito)
+    { resource: 'agents', action: 'approve' },
+    { resource: 'agents', action: 'publish' },
     // Configuração
     { resource: 'config', action: 'read' },
     { resource: 'config', action: 'update' },
@@ -154,6 +157,9 @@ const ROLE_PERMISSIONS = {
     { resource: 'agents', action: 'update' },
     { resource: 'agents', action: 'delete' },
     { resource: 'agents', action: 'list_all' },
+    // Governança de agentes (Agent Factory: approve/publish exigem papel explícito)
+    { resource: 'agents', action: 'approve' },
+    { resource: 'agents', action: 'publish' },
     // Configuração
     { resource: 'config', action: 'read' },
     { resource: 'config', action: 'update' },

@@ -35,6 +35,10 @@ function makeReq(body) {
   req.url = '/';
   req.originalUrl = '/';
   req.query = {};
+  // Tenant/principal explícitos: as rotas são fail-closed (sem tenant → 400
+  // tenant_required; sem principal → 401 principal_required).
+  req.tenantId = 'system';
+  req.agent = { id: 'qa-agent', username: 'qa-agent', role: 'admin', tenantId: 'system' };
   return req;
 }
 

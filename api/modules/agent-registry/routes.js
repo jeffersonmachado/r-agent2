@@ -18,7 +18,17 @@ async function handleAgentRegistryRoutes(ctx) {
   const sendJson = (data, code) => _sendJson(res, code || 200, data);
   const badRequest = (msg) => _badRequest(res, msg);
 
-  const tenantId = req.tenant_id || 'system';
+  // Fail-closed: req.tenant_id nunca existiu; o tenant real vem do middleware
+  // de auth (req.tenantId) ou do agente autenticado. Sem tenant explicito → 400.
+  const resolveTenantId = () => req.tenantId || (req.agent && req.agent.tenantId) || null;
+  const requireTenant = () => {
+    const resolved = resolveTenantId();
+    if (!resolved) {
+      sendJson({ error: 'tenant_required', message: 'Tenant explicito obrigatorio (X-Tenant-Id ou agente autenticado)' }, 400);
+      return null;
+    }
+    return resolved;
+  };
 
   // GET /api/agent-registry
   if (method === 'GET' && pathname === '/api/agent-registry') {
@@ -26,6 +36,8 @@ async function handleAgentRegistryRoutes(ctx) {
     if (!authResult.valid) { sendJson({ error: 'unauthorized', message: authResult.error }, 401); return true; }
     const permResult = requirePermission(req, 'agents', 'list_all');
     if (!permResult.allowed) { sendJson({ error: 'forbidden', message: permResult.error }, 403); return true; }
+    const tenantId = requireTenant();
+    if (!tenantId) return true;
 
     const filters = {};
     if (req.query.classification) filters.classification = req.query.classification;
@@ -50,6 +62,8 @@ async function handleAgentRegistryRoutes(ctx) {
     if (!authResult.valid) { sendJson({ error: 'unauthorized', message: authResult.error }, 401); return true; }
     const permResult = requirePermission(req, 'agents', 'read');
     if (!permResult.allowed) { sendJson({ error: 'forbidden', message: permResult.error }, 403); return true; }
+    const tenantId = requireTenant();
+    if (!tenantId) return true;
 
     try {
       const agent = await service.getCorporateAgentById(idMatch[1], tenantId);
@@ -68,6 +82,8 @@ async function handleAgentRegistryRoutes(ctx) {
     const permResult = requirePermission(req, 'agents', 'create');
     if (!permResult.allowed) { sendJson({ error: 'forbidden', message: permResult.error }, 403); return true; }
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+    const tenantId = requireTenant();
+    if (!tenantId) return true;
 
     try {
       const body = await parseJsonBody(req);
@@ -89,6 +105,8 @@ async function handleAgentRegistryRoutes(ctx) {
     const permResult = requirePermission(req, 'agents', 'update');
     if (!permResult.allowed) { sendJson({ error: 'forbidden', message: permResult.error }, 403); return true; }
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+    const tenantId = requireTenant();
+    if (!tenantId) return true;
 
     try {
       const body = await parseJsonBody(req);
@@ -109,6 +127,8 @@ async function handleAgentRegistryRoutes(ctx) {
     if (!authResult.valid) { sendJson({ error: 'unauthorized', message: authResult.error }, 401); return true; }
     const permResult = requirePermission(req, 'agents', 'delete');
     if (!permResult.allowed) { sendJson({ error: 'forbidden', message: permResult.error }, 403); return true; }
+    const tenantId = requireTenant();
+    if (!tenantId) return true;
 
     try {
       const deleted = await service.deleteCorporateAgent(deleteMatch[1], tenantId);

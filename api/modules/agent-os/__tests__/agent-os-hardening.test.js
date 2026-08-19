@@ -19,6 +19,7 @@
  */
 
 const { jest: jestGlobal } = require('@jest/globals');
+const fs = require('fs');
 
 // Mock dos serviços para testes unitários
 const mockAgentRegistryService = {
@@ -414,6 +415,29 @@ describe('Agent OS Hardening - Regression Tests', () => {
   });
 
   describe('Governance Gates', () => {
+    let readSpy;
+    let realReadFileSync;
+
+    beforeEach(() => {
+      // Artefatos de validação (evidence/replay) verificados semanticamente:
+      // o gate exige que o arquivo exista e pertença ao agente.
+      realReadFileSync = fs.readFileSync;
+      readSpy = jest.spyOn(fs, 'readFileSync').mockImplementation((p, ...rest) => {
+        const s = String(p);
+        if (s.includes('agent_evd_full')) {
+          return JSON.stringify({ evidenceId: 'agent_evd_full', agentId: 'agent-full' });
+        }
+        if (s.includes('agent_replay_full')) {
+          return JSON.stringify({ replayId: 'agent_replay_full', agentId: 'agent-full' });
+        }
+        return realReadFileSync(p, ...rest);
+      });
+    });
+
+    afterEach(() => {
+      readSpy.mockRestore();
+    });
+
     it('deve validar todos os 6 gates', async () => {
       const hardeningService = require('../services/agent-hardening-service');
 
@@ -434,12 +458,19 @@ describe('Agent OS Hardening - Regression Tests', () => {
           },
         },
       };
+      // A assinatura é emitida no approve e verificada de verdade no gate 6.
+      agentWithValidation.governance.governanceSignature =
+        hardeningService.computeGovernanceSignature(agentWithValidation);
 
       const result = await hardeningService.validateGovernanceGates({ agent: agentWithValidation });
       expect(result.passed).toBe(true);
       expect(result.checks.length).toBe(6);
       expect(result.blockers.length).toBe(0);
       expect(result.governanceSignature).toBeDefined();
+      // Gates técnicos verificados de verdade (não apenas presença).
+      expect(result.checks.find((c) => c.gate === 'evidence').verified).toBe(true);
+      expect(result.checks.find((c) => c.gate === 'replay').verified).toBe(true);
+      expect(result.checks.find((c) => c.gate === 'governance_signature').verified).toBe(true);
     });
 
     it('deve falhar se faltar QA Wave', async () => {
@@ -456,6 +487,52 @@ describe('Agent OS Hardening - Regression Tests', () => {
       const result = await hardeningService.validateGovernanceGates({ agent: agentWithoutQA });
       expect(result.passed).toBe(false);
       expect(result.blockers.some(b => b.gate === 'qa_wave')).toBe(true);
+    });
+
+    it('deve falhar quando a assinatura de governança não foi emitida no approve', async () => {
+      const hardeningService = require('../services/agent-hardening-service');
+
+      const agentSemAssinatura = {
+        id: 'agent-full',
+        slug: 'full-agent',
+        governance: {
+          approvedBy: 'admin',
+          riskLevel: 'low',
+          validation: {
+            waveId: 'agent-os-full-agent',
+            evidenceId: 'agent_evd_full',
+            replayId: 'agent_replay_full',
+          },
+        },
+      };
+
+      const result = await hardeningService.validateGovernanceGates({ agent: agentSemAssinatura });
+      expect(result.passed).toBe(false);
+      expect(result.blockers.some(b => b.gate === 'governance_signature')).toBe(true);
+      expect(result.checks.find((c) => c.gate === 'governance_signature').verified).toBe(false);
+    });
+
+    it('modo approve (requireApproval:false) não exige approval/assinatura pré-existentes', async () => {
+      const hardeningService = require('../services/agent-hardening-service');
+
+      const agentValidated = {
+        id: 'agent-full',
+        slug: 'full-agent',
+        governance: {
+          approvedBy: null,
+          riskLevel: 'low',
+          validation: {
+            waveId: 'agent-os-full-agent',
+            evidenceId: 'agent_evd_full',
+            replayId: 'agent_replay_full',
+          },
+        },
+      };
+
+      const result = await hardeningService.validateGovernanceGates({ agent: agentValidated, requireApproval: false });
+      expect(result.passed).toBe(true);
+      expect(result.checks.find((c) => c.gate === 'approval').verified).toBe(false);
+      expect(result.checks.find((c) => c.gate === 'governance_signature').verified).toBe(false);
     });
   });
 });

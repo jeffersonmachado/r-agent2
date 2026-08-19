@@ -50,17 +50,61 @@ function safeWriteJson(filePath, payload) {
 }
 
 /**
+ * FASES 13-14 — Resolve as jornadas model-driven relacionadas ao agente,
+ * derivadas de verdade do pipeline (models → entity graph → inferJourneys).
+ * O relatório é memoizado por processo para não re-introspectar 150+ models
+ * a cada validação; `journeysReport` injetável permite ao pipeline verificar
+ * a integração com a saída da execução corrente.
+ */
+let cachedJourneysReport = null;
+
+function getModelDrivenJourneysReport() {
+  if (!cachedJourneysReport) {
+    const { inferJourneysFromModels } = require('./model-driven-pipeline');
+    cachedJourneysReport = inferJourneysFromModels();
+  }
+  return cachedJourneysReport;
+}
+
+function resolveModelDrivenJourneysForValidation({ agent = {}, journeysReport = null } = {}) {
+  const report = journeysReport || getModelDrivenJourneysReport();
+  const journeys = Array.isArray(report?.journeys) ? report.journeys : [];
+  const domainHint = String(agent.domain || agent.vertical || '').toLowerCase();
+  const related = domainHint
+    ? journeys.filter((j) => {
+      const journeyDomain = String(j.domain || '').toLowerCase();
+      return journeyDomain.includes(domainHint) || domainHint.includes(journeyDomain);
+    })
+    : journeys;
+  const effective = related.length > 0 ? related : journeys;
+  return {
+    source: 'model-driven-pipeline.inferJourneys',
+    totalJourneys: report?.totalJourneys ?? journeys.length,
+    relatedJourneys: effective.map((j) => ({
+      id: j.id,
+      name: j.name,
+      domain: j.domain,
+      completeness: j.completeness,
+    })),
+  };
+}
+
+/**
  * Gera um validation journey para o agente, usando o Journey Registry.
+ * As jornadas model-driven relacionadas são resolvidas de verdade
+ * (inferJourneys) e registradas na descrição da jornada de validação.
  */
 async function generateValidationJourney({ agent, tenantId }) {
   const journeyService = require('../../journey-registry/service');
+
+  const modelDriven = resolveModelDrivenJourneysForValidation({ agent });
 
   const journey = await journeyService.createJourney({
     tenantId,
     domain: 'agent-os',
     name: `Validation: ${agent.name}`,
     slug: `agent-validation-${agent.slug}`,
-    description: `Jornada de validação para o agente ${agent.name}`,
+    description: `Jornada de validação para o agente ${agent.name} — model-driven journeys relacionadas: ${modelDriven.relatedJourneys.map((j) => j.name).join(', ') || 'nenhuma'}`,
     status: 'active',
     criticality: 'high',
     steps: [
@@ -70,6 +114,12 @@ async function generateValidationJourney({ agent, tenantId }) {
       { id: 'step_integration_check', name: 'Integration Check', type: 'validation' },
     ],
   });
+
+  // Vínculo model-driven no objeto retornado (não persistido — o registry
+  // não tem coluna de metadata; o vínculo auditável fica na descrição).
+  if (journey && typeof journey === 'object') {
+    journey.modelDrivenJourneys = modelDriven.relatedJourneys;
+  }
 
   return journey;
 }
@@ -345,16 +395,20 @@ async function generateReplayArtifact({ agent, waveResult, evidence, tenantId })
 
 /**
  * Registra trilha de governança da validação.
+ *
+ * actor/actorRole devem vir do principal autenticado (req.agent); nunca
+ * hardcodar papel. Sem actor explícito a trilha registra actor nulo em vez
+ * de um 'system' implícito.
  */
-async function recordGovernanceTrail({ agent, waveResult, evidence, replay, tenantId, actor }) {
+async function recordGovernanceTrail({ agent, waveResult, evidence, replay, tenantId, actor, actorRole }) {
   await governanceService.logGovernanceEvent({
     tenantId,
     agentId: agent.id,
     // 'audit' é o eventType do ENUM do Postgres para trilhas de validação
     // ('agent_validation' violava o CHECK ai_governance_records_event_type_check).
     eventType: 'audit',
-    actor: actor || 'system',
-    actorRole: 'super_admin',
+    actor: actor || null,
+    actorRole: actorRole || null,
     description: `Agent ${agent.slug} validation: ${waveResult?.status || 'NO_GO'}`,
     decision: waveResult?.status === 'GO' ? 'approved' : 'rejected',
     metadata: {
@@ -376,9 +430,67 @@ async function recordGovernanceTrail({ agent, waveResult, evidence, replay, tena
 }
 
 /**
+ * Assinatura de governança: hash SHA-256 sobre os campos que vinculam a
+ * aprovação aos artefatos de validação. Emitida no approve e verificada no
+ * publish — qualquer adulteração de approvedBy/waveId/replayId/evidenceId
+ * entre as duas transições invalida a assinatura.
+ */
+function computeGovernanceSignature(agent) {
+  return createHash(JSON.stringify({
+    agentId: agent.id,
+    waveId: agent.governance?.validation?.waveId,
+    replayId: agent.governance?.validation?.replayId,
+    evidenceId: agent.governance?.validation?.evidenceId,
+    approvedBy: agent.governance?.approvedBy,
+  }));
+}
+
+/**
+ * Resolve o path local do artefato de validação (evidence/replay) gerado pelo
+ * pipeline. Retorna null quando não é possível determinar o path (sem slug/id).
+ */
+function resolveArtifactPath(kind, agent, artifactId) {
+  if (!agent?.slug || !artifactId) return null;
+  if (kind === 'evidence') {
+    return path.join(ROOT_DIR, 'qa-mesh', 'meshEvidence', `agent-os-${agent.slug}`, `${artifactId}.json`);
+  }
+  if (kind === 'replay') {
+    return path.join(ROOT_DIR, 'replays', 'agent-os', `${artifactId}.json`);
+  }
+  return null;
+}
+
+/**
+ * Verificação semântica local de um artefato de validação: o arquivo precisa
+ * existir, carregar o id esperado e pertencer ao agente. Quando o path não é
+ * determinável, o gate segue por presença mas fica marcado verified:false.
+ */
+function verifyValidationArtifact(kind, agent, artifactId) {
+  const filePath = resolveArtifactPath(kind, agent, artifactId);
+  if (!filePath) {
+    return { available: false, verified: false, reason: 'artifact_path_not_resolvable' };
+  }
+  const data = safeReadJson(filePath);
+  if (!data) {
+    return { available: true, verified: false, reason: 'artifact_not_found_or_unreadable' };
+  }
+  const idField = kind === 'evidence' ? 'evidenceId' : 'replayId';
+  if (data[idField] !== artifactId) {
+    return { available: true, verified: false, reason: 'artifact_id_mismatch' };
+  }
+  if (data.agentId && agent.id && data.agentId !== agent.id) {
+    return { available: true, verified: false, reason: 'artifact_agent_mismatch' };
+  }
+  return { available: true, verified: true };
+}
+
+/**
  * Pipeline completo de validação e publicação de agente.
  *
  * Fluxo:
+ *   0. Enforcement de lifecycle: somente agentes 'approved' com approvedBy
+ *      registrado podem publicar; o publisher nunca pode ser o approver
+ *      (segregação de funções). Gates de governança verificados por completo.
  *   1. Gerar validation journey
  *   2. Executar QA Wave real
  *   3. Gerar evidência
@@ -386,10 +498,74 @@ async function recordGovernanceTrail({ agent, waveResult, evidence, replay, tena
  *   5. Registrar governance trail
  *   6. Se GO: publicar; Se NO_GO: bloquear
  */
-async function validateAndPublishAgent({ agentId, tenantId, actor }) {
+async function validateAndPublishAgent({ agentId, tenantId, actor, actorRole }) {
   const agent = await agentRegistryService.getCorporateAgentById(agentId, tenantId);
   if (!agent) {
     return { ok: false, error: 'Agent not found', code: 'NOT_FOUND' };
+  }
+
+  // Passo 0: enforcement de lifecycle e segregação de funções.
+  // Publish NUNCA contorna o approve: lifecycle precisa ser 'approved'.
+  if (agent.lifecycle !== 'approved') {
+    logger.warn('[AgentOS:Hardening] Publish blocked: agent not approved', {
+      agentId,
+      lifecycle: agent.lifecycle,
+    });
+    return {
+      ok: false,
+      code: 'agent_not_approved',
+      status: 'BLOCKED',
+      agent,
+      error: `Agent lifecycle is '${agent.lifecycle}'; publish requires lifecycle 'approved'`,
+      reason: 'agent_not_approved',
+      workflow: { step: 'publish_blocked', next: 'approve' },
+    };
+  }
+
+  const approvedBy = agent.governance?.approvedBy;
+  if (!approvedBy) {
+    return {
+      ok: false,
+      code: 'agent_not_approved',
+      status: 'BLOCKED',
+      agent,
+      error: 'Agent has no recorded approval (governance.approvedBy is empty)',
+      reason: 'agent_not_approved',
+      workflow: { step: 'publish_blocked', next: 'approve' },
+    };
+  }
+
+  // Segregação de funções: quem aprovou não pode publicar.
+  if (actor && String(approvedBy) === String(actor)) {
+    logger.warn('[AgentOS:Hardening] Publish blocked: self-approval denied', {
+      agentId,
+      actor,
+      approvedBy,
+    });
+    return {
+      ok: false,
+      code: 'publish_self_approval_denied',
+      status: 'BLOCKED',
+      agent,
+      error: 'Publisher cannot be the same principal that approved the agent',
+      reason: 'publish_self_approval_denied',
+      workflow: { step: 'publish_blocked', next: 'publish_by_another_principal' },
+    };
+  }
+
+  // Gates de governança completos (approval + assinatura verificados de verdade).
+  const governanceResult = await validateGovernanceGates({ agent });
+  if (!governanceResult.passed) {
+    return {
+      ok: false,
+      code: 'governance_gates_failed',
+      status: 'BLOCKED',
+      agent,
+      error: 'Governance gates not satisfied for publish',
+      reason: 'governance_gates_failed',
+      governance: governanceResult,
+      workflow: { step: 'publish_blocked', next: 'fix_governance' },
+    };
   }
 
   // Passo 1: Gerar validation journey
@@ -421,7 +597,7 @@ async function validateAndPublishAgent({ agentId, tenantId, actor }) {
     // Ainda gera evidência e replay do bloqueio
     const { evidence } = await generateEvidence({ agent, waveResult, tenantId });
     const { replay } = await generateReplayArtifact({ agent, waveResult, evidence, tenantId });
-    await recordGovernanceTrail({ agent, waveResult, evidence, replay, tenantId, actor });
+    await recordGovernanceTrail({ agent, waveResult, evidence, replay, tenantId, actor, actorRole });
 
     return {
       ok: false,
@@ -442,26 +618,33 @@ async function validateAndPublishAgent({ agentId, tenantId, actor }) {
   const { replay } = await generateReplayArtifact({ agent, waveResult, evidence, tenantId });
 
   // Passo 5: Registrar governance trail
-  await recordGovernanceTrail({ agent, waveResult, evidence, replay, tenantId, actor });
+  await recordGovernanceTrail({ agent, waveResult, evidence, replay, tenantId, actor, actorRole });
 
-  // Passo 6: Publicar (aprovar + publicar)
+  // Passo 6: Publicar. A aprovação (approvedBy/approvedAt) é preservada —
+  // publish não aprova, apenas ativa quem já foi aprovado por outro principal.
+  const governance = {
+    ...(agent.governance || {}),
+    approvedBy,
+    approvedAt: agent.governance?.approvedAt || null,
+    publishedBy: actor || null,
+    publishedAt: nowIso(),
+    riskLevel: agent.governance?.riskLevel || 'low',
+    auditEnabled: true,
+    validation: {
+      waveId: waveResult.waveId,
+      executionId: waveResult.executionId,
+      evidenceId: evidence.evidenceId,
+      replayId: replay.replayId,
+      validatedAt: nowIso(),
+    },
+  };
+  // Re-emite a assinatura sobre o novo linkage de validação (mesma aprovação).
+  governance.governanceSignature = computeGovernanceSignature({ id: agent.id, governance });
+
   await agentRegistryService.updateCorporateAgent(agentId, {
     lifecycle: 'active',
     status: 'active',
-    governance: {
-      ...(agent.governance || {}),
-      approvedBy: actor || 'system',
-      approvedAt: nowIso(),
-      riskLevel: agent.governance?.riskLevel || 'low',
-      auditEnabled: true,
-      validation: {
-        waveId: waveResult.waveId,
-        executionId: waveResult.executionId,
-        evidenceId: evidence.evidenceId,
-        replayId: replay.replayId,
-        validatedAt: nowIso(),
-      },
-    },
+    governance,
   }, tenantId);
 
   return {
@@ -476,56 +659,230 @@ async function validateAndPublishAgent({ agentId, tenantId, actor }) {
 }
 
 /**
- * Valida se todos os gates de governança estão satisfeitos antes de publicar.
+ * Aprova um agente validado (transição validated → approved).
+ *
+ * O approve CRIA o registro de aprovação: exige lifecycle 'validated' e os
+ * gates técnicos (QA wave, replay, evidence, risco), mas NÃO exige approvedBy
+ * pré-existente — o gate de approval só é verificado no publish. Emite a
+ * assinatura de governança que o publish verificará.
  */
-async function validateGovernanceGates({ agent }) {
+async function approveAgent({ agentId, tenantId, actor, actorRole, riskLevel, auditEnabled }) {
+  const agent = await agentRegistryService.getCorporateAgentById(agentId, tenantId);
+  if (!agent) {
+    return { ok: false, error: 'Agent not found', code: 'NOT_FOUND' };
+  }
+
+  if (agent.lifecycle !== 'validated') {
+    return {
+      ok: false,
+      code: 'agent_not_validated',
+      agent,
+      error: `Agent lifecycle is '${agent.lifecycle}'; approve requires lifecycle 'validated'`,
+    };
+  }
+
+  // Gates técnicos: approval/signature são emitidos por ESTA transição,
+  // portanto não podem ser pré-condição dela.
+  const gates = await validateGovernanceGates({ agent, requireApproval: false });
+  if (!gates.passed) {
+    return {
+      ok: false,
+      code: 'governance_gates_failed',
+      agent,
+      error: 'Governance gates not satisfied for approval',
+      governance: gates,
+    };
+  }
+
+  const approvedAt = nowIso();
+  const governance = {
+    ...(agent.governance || {}),
+    approvedBy: actor,
+    approvedAt,
+    riskLevel: riskLevel || agent.governance?.riskLevel || 'low',
+    auditEnabled: auditEnabled !== false,
+  };
+  governance.governanceSignature = computeGovernanceSignature({ id: agent.id, governance });
+
+  const updatedAgent = await agentRegistryService.updateCorporateAgent(agentId, {
+    lifecycle: 'approved',
+    status: 'approved',
+    governance,
+  }, tenantId);
+
+  // Trilha de auditoria da aprovação com o principal real.
+  try {
+    await governanceService.logGovernanceEvent({
+      tenantId,
+      agentId: agent.id,
+      eventType: 'approve',
+      actor: actor || null,
+      actorRole: actorRole || null,
+      description: `Agent ${agent.slug} approved`,
+      decision: 'approved',
+      metadata: {
+        waveId: governance.validation?.waveId || null,
+        evidenceId: governance.validation?.evidenceId || null,
+        replayId: governance.validation?.replayId || null,
+        governanceSignature: governance.governanceSignature,
+      },
+      toolsUsed: [],
+      dataAccessed: [],
+      riskLevel: governance.riskLevel,
+    });
+  } catch (err) {
+    logger.warn('[AgentOS:Hardening] Approval audit trail failed (non-blocking)', {
+      agentId,
+      error: err.message,
+    });
+  }
+
+  logger.info('[AgentOS:Hardening] Agent approved', { agentId, approvedBy: actor });
+  return { ok: true, agent: updatedAgent, governance: gates };
+}
+
+/**
+ * Valida os gates de governança de um agente.
+ *
+ * Além de presença, verifica semanticamente o que é verificável localmente:
+ * - qa_wave: waveId precisa corresponder à wave canônica do agente.
+ * - replay/evidence: o artefato precisa existir em disco, carregar o id
+ *   esperado e pertencer ao agente.
+ * - governance_signature: recomputada e comparada com a assinatura emitida no
+ *   approve (nada de passed hardcoded).
+ *
+ * options.requireApproval (default true): exige approvedBy + assinatura
+ * válida. O approve chama com false porque é ele quem CRIA a aprovação; o
+ * publish chama com true e verifica tudo.
+ */
+async function validateGovernanceGates({ agent, requireApproval = true }) {
   const blockers = [];
   const checks = [];
+  const validation = agent.governance?.validation || {};
 
-  // Gate 1: QA Wave
-  const hasQaWave = !!(agent.governance?.validation?.waveId);
-  checks.push({ gate: 'qa_wave', passed: hasQaWave, detail: agent.governance?.validation?.waveId || null });
+  // Gate 1: QA Wave (presença + waveId canônico do agente)
+  const waveId = validation.waveId;
+  const hasQaWave = !!waveId;
+  let qaWaveVerified = false;
+  let qaWaveReason = null;
+  if (hasQaWave) {
+    if (agent.slug) {
+      qaWaveVerified = waveId === `agent-os-${agent.slug}`;
+      if (!qaWaveVerified) qaWaveReason = 'wave_id_mismatch_for_agent';
+    } else {
+      qaWaveReason = 'agent_slug_unavailable';
+    }
+  }
+  const qaWavePassed = hasQaWave && (qaWaveVerified || qaWaveReason === 'agent_slug_unavailable');
+  checks.push({
+    gate: 'qa_wave',
+    passed: qaWavePassed,
+    verified: qaWaveVerified,
+    ...(qaWaveReason ? { reason: qaWaveReason } : {}),
+    detail: waveId || null,
+  });
   if (!hasQaWave) {
     blockers.push({ gate: 'qa_wave', reason: 'missing_qa_wave_validation' });
+  } else if (!qaWavePassed) {
+    blockers.push({ gate: 'qa_wave', reason: qaWaveReason });
   }
 
-  // Gate 2: Replay
-  const hasReplay = !!(agent.governance?.validation?.replayId);
-  checks.push({ gate: 'replay', passed: hasReplay, detail: agent.governance?.validation?.replayId || null });
+  // Gate 2: Replay (presença + artefato real)
+  const replayId = validation.replayId;
+  const replayCheck = verifyValidationArtifact('replay', agent, replayId);
+  const hasReplay = !!replayId;
+  const replayPassed = hasReplay && (!replayCheck.available || replayCheck.verified);
+  checks.push({
+    gate: 'replay',
+    passed: replayPassed,
+    verified: replayCheck.verified,
+    ...(replayCheck.reason ? { reason: replayCheck.reason } : {}),
+    detail: replayId || null,
+  });
   if (!hasReplay) {
     blockers.push({ gate: 'replay', reason: 'missing_replay_artifact' });
+  } else if (!replayPassed) {
+    blockers.push({ gate: 'replay', reason: replayCheck.reason });
   }
 
-  // Gate 3: Evidence
-  const hasEvidence = !!(agent.governance?.validation?.evidenceId);
-  checks.push({ gate: 'evidence', passed: hasEvidence, detail: agent.governance?.validation?.evidenceId || null });
+  // Gate 3: Evidence (presença + artefato real)
+  const evidenceId = validation.evidenceId;
+  const evidenceCheck = verifyValidationArtifact('evidence', agent, evidenceId);
+  const hasEvidence = !!evidenceId;
+  const evidencePassed = hasEvidence && (!evidenceCheck.available || evidenceCheck.verified);
+  checks.push({
+    gate: 'evidence',
+    passed: evidencePassed,
+    verified: evidenceCheck.verified,
+    ...(evidenceCheck.reason ? { reason: evidenceCheck.reason } : {}),
+    detail: evidenceId || null,
+  });
   if (!hasEvidence) {
     blockers.push({ gate: 'evidence', reason: 'missing_evidence' });
+  } else if (!evidencePassed) {
+    blockers.push({ gate: 'evidence', reason: evidenceCheck.reason });
   }
 
-  // Gate 4: Approval
+  // Gate 4: Approval — verificado no publish; no approve ele é a SAÍDA.
   const hasApproval = !!(agent.governance?.approvedBy);
-  checks.push({ gate: 'approval', passed: hasApproval, detail: agent.governance?.approvedBy || null });
-  if (!hasApproval) {
-    blockers.push({ gate: 'approval', reason: 'missing_approval' });
+  if (requireApproval) {
+    checks.push({ gate: 'approval', passed: hasApproval, verified: hasApproval, detail: agent.governance?.approvedBy || null });
+    if (!hasApproval) {
+      blockers.push({ gate: 'approval', reason: 'missing_approval' });
+    }
+  } else {
+    checks.push({
+      gate: 'approval',
+      passed: true,
+      verified: false,
+      reason: 'approval_created_by_this_transition',
+      detail: null,
+    });
   }
 
   // Gate 5: Risk Assessment
   const hasRiskAssessment = !!(agent.governance?.riskLevel);
-  checks.push({ gate: 'risk_assessment', passed: hasRiskAssessment, detail: agent.governance?.riskLevel || null });
+  checks.push({ gate: 'risk_assessment', passed: hasRiskAssessment, verified: hasRiskAssessment, detail: agent.governance?.riskLevel || null });
   if (!hasRiskAssessment) {
     blockers.push({ gate: 'risk_assessment', reason: 'missing_risk_assessment' });
   }
 
-  // Gate 6: Governance Signature (hash)
-  const governanceSignature = createHash(JSON.stringify({
-    agentId: agent.id,
-    waveId: agent.governance?.validation?.waveId,
-    replayId: agent.governance?.validation?.replayId,
-    evidenceId: agent.governance?.validation?.evidenceId,
-    approvedBy: agent.governance?.approvedBy,
-  }));
-  checks.push({ gate: 'governance_signature', passed: true, detail: governanceSignature });
+  // Gate 6: Governance Signature — recomputada e comparada com a emitida no
+  // approve. Sem assinatura armazenada (ou divergente) o publish não passa.
+  const governanceSignature = computeGovernanceSignature(agent);
+  const storedSignature = agent.governance?.governanceSignature || null;
+  if (requireApproval) {
+    if (!storedSignature) {
+      checks.push({
+        gate: 'governance_signature',
+        passed: false,
+        verified: false,
+        reason: 'signature_not_stored',
+        detail: governanceSignature,
+      });
+      blockers.push({ gate: 'governance_signature', reason: 'missing_governance_signature' });
+    } else {
+      const signatureMatch = storedSignature === governanceSignature;
+      checks.push({
+        gate: 'governance_signature',
+        passed: signatureMatch,
+        verified: true,
+        ...(signatureMatch ? {} : { reason: 'signature_mismatch' }),
+        detail: governanceSignature,
+      });
+      if (!signatureMatch) {
+        blockers.push({ gate: 'governance_signature', reason: 'signature_mismatch' });
+      }
+    }
+  } else {
+    checks.push({
+      gate: 'governance_signature',
+      passed: true,
+      verified: false,
+      reason: 'signature_issued_on_approval',
+      detail: governanceSignature,
+    });
+  }
 
   return {
     passed: blockers.length === 0,
@@ -537,10 +894,13 @@ async function validateGovernanceGates({ agent }) {
 
 module.exports = {
   validateAndPublishAgent,
+  approveAgent,
   validateGovernanceGates,
+  computeGovernanceSignature,
   generateValidationJourney,
   runQaWaveValidation,
   generateEvidence,
   generateReplayArtifact,
   recordGovernanceTrail,
+  resolveModelDrivenJourneysForValidation,
 };

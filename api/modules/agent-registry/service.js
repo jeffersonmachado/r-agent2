@@ -4,9 +4,24 @@ const { getSequelize } = require('../../db/sequelize');
 const getCorporateAgentModel = require('../../db/models/CorporateAgent');
 const logger = require('../../utils/logger');
 
+/**
+ * Fail-closed: nenhum CorporateAgent pode ser lido/criado/alterado sem tenant
+ * explícito. Nunca assumir 'system' implicitamente — quem quiser o tenant de
+ * plataforma passa 'system' explicitamente (ex.: super_admin via X-Tenant-Id).
+ */
+function requireTenantId(tenantId) {
+  const resolved = tenantId && String(tenantId).trim();
+  if (!resolved) {
+    const err = new Error('tenant_required: tenantId explicito e obrigatorio para CorporateAgent');
+    err.code = 'tenant_required';
+    throw err;
+  }
+  return resolved;
+}
+
 async function listCorporateAgents({ tenantId, filters = {} }) {
   const CorporateAgent = getCorporateAgentModel();
-  const where = { tenant_id: tenantId || 'system' };
+  const where = { tenant_id: requireTenantId(tenantId) };
 
   if (filters.classification) {
     where.classification = filters.classification;
@@ -37,7 +52,7 @@ async function listCorporateAgents({ tenantId, filters = {} }) {
 async function getCorporateAgentById(id, tenantId) {
   const CorporateAgent = getCorporateAgentModel();
   const agent = await CorporateAgent.findOne({
-    where: { id, tenant_id: tenantId || 'system' },
+    where: { id, tenant_id: requireTenantId(tenantId) },
   });
   if (!agent) return null;
   return agent;
@@ -46,7 +61,7 @@ async function getCorporateAgentById(id, tenantId) {
 async function createCorporateAgent(data) {
   const CorporateAgent = getCorporateAgentModel();
   const agent = await CorporateAgent.create({
-    tenant_id: data.tenantId || 'system',
+    tenant_id: requireTenantId(data.tenantId),
     name: data.name,
     slug: data.slug,
     description: data.description || null,
@@ -71,7 +86,7 @@ async function createCorporateAgent(data) {
 async function updateCorporateAgent(id, data, tenantId) {
   const CorporateAgent = getCorporateAgentModel();
   const agent = await CorporateAgent.findOne({
-    where: { id, tenant_id: tenantId || 'system' },
+    where: { id, tenant_id: requireTenantId(tenantId) },
   });
   if (!agent) return null;
 
@@ -95,7 +110,7 @@ async function updateCorporateAgent(id, data, tenantId) {
 async function deleteCorporateAgent(id, tenantId) {
   const CorporateAgent = getCorporateAgentModel();
   const deleted = await CorporateAgent.destroy({
-    where: { id, tenant_id: tenantId || 'system' },
+    where: { id, tenant_id: requireTenantId(tenantId) },
   });
   return deleted > 0;
 }
@@ -103,7 +118,7 @@ async function deleteCorporateAgent(id, tenantId) {
 async function getAgentsByClassification(classification, tenantId) {
   const CorporateAgent = getCorporateAgentModel();
   return CorporateAgent.findAll({
-    where: { classification, tenant_id: tenantId || 'system', lifecycle: 'active' },
+    where: { classification, tenant_id: requireTenantId(tenantId), lifecycle: 'active' },
     order: [['name', 'ASC']],
   });
 }

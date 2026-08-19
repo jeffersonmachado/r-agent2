@@ -7,14 +7,37 @@ const hardeningService = require('../services/agent-hardening-service');
 async function handleAgentFactoryRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const { requireAuth, requirePermission, sendJson: _s, badRequest: _b, hasJsonContentType, parseJsonBody, logAction } = deps;
-  const tenantId = req.tenant_id || 'system';
   const sendJson = (d, c) => _s(res, c || 200, d);
   const badRequest = (m) => _b(res, m);
+
+  // Fail-closed: req.tenant_id e req.user nunca existiram. O tenant real vem
+  // do middleware de auth (req.tenantId) ou do agente autenticado; o principal
+  // vem de req.agent. Sem tenant → 400 tenant_required; sem principal → 401
+  // principal_required. Nunca 'system' implícito.
+  const resolveTenantId = () => req.tenantId || (req.agent && req.agent.tenantId) || null;
+  const resolveActor = () => (req.agent && (req.agent.username || req.agent.id)) || null;
+  const requireTenant = () => {
+    const resolved = resolveTenantId();
+    if (!resolved) {
+      sendJson({ error: 'tenant_required', message: 'Tenant explicito obrigatorio (X-Tenant-Id ou agente autenticado)' }, 400);
+      return null;
+    }
+    return resolved;
+  };
+  const requirePrincipal = () => {
+    const actor = resolveActor();
+    if (!actor) {
+      sendJson({ error: 'principal_required', message: 'Principal autenticado obrigatorio para esta operacao' }, 401);
+      return null;
+    }
+    return actor;
+  };
 
   // POST /api/agent-factory/create - Create agent with full workflow
   if (method === 'POST' && pathname === '/api/agent-factory/create') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'create'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    const tenantId = requireTenant(); if (!tenantId) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -35,6 +58,7 @@ async function handleAgentFactoryRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/agent-factory/configure') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'update'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    const tenantId = requireTenant(); if (!tenantId) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -58,6 +82,8 @@ async function handleAgentFactoryRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/agent-factory/validate') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'update'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    const tenantId = requireTenant(); if (!tenantId) return true;
+    const actor = requirePrincipal(); if (!actor) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -102,14 +128,15 @@ async function handleAgentFactoryRoutes(ctx) {
         tenantId,
       });
 
-      // Registra governance trail
+      // Registra governance trail com o principal real
       await hardeningService.recordGovernanceTrail({
         agent,
         waveResult,
         evidence,
         replay,
         tenantId,
-        actor: req.user?.username || 'system',
+        actor,
+        actorRole: req.agent?.role || null,
       });
 
       // Atualiza agente com metadados de validação
@@ -188,52 +215,62 @@ async function handleAgentFactoryRoutes(ctx) {
     }
   }
 
-  // POST /api/agent-factory/approve - Approve agent (COM validação de governança)
+  // POST /api/agent-factory/approve - Approve agent (validated → approved)
+  // O approve CRIA a aprovação: exige lifecycle 'validated' e gates técnicos,
+  // mas não approvedBy pré-existente (esse gate passou a ser verificado no publish).
   if (method === 'POST' && pathname === '/api/agent-factory/approve') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'approve'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    const tenantId = requireTenant(); if (!tenantId) return true;
+    const actor = requirePrincipal(); if (!actor) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
     if (!body.id) return badRequest('id is required');
 
-    const agent = await agentRegistryService.getCorporateAgentById(body.id, tenantId);
-    if (!agent) return sendJson({ error: 'Agent not found' }, 404);
+    const result = await hardeningService.approveAgent({
+      agentId: body.id,
+      tenantId,
+      actor,
+      actorRole: req.agent?.role || null,
+      riskLevel: body.riskLevel,
+      auditEnabled: body.auditEnabled,
+    });
 
-    // Valida gates de governança ANTES de aprovar
-    const governanceResult = await hardeningService.validateGovernanceGates({ agent });
-    if (!governanceResult.passed) {
+    if (!result.ok) {
+      if (result.code === 'NOT_FOUND') {
+        return sendJson({ error: 'agent_not_found', message: result.error || 'Agent not found' }, 404);
+      }
+      if (result.code === 'agent_not_validated') {
+        return sendJson({
+          error: 'agent_not_validated',
+          message: result.error,
+          lifecycle: result.agent?.lifecycle || null,
+        }, 400);
+      }
       return sendJson({
         error: 'governance_gates_failed',
-        message: 'Cannot approve agent: governance gates not satisfied',
-        governance: governanceResult,
+        message: result.error || 'Cannot approve agent: governance gates not satisfied',
+        governance: result.governance,
       }, 400);
     }
 
-    const updatedAgent = await agentRegistryService.updateCorporateAgent(body.id, {
-      lifecycle: 'approved',
-      status: 'approved',
-      governance: {
-        ...(agent.governance || {}),
-        approvedBy: req.user?.username || 'system',
-        approvedAt: new Date().toISOString(),
-        riskLevel: body.riskLevel || agent.governance?.riskLevel || 'low',
-        auditEnabled: body.auditEnabled !== false,
-      },
-    }, tenantId);
-
-    await logAction('agent_factory.approve', { agentId: agent.id });
+    await logAction('agent_factory.approve', { agentId: body.id, approvedBy: actor });
     sendJson({
-      agent: updatedAgent,
-      governance: governanceResult,
+      agent: result.agent,
+      governance: result.governance,
       workflow: { step: 'approved', next: 'publish' },
     });
   }
 
-  // POST /api/agent-factory/publish - Publish agent (COM validação real completa)
+  // POST /api/agent-factory/publish - Publish agent (approved → active)
+  // Publish NUNCA contorna o approve: exige lifecycle 'approved', approvedBy
+  // registrado e publisher ≠ approver (segregação de funções).
   if (method === 'POST' && pathname === '/api/agent-factory/publish') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'publish'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    const tenantId = requireTenant(); if (!tenantId) return true;
+    const actor = requirePrincipal(); if (!actor) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -243,7 +280,8 @@ async function handleAgentFactoryRoutes(ctx) {
     const result = await hardeningService.validateAndPublishAgent({
       agentId: body.id,
       tenantId,
-      actor: req.user?.username || 'system',
+      actor,
+      actorRole: req.agent?.role || null,
     });
 
     if (!result.ok) {
@@ -256,6 +294,24 @@ async function handleAgentFactoryRoutes(ctx) {
         agentId: body.id,
         reason: result.reason,
       });
+
+      // Bloqueios de lifecycle/segregação têm código explícito.
+      if (result.code === 'agent_not_approved' || result.code === 'governance_gates_failed') {
+        return sendJson({
+          error: result.code,
+          message: result.error || 'Publication blocked by governance',
+          lifecycle: result.agent?.lifecycle || null,
+          governance: result.governance,
+          workflow: result.workflow,
+        }, 400);
+      }
+      if (result.code === 'publish_self_approval_denied') {
+        return sendJson({
+          error: 'publish_self_approval_denied',
+          message: result.error,
+          workflow: result.workflow,
+        }, 403);
+      }
 
       return sendJson({
         error: 'publish_blocked',
