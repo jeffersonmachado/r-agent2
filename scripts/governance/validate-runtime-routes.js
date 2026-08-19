@@ -142,54 +142,67 @@ async function main() {
     }
 
     for (const route of routes) {
-      const beforeErrors = consoleErrors.length;
-      const beforeFailures = networkFailures.length;
-      const response = await page.goto(buildUrl(route.requested), { waitUntil: 'domcontentloaded', timeout: 30000 }).catch((error) => {
-        issues.push({ code: 'route_navigation_error', route: route.requested, message: error.message });
-        return null;
-      });
-      await page.waitForTimeout(1200);
-      await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => null);
+      let result = null;
+      // Retry único para falha de AMBIENTE (blip de rede do browser —
+      // ERR_NETWORK_CHANGED/ERR_CONNECTION_* derruba o fetch de módulos
+      // estáticos do Vite e a página não renderiza). Se persistir na 2ª
+      // tentativa, é falha real da rota e o gate reprova normalmente.
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        const beforeErrors = consoleErrors.length;
+        const beforeFailures = networkFailures.length;
+        const response = await page.goto(buildUrl(route.requested), { waitUntil: 'domcontentloaded', timeout: 30000 }).catch((error) => {
+          issues.push({ code: 'route_navigation_error', route: route.requested, message: error.message });
+          return null;
+        });
+        await page.waitForTimeout(1200);
+        await page.waitForLoadState('networkidle', { timeout: 2500 }).catch(() => null);
 
-      const snapshot = await page.evaluate(() => {
-        const heading = Array.from(document.querySelectorAll('h1,h2,h3')).map((node) => String(node.textContent || '').trim()).filter(Boolean)[0] || '';
-        const text = String(document.body ? document.body.innerText : '').slice(0, 2000);
-        const links = Array.from(document.querySelectorAll('a[href],button')).slice(0, 80).map((node) => String(node.textContent || node.getAttribute('aria-label') || '').trim()).filter(Boolean);
-        return { heading, textLength: text.length, textSample: text, controls: links };
-      }).catch(() => ({ heading: '', textLength: 0, textSample: '', controls: [] }));
+        const snapshot = await page.evaluate(() => {
+          const heading = Array.from(document.querySelectorAll('h1,h2,h3')).map((node) => String(node.textContent || '').trim()).filter(Boolean)[0] || '';
+          const text = String(document.body ? document.body.innerText : '').slice(0, 2000);
+          const links = Array.from(document.querySelectorAll('a[href],button')).slice(0, 80).map((node) => String(node.textContent || node.getAttribute('aria-label') || '').trim()).filter(Boolean);
+          return { heading, textLength: text.length, textSample: text, controls: links };
+        }).catch(() => ({ heading: '', textLength: 0, textSample: '', controls: [] }));
 
-      const finalPath = new URL(page.url()).pathname;
-      const status = response ? response.status() : 0;
-      const routeErrors = consoleErrors.slice(beforeErrors);
-      const routeFailures = networkFailures.slice(beforeFailures);
-      const isJsonError = snapshot.textSample.trim().startsWith('{') && /error|unauthorized|not_found/i.test(snapshot.textSample);
-      const rendered = snapshot.textLength > 50 && !isJsonError && status < 500;
-      const canonicalReached = finalPath === route.canonical || route.requested === route.canonical;
+        const finalPath = new URL(page.url()).pathname;
+        const status = response ? response.status() : 0;
+        const routeErrors = consoleErrors.slice(beforeErrors);
+        const routeFailures = networkFailures.slice(beforeFailures);
+        const isJsonError = snapshot.textSample.trim().startsWith('{') && /error|unauthorized|not_found/i.test(snapshot.textSample);
+        const rendered = snapshot.textLength > 50 && !isJsonError && status < 500;
+        const canonicalReached = finalPath === route.canonical || route.requested === route.canonical;
 
-      const result = {
-        requested: route.requested,
-        canonical: route.canonical,
-        finalPath,
-        httpStatus: status,
-        rendered,
-        canonicalReached,
-        heading: snapshot.heading,
-        consoleErrors: routeErrors,
-        networkFailures: routeFailures,
-      };
+        result = {
+          requested: route.requested,
+          canonical: route.canonical,
+          finalPath,
+          httpStatus: status,
+          rendered,
+          canonicalReached,
+          heading: snapshot.heading,
+          consoleErrors: routeErrors,
+          networkFailures: routeFailures,
+        };
+
+        const infraBlip = routeFailures.some((failure) => /ERR_NETWORK_CHANGED|ERR_CONNECTION_(RESET|REFUSED|CLOSED)|ERR_TIMED_OUT/i.test(String(failure.failure || '')));
+        if (attempt === 1 && !rendered && infraBlip) {
+          continue;
+        }
+        break;
+      }
       observations.push(result);
 
-      if (!rendered) {
+      if (!result.rendered) {
         issues.push({ code: 'route_not_rendered', route: route.requested, message: `${route.requested} did not render an authenticated page.` });
       }
-      if (route.requested === route.canonical && finalPath !== route.canonical) {
-        issues.push({ code: 'route_redirected_unexpectedly', route: route.requested, finalPath, message: `${route.requested} ended at ${finalPath}.` });
+      if (route.requested === route.canonical && result.finalPath !== route.canonical) {
+        issues.push({ code: 'route_redirected_unexpectedly', route: route.requested, finalPath: result.finalPath, message: `${route.requested} ended at ${result.finalPath}.` });
       }
-      if (routeErrors.length > 0) {
-        issues.push({ code: 'route_console_errors', route: route.requested, count: routeErrors.length, message: `${route.requested} emitted console errors.` });
+      if (result.consoleErrors.length > 0) {
+        issues.push({ code: 'route_console_errors', route: route.requested, count: result.consoleErrors.length, message: `${route.requested} emitted console errors.` });
       }
-      if (routeFailures.length > 0) {
-        issues.push({ code: 'route_network_failures', route: route.requested, count: routeFailures.length, message: `${route.requested} had failed network requests.` });
+      if (result.networkFailures.length > 0) {
+        issues.push({ code: 'route_network_failures', route: route.requested, count: result.networkFailures.length, message: `${route.requested} had failed network requests.` });
       }
     }
 

@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-08-19T17:41:05.479Z",
+  "generatedAt": "2026-08-19T18:05:14.701Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260819-143905.zip",
-  "zipHash": "304dffe52f34e70a257bfa8ef10752fa736b4f59eea7a30b58bfab6785075608",
-  "manifestHash": "484d7124487e9d4cc558b4eef0d979b3ea4f997368796ff9c8c46bf4a0d130b7",
+  "zipName": null,
+  "zipHash": null,
+  "manifestHash": "0f031bc79f636a8208a27a0048746b30351ccdf2db9b6b4ab0e5f3918afde22f",
   "replayHash": "2f6353583393be10bd38f77ce85cfba7faa49e5e17797595c1dc04d75d9e0b26",
   "governanceHash": "5d8f10b2d5dde9f1e60db711ac2164686d352c45162b31c4f9d72a764af4743e",
-  "readinessHash": "4fb019e1a306e042b4377b13c78aad1295730e74641ada6cab8fd8e505f9982f",
+  "readinessHash": "50cbcfcf080855ce36a06ea4641c7f974d53066e97360a8dd60fb2e254d6cd97",
   "consistencyHash": "64f66f37038a54ee005529855f388089cb971a058cf63b3c6f003f5333508370",
   "contaminationHash": "8f222267233bc4c28802613a51c179e37e94d8972d0911de2c36db5575277677",
   "packageIntegrityHash": "24f0f3f353341fa79be7e3556c69ac9c0d9a1af35777c0e61dbbefa1edfc976f",
   "driftHash": "e29e058a75aeb07b8e73e4d302dfafd13e519edf2526ddb62fa3890bc24f6ef6",
   "gateHash": "0cc1d7048258c160fe946434f92493586f637db6cc18c47823d999783efe898a",
-  "recalculatedReadinessHash": "f2e7686370c834176a7aa352510e9591f89939404d61a3a2b97725f890bf11f9",
+  "recalculatedReadinessHash": "a8a1e19d188e264af78d60d79350df8e5c9c2989446d8c525eb5f815c14e8a64",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_NO_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_NO_GO",
     "contamination": "GOVERNANCE_CONTAMINATION_NO_GO",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
     "finalGovernance": "NO_GO:STRICT_ENTERPRISE [98 step(s) com ui.available=false em jornadas visuais críticas]",
-    "readiness": "NO_GO:AUTONOMOUS_READY_GO",
+    "readiness": "AUTONOMOUS_READY_GO",
     "readinessDrift": "READINESS_DRIFT_NO_GO",
     "finalConsistencyGate": "FINAL_CONSISTENCY_NO_GO"
   },
@@ -44,10 +44,6 @@
       "decision": "NO_GO:STRICT_ENTERPRISE [98 step(s) com ui.available=false em jornadas visuais críticas]"
     },
     {
-      "engine": "readiness",
-      "decision": "NO_GO:AUTONOMOUS_READY_GO"
-    },
-    {
       "engine": "readinessDrift",
       "decision": "READINESS_DRIFT_NO_GO"
     },
@@ -57,5 +53,5 @@
     }
   ],
   "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260819-143905.zip. Package: ÍNTEGRO. Validadores falhos: 7."
+  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 6."
 }

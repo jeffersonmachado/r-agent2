@@ -448,7 +448,37 @@ function summarizeProdLike(prodLikeSmoke, qaWavesGovernance) {
     supportedJourneyIds: journeys.filter((item) => item.status === 'GO').map((item) => item.journeyId),
     supportedVerticals: Array.from(supportedVerticals).sort(),
     signals,
+    // HARD-028 — prova semântica de mutação CRM em replay prod-like
+    // (declarada no contrato E observada na execução, com step proof válido).
+    crmMutationProven: hasProvenCrmMutation(prodLikeSmoke),
   };
+}
+
+/**
+ * INVARIANTE 10 aplicada ao CRM: não basta a keyword 'crm_journey_updated'
+ * existir no corpus — a mutação precisa estar DECLARADA no contrato do step
+ * (expectedSideEffects), OBSERVADA na execução real (observedSideEffects) e
+ * o step precisa ter stepExecutionProof válido num replay GO.
+ */
+function hasProvenCrmMutation(prodLikeSmoke) {
+  const flowEntries = Array.isArray(prodLikeSmoke?.flows) ? prodLikeSmoke.flows : [];
+  return flowEntries.some((flow) => {
+    const flowGo = (flow.replay?.status || flow.status) === 'GO';
+    if (!flowGo) return false;
+    const steps = Array.isArray(flow.steps) ? flow.steps : [];
+    return steps.some((step) => {
+      const linkage = step?.mutationLinkage;
+      if (!linkage) return false;
+      const expected = Array.isArray(linkage.expectedSideEffects) ? linkage.expectedSideEffects : [];
+      const observed = Array.isArray(linkage.observedSideEffects) ? linkage.observedSideEffects : [];
+      return (
+        step.status === 'executed'
+        && step.stepExecutionProof?.valid === true
+        && expected.includes('crm_journey_updated')
+        && observed.includes('crm_journey_updated')
+      );
+    });
+  });
 }
 
 function getMeshVerticalCoverage(meshSummary, vertical) {
@@ -798,7 +828,10 @@ function summarizeProductionValidation(scenarioStore, smokeEvidence, prodLikeSum
         evidence.push('qa/smoke-evidence.json');
       }
     } else if (requirement.id === 'crm_updates') {
-      if (hasCheckinReplay) {
+      if (prodLikeSummary.crmMutationProven) {
+        status = 'production-like';
+        evidence.push('qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json');
+      } else if (hasCheckinReplay) {
         status = 'validated';
         evidence.push('qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json');
       } else if (prodLikeSignals.crm_updates) {
@@ -1590,6 +1623,7 @@ if (require.main === module) {
 module.exports = {
   buildReport,
   calculateReplayCoveragePercent,
+  hasProvenCrmMutation,
   persistReport,
   REQUIRED_REPLAY_JOURNEYS,
 };
