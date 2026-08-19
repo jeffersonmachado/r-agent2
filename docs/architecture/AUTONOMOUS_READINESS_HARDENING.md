@@ -114,6 +114,7 @@ Channel (REST/WhatsApp/UI)
 1. ENOSPC (disco 100%) derrubou a API dev → ERR_INSUFFICIENT_RESOURCES rotativo no validate:runtime. Mitigado: poda de artefatos transitórios gitignored (tests/rpa/{screenshots,reports} ≈ 2G) e restart da API. Sem regressão de código.
 2. Wave reports de 2026-08-14 (pré-hardening) degradaram a cobertura VALIDATED → regenerados contra a stack viva.
 3. Scheduler do QA mesh (execução recorrente a cada ~15 min) registrou `infra_error` no cenário RPA `fitness-matricula-agendamento-ui` sob contenção de CPU enquanto smokes/gates pesados rodavam — o wait soft de toast expirou e, pelo bug HARD-026, derrubou a execução. Como o coverage gate usa "meshHistory mais recente vence", a jornada `agendamento` ficou BLOCKED até a correção + re-run dirigido.
+4. `zip:release` persiste um readiness NO_GO transitório com `gap-proof-package-validation` (missingEntries vazio): o proof engine avalia a validação de pacote ANTES do ZIP novo existir — é estrutural (o pacote não pode conter a prova de si mesmo; por isso existe o two-pass self-proving com verificador offline externo). O estado correto é obtido re-rodando `system:platform-readiness` APÓS o packaging: GO/FRESH com 0 gaps. Era exatamente esse o gap histórico reportado em PLATFORM_STATUS.md — artefato de timing de avaliação, não defeito de pacote.
 
 ### Números finais dos gates
 
@@ -126,7 +127,7 @@ Estado final comprovado (2026-08-19, commit pós-`51599c1f`):
 - **Prod-like smoke (stack real): GO** — 8/8 jornadas (support, fitness, booking, payment, food, market, clinic, agendamento) com productionReadiness GO e 0 blockers; scheduled production_health GO (0 blockers).
 - **QA Waves enterprise governance (live rebuild): GO** — confidence 100, replayIntegrity válida, continuous smoke healthy e vinculado ao hash da evidência atual.
 - **Testes:** unit 3044/3044 (543 suites; +9 neste ciclo — HARD-026: 3, HARD-027: 6) passando; test:system 84/84; FASE 24 integrações 7/7; frontend vitest 661/661.
-- **Pacote:** `dist/r-agent2-20260819-102810.zip` — two-pass release self-proving, verifier offline PASS, vinculado ao commit `51599c1f`.
+- **Pacote:** `dist/release/r-agent2-20260819-143905.zip` — two-pass release self-proving PASS, verifier offline PASS, audit `passed`, status `immutable`, vinculado ao commit `33366a39` (código final HARD-001..027). O pacote anterior (`20260819-102810`, commit `51599c1f`) foi substituído por este.
 
 ### Classificação final
 
