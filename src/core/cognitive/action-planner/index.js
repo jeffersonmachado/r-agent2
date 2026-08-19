@@ -11,6 +11,11 @@
  *  - ações críticas exigem confirmação explícita antes da execução
  *  - ações obrigatórias (requiredAction do outcome contract) NUNCA podem ser
  *    removidas silenciosamente: se negadas, o plano inteiro é rejeitado
+ *  - INVARIANTE 4: tools com `sideEffects: true` só executam sob um Outcome
+ *    Contract explícito — intents de MUTATION sem contrato são rejeitadas
+ *    (`outcome_contract_required`); intents READ_ONLY/INFORMATIONAL têm os
+ *    steps com sideEffects negados explicitamente (intents informativas
+ *    nunca mutam)
  *  - steps com toolId=null recebem tipagem explícita (CONTEXT_ASSERTION,
  *    DOMAIN_QUERY, etc.) e NUNCA são marcados como resolved_from_context
  *    sem prova
@@ -19,7 +24,7 @@
 
 const crypto = require('crypto');
 const { canAccess } = require('../visibility');
-const { getOutcomeContract, stepType } = require('../outcome');
+const { getOutcomeContract, getIntentClass, INTENT_CLASSES, stepType } = require('../outcome');
 
 /**
  * Templates determinísticos: intent → passos.
@@ -85,9 +90,10 @@ function defaultLogger() {
   return require('../../../../api/utils/logger');
 }
 
-function createActionPlanner({ toolRegistry, logger } = {}) {
+function createActionPlanner({ toolRegistry, logger, planTemplates } = {}) {
   if (!toolRegistry) throw new Error('cognitive_planner_registry_required');
   const log = logger || defaultLogger();
+  const templates = planTemplates || PLAN_TEMPLATES;
 
   /**
    * @param {object} args
@@ -101,7 +107,7 @@ function createActionPlanner({ toolRegistry, logger } = {}) {
     const tenantId = String(context.tenantId || '').trim();
     if (!tenantId) throw new Error('cognitive_planner_tenant_required');
 
-    const template = PLAN_TEMPLATES[intent];
+    const template = templates[intent];
     if (!template) throw new Error(`cognitive_planner_unknown_intent: ${intent}`);
 
     const confirmed = payload.confirmed === true;
@@ -165,6 +171,37 @@ function createActionPlanner({ toolRegistry, logger } = {}) {
       err.outcomeContract = outcomeContract ? outcomeContract.requiredAction : null;
       throw err;
     }
+
+    // INVARIANTE 4 (NO EXPLICIT BUSINESS OUTCOME → NO BUSINESS SUCCESS):
+    // tool com sideEffects só pode ser invocada sob Outcome Contract explícito.
+    //  - Intent de MUTATION sem contrato → plano rejeitado (outcome_contract_required).
+    //  - Intent READ_ONLY/INFORMATIONAL → step com sideEffects negado
+    //    explicitamente: intents informativas nunca executam mutações.
+    const intentClass = getIntentClass(intent);
+    const allowedSteps = [];
+    for (const step of steps) {
+      if (!outcomeContract && step.toolId) {
+        const tool = toolRegistry.get(step.toolId);
+        if (tool && tool.sideEffects === true) {
+          if (intentClass === INTENT_CLASSES.MUTATION) {
+            const message = `cognitive_planner_outcome_contract_required: ${intent} invoca tool com sideEffects (${step.toolId}) sem Outcome Contract`;
+            log.error('[CognitiveActionPlanner] Side-effect tool without outcome contract', {
+              tenantId, intent, toolId: step.toolId,
+            });
+            const err = new Error(message);
+            err.code = 'outcome_contract_required';
+            err.intent = intent;
+            err.toolId = step.toolId;
+            throw err;
+          }
+          denied.push({ step: step.id, reason: `side_effect_denied_in_${intentClass.toLowerCase()}_intent: ${step.toolId}` });
+          continue;
+        }
+      }
+      allowedSteps.push(step);
+    }
+    steps.length = 0;
+    steps.push(...allowedSteps);
 
     if (denied.length > 0) {
       log.warn('[CognitiveActionPlanner] Steps denied during planning', { tenantId, intent, denied });

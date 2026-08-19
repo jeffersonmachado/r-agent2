@@ -340,12 +340,33 @@ function createCognitiveOrchestrator(deps = {}) {
 
     // P1: Event semantics — mapear status → evento correto.
     // NUNCA emitir `agent.execution.completed` para cannot_complete / outcome_not_achieved.
+    // Handoff humano é categoria própria (`agent.execution.handed_off`): não é
+    // sucesso nem falha de negócio e nunca gera eventos business.outcome.* —
+    // nenhum caminho pode emitir eventos contraditórios para o mesmo desfecho.
     const effectiveStatus = status;
-    const isSuccess = effectiveStatus === 'completed' || effectiveStatus === 'completed_with_validation_warnings';
-    const isFailure = effectiveStatus === 'failed' || effectiveStatus === 'cannot_complete'
-      || effectiveStatus === 'halted_awaiting_confirmation';
+    const isHandoff = effectiveStatus === 'human_handoff_requested';
 
-    const outcomeEventType = isFailure ? 'agent.execution.failed' : 'agent.execution.completed';
+    // INVARIANTE 4: o outcome de negócio é calculado ANTES dos eventos e
+    // `status === 'completed'` sozinho NÃO é sucesso — planos com contrato
+    // exigem `businessOutcome.valid === true`.
+    const businessOutcome = validateBusinessOutcome({
+      intent: intentResult?.intent || null,
+      execution: {
+        status: effectiveStatus,
+        steps: execution?.steps || [],
+        toolsExecuted: execution?.toolsExecuted || [],
+      },
+    });
+
+    const technicalSuccess = effectiveStatus === 'completed' || effectiveStatus === 'completed_with_validation_warnings';
+    const isSuccess = !isHandoff && technicalSuccess && businessOutcome.valid === true;
+    const isFailure = !isHandoff && (effectiveStatus === 'failed' || effectiveStatus === 'cannot_complete'
+      || effectiveStatus === 'halted_awaiting_confirmation'
+      || (technicalSuccess && !businessOutcome.valid));
+
+    const outcomeEventType = isHandoff
+      ? 'agent.execution.handed_off'
+      : (isFailure ? 'agent.execution.failed' : 'agent.execution.completed');
     await emitEvent({
       type: outcomeEventType,
       tenantId,
@@ -363,16 +384,8 @@ function createCognitiveOrchestrator(deps = {}) {
     });
 
     // P1: Emitir business.outcome.* separadamente (semântica real de negócio).
-    const businessOutcome = validateBusinessOutcome({
-      intent: intentResult?.intent || null,
-      execution: {
-        status: effectiveStatus,
-        steps: execution?.steps || [],
-        toolsExecuted: execution?.toolsExecuted || [],
-      },
-    });
-
-    if (businessOutcome.valid && isSuccess) {
+    // Handoff nunca emite business.outcome.* (desfecho neutro de negócio).
+    if (!isHandoff && businessOutcome.valid && isSuccess) {
       await emitEvent({
         type: 'business.outcome.validated',
         tenantId,
@@ -385,7 +398,7 @@ function createCognitiveOrchestrator(deps = {}) {
           intent: intentResult?.intent || null,
         },
       });
-    } else if (!isSuccess || businessOutcome.outcome === 'outcome_not_achieved') {
+    } else if (!isHandoff && (!isSuccess || businessOutcome.outcome === 'outcome_not_achieved')) {
       await emitEvent({
         type: 'business.outcome.failed',
         tenantId,

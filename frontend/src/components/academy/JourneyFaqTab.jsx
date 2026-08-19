@@ -10,8 +10,31 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as academyApi from '../../api/academy';
+import { useAuth } from '../../context/authContext';
 import { Button } from '../../styles/Button';
 import logger from '../../utils/logger';
+
+/**
+ * Classificação de experiência do agente — mesma regra do backend
+ * (api/modules/agent-os/experience-segregation.js):
+ * super_admin → DEVELOPMENT; auditor → SUPPORT; demais papéis → PRODUCTION.
+ * Derivada SEMPRE do principal autenticado (auth context), nunca de payload.
+ */
+export function resolveAgentClassification(agent) {
+  const role = String((agent && agent.role) || '').trim().toLowerCase();
+  if (role === 'super_admin') return 'DEVELOPMENT';
+  if (role === 'auditor') return 'SUPPORT';
+  return 'PRODUCTION';
+}
+
+/**
+ * Fontes internas de evidência (paths de contratos/cenários governados) são
+ * detalhe técnico: visíveis apenas para SUPPORT/DEVELOPMENT (HARD-014).
+ * O dado continua persistido no backend — só a apresentação é segregada.
+ */
+export function canViewInternalSources(agent) {
+  return resolveAgentClassification(agent) !== 'PRODUCTION';
+}
 
 const CATEGORY_LABELS = {
   visao_geral: 'Visão geral',
@@ -29,7 +52,7 @@ const STATUS_LABELS = {
   excluded: 'Excluída',
 };
 
-function FaqItem({ item, isAdmin, onSetStatus, updating }) {
+function FaqItem({ item, isAdmin, showSources, onSetStatus, updating }) {
   return (
     <article className="academy-manual-card" data-testid={`faq-${item.id}`}>
       <div className="academy-manual-body">
@@ -41,7 +64,7 @@ function FaqItem({ item, isAdmin, onSetStatus, updating }) {
           {item.current === false ? ' · desatualizada (fonte mudou)' : ''}
           {item.curatedBy ? ` · curadoria de ${item.curatedBy}` : ''}
         </p>
-        {Array.isArray(item.sources) && item.sources.length > 0 && (
+        {showSources && Array.isArray(item.sources) && item.sources.length > 0 && (
           <p className="academy-muted">Fontes: {item.sources.join(', ')}</p>
         )}
       </div>
@@ -64,6 +87,8 @@ function FaqItem({ item, isAdmin, onSetStatus, updating }) {
 }
 
 export function JourneyFaqTab({ isAdmin }) {
+  const { agent } = useAuth();
+  const showSources = canViewInternalSources(agent);
   const [journeys, setJourneys] = useState(null);
   const [selectedJourney, setSelectedJourney] = useState('');
   const [items, setItems] = useState(null);
@@ -226,6 +251,7 @@ export function JourneyFaqTab({ isAdmin }) {
               key={item.id}
               item={item}
               isAdmin={isAdmin}
+              showSources={showSources}
               onSetStatus={handleSetStatus}
               updating={updating}
             />

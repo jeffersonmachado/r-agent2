@@ -158,7 +158,7 @@ Decisão arquitetural confirmada: **Cognitive Core = núcleo obrigatório do RAP
 |---|---|
 | Localização | `api/services/workspace/` (`WorkspaceEntityService`, `WorkspaceInsightService`, `WorkspaceActionService`, `WorkspaceTimelineService`, `WorkspaceOperationsService`, `WorkspaceLinkAutomationService`), `api/modules/workspace/`, frontend `workspaceAreas.js` |
 | Maturidade | Alta — é o single pane operacional |
-| Reaproveitamento | Tool `generateInsight` → `WorkspaceInsightService.persistInsight`; resultados cognitivos aparecem como insights/ações/timeline |
+| Reaproveitamento | Tool `generateInsight` → `WorkspaceInsightService.persistInsight`; resultados cognitivos aparecem como insights/ações/timeline. Desde o hardening de outcome contracts (2026-08), `generateInsight` tem `sideEffects: true` e é negada em intents INFORMATIONAL/READ_ONLY (ex.: `consultar_metricas` — o step fica auditável em `plan.denied`); só executa em planos com Outcome Contract |
 | Gaps | Nenhum |
 
 ## 17. Agent OS (camada existente — 2026-06-11)

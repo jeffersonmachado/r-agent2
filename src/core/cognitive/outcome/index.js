@@ -10,7 +10,18 @@
  *  - postCondition: validador do resultado (opcional)
  *
  * Se a ação obrigatória for negada (permission, capability, tool, etc.)
- * o plano NUNCA pode ser considerado concluído com sucesso.
+ * o plano NUNCA pode ser considerado concluído com sucesso — o Action
+ * Planner rejeita o plano inteiro (`required_action_denied`), o que torna
+ * desnecessária uma lista de "failureIfDenied" por contrato.
+ *
+ * INVARIANTE 4 (NO EXPLICIT BUSINESS OUTCOME → NO BUSINESS SUCCESS):
+ *  - intents de MUTATION que invocam tools com `sideEffects: true` exigem
+ *    um Outcome Contract declarado (enforced pelo Action Planner com erro
+ *    `outcome_contract_required`);
+ *  - intents READ_ONLY/INFORMATIONAL não declaram contrato e nunca executam
+ *    tools com sideEffects (o planner nega esses steps explicitamente);
+ *  - a evidência do contrato vem EXCLUSIVAMENTE do step que executou a
+ *    `requiredAction` — nunca de um merge flat dos outputs de todos os steps.
  *
  * Complementa o Validation Engine (que valida consistência técnica).
  * Este módulo valida resultado de NEGÓCIO.
@@ -22,12 +33,6 @@ const OUTCOME_CONTRACTS = Object.freeze({
     requiredAction: 'createAppointment',
     requiredOutcome: 'appointment_created',
     requiredEvidence: ['appointment.id'],
-    failureIfDenied: [
-      'cannot_complete',
-      'authorization_required',
-      'confirmation_required',
-      'dependency_unavailable',
-    ],
   },
   'schedule.reschedule': {
     description: 'Agendamento remarcado',
@@ -71,12 +76,6 @@ const OUTCOME_CONTRACTS = Object.freeze({
     requiredOutcome: 'ticket_created',
     requiredEvidence: [['ticket.id', 'id']],
   },
-  'messaging.send': {
-    description: 'Mensagem enviada',
-    requiredAction: 'sendWhatsappMessage',
-    requiredOutcome: 'message_sent',
-    requiredEvidence: ['messageId'],
-  },
   'handover.transfer': {
     description: 'Transferência para humano',
     requiredAction: 'transferConversation',
@@ -100,6 +99,33 @@ const INTENT_OUTCOME_MAP = Object.freeze({
   abrir_ticket: 'ticket.create',
   transferir_humano: 'handover.transfer',
 });
+
+/**
+ * Classificação da intent quanto a efeito colateral:
+ *  - READ_ONLY:     apenas leitura (consultar_status)
+ *  - INFORMATIONAL: leitura/agregação informativa (consultar_metricas)
+ *  - MUTATION:      default — qualquer intent não classificada é tratada
+ *                   como mutação e exige Outcome Contract para invocar
+ *                   tools com `sideEffects: true` (fail closed).
+ */
+const INTENT_CLASSES = Object.freeze({
+  READ_ONLY: 'READ_ONLY',
+  INFORMATIONAL: 'INFORMATIONAL',
+  MUTATION: 'MUTATION',
+});
+
+const INTENT_CLASS_MAP = Object.freeze({
+  consultar_status: INTENT_CLASSES.READ_ONLY,
+  consultar_metricas: INTENT_CLASSES.INFORMATIONAL,
+});
+
+/**
+ * @param {string} intent
+ * @returns {string} READ_ONLY | INFORMATIONAL | MUTATION (default)
+ */
+function getIntentClass(intent) {
+  return INTENT_CLASS_MAP[intent] || INTENT_CLASSES.MUTATION;
+}
 
 /**
  * Step typology — classificação explícita de cada passo do plano.
@@ -211,15 +237,18 @@ function validateBusinessOutcome({ intent, execution = {} } = {}) {
   }
 
   // 2. Evidências obrigatórias presentes?
+  // INVARIANTE 4: a evidência vem EXCLUSIVAMENTE do(s) step(s) que executaram
+  // a requiredAction do contrato (match por step.toolId). Um step qualquer com
+  // campos homônimos NÃO satisfaz o contrato.
   const evidence = {};
-  const stepOutputs = (execution.steps || [])
-    .filter((s) => s.status === 'executed' && s.output)
-    .reduce((acc, step) => {
-      if (step.output && typeof step.output === 'object') {
-        Object.assign(acc, step.output);
-      }
-      return acc;
-    }, {});
+  const actionSteps = (execution.steps || [])
+    .filter((s) => s.status === 'executed' && s.output && s.toolId === requiredAction);
+  const stepOutputs = actionSteps.reduce((acc, step) => {
+    if (step.output && typeof step.output === 'object') {
+      Object.assign(acc, step.output);
+    }
+    return acc;
+  }, {});
 
   for (const evidenceKey of contract.requiredEvidence) {
     // Suporte a paths compostos e alternativos.
@@ -228,7 +257,7 @@ function validateBusinessOutcome({ intent, execution = {} } = {}) {
     const paths = Array.isArray(evidenceKey) ? evidenceKey : [evidenceKey];
     let value = null;
     for (const p of paths) {
-      value = stepOutputs[p] || extractEvidence(stepOutputs, p) || execution[p] || null;
+      value = stepOutputs[p] || extractEvidence(stepOutputs, p) || null;
       if (value !== null && value !== undefined) break;
     }
 
@@ -255,9 +284,12 @@ function validateBusinessOutcome({ intent, execution = {} } = {}) {
 module.exports = {
   OUTCOME_CONTRACTS,
   INTENT_OUTCOME_MAP,
+  INTENT_CLASSES,
+  INTENT_CLASS_MAP,
   STEP_TYPES,
   STEP_TYPE_MAP,
   getOutcomeContract,
+  getIntentClass,
   stepType,
   validateBusinessOutcome,
 };

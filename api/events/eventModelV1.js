@@ -87,12 +87,14 @@ const EVENT_TYPES_V1 = new Set([
   // Cognitive Core — execuções do pipeline cognitivo
   'cognitive.execution.completed',
   'cognitive.execution.failed',
+  'cognitive.execution.handed_off',
 
   // Agent Runtime — roteamento, execução e delegação de agentes especialistas
   'agent.routing.completed',
   'agent.execution.started',
   'agent.execution.completed',
   'agent.execution.failed',
+  'agent.execution.handed_off',
   'agent.delegation.requested',
   'agent.delegation.completed',
   'tool.execution.started',

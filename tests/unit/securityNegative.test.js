@@ -237,8 +237,8 @@ describe('Security — Outcome Contracts', () => {
       execution: {
         status: 'completed',
         steps: [
-          { id: 'find_customer', output: { customerId: 'c1' } },
-          { id: 'create_appointment', status: 'executed', output: { appointment: { id: 'apt-123' } } },
+          { id: 'find_customer', toolId: 'searchCustomer', output: { customerId: 'c1' } },
+          { id: 'create_appointment', toolId: 'createAppointment', status: 'executed', output: { appointment: { id: 'apt-123' } } },
         ],
         toolsExecuted: ['searchCustomer', 'createAppointment'],
       },

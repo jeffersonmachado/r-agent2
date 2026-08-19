@@ -43,12 +43,18 @@ function createLearningEngine({ appendEventV1, recordFailure, logger } = {}) {
       throw new Error('cognitive_learning_record_invalid');
     }
     const sanitized = sanitize(executionRecord);
-    const succeeded = executionRecord.result?.status === 'completed';
+    const resultStatus = executionRecord.result?.status;
+    // Handoff humano é desfecho próprio (neutro) — nunca classificado como falha.
+    const handedOff = resultStatus === 'human_handoff_requested';
+    const succeeded = resultStatus === 'completed';
+    const eventType = handedOff
+      ? 'cognitive.execution.handed_off'
+      : (succeeded ? 'cognitive.execution.completed' : 'cognitive.execution.failed');
 
     try {
       await appendEvent({
         tenantId: executionRecord.tenantId,
-        type: succeeded ? 'cognitive.execution.completed' : 'cognitive.execution.failed',
+        type: eventType,
         source: 'cognitive-core',
         correlationId: executionRecord.executionId,
         subject: { type: 'cognitive_execution', id: executionRecord.executionId },

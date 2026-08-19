@@ -12,39 +12,17 @@
  * nunca expõe engines internas, QA, replay, seeds, mesh ou RPA).
  */
 
-const { hasPermission } = require('../../services/rbacService');
 const logger = require('../../utils/logger');
+const { getClassificationForAgent } = require('../agent-os/experience-segregation');
+const { resolveActorToolPermissions } = require('../../utils/actorToolPermissions');
 
 /**
- * Classificação de experiência do ator (mesma política do Agent OS):
+ * Classificação de experiência do ator — delega à fonte única da política
+ * (api/modules/agent-os/experience-segregation.js):
  * super_admin → DEVELOPMENT; auditor → SUPPORT; demais papéis → PRODUCTION.
  */
 function resolveActorClassification(agent) {
-  const role = String(agent?.role || '').toLowerCase();
-  if (role === 'super_admin') return 'DEVELOPMENT';
-  if (role === 'auditor') return 'SUPPORT';
-  return 'PRODUCTION';
-}
-
-/**
- * Traduz RBAC → permissões de tools do Cognitive Core.
- *
- * Baseline (quem tem ai/execute pode operar a IA de negócio): agenda, canal,
- * tickets, transferência e chamadas. Permissões com recurso RBAC equivalente
- * (crm, campanhas, workspace) são derivadas do papel real do usuário.
- */
-function resolveActorToolPermissions(agent) {
-  if (String(agent?.role || '').toLowerCase() === 'super_admin') return ['*'];
-
-  const granted = [];
-  if (hasPermission(agent, 'ai', 'execute')) {
-    granted.push('agenda.write', 'channel.send', 'ticket.write', 'conversation.transfer', 'pbx.call');
-  }
-  if (hasPermission(agent, 'crm', 'read')) granted.push('crm.read');
-  if (hasPermission(agent, 'crm', 'create') || hasPermission(agent, 'crm', 'update')) granted.push('crm.write');
-  if (hasPermission(agent, 'bulk_messaging', 'create') || hasPermission(agent, 'bulk_messaging', 'update')) granted.push('campaign.write');
-  if (hasPermission(agent, 'workspace', 'write') || hasPermission(agent, 'workspace', 'action')) granted.push('workspace.write');
-  return granted;
+  return getClassificationForAgent(agent);
 }
 
 function buildActor(req) {
@@ -53,6 +31,53 @@ function buildActor(req) {
     classification: resolveActorClassification(req.agent),
     permissions: resolveActorToolPermissions(req.agent),
   };
+}
+
+/**
+ * Mensagem operacional curta derivada do desfecho de negócio.
+ */
+function businessMessage(result) {
+  if (!result || typeof result !== 'object') return null;
+  if (result.status === 'human_handoff_requested' || result.humanHandoff === true) {
+    return 'Solicitação encaminhada para atendimento humano.';
+  }
+  if (result.requiresConfirmation === true) return 'Ação pendente de confirmação explícita.';
+  if (result.businessOutcome === 'outcome_not_achieved') return 'A ação solicitada não foi concluída.';
+  return null;
+}
+
+/**
+ * DTO de resultado de negócio (HARD-014 / INVARIANTE 9).
+ *
+ * PRODUCTION recebe apenas o resultado de negócio (status, outcome, message,
+ * data) — nunca internals de execução (`outputs` com ids de steps e saídas
+ * brutas de tools, nem razões técnicas de falha do outcome). SUPPORT e
+ * DEVELOPMENT recebem os detalhes técnicos para diagnóstico.
+ *
+ * Nada é destruído: o execution record completo segue persistido no ledger
+ * pelo orchestrator; apenas a apresentação é segregada. A classificação vem
+ * do principal autenticado (req.agent → role), nunca do payload do cliente.
+ */
+function buildBusinessResultDTO(result, classification) {
+  const dto = {
+    executionId: result.executionId,
+    tenantId: result.tenantId,
+    status: result.status,
+    intent: result.intent,
+    confidence: result.confidence,
+    humanHandoff: result.humanHandoff,
+    fallback: result.fallback,
+    requiresConfirmation: result.requiresConfirmation,
+    outcome: result.businessOutcome,
+    message: businessMessage(result),
+    data: { evidence: result.businessEvidence || {} },
+    latencyMs: result.latencyMs,
+  };
+  if (String(classification || '').toUpperCase() !== 'PRODUCTION') {
+    dto.businessFailures = result.businessFailures || [];
+    dto.outputs = result.outputs || [];
+  }
+  return dto;
 }
 
 async function handleCognitiveRoutes(ctx) {
@@ -89,6 +114,7 @@ async function handleCognitiveRoutes(ctx) {
     }
 
     try {
+      const actor = buildActor(req);
       const result = await orchestrator.process({
         tenantId,
         channel: body.channel || 'workspace',
@@ -96,9 +122,9 @@ async function handleCognitiveRoutes(ctx) {
         message: body.message || null,
         eventType: body.eventType || null,
         payload: body.payload || {},
-        actor: buildActor(req),
+        actor,
       });
-      sendJson({ ok: true, result });
+      sendJson({ ok: true, result: buildBusinessResultDTO(result, actor.classification) });
     } catch (error) {
       logger.error('[CognitiveRoutes] process failed', {
         tenantId,
@@ -138,5 +164,5 @@ async function handleCognitiveRoutes(ctx) {
 
 module.exports = {
   handleCognitiveRoutes,
-  _internal: { resolveActorClassification, resolveActorToolPermissions },
+  _internal: { resolveActorClassification, resolveActorToolPermissions, buildBusinessResultDTO },
 };

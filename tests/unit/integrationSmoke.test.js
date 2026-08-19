@@ -139,7 +139,7 @@ describe('Integration Smoke — Outcome Validation', () => {
       execution: {
         status: 'completed',
         steps: [
-          { id: 'create_appointment', status: 'executed', output: { appointment: { id: 'apt-1' } } },
+          { id: 'create_appointment', toolId: 'createAppointment', status: 'executed', output: { appointment: { id: 'apt-1' } } },
         ],
         toolsExecuted: ['createAppointment'],
       },
@@ -154,7 +154,7 @@ describe('Integration Smoke — Outcome Validation', () => {
       execution: {
         status: 'completed',
         steps: [
-          { id: 'create_lead', status: 'executed', output: { lead: { id: 'lead-1' } } },
+          { id: 'create_lead', toolId: 'createLead', status: 'executed', output: { lead: { id: 'lead-1' } } },
         ],
         toolsExecuted: ['createLead'],
       },
