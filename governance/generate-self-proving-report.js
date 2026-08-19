@@ -42,6 +42,47 @@ function findLatestZip() {
   return zips[0] || null;
 }
 
+// ─── Decisões de GO por engine — vocabulário explícito, nunca substring ──────
+// Cada validador obrigatório tem um conjunto fechado de decisões que contam
+// como prova válida. Qualquer outra decisão (NO_GO, UNKNOWN, estágio
+// intermediário como PRODLIKE_GO, vocabulário novo) é falha de validador.
+const ENGINE_GO_DECISIONS = {
+  replayHardening:      ['REPLAY_HARDENING_GO'],
+  replayConsistency:    ['REPLAY_CONSISTENCY_GO'],
+  contamination:        ['NO_CONTAMINATION'],
+  packageIntegrity:     ['PACKAGE_INTEGRITY_GO'],
+  finalGovernance:      ['AUTONOMOUS_READY_GO'],
+  readiness:            ['AUTONOMOUS_READY_GO'],
+  readinessDrift:       ['READINESS_NO_DRIFT'],
+  finalConsistencyGate: ['FINAL_CONSISTENCY_GO'],
+};
+
+function isEngineGo(engine, decision) {
+  const allowed = ENGINE_GO_DECISIONS[engine];
+  return Array.isArray(allowed) && allowed.includes(decision);
+}
+
+/**
+ * autonomousReady deriva dos resultados reais dos validadores: TODOS os
+ * engines obrigatórios com decisão de GO explícita. Nunca heurística de
+ * substring sobre o texto da decisão.
+ */
+function deriveAutonomousReady(engineDecisions) {
+  return Object.keys(ENGINE_GO_DECISIONS).every((engine) => isEngineGo(engine, engineDecisions[engine]));
+}
+
+/**
+ * Lista os validadores obrigatórios que NÃO estão em decisão de GO explícita.
+ * Usado para o exit code do CLI: qualquer falha → exit não-zero.
+ */
+function collectMandatoryFailures(engineDecisions, packageOk) {
+  const failures = Object.keys(ENGINE_GO_DECISIONS)
+    .filter((engine) => !isEngineGo(engine, engineDecisions[engine]))
+    .map((engine) => ({ engine, decision: engineDecisions[engine] }));
+  if (!packageOk) failures.push({ engine: 'packageIntegrity.zipBinding', decision: 'ZIP_HASH_NOT_BOUND' });
+  return failures;
+}
+
 function generateSelfProvingReport() {
   const zipName = findLatestZip();
   const zipHash = zipName ? sha256File(`dist/${zipName}`) : null;
@@ -91,6 +132,11 @@ function generateSelfProvingReport() {
   );
   const packageOk = engineDecisions.packageIntegrity === 'PACKAGE_INTEGRITY_GO';
 
+  // Derivação real: autonomousReady e falhas obrigatórias vêm do vocabulário
+  // fechado de decisões GO por engine (nunca de match de substring).
+  const autonomousReady    = deriveAutonomousReady(engineDecisions);
+  const mandatoryFailures  = collectMandatoryFailures(engineDecisions, packageOk);
+
   const report = {
     generatedAt:               new Date().toISOString(),
     engine:                    'generate-self-proving-report/v1',
@@ -114,8 +160,11 @@ function generateSelfProvingReport() {
     // Status geral
     packageIntegrityOk: packageOk,
     allEnginesBlockedOrUnknown: allNoGo,
-    autonomousReady: Object.values(engineDecisions).every((d) => d === 'AUTONOMOUS_READY_GO' || d.includes('_GO') && !d.includes('NO_GO') && !d.includes('CONTAMINATION') && !d.includes('DRIFT') && !d.includes('CONSISTENCY_NO')),
-    summary: `Self-proving report gerado. ZIP: ${zipName || 'ausente'}. Package: ${packageOk ? 'ÍNTEGRO' : 'DIVERGENTE'}.`,
+    autonomousReady,
+    // FASE 16 — falha explícita de validador obrigatório
+    mandatoryFailures,
+    ok: mandatoryFailures.length === 0,
+    summary: `Self-proving report gerado. ZIP: ${zipName || 'ausente'}. Package: ${packageOk ? 'ÍNTEGRO' : 'DIVERGENTE'}. Validadores falhos: ${mandatoryFailures.length}.`,
   };
 
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
@@ -123,11 +172,19 @@ function generateSelfProvingReport() {
   return report;
 }
 
-module.exports = { generateSelfProvingReport };
+module.exports = {
+  generateSelfProvingReport,
+  deriveAutonomousReady,
+  collectMandatoryFailures,
+  isEngineGo,
+  ENGINE_GO_DECISIONS,
+};
 
 if (require.main === module) {
   const report = generateSelfProvingReport();
   // eslint-disable-next-line no-console
-  console.log(`[self-proving-report] zip=${report.zipName} packageOk=${report.packageIntegrityOk} autonomousReady=${report.autonomousReady}`);
-  process.exit(0);
+  console.log(`[self-proving-report] zip=${report.zipName} packageOk=${report.packageIntegrityOk} autonomousReady=${report.autonomousReady} failures=${report.mandatoryFailures.length}`);
+  // Exit não-zero quando qualquer validador obrigatório falha — o relatório
+  // deriva dos resultados reais dos validadores, nunca de exit 0 incondicional.
+  process.exit(report.ok ? 0 : 1);
 }

@@ -18,6 +18,10 @@
  *   - ui.available = false em qualquer snapshot de step
  *   - ui.reason = playwright_page_unavailable em step crítico
  *   - replay.status = GO mas evidências contradizem
+ *
+ * Classificação hardened: apenas replays com verificação determinística
+ * completa (steps + hashes) são `hardened`. Registros hash-only vindos de
+ * proof-signature.json NUNCA são hardened — ver buildHashOnlyRecord.
  */
 
 const fs     = require('fs');
@@ -244,6 +248,28 @@ function analyzeFlows(smokeData, sourcePath, VISUAL_CRITICAL) {
   return results;
 }
 
+// ─── Registro hash-only (proof-signature.json) ──────────────────────────────
+// Um replay certificado apenas por hash NÃO é hardened: hardened exige a
+// verificação determinística completa definida neste motor (steps analisados,
+// failedStepCount=0, failedStepIds vazio, UI disponível em jornadas críticas).
+// Registro hash-only não contém evidência de execução — apenas prova de que um
+// hash foi assinado. Por isso `hardened` é false e o registro não conta para
+// `hardenedReplays`; também não gera violação (ausência de evidência não é
+// evidência de falha — mas nunca conta como prova de hardening).
+function buildHashOnlyRecord(subjectHashEntry = {}) {
+  return {
+    journeyId:   subjectHashEntry.journeyId,
+    source:      'governance/proof-signature.json',
+    status:      'SIGNED_HASH_ONLY',
+    violations:  [],
+    hardened:    false,
+    hashOnly:    true,
+    replayDeterministicHash: subjectHashEntry.replayHash || null,
+    replayExecutionHash:     null,
+    replayEvidenceHash:      null,
+  };
+}
+
 // ─── Motor principal ──────────────────────────────────────────────────────────
 function runReplayHardeningEngine() {
   const VISUAL_CRITICAL = loadVisualCriticalJourneys();
@@ -276,18 +302,7 @@ function runReplayHardeningEngine() {
   for (const r of proofSig.subjectHashes || []) {
     const jid = r.journeyId;
     if (results.find((x) => x.journeyId === jid)) continue;
-    // Registros hash-only: sem evidência de execução completa → análise limitada
-    results.push({
-      journeyId:   jid,
-      source:      'governance/proof-signature.json',
-      status:      'SIGNED',
-      violations:  [],
-      hardened:    true,
-      hashOnly:    true,
-      replayDeterministicHash: r.replayHash || null,
-      replayExecutionHash:     null,
-      replayEvidenceHash:      null,
-    });
+    results.push(buildHashOnlyRecord(r));
   }
 
   // 4. Enterprise replays
@@ -320,6 +335,7 @@ function runReplayHardeningEngine() {
     decision:             pass ? 'REPLAY_HARDENING_GO' : 'REPLAY_HARDENING_NO_GO',
     totalReplaysAnalyzed: results.length,
     hardenedReplays:      results.filter((r) => r.hardened).length,
+    hashOnlyReplays:      results.filter((r) => r.hashOnly).length,
     violations:           allViolations.length,
     uiViolations:         uiViolations.length,
     failedReplays:        failedReplays.length,
@@ -336,7 +352,7 @@ function runReplayHardeningEngine() {
   return report;
 }
 
-module.exports = { runReplayHardeningEngine, analyzeIndividualReplay, loadVisualCriticalJourneys };
+module.exports = { runReplayHardeningEngine, analyzeIndividualReplay, loadVisualCriticalJourneys, buildHashOnlyRecord };
 
 if (require.main === module) {
   const report = runReplayHardeningEngine();

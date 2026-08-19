@@ -37,7 +37,13 @@ const logger = require('../../../utils/logger');
  */
 function buildSupportOperationalSeedSpec(options = {}) {
   const suffix = options.suffix || String(Date.now());
-  const tenantId = options.tenantId || process.env.DEFAULT_TENANT_ID || 'system';
+  // FASE 15 — tenant ausente é erro explícito; fallback silencioso é proibido.
+  const tenantId = options.tenantId || process.env.DEFAULT_TENANT_ID || null;
+  if (!tenantId) {
+    const error = new Error('tenantId obrigatório para seed operacional de suporte');
+    error.code = 'tenant_required';
+    throw error;
+  }
   const agentId = options.agentId || process.env.DEFAULT_AGENT_ID || 'qa-agent-seed';
   const phone = options.phone || `551199${suffix.slice(-7)}`;
 

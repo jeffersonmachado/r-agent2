@@ -39,17 +39,28 @@ function buildEntityGraph(introspectionReport, domainMap) {
     });
   }
 
-  // Cria edges a partir de FK
+  // Cria edges a partir de FK (metadata real: references/associations).
+  // references.model pode ser tableName ('kg_nodes') ou modelName
+  // ('KnowledgeGraphNode') — resolve por ambos.
+  const nodeIds = new Set(nodes.map(n => n.id));
+  const nodeIdByTableName = new Map(nodes.map(n => [n.tableName, n.id]));
   for (const model of models) {
     if (model.error || !model.foreignKeys) continue;
     for (const [fkName, fkDef] of Object.entries(model.foreignKeys)) {
-      const targetModel = fkDef.referencedModel;
-      if (nodes.some(n => n.id === targetModel)) {
+      let targetModel = fkDef.referencedModel;
+      if (!nodeIds.has(targetModel) && fkDef.referencedTable && nodeIdByTableName.has(fkDef.referencedTable)) {
+        targetModel = nodeIdByTableName.get(fkDef.referencedTable);
+      }
+      if (!nodeIds.has(targetModel) && nodeIdByTableName.has(String(targetModel))) {
+        targetModel = nodeIdByTableName.get(String(targetModel));
+      }
+      if (nodeIds.has(targetModel)) {
         edges.push({
           source: model.modelName,
           target: targetModel,
           relationship: fkName.replace(/_id$|_key$/, ''),
           fkField: fkName,
+          fkSource: fkDef.source || null,
           required: !fkDef.allowNull,
         });
       }
@@ -184,6 +195,107 @@ const JOURNEY_TEMPLATES = {
 };
 
 /**
+ * FASES 13-14 — Inferência de jornadas candidatas via entity graph (FKs
+ * reais). Componentes de models conectados por FK que NÃO são cobertos por
+ * nenhuma jornada de template geram:
+ *   - `candidateJourneys`: jornada candidata inferida via FK (status
+ *     'candidate', source 'entity_graph_fk');
+ *   - `uncoveredBehaviors`: sinal 'behavior_without_registered_journey' por
+ *     model conectado por FK sem jornada registrada.
+ * Os JOURNEY_TEMPLATES continuam como conhecimento adicional — não são mais
+ * a única fonte de descoberta.
+ */
+function inferFkCandidateJourneys(introspectionReport, entityGraph, templateJourneys = []) {
+  const fkEdges = (entityGraph?.edges || []).filter(e => e.relationship !== 'same_domain');
+  const nodeDomain = new Map((entityGraph?.nodes || []).map(n => [n.id, n.domain]));
+  const coveredModels = new Set(templateJourneys.flatMap(j => j.availableModels || []));
+
+  // Adjacência não-direcionada (componentes) + grau de entrada (entrypoints)
+  const adjacency = new Map();
+  const inDegree = new Map();
+  for (const edge of fkEdges) {
+    if (!adjacency.has(edge.source)) adjacency.set(edge.source, new Set());
+    if (!adjacency.has(edge.target)) adjacency.set(edge.target, new Set());
+    adjacency.get(edge.source).add(edge.target);
+    adjacency.get(edge.target).add(edge.source);
+    if (!inDegree.has(edge.source)) inDegree.set(edge.source, 0);
+    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1);
+  }
+
+  // Componentes conectados — visita em ordem alfabética (determinístico)
+  const visited = new Set();
+  const components = [];
+  for (const start of [...adjacency.keys()].sort()) {
+    if (visited.has(start)) continue;
+    const component = [];
+    const queue = [start];
+    visited.add(start);
+    while (queue.length > 0) {
+      const current = queue.shift();
+      component.push(current);
+      for (const next of [...(adjacency.get(current) || [])].sort()) {
+        if (!visited.has(next)) {
+          visited.add(next);
+          queue.push(next);
+        }
+      }
+    }
+    components.push(component.sort());
+  }
+
+  const candidateJourneys = [];
+  const uncoveredBehaviors = [];
+
+  for (const component of components) {
+    const uncovered = component.filter(m => !coveredModels.has(m));
+    if (uncovered.length === 0) continue;
+
+    for (const modelName of uncovered) {
+      uncoveredBehaviors.push({
+        model: modelName,
+        signal: 'behavior_without_registered_journey',
+        linkedModels: [...(adjacency.get(modelName) || [])].sort(),
+        fkLinked: true,
+      });
+    }
+
+    const entrypoints = component.filter(m => (inDegree.get(m) || 0) === 0);
+    const domainCounts = {};
+    for (const m of component) {
+      const d = nodeDomain.get(m) || 'Unassigned';
+      domainCounts[d] = (domainCounts[d] || 0) + 1;
+    }
+    const dominantDomain = Object.entries(domainCounts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+    const componentEdges = fkEdges.filter(e => component.includes(e.source) && component.includes(e.target));
+    const rootName = entrypoints[0] || component[0];
+
+    candidateJourneys.push({
+      id: makeId('journey'),
+      name: `FK Candidate: ${rootName}`,
+      slug: `fk-candidate-${rootName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      description: `Jornada candidata inferida via FKs reais do entity graph (${component.length} models conectados, ${uncovered.length} sem jornada registrada)`,
+      domain: dominantDomain,
+      source: 'entity_graph_fk',
+      inferredFromFk: true,
+      status: 'candidate',
+      sourceModels: component,
+      availableModels: component,
+      missingModels: [],
+      uncoveredModels: uncovered,
+      entrypoints: entrypoints.length > 0 ? entrypoints : [component[0]],
+      fkEdges: componentEdges,
+      expectedOutcomes: [],
+      successCriteria: [],
+      failureCriteria: [],
+      completeness: 1,
+    });
+  }
+
+  return { candidateJourneys, uncoveredBehaviors, fkEdgesAnalyzed: fkEdges.length };
+}
+
+/**
  * Infere jornadas a partir do domain map e entity graph.
  */
 function inferJourneys(introspectionReport, domainMap, entityGraph) {
@@ -226,10 +338,20 @@ function inferJourneys(introspectionReport, domainMap, entityGraph) {
     });
   }
 
+  // FASES 13-14 — o entityGraph (FKs reais) é consumido de verdade: templates
+  // são conhecimento adicional, não a única fonte de descoberta de jornadas.
+  const { candidateJourneys, uncoveredBehaviors, fkEdgesAnalyzed } =
+    inferFkCandidateJourneys(introspectionReport, entityGraph, journeys);
+
   return {
     generatedAt: nowIso(),
     totalJourneys: journeys.length,
     journeys,
+    candidateJourneys,
+    totalCandidateJourneys: candidateJourneys.length,
+    uncoveredBehaviors,
+    entityGraphConsumed: true,
+    fkEdgesAnalyzed,
   };
 }
 
@@ -511,9 +633,62 @@ function generateModelDrivenWaves(journeys, scenarios) {
   };
 }
 
+/**
+ * Executa o pipeline de inferência completo sobre os models atuais
+ * (introspection → domain map → entity graph → journey inference).
+ * Usado pelo Agent Factory (agent-hardening-service) para resolver jornadas
+ * model-driven reais em tempo de validação.
+ */
+function inferJourneysFromModels() {
+  const { introspectAllModels } = require('./model-introspection-service');
+  const { buildDomainMap } = require('./domain-map-service');
+  const introspection = introspectAllModels();
+  const domainMap = buildDomainMap(introspection);
+  const entityGraph = buildEntityGraph(introspection, domainMap);
+  return inferJourneys(introspection, domainMap, entityGraph);
+}
+
+/**
+ * Verificação REAL da integração Agent Factory ↔ model-driven journeys.
+ * Nunca literal: exige que o consumidor (agent-hardening-service) exista,
+ * exponha o resolvedor e que uma chamada real derive das jornadas desta
+ * execução do pipeline.
+ */
+function verifyAgentFactoryModelDrivenIntegration(journeysReport) {
+  try {
+    const hardeningService = require('./agent-hardening-service');
+    if (typeof hardeningService.resolveModelDrivenJourneysForValidation !== 'function') {
+      return {
+        used: false,
+        evidence: {
+          reason: 'consumer_missing',
+          detail: 'agent-hardening-service não expõe resolveModelDrivenJourneysForValidation',
+        },
+      };
+    }
+    const probe = hardeningService.resolveModelDrivenJourneysForValidation({
+      agent: { slug: 'model-driven-integration-probe', name: 'integration-probe', domain: 'Agent OS' },
+      journeysReport,
+    });
+    const derived = Boolean(probe)
+      && probe.source === 'model-driven-pipeline.inferJourneys'
+      && probe.totalJourneys === (journeysReport?.totalJourneys ?? -1)
+      && Array.isArray(probe.relatedJourneys);
+    return {
+      used: derived,
+      evidence: { reason: derived ? 'consumer_invoked' : 'consumer_output_invalid', probe },
+    };
+  } catch (error) {
+    return { used: false, evidence: { reason: 'consumer_error', detail: error.message } };
+  }
+}
+
 module.exports = {
   buildEntityGraph,
   inferJourneys,
+  inferFkCandidateJourneys,
+  inferJourneysFromModels,
+  verifyAgentFactoryModelDrivenIntegration,
   generateScenarios,
   generateSeeds,
   generateModelDrivenWaves,

@@ -31,7 +31,13 @@ const DEVICE_MODES = {
  */
 function buildFitnessOperationalSeedSpec(options = {}) {
   const suffix = options.suffix || String(Date.now());
-  const tenantId = options.tenantId || process.env.DEFAULT_TENANT_ID || 'system';
+  // FASE 15 — tenant ausente é erro explícito; fallback silencioso é proibido.
+  const tenantId = options.tenantId || process.env.DEFAULT_TENANT_ID || null;
+  if (!tenantId) {
+    const error = new Error('tenantId obrigatório para seed operacional de fitness');
+    error.code = 'tenant_required';
+    throw error;
+  }
 
   // Prioridade: device real > device de test > FALHA (nunca simulado)
   const rawDeviceId = options.deviceId

@@ -60,6 +60,14 @@ const SEED_TEMPLATES = {
 
 /**
  * Domain-specific seed data
+ *
+ * FASE 15 — PLACEHOLDERS DECLARATIVOS: estes seeds são dados iniciais
+ * declarados manualmente (hard-coded), NÃO são gerados relacionalmente a
+ * partir do grafo de entidades/FKs. Eles descrevem intenção de teste por
+ * domínio, mas não garantem integridade relacional nem ordem de
+ * provisionamento por FK. Todo seed originado daqui é rotulado com
+ * `placeholder: true` e `seedNature: 'declarative_placeholder'` no report —
+ * nunca deve ser apresentado como seed relacional validado.
  */
 const DOMAIN_SEEDS = {
   support_ticket: {
@@ -246,6 +254,10 @@ function inferDomainSpecificSeeds(capability = {}, availableSeeds = DOMAIN_SEEDS
         data,
         domain,
         inferred: true,
+        // FASE 15 — seeds declarativos iniciais (ver nota em DOMAIN_SEEDS):
+        // não são geração relacional por FK; o rótulo é obrigatório no report.
+        placeholder: true,
+        seedNature: 'declarative_placeholder',
       }));
     }
   }

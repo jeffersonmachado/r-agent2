@@ -6,6 +6,9 @@
  * Carrega todos os models Sequelize de api/db/models/
  * Extrai: modelName, tableName, attributes, constraints, FK, PK, indexes,
  * associations, JSONB fields, status fields, lifecycle fields, timestamps.
+ *
+ * FKs são detectadas APENAS por metadata real do Sequelize
+ * (`attrMeta.references` ou associação BelongsTo) — nunca por sufixo de nome.
  */
 const path = require('path');
 const fs = require('fs');
@@ -71,26 +74,83 @@ function extractLifecycleFields(attributes) {
 }
 
 /**
- * Detecta campos de foreign key baseado no nome (termina com _id, não é PK).
+ * Normaliza `references` do Sequelize ({ model: 'tabela'|Model, key }) para
+ * { model, table, key }. Retorna null quando não há referência real declarada.
  */
-function detectForeignKeyFields(attributes, primaryKeys) {
-  const fks = {};
-  for (const [name, def] of Object.entries(attributes)) {
-    if (!primaryKeys.includes(name) && (name.endsWith('_id') || name === 'tenant_key' || name === 'tenant_id')) {
-      fks[name] = {
-        referencedModel: inferReferencedModel(name),
-        allowNull: def.allowNull !== false,
-      };
+function normalizeReferences(references) {
+  if (!references || typeof references !== 'object') return null;
+  const model = references.model;
+  if (!model) return null;
+  if (typeof model === 'string') return { model, table: model, key: references.key || 'id' };
+  // references.model pode ser a classe do Model Sequelize
+  const modelName = model.modelName || model.name || null;
+  const tableName = model.tableName || (model.options && model.options.tableName) || null;
+  if (!modelName && !tableName) return null;
+  return { model: modelName || tableName, table: tableName, key: references.key || 'id' };
+}
+
+/**
+ * Extrai FKs reais das associações Sequelize carregadas (model.associations).
+ * Apenas BelongsTo introduz FK no model local; demais tipos vivem no target
+ * ou em tabela de junção e não são FK local.
+ */
+function extractAssociationForeignKeys(model) {
+  const associations = model && model.associations;
+  if (!associations || typeof associations !== 'object') return [];
+  const fks = [];
+  for (const assoc of Object.values(associations)) {
+    if (!assoc || assoc.associationType !== 'BelongsTo') continue;
+    const fkField = typeof assoc.foreignKey === 'string'
+      ? assoc.foreignKey
+      : (assoc.foreignKey && (assoc.foreignKey.fieldName || assoc.foreignKey.name)) || null;
+    const target = assoc.target;
+    const referencedModel = (target && (target.name || (target.options && target.options.name && target.options.name.singular))) || null;
+    if (fkField && referencedModel) {
+      fks.push({ fkField, referencedModel, as: assoc.as || null });
     }
   }
   return fks;
 }
 
-function inferReferencedModel(fieldName) {
-  if (fieldName === 'tenant_key' || fieldName === 'tenant_id') return 'Tenant';
-  const base = fieldName.replace(/_id$/, '').replace(/_key$/, '');
-  // PascalCase
-  return base.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+/**
+ * Detecta foreign keys por metadata REAL do Sequelize — nunca por sufixo de
+ * nome: um campo `owner` com `references` declarado É uma FK; um campo
+ * `xyz_id` sem `references` e sem associação BelongsTo NÃO é.
+ *
+ * Fontes aceitas (ambas reais):
+ *   1. attrMeta.references (DataTypes attribute references)
+ *   2. model.associations[*] com associationType 'BelongsTo'
+ */
+function detectForeignKeyFields(attributes, primaryKeys, associationFks = []) {
+  const fks = {};
+  for (const [name, def] of Object.entries(attributes)) {
+    if (primaryKeys.includes(name)) continue;
+    const refs = normalizeReferences(def.references);
+    if (refs && refs.model) {
+      fks[name] = {
+        referencedModel: refs.model,
+        referencedTable: refs.table || null,
+        referencedKey: refs.key,
+        allowNull: def.allowNull !== false,
+        source: 'sequelize_references',
+      };
+    }
+  }
+  for (const assoc of associationFks) {
+    if (fks[assoc.fkField]) {
+      fks[assoc.fkField].source = 'sequelize_references+association';
+      continue;
+    }
+    fks[assoc.fkField] = {
+      referencedModel: assoc.referencedModel,
+      referencedTable: null,
+      referencedKey: 'id',
+      allowNull: attributes[assoc.fkField] ? attributes[assoc.fkField].allowNull !== false : true,
+      source: 'sequelize_association',
+      as: assoc.as || null,
+    };
+  }
+  return fks;
 }
 
 /**
@@ -198,7 +258,8 @@ function introspectModel(requirePath, modelName) {
     }
 
     const primaryKeys = extractPrimaryKeys(attributes);
-    const foreignKeys = detectForeignKeyFields(attrMeta, primaryKeys);
+    const associationFks = extractAssociationForeignKeys(model);
+    const foreignKeys = detectForeignKeyFields(attrMeta, primaryKeys, associationFks);
 
     return {
       modelName,
@@ -206,6 +267,7 @@ function introspectModel(requirePath, modelName) {
       attributes: attrMeta,
       primaryKeys,
       foreignKeys,
+      associations: associationFks,
       indexes: extractIndexes(model),
       statusFields: extractStatusFields(attributes),
       jsonbFields: extractJsonbFields(attributes),
@@ -285,6 +347,26 @@ function introspectModelFromSource(requirePath, modelName) {
       primaryKeys.push('id');
     }
 
+    // FK real via metadata: extrai `references: { model: 'x', key: 'y' }` do
+    // source (um nível de chaves aninhadas) e anexa ao atributo já extraído.
+    // Campo SEM references declarado nunca vira FK — sufixo _id não é prova.
+    const referencesPattern = /(\w+)\s*:\s*\{((?:[^{}]|\{[^{}]*\})*?)references\s*:\s*\{\s*model\s*:\s*['"]([^'"]+)['"]\s*,\s*key\s*:\s*['"]([^'"]+)['"]/g;
+    let refsMatch;
+    while ((refsMatch = referencesPattern.exec(source)) !== null) {
+      const fieldName = refsMatch[1];
+      if (attributes[fieldName]) {
+        attributes[fieldName].references = { model: refsMatch[3], key: refsMatch[4] };
+      } else {
+        attributes[fieldName] = {
+          type: 'UNKNOWN',
+          allowNull: true,
+          defaultValue: null,
+          primaryKey: false,
+          references: { model: refsMatch[3], key: refsMatch[4] },
+        };
+      }
+    }
+
     const tableNameMatch = source.match(/tableName\s*:\s*['"]([^'"]+)['"]/);
     const hasTimestamps = !source.includes('timestamps: false');
 
@@ -340,4 +422,7 @@ module.exports = {
   introspectAllModels,
   introspectModel,
   introspectModelFromSource,
+  detectForeignKeyFields,
+  normalizeReferences,
+  extractAssociationForeignKeys,
 };

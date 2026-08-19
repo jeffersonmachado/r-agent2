@@ -3,7 +3,7 @@
 
 require('../api/utils/runtimePaths').configureRuntimeRoot('/tmp/ragent2-runtime');
 
-const { listLatestScenarios, runScenarioExecution } = require('../api/services/qaWavesScenarioService');
+const { listLatestScenarios, runScenarioExecution, isSeedExecutableForEvidence } = require('../api/services/qaWavesScenarioService');
 const { getQueuedExecutionStatus } = require('../api/services/qaMeshService');
 const { EXECUTABLE_SCENARIO_STATUS } = require('../api/modules/qa-waves/waveScenario.constants');
 
@@ -37,17 +37,33 @@ async function main() {
   }
 
   const listed = listLatestScenarios({ waveId });
-  const scenarios = (listed.items || []).filter((scenario) => EXECUTABLE_SCENARIO_STATUS.includes(scenario.status));
+  const allScenarios = listed.items || [];
+  const draftAiScenarios = allScenarios.filter(
+    (scenario) => String(scenario.status || '').toLowerCase() === 'draft_ai',
+  );
+  const scenarios = allScenarios.filter((scenario) => EXECUTABLE_SCENARIO_STATUS.includes(scenario.status));
 
+  // FASE 15 — rascunhos de IA (draft_ai) nunca executam como evidência:
+  // exigem aprovação explícita. Se a wave só tem rascunhos, falha explícita.
   if (scenarios.length === 0) {
-    console.error(`Nenhum cenário executável encontrado para a wave: ${waveId}`);
+    if (draftAiScenarios.length > 0) {
+      console.error(
+        `Nenhum cenário executável: ${draftAiScenarios.length} cenário(s) em draft_ai aguardando aprovação `
+        + `(status exigido: ${EXECUTABLE_SCENARIO_STATUS.join(', ')}).`,
+      );
+    } else {
+      console.error(`Nenhum cenário executável encontrado para a wave: ${waveId}`);
+    }
     process.exit(1);
+  }
+  if (draftAiScenarios.length > 0) {
+    console.log(`  Ignorados (draft_ai aguardando aprovação): ${draftAiScenarios.length}`);
   }
 
   const plannedRuns = [];
   for (const scenario of scenarios) {
     const enabledSeeds = Array.isArray(scenario.seeds) && scenario.seeds.length > 0
-      ? scenario.seeds.filter((seed) => seed.status !== 'disabled')
+      ? scenario.seeds.filter((seed) => isSeedExecutableForEvidence(seed))
       : [null];
 
     for (const seed of enabledSeeds) {

@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { resolveEvidenceCandidates, resolveWorkspacePath, getRuntimeRoot } = require('../../tools/system/lib/runtime-paths');
 const { validatePackage } = require('../package-validator');
 const { runCrossReportValidation, classifyPbxMaturity, THRESHOLDS } = require('../cross-report-validator');
+const { computeFingerprintChain, compareFingerprintChains } = require('./fingerprint-chain');
 
 const ROOT = path.join(__dirname, '..', '..');
 
@@ -138,6 +139,110 @@ function hasArrayPayload(artifact, key) {
   return Boolean(Array.isArray(artifact?.json?.[key]) && artifact.json[key].length > 0);
 }
 
+// ─── Validade semântica — artefato presente ≠ artefato válido (FASE 16) ─────
+// Flags negativas explícitas invalidam a prova mesmo quando o arquivo existe:
+//   - `ok === false` ou `valid === false` no nível raiz do artefato;
+//   - `status` 'failed'/'NO_GO' no nível raiz;
+//   - qualquer assertion com `passed === false` (arrays `assertions`, em
+//     qualquer profundidade);
+//   - `valid === false` dentro de snapshots (`diff`, `snapshotDiff`,
+//     `postState`, `before/after(Step)Snapshot`).
+// Heurísticas de presença (arquivo existe, array não vazio) permanecem, mas
+// nunca são suficientes: conteúdo semanticamente inválido derruba a avaliação.
+const SNAPSHOT_CONTAINER_KEYS = new Set([
+  'diff', 'snapshotDiff', 'postState',
+  'beforeSnapshot', 'afterSnapshot', 'beforeStepSnapshot', 'afterStepSnapshot',
+]);
+
+const SEMANTIC_SCAN_MAX_DEPTH = 12;
+
+function findFailedAssertions(node, acc = [], depth = 0) {
+  if (!node || typeof node !== 'object' || depth > SEMANTIC_SCAN_MAX_DEPTH) return acc;
+  if (Array.isArray(node)) {
+    for (const item of node) findFailedAssertions(item, acc, depth + 1);
+    return acc;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'assertions' && Array.isArray(value)) {
+      for (const assertion of value) {
+        if (assertion && typeof assertion === 'object' && assertion.passed === false) acc.push(assertion);
+      }
+      continue;
+    }
+    findFailedAssertions(value, acc, depth + 1);
+  }
+  return acc;
+}
+
+function findInvalidSnapshots(node, acc = [], depth = 0) {
+  if (!node || typeof node !== 'object' || depth > SEMANTIC_SCAN_MAX_DEPTH) return acc;
+  if (Array.isArray(node)) {
+    for (const item of node) findInvalidSnapshots(item, acc, depth + 1);
+    return acc;
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (SNAPSHOT_CONTAINER_KEYS.has(key) && value && typeof value === 'object'
+      && !Array.isArray(value) && value.valid === false) {
+      acc.push(key);
+    }
+    findInvalidSnapshots(value, acc, depth + 1);
+  }
+  return acc;
+}
+
+/**
+ * Violações semânticas de um artefato resolvido. Artefato ausente não é
+ * tratado aqui (a ausência já é coberta pelas checagens de existência).
+ * @returns {string[]} códigos de violação (vazio = semanticamente válido)
+ */
+function semanticArtifactViolations(artifact) {
+  const violations = [];
+  if (!artifact || !artifact.exists) return violations;
+  const json = artifact.json;
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return violations;
+
+  if (json.ok === false) violations.push('ok_false');
+  if (json.valid === false) violations.push('valid_false');
+  const status = String(json.status || '').toUpperCase();
+  if (status === 'FAILED' || status === 'NO_GO') violations.push(`status_${status.toLowerCase()}`);
+
+  const failedAssertions = findFailedAssertions(json);
+  if (failedAssertions.length > 0) violations.push(`assertions_failed(${failedAssertions.length})`);
+
+  const invalidSnapshots = findInvalidSnapshots(json);
+  if (invalidSnapshots.length > 0) violations.push(`snapshot_invalid(${invalidSnapshots.length})`);
+
+  return violations;
+}
+
+/**
+ * Validação de conteúdo de um snapshot do digital twin: `diff.valid === false`,
+ * assertion falha, mutação indevida (`unexpectedMutations`) e mutação esperada
+ * ausente (`expectedMutations` sem correspondente em `observedMutations`)
+ * invalidam o snapshot — presença do registro não conta como prova.
+ */
+function validateTwinSnapshotContent(snapshot, index) {
+  const violations = [];
+  if (!snapshot || typeof snapshot !== 'object') return violations;
+  const label = snapshot.stepId || snapshot.journeyId || `snapshot[${index}]`;
+  const diff = snapshot.diff && typeof snapshot.diff === 'object' ? snapshot.diff : null;
+
+  if (diff && diff.valid === false) violations.push(`snapshot_diff_invalid:${label}`);
+  if (findFailedAssertions(snapshot).length > 0) violations.push(`snapshot_assertions_failed:${label}`);
+
+  const unexpected = Array.isArray(diff?.unexpectedMutations) ? diff.unexpectedMutations : [];
+  if (unexpected.length > 0) violations.push(`snapshot_unexpected_mutations:${label}(${unexpected.length})`);
+
+  const expected = Array.isArray(diff?.expectedMutations) ? diff.expectedMutations : [];
+  const observed = Array.isArray(diff?.observedMutations) ? diff.observedMutations : [];
+  const missingMutations = expected.filter((mutation) => !observed.includes(mutation));
+  if (missingMutations.length > 0) {
+    violations.push(`snapshot_expected_mutations_missing:${label}(${missingMutations.length})`);
+  }
+
+  return violations;
+}
+
 function collectInvalidReferences(referencePaths = []) {
   return Array.from(new Set(referencePaths.filter(Boolean))).map((refPath) => {
     const candidates = resolveEvidenceCandidates(ROOT, refPath, null, process.env);
@@ -187,6 +292,9 @@ function evaluateHumanHandoff(artifact, screenshotArtifact) {
   // presença do artefato
   if (!artifact.exists) missing.push('human_handoff_artifact');
 
+  // FASE 16 — validade semântica do conteúdo (presença ≠ validade)
+  missing.push(...semanticArtifactViolations(artifact).map((v) => `semantic:${v}`));
+
   // replay e timeline
   if (replay.length === 0) missing.push('replay');
   if (!(Number(evidence.timelineCount || 0) > 0)) missing.push('timeline');
@@ -232,6 +340,7 @@ function evaluatePbx(artifact, asrArtifact, ttsArtifact, recordingsArtifact) {
   const missing = [];
 
   if (!artifact.exists) missing.push('pbx_prod_like_artifact');
+  missing.push(...semanticArtifactViolations(artifact).map((v) => `semantic:${v}`));
   if (!Array.isArray(data.evidencePaths) || data.evidencePaths.length < 2) missing.push('call_replay');
   if (!l03.realCall?.cdrFound) missing.push('cdr');
   if (data.signals?.replayTimeline !== true || !l04.flow?.executionId) missing.push('ivr_timeline');
@@ -269,6 +378,7 @@ function evaluateOmnichannel(artifact, crmArtifact) {
   const missing = [];
 
   if (!artifact.exists) missing.push('unified_replay_artifact');
+  missing.push(...semanticArtifactViolations(artifact).map((v) => `semantic:${v}`));
   if (replay.length === 0) missing.push('replay');
   if (distinctSources.length < 3) missing.push('cross_channel_transitions');
   if (!hasWhatsAppEvents) missing.push('whatsapp_events');
@@ -287,13 +397,16 @@ function evaluateOmnichannel(artifact, crmArtifact) {
 }
 
 function evaluateDigitalTwin(context, snapshotsArtifact) {
-  const replayPresent     = context.omnichannel.status !== 'NOT_VALIDATED' || context.humanHandoff.status === 'VALIDATED' || context.pbx.status === 'VALIDATED';
-  const timelinePresent   = !context.humanHandoff.missing.includes('timeline') || !context.pbx.missing.includes('ivr_timeline');
-  const assertionsPresent = !context.humanHandoff.missing.includes('ticket_transitions') || !context.omnichannel.missing.includes('ticket_events');
-  const mutationsPresent  = !context.humanHandoff.missing.includes('backend_mutations') || !context.omnichannel.missing.includes('crm_mutations');
+  // FASE 16 — conjunção (AND) dos requisitos: TODAS as fontes precisam provar
+  // o requisito; a presença de qualquer artefato isolado não satisfez mais a
+  // avaliação (antes: lógica OR — qualquer artefato presente tendia a passar).
+  const replayPresent     = context.omnichannel.status === 'VALIDATED' && context.humanHandoff.status === 'VALIDATED' && context.pbx.status === 'VALIDATED';
+  const timelinePresent   = !context.humanHandoff.missing.includes('timeline') && !context.pbx.missing.includes('ivr_timeline');
+  const assertionsPresent = !context.humanHandoff.missing.includes('ticket_transitions') && !context.omnichannel.missing.includes('ticket_events');
+  const mutationsPresent  = !context.humanHandoff.missing.includes('backend_mutations') && !context.omnichannel.missing.includes('crm_mutations');
   const evidencePresent   = context.requiredArtifacts.filter((a) => a.domain === 'foundation').every((a) => a.exists);
   const snapshots         = Array.isArray(snapshotsArtifact?.json?.snapshots) ? snapshotsArtifact.json.snapshots : [];
-  const snapshotsPresent  = snapshotsArtifact.exists && snapshots.length > 0;
+  const snapshotViolations = snapshots.flatMap((snapshot, index) => validateTwinSnapshotContent(snapshot, index));
   const missing = [];
 
   if (!replayPresent)     missing.push('replay');
@@ -301,12 +414,15 @@ function evaluateDigitalTwin(context, snapshotsArtifact) {
   if (!assertionsPresent) missing.push('assertions');
   if (!mutationsPresent)  missing.push('mutations');
   if (!evidencePresent)   missing.push('evidence');
-  if (!snapshotsPresent)  missing.push('snapshots');
+  if (!snapshotsArtifact.exists || snapshots.length === 0) missing.push('snapshots');
+  const baseMissingCount = missing.length;
+  if (snapshotViolations.length > 0) missing.push(...snapshotViolations.map((v) => `semantic:${v}`));
 
   return {
-    status: missing.length === 0 ? 'VALIDATED' : (missing.length === 6 ? 'NOT_VALIDATED' : 'PARTIAL'),
+    status: missing.length === 0 ? 'VALIDATED' : (baseMissingCount === 6 ? 'NOT_VALIDATED' : 'PARTIAL'),
     artifact: snapshotsArtifact.path,
     missing,
+    snapshotViolations,
     snapshots,
   };
 }
@@ -321,6 +437,7 @@ function evaluateGovernance(requiredArtifacts) {
   } else {
     const sd = signatureArtifact.json || {};
     if (!sd.signature || !hasArrayPayload(signatureArtifact, 'subjectHashes')) missing.push('governance_signature_payload');
+    missing.push(...semanticArtifactViolations(signatureArtifact).map((v) => `semantic:signature_${v}`));
   }
 
   if (!cleanupArtifact.exists) {
@@ -328,6 +445,7 @@ function evaluateGovernance(requiredArtifacts) {
   } else {
     const cd = cleanupArtifact.json || {};
     if (cd.runtimeClean !== true || cd.workspaceClean !== true) missing.push('cleanup_status');
+    missing.push(...semanticArtifactViolations(cleanupArtifact).map((v) => `semantic:cleanup_${v}`));
   }
 
   return {
@@ -551,6 +669,31 @@ function buildBlockingGaps(report, intelligenceResult, crossReport) {
     });
   }
 
+  // FASE 16 — artefatos presentes mas semanticamente invalidos
+  const semanticallyInvalid = (report.evidenceManifest?.artifacts || [])
+    .filter((a) => a.proofStatus === 'invalid');
+  if (semanticallyInvalid.length > 0) {
+    gaps.push({
+      id: 'gap-proof-invalid-artifact-semantics', severity: 'critical', area: 'proof-governance',
+      title: 'Proof artifacts presentes mas semanticamente invalidos (presenca != validade)',
+      evidence: {
+        count: semanticallyInvalid.length,
+        artifacts: semanticallyInvalid.map((a) => ({ id: a.id, path: a.path, violations: a.semanticViolations })),
+      },
+      suggestedFix: 'Corrigir o conteudo dos artifacts (ok/valid/status, assertions, snapshots) e regerar as evidencias.',
+    });
+  }
+
+  // FASE 11 — fingerprint chain divergente: proof STALE nunca pode ser GO
+  if (report.fingerprintChain?.status === 'STALE') {
+    gaps.push({
+      id: 'gap-proof-stale-fingerprints', severity: 'critical', area: 'proof-governance',
+      title: 'Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)',
+      evidence: { diverged: report.fingerprintChain.diverged },
+      suggestedFix: 'Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO.',
+    });
+  }
+
   if (report.humanHandoffCoverage.status !== 'VALIDATED') {
     gaps.push({
       id: 'gap-proof-human-handoff', severity: 'high', area: 'human-handoff',
@@ -700,21 +843,37 @@ function buildFinalProofReport(context = {}) {
   };
   prodLikeCoverage.percent = prodLikeCoverage.required === 0 ? 0 : Number(((prodLikeCoverage.found / prodLikeCoverage.required) * 100).toFixed(2));
 
-  // Evidence manifest
+  // Evidence manifest — proofStatus semântico: artefato presente com conteúdo
+  // inválido (ok===false, assertion falha, snapshot inválido) é 'invalid'.
   const evidenceManifest = {
     generatedAt: new Date().toISOString(),
     runtimeRoot: getRuntimeRootSafe(),
-    artifacts: requiredArtifacts.map((a) => ({
-      id: a.id, domain: a.domain, path: a.path,
-      sourcePath: a.sourcePath, resolvedPath: a.resolvedPath,
-      exists: a.exists, packageRequired: a.packageRequired,
-      hash: a.sha256, checksum: a.sha256, timestamp: a.timestamp,
-      proofStatus: a.exists ? 'present' : 'missing',
-      replayLinkage:     a.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : a.domain === 'human_handoff' ? ['human_handoff_full_validation'] : a.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
-      journeyLinkage:    a.domain === 'human_handoff' ? ['human_handoff_full_validation'] : a.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : a.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
-      governanceLinkage: a.domain === 'governance' ? ['proof_based_governance'] : ['final_decision'],
-    })),
+    artifacts: requiredArtifacts.map((a) => {
+      const semanticViolations = semanticArtifactViolations(a);
+      return {
+        id: a.id, domain: a.domain, path: a.path,
+        sourcePath: a.sourcePath, resolvedPath: a.resolvedPath,
+        exists: a.exists, packageRequired: a.packageRequired,
+        hash: a.sha256, checksum: a.sha256, timestamp: a.timestamp,
+        proofStatus: !a.exists ? 'missing' : (semanticViolations.length > 0 ? 'invalid' : 'valid'),
+        semanticViolations,
+        replayLinkage:     a.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : a.domain === 'human_handoff' ? ['human_handoff_full_validation'] : a.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
+        journeyLinkage:    a.domain === 'human_handoff' ? ['human_handoff_full_validation'] : a.domain === 'pbx' ? ['pbx_voice_flow_prod_like'] : a.domain === 'omnichannel' ? ['omnichannel_unified_replay'] : [],
+        governanceLinkage: a.domain === 'governance' ? ['proof_based_governance'] : ['final_decision'],
+      };
+    }),
   };
+
+  // ─── FASE 11 — Fingerprint chain: CHANGED CODE → STALE PROOF ──────────────
+  // A cadeia registrada no evidence-manifest anterior é comparada com a cadeia
+  // atual (conteúdo, nunca timestamps). Divergência → proof STALE (nunca GO).
+  const fingerprintChain = computeFingerprintChain(ROOT);
+  const previousManifest = readJsonMaybe(resolveWorkspacePath(ROOT, 'governance', 'evidence-manifest.json'));
+  const registeredFingerprints = previousManifest && previousManifest.fingerprints
+    ? previousManifest.fingerprints
+    : null;
+  const fingerprintStatus = compareFingerprintChains(registeredFingerprints, fingerprintChain);
+  evidenceManifest.fingerprints = fingerprintChain;
 
   // Package validation — A. Strict package binding
   let packageValidation;
@@ -775,7 +934,8 @@ function buildFinalProofReport(context = {}) {
     digitalTwinCoverageOk:   digitalTwinCoverage.status === 'VALIDATED',
     governanceCoverageOk:    governanceCoverage.status === 'VALIDATED',
     packageValidationOk:     packageValidation.ok,
-    evidenceManifestValid:   evidenceManifest.artifacts.every((a) => a.exists === true),
+    evidenceManifestValid:   evidenceManifest.artifacts.every((a) => a.proofStatus === 'valid'),
+    fingerprintsFresh:       fingerprintStatus.status !== 'STALE',
     intelligenceStable:      intelligenceResult.status === 'STABLE',
     crossReportConsistent:   (crossReport?.blockerCount || 0) === 0,
     verticalCoverageValid:   verticalCoverage.invalidClaims.length === 0,
@@ -799,6 +959,13 @@ function buildFinalProofReport(context = {}) {
     crossReportConsistency: crossReport,
     packageValidation,
     evidenceManifest,
+    fingerprintChain: {
+      status:     fingerprintStatus.status,
+      diverged:   fingerprintStatus.diverged,
+      registered: registeredFingerprints,
+      current:    fingerprintChain,
+    },
+    proofStatus: fingerprintStatus.status, // 'FRESH' | 'STALE' | 'UNREGISTERED'
     proofQualityScore,
     decisionMatrix: {
       stages: STAGE_ORDER,
@@ -837,5 +1004,8 @@ module.exports = {
   evaluateIntelligenceStability,
   evaluateVerticalCoverage,
   evaluatePbxMaturityLevel,
+  evaluateDigitalTwin,
   computeProofQualityScore,
+  semanticArtifactViolations,
+  validateTwinSnapshotContent,
 };

@@ -37,13 +37,19 @@ function decideFromHardeningReport() {
   const report = readJsonSafe('governance/replay-hardening-report.json');
   if (!report) return null;
 
-  const perJourney = (report.results || []).map((r) => ({
-    journeyId:  r.journeyId,
-    decision:   r.hardened ? 'GO' : 'NO_GO',
-    violations: r.violations || [],
-    source:     'replay-hardening-report.json',
-    hashOnly:   r.hashOnly || false,
-  }));
+  // Registros hash-only (assinatura de hash sem evidência de execução) não
+  // carregam verificação determinística — não geram decisão GO/NO_GO de
+  // replay e ficam fora do perJourney (a decisão da jornada, se existir,
+  // vem dos artefatos online). Ver buildHashOnlyRecord no hardening engine.
+  const perJourney = (report.results || [])
+    .filter((r) => !r.hashOnly)
+    .map((r) => ({
+      journeyId:  r.journeyId,
+      decision:   r.hardened ? 'GO' : 'NO_GO',
+      violations: r.violations || [],
+      source:     'replay-hardening-report.json',
+      hashOnly:   r.hashOnly || false,
+    }));
 
   const allViolations = (report.allViolations || []);
   const pass          = report.pass === true;

@@ -144,6 +144,50 @@ function evalGovernanceSignature(ROOT) {
   }
 }
 
+// ─── Blocking gaps do final-proof-report (FASE 16) ───────────────────────────
+// A decisão de readiness DEVE consumir os findings do proof engine: um blocker
+// fatal (severity 'critical') nunca pode coexistir com GO/AUTONOMOUS_READY.
+// Gaps 'high' não bloqueiam a decisão, mas rebaixam o nível para
+// CONTROLLED_PILOT (ver classifyReadinessLevel).
+function evalProofGaps(ROOT) {
+  const proof = readJsonSafe('governance/final-proof-report.json', ROOT);
+  if (!proof) {
+    return {
+      component: 'proof_gaps',
+      blocked:   true,
+      fatalGaps: 0,
+      highGaps:  0,
+      blocker:   'final-proof-report.json ausente — blockingGaps não verificáveis',
+    };
+  }
+  const gaps = Array.isArray(proof.blockingGaps) ? proof.blockingGaps : [];
+  const fatal = gaps.filter((g) => g && g.severity === 'critical');
+  const high  = gaps.filter((g) => g && g.severity === 'high');
+  return {
+    component: 'proof_gaps',
+    blocked:   fatal.length > 0,
+    fatalGaps: fatal.length,
+    highGaps:  high.length,
+    blocker:   fatal.length > 0
+      ? `proof-blocking-gaps=${fatal.length} critical [${fatal.slice(0, 3).map((g) => g.id).join(', ')}]`
+      : null,
+  };
+}
+
+// ─── Níveis canônicos de readiness ────────────────────────────────────────────
+// NO_GO             blockers fatais presentes
+// CONTROLLED_PILOT  sem blocker fatal, mas com findings high pendentes
+// PRODUCTION_READY  sem blockers e sem findings high
+// AUTONOMOUS_READY  PRODUCTION_READY com score máximo (todos os componentes OK)
+const READINESS_LEVELS = ['NO_GO', 'CONTROLLED_PILOT', 'PRODUCTION_READY', 'AUTONOMOUS_READY'];
+
+function classifyReadinessLevel({ decision, score, components }) {
+  if (String(decision).startsWith('NO_GO')) return 'NO_GO';
+  const highFindings = components.reduce((acc, c) => acc + (Number(c.highGaps) || 0), 0);
+  if (highFindings > 0) return 'CONTROLLED_PILOT';
+  return score >= 100 ? 'AUTONOMOUS_READY' : 'PRODUCTION_READY';
+}
+
 // ─── Classificação da decisão ─────────────────────────────────────────────────
 function classifyDecision(blockers) {
   if (blockers.length === 0) return 'AUTONOMOUS_READY_GO';
@@ -153,6 +197,8 @@ function classifyDecision(blockers) {
 
   if (has('mesh=NO_GO') || has('gate=NO_GO') || has('mesh='))
     return 'NO_GO:MESH_BLOCKED';
+  if (has('proof-blocking-gaps=') || has('final-proof-report'))
+    return 'NO_GO:PROOF_BLOCKING_GAPS';
   if (has('contamination=') || has('contaminations='))
     return 'NO_GO:CONTAMINATION_BLOCKED';
   if (has('replay-hardening=REPLAY_NO_GO') || has('replay-signatures'))
@@ -181,16 +227,19 @@ function computeReadiness(ROOT) {
     evalGovernanceConsistency(ROOT),
     evalContamination(ROOT),
     evalGovernanceSignature(ROOT),
+    evalProofGaps(ROOT),
   ];
 
   const blocked    = components.filter((c) => c.blocked);
   const blockers   = blocked.map((c) => c.blocker).filter(Boolean);
   const decision   = classifyDecision(blockers);
   const score      = Math.round(((components.length - blocked.length) / components.length) * 100);
+  const level      = classifyReadinessLevel({ decision, score, components });
 
   return {
     decision,
     classification: decision.startsWith('NO_GO') ? 'NO_GO' : 'GO',
+    level,
     score,
     blockedCount:   blocked.length,
     blockers,
@@ -198,4 +247,16 @@ function computeReadiness(ROOT) {
   };
 }
 
-module.exports = { computeReadiness, evalMesh, evalReplay, evalPackage, evalGovernanceConsistency, evalContamination, evalGovernanceSignature };
+module.exports = {
+  computeReadiness,
+  evalMesh,
+  evalReplay,
+  evalPackage,
+  evalGovernanceConsistency,
+  evalContamination,
+  evalGovernanceSignature,
+  evalProofGaps,
+  classifyDecision,
+  classifyReadinessLevel,
+  READINESS_LEVELS,
+};

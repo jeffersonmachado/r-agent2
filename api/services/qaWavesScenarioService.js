@@ -908,6 +908,21 @@ function runScenarioExecution(payload = {}) {
 
   for (const scenario of scenarios) {
     const isDevMode = payloadAllowsDevExecution(payload);
+
+    // FASE 15 — draft_ai NUNCA executa como evidência: rascunho gerado por IA
+    // exige aprovação explícita (approved/active/regression). A regra vale
+    // inclusive em devMode/allowNonExecutableStatus — não há bypass.
+    if (String(scenario.status || '').toLowerCase() === 'draft_ai') {
+      const error = new Error(`Cenario draft_ai nao executavel como evidencia: ${scenario.id} — aprovacao obrigatoria`);
+      error.code = 'SCENARIO_NOT_APPROVED';
+      error.details = {
+        scenarioId: scenario.id,
+        status: scenario.status,
+        requiredStatus: EXECUTABLE_SCENARIO_STATUS,
+      };
+      throw error;
+    }
+
     const validation = validateScenarioCompatibility(scenario);
     if (!validation.valid) {
       // Preserva o código específico quando a violação inclui ausência de
@@ -955,7 +970,7 @@ function runScenarioExecution(payload = {}) {
     const seeds = Array.isArray(scenario.seeds) ? scenario.seeds : [];
     const filtered = selectedSeedIds.length > 0
       ? seeds.filter((seed) => selectedSeedIds.includes(seed.id))
-      : seeds.filter((seed) => seed.status !== 'disabled');
+      : seeds.filter((seed) => isSeedExecutableForEvidence(seed));
 
     if (filtered.length === 0) {
       expanded.push({ scenario, seed: null });
@@ -989,6 +1004,17 @@ function payloadAllowsDevExecution(payload = {}) {
   return process.env.NODE_ENV !== 'production';
 }
 
+/**
+ * FASE 15 — seeds em rascunho de IA (`draft_ai`) ou desabilitadas não podem
+ * ser executadas como evidência. Seeds legadas sem status explícito seguem
+ * elegíveis (compatibilidade); apenas status declarados como não-aprovados
+ * são excluídos.
+ */
+function isSeedExecutableForEvidence(seed) {
+  const status = String(seed?.status || '').toLowerCase();
+  return status !== 'disabled' && status !== 'draft_ai';
+}
+
 function deleteScenario(scenarioId, tenantId = 'system') {
   const scopedTenantId = normalizeTenantKey(tenantId);
   if (!scenarioId) throw Object.assign(new Error('scenarioId é obrigatório'), { code: 'BAD_REQUEST' });
@@ -1013,4 +1039,5 @@ module.exports = {
   upsertScenarioStore,
   normalizeScenarioRecord,
   deleteScenario,
+  isSeedExecutableForEvidence,
 };

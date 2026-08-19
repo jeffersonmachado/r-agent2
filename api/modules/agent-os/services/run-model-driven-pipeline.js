@@ -91,11 +91,17 @@ async function run() {
 
   // FASE 11: Agent Factory Integration Report
   console.log('[FASE 11] Agent Factory Integration...');
+  // FASES 13-14 — o flag NÃO é literal: deriva de uma verificação real que
+  // requer o consumidor (agent-hardening-service), invoca o resolvedor de
+  // jornadas model-driven e confere que a saída deriva desta execução.
+  const { verifyAgentFactoryModelDrivenIntegration } = require('./model-driven-pipeline');
+  const integrationCheck = verifyAgentFactoryModelDrivenIntegration(journeys);
   const agentFactoryReport = {
     generatedAt: nowIso(),
-    status: 'GO',
+    status: integrationCheck.used ? 'GO' : 'NO_GO',
     integration: {
-      agentFactoryUsesModelDrivenJourneys: true,
+      agentFactoryUsesModelDrivenJourneys: integrationCheck.used,
+      integrationEvidence: integrationCheck.evidence,
       pipeline: 'Agent Draft → infer related journeys → model-driven scenarios → seeds → QA Waves → Evidence → Replay → Governance → Publish',
       publishOnlyIfGO: true,
       noManualQAOverride: true,
@@ -123,6 +129,7 @@ async function run() {
       totalNodes: entityGraph.totalNodes,
       totalEdges: entityGraph.totalEdges,
       totalJourneys: journeys.totalJourneys,
+      totalCandidateJourneys: journeys.totalCandidateJourneys || 0,
       totalScenarios: scenarios.totalScenarios,
       totalSeeds: seeds.totalSeeds,
       totalWaves: waves.totalWaves,
@@ -132,6 +139,8 @@ async function run() {
       domainMapGenerated: true,
       entityGraphGenerated: true,
       journeysInferredFromModels: true,
+      entityGraphConsumedForDiscovery: (journeys.fkEdgesAnalyzed || 0) >= 0 && journeys.entityGraphConsumed === true,
+      agentFactoryIntegrationVerified: integrationCheck.used === true,
       scenariosGeneratedFromConstraints: true,
       seedsCompatibleWithConstraints: true,
       wavesGeneratedFromJourneys: true,
