@@ -42,6 +42,20 @@ function safeArrayFilter(arr, predicate) {
     });
   } catch (_) { return []; }
 }
+
+// Fail-closed: job sem tenant não pode executar como 'system'. Lança erro
+// explícito (o worker registra last_error='tenant_required' e aplica retry/dead
+// conforme attempts) sem fazer dispatch.
+function throwJobTenantRequired(kind, job) {
+  logger.warn('[ExecutionQueue] job sem tenant — falhando sem dispatch', {
+    kind: safeToString(kind),
+    jobId: safeToString(safeGet(job, 'id', '')),
+  });
+  const err = new Error('tenant_required');
+  // @ts-ignore
+  err.code = 'tenant_required';
+  throw err;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 function dbAvailable() {
@@ -292,11 +306,15 @@ async function finishJob({ jobId, status, errorMessage = null, backoffSeconds = 
 }
 
 async function listDeadJobs({ tenantId, kind = null, limit = 100, offset = 0 } = {}) {
-  const Model = ExecutionJob();
   const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 1000);
   const safeOffset = Math.max(Number(offset) || 0, 0);
+  // Fail-closed: sem tenant explícito, não consultar a DLQ como 'system'.
+  if (!safeToString(tenantId)) {
+    return { ok: false, error: 'tenant_required', total: 0, items: [], limit: safeLimit, offset: safeOffset };
+  }
+  const Model = ExecutionJob();
   const where = {
-    tenant_key: safeToString(tenantId || 'system'),
+    tenant_key: safeToString(tenantId),
     status: 'dead',
   };
   if (kind) where.kind = safeToString(kind);
@@ -319,7 +337,9 @@ async function listDeadJobs({ tenantId, kind = null, limit = 100, offset = 0 } =
 async function retryDeadJob({ tenantId, jobId } = {}) {
   const sequelize = getSequelize();
   if (!sequelize) return { ok: false, error: 'db_unavailable' };
-  const tid = safeToString(tenantId || 'system');
+  // Fail-closed: sem tenant explícito, não reenfileirar como 'system'.
+  const tid = safeToString(tenantId);
+  if (!tid) return { ok: false, error: 'tenant_required' };
   const id = safeToString(jobId || '');
   if (!id) return { ok: false, error: 'job_id_required' };
 
@@ -447,7 +467,9 @@ async function processJob(job) {
   }
   if (kind === 'learning_adaptive_cycle') {
     const { runScheduledCycle } = require('../modules/learning-core/adaptiveCycleService');
-    const tenantId = safeGet(job, 'payload.tenantId') || safeGet(job, 'tenant_key') || 'system';
+    // Fail-closed: job sem tenant não executa como 'system' — falha explícita.
+    const tenantId = safeGet(job, 'payload.tenantId') || safeGet(job, 'tenant_key');
+    if (!tenantId) throwJobTenantRequired(kind, job);
     await runScheduledCycle({ tenantId });
     return;
   }
@@ -486,7 +508,9 @@ async function processJob(job) {
   }
   if (kind === 'dispatch_event_trigger') {
     const { dispatchOne } = require('./eventLedgerTriggerDispatcher');
-    const tenantId = safeGet(job, 'tenant_key') || safeGet(job, 'tenantId') || 'system';
+    // Fail-closed: job sem tenant não executa como 'system' — falha explícita.
+    const tenantId = safeGet(job, 'tenant_key') || safeGet(job, 'tenantId');
+    if (!tenantId) throwJobTenantRequired(kind, job);
     const consumer = safeGet(job, 'payload.consumer', 'webhooks_v1');
     const eventId = safeGet(job, 'payload.eventId', null);
     const dispatchTargets = Array.isArray(safeGet(job, 'payload.dispatchTargets')) ? safeGet(job, 'payload.dispatchTargets') : null;
@@ -505,7 +529,9 @@ async function processJob(job) {
   }
   if (kind === 'vertical_notification_dispatch' || kind === 'vertical_notification_send') {
     const { dispatchNotification } = require('./notificationService');
-    const tenantId = safeGet(job, 'payload.tenantId') || safeGet(job, 'tenant_key') || 'system';
+    // Fail-closed: job sem tenant não executa como 'system' — falha explícita.
+    const tenantId = safeGet(job, 'payload.tenantId') || safeGet(job, 'tenant_key');
+    if (!tenantId) throwJobTenantRequired(kind, job);
     const notificationId = safeGet(job, 'payload.notificationId', null);
     const fallbackPayload = notificationId ? null : {
       tenantId,

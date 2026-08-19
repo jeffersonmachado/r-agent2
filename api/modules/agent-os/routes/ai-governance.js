@@ -9,14 +9,24 @@ const VALID_EVENT_TYPES = getAiGovernanceRecordModel.EVENT_TYPES;
 async function handleAiGovernanceRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const { requireAuth, requirePermission, sendJson: _s, badRequest: _b, hasJsonContentType, parseJsonBody, logAction } = deps;
-  const tenantId = req.tenant_id || 'system';
   const sendJson = (d, c) => _s(res, c || 200, d);
   const badRequest = (m) => _b(res, m);
+  // Fail-closed: requireAuth popula req.tenantId e req.agent.tenantId
+  // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
+  // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
+  // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
+  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const tenantGuard = () => {
+    if (tenantId) return true;
+    sendJson({ error: 'tenant_required' }, 400);
+    return false;
+  };
 
   // GET /api/ai-governance/audit-trail
   if (method === 'GET' && pathname === '/api/ai-governance/audit-trail') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     const eventTypes = req.query.eventTypes ? req.query.eventTypes.split(',') : null;
     const trail = await governanceService.getAuditTrail({
@@ -32,6 +42,7 @@ async function handleAiGovernanceRoutes(ctx) {
   if (method === 'GET' && pathname === '/api/ai-governance/decision-log') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     const log = await governanceService.getDecisionLog({
       tenantId,
@@ -45,6 +56,7 @@ async function handleAiGovernanceRoutes(ctx) {
   if (method === 'GET' && pathname === '/api/ai-governance/compliance-report') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     const report = await governanceService.generateComplianceReport({
       tenantId,
@@ -58,6 +70,7 @@ async function handleAiGovernanceRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/ai-governance/event') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'create'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);

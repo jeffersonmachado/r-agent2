@@ -6,14 +6,24 @@ const logger = require('../../../utils/logger');
 async function handleRapLearnRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const { requireAuth, requirePermission, sendJson: _s, badRequest: _b, hasJsonContentType, parseJsonBody } = deps;
-  const tenantId = req.tenant_id || 'system';
   const sendJson = (d, c) => _s(res, c || 200, d);
   const badRequest = (m) => _b(res, m);
+  // Fail-closed: requireAuth popula req.tenantId e req.agent.tenantId
+  // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
+  // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
+  // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
+  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const tenantGuard = () => {
+    if (tenantId) return true;
+    sendJson({ error: 'tenant_required' }, 400);
+    return false;
+  };
 
   // GET /api/rap-learn/records
   if (method === 'GET' && pathname === '/api/rap-learn/records') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     const filters = {};
     if (req.query.type) filters.type = req.query.type;
@@ -28,6 +38,7 @@ async function handleRapLearnRoutes(ctx) {
   if (method === 'GET' && pathname === '/api/rap-learn/regressions') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     const windowHours = parseInt(req.query.windowHours) || 24;
     const regressions = await learningService.detectRegressions({ tenantId, windowHours });
@@ -38,6 +49,7 @@ async function handleRapLearnRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/rap-learn/failure') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'create'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -57,6 +69,7 @@ async function handleRapLearnRoutes(ctx) {
   if (method === 'POST' && classifyMatch) {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'update'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -71,6 +84,7 @@ async function handleRapLearnRoutes(ctx) {
   if (method === 'POST' && suggestMatch) {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'update'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -85,6 +99,7 @@ async function handleRapLearnRoutes(ctx) {
   if (method === 'POST' && validateMatch) {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'update'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -99,9 +114,14 @@ async function handleRapLearnRoutes(ctx) {
   if (method === 'POST' && promoteMatch) {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'approve'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     const body = hasJsonContentType(req) ? await parseJsonBody(req) : {};
-    const record = await learningService.promoteToProduction(promoteMatch[1], body.promotedBy || req.user?.username, tenantId);
+    // requireAuth popula req.agent (nunca req.user): o ator da promoção vem do
+    // agente autenticado; ausente → principal_required (não criar actor fictício).
+    const promotedBy = body.promotedBy || req.agent?.username || req.agent?.id || null;
+    if (!promotedBy) { sendJson({ error: 'principal_required' }, 400); return true; }
+    const record = await learningService.promoteToProduction(promoteMatch[1], promotedBy, tenantId);
     if (!record) return sendJson({ error: 'Record not found' }, 404);
     sendJson({ record });
   }

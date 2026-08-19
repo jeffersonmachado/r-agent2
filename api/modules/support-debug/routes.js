@@ -11,19 +11,33 @@ function requireAuthenticated(req, res, deps) {
   return true;
 }
 
+// Fail-closed: requireAuth popula req.tenantId e req.agent.tenantId (camelCase).
+// Tenant ausente → 400 tenant_required em vez de operar como 'default'
+// (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
+function requireTenant(req, res, deps) {
+  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  if (!tenantId) {
+    deps.sendJson(res, 400, { error: 'tenant_required' });
+    return null;
+  }
+  return tenantId;
+}
+
 function createSupportDebugRoutes({ buildDeps }) {
   const router = express.Router();
 
   router.get('/api/schedules', (req, res) => {
     const deps = buildDeps(req, res);
     if (!requireAuthenticated(req, res, deps)) return;
+    const tenantId = requireTenant(req, res, deps);
+    if (!tenantId) return;
 
     const urlObj = new URL(req.url, 'http://localhost');
     const contextType = urlObj.searchParams.get('contextType') || undefined;
     const contextId = urlObj.searchParams.get('contextId') || undefined;
     const limit = Math.min(parseInt(urlObj.searchParams.get('limit') || '50', 10), 200);
     const result = deps.scheduleService.listSchedules({
-      tenantId: req.tenantId || 'default',
+      tenantId,
       contextType,
       contextId,
       limit,
@@ -34,10 +48,12 @@ function createSupportDebugRoutes({ buildDeps }) {
   router.post('/api/schedules', async (req, res) => {
     const deps = buildDeps(req, res);
     if (!requireAuthenticated(req, res, deps)) return;
+    const tenantId = requireTenant(req, res, deps);
+    if (!tenantId) return;
 
     const body = await deps.parseJsonBody(req);
     const schedule = deps.scheduleService.createSchedule({
-      tenantId: req.tenantId || 'default',
+      tenantId,
       payload: body,
     });
     deps.sendJson(res, 201, { schedule });
@@ -58,6 +74,8 @@ function createSupportDebugRoutes({ buildDeps }) {
       next();
       return;
     }
+    const tenantId = requireTenant(req, res, deps);
+    if (!tenantId) return;
 
     let payload = {};
     if (action === 'reschedule') {
@@ -66,7 +84,7 @@ function createSupportDebugRoutes({ buildDeps }) {
 
     try {
       const schedule = deps.scheduleService.updateScheduleStatus({
-        tenantId: req.tenantId || 'default',
+        tenantId,
         scheduleId,
         action,
         payload,

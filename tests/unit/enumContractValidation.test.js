@@ -45,6 +45,9 @@ function makeReq(body) {
   req.url = '/';
   req.originalUrl = '/';
   req.query = {};
+  // Fail-closed (W1-A): as rotas exigem tenant explícito; antes o fallback
+  // silencioso `req.tenant_id || 'system'` mascarava a ausência no harness.
+  req.tenantId = 'tenant-qa';
   return req;
 }
 

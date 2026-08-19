@@ -138,14 +138,24 @@ function buildLegacyCapabilityView() {
 async function handleAgentOrchestratorRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const { requireAuth, requirePermission, sendJson: _s, badRequest: _b, hasJsonContentType, parseJsonBody } = deps;
-  const tenantId = req.tenant_id || 'system';
+  // Fail-closed: requireAuth popula req.tenantId e req.agent.tenantId
+  // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
+  // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
+  // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
+  const tenantId = req.tenantId || req.agent?.tenantId || null;
   const sendJson = (d, c) => _s(res, c || 200, d);
   const badRequest = (m) => _b(res, m);
+  const tenantGuard = () => {
+    if (tenantId) return true;
+    sendJson({ error: 'tenant_required' }, 400);
+    return false;
+  };
 
   // POST /api/agent-orchestrator/execute - Execute orchestration workflow (REAL)
   if (method === 'POST' && pathname === '/api/agent-orchestrator/execute') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'execute'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);

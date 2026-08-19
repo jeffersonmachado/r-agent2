@@ -9,14 +9,24 @@ const VALID_NODE_TYPES = getKnowledgeGraphNodeModel.NODE_TYPES;
 async function handleKnowledgeGraphRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;
   const { requireAuth, requirePermission, sendJson: _s, badRequest: _b, hasJsonContentType, parseJsonBody } = deps;
-  const tenantId = req.tenant_id || 'system';
   const sendJson = (d, c) => _s(res, c || 200, d);
   const badRequest = (m) => _b(res, m);
+  // Fail-closed: requireAuth popula req.tenantId e req.agent.tenantId
+  // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
+  // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
+  // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
+  const tenantId = req.tenantId || req.agent?.tenantId || null;
+  const tenantGuard = () => {
+    if (tenantId) return true;
+    sendJson({ error: 'tenant_required' }, 400);
+    return false;
+  };
 
   // GET /api/knowledge-graph - Query graph
   if (method === 'GET' && pathname === '/api/knowledge-graph') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     const nodeTypes = req.query.types ? req.query.types.split(',') : null;
     const result = await kgService.queryGraph({ tenantId, nodeTypes, maxDepth: parseInt(req.query.depth) || 3 });
@@ -28,6 +38,7 @@ async function handleKnowledgeGraphRoutes(ctx) {
   if (method === 'GET' && relatedMatch) {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'read'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     const result = await kgService.findRelated({
       tenantId,
@@ -42,6 +53,7 @@ async function handleKnowledgeGraphRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/knowledge-graph/node') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'create'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);
@@ -66,6 +78,7 @@ async function handleKnowledgeGraphRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/knowledge-graph/edge') {
     const authCheck = requireAuth(req); if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const permCheck = requirePermission(req, 'agents', 'create'); if (!permCheck.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantGuard()) return true;
 
     if (!hasJsonContentType(req)) return badRequest('Content-Type must be application/json');
     const body = await parseJsonBody(req);

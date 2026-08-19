@@ -203,6 +203,10 @@ function createOpsRoutes({ buildDeps }) {
         limit: urlObj.searchParams.get('limit') != null ? Number(urlObj.searchParams.get('limit')) : 100,
         offset: urlObj.searchParams.get('offset') != null ? Number(urlObj.searchParams.get('offset')) : 0,
       });
+      if (result && result.ok === false) {
+        deps.sendJson(res, 400, { error: result.error || 'bad_request' });
+        return;
+      }
       deps.sendJson(res, 200, { ok: true, ...result });
     } catch (err) {
       deps.logger.error('[Ops] Erro ao listar DLQ da execution queue:', err);

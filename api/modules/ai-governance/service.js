@@ -3,10 +3,19 @@
 const getAiGovernanceRecordModel = require('../../db/models/AiGovernanceRecord');
 const logger = require('../../utils/logger');
 
+// Fail-closed: o service exige tenant explícito do caller (o boundary HTTP
+// garante); sem tenant, lança TENANT_REQUIRED em vez de persistir/consultar o
+// tenant 'system' por fallback silencioso.
+function requireTenantId(tenantId) {
+  const tid = typeof tenantId === 'string' ? tenantId.trim() : tenantId;
+  if (!tid) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
+  return tid;
+}
+
 async function logGovernanceEvent({ tenantId, agentId, eventType, actor, actorRole, description, metadata, decision, dataAccessed, toolsUsed, cost, riskLevel }) {
   const AiGovernanceRecord = getAiGovernanceRecordModel();
   return AiGovernanceRecord.create({
-    tenant_id: tenantId || 'system',
+    tenant_id: requireTenantId(tenantId),
     agentId: agentId || null,
     eventType,
     actor: actor || null,
@@ -23,7 +32,7 @@ async function logGovernanceEvent({ tenantId, agentId, eventType, actor, actorRo
 
 async function getAuditTrail({ tenantId, agentId, eventTypes, limit = 100 }) {
   const AiGovernanceRecord = getAiGovernanceRecordModel();
-  const where = { tenant_id: tenantId || 'system' };
+  const where = { tenant_id: requireTenantId(tenantId) };
 
   if (agentId) where.agentId = agentId;
   if (eventTypes && eventTypes.length > 0) {
@@ -41,7 +50,7 @@ async function getAuditTrail({ tenantId, agentId, eventTypes, limit = 100 }) {
 async function getDecisionLog({ tenantId, agentId, limit = 100 }) {
   const AiGovernanceRecord = getAiGovernanceRecordModel();
   const where = {
-    tenant_id: tenantId || 'system',
+    tenant_id: requireTenantId(tenantId),
     eventType: { [require('sequelize').Op.in]: ['decision', 'execute'] },
   };
   if (agentId) where.agentId = agentId;
@@ -57,7 +66,7 @@ async function generateComplianceReport({ tenantId, startDate, endDate }) {
   const AiGovernanceRecord = getAiGovernanceRecordModel();
   const { Op, fn, col } = require('sequelize');
 
-  const where = { tenant_id: tenantId || 'system' };
+  const where = { tenant_id: requireTenantId(tenantId) };
   if (startDate || endDate) {
     where.created_at = {};
     if (startDate) where.created_at[Op.gte] = new Date(startDate);

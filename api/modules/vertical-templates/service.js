@@ -3,6 +3,15 @@
 const getVerticalTemplateModel = require('../../db/models/VerticalTemplate');
 const logger = require('../../utils/logger');
 
+// Fail-closed: o service exige tenant explícito do caller (o boundary HTTP
+// garante); sem tenant, lança TENANT_REQUIRED em vez de persistir/consultar o
+// tenant 'system' por fallback silencioso.
+function requireTenantId(tenantId) {
+  const tid = typeof tenantId === 'string' ? tenantId.trim() : tenantId;
+  if (!tid) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
+  return tid;
+}
+
 const DEFAULT_TEMPLATES = [
   {
     category: 'Beauty', name: 'Beauty', slug: 'beauty',
@@ -64,7 +73,7 @@ const DEFAULT_TEMPLATES = [
 
 async function listTemplates({ tenantId, filters = {} }) {
   const VerticalTemplate = getVerticalTemplateModel();
-  const where = { tenant_id: tenantId || 'system' };
+  const where = { tenant_id: requireTenantId(tenantId) };
 
   if (filters.category) where.category = filters.category;
   if (filters.status) where.status = filters.status;
@@ -74,13 +83,13 @@ async function listTemplates({ tenantId, filters = {} }) {
 
 async function getTemplateById(id, tenantId) {
   const VerticalTemplate = getVerticalTemplateModel();
-  return VerticalTemplate.findOne({ where: { id, tenant_id: tenantId || 'system' } });
+  return VerticalTemplate.findOne({ where: { id, tenant_id: requireTenantId(tenantId) } });
 }
 
 async function createTemplate(data) {
   const VerticalTemplate = getVerticalTemplateModel();
   return VerticalTemplate.create({
-    tenant_id: data.tenantId || 'system',
+    tenant_id: requireTenantId(data.tenantId),
     name: data.name,
     slug: data.slug,
     category: data.category,
@@ -98,7 +107,7 @@ async function createTemplate(data) {
 
 async function updateTemplate(id, data, tenantId) {
   const VerticalTemplate = getVerticalTemplateModel();
-  const tmpl = await VerticalTemplate.findOne({ where: { id, tenant_id: tenantId || 'system' } });
+  const tmpl = await VerticalTemplate.findOne({ where: { id, tenant_id: requireTenantId(tenantId) } });
   if (!tmpl) return null;
 
   const updatableFields = [
@@ -114,13 +123,13 @@ async function updateTemplate(id, data, tenantId) {
 
 async function seedDefaultTemplates(tenantId) {
   const VerticalTemplate = getVerticalTemplateModel();
-  const existing = await VerticalTemplate.count({ where: { tenant_id: tenantId || 'system' } });
+  const existing = await VerticalTemplate.count({ where: { tenant_id: requireTenantId(tenantId) } });
   if (existing > 0) return [];
 
   const created = [];
   for (const t of DEFAULT_TEMPLATES) {
     const tmpl = await VerticalTemplate.create({
-      tenant_id: tenantId || 'system',
+      tenant_id: requireTenantId(tenantId),
       ...t,
       status: 'published',
     });

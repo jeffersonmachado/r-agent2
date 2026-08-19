@@ -49,7 +49,7 @@ describe('ExecutionQueueService', () => {
     }
   });
 
-  test('listDeadJobs tolera tenantId invalido (coerced to string)', async () => {
+  test('listDeadJobs falha fechado sem tenantId (tenant_required, sem consulta)', async () => {
     jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => null) }));
     const mockFindAndCountAll = jest.fn(async () => ({ count: 0, rows: [] }));
     jest.doMock('../../api/db/models', () => ({
@@ -59,12 +59,12 @@ describe('ExecutionQueueService', () => {
     // eslint-disable-next-line global-require
     const svc = require('../../api/services/executionQueueService');
 
-    // Pass null tenantId (should coerce to 'system')
+    // Sem tenantId: fail-closed (não consulta como 'system')
     const result = await svc.listDeadJobs({ tenantId: null });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('tenant_required');
     expect(result.total).toBe(0);
-    expect(mockFindAndCountAll).toHaveBeenCalled();
-    const whereArg = mockFindAndCountAll.mock.calls[0][0].where;
-    expect(whereArg.tenant_key).toBe('system');
+    expect(mockFindAndCountAll).not.toHaveBeenCalled();
   });
 
   test('finishJob with errorMessage coerced safely', async () => {

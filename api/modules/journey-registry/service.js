@@ -3,6 +3,15 @@
 const getJourneyRegistryModel = require('../../db/models/JourneyRegistry');
 const logger = require('../../utils/logger');
 
+// Fail-closed: o service exige tenant explícito do caller (o boundary HTTP
+// garante); sem tenant, lança TENANT_REQUIRED em vez de persistir/consultar o
+// tenant 'system' por fallback silencioso.
+function requireTenantId(tenantId) {
+  const tid = typeof tenantId === 'string' ? tenantId.trim() : tenantId;
+  if (!tid) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
+  return tid;
+}
+
 const DEFAULT_JOURNEYS = [
   { domain: 'sales', name: 'Lead Conversion', slug: 'lead-conversion', description: 'Converter leads em clientes', criticality: 'high' },
   { domain: 'service', name: 'Appointment Scheduling', slug: 'appointment-scheduling', description: 'Agendamento de compromissos', criticality: 'high' },
@@ -15,7 +24,7 @@ const DEFAULT_JOURNEYS = [
 
 async function listJourneys({ tenantId, filters = {} }) {
   const JourneyRegistry = getJourneyRegistryModel();
-  const where = { tenant_id: tenantId || 'system' };
+  const where = { tenant_id: requireTenantId(tenantId) };
 
   if (filters.domain) where.domain = filters.domain;
   if (filters.status) where.status = filters.status;
@@ -26,13 +35,13 @@ async function listJourneys({ tenantId, filters = {} }) {
 
 async function getJourneyById(id, tenantId) {
   const JourneyRegistry = getJourneyRegistryModel();
-  return JourneyRegistry.findOne({ where: { id, tenant_id: tenantId || 'system' } });
+  return JourneyRegistry.findOne({ where: { id, tenant_id: requireTenantId(tenantId) } });
 }
 
 async function createJourney(data) {
   const JourneyRegistry = getJourneyRegistryModel();
   return JourneyRegistry.create({
-    tenant_id: data.tenantId || 'system',
+    tenant_id: requireTenantId(data.tenantId),
     domain: data.domain,
     name: data.name,
     slug: data.slug,
@@ -49,7 +58,7 @@ async function createJourney(data) {
 
 async function updateJourney(id, data, tenantId) {
   const JourneyRegistry = getJourneyRegistryModel();
-  const journey = await JourneyRegistry.findOne({ where: { id, tenant_id: tenantId || 'system' } });
+  const journey = await JourneyRegistry.findOne({ where: { id, tenant_id: requireTenantId(tenantId) } });
   if (!journey) return null;
 
   const updatableFields = [
@@ -65,18 +74,18 @@ async function updateJourney(id, data, tenantId) {
 
 async function deleteJourney(id, tenantId) {
   const JourneyRegistry = getJourneyRegistryModel();
-  return JourneyRegistry.destroy({ where: { id, tenant_id: tenantId || 'system' } });
+  return JourneyRegistry.destroy({ where: { id, tenant_id: requireTenantId(tenantId) } });
 }
 
 async function seedDefaultJourneys(tenantId) {
   const JourneyRegistry = getJourneyRegistryModel();
-  const existing = await JourneyRegistry.count({ where: { tenant_id: tenantId || 'system' } });
+  const existing = await JourneyRegistry.count({ where: { tenant_id: requireTenantId(tenantId) } });
   if (existing > 0) return [];
 
   const created = [];
   for (const j of DEFAULT_JOURNEYS) {
     const journey = await JourneyRegistry.create({
-      tenant_id: tenantId || 'system',
+      tenant_id: requireTenantId(tenantId),
       ...j,
       sla: { responseTime: '5min', resolutionTime: '1h' },
       kpis: { csat: 90, resolutionRate: 95 },

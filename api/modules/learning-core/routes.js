@@ -18,6 +18,14 @@ const journeyFaqService = require('./journeyFaqService');
 
 const ADMIN_ROLES = new Set(['owner', 'admin', 'super_admin']);
 
+// Fail-closed: requireAuth popula req.tenantId e req.agent.tenantId (camelCase);
+// req.agent.tenant_id nunca é populado em produção e o fallback 'system'
+// executava 100% das vezes. Tenant ausente → 400 tenant_required no caller
+// (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
+function resolveTenantId(req) {
+  return req.tenantId || req.agent?.tenantId || null;
+}
+
 /**
  * Rotas do Learning Core (boundary HTTP — delega ao service).
  *
@@ -51,13 +59,14 @@ async function handleLearningCoreRoutes(ctx) {
       if (validation.valid) {
         req.agent = validation.agent;
         req.session = validation.session;
-        req.tenantId = validation.agent && (validation.agent.tenantId || validation.agent.tenant_id);
+        req.tenantId = validation.agent && validation.agent.tenantId;
         authCheck = { valid: true };
       }
     }
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const result = await learningCoreService.ingestInteractionBatch({
         tenantId,
@@ -78,7 +87,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const result = await competencyService.getCompetencies({
       tenantId,
       agentId: req.agent?.id,
@@ -91,7 +101,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const result = await competencyService.recomputeCompetencies({
       tenantId,
       agentId: req.agent?.id,
@@ -113,7 +124,8 @@ async function handleLearningCoreRoutes(ctx) {
       return true;
     }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const result = await competencyService.getCompetencies({
       tenantId,
       agentId: decodeURIComponent(competencyUserMatch[1]),
@@ -143,7 +155,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const result = await competencyService.getCompetencies({
       tenantId,
       agentId: req.agent?.id,
@@ -175,7 +188,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
 
     const body = await parseJsonBody(req);
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const result = await journeyTrainerService.generateTrainingFromReplay({
         tenantId,
@@ -195,7 +209,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const missions = await missionService.listMissionsForUser({
       tenantId,
       agentId: req.agent?.id,
@@ -211,7 +226,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const result = await missionService.completeMission({
         tenantId,
@@ -234,7 +250,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
 
     const body = await parseJsonBody(req);
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const result = await simulationService.generateSimulation({
         tenantId,
@@ -256,7 +273,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const simulations = await simulationService.listSimulations({ tenantId });
     sendJson({
       simulations,
@@ -274,7 +292,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
 
     const body = await parseJsonBody(req);
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const result = await tutorService.requestTutorHelp({
         tenantId,
@@ -295,7 +314,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const certifications = await certificationService.listCertifications({
       tenantId,
       agentId: req.agent?.id,
@@ -308,7 +328,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const result = await certificationService.evaluateCertifications({
       tenantId,
       agentId: req.agent?.id,
@@ -321,7 +342,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const plan = await mentorService.getLatestMentorPlan({
       tenantId,
       agentId: req.agent?.id,
@@ -334,7 +356,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const result = await mentorService.generateMentorPlan({
         tenantId,
@@ -356,7 +379,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const result = await adaptiveService.collectSignals({ tenantId });
     sendJson(result);
     return true;
@@ -367,7 +391,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const result = await adaptiveService.runAdaptiveCycle({ tenantId });
     sendJson(result);
     return true;
@@ -378,7 +403,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const result = await analyticsService.getOverview({ tenantId });
     sendJson(result);
     return true;
@@ -393,7 +419,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
 
     const body = await parseJsonBody(req);
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const result = await manualService.generateManualFromReplay({
         tenantId,
@@ -415,7 +442,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     sendJson({ manuals: manualService.listManuals({ tenantId }) });
     return true;
   }
@@ -427,7 +455,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const { filePath } = await manualService.ensureManualPdf({
         tenantId,
@@ -454,7 +483,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const { filePath, contentType } = manualService.resolveManualFile({
         tenantId,
@@ -481,7 +511,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const { filePath, contentType } = manualService.resolveManualFile({
         tenantId,
@@ -505,7 +536,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const journeys = await journeyFaqService.listJourneyFaqSummary({ tenantId });
     sendJson({ journeys });
     return true;
@@ -515,7 +547,8 @@ async function handleLearningCoreRoutes(ctx) {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
 
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     const journeyKey = new URL(req.url, 'http://localhost').searchParams.get('journeyKey');
     try {
       // usuário comum vê apenas o FAQ curado (included); admin vê tudo
@@ -536,7 +569,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
 
     const body = await parseJsonBody(req);
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const result = await journeyFaqService.generateJourneyFaq({
         tenantId,
@@ -563,7 +597,8 @@ async function handleLearningCoreRoutes(ctx) {
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
 
     const body = await parseJsonBody(req);
-    const tenantId = req.tenantId || req.agent?.tenantId || req.agent?.tenant_id || 'system';
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     try {
       const item = await journeyFaqService.setJourneyFaqStatus({
         tenantId,

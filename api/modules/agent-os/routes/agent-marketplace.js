@@ -23,7 +23,11 @@ async function handleAgentMarketplaceRoutes(ctx) {
   const { requireAuth, requirePermission, sendJson: _s, badRequest: _b, hasJsonContentType, parseJsonBody } = deps;
   const sendJson = (d, c) => _s(res, c || 200, d);
   const badRequest = (m) => _b(res, m);
-  const tenantId = req.tenant_id || 'system';
+  // Fail-closed: requireAuth popula req.tenantId e req.agent.tenantId
+  // (camelCase); req.tenant_id nunca é populado em produção, então o fallback
+  // 'system' executava 100% das vezes. Tenant ausente → 400 tenant_required
+  // (super_admin deve enviar X-Tenant-Id explicitamente, sem inferência).
+  const tenantId = req.tenantId || req.agent?.tenantId || null;
 
   // P1: Resolve classificação do ator autenticado.
   const actorClassification = getClassificationForAgent(req.agent);
@@ -57,6 +61,7 @@ async function handleAgentMarketplaceRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/agent-marketplace/install') {
     const a = requireAuth(req); if (!a.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
     const p = requirePermission(req, 'agents', 'create'); if (!p.allowed) { sendJson({ error: 'forbidden' }, 403); return true; }
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
     try {
       const body = await parseJsonBody(req);

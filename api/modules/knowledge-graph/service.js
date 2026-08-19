@@ -4,9 +4,18 @@ const getKnowledgeGraphNodeModel = require('../../db/models/KnowledgeGraphNode')
 const getKnowledgeGraphEdgeModel = require('../../db/models/KnowledgeGraphEdge');
 const logger = require('../../utils/logger');
 
+// Fail-closed: o service exige tenant explícito do caller (o boundary HTTP
+// garante); sem tenant, lança TENANT_REQUIRED em vez de persistir/consultar o
+// tenant 'system' por fallback silencioso.
+function requireTenantId(tenantId) {
+  const tid = typeof tenantId === 'string' ? tenantId.trim() : tenantId;
+  if (!tid) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
+  return tid;
+}
+
 async function upsertNode({ tenantId, type, label, properties, externalRef, externalType }) {
   const KGNode = getKnowledgeGraphNodeModel();
-  const where = { tenant_id: tenantId || 'system', external_ref: externalRef, external_type: externalType };
+  const where = { tenant_id: requireTenantId(tenantId), external_ref: externalRef, external_type: externalType };
 
   if (externalRef && externalType) {
     const existing = await KGNode.findOne({ where });
@@ -17,7 +26,7 @@ async function upsertNode({ tenantId, type, label, properties, externalRef, exte
   }
 
   return KGNode.create({
-    tenant_id: tenantId || 'system',
+    tenant_id: requireTenantId(tenantId),
     type,
     label,
     properties: properties || {},
@@ -29,7 +38,7 @@ async function upsertNode({ tenantId, type, label, properties, externalRef, exte
 async function createEdge({ tenantId, sourceNodeId, targetNodeId, relationship, weight, properties }) {
   const KGEdge = getKnowledgeGraphEdgeModel();
   return KGEdge.create({
-    tenant_id: tenantId || 'system',
+    tenant_id: requireTenantId(tenantId),
     sourceNodeId,
     targetNodeId,
     relationship,
@@ -43,7 +52,7 @@ async function queryGraph({ tenantId, nodeTypes, maxDepth = 3 }) {
   const KGEdge = getKnowledgeGraphEdgeModel();
   const { Op } = require('sequelize');
 
-  const where = { tenant_id: tenantId || 'system' };
+  const where = { tenant_id: requireTenantId(tenantId) };
   if (nodeTypes && nodeTypes.length > 0) {
     where.type = { [Op.in]: nodeTypes };
   }
@@ -53,7 +62,7 @@ async function queryGraph({ tenantId, nodeTypes, maxDepth = 3 }) {
 
   const edges = await KGEdge.findAll({
     where: {
-      tenant_id: tenantId || 'system',
+      tenant_id: requireTenantId(tenantId),
       [Op.or]: [
         { sourceNodeId: { [Op.in]: nodeIds } },
         { targetNodeId: { [Op.in]: nodeIds } },
@@ -69,7 +78,7 @@ async function findRelated({ tenantId, nodeId, relationship, direction = 'both' 
   const KGNode = getKnowledgeGraphNodeModel();
   const { Op } = require('sequelize');
 
-  const edgeWhere = { tenant_id: tenantId || 'system' };
+  const edgeWhere = { tenant_id: requireTenantId(tenantId) };
   if (relationship) edgeWhere.relationship = relationship;
 
   let edgeCondition;
@@ -102,12 +111,12 @@ async function deleteNode(nodeId, tenantId) {
 
   await KGEdge.destroy({
     where: {
-      tenant_id: tenantId || 'system',
+      tenant_id: requireTenantId(tenantId),
       [Op.or]: [{ sourceNodeId: nodeId }, { targetNodeId: nodeId }],
     },
   });
 
-  return KGNode.destroy({ where: { id: nodeId, tenant_id: tenantId || 'system' } });
+  return KGNode.destroy({ where: { id: nodeId, tenant_id: requireTenantId(tenantId) } });
 }
 
 module.exports = {

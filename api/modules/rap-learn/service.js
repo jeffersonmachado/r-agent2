@@ -3,10 +3,19 @@
 const getLearningRecordModel = require('../../db/models/LearningRecord');
 const logger = require('../../utils/logger');
 
+// Fail-closed: o service exige tenant explícito do caller (o boundary HTTP
+// garante); sem tenant, lança TENANT_REQUIRED em vez de persistir/consultar o
+// tenant 'system' por fallback silencioso.
+function requireTenantId(tenantId) {
+  const tid = typeof tenantId === 'string' ? tenantId.trim() : tenantId;
+  if (!tid) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
+  return tid;
+}
+
 async function recordFailure({ tenantId, source, sourceRef, classification, metrics }) {
   const LearningRecord = getLearningRecordModel();
   return LearningRecord.create({
-    tenant_id: tenantId || 'system',
+    tenant_id: requireTenantId(tenantId),
     type: 'failure',
     source: source || null,
     sourceRef: sourceRef || null,
@@ -18,7 +27,7 @@ async function recordFailure({ tenantId, source, sourceRef, classification, metr
 
 async function classifyFailure(id, classification, rootCause, tenantId) {
   const LearningRecord = getLearningRecordModel();
-  const record = await LearningRecord.findOne({ where: { id, tenant_id: tenantId || 'system' } });
+  const record = await LearningRecord.findOne({ where: { id, tenant_id: requireTenantId(tenantId) } });
   if (!record) return null;
 
   record.classification = classification;
@@ -30,7 +39,7 @@ async function classifyFailure(id, classification, rootCause, tenantId) {
 
 async function generateSuggestion(id, suggestion, tenantId) {
   const LearningRecord = getLearningRecordModel();
-  const record = await LearningRecord.findOne({ where: { id, tenant_id: tenantId || 'system' } });
+  const record = await LearningRecord.findOne({ where: { id, tenant_id: requireTenantId(tenantId) } });
   if (!record) return null;
 
   record.suggestion = suggestion;
@@ -41,7 +50,7 @@ async function generateSuggestion(id, suggestion, tenantId) {
 
 async function validateSuggestion(id, validationResult, tenantId) {
   const LearningRecord = getLearningRecordModel();
-  const record = await LearningRecord.findOne({ where: { id, tenant_id: tenantId || 'system' } });
+  const record = await LearningRecord.findOne({ where: { id, tenant_id: requireTenantId(tenantId) } });
   if (!record) return null;
 
   record.validationResult = validationResult;
@@ -52,7 +61,7 @@ async function validateSuggestion(id, validationResult, tenantId) {
 
 async function promoteToProduction(id, promotedBy, tenantId) {
   const LearningRecord = getLearningRecordModel();
-  const record = await LearningRecord.findOne({ where: { id, tenant_id: tenantId || 'system' } });
+  const record = await LearningRecord.findOne({ where: { id, tenant_id: requireTenantId(tenantId) } });
   if (!record) return null;
 
   record.status = 'promoted';
@@ -65,7 +74,7 @@ async function promoteToProduction(id, promotedBy, tenantId) {
 
 async function listLearningRecords({ tenantId, filters = {} }) {
   const LearningRecord = getLearningRecordModel();
-  const where = { tenant_id: tenantId || 'system' };
+  const where = { tenant_id: requireTenantId(tenantId) };
 
   if (filters.type) where.type = filters.type;
   if (filters.status) where.status = filters.status;
@@ -81,7 +90,7 @@ async function detectRegressions({ tenantId, windowHours = 24 }) {
   const since = new Date(Date.now() - windowHours * 60 * 60 * 1000);
   return LearningRecord.findAll({
     where: {
-      tenant_id: tenantId || 'system',
+      tenant_id: requireTenantId(tenantId),
       type: { [Op.in]: ['failure', 'regression'] },
       created_at: { [Op.gte]: since },
     },

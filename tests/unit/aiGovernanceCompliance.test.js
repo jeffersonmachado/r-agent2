@@ -77,7 +77,7 @@ describe('POST /api/ai-governance/event — ator derivado do agente autenticado'
   function makeCtx(body, agent) {
     const res = { statusCode: null, body: null };
     return {
-      req: { tenant_id: 'tenant-a', query: {}, agent },
+      req: { tenantId: 'tenant-a', query: {}, agent },
       res,
       method: 'POST',
       pathname: '/api/ai-governance/event',
