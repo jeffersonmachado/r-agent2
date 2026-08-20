@@ -2739,6 +2739,7 @@ async function runRealFlow({ journeyId, steps, seedEvidence }) {
     bookingId: seedEvidence.bookingId,
     transactionId: seedEvidence.transactionId,
     seedEvidence,
+    page: seedEvidence.page || null,
   });
 
   const result = await executeBlockingJourneyWithBrowser(journeyId, steps, {
@@ -2777,6 +2778,7 @@ async function runRealFlow({ journeyId, steps, seedEvidence }) {
     bookingId: seedEvidence.bookingId,
     transactionId: seedEvidence.transactionId,
     seedEvidence,
+    page: seedEvidence.page || null,
   });
 
   const normalizedSteps = (result.steps || []).map((step) => withSemanticContract({

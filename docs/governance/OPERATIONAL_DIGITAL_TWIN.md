@@ -1,7 +1,7 @@
 # Operational Digital Twin
 
 - Status: complete
-- Platform maturity: enterprise-partial
+- Platform maturity: enterprise-ready
 
 ## Observed signals
 - chronological_replays

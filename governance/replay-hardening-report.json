@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-08-20T12:17:00.751Z",
+  "generatedAt": "2026-08-20T14:56:00.244Z",
   "engine": "replay-hardening-engine/v2",
-  "pass": false,
-  "decision": "REPLAY_HARDENING_NO_GO",
+  "pass": true,
+  "decision": "REPLAY_HARDENING_GO",
   "totalReplaysAnalyzed": 10,
-  "hardenedReplays": 3,
+  "hardenedReplays": 10,
   "hashOnlyReplays": 0,
-  "violations": 17,
-  "uiViolations": 17,
+  "violations": 0,
+  "uiViolations": 0,
   "failedReplays": 0,
   "visualCriticalConfig": "governance/visual-critical-journeys.json",
   "results": [
@@ -17,47 +17,8 @@
       "flowStatus": "GO",
       "stepCount": 10,
       "isVisualCritical": true,
-      "violations": [
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_access_support_module",
-          "actionType": "navigate",
-          "path": "step.step_access_support_module.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_access_support_module (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica support_ticket_flow"
-        },
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_wait_ticket_list",
-          "actionType": "wait_for_list",
-          "path": "step.step_wait_ticket_list.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_wait_ticket_list (wait_for_list) ui.available=false (playwright_page_unavailable) em jornada crítica support_ticket_flow"
-        },
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_open_ticket",
-          "actionType": "click_open",
-          "path": "step.step_open_ticket.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_open_ticket (click_open) ui.available=false (playwright_page_unavailable) em jornada crítica support_ticket_flow"
-        },
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_assert_ticket_ui",
-          "actionType": "assert_ui_state",
-          "path": "step.step_assert_ticket_ui.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_assert_ticket_ui (assert_ui_state) ui.available=false (playwright_page_unavailable) em jornada crítica support_ticket_flow"
-        },
-        {
-          "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-          "path": "root.beforeSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Replay support_ticket_flow ui.available=false em snapshot raiz (playwright_page_unavailable)"
-        }
-      ],
-      "hardened": false,
+      "violations": [],
+      "hardened": true,
       "replayDeterministicHash": "ae63569ffa462e429e0e50b972fa56136e093065e91822a5fec825cc76132862",
       "replayExecutionHash": "dd7d9cc8f0c8f6161e6d119b7f7dad37a99ff89547d2be775a3ae6fd1d776198",
       "replayEvidenceHash": "26ace2139ea5d549cc2e070df41b92526fb7b1145a847652ee754bb71445edbf"
@@ -68,23 +29,8 @@
       "flowStatus": "GO",
       "stepCount": 5,
       "isVisualCritical": true,
-      "violations": [
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_access_checkin_module",
-          "actionType": "navigate",
-          "path": "step.step_access_checkin_module.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_access_checkin_module (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica fitness_customer_checkin"
-        },
-        {
-          "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-          "path": "root.beforeSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Replay fitness_customer_checkin ui.available=false em snapshot raiz (playwright_page_unavailable)"
-        }
-      ],
-      "hardened": false,
+      "violations": [],
+      "hardened": true,
       "replayDeterministicHash": "a712c1bc76f561564fc0ac29a6a066632cdbfc8c67580cec0caa3806c6d0c556",
       "replayExecutionHash": "040e55fc0d21dfebe4a1d7dfa4b55c219fad7aa7e5f04741f94ca9788a1a122d",
       "replayEvidenceHash": "3ecc563d78d67e25469204118c26e181bef85f7dec87c3e3a16d3807c0dfab40"
@@ -95,23 +41,8 @@
       "flowStatus": "GO",
       "stepCount": 3,
       "isVisualCritical": true,
-      "violations": [
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_access_booking_workspace",
-          "actionType": "navigate",
-          "path": "step.step_access_booking_workspace.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_access_booking_workspace (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica booking_flow"
-        },
-        {
-          "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-          "path": "root.beforeSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Replay booking_flow ui.available=false em snapshot raiz (playwright_page_unavailable)"
-        }
-      ],
-      "hardened": false,
+      "violations": [],
+      "hardened": true,
       "replayDeterministicHash": "42e6826adb695b4e342f0f40429dd1bb324456ff511218e3ff7585d79837cd72",
       "replayExecutionHash": "03b370e81a0edf17808973736e555249dd7a7b61e64bbd16ed52b216a9f60033",
       "replayEvidenceHash": "a63de41e2ad3199729c59f0fe6543b924fcb95a164bf9df8c1bb6c6c8faa8829"
@@ -122,23 +53,8 @@
       "flowStatus": "GO",
       "stepCount": 4,
       "isVisualCritical": true,
-      "violations": [
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_access_payments_module",
-          "actionType": "navigate",
-          "path": "step.step_access_payments_module.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_access_payments_module (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica payment_charge_flow"
-        },
-        {
-          "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-          "path": "root.beforeSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Replay payment_charge_flow ui.available=false em snapshot raiz (playwright_page_unavailable)"
-        }
-      ],
-      "hardened": false,
+      "violations": [],
+      "hardened": true,
       "replayDeterministicHash": "c109c3ebf89c9e9c048268052e4ba2eecc3a481cf82313dab44171a9d6b15b17",
       "replayExecutionHash": "3396c8c64ae5f0abfd988251d87476e4d0dde406f3b422dfba4cb99d61b69967",
       "replayEvidenceHash": "954ca38240cb6dba0e48b1e269f5aa4e08fbde453e49313e50498d5edb96562e"
@@ -149,23 +65,8 @@
       "flowStatus": "GO",
       "stepCount": 3,
       "isVisualCritical": true,
-      "violations": [
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_access_orders_module",
-          "actionType": "navigate",
-          "path": "step.step_access_orders_module.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_access_orders_module (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica food_order_status_flow"
-        },
-        {
-          "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-          "path": "root.beforeSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Replay food_order_status_flow ui.available=false em snapshot raiz (playwright_page_unavailable)"
-        }
-      ],
-      "hardened": false,
+      "violations": [],
+      "hardened": true,
       "replayDeterministicHash": "5b6b523528b8a13ae3c373ce1877e6919d0f9ed36881300a065fb9fcf27c19c1",
       "replayExecutionHash": "600c40017333386e0f8ab964b6c20cd4b676ba59fe6bf763731716218094b601",
       "replayEvidenceHash": "b8190840a2d171a9bed2a9815535f4c73f4d5eb7d41eebd6f5f8b905c0652cb5"
@@ -176,23 +77,8 @@
       "flowStatus": "GO",
       "stepCount": 3,
       "isVisualCritical": true,
-      "violations": [
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_access_node_marketplace",
-          "actionType": "navigate",
-          "path": "step.step_access_node_marketplace.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_access_node_marketplace (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica market_node_publish_flow"
-        },
-        {
-          "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-          "path": "root.beforeSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Replay market_node_publish_flow ui.available=false em snapshot raiz (playwright_page_unavailable)"
-        }
-      ],
-      "hardened": false,
+      "violations": [],
+      "hardened": true,
       "replayDeterministicHash": "1b225938fc2d8a704bea6f3c836a21d0bb66eb7152951bbd7c1a6c3a77513700",
       "replayExecutionHash": "ad3b0d736af925e3ec5460f44f21f0ad43ba6fe5d6eadf9c0451119513ae4620",
       "replayEvidenceHash": "d244bb89eca1ab73d6f8e0bc88f355b3f3c86328c0f5424f54dbb5c540e679d0"
@@ -203,23 +89,8 @@
       "flowStatus": "GO",
       "stepCount": 3,
       "isVisualCritical": true,
-      "violations": [
-        {
-          "rule": "STEP_UI_UNAVAILABLE",
-          "stepId": "step_access_clinic_calendar",
-          "actionType": "navigate",
-          "path": "step.step_access_clinic_calendar.beforeStepSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Step step_access_clinic_calendar (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica clinic_calendar_block_flow"
-        },
-        {
-          "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-          "path": "root.beforeSnapshot.ui",
-          "reason": "playwright_page_unavailable",
-          "message": "Replay clinic_calendar_block_flow ui.available=false em snapshot raiz (playwright_page_unavailable)"
-        }
-      ],
-      "hardened": false,
+      "violations": [],
+      "hardened": true,
       "replayDeterministicHash": "fbf6f84a0562ae9f0a38f0f0c62eb53668d4075c3e13153c39863dbbd09aedbc",
       "replayExecutionHash": "1ca62c875af1fbee16a78e9763bf855e8651570c4449f9f373b3d8d989cb86d3",
       "replayEvidenceHash": "5908d81bc1a8daa1fe9f29becb348a32643c0b7335012253fc386ec680310ac0"
@@ -262,164 +133,6 @@
       "replayEvidenceHash": "4fd343dd0bfe930b7af12c59510a861a845183bf6134d694ed2342d1b14c7021"
     }
   ],
-  "allViolations": [
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_access_support_module",
-      "actionType": "navigate",
-      "path": "step.step_access_support_module.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_access_support_module (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica support_ticket_flow",
-      "journeyId": "support_ticket_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_wait_ticket_list",
-      "actionType": "wait_for_list",
-      "path": "step.step_wait_ticket_list.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_wait_ticket_list (wait_for_list) ui.available=false (playwright_page_unavailable) em jornada crítica support_ticket_flow",
-      "journeyId": "support_ticket_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_open_ticket",
-      "actionType": "click_open",
-      "path": "step.step_open_ticket.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_open_ticket (click_open) ui.available=false (playwright_page_unavailable) em jornada crítica support_ticket_flow",
-      "journeyId": "support_ticket_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_assert_ticket_ui",
-      "actionType": "assert_ui_state",
-      "path": "step.step_assert_ticket_ui.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_assert_ticket_ui (assert_ui_state) ui.available=false (playwright_page_unavailable) em jornada crítica support_ticket_flow",
-      "journeyId": "support_ticket_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-      "path": "root.beforeSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Replay support_ticket_flow ui.available=false em snapshot raiz (playwright_page_unavailable)",
-      "journeyId": "support_ticket_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_access_checkin_module",
-      "actionType": "navigate",
-      "path": "step.step_access_checkin_module.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_access_checkin_module (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica fitness_customer_checkin",
-      "journeyId": "fitness_customer_checkin",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-      "path": "root.beforeSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Replay fitness_customer_checkin ui.available=false em snapshot raiz (playwright_page_unavailable)",
-      "journeyId": "fitness_customer_checkin",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_access_booking_workspace",
-      "actionType": "navigate",
-      "path": "step.step_access_booking_workspace.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_access_booking_workspace (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica booking_flow",
-      "journeyId": "booking_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-      "path": "root.beforeSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Replay booking_flow ui.available=false em snapshot raiz (playwright_page_unavailable)",
-      "journeyId": "booking_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_access_payments_module",
-      "actionType": "navigate",
-      "path": "step.step_access_payments_module.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_access_payments_module (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica payment_charge_flow",
-      "journeyId": "payment_charge_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-      "path": "root.beforeSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Replay payment_charge_flow ui.available=false em snapshot raiz (playwright_page_unavailable)",
-      "journeyId": "payment_charge_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_access_orders_module",
-      "actionType": "navigate",
-      "path": "step.step_access_orders_module.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_access_orders_module (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica food_order_status_flow",
-      "journeyId": "food_order_status_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-      "path": "root.beforeSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Replay food_order_status_flow ui.available=false em snapshot raiz (playwright_page_unavailable)",
-      "journeyId": "food_order_status_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_access_node_marketplace",
-      "actionType": "navigate",
-      "path": "step.step_access_node_marketplace.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_access_node_marketplace (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica market_node_publish_flow",
-      "journeyId": "market_node_publish_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-      "path": "root.beforeSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Replay market_node_publish_flow ui.available=false em snapshot raiz (playwright_page_unavailable)",
-      "journeyId": "market_node_publish_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "STEP_UI_UNAVAILABLE",
-      "stepId": "step_access_clinic_calendar",
-      "actionType": "navigate",
-      "path": "step.step_access_clinic_calendar.beforeStepSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Step step_access_clinic_calendar (navigate) ui.available=false (playwright_page_unavailable) em jornada crítica clinic_calendar_block_flow",
-      "journeyId": "clinic_calendar_block_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    },
-    {
-      "rule": "REPLAY_ROOT_UI_UNAVAILABLE",
-      "path": "root.beforeSnapshot.ui",
-      "reason": "playwright_page_unavailable",
-      "message": "Replay clinic_calendar_block_flow ui.available=false em snapshot raiz (playwright_page_unavailable)",
-      "journeyId": "clinic_calendar_block_flow",
-      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
-    }
-  ],
-  "summary": "17 violação(ões): 17 UI indisponível, 0 replay falso positivo",
-  "reboundAt": "2026-08-20T12:57:21.940Z"
+  "allViolations": [],
+  "summary": "Todos os 10 replays passaram no hardening."
 }

@@ -1,50 +1,8 @@
 {
-  "generatedAt": "2026-08-20T14:28:57.241Z",
-  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:STRICT_ENTERPRISE [17 step(s) com ui.available=false em jornadas visuais críticas] | replay-hardening=REPLAY_HARDENING_NO_GO]",
-  "platformMaturity": "enterprise-partial",
-  "backlog": [
-    {
-      "id": "gap-proof-invalid-artifact-semantics",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Proof artifacts presentes mas semanticamente invalidos (presenca != validade)",
-      "evidence": {
-        "count": 2,
-        "artifacts": [
-          {
-            "id": "smoke_l01",
-            "path": "qa/l01-physical-queue-evidence.json",
-            "violations": [
-              "ok_false"
-            ]
-          },
-          {
-            "id": "smoke_l05",
-            "path": "qa/l05-chatpro-omnichannel-evidence.json",
-            "violations": [
-              "ok_false"
-            ]
-          }
-        ]
-      },
-      "suggestedFix": "Corrigir o conteudo dos artifacts (ok/valid/status, assertions, snapshots) e regerar as evidencias."
-    },
-    {
-      "id": "gap-proof-governance-support",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Governance signature ou cleanup proof nao possuem artifact fisico valido",
-      "evidence": {
-        "status": "NOT_VALIDATED",
-        "signatureArtifact": "governance/proof-signature.json",
-        "cleanupArtifact": "governance/cleanup-proof.json",
-        "missing": [
-          "cleanup_status"
-        ]
-      },
-      "suggestedFix": "Persistir assinatura de governance com hashes e cleanup proof com limpeza validada."
-    }
-  ],
-  "blocking": 2,
+  "generatedAt": "2026-08-20T15:13:15.205Z",
+  "status": "AUTONOMOUS_READY_GO",
+  "platformMaturity": "enterprise-ready",
+  "backlog": [],
+  "blocking": 0,
   "nonBlocking": 0
 }

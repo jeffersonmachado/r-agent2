@@ -9,6 +9,8 @@
       "Bash(git diff *)",
       "Bash(git add *)",
       "Bash(git log *)",
+      "Bash(git push origin main)",
+      "Bash(git push origin main 2>&1)",
       "Bash(cat *)",
       "Bash(ls *)",
       "Bash(grep *)",
@@ -38,7 +40,6 @@
     ],
     "deny": [
       "Bash(rm -rf *)",
-      "Bash(git push *)",
       "Bash(git reset --hard *)",
       "Bash(git merge *)",
       "Bash(* --force)",

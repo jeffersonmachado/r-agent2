@@ -1,10 +1,10 @@
 # Platform Status
 
-- Generated at: 2026-08-20T14:28:57.241Z
+- Generated at: 2026-08-20T15:13:15.205Z
 - Canonical mesh execution: mesh-2026-08-19T11-15-13-868Z
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:STRICT_ENTERPRISE [17 step(s) com ui.available=false em jornadas visuais críticas] | replay-hardening=REPLAY_HARDENING_NO_GO]
-- Readiness score: 100
+- Readiness decision: AUTONOMOUS_READY_GO
+- Readiness score: 85
 - QA coverage: 100%
 - Replay coverage: 100%
 - Vertical coverage: 100%
@@ -23,5 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Proof artifacts presentes mas semanticamente invalidos (presenca != validade) [gap-proof-invalid-artifact-semantics]
-- Governance signature ou cleanup proof nao possuem artifact fisico valido [gap-proof-governance-support]
+- Sem bloqueadores ativos.
