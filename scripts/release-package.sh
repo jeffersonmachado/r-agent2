@@ -324,6 +324,27 @@ RELEASE_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "n/a")"
 GIT_BRANCH="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "n/a")"
 
+# Extrair fingerprints do proof report para rastreabilidade de consistência
+# (FINAL-001): o manifesto do pacote deve carregar o mesmo sourceFingerprint
+# do proof report gerado antes do empacotamento; verificadores pós-entrega
+# comparam sourceFingerprint do manifesto com o do proof contido no ZIP.
+PROOF_REPORT="$PROJECT_ROOT/governance/final-proof-report.json"
+SOURCE_FP="n/a"
+INVENTORY_FP="n/a"
+SCENARIO_FP="n/a"
+POLICY_FP="n/a"
+CHAIN_FP="n/a"
+PROOF_FP="n/a"
+if [[ -f "$PROOF_REPORT" ]]; then
+  SOURCE_FP="$(node_with_workspace_env -e "try{const r=require('$PROOF_REPORT');process.stdout.write(r.sourceFingerprint||'n/a')}catch(_){process.stdout.write('n/a')}" 2>/dev/null || echo "n/a")"
+  INVENTORY_FP="$(node_with_workspace_env -e "try{const r=require('$PROOF_REPORT');process.stdout.write(r.inventoryFingerprint||'n/a')}catch(_){process.stdout.write('n/a')}" 2>/dev/null || echo "n/a")"
+  SCENARIO_FP="$(node_with_workspace_env -e "try{const r=require('$PROOF_REPORT');process.stdout.write(r.scenarioFingerprint||'n/a')}catch(_){process.stdout.write('n/a')}" 2>/dev/null || echo "n/a")"
+  POLICY_FP="$(node_with_workspace_env -e "try{const r=require('$PROOF_REPORT');process.stdout.write(r.policyFingerprint||'n/a')}catch(_){process.stdout.write('n/a')}" 2>/dev/null || echo "n/a")"
+  CHAIN_FP="$(node_with_workspace_env -e "try{const r=require('$PROOF_REPORT');process.stdout.write(r.chainFingerprint||'n/a')}catch(_){process.stdout.write('n/a')}" 2>/dev/null || echo "n/a")"
+  # proofFingerprint = sha256 do próprio proof report
+  PROOF_FP="$(sha256sum "$PROOF_REPORT" | awk '{print $1}')"
+fi
+
 MANIFEST_FILE="$DIST_DIR/${ZIP_BASENAME%.zip}.manifest.json"
 cat > "$MANIFEST_FILE" <<EOF
 {
@@ -335,12 +356,22 @@ cat > "$MANIFEST_FILE" <<EOF
   "git_commit": "$GIT_COMMIT",
   "git_branch": "$GIT_BRANCH",
   "generated_by": "scripts/release-package.sh",
-  "audit": "passed"
+  "audit": "passed",
+  "fingerprints": {
+    "packageFingerprint": "$ZIP_HASH",
+    "sourceFingerprint": "$SOURCE_FP",
+    "inventoryFingerprint": "$INVENTORY_FP",
+    "scenarioFingerprint": "$SCENARIO_FP",
+    "policyFingerprint": "$POLICY_FP",
+    "chainFingerprint": "$CHAIN_FP",
+    "proofFingerprint": "$PROOF_FP"
+  }
 }
 EOF
 
 ok "Manifesto: $MANIFEST_FILE"
-echo "  SHA-256: $ZIP_HASH"
+echo "  SHA-256:           $ZIP_HASH"
+echo "  sourceFingerprint: $SOURCE_FP"
 
 step "Validando candidate ZIP contra o manifest de provas..."
 if ! node_with_workspace_env "$PROJECT_ROOT/governance/package-validator.js" --zip "$LATEST_ZIP" --audited-only; then

@@ -270,6 +270,11 @@ function inferFkCandidateJourneys(introspectionReport, entityGraph, templateJour
     const componentEdges = fkEdges.filter(e => component.includes(e.source) && component.includes(e.target));
     const rootName = entrypoints[0] || component[0];
 
+    // BLOCKER 8 — Candidate Journey states: DISCOVERED é o estado inicial.
+    // Pipeline: DISCOVERED → REGISTERED → SCENARIO_GENERATED → SEED_READY
+    //           → EXECUTED → VALIDATED.
+    // Jornadas descobertas via entity graph entram como DISCOVERED.
+    // Jornadas mutáveis ou de alto risco não são autoativadas (exigem approval).
     candidateJourneys.push({
       id: makeId('journey'),
       name: `FK Candidate: ${rootName}`,
@@ -278,7 +283,10 @@ function inferFkCandidateJourneys(introspectionReport, entityGraph, templateJour
       domain: dominantDomain,
       source: 'entity_graph_fk',
       inferredFromFk: true,
-      status: 'candidate',
+      status: 'DISCOVERED',
+      pipelineState: 'DISCOVERED',
+      autoActivate: false,
+      requiresApproval: uncovered.some(m => m.toLowerCase().includes('payment') || m.toLowerCase().includes('mutation')),
       sourceModels: component,
       availableModels: component,
       missingModels: [],
@@ -289,6 +297,7 @@ function inferFkCandidateJourneys(introspectionReport, entityGraph, templateJour
       successCriteria: [],
       failureCriteria: [],
       completeness: 1,
+      discoveredAt: nowIso(),
     });
   }
 
@@ -505,6 +514,7 @@ function generateSeeds(introspectionReport, journeys) {
       };
 
       // Constrói seed data respeitando constraints
+      const journeyTenantKey = journey.tenantKey || null;
       for (const [attrName, attrDef] of Object.entries(attrs)) {
         if (attrDef.primaryKey) {
           // PK: gera UUID ou string
@@ -513,12 +523,13 @@ function generateSeeds(introspectionReport, journeys) {
         } else if (attrDef.defaultValue !== null && attrDef.defaultValue !== undefined) {
           seed[attrName] = attrDef.defaultValue;
         } else if (!attrDef.allowNull) {
-          // Required field: gera valor compatível com o tipo
-          seed[attrName] = generateCompatibleValue(attrName, attrDef);
+          // Required field: gera valor compatível com o tipo.
+          // FKs ficam marcadas como FK_UNRESOLVED para validação posterior.
+          seed[attrName] = generateCompatibleValue(attrName, attrDef, { tenantKey: journeyTenantKey });
         }
       }
 
-      // Validações
+      // Validações estruturais e FK integrity (BLOCKER 9)
       const validations = [];
       for (const [attrName, attrDef] of Object.entries(attrs)) {
         if (seed[attrName] === undefined && attrDef.allowNull) continue;
@@ -526,6 +537,7 @@ function generateSeeds(introspectionReport, journeys) {
           validations.push({ field: attrName, issue: 'missing_required', resolved: true });
         }
       }
+      const fkIntegrity = validateSeedFkIntegrity({ data: seed });
 
       journeySeeds.push({
         id: makeId('seed'),
@@ -534,6 +546,8 @@ function generateSeeds(introspectionReport, journeys) {
         data: seed,
         validations,
         compatible: validations.length === 0,
+        fkIntegrity,
+        seedStatus: fkIntegrity.valid ? 'SEED_VALIDATED' : 'FK_UNRESOLVED',
       });
     }
 
@@ -552,18 +566,33 @@ function generateSeeds(introspectionReport, journeys) {
   };
 }
 
-function generateCompatibleValue(fieldName, attrDef) {
+// Símbolo canônico para FK não resolvida. Nunca usar UUID aleatório como FK —
+// uma FK semanticamente válida precisa referenciar entidade existente no mesmo
+// tenant. Seeds com FK_UNRESOLVED devem ser rejeitados pelo validador.
+const FK_UNRESOLVED = '__FK_UNRESOLVED__';
+
+function generateCompatibleValue(fieldName, attrDef, { tenantKey = null } = {}) {
   const type = String(attrDef.type || '').toUpperCase();
 
-  if (fieldName === 'tenant_key' || fieldName === 'tenant_id') return 'system';
-  if (fieldName.endsWith('_id') || fieldName.endsWith('_key')) return crypto.randomUUID();
+  // tenant_key / tenant_id: nunca 'system' como fallback genérico —
+  // usar o tenantKey do contexto de seed. Se ausente, marcar como FK pendente.
+  if (fieldName === 'tenant_key' || fieldName === 'tenant_id') {
+    return tenantKey || FK_UNRESOLVED;
+  }
+
+  // FK fields (_id, _key suffix): UUID aleatório NÃO é semanticamente válido.
+  // Marcar como não resolvida para que o validador rejeite o seed.
+  if (fieldName.endsWith('_id') || fieldName.endsWith('_key')) {
+    return FK_UNRESOLVED;
+  }
+
   if (fieldName === 'status') return 'active';
   if (fieldName === 'lifecycle') return 'draft';
   if (fieldName === 'classification') return 'DEVELOPMENT';
   if (fieldName === 'channel_type') return 'whatsapp';
   if (fieldName === 'kind') return 'interval';
   if (fieldName === 'source') return 'model_driven';
-  if (fieldName === 'eventType' || fieldName === 'event_type') return 'system';
+  if (fieldName === 'eventType' || fieldName === 'event_type') return 'platform_event';
   if (fieldName === 'mode') return 'auto';
   if (fieldName === 'queue') return 'default';
 
@@ -576,6 +605,21 @@ function generateCompatibleValue(fieldName, attrDef) {
   if (type.includes('STRING') || type.includes('TEXT')) return `${fieldName}_value`;
 
   return `${fieldName}_value`;
+}
+
+/**
+ * Valida um seed: rejeita se tiver FK_UNRESOLVED em campo obrigatório.
+ * BLOCKER 9 — FK integrity validation.
+ */
+function validateSeedFkIntegrity(seed) {
+  const unresolvedFields = Object.entries(seed.data || {})
+    .filter(([, v]) => v === FK_UNRESOLVED)
+    .map(([k]) => k);
+  return {
+    valid: unresolvedFields.length === 0,
+    unresolvedFkFields: unresolvedFields,
+    status: unresolvedFields.length === 0 ? 'SEED_VALIDATED' : 'FK_UNRESOLVED',
+  };
 }
 
 // ============================================================================
@@ -692,5 +736,8 @@ module.exports = {
   generateScenarios,
   generateSeeds,
   generateModelDrivenWaves,
+  generateCompatibleValue,
+  validateSeedFkIntegrity,
+  FK_UNRESOLVED,
   JOURNEY_TEMPLATES,
 };

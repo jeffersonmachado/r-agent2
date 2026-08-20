@@ -104,6 +104,7 @@ qa-mesh/meshEvidence/*
 qa-mesh/meshHistory/*
 qa-mesh/execution-history/*
 qa-mesh/isolated-run*/
+qa-mesh/system-validate/
 qa-mesh/meshReport.json
 qa-mesh/metrics.json
 qa-mesh/repairPlan.json

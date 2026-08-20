@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T19:55:42.826Z",
+  "generatedAt": "2026-08-20T11:25:06.611Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -9,15 +9,17 @@
     "indexedSecrets": 0,
     "operationalAccessToSystemDomain": 0,
     "dbChecksFailed": 0,
-    "runtimeChecksFailed": 0,
-    "internalTokenMissing": 0
+    "runtimeChecksFailed": 1,
+    "internalTokenMissing": 1
   },
   "probes": {
-    "serviceReachable": true,
-    "crossDomainLeakage": 0,
-    "crossTenantLeakage": 0,
-    "operationalAccessToSystemDomain": 0,
-    "details": []
+    "serviceReachable": false,
+    "crossDomainLeakage": "skipped",
+    "crossTenantLeakage": "skipped",
+    "operationalAccessToSystemDomain": "skipped",
+    "details": [
+      "rag-service inalcançável: provas obrigatórias de runtime não executadas"
+    ]
   },
   "distribution": [
     {
@@ -38,9 +40,11 @@
     {
       "domain": "SYSTEM",
       "classification": "SUPPORT",
-      "count": 133
+      "count": 143
     }
   ],
-  "details": [],
-  "status": "PASS"
+  "details": [
+    "rag-service inalcançável: provas obrigatórias de runtime não executadas"
+  ],
+  "status": "FAIL"
 }
