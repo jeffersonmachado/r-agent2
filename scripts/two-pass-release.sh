@@ -119,6 +119,15 @@ write_payload_manifest() {
   local git_commit="$6"
   local git_branch="$7"
 
+  # Ler runId e sourceFingerprint do run atual (obrigatório — artifact governado)
+  local current_run_path="$PROJECT_ROOT/governance/.current-run.json"
+  local run_id="null"
+  local source_fp="null"
+  if [[ -f "$current_run_path" ]]; then
+    run_id="$(node -e "try{const r=require('$current_run_path');process.stdout.write(JSON.stringify(r.runId||null))}catch(_){process.stdout.write('null')}" 2>/dev/null || echo "null")"
+    source_fp="$(node -e "try{const r=require('$current_run_path');process.stdout.write(JSON.stringify(r.sourceFingerprint||null))}catch(_){process.stdout.write('null')}" 2>/dev/null || echo "null")"
+  fi
+
   cat > "$manifest_path" <<EOF
 {
   "artifactType": "payload",
@@ -126,6 +135,8 @@ write_payload_manifest() {
   "sha256": "$payload_hash",
   "size": "$payload_size",
   "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "runId": $run_id,
+  "sourceFingerprint": $source_fp,
   "governedArtifact": "$payload_name",
   "selfContained": false,
   "envelopeAware": true,

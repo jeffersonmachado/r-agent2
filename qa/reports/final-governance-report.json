@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-20T17:31:25.078Z",
+  "generatedAt": "2026-08-20T19:05:25.957Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
-  "finalDecision": "NO_GO:ENTERPRISE_READY_GO",
+  "finalDecision": "NO_GO:AUTONOMOUS_READY_GO",
   "autonomousReady": false,
   "allChecksPass": true,
   "criticalBlocked": false,
@@ -43,9 +43,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260820-143006.zip",
-      "computed": "978d0abbd7093e2c0c7d6c9c…",
-      "recorded": "978d0abbd7093e2c0c7d6c9c…",
+      "zipName": "r-agent2-20260820-160402.zip",
+      "computed": "ccbd96146b66c72b6ba062b6…",
+      "recorded": "ccbd96146b66c72b6ba062b6…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },
@@ -66,5 +66,5 @@
   ],
   "criticalFailed": [],
   "highFailed": [],
-  "summary": "Governança limpa. Decisão: NO_GO:ENTERPRISE_READY_GO"
+  "summary": "Governança limpa. Decisão: NO_GO:AUTONOMOUS_READY_GO"
 }

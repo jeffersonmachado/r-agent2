@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T17:39:37.687Z",
+  "generatedAt": "2026-08-20T19:09:27.325Z",
   "engine": "final-governance-engine/v1",
   "strictMode": true,
   "finalDecision": "AUTONOMOUS_READY_GO",
@@ -43,9 +43,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260820-143006.payload.zip",
-      "computed": "5d128b835b9c0acb4acbc71e…",
-      "recorded": "5d128b835b9c0acb4acbc71e…",
+      "zipName": "r-agent2-20260820-160402.payload.zip",
+      "computed": "b15ef13c8273ac4c3b7fb37f…",
+      "recorded": "b15ef13c8273ac4c3b7fb37f…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },

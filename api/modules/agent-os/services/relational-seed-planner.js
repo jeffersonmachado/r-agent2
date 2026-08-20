@@ -56,15 +56,18 @@ function buildDependencyGraph(models) {
  * @returns {{ order: string[], cycles: string[][] }}
  */
 function topologicalSort(nodes, edges) {
+  // in-degree = número de dependências que o nó tem (não quantos dependem dele).
+  // edges[n] = [deps]: n depende de deps.
+  // Nós com in-degree 0 não têm predecessores — são provisionados primeiro.
   const inDegree = new Map(nodes.map((n) => [n, 0]));
 
-  for (const [, deps] of edges.entries()) {
-    for (const dep of deps) {
-      inDegree.set(dep, (inDegree.get(dep) || 0) + 1);
-    }
+  for (const [n, deps] of edges.entries()) {
+    // Cada dep em deps é um prerequisito de n. Contamos os prerequisitos de n.
+    const uniqueDeps = new Set(deps);
+    inDegree.set(n, uniqueDeps.size);
   }
 
-  // Nós com in-degree 0 (sem dependentes) são os roots — começamos por eles
+  // Nós com in-degree 0 não dependem de ninguém → são provisionados primeiro
   const queue = nodes.filter((n) => (inDegree.get(n) || 0) === 0);
   const order = [];
   const remaining = new Set(nodes);
@@ -261,10 +264,14 @@ function validateSeed(seedData, modelName, models, tenantId) {
 }
 
 // ─── Síntese de exemplo para journey ─────────────────────────────────────────
+//
+// TEST_FIXTURE_ONLY — uso exclusivo em testes unitários.
+// PROIBIDO usar como evidência de governança ou em scripts de validação.
+// Para planos de seed reais, usar buildSeedPlan() com models do Sequelize.
 
 /**
- * Gera um plano de seed sintético de exemplo para demonstração.
- * Usa um grafo de dependências fixo baseado na estrutura canônica do projeto.
+ * Gera um plano de seed sintético de exemplo para uso em testes unitários.
+ * @see buildSeedPlan para uso em produção (requer Sequelize models)
  */
 function synthesizeExampleSeedPlan(journeyId, tenantId) {
   // Grafo de dependência canônica do domínio fitness (exemplo)

@@ -67,7 +67,8 @@ function fail(gate, reason, detail = {}) {
 function checkPackageManifest() {
   const gate = makeGate('package_manifest');
 
-  // Procurar sidecar manifest ao lado do ZIP em dist/release/
+  // Procurar sidecar manifest ao lado do ZIP em dist/release/.
+  // PROIBIDO: nunca criar manifest sintético a partir do Proof.
   const releaseDir = path.join(ROOT, 'dist', 'release');
   let manifest = null;
   let manifestPath = null;
@@ -83,19 +84,7 @@ function checkPackageManifest() {
     }
   }
 
-  // Fallback: governance/final-proof-report.json como referência de fingerprints
-  if (!manifest) {
-    const proof = readJson('governance/final-proof-report.json');
-    if (proof) {
-      manifest = {
-        sourceFingerprint: proof.sourceFingerprint,
-        runId: proof.runId,
-        _syntheticFromProof: true,
-      };
-    }
-  }
-
-  if (!manifest) return fail(gate, 'Package manifest não encontrado');
+  if (!manifest) return fail(gate, 'PACKAGE_MANIFEST_REQUIRED — manifest real ausente em dist/release/. Proibido usar Proof como substituto.');
   return pass(gate, { manifest, manifestPath });
 }
 
@@ -106,17 +95,18 @@ function checkRunId(manifest) {
   const currentRun = readJson('governance/.current-run.json');
   const manifestRunId = manifest?.runId;
 
-  if (!manifestRunId && !currentRun?.runId) {
-    // Nenhum runId — artifact pré-FINAL3-001; aceitar como UNREGISTERED (não bloqueia)
-    return pass(gate, { note: 'runId ausente (pré-FINAL3-001); verificação de consistência pulada', runId: null });
+  // runId ausente é INVÁLIDO. Sem compatibilidade com "pré-FINAL3".
+  if (!manifestRunId) {
+    return fail(gate, 'INVALID_ARTIFACT — runId ausente no manifest. Todo artifact governado deve ter runId.');
+  }
+  if (!currentRun?.runId) {
+    return fail(gate, 'INVALID_ARTIFACT — .current-run.json ausente ou sem runId.');
+  }
+  if (manifestRunId !== currentRun.runId) {
+    return fail(gate, `FOREIGN_RUN_ARTIFACT — runId do manifest (${manifestRunId}) diverge do run atual (${currentRun.runId})`);
   }
 
-  if (manifestRunId && currentRun?.runId && manifestRunId !== currentRun.runId) {
-    return fail(gate, `runId do manifest (${manifestRunId}) diverge do run atual (${currentRun.runId})`);
-  }
-
-  const runId = manifestRunId || currentRun?.runId || null;
-  return pass(gate, { runId });
+  return pass(gate, { runId: manifestRunId });
 }
 
 // ─── 3. Source fingerprint ───────────────────────────────────────────────────
@@ -256,9 +246,9 @@ function checkCriticalJourney() {
   const gate = makeGate('critical_causal_journey');
 
   const evidence = readJson('governance/critical-journey-evidence.json');
+  // Ausência de evidência causal é BLOQUEANTE. Sem fail-open.
   if (!evidence) {
-    // Não bloqueia se o artifact ainda não existe (pré-FINAL3-004)
-    return pass(gate, { note: 'critical-journey-evidence.json ausente; gate pulado (pré-FINAL3-004)' });
+    return fail(gate, 'CRITICAL_CAUSAL_EVIDENCE_MISSING — critical-journey-evidence.json ausente. A cadeia causal real é obrigatória.');
   }
 
   const chain = evidence.causalChain || [];
@@ -284,8 +274,9 @@ function checkSystemScopeAudit() {
   const gate = makeGate('tenant_system_audit');
 
   const audit = readJson('governance/system-scope-audit.json');
+  // Ausência da auditoria é BLOQUEANTE. Sem fail-open.
   if (!audit) {
-    return pass(gate, { note: 'system-scope-audit.json ausente; gate pulado' });
+    return fail(gate, 'TENANT_AUDIT_MISSING — system-scope-audit.json ausente. Auditoria de tenant é obrigatória.');
   }
 
   if (audit.runtimeFailOpenCount > 0) {

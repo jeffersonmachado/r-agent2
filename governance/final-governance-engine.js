@@ -251,9 +251,11 @@ function checkPackageIntegrity() {
                reason: null, note: 'No hash record in package-validation-report — skipping' };
     }
 
-    // Tenta zipPath do relatório (ex: dist/release/), depois dist/ direto
+    // Tenta zipPath do relatório, depois dist/release/, depois dist/ direto
     const reportedZipPath = pkgReport?.zipPath && fs.existsSync(pkgReport.zipPath) ? pkgReport.zipPath : null;
-    const zipPath = reportedZipPath || path.join(ROOT, 'dist', zipName);
+    const zipPath = reportedZipPath
+      || (fs.existsSync(path.join(ROOT, 'dist', 'release', zipName)) ? path.join(ROOT, 'dist', 'release', zipName) : null)
+      || path.join(ROOT, 'dist', zipName);
     if (!fs.existsSync(zipPath)) {
       return { id: 'package_integrity', pass: false, severity: 'HIGH',
                reason: `ZIP não encontrado: ${zipName}` };

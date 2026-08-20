@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-20T17:39:37.941Z",
-  "runId": "rap-release-20260820-140449-58582886",
+  "generatedAt": "2026-08-20T19:09:13.792Z",
+  "runId": "rap-release-20260820-160006-0f281472",
   "engine": "report-contamination-cleaner/v3",
   "pass": true,
   "decision": "NO_CONTAMINATION",
@@ -10,7 +10,7 @@
   "totalContaminations": 0,
   "criticalCount": 0,
   "highCount": 0,
-  "currentRunId": "rap-release-20260820-140449-58582886",
+  "currentRunId": "rap-release-20260820-160006-0f281472",
   "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",

@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-08-20T17:41:51.553Z",
+  "generatedAt": "2026-08-20T19:09:58.689Z",
   "engine": "generate-self-proving-report/v1",
   "zipName": null,
   "zipHash": null,
-  "manifestHash": "a13b4e401f0b3c6fda4104ccf1fbdaebf2e6465e672f713ee5aa3529002cf32f",
-  "replayHash": "2217415e6733e1b0fa0e3f487602aeb523823603e907bde50414d50960b73a01",
-  "governanceHash": "c50644c0a9abe2d0e4ff6a0e25d753414af2a7ef69bb1cb043962f0342f18e21",
-  "readinessHash": "b6563b36c670242bbe00a5826456c6d59154cd49a9b92021a1786eb5d1b33d70",
-  "consistencyHash": "1a2c0e87e03f2abc67feff3c0fecf209d2b056b6046b61a38d30ac50f8e55107",
-  "contaminationHash": "01c6cb1bbebcf41227076dccf67c52a355e29bb09df961a6f6fad9d32403f93c",
-  "packageIntegrityHash": "8e003cfaf1bd9a76b8d3b261b9968b6b0792811e7cae683af70042e2128ad4ad",
+  "manifestHash": "53960b961f5f69f4557ac1907c1fed45d682f6fd85229e1ac0633754b66014e6",
+  "replayHash": "64af543dbd900f6d298387050089f4dda17637fc91ac3f29d955275df75cb7d1",
+  "governanceHash": "c8b1d03ff5f8bb1230e6a6b1d0311b5efc24fac40b51d98b4ca12892714a02b7",
+  "readinessHash": "eaa9b24cd7987b1a98b6a4c9160635ab5024a0b1ff1dc222ffcd3a270bcc61e3",
+  "consistencyHash": "70df507977a0d734840975a4e3aa08675983d7358b39a0b2ededc62a71194bcb",
+  "contaminationHash": "13d86236281b57a67142c7c609d1157b8c49b99b2df538b5df2d5c2956b6bcb8",
+  "packageIntegrityHash": "e684a965fda380be347ceb328212c61ae258c010a3b6107af3c39269671abfc6",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "be084375004d9d168bdba15372d6b35462f942236f8d5ab921b01001fa8c7a93",
+  "gateHash": "07a511b38e3568c4a8102de8617cdd7c56b3aa920fdba375747327cfae5bcc8e",
   "recalculatedReadinessHash": "9987274c3ca0757dcf308f5c8d9051d7048f1c0bdac5b79ab4ea265236eb2bd9",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
@@ -19,19 +19,14 @@
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
     "finalGovernance": "AUTONOMOUS_READY_GO",
-    "readiness": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:ENTERPRISE_READY_GO]",
+    "readiness": "AUTONOMOUS_READY_GO",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
-  "autonomousReady": false,
-  "mandatoryFailures": [
-    {
-      "engine": "readiness",
-      "decision": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:ENTERPRISE_READY_GO]"
-    }
-  ],
-  "ok": false,
-  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 1."
+  "autonomousReady": true,
+  "mandatoryFailures": [],
+  "ok": true,
+  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 0."
 }

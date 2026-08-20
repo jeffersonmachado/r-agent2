@@ -2,18 +2,22 @@
 'use strict';
 
 /**
- * validate-model-driven-e2e.js
+ * validate-model-driven-e2e.js — v2-real-pipeline
  *
- * Valida o pipeline completo:
- *   candidateJourney (DISCOVERED) → scenario → relational seed →
- *   wave → execution → evidence → validated coverage
+ * REGRA ABSOLUTA: Este script NÃO simula, NÃO sintetiza estados, NÃO cria
+ * IDs de jornada, NÃO hardcoda listas de entidades.
  *
- * Gera: governance/model-driven-e2e-report.json
+ * Ele EXECUTA o pipeline real model-driven (sem DB) e LEITURA evidências QA:
+ *   1. inferJourneysFromModels() → descoberta real via Sequelize models + introspection
+ *   2. buildEntityGraph()        → grafo real de entidades e FKs
+ *   3. generateSeeds()           → seeds reais derivados do domínio
+ *   4. QA smoke report           → prova real de execução e geração de evidência
+ *
+ * Saída: governance/model-driven-e2e-report.json
  */
 
 const fs   = require('fs');
 const path = require('path');
-const { synthesizeExampleSeedPlan } = require('../../api/modules/agent-os/services/relational-seed-planner');
 
 const ROOT        = path.join(__dirname, '..', '..');
 const OUTPUT_PATH = path.join(ROOT, 'governance', 'model-driven-e2e-report.json');
@@ -24,227 +28,215 @@ function readJson(relPath) {
   try { return JSON.parse(fs.readFileSync(abs, 'utf8')); } catch (_) { return null; }
 }
 
-// ─── Simular pipeline de candidateJourney ─────────────────────────────────────
-function simulateCandidateJourneyPipeline() {
-  // A model-driven-pipeline já descobre candidateJourneys
-  // Simulamos a jornada de exemplo completa pelo pipeline
-  const now = new Date().toISOString();
-  const tenantId = 'results-tenant';
-  const journeyId = 'fitness_customer_checkin';
+// ─── Fase 1: Descoberta real via pipeline model-driven ────────────────────────
 
-  const states = [];
+function runRealDiscovery() {
+  const {
+    inferJourneysFromModels,
+    buildEntityGraph,
+    generateSeeds,
+  } = require('../../api/modules/agent-os/services/model-driven-pipeline');
+  const { introspectAllModels } = require('../../api/modules/agent-os/services/model-introspection-service');
+  const { buildDomainMap }      = require('../../api/modules/agent-os/services/domain-map-service');
+  const { topologicalSort }     = require('../../api/modules/agent-os/services/relational-seed-planner');
 
-  // DISCOVERED
-  states.push({
-    state:      'DISCOVERED',
-    timestamp:  now,
-    journeyId,
-    source:     'Sequelize models + FK associations via model-driven-pipeline.js',
-    entityGraph: ['Customer', 'Establishment', 'Appointment', 'Resource'],
-  });
+  // Introspect models — funciona sem DB (lê arquivos fonte)
+  const introspection = introspectAllModels();
+  const domainMap     = buildDomainMap(introspection);
+  const entityGraph   = buildEntityGraph(introspection, domainMap);
 
-  // REGISTERED
-  states.push({
-    state:      'REGISTERED',
-    timestamp:  now,
-    journeyId,
-    scenarioId: null,
-    policy:     'autoActivate=false; requiresApproval=true',
-  });
+  // Inferir jornadas a partir do grafo real
+  const journeysReport = inferJourneysFromModels();
 
-  // SCENARIO_GENERATED
-  const scenarioId = `sc-${journeyId}-001`;
-  states.push({
-    state:      'SCENARIO_GENERATED',
-    timestamp:  now,
-    journeyId,
-    scenarioId,
-    scenarioType:  'production-like',
-    stepCount:     5,
-    verticalScope: 'fitness',
-  });
+  // Construir grafo de dependência para topological sort
+  const modelNames = introspection.models.map((m) => m.modelName);
+  const fkEdges    = new Map(modelNames.map((n) => [n, []]));
 
-  // SEED_PLANNED
-  const seedPlan = synthesizeExampleSeedPlan(journeyId, tenantId);
-  states.push({
-    state:        'SEED_PLANNED',
-    timestamp:    now,
-    journeyId,
-    scenarioId,
-    seedPlanId:   seedPlan.planId,
-    entities:     seedPlan.provisionOrder,
-    stepsCount:   seedPlan.provisioningSteps.length,
-  });
+  for (const model of introspection.models) {
+    for (const [field, attr] of Object.entries(model.attributes || {})) {
+      if (attr && attr.references) {
+        const targetModel = attr.references.model;
+        if (targetModel && fkEdges.has(model.modelName)) {
+          fkEdges.get(model.modelName).push(targetModel);
+        }
+      }
+    }
+  }
 
-  // SEED_READY
-  states.push({
-    state:        'SEED_READY',
-    timestamp:    now,
-    journeyId,
-    scenarioId,
-    seedPlanId:   seedPlan.planId,
-    tenantId,
-    validationStatus: seedPlan.validationSummary,
-    tenantConsistency: 'PASS',
-    fkResolved:   true,
-  });
+  const { order: topologicalOrder, cycles } = topologicalSort(modelNames, fkEdges);
 
-  // WAVE_CREATED
-  const waveId = `wave-${journeyId}-001`;
-  states.push({
-    state:    'WAVE_CREATED',
-    timestamp: now,
-    journeyId,
-    scenarioId,
-    waveId,
-    meshStatus: 'QUEUED',
-  });
+  // Gerar seeds para a primeira jornada candidata
+  const candidateJourneys = journeysReport.candidateJourneys || journeysReport.journeys || [];
+  const sampleSeeds = candidateJourneys.length > 0
+    ? generateSeeds(introspection, candidateJourneys.slice(0, 2))
+    : [];
 
-  // EXECUTED
-  const executionId = `exec-${journeyId}-001`;
-  states.push({
-    state:       'EXECUTED',
-    timestamp:   now,
-    journeyId,
-    scenarioId,
-    waveId,
-    executionId,
-    result:      'PASSED',
-    stepsExecuted: 5,
-    inventoryExercised: seedPlan.provisionOrder,
-  });
-
-  // EVIDENCE_GENERATED
-  const evidenceId = `ev-${journeyId}-001`;
-  states.push({
-    state:       'EVIDENCE_GENERATED',
-    timestamp:   now,
-    journeyId,
-    scenarioId,
-    waveId,
-    executionId,
-    evidenceId,
-    evidenceType: 'QA_WAVE_EXECUTION',
-    artifacts: ['execution-log', 'step-snapshots', 'assertions'],
-  });
-
-  // VALIDATED
-  states.push({
-    state:        'VALIDATED',
-    timestamp:    now,
-    journeyId,
-    scenarioId,
-    waveId,
-    executionId,
-    evidenceId,
-    coverageStatus: 'VALIDATED',
-    coveragePercent: 100,
-    decision:    'CANDIDATE_JOURNEY_VALIDATED',
-  });
-
-  return { journeyId, tenantId, states, seedPlan };
+  return {
+    introspection,
+    domainMap,
+    entityGraph,
+    journeysReport,
+    topologicalOrder,
+    cycles,
+    sampleSeeds,
+    candidateJourneys,
+  };
 }
 
-// ─── Validar o pipeline ───────────────────────────────────────────────────────
-function validatePipeline(simulation) {
-  const { states } = simulation;
+// ─── Fase 2: Leitura de evidências reais de execução ─────────────────────────
+
+function readExecutionEvidence() {
+  const smokeReport     = readJson('qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json');
+  const hardeningReport = readJson('governance/replay-hardening-report.json');
+  const consistReport   = readJson('governance/replay-consistency-report.json');
+  const qaGoNoGo        = readJson('qa-mesh/go-no-go-report.json');
+
+  return { smokeReport, hardeningReport, consistReport, qaGoNoGo };
+}
+
+// ─── Fase 3: Validação ────────────────────────────────────────────────────────
+
+function validateDiscovery(discovery) {
   const violations = [];
 
-  const requiredStates = [
-    'DISCOVERED', 'REGISTERED', 'SCENARIO_GENERATED', 'SEED_PLANNED',
-    'SEED_READY', 'WAVE_CREATED', 'EXECUTED', 'EVIDENCE_GENERATED', 'VALIDATED',
-  ];
+  const { journeysReport, topologicalOrder, cycles, candidateJourneys, entityGraph } = discovery;
 
-  const presentStates = new Set(states.map((s) => s.state));
+  // DISCOVERED: pelo menos uma jornada descoberta pelo pipeline real
+  if (!journeysReport || journeysReport.totalJourneys === 0) {
+    violations.push('DISCOVERED: nenhuma jornada descoberta pelo model-driven pipeline (inferJourneysFromModels)');
+  }
 
-  for (const req of requiredStates) {
-    if (!presentStates.has(req)) {
-      violations.push(`Estado ausente: ${req}`);
+  // REGISTERED: a estrutura do journey report deve conter journeys (CandidateJourney registradas)
+  if (candidateJourneys.length === 0) {
+    violations.push('REGISTERED: nenhuma candidateJourney no journeysReport');
+  }
+
+  // SEED_PLANNED: topological sort deve funcionar sem ciclos para os modelos de domínio
+  if (cycles.length > 0) {
+    violations.push(`SEED_PLANNED: ciclos detectados no grafo relacional: ${cycles.map((c) => c.join('→')).join(', ')}`);
+  }
+
+  // SEED_PLANNED: ordem topológica deve conter pelo menos os modelos de domínio core
+  const domainModels = ['Tenant', 'Ticket', 'ChannelConversation', 'EventLedger'];
+  const presentInOrder = new Set(topologicalOrder);
+  for (const dm of domainModels) {
+    if (!presentInOrder.has(dm)) {
+      violations.push(`SEED_PLANNED: modelo de domínio ${dm} ausente na ordem topológica`);
     }
   }
 
-  // Verificar ordem
-  for (let i = 1; i < requiredStates.length; i++) {
-    const prev = states.findIndex((s) => s.state === requiredStates[i - 1]);
-    const curr = states.findIndex((s) => s.state === requiredStates[i]);
-    if (prev === -1 || curr === -1) continue;
-    if (curr < prev) {
-      violations.push(`Ordem incorreta: ${requiredStates[i]} antes de ${requiredStates[i - 1]}`);
+  // ENTITY_GRAPH: entidades devem ter sido detectadas
+  if (!entityGraph || (entityGraph.nodes || []).length === 0) {
+    violations.push('ENTITY_GRAPH: buildEntityGraph retornou grafo vazio');
+  }
+
+  return violations;
+}
+
+function validateExecution(evidence) {
+  const violations = [];
+  const { smokeReport, hardeningReport } = evidence;
+
+  // EXECUTED: smoke report deve existir e ter status GO
+  if (!smokeReport) {
+    violations.push('EXECUTED: smoke report ausente (qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json)');
+  } else if (smokeReport.status !== 'GO') {
+    violations.push(`EXECUTED: smoke report status=${smokeReport.status} (esperado: GO)`);
+  }
+
+  // EVIDENCE_GENERATED: smoke flows devem ter sido executados
+  const flows = smokeReport?.flows || [];
+  if (flows.length === 0) {
+    violations.push('EVIDENCE_GENERATED: smoke report sem flows executados');
+  } else {
+    const failedFlows = flows.filter((f) => f.replay?.status !== 'GO');
+    if (failedFlows.length > 0) {
+      violations.push(`EVIDENCE_GENERATED: ${failedFlows.length} flow(s) com replay.status≠GO`);
     }
   }
 
-  // Verificar seed plan
-  const seedPlan = simulation.seedPlan;
-  if (!seedPlan || seedPlan.hasCycles) {
-    violations.push('Seed plan com ciclos ou ausente');
-  }
-
-  if (seedPlan?.provisioningSteps?.length === 0) {
-    violations.push('Seed plan sem steps de provisioning');
-  }
-
-  // Verificar tenant consistency
-  const seedReady = states.find((s) => s.state === 'SEED_READY');
-  if (seedReady && seedReady.tenantConsistency !== 'PASS') {
-    violations.push('Seed tenant consistency FAIL');
+  // VALIDATED: replay hardening deve ter passado
+  if (!hardeningReport) {
+    violations.push('VALIDATED: replay-hardening-report.json ausente');
+  } else if (!hardeningReport.decision?.includes('GO')) {
+    violations.push(`VALIDATED: replay hardening decision=${hardeningReport.decision} (esperado: *GO*)`);
   }
 
   return violations;
 }
 
 function run() {
-  const simulation = simulateCandidateJourneyPipeline();
-  const violations = validatePipeline(simulation);
-  const pass = violations.length === 0;
   const runId = readJson('governance/.current-run.json')?.runId || null;
+  const violations = [];
 
-  // Demonstrar árvore relacional com parent IDs
-  const seedPlanExample = simulation.seedPlan;
-  const relationalTree = seedPlanExample.provisioningSteps.map((step) => ({
-    step:       step.step,
-    model:      step.modelName,
-    primaryKey: step.primaryKey,
-    parentRefs: Object.entries(step.references || {})
-      .filter(([k]) => k !== 'tenant_key')
-      .map(([field, value]) => ({ field, value })),
-    tenant:     step.tenantId || 'root',
-    validation: step.validationStatus || 'SEED_VALIDATED',
-  }));
+  // Fase 1: pipeline real
+  let discovery;
+  try {
+    discovery = runRealDiscovery();
+  } catch (err) {
+    violations.push(`PIPELINE_ERROR: falha ao executar pipeline real: ${err.message}`);
+    const report = {
+      generatedAt: new Date().toISOString(),
+      runId,
+      engine:      'model-driven-e2e/v2-real-pipeline',
+      pass:        false,
+      decision:    'MODEL_DRIVEN_E2E_FAIL',
+      violations,
+    };
+    fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
+    fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+    console.error(`[model-driven-e2e] PIPELINE_ERROR: ${err.message}`);
+    return report;
+  }
+
+  violations.push(...validateDiscovery(discovery));
+
+  // Fase 2: evidências de execução reais
+  const evidence = readExecutionEvidence();
+  violations.push(...validateExecution(evidence));
+
+  const pass = violations.length === 0;
+
+  const { journeysReport, topologicalOrder, cycles, candidateJourneys, entityGraph, introspection } = discovery;
 
   const report = {
-    generatedAt:   new Date().toISOString(),
+    generatedAt:    new Date().toISOString(),
     runId,
-    engine:        'model-driven-e2e/v1',
+    engine:         'model-driven-e2e/v2-real-pipeline',
     pass,
-    decision:      pass ? 'MODEL_DRIVEN_E2E_VALIDATED' : 'MODEL_DRIVEN_E2E_FAIL',
+    decision:       pass ? 'MODEL_DRIVEN_E2E_VALIDATED' : 'MODEL_DRIVEN_E2E_FAIL',
     violations,
-    candidateJourneyPipeline: {
-      journeyId:   simulation.journeyId,
-      tenantId:    simulation.tenantId,
-      stateCount:  simulation.states.length,
-      states:      simulation.states.map((s) => ({ state: s.state, timestamp: s.timestamp })),
+    pipelineOutput: {
+      modelsIntrospected:      introspection.totalModels,
+      modelsLoaded:            introspection.modelsLoaded,
+      entityGraphNodes:        (entityGraph?.nodes || []).length,
+      entityGraphEdges:        (entityGraph?.edges || []).length,
+      journeysDiscovered:      journeysReport.totalJourneys,
+      candidateJourneys:       candidateJourneys.length,
+      topologicalOrderLength:  topologicalOrder.length,
+      topologicalCycles:       cycles.length,
+      topologicalSample:       topologicalOrder.slice(0, 10),
     },
-    relationalSeedExample: {
-      journeyId:        simulation.journeyId,
-      tenantId:         simulation.tenantId,
-      planId:           seedPlanExample.planId,
-      provisionOrder:   seedPlanExample.provisionOrder,
-      stepsCount:       seedPlanExample.provisioningSteps.length,
-      hasCycles:        seedPlanExample.hasCycles,
-      validationSummary: seedPlanExample.validationSummary,
-      relationalTree,
+    executionEvidence: {
+      smokeStatus:      evidence.smokeReport?.status || null,
+      smokeFlowsCount:  (evidence.smokeReport?.flows || []).length,
+      smokeFlowsPassed: (evidence.smokeReport?.flows || []).filter((f) => f.replay?.status === 'GO').length,
+      hardeningDecision: evidence.hardeningReport?.decision || null,
+      consistencyDecision: evidence.consistReport?.decision || null,
     },
+    candidateJourneysSample: candidateJourneys.slice(0, 3).map((j) => ({
+      id:     j.id,
+      domain: j.domain,
+      entityCount: (j.entities || []).length,
+    })),
   };
 
   fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
   fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
-  console.log(`[model-driven-e2e] decision=${report.decision} states=${simulation.states.length} violations=${violations.length}`);
+  console.log(`[model-driven-e2e] decision=${report.decision} journeys=${journeysReport.totalJourneys} models=${introspection.totalModels} violations=${violations.length}`);
   if (violations.length > 0) {
     violations.forEach((v) => console.log(`  VIOLATION: ${v}`));
-  } else {
-    console.log(`  candidateJourney ${simulation.journeyId}: DISCOVERED→VALIDATED (${simulation.states.length} estados)`);
-    console.log(`  relationalTree: ${relationalTree.length} entidades em ordem topológica`);
   }
 
   return report;
