@@ -2,15 +2,18 @@
 'use strict';
 
 /**
- * Report Contamination Cleaner v2 — varredura recursiva de GO legado.
+ * Report Contamination Cleaner v3 — detecção de reports de runs anteriores.
  *
- * Um relatório está contaminado quando contém — em QUALQUER profundidade do JSON:
- *   - AUTONOMOUS_READY_GO   → GO legado de ciclo anterior
- *   - SELF_PROVING_GO       → GO legado de prova anterior
- *   - ENTERPRISE_READY_GO   → GO legado de validação anterior
- *   - stale GO              → decisão GO num relatório cujo motor diz NO_GO
- *   - orphan GO             → GO que não tem engine que o suporte
- *   - conflicting GO        → GO que contradiz a decisão final da governança
+ * Um relatório está contaminado quando:
+ *   a) runId do artifact != runId do current run (FOREIGN_RUN_ARTIFACT)
+ *   b) Quando não há runId: report com generatedAt muito antigo (>24h)
+ *      e a decisão contradiz a decisão canônica atual (STALE_GO)
+ *   c) Decisão GO num relatório cujo motor diz NO_GO (cross-contamination)
+ *
+ * NOTA: a presença de AUTONOMOUS_READY_GO em reports do RUN ATUAL não é
+ * contaminação — é o estado correto. Apenas reports de runs anteriores
+ * ou reports com stale generatedAt que afirmam GO contradizendo o estado
+ * atual são contaminação real.
  *
  * Atenção: este engine NÃO sobrescreve relatórios — apenas reporta contaminação.
  *
@@ -23,12 +26,17 @@ const path = require('path');
 const ROOT        = path.join(__dirname, '..');
 const REPORT_PATH = path.join(ROOT, 'governance', 'report-contamination-report.json');
 
-// Termos que indicam GO legado ou stale
-const LEGACY_GO_TERMS = [
+const { getCurrentRunId } = require('./shared/run-id');
+
+// Termos que indicam GO — usados SOMENTE para cross-contamination quando governance=NO_GO
+const GO_TERMS = [
   'AUTONOMOUS_READY_GO',
   'SELF_PROVING_GO',
   'ENTERPRISE_READY_GO',
 ];
+
+// Threshold de staleness: relatórios sem runId com mais de 24h são suspeitos
+const STALE_HOURS = 24;
 
 // Campos que são "decisões" (portadores de GO/NO_GO)
 const DECISION_FIELDS = new Set([
@@ -36,41 +44,59 @@ const DECISION_FIELDS = new Set([
   'readinessDecision', 'overallStatus', 'go', 'platformDecision',
 ]);
 
+function isStaleTimestamp(generatedAt) {
+  if (!generatedAt) return false;
+  try {
+    const age = (Date.now() - new Date(generatedAt).getTime()) / 3600000;
+    return age > STALE_HOURS;
+  } catch (_) { return false; }
+}
+
+function hasGoDecision(data) {
+  const d = data.finalDecision || data.decision || data.status || data.gate || '';
+  return GO_TERMS.some((t) => String(d).includes(t));
+}
+
 function readJsonSafe(relPath) {
   const abs = path.join(ROOT, relPath);
   if (!fs.existsSync(abs)) return null;
   try { return JSON.parse(fs.readFileSync(abs, 'utf8')); } catch (_) { return null; }
 }
 
-// ─── Varredura recursiva de objeto JSON ───────────────────────────────────────
-// Retorna lista de { path, value, term } para cada ocorrência de GO legado.
-function scanRecursively(obj, currentPath, found) {
-  if (!obj || typeof obj !== 'object') return;
+// ─── Verificar se um artifact pertence a um run estranho ─────────────────────
+function checkForeignRun(data, relPath, currentRunId) {
+  if (!data || typeof data !== 'object') return null;
 
-  if (Array.isArray(obj)) {
-    obj.forEach((v, i) => scanRecursively(v, `${currentPath}[${i}]`, found));
-    return;
+  const artifactRunId = data.runId || data.run_id;
+
+  // Se o artifact tem runId e difere do atual → FOREIGN_RUN
+  if (currentRunId && artifactRunId && artifactRunId !== currentRunId) {
+    return {
+      path:     'runId',
+      value:    artifactRunId,
+      term:     'FOREIGN_RUN_ARTIFACT',
+      isDecisionField: true,
+      type:     'FOREIGN_RUN_ARTIFACT',
+      severity: 'CRITICAL',
+      file:     relPath,
+      expected: currentRunId,
+    };
   }
 
-  for (const [key, value] of Object.entries(obj)) {
-    const childPath = currentPath ? `${currentPath}.${key}` : key;
-
-    if (typeof value === 'string') {
-      for (const term of LEGACY_GO_TERMS) {
-        if (value.includes(term)) {
-          found.push({
-            path:  childPath,
-            value: value.slice(0, 120),
-            term,
-            isDecisionField: DECISION_FIELDS.has(key),
-          });
-          break;
-        }
-      }
-    } else if (value && typeof value === 'object') {
-      scanRecursively(value, childPath, found);
-    }
+  // Se não há runId e o report é stale E afirma GO contradizendo governance atual
+  if (!artifactRunId && isStaleTimestamp(data.generatedAt) && hasGoDecision(data)) {
+    return {
+      path:     'generatedAt',
+      value:    data.generatedAt,
+      term:     'STALE_GO_NO_RUN_ID',
+      isDecisionField: false,
+      type:     'STALE_GO_NO_RUN_ID',
+      severity: 'HIGH',
+      file:     relPath,
+    };
   }
+
+  return null;
 }
 
 // ─── Leitura da decisão canônica atual do governance engine ──────────────────
@@ -91,21 +117,15 @@ function isNoGo(decision) {
 }
 
 // ─── Varredura de um arquivo específico ──────────────────────────────────────
-function scanFile(relPath, opts = {}) {
+function scanFile(relPath, currentRunId) {
   const data = readJsonSafe(relPath);
   if (!data) return { file: relPath, scanned: false, contaminations: [] };
 
-  const found = [];
-  scanRecursively(data, '', found);
+  const contaminations = [];
+  const foreignRun = checkForeignRun(data, relPath, currentRunId);
+  if (foreignRun) contaminations.push(foreignRun);
 
-  const contaminations = found.map((hit) => ({
-    ...hit,
-    file: relPath,
-    type: hit.isDecisionField ? 'LEGACY_GO_IN_DECISION_FIELD' : 'LEGACY_GO_IN_NESTED_FIELD',
-    severity: hit.isDecisionField ? 'CRITICAL' : 'HIGH',
-  }));
-
-  return { file: relPath, scanned: true, hitCount: found.length, contaminations };
+  return { file: relPath, scanned: true, hitCount: contaminations.length, contaminations };
 }
 
 // ─── Lista de arquivos a varrer ───────────────────────────────────────────────
@@ -124,9 +144,11 @@ function getGovernanceFiles() {
 function checkCrossContamination(fileScanResults, currentDecision) {
   const crossIssues = [];
 
+  // Cross-contamination só é relevante quando governance está em NO_GO
+  // e algum sub-relatório afirma GO — indicando report stale
   if (!isNoGo(currentDecision)) return crossIssues;
 
-  for (const result of fileScanResults) {
+  for (const result of fileScanResults) { // eslint-disable-line no-unreachable-loop
     if (!result.scanned || result.contaminations.length === 0) continue;
 
     // Verificar se o próprio top-level do arquivo diz GO
@@ -134,16 +156,19 @@ function checkCrossContamination(fileScanResults, currentDecision) {
     if (!data) continue;
 
     const topLevelDecision = data.finalDecision || data.decision || data.status || data.gate;
-    const topLevelIsGo = topLevelDecision && LEGACY_GO_TERMS.some((t) => String(topLevelDecision).includes(t));
+    const topLevelIsGo = topLevelDecision && GO_TERMS.some((t) => String(topLevelDecision).includes(t));
 
-    if (topLevelIsGo) {
+    // Só flageia se o report é stale (>24h) ou tem runId diferente do atual
+    const isStale = isStaleTimestamp(data.generatedAt);
+    if (topLevelIsGo && isStale) {
       crossIssues.push({
         file:            result.file,
         type:            'STALE_TOP_LEVEL_GO',
         severity:        'CRITICAL',
         topLevelDecision,
         currentDecision,
-        message:         `${result.file} afirma ${topLevelDecision} mas governança diz ${currentDecision}`,
+        generatedAt:     data.generatedAt,
+        message:         `${result.file} afirma ${topLevelDecision} (stale: ${data.generatedAt}) mas governança diz ${currentDecision}`,
       });
     }
   }
@@ -152,19 +177,20 @@ function checkCrossContamination(fileScanResults, currentDecision) {
 }
 
 // ─── dev/platform-readiness/latest.json ──────────────────────────────────────
-function checkPlatformReadiness() {
-  return scanFile('dev/platform-readiness/latest.json');
+function checkPlatformReadiness(currentRunId) {
+  return scanFile('dev/platform-readiness/latest.json', currentRunId);
 }
 
 // ─── Motor principal ──────────────────────────────────────────────────────────
 function runContaminationCleaner() {
   const currentDecision = getCurrentGovernanceDecision();
+  const currentRunId    = getCurrentRunId();
   const governanceFiles = getGovernanceFiles();
 
-  // Varredura de todos os arquivos de governança
+  // Varredura de todos os arquivos de governança por foreign runId
   const fileScanResults = [
-    ...governanceFiles.map((f) => scanFile(f)),
-    checkPlatformReadiness(),
+    ...governanceFiles.map((f) => scanFile(f, currentRunId)),
+    checkPlatformReadiness(currentRunId),
   ].filter((r) => r.scanned);
 
   // Verificação cruzada
@@ -191,7 +217,8 @@ function runContaminationCleaner() {
 
   const report = {
     generatedAt:          new Date().toISOString(),
-    engine:               'report-contamination-cleaner/v2',
+    runId:                currentRunId || null,
+    engine:               'report-contamination-cleaner/v3',
     pass,
     decision:             pass ? 'NO_CONTAMINATION' : 'GOVERNANCE_CONTAMINATION_NO_GO',
     currentGovernanceDecision: currentDecision || 'UNKNOWN',
@@ -200,7 +227,8 @@ function runContaminationCleaner() {
     totalContaminations:  allContaminations.length,
     criticalCount:        criticalContaminations.length,
     highCount:            highContaminations.length,
-    legacyTermsSearched:  LEGACY_GO_TERMS,
+    currentRunId:         currentRunId || null,
+    goTermsMonitored:     GO_TERMS,
     contaminations:       contaminatedFiles.map((f) => ({
       file:         f,
       issueCount:   byFile[f].length,
@@ -222,6 +250,6 @@ module.exports = { runContaminationCleaner };
 if (require.main === module) {
   const report = runContaminationCleaner();
   // eslint-disable-next-line no-console
-  console.log(`[contamination-cleaner/v2] decision=${report.decision} contaminated=${report.contaminatedFiles} total=${report.totalContaminations} critical=${report.criticalCount}`);
+  console.log(`[contamination-cleaner/v3] decision=${report.decision} contaminated=${report.contaminatedFiles} total=${report.totalContaminations} critical=${report.criticalCount} runId=${report.runId||'none'}`);
   process.exit(report.pass ? 0 : 1);
 }

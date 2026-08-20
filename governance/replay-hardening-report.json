@@ -134,5 +134,6 @@
     }
   ],
   "allViolations": [],
-  "summary": "Todos os 10 replays passaram no hardening."
+  "summary": "Todos os 10 replays passaram no hardening.",
+  "reboundAt": "2026-08-20T17:31:22.895Z"
 }

@@ -294,13 +294,23 @@ function runCrossReportValidation(options = {}) {
     || resolveReport('governance/package-validation-report.json');
 
   const expectedZipName = options.expectedZipName || (() => {
-    const DIST_DIR = path.join(ROOT, 'dist');
-    if (!fs.existsSync(DIST_DIR)) return null;
-    const zips = fs.readdirSync(DIST_DIR)
-      .filter((n) => n.endsWith('.zip'))
-      .sort()
-      .reverse();
-    return zips[0] || null;
+    // Usar package-context.js como fonte canônica do ZIP atual
+    try {
+      const { getPackageContext } = require('./shared/package-context');
+      const ctx = getPackageContext(ROOT);
+      if (ctx.zipFound && ctx.zipName) return ctx.zipName;
+    } catch (_) {}
+    // Fallback legado: buscar em dist/release/ antes de dist/
+    const searchDirs = [path.join(ROOT, 'dist', 'release'), path.join(ROOT, 'dist')];
+    for (const dir of searchDirs) {
+      if (!fs.existsSync(dir)) continue;
+      const zips = fs.readdirSync(dir)
+        .filter((n) => /^r-agent2-.*\.zip$/.test(n))
+        .sort()
+        .reverse();
+      if (zips.length > 0) return zips[0];
+    }
+    return null;
   })();
 
   const allContradictions = [

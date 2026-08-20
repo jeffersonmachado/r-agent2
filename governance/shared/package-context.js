@@ -30,16 +30,42 @@ function readJsonSafe(absPath) {
   try { return JSON.parse(fs.readFileSync(absPath, 'utf8')); } catch (_) { return null; }
 }
 
-// ─── Localizar o ZIP mais recente em dist/ ────────────────────────────────────
+// ─── Localizar o ZIP mais recente em dist/ ou dist/release/ ──────────────────
 function findLatestZip(ROOT) {
-  const distDir = path.join(ROOT, 'dist');
-  if (!fs.existsSync(distDir)) return null;
-  const zips = fs.readdirSync(distDir)
-    .filter((f) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(f))
-    .sort()
-    .reverse();
-  if (zips.length === 0) return null;
-  return { zipName: zips[0], zipPath: path.join(distDir, zips[0]) };
+  const distDir     = path.join(ROOT, 'dist');
+  const releaseDir  = path.join(ROOT, 'dist', 'release');
+
+  // Primeiro: verificar se package-validation-report aponta para um ZIP específico
+  const pkgReport = readJsonSafe(path.join(ROOT, 'governance', 'package-validation-report.json'));
+  if (pkgReport && pkgReport.zipName) {
+    const candidates = [
+      path.join(releaseDir, pkgReport.zipName),
+      path.join(distDir,    pkgReport.zipName),
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) {
+        return { zipName: pkgReport.zipName, zipPath: c };
+      }
+    }
+  }
+
+  // Fallback: último ZIP em dist/release/ ou dist/ raiz
+  const searchDirs = [releaseDir, distDir].filter((d) => fs.existsSync(d));
+  const allZips = [];
+  for (const dir of searchDirs) {
+    fs.readdirSync(dir)
+      .filter((f) => /^r-agent2-\d{8}-\d{6}(\.payload)?\.zip$/.test(f))
+      .forEach((f) => allZips.push({ zipName: f, zipPath: path.join(dir, f) }));
+  }
+  if (allZips.length === 0) return null;
+  // Ordena: prefere .payload.zip, depois mais recente por nome
+  allZips.sort((a, b) => {
+    const pa = a.zipName.includes('.payload') ? 1 : 0;
+    const pb = b.zipName.includes('.payload') ? 1 : 0;
+    if (pb !== pa) return pb - pa;
+    return b.zipName.localeCompare(a.zipName);
+  });
+  return allZips[0];
 }
 
 // ─── Ler sidecar manifest do ZIP ─────────────────────────────────────────────

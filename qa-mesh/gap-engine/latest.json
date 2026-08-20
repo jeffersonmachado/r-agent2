@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-20T15:13:15.205Z",
-  "status": "AUTONOMOUS_READY_GO",
+  "generatedAt": "2026-08-20T17:37:29.658Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:ENTERPRISE_READY_GO]",
   "platformMaturity": "enterprise-ready",
   "backlog": [],
   "blocking": 0,

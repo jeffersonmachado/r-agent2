@@ -1,48 +1,48 @@
 {
-  "generatedAt": "2026-05-13T15:38:53.513Z",
+  "generatedAt": "2026-08-20T17:09:11.063Z",
   "engine": "readiness-drift-engine/v1",
-  "pass": false,
-  "decision": "READINESS_DRIFT_NO_GO",
-  "driftDetected": true,
-  "driftCount": 1,
+  "pass": true,
+  "decision": "READINESS_NO_DRIFT",
+  "driftDetected": false,
+  "driftCount": 0,
   "criticalDrifts": 0,
-  "highDrifts": 1,
+  "highDrifts": 0,
   "persisted": {
-    "decision": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
-    "classification": "MESH_BLOCKED",
+    "decision": "AUTONOMOUS_READY_GO",
+    "classification": "GO",
     "score": null,
     "source": "governance/final-readiness-report.json"
   },
   "recalculated": {
-    "decision": "NO_GO:MESH_BLOCKED",
-    "classification": "NO_GO",
-    "score": 33,
-    "blockedCount": 4
+    "decision": "AUTONOMOUS_READY_GO",
+    "classification": "GO",
+    "score": 100,
+    "blockedCount": 0
   },
   "checks": [
     {
       "type": "CLASSIFICATION_DRIFT",
       "severity": "OK",
       "drift": false,
-      "persisted": "NO_GO",
-      "recalculated": "NO_GO",
+      "persisted": "GO",
+      "recalculated": "GO",
       "message": null
     },
     {
       "type": "BLOCKER_SEMANTIC_DRIFT",
       "severity": "OK",
       "drift": false,
-      "persistedBlocker": "MESH_BLOCKED",
-      "recalcBlocker": "MESH_BLOCKED"
+      "persistedBlocker": "GO",
+      "recalcBlocker": "GO"
     },
     {
       "type": "DECISION_DRIFT",
       "severity": "OK",
       "drift": false,
-      "persistedCategory": "MESH_BLOCKED",
-      "recalcCategory": "MESH_BLOCKED",
-      "persisted": "NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO]",
-      "recalculated": "NO_GO:MESH_BLOCKED",
+      "persistedCategory": "GO",
+      "recalcCategory": "GO",
+      "persisted": "AUTONOMOUS_READY_GO",
+      "recalculated": "AUTONOMOUS_READY_GO",
       "message": null
     },
     {
@@ -53,24 +53,12 @@
     },
     {
       "type": "COMPONENT_DRIFT",
-      "severity": "HIGH",
-      "drift": true,
-      "blocked": [
-        "mesh",
-        "replay"
-      ],
-      "unexplained": [
-        "replay"
-      ],
-      "message": "Componentes bloqueados não refletidos no persisted: replay"
+      "severity": "OK",
+      "drift": false,
+      "blocked": [],
+      "note": "Sem componentes críticos bloqueados"
     }
   ],
-  "driftDetails": [
-    {
-      "type": "COMPONENT_DRIFT",
-      "severity": "HIGH",
-      "message": "Componentes bloqueados não refletidos no persisted: replay"
-    }
-  ],
-  "summary": "DRIFT DETECTADO: 1 tipo(s) — persisted=NO_GO:MESH_BLOCKED [qa-mesh/go-no-go=NO_GO (BASELINE_PASS_RATE_REGRESSION) | qa-mesh/release-gate=NO_GO] recalc=NO_GO:MESH_BLOCKED"
+  "driftDetails": [],
+  "summary": "Readiness estável. Nenhum drift detectado. Decisão: AUTONOMOUS_READY_GO"
 }

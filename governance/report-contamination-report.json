@@ -1,145 +1,22 @@
 {
-  "generatedAt": "2026-05-13T17:37:10.860Z",
-  "engine": "report-contamination-cleaner/v2",
-  "pass": false,
-  "decision": "GOVERNANCE_CONTAMINATION_NO_GO",
-  "currentGovernanceDecision": "NO_GO:GOVERNANCE_BLOCKED [qa-mesh go-no-go = NO_GO (BASELINE_PASS_RATE_REGRESSION) | release-gate = NO_GO]",
-  "filesScanned": 30,
-  "contaminatedFiles": 4,
-  "totalContaminations": 11,
-  "criticalCount": 4,
-  "highCount": 7,
-  "legacyTermsSearched": [
+  "generatedAt": "2026-08-20T17:39:37.941Z",
+  "runId": "rap-release-20260820-140449-58582886",
+  "engine": "report-contamination-cleaner/v3",
+  "pass": true,
+  "decision": "NO_CONTAMINATION",
+  "currentGovernanceDecision": "AUTONOMOUS_READY_GO",
+  "filesScanned": 35,
+  "contaminatedFiles": 0,
+  "totalContaminations": 0,
+  "criticalCount": 0,
+  "highCount": 0,
+  "currentRunId": "rap-release-20260820-140449-58582886",
+  "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",
     "ENTERPRISE_READY_GO"
   ],
-  "contaminations": [
-    {
-      "file": "governance/final-consistency-report.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "finalDecisionConsistency.reports.final-proof-report.json",
-          "value": "AUTONOMOUS_READY_GO",
-          "term": "AUTONOMOUS_READY_GO",
-          "isDecisionField": false,
-          "file": "governance/final-consistency-report.json",
-          "type": "LEGACY_GO_IN_NESTED_FIELD",
-          "severity": "HIGH"
-        }
-      ]
-    },
-    {
-      "file": "governance/final-proof-report.json",
-      "issueCount": 2,
-      "issues": [
-        {
-          "path": "decisionMatrix.stageDecisions.enterprise-ready",
-          "value": "ENTERPRISE_READY_GO",
-          "term": "ENTERPRISE_READY_GO",
-          "isDecisionField": false,
-          "file": "governance/final-proof-report.json",
-          "type": "LEGACY_GO_IN_NESTED_FIELD",
-          "severity": "HIGH"
-        },
-        {
-          "path": "decisionMatrix.stageDecisions.autonomous-ready",
-          "value": "AUTONOMOUS_READY_GO",
-          "term": "AUTONOMOUS_READY_GO",
-          "isDecisionField": false,
-          "file": "governance/final-proof-report.json",
-          "type": "LEGACY_GO_IN_NESTED_FIELD",
-          "severity": "HIGH"
-        }
-      ]
-    },
-    {
-      "file": "governance/final-readiness-report.json",
-      "issueCount": 4,
-      "issues": [
-        {
-          "path": "productionReadiness.status",
-          "value": "AUTONOMOUS_READY_GO",
-          "term": "AUTONOMOUS_READY_GO",
-          "isDecisionField": true,
-          "file": "governance/final-readiness-report.json",
-          "type": "LEGACY_GO_IN_DECISION_FIELD",
-          "severity": "CRITICAL"
-        },
-        {
-          "path": "proofReport.decisionMatrix.stageDecisions.enterprise-ready",
-          "value": "ENTERPRISE_READY_GO",
-          "term": "ENTERPRISE_READY_GO",
-          "isDecisionField": false,
-          "file": "governance/final-readiness-report.json",
-          "type": "LEGACY_GO_IN_NESTED_FIELD",
-          "severity": "HIGH"
-        },
-        {
-          "path": "proofReport.decisionMatrix.stageDecisions.autonomous-ready",
-          "value": "AUTONOMOUS_READY_GO",
-          "term": "AUTONOMOUS_READY_GO",
-          "isDecisionField": false,
-          "file": "governance/final-readiness-report.json",
-          "type": "LEGACY_GO_IN_NESTED_FIELD",
-          "severity": "HIGH"
-        },
-        {
-          "path": "proofReport.finalDecision",
-          "value": "AUTONOMOUS_READY_GO",
-          "term": "AUTONOMOUS_READY_GO",
-          "isDecisionField": true,
-          "file": "governance/final-readiness-report.json",
-          "type": "LEGACY_GO_IN_DECISION_FIELD",
-          "severity": "CRITICAL"
-        }
-      ]
-    },
-    {
-      "file": "dev/platform-readiness/latest.json",
-      "issueCount": 4,
-      "issues": [
-        {
-          "path": "proofReport.decisionMatrix.stageDecisions.enterprise-ready",
-          "value": "ENTERPRISE_READY_GO",
-          "term": "ENTERPRISE_READY_GO",
-          "isDecisionField": false,
-          "file": "dev/platform-readiness/latest.json",
-          "type": "LEGACY_GO_IN_NESTED_FIELD",
-          "severity": "HIGH"
-        },
-        {
-          "path": "proofReport.decisionMatrix.stageDecisions.autonomous-ready",
-          "value": "AUTONOMOUS_READY_GO",
-          "term": "AUTONOMOUS_READY_GO",
-          "isDecisionField": false,
-          "file": "dev/platform-readiness/latest.json",
-          "type": "LEGACY_GO_IN_NESTED_FIELD",
-          "severity": "HIGH"
-        },
-        {
-          "path": "proofReport.finalDecision",
-          "value": "AUTONOMOUS_READY_GO",
-          "term": "AUTONOMOUS_READY_GO",
-          "isDecisionField": true,
-          "file": "dev/platform-readiness/latest.json",
-          "type": "LEGACY_GO_IN_DECISION_FIELD",
-          "severity": "CRITICAL"
-        },
-        {
-          "path": "productionReadiness.status",
-          "value": "AUTONOMOUS_READY_GO",
-          "term": "AUTONOMOUS_READY_GO",
-          "isDecisionField": true,
-          "file": "dev/platform-readiness/latest.json",
-          "type": "LEGACY_GO_IN_DECISION_FIELD",
-          "severity": "CRITICAL"
-        }
-      ]
-    }
-  ],
+  "contaminations": [],
   "crossIssues": [],
-  "summary": "11 contaminação(ões) em 4 arquivo(s): 4 crítica(s), 7 alta(s)",
-  "reboundAt": "2026-08-20T12:57:21.941Z"
+  "summary": "Nenhuma contaminação detectada em 35 arquivos."
 }
