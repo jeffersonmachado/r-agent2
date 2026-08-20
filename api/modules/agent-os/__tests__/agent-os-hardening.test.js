@@ -420,15 +420,21 @@ describe('Agent OS Hardening - Regression Tests', () => {
 
     beforeEach(() => {
       // Artefatos de validação (evidence/replay) verificados semanticamente:
-      // o gate exige que o arquivo exista e pertença ao agente.
+      // o gate exige que o arquivo exista, pertença ao agente e tenha
+      // contentHash íntegro (fail-closed: ausência → artifact_unverifiable).
+      const hardeningService = require('../services/agent-hardening-service');
       realReadFileSync = fs.readFileSync;
       readSpy = jest.spyOn(fs, 'readFileSync').mockImplementation((p, ...rest) => {
         const s = String(p);
         if (s.includes('agent_evd_full')) {
-          return JSON.stringify({ evidenceId: 'agent_evd_full', agentId: 'agent-full' });
+          const payload = { evidenceId: 'agent_evd_full', agentId: 'agent-full' };
+          payload.contentHash = hardeningService.computeArtifactContentHash(payload);
+          return JSON.stringify(payload);
         }
         if (s.includes('agent_replay_full')) {
-          return JSON.stringify({ replayId: 'agent_replay_full', agentId: 'agent-full' });
+          const payload = { replayId: 'agent_replay_full', agentId: 'agent-full' };
+          payload.contentHash = hardeningService.computeArtifactContentHash(payload);
+          return JSON.stringify(payload);
         }
         return realReadFileSync(p, ...rest);
       });

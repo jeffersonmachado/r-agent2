@@ -107,13 +107,91 @@ describe('Cognitive Core — rotas /api/cognitive', () => {
     expect(sent[0].data.intents).toHaveLength(11);
   });
 
-  test('GET /tools lista tools filtradas pela classificação do ator', async () => {
+  test('GET /tools nega Tool Registry técnico a PRODUCTION (403)', async () => {
     const { deps, sent } = buildDeps();
     await handleCognitiveRoutes(buildCtx({ method: 'GET', pathname: '/api/cognitive/tools', deps }));
+    expect(sent[0].code).toBe(403);
+    expect(sent[0].data.error).toBe('classification_required');
+    expect(sent[0].data.required).toBe('DEVELOPMENT');
+    expect(sent[0].data.classification).toBe('PRODUCTION');
+    expect(deps.cognitiveOrchestrator.toolRegistry.list).not.toHaveBeenCalled();
+  });
+
+  test('GET /tools nega Tool Registry técnico a SUPPORT (auditor → 403)', async () => {
+    const { deps, sent } = buildDeps();
+    await handleCognitiveRoutes(buildCtx({
+      method: 'GET',
+      pathname: '/api/cognitive/tools',
+      agent: { id: 'u2', role: 'auditor', tenantId: 'tenant-a' },
+      deps,
+    }));
+    expect(sent[0].code).toBe(403);
+    expect(sent[0].data.error).toBe('classification_required');
+    expect(deps.cognitiveOrchestrator.toolRegistry.list).not.toHaveBeenCalled();
+  });
+
+  test('GET /tools mantém acesso a DEVELOPMENT (super_admin)', async () => {
+    const { deps, sent } = buildDeps();
+    await handleCognitiveRoutes(buildCtx({
+      method: 'GET',
+      pathname: '/api/cognitive/tools',
+      agent: { id: 'u3', role: 'super_admin', tenantId: 'tenant-a' },
+      deps,
+    }));
     expect(deps.cognitiveOrchestrator.toolRegistry.list).toHaveBeenCalledWith(
-      expect.objectContaining({ classification: 'PRODUCTION' }),
+      expect.objectContaining({ classification: 'DEVELOPMENT' }),
     );
+    expect(sent[0].code).toBe(200);
     expect(sent[0].data.tools).toEqual([{ id: 'searchCustomer', visibility: 'PRODUCTION' }]);
+  });
+
+  describe('GET /capabilities — business capability view', () => {
+    test('PRODUCTION recebe 200 com payload sem campos técnicos', async () => {
+      const { deps, sent } = buildDeps();
+      await handleCognitiveRoutes(buildCtx({ method: 'GET', pathname: '/api/cognitive/capabilities', deps }));
+      expect(sent[0].code).toBe(200);
+      expect(Array.isArray(sent[0].data.capabilities)).toBe(true);
+      expect(sent[0].data.capabilities.length).toBeGreaterThan(0);
+      for (const cap of sent[0].data.capabilities) {
+        expect(Object.keys(cap).sort()).toEqual(['description', 'id', 'name']);
+        expect(cap).not.toHaveProperty('inputSchema');
+        expect(cap).not.toHaveProperty('outputSchema');
+        expect(cap).not.toHaveProperty('riskLevel');
+        expect(cap).not.toHaveProperty('sideEffects');
+        expect(cap).not.toHaveProperty('permissions');
+        expect(cap).not.toHaveProperty('tools');
+        expect(cap).not.toHaveProperty('confirmationPolicy');
+        expect(cap).not.toHaveProperty('idempotencyPolicy');
+        expect(cap).not.toHaveProperty('executionMode');
+      }
+    });
+
+    test('capabilities filtradas por visibility: PRODUCTION não vê DEVELOPMENT-only', async () => {
+      const { deps, sent } = buildDeps();
+      await handleCognitiveRoutes(buildCtx({ method: 'GET', pathname: '/api/cognitive/capabilities', deps }));
+      const ids = sent[0].data.capabilities.map((c) => c.id);
+      expect(ids).toContain('crm.read');
+      expect(ids).not.toContain('qa.waves');
+      expect(ids).not.toContain('qa.mesh');
+      expect(ids).not.toContain('audit.replay');
+
+      const { deps: depsDev, sent: sentDev } = buildDeps();
+      await handleCognitiveRoutes(buildCtx({
+        method: 'GET',
+        pathname: '/api/cognitive/capabilities',
+        agent: { id: 'u3', role: 'super_admin', tenantId: 'tenant-a' },
+        deps: depsDev,
+      }));
+      const devIds = sentDev[0].data.capabilities.map((c) => c.id);
+      expect(devIds).toContain('qa.waves');
+      expect(devIds).toContain('crm.read');
+    });
+
+    test('exige permissão ai/execute', async () => {
+      const { deps, sent } = buildDeps({ requirePermission: jest.fn(() => ({ allowed: false, error: 'denied' })) });
+      await handleCognitiveRoutes(buildCtx({ method: 'GET', pathname: '/api/cognitive/capabilities', deps }));
+      expect(sent[0].code).toBe(403);
+    });
   });
 
   describe('mapeamento de ator', () => {

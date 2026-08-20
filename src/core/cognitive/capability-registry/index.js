@@ -92,6 +92,7 @@ function createCapabilityRegistry({ data, dataPath } = {}) {
       .map((cap) => ({
         id: cap.id,
         name: cap.name,
+        description: cap.description || null,
         domain: cap.domain,
         kind: cap.kind,
         visibility: cap.visibility,

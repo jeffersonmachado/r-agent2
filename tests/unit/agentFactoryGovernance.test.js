@@ -157,6 +157,8 @@ beforeEach(() => {
       const id = match[1];
       const payload = { agentId: 'agent-gov-1' };
       payload[id.startsWith('agent_evd') ? 'evidenceId' : 'replayId'] = id;
+      // Integridade: contentHash válido, como gravado na criação real.
+      payload.contentHash = hardeningService.computeArtifactContentHash(payload);
       return JSON.stringify(payload);
     }
     return realReadFileSync(p, ...rest);

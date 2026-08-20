@@ -251,7 +251,9 @@ function checkPackageIntegrity() {
                reason: null, note: 'No hash record in package-validation-report — skipping' };
     }
 
-    const zipPath = path.join(ROOT, 'dist', zipName);
+    // Tenta zipPath do relatório (ex: dist/release/), depois dist/ direto
+    const reportedZipPath = pkgReport?.zipPath && fs.existsSync(pkgReport.zipPath) ? pkgReport.zipPath : null;
+    const zipPath = reportedZipPath || path.join(ROOT, 'dist', zipName);
     if (!fs.existsSync(zipPath)) {
       return { id: 'package_integrity', pass: false, severity: 'HIGH',
                reason: `ZIP não encontrado: ${zipName}` };
@@ -296,9 +298,16 @@ function checkCriticalBlockers() {
 function checkGovernanceSignature() {
   try {
     const { verifySeal } = require('./sign-governance');
+    // Localiza governance.sig em ordem de prioridade:
+    //   1. governance/ (seal HMAC persistente — não gerenciado por two-pass-release)
+    //   2. dist/governance-artifacts/ (staging, presente antes do zip:release)
+    //   3. dist/ raiz (compatibilidade com comportamento anterior)
+    // dist/signatures/ e dist/governance/ são EXCLUÍDOS — two-pass-release sobrescreve
+    // esses locais com manifests SHA256 incompatíveis com verifySeal.
     const govSigPath = path.join(ROOT, 'dist', 'governance.sig');
     const artSigDir  = path.join(ROOT, 'dist', 'governance-artifacts', 'governance.sig');
-    const sigPath    = fs.existsSync(artSigDir) ? artSigDir : govSigPath;
+    const canonSig   = path.join(ROOT, 'governance', 'governance.sig');
+    const sigPath = [canonSig, artSigDir, govSigPath].find((p) => fs.existsSync(p)) || govSigPath;
     if (!fs.existsSync(sigPath)) {
       return { id: 'governance_signature', pass: false, severity: 'HIGH', reason: 'governance.sig not found' };
     }
@@ -317,14 +326,13 @@ function checkGovernanceSignature() {
 
 // ─── Motor principal ──────────────────────────────────────────────────────────
 
-function computeFinalDecision(checks) {
+function computeFinalDecision(checks, { proofDecision: proofDecOverride } = {}) {
   const criticalFailed = checks.filter((c) => !c.pass && c.severity === 'CRITICAL');
   const highFailed     = checks.filter((c) => !c.pass && c.severity === 'HIGH');
   const warnFailed     = checks.filter((c) => !c.pass && c.severity === 'WARN');
 
-  // Leitura do proof report para nível de readiness
-  const proof    = readJsonSafe('governance/final-proof-report.json') || {};
-  const proofDec = proof.finalDecision || 'NO_GO:UNKNOWN';
+  // Leitura do proof report para nível de readiness (override permite teste puro)
+  const proofDec = proofDecOverride ?? (readJsonSafe('governance/final-proof-report.json') || {}).finalDecision ?? 'NO_GO:UNKNOWN';
 
   if (criticalFailed.length > 0) {
     const reasons = criticalFailed.map((c) => c.reason || c.id).join(' | ');
@@ -375,6 +383,7 @@ function runGovernanceEngine() {
 
 module.exports = {
   runGovernanceEngine,
+  computeFinalDecision,
   checkMeshGoNoGo,
   checkReleaseGate,
   checkReplayFalsePositives,
@@ -383,6 +392,7 @@ module.exports = {
   checkCriticalBlockers,
   checkGovernanceSignature,
   VISUAL_CRITICAL_JOURNEYS,
+  STRICT_MODE,
 };
 
 if (require.main === module) {

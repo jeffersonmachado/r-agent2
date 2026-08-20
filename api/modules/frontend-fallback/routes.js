@@ -85,6 +85,15 @@ function createFrontendFallbackRoutes({ buildDeps }) {
       const isHtmlNavigation = acceptHeader.includes('text/html');
 
       if (isDev && req.method === 'GET' && isHtmlNavigation) {
+        // Bundle probe requests (__bundle_probe__) são fetch internos do
+        // BundleVersionGuard — não devem ser redirecionados (criaria loop
+        // infinito: API → Vite preview → API → ...). Retorna 204 para que
+        // o guard entenda que não há bundle novo e siga sem recarregar.
+        if ((req.url || '').includes('__bundle_probe__')) {
+          res.writeHead(204);
+          res.end();
+          return;
+        }
         const frontendPort = Number(process.env.FRONTEND_PORT || 5173);
         const location = `http://localhost:${frontendPort}${req.url || pathname || '/'}`;
         res.writeHead(302, { Location: location });

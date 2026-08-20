@@ -465,7 +465,7 @@ const viteConfig = defineConfig(({ mode }) => {
           return undefined;
         },
       },
-      '^/whatsapp': {
+      '^/whatsapp/': {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,

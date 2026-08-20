@@ -8,10 +8,15 @@ const { buildQaWavesEnterpriseGovernance } = require('./lib/qa-waves-enterprise-
 const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 const { main: materializeProofArtifacts } = require('../../governance/materialize-proof-artifacts');
 const { buildFinalProofReport } = require('../../governance/proof-engine');
+const { calculateSetCoverage } = require('../../qa/coverage/setCoverage');
+const {
+  PROD_LIKE_JOURNEY_VERTICAL,
+  REQUIRED_REPLAY_JOURNEYS,
+  REQUIRED_VERTICALS,
+} = require('../../governance/shared/required-journeys');
 
 const ROOT = path.join(__dirname, '..', '..');
 const NOW = new Date().toISOString();
-const REQUIRED_VERTICALS = ['beauty', 'fitness', 'food', 'services', 'clinic', 'market'];
 const EXECUTABLE_SCENARIO_STATUS = new Set(['approved', 'active', 'ready', 'validated']);
 const REQUIRED_FOUNDATION_PROD_LIKE_JOURNEYS = [
   'support_ticket_flow',
@@ -26,16 +31,6 @@ const REQUIRED_ENTERPRISE_PROOFS = [
   { id: 'replay_universalization', label: 'Replay universalization' },
   { id: 'vertical_prod_like_coverage', label: 'Vertical prod-like coverage' },
 ];
-const PROD_LIKE_JOURNEY_VERTICAL = {
-  support_ticket_flow: 'services',
-  fitness_customer_checkin: 'fitness',
-  booking_flow: 'services',
-  payment_charge_flow: 'fitness',
-  food_order_status_flow: 'food',
-  market_node_publish_flow: 'market',
-  clinic_calendar_block_flow: 'clinic',
-};
-const REQUIRED_REPLAY_JOURNEYS = Object.freeze(Object.keys(PROD_LIKE_JOURNEY_VERTICAL));
 const MESH_VERTICAL_DOMAIN_ALIASES = {
   beauty: ['beauty'],
   fitness: ['fitness'],
@@ -1390,8 +1385,26 @@ function buildReport() {
     ...(gateHardBlock ? [`qa-mesh/release-gate=${releaseGateReport.gate}`] : []),
   ];
 
-  const finalDecision = (meshHardBlock || gateHardBlock)
-    ? `NO_GO:MESH_BLOCKED [${meshBlockReasons.join(' | ')}]`
+  // ── FINAL DECISION AGGREGATOR (fail-closed) ─────────────────────────────────
+  // Todos os gates obrigatórios devem concordar com GO antes de emitir
+  // AUTONOMOUS_READY_GO. Um único NO_GO de gate obrigatório é fatal.
+  // Regra: nunca vota, nunca faz média, nunca compensa.
+  const govReport = loadJson('governance/final-governance-report.json', null);
+  const govDecision = govReport?.finalDecision || null;
+  const govHardBlock = govDecision != null && String(govDecision).startsWith('NO_GO');
+  const hardeningReport = loadJson('governance/replay-hardening-report.json', null);
+  const hardeningBlock = hardeningReport?.decision === 'REPLAY_HARDENING_NO_GO';
+
+  const mandatoryGateBlocked = meshHardBlock || gateHardBlock || govHardBlock || hardeningBlock;
+  const mandatoryBlockReasons = [
+    ...(meshHardBlock ? [`qa-mesh=${meshGoNoGoReport.status}`] : []),
+    ...(gateHardBlock ? [`release-gate=${releaseGateReport.gate}`] : []),
+    ...(govHardBlock ? [`governance=${govDecision}`] : []),
+    ...(hardeningBlock ? [`replay-hardening=REPLAY_HARDENING_NO_GO`] : []),
+  ];
+
+  const finalDecision = mandatoryGateBlocked
+    ? `NO_GO:MANDATORY_GATE_BLOCKED [${mandatoryBlockReasons.join(' | ')}]`
     : (blockingGaps.length > 0
       ? `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`
       : proofDecision);
@@ -1620,10 +1633,39 @@ if (require.main === module) {
   main();
 }
 
+/**
+ * Lógica pura do FinalDecisionAggregator — sem I/O.
+ * Usada para teste unitário. Em produção os valores vêm de loadJson().
+ */
+function _computeMandatoryDecision({
+  meshHardBlock = false,
+  gateHardBlock = false,
+  govDecision = null,
+  hardeningDecision = null,
+  blockingGaps = 0,
+  proofDecision = 'NO_GO:UNKNOWN',
+} = {}) {
+  const govHardBlock = govDecision != null && String(govDecision).startsWith('NO_GO');
+  const hardeningBlock = hardeningDecision === 'REPLAY_HARDENING_NO_GO';
+  const mandatoryGateBlocked = meshHardBlock || gateHardBlock || govHardBlock || hardeningBlock;
+  const mandatoryBlockReasons = [
+    ...(meshHardBlock ? ['qa-mesh=NO_GO'] : []),
+    ...(gateHardBlock ? ['release-gate=NO_GO'] : []),
+    ...(govHardBlock ? [`governance=${govDecision}`] : []),
+    ...(hardeningBlock ? ['replay-hardening=REPLAY_HARDENING_NO_GO'] : []),
+  ];
+  if (mandatoryGateBlocked) {
+    return `NO_GO:MANDATORY_GATE_BLOCKED [${mandatoryBlockReasons.join(' | ')}]`;
+  }
+  if (blockingGaps > 0) return `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`;
+  return proofDecision;
+}
+
 module.exports = {
   buildReport,
   calculateReplayCoveragePercent,
   hasProvenCrmMutation,
   persistReport,
   REQUIRED_REPLAY_JOURNEYS,
+  _internal: { _computeMandatoryDecision },
 };

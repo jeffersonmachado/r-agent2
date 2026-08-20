@@ -7,6 +7,8 @@ const { resolveEvidenceCandidates, resolveWorkspacePath, getRuntimeRoot } = requ
 const { validatePackage } = require('../package-validator');
 const { runCrossReportValidation, classifyPbxMaturity, THRESHOLDS } = require('../cross-report-validator');
 const { computeFingerprintChain, compareFingerprintChains } = require('./fingerprint-chain');
+const { calculateSetCoverage } = require('../../qa/coverage/setCoverage');
+const { REQUIRED_REPLAY_JOURNEYS } = require('../shared/required-journeys');
 
 const ROOT = path.join(__dirname, '..', '..');
 
@@ -826,12 +828,20 @@ function buildFinalProofReport(context = {}) {
     packageValidationReport: null, // será calculado abaixo
   });
 
-  // Cobertura de replay
+  // Cobertura de replay — set-based: matched = interseção(required, supported).
+  // Extra journeys (beyond required) NUNCA aumentam a cobertura; percent ≤ 100.
+  const supportedJourneyIds = Array.isArray(context.prodLikeSummary?.supportedJourneyIds)
+    ? context.prodLikeSummary.supportedJourneyIds
+    : [];
+  const replayCoverageSet = calculateSetCoverage(REQUIRED_REPLAY_JOURNEYS, supportedJourneyIds);
   const replayCoverage = {
-    required: 6,
-    found: Number(context.prodLikeSummary?.supportedJourneyIds?.length || 0),
+    required: replayCoverageSet.required,
+    found: replayCoverageSet.matched.length,
+    matched: replayCoverageSet.matched,
+    missing: replayCoverageSet.missing,
+    extra: replayCoverageSet.extra,
+    percent: replayCoverageSet.percent,
   };
-  replayCoverage.percent = replayCoverage.required === 0 ? 0 : Number(((replayCoverage.found / replayCoverage.required) * 100).toFixed(2));
 
   // D. Cobertura prod-like com hardening de vertical
   const requiredVerticalCount = Number(context.requiredVerticalCount || 6);
@@ -944,8 +954,25 @@ function buildFinalProofReport(context = {}) {
     verticalCoverageValid:   verticalCoverage.invalidClaims.length === 0,
   };
 
+  // Fingerprints explícitos no nível raiz do relatório para rastreabilidade
+  // direta (FINAL-001). Derivados de fingerprintChain.current — nunca gerados
+  // manualmente. Usados na verificação do pacote (package manifest deve ter
+  // sourceFingerprint idêntico ao registrado aqui no momento do empacotamento).
+  const explicitFingerprints = {
+    sourceFingerprint:           fingerprintChain.sourceFingerprint || null,
+    inventoryFingerprint:        fingerprintChain.inventoryFingerprint || null,
+    scenarioFingerprint:         fingerprintChain.scenarioRegistryFingerprint || null,
+    policyFingerprint:           fingerprintChain.policyFingerprint || null,
+    evidenceFingerprint:         fingerprintChain.chainFingerprint || null,
+    chainFingerprint:            fingerprintChain.chainFingerprint || null,
+    fingerprintGeneratedAt:      new Date().toISOString(),
+    fingerprintStatus:           fingerprintStatus.status,
+  };
+
   const report = {
     generatedAt: new Date().toISOString(),
+    // Fingerprints explícitos (FINAL-001)
+    ...explicitFingerprints,
     proofCoverage,
     missingArtifacts,
     invalidReferences,

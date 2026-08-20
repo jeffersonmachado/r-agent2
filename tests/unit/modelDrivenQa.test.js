@@ -147,7 +147,8 @@ describe('model-driven-pipeline — inferência de jornadas via entity graph (FK
     const candidate = result.candidateJourneys[0];
     expect(candidate.source).toBe('entity_graph_fk');
     expect(candidate.inferredFromFk).toBe(true);
-    expect(candidate.status).toBe('candidate');
+    expect(candidate.status).toBe('DISCOVERED');
+    expect(candidate.pipelineState).toBe('DISCOVERED');
     expect(candidate.sourceModels).toEqual(['W5Bar', 'W5Foo']);
     expect(candidate.entrypoints).toEqual(['W5Foo']); // detentor da FK, sem aresta de entrada
 

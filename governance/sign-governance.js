@@ -322,14 +322,20 @@ function preSign(options = {}) {
     fs.copyFileSync(chainSrc, path.join(GOV_ARTIFACTS_DIR, 'governance-chain.json'));
   }
 
-  // Espelhar em dist/ (sidecar, compatibilidade com ferramentas externas)
+  // Persistir o seal HMAC em governance/ (diretório de código-fonte — não gerenciado
+  // por two-pass-release.sh, não apagado após release). Esta é a localização canonical
+  // para verificação offline pelo final-governance-engine.js.
+  writeArtifact(path.join(ROOT, 'governance', 'governance.sig'), govSig);
+
+  // Remover cópias legadas da raiz de dist/ (migração de behavior anterior).
+  // dist/governance-artifacts/ NÃO é removido aqui — o zip:release precisa incluí-lo
+  // no ZIP; a limpeza do staging é responsabilidade do release-package.sh.
   const distDir = path.join(ROOT, 'dist');
-  fs.mkdirSync(distDir, { recursive: true });
-  writeArtifact(path.join(distDir, 'governance.sig'),              govSig);
-  writeArtifact(path.join(distDir, 'release.sig'),                 releaseSig);
-  writeArtifact(path.join(distDir, 'package.manifest.sig'),        manifestSig);
-  writeArtifact(path.join(distDir, 'replay.sig'),                  replaySig);
-  writeArtifact(path.join(distDir, 'governance-attestation.json'), attestation);
+  const legacyRootFiles = ['governance.sig', 'release.sig', 'package.manifest.sig', 'replay.sig', 'governance-attestation.json'];
+  for (const f of legacyRootFiles) {
+    const legacyPath = path.join(distDir, f);
+    try { if (fs.existsSync(legacyPath)) fs.unlinkSync(legacyPath); } catch (_) {}
+  }
 
   return {
     chain,
@@ -342,6 +348,7 @@ function preSign(options = {}) {
       'dist/governance-artifacts/replay.sig',
       'dist/governance-artifacts/governance-attestation.json',
       'dist/governance-artifacts/governance-chain.json',
+      'governance/governance.sig',
       'governance/governance-chain.json',
     ],
     presigned: true,

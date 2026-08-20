@@ -3,10 +3,15 @@
 /**
  * Rotas do Cognitive Core — ponto de entrada operacional do núcleo cognitivo.
  *
- * POST /api/cognitive/process  → executa o pipeline obrigatório (CONTEXT→INTENT→
- *                                PLAN→EXECUTE→VALIDATE→LEARN) para o tenant autenticado
- * GET  /api/cognitive/intents  → taxonomia de intenções de negócio
- * GET  /api/cognitive/tools    → tools visíveis para o ator (filtradas por visibility)
+ * POST /api/cognitive/process      → executa o pipeline obrigatório (CONTEXT→INTENT→
+ *                                    PLAN→EXECUTE→VALIDATE→LEARN) para o tenant autenticado
+ * GET  /api/cognitive/intents      → taxonomia de intenções de negócio (vocabulário
+ *                                    de negócio, sem internals — aberta a PRODUCTION)
+ * GET  /api/cognitive/capabilities → BUSINESS CAPABILITY VIEW (id/name/description,
+ *                                    filtrada por visibility do ator) — PRODUCTION/
+ *                                    SUPPORT/DEVELOPMENT
+ * GET  /api/cognitive/tools        → Tool Registry técnico (schemas, riskLevel,
+ *                                    sideEffects, policies) — SOMENTE DEVELOPMENT
  *
  * A resposta contém apenas resultado de negócio (o orchestrator já sanitiza e
  * nunca expõe engines internas, QA, replay, seeds, mesh ou RPA).
@@ -14,6 +19,7 @@
 
 const logger = require('../../utils/logger');
 const { getClassificationForAgent } = require('../agent-os/experience-segregation');
+const { checkClassification } = require('../../middleware/requireClassification');
 const { resolveActorToolPermissions } = require('../../utils/actorToolPermissions');
 
 /**
@@ -147,11 +153,43 @@ async function handleCognitiveRoutes(ctx) {
     return true;
   }
 
-  // GET /api/cognitive/tools — tools visíveis para o ator (visibility-filtered)
+  // GET /api/cognitive/capabilities — visão de capacidades de NEGÓCIO
+  // (BLOCKER 7): expõe apenas { id, name, description } por capability,
+  // filtrada pela visibility do ator. Nunca vaza tool ids, schemas,
+  // riskLevel, sideEffects, policies ou permissions internas.
+  if (method === 'GET' && pathname === '/api/cognitive/capabilities') {
+    const permCheck = requirePermission(req, 'ai', 'execute');
+    if (!permCheck.allowed) {
+      sendJson({ error: 'forbidden', message: permCheck.error }, 403);
+      return true;
+    }
+    const actor = buildActor(req);
+    const capabilityRegistry = deps.capabilityRegistry
+      || require('../../../src/core/cognitive').getCapabilityRegistry();
+    const capabilities = capabilityRegistry.list(actor).map((cap) => ({
+      id: cap.id,
+      name: cap.name,
+      description: cap.description || null,
+    }));
+    sendJson({ classification: actor.classification, capabilities });
+    return true;
+  }
+
+  // GET /api/cognitive/tools — Tool Registry técnico (schemas, riskLevel,
+  // sideEffects, policies). Restrito a DEVELOPMENT (BLOCKER 7): a visão de
+  // negócio para PRODUCTION/SUPPORT é GET /api/cognitive/capabilities.
   if (method === 'GET' && pathname === '/api/cognitive/tools') {
     const permCheck = requirePermission(req, 'ai', 'execute');
     if (!permCheck.allowed) {
       sendJson({ error: 'forbidden', message: permCheck.error }, 403);
+      return true;
+    }
+    const classCheck = checkClassification(req, 'DEVELOPMENT');
+    if (!classCheck.allowed) {
+      sendJson(
+        { error: 'classification_required', required: classCheck.required, classification: classCheck.classification },
+        403,
+      );
       return true;
     }
     const actor = buildActor(req);

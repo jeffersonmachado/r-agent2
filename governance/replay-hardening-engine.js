@@ -102,6 +102,16 @@ function findUiUnavailable(obj, parentPath = '') {
   return found;
 }
 
+// Action types that genuinely require a browser/Playwright to execute.
+// Backend assertion steps NEVER require UI and must not be flagged for
+// ui.available=false — their UI snapshot fields are informational only.
+const UI_REQUIRED_ACTION_TYPES = new Set([
+  'navigate', 'click', 'click_open', 'type', 'type_and_send',
+  'assert_ui_state', 'wait_for_list', 'wait_for_element',
+  'hover', 'select', 'scroll', 'screenshot', 'fill',
+  'check', 'uncheck', 'press', 'keyboard',
+]);
+
 // ─── Análise de um step individual ───────────────────────────────────────────
 function analyzeStep(step, journeyId, VISUAL_CRITICAL) {
   const violations = [];
@@ -116,20 +126,27 @@ function analyzeStep(step, journeyId, VISUAL_CRITICAL) {
     });
   }
 
-  // 2. ui.available=false em qualquer snapshot do step (apenas em jornadas críticas)
-  if (VISUAL_CRITICAL.has(journeyId)) {
+  // 2. ui.available=false em snapshots — apenas para steps que exigem browser.
+  // Steps de assertiva de backend (assert_backend_state, webhook_status, etc.)
+  // NÃO precisam de Playwright; seu ui.available=false é esperado e não é violação.
+  if (VISUAL_CRITICAL.has(journeyId) && UI_REQUIRED_ACTION_TYPES.has(step.actionType || '')) {
     const uiIssues = findUiUnavailable(step, `step.${stepId}`);
-    // Filtrar: apenas snapshots de step (não snapshot raiz do replay)
+    // Filtrar: apenas snapshots de step (não snapshot raiz do replay).
+    // Deduplificar por step: se beforeStepSnapshot E afterStepSnapshot têm
+    // ui.available=false, reportar apenas UMA violação por step (o estado é
+    // o mesmo — Playwright indisponível). Double-report não adiciona informação.
     const stepUiIssues = uiIssues.filter((u) =>
       u.path.includes('beforeStepSnapshot') || u.path.includes('afterStepSnapshot')
     );
-    for (const issue of stepUiIssues) {
+    if (stepUiIssues.length > 0) {
+      const issue = stepUiIssues[0];
       violations.push({
         rule:    'STEP_UI_UNAVAILABLE',
         stepId,
+        actionType: step.actionType,
         path:    issue.path,
         reason:  issue.reason,
-        message: `Step ${stepId} ui.available=false (${issue.reason}) em jornada crítica ${journeyId}`,
+        message: `Step ${stepId} (${step.actionType}) ui.available=false (${issue.reason}) em jornada crítica ${journeyId}`,
       });
     }
   }
@@ -168,10 +185,14 @@ function analyzeIndividualReplay(replay, source, VISUAL_CRITICAL) {
     violations.push(...stepViolations);
   }
 
-  // 4. ui.available=false no nível raiz do replay (antes/após snapshot global)
+  // 4. ui.available=false no nível raiz do replay (antes/após snapshot global).
+  // Deduplificar: beforeSnapshot e afterSnapshot tipicamente refletem o mesmo
+  // estado — reportar apenas UMA violação por replay se algum snapshot for
+  // ui.available=false.
   if (VISUAL_CRITICAL.has(journeyId)) {
     const rootUiIssues = findUiUnavailable({ beforeSnapshot: replay.beforeSnapshot, afterSnapshot: replay.afterSnapshot }, 'root');
-    for (const issue of rootUiIssues) {
+    if (rootUiIssues.length > 0) {
+      const issue = rootUiIssues[0];
       violations.push({
         rule:    'REPLAY_ROOT_UI_UNAVAILABLE',
         path:    issue.path,
@@ -209,18 +230,19 @@ function analyzeFlows(smokeData, sourcePath, VISUAL_CRITICAL) {
     const steps     = Array.isArray(flow.steps) ? flow.steps : [];
     const violations = [];
 
-    // Analisar o replay dentro do flow
+    // Analisar o replay dentro do flow usando replay.steps se disponível.
+    // flow.steps e replay.steps contêm os mesmos registros — analisar apenas
+    // uma fonte evita double-counting de violações.
+    const replaySteps = Array.isArray(replay.steps) ? replay.steps : steps;
     const replayViolations = analyzeIndividualReplay(
-      { ...replay, steps: Array.isArray(replay.steps) ? replay.steps : steps },
+      { ...replay, steps: replaySteps },
       sourcePath,
       VISUAL_CRITICAL
     );
     violations.push(...replayViolations.violations);
 
-    // Analisar steps do próprio flow (separado do replay)
-    for (const step of steps) {
-      violations.push(...analyzeStep(step, journeyId, VISUAL_CRITICAL));
-    }
+    // NÃO analisar flow.steps separadamente: são os mesmos steps do replay.
+    // Análise separada causaria double-counting de cada violação.
 
     // Verificar audit do flow
     const audit = flow.audit || {};

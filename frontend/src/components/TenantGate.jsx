@@ -40,7 +40,10 @@ export function TenantGate() {
       autoConfirmOnTenantClick={true}
       onSelect={(tenant) => {
         if (!tenant?.id) return;
-        const baseOriginalTenantId = agent?.originalTenantId || agent?.tenantId || 'system';
+        // Sem tenant de origem não assumimos 'system': bloqueia a troca e o
+        // gate permanece aberto, sinalizando a ausência de tenant efetivo.
+        const baseOriginalTenantId = agent?.originalTenantId || agent?.tenantId;
+        if (!baseOriginalTenantId) return;
         updateAgent({
           ...agent,
           tenantId: tenant.id,

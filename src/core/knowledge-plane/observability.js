@@ -22,6 +22,21 @@ function defaultLogger() {
 }
 
 /**
+ * Resolve o tenant do evento (fail-closed).
+ *
+ * Regra: tenant ausente em runtime de tenant → TENANT_REQUIRED. O tenant
+ * 'system' só é aceito sem tenantId explícito quando o emissor declara
+ * principalType PLATFORM_SYSTEM (principal de plataforma, não fallback).
+ */
+function resolveEventTenantId(payload) {
+  if (payload.tenantId) return payload.tenantId;
+  if (payload.principalType === 'PLATFORM_SYSTEM') return 'system';
+  const error = new Error('tenant_required: evento do Knowledge Plane sem tenantId exige principalType PLATFORM_SYSTEM explícito');
+  error.code = 'tenant_required';
+  throw error;
+}
+
+/**
  * Event emitter para o Knowledge Plane (best-effort).
  */
 function createKnowledgeEventEmitter(deps = {}) {
@@ -30,10 +45,14 @@ function createKnowledgeEventEmitter(deps = {}) {
   const metricsCollector = deps.metricsCollector || null;
 
   async function emit(type, payload = {}) {
+    // Fail-closed: evento sem tenantId só é aceito com principal explícito de
+    // plataforma; caso contrário lança tenant_required em vez de poluir o
+    // ledger sob 'system'. A validação fica fora do try best-effort abaixo.
+    const tenantId = resolveEventTenantId(payload);
     try {
       if (eventLedger && typeof eventLedger.appendEventV1 === 'function') {
         await eventLedger.appendEventV1({
-          tenantId: payload.tenantId || 'system',
+          tenantId,
           type,
           source: 'knowledge-plane',
           correlationId: payload.correlationId || null,

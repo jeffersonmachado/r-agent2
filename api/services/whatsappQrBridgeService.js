@@ -832,16 +832,27 @@ async function sendMediaViaConnection({ tenantId, to, mediaId, mimeType, fileNam
 async function resolveTenantIdsForSync() {
   const forced = resolveBridgeTenants();
   if (forced && forced.length) return forced;
+  let tenants;
   try {
-    const tenants = await listTenants();
-    const ids = (Array.isArray(tenants) ? tenants : [])
-      .map((t) => t?.tenant_key || t?.id)
-      .filter(Boolean)
-      .map((value) => safeToString(value))
-      .filter(Boolean);
-    if (ids.length > 0) return Array.from(new Set(ids));
-  } catch (_) {}
-  return ['system'];
+    tenants = await listTenants();
+  } catch (err) {
+    // Falha de DB é erro explícito (persistence_required): nunca degradar o
+    // sync multi-tenant para 'system' silenciosamente. O throw aborta o ciclo
+    // de sync antes de criar/destruir clientes (fail-closed); o tick periódico
+    // captura e loga, sem derrubar o processo.
+    logger.error('[WhatsAppQRBridge] Falha ao listar tenants para sync', { error: safeErrorMessage(err) });
+    const syncError = new Error('tenant_sync_unavailable: falha ao listar tenants para o sync do bridge');
+    syncError.code = 'tenant_sync_unavailable';
+    throw syncError;
+  }
+  const ids = (Array.isArray(tenants) ? tenants : [])
+    .map((t) => t?.tenant_key || t?.id)
+    .filter(Boolean)
+    .map((value) => safeToString(value))
+    .filter(Boolean);
+  // Lista vazia legítima (sem tenants cadastrados) não é erro — mas também não
+  // vira ['system'] por fallback: simplesmente não há escopo a sincronizar.
+  return Array.from(new Set(ids));
 }
 
 async function syncConnections() {

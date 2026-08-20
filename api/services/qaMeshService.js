@@ -396,7 +396,9 @@ function queueScenarioReplay(scenarioId, options = {}) {
     error.code = 'PIPELINE_REQUIRED';
     throw error;
   }
-  const tenantId = normalizeTenantKey(options.tenantId || 'system');
+  // Alinhado com queueMeshRun: tenant ausente → null explícito (escopo resolvido
+  // downstream), nunca fallback silencioso para 'system'.
+  const tenantId = options.tenantId == null ? null : normalizeTenantKey(options.tenantId);
   return enqueueExecution('replay', { scenarioId, tenantId }, async (executionId) => {
 
     // ── Proteção: não inicia replay se já tem mesh rodando ──

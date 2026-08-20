@@ -32,6 +32,19 @@ function createHash(input) {
   return crypto.createHash('sha256').update(String(input)).digest('hex');
 }
 
+/**
+ * Hash de integridade (SHA-256) do conteúdo canônico de um artefato de
+ * validação: JSON.stringify do payload SEM o próprio campo contentHash.
+ * Computado na criação (generateEvidence/generateReplayArtifact) e
+ * recomputado no gate (verifyValidationArtifact) — qualquer adulteração do
+ * conteúdo entre criação e gate invalida o hash.
+ */
+function computeArtifactContentHash(artifact) {
+  if (!artifact || typeof artifact !== 'object') return null;
+  const { contentHash, ...content } = artifact;
+  return createHash(JSON.stringify(content));
+}
+
 function safeReadJson(filePath, fallback = null) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -296,6 +309,9 @@ async function generateEvidence({ agent, waveResult, tenantId }) {
     hash: createHash(JSON.stringify({ agentId: agent.id, status: waveResult?.status })),
     signature: createHash(`${evidenceId}:${agent.id}:${waveResult?.status}:${nowIso()}`),
   };
+  // Hash de integridade do conteúdo — verificado fail-closed no gate de
+  // evidence (artefato adulterado ou sem hash → NO_GO).
+  evidence.contentHash = computeArtifactContentHash(evidence);
 
   const evidencePath = path.join(evidenceDir, `${evidenceId}.json`);
   safeWriteJson(evidencePath, evidence);
@@ -380,6 +396,9 @@ async function generateReplayArtifact({ agent, waveResult, evidence, tenantId })
     type: 'agent_validation_replay',
     source: 'agent-os-hardening',
   };
+  // Hash de integridade do conteúdo — verificado fail-closed no gate de
+  // replay (artefato adulterado ou sem hash → NO_GO).
+  replay.contentHash = computeArtifactContentHash(replay);
 
   const replayPath = path.join(replayDir, `${replayId}.json`);
   safeWriteJson(replayPath, replay);
@@ -462,8 +481,11 @@ function resolveArtifactPath(kind, agent, artifactId) {
 
 /**
  * Verificação semântica local de um artefato de validação: o arquivo precisa
- * existir, carregar o id esperado e pertencer ao agente. Quando o path não é
- * determinável, o gate segue por presença mas fica marcado verified:false.
+ * existir, carregar o id esperado, pertencer ao agente e ter integridade de
+ * conteúdo (contentHash recomputado e comparado com o gravado na criação).
+ * Quando o path não é determinável, retorna available:false — o gate trata
+ * como VERIFIER_UNAVAILABLE (fail-closed, nunca PASS). Artefatos legados sem
+ * contentHash são não verificáveis (artifact_unverifiable) e reprovam o gate.
  */
 function verifyValidationArtifact(kind, agent, artifactId) {
   const filePath = resolveArtifactPath(kind, agent, artifactId);
@@ -480,6 +502,12 @@ function verifyValidationArtifact(kind, agent, artifactId) {
   }
   if (data.agentId && agent.id && data.agentId !== agent.id) {
     return { available: true, verified: false, reason: 'artifact_agent_mismatch' };
+  }
+  if (data.contentHash == null) {
+    return { available: true, verified: false, reason: 'artifact_unverifiable' };
+  }
+  if (computeArtifactContentHash(data) !== data.contentHash) {
+    return { available: true, verified: false, reason: 'artifact_integrity_failed' };
   }
   return { available: true, verified: true };
 }
@@ -747,9 +775,15 @@ async function approveAgent({ agentId, tenantId, actor, actorRole, riskLevel, au
  * Além de presença, verifica semanticamente o que é verificável localmente:
  * - qa_wave: waveId precisa corresponder à wave canônica do agente.
  * - replay/evidence: o artefato precisa existir em disco, carregar o id
- *   esperado e pertencer ao agente.
+ *   esperado, pertencer ao agente e ter integridade de conteúdo (contentHash
+ *   SHA-256 recomputado e comparado com o gravado na criação).
  * - governance_signature: recomputada e comparada com a assinatura emitida no
  *   approve (nada de passed hardcoded).
+ *
+ * FAIL-CLOSED: gates obrigatórios exigem artifact exists AND verifier
+ * available AND artifact verified. Verificador indisponível → blocker
+ * verifier_unavailable (NO_GO); hash ausente/adulterado →
+ * artifact_unverifiable/artifact_integrity_failed. Nunca PASS por presença.
  *
  * options.requireApproval (default true): exige approvedBy + assinatura
  * válida. O approve chama com false porque é ele quem CRIA a aprovação; o
@@ -760,20 +794,23 @@ async function validateGovernanceGates({ agent, requireApproval = true }) {
   const checks = [];
   const validation = agent.governance?.validation || {};
 
-  // Gate 1: QA Wave (presença + waveId canônico do agente)
+  // Gate 1: QA Wave (presença + waveId canônico do agente).
+  // Fail-closed: sem slug do agente o verificador canônico não roda →
+  // verifier_unavailable (NO_GO), nunca PASS por presença.
   const waveId = validation.waveId;
   const hasQaWave = !!waveId;
+  const qaWaveVerifierAvailable = !!agent.slug;
   let qaWaveVerified = false;
   let qaWaveReason = null;
   if (hasQaWave) {
-    if (agent.slug) {
+    if (qaWaveVerifierAvailable) {
       qaWaveVerified = waveId === `agent-os-${agent.slug}`;
       if (!qaWaveVerified) qaWaveReason = 'wave_id_mismatch_for_agent';
     } else {
       qaWaveReason = 'agent_slug_unavailable';
     }
   }
-  const qaWavePassed = hasQaWave && (qaWaveVerified || qaWaveReason === 'agent_slug_unavailable');
+  const qaWavePassed = hasQaWave && qaWaveVerifierAvailable && qaWaveVerified;
   checks.push({
     gate: 'qa_wave',
     passed: qaWavePassed,
@@ -783,15 +820,21 @@ async function validateGovernanceGates({ agent, requireApproval = true }) {
   });
   if (!hasQaWave) {
     blockers.push({ gate: 'qa_wave', reason: 'missing_qa_wave_validation' });
+  } else if (!qaWaveVerifierAvailable) {
+    blockers.push({ gate: 'qa_wave', reason: 'verifier_unavailable' });
   } else if (!qaWavePassed) {
     blockers.push({ gate: 'qa_wave', reason: qaWaveReason });
   }
 
-  // Gate 2: Replay (presença + artefato real)
+  // Gate 2: Replay (presença + artefato real + integridade de conteúdo).
+  // Fail-closed: verificador indisponível (path não resolvível) →
+  // verifier_unavailable; hash adulterado → artifact_integrity_failed;
+  // artefato legado sem hash → artifact_unverifiable. Nunca PASS sem
+  // verificação completa.
   const replayId = validation.replayId;
   const replayCheck = verifyValidationArtifact('replay', agent, replayId);
   const hasReplay = !!replayId;
-  const replayPassed = hasReplay && (!replayCheck.available || replayCheck.verified);
+  const replayPassed = hasReplay && replayCheck.available && replayCheck.verified;
   checks.push({
     gate: 'replay',
     passed: replayPassed,
@@ -801,15 +844,18 @@ async function validateGovernanceGates({ agent, requireApproval = true }) {
   });
   if (!hasReplay) {
     blockers.push({ gate: 'replay', reason: 'missing_replay_artifact' });
+  } else if (!replayCheck.available) {
+    blockers.push({ gate: 'replay', reason: 'verifier_unavailable' });
   } else if (!replayPassed) {
     blockers.push({ gate: 'replay', reason: replayCheck.reason });
   }
 
-  // Gate 3: Evidence (presença + artefato real)
+  // Gate 3: Evidence (presença + artefato real + integridade de conteúdo).
+  // Mesma regra fail-closed do gate de replay.
   const evidenceId = validation.evidenceId;
   const evidenceCheck = verifyValidationArtifact('evidence', agent, evidenceId);
   const hasEvidence = !!evidenceId;
-  const evidencePassed = hasEvidence && (!evidenceCheck.available || evidenceCheck.verified);
+  const evidencePassed = hasEvidence && evidenceCheck.available && evidenceCheck.verified;
   checks.push({
     gate: 'evidence',
     passed: evidencePassed,
@@ -819,6 +865,8 @@ async function validateGovernanceGates({ agent, requireApproval = true }) {
   });
   if (!hasEvidence) {
     blockers.push({ gate: 'evidence', reason: 'missing_evidence' });
+  } else if (!evidenceCheck.available) {
+    blockers.push({ gate: 'evidence', reason: 'verifier_unavailable' });
   } else if (!evidencePassed) {
     blockers.push({ gate: 'evidence', reason: evidenceCheck.reason });
   }
@@ -897,6 +945,7 @@ module.exports = {
   approveAgent,
   validateGovernanceGates,
   computeGovernanceSignature,
+  computeArtifactContentHash,
   generateValidationJourney,
   runQaWaveValidation,
   generateEvidence,

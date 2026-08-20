@@ -1,0 +1,391 @@
+'use strict';
+
+/**
+ * Testes obrigatórios para os blockers FINAL-001, FINAL-002, FINAL-004, FINAL-009.
+ *
+ * Cada teste falha antes da correção e passa depois — prova que a invariante
+ * foi implementada (e não apenas declarada em narrativa).
+ *
+ * FINAL-001 — fingerprint da prova torna-se STALE após mudança de fonte.
+ * FINAL-002 — NO_GO obrigatório bloqueia GO final; engines contraditórios são proibidos.
+ * FINAL-004 — cobertura set-based nunca excede 100%; extras não aumentam cobertura.
+ * FINAL-009 — UUID aleatório não satisfaz FK; validateSeedFkIntegrity rejeita FK_UNRESOLVED.
+ */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINAL-001 — Fingerprint chain
+// ─────────────────────────────────────────────────────────────────────────────
+
+const {
+  compareFingerprintChains,
+} = require('../../governance/proof-engine/fingerprint-chain');
+
+describe('FINAL-001 — fingerprint chain: STALE, FRESH, UNREGISTERED', () => {
+  function chain(overrides = {}) {
+    return {
+      sourceFingerprint: 'src_fp_aaa',
+      inventoryFingerprint: 'inv_fp_bbb',
+      scenarioRegistryFingerprint: 'sce_fp_ccc',
+      policyFingerprint: 'pol_fp_ddd',
+      chainFingerprint: 'chain_fp_eee',
+      ...overrides,
+    };
+  }
+
+  test('prova torna-se STALE após mudança de fonte (sourceFingerprint diverge)', () => {
+    const registered = chain();
+    const current = chain({ sourceFingerprint: 'src_fp_CHANGED' });
+    const result = compareFingerprintChains(registered, current);
+    expect(result.status).toBe('STALE');
+    expect(result.diverged).toContain('sourceFingerprint');
+  });
+
+  test('mudança de inventário também invalida a cadeia (STALE)', () => {
+    const registered = chain();
+    const current = chain({ inventoryFingerprint: 'inv_fp_CHANGED' });
+    const result = compareFingerprintChains(registered, current);
+    expect(result.status).toBe('STALE');
+    expect(result.diverged).toContain('inventoryFingerprint');
+  });
+
+  test('sem cadeia registrada → UNREGISTERED (primeiro run não é STALE)', () => {
+    const current = chain();
+    // null e undefined indicam ausência de registro anterior
+    expect(compareFingerprintChains(null, current).status).toBe('UNREGISTERED');
+    expect(compareFingerprintChains(undefined, current).status).toBe('UNREGISTERED');
+    // string (tipo inválido) também é UNREGISTERED
+    expect(compareFingerprintChains('not-an-object', current).status).toBe('UNREGISTERED');
+  });
+
+  test('cadeia idêntica → FRESH (prova válida sem mudança de fonte)', () => {
+    const c = chain();
+    expect(compareFingerprintChains(c, { ...c }).status).toBe('FRESH');
+  });
+
+  test('STALE nunca é GO: status deve ser "STALE", não "FRESH"', () => {
+    const registered = chain({ chainFingerprint: 'chain_fp_OLD' });
+    const current = chain({ chainFingerprint: 'chain_fp_NEW' });
+    const result = compareFingerprintChains(registered, current);
+    expect(result.status).not.toBe('FRESH');
+    expect(result.status).toBe('STALE');
+  });
+
+  test('diverged lista todos os componentes alterados, não apenas o primeiro', () => {
+    const registered = chain();
+    const current = chain({
+      sourceFingerprint: 'src_CHANGED',
+      policyFingerprint: 'pol_CHANGED',
+    });
+    const result = compareFingerprintChains(registered, current);
+    expect(result.status).toBe('STALE');
+    expect(result.diverged).toContain('sourceFingerprint');
+    expect(result.diverged).toContain('policyFingerprint');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINAL-002 — FinalDecisionAggregator (fail-closed)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const {
+  computeFinalDecision,
+  STRICT_MODE,
+} = require('../../governance/final-governance-engine');
+
+const {
+  _internal: { _computeMandatoryDecision },
+} = require('../../tools/system/platform-readiness');
+
+describe('FINAL-002 — computeFinalDecision: NO_GO obrigatório bloqueia GO', () => {
+  function passCheck(id, severity = 'HIGH') {
+    return { id, pass: true, severity, reason: id };
+  }
+  function failCheck(id, severity = 'CRITICAL') {
+    return { id, pass: false, severity, reason: id };
+  }
+
+  test('check CRITICAL falho → NO_GO:GOVERNANCE_BLOCKED (independente do proofDecision)', () => {
+    const decision = computeFinalDecision(
+      [passCheck('mesh', 'HIGH'), failCheck('replay_integrity', 'CRITICAL')],
+      { proofDecision: 'AUTONOMOUS_READY_GO' },
+    );
+    expect(decision).toMatch(/^NO_GO:GOVERNANCE_BLOCKED/);
+    expect(decision).toContain('replay_integrity');
+  });
+
+  test('sem falhas críticas → retorna o proofDecision informado', () => {
+    const decision = computeFinalDecision(
+      [passCheck('mesh'), passCheck('release_gate')],
+      { proofDecision: 'AUTONOMOUS_READY_GO' },
+    );
+    expect(decision).toBe('AUTONOMOUS_READY_GO');
+  });
+
+  test('engines contraditórios são proibidos: CRITICAL blocked + proofGO → resultado é NO_GO', () => {
+    const decision = computeFinalDecision(
+      [failCheck('governance_signature', 'CRITICAL')],
+      { proofDecision: 'AUTONOMOUS_READY_GO' },
+    );
+    // AUTONOMOUS_READY_GO nunca pode coexistir com CRITICAL blocker
+    expect(decision).not.toBe('AUTONOMOUS_READY_GO');
+    expect(decision.startsWith('NO_GO')).toBe(true);
+  });
+
+  if (STRICT_MODE) {
+    test('[STRICT_MODE] HIGH falho → NO_GO:STRICT_ENTERPRISE', () => {
+      const decision = computeFinalDecision(
+        [failCheck('visual_journeys', 'HIGH')],
+        { proofDecision: 'STAGE_GO' },
+      );
+      expect(decision).toMatch(/^NO_GO:STRICT_ENTERPRISE/);
+    });
+  }
+});
+
+describe('FINAL-002 — _computeMandatoryDecision: invariante agregador fail-closed', () => {
+  test('governance NO_GO bloqueia finalDecision mesmo com proof GO', () => {
+    const dec = _computeMandatoryDecision({
+      govDecision: 'NO_GO:STRICT_ENTERPRISE [visual_journeys]',
+      proofDecision: 'AUTONOMOUS_READY_GO',
+    });
+    expect(dec).toMatch(/^NO_GO:MANDATORY_GATE_BLOCKED/);
+    expect(dec).toContain('governance=NO_GO:STRICT_ENTERPRISE');
+  });
+
+  test('replay-hardening NO_GO bloqueia finalDecision mesmo com proof GO', () => {
+    const dec = _computeMandatoryDecision({
+      hardeningDecision: 'REPLAY_HARDENING_NO_GO',
+      proofDecision: 'AUTONOMOUS_READY_GO',
+    });
+    expect(dec).toMatch(/^NO_GO:MANDATORY_GATE_BLOCKED/);
+    expect(dec).toContain('replay-hardening=REPLAY_HARDENING_NO_GO');
+  });
+
+  test('qa-mesh NO_GO bloqueia finalDecision', () => {
+    const dec = _computeMandatoryDecision({
+      meshHardBlock: true,
+      proofDecision: 'AUTONOMOUS_READY_GO',
+    });
+    expect(dec).toMatch(/^NO_GO:MANDATORY_GATE_BLOCKED/);
+    expect(dec).toContain('qa-mesh=NO_GO');
+  });
+
+  test('nenhum gate bloqueado + sem gaps → retorna proofDecision original', () => {
+    const dec = _computeMandatoryDecision({
+      proofDecision: 'AUTONOMOUS_READY_GO',
+    });
+    expect(dec).toBe('AUTONOMOUS_READY_GO');
+  });
+
+  test('nenhum gate bloqueado + blockingGaps > 0 → NO_GO do proof', () => {
+    const dec = _computeMandatoryDecision({
+      blockingGaps: 2,
+      proofDecision: 'AUTONOMOUS_READY_GO',
+    });
+    expect(dec).toMatch(/^NO_GO:/);
+  });
+
+  test('múltiplos gates bloqueados → todos listados na mensagem', () => {
+    const dec = _computeMandatoryDecision({
+      meshHardBlock: true,
+      govDecision: 'NO_GO:GOVERNANCE_BLOCKED [x]',
+      proofDecision: 'AUTONOMOUS_READY_GO',
+    });
+    expect(dec).toContain('qa-mesh=NO_GO');
+    expect(dec).toContain('governance=NO_GO:GOVERNANCE_BLOCKED');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINAL-004 — Set-based coverage (nunca > 100%)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const { calculateSetCoverage } = require('../../qa/coverage/setCoverage');
+
+describe('FINAL-004 — calculateSetCoverage: set-based, nunca > 100%', () => {
+  test('extras não aumentam cobertura — 8 validados para 6 requeridos nunca dá > 100%', () => {
+    const required = ['j1', 'j2', 'j3', 'j4', 'j5', 'j6'];
+    const validated = ['j1', 'j2', 'j3', 'j4', 'j5', 'j6', 'j7', 'j8'];
+    const result = calculateSetCoverage(required, validated);
+    expect(result.percent).toBeLessThanOrEqual(100);
+    expect(result.percent).toBe(100);
+    expect(result.extra).toEqual(['j7', 'j8']);
+    expect(result.matched).toHaveLength(6);
+  });
+
+  test('jornada requerida ausente reduz cobertura abaixo de 100%', () => {
+    const required = ['j1', 'j2', 'j3'];
+    const validated = ['j1', 'j2'];
+    const result = calculateSetCoverage(required, validated);
+    expect(result.percent).toBeLessThan(100);
+    expect(result.missing).toContain('j3');
+    expect(result.matched).toHaveLength(2);
+  });
+
+  test('item extra sem matching com requerido: percent permanece igual ao sem extras', () => {
+    const required = ['j1', 'j2'];
+    const withoutExtra = calculateSetCoverage(required, ['j1', 'j2']);
+    const withExtra = calculateSetCoverage(required, ['j1', 'j2', 'extra1', 'extra2']);
+    expect(withExtra.percent).toBe(withoutExtra.percent);
+    expect(withExtra.extra).toEqual(['extra1', 'extra2']);
+  });
+
+  test('cobertura é interseção: matched ⊆ required e matched ⊆ validated', () => {
+    const required = ['A', 'B', 'C'];
+    const validated = ['B', 'C', 'D', 'E'];
+    const result = calculateSetCoverage(required, validated);
+    // matched só pode conter itens que estão em AMBOS os conjuntos
+    for (const id of result.matched) {
+      expect(required).toContain(id);
+      expect(validated).toContain(id);
+    }
+    expect(result.matched).toHaveLength(2); // B e C
+    expect(result.missing).toEqual(['A']);
+    expect(result.extra).toEqual(['D', 'E']);
+  });
+
+  test('required vazio → 100% por definição (sem requerimentos)', () => {
+    expect(calculateSetCoverage([], ['j1', 'j2']).percent).toBe(100);
+    expect(calculateSetCoverage([], []).percent).toBe(100);
+  });
+
+  test('nenhum validado para requeridos existentes → 0%', () => {
+    const result = calculateSetCoverage(['j1', 'j2', 'j3'], []);
+    expect(result.percent).toBe(0);
+    expect(result.matched).toHaveLength(0);
+    expect(result.missing).toHaveLength(3);
+  });
+
+  test('percent é número, nunca NaN nem Infinity', () => {
+    const cases = [
+      [[], []],
+      [['j1'], []],
+      [[], ['j1']],
+      [['j1'], ['j1']],
+      [['j1', 'j2'], ['j2', 'j3']],
+    ];
+    for (const [req, val] of cases) {
+      const { percent } = calculateSetCoverage(req, val);
+      expect(Number.isFinite(percent)).toBe(true);
+      expect(percent).toBeGreaterThanOrEqual(0);
+      expect(percent).toBeLessThanOrEqual(100);
+    }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINAL-009 — Relational Seed FK integrity
+// ─────────────────────────────────────────────────────────────────────────────
+
+const {
+  generateCompatibleValue,
+  validateSeedFkIntegrity,
+  FK_UNRESOLVED,
+} = require('../../api/modules/agent-os/services/model-driven-pipeline');
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+describe('FINAL-009 — generateCompatibleValue: UUID aleatório não satisfaz FK', () => {
+  test('campo terminando em _id vira FK_UNRESOLVED, não UUID', () => {
+    const val = generateCompatibleValue('user_id', { type: 'UUID', allowNull: false });
+    expect(val).toBe(FK_UNRESOLVED);
+    expect(UUID_PATTERN.test(val)).toBe(false);
+  });
+
+  test('campo terminando em _key vira FK_UNRESOLVED, não UUID', () => {
+    const val = generateCompatibleValue('tenant_key', {}, { tenantKey: null });
+    expect(val).toBe(FK_UNRESOLVED);
+  });
+
+  test('tenant_key com contexto → usa o tenantKey fornecido (não FK_UNRESOLVED)', () => {
+    const val = generateCompatibleValue('tenant_key', {}, { tenantKey: 'tenant-abc' });
+    expect(val).toBe('tenant-abc');
+    expect(val).not.toBe(FK_UNRESOLVED);
+  });
+
+  test('campo não-FK retorna valor compatível com o tipo (não FK_UNRESOLVED)', () => {
+    const strVal = generateCompatibleValue('name', { type: 'STRING' });
+    expect(strVal).not.toBe(FK_UNRESOLVED);
+
+    const boolVal = generateCompatibleValue('active', { type: 'BOOLEAN' });
+    expect(typeof boolVal).toBe('boolean');
+    expect(boolVal).not.toBe(FK_UNRESOLVED);
+  });
+
+  test('qualquer campo _id: nunca UUID aleatório mesmo que type seja UUID', () => {
+    const fkFields = ['agent_id', 'conversation_id', 'ticket_id', 'owner_id', 'flow_id'];
+    for (const field of fkFields) {
+      const val = generateCompatibleValue(field, { type: 'UUID' });
+      expect(val).toBe(FK_UNRESOLVED);
+      expect(UUID_PATTERN.test(val)).toBe(false);
+    }
+  });
+});
+
+describe('FINAL-009 — validateSeedFkIntegrity: integridade relacional dos seeds', () => {
+  test('seed com FK_UNRESOLVED → inválido', () => {
+    const result = validateSeedFkIntegrity({
+      data: { name: 'Test Item', user_id: FK_UNRESOLVED, active: true },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.status).toBe('FK_UNRESOLVED');
+    expect(result.unresolvedFkFields).toContain('user_id');
+  });
+
+  test('seed sem FK_UNRESOLVED → válido (SEED_VALIDATED)', () => {
+    const result = validateSeedFkIntegrity({
+      data: { name: 'Clean Item', active: true, score: 42 },
+    });
+    expect(result.valid).toBe(true);
+    expect(result.status).toBe('SEED_VALIDATED');
+    expect(result.unresolvedFkFields).toHaveLength(0);
+  });
+
+  test('múltiplos FK_UNRESOLVED → todos listados em unresolvedFkFields', () => {
+    const result = validateSeedFkIntegrity({
+      data: {
+        name: 'Multi FK',
+        user_id: FK_UNRESOLVED,
+        tenant_key: FK_UNRESOLVED,
+        conversation_id: FK_UNRESOLVED,
+      },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.unresolvedFkFields).toContain('user_id');
+    expect(result.unresolvedFkFields).toContain('tenant_key');
+    expect(result.unresolvedFkFields).toContain('conversation_id');
+    expect(result.unresolvedFkFields).toHaveLength(3);
+  });
+
+  test('seed vazio → válido (sem campos FK_UNRESOLVED)', () => {
+    const result = validateSeedFkIntegrity({ data: {} });
+    expect(result.valid).toBe(true);
+    expect(result.status).toBe('SEED_VALIDATED');
+  });
+
+  test('seed nulo/ausente → trata como vazio, não lança', () => {
+    const result = validateSeedFkIntegrity({});
+    expect(result.valid).toBe(true);
+    expect(result.status).toBe('SEED_VALIDATED');
+  });
+
+  test('cross-tenant: seed com tenant_key resolvido + FK_UNRESOLVED em outro campo → inválido', () => {
+    const result = validateSeedFkIntegrity({
+      data: {
+        name: 'Cross Tenant Test',
+        tenant_key: 'tenant-abc',
+        agent_id: FK_UNRESOLVED,
+      },
+    });
+    expect(result.valid).toBe(false);
+    expect(result.unresolvedFkFields).toContain('agent_id');
+    expect(result.unresolvedFkFields).not.toContain('tenant_key');
+  });
+
+  test('FK_UNRESOLVED sentinel é string distinta de UUID e de string vazia', () => {
+    expect(typeof FK_UNRESOLVED).toBe('string');
+    expect(FK_UNRESOLVED.length).toBeGreaterThan(0);
+    expect(UUID_PATTERN.test(FK_UNRESOLVED)).toBe(false);
+    expect(FK_UNRESOLVED).not.toBe('');
+  });
+});

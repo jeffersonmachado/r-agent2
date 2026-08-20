@@ -1,16 +1,16 @@
 {
   "pass": true,
-  "currentZipName": "r-agent2-20260819-143905.zip",
-  "governedArtifact": "r-agent2-20260819-143905.payload.zip",
+  "currentZipName": "r-agent2-20260820-095540.zip",
+  "governedArtifact": "r-agent2-20260820-095540.payload.zip",
   "hash": "ea1d71bedff7582dcc71ac2a5fc85d14f725b2bf67b5075c7a599e4403dd5bd9",
   "overallConsistencyScore": 100,
   "allChecksPass": true,
   "regeneratedAt": "2026-06-12T08:42:07.733Z",
   "source": "clean-governance.js",
-  "generatedAt": "2026-08-19T17:41:01.886Z",
-  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260819-143905.manifest.json",
-  "currentZipManifest": "dist/r-agent2-20260819-143905.manifest.json",
-  "currentZipTimestamp": "2026-08-19T17:41:00Z",
-  "finalDecision": "NO_GO:AUTONOMOUS_READY_GO",
-  "reboundAt": "2026-08-19T17:41:02.279Z"
+  "generatedAt": "2026-08-20T12:57:20.762Z",
+  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260820-095540.manifest.json",
+  "currentZipManifest": "dist/r-agent2-20260820-095540.manifest.json",
+  "currentZipTimestamp": "2026-08-20T12:57:19Z",
+  "finalDecision": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:STRICT_ENTERPRISE [17 step(s) com ui.available=false em jornadas visuais críticas] | replay-hardening=REPLAY_HARDENING_NO_GO]",
+  "reboundAt": "2026-08-20T12:57:21.528Z"
 }
