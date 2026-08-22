@@ -74,6 +74,19 @@ function verify({ strict = false, run = null } = {}) {
   };
 }
 
+function readCurrentRunFromJson() {
+  try {
+    const current = JSON.parse(fs.readFileSync(path.join(ROOT, 'governance', '.current-run.json'), 'utf8'));
+    return {
+      run_id: current.runId || null,
+      source_fingerprint: current.sourceFingerprint || null,
+      policy_fingerprint: current.policyFingerprint || null,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
 async function main() {
   let run = null;
   try {
@@ -82,6 +95,9 @@ async function main() {
   } catch (_) {
     run = null;
   }
+  // DB-free fallback: em extração limpa (DELIVERED) o .current-run.json commitado
+  // carrega a lineage do run — o verifier permanece dependency-light e reproduzível.
+  if (!run) run = readCurrentRunFromJson();
   const result = verify({ run });
   fs.mkdirSync(path.join(ROOT, 'governance'), { recursive: true });
   fs.writeFileSync(path.join(ROOT, 'governance', 'mutable-json-state-validation-report.json'), `${JSON.stringify(result, null, 2)}\n`);
