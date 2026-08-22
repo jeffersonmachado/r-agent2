@@ -63,6 +63,10 @@ describe('RAP-078 — Runtime State Persistence & Filesystem State Elimination',
     expect(classifyTarget('qa-mesh/baseline.json', 'qa-mesh/meshRunner.js')).toBe('DB_CANONICAL_JSON_EXPORT');
     expect(classifyTarget('governance/node-marketplace-registry.json', 'api/services/nodeMarketplaceService.js')).toBe('DB_CANONICAL_JSON_EXPORT');
     expect(classifyTarget('core/rpa/reports/bugs/bug-memory.json', 'core/rpa/bugResolution/bugMemoryStore.js')).toBe('DB_CANONICAL_JSON_EXPORT');
+    // meshRegistry.json NÃO é static config: é registry derivado regenerado por
+    // tooling (auto-cover-gaps) e lido em runtime — reclassificado para export.
+    expect(classifyTarget('qa-mesh/meshRegistry.json', 'scripts/governance/auto-cover-gaps.js')).toBe('DB_CANONICAL_JSON_EXPORT');
+    expect(classifyTarget('meshRegistry.json', 'api/services/qa/inventory/inventoryEngine.js')).toBe('DB_CANONICAL_JSON_EXPORT');
   });
 
   test('dbStateStore escreve export derivado e agendou persistência canônica', () => {

@@ -84,10 +84,9 @@ const CLASSIFIED = {
   'config/': 'STATIC_VERSIONED_CONFIG',
   'contracts/': 'STATIC_VERSIONED_CONFIG',
   'qa/contracts/': 'STATIC_VERSIONED_CONFIG',
-  'qa-mesh/meshRegistry.json': 'STATIC_VERSIONED_CONFIG',
 
   // ── Estado mutável migrado p/ DB (dbStateStore) — JSON agora é export derivado ──
-  'qa/qa-waves/scenario-store.json': 'DB_CANONICAL_JSON_EXPORT',
+  'qa-mesh/meshRegistry.json': 'DB_CANONICAL_JSON_EXPORT',
   'qa/qa-waves/ai-drafts.json': 'DB_CANONICAL_JSON_EXPORT',
   'qa/qa-waves/journey-store.json': 'DB_CANONICAL_JSON_EXPORT',
   'qa/qa-waves/coverage-map.json': 'DB_CANONICAL_JSON_EXPORT',
@@ -122,6 +121,7 @@ const BASENAME_CLASSIFIED = {
   'pbx-voice-flow-prod-like.json': 'ARTIFACT_STORAGE',
   'omnichannel-unified-replay.json': 'ARTIFACT_STORAGE',
   'enterprise-proof-report.json': 'ARTIFACT_STORAGE',
+  'meshRegistry.json': 'DB_CANONICAL_JSON_EXPORT',
 };
 
 // Caminhos de runtime que NÃO devem conter escritas JSON não classificadas.
@@ -193,7 +193,7 @@ function classifyByPattern(norm, writer) {
   // Schemas de validação e configs declarativas (versionadas, não mutáveis)
   if (/\.(schema|rules|errors|actions|selectors|pages|restrictions|types)\.json$/.test(base)) return 'STATIC_VERSIONED_CONFIG';
   if (/^api\/data\//.test(norm) || /^core\/rpa\/rpa\.config\.json$/.test(norm)) return 'STATIC_VERSIONED_CONFIG';
-  if (base === 'capabilities.json' || base === 'journey-contracts.json' || base === 'technical-wave-map.json' || base === 'question-generation.rules.json' || base === 'config.json' || base === 'metadata.json' || base === 'tenant.contract.json' || base === 'bulkMessaging.json' || base === 'qa-policy.json' || base === 'warn-approval-policy.json' || base === 'meshRegistry.json') return 'STATIC_VERSIONED_CONFIG';
+  if (base === 'capabilities.json' || base === 'journey-contracts.json' || base === 'technical-wave-map.json' || base === 'question-generation.rules.json' || base === 'config.json' || base === 'metadata.json' || base === 'tenant.contract.json' || base === 'bulkMessaging.json' || base === 'qa-policy.json' || base === 'warn-approval-policy.json') return 'STATIC_VERSIONED_CONFIG';
   if (base === 'rpa-token.json' || /token|secret|credential/i.test(base)) return 'SECRET_STORE';
   // Lock transiente reconstruível
   if (/canonical\.lock\.json$/.test(norm)) return 'TEMPORARY_CACHE';
