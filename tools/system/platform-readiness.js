@@ -1407,7 +1407,9 @@ function buildReport() {
     ? `NO_GO:MANDATORY_GATE_BLOCKED [${mandatoryBlockReasons.join(' | ')}]`
     : (blockingGaps.length > 0
       ? `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`
-      : proofDecision);
+      : (String(govDecision) === 'PASS_WITH_DEFERRED_PACKAGE_GATE'
+        ? 'PASS_WITH_DEFERRED_PACKAGE_GATE'
+        : proofDecision));
   const platformMaturity = classifyPlatformMaturity({
     qaWavesGovernance,
     prodLikeSummary,
@@ -1662,6 +1664,13 @@ function _computeMandatoryDecision({
     return `NO_GO:MANDATORY_GATE_BLOCKED [${mandatoryBlockReasons.join(' | ')}]`;
   }
   if (blockingGaps > 0) return `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`;
+  // Fase PRE_PACKAGE honesta: se o governance canônico (DB-derivado) declarou
+  // PASS_WITH_DEFERRED_PACKAGE_GATE (scorecard abaixo de 10 apenas em dimensões
+  // da fase DELIVERED), o readiness NÃO pode promover para AUTONOMOUS_READY_GO.
+  // O pós-package só vira AUTONOMOUS_READY_GO quando o governance declarar GO.
+  if (String(govDecision) === 'PASS_WITH_DEFERRED_PACKAGE_GATE') {
+    return 'PASS_WITH_DEFERRED_PACKAGE_GATE';
+  }
   return proofDecision;
 }
 

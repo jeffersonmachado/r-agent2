@@ -53,7 +53,9 @@ async function exportGovernanceArtifacts() {
   const chain = computeFingerprintChain(process.cwd());
 
   const below10 = evaluation ? evaluation.dimensions_below_10 : 1;
-  const failedGates = gates.filter((gate) => gate.mandatory && gate.status !== 'PASS');
+  // Gates DEFERRED (ex.: master_scorecard em PRE_PACKAGE com apenas dimensões
+  // DELIVERED pendentes) NÃO são falhas semânticas — não contam para NO_GO.
+  const failedGates = gates.filter((gate) => gate.mandatory && gate.status === 'FAIL');
   // Nenhum GO é fabricado: a projeção deriva do estado persistido do run.
   //   - AUTONOMOUS_READY_GO: scorecard 10/10 E todos os gates mandatórios PASS.
   //   - PASS_WITH_DEFERRED_PACKAGE_GATE: gates semânticos PASS, mas o scorecard

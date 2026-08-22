@@ -48,6 +48,10 @@ const GAP_SEVERITY = Object.freeze({
   CURRENT_SOURCE: 'critical',
 });
 
+// Dimensões cuja verificação só existe na fase DELIVERED (artefato entregue).
+// Em PRE_PACKAGE, seus gaps são DEFERRED (não-blocking) — não é FAIL, nem GO.
+const DELIVERED_PHASE_DIMENSIONS = new Set(['RAP-055', 'RAP-056']);
+
 function readJsonSafe(absPath) {
   if (!fs.existsSync(absPath)) return null;
   try {
@@ -381,13 +385,14 @@ function gapForRequirement(dimensionDefinition, requirement, requirementIndex) {
     for (const checkedPath of evidence.paths || []) files.add(checkedPath.path || checkedPath);
     if (evidence.path) files.add(evidence.path);
   }
-  const severity = GAP_SEVERITY[requirement.category] || 'medium';
+  const deferredPhase = DELIVERED_PHASE_DIMENSIONS.has(dimensionDefinition.id);
+  const severity = deferredPhase ? 'low' : (GAP_SEVERITY[requirement.category] || 'medium');
   return {
     id: `GAP-${dimensionDefinition.id}-${String(requirementIndex + 1).padStart(3, '0')}`,
     dimension: dimensionDefinition.id,
     requirementId: requirement.id,
     severity,
-    status: 'OPEN',
+    status: deferredPhase ? 'DEFERRED' : 'OPEN',
     rootCause: requirement.code,
     description: requirement.reason,
     files: [...files],

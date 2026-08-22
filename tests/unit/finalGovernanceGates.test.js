@@ -268,6 +268,14 @@ describe('FINAL-002 — _computeMandatoryDecision: invariante agregador fail-clo
     expect(dec).toContain('qa-mesh=NO_GO');
     expect(dec).toContain('governance=NO_GO:GOVERNANCE_BLOCKED');
   });
+
+  test('governance PASS_WITH_DEFERRED_PACKAGE_GATE NÃO promove para AUTONOMOUS_READY_GO', () => {
+    const dec = _computeMandatoryDecision({
+      govDecision: 'PASS_WITH_DEFERRED_PACKAGE_GATE',
+      proofDecision: 'AUTONOMOUS_READY_GO',
+    });
+    expect(dec).toBe('PASS_WITH_DEFERRED_PACKAGE_GATE');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
