@@ -34,7 +34,7 @@ function parseGateStatuses(output) {
   const lines = output.split('\n');
   const gates = {};
   for (const line of lines) {
-    const m = line.match(/\b([a-z][a-z0-9_]+)\s+(PASS|FAIL)\b/);
+    const m = line.match(/\b([a-z][a-z0-9_]+)\s+(PASS|FAIL|DEFERRED)\b/);
     if (m) gates[m[1]] = m[2];
   }
   return gates;
@@ -195,6 +195,12 @@ function buildMinimalValidRoot(dir) {
     checks: [{ id: 'hash', pass: true }], failedChecks: 0,
   });
 
+  // Fonte canônica de coverage lida por checkCoverage (validate:coverage-gate).
+  writeJson(dir, 'reports/coverage-gate-report.json', {
+    ...lineage('coverage-gate-report'),
+    status: 'GO', weightedCoverage: 99.9, validatedCoverage: 99.9, critical: { failed: 0 },
+  });
+
   const payloadPath = path.join(dir, 'dist', 'release', 'r-agent2-20260820-000000.payload.zip');
   fs.mkdirSync(path.dirname(payloadPath), { recursive: true });
   fs.writeFileSync(payloadPath, 'immutable payload bytes', 'utf8');
@@ -229,6 +235,37 @@ describe('verify-delivered-release — fail-closed behavior', () => {
     expect(result.error).toBeNull();
     expect(result.exitCode).toBe(0);
     expect(result.output).toContain('DELIVERED_RELEASE_VERIFIED');
+  });
+
+  test('DELIVERED_RELEASE_VERIFIED when only DELIVERED-phase dims pending (PRE_PACKAGE → DELIVERED fixpoint)', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    // Scorecard com RAP-055/056 abaixo de 10 (fase DELIVERED pendente) e
+    // governance PASS_WITH_DEFERRED_PACKAGE_GATE. O artefato está íntegro:
+    // DELIVERED_RELEASE_VERIFIED (exit 0), mas finalDecision ainda não é
+    // AUTONOMOUS_READY — o scorecard sobe para 10 na re-execução seguinte.
+    writeJson(dir, 'governance/rap-master-scorecard.json', {
+      runId: 'rap-release-20260820-000000-testtest',
+      generatedAt: '2026-08-20T00:01:00.000Z',
+      artifactType: 'rap-master-scorecard', artifactVersion: '1.0.0',
+      dimensions: [
+        { id: 'RAP-055', name: 'Delivered', score: 6, target: 10 },
+        { id: 'RAP-056', name: 'Source/Proof', score: 6, target: 10 },
+      ],
+    });
+    writeJson(dir, 'governance/final-governance-report.json', {
+      runId: 'rap-release-20260820-000000-testtest',
+      generatedAt: '2026-08-20T00:01:00.000Z',
+      finalDecision: 'PASS_WITH_DEFERRED_PACKAGE_GATE',
+    });
+
+    const result = runVerifier(dir);
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('DELIVERED_RELEASE_VERIFIED');
+    expect(result.output).toContain('DELIVERED_PENDING_SCORECARD');
+    const gates = parseGateStatuses(result.output);
+    expect(gates.master_scorecard).toBe('DEFERRED');
+    expect(gates.governance_mandatory_gates).toBe('DEFERRED');
   });
 
   test('FAIL when package manifest is absent (no synthetic fallback allowed)', () => {
@@ -393,9 +430,19 @@ describe('verify-delivered-release — fail-closed behavior', () => {
   test('FAIL when coverage is missing instead of treating null as PASS', () => {
     const dir = makeTempDir();
     buildMinimalValidRoot(dir);
-    updateJson(dir, 'governance/final-proof-report.json', (proof) => { delete proof.proofCoverage; });
+    fs.rmSync(path.join(dir, 'reports', 'coverage-gate-report.json'));
     const result = runVerifier(dir);
     expect(parseGateStatuses(result.output).coverage).toBe('FAIL');
+    expect(result.exitCode).toBe(1);
+  });
+
+  test('coverage gate NO_GO blocks DELIVERED even with weightedCoverage', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    updateJson(dir, 'reports/coverage-gate-report.json', (report) => { report.status = 'NO_GO'; });
+    const result = runVerifier(dir);
+    expect(parseGateStatuses(result.output).coverage).toBe('FAIL');
+    expect(result.exitCode).toBe(1);
   });
 
   test('FAIL when replay status is UNKNOWN', () => {

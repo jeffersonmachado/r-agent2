@@ -55,6 +55,12 @@ function makeGate(id, mandatory = true) {
   return { id, mandatory, status: 'PENDING', reason: null, runId: null };
 }
 
+// Dimensões cuja verificação só existe na fase DELIVERED (artefato entregue).
+// Em PRE_PACKAGE, se as ÚNICAS abaixo de 10 forem estas, o gate master_scorecard
+// fica DEFERRED (não FAIL): o artefato está íntegro, o scorecard ainda não
+// refletiu o delivered-report que este próprio verifier produz.
+const DELIVERED_PHASE_DIMENSIONS = new Set(['RAP-055', 'RAP-056']);
+
 function pass(gate, detail = {}) {
   return { ...gate, ...detail, status: 'PASS' };
 }
@@ -304,21 +310,27 @@ function checkSystemScopeAudit() {
 function checkCoverage() {
   const gate = makeGate('coverage');
 
-  const proof = readJson('governance/final-proof-report.json');
-  if (!proof) return fail(gate, 'final-proof-report.json ausente');
+  // A fonte canônica de cobertura é o coverage gate (validate:coverage-gate),
+  // o mesmo input usado pelo scorecard (RAP-022/023/025/040). A projeção
+  // DB-derivada de final-proof-report não carrega proofCoverage — ler coverage
+  // de lá era uma dependência circular que fabricava COVERAGE_INSUFFICIENT.
+  const report = readJson('reports/coverage-gate-report.json');
+  if (!report) return fail(gate, 'COVERAGE_INSUFFICIENT_EVIDENCE - reports/coverage-gate-report.json ausente');
 
-  const coverage = proof.proofCoverage || proof.coverage || {};
-  const pct = coverage.percent ?? null;
-
-  if (pct === null || !Number.isFinite(Number(pct))) {
-    return fail(gate, 'COVERAGE_INSUFFICIENT_EVIDENCE - coverage percent ausente ou invalido');
+  const weighted = Number(report.weightedCoverage ?? report.validatedCoverage ?? null);
+  if (!Number.isFinite(weighted)) {
+    return fail(gate, 'COVERAGE_INSUFFICIENT_EVIDENCE - weightedCoverage ausente ou invalido');
   }
 
-  if (pct !== null && pct < 70) {
-    return fail(gate, `Coverage insuficiente: ${pct}% (mínimo 70%)`);
+  if (report.status === 'NO_GO' || report.gate === 'NO_GO') {
+    return fail(gate, `Coverage gate NO_GO — weightedCoverage=${weighted}%`);
   }
 
-  return pass(gate, { coveragePercent: pct });
+  if (weighted < 70) {
+    return fail(gate, `Coverage insuficiente: ${weighted}% (mínimo 70%)`);
+  }
+
+  return pass(gate, { coveragePercent: weighted, coverageGate: report.status || report.gate });
 }
 
 function checkMasterScorecard() {
@@ -327,8 +339,17 @@ function checkMasterScorecard() {
   if (!scorecard) return fail(gate, 'MASTER_SCORECARD_MISSING');
   const dimensions = Array.isArray(scorecard.dimensions) ? scorecard.dimensions : [];
   const below10 = dimensions.filter((dimension) => (dimension.score ?? dimension.currentScore) !== 10);
-  if (below10.length > 0) return fail(gate, `MASTER_SCORECARD_NOT_10_OF_10 - below10=${below10.length}`);
-  return pass(gate, { dimensions: dimensions.length });
+  if (below10.length === 0) return pass(gate, { dimensions: dimensions.length });
+
+  const below10Ids = below10.map((dimension) => dimension.id).filter(Boolean);
+  const nonDelivered = below10Ids.filter((id) => !DELIVERED_PHASE_DIMENSIONS.has(id));
+  if (nonDelivered.length > 0) {
+    return fail(gate, `MASTER_SCORECARD_NOT_10_OF_10 - below10=${below10.length} (non-delivered: ${nonDelivered.join(', ')})`);
+  }
+  // Abaixo de 10 apenas em dimensões DELIVERED (RAP-055/056): este verifier é
+  // exatamente quem produz o delivered-report que as sobe para 10. DEFERRED,
+  // não FAIL — o artefato está íntegro e o scorecard refletirá o resultado.
+  return { ...gate, status: 'DEFERRED', reason: `MASTER_SCORECARD delivered pending - below10=${below10Ids.join(', ')}` };
 }
 
 function checkSelfProofAndTamper() {
@@ -349,11 +370,14 @@ function checkGovernanceMandatoryGates() {
   const govReport = readJson('governance/final-governance-report.json');
   if (!govReport) return fail(gate, 'final-governance-report.json ausente');
 
-  if (govReport.finalDecision !== 'AUTONOMOUS_READY_GO') {
-    return fail(gate, `governance decision=${govReport.finalDecision}`);
+  const decision = govReport.finalDecision;
+  if (decision === 'AUTONOMOUS_READY_GO') return pass(gate, { governanceDecision: decision });
+  if (decision === 'PASS_WITH_DEFERRED_PACKAGE_GATE') {
+    // PRE_PACKAGE honesto: gates semânticos PASS, scorecard com dimensões
+    // DELIVERED pendentes. Não é GO, mas também não é falha do artefato.
+    return { ...gate, status: 'DEFERRED', reason: 'PASS_WITH_DEFERRED_PACKAGE_GATE (scorecard delivered pending)' };
   }
-
-  return pass(gate, { governanceDecision: govReport.finalDecision });
+  return fail(gate, `governance decision=${decision}`);
 }
 
 // ─── 11. Final consistency ───────────────────────────────────────────────────
@@ -393,7 +417,11 @@ function verify() {
   const manifestCheck = checkPackageManifest();
   const manifest      = manifestCheck.manifest || null;
 
-  const gates = [
+  // Gates de ARTEFATO: verificam o pacote entregue em si (manifest, runId,
+  // sourceFingerprint, chain, freshness, contaminação de run, causal journey,
+  // tenant audit, coverage, consistency, replay hardening, self-proof, tamper).
+  // Estes definem DELIVERED_RELEASE_VERIFIED — a evidência que RAP-055/056 leem.
+  const artifactGates = [
     manifestCheck,
     checkRunId(manifest),
     checkSourceFingerprint(manifest),
@@ -403,19 +431,45 @@ function verify() {
     checkCriticalJourney(),
     checkSystemScopeAudit(),
     checkCoverage(),
-    checkGovernanceMandatoryGates(),
     checkFinalConsistency(),
     checkReplayHardening(),
-    checkMasterScorecard(),
     ...checkSelfProofAndTamper(),
   ];
 
-  const failed    = gates.filter((g) => g.status === 'FAIL');
-  const mandatory = failed.filter((g) => g.mandatory);
-  const pass      = mandatory.length === 0;
+  // Gates DERIVADOS: scorecard 10/10 e governance AUTONOMOUS_READY_GO são o
+  // RESULTADO de RAP-055/056 terem subido para 10 após este relatório existir
+  // com DELIVERED_RELEASE_VERIFIED. Exigí-los como pré-condição do DELIVERED
+  // criaria um ciclo impossível (scorecard precisa deste relatório; este
+  // relatório precisaria do scorecard). Eles determinam o upgrade final para
+  // AUTONOMOUS_READY. DEFERRED (só delivered pendente) NÃO bloqueia o
+  // DELIVERED; FAIL real (NO_GO / below10 não-delivered) bloqueia.
+  const derivedGates = [
+    checkGovernanceMandatoryGates(),
+    checkMasterScorecard(),
+  ];
 
-  const finalDecision = pass ? 'AUTONOMOUS_READY' : 'NO_GO';
-  const delivered     = pass ? 'DELIVERED_RELEASE_VERIFIED' : 'DELIVERED_RELEASE_NO_GO';
+  const allGates = [...artifactGates, ...derivedGates];
+
+  const artifactFailed = artifactGates
+    .filter((g) => g.status === 'FAIL' && g.mandatory);
+  const derivedFailed = derivedGates
+    .filter((g) => g.status === 'FAIL' && g.mandatory);
+  const derivedDeferred = derivedGates
+    .filter((g) => g.status === 'DEFERRED');
+
+  // DELIVERED_RELEASE_VERIFIED = artefato entregue verificado (pré-condição),
+  // sem falha semântica de gate derivado (NO_GO/below10 não-delivered).
+  // AUTONOMOUS_READY = artefato verificado E scorecard 10/10 E governance GO.
+  const delivered = artifactFailed.length === 0 && derivedFailed.length === 0
+    ? 'DELIVERED_RELEASE_VERIFIED'
+    : 'DELIVERED_RELEASE_NO_GO';
+  const autonomousReady = delivered === 'DELIVERED_RELEASE_VERIFIED'
+    && derivedDeferred.length === 0;
+  const finalDecision = autonomousReady
+    ? 'AUTONOMOUS_READY'
+    : (delivered === 'DELIVERED_RELEASE_VERIFIED'
+      ? 'DELIVERED_PENDING_SCORECARD'
+      : 'NO_GO');
 
   // Persistir o resultado REAL do verifier entregue (nunca fabricado por outro
   // script): este relatório é o único produtor legítimo de DELIVERED_RELEASE_VERIFIED.
@@ -431,7 +485,7 @@ function verify() {
       decision: delivered,
       status: delivered,
       finalDecision,
-      gates: gates.map((gate) => ({ id: gate.id, status: gate.status, mandatory: gate.mandatory, reason: gate.reason || null })),
+      gates: allGates.map((gate) => ({ id: gate.id, status: gate.status, mandatory: gate.mandatory, reason: gate.reason || null })),
     };
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, `${JSON.stringify(deliveredReport, null, 2)}\n`);
@@ -443,8 +497,8 @@ function verify() {
   console.log('─'.repeat(60));
   console.log('MANDATORY GATES');
   console.log('─'.repeat(60));
-  for (const g of gates) {
-    const icon = g.status === 'PASS' ? '✓' : '✗';
+  for (const g of allGates) {
+    const icon = g.status === 'PASS' ? '✓' : (g.status === 'DEFERRED' ? '⟳' : '✗');
     console.log(`  ${icon} ${g.id.padEnd(35)} ${g.status}${g.note ? ` (${g.note})` : ''}${g.reason ? ` — ${g.reason}` : ''}`);
   }
 
@@ -480,13 +534,14 @@ function verify() {
   console.log(`DELIVERED:       ${delivered}`);
   console.log('─'.repeat(60));
 
-  if (!pass) {
+  if (finalDecision !== 'AUTONOMOUS_READY') {
     console.log('\nFailed gates:');
-    mandatory.forEach((g) => console.log(`  - ${g.id}: ${g.reason}`));
+    const failedGates = allGates.filter((g) => g.status === 'FAIL' && g.mandatory);
+    for (const g of failedGates) console.log(`  - ${g.id}: ${g.reason}`);
     console.log();
   }
 
-  process.exit(pass ? 0 : 1);
+  process.exit(delivered === 'DELIVERED_RELEASE_VERIFIED' ? 0 : 1);
 }
 
 verify();
