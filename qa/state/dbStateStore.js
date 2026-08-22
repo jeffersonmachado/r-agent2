@@ -64,20 +64,35 @@ function persistenceRequired(cause = null) {
   return error;
 }
 
+/**
+ * CERTIFICATION_MODE=true (ou NODE_ENV=production) exige DB como fonte única:
+ *   - DB indisponível → PERSISTENCE_REQUIRED (nunca filesystem fallback);
+ *   - load() lê do DB (nunca do JSON export);
+ *   - save() propaga falha de DB (nunca grava JSON e segue).
+ */
+function isCertificationMode() {
+  return process.env.CERTIFICATION_MODE === 'true'
+    || process.env.CERTIFICATION_MODE === '1'
+    || process.env.NODE_ENV === 'production';
+}
+
 async function ensureStore() {
-  const production = process.env.NODE_ENV === 'production';
+  const certification = isCertificationMode();
   if (cachedStore) return cachedStore;
   if (!getSequelize()) {
     try {
       await connect(3, 300);
     } catch (error) {
-      if (production) throw persistenceRequired(error);
+      if (certification) throw persistenceRequired(error);
     }
   }
   const postgresReady = Boolean(getSequelize());
-  if (production && !postgresReady) throw persistenceRequired();
+  if (certification && !postgresReady) throw persistenceRequired();
   if (postgresReady && process.env.ARTIFACT_STORE_BACKEND !== 'filesystem') {
     cachedStore = createArtifactStore({ backend: 'postgres' });
+  } else if (certification) {
+    // Certificação NUNCA usa filesystem como fonte de verdade.
+    throw persistenceRequired();
   } else {
     cachedStore = createArtifactStore({ backend: 'filesystem', rootDir: path.join(ROOT, 'cache', 'qa-state') });
   }
@@ -89,21 +104,23 @@ async function save(stateKey, data) {
   const refId = sanitizeRefId(stateKey.replace(/^\.\//, '').replace(/^\/+/, ''));
   const payload = typeof data === 'string' ? data : JSON.stringify(data);
   const result = await store.write({ kind: KIND, refId, payload });
-  writeExport(stateKey, data); // export derivado do banco
+  writeExport(stateKey, data); // export derivado do banco (após commit do write)
   return result;
 }
 
 function saveSyncExport(stateKey, data) {
-  // Grava o export derivado (síncrono, CI-friendly) e agenda a persistência
-  // canônica no DB (fire-and-forget). A fonte de verdade é o banco; o JSON é
-  // apenas o cache derivado para leituras síncronas.
+  // DB-first em runtime governado: grava no DB PRIMEIRO e deriva o export DEPOIS.
+  // Falha de DB propaga — a operação NÃO continua usando JSON como verdade.
+  if (isCertificationMode()) {
+    return save(stateKey, data);
+  }
+  // Dev/CI (utility local, não governado): o export síncrono é cache
+  // NÃO-autoritativo para leituras offline; a persistência canônica no DB é
+  // agendada. Nenhum path de certificação depende deste cache.
   writeExport(stateKey, data);
   save(stateKey, data).catch((error) => {
-    // Em produção, falha de persistência é crítica; em dev, loga e segue.
-    if (process.env.NODE_ENV === 'production') {
-      // eslint-disable-next-line no-console
-      console.error(`[dbStateStore] persistence_required: ${stateKey}: ${error?.message || error}`);
-    }
+    // eslint-disable-next-line no-console
+    console.error(`[dbStateStore] persistence_required: ${stateKey}: ${error?.message || error}`);
   });
 }
 
@@ -113,16 +130,32 @@ async function loadFromDb(stateKey, fallback = null) {
     const refId = sanitizeRefId(stateKey.replace(/^\.\//, '').replace(/^\/+/, ''));
     const data = await store.readJson({ kind: KIND, refId });
     return data === null ? fallback : data;
-  } catch (_) {
+  } catch (error) {
+    if (isCertificationMode()) throw persistenceRequired(error);
     return fallback;
   }
 }
 
-function load(stateKey, fallback = null) {
-  const data = readExport(stateKey);
-  return data === undefined ? fallback : data;
+/**
+ * Leitura canônica — lê do DB. Em CERTIFICATION_MODE/produção, o JSON export
+ * (cache) NUNCA é usado como fonte de verdade; DB indisponível → PERSISTENCE_REQUIRED.
+ * Fora de certificação (dev/CI), usa o DB quando disponível e cai para o export
+ * derivado apenas quando o DB não tem o valor.
+ */
+async function load(stateKey, fallback = null) {
+  if (isCertificationMode()) {
+    return loadFromDb(stateKey, fallback);
+  }
+  try {
+    const fromDb = await loadFromDb(stateKey, undefined);
+    if (fromDb !== undefined) return fromDb;
+  } catch (_) {
+    // dev: DB indisponível → cache export (não autoritativo)
+  }
+  const cached = readExport(stateKey);
+  return cached === undefined ? fallback : cached;
 }
 
 function resetStoreForTests() { cachedStore = null; }
 
-module.exports = { save, saveSyncExport, load, loadFromDb, KIND, writeExport, readExport, resetStoreForTests };
+module.exports = { save, saveSyncExport, load, loadFromDb, isCertificationMode, KIND, writeExport, readExport, resetStoreForTests };
