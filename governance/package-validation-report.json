@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-08-22T06:07:08.900Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260822-030625.zip",
-  "zipName": "r-agent2-20260822-030625.zip",
-  "zipSha256": "2d2deff633fc438283af3ce381800860311d085ad1aabd554981f3d916538490",
+  "generatedAt": "2026-08-22T11:19:55.124Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260822-081930.zip",
+  "zipName": "r-agent2-20260822-081930.zip",
+  "zipSha256": "087591faf9084e1530775153ec1fe8caa9133f8ef2e4c6cc7b36092cc4737966",
   "payloadCentric": false,
   "envelopePath": null,
   "selectionMode": "explicit",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260822-030625.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260822-081930.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -20,20 +20,20 @@
     "governance/blocker-engine.js",
     "governance/final-consistency-report.json"
   ],
-  "entryCount": 5782,
+  "entryCount": 5783,
   "missingEntries": [],
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20260822-030625.zip",
-    "sha256": "2d2deff633fc438283af3ce381800860311d085ad1aabd554981f3d916538490",
+    "boundTo": "r-agent2-20260822-081930.zip",
+    "sha256": "087591faf9084e1530775153ec1fe8caa9133f8ef2e4c6cc7b36092cc4737966",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
   },
-  "reboundAt": "2026-08-22T06:07:10.321Z",
-  "runId": "rap-governed-20260822060624928-3b524dc9",
-  "sourceFingerprint": "08a50aead310100d677b2953a6aed8fc35385fbbccc8371583fc9e94b9c006fe",
+  "reboundAt": "2026-08-22T11:19:55.492Z",
+  "runId": "rap-governed-20260822111929984-38e21523",
+  "sourceFingerprint": "be484de9384b3ab1530ec01b5ba3c51a991dad2602b9a997d9a5038c25f78d09",
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0"
 }

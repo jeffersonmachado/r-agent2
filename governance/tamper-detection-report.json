@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-08-22T05:10:36.224Z",
-  "artifact": "r-agent2-20260822-030625.payload.zip",
+  "artifact": "r-agent2-20260822-081930.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,7 +12,7 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260822-030625.payload.zip",
+        "zipName": "r-agent2-20260822-081930.payload.zip",
         "computedHash": "06f93779faa01b297ef0769f88fa48fc0795abf66e5c3e262ff4fb7e87beb308",
         "recordedHash": "06f93779faa01b297ef0769f88fa48fc0795abf66e5c3e262ff4fb7e87beb308",
         "match": true
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260822-030625.payload.manifest.json"
+        "subject": "r-agent2-20260822-081930.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260822-030625.payload.zip"
+        "subject": "r-agent2-20260822-081930.payload.zip"
       }
     },
     {
@@ -99,9 +99,9 @@
     }
   ],
   "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
-  "runId": "rap-governed-20260822060624928-3b524dc9",
-  "sourceFingerprint": "08a50aead310100d677b2953a6aed8fc35385fbbccc8371583fc9e94b9c006fe",
+  "runId": "rap-governed-20260822111929984-38e21523",
+  "sourceFingerprint": "be484de9384b3ab1530ec01b5ba3c51a991dad2602b9a997d9a5038c25f78d09",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-08-22T06:07:11.769Z"
+  "reboundAt": "2026-08-22T11:19:55.903Z"
 }
