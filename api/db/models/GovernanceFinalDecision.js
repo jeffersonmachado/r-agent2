@@ -1,0 +1,3 @@
+'use strict';
+const { getGovernanceModel, uuid, json, DataTypes } = require('./governanceModelFactory');
+module.exports = () => getGovernanceModel('GovernanceFinalDecision', { id: uuid, run_id: { type: DataTypes.STRING, allowNull: false, unique: true }, decision: { type: DataTypes.STRING, allowNull: false }, reason: { type: DataTypes.TEXT, allowNull: false }, mandatory_gate_failures: { type: DataTypes.INTEGER, defaultValue: 0 }, scorecard_below_10: { type: DataTypes.INTEGER, defaultValue: 0 }, source_fingerprint: { type: DataTypes.STRING(64), allowNull: false }, proof_fingerprint: DataTypes.STRING(64), package_fingerprint: DataTypes.STRING(64), metadata: json }, { tableName: 'governance_final_decisions' });

@@ -13,6 +13,7 @@
  */
 
 const logger = require('../../utils/logger');
+const crypto = require('crypto');
 const { buildServicePrincipal } = require('../../../src/core/cognitive/principal');
 
 /** Frases de outcome de negócio por intent — nunca termos de infraestrutura. */
@@ -92,6 +93,9 @@ function toBusinessMessage(result) {
  * @param {function} args.sendText      (text) => Promise — envio no canal
  * @param {function} [args.configGet]   leitura de configuração do tenant
  * @param {object} [args.orchestrator]  injetável em testes
+ * @param {object} [args.traceContext] contexto causal recebido no boundary
+ * @param {function} [args.appendEvent] injetável em testes; default Event Ledger
+ * @param {function} [args.eventIdFactory] factory de eventId do runtime
  * @returns {Promise<{path: string, result: object}>}
  */
 async function handleInboundWithCognitiveCore({
@@ -104,8 +108,18 @@ async function handleInboundWithCognitiveCore({
   sendText,
   configGet = null,
   orchestrator = null,
+  traceContext = null,
+  appendEvent = null,
+  eventIdFactory = null,
 }) {
   const orch = orchestrator || require('../../../src/core/cognitive').getCognitiveOrchestrator();
+  const effectiveCorrelationId = correlationId || `channel-${crypto.randomUUID()}`;
+  const makeEventId = eventIdFactory || (() => `evt-${crypto.randomUUID()}`);
+  const trace = traceContext && typeof traceContext === 'object' ? traceContext : {};
+  const append = appendEvent || ((event) => {
+    const { appendEventV1 } = require('../eventLedgerService');
+    return appendEventV1(event);
+  });
 
   const principal = buildServicePrincipal({
     serviceId: `cognitive-entry:${channel}`,
@@ -113,16 +127,70 @@ async function handleInboundWithCognitiveCore({
     permissions: resolveChannelPermissions(configGet),
     channel,
     sessionId: conversationId,
-    correlationId,
+    correlationId: effectiveCorrelationId,
+  });
+
+  let parentEventId = trace.parentEventId || null;
+  let causationId = trace.causationId || null;
+  async function emitBoundary(type, eventPayload, { principalId = principal.principalId } = {}) {
+    const eventId = makeEventId();
+    if (!causationId) causationId = eventId;
+    const event = {
+      eventId,
+      type,
+      tenantId,
+      source: `channel:${channel}`,
+      correlationId: effectiveCorrelationId,
+      parentEventId,
+      causationId,
+      runId: trace.runId || null,
+      criticalJourneyId: trace.criticalJourneyId || null,
+      executionId: trace.executionId || null,
+      principalId,
+      subject: { type: 'channel_conversation', id: conversationId || effectiveCorrelationId },
+      actor: { type: principal.principalType, id: principalId },
+      payload: eventPayload,
+    };
+    try {
+      await append(event);
+    } catch (error) {
+      logger.warn('[InboundCognitive] Causal boundary persistence failed', {
+        type,
+        tenantId,
+        correlationId: effectiveCorrelationId,
+        error: error.message,
+      });
+    }
+    parentEventId = eventId;
+    return event;
+  }
+
+  await emitBoundary('channel.message.inbound', {
+    channel,
+    conversationId,
+    messageReceived: true,
+  }, { principalId: `channel:${channel}` });
+  await emitBoundary('tenant.resolution.completed', {
+    resolvedTenantId: tenantId,
+    resolutionSource: 'trusted_channel_boundary',
+  }, { principalId: `channel:${channel}` });
+  await emitBoundary('principal.resolution.completed', {
+    principalType: principal.principalType,
+    classification: principal.classification,
   });
 
   const result = await orch.process({
     tenantId,
     channel,
     message,
-    payload: { ...payload, conversationId, correlationId },
+    payload: { ...payload, conversationId, correlationId: effectiveCorrelationId },
     actor: principal,
-    correlationId,
+    correlationId: effectiveCorrelationId,
+    traceContext: {
+      ...trace,
+      parentEventId,
+      causationId,
+    },
   });
 
   const text = toBusinessMessage(result);
@@ -136,7 +204,7 @@ async function handleInboundWithCognitiveCore({
     executionId: result.executionId,
     intent: result.intent,
     status: result.status,
-    correlationId,
+    correlationId: effectiveCorrelationId,
   });
 
   return { path: payload.durable ? 'DURABLE_PROCESS' : 'COGNITIVE', result };

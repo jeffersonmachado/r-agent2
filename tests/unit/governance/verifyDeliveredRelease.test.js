@@ -34,7 +34,7 @@ function parseGateStatuses(output) {
   const lines = output.split('\n');
   const gates = {};
   for (const line of lines) {
-    const m = line.match(/\s+[✓✗]\s+(\S+)\s+(PASS|FAIL)/);
+    const m = line.match(/\b([a-z][a-z0-9_]+)\s+(PASS|FAIL)\b/);
     if (m) gates[m[1]] = m[2];
   }
   return gates;
@@ -42,91 +42,119 @@ function parseGateStatuses(output) {
 
 // Executar o verifier em um diretório raiz customizado
 function runVerifier(rootDir) {
-  const { execFileSync, spawnSync } = require('child_process');
+  const { spawnSync } = require('child_process');
   const verifierPath = path.join(__dirname, '..', '..', '..', 'governance', 'verify-delivered-release.js');
   const result = spawnSync(process.execPath, [verifierPath, '--root', rootDir], {
     encoding: 'utf8',
     cwd: path.join(__dirname, '..', '..', '..'),
     env: { ...process.env },
+    maxBuffer: 10 * 1024 * 1024,
   });
   return {
     exitCode: result.status,
     stdout: result.stdout || '',
     stderr: result.stderr || '',
     output: (result.stdout || '') + (result.stderr || ''),
+    error: result.error || null,
   };
+}
+
+function updateJson(dir, relPath, mutate) {
+  const abs = path.join(dir, relPath);
+  const value = JSON.parse(fs.readFileSync(abs, 'utf8'));
+  mutate(value);
+  fs.writeFileSync(abs, JSON.stringify(value, null, 2), 'utf8');
 }
 
 // ─── Mínimo de artifacts válidos para um root que passa ──────────────────────
 function buildMinimalValidRoot(dir) {
   const runId = 'rap-release-20260820-000000-testtest';
+  const startedAt = '2026-08-20T00:00:00.000Z';
+  const generatedAt = '2026-08-20T00:01:00.000Z';
 
-  // .current-run.json
-  writeJson(dir, 'governance/.current-run.json', { runId, createdAt: new Date().toISOString() });
-
-  // dist/release/manifest com runId e sourceFingerprint
-  const sourceFingerprint = 'aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233';
-  writeJson(dir, 'dist/release/r-agent2-20260820-000000.manifest.json', {
+  // Inventário e registry tornam todos os componentes da cadeia não nulos.
+  writeJson(dir, 'config/system-inventory.json', { items: [{ id: 'api:test', fingerprint: 'fp-test' }] });
+  writeJson(dir, 'qa/qa-waves/scenario-store.json', { scenarios: [{ id: 'scenario-test' }] });
+  const fingerprints = require('../../../governance/proof-engine/fingerprint-chain').computeFingerprintChain(dir);
+  const sourceFingerprint = fingerprints.sourceFingerprint;
+  const lineage = (artifactType) => ({
     runId,
     sourceFingerprint,
-    inventoryFingerprint: 'inv00000000000000000000000000000000000000000000000000000000000000',
-    scenarioFingerprint:  'scn00000000000000000000000000000000000000000000000000000000000000',
-    policyFingerprint:    'pol00000000000000000000000000000000000000000000000000000000000000',
-    chainFingerprint:     'chn00000000000000000000000000000000000000000000000000000000000000',
-    createdAt: new Date().toISOString(),
-    architecture: 'source-verified',
+    generatedAt,
+    artifactType,
+    artifactVersion: '1.0.0',
   });
 
-  // final-proof-report.json com finalDecision e sourceFingerprint coerente
-  writeJson(dir, 'governance/final-proof-report.json', {
+  writeJson(dir, 'governance/.current-run.json', {
+    ...lineage('run-context'),
+    startedAt,
+    status: 'PACKAGED',
+    stageHistory: [],
+  });
+
+  const scorecard = {
+    ...lineage('rap-master-scorecard'),
+    schema: 'rap-master-scorecard/v2',
+    dimensions: [{
+      id: 'RAP-001', name: 'Verifier', score: 10, target: 10, status: 'VERIFIED',
+      requirements: [{ id: 'delivered', mandatory: true, status: 'PASS' }],
+      tests: ['tests/unit/governance/verifyDeliveredRelease.test.js'],
+      runtimeEvidence: ['governance/critical-journey-evidence.json'],
+      blockers: [], gaps: [],
+    }],
+    blockers: [], gaps: [],
+  };
+  writeJson(dir, 'governance/rap-master-scorecard.json', scorecard);
+
+  const proof = {
+    ...lineage('final-proof-report'),
     finalDecision: 'AUTONOMOUS_READY_GO',
-    sourceFingerprint,
-    runId,
-    generatedAt: new Date().toISOString(),
+    fingerprintStatus: 'FRESH',
     fingerprintChain: { status: 'FRESH' },
-    proofCoverage: { percent: 100 },
-  });
+    proofCoverage: { total: 1, valid: 1, percent: 100 },
+    blockerCount: 0,
+    missingArtifacts: [],
+    sourceFingerprint,
+    inventoryFingerprint: fingerprints.inventoryFingerprint,
+    scenarioFingerprint: fingerprints.scenarioRegistryFingerprint,
+    policyFingerprint: fingerprints.policyFingerprint,
+    chainFingerprint: fingerprints.chainFingerprint,
+  };
+  writeJson(dir, 'governance/final-proof-report.json', proof);
 
-  // evidence-manifest.json com fingerprints
   writeJson(dir, 'governance/evidence-manifest.json', {
-    fingerprints: {
-      sourceFingerprint,
-      inventoryFingerprint: 'inv',
-      scenarioFingerprint: 'scn',
-      policyFingerprint: 'pol',
-      chainFingerprint: 'chn',
-    },
-    generatedAt: new Date().toISOString(),
+    ...lineage('evidence-manifest'),
+    fingerprints,
+    artifacts: [],
   });
 
-  // final-governance-report.json
   writeJson(dir, 'governance/final-governance-report.json', {
-    finalDecision: 'AUTONOMOUS_READY_GO',
-    runId,
-    generatedAt: new Date().toISOString(),
+    ...lineage('final-governance-report'),
+    finalDecision: 'AUTONOMOUS_READY_GO', autonomousReady: true, allChecksPass: true,
+    checks: [{ id: 'authority', pass: true }],
   });
 
-  // final-consistency-gate-report.json
+  writeJson(dir, 'governance/final-readiness-report.json', {
+    ...lineage('final-readiness-report'),
+    finalDecision: 'AUTONOMOUS_READY_GO', status: 'AUTONOMOUS_READY_GO', blockingGaps: [],
+  });
+
   writeJson(dir, 'governance/final-consistency-gate-report.json', {
-    decision: 'FINAL_CONSISTENCY_GO',
-    runId,
-    generatedAt: new Date().toISOString(),
-    failures: [],
+    ...lineage('final-consistency-report'),
+    decision: 'FINAL_CONSISTENCY_GO', pass: true, failures: [],
+    checks: [{ id: 'authority', pass: true }],
   });
 
-  // replay-hardening-report.json
   writeJson(dir, 'governance/replay-hardening-report.json', {
-    decision: 'REPLAY_HARDENING_GO',
-    runId,
-    generatedAt: new Date().toISOString(),
-    violations: 0,
+    ...lineage('replay-hardening-report'),
+    decision: 'REPLAY_HARDENING_GO', pass: true, violations: 0,
   });
 
   // critical-journey-evidence.json com cadeia real (sem IDs sintéticos verificados)
   writeJson(dir, 'governance/critical-journey-evidence.json', {
+    ...lineage('critical-journey-evidence'),
     decision: 'CRITICAL_JOURNEY_VALIDATED',
-    runId,
-    generatedAt: new Date().toISOString(),
+    pass: true,
     causalChain: [
       { eventType: 'INBOUND_MESSAGE',    correlationId: 'real-corr-001', tenantId: 't1', eventId: 'real-evt-001' },
       { eventType: 'COGNITIVE_DECISION', correlationId: 'real-corr-001', tenantId: 't1', eventId: 'real-evt-002' },
@@ -139,17 +167,70 @@ function buildMinimalValidRoot(dir) {
 
   // system-scope-audit.json
   writeJson(dir, 'governance/system-scope-audit.json', {
+    ...lineage('system-scope-audit'),
+    decision: 'NO_RUNTIME_FAIL_OPEN',
+    pass: true,
     runtimeFailOpenCount: 0,
     totalFindings: 10,
-    generatedAt: new Date().toISOString(),
   });
 
-  return { runId, sourceFingerprint };
+  writeJson(dir, 'governance/self-proving-report.json', {
+    ...lineage('self-proving-report'),
+    pass: true, selfProofStatus: 'PASS', verifierPassed: true,
+    staleReferencesFound: 0, staleHashesFound: 0,
+    selfProofGate: { failedGates: [] },
+  });
+
+  writeJson(dir, 'governance/tamper-detection-report.json', {
+    ...lineage('tamper-detection-report'),
+    pass: true, decision: 'GO', failedChecks: 0,
+    checks: [{ id: 'package', pass: true }],
+  });
+
+  writeJson(dir, 'governance/package-validation-report.json', {
+    ...lineage('package-validation-report'), ok: true, pass: true,
+  });
+  writeJson(dir, 'governance/package-integrity-report.json', {
+    ...lineage('package-integrity-report'), pass: true, decision: 'PACKAGE_INTEGRITY_GO',
+    checks: [{ id: 'hash', pass: true }], failedChecks: 0,
+  });
+
+  const payloadPath = path.join(dir, 'dist', 'release', 'r-agent2-20260820-000000.payload.zip');
+  fs.mkdirSync(path.dirname(payloadPath), { recursive: true });
+  fs.writeFileSync(payloadPath, 'immutable payload bytes', 'utf8');
+  const packageFingerprint = crypto.createHash('sha256').update(fs.readFileSync(payloadPath)).digest('hex');
+  const proofFingerprint = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, 'governance', 'final-proof-report.json'))).digest('hex');
+  const scorecardFingerprint = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, 'governance', 'rap-master-scorecard.json'))).digest('hex');
+  writeJson(dir, 'dist/release/r-agent2-20260820-000000.manifest.json', {
+    ...lineage('package-manifest'),
+    artifact: path.basename(payloadPath),
+    packageFingerprint,
+    sourceFingerprint,
+    inventoryFingerprint: fingerprints.inventoryFingerprint,
+    scenarioFingerprint: fingerprints.scenarioRegistryFingerprint,
+    policyFingerprint: fingerprints.policyFingerprint,
+    proofFingerprint,
+    chainFingerprint: fingerprints.chainFingerprint,
+    scorecardFingerprint,
+    createdAt: generatedAt,
+    audit: 'passed',
+  });
+
+  return { runId, sourceFingerprint, fingerprints };
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('verify-delivered-release — fail-closed behavior', () => {
+  test('PASS only for a complete same-run delivered root', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    const result = runVerifier(dir);
+    expect(result.error).toBeNull();
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('DELIVERED_RELEASE_VERIFIED');
+  });
+
   test('FAIL when package manifest is absent (no synthetic fallback allowed)', () => {
     const dir = makeTempDir();
     buildMinimalValidRoot(dir);
@@ -279,5 +360,68 @@ describe('verify-delivered-release — fail-closed behavior', () => {
     expect(result.exitCode).toBe(1);
     const gates = parseGateStatuses(result.output);
     expect(gates['tenant_system_audit']).toBe('FAIL');
+  });
+
+  test('FAIL when proof fingerprint is missing (absence cannot match)', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    updateJson(dir, 'governance/final-proof-report.json', (proof) => { delete proof.sourceFingerprint; });
+    const result = runVerifier(dir);
+    expect(parseGateStatuses(result.output).source_fingerprint).toBe('FAIL');
+    expect(result.exitCode).toBe(1);
+  });
+
+  test('FAIL when any governed artifact has a foreign runId', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    updateJson(dir, 'governance/replay-hardening-report.json', (report) => {
+      report.runId = 'rap-release-99999999-000000-foreign';
+    });
+    const result = runVerifier(dir);
+    expect(parseGateStatuses(result.output).artifact_run_consistency).toBe('FAIL');
+    expect(result.exitCode).toBe(1);
+  });
+
+  test('FAIL when fingerprint chain is UNREGISTERED', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    updateJson(dir, 'governance/evidence-manifest.json', (manifest) => { delete manifest.fingerprints; });
+    const result = runVerifier(dir);
+    expect(parseGateStatuses(result.output).fingerprint_chain).toBe('FAIL');
+  });
+
+  test('FAIL when coverage is missing instead of treating null as PASS', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    updateJson(dir, 'governance/final-proof-report.json', (proof) => { delete proof.proofCoverage; });
+    const result = runVerifier(dir);
+    expect(parseGateStatuses(result.output).coverage).toBe('FAIL');
+  });
+
+  test('FAIL when replay status is UNKNOWN', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    updateJson(dir, 'governance/replay-hardening-report.json', (report) => { report.decision = 'UNKNOWN'; });
+    const result = runVerifier(dir);
+    expect(parseGateStatuses(result.output).replay_hardening).toBe('FAIL');
+  });
+
+  test('FAIL when scorecard contains a dimension below 10', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    updateJson(dir, 'governance/rap-master-scorecard.json', (scorecard) => { scorecard.dimensions[0].score = 9; });
+    const result = runVerifier(dir);
+    expect(parseGateStatuses(result.output).master_scorecard).toBe('FAIL');
+  });
+
+  test('FAIL when self-proof or tamper detection is not PASS', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir);
+    updateJson(dir, 'governance/self-proving-report.json', (report) => { report.pass = false; report.selfProofStatus = 'FAIL'; });
+    updateJson(dir, 'governance/tamper-detection-report.json', (report) => { report.pass = false; report.decision = 'NO_GO'; });
+    const result = runVerifier(dir);
+    const gates = parseGateStatuses(result.output);
+    expect(gates.self_proof).toBe('FAIL');
+    expect(gates.tamper_detection).toBe('FAIL');
   });
 });

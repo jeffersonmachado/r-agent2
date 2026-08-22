@@ -31,6 +31,19 @@ function writeFileAtomic(filePath, content, encoding = 'utf8') {
 
 function writeJsonAtomic(filePath, value) {
   writeFileAtomic(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  // RAP-078: espelho canônico em banco para stores mutáveis de QA/Mesh.
+  // O JSON permanece como export derivado; a fonte de verdade é o DB.
+  try {
+    const rel = path.relative(process.cwd(), path.resolve(filePath)).replace(/\\/g, '/');
+    if (/^(qa\/qa-waves\/|qa-mesh\/(baseline|canonical-promotion|scheduler-state|gap-engine)\/)/.test(rel)) {
+      // Require lazy para evitar ciclo de inicialização.
+      // eslint-disable-next-line global-require
+      const dbStateStore = require('../../qa/state/dbStateStore');
+      dbStateStore.saveSyncExport(rel, value);
+    }
+  } catch (_) {
+    // Espelho DB é best-effort fora do fluxo transacional; nunca derruba o writer.
+  }
 }
 
 module.exports = {

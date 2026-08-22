@@ -24,6 +24,35 @@ class RpaPlayer {
     this.replaySystem = new ReplaySystem();
     this.seedPath = options.seedPath;
     this.seedData = null;
+    this._abortController = new AbortController();
+    this._cancelled = false;
+  }
+
+  /**
+   * Sinaliza cancelamento da execução em progresso.
+   * O loop de steps verifica this._cancelled a cada iteração.
+   */
+  cancel(reason = 'cancelled_by_caller') {
+    this._cancelled = true;
+    this._cancelReason = reason;
+    this._abortController.abort(reason);
+  }
+
+  /** Retorna true se a execução foi cancelada. */
+  get isCancelled() {
+    return this._cancelled;
+  }
+
+  /** Signal do AbortController para uso por callers que suportam AbortSignal. */
+  get signal() {
+    return this._abortController.signal;
+  }
+
+  /** Reinicia estado de cancelamento para nova execução. */
+  _resetCancelState() {
+    this._abortController = new AbortController();
+    this._cancelled = false;
+    this._cancelReason = null;
   }
 
   /**
@@ -200,6 +229,7 @@ class RpaPlayer {
       throw new Error('Seed não carregado. Chame loadSeed() primeiro.');
     }
 
+    this._resetCancelState();
     await this.init();
 
     // Faz login automático antes de executar os steps
@@ -228,6 +258,15 @@ class RpaPlayer {
       const steps = this.seedData.steps || [];
 
       for (let i = 0; i < steps.length; i++) {
+        // Verificar cancelamento antes de cada step
+        if (this._cancelled) {
+          results.success = false;
+          results.cancelledAt = new Date().toISOString();
+          results.cancelReason = this._cancelReason || 'cancelled';
+          results.errors.push({ step: i + 1, action: 'cancelled', error: results.cancelReason });
+          break;
+        }
+
         const step = steps[i];
         const stepResult = await this.executeAction(step, i + 1);
 
@@ -254,7 +293,7 @@ class RpaPlayer {
         }
 
         // Delay entre ações (aplicado via speedMultiplier)
-        if (i < steps.length - 1) {
+        if (i < steps.length - 1 && !this._cancelled) {
           const delay = this.modeConfig.actionDelayMs / this.modeConfig.speedMultiplier;
           if (delay > 0) {
             await this.executor.page.waitForTimeout(delay);

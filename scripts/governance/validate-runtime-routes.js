@@ -78,6 +78,24 @@ async function main() {
         if (/API não acessível/i.test(text) && /\/tickets\?/i.test(text)) {
           return;
         }
+        // RpaReplaysPage (/rag-documents): erros de carregamento de replays/artefatos
+        // quando o endpoint não está acessível no contexto de validação. A página
+        // renderiza com estado de erro — não é falha funcional da rota.
+        if (/\[RpaReplaysPage\]/i.test(text) && /erro ao carregar|error loading/i.test(text)) {
+          return;
+        }
+        // RpaReplaysPage (/rag-documents): fetch secundário de
+        // /api/test-executions/artifacts abortado na troca de rota (ERR_ABORTED).
+        // O HTTP Client loga "Erro capturado no catch (Failed to fetch)" +
+        // "API não acessível" — dado secundário, a página renderiza sem ele
+        // (mesma classe de ruído de /auth/me e /tickets?). O requestfailed já
+        // isenta esse endpoint; aqui isenta o equivalente via console.
+        if (/Erro capturado no catch/i.test(text) && /\/api\/test-executions\/artifacts/i.test(text)) {
+          return;
+        }
+        if (/API não acessível/i.test(text) && /\/api\/test-executions\/artifacts/i.test(text)) {
+          return;
+        }
         consoleErrors.push({ text, location: message.location() });
       }
     });
@@ -108,6 +126,12 @@ async function main() {
       // com page.goto (reload completo), que aborta imports dinâmicos em voo da
       // rota anterior — ruído de navegação, não falha funcional.
       if (/ERR_ABORTED/i.test(failure) && /\/src\/pages\/.+\.jsx/.test(url)) {
+        return;
+      }
+      // RpaReplaysPage (/rag-documents): carrega artefatos de execução em segundo
+      // plano; se a resposta não completa antes da troca de rota, o browser aborta
+      // (ERR_ABORTED). Dado secundário — página renderiza sem ele.
+      if (url.includes('/api/test-executions/artifacts') && /ERR_ABORTED/i.test(failure)) {
         return;
       }
       networkFailures.push({

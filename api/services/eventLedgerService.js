@@ -24,6 +24,12 @@ function safeToFiniteInt(value, fallback) {
  * @param {string} [args.source]
  * @param {Date|string} [args.occurredAt]
  * @param {string|null} [args.correlationId]
+ * @param {string|null} [args.parentEventId]
+ * @param {string|null} [args.causationId]
+ * @param {string|null} [args.runId]
+ * @param {string|null} [args.criticalJourneyId]
+ * @param {string|null} [args.executionId]
+ * @param {string|null} [args.principalId]
  * @param {{type?:string,id?:string}|null} [args.subject]
  * @param {{type?:string,id?:string}|null} [args.actor]
  * @param {string|null} [args.idempotencyKey]
@@ -46,6 +52,12 @@ async function appendEventV1(args) {
       occurred_at: occurredAt,
       received_at: now,
       correlation_id: evt.correlation_id,
+      parent_event_id: evt.parent_event_id,
+      causation_id: evt.causation_id,
+      run_id: evt.run_id,
+      critical_journey_id: evt.critical_journey_id,
+      execution_id: evt.execution_id,
+      principal_id: evt.principal_id,
       subject_type: evt.subject.type,
       subject_id: evt.subject.id,
       actor_type: evt.actor.type,
@@ -115,4 +127,3 @@ module.exports = {
     };
   },
 };
-

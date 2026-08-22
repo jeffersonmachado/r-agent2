@@ -1,6 +1,8 @@
 # CLAUDE.md — Results Autonomous Platform (r-agent2)
 # Lido automaticamente em toda sessão. Mantenha conciso.
 
+Constituição canônica obrigatória: `governance/RAP_AGENT_CONSTITUTION.md`. Este arquivo é somente adaptador e não pode divergir da Constituição.
+
 ## Memoria operacional obrigatoria
 - Antes de propor arquitetura, fluxos, release ou navegacao, leia `AI_MEMORY/architecture.md`, `AI_MEMORY/project-map.md`, `AI_MEMORY/runtime-navigation.md` e o documento especifico da area alterada.
 - `AI_MEMORY/*` e a camada oficial de contexto para Claude, Copilot, Codex/OpenAI Agents e futuras automacoes.

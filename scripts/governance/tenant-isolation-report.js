@@ -101,8 +101,12 @@ function buildReport(jestResult) {
     .filter((suite) => suite.status === 'failed')
     .map((suite) => path.relative(ROOT_DIR, suite.name));
 
+  const failed = jestResult.numFailedTests || 0;
   return {
     generatedAt: new Date().toISOString(),
+    status: failed === 0 ? 'PASS' : 'FAIL',
+    artifactType: 'tenant-isolation-report',
+    artifactVersion: '1.0.0',
     command: `jest ${TENANT_TEST_TARGETS.join(' ')} --ci --json`,
     suites: {
       total: jestResult.numTotalTestSuites,
@@ -111,9 +115,9 @@ function buildReport(jestResult) {
     },
     testsTotal: jestResult.numTotalTests,
     testsPassed: jestResult.numPassedTests,
-    testsFailed: jestResult.numFailedTests,
+    testsFailed: failed,
     testsPending: jestResult.numPendingTests || 0,
-    violations: jestResult.numFailedTests,
+    violations: failed,
     failingSuites,
   };
 }

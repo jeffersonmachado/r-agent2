@@ -140,6 +140,7 @@ const SKIP_REL_FILES = new Set([
 
 /** Políticas e contratos de jornada versionados (policyFingerprint). */
 const POLICY_FILES = [
+  'governance/RAP_AGENT_CONSTITUTION.md',
   'config/journey-contracts.json',
   'config/journey-criticality.json',
   'config/coverage-gate-thresholds.json',
@@ -151,10 +152,13 @@ const POLICY_FILES = [
   'contracts/versions.json',
 ];
 
-/** Registries de cenários (scenarioRegistryFingerprint). */
+/** Registries de cenários (scenarioRegistryFingerprint).
+ * meshRegistry.json é artefato DERIVADO (auto-gerado a cada run) — rastreá-lo
+ * aqui causaria STALE perpétuo. As fontes reais são: scenario-store.json,
+ * rpa/seeds/*.json e tests/rpa/flows/*.json.
+ */
 const SCENARIO_REGISTRY_FILES = [
   'qa/qa-waves/scenario-store.json',
-  'qa-mesh/meshRegistry.json',
 ];
 
 const INVENTORY_FILE = 'config/system-inventory.json';

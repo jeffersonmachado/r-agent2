@@ -1,0 +1,3 @@
+'use strict';
+const { getGovernanceModel, uuid, json, DataTypes } = require('./governanceModelFactory');
+module.exports = () => getGovernanceModel('AgentPolicyAssignment', { id: uuid, policy_version_id: { type: DataTypes.UUID, allowNull: false }, agent_type: { type: DataTypes.STRING, allowNull: false }, agent_id: DataTypes.STRING, scope: { type: DataTypes.STRING, allowNull: false }, mandatory: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true }, metadata: json }, { tableName: 'agent_policy_assignments', indexes: [{ fields: ['agent_type', 'agent_id', 'scope'], name: 'agent_policy_assignments_lookup_idx' }] });

@@ -35,6 +35,8 @@ function runRealDiscovery() {
     inferJourneysFromModels,
     buildEntityGraph,
     generateSeeds,
+    generateScenarios,
+    advanceCandidateJourneyStates,
   } = require('../../api/modules/agent-os/services/model-driven-pipeline');
   const { introspectAllModels } = require('../../api/modules/agent-os/services/model-introspection-service');
   const { buildDomainMap }      = require('../../api/modules/agent-os/services/domain-map-service');
@@ -65,10 +67,15 @@ function runRealDiscovery() {
 
   const { order: topologicalOrder, cycles } = topologicalSort(modelNames, fkEdges);
 
-  // Gerar seeds para a primeira jornada candidata
+  // Gerar seeds e scenarios para jornadas candidatas
   const candidateJourneys = journeysReport.candidateJourneys || journeysReport.journeys || [];
-  const sampleSeeds = candidateJourneys.length > 0
-    ? generateSeeds(introspection, candidateJourneys.slice(0, 2))
+  // generateScenarios/generateSeeds esperam { journeys: [...] } como segundo parâmetro
+  const candidateSlice = candidateJourneys.slice(0, 2);
+  const sampleSeeds = candidateSlice.length > 0
+    ? generateSeeds(introspection, { journeys: candidateSlice })
+    : [];
+  const sampleScenarios = candidateSlice.length > 0
+    ? generateScenarios(introspection, { journeys: candidateSlice })
     : [];
 
   return {
@@ -79,7 +86,9 @@ function runRealDiscovery() {
     topologicalOrder,
     cycles,
     sampleSeeds,
+    sampleScenarios,
     candidateJourneys,
+    advanceCandidateJourneyStates,
   };
 }
 
@@ -195,9 +204,23 @@ function run() {
   const evidence = readExecutionEvidence();
   violations.push(...validateExecution(evidence));
 
-  const pass = violations.length === 0;
+  // Fase 3: avançar pipelineState das candidateJourneys com evidência real
+  const { journeysReport, topologicalOrder, cycles, candidateJourneys, entityGraph, introspection,
+    sampleSeeds, sampleScenarios, advanceCandidateJourneyStates: advance } = discovery;
 
-  const { journeysReport, topologicalOrder, cycles, candidateJourneys, entityGraph, introspection } = discovery;
+  const advancedCandidates = advance
+    ? advance(candidateJourneys, {
+      smokeReport: evidence.smokeReport,
+      hardeningReport: evidence.hardeningReport,
+      scenarios: sampleScenarios,
+      seeds: sampleSeeds,
+    })
+    : candidateJourneys;
+
+  const candidatesValidated = advancedCandidates.filter((j) => j.pipelineState === 'VALIDATED').length;
+  const candidatesExecuted  = advancedCandidates.filter((j) => j.pipelineState === 'EXECUTED' || j.pipelineState === 'VALIDATED').length;
+
+  const pass = violations.length === 0;
 
   const report = {
     generatedAt:    new Date().toISOString(),
@@ -212,7 +235,9 @@ function run() {
       entityGraphNodes:        (entityGraph?.nodes || []).length,
       entityGraphEdges:        (entityGraph?.edges || []).length,
       journeysDiscovered:      journeysReport.totalJourneys,
-      candidateJourneys:       candidateJourneys.length,
+      candidateJourneys:       advancedCandidates.length,
+      candidatesExecuted,
+      candidatesValidated,
       topologicalOrderLength:  topologicalOrder.length,
       topologicalCycles:       cycles.length,
       topologicalSample:       topologicalOrder.slice(0, 10),
@@ -224,10 +249,12 @@ function run() {
       hardeningDecision: evidence.hardeningReport?.decision || null,
       consistencyDecision: evidence.consistReport?.decision || null,
     },
-    candidateJourneysSample: candidateJourneys.slice(0, 3).map((j) => ({
-      id:     j.id,
-      domain: j.domain,
-      entityCount: (j.entities || []).length,
+    candidateJourneysSample: advancedCandidates.slice(0, 3).map((j) => ({
+      id:            j.id,
+      domain:        j.domain,
+      pipelineState: j.pipelineState,
+      entityCount:   (j.entities || j.sourceModels || []).length,
+      executionEvidence: j.executionEvidence || {},
     })),
   };
 

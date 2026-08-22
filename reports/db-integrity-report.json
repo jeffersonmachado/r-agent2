@@ -1,13 +1,16 @@
 {
-  "generatedAt": "2026-08-19T08:57:10.741Z",
-  "commit": "ec923b04082266b1cc0bc3cae48118ee68e8b681",
+  "generatedAt": "2026-08-21T20:30:42.378Z",
+  "status": "PASS",
+  "artifactType": "db-integrity-report",
+  "artifactVersion": "1.0.0",
+  "commit": "b8d10edbfa23b1b19afa13143efacbbe74ae0d77",
   "dbAvailable": true,
   "totals": {
-    "models": 158,
-    "validated": 158,
+    "models": 174,
+    "validated": 174,
     "visited": 0,
     "failed": 0,
-    "warnings": 16
+    "warnings": 31
   },
   "relationTotals": {
     "relations": 9,
@@ -426,6 +429,214 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "7 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:AgentPolicy",
+      "table": "agent_policies",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/AgentPolicy.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=agent_policies"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821110000-create-agent-policy-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'agent_policies' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "4 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:AgentPolicyAssignment",
+      "table": "agent_policy_assignments",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/AgentPolicyAssignment.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=agent_policy_assignments"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821110000-create-agent-policy-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'agent_policy_assignments' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "4 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:AgentPolicyAttestation",
+      "table": "agent_policy_attestations",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/AgentPolicyAttestation.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=agent_policy_attestations"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821110000-create-agent-policy-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'agent_policy_attestations' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "9 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:AgentPolicyVersion",
+      "table": "agent_policy_versions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/AgentPolicyVersion.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=agent_policy_versions"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821110000-create-agent-policy-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'agent_policy_versions' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "4 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -1445,7 +1656,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260813030000-create-coverage-evidence.js"
+          "detail": "migrations: api/db/migrations/20260813030000-create-coverage-evidence.js, api/db/migrations/20260821100000-create-governance-control-plane.js"
         },
         {
           "name": "tenantScope",
@@ -1465,7 +1676,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "4 colunas do model presentes"
+          "detail": "11 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -1601,7 +1812,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260204020000-create-event-ledger.js, api/db/migrations/20260313100000-create-tenant-intelligence-core.js"
+          "detail": "migrations: api/db/migrations/20260204020000-create-event-ledger.js, api/db/migrations/20260313100000-create-tenant-intelligence-core.js, api/db/migrations/20260821090000-add-event-causal-lineage.js"
         },
         {
           "name": "tenantScope",
@@ -1621,7 +1832,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "13 colunas do model presentes"
+          "detail": "19 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -1778,6 +1989,110 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "13 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:ExecutionTrace",
+      "table": "execution_traces",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/ExecutionTrace.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=execution_traces"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'execution_traces' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "5 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:ExecutionTraceEvent",
+      "table": "execution_trace_events",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/ExecutionTraceEvent.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=execution_trace_events"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'execution_trace_events' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "5 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -1991,6 +2306,214 @@
           "name": "primaryKeyExistsInDb",
           "passed": true,
           "detail": "PK no banco: audit_id"
+        }
+      ]
+    },
+    {
+      "id": "model:GovernanceFinalDecision",
+      "table": "governance_final_decisions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/GovernanceFinalDecision.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=governance_final_decisions"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'governance_final_decisions' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "6 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:GovernanceGap",
+      "table": "governance_gaps",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/GovernanceGap.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=governance_gaps"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'governance_gaps' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "6 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:GovernanceGateResult",
+      "table": "governance_gate_results",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/GovernanceGateResult.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=governance_gate_results"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js, api/db/migrations/20260821102000-add-governance-unique-indexes.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'governance_gate_results' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "4 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:GovernanceRun",
+      "table": "governance_runs",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/GovernanceRun.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=governance_runs"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js, api/db/migrations/20260821110000-create-agent-policy-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'governance_runs' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "8 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
         }
       ]
     },
@@ -6213,6 +6736,58 @@
       ]
     },
     {
+      "id": "model:ReleaseManifestRecord",
+      "table": "release_manifest_records",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/ReleaseManifestRecord.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=release_manifest_records"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'release_manifest_records' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "3 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
       "id": "model:Resource",
       "table": "resources",
       "state": "VALIDATED",
@@ -6391,7 +6966,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260813020000-create-runtime-artifacts.js, api/db/migrations/20260813040000-add-runtime-artifacts-storage-key.js"
+          "detail": "migrations: api/db/migrations/20260813020000-create-runtime-artifacts.js, api/db/migrations/20260813040000-add-runtime-artifacts-storage-key.js, api/db/migrations/20260821100000-create-governance-control-plane.js, api/db/migrations/20260821101000-add-runtime-artifact-metadata.js"
         },
         {
           "name": "tenantScope",
@@ -6411,7 +6986,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "9 colunas do model presentes"
+          "detail": "17 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -6464,6 +7039,266 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "9 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:ScorecardDimension",
+      "table": "scorecard_dimensions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/ScorecardDimension.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=scorecard_dimensions"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'scorecard_dimensions' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "6 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:ScorecardDimensionResult",
+      "table": "scorecard_dimension_results",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/ScorecardDimensionResult.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=scorecard_dimension_results"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js, api/db/migrations/20260821102000-add-governance-unique-indexes.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'scorecard_dimension_results' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "7 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:ScorecardEvaluation",
+      "table": "scorecard_evaluations",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/ScorecardEvaluation.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=scorecard_evaluations"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'scorecard_evaluations' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "7 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:ScorecardRequirement",
+      "table": "scorecard_requirements",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/ScorecardRequirement.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=scorecard_requirements"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'scorecard_requirements' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "7 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:ScorecardRequirementResult",
+      "table": "scorecard_requirement_results",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/ScorecardRequirementResult.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=scorecard_requirement_results"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK implícita do Sequelize (id autoincrement)"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260821100000-create-governance-control-plane.js, api/db/migrations/20260821102000-add-governance-unique-indexes.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'scorecard_requirement_results' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "4 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -8628,5 +9463,7 @@
         }
       ]
     }
-  ]
+  ],
+  "runId": "rap-governed-20260822050505379-04b94543",
+  "sourceFingerprint": "1658f8f6a1c2b9ee37abb3a56d486678e5467d0e695fdb8c9b1403cba2da01c2"
 }

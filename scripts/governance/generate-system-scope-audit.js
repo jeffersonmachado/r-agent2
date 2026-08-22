@@ -225,6 +225,9 @@ function run() {
 
   const report = {
     generatedAt:   new Date().toISOString(),
+    status:        runtimeFailOpen.length === 0 ? 'PASS' : 'FAIL',
+    artifactType:  'system-scope-audit',
+    artifactVersion: '1.0.0',
     engine:        'system-scope-audit/v1',
     totalFindings: findings.length,
     byClassification: byClass,

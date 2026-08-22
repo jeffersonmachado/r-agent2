@@ -1,0 +1,3 @@
+'use strict';
+const { getGovernanceModel, uuid, DataTypes } = require('./governanceModelFactory');
+module.exports = () => getGovernanceModel('ScorecardRequirementResult', { id: uuid, dimension_result_id: { type: DataTypes.UUID, allowNull: false }, requirement_id: { type: DataTypes.UUID, allowNull: false }, status: { type: DataTypes.STRING, allowNull: false }, reason: DataTypes.TEXT, validator: DataTypes.STRING, test_reference: DataTypes.STRING, evidence_reference: DataTypes.STRING, runtime_evidence_reference: DataTypes.STRING, evaluated_at: { type: DataTypes.DATE, allowNull: false } }, { tableName: 'scorecard_requirement_results', indexes: [{ fields: ['dimension_result_id', 'requirement_id'], unique: true, name: 'scorecard_requirement_results_unique_idx' }] });

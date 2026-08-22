@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T11:25:06.611Z",
+  "generatedAt": "2026-08-21T20:30:43.085Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -9,17 +9,15 @@
     "indexedSecrets": 0,
     "operationalAccessToSystemDomain": 0,
     "dbChecksFailed": 0,
-    "runtimeChecksFailed": 1,
-    "internalTokenMissing": 1
+    "runtimeChecksFailed": 0,
+    "internalTokenMissing": 0
   },
   "probes": {
-    "serviceReachable": false,
-    "crossDomainLeakage": "skipped",
-    "crossTenantLeakage": "skipped",
-    "operationalAccessToSystemDomain": "skipped",
-    "details": [
-      "rag-service inalcançável: provas obrigatórias de runtime não executadas"
-    ]
+    "serviceReachable": true,
+    "crossDomainLeakage": 0,
+    "crossTenantLeakage": 0,
+    "operationalAccessToSystemDomain": 0,
+    "details": []
   },
   "distribution": [
     {
@@ -40,11 +38,13 @@
     {
       "domain": "SYSTEM",
       "classification": "SUPPORT",
-      "count": 143
+      "count": 145
     }
   ],
-  "details": [
-    "rag-service inalcançável: provas obrigatórias de runtime não executadas"
-  ],
-  "status": "FAIL"
+  "details": [],
+  "status": "PASS",
+  "runId": "rap-governed-20260822050505379-04b94543",
+  "sourceFingerprint": "1658f8f6a1c2b9ee37abb3a56d486678e5467d0e695fdb8c9b1403cba2da01c2",
+  "artifactType": "rag-domain-segregation-report",
+  "artifactVersion": "1.0.0"
 }

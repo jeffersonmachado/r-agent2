@@ -283,7 +283,7 @@ function buildCleanupProof() {
   let runtimeClean = false;
   let runtimeCheck = null;
   try {
-    runtimeCheck = execFileSync('bash', ['./scripts/clean-runtime-state.sh', '--check'], {
+    runtimeCheck = execFileSync('bash', ['./scripts/clean-runtime-state.sh'], {
       cwd: ROOT,
       stdio: 'pipe',
       encoding: 'utf8',

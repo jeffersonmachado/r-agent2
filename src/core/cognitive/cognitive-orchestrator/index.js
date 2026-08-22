@@ -50,18 +50,58 @@ function defaultLogger() {
 
 /** Event Fabric: ledger canônico (best-effort — nunca quebra o fluxo de negócio). */
 function defaultEventEmitter(log) {
-  return async function emitAgentEvent({ type, tenantId, correlationId, subject, actor, payload }) {
+  return async function emitAgentEvent({
+    type,
+    tenantId,
+    correlationId,
+    subject,
+    actor,
+    payload,
+    eventId = null,
+    parentEventId = null,
+    causationId = null,
+    runId = null,
+    criticalJourneyId = null,
+    executionId = null,
+    principalId = null,
+  }) {
     try {
       const { appendEventV1 } = require('../../../../api/services/eventLedgerService');
-      await appendEventV1({
+      const result = await appendEventV1({
+        eventId,
         tenantId,
         type,
         source: 'cognitive-core',
         correlationId: correlationId || null,
+        parentEventId,
+        causationId,
+        runId,
+        criticalJourneyId,
+        executionId,
+        principalId,
         subject: subject || null,
         actor: actor || null,
         payload: payload || {},
       });
+      if (runId && correlationId) {
+        const { recordCriticalEvent } = require('../../../../api/services/governance/runtimeTraceRecorder');
+        await recordCriticalEvent({
+          runId,
+          correlationId,
+          criticalJourneyId,
+          executionId,
+          tenantId,
+          principalId,
+          eventId: eventId || null,
+          parentEventId,
+          causationId,
+          producer: 'runtime:cognitive-core',
+          type,
+          subject,
+          payload,
+        });
+      }
+      return result;
     } catch (error) {
       log.warn('[CognitiveOrchestrator] Event emit failed (best-effort)', { type, tenantId, error: error.message });
     }
@@ -84,6 +124,7 @@ function createCognitiveOrchestrator(deps = {}) {
   const intentEngine = deps.intentEngine || createIntentEngine({ logger: log, generateAiResponse: deps.generateAiResponse, llmEnabled: deps.llmEnabled !== false });
   const actionPlanner = deps.actionPlanner || createActionPlanner({ toolRegistry, logger: log });
   const emitEvent = deps.eventEmitter || defaultEventEmitter(log);
+  const eventIdFactory = deps.eventIdFactory || (() => `evt-${crypto.randomUUID()}`);
 
   // P1: toolEventEmitter — eventos tool.execution.* emitidos pelo execution engine.
   const toolEventEmitter = async (type, details) => {
@@ -190,6 +231,37 @@ function createCognitiveOrchestrator(deps = {}) {
       ? normalizeActor(args.actor, { tenantId, channel })
       : defaultRestrictedPrincipal({ tenantId, channel, userId: args.userId || null });
     const correlationId = payload.correlationId || args.correlationId || executionId;
+    const suppliedTrace = args.traceContext && typeof args.traceContext === 'object'
+      ? args.traceContext
+      : {};
+    const traceRunId = suppliedTrace.runId || null;
+    const criticalJourneyId = suppliedTrace.criticalJourneyId || null;
+    const rootCausationId = suppliedTrace.causationId
+      || suppliedTrace.parentEventId
+      || correlationId;
+    let lastCausalEventId = suppliedTrace.parentEventId || null;
+
+    async function emitCausalEvent(type, eventPayload = {}, overrides = {}) {
+      const eventId = eventIdFactory();
+      const event = {
+        type,
+        tenantId,
+        correlationId,
+        eventId,
+        parentEventId: overrides.parentEventId === undefined ? lastCausalEventId : overrides.parentEventId,
+        causationId: overrides.causationId || rootCausationId,
+        runId: traceRunId,
+        criticalJourneyId,
+        executionId,
+        principalId: actor.principalId,
+        subject: overrides.subject || { type: 'cognitive_execution', id: executionId },
+        actor: overrides.actor || { type: actor.principalType, id: actor.principalId },
+        payload: eventPayload,
+      };
+      await emitEvent(event);
+      lastCausalEventId = eventId;
+      return event;
+    }
 
     let context = null;
     let intentResult = null;
@@ -210,6 +282,11 @@ function createCognitiveOrchestrator(deps = {}) {
         message: args.message || null,
         payload,
       });
+      await emitCausalEvent('cognitive.context.completed', {
+        channel,
+        conversationId: payload.conversationId || null,
+        contextBuiltAt: context?.builtAt || null,
+      });
 
       // 2. INTENT ENGINE
       intentResult = await intentEngine.classify({
@@ -218,6 +295,17 @@ function createCognitiveOrchestrator(deps = {}) {
         eventType: args.eventType,
         payload,
         context,
+      });
+      await emitCausalEvent('cognitive.intent.classified', {
+        intent: intentResult.intent,
+        confidence: intentResult.confidence,
+        source: intentResult.source || null,
+        fallback: intentResult.fallback === true,
+      });
+      await emitCausalEvent('cognitive.decision.completed', {
+        intent: intentResult.intent,
+        decision: intentResult.humanHandoff === true ? 'HUMAN_HANDOFF' : 'CONTINUE',
+        rationale: intentResult.rationale || null,
       });
 
       // Handoff por baixa confiança sem referência de conversa: sinaliza para a
@@ -239,19 +327,14 @@ function createCognitiveOrchestrator(deps = {}) {
             vertical: args.vertical || payload.vertical || null,
           });
           if (supervisorDecision.status === 'routed') {
-            await emitEvent({
-              type: 'agent.routing.completed',
-              tenantId,
-              correlationId,
-              subject: { type: 'agent', id: supervisorDecision.agentId },
-              actor: { type: actor.principalType, id: actor.principalId },
-              payload: {
+            await emitCausalEvent('agent.routing.completed', {
                 executionId,
                 intent: intentResult.intent,
                 agentSlug: supervisorDecision.agentSlug,
                 confidence: supervisorDecision.confidence,
                 capabilities: supervisorDecision.capabilities,
-              },
+              }, {
+                subject: { type: 'agent', id: supervisorDecision.agentId },
             });
           } else if (supervisorDecision.status === 'no_specialist' || supervisorDecision.status === 'directory_unavailable') {
             // P0: NO_SPECIALIST e DIRECTORY_UNAVAILABLE → NUNCA prosseguir para execução.
@@ -284,13 +367,17 @@ function createCognitiveOrchestrator(deps = {}) {
         });
         plan = restrictPlanToSpecialist(rawPlan, supervisorDecision);
 
-        await emitEvent({
-          type: 'agent.execution.started',
-          tenantId,
-          correlationId,
-          subject: { type: 'cognitive_execution', id: executionId },
-          actor: { type: actor.principalType, id: actor.principalId },
-          payload: { intent: intentResult.intent, planId: plan.planId, agentSlug: supervisorDecision?.agentSlug || null },
+        await emitCausalEvent('agent.planning.completed', {
+          planId: plan.planId,
+          intent: plan.intent,
+          steps: plan.steps.map((step) => step.id),
+          requiresConfirmation: plan.requiresConfirmation === true,
+        });
+
+        await emitCausalEvent('agent.execution.started', {
+          intent: intentResult.intent,
+          planId: plan.planId,
+          agentSlug: supervisorDecision?.agentSlug || null,
         });
 
         // 5. EXECUTION ROUTER (ATOMIC → Tool Registry | DURABLE → Process Runtime)
@@ -367,49 +454,28 @@ function createCognitiveOrchestrator(deps = {}) {
     const outcomeEventType = isHandoff
       ? 'agent.execution.handed_off'
       : (isFailure ? 'agent.execution.failed' : 'agent.execution.completed');
-    await emitEvent({
-      type: outcomeEventType,
-      tenantId,
-      correlationId,
-      subject: { type: 'cognitive_execution', id: executionId },
-      actor: { type: actor.principalType, id: actor.principalId },
-      payload: {
+    await emitCausalEvent(outcomeEventType, {
         intent: intentResult?.intent || null,
         status: effectiveStatus,
         executionMode: execution?.executionMode || 'none',
         toolsExecuted: execution?.toolsExecuted || [],
         agentSlug: supervisorDecision?.agentSlug || null,
         latencyMs,
-      },
     });
 
     // P1: Emitir business.outcome.* separadamente (semântica real de negócio).
     // Handoff nunca emite business.outcome.* (desfecho neutro de negócio).
     if (!isHandoff && businessOutcome.valid && isSuccess) {
-      await emitEvent({
-        type: 'business.outcome.validated',
-        tenantId,
-        correlationId,
-        subject: { type: 'cognitive_execution', id: executionId },
-        actor: { type: actor.principalType, id: actor.principalId },
-        payload: {
+      await emitCausalEvent('business.outcome.validated', {
           outcome: businessOutcome.outcome,
           evidence: businessOutcome.evidence,
           intent: intentResult?.intent || null,
-        },
       });
     } else if (!isHandoff && (!isSuccess || businessOutcome.outcome === 'outcome_not_achieved')) {
-      await emitEvent({
-        type: 'business.outcome.failed',
-        tenantId,
-        correlationId,
-        subject: { type: 'cognitive_execution', id: executionId },
-        actor: { type: actor.principalType, id: actor.principalId },
-        payload: {
+      await emitCausalEvent('business.outcome.failed', {
           failures: businessOutcome.failures,
           intent: intentResult?.intent || null,
           status: effectiveStatus,
-        },
       });
     }
 

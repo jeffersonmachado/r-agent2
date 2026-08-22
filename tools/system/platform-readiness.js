@@ -1563,6 +1563,10 @@ function persistReport(report) {
 
   writeJson('governance/final-readiness-report.json', {
     generatedAt: report.generatedAt,
+    runId: report.proofReport?.runId || null,
+    sourceFingerprint: report.proofReport?.sourceFingerprint || null,
+    artifactType: 'final-readiness-report',
+    artifactVersion: '2.0.0',
     status: report.finalDecision,
     finalDecision: report.finalDecision,
     canonicalMeshExecutionId: report.canonicalMeshExecutionId,

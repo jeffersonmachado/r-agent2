@@ -115,7 +115,11 @@ Channel (REST/WhatsApp/UI)
 1. ENOSPC (disco 100%) derrubou a API dev → ERR_INSUFFICIENT_RESOURCES rotativo no validate:runtime. Mitigado: poda de artefatos transitórios gitignored (tests/rpa/{screenshots,reports} ≈ 2G) e restart da API. Sem regressão de código.
 2. Wave reports de 2026-08-14 (pré-hardening) degradaram a cobertura VALIDATED → regenerados contra a stack viva.
 3. Scheduler do QA mesh (execução recorrente a cada ~15 min) registrou `infra_error` no cenário RPA `fitness-matricula-agendamento-ui` sob contenção de CPU enquanto smokes/gates pesados rodavam — o wait soft de toast expirou e, pelo bug HARD-026, derrubou a execução. Como o coverage gate usa "meshHistory mais recente vence", a jornada `agendamento` ficou BLOCKED até a correção + re-run dirigido.
-4. `zip:release` persiste um readiness NO_GO transitório com `gap-proof-package-validation` (missingEntries vazio): o proof engine avalia a validação de pacote ANTES do ZIP novo existir — é estrutural (o pacote não pode conter a prova de si mesmo; por isso existe o two-pass self-proving com verificador offline externo). O estado correto é obtido re-rodando `system:platform-readiness` APÓS o packaging: GO/FRESH com 0 gaps. Era exatamente esse o gap histórico reportado em PLATFORM_STATUS.md — artefato de timing de avaliação, não defeito de pacote.
+4. `zip:release` ANTES do ZIP existir avalia a validação de pacote como **DEFERRED**, não como NO_GO. O modelo de certificação é trifásico — `PRE_PACKAGE` → `POST_PACKAGE` → `DELIVERED` — e o `GovernanceGateResult` carrega `phase` para distinguir os estágios:
+   - **PRE_PACKAGE** (sem ZIP): `package-validation.status = DEFERRED` (reason `PACKAGE_NOT_CREATED_YET`), o proof engine devolve `PASS_WITH_DEFERRED_PACKAGE_GATE` (0 blocking gaps, exit 0) e `certificationService.calculateFinalDecision({phase:'PRE_PACKAGE'})` tolera gates DEFERRED. É estrutural: o pacote não pode conter a prova de si mesmo — por isso existe o two-pass self-proving com verificador offline externo.
+   - **POST_PACKAGE** (ZIP + manifest auditados): `package-validation.status = PASS`, gates todos PASS e a decisão sobe para `AUTONOMOUS_READY_GO`.
+   - **DELIVERED** (autoridade máxima): `verify-delivered-release` atesta o artefato entregue contra o master scorecard 10/10 e o package binding do ZIP real.
+   - Regra fail-closed: `DEFERRED` só é aceitável em `PRE_PACKAGE`; em `POST_PACKAGE`/`DELIVERED`, um gate ainda `DEFERRED` é blocker. O estado `PASS_WITH_DEFERRED_PACKAGE_GATE` nunca é relatado como GO final.
 
 ### Números finais dos gates
 

@@ -1,0 +1,3 @@
+'use strict';
+const { getGovernanceModel, uuid, json, DataTypes } = require('./governanceModelFactory');
+module.exports = () => getGovernanceModel('AgentPolicy', { id: uuid, policy_id: { type: DataTypes.STRING, allowNull: false, unique: true }, name: { type: DataTypes.STRING, allowNull: false }, status: { type: DataTypes.STRING, allowNull: false }, current_version: { type: DataTypes.STRING, allowNull: false }, metadata: json }, { tableName: 'agent_policies' });

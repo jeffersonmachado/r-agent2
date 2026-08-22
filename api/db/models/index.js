@@ -160,6 +160,22 @@ const getAiGovernanceRecord = require('./AiGovernanceRecord');
 const getVerticalTemplate = require('./VerticalTemplate');
 const getRuntimeArtifact = require('./RuntimeArtifact');
 const getCoverageEvidence = require('./CoverageEvidence');
+const getGovernanceRun = require('./GovernanceRun');
+const getScorecardDimension = require('./ScorecardDimension');
+const getScorecardRequirement = require('./ScorecardRequirement');
+const getScorecardEvaluation = require('./ScorecardEvaluation');
+const getScorecardDimensionResult = require('./ScorecardDimensionResult');
+const getScorecardRequirementResult = require('./ScorecardRequirementResult');
+const getGovernanceGap = require('./GovernanceGap');
+const getGovernanceGateResult = require('./GovernanceGateResult');
+const getExecutionTrace = require('./ExecutionTrace');
+const getExecutionTraceEvent = require('./ExecutionTraceEvent');
+const getGovernanceFinalDecision = require('./GovernanceFinalDecision');
+const getReleaseManifestRecord = require('./ReleaseManifestRecord');
+const getAgentPolicy = require('./AgentPolicy');
+const getAgentPolicyVersion = require('./AgentPolicyVersion');
+const getAgentPolicyAssignment = require('./AgentPolicyAssignment');
+const getAgentPolicyAttestation = require('./AgentPolicyAttestation');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -319,6 +335,22 @@ const AiGovernanceRecord = () => getAiGovernanceRecord();
 const VerticalTemplate = () => getVerticalTemplate();
 const RuntimeArtifact = () => getRuntimeArtifact();
 const CoverageEvidence = () => getCoverageEvidence();
+const GovernanceRun = () => getGovernanceRun();
+const ScorecardDimension = () => getScorecardDimension();
+const ScorecardRequirement = () => getScorecardRequirement();
+const ScorecardEvaluation = () => getScorecardEvaluation();
+const ScorecardDimensionResult = () => getScorecardDimensionResult();
+const ScorecardRequirementResult = () => getScorecardRequirementResult();
+const GovernanceGap = () => getGovernanceGap();
+const GovernanceGateResult = () => getGovernanceGateResult();
+const ExecutionTrace = () => getExecutionTrace();
+const ExecutionTraceEvent = () => getExecutionTraceEvent();
+const GovernanceFinalDecision = () => getGovernanceFinalDecision();
+const ReleaseManifestRecord = () => getReleaseManifestRecord();
+const AgentPolicy = () => getAgentPolicy();
+const AgentPolicyVersion = () => getAgentPolicyVersion();
+const AgentPolicyAssignment = () => getAgentPolicyAssignment();
+const AgentPolicyAttestation = () => getAgentPolicyAttestation();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -936,6 +968,22 @@ module.exports = {
   VerticalTemplate,
   RuntimeArtifact,
   CoverageEvidence,
+  GovernanceRun,
+  ScorecardDimension,
+  ScorecardRequirement,
+  ScorecardEvaluation,
+  ScorecardDimensionResult,
+  ScorecardRequirementResult,
+  GovernanceGap,
+  GovernanceGateResult,
+  ExecutionTrace,
+  ExecutionTraceEvent,
+  GovernanceFinalDecision,
+  ReleaseManifestRecord,
+  AgentPolicy,
+  AgentPolicyVersion,
+  AgentPolicyAssignment,
+  AgentPolicyAttestation,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -1095,4 +1143,20 @@ module.exports = {
   getVerticalTemplate,
   getRuntimeArtifact,
   getCoverageEvidence,
+  getGovernanceRun,
+  getScorecardDimension,
+  getScorecardRequirement,
+  getScorecardEvaluation,
+  getScorecardDimensionResult,
+  getScorecardRequirementResult,
+  getGovernanceGap,
+  getGovernanceGateResult,
+  getExecutionTrace,
+  getExecutionTraceEvent,
+  getGovernanceFinalDecision,
+  getReleaseManifestRecord,
+  getAgentPolicy,
+  getAgentPolicyVersion,
+  getAgentPolicyAssignment,
+  getAgentPolicyAttestation,
 };

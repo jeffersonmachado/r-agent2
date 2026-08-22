@@ -88,12 +88,66 @@ describe('Outcome de negócio no canal (30)', () => {
       correlationId: 'msg-1',
       sendText,
       orchestrator: { process },
+      appendEvent: jest.fn(async (event) => ({ id: event.eventId })),
+      eventIdFactory: (() => { let n = 0; return () => `evt-entry-${++n}`; })(),
     });
 
     const call = process.mock.calls[0][0];
     expect(call.tenantId).toBe('tenant-a');
     expect(call.actor.principalType).toBe('service');
     expect(call.actor.permissions).not.toContain('*');
+    expect(call.correlationId).toBe('msg-1');
+    expect(call.traceContext).toEqual(expect.objectContaining({
+      parentEventId: 'evt-entry-3',
+      causationId: 'evt-entry-1',
+    }));
     expect(sendText).toHaveBeenCalledWith('Agendamento realizado.');
+  });
+
+  test('handler emite channel→tenant→principal com uma única identidade causal', async () => {
+    const emitted = [];
+    const process = jest.fn(async () => ({
+      executionId: 'exec-real-1', status: 'human_handoff_requested', intent: 'transferir_humano', humanHandoff: true,
+    }));
+    let n = 0;
+
+    await handleInboundWithCognitiveCore({
+      tenantId: 'tenant-a',
+      channel: 'whatsapp',
+      message: 'preciso de ajuda',
+      conversationId: 'conv-real-1',
+      correlationId: 'wamid.real-1',
+      traceContext: {
+        runId: 'rap-release-20260821-120000-abcd1234',
+        criticalJourneyId: 'support_ticket_flow',
+      },
+      sendText: jest.fn(async () => {}),
+      orchestrator: { process },
+      eventIdFactory: () => `evt-entry-${++n}`,
+      appendEvent: jest.fn(async (event) => { emitted.push(event); return { id: event.eventId }; }),
+    });
+
+    expect(emitted.map((event) => event.type)).toEqual([
+      'channel.message.inbound',
+      'tenant.resolution.completed',
+      'principal.resolution.completed',
+    ]);
+    expect(emitted.map((event) => event.parentEventId)).toEqual([null, 'evt-entry-1', 'evt-entry-2']);
+    for (const event of emitted) {
+      expect(event).toEqual(expect.objectContaining({
+        correlationId: 'wamid.real-1',
+        causationId: 'evt-entry-1',
+        runId: 'rap-release-20260821-120000-abcd1234',
+        criticalJourneyId: 'support_ticket_flow',
+        tenantId: 'tenant-a',
+      }));
+    }
+    expect(process).toHaveBeenCalledWith(expect.objectContaining({
+      correlationId: 'wamid.real-1',
+      traceContext: expect.objectContaining({
+        parentEventId: 'evt-entry-3',
+        causationId: 'evt-entry-1',
+      }),
+    }));
   });
 });

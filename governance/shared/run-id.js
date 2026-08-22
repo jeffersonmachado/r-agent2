@@ -18,6 +18,10 @@ const crypto = require('crypto');
 const ROOT           = path.resolve(__dirname, '..', '..');
 const CURRENT_RUN_FILE = path.join(ROOT, 'governance', '.current-run.json');
 
+function currentRunFile(rootDir = ROOT) {
+  return path.join(path.resolve(rootDir), 'governance', '.current-run.json');
+}
+
 /**
  * Gera um novo runId a partir da data atual e do sourceHash fornecido.
  */
@@ -34,29 +38,29 @@ function generateRunId(sourceHash) {
  * Persiste o runId atual no arquivo canônico.
  */
 function saveCurrentRun(runId, meta = {}) {
-  const record = {
-    runId,
-    createdAt: new Date().toISOString(),
-    ...meta,
-  };
-  fs.mkdirSync(path.dirname(CURRENT_RUN_FILE), { recursive: true });
-  fs.writeFileSync(CURRENT_RUN_FILE, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
-  return record;
+  const { rootDir = ROOT, sourceFingerprint, now, ...metadata } = meta;
+  if (!sourceFingerprint) {
+    throw new Error('INVALID_RUN_CONTEXT: sourceFingerprint is required');
+  }
+  // Lazy require avoids a module-init cycle: run-context uses generateRunId.
+  const { createRunContext } = require('./run-context');
+  return createRunContext({ rootDir, runId, sourceFingerprint, now, metadata });
 }
 
 /**
  * Lê o runId canônico atual. Retorna null se não existir.
  */
-function readCurrentRun() {
-  if (!fs.existsSync(CURRENT_RUN_FILE)) return null;
-  try { return JSON.parse(fs.readFileSync(CURRENT_RUN_FILE, 'utf8')); } catch (_) { return null; }
+function readCurrentRun(rootDir = ROOT) {
+  const target = currentRunFile(rootDir);
+  if (!fs.existsSync(target)) return null;
+  try { return JSON.parse(fs.readFileSync(target, 'utf8')); } catch (_) { return null; }
 }
 
 /**
  * Lê somente o runId string. Retorna null se não existir.
  */
-function getCurrentRunId() {
-  const run = readCurrentRun();
+function getCurrentRunId(rootDir = ROOT) {
+  const run = readCurrentRun(rootDir);
   return run ? run.runId : null;
 }
 
@@ -65,15 +69,15 @@ function getCurrentRunId() {
  */
 function startNewRun(sourceHash, meta = {}) {
   const runId = generateRunId(sourceHash);
-  return saveCurrentRun(runId, meta);
+  return saveCurrentRun(runId, { ...meta, sourceFingerprint: sourceHash });
 }
 
 /**
  * Verifica se um artifact pertence ao run atual.
  * Retorna 'CURRENT' | 'FOREIGN_RUN' | 'NO_RUN_ID' | 'NO_CURRENT_RUN'
  */
-function checkArtifactRun(artifact) {
-  const currentRunId = getCurrentRunId();
+function checkArtifactRun(artifact, { currentRun = null, rootDir = ROOT } = {}) {
+  const currentRunId = currentRun?.runId || getCurrentRunId(rootDir);
   if (!currentRunId) return 'NO_CURRENT_RUN';
 
   const artifactRunId = artifact && (artifact.runId || artifact.run_id);
@@ -86,10 +90,9 @@ function checkArtifactRun(artifact) {
  * Filtra artifacts pelo runId atual.
  * Artifacts sem runId ou com runId diferente são marcados como inválidos.
  */
-function validateArtifactRun(artifact, { allowMissing = false } = {}) {
-  const status = checkArtifactRun(artifact);
+function validateArtifactRun(artifact, options = {}) {
+  const status = checkArtifactRun(artifact, options);
   if (status === 'CURRENT') return { valid: true, status };
-  if (status === 'NO_RUN_ID' && allowMissing) return { valid: true, status };
   return { valid: false, status };
 }
 
@@ -102,4 +105,5 @@ module.exports = {
   checkArtifactRun,
   validateArtifactRun,
   CURRENT_RUN_FILE,
+  currentRunFile,
 };

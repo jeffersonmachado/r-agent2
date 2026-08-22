@@ -129,6 +129,27 @@ function main() {
   const replay = readJson('governance/replay-integrity-report.json', {});
   const maxAgeMs = parseMaxAge(process.env.REPLAY_GOVERNANCE_REPORT_MAX_AGE_MS);
   const issues = validateReplayReport(replay, { maxAgeMs });
+
+  // RAP-017: validação formal da cadeia causal executionId→replayId→evidence
+  let causalChainValidation = { allValid: true, summary: { valid: 'N/A', strong: 'N/A', gapCount: 0 } };
+  try {
+    const { validateSmokeFlowCausalChains } = require('../../api/services/qa/causChainValidator');
+    const smokeReport = readJson('qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json', {});
+    const flows = Array.isArray(smokeReport.flows) ? smokeReport.flows : [];
+    if (flows.length > 0) {
+      causalChainValidation = validateSmokeFlowCausalChains(flows);
+      if (!causalChainValidation.allValid) {
+        const breakGaps = causalChainValidation.allGaps.filter((g) => g.gap.startsWith('CHAIN_BREAK'));
+        breakGaps.forEach((g) => {
+          issues.push({ code: 'causal_chain_break', journeyId: g.journeyId, message: g.gap });
+        });
+      }
+    }
+  } catch (_) {
+    // causChainValidator não disponível — não bloqueia mas registra
+    causalChainValidation = { allValid: true, summary: { valid: 'unavailable', strong: 'unavailable', gapCount: 0 } };
+  }
+
   const report = {
     name: 'validate-replay-governance',
     status: statusFromIssues(issues),
@@ -142,6 +163,7 @@ function main() {
     signatureAuditValid: replay.signatureAuditValid === true,
     signatureAlgorithmsValid: replay.signatureAlgorithmsValid === true,
     criticalIssues: Number(replay.criticalIssues || 0),
+    causalChainValidation: causalChainValidation.summary,
     issues,
     suggestions: issues.map((issue) => issue.message),
   };

@@ -13,6 +13,7 @@ const crypto = require('crypto');
 function nowIso() { return new Date().toISOString(); }
 function makeHash(input) { return crypto.createHash('sha256').update(String(input)).digest('hex'); }
 function makeId(prefix) { return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
+function makeStableId(prefix, input) { return `${prefix}_${makeHash(input).slice(0, 24)}`; }
 
 // ============================================================================
 // FASE 3: ENTITY GRAPH
@@ -275,8 +276,17 @@ function inferFkCandidateJourneys(introspectionReport, entityGraph, templateJour
     //           → EXECUTED → VALIDATED.
     // Jornadas descobertas via entity graph entram como DISCOVERED.
     // Jornadas mutáveis ou de alto risco não são autoativadas (exigem approval).
+    const candidateSignature = JSON.stringify({
+      component,
+      entrypoints: entrypoints.length > 0 ? entrypoints : [component[0]],
+      fkEdges: componentEdges.map((edge) => ({
+        source: edge.source,
+        target: edge.target,
+        fkField: edge.fkField || null,
+      })),
+    });
     candidateJourneys.push({
-      id: makeId('journey'),
+      id: makeStableId('candidate_journey', candidateSignature),
       name: `FK Candidate: ${rootName}`,
       slug: `fk-candidate-${rootName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
       description: `Jornada candidata inferida via FKs reais do entity graph (${component.length} models conectados, ${uncovered.length} sem jornada registrada)`,
@@ -321,7 +331,7 @@ function inferJourneys(introspectionReport, domainMap, entityGraph) {
     const domain = domainMap?.domains?.find(d => d.domain === template.domain);
 
     journeys.push({
-      id: makeId('journey'),
+      id: makeStableId('journey', JSON.stringify({ journeyName, sourceModels: template.sourceModels })),
       domain: template.domain,
       name: journeyName,
       slug: journeyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
@@ -344,6 +354,7 @@ function inferJourneys(introspectionReport, domainMap, entityGraph) {
       kpis: domain?.kpis || [],
       completeness: availableModels.length / template.sourceModels.length,
       status: availableModels.length === template.sourceModels.length ? 'complete' : 'partial',
+      pipelineState: 'REGISTERED',
     });
   }
 
@@ -361,6 +372,173 @@ function inferJourneys(introspectionReport, domainMap, entityGraph) {
     uncoveredBehaviors,
     entityGraphConsumed: true,
     fkEdgesAnalyzed,
+  };
+}
+
+function isExactGo(value) {
+  return value === 'GO';
+}
+
+function hasValidRegistrationEvidence(candidate, context = {}) {
+  const evidence = candidate?.registrationEvidence;
+  if (!evidence || typeof evidence !== 'object') return false;
+  if (evidence.stage !== 'REGISTERED' || evidence.journeyId !== candidate.id) return false;
+  if (!evidence.registrationId || !evidence.approvedBy || !evidence.producer) return false;
+  if (!Number.isFinite(Date.parse(evidence.producedAt))) return false;
+  if (context.runId && evidence.runId !== context.runId) return false;
+  if (context.sourceFingerprint && evidence.sourceFingerprint !== context.sourceFingerprint) return false;
+  return true;
+}
+
+/**
+ * Fonte canônica para as fases posteriores do pipeline. Templates registrados
+ * sempre entram; candidates somente entram após registro/aprovação explícitos.
+ */
+function resolveEligibleJourneys(journeysReport = {}, context = {}) {
+  const registeredJourneys = Array.isArray(journeysReport.journeys)
+    ? journeysReport.journeys
+    : [];
+  const candidates = Array.isArray(journeysReport.candidateJourneys)
+    ? journeysReport.candidateJourneys
+    : [];
+  const eligibleCandidates = [];
+  const rejectedCandidates = [];
+
+  for (const candidate of candidates) {
+    const registered = candidate?.pipelineState === 'REGISTERED'
+      && candidate?.status === 'REGISTERED'
+      && hasValidRegistrationEvidence(candidate, context);
+    if (!registered) {
+      rejectedCandidates.push({ id: candidate?.id || null, reason: 'candidate_not_registered' });
+      continue;
+    }
+    eligibleCandidates.push(candidate);
+  }
+
+  const seen = new Set();
+  const journeys = [...registeredJourneys, ...eligibleCandidates].filter((journey) => {
+    if (!journey?.id || seen.has(journey.id)) return false;
+    seen.add(journey.id);
+    return true;
+  });
+
+  return {
+    journeys,
+    registeredJourneys,
+    eligibleCandidates,
+    rejectedCandidates,
+    totalJourneys: journeys.length,
+  };
+}
+
+const CANDIDATE_LIFECYCLE_STAGES = Object.freeze([
+  'REGISTERED',
+  'SCENARIO_GENERATED',
+  'SEED_PLANNED',
+  'SEED_READY',
+  'WAVE_CREATED',
+  'EXECUTED',
+  'EVIDENCE_GENERATED',
+  'VALIDATED',
+]);
+
+function nonEmptyArray(value) {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function validateLifecycleArtifact(stage, artifact, previous, context) {
+  const violations = [];
+  if (!artifact || typeof artifact !== 'object') return [`${stage}: artifact ausente`];
+  if (artifact.stage !== stage) violations.push(`${stage}: stage inválido`);
+  if (!artifact.producer || !Number.isFinite(Date.parse(artifact.producedAt))) {
+    violations.push(`${stage}: producer/producedAt ausente ou inválido`);
+  }
+  if (context.runId && artifact.runId !== context.runId) violations.push(`${stage}: foreign runId`);
+  if (context.sourceFingerprint && artifact.sourceFingerprint !== context.sourceFingerprint) {
+    violations.push(`${stage}: foreign sourceFingerprint`);
+  }
+
+  if (stage === 'REGISTERED' && (!artifact.registrationId || !artifact.approvedBy)) {
+    violations.push('REGISTERED: registrationId/approvedBy ausente');
+  }
+  if (stage === 'SCENARIO_GENERATED' && !nonEmptyArray(artifact.scenarioIds)) {
+    violations.push('SCENARIO_GENERATED: scenarioIds vazio');
+  }
+  if (stage === 'SEED_PLANNED' && !artifact.seedPlanId) {
+    violations.push('SEED_PLANNED: seedPlanId ausente');
+  }
+  if (stage === 'SEED_READY') {
+    if (!nonEmptyArray(artifact.seedIds)) violations.push('SEED_READY: seedIds vazio');
+    if (artifact.provisioned !== true) violations.push('SEED_READY: seed não provisionada');
+    if (artifact.fkIntegrity?.valid !== true) violations.push('SEED_READY: FK integrity inválida');
+  }
+  if (stage === 'WAVE_CREATED') {
+    if (!artifact.waveId || !nonEmptyArray(artifact.scenarioIds)) violations.push('WAVE_CREATED: wave/scenarios ausentes');
+    if (previous?.scenarioIds && !artifact.scenarioIds.every((id) => previous.scenarioIds.includes(id))) {
+      violations.push('WAVE_CREATED: scenarioIds não derivam do scenario artifact');
+    }
+  }
+  if (stage === 'EXECUTED') {
+    if (!artifact.executionId || !artifact.waveId) violations.push('EXECUTED: executionId/waveId ausente');
+    if (!isExactGo(artifact.status)) violations.push(`EXECUTED: status=${artifact.status || 'missing'} (esperado GO exato)`);
+    if (previous?.waveId && artifact.waveId !== previous.waveId) violations.push('EXECUTED: waveId divergente');
+  }
+  if (stage === 'EVIDENCE_GENERATED') {
+    if (!artifact.executionId || !artifact.evidenceId) violations.push('EVIDENCE_GENERATED: executionId/evidenceId ausente');
+    if (previous?.executionId && artifact.executionId !== previous.executionId) {
+      violations.push('EVIDENCE_GENERATED: executionId divergente');
+    }
+  }
+  if (stage === 'VALIDATED') {
+    if (!isExactGo(artifact.decision)) violations.push(`VALIDATED: decision=${artifact.decision || 'missing'} (esperado GO exato)`);
+    if (!artifact.executionId || !artifact.evidenceId || !artifact.replayId) {
+      violations.push('VALIDATED: execution/evidence/replay linkage ausente');
+    }
+    if (previous?.executionId && artifact.executionId !== previous.executionId) violations.push('VALIDATED: executionId divergente');
+    if (previous?.evidenceId && artifact.evidenceId !== previous.evidenceId) violations.push('VALIDATED: evidenceId divergente');
+  }
+  return violations;
+}
+
+/**
+ * Reconstrói a lifecycle de uma candidate exclusivamente de artifacts emitidos
+ * pelos componentes responsáveis. Não cria timestamps nem promove smoke global.
+ */
+function evaluateCandidateJourneyLifecycle(candidate, artifacts = [], context = {}) {
+  const violations = [];
+  const transitions = [];
+  let pipelineState = candidate?.pipelineState || 'DISCOVERED';
+  let previous = null;
+  let previousTimestamp = -Infinity;
+
+  for (const stage of CANDIDATE_LIFECYCLE_STAGES) {
+    const matches = artifacts.filter((artifact) => artifact?.journeyId === candidate?.id && artifact?.stage === stage);
+    if (matches.length !== 1) {
+      violations.push(`${stage}: esperado exatamente 1 artifact candidate-specific; encontrado ${matches.length}`);
+      break;
+    }
+    const artifact = matches[0];
+    const stageViolations = validateLifecycleArtifact(stage, artifact, previous, context);
+    const timestamp = Date.parse(artifact.producedAt);
+    if (Number.isFinite(timestamp) && timestamp < previousTimestamp) {
+      stageViolations.push(`${stage}: producedAt fora de ordem`);
+    }
+    if (stageViolations.length > 0) {
+      violations.push(...stageViolations);
+      break;
+    }
+    transitions.push({ ...artifact });
+    pipelineState = stage;
+    previous = artifact;
+    previousTimestamp = timestamp;
+  }
+
+  return {
+    ...candidate,
+    pipelineState,
+    transitions,
+    violations,
+    valid: pipelineState === 'VALIDATED' && violations.length === 0,
   };
 }
 
@@ -525,7 +703,9 @@ function generateSeeds(introspectionReport, journeys) {
         } else if (!attrDef.allowNull) {
           // Required field: gera valor compatível com o tipo.
           // FKs ficam marcadas como FK_UNRESOLVED para validação posterior.
-          seed[attrName] = generateCompatibleValue(attrName, attrDef, { tenantKey: journeyTenantKey });
+          seed[attrName] = attrDef.references
+            ? FK_UNRESOLVED
+            : generateCompatibleValue(attrName, attrDef, { tenantKey: journeyTenantKey });
         }
       }
 
@@ -545,9 +725,11 @@ function generateSeeds(introspectionReport, journeys) {
         modelName,
         data: seed,
         validations,
-        compatible: validations.length === 0,
+        compatible: validations.length === 0 && fkIntegrity.valid,
         fkIntegrity,
-        seedStatus: fkIntegrity.valid ? 'SEED_VALIDATED' : 'FK_UNRESOLVED',
+        // Generation creates a plan only. SEED_READY is emitted by the runtime
+        // provisioner after parent IDs and FKs have been resolved.
+        seedStatus: fkIntegrity.valid ? 'SEED_PLANNED' : 'FK_UNRESOLVED',
       });
     }
 
@@ -727,6 +909,33 @@ function verifyAgentFactoryModelDrivenIntegration(journeysReport) {
   }
 }
 
+/**
+ * Avança pipelineState das candidateJourneys usando evidência real de execução.
+ *
+ * Transições suportadas:
+ *   DISCOVERED → SCENARIO_GENERATED  (quando scenario gerado para a journey)
+ *   SCENARIO_GENERATED → SEED_READY  (quando seed presente para a journey)
+ *   SEED_READY → EXECUTED            (quando flow correspondente no smoke está GO)
+ *   EXECUTED → VALIDATED             (quando hardening report está GO e replay integro)
+ *
+ * Nenhuma transição é sintética: cada avanço requer evidência externa real.
+ *
+ * @param {Array} candidateJourneys - jornadas com pipelineState inicial
+ * @param {Object} opts.smokeReport - qa-waves-operational-prod-like-smoke.json
+ * @param {Object} opts.hardeningReport - replay-hardening-report.json
+ * @param {Array} opts.scenarios - cenários gerados para as jornadas
+ * @param {Array} opts.seeds - seeds gerados para as jornadas
+ * @returns {Array} candidateJourneys com pipelineState e executionEvidence atualizados
+ */
+function advanceCandidateJourneyStates(candidateJourneys, { lifecycleArtifacts = [], runId, sourceFingerprint } = {}) {
+  if (!Array.isArray(candidateJourneys) || candidateJourneys.length === 0) return [];
+  return candidateJourneys.map((journey) => evaluateCandidateJourneyLifecycle(
+    journey,
+    lifecycleArtifacts,
+    { runId, sourceFingerprint },
+  ));
+}
+
 module.exports = {
   buildEntityGraph,
   inferJourneys,
@@ -738,6 +947,11 @@ module.exports = {
   generateModelDrivenWaves,
   generateCompatibleValue,
   validateSeedFkIntegrity,
+  advanceCandidateJourneyStates,
+  resolveEligibleJourneys,
+  evaluateCandidateJourneyLifecycle,
+  CANDIDATE_LIFECYCLE_STAGES,
+  isExactGo,
   FK_UNRESOLVED,
   JOURNEY_TEMPLATES,
 };

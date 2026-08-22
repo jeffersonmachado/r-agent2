@@ -52,6 +52,21 @@ function main() {
 
   fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(next, null, 2)}\n`);
   console.log(`Gravado em ${path.relative(ROOT_DIR, OUTPUT_PATH)}`);
+
+  const buildReport = {
+    generatedAt: new Date().toISOString(),
+    status: 'PASS',
+    artifactType: 'inventory-build-report',
+    artifactVersion: '1.0.0',
+    totalItems: next.counts.total,
+    byKind: next.counts.byKind,
+    byClassification: next.counts.byClassification,
+    orphaned: next.counts.orphaned,
+  };
+  const reportPath = path.join(ROOT_DIR, 'reports', 'inventory-build-report.json');
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  fs.writeFileSync(reportPath, `${JSON.stringify(buildReport, null, 2)}\n`);
+  console.log(`Gravado em ${path.relative(ROOT_DIR, reportPath)}`);
 }
 
 main();

@@ -69,7 +69,11 @@ function classifyPbxMaturity(pbxData) {
   const l04 = pbxData.sources?.l04 || {};
 
   const l03RealCall = l03.realCall?.synthetic === false && l03.realCall?.cdrFound === true;
-  const l03SelfTestFail = l03.selftestStatus === 'FAIL';
+  // A maturidade do PBX deve refletir a saúde do runtime de VOZ (voiceRuntime),
+  // não o selftest global da plataforma (que agrega checks não-PBX). Quando a
+  // evidência não traz voiceRuntimeStatus, cai para o selftestStatus legado.
+  const l03VoiceStatus = String(l03.voiceRuntimeStatus || l03.selftestStatus || '').toUpperCase();
+  const l03SelfTestFail = l03VoiceStatus === 'FAIL' || l03VoiceStatus === 'UNHEALTHY';
 
   // CDR sintético do L04 é scaffold de pipeline test — não conta como evidência de chamada falsa
   // quando L03 já tem chamada real. Conta apenas se L03 também for sintético.
@@ -266,12 +270,19 @@ function checkPackageBinding(packageValidationReport, expectedZipName) {
   }
 
   if (packageValidationReport.ok === false) {
-    contradictions.push({
-      type: 'package_validation_failed',
-      missingEntries: packageValidationReport.missingEntries || [],
-      blocker: true,
-      message: `Pacote não passou na validação: ${(packageValidationReport.missingEntries || []).length} entradas ausentes.`,
-    });
+    // DEFERRED: pacote ainda não criado (artifact_missing) não é falha de
+    // validação — é gate ainda não avaliável na fase PRE_PACKAGE. Só vira
+    // contradição blocker quando o pacote EXISTE e mesmo assim falha.
+    const deferred = String(packageValidationReport.error || '').includes('artifact_missing')
+      || packageValidationReport.deferred === true;
+    if (!deferred) {
+      contradictions.push({
+        type: 'package_validation_failed',
+        missingEntries: packageValidationReport.missingEntries || [],
+        blocker: true,
+        message: `Pacote não passou na validação: ${(packageValidationReport.missingEntries || []).length} entradas ausentes.`,
+      });
+    }
   }
 
   return contradictions;

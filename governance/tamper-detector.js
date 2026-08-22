@@ -185,6 +185,10 @@ function checkProofConsistency() {
 
 function checkStaleArtifacts(artifact) {
   const zipName = artifact.zip;
+  // O modelo two-pass embrulha o ZIP final como <release>.payload.zip; os
+  // relatórios de governança referenciam <release>.zip. Ambos são o MESMO
+  // release — normalizar antes de comparar (não é referência stale).
+  const normalizeZipName = (name) => String(name || '').replace(/\.payload\.zip$/, '.zip');
   const filesToCheck = [
     { path: 'governance/cross-report-validation.json',    field: 'expectedZipName' },
     { path: 'governance/package-validation-report.json',  field: 'zipName' },
@@ -198,7 +202,7 @@ function checkStaleArtifacts(artifact) {
     try {
       const data = JSON.parse(fs.readFileSync(abs, 'utf8'));
       const val  = data[item.field];
-      if (val && val !== zipName) {
+      if (val && normalizeZipName(val) !== normalizeZipName(zipName)) {
         stale.push({ file: item.path, field: item.field, found: val, expected: zipName });
       }
     } catch (_) {

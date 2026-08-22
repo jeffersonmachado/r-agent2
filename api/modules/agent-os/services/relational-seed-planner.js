@@ -39,7 +39,7 @@ function buildDependencyGraph(models) {
       if (!targetName || !nodes.includes(targetName)) continue;
 
       // belongsTo: modelName DEPENDE de targetName
-      if (assocType === 'BelongsTo' || assocType === 'HasOne') {
+      if (assocType === 'BelongsTo') {
         if (!edges.get(modelName).includes(targetName)) {
           edges.get(modelName).push(targetName);
         }
@@ -165,6 +165,7 @@ function buildSeedPlan(journeyEntities, models, tenantId) {
     const model = models[modelName];
     const entityDef = journeyEntities.find((e) => e.modelName === modelName);
     const associations = model?.associations || {};
+    const attributes = model?.rawAttributes || model?.tableAttributes || {};
     const references = {};
 
     // Resolver FKs dos parents já provisionados
@@ -173,7 +174,7 @@ function buildSeedPlan(journeyEntities, models, tenantId) {
       const targetName = assoc.target?.name || assoc.targetModel?.name;
       const fkField    = assoc.foreignKey;
 
-      if ((assocType === 'BelongsTo' || assocType === 'HasOne') && targetName && fkField) {
+      if (assocType === 'BelongsTo' && targetName && fkField) {
         const parentCtx = entityContext.get(targetName);
         if (parentCtx) {
           references[fkField] = `{{${targetName}.${parentCtx.primaryKey}}}`;
@@ -181,19 +182,23 @@ function buildSeedPlan(journeyEntities, models, tenantId) {
       }
     }
 
+    const primaryKey = Object.entries(attributes).find(([, definition]) => definition?.primaryKey)?.[0] || 'id';
+    const tenantField = ['tenant_key', 'tenant_id', 'tenantKey', 'tenantId']
+      .find((field) => Object.prototype.hasOwnProperty.call(attributes, field)) || null;
+
     const step = {
       step:         provisionOrder.indexOf(modelName) + 1,
       modelName,
       tenantId,
       references,
       data:         entityDef?.data || {},
-      primaryKey:   'id',
-      tenantField:  'tenant_key',
+      primaryKey,
+      tenantField,
     };
 
     entityContext.set(modelName, {
       model:      modelName,
-      primaryKey: 'id',
+      primaryKey,
       tenantId,
       references,
     });
@@ -219,7 +224,27 @@ function buildSeedPlan(journeyEntities, models, tenantId) {
  * Valida o seed final após provisioning.
  * Verifica: Schema, FK, Tenant, Unique, NotNull, Enums, BusinessInvariants.
  */
-function validateSeed(seedData, modelName, models, tenantId) {
+function resolveReferencedModelName(reference, models) {
+  const rawTarget = reference?.model;
+  if (!rawTarget) return null;
+  if (typeof rawTarget !== 'string') {
+    return rawTarget.name || rawTarget.modelName || rawTarget.options?.name?.singular || null;
+  }
+  if (models[rawTarget]) return rawTarget;
+  return Object.entries(models).find(([, model]) => {
+    const tableName = model?.tableName || model?.options?.tableName;
+    return tableName === rawTarget;
+  })?.[0] || rawTarget;
+}
+
+function enumValues(definition) {
+  if (Array.isArray(definition?.values)) return definition.values;
+  if (Array.isArray(definition?.type?.values)) return definition.type.values;
+  if (Array.isArray(definition?.type?.options?.values)) return definition.type.options.values;
+  return [];
+}
+
+function validateSeed(seedData, modelName, models, tenantId, options = {}) {
   const violations = [];
   const model = models[modelName];
 
@@ -229,9 +254,18 @@ function validateSeed(seedData, modelName, models, tenantId) {
 
   const attrs = model.rawAttributes || model.tableAttributes || {};
 
+  // Schema: o seed não pode carregar campos inexistentes no model.
+  for (const field of Object.keys(seedData || {})) {
+    if (!Object.prototype.hasOwnProperty.call(attrs, field)) {
+      violations.push({ check: 'SCHEMA', field, issue: 'campo não declarado no model' });
+    }
+  }
+
   // NotNull
   for (const [field, def] of Object.entries(attrs)) {
-    if (def.allowNull === false && seedData[field] === undefined && seedData[field] !== 0 && seedData[field] !== '') {
+    const databaseGenerated = def.primaryKey === true
+      && (def.autoIncrement === true || def.defaultValue !== undefined || options.allowGeneratedPrimaryKeys !== false);
+    if (def.allowNull === false && seedData[field] === undefined && !databaseGenerated) {
       violations.push({ check: 'NOT_NULL', field, issue: 'campo obrigatório ausente' });
     }
   }
@@ -256,10 +290,176 @@ function validateSeed(seedData, modelName, models, tenantId) {
     }
   }
 
+  // FK target: quando o parent já foi provisionado, o valor precisa apontar
+  // exatamente para a PK capturada, nunca para um UUID inventado.
+  for (const [field, def] of Object.entries(attrs)) {
+    if (!def?.references || seedData[field] === undefined || seedData[field] === '__FK_UNRESOLVED__') continue;
+    const targetName = resolveReferencedModelName(def.references, models);
+    const target = targetName ? options.resolvedEntities?.[targetName] : null;
+    if (target) {
+      const targetKey = def.references.key || 'id';
+      const expected = target[targetKey];
+      if (expected === undefined) {
+        violations.push({ check: 'FK_EXISTENCE', field, targetModel: targetName, issue: `target key ${targetKey} ausente` });
+      } else if (seedData[field] !== expected) {
+        violations.push({ check: 'FK_TARGET', field, targetModel: targetName, expected, got: seedData[field] });
+      }
+    } else if (options.requireResolvedForeignKeys === true) {
+      violations.push({ check: 'FK_EXISTENCE', field, targetModel: targetName, issue: 'target não provisionado' });
+    }
+  }
+
+  // Enum constraints.
+  for (const [field, def] of Object.entries(attrs)) {
+    const allowed = enumValues(def);
+    if (allowed.length > 0 && seedData[field] !== undefined && !allowed.includes(seedData[field])) {
+      violations.push({ check: 'ENUM', field, allowed, got: seedData[field] });
+    }
+  }
+
+  // Unique dentro do provisioning atual. A constraint do banco continua sendo
+  // a autoridade final para concorrência/outros registros.
+  const seenUnique = options.seenUnique;
+  if (seenUnique instanceof Map) {
+    for (const [field, def] of Object.entries(attrs)) {
+      if (def?.unique !== true || seedData[field] === undefined) continue;
+      const key = `${modelName}.${field}:${JSON.stringify(seedData[field])}`;
+      if (seenUnique.has(key)) {
+        violations.push({ check: 'UNIQUE', field, got: seedData[field], issue: 'valor duplicado no seed plan' });
+      } else {
+        seenUnique.set(key, true);
+      }
+    }
+  }
+
+  for (const validator of options.businessValidators || []) {
+    const result = validator({ seedData, modelName, models, tenantId, options });
+    if (result === true || result === undefined || result === null) continue;
+    violations.push(typeof result === 'object'
+      ? { check: 'BUSINESS_INVARIANT', ...result }
+      : { check: 'BUSINESS_INVARIANT', issue: String(result) });
+  }
+
   return {
     valid:      violations.length === 0,
     violations,
     status:     violations.length === 0 ? 'SEED_VALIDATED' : 'SEED_INVALID',
+  };
+}
+
+function resolveReferenceTemplate(value, provisionedEntities) {
+  if (typeof value !== 'string') return { resolved: true, value };
+  const match = /^\{\{([^.}]+)\.([^.}]+)\}\}$/.exec(value);
+  if (!match) return { resolved: true, value };
+  const [, modelName, key] = match;
+  const target = provisionedEntities[modelName];
+  if (!target || target[key] === undefined || target[key] === null) {
+    return { resolved: false, modelName, key, value: null };
+  }
+  return { resolved: true, modelName, key, value: target[key] };
+}
+
+function plainRecord(record) {
+  if (!record) return null;
+  if (typeof record.get === 'function') return record.get({ plain: true });
+  if (typeof record.toJSON === 'function') return record.toJSON();
+  return { ...record };
+}
+
+/**
+ * Executa um SeedPlan contra os models reais em ordem topológica. Parents são
+ * criados primeiro; suas PKs retornadas pelo banco alimentam as FKs dos filhos.
+ */
+async function provisionSeedPlan(seedPlan, models, options = {}) {
+  const violations = [];
+  const provisionedEntities = {};
+  const seenUnique = new Map();
+  const steps = Array.isArray(seedPlan?.provisioningSteps) ? seedPlan.provisioningSteps : [];
+
+  if (!seedPlan || seedPlan.hasCycles === true || (seedPlan.cycles || []).length > 0) {
+    return {
+      valid: false,
+      status: 'SEED_INVALID',
+      violations: [{ check: 'CYCLE', issue: 'seed plan contém ciclo relacional' }],
+      provisionedEntities,
+    };
+  }
+
+  // Preflight completo antes da primeira escrita: schema, tenant, enum, not-null
+  // e invariantes que não dependem de IDs provisionados.
+  for (const step of steps) {
+    const preflightData = { ...(step.data || {}), ...(step.references || {}) };
+    if (step.tenantField && preflightData[step.tenantField] === undefined) {
+      preflightData[step.tenantField] = seedPlan.tenantId;
+    }
+    const preflight = validateSeed(preflightData, step.modelName, models, seedPlan.tenantId, {
+      allowGeneratedPrimaryKeys: true,
+      businessValidators: options.businessValidators,
+    });
+    violations.push(...preflight.violations);
+  }
+  if (violations.length > 0) {
+    return { valid: false, status: 'SEED_INVALID', violations, provisionedEntities };
+  }
+
+  for (const step of steps) {
+    const model = models[step.modelName];
+    if (!model || typeof model.create !== 'function') {
+      violations.push({ check: 'MODEL_CREATE', modelName: step.modelName, issue: 'model.create indisponível' });
+      break;
+    }
+
+    const data = { ...(step.data || {}) };
+    if (step.tenantField && data[step.tenantField] === undefined) data[step.tenantField] = seedPlan.tenantId;
+    for (const [field, template] of Object.entries(step.references || {})) {
+      const resolved = resolveReferenceTemplate(template, provisionedEntities);
+      if (!resolved.resolved) {
+        violations.push({
+          check: 'FK_EXISTENCE',
+          field,
+          targetModel: resolved.modelName,
+          issue: `parent ${resolved.modelName}.${resolved.key} não provisionado`,
+        });
+        continue;
+      }
+      data[field] = resolved.value;
+    }
+    if (violations.length > 0) break;
+
+    const validation = validateSeed(data, step.modelName, models, seedPlan.tenantId, {
+      allowGeneratedPrimaryKeys: true,
+      requireResolvedForeignKeys: true,
+      resolvedEntities: provisionedEntities,
+      seenUnique,
+      businessValidators: options.businessValidators,
+    });
+    if (!validation.valid) {
+      violations.push(...validation.violations);
+      break;
+    }
+
+    try {
+      const created = plainRecord(await model.create(data, options.transaction ? { transaction: options.transaction } : undefined));
+      const primaryKey = step.primaryKey || 'id';
+      if (!created || created[primaryKey] === undefined || created[primaryKey] === null) {
+        violations.push({ check: 'PRIMARY_KEY', modelName: step.modelName, field: primaryKey, issue: 'PK não retornada pelo banco' });
+        break;
+      }
+      provisionedEntities[step.modelName] = created;
+    } catch (error) {
+      violations.push({ check: 'PERSISTENCE', modelName: step.modelName, issue: error.message });
+      break;
+    }
+  }
+
+  return {
+    valid: violations.length === 0 && Object.keys(provisionedEntities).length === steps.length,
+    status: violations.length === 0 && Object.keys(provisionedEntities).length === steps.length
+      ? 'SEED_READY'
+      : 'SEED_INVALID',
+    violations,
+    provisionedEntities,
+    provisionedCount: Object.keys(provisionedEntities).length,
   };
 }
 
@@ -345,6 +545,7 @@ module.exports = {
   buildDependencyGraph,
   topologicalSort,
   buildSeedPlan,
+  provisionSeedPlan,
   validateSeed,
   synthesizeExampleSeedPlan,
 };

@@ -13,6 +13,18 @@ const { writeJsonAtomic } = require('../../../api/utils/atomicJsonFile');
 
 const DEFAULT_THRESHOLD = 95;
 const DEFAULT_SCHEDULED_MAX_AGE_HOURS = 48;
+
+function readCurrentRunLineage() {
+  try {
+    const run = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'governance', '.current-run.json'), 'utf8'));
+    return {
+      runId: run?.runId || null,
+      sourceFingerprint: run?.sourceFingerprint || null,
+    };
+  } catch (_) {
+    return { runId: null, sourceFingerprint: null };
+  }
+}
 const DEFAULT_REQUIRED_SCHEDULED_JOURNEYS = Object.freeze([
   'support_ticket_flow',
   'fitness_customer_checkin',
@@ -450,6 +462,10 @@ function buildQaWavesEnterpriseGovernance(options = {}) {
 
   const report = {
     generatedAt: new Date().toISOString(),
+    runId: readCurrentRunLineage().runId,
+    sourceFingerprint: readCurrentRunLineage().sourceFingerprint,
+    artifactType: 'qa-waves-enterprise-governance',
+    artifactVersion: '1.0.0',
     status: governanceStatus,
     governanceStatus,
     threshold,

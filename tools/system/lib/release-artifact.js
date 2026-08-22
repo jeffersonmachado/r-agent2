@@ -58,7 +58,7 @@ function listArtifacts(options = {}) {
 
   for (const dir of searchDirs) {
     const zips = fs.readdirSync(dir)
-      .filter((name) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(name))
+      .filter((name) => /^r-agent2-\d{8}-\d{6}(\.payload)?\.zip$/.test(name))
       .sort()
       .reverse();
 
@@ -67,7 +67,8 @@ function listArtifacts(options = {}) {
       seen.add(zip);
 
       const zipPath = path.join(dir, zip);
-      const manifestName = zip.replace(/\.zip$/, '.manifest.json');
+      // Layout two-pass: <release>.payload.zip usa manifest <release>.manifest.json
+      const manifestName = zip.replace(/\.payload\.zip$/, '.manifest.json').replace(/\.zip$/, '.manifest.json');
       // Procurar manifest na mesma dir ou no flat dist/
       let manifestPath = path.join(dir, manifestName);
       if (!fs.existsSync(manifestPath)) {

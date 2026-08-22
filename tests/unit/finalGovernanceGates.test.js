@@ -89,6 +89,7 @@ describe('FINAL-001 — fingerprint chain: STALE, FRESH, UNREGISTERED', () => {
 
 const {
   computeFinalDecision,
+  buildCertificationAuthorityChecks,
   STRICT_MODE,
 } = require('../../governance/final-governance-engine');
 
@@ -121,6 +122,13 @@ describe('FINAL-002 — computeFinalDecision: NO_GO obrigatório bloqueia GO', (
     expect(decision).toBe('AUTONOMOUS_READY_GO');
   });
 
+  test('proof ausente/UNKNOWN nunca pode virar GO', () => {
+    expect(computeFinalDecision([passCheck('mesh')], { proofDecision: undefined }))
+      .toMatch(/^NO_GO:PROOF_NOT_PASS/);
+    expect(computeFinalDecision([passCheck('mesh')], { proofDecision: 'UNKNOWN' }))
+      .toMatch(/^NO_GO:PROOF_NOT_PASS/);
+  });
+
   test('engines contraditórios são proibidos: CRITICAL blocked + proofGO → resultado é NO_GO', () => {
     const decision = computeFinalDecision(
       [failCheck('governance_signature', 'CRITICAL')],
@@ -140,6 +148,72 @@ describe('FINAL-002 — computeFinalDecision: NO_GO obrigatório bloqueia GO', (
       expect(decision).toMatch(/^NO_GO:STRICT_ENTERPRISE/);
     });
   }
+});
+
+describe('FINAL-002 — autoridade final exige scorecard/self-proof/tamper do mesmo run', () => {
+  const fp = 'a'.repeat(64);
+  const runContext = {
+    runId: 'rap-release-20260821-120000-aaaaaaaa',
+    sourceFingerprint: fp,
+    startedAt: '2026-08-21T15:00:00.000Z',
+    generatedAt: '2026-08-21T15:00:00.000Z',
+    status: 'RUNNING',
+    artifactType: 'run-context',
+    artifactVersion: '1.0.0',
+  };
+  const meta = (artifactType) => ({
+    runId: runContext.runId,
+    sourceFingerprint: fp,
+    generatedAt: '2026-08-21T15:01:00.000Z',
+    artifactType,
+    artifactVersion: '1.0.0',
+  });
+  const documents = () => ({
+    scorecard: {
+      ...meta('rap-master-scorecard'),
+      dimensions: [{
+        id: 'RAP-001', score: 10, target: 10,
+        requirements: [{ id: 'r1', mandatory: true, status: 'PASS' }],
+        tests: ['t'], runtimeEvidence: ['e'], blockers: [], gaps: [],
+      }],
+      blockers: [], gaps: [],
+    },
+    selfProof: {
+      ...meta('self-proving-report'), pass: true, selfProofStatus: 'PASS',
+      verifierPassed: true, staleReferencesFound: 0, staleHashesFound: 0,
+      selfProofGate: { failedGates: [] },
+    },
+    tamper: {
+      ...meta('tamper-detection-report'), pass: true, decision: 'GO',
+      failedChecks: 0, checks: [{ id: 'signature', pass: true }],
+    },
+    proof: {
+      ...meta('final-proof-report'), finalDecision: 'AUTONOMOUS_READY_GO',
+      fingerprintStatus: 'FRESH', blockerCount: 0, missingArtifacts: [],
+    },
+    readiness: {
+      ...meta('final-readiness-report'), finalDecision: 'AUTONOMOUS_READY_GO', blockingGaps: [],
+    },
+  });
+
+  test('all authority artifacts PASS only when their lineage and semantics pass', () => {
+    const checks = buildCertificationAuthorityChecks({ runContext, ...documents() });
+    expect(checks).toHaveLength(5);
+    expect(checks.every((check) => check.pass)).toBe(true);
+  });
+
+  test.each([
+    ['scorecard below 10', (docs) => { docs.scorecard.dimensions[0].score = 9; }],
+    ['self proof FAIL', (docs) => { docs.selfProof.pass = false; docs.selfProof.selfProofStatus = 'FAIL'; }],
+    ['tamper NO_GO', (docs) => { docs.tamper.pass = false; docs.tamper.decision = 'NO_GO'; }],
+    ['foreign readiness', (docs) => { docs.readiness.runId = 'foreign'; }],
+    ['unknown proof', (docs) => { docs.proof.finalDecision = 'UNKNOWN'; }],
+  ])('%s blocks authority', (_label, mutate) => {
+    const docs = documents();
+    mutate(docs);
+    const checks = buildCertificationAuthorityChecks({ runContext, ...docs });
+    expect(checks.some((check) => !check.pass)).toBe(true);
+  });
 });
 
 describe('FINAL-002 — _computeMandatoryDecision: invariante agregador fail-closed', () => {

@@ -1,0 +1,3 @@
+'use strict';
+const { getGovernanceModel, uuid, json, DataTypes } = require('./governanceModelFactory');
+module.exports = () => getGovernanceModel('ScorecardDimension', { id: uuid, dimension_key: { type: DataTypes.STRING, allowNull: false, unique: true }, name: { type: DataTypes.STRING, allowNull: false }, description: DataTypes.TEXT, category: DataTypes.STRING, mandatory: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true }, target_score: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 10 }, active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true }, version: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 }, metadata: json }, { tableName: 'scorecard_dimensions' });

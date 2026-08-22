@@ -22,6 +22,19 @@
 const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
+const {
+  assertSourceFreeze,
+  readRunContext,
+  validateRunContext,
+} = require('./shared/run-context');
+const {
+  gate: authorityGate,
+  evaluateMasterScorecard,
+  evaluateSelfProof,
+  evaluateTamperDetection,
+  evaluateFinalProof,
+  evaluateFinalReadiness,
+} = require('./shared/certification-authority');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -74,9 +87,9 @@ function checkMeshGoNoGo() {
 
 function checkReleaseGate() {
   const report = readJsonSafe('qa-mesh/release-gate-report.json');
-  if (!report) return { id: 'release_gate', pass: true, severity: 'OK', reason: 'release-gate-report not found (skipped)' };
+  if (!report) return { id: 'release_gate', pass: false, severity: 'CRITICAL', reason: 'release-gate-report not found' };
   const gate = report.gate || report.status;
-  const pass = gate === 'GO' || gate == null;
+  const pass = gate === 'GO';
   return {
     id:       'release_gate',
     pass,
@@ -188,9 +201,11 @@ function checkVisualJourneys() {
     'qa/enterprise/omnichannel-unified-replay.json',
   ];
 
+  let checkedArtifacts = 0;
   for (const relPath of checkFiles) {
     const data = readJsonSafe(relPath);
     if (!data) continue;
+    checkedArtifacts += 1;
 
     if (data.ui?.available === false) {
       const jid = data.journeyId || data.id || path.basename(relPath);
@@ -227,13 +242,15 @@ function checkVisualJourneys() {
     }
   }
 
-  const pass = violations.length === 0;
+  const pass = checkedArtifacts > 0 && violations.length === 0;
   return {
     id:         'visual_journeys',
     pass,
     severity:   pass ? 'OK' : 'HIGH',
     violations,
-    reason:     pass ? null : `${violations.length} jornada(s) visual(is) com UI indisponível`,
+    reason:     pass ? null : (checkedArtifacts === 0
+      ? 'visual journey evidence missing'
+      : `${violations.length} jornada(s) visual(is) com UI indisponível`),
   };
 }
 
@@ -247,14 +264,17 @@ function checkPackageIntegrity() {
     const hashSource = 'governance/package-validation-report.json';
 
     if (!zipName || !recorded) {
-      return { id: 'package_integrity', pass: true, severity: 'OK',
-               reason: null, note: 'No hash record in package-validation-report — skipping' };
+      return { id: 'package_integrity', pass: false, severity: 'CRITICAL',
+               reason: 'package-validation-report is missing a package hash binding' };
     }
 
-    // Tenta zipPath do relatório, depois dist/release/, depois dist/ direto
+    // Tenta zipPath do relatório, depois dist/release/, depois dist/ direto.
+    // O modelo two-pass embrulha o ZIP final como <release>.payload.zip.
+    const payloadZipName = zipName.replace(/\.zip$/, '.payload.zip');
     const reportedZipPath = pkgReport?.zipPath && fs.existsSync(pkgReport.zipPath) ? pkgReport.zipPath : null;
     const zipPath = reportedZipPath
       || (fs.existsSync(path.join(ROOT, 'dist', 'release', zipName)) ? path.join(ROOT, 'dist', 'release', zipName) : null)
+      || (fs.existsSync(path.join(ROOT, 'dist', 'release', payloadZipName)) ? path.join(ROOT, 'dist', 'release', payloadZipName) : null)
       || path.join(ROOT, 'dist', zipName);
     if (!fs.existsSync(zipPath)) {
       return { id: 'package_integrity', pass: false, severity: 'HIGH',
@@ -279,8 +299,14 @@ function checkPackageIntegrity() {
 }
 
 function checkCriticalBlockers() {
-  const crossReport = readJsonSafe('governance/cross-report-validation.json') || {};
-  const proofReport = readJsonSafe('governance/final-proof-report.json')       || {};
+  const crossReport = readJsonSafe('governance/cross-report-validation.json');
+  const proofReport = readJsonSafe('governance/final-proof-report.json');
+  if (!crossReport || !proofReport) {
+    return {
+      id: 'critical_blockers', pass: false, severity: 'CRITICAL',
+      reason: `mandatory blocker sources missing: crossReport=${!!crossReport} proofReport=${!!proofReport}`,
+    };
+  }
 
   const blockers  = crossReport.blockers || [];
   const critical  = blockers.filter((b) => b.severity === 'CRITICAL' || b.severity === 'critical');
@@ -295,6 +321,40 @@ function checkCriticalBlockers() {
     blockerCount:   gapCount,
     reason:         pass ? null : `${critical.length} blocker(s) crítico(s) não resolvido(s)`,
   };
+}
+
+function checkRunContext() {
+  try {
+    const runContext = assertSourceFreeze({ rootDir: ROOT, stage: 'final-governance' });
+    return authorityGate('run_context', true, runContext, null, { runContext });
+  } catch (error) {
+    let runContext = null;
+    try { runContext = readRunContext(ROOT); } catch (_) {}
+    return authorityGate(
+      'run_context',
+      false,
+      runContext,
+      `${error.code || 'INVALID_RUN_CONTEXT'}: ${error.message}`,
+      { runContext },
+    );
+  }
+}
+
+function buildCertificationAuthorityChecks({
+  runContext,
+  scorecard,
+  selfProof,
+  tamper,
+  proof,
+  readiness,
+} = {}) {
+  return [
+    evaluateMasterScorecard(scorecard, runContext),
+    evaluateSelfProof(selfProof, runContext),
+    evaluateTamperDetection(tamper, runContext),
+    evaluateFinalProof(proof, runContext),
+    evaluateFinalReadiness(readiness, runContext),
+  ];
 }
 
 function checkGovernanceSignature() {
@@ -334,7 +394,10 @@ function computeFinalDecision(checks, { proofDecision: proofDecOverride } = {}) 
   const warnFailed     = checks.filter((c) => !c.pass && c.severity === 'WARN');
 
   // Leitura do proof report para nível de readiness (override permite teste puro)
-  const proofDec = proofDecOverride ?? (readJsonSafe('governance/final-proof-report.json') || {}).finalDecision ?? 'NO_GO:UNKNOWN';
+  const hasOverride = Object.prototype.hasOwnProperty.call(arguments[1] || {}, 'proofDecision');
+  const proofDec = hasOverride
+    ? proofDecOverride
+    : (readJsonSafe('governance/final-proof-report.json') || {}).finalDecision;
 
   if (criticalFailed.length > 0) {
     const reasons = criticalFailed.map((c) => c.reason || c.id).join(' | ');
@@ -346,12 +409,27 @@ function computeFinalDecision(checks, { proofDecision: proofDecOverride } = {}) 
     return `NO_GO:STRICT_ENTERPRISE [${reasons}]`;
   }
 
-  // Sem blockers críticos: respeitar o proof engine
+  // Sem blockers críticos: o proof ainda precisa ser explicitamente GO.
+  if (proofDec !== 'AUTONOMOUS_READY_GO') {
+    return `NO_GO:PROOF_NOT_PASS [proof=${proofDec || 'MISSING'}]`;
+  }
   return proofDec;
 }
 
 function runGovernanceEngine() {
+  const runCheck = checkRunContext();
+  const runContext = runCheck.runContext || readRunContext(ROOT);
+  const authorityChecks = buildCertificationAuthorityChecks({
+    runContext,
+    scorecard:  readJsonSafe('governance/rap-master-scorecard.json'),
+    selfProof:  readJsonSafe('governance/self-proving-report.json'),
+    tamper:     readJsonSafe('governance/tamper-detection-report.json'),
+    proof:      readJsonSafe('governance/final-proof-report.json'),
+    readiness:  readJsonSafe('governance/final-readiness-report.json'),
+  });
   const checks = [
+    runCheck,
+    ...authorityChecks,
     checkMeshGoNoGo(),
     checkReleaseGate(),
     checkReplayFalsePositives(),
@@ -361,7 +439,8 @@ function runGovernanceEngine() {
     checkGovernanceSignature(),
   ];
 
-  const finalDecision = computeFinalDecision(checks);
+  const proofDecision = readJsonSafe('governance/final-proof-report.json')?.finalDecision;
+  const finalDecision = computeFinalDecision(checks, { proofDecision });
   const allPass       = checks.every((c) => c.pass);
   const criticals     = checks.filter((c) => !c.pass && c.severity === 'CRITICAL');
   const highs         = checks.filter((c) => !c.pass && (c.severity === 'HIGH' || c.severity === 'WARN'));
@@ -369,6 +448,10 @@ function runGovernanceEngine() {
   return {
     generatedAt:     new Date().toISOString(),
     engine:          'final-governance-engine/v1',
+    artifactType:    'final-governance-report',
+    artifactVersion: '2.0.0',
+    runId:           runContext?.runId || null,
+    sourceFingerprint: runContext?.sourceFingerprint || null,
     strictMode:      STRICT_MODE,
     finalDecision,
     autonomousReady: finalDecision === 'AUTONOMOUS_READY_GO',
@@ -393,6 +476,8 @@ module.exports = {
   checkPackageIntegrity,
   checkCriticalBlockers,
   checkGovernanceSignature,
+  checkRunContext,
+  buildCertificationAuthorityChecks,
   VISUAL_CRITICAL_JOURNEYS,
   STRICT_MODE,
 };

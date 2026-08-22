@@ -1,5 +1,8 @@
 {
-  "generatedAt": "2026-08-20T17:41:33.546Z",
+  "generatedAt": "2026-08-21T20:30:14.936Z",
+  "status": "PASS",
+  "artifactType": "tenant-isolation-report",
+  "artifactVersion": "1.0.0",
   "command": "jest tests/tenant api/middleware/__tests__/tenantValidation.test.js tests/unit/exportServiceTenantIsolation.test.js tests/unit/departmentsServiceTenantIsolation.test.js --ci --json",
   "suites": {
     "total": 8,
@@ -11,5 +14,7 @@
   "testsFailed": 0,
   "testsPending": 0,
   "violations": 0,
-  "failingSuites": []
+  "failingSuites": [],
+  "runId": "rap-governed-20260822050505379-04b94543",
+  "sourceFingerprint": "1658f8f6a1c2b9ee37abb3a56d486678e5467d0e695fdb8c9b1403cba2da01c2"
 }

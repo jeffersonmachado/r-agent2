@@ -339,10 +339,15 @@ if (require.main === module) {
     process.exit(report.ok ? 0 : 1);
   } catch (error) {
     const manifest = loadEvidenceManifest();
+    const errorMessage = String(error?.message || error || '');
+    const deferred = errorMessage.includes('artifact_missing');
     const report = {
       generatedAt: new Date().toISOString(),
       ok: false,
-      error: error.message || String(error),
+      error: errorMessage,
+      deferred,
+      phase: deferred ? 'PRE_PACKAGE' : 'POST_PACKAGE',
+      status: deferred ? 'DEFERRED' : 'FAIL',
       missingEntries: [],
       requiredEntries: Array.isArray(manifest?.artifacts)
         ? manifest.artifacts
@@ -352,7 +357,7 @@ if (require.main === module) {
     };
     writeReport(report);
     // eslint-disable-next-line no-console
-    console.error(`[package-validator] error=${report.error}`);
+    console.error(`[package-validator] error=${report.error}${deferred ? ' (DEFERRED: package not created yet)' : ''}`);
     process.exit(1);
   }
 }

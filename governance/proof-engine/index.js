@@ -12,6 +12,15 @@ const { REQUIRED_REPLAY_JOURNEYS } = require('../shared/required-journeys');
 
 const ROOT = path.join(__dirname, '..', '..');
 
+function readCurrentRunId() {
+  try {
+    const run = JSON.parse(fs.readFileSync(path.join(ROOT, 'governance', '.current-run.json'), 'utf8'));
+    return run?.runId || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 // ─── Modelo de maturidade operacional estrito ────────────────────────────────
 // Cada nível requer prova operacional objetiva. Não há saltos.
 const STAGE_ORDER = [
@@ -663,12 +672,26 @@ function buildBlockingGaps(report, intelligenceResult, crossReport) {
   }
 
   if (!report.packageValidation.ok) {
-    gaps.push({
-      id: 'gap-proof-package-validation', severity: 'critical', area: 'package',
-      title: 'ZIP de release nao contem todos os proofs obrigatorios',
-      evidence: { missingEntries: report.packageValidation.missingEntries },
-      suggestedFix: 'Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico.',
-    });
+    if (report.packageValidation.deferred) {
+      // DEFERRED — o pacote ainda não existe. Não é falha, é gate ainda não
+      // avaliável na fase PRE_PACKAGE. Nunca vira blocker; o pós-package é que
+      // decide (se continuar DEFERRED no final → NO_GO).
+      report.deferredGates = report.deferredGates || [];
+      report.deferredGates.push({
+        id: 'package-validation',
+        phase: 'PRE_PACKAGE',
+        status: 'DEFERRED',
+        reason: 'PACKAGE_NOT_CREATED_YET',
+        title: 'Package validation ainda não avaliável (pacote ainda não criado)',
+      });
+    } else {
+      gaps.push({
+        id: 'gap-proof-package-validation', severity: 'critical', area: 'package',
+        title: 'ZIP de release nao contem todos os proofs obrigatorios',
+        evidence: { missingEntries: report.packageValidation.missingEntries },
+        suggestedFix: 'Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico.',
+      });
+    }
   }
 
   // FASE 16 — artefatos presentes mas semanticamente invalidos
@@ -777,10 +800,16 @@ function buildBlockingGaps(report, intelligenceResult, crossReport) {
 }
 
 // ─── J. Decisão final granular ────────────────────────────────────────────────
-function determineFinalDecision(stage, blockingGaps) {
+function determineFinalDecision(stage, blockingGaps, deferredGates = []) {
   if (blockingGaps.length > 0) {
     // Mesmo com blockers, identificamos o estágio máximo alcançado
     return `NO_GO:${STAGE_DECISIONS[stage] || 'UNKNOWN'}`;
+  }
+  // Sem blockers: se há gates DEFERRED (pacote ainda não criado), a decisão é
+  // PASS_WITH_DEFERRED_PACKAGE_GATE (pré-package), não um NO_GO. O pós-package
+  // decide AUTONOMOUS_READY_GO apenas quando todos os gates forem PASS.
+  if (deferredGates.length > 0) {
+    return 'PASS_WITH_DEFERRED_PACKAGE_GATE';
   }
   return STAGE_DECISIONS[stage] || 'NO_GO:UNKNOWN';
 }
@@ -858,6 +887,11 @@ function buildFinalProofReport(context = {}) {
   const evidenceManifest = {
     generatedAt: new Date().toISOString(),
     runtimeRoot: getRuntimeRootSafe(),
+    runId: readCurrentRunId(),
+    sourceFingerprint: null,
+    artifactType: 'evidence-manifest',
+    artifactVersion: '1.0.0',
+    status: 'PASS',
     artifacts: requiredArtifacts.map((a) => {
       const semanticViolations = semanticArtifactViolations(a);
       return {
@@ -887,6 +921,7 @@ function buildFinalProofReport(context = {}) {
     : null;
   const fingerprintStatus = compareFingerprintChains(registeredFingerprints, fingerprintChain);
   evidenceManifest.fingerprints = fingerprintChain;
+  evidenceManifest.sourceFingerprint = fingerprintChain.sourceFingerprint || null;
 
   // Package validation — A. Strict package binding
   let packageValidation;
@@ -896,12 +931,17 @@ function buildFinalProofReport(context = {}) {
       requiredEntries: requiredArtifacts.filter((a) => a.packageRequired).map((a) => a.path),
     });
   } catch (error) {
+    const errorMessage = String(error?.message || error || '');
+    const deferred = errorMessage.includes('artifact_missing');
     packageValidation = {
       generatedAt: new Date().toISOString(),
       ok: false, zipPath: null, zipName: null,
       requiredEntries: requiredArtifacts.filter((a) => a.packageRequired).map((a) => a.path),
       missingEntries: [],
-      error: error.message || String(error),
+      error: errorMessage,
+      deferred,
+      phase: deferred ? 'PRE_PACKAGE' : 'POST_PACKAGE',
+      status: deferred ? 'DEFERRED' : 'FAIL',
     };
   }
 
@@ -971,6 +1011,9 @@ function buildFinalProofReport(context = {}) {
 
   const report = {
     generatedAt: new Date().toISOString(),
+    runId: readCurrentRunId(),
+    artifactType: 'final-proof-report',
+    artifactVersion: '2.0.0',
     // Fingerprints explícitos (FINAL-001)
     ...explicitFingerprints,
     proofCoverage,
@@ -1018,10 +1061,11 @@ function buildFinalProofReport(context = {}) {
     finalDecision: 'PENDING', // placeholder
   };
 
+  report.deferredGates = [];
   report.blockingGaps = buildBlockingGaps(report, intelligenceResult, crossReport);
 
   // J. Decisão final granular
-  report.finalDecision = determineFinalDecision(stage, report.blockingGaps);
+  report.finalDecision = determineFinalDecision(stage, report.blockingGaps, report.deferredGates);
 
   return report;
 }

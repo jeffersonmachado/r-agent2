@@ -89,6 +89,25 @@ const EVENT_TYPES_V1 = new Set([
   'cognitive.execution.failed',
   'cognitive.execution.handed_off',
 
+  // Causal runtime trace — boundaries reais da jornada operacional
+  'channel.message.inbound',
+  'tenant.resolution.completed',
+  'principal.resolution.completed',
+  'cognitive.context.completed',
+  'cognitive.intent.classified',
+  'cognitive.decision.completed',
+  'agent.planning.completed',
+  'handoff.decision.completed',
+  'handoff.requested',
+  'ticket.queue.enqueued',
+  'human.takeover.started',
+  'human.action.completed',
+  'backend.mutation.completed',
+  'business.outcome.validated',
+  'business.outcome.failed',
+  'evidence.generated',
+  'replay.persisted',
+
   // Agent Runtime — roteamento, execução e delegação de agentes especialistas
   'agent.routing.completed',
   'agent.execution.started',
@@ -140,11 +159,18 @@ function normalizeString(v, maxLen = 120) {
  * Build a canonical event. Validation is shallow; storage layer enforces minimal constraints.
  *
  * @param {object} args
+ * @param {string} [args.eventId]
  * @param {string} args.tenantId
  * @param {string} args.type
  * @param {string} [args.source]
  * @param {Date|string} [args.occurredAt]
  * @param {string|null} [args.correlationId]
+ * @param {string|null} [args.parentEventId]
+ * @param {string|null} [args.causationId]
+ * @param {string|null} [args.runId]
+ * @param {string|null} [args.criticalJourneyId]
+ * @param {string|null} [args.executionId]
+ * @param {string|null} [args.principalId]
  * @param {{type?:string,id?:string}|null} [args.subject]
  * @param {{type?:string,id?:string}|null} [args.actor]
  * @param {string|null} [args.idempotencyKey]
@@ -152,11 +178,18 @@ function normalizeString(v, maxLen = 120) {
  * @returns {CanonicalEventV1}
  */
 function buildEventV1({
+  eventId = null,
   tenantId,
   type,
   source = 'api',
   occurredAt = new Date(),
   correlationId = null,
+  parentEventId = null,
+  causationId = null,
+  runId = null,
+  criticalJourneyId = null,
+  executionId = null,
+  principalId = null,
   subject = null,
   actor = null,
   idempotencyKey = null,
@@ -175,12 +208,18 @@ function buildEventV1({
   const occurredIso = Number.isNaN(dt.getTime()) ? new Date().toISOString() : dt.toISOString();
 
   return {
-    id: makeId('evt'),
+    id: normalizeString(eventId, 160) || makeId('evt'),
     tenant_key: String(tenantId),
     type: t,
     source: String(source || 'api'),
     occurred_at: occurredIso,
     correlation_id: normalizeString(correlationId, 120),
+    parent_event_id: normalizeString(parentEventId, 160),
+    causation_id: normalizeString(causationId, 160),
+    run_id: normalizeString(runId, 160),
+    critical_journey_id: normalizeString(criticalJourneyId, 160),
+    execution_id: normalizeString(executionId, 160),
+    principal_id: normalizeString(principalId, 160),
     subject: {
       type: normalizeString(subject && subject.type, 40),
       id: normalizeString(subject && subject.id, 128),

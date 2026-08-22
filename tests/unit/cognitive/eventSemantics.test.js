@@ -205,4 +205,104 @@ describe('Event Semantics — taxonomia eventModelV1', () => {
     expect(() => buildEventV1({ tenantId: 't1', type: 'agent.execution.inventado' }))
       .toThrow('unsupported_event_type');
   });
+
+  test('evento causal preserva identidade de run, execução, pai e causa', () => {
+    const event = buildEventV1({
+      eventId: 'evt-inbound-1',
+      tenantId: 't1',
+      type: 'channel.message.inbound',
+      source: 'whatsapp-webhook',
+      correlationId: 'wamid.real-1',
+      parentEventId: null,
+      causationId: 'wamid.real-1',
+      runId: 'rap-release-20260821-120000-abcd1234',
+      criticalJourneyId: 'support_ticket_flow',
+      executionId: 'exec-real-1',
+      principalId: 'channel:whatsapp',
+    });
+
+    expect(event).toEqual(expect.objectContaining({
+      id: 'evt-inbound-1',
+      correlation_id: 'wamid.real-1',
+      parent_event_id: null,
+      causation_id: 'wamid.real-1',
+      run_id: 'rap-release-20260821-120000-abcd1234',
+      critical_journey_id: 'support_ticket_flow',
+      execution_id: 'exec-real-1',
+      principal_id: 'channel:whatsapp',
+    }));
+  });
+});
+
+describe('Event Semantics — causalidade emitida pelo Cognitive Core', () => {
+  test('contexto, intenção, plano, execução e outcome formam uma cadeia do mesmo run', async () => {
+    const events = [];
+    const learningRecords = [];
+    let sequence = 0;
+    const orchestrator = createCognitiveOrchestrator({
+      toolRegistry: buildScheduleRegistry(),
+      contextEngine: buildStubContextEngine(),
+      intentEngine: {
+        classify: jest.fn(async () => ({
+          intent: 'agendar', confidence: 0.99, entities: {}, source: 'llm', rationale: 'explicit',
+        })),
+      },
+      agentSupervisor: null,
+      learningEngine: {
+        record: jest.fn(async (record) => { learningRecords.push(record); return { recorded: true }; }),
+      },
+      eventIdFactory: () => `evt-runtime-${++sequence}`,
+      eventEmitter: async (event) => {
+        events.push(event);
+        return { id: event.eventId };
+      },
+    });
+
+    const result = await orchestrator.process({
+      tenantId: 't1',
+      channel: 'whatsapp',
+      message: 'Quero agendar',
+      correlationId: 'wamid.real-2',
+      traceContext: {
+        runId: 'rap-release-20260821-120000-abcd1234',
+        criticalJourneyId: 'support_ticket_flow',
+        parentEventId: 'evt-channel-inbound',
+        causationId: 'evt-channel-inbound',
+      },
+    });
+
+    expect(result.executionId).toBeTruthy();
+    const causal = events.filter((event) => [
+      'cognitive.context.completed',
+      'cognitive.intent.classified',
+      'cognitive.decision.completed',
+      'agent.planning.completed',
+      'agent.execution.started',
+      'agent.execution.completed',
+      'business.outcome.validated',
+    ].includes(event.type));
+    expect(causal.map((event) => event.type)).toEqual([
+      'cognitive.context.completed',
+      'cognitive.intent.classified',
+      'cognitive.decision.completed',
+      'agent.planning.completed',
+      'agent.execution.started',
+      'agent.execution.completed',
+      'business.outcome.validated',
+    ]);
+
+    let parent = 'evt-channel-inbound';
+    for (const event of causal) {
+      expect(event).toEqual(expect.objectContaining({
+        eventId: expect.any(String),
+        parentEventId: parent,
+        causationId: 'evt-channel-inbound',
+        correlationId: 'wamid.real-2',
+        runId: 'rap-release-20260821-120000-abcd1234',
+        criticalJourneyId: 'support_ticket_flow',
+        executionId: result.executionId,
+      }));
+      parent = event.eventId;
+    }
+  });
 });

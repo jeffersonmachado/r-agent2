@@ -1,5 +1,7 @@
 # AGENTS.md — RAP / r-agent2 (Results Autonomous Platform)
 
+Antes de qualquer alteração, leia e aplique a Constituição canônica em `governance/RAP_AGENT_CONSTITUTION.md`. Este arquivo é apenas um adaptador operacional; a política completa não deve ser duplicada aqui.
+
 Este repositório é AI-native. Todo agente deve usar `AI_MEMORY/` como primeira camada de memória operacional e preservar a governança existente.
 
 ## Visão geral do projeto

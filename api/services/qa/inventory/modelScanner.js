@@ -33,7 +33,7 @@ const SUPPORT_TOKENS = new Set(['audit', 'log', 'ledger', 'diagnostic']);
 const TENANT_FIELD_NAMES = new Set(['tenant_id', 'tenantId', 'tenant_key', 'tenantKey']);
 
 /** Arquivos utilitários do diretório de models que não declaram models. */
-const NON_MODEL_FILES = new Set(['index.js', 'helpers.js']);
+const NON_MODEL_FILES = new Set(['index.js', 'helpers.js', 'governanceModelFactory.js']);
 
 function classifyModel(modelName, tableName) {
   const tokens = `${modelName || ''} ${tableName || ''}`
@@ -179,8 +179,8 @@ function parseModelFile(filePath) {
   const fallbackName = path.basename(filePath, '.js');
   // Dois padrões de fábrica no diretório: sequelize.define('Nome', ...) direto
   // (inclui variações como getSequelize().define) e createModelFactory('Nome', ...)
-  // de api/db/models/helpers.js.
-  const defineMatch = /(?:\.define|\bcreateModelFactory)\s*\(\s*'([^']+)'/.exec(source);
+  // de api/db/models/helpers.js e governanceModelFactory.js.
+  const defineMatch = /(?:\.define|\bcreateModelFactory|\bgetGovernanceModel)\s*\(\s*'([^']+)'/.exec(source);
   if (!defineMatch) {
     return { modelName: fallbackName, parseError: true };
   }

@@ -1,5 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const dbStateStore = require('../../../qa/state/dbStateStore');
+
+const BUG_MEMORY_KEY = 'core/rpa/reports/bugs/bug-memory.json';
 
 class BugMemoryStore {
   constructor(options = {}) {
@@ -26,7 +29,9 @@ class BugMemoryStore {
   }
 
   writeStore(store) {
+    // RAP-078: DB canônico + JSON como export derivado.
     fs.writeFileSync(this.storagePath, JSON.stringify(store, null, 2), 'utf8');
+    dbStateStore.saveSyncExport(BUG_MEMORY_KEY, store);
   }
 
   registerBug(input = {}) {

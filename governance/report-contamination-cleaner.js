@@ -27,6 +27,7 @@ const ROOT        = path.join(__dirname, '..');
 const REPORT_PATH = path.join(ROOT, 'governance', 'report-contamination-report.json');
 
 const { getCurrentRunId } = require('./shared/run-id');
+const { computeSourceFingerprint } = require('./proof-engine/fingerprint-chain');
 
 // Termos que indicam GO — usados SOMENTE para cross-contamination quando governance=NO_GO
 const GO_TERMS = [
@@ -218,6 +219,9 @@ function runContaminationCleaner() {
   const report = {
     generatedAt:          new Date().toISOString(),
     runId:                currentRunId || null,
+    sourceFingerprint:    computeSourceFingerprint(ROOT),
+    artifactType:         'report-contamination-report',
+    artifactVersion:      '1.0.0',
     engine:               'report-contamination-cleaner/v3',
     pass,
     decision:             pass ? 'NO_CONTAMINATION' : 'GOVERNANCE_CONTAMINATION_NO_GO',

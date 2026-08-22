@@ -6,6 +6,8 @@ const { execSync } = require('child_process');
 const cron = require('./nodeCronCompat');
 const { loadRegistry, runMesh } = require('./meshRunner');
 
+const dbStateStore = require('../qa/state/dbStateStore');
+const SCHEDULER_STATE_KEY = 'qa-mesh/scheduler-state.json';
 const SCHEDULER_STATE_PATH = path.join(__dirname, 'scheduler-state.json');
 const PIPELINE_ACTIVE_LOCK_PATH = path.join(__dirname, '..', 'pipeline', '.active-validation.lock');
 const MESH_RUNNING_LOCK_PATH = path.join(__dirname, 'mesh-running.lock');
@@ -96,7 +98,8 @@ function safeReadState() {
 }
 
 function writeState(nextState) {
-  fs.writeFileSync(SCHEDULER_STATE_PATH, `${JSON.stringify(nextState, null, 2)}\n`, 'utf8');
+  // DB canônico (RAP-078): grava no banco e mantém o JSON como export derivado.
+  dbStateStore.saveSyncExport(SCHEDULER_STATE_KEY, nextState);
   return nextState;
 }
 

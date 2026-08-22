@@ -1,0 +1,3 @@
+'use strict';
+const { getGovernanceModel, uuid, DataTypes } = require('./governanceModelFactory');
+module.exports = () => getGovernanceModel('AgentPolicyVersion', { id: uuid, policy_id: { type: DataTypes.UUID, allowNull: false }, version: { type: DataTypes.STRING, allowNull: false }, content_fingerprint: { type: DataTypes.STRING(64), allowNull: false }, effective_from: { type: DataTypes.DATE, allowNull: false }, deprecated_at: DataTypes.DATE, source_artifact_id: DataTypes.UUID }, { tableName: 'agent_policy_versions', indexes: [{ fields: ['policy_id', 'version'], unique: true, name: 'agent_policy_versions_policy_version_idx' }] });

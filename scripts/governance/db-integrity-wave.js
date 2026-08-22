@@ -362,6 +362,9 @@ async function main() {
 
   const report = {
     generatedAt: new Date().toISOString(),
+    status: result.totals.failed === 0 ? 'PASS' : 'FAIL',
+    artifactType: 'db-integrity-report',
+    artifactVersion: '1.0.0',
     commit,
     dbAvailable,
     ...(dbUnavailableReason ? { dbUnavailableReason } : {}),

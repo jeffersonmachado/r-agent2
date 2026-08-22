@@ -126,7 +126,8 @@ FORBIDDEN_PATTERNS=(
   '(^|/)qa-mesh/(meshReport|metrics|repairPlan|scheduler-state)\.json$'
   '(^|/)qa-mesh/system-validate/'
   '(^|/)qa/deploy-report\.json$'
-  '(^|/)reports/'
+  # reports/ da raiz é gerado; scripts/reports/ é código-fonte do produto.
+  '^([^/]+/)?reports/'
   '(^|/)rag-service/\.coverage$'
   '(^|/)rag-service/data/vector_store/'
   '(^|/)rag-service/data/adaptive_learning/'

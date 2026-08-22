@@ -130,6 +130,8 @@ function checkSourceFingerprint(manifest) {
   const fromManifest = manifest?.sourceFingerprint;
 
   const mismatch = [];
+  if (!fromProof) mismatch.push('proof_missing');
+  if (!fromManifest) mismatch.push('manifest_missing');
   if (fromProof    && recalculated !== fromProof)    mismatch.push('proof');
   if (fromManifest && recalculated !== fromManifest) mismatch.push('manifest');
 
@@ -169,7 +171,7 @@ function checkFingerprintChain() {
   const registered = manifest?.fingerprints || null;
   const status   = compareFingerprintChains(registered, chain);
 
-  if (status.status === 'STALE') {
+  if (status.status !== 'FRESH') {
     return fail(gate,
       `STALE_PROOF — fingerprints divergem: ${status.diverged.join(', ')}`,
       { diverged: status.diverged }
@@ -212,7 +214,7 @@ function checkArtifactRunConsistency() {
   const currentRunId = currentRun?.runId;
 
   if (!currentRunId) {
-    return pass(gate, { note: 'runId não configurado; consistência de artifacts pulada' });
+    return fail(gate, 'INVALID_ARTIFACT — runId ausente no run atual.');
   }
 
   const governanceFiles = fs.existsSync(path.join(ROOT, 'governance'))
@@ -226,6 +228,12 @@ function checkArtifactRunConsistency() {
     const data = readJson(relPath);
     if (!data || typeof data !== 'object') continue;
     const artRunId = data.runId || data.run_id;
+    // Um artefato é "de run diferente" (foreign) somente quando DECLARA um
+    // runId que diverge do run atual. Arquivos estáticos de governança
+    // (policies, RACI, playbooks, registries) não são artefatos de run e
+    // legitimamente não carregam runId — não são contaminação de outro run.
+    // A completude de lineage dos artefatos de run é verificada separadamente
+    // pelo engine de certificação (INVALID_ARTIFACT) e pelo stamp-lineage.
     if (artRunId && artRunId !== currentRunId) {
       foreign.push({ file: relPath, runId: artRunId });
     }
@@ -302,11 +310,36 @@ function checkCoverage() {
   const coverage = proof.proofCoverage || proof.coverage || {};
   const pct = coverage.percent ?? null;
 
+  if (pct === null || !Number.isFinite(Number(pct))) {
+    return fail(gate, 'COVERAGE_INSUFFICIENT_EVIDENCE - coverage percent ausente ou invalido');
+  }
+
   if (pct !== null && pct < 70) {
     return fail(gate, `Coverage insuficiente: ${pct}% (mínimo 70%)`);
   }
 
   return pass(gate, { coveragePercent: pct });
+}
+
+function checkMasterScorecard() {
+  const gate = makeGate('master_scorecard');
+  const scorecard = readJson('governance/rap-master-scorecard.json');
+  if (!scorecard) return fail(gate, 'MASTER_SCORECARD_MISSING');
+  const dimensions = Array.isArray(scorecard.dimensions) ? scorecard.dimensions : [];
+  const below10 = dimensions.filter((dimension) => (dimension.score ?? dimension.currentScore) !== 10);
+  if (below10.length > 0) return fail(gate, `MASTER_SCORECARD_NOT_10_OF_10 - below10=${below10.length}`);
+  return pass(gate, { dimensions: dimensions.length });
+}
+
+function checkSelfProofAndTamper() {
+  return [
+    ['self_proof', 'governance/self-proving-report.json', (report) => report.pass === true && report.selfProofStatus === 'PASS'],
+    ['tamper_detection', 'governance/tamper-detection-report.json', (report) => report.pass === true && report.decision === 'GO' && report.failedChecks === 0],
+  ].map(([id, file, predicate]) => {
+    const gate = makeGate(id);
+    const report = readJson(file);
+    return predicate(report || {}) ? pass(gate) : fail(gate, `${id.toUpperCase()}_NOT_PASS`);
+  });
 }
 
 // ─── 10. Mandatory gates from governance ─────────────────────────────────────
@@ -345,8 +378,8 @@ function checkReplayHardening() {
   const report = readJson('governance/replay-hardening-report.json');
   if (!report) return fail(gate, 'replay-hardening-report.json ausente');
 
-  if (report.decision === 'REPLAY_HARDENING_NO_GO') {
-    return fail(gate, `REPLAY_HARDENING_NO_GO — violations=${report.violations}`);
+  if (report.decision !== 'REPLAY_HARDENING_GO') {
+    return fail(gate, `REPLAY_HARDENING_NOT_PASS — decision=${report.decision || 'UNKNOWN'}`);
   }
 
   return pass(gate, { hardeningDecision: report.decision });
@@ -373,6 +406,8 @@ function verify() {
     checkGovernanceMandatoryGates(),
     checkFinalConsistency(),
     checkReplayHardening(),
+    checkMasterScorecard(),
+    ...checkSelfProofAndTamper(),
   ];
 
   const failed    = gates.filter((g) => g.status === 'FAIL');

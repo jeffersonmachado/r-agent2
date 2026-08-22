@@ -162,9 +162,23 @@ class InMemoryProcessInstanceStore {
     return normalizeProcessInstance(normalized);
   }
 
-  async loadInstance(executionId) {
+  /**
+   * Carrega instância por executionId com verificação de tenant.
+   * Se tenantId for fornecido, rejeita cross-tenant access explicitamente.
+   * Nota: InMemoryProcessInstanceStore é fallback para quando DB está indisponível;
+   * isolation por tenantId é enforçada aqui para manter paridade com SequelizeStore.
+   */
+  async loadInstance(executionId, { tenantId } = {}) {
     const found = this._instances.get(safeToString(executionId || '', ''));
-    return found ? normalizeProcessInstance(found) : null;
+    if (!found) return null;
+    if (tenantId && found.tenantId && found.tenantId !== tenantId) {
+      const err = new Error('process_instance_tenant_mismatch');
+      err.code = 'PROCESS_INSTANCE_TENANT_MISMATCH';
+      err.executionId = executionId;
+      err.requestedTenantId = tenantId;
+      throw err;
+    }
+    return normalizeProcessInstance(found);
   }
 
   async saveInstance(instance) {

@@ -21,6 +21,16 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { assertSourceFreeze, readRunContext } = require('./shared/run-context');
+const {
+  gate: authorityGate,
+  evaluateMasterScorecard,
+  evaluateSelfProof,
+  evaluateTamperDetection,
+  evaluateFinalProof,
+  evaluateFinalReadiness,
+  evaluateFinalGovernance,
+} = require('./shared/certification-authority');
 
 const ROOT        = path.join(__dirname, '..');
 const REPORT_PATH = path.join(ROOT, 'governance', 'final-consistency-gate-report.json');
@@ -34,11 +44,17 @@ function readJsonSafe(relPath) {
 function isGo(decision) {
   if (!decision) return null; // indeterminado
   const d = String(decision);
-  if (d === 'AUTONOMOUS_READY_GO' || d === 'GO') return true;
+  const goDecisions = new Set([
+    'AUTONOMOUS_READY_GO',
+    'GO',
+    'FINAL_CONSISTENCY_GO',
+    'REPLAY_HARDENING_GO',
+    'REPLAY_CONSISTENCY_GO',
+    'CONSISTENCY_GO',
+    'PACKAGE_INTEGRITY_GO',
+  ]);
+  if (goDecisions.has(d)) return true;
   if (d.startsWith('NO_GO')) return false;
-  // Decisões de sub-engines
-  if (d.includes('_GO') && !d.includes('NO_GO')) return true;
-  if (d.includes('NO_GO')) return false;
   return null;
 }
 
@@ -59,27 +75,24 @@ function checkReplayConsistency() {
   const hGo = isGo(hardening.decision);
   const cGo = isGo(consistency.decision);
 
-  // SE hardening diz NO_GO, consistency DEVE também dizer NO_GO
-  if (hGo === false && cGo === true) {
+  if (hGo !== true || cGo !== true) {
     return {
       check:      'replay_consistency',
       pass:       false,
       severity:   'CRITICAL',
       hardeningDecision:   hardening.decision,
       consistencyDecision: consistency.decision,
-      reason:     `CONTRADIÇÃO: replay-hardening=${hardening.decision} mas replay-consistency=${consistency.decision}`,
+      reason:     `Replay obrigatório não está GO: hardening=${hardening.decision || 'UNKNOWN'} consistency=${consistency.decision || 'UNKNOWN'}`,
     };
   }
 
-  // SE consistency diz NO_GO, hardening também deve dizer NO_GO (ou vice-versa é warning)
-  const pass = !(hGo === false && cGo === true) && !(hGo === true && cGo === false);
   return {
     check:      'replay_consistency',
-    pass,
-    severity:   pass ? 'OK' : 'HIGH',
+    pass:       true,
+    severity:   'OK',
     hardeningDecision:   hardening.decision,
     consistencyDecision: consistency.decision,
-    reason:     pass ? null : `Divergência entre engines de replay`,
+    reason:     null,
   };
 }
 
@@ -87,17 +100,10 @@ function checkReplayConsistency() {
 function checkReadinessConsistency() {
   const driftReport = readJsonSafe('governance/readiness-drift-report.json');
 
-  if (!driftReport) {
-    // Sem relatório de drift: calcular inline
-    const readiness = readJsonSafe('governance/final-readiness-report.json');
-    const readinessGo = isGo(readiness?.finalDecision || readiness?.status);
-    return {
-      check:    'readiness_consistency',
-      pass:     readinessGo !== null,
-      severity: readinessGo === null ? 'HIGH' : 'OK',
-      reason:   readinessGo === null ? 'final-readiness-report e readiness-drift-report ausentes' : null,
-    };
-  }
+  if (!driftReport) return {
+    check: 'readiness_consistency', pass: false, severity: 'CRITICAL',
+    reason: 'readiness-drift-report ausente',
+  };
 
   const pass = driftReport.pass === true;
   return {
@@ -115,15 +121,15 @@ function checkPackageConsistency() {
   const integrityReport  = readJsonSafe('governance/package-integrity-report.json');
   const validationReport = readJsonSafe('governance/package-validation-report.json');
 
-  if (!integrityReport) {
+  if (!integrityReport || !validationReport) {
     return {
       check: 'package_consistency', pass: false, severity: 'CRITICAL',
-      reason: 'package-integrity-report ausente',
+      reason: `Relatório de pacote ausente: integrity=${!!integrityReport} validation=${!!validationReport}`,
     };
   }
 
   const integrityGo  = isGo(integrityReport.decision);
-  const validationOk = validationReport ? validationReport.ok === true : null;
+  const validationOk = validationReport.ok === true;
 
   // Integrity falhou
   if (integrityGo === false) {
@@ -137,13 +143,12 @@ function checkPackageConsistency() {
     };
   }
 
-  // Integrity passou mas validation report diz falha
-  if (integrityGo === true && validationOk === false) {
+  if (integrityGo !== true || validationOk !== true) {
     return {
       check:    'package_consistency',
       pass:     false,
       severity: 'HIGH',
-      reason:   `Contradição: package-integrity=GO mas package-validation ok=false`,
+      reason:   `Package obrigatório não está PASS: integrity=${integrityReport.decision || 'UNKNOWN'} validation=${validationReport.ok}`,
     };
   }
 
@@ -155,25 +160,24 @@ function checkGovernanceConsistency() {
   const govReport   = readJsonSafe('governance/final-governance-report.json');
   const consistReport = readJsonSafe('governance/governance-consistency-report.json');
 
-  if (!govReport) {
+  if (!govReport || !consistReport) {
     return {
       check: 'governance_engine_consistency', pass: false, severity: 'CRITICAL',
-      reason: 'final-governance-report ausente',
+      reason: `Relatório de governança ausente: final=${!!govReport} consistency=${!!consistReport}`,
     };
   }
 
   const govGo    = isGo(govReport.finalDecision);
   const consistGo = consistReport ? isGo(consistReport.decision) : null;
 
-  // Governance diz GO mas consistency diz NO_GO
-  if (govGo === true && consistGo === false) {
+  if (govGo !== true || consistGo !== true) {
     return {
       check:      'governance_engine_consistency',
       pass:       false,
       severity:   'CRITICAL',
       govDecision:     govReport.finalDecision,
       consistDecision: consistReport.decision,
-      reason:     `CONTRADIÇÃO: final-governance=${govReport.finalDecision} mas consistency=${consistReport.decision}`,
+      reason:     `Governança obrigatória não está GO: final=${govReport.finalDecision || 'UNKNOWN'} consistency=${consistReport.decision || 'UNKNOWN'}`,
     };
   }
 
@@ -197,7 +201,7 @@ function checkContaminationConsistency() {
     };
   }
 
-  const pass = contamReport.pass === true;
+  const pass = contamReport.pass === true && contamReport.decision === 'NO_CONTAMINATION';
   return {
     check:          'contamination_consistency',
     pass,
@@ -206,6 +210,36 @@ function checkContaminationConsistency() {
     totalContaminations: contamReport.totalContaminations,
     reason:         pass ? null : `${contamReport.totalContaminations} contaminação(ões) em ${contamReport.contaminatedFiles} arquivo(s): ${contamReport.decision}`,
   };
+}
+
+function checkRunContext() {
+  try {
+    const runContext = assertSourceFreeze({ rootDir: ROOT, stage: 'final-consistency' });
+    return authorityGate('run_context', true, runContext, null, { runContext });
+  } catch (error) {
+    let runContext = null;
+    try { runContext = readRunContext(ROOT); } catch (_) {}
+    return authorityGate('run_context', false, runContext, `${error.code || 'INVALID_RUN_CONTEXT'}: ${error.message}`, { runContext });
+  }
+}
+
+function buildFinalConsistencyAuthorityChecks({
+  runContext,
+  scorecard,
+  selfProof,
+  tamper,
+  proof,
+  readiness,
+  finalGovernance,
+} = {}) {
+  return [
+    evaluateMasterScorecard(scorecard, runContext),
+    evaluateSelfProof(selfProof, runContext),
+    evaluateTamperDetection(tamper, runContext),
+    evaluateFinalProof(proof, runContext),
+    evaluateFinalReadiness(readiness, runContext),
+    evaluateFinalGovernance(finalGovernance, runContext),
+  ];
 }
 
 // ─── Check 6: Cross-engine decision alignment ────────────────────────────────
@@ -307,7 +341,23 @@ function checkCrossEngineAlignment() {
 
 // ─── Motor principal ──────────────────────────────────────────────────────────
 function runFinalConsistencyGate() {
+  const runCheck = checkRunContext();
+  let runContext = runCheck.runContext || null;
+  if (!runContext) {
+    try { runContext = readRunContext(ROOT); } catch (_) {}
+  }
+  const authorityChecks = buildFinalConsistencyAuthorityChecks({
+    runContext,
+    scorecard:       readJsonSafe('governance/rap-master-scorecard.json'),
+    selfProof:       readJsonSafe('governance/self-proving-report.json'),
+    tamper:          readJsonSafe('governance/tamper-detection-report.json'),
+    proof:           readJsonSafe('governance/final-proof-report.json'),
+    readiness:       readJsonSafe('governance/final-readiness-report.json'),
+    finalGovernance: readJsonSafe('governance/final-governance-report.json'),
+  });
   const checks = [
+    runCheck,
+    ...authorityChecks,
     checkReplayConsistency(),
     checkReadinessConsistency(),
     checkPackageConsistency(),
@@ -324,6 +374,10 @@ function runFinalConsistencyGate() {
   const report = {
     generatedAt:      new Date().toISOString(),
     engine:           'final-consistency-gate/v1',
+    artifactType:     'final-consistency-report',
+    artifactVersion:  '2.0.0',
+    runId:            runContext?.runId || null,
+    sourceFingerprint: runContext?.sourceFingerprint || null,
     pass,
     decision:         pass ? 'FINAL_CONSISTENCY_GO' : 'FINAL_CONSISTENCY_NO_GO',
     totalChecks:      checks.length,
@@ -342,7 +396,12 @@ function runFinalConsistencyGate() {
   return report;
 }
 
-module.exports = { runFinalConsistencyGate };
+module.exports = {
+  runFinalConsistencyGate,
+  buildFinalConsistencyAuthorityChecks,
+  checkRunContext,
+  isGo,
+};
 
 if (require.main === module) {
   const report = runFinalConsistencyGate();

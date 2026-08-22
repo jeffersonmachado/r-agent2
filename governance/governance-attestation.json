@@ -1,9 +1,262 @@
 {
-  "architecture": "payload-centric",
-  "governedArtifact": "r-agent2-20260612-054019.payload.zip",
-  "governedHash": "ea1d71bedff7582dcc71ac2a5fc85d14f725b2bf67b5075c7a599e4403dd5bd9",
-  "finalDecision": "PENDING_VERIFICATION",
+  "generatedAt": "2026-08-22T05:08:47.706Z",
+  "schemaVersion": "2.0.0",
+  "governanceLevel": "LEVEL_4_IMMUTABLE",
+  "packageIdentity": {
+    "name": "r-agent2-20260822-020607.zip",
+    "sha256": "5c727672488462d58d5f71e030179006865152c29779985622a9e7321bb68052",
+    "sha256Source": "sidecar-manifest",
+    "chainRoot": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+    "gitCommit": "b8d10edb",
+    "note": "sha256 read from sidecar manifest — circular dependency resolved"
+  },
+  "commitProvenance": {
+    "gitCommit": "b8d10edb",
+    "gitBranch": "main",
+    "generatedBy": "scripts/release-package.sh",
+    "generatedAt": "2026-08-22T05:08:46Z"
+  },
+  "chainAttestation": {
+    "chainRoot": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+    "chainLength": 10,
+    "chainComplete": true,
+    "chainValid": true,
+    "missingLayers": []
+  },
+  "selfContainment": {
+    "distArtifactsIncluded": true,
+    "signaturesInZip": true,
+    "attestationInZip": true,
+    "offlineVerifiable": true,
+    "note": "All proof artifacts are in dist/governance-artifacts/ inside the ZIP"
+  },
+  "operationalCoverage": {
+    "replayCoverage": {
+      "required": 7,
+      "found": 7,
+      "matched": [
+        "booking_flow",
+        "clinic_calendar_block_flow",
+        "fitness_customer_checkin",
+        "food_order_status_flow",
+        "market_node_publish_flow",
+        "payment_charge_flow",
+        "support_ticket_flow"
+      ],
+      "missing": [],
+      "extra": [
+        "agendamento"
+      ],
+      "percent": 100
+    },
+    "prodLikeCoverage": {
+      "required": 6,
+      "found": 6,
+      "percent": 100
+    },
+    "proofCoverage": {
+      "total": 20,
+      "valid": 20,
+      "percent": 100
+    },
+    "proofQualityScore": {
+      "score": 100,
+      "raw": 120,
+      "max": 120,
+      "grade": "A",
+      "breakdown": [
+        {
+          "label": "foundation_artifacts",
+          "earned": 20,
+          "max": 20
+        },
+        {
+          "label": "replay_coverage_100pct",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "vertical_assertions_valid",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "pbx_fully_real",
+          "earned": 15,
+          "max": 15
+        },
+        {
+          "label": "pbx_partial_real",
+          "earned": 0,
+          "max": 0
+        },
+        {
+          "label": "handoff_validated",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "handoff_fully_normalized",
+          "earned": 5,
+          "max": 5
+        },
+        {
+          "label": "omnichannel_validated",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "digital_twin_validated",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "governance_validated",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "intelligence_stable",
+          "earned": 10,
+          "max": 10
+        },
+        {
+          "label": "pbx_enterprise_real",
+          "earned": 5,
+          "max": 5
+        },
+        {
+          "label": "handoff_screenshots",
+          "earned": 3,
+          "max": 3
+        },
+        {
+          "label": "runtime_cleanup",
+          "earned": 2,
+          "max": 2
+        }
+      ]
+    },
+    "verticalCoverage": {
+      "status": "VALIDATED",
+      "validated": 6,
+      "required": 6,
+      "percent": 100,
+      "invalidClaims": []
+    }
+  },
+  "domainMaturity": {
+    "PBX": {
+      "maturityLevel": "enterprise-real",
+      "isFullyReal": true,
+      "status": "VALIDATED"
+    },
+    "omnichannel": {
+      "status": "VALIDATED",
+      "sourceCount": 4
+    },
+    "humanHandoff": {
+      "status": "VALIDATED",
+      "normalizationGaps": 0
+    },
+    "intelligence": {
+      "status": "STABLE",
+      "unstableDomains": 0,
+      "blocksAutonomous": false
+    }
+  },
+  "governanceIntegrity": {
+    "overallConsistencyScore": 100,
+    "blockerCount": 0,
+    "allChecksPass": true,
+    "replaySignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
+    "replaySignatureValid": true
+  },
+  "signatures": {
+    "governance": {
+      "signatureVersion": 2,
+      "algorithm": "hmac-sha256",
+      "keyDerivation": "hmac-sha256(replay-signing-key,rap-governance-v2:gitCommit)",
+      "keyId": "fea81834859c0c61",
+      "subject": "governance-chain",
+      "sha256": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+      "chainRoot": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+      "gitCommit": "b8d10edb",
+      "timestamp": "2026-08-22T05:08:47.706Z",
+      "seal": "a6fa1b62ae30402c09fc85facf6d3dc73f9e9e734d7b574d4087d6a2a29e8797",
+      "governanceLevel": "LEVEL_4_IMMUTABLE",
+      "verificationNote": "derive key with configured replay signing secret; verify HMAC-SHA256 over subject:sha256:chainRoot:timestamp[:extra]",
+      "extra": "links:10"
+    },
+    "release": {
+      "signatureVersion": 2,
+      "algorithm": "hmac-sha256",
+      "keyDerivation": "hmac-sha256(replay-signing-key,rap-governance-v2:gitCommit)",
+      "keyId": "fea81834859c0c61",
+      "subject": "r-agent2-20260822-020607.zip",
+      "sha256": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+      "chainRoot": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+      "gitCommit": "b8d10edb",
+      "timestamp": "2026-08-22T05:08:47.706Z",
+      "seal": "a3822301dfbaa63d747a97abd5fc1bf46918f3b3dfb6ba2e5cff77e45089f639",
+      "governanceLevel": "LEVEL_4_IMMUTABLE",
+      "verificationNote": "derive key with configured replay signing secret; verify HMAC-SHA256 over subject:sha256:chainRoot:timestamp[:extra]",
+      "extra": "pre-sign:no-zip-hash"
+    },
+    "manifest": {
+      "signatureVersion": 2,
+      "algorithm": "hmac-sha256",
+      "keyDerivation": "hmac-sha256(replay-signing-key,rap-governance-v2:gitCommit)",
+      "keyId": "fea81834859c0c61",
+      "subject": "r-agent2-20260822-020607.manifest.json",
+      "sha256": "91f3e177923533626493f0c5e37268adbccdcffca96d0f0f692bb45223997112",
+      "chainRoot": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+      "gitCommit": "b8d10edb",
+      "timestamp": "2026-08-22T05:08:47.706Z",
+      "seal": "bcabf1f7658aeae4d40674cf347e5c4ce924b605535d4202b89aa4693a4db233",
+      "governanceLevel": "LEVEL_4_IMMUTABLE",
+      "verificationNote": "derive key with configured replay signing secret; verify HMAC-SHA256 over subject:sha256:chainRoot:timestamp[:extra]"
+    },
+    "replay": {
+      "signatureVersion": 2,
+      "algorithm": "hmac-sha256",
+      "keyDerivation": "hmac-sha256(replay-signing-key,rap-governance-v2:gitCommit)",
+      "keyId": "fea81834859c0c61",
+      "subject": "replay-chain",
+      "sha256": "076e769edccf60ccfc9f502bbbc4ecd6a6840dbdca3013a5a9b136955c199649",
+      "chainRoot": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+      "gitCommit": "b8d10edb",
+      "timestamp": "2026-08-22T05:08:47.706Z",
+      "seal": "1d9cb797b788afdacf00a17ed3e47eb06006a1dd05d7e708aeb592673972ba64",
+      "governanceLevel": "LEVEL_4_IMMUTABLE",
+      "verificationNote": "derive key with configured replay signing secret; verify HMAC-SHA256 over subject:sha256:chainRoot:timestamp[:extra]",
+      "extra": "replays:8"
+    },
+    "attestation": {
+      "signatureVersion": 2,
+      "algorithm": "hmac-sha256",
+      "keyDerivation": "hmac-sha256(replay-signing-key,rap-governance-v2:gitCommit)",
+      "keyId": "fea81834859c0c61",
+      "subject": "governance-attestation",
+      "sha256": "a36a1eeeab54051b1f68252474ee838af0c87dbe9525e6b792d0b17a8144090d",
+      "chainRoot": "5d7c06be4c744f8489fca27938c6b64bb09aafcd5b83474208511c68bff1c23b",
+      "gitCommit": "b8d10edb",
+      "timestamp": "2026-08-22T05:08:47.706Z",
+      "seal": "639309acea33d50100861274b98c41a12548ef47b4c767b04a518fddfdd04bae",
+      "governanceLevel": "LEVEL_4_IMMUTABLE",
+      "verificationNote": "derive key with configured replay signing secret; verify HMAC-SHA256 over subject:sha256:chainRoot:timestamp[:extra]",
+      "extra": "decision:PASS_WITH_DEFERRED_PACKAGE_GATE"
+    }
+  },
+  "boundZipName": "r-agent2-20260822-020607.zip",
+  "boundZipHash": "5c727672488462d58d5f71e030179006865152c29779985622a9e7321bb68052",
+  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
   "autonomousReady": true,
-  "regeneratedAt": "2026-06-12T08:42:07.733Z",
-  "source": "clean-governance.js"
+  "verificationInstructions": [
+    "1. Verify ZIP SHA256 against sidecar manifest: sha256sum <zip> vs manifest.sha256",
+    "2. Run: node governance/governance-chain.js --verify",
+    "3. Configure REPLAY_SIGNING_KEY/ENCRYPTION_KEY and verify HMAC-SHA256 signatures",
+    "4. Run: bash scripts/verify-enterprise-governance.sh (offline, no external deps)",
+    "5. All proof artifacts are in dist/governance-artifacts/ inside the ZIP"
+  ]
 }

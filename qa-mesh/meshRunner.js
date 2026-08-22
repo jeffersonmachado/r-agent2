@@ -524,7 +524,12 @@ function buildRegistry() {
 }
 
 function saveRegistry(registry) {
-  fs.writeFileSync(REGISTRY_PATH, `${JSON.stringify(registry, null, 2)}\n`, 'utf8');
+  const newContent = `${JSON.stringify(registry, null, 2)}\n`;
+  try {
+    const existing = fs.readFileSync(REGISTRY_PATH, 'utf8');
+    if (existing === newContent) return registry;
+  } catch (_) {}
+  fs.writeFileSync(REGISTRY_PATH, newContent, 'utf8');
   return registry;
 }
 
@@ -655,6 +660,17 @@ function compactRawStatus(rawStatus) {
 
 function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  // RAP-078: espelho canônico em banco para stores mutáveis de Mesh.
+  try {
+    const rel = path.relative(path.join(__dirname, '..'), path.resolve(filePath)).replace(/\\/g, '/');
+    if (/^(qa-mesh\/(baseline|canonical-promotion|scheduler-state|gap-engine)\/|qa\/qa-waves\/)/.test(rel)) {
+      // eslint-disable-next-line global-require
+      const dbStateStore = require('../qa/state/dbStateStore');
+      dbStateStore.saveSyncExport(rel, payload);
+    }
+  } catch (_) {
+    // Espelho DB best-effort; nunca derruba o writer.
+  }
   return filePath;
 }
 

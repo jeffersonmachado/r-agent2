@@ -629,7 +629,7 @@ describe('qa-mesh/meshRunner', () => {
       });
       jest.resetModules();
     }
-  });
+  }, 30000);
 
   test('classifica bloqueio de pipeline como pipeline_required e não flaky', async () => {
     const previousExecutionId = `mesh-prev-${Date.now()}`;

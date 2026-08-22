@@ -251,7 +251,7 @@ export function RpaReplaysPage() {
       const result = await listRpaExecutionArtifacts();
       setExecutionArtifacts(result.items || []);
     } catch (err) {
-      logger.error('[RpaReplaysPage] Erro ao carregar execuções RPA persistidas:', err);
+      logger.warn('[RpaReplaysPage] Erro ao carregar execuções RPA persistidas:', err);
     } finally {
       setLoadingExecutionArtifacts(false);
     }

@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const dbStateStore = require('../state/dbStateStore');
 
 const ROOT = path.join(__dirname, '..', '..');
 const CHECKPOINT_ROOT = path.join(ROOT, 'qa', 'checkpoints');
@@ -57,6 +58,11 @@ function safeReadDir(dirPath) {
 function writeJson(filePath, payload) {
   ensureDir(path.dirname(filePath));
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  // RAP-078: estado canônico em banco para os checkpoints de estado (não wave snapshots).
+  const rel = path.relative(ROOT, filePath).replace(/\\/g, '/');
+  if (rel.startsWith('qa/checkpoints/state/')) {
+    dbStateStore.saveSyncExport(rel, payload);
+  }
 }
 
 function normalizeWaveId(wave) {

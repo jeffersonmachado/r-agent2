@@ -241,6 +241,7 @@ async function main() {
     baseUrl: BASE_URL,
     tokens: { development: Boolean(devToken), production: Boolean(prodToken) },
     totals,
+    status: (totals.byState?.FAILED || 0) === 0 && (totals.byState?.BLOCKED || 0) === 0 ? 'PASS' : 'FAIL',
     exemptions: exemptionsApplied,
     perItem,
   };

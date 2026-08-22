@@ -9,6 +9,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const dbStateStore = require('../../qa/state/dbStateStore');
+
+const MARKETPLACE_KEY = 'governance/node-marketplace-registry.json';
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -43,6 +46,8 @@ function loadRegistry() {
 function saveRegistry(registry) {
   ensureRegistryFile();
   fs.writeFileSync(REGISTRY_PATH, JSON.stringify(registry, null, 2));
+  // RAP-078: DB canônico + JSON como export derivado.
+  dbStateStore.saveSyncExport(MARKETPLACE_KEY, registry);
 }
 
 function listBuiltinNodes() {

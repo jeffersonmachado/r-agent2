@@ -231,7 +231,9 @@ RSYNC_EXCLUDES=(
   'qa-mesh/scheduler-state.json'
   'qa-mesh/system-validate/'
   'qa/deploy-report.json'
-  'reports/'
+  # Somente reports/ da raiz é output gerado. scripts/reports/ contém source
+  # coberto pelo sourceFingerprint e precisa existir na extração entregue.
+  '/reports/'
   'artifacts/'
   'tmp/'
   'temp/'
@@ -381,7 +383,7 @@ FORBIDDEN_REGEX=(
   '(^|/)qa-mesh/meshEvidence/'
   '(^|/)qa-mesh/meshHistory/'
   '(^|/)qa-mesh/(meshReport|metrics|repairPlan|scheduler-state)\.json$'
-  '(^|/)reports/'
+  '^([^/]+/)?reports/'
   '(^|/)rag-service/\.coverage$'
   '(^|/)rag-service/data/vector_store/'
   '(^|/)rag-service/data/adaptive_learning/'

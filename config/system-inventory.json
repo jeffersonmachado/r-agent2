@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-19T04:04:51.585Z",
+  "generatedAt": "2026-08-21T20:30:59.514Z",
   "counts": {
-    "total": 2760,
+    "total": 2903,
     "byKind": {
-      "api": 774,
-      "field": 1522,
-      "model": 158,
+      "api": 775,
+      "field": 1632,
+      "model": 174,
       "page": 139,
       "relation": 9,
-      "table": 158
+      "table": 174
     },
     "byClassification": {
-      "PRODUCTION": 2542,
+      "PRODUCTION": 2679,
       "DEVELOPMENT": 133,
-      "SUPPORT": 85
+      "SUPPORT": 91
     },
     "orphaned": 0
   },
@@ -1541,6 +1541,30 @@
         "pbx"
       ],
       "fingerprint": "8b9cd35ec965d88ab9c908cd305ee5d3ad4086edf4525a6108656a11106068cb"
+    },
+    {
+      "id": "api:GET:/api/cognitive/capabilities",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/cognitive/capabilities",
+      "module": "agent-os",
+      "source": "api/modules/cognitive/routes.js",
+      "authRequired": false,
+      "authorization": [
+        "requirePermission:ai:execute"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry",
+        "cognitive_assistant"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1f7d50e47c908c14b1564175e29b602391801cc0b1601ac33f0d960a0015f150"
     },
     {
       "id": "api:GET:/api/cognitive/intents",
@@ -17381,6 +17405,489 @@
       "fingerprint": "e7b79dbb596522b636387ec2f2811a83b8b5ac884651f05316cbb830861ee9ad"
     },
     {
+      "id": "field:AgentPolicy.current_version",
+      "kind": "field",
+      "model": "AgentPolicy",
+      "field": "current_version",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicy.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "13f0233929bca347bd6f372b83da74a524966d711df7d1c593a2ce392ef13962"
+    },
+    {
+      "id": "field:AgentPolicy.name",
+      "kind": "field",
+      "model": "AgentPolicy",
+      "field": "name",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicy.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7ba9c33978e1ec58d6dbabf22fe9e5a41f4f4e934c1540cacdcc85d76b29045f"
+    },
+    {
+      "id": "field:AgentPolicy.policy_id",
+      "kind": "field",
+      "model": "AgentPolicy",
+      "field": "policy_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicy.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "55ddff626d125b8da49b2324498d145f7d7654a3bf631eb664b61ff5e5cdd8c7"
+    },
+    {
+      "id": "field:AgentPolicy.status",
+      "kind": "field",
+      "model": "AgentPolicy",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicy.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "abfd2b3ae9d168cc30a49e1f6055c324c6dafcd5af46619edf5033cdfd6dfc5e"
+    },
+    {
+      "id": "field:AgentPolicyAssignment.agent_type",
+      "kind": "field",
+      "model": "AgentPolicyAssignment",
+      "field": "agent_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAssignment.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "86b01ae62b7ef7994b7ddc6ebbb757eda8c019fb6e72379cb83669051387e9cc"
+    },
+    {
+      "id": "field:AgentPolicyAssignment.mandatory",
+      "kind": "field",
+      "model": "AgentPolicyAssignment",
+      "field": "mandatory",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "true",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAssignment.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "deb9481db9ac51f680b5c7824f31e1731eca98bdd30aa9e71f3c3b69d7f79728"
+    },
+    {
+      "id": "field:AgentPolicyAssignment.policy_version_id",
+      "kind": "field",
+      "model": "AgentPolicyAssignment",
+      "field": "policy_version_id",
+      "type": "UUID",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAssignment.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "84d59562fcb9cc8d1f06e94789d06110af460bb1a7b7c561b340bd4dfc74e5c5"
+    },
+    {
+      "id": "field:AgentPolicyAssignment.scope",
+      "kind": "field",
+      "model": "AgentPolicyAssignment",
+      "field": "scope",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAssignment.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1842c79c912b67556d0ddcbcd0355950ad0a6debc4ec9ab44daf7d9060d18f5b"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.agent_id",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "agent_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "03770bb6379bddea88461a5bc9f9ced97b7ddc879ffa603a4c464f0fe9aeee0f"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.agent_type",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "agent_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8ad8c4a50341a54e9876b90a43a907c231d5f236f372ce8bb05a0970e23f6526"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.attested_at",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "attested_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "293b995bf96c856893df0be939f97e1a106ce675fc22a5811c438cf95e1d935a"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.loaded_at",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "loaded_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b25e6be7ce23a9c0b5994b64454040b581f0d08669c99257cb4372ea22c0739f"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.policy_fingerprint",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "policy_fingerprint",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d0c5e49353f9f243506d8a4b39a05cf746861ce71670b72f442f6bf2a6f71968"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.policy_id",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "policy_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1c914f8e6e62a9a00f507fe5ce78e0df318f99f9e22cd0fcd70a818a81592993"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.policy_version",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "policy_version",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2e13215e14c4a683691722dcb47c55a8741ce687fa983fd8e8e239cd56f5e1af"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.run_id",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e7a2950a6de1c4adbc140351a81ac17da69d00b73676c3043e9dd5fd9e3f6ee5"
+    },
+    {
+      "id": "field:AgentPolicyAttestation.status",
+      "kind": "field",
+      "model": "AgentPolicyAttestation",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "171ff54d57712aa3642c3286c21257dc9282feb7885f277ab765b3709cd9aa08"
+    },
+    {
+      "id": "field:AgentPolicyVersion.content_fingerprint",
+      "kind": "field",
+      "model": "AgentPolicyVersion",
+      "field": "content_fingerprint",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyVersion.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8b018775ecfaf435b4865fad8e4566af949434e203c0683f97f77b558afe8a8f"
+    },
+    {
+      "id": "field:AgentPolicyVersion.effective_from",
+      "kind": "field",
+      "model": "AgentPolicyVersion",
+      "field": "effective_from",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyVersion.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "5ed3b1e85a2223d5d842ef251d224e74c119b7addd785862c8f1aea7294d1b74"
+    },
+    {
+      "id": "field:AgentPolicyVersion.policy_id",
+      "kind": "field",
+      "model": "AgentPolicyVersion",
+      "field": "policy_id",
+      "type": "UUID",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyVersion.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "fc8b4aeca1c8dc93b4f805adf19e58868163ce623e76deca7c800e375a7ea1eb"
+    },
+    {
+      "id": "field:AgentPolicyVersion.version",
+      "kind": "field",
+      "model": "AgentPolicyVersion",
+      "field": "version",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyVersion.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "50ca25afbde8ea07ebed5e8915669074e4b6b2b297df372343ae747c6320c94f"
+    },
+    {
       "id": "field:AiGovernanceRecord.actor",
       "kind": "field",
       "model": "AiGovernanceRecord",
@@ -20917,6 +21424,42 @@
       "fingerprint": "02393c73d935983902dd3ec0cc524e58ad60b0d0804c1e4d41d3151e0caf6f61"
     },
     {
+      "id": "field:CoverageEvidence.coverage_state",
+      "kind": "field",
+      "model": "CoverageEvidence",
+      "field": "coverage_state",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CoverageEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0e6fa281d2a2047110032b54edd1b67efd3e08ea88068507700a4a6ebe9cfbcb"
+    },
+    {
+      "id": "field:CoverageEvidence.evidence_id",
+      "kind": "field",
+      "model": "CoverageEvidence",
+      "field": "evidence_id",
+      "type": "UUID",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CoverageEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1d8183be070059ce328c355575f680bf9a20d15583b725cd5a418e7335293269"
+    },
+    {
       "id": "field:CoverageEvidence.hash",
       "kind": "field",
       "model": "CoverageEvidence",
@@ -20953,6 +21496,42 @@
       "fingerprint": "29b1cadc124d9b66b86698af7432dac9d6521e8753d4eae2ba40098e4479af9a"
     },
     {
+      "id": "field:CoverageEvidence.inventory_item_id",
+      "kind": "field",
+      "model": "CoverageEvidence",
+      "field": "inventory_item_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CoverageEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "169122b662131a2b01d39eec1d595b7f6cd5d048d068aba3787d9ffb98cfb0a7"
+    },
+    {
+      "id": "field:CoverageEvidence.journey_id",
+      "kind": "field",
+      "model": "CoverageEvidence",
+      "field": "journey_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CoverageEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8e5cd8c09b9a42572584b8d9db2ed91c7e9d83f93414e72b4cb74d3b62f08797"
+    },
+    {
       "id": "field:CoverageEvidence.prev_hash",
       "kind": "field",
       "model": "CoverageEvidence",
@@ -20987,6 +21566,60 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "4a705ce00c441f56903db21a64401d4625145cbcea228e69956cd7a71370a3d1"
+    },
+    {
+      "id": "field:CoverageEvidence.run_id",
+      "kind": "field",
+      "model": "CoverageEvidence",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CoverageEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "3ae014ea59edf10d014ba1b78d33ceb77d1313859f0276bea2b45b08cce02a73"
+    },
+    {
+      "id": "field:CoverageEvidence.scenario_id",
+      "kind": "field",
+      "model": "CoverageEvidence",
+      "field": "scenario_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CoverageEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "7c69995bb21325ece026c8d0eb954212786aca1736cc94719409b8060e58cce4"
+    },
+    {
+      "id": "field:CoverageEvidence.step_id",
+      "kind": "field",
+      "model": "CoverageEvidence",
+      "field": "step_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CoverageEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "32fac3a632d2d6b5b85508b801e0f5ee7d0e9770e16ffcdc6c061d47267b8727"
     },
     {
       "id": "field:Delivery.context",
@@ -21425,6 +22058,26 @@
       "fingerprint": "5be30a8fd82a017773c2296c6bf387821088c4f953c946236fb691bbc6dcae1d"
     },
     {
+      "id": "field:EventLedger.causation_id",
+      "kind": "field",
+      "model": "EventLedger",
+      "field": "causation_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "SUPPORT",
+      "source": "api/db/models/EventLedger.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "200e815802a20628c4fa9782e86dbd6bd8db3b0ab3be7818068825eb389bca05"
+    },
+    {
       "id": "field:EventLedger.correlation_id",
       "kind": "field",
       "model": "EventLedger",
@@ -21443,6 +22096,46 @@
       ],
       "linkedDomains": [],
       "fingerprint": "542fc7b3384bd1bea6bd135e4f1491f65b1d51bea9172245d958af20808fdf0e"
+    },
+    {
+      "id": "field:EventLedger.critical_journey_id",
+      "kind": "field",
+      "model": "EventLedger",
+      "field": "critical_journey_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "SUPPORT",
+      "source": "api/db/models/EventLedger.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "83449e3c5ee0b466898187f8f22691930f31000b675d569de54abf768c5dda0c"
+    },
+    {
+      "id": "field:EventLedger.execution_id",
+      "kind": "field",
+      "model": "EventLedger",
+      "field": "execution_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "SUPPORT",
+      "source": "api/db/models/EventLedger.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7c11b1452ba688c08a7f89eb8afd56b392a041886794db37047cc4aabb82f6da"
     },
     {
       "id": "field:EventLedger.id",
@@ -21505,6 +22198,26 @@
       "fingerprint": "ea8043b4ccb47f211b24098ba6d8a44a1e67f8abf005052fb123652091436738"
     },
     {
+      "id": "field:EventLedger.parent_event_id",
+      "kind": "field",
+      "model": "EventLedger",
+      "field": "parent_event_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "SUPPORT",
+      "source": "api/db/models/EventLedger.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b657eb89b68b9d40863a36d426e12070a027dc974353df59a54bc12e5ba631df"
+    },
+    {
       "id": "field:EventLedger.payload",
       "kind": "field",
       "model": "EventLedger",
@@ -21525,6 +22238,26 @@
       "fingerprint": "558910ba756c63d74862589c9fc36355f320d474df1d1a0e9b996e9c88feaf5d"
     },
     {
+      "id": "field:EventLedger.principal_id",
+      "kind": "field",
+      "model": "EventLedger",
+      "field": "principal_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "SUPPORT",
+      "source": "api/db/models/EventLedger.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b18fedfd0d837c17606823b53cd0f7250772c994d59d679aa6e3588825a49fc7"
+    },
+    {
       "id": "field:EventLedger.received_at",
       "kind": "field",
       "model": "EventLedger",
@@ -21543,6 +22276,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "4b4843141b05350b47117bbaad7417c7d5b554027d4d754bca653c94738b5dfb"
+    },
+    {
+      "id": "field:EventLedger.run_id",
+      "kind": "field",
+      "model": "EventLedger",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "SUPPORT",
+      "source": "api/db/models/EventLedger.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1dfee88de2f6db7a522c0545b3fc185455d4a8e3078745fe76d3258f32a4f5d9"
     },
     {
       "id": "field:EventLedger.source",
@@ -22347,6 +23100,196 @@
       "fingerprint": "fca60d1dcc5e8c3c0abebdfad40025cd86f36f17477e83125bd2a7641df91498"
     },
     {
+      "id": "field:ExecutionTrace.correlation_id",
+      "kind": "field",
+      "model": "ExecutionTrace",
+      "field": "correlation_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTrace.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4f7c85897e97e3fa5286bc670428dcb5fb7d2327789de4f8b5a40e86cf1ea150"
+    },
+    {
+      "id": "field:ExecutionTrace.run_id",
+      "kind": "field",
+      "model": "ExecutionTrace",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTrace.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "518625d642bad451173eb914a06a1c98153f2dda310f3a4884e88a0879db4619"
+    },
+    {
+      "id": "field:ExecutionTrace.started_at",
+      "kind": "field",
+      "model": "ExecutionTrace",
+      "field": "started_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTrace.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e36b3dd20b6cb8506abea60d8cbded32dd63384bef605c18a387ee571af5da57"
+    },
+    {
+      "id": "field:ExecutionTrace.status",
+      "kind": "field",
+      "model": "ExecutionTrace",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTrace.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "aac0b603387894c08630e28b62072d02d36be2baf9d7efc298b0b896f62a9888"
+    },
+    {
+      "id": "field:ExecutionTrace.trace_type",
+      "kind": "field",
+      "model": "ExecutionTrace",
+      "field": "trace_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTrace.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "eed8e1f0b8966f252616196170bd701be0d69549e4eae17a68dbd0bbd45f6dfb"
+    },
+    {
+      "id": "field:ExecutionTraceEvent.event_id",
+      "kind": "field",
+      "model": "ExecutionTraceEvent",
+      "field": "event_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTraceEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e57b1945c4a09397cc5eddf904049d333dab47134549a74a53973e4f4d970426"
+    },
+    {
+      "id": "field:ExecutionTraceEvent.event_type",
+      "kind": "field",
+      "model": "ExecutionTraceEvent",
+      "field": "event_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTraceEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b8137d8d88898ba6a6ee06b565b55228ffe07f052d72b9b1e7762d0c200c5b13"
+    },
+    {
+      "id": "field:ExecutionTraceEvent.occurred_at",
+      "kind": "field",
+      "model": "ExecutionTraceEvent",
+      "field": "occurred_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTraceEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2eccadc2c2d3466223a4dc1582defbd92ab414506a4630d11bed9399e4322e13"
+    },
+    {
+      "id": "field:ExecutionTraceEvent.producer",
+      "kind": "field",
+      "model": "ExecutionTraceEvent",
+      "field": "producer",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTraceEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7dec2f9608fb72c2099779bbddd77cfdfd4c13d21608ca6d884065ff534bde26"
+    },
+    {
+      "id": "field:ExecutionTraceEvent.trace_id",
+      "kind": "field",
+      "model": "ExecutionTraceEvent",
+      "field": "trace_id",
+      "type": "UUID",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTraceEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "023aac4909585d97db6d8b13174417c2d1fc6f7b97b56a630751a662ddd39633"
+    },
+    {
       "id": "field:Flow.data",
       "kind": "field",
       "model": "Flow",
@@ -22921,6 +23864,486 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "7180b429cf15e4990d6cf922db00e128aa52ddabfb01d6a8efa2edf1afadb1a0"
+    },
+    {
+      "id": "field:GovernanceFinalDecision.decision",
+      "kind": "field",
+      "model": "GovernanceFinalDecision",
+      "field": "decision",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceFinalDecision.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "78ac2dc8b7053bc84a71204328dd2433981977a3b934e0cc7fc0e2f8407abb1f"
+    },
+    {
+      "id": "field:GovernanceFinalDecision.mandatory_gate_failures",
+      "kind": "field",
+      "model": "GovernanceFinalDecision",
+      "field": "mandatory_gate_failures",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceFinalDecision.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "77cc7c39fdf78cd9c2fbaa04118407feee59acc3ba93f7e75dc95608381f4838"
+    },
+    {
+      "id": "field:GovernanceFinalDecision.reason",
+      "kind": "field",
+      "model": "GovernanceFinalDecision",
+      "field": "reason",
+      "type": "TEXT",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceFinalDecision.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "47ae776f018991e2201d030a7790fb5d02cf5351a4773d03000db8b023283ea3"
+    },
+    {
+      "id": "field:GovernanceFinalDecision.run_id",
+      "kind": "field",
+      "model": "GovernanceFinalDecision",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceFinalDecision.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d876bbeb180755df6f0e1f07f33b93cbba547c8078cb416bb49c729cac7ae8ea"
+    },
+    {
+      "id": "field:GovernanceFinalDecision.scorecard_below_10",
+      "kind": "field",
+      "model": "GovernanceFinalDecision",
+      "field": "scorecard_below_10",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceFinalDecision.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "0d4db169c90320d0b49374db2d960046f2636847dba3f3a41ab6a43693488c10"
+    },
+    {
+      "id": "field:GovernanceFinalDecision.source_fingerprint",
+      "kind": "field",
+      "model": "GovernanceFinalDecision",
+      "field": "source_fingerprint",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceFinalDecision.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8955b53bfda189762cec738ecac34cf11bf65eef16af0e8eda3cdffb8b94c883"
+    },
+    {
+      "id": "field:GovernanceGap.gap_key",
+      "kind": "field",
+      "model": "GovernanceGap",
+      "field": "gap_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGap.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "db416ecb4d7f60193898f7f1f09b6ee448843e7a7cf5d465afef5b584ea5d768"
+    },
+    {
+      "id": "field:GovernanceGap.opened_at",
+      "kind": "field",
+      "model": "GovernanceGap",
+      "field": "opened_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGap.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6d727c033506ff925a7d6d195e890b75985daa358a888c5a62cdcd2bfdb6ccb2"
+    },
+    {
+      "id": "field:GovernanceGap.run_id",
+      "kind": "field",
+      "model": "GovernanceGap",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGap.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "68f106fc18b6f37560fc54918e7048b824d83c5ee477d917a2549aa11f9f0825"
+    },
+    {
+      "id": "field:GovernanceGap.severity",
+      "kind": "field",
+      "model": "GovernanceGap",
+      "field": "severity",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGap.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "35a53a03d0a222074d697f7afcfe4e4689228ea5643c0e3747f3535ebf0db19e"
+    },
+    {
+      "id": "field:GovernanceGap.status",
+      "kind": "field",
+      "model": "GovernanceGap",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGap.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a3e6bb5ae141ad85c6223186ce5f05040b9324d460dc02cc56579ad8a4c9baf9"
+    },
+    {
+      "id": "field:GovernanceGap.title",
+      "kind": "field",
+      "model": "GovernanceGap",
+      "field": "title",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGap.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "314301b472140a637de2fcfb40feaacccde08292c799381815785559aa399bd0"
+    },
+    {
+      "id": "field:GovernanceGateResult.gate_key",
+      "kind": "field",
+      "model": "GovernanceGateResult",
+      "field": "gate_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGateResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6c17b0501ec4f47deaca2586c9f2204b33851feb410862ebd50eadaf802482f5"
+    },
+    {
+      "id": "field:GovernanceGateResult.mandatory",
+      "kind": "field",
+      "model": "GovernanceGateResult",
+      "field": "mandatory",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "true",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGateResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "55e389fb78be4f349e164b0ae8439557dda572957f1b48e3d116b9206495ae82"
+    },
+    {
+      "id": "field:GovernanceGateResult.run_id",
+      "kind": "field",
+      "model": "GovernanceGateResult",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGateResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "be1a68aae395285b64ef4ce0278b85df9b2dfe5aa5c72b8ad10e765f9a5d37b4"
+    },
+    {
+      "id": "field:GovernanceGateResult.status",
+      "kind": "field",
+      "model": "GovernanceGateResult",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGateResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2f2a2e6f881259bebab1b67fe602a168c6a38a45fe0af8c5d56c7790ee7b9041"
+    },
+    {
+      "id": "field:GovernanceRun.principal_id",
+      "kind": "field",
+      "model": "GovernanceRun",
+      "field": "principal_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "4548e7832b08f7a1ae277e789092110dc5a8bf16a5772126a995b346fb9420ea"
+    },
+    {
+      "id": "field:GovernanceRun.principal_type",
+      "kind": "field",
+      "model": "GovernanceRun",
+      "field": "principal_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "0230d5aed09150257266a8639e315730a6f374c8332b55bad7c4ec383231b358"
+    },
+    {
+      "id": "field:GovernanceRun.run_id",
+      "kind": "field",
+      "model": "GovernanceRun",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "270481253a6c745638774cbc20456135bea1e65c808fb15ba66338ad14704fbc"
+    },
+    {
+      "id": "field:GovernanceRun.scope_type",
+      "kind": "field",
+      "model": "GovernanceRun",
+      "field": "scope_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6dec454675a5147c45cda2820e5fb2a9268a35109e05c1cc7f9eca5fcbf8037a"
+    },
+    {
+      "id": "field:GovernanceRun.source_fingerprint",
+      "kind": "field",
+      "model": "GovernanceRun",
+      "field": "source_fingerprint",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "c68285fdcd7330885a0df0044e13a95fa9accbc26c5b7d2b2163726fa15d60d2"
+    },
+    {
+      "id": "field:GovernanceRun.started_at",
+      "kind": "field",
+      "model": "GovernanceRun",
+      "field": "started_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3d5f5a1dea4deaebbcf010f54fd5a7ecdd9c39a124d716df8b7355421910d87e"
+    },
+    {
+      "id": "field:GovernanceRun.status",
+      "kind": "field",
+      "model": "GovernanceRun",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "253baf98f13e5000ac8467db20f56ebebbc8bf7f5f3fc214f9bec64c9708c242"
+    },
+    {
+      "id": "field:GovernanceRun.tenant_id",
+      "kind": "field",
+      "model": "GovernanceRun",
+      "field": "tenant_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "9afa840c59df7a43910c308e45d274c82845c51fedcce3380f5bf84be1fcd1e2"
     },
     {
       "id": "field:JourneyRegistry.createdAt",
@@ -38130,6 +39553,60 @@
       "fingerprint": "a930aefdc947723f62def0a4ae4844607dd437d66250b215cdbb1cd88f933d02"
     },
     {
+      "id": "field:ReleaseManifestRecord.metadata",
+      "kind": "field",
+      "model": "ReleaseManifestRecord",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ReleaseManifestRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "452ddb19889ed3b7a0384d0ff85b9eb188ab84fb6bd3f29405de9efb355aceb9"
+    },
+    {
+      "id": "field:ReleaseManifestRecord.run_id",
+      "kind": "field",
+      "model": "ReleaseManifestRecord",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ReleaseManifestRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "41fe516948d6f4e206ce13301fddf9764ae5acf59674447cb103efc99f83284a"
+    },
+    {
+      "id": "field:ReleaseManifestRecord.status",
+      "kind": "field",
+      "model": "ReleaseManifestRecord",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ReleaseManifestRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a4c28c5911df3c434d49829b755e24382711f96a29e9c2880e3562dffb62a915"
+    },
+    {
       "id": "field:Resource.id",
       "kind": "field",
       "model": "Resource",
@@ -38535,6 +40012,46 @@
       "fingerprint": "588a009d1c067517e156863f83292a0b2c3576e1cdb3e7140d49a8585b84219b"
     },
     {
+      "id": "field:RuntimeArtifact.artifact_type",
+      "kind": "field",
+      "model": "RuntimeArtifact",
+      "field": "artifact_type",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RuntimeArtifact.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "process_runtime"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "4eadf28235192d3469585ccec7dc3e2c2963f7886911d5867c710720340d5bb5"
+    },
+    {
+      "id": "field:RuntimeArtifact.artifact_version",
+      "kind": "field",
+      "model": "RuntimeArtifact",
+      "field": "artifact_version",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RuntimeArtifact.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "process_runtime"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "c23dd8ac18ec7ef8fb7171d2afd4636775ad959abdde8a233fdc8e7f02ccf461"
+    },
+    {
       "id": "field:RuntimeArtifact.content_jsonb",
       "kind": "field",
       "model": "RuntimeArtifact",
@@ -38595,6 +40112,26 @@
       "fingerprint": "481fb9b9a8cd02b5d84637861bd20b3fcf2cb6004100f9abb17e2bac1adeb2df"
     },
     {
+      "id": "field:RuntimeArtifact.immutable",
+      "kind": "field",
+      "model": "RuntimeArtifact",
+      "field": "immutable",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RuntimeArtifact.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "process_runtime"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "802e298d7f17926699ca00c9554e38c69f51458e75910352466126ab673d86d7"
+    },
+    {
       "id": "field:RuntimeArtifact.kind",
       "kind": "field",
       "model": "RuntimeArtifact",
@@ -38615,6 +40152,46 @@
       "fingerprint": "68d6f7252332d0a7d270b3004c32aa6df6a4c2502be47494afc3b5ae3911d4cb"
     },
     {
+      "id": "field:RuntimeArtifact.metadata",
+      "kind": "field",
+      "model": "RuntimeArtifact",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RuntimeArtifact.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "process_runtime"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7b1db12d72479e9ed8fd83ccf99c27afc4929bc7beaf2687ca3ec666136a42ca"
+    },
+    {
+      "id": "field:RuntimeArtifact.producer",
+      "kind": "field",
+      "model": "RuntimeArtifact",
+      "field": "producer",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RuntimeArtifact.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "process_runtime"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "fc63a9ce89a4143326944f01e9e7c036c8b746ca89b6db20346b78cee52b4beb"
+    },
+    {
       "id": "field:RuntimeArtifact.ref_id",
       "kind": "field",
       "model": "RuntimeArtifact",
@@ -38633,6 +40210,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "c4d1a36f495540ce57e57bc0dc5b8b618936e6d220d8fe44851f464fad520a02"
+    },
+    {
+      "id": "field:RuntimeArtifact.run_id",
+      "kind": "field",
+      "model": "RuntimeArtifact",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RuntimeArtifact.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "process_runtime"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f5afbc1becb8f8e53fb370b7e88105ebf082c7f58035417b43881cb183e12065"
     },
     {
       "id": "field:RuntimeArtifact.sha256",
@@ -38673,6 +40270,46 @@
       ],
       "linkedDomains": [],
       "fingerprint": "a58b3491c93c7de6091e4b672eee405f7a54f9aaa8a6c374638a5ee251bc97e2"
+    },
+    {
+      "id": "field:RuntimeArtifact.source_fingerprint",
+      "kind": "field",
+      "model": "RuntimeArtifact",
+      "field": "source_fingerprint",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RuntimeArtifact.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "process_runtime"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "40de9c487ff4ed25bb5107e2aced0d10ead5f3a37ce5aaf1d16888361d9c0b1e"
+    },
+    {
+      "id": "field:RuntimeArtifact.status",
+      "kind": "field",
+      "model": "RuntimeArtifact",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/RuntimeArtifact.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "process_runtime"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "26e72323cfc341de37e0a1c1850db62106855fa27594542948437813076c956f"
     },
     {
       "id": "field:RuntimeArtifact.storage_key",
@@ -38875,6 +40512,564 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "595d35d9272e473abae9a07647a4395ffff413e6f4b47277d729acc1aadbf68e"
+    },
+    {
+      "id": "field:ScorecardDimension.active",
+      "kind": "field",
+      "model": "ScorecardDimension",
+      "field": "active",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "true",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimension.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e021110dd884681de14684f6d4a2c42a9c531b7b27aace3932f60f1538b20cbd"
+    },
+    {
+      "id": "field:ScorecardDimension.dimension_key",
+      "kind": "field",
+      "model": "ScorecardDimension",
+      "field": "dimension_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimension.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "493fa8f2c67406a4fafaad8562ffa65d5b298ca92cc3bb169ffc34c2d3908d66"
+    },
+    {
+      "id": "field:ScorecardDimension.mandatory",
+      "kind": "field",
+      "model": "ScorecardDimension",
+      "field": "mandatory",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "true",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimension.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e893c568828e60705500ae65d9488625aa5585c32a521932500cafbeb418fa47"
+    },
+    {
+      "id": "field:ScorecardDimension.name",
+      "kind": "field",
+      "model": "ScorecardDimension",
+      "field": "name",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimension.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b3c07c9cf87bbf516d9dbe143742f1e4aafefa8adabea0b05a99f5bcae23f80c"
+    },
+    {
+      "id": "field:ScorecardDimension.target_score",
+      "kind": "field",
+      "model": "ScorecardDimension",
+      "field": "target_score",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "10",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimension.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "02a16202740e692e16d32e913605167b0f84c1c07b56221d091e773e929cd245"
+    },
+    {
+      "id": "field:ScorecardDimension.version",
+      "kind": "field",
+      "model": "ScorecardDimension",
+      "field": "version",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "1",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimension.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "541a702c09f23d5cfbd1c0b78295f639ee624641ac4445cc5e0b04120a8344ab"
+    },
+    {
+      "id": "field:ScorecardDimensionResult.blocker_count",
+      "kind": "field",
+      "model": "ScorecardDimensionResult",
+      "field": "blocker_count",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "dd867f5983d883afe390a71ff4b443246ad492353e218ef8f5b651cd8afbabfd"
+    },
+    {
+      "id": "field:ScorecardDimensionResult.dimension_id",
+      "kind": "field",
+      "model": "ScorecardDimensionResult",
+      "field": "dimension_id",
+      "type": "UUID",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e9730be044ae66e705724235698eb1b8a02e4399367a0f9bdc4f8c3f83d31a92"
+    },
+    {
+      "id": "field:ScorecardDimensionResult.evaluated_at",
+      "kind": "field",
+      "model": "ScorecardDimensionResult",
+      "field": "evaluated_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "7e1d706f08ec81b4dce68bd5e23d1185caf3a317aa147eef3630ec7ad5c5f9c8"
+    },
+    {
+      "id": "field:ScorecardDimensionResult.evaluation_id",
+      "kind": "field",
+      "model": "ScorecardDimensionResult",
+      "field": "evaluation_id",
+      "type": "UUID",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "3aa9ec7240eddf078ea2fb053c49dd8fdb647c92ae65e21254a02f4776bd76d2"
+    },
+    {
+      "id": "field:ScorecardDimensionResult.gap_count",
+      "kind": "field",
+      "model": "ScorecardDimensionResult",
+      "field": "gap_count",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0c9cb6a96f464a9a6bb63df44e0b995aaee10dba523eaaf11f09015bd1c57c2f"
+    },
+    {
+      "id": "field:ScorecardDimensionResult.score",
+      "kind": "field",
+      "model": "ScorecardDimensionResult",
+      "field": "score",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "20898f4e4cf73452f5c4e332b8e0a4965d583226ac6905ebe38ec562d8493cc2"
+    },
+    {
+      "id": "field:ScorecardDimensionResult.status",
+      "kind": "field",
+      "model": "ScorecardDimensionResult",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "163cc62878e60e78e77002574b4cc0734ea48bf9e058c921cdd3ff97b4f515cc"
+    },
+    {
+      "id": "field:ScorecardEvaluation.dimensions_at_10",
+      "kind": "field",
+      "model": "ScorecardEvaluation",
+      "field": "dimensions_at_10",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "79768f955b6fc3a787e8932a939e8891055cec0b670be4f11e4df7d24545caa0"
+    },
+    {
+      "id": "field:ScorecardEvaluation.dimensions_below_10",
+      "kind": "field",
+      "model": "ScorecardEvaluation",
+      "field": "dimensions_below_10",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "78c79630c2f060cb0586c36f472448584389ec3fdbd32746662600db8e489bf4"
+    },
+    {
+      "id": "field:ScorecardEvaluation.open_blockers",
+      "kind": "field",
+      "model": "ScorecardEvaluation",
+      "field": "open_blockers",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a2d79c132d2576830c81c66d6ef4594fb14b98c313de616533d2580fa30ed29d"
+    },
+    {
+      "id": "field:ScorecardEvaluation.open_gaps",
+      "kind": "field",
+      "model": "ScorecardEvaluation",
+      "field": "open_gaps",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8c41e92e936396639031ac19d08ca9a3683114f818509e3ba5dc081720036c55"
+    },
+    {
+      "id": "field:ScorecardEvaluation.run_id",
+      "kind": "field",
+      "model": "ScorecardEvaluation",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ab47d098b4fed7a93ad2a241ff7d24be1bd415ee75c09a332bfec4e79147be7e"
+    },
+    {
+      "id": "field:ScorecardEvaluation.status",
+      "kind": "field",
+      "model": "ScorecardEvaluation",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c691c38f2bbe5be86a1eef861becb4f105b2e0c64c3b5bc2c50dbb7d8ea31ac3"
+    },
+    {
+      "id": "field:ScorecardEvaluation.total_dimensions",
+      "kind": "field",
+      "model": "ScorecardEvaluation",
+      "field": "total_dimensions",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c2bd984cd322a1a80f8476cc982e6cbf1940d76896bc30725a7ebc3cf77bd26e"
+    },
+    {
+      "id": "field:ScorecardRequirement.active",
+      "kind": "field",
+      "model": "ScorecardRequirement",
+      "field": "active",
+      "type": "BOOLEAN",
+      "allowNull": null,
+      "default": "true",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "851a4952db492e03b302303b620ba7d5196546c3bf46a7134a59dea8839c1226"
+    },
+    {
+      "id": "field:ScorecardRequirement.dimension_id",
+      "kind": "field",
+      "model": "ScorecardRequirement",
+      "field": "dimension_id",
+      "type": "UUID",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "66f1742fc45dbc91a922a9055a8520282edcff70ea614acbe37c3553d3fc8631"
+    },
+    {
+      "id": "field:ScorecardRequirement.mandatory",
+      "kind": "field",
+      "model": "ScorecardRequirement",
+      "field": "mandatory",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "true",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "56a17c3728b54335a65a4d3629394adc36a279ea83372c9b7fff33a906054cb4"
+    },
+    {
+      "id": "field:ScorecardRequirement.requirement_key",
+      "kind": "field",
+      "model": "ScorecardRequirement",
+      "field": "requirement_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6c521232ceb1a0c5e4e8b834494f3fbd8efbd151e6bc5d2c01adf909e8fc969e"
+    },
+    {
+      "id": "field:ScorecardRequirement.requires_runtime_evidence",
+      "kind": "field",
+      "model": "ScorecardRequirement",
+      "field": "requires_runtime_evidence",
+      "type": "BOOLEAN",
+      "allowNull": null,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "397b1980c54481492816bfd32fd6784d3285ff1eec5d2fb471bf0901cc0420ff"
+    },
+    {
+      "id": "field:ScorecardRequirement.requires_test",
+      "kind": "field",
+      "model": "ScorecardRequirement",
+      "field": "requires_test",
+      "type": "BOOLEAN",
+      "allowNull": null,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bc7e6b199c1d99f4cb40bc1e88896d2f1120fe0901be71e5918296aded188565"
+    },
+    {
+      "id": "field:ScorecardRequirement.version",
+      "kind": "field",
+      "model": "ScorecardRequirement",
+      "field": "version",
+      "type": "INTEGER",
+      "allowNull": null,
+      "default": "1",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8bd93cba27c9c6aba38d50417ce0b9387208f2b80cdfec9ed7e6d30d836e0669"
+    },
+    {
+      "id": "field:ScorecardRequirementResult.dimension_result_id",
+      "kind": "field",
+      "model": "ScorecardRequirementResult",
+      "field": "dimension_result_id",
+      "type": "UUID",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirementResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4ac69b9ebc4097236e67949be2470f8f382c446305cf7c9a79c3d617fdfa22a9"
+    },
+    {
+      "id": "field:ScorecardRequirementResult.evaluated_at",
+      "kind": "field",
+      "model": "ScorecardRequirementResult",
+      "field": "evaluated_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirementResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0df942c17d51659b67f61e9d96ea72d5252a006a50ff0e8ca49b054633493ee2"
+    },
+    {
+      "id": "field:ScorecardRequirementResult.requirement_id",
+      "kind": "field",
+      "model": "ScorecardRequirementResult",
+      "field": "requirement_id",
+      "type": "UUID",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirementResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "db2e521108fc0930f3bbda7558ce43c56c73dbaf9c7a9453ef69d0ef375a40d6"
+    },
+    {
+      "id": "field:ScorecardRequirementResult.status",
+      "kind": "field",
+      "model": "ScorecardRequirementResult",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirementResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "02ff75208add31c2023597df7b54fe67272dca103b62b7658d2babb75985335e"
     },
     {
       "id": "field:Session.agent_snapshot",
@@ -45986,6 +48181,86 @@
       "fingerprint": "4b7777b797a67c833a5d3d37539eb86c39878e30b2482c2d440d9e52bae050e8"
     },
     {
+      "id": "model:AgentPolicy",
+      "kind": "model",
+      "model": "AgentPolicy",
+      "tableName": "agent_policies",
+      "fieldCount": 4,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicy.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b9e8e9a5cd616a65a285439a5b8fead4c49fb0eaa2898db7cf23ac7a33c73a01"
+    },
+    {
+      "id": "model:AgentPolicyAssignment",
+      "kind": "model",
+      "model": "AgentPolicyAssignment",
+      "tableName": "agent_policy_assignments",
+      "fieldCount": 4,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAssignment.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a3e2fec64644db47a44d3b2cd263973a752cca21f68cd6f2c8d8a42f1019bed3"
+    },
+    {
+      "id": "model:AgentPolicyAttestation",
+      "kind": "model",
+      "model": "AgentPolicyAttestation",
+      "tableName": "agent_policy_attestations",
+      "fieldCount": 9,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "4044e150820ef8d9b80021a84910ca07c6d789e1182239b62120981bc21d9ba6"
+    },
+    {
+      "id": "model:AgentPolicyVersion",
+      "kind": "model",
+      "model": "AgentPolicyVersion",
+      "tableName": "agent_policy_versions",
+      "fieldCount": 4,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyVersion.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "26ca4eec45fb859be3ba0729a15c4cf23403e8e33a1011bddc6bc870b12cd10b"
+    },
+    {
       "id": "model:AiGovernanceRecord",
       "kind": "model",
       "model": "AiGovernanceRecord",
@@ -46300,7 +48575,7 @@
       "kind": "model",
       "model": "CoverageEvidence",
       "tableName": "coverage_evidence",
-      "fieldCount": 4,
+      "fieldCount": 11,
       "hasTenantId": false,
       "classification": "PRODUCTION",
       "source": "api/db/models/CoverageEvidence.js",
@@ -46308,7 +48583,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "65fb23af86e7015af9e0ff38a583212275b9078831d34e2bbe6d7ec7336bcab4"
+      "fingerprint": "f4336baa8cb8072eaca8c9f846c14369a9f20f45446f3a83a07603882d42948c"
     },
     {
       "id": "model:Delivery",
@@ -46349,7 +48624,7 @@
       "kind": "model",
       "model": "EventLedger",
       "tableName": "event_ledger",
-      "fieldCount": 13,
+      "fieldCount": 19,
       "hasTenantId": true,
       "classification": "SUPPORT",
       "source": "api/db/models/EventLedger.js",
@@ -46359,7 +48634,7 @@
         "voice_event_ledger"
       ],
       "linkedDomains": [],
-      "fingerprint": "a2676a5dc60ccd86f2ade554c2ee6ac79fd0cf0e11661e3ce726af34791e8ad7"
+      "fingerprint": "4b7aa95837c18d8c273dd77af1e77b633537af91a6c1de3664dda3bbf3a113fd"
     },
     {
       "id": "model:Evidence",
@@ -46405,6 +48680,38 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "025c49a0b0ccc9d296cdbc952e892fd7bc73fc50826328df1d0042c316dfaf2f"
+    },
+    {
+      "id": "model:ExecutionTrace",
+      "kind": "model",
+      "model": "ExecutionTrace",
+      "tableName": "execution_traces",
+      "fieldCount": 5,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTrace.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ef30de3c23ee7a1e5dcd26bc88e066d381aa416e60a551bc2180242808e078d2"
+    },
+    {
+      "id": "model:ExecutionTraceEvent",
+      "kind": "model",
+      "model": "ExecutionTraceEvent",
+      "tableName": "execution_trace_events",
+      "fieldCount": 5,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTraceEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "cdc4eb9521828041857b57b545dd510a926b52596a5fbd203ac5f7754543fb59"
     },
     {
       "id": "model:Flow",
@@ -46469,6 +48776,74 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "c71cc5de3999c62beee1335d657bc3ad9e20b1e059b3c3545966f0e249a78543"
+    },
+    {
+      "id": "model:GovernanceFinalDecision",
+      "kind": "model",
+      "model": "GovernanceFinalDecision",
+      "tableName": "governance_final_decisions",
+      "fieldCount": 6,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceFinalDecision.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ac3c0d57b75f3cc2528246c967382d5ef7f3d4b595ef299d4ebae87d923ac94b"
+    },
+    {
+      "id": "model:GovernanceGap",
+      "kind": "model",
+      "model": "GovernanceGap",
+      "tableName": "governance_gaps",
+      "fieldCount": 6,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGap.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8663a53c9efca244ddd688360b53bd7be34855556fb26934a716721507814db4"
+    },
+    {
+      "id": "model:GovernanceGateResult",
+      "kind": "model",
+      "model": "GovernanceGateResult",
+      "tableName": "governance_gate_results",
+      "fieldCount": 4,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGateResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "02a5511f29beb561130c7c882fefc8f6d9280e142c84e610aa7e826593fc3a27"
+    },
+    {
+      "id": "model:GovernanceRun",
+      "kind": "model",
+      "model": "GovernanceRun",
+      "tableName": "governance_runs",
+      "fieldCount": 8,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "30980a8c4373b5c50d35f79caf4dda1d09d8145095a9c9d8f9537e96d7239771"
     },
     {
       "id": "model:JourneyRegistry",
@@ -47865,6 +50240,21 @@
       "fingerprint": "8eb692deaf517ef2cfeb733abe5abfe87b8b86425da6ce84464ded05dd710866"
     },
     {
+      "id": "model:ReleaseManifestRecord",
+      "kind": "model",
+      "model": "ReleaseManifestRecord",
+      "tableName": "release_manifest_records",
+      "fieldCount": 3,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ReleaseManifestRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a03b5849865498321ca66b07913a23786512306f30b344d2703d34b5cf670246"
+    },
+    {
       "id": "model:Resource",
       "kind": "model",
       "model": "Resource",
@@ -47917,7 +50307,7 @@
       "kind": "model",
       "model": "RuntimeArtifact",
       "tableName": "runtime_artifacts",
-      "fieldCount": 9,
+      "fieldCount": 17,
       "hasTenantId": true,
       "classification": "PRODUCTION",
       "source": "api/db/models/RuntimeArtifact.js",
@@ -47927,7 +50317,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "8caf6f7dd5a7b08931a052ee5850ce07d838f6d4f6531e4a01e64c77526571b3"
+      "fingerprint": "582e4070df48e110be67380e4343ae6b67c94c5890613a6b1b319b20b0961441"
     },
     {
       "id": "model:Schedule",
@@ -47943,6 +50333,81 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "a8f0a9e42ccb47bbe5a1b4762db99cf23306ada9469bf4c7f4feda12e40fda37"
+    },
+    {
+      "id": "model:ScorecardDimension",
+      "kind": "model",
+      "model": "ScorecardDimension",
+      "tableName": "scorecard_dimensions",
+      "fieldCount": 6,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimension.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "cd44fdd6ae334a5d364ebfb283fb9719e9864b960e731c63d685497e69a9fb31"
+    },
+    {
+      "id": "model:ScorecardDimensionResult",
+      "kind": "model",
+      "model": "ScorecardDimensionResult",
+      "tableName": "scorecard_dimension_results",
+      "fieldCount": 7,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bfaa5be2df7a548ff056961387e0761006d523d189fc296b9eb050fd05503cfc"
+    },
+    {
+      "id": "model:ScorecardEvaluation",
+      "kind": "model",
+      "model": "ScorecardEvaluation",
+      "tableName": "scorecard_evaluations",
+      "fieldCount": 7,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1d5d5db470198b97bf9d9d930c53f768e49c9d279def5171264728e4ca481c84"
+    },
+    {
+      "id": "model:ScorecardRequirement",
+      "kind": "model",
+      "model": "ScorecardRequirement",
+      "tableName": "scorecard_requirements",
+      "fieldCount": 7,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "954e609aaabd3155b702a40d1639f2d7a5d153c15c9944e3f964fb3e95163e12"
+    },
+    {
+      "id": "model:ScorecardRequirementResult",
+      "kind": "model",
+      "model": "ScorecardRequirementResult",
+      "tableName": "scorecard_requirement_results",
+      "fieldCount": 4,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirementResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "7447b936993198c4af195bb0c5f39569111c8c460230ef28317bc9026c48ad8d"
     },
     {
       "id": "model:Session",
@@ -51932,6 +54397,114 @@
       "fingerprint": "261e7cd909a9614c91fa0d0afe77dbe4156ced4848bd19b94104dc2ab6e3f058"
     },
     {
+      "id": "table:agent_policies",
+      "kind": "table",
+      "table": "agent_policies",
+      "model": "AgentPolicy",
+      "hasTenantId": false,
+      "indexes": [],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicy.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "54b5f2a89b548087ff8f497680cd499c68d8949fc551f0c3af97f7189fd0b579"
+    },
+    {
+      "id": "table:agent_policy_assignments",
+      "kind": "table",
+      "table": "agent_policy_assignments",
+      "model": "AgentPolicyAssignment",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "agent_type",
+            "agent_id",
+            "scope"
+          ],
+          "name": "agent_policy_assignments_lookup_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAssignment.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2ee79cdae02ec806da1fbdac3ef5364f7f99edc5800f06787be8a1f335dd5eb9"
+    },
+    {
+      "id": "table:agent_policy_attestations",
+      "kind": "table",
+      "table": "agent_policy_attestations",
+      "model": "AgentPolicyAttestation",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "run_id",
+            "agent_id"
+          ],
+          "name": "agent_policy_attestations_run_agent_idx",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyAttestation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a144108c9da89bfe71c13fbb43e58b10ce781d5bb49e6ec8ff14f8f4525d65ca"
+    },
+    {
+      "id": "table:agent_policy_versions",
+      "kind": "table",
+      "table": "agent_policy_versions",
+      "model": "AgentPolicyVersion",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "policy_id",
+            "version"
+          ],
+          "name": "agent_policy_versions_policy_version_idx",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AgentPolicyVersion.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_factory",
+        "agent_marketplace",
+        "agent_orchestrator",
+        "agent_registry"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "63bd1694e8c49d64b4237e8d8e59cb37abe6b57490b79cd971e37825321ed928"
+    },
+    {
       "id": "table:ai_governance_records",
       "kind": "table",
       "table": "ai_governance_records",
@@ -52625,6 +55198,15 @@
           ],
           "name": "coverage_evidence_prev_hash_idx",
           "unique": false
+        },
+        {
+          "fields": [
+            "run_id",
+            "journey_id",
+            "scenario_id"
+          ],
+          "name": "coverage_evidence_lineage_idx",
+          "unique": false
         }
       ],
       "classification": "PRODUCTION",
@@ -52633,7 +55215,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "7e4c23e5c302b248c7e6d11a2e80a5ab04a633ad49a5264311ae254cfeed1ae2"
+      "fingerprint": "2c46a4a28753dd26af7021e22dfc23da388cc103086f747a980e8fcd37983317"
     },
     {
       "id": "table:deliveries",
@@ -52747,6 +55329,25 @@
         {
           "fields": [
             "tenant_key",
+            "run_id",
+            "critical_journey_id",
+            "occurred_at"
+          ],
+          "name": "event_ledger_tenant_run_journey_occurred_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "execution_id",
+            "occurred_at"
+          ],
+          "name": "event_ledger_tenant_execution_occurred_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
             "subject_type",
             "subject_id",
             "occurred_at"
@@ -52772,7 +55373,7 @@
         "voice_event_ledger"
       ],
       "linkedDomains": [],
-      "fingerprint": "3897eae3bb4c8798840e5a8426b170fe121daac2301c289301276e66f5829fd7"
+      "fingerprint": "470aef88df42ae90a465f7bb00bf969787f35d3068b5c2fc7d9d39cb8b020e46"
     },
     {
       "id": "table:evidence",
@@ -52885,6 +55486,71 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "97d71de77f79206a8d8013fa4282675dbb37f13d1aad6845327f7b43d52331f0"
+    },
+    {
+      "id": "table:execution_trace_events",
+      "kind": "table",
+      "table": "execution_trace_events",
+      "model": "ExecutionTraceEvent",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "trace_id",
+            "event_id"
+          ],
+          "name": "execution_trace_events_trace_event_idx",
+          "unique": true
+        },
+        {
+          "fields": [
+            "trace_id",
+            "occurred_at"
+          ],
+          "name": "execution_trace_events_trace_time_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "event_type"
+          ],
+          "name": "execution_trace_events_type_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTraceEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "4c2d1d8bebd1942f34237eab09eb818f28132fe15fcff9fe0720e9035dd0120b"
+    },
+    {
+      "id": "table:execution_traces",
+      "kind": "table",
+      "table": "execution_traces",
+      "model": "ExecutionTrace",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "run_id",
+            "correlation_id"
+          ],
+          "name": "execution_traces_run_correlation_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ExecutionTrace.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "717da41d4a3c04f69621903e848a65c999d6fffe15013aa16dfad2e77fecba33"
     },
     {
       "id": "table:executions",
@@ -53076,6 +55742,101 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "b14d164c7d0b8020e057ad1d1684c9631558a2ae0d274ac30bb0b90465d336e7"
+    },
+    {
+      "id": "table:governance_final_decisions",
+      "kind": "table",
+      "table": "governance_final_decisions",
+      "model": "GovernanceFinalDecision",
+      "hasTenantId": false,
+      "indexes": [],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceFinalDecision.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "14774793b5db499ddd26f1a24ca1049ac2b31477845ccc247568b1551f410e8a"
+    },
+    {
+      "id": "table:governance_gaps",
+      "kind": "table",
+      "table": "governance_gaps",
+      "model": "GovernanceGap",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "run_id",
+            "status"
+          ],
+          "name": "governance_gaps_run_status_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGap.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f101ef377aefcd1dc77468ff6587f125c9791c0c51517fde2d295dc5a54a90ab"
+    },
+    {
+      "id": "table:governance_gate_results",
+      "kind": "table",
+      "table": "governance_gate_results",
+      "model": "GovernanceGateResult",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "run_id",
+            "gate_key"
+          ],
+          "name": "governance_gate_results_run_key_idx",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceGateResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "38057ad8dc60ccb6f7552197845cb7c935f03629c6e0cf48d5870249d3321903"
+    },
+    {
+      "id": "table:governance_runs",
+      "kind": "table",
+      "table": "governance_runs",
+      "model": "GovernanceRun",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "status",
+            "scope_type"
+          ],
+          "name": "governance_runs_status_scope_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/GovernanceRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b41b3cae8bf2071e77cb87cf2954de1bbed8302fc3403d4a7a5e34c587aa72df"
     },
     {
       "id": "table:journey_registry",
@@ -55554,6 +58315,21 @@
       "fingerprint": "54af2808bcc3030cf7a5534c434f799b2dedd085a9173e2121b2ac23ba99bd10"
     },
     {
+      "id": "table:release_manifest_records",
+      "kind": "table",
+      "table": "release_manifest_records",
+      "model": "ReleaseManifestRecord",
+      "hasTenantId": false,
+      "indexes": [],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ReleaseManifestRecord.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ebd08d0a0033c43e7c8d18005d1f508b5b529b1f361a69f30cf694e888bf24b3"
+    },
+    {
       "id": "table:resource_availabilities",
       "kind": "table",
       "table": "resource_availabilities",
@@ -55662,6 +58438,15 @@
           ],
           "name": "runtime_artifacts_tenant_kind_created_idx",
           "unique": false
+        },
+        {
+          "fields": [
+            "run_id",
+            "artifact_type",
+            "sha256"
+          ],
+          "name": "runtime_artifacts_run_type_sha_idx",
+          "unique": false
         }
       ],
       "classification": "PRODUCTION",
@@ -55672,7 +58457,7 @@
         "process_runtime"
       ],
       "linkedDomains": [],
-      "fingerprint": "3f2b2f99f8b976f344db7b3dc3cd495abc7ae5fe3392dac6f92e683c42fc213f"
+      "fingerprint": "2674ef05406bd08768f5c532b1fd6fa8c0ddff7fd129eff6fa4244034381e120"
     },
     {
       "id": "table:schedules",
@@ -55698,6 +58483,117 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "bd2b885ac5b5df27449074c81b1661195884cffcab2189332c42e914df1e92fb"
+    },
+    {
+      "id": "table:scorecard_dimension_results",
+      "kind": "table",
+      "table": "scorecard_dimension_results",
+      "model": "ScorecardDimensionResult",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "evaluation_id",
+            "dimension_id"
+          ],
+          "name": "scorecard_dimension_results_eval_dimension_idx",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimensionResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "726b2d9525332ebd1309aa4ba96ba5fa004d1b5fb9051749d14955edd1b69cb3"
+    },
+    {
+      "id": "table:scorecard_dimensions",
+      "kind": "table",
+      "table": "scorecard_dimensions",
+      "model": "ScorecardDimension",
+      "hasTenantId": false,
+      "indexes": [],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardDimension.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5d575bd5b848faa73115a16e9dfe924ce95808233e205000eee831a9aec314ed"
+    },
+    {
+      "id": "table:scorecard_evaluations",
+      "kind": "table",
+      "table": "scorecard_evaluations",
+      "model": "ScorecardEvaluation",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "run_id",
+            "created_at"
+          ],
+          "name": "scorecard_evaluations_run_created_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardEvaluation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a6008b3776a4e7389edcc96fe78aced6cbaa2928dc379c50dccabc88d97d3fe4"
+    },
+    {
+      "id": "table:scorecard_requirement_results",
+      "kind": "table",
+      "table": "scorecard_requirement_results",
+      "model": "ScorecardRequirementResult",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "dimension_result_id",
+            "requirement_id"
+          ],
+          "name": "scorecard_requirement_results_unique_idx",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirementResult.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "3f7d38c61fb5d7f2e5bc187c2c8ffcbd8deec9a4706cd2510c8781230448d0a5"
+    },
+    {
+      "id": "table:scorecard_requirements",
+      "kind": "table",
+      "table": "scorecard_requirements",
+      "model": "ScorecardRequirement",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "dimension_id",
+            "requirement_key"
+          ],
+          "name": "scorecard_requirements_dimension_key_idx",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ScorecardRequirement.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "93f6d206301da19deea59d417fa89d2f069ed14d84f28fffd4b89e9c06f35995"
     },
     {
       "id": "table:sessions",
