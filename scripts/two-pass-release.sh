@@ -177,7 +177,7 @@ materialize_payload_governance() {
   # Antes, re-exporta os artefatos circulares (final-proof/governance/consistency/
   # evidence-manifest) com AUTONOMOUS_READY_GO — o fixpoint que quebra o ciclo
   # "governança → scorecard → governança".
-  node_with_workspace_env -e "require('$PROJECT_ROOT/governance/export-governance-artifacts').exportGovernanceArtifacts({forceAutonomousReady:true})" >/dev/null 2>&1 \
+  node_with_workspace_env -e "require('$PROJECT_ROOT/governance/export-governance-artifacts').exportGovernanceArtifacts()" >/dev/null 2>&1 \
     || warn "export-governance-artifacts não concluiu no PASS 5"
 
   # Revalidar o payload saneado: o saneamento (PASS 4b) mudou o sha256 do

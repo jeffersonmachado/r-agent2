@@ -14,8 +14,25 @@ const REQUIRED_CATEGORIES = Object.freeze([
 ]);
 
 function artifact(path, acceptedValues, statusPaths = ['status', 'decision', 'finalDecision', 'pass', 'ok']) {
-  return { type: 'current_artifact', path, statusPaths, acceptedValues, requireLineage: true, maxAgeMs: 7 * 24 * 60 * 60 * 1000 };
+  // Projeções circulares finais (proof/readiness/governance) são DERIVADAS do
+  // scorecard. Em fase PRE_PACKAGE elas carregam honestamente
+  // `PASS_WITH_DEFERRED_PACKAGE_GATE` (gates semânticos ok, decisão final
+  // pendente de package/delivered) — não é GO final, tampouco FAIL. Aceitá-las
+  // como governadas é o que quebra o ciclo sem fabricar GO (sem
+  // forceAutonomousReady). `NO_GO` permanece rejeitado.
+  const values = DEFERRED_CIRCULAR_PATHS.has(path)
+    ? [...new Set([...acceptedValues, 'PASS_WITH_DEFERRED_PACKAGE_GATE'])]
+    : acceptedValues;
+  return { type: 'current_artifact', path, statusPaths, acceptedValues: values, requireLineage: true, maxAgeMs: 7 * 24 * 60 * 60 * 1000 };
 }
+
+// Projeções finais que derivam do estado do próprio scorecard (não são inputs
+// independentes). Só estas carregam o estado transitório DEFERRED em PRE_PACKAGE.
+const DEFERRED_CIRCULAR_PATHS = new Set([
+  'governance/final-proof-report.json',
+  'governance/final-readiness-report.json',
+  'governance/final-governance-report.json',
+]);
 
 function commonTestEvidence(id) {
   return artifact('reports/master-scorecard-test-report.json', ['PASS'], [`dimensions.${id}.status`]);

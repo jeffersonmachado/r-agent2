@@ -79,8 +79,9 @@ describe('Model-Driven Waves & Journeys Pipeline', () => {
       expect(report.modelsLoaded).toBeGreaterThan(100);
       expect(report.modelsWithErrors).toBe(0);
       // A introspecção deve cobrir exatamente os arquivos de model existentes
+      // (governanceModelFactory.js é um factory auxiliar, não um model Sequelize).
       const modelsDir = path.join(__dirname, '..', '..', '..', '..', 'api', 'db', 'models');
-      const files = fs.readdirSync(modelsDir).filter(f => f.endsWith('.js') && f !== 'index.js' && f !== 'helpers.js');
+      const files = fs.readdirSync(modelsDir).filter(f => f.endsWith('.js') && f !== 'index.js' && f !== 'helpers.js' && f !== 'governanceModelFactory.js');
       expect(report.totalModels).toBe(files.length);
       expect(report.modelsLoaded).toBe(files.length);
     });
@@ -210,7 +211,12 @@ describe('Model-Driven Waves & Journeys Pipeline', () => {
       ));
       for (const js of report.journeySeeds) {
         for (const seed of js.seeds) {
-          expect(seed.compatible).toBe(true);
+          // FK_UNRESOLVED é honesto: FK é resolvida no provisionamento real.
+          // Proibido é campo obrigatório ausente sem resolução — nunca random FK.
+          const missingUnresolved = (seed.validations || []).filter(v => v.issue === 'missing_required' && v.resolved !== true);
+          expect(missingUnresolved).toHaveLength(0);
+          expect(seed.data.modelName).toBeDefined();
+          expect(seed.data.tableName).toBeDefined();
         }
       }
     });

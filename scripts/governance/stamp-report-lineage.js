@@ -89,7 +89,10 @@ async function main() {
       'qa/enterprise/pbx-voice-flow-prod-like.json',
       'governance/package-validation-report.json',
       'governance/package-integrity-report.json',
-      'governance/delivered-release-verification-report.json',
+      // NÃO stampar delivered-release-verification-report.json: ele é produzido
+      // EXCLUSIVAMENTE por verify-delivered-release.js em fase DELIVERED, com a
+      // decisão real. Stampar aqui re-injetaria lineage sobre conteúdo stale e
+      // fabricaria DELIVERED_RELEASE_VERIFIED fora da fase DELIVERED.
       'governance/report-contamination-report.json',
       'governance/certification-snapshot.json',
       'reports/master-scorecard-test-report.json',

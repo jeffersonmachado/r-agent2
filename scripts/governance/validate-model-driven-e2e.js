@@ -108,16 +108,32 @@ function readExecutionEvidence() {
 function validateDiscovery(discovery) {
   const violations = [];
 
-  const { journeysReport, topologicalOrder, cycles, candidateJourneys, entityGraph } = discovery;
+  const { journeysReport, topologicalOrder, cycles, candidateJourneys, entityGraph,
+    introspection, sampleScenarios, sampleSeeds } = discovery;
 
   // DISCOVERED: pelo menos uma jornada descoberta pelo pipeline real
   if (!journeysReport || journeysReport.totalJourneys === 0) {
     violations.push('DISCOVERED: nenhuma jornada descoberta pelo model-driven pipeline (inferJourneysFromModels)');
   }
 
+  // MODEL_INTROSPECTION: com modelos elegíveis, zero carregados NÃO é complete.
+  if (introspection && (introspection.totalModels || 0) > 0 && (introspection.modelsLoaded || 0) === 0) {
+    violations.push(`MODEL_INTROSPECTION: ${introspection.totalModels} modelos elegíveis e 0 carregados (modelsLoaded=0) — INSUFFICIENT_EVIDENCE`);
+  }
+
   // REGISTERED: a estrutura do journey report deve conter journeys (CandidateJourney registradas)
   if (candidateJourneys.length === 0) {
     violations.push('REGISTERED: nenhuma candidateJourney no journeysReport');
+  }
+
+  // SCENARIO_GENERATED: zero cenários gerados a partir das constraints é FAIL.
+  if (!sampleScenarios || sampleScenarios.length === 0) {
+    violations.push('SCENARIO_GENERATED: zero cenários gerados (scenarios=0) — INSUFFICIENT_EVIDENCE');
+  }
+
+  // SEED_READY: zero seeds planejados é FAIL.
+  if (!sampleSeeds || sampleSeeds.length === 0) {
+    violations.push('SEED_READY: zero relational seeds planejados (seeds=0) — INSUFFICIENT_EVIDENCE');
   }
 
   // SEED_PLANNED: topological sort deve funcionar sem ciclos para os modelos de domínio

@@ -43,7 +43,7 @@ function artifactBase(run, type) {
   };
 }
 
-async function exportGovernanceArtifacts({ forceAutonomousReady = false } = {}) {
+async function exportGovernanceArtifacts() {
   await connect();
   const run = await getRun().findOne({ order: [['created_at', 'DESC']] });
   if (!run) throw new Error('governance_run_missing');
@@ -54,10 +54,18 @@ async function exportGovernanceArtifacts({ forceAutonomousReady = false } = {}) 
 
   const below10 = evaluation ? evaluation.dimensions_below_10 : 1;
   const failedGates = gates.filter((gate) => gate.mandatory && gate.status !== 'PASS');
-  const autonomousReady = forceAutonomousReady
-    || (run.status !== 'INVALIDATED' && below10 === 0 && failedGates.length === 0);
+  // Nenhum GO é fabricado: a projeção deriva do estado persistido do run.
+  //   - AUTONOMOUS_READY_GO: scorecard 10/10 E todos os gates mandatórios PASS.
+  //   - PASS_WITH_DEFERRED_PACKAGE_GATE: gates semânticos PASS, mas o scorecard
+  //     ainda tem dimensões abaixo de 10 (package/delivered pendentes) — não é
+  //     GO final, tampouco FAIL.
+  //   - NO_GO: ao menos um gate mandatório falhou.
+  const semanticGatesPass = failedGates.length === 0;
+  const autonomousReady = run.status !== 'INVALIDATED' && below10 === 0 && semanticGatesPass;
   const finalDecision = derivedDecision(decision, evaluation, gates);
-  const proofDecision = autonomousReady ? 'AUTONOMOUS_READY_GO' : 'NO_GO';
+  const proofDecision = autonomousReady
+    ? 'AUTONOMOUS_READY_GO'
+    : (semanticGatesPass ? 'PASS_WITH_DEFERRED_PACKAGE_GATE' : 'NO_GO');
 
   const proof = {
     ...artifactBase(run, 'final-proof-report'),
@@ -101,7 +109,7 @@ async function exportGovernanceArtifacts({ forceAutonomousReady = false } = {}) 
 
   const consistency = {
     ...artifactBase(run, 'final-consistency-gate-report'),
-    decision: autonomousReady ? 'FINAL_CONSISTENCY_GO' : 'FINAL_CONSISTENCY_NO_GO',
+    decision: failedGates.length === 0 ? 'FINAL_CONSISTENCY_GO' : 'FINAL_CONSISTENCY_NO_GO',
     failures: failedGates.map((gate) => ({ id: gate.gate_key, reason: gate.reason || gate.status })),
   };
   write('governance/final-consistency-gate-report.json', consistency);

@@ -31,8 +31,9 @@ function readJson(abs) {
 }
 
 function buildChain(handoff, run, sourceFingerprint) {
-  const correlationId = handoff.ticket?.conversationId
-    || `support_ticket_flow-${handoff.ticketId}`;
+  // IDs reais da evidência de runtime — NUNCA sintetizados pelo generator.
+  // Onde a evidência não fornece o ID causal, ele fica null (não fabricado).
+  const correlationId = handoff.ticket?.conversationId || null;
   const ts = handoff.generatedAt || new Date().toISOString();
   const base = {
     criticalJourneyId: 'support_ticket_flow',
@@ -48,7 +49,7 @@ function buildChain(handoff, run, sourceFingerprint) {
       evidence: {
         channel: 'whatsapp',
         phoneNumber: handoff.phoneNumber,
-        messageId: `wamid.enterprise_${Date.now()}`,
+        messageId: handoff.evidence?.messageId || handoff.messageId || null,
         inboundObserved: true,
         timestamp: ts,
       },
@@ -65,7 +66,7 @@ function buildChain(handoff, run, sourceFingerprint) {
     {
       eventType: 'HANDOFF_REQUEST',
       evidence: {
-        handoffRequestId: `handoff-${handoff.ticketId}`,
+        handoffRequestId: handoff.handoffRequestId || null,
         transferQueue: handoff.transferQueue,
         transferObserved: Boolean(handoff.signals?.routingTransferObserved),
         timestamp: ts,
@@ -83,7 +84,7 @@ function buildChain(handoff, run, sourceFingerprint) {
     {
       eventType: 'BACKEND_MUTATION',
       evidence: {
-        mutationId: `mutation-${handoff.ticketId}`,
+        mutationId: handoff.evidence?.mutationId || null,
         ticketId: handoff.ticketId,
         mutationObserved: Boolean(handoff.signals?.backendMutationObserved),
         auditCount: handoff.evidence?.auditCount || 0,
@@ -93,7 +94,7 @@ function buildChain(handoff, run, sourceFingerprint) {
     {
       eventType: 'BUSINESS_OUTCOME',
       evidence: {
-        outcomeId: `outcome-${handoff.ticketId}`,
+        outcomeId: handoff.evidence?.outcomeId || null,
         outcomeType: 'ticket_resolved',
         ticketId: handoff.ticketId,
         finalStatus: handoff.ticket?.status || null,
@@ -136,9 +137,9 @@ async function main() {
       identities: {
         ticketId: handoff.ticketId,
         conversationId: handoff.ticket?.conversationId || null,
-        replayId: `replay-${handoff.ticketId}`,
-        evidenceId: `evidence-${handoff.ticketId}`,
-        outcomeId: `outcome-${handoff.ticketId}`,
+        replayId: handoff.replayId || null,
+        evidenceId: handoff.evidenceId || null,
+        outcomeId: handoff.evidence?.outcomeId || null,
       },
       pass: true,
       decision: 'CRITICAL_JOURNEY_VALIDATED',

@@ -417,6 +417,28 @@ function verify() {
   const finalDecision = pass ? 'AUTONOMOUS_READY' : 'NO_GO';
   const delivered     = pass ? 'DELIVERED_RELEASE_VERIFIED' : 'DELIVERED_RELEASE_NO_GO';
 
+  // Persistir o resultado REAL do verifier entregue (nunca fabricado por outro
+  // script): este relatório é o único produtor legítimo de DELIVERED_RELEASE_VERIFIED.
+  const reportPath = path.join(ROOT, 'governance', 'delivered-release-verification-report.json');
+  try {
+    const deliveredReport = {
+      generatedAt: new Date().toISOString(),
+      runId: manifest?.runId || null,
+      sourceFingerprint: manifest?.sourceFingerprint || null,
+      policyFingerprint: manifest?.policyFingerprint || null,
+      artifactType: 'delivered-release-verification-report',
+      artifactVersion: '1.0.0',
+      decision: delivered,
+      status: delivered,
+      finalDecision,
+      gates: gates.map((gate) => ({ id: gate.id, status: gate.status, mandatory: gate.mandatory, reason: gate.reason || null })),
+    };
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+    fs.writeFileSync(reportPath, `${JSON.stringify(deliveredReport, null, 2)}\n`);
+  } catch (error) {
+    console.error(`[verify-delivered-release] failed to persist delivered report: ${error.message}`);
+  }
+
   // Exibir resultado
   console.log('─'.repeat(60));
   console.log('MANDATORY GATES');

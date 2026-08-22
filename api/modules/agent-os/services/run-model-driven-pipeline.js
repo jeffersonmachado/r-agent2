@@ -117,14 +117,31 @@ async function run() {
   };
   writeReport('model-driven-agent-factory-report.json', agentFactoryReport);
 
-  // Final Attestation
+  // Final Attestation — NENHUM boolean é autoatestado: cada critério deriva de
+  // uma contagem real da execução. Zero-data (modelsLoaded=0, scenarios=0,
+  // seeds=0, waves=0, journeys=0) ⇒ critério false ⇒ status NÃO é complete.
   console.log('[FINAL] Attestation...');
+  const criteriaChecklist = {
+    modelsIntrospected:              introspection.modelsLoaded > 0,
+    domainMapGenerated:              domainMap.totalDomains > 0 || domainMap.totalModelsAssigned > 0,
+    entityGraphGenerated:            entityGraph.totalNodes > 0,
+    journeysInferredFromModels:      journeys.totalJourneys > 0,
+    entityGraphConsumedForDiscovery: journeys.entityGraphConsumed === true && (journeys.fkEdgesAnalyzed || 0) >= 0,
+    agentFactoryIntegrationVerified: integrationCheck.used === true,
+    scenariosGeneratedFromConstraints: scenarios.totalScenarios > 0,
+    seedsCompatibleWithConstraints:  seeds.totalSeeds > 0,
+    wavesGeneratedFromJourneys:      waves.totalWaves > 0,
+  };
+  const allCriteriaPass = Object.values(criteriaChecklist).every(Boolean);
+
   const attestation = {
     generatedAt: nowIso(),
-    status: 'GO_MODEL_DRIVEN_COMPLETE',
+    status: allCriteriaPass ? 'GO_MODEL_DRIVEN_COMPLETE' : 'MODEL_DRIVEN_E2E_FAIL',
     pipeline: 'Sequelize Models → Domain Map → Entity Graph → Journey Inference → Scenario Generation → Seed Generation → QA Waves → Reports',
     summary: {
       totalModels: introspection.totalModels,
+      modelsLoaded: introspection.modelsLoaded,
+      modelsWithErrors: introspection.modelsWithErrors,
       totalDomains: domainMap.totalDomains,
       totalNodes: entityGraph.totalNodes,
       totalEdges: entityGraph.totalEdges,
@@ -134,22 +151,7 @@ async function run() {
       totalSeeds: seeds.totalSeeds,
       totalWaves: waves.totalWaves,
     },
-    criteriaChecklist: {
-      modelsIntrospected: true,
-      domainMapGenerated: true,
-      entityGraphGenerated: true,
-      journeysInferredFromModels: true,
-      entityGraphConsumedForDiscovery: (journeys.fkEdgesAnalyzed || 0) >= 0 && journeys.entityGraphConsumed === true,
-      agentFactoryIntegrationVerified: integrationCheck.used === true,
-      scenariosGeneratedFromConstraints: true,
-      seedsCompatibleWithConstraints: true,
-      wavesGeneratedFromJourneys: true,
-      noManualQA: true,
-      noSimulatedResponse: true,
-      noMockedExecution: true,
-      evidenceRequired: true,
-      replayRequired: true,
-    },
+    criteriaChecklist,
     reports: [
       'dist/model-introspection-report.json',
       'dist/domain-map-report.json',

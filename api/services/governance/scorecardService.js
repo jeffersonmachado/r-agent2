@@ -18,12 +18,12 @@ async function persistDefinitions({ transaction } = {}) {
   return { dimensions: MASTER_SCORECARD_REGISTRY.length };
 }
 
-async function persistEvaluation({ runId, sourceFingerprint, results, status = 'COMPLETED' }) {
+async function persistEvaluation({ runId, sourceFingerprint, results, status = 'COMPLETED', scorecardFingerprint }) {
   const sequelize = getSequelize(); if (!sequelize) throw new Error('governance_db_required: Sequelize não inicializado');
   return sequelize.transaction(async (transaction) => {
     await persistDefinitions({ transaction });
     const dimensions = Array.isArray(results) ? results : [];
-    const evaluation = await getEvaluation().create({ run_id: runId, status, started_at: new Date(), completed_at: new Date(), total_dimensions: dimensions.length, dimensions_at_10: dimensions.filter((item) => item.score === 10).length, dimensions_below_10: dimensions.filter((item) => item.score !== 10).length, open_gaps: dimensions.reduce((total, item) => total + (item.gapCount || 0), 0), open_blockers: dimensions.reduce((total, item) => total + (item.blockerCount || 0), 0), scorecard_fingerprint: sourceFingerprint, metadata: {} }, { transaction });
+    const evaluation = await getEvaluation().create({ run_id: runId, status, started_at: new Date(), completed_at: new Date(), total_dimensions: dimensions.length, dimensions_at_10: dimensions.filter((item) => item.score === 10).length, dimensions_below_10: dimensions.filter((item) => item.score !== 10).length, open_gaps: dimensions.reduce((total, item) => total + (item.gapCount || 0), 0), open_blockers: dimensions.reduce((total, item) => total + (item.blockerCount || 0), 0), scorecard_fingerprint: scorecardFingerprint || sourceFingerprint, metadata: {} }, { transaction });
     for (const item of dimensions) {
       const dimension = await getDimension().findOne({ where: { dimension_key: item.dimensionKey }, transaction });
       if (!dimension) throw new Error(`scorecard_dimension_not_found: ${item.dimensionKey}`);
