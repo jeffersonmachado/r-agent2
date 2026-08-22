@@ -306,11 +306,9 @@ normalize_rebound_dist_artifacts() {
     self-proving-report.json \
     package-validation-report.json \
     package-integrity-report.json \
-    final-consistency-report.json \
     final-governance-report.json \
     governance-attestation.json \
-    governance-chain.json \
-    replay-integrity-report.json; do
+    governance-chain.json; do
     if [[ -f "$DIST_DIR/$f" ]]; then
       mv "$DIST_DIR/$f" "$gov_dir/$f"
     elif [[ -f "$PROJECT_ROOT/governance/$f" ]]; then
