@@ -4,7 +4,7 @@
     "blockingFailures": 0,
     "infraErrors": 0
   },
-  "accepted": false,
+  "accepted": true,
   "bestKnown": {
     "executionId": "mesh-canonical-recovered-1787343988620",
     "passRate": 1,
@@ -17,6 +17,41 @@
     "updatedAt": "2026-08-21T20:26:39.852Z"
   },
   "history": [
+    {
+      "executionId": "mesh-2026-08-22T12-45-00-192Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-22T12:54:36.550Z"
+    },
+    {
+      "executionId": "mesh-2026-08-22T12-30-00-582Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-22T12:40:14.998Z"
+    },
+    {
+      "executionId": "mesh-2026-08-22T12-15-00-166Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-22T12:22:47.216Z"
+    },
+    {
+      "executionId": "mesh-2026-08-22T12-00-00-298Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-22T12:08:08.664Z"
+    },
+    {
+      "executionId": "mesh-2026-08-22T11-45-00-210Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-22T11:52:45.148Z"
+    },
     {
       "executionId": "mesh-2026-08-22T11-15-00-454Z",
       "passRate": 0.9411764705882353,
@@ -121,41 +156,6 @@
       "blockingFailures": 1,
       "infraErrors": 0,
       "at": "2026-08-22T07:52:10.229Z"
-    },
-    {
-      "executionId": "mesh-2026-08-22T07-30-00-168Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-22T07:37:03.258Z"
-    },
-    {
-      "executionId": "mesh-2026-08-22T07-15-00-452Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-22T07:22:00.896Z"
-    },
-    {
-      "executionId": "mesh-2026-08-22T07-00-00-460Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-22T07:07:02.827Z"
-    },
-    {
-      "executionId": "mesh-2026-08-22T06-45-00-457Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-22T06:52:03.650Z"
-    },
-    {
-      "executionId": "mesh-2026-08-22T06-30-00-176Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-22T06:37:13.600Z"
     }
   ]
 }
