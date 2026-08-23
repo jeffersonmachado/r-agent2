@@ -22,8 +22,12 @@ function getModels() {
 }
 const { encrypt, decrypt } = require('../utils/crypto');
 const logger = require('../utils/logger');
+const { SUPPORTED_PROVIDER_IDS } = require('../../engine/aiProviderRegistry');
+const aiProviderRegistryService = require('./aiProviderRegistryService');
 
-const SUPPORTED_AI_PROVIDERS = new Set(['openai', 'anthropic', 'deepseek']);
+// Mantido como fallback estático (built-ins). A validação em runtime consulta
+// o registry dinâmico (built-ins + custom) via aiProviderRegistryService.
+const SUPPORTED_AI_PROVIDERS = new Set(SUPPORTED_PROVIDER_IDS);
 
 // ---------------------------------------------------------------------------
 // Cache em memória de getAIConfig (TTL 60s) — chamada por request e custa 2
@@ -48,9 +52,11 @@ function normalizeProvider(provider) {
   return normalized || null;
 }
 
-function assertSupportedProvider(provider, fieldName = 'provider') {
-  if (!provider || !SUPPORTED_AI_PROVIDERS.has(provider)) {
-    throw new Error(`${fieldName} inválido. Suportados: ${Array.from(SUPPORTED_AI_PROVIDERS).join(', ')}`);
+async function assertSupportedProvider(provider, fieldName = 'provider') {
+  const supported = await aiProviderRegistryService.isSupportedProvider(provider);
+  if (!provider || !supported) {
+    const ids = await aiProviderRegistryService.getProviderIds();
+    throw new Error(`${fieldName} inválido. Suportados: ${ids.join(', ')}`);
   }
 }
 
@@ -106,12 +112,20 @@ async function getAIConfig(tenantKey) {
       where: { tenant_id: tenant.id },
     });
 
+    // Status de credenciais por provider (uma única query em TenantAICredential)
+    const providersStatus = await getCredentialStatusMap(tenantKey, tenant);
+    const supportedIds = await aiProviderRegistryService.getProviderIds();
+    const providersMap = Object.fromEntries(
+      supportedIds.map((id) => [id, { hasCredential: !!providersStatus[id] }]),
+    );
+
     if (!aiSetting) {
       // Retorna configuração padrão
       const defaultConfig = {
         primary: null,
         secondary: null,
         configured: false,
+        providers: providersMap,
       };
       aiConfigCache.set(cacheKey, { value: defaultConfig, expiresAt: Date.now() + AI_CONFIG_CACHE_TTL_MS });
       return structuredClone(defaultConfig);
@@ -122,6 +136,7 @@ async function getAIConfig(tenantKey) {
       primary: aiSetting.primary || aiSetting.provider || null,
       secondary: aiSetting.secondary || null,
       configured: !!(aiSetting.primary || aiSetting.provider),
+      providers: providersMap,
       // Mantém campos antigos para compatibilidade
       enabled: aiSetting.enabled,
       provider: aiSetting.primary || aiSetting.provider,
@@ -178,10 +193,10 @@ async function saveAIConfig(tenantKey, config) {
     const secondaryProvider = normalizeProvider(config.secondary || null);
 
     if (primaryProvider) {
-      assertSupportedProvider(primaryProvider, 'primary');
+      await assertSupportedProvider(primaryProvider, 'primary');
     }
     if (secondaryProvider) {
-      assertSupportedProvider(secondaryProvider, 'secondary');
+      await assertSupportedProvider(secondaryProvider, 'secondary');
     }
     if (primaryProvider && secondaryProvider && primaryProvider === secondaryProvider) {
       throw new Error('secondary deve ser diferente de primary');
@@ -231,7 +246,7 @@ async function saveAIConfig(tenantKey, config) {
 async function saveAICredentials(tenantKey, provider, apiKey) {
   try {
     const normalizedProvider = normalizeProvider(provider);
-    assertSupportedProvider(normalizedProvider);
+    await assertSupportedProvider(normalizedProvider);
 
     if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
       throw new Error('API key não pode estar vazia');
@@ -279,6 +294,11 @@ async function saveAICredentials(tenantKey, provider, apiKey) {
         api_key_encrypted: encrypted,
       });
     }
+
+    // Invalida o cache de getAIConfig para que o status de credenciais
+    // (providers) seja recalculado na próxima leitura.
+    invalidateAIConfigCache(tenantKey);
+    invalidateAIConfigCache(tenant.tenant_key || tenantKey);
 
     logger.info(`[TenantAIService] Credencial ${normalizedProvider} salva para tenant ${tenantKey}`);
   } catch (err) {
@@ -389,12 +409,49 @@ async function hasCredentials(tenantKey, provider) {
   }
 }
 
+/**
+ * Retorna um mapa { providerId: boolean } indicando quais providers têm
+ * credencial salva para o tenant (uma única query).
+ *
+ * @param {string} tenantKey - Chave do tenant (ou UUID)
+ * @param {Object} [resolvedTenant] - Instância de Tenant já resolvida (evita re-resolução)
+ * @returns {Promise<Object<string, boolean>>}
+ */
+async function getCredentialStatusMap(tenantKey, resolvedTenant = null) {
+  const ids = await aiProviderRegistryService.getProviderIds();
+  const status = {};
+  for (const id of ids) status[id] = false;
+
+  try {
+    const tenant = resolvedTenant || await findTenantByIdentifier(tenantKey);
+    if (!tenant) return status;
+
+    const { TenantAICredential } = getModels();
+    const credentials = await TenantAICredential.findAll({
+      where: { tenant_id: tenant.id },
+      attributes: ['provider'],
+    });
+
+    for (const cred of credentials) {
+      const pid = normalizeProvider(cred.provider);
+      if (pid && Object.prototype.hasOwnProperty.call(status, pid)) {
+        status[pid] = true;
+      }
+    }
+    return status;
+  } catch (err) {
+    logger.error('[TenantAIService] Erro ao obter status de credenciais:', err);
+    return status;
+  }
+}
+
 module.exports = {
   getAIConfig,
   saveAIConfig,
   saveAICredentials,
   getDecryptedAPIKey,
   hasCredentials,
+  getCredentialStatusMap,
   invalidateAIConfigCache,
   SUPPORTED_AI_PROVIDERS,
   // Funções internas para testes

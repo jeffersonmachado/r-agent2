@@ -1,6 +1,6 @@
 const { validateInput, schemas } = require('../../utils/inputValidator');
 const { generateTenantByAi, getTenantAiProviderStatus, validateProviderCredentials } = require('./aiWorkflows');
-const { SUPPORTED_AI_PROVIDERS } = require('../../services/tenantAIService');
+const aiProviderRegistryService = require('../../services/aiProviderRegistryService');
 
 function createHttpError(message, httpStatus, code, payload) {
   const error = new Error(message);
@@ -395,8 +395,10 @@ function createTenantService({
         throw createHttpError('Provider é obrigatório', 400, 'invalid_request');
       }
 
-      if (!SUPPORTED_AI_PROVIDERS.has(provider)) {
-        throw createHttpError(`Provider inválido. Suportados: ${Array.from(SUPPORTED_AI_PROVIDERS).join(', ')}`, 400, 'invalid_request');
+      const supported = await aiProviderRegistryService.isSupportedProvider(provider);
+      if (!supported) {
+        const ids = await aiProviderRegistryService.getProviderIds();
+        throw createHttpError(`Provider inválido. Suportados: ${ids.join(', ')}`, 400, 'invalid_request');
       }
 
       if (!apiKey || typeof apiKey !== 'string') {

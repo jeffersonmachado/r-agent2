@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection, getTenantAiConfig, saveTenantAiConfig, saveTenantAiCredentials, validateTenantAiCredentials, validateBillingCredentials } from '../api/config';
+import { getConfig, updateConfig, reloadConfig, restartServer, getProcessManager, validateProviderToken, validateRedisConnection, getTenantAiConfig, saveTenantAiCredentials, validateBillingCredentials } from '../api/config';
 import { getTenantSetting, upsertTenantSetting } from '../api/tenantSettings';
 import { listFlows } from '../api/flows';
 import { useAuth } from '../context/authContext';
@@ -145,8 +145,6 @@ export function ConfigPage() {
   const [validatingApiKey, setValidatingApiKey] = useState(false);
   const [apiKeyValidationStatus, setApiKeyValidationStatus] = useState(null); // { valid: boolean, error: string | null }
   const [credentialsValidatedAndSaved, setCredentialsValidatedAndSaved] = useState(false); // Rastreia se credenciais foram validadas e salvas
-  const [providerAutoValidation, setProviderAutoValidation] = useState({ validating: false, status: null }); // { validating, status: { valid, error, provider } }
-  const [providerAutoValidationNonce, setProviderAutoValidationNonce] = useState(0); // força revalidação automática
 
   const configLoadedRef = useRef(false);
   const configLoadedTenantRef = useRef(null); // Rastreia qual tenant foi carregado
@@ -321,7 +319,8 @@ export function ConfigPage() {
         configured: aiConfig?.configured || false,
         model: aiConfig?.model || null,
         temperature: aiConfig?.temperature || null,
-        max_tokens: aiConfig?.max_tokens || null
+        max_tokens: aiConfig?.max_tokens || null,
+        providers: aiConfig?.providers || null
       });
       setApiKey(''); // Sempre limpa apiKey - nunca exibimos a chave atual
       setApiKeyProvider('');
@@ -338,7 +337,8 @@ export function ConfigPage() {
           configured: false,
           model: null,
           temperature: null,
-          max_tokens: null
+          max_tokens: null,
+          providers: null
         });
       } else {
         showToastRef.current('Erro ao carregar configuração de IA do tenant', 'error');
@@ -350,7 +350,8 @@ export function ConfigPage() {
           configured: false,
           model: null,
           temperature: null,
-          max_tokens: null
+          max_tokens: null,
+          providers: null
         });
       }
       setApiKey(''); // Sempre limpa apiKey
@@ -387,55 +388,6 @@ export function ConfigPage() {
     }
   }, [activeTab, loadPhoneMasking]);
 
-  // Validação automática do provider ao abrir a aba IA (usa credenciais salvas no backend)
-  useEffect(() => {
-    const run = async () => {
-      if (activeTab !== 'ai') return;
-      if (loadingTenantAiConfig) return;
-
-      const tenantToUse = targetTenantId || agent?.tenantId || null;
-      const primary = tenantAiConfig?.primary || null;
-
-      // Sem provider: reseta
-      if (!primary) {
-        setProviderAutoValidation({ validating: false, status: null });
-        return;
-      }
-
-      setProviderAutoValidation({ validating: true, status: null });
-      try {
-        // Valida o que está efetivamente salvo no backend (runtime),
-        // para evitar incoerência: "API key válida" vs "provider não configurado no tenant".
-        const result = await validateTenantAiCredentials({
-          tenantId: targetTenantId || null,
-        });
-        setProviderAutoValidation({
-          validating: false,
-          status: {
-            valid: !!result?.valid,
-            error: result?.error || null,
-            provider: result?.provider || primary,
-            tenantId: tenantToUse,
-          },
-        });
-      } catch (error) {
-        const errorMessage = error?.body?.message || error?.message || 'Erro ao validar credenciais';
-        setProviderAutoValidation({
-          validating: false,
-          status: {
-            valid: false,
-            error: errorMessage,
-            provider: primary,
-            tenantId: tenantToUse,
-          },
-        });
-      }
-    };
-
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, loadingTenantAiConfig, tenantAiConfig?.primary, targetTenantId, agent?.tenantId, providerAutoValidationNonce]);
-
   // Detecta se há erros de validação em qualquer campo
   const hasValidationErrors = useMemo(() => {
     return Object.values(fieldErrors).some(err => err !== null && err !== undefined);
@@ -457,38 +409,10 @@ export function ConfigPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Se estiver na aba IA, salva a configuração de IA do tenant
+      // Se estiver na aba IA, providers e credenciais são salvos individualmente
       if (activeTab === 'ai') {
-        if (!tenantAiConfig?.primary) {
-          showToast('Selecione um provider primário antes de salvar', 'warning');
-          setSaving(false);
-          return;
-        }
-        
-        setSavingTenantAiConfig(true);
-        try {
-          // Usa targetTenantId se disponível (super-admin), senão undefined (usa current)
-          await saveTenantAiConfig({
-            primary: tenantAiConfig.primary,
-            secondary: tenantAiConfig.secondary || undefined,
-            model: tenantAiConfig.model || undefined,
-            temperature: tenantAiConfig.temperature !== null && tenantAiConfig.temperature !== undefined ? tenantAiConfig.temperature : undefined,
-            max_tokens: tenantAiConfig.max_tokens || undefined
-          }, targetTenantId || undefined);
-          showToast('Configuração de IA salva com sucesso!', 'success');
-          // Reset estado de credenciais quando configuração muda
-          setCredentialsValidatedAndSaved(false);
-          setApiKeyValidationStatus(null);
-          setProviderAutoValidationNonce((n) => n + 1); // revalida provider ao salvar config
-          await loadTenantAiConfig(); // Recarrega
-        } catch (error) {
-          logger.error('Erro ao salvar configuração de IA', error);
-          const errorMessage = error.body?.message || error.message || 'Erro ao salvar configuração';
-          showToast(`Erro: ${errorMessage}`, 'error');
-        } finally {
-          setSavingTenantAiConfig(false);
-          setSaving(false);
-        }
+        showToast('Providers e credenciais são salvos individualmente na aba IA', 'info');
+        setSaving(false);
         return;
       }
       
@@ -958,7 +882,7 @@ export function ConfigPage() {
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={(saving || savingTenantAiConfig) || (activeTab !== 'ai' && (!hasChanges || hasValidationErrors)) || (activeTab === 'ai' && (!tenantAiConfig?.primary || hasValidationErrors))} 
+              disabled={(saving || savingTenantAiConfig) || activeTab === 'ai' || (activeTab !== 'ai' && (!hasChanges || hasValidationErrors))} 
               variant="primary"
               className="flex items-center gap-2"
             >
@@ -1106,7 +1030,6 @@ export function ConfigPage() {
                 targetTenantId={targetTenantId}
                 loadingTenantAiConfig={loadingTenantAiConfig}
                 tenantAiConfig={tenantAiConfig}
-                providerAutoValidation={providerAutoValidation}
                 apiKey={apiKey}
                 apiKeyProvider={apiKeyProvider}
                 validatingApiKey={validatingApiKey}
@@ -1121,7 +1044,6 @@ export function ConfigPage() {
                 setValidatingApiKey={setValidatingApiKey}
                 setSavingTenantAiCredentials={setSavingTenantAiCredentials}
                 setCredentialsValidatedAndSaved={setCredentialsValidatedAndSaved}
-                setProviderAutoValidationNonce={setProviderAutoValidationNonce}
                 showToast={showToast}
               />
             )}

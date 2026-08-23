@@ -1,24 +1,44 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-21T20:30:59.514Z",
+  "generatedAt": "2026-08-23T01:07:03.398Z",
   "counts": {
-    "total": 2903,
+    "total": 2918,
     "byKind": {
-      "api": 775,
-      "field": 1632,
-      "model": 174,
+      "api": 778,
+      "field": 1642,
+      "model": 175,
       "page": 139,
       "relation": 9,
-      "table": 174
+      "table": 175
     },
     "byClassification": {
-      "PRODUCTION": 2679,
+      "PRODUCTION": 2694,
       "DEVELOPMENT": 133,
       "SUPPORT": 91
     },
     "orphaned": 0
   },
   "items": [
+    {
+      "id": "api:DELETE:/ai-providers/:key",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/ai-providers/:key",
+      "module": "platform-admin",
+      "source": "api/modules/config/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "d024696531be77ee1d22205f579078eec2b0675ef0a5b3a2f32282f798b772f9"
+    },
     {
       "id": "api:DELETE:/api/calendar/resource/:resourceId/blocks/:blockId",
       "kind": "api",
@@ -675,6 +695,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "f59a5cb13d90c3b965a03628bffa4ae726dcc85c94e2dcd382a24a6cfb67d650"
+    },
+    {
+      "id": "api:GET:/ai-providers",
+      "kind": "api",
+      "method": "GET",
+      "path": "/ai-providers",
+      "module": "platform-admin",
+      "source": "api/modules/config/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:read",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "5d1bd3d09f18633e18cea0c1b95574734427e303e2a432221be2ec14a5f22450"
     },
     {
       "id": "api:GET:/analytics/agents",
@@ -8372,6 +8412,26 @@
       "technicalWave": "platform",
       "linkedJourneys": [],
       "fingerprint": "de8e94189a0b353a3abc386e5cbc8240ae01450f044539a8f2d4029e780451c0"
+    },
+    {
+      "id": "api:POST:/ai-providers",
+      "kind": "api",
+      "method": "POST",
+      "path": "/ai-providers",
+      "module": "platform-admin",
+      "source": "api/modules/config/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:config:update",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "b55f8f44a646be7ab5e01300274a11f1eb455ed79813993fbf46bf15cee1581f"
     },
     {
       "id": "api:POST:/ai/chatbot/generate",
@@ -18182,6 +18242,216 @@
       ],
       "linkedDomains": [],
       "fingerprint": "7e9f6864b178c521745ffa93c9559aa35702ac3dc1831f547b8f731a312f752a"
+    },
+    {
+      "id": "field:AiProvider.base_url",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "base_url",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "c6b53abde8ab2b5d91e7a317434369ba55352d3cde485d6e34ef4de6fd94486c"
+    },
+    {
+      "id": "field:AiProvider.default_model",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "default_model",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "252ee92c36d85b6f422c60f5008956fa0a81e749c96ff236af76ff663746eccc"
+    },
+    {
+      "id": "field:AiProvider.enabled",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "enabled",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "true",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8cef27a2d7366e3ad06511f67d843328cbdc542d09de87f4095e950708646a94"
+    },
+    {
+      "id": "field:AiProvider.id",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "id",
+      "type": "UUID",
+      "allowNull": null,
+      "default": "DataTypes.UUIDV4",
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "c2fa22124f79e97c792f956d34654bc67f6ba9c2601fbe72283a7d19c8c0cb34"
+    },
+    {
+      "id": "field:AiProvider.is_builtin",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "is_builtin",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2b4cdaaa365a4dc6d6c05bacfb3aecab8f283c1da8d1327b7e66c083e6f9df1d"
+    },
+    {
+      "id": "field:AiProvider.key",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6bfca55fce927f7b751c59b486435cc14bf3fe50593d359f4c4ac56f0c507aee"
+    },
+    {
+      "id": "field:AiProvider.kind",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "kind",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "b13557a08da8511ff7f4a7920d7297f7e08f32fddac7f47ac35793c2b81d6288"
+    },
+    {
+      "id": "field:AiProvider.label",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "label",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ea46d680b73d877ae45d4b82808d5a89f3182bd35d70944daffd8ab0431bdb25"
+    },
+    {
+      "id": "field:AiProvider.models",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "models",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3a671264c47f8603cf3371fb31337aa1fac99a3c1db3f2c1407a12482d032e25"
+    },
+    {
+      "id": "field:AiProvider.validation_model",
+      "kind": "field",
+      "model": "AiProvider",
+      "field": "validation_model",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e9338a5473d6fd2a98a9da6dc9ff2923aa3ca289906bd2da317cd128acfb8f0a"
     },
     {
       "id": "field:AuditEvent.action",
@@ -48279,6 +48549,24 @@
       "fingerprint": "ab6c99c8efb3805ec1121450712bec858ca13ae13c1a31f442607393e2dcdfab"
     },
     {
+      "id": "model:AiProvider",
+      "kind": "model",
+      "model": "AiProvider",
+      "tableName": "ai_providers",
+      "fieldCount": 10,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "5282d7824e0b6f4d53c091c35047d79e67186aa4aadfbd707f9125c5f93d54aa"
+    },
+    {
       "id": "model:AuditEvent",
       "kind": "model",
       "model": "AuditEvent",
@@ -54550,6 +54838,32 @@
       ],
       "linkedDomains": [],
       "fingerprint": "258d568ea457d60c8cc5ee1080a9cf90b5f81d8cd4fafa5ae48b331ca2cfad98"
+    },
+    {
+      "id": "table:ai_providers",
+      "kind": "table",
+      "table": "ai_providers",
+      "model": "AiProvider",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "key"
+          ],
+          "name": "ai_providers_key_unique",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AiProvider.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a11d8e406b24edbbf36f7931eb108f3718b0117e86bcaba38dc36fdb09a44f84"
     },
     {
       "id": "table:audit_events",

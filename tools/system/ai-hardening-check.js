@@ -60,31 +60,29 @@ function checkFilesExist() {
 }
 
 function checkSupportedProviders() {
-  const source = readText('api/services/tenantAIService.js');
-  const match = source.match(/SUPPORTED_AI_PROVIDERS\s*=\s*new Set\(\[([^\]]+)\]\)/m);
-
-  if (!match) {
+  let providers;
+  try {
+    // Fonte única de providers: engine/aiProviderRegistry.js
+    // eslint-disable-next-line global-require
+    const registry = require('../../engine/aiProviderRegistry');
+    providers = registry.getProviderIds().slice().sort();
+  } catch (err) {
     return {
       id: 'supported-providers',
       status: 'fail',
-      details: { reason: 'supported_providers_declaration_not_found' },
+      details: { reason: `supported_providers_registry_unreadable: ${err.message}` },
     };
   }
 
-  const providers = match[1]
-    .split(',')
-    .map((part) => part.replace(/["'\s]/g, ''))
-    .filter(Boolean)
-    .sort();
-
-  const expected = ['anthropic', 'openai'];
-  const isOk = providers.length === expected.length && providers.every((item, idx) => item === expected[idx]);
+  const expected = ['anthropic', 'deepseek', 'groq', 'kimi', 'mistral', 'openai'];
+  const isOk = providers.length >= 6
+    && expected.every((item) => providers.includes(item));
 
   return {
     id: 'supported-providers',
     status: isOk ? 'pass' : 'fail',
     details: {
-      expected,
+      expectedAtLeast: expected,
       found: providers,
     },
   };

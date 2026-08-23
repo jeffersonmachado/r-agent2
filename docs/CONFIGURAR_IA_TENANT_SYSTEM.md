@@ -2,9 +2,17 @@
 
 Este documento explica como salvar a configuração de IA para o tenant "system".
 
+## ⚠️ Atualizado (2026-08): a engine decide o provider
+
+A partir de 2026-08, **não é mais necessário configurar `primary`/`secondary`**. Os providers são registrados globalmente (`engine/aiProviderRegistry.js` + tabela `ai_providers`) e a engine roteia por todos os providers com credencial configurada (circuit breaker + failover). `primary`/`secondary` continuam aceitos por compatibilidade, mas **não dirigem mais o roteamento**.
+
+O que importa agora:
+1. **Credenciais por provider** (`PUT /tenants/:tenantKey/ai-credentials`) — a engine usa qualquer provider que tenha chave salva.
+2. **Registro de providers** (`GET/POST /ai-providers`, `DELETE /ai-providers/:key`) — gerencie os providers na aba IA (⚙️ Configuração → 🤖 IA).
+
 ## Visão Geral
 
-O tenant "system" é um tenant especial usado para operações administrativas e geração de sistemas. Ele precisa ter um provider de IA configurado para funcionar corretamente.
+O tenant "system" é um tenant especial usado para operações administrativas e geração de sistemas. Ele precisa ter ao menos um provider de IA com credencial configurada para funcionar corretamente.
 
 ## Métodos para Configurar
 
@@ -115,17 +123,14 @@ async function verificarConfig() {
 }
 ```
 
-## Configuração Automática na Inicialização
+## Inicialização
 
-O sistema tenta configurar automaticamente o tenant "system" durante a inicialização:
+Na inicialização, `initializeAiProviders`:
+1. Registra os providers built-in (OpenAI SDK, Anthropic SDK) e os demais (DeepSeek, Kimi, Mistral, Groq + custom) via factory genérica.
+2. Sincroniza os built-ins na tabela `ai_providers` (`aiProviderRegistryService.ensureBuiltinProviders`).
+3. NÃO sincroniza mais `primary`/`secondary` do banco para o runtime — a seleção de provider por tenant é decisão da engine (roteamento engine-wide).
 
-1. Verifica se o tenant "system" já tem configuração
-2. Se não tiver, tenta configurar com o primeiro provider disponível:
-   - Prioriza `openai`
-   - Se não disponível, tenta `anthropic`
-3. Registra logs informativos sobre o processo
-
-**Nota:** A configuração automática só funciona se houver pelo menos um provider registrado (com API key configurada).
+A engine resolve o provider de um tenant sem config explícita: tenta todos os providers registrados em ordem, pula os sem credencial (`AI_PROVIDER_NOT_CONFIGURED`) e para em bloqueios duros (policy denial, modelo aposentado, budget).
 
 ## Estrutura no Banco de Dados
 
@@ -158,12 +163,11 @@ O tenant "system" é criado automaticamente na inicialização. Se não existir:
 ### Erro: "Nenhum provider de IA configurado para tenant: system"
 
 Isso significa que:
-1. O tenant "system" não tem configuração salva no banco
-2. A configuração automática falhou (nenhum provider disponível)
+1. Nenhum provider registrado tem credencial salva para o tenant "system".
 
 **Solução:**
-1. Configure manualmente via API (método 1 acima)
-2. Ou garanta que pelo menos um provider (openai ou anthropic) tenha API key configurada
+1. Salve a API key de pelo menos um provider (`PUT /tenants/system/ai-credentials`)
+2. Ou registre/configure um provider na aba IA (⚙️ Configuração → 🤖 IA)
 
 ### Verificar se Providers Estão Registrados
 
@@ -203,5 +207,5 @@ curl -X GET http://localhost:3000/tenants/system/ai-config \
 
 1. **Permissões:** Apenas Super Admins ou Owners do tenant podem alterar configurações
 2. **Criptografia:** API keys são criptografadas antes de serem salvas
-3. **Fallback:** Se o provider primário falhar e houver secundário configurado, o sistema tenta o secundário automaticamente
+3. **Roteamento:** A engine tenta os providers registrados em ordem (com circuit breaker), pulando os sem credencial e parando em bloqueios duros; não depende de primary/secondary.
 4. **Reinicialização:** Após salvar a configuração, o sistema precisa recarregar os providers (geralmente automático na próxima requisição)

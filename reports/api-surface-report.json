@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-08-22T11:22:33.481Z",
-  "commit": "4b0f5ef4fbbf4d9473692015fba1a32a429995d9",
+  "generatedAt": "2026-08-23T01:17:53.589Z",
+  "commit": "b67aaf3a005012485dcb86ce333ddccf4693ed51",
   "baseUrl": "http://localhost:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 775,
+    "items": 778,
     "byState": {
-      "VALIDATED": 751,
+      "VALIDATED": 754,
       "NOT_APPLICABLE": 21,
       "VISITED": 3
     }
@@ -193,6 +193,30 @@
     }
   ],
   "perItem": [
+    {
+      "id": "api:DELETE:/ai-providers/:key",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
     {
       "id": "api:DELETE:/api/calendar/resource/:resourceId/blocks/:blockId",
       "state": "VALIDATED",
@@ -1042,6 +1066,33 @@
           "notFoundFallback": false
         },
         "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/ai-providers",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 200,
+          "notFoundFallback": false
+        },
         "p3": "skipped"
       }
     },
@@ -5668,7 +5719,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (200)"
+          "detail": "super_admin alcançou a rota (500)"
         }
       ],
       "probes": {
@@ -5681,7 +5732,7 @@
           "notFoundFallback": false
         },
         "p3": {
-          "status": 200,
+          "status": 500,
           "notFoundFallback": false
         }
       }
@@ -10240,7 +10291,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 500,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -12072,6 +12123,30 @@
     },
     {
       "id": "api:POST:/admin/rate-limit/clear-cache",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/ai-providers",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -21699,9 +21774,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20260822124154425-a93b2405",
-  "sourceFingerprint": "2d9c35295670e6a2d3d51d6ee954129b392960ad80aad1cc85fae4e6b62c23a1",
-  "artifactType": "api-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }

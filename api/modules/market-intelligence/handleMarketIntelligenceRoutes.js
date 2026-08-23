@@ -2,6 +2,7 @@
 
 const tenantService = require('../../services/tenantService');
 const { getMarketKnowledgeService } = require('../../core/market-intelligence/MarketKnowledgeService');
+const aiControlPlaneStatus = require('../../services/aiControlPlaneStatus');
 
 function parseMetricKeys(searchParams) {
   const multi = searchParams.getAll('metric_key').map((item) => String(item).trim()).filter(Boolean);
@@ -72,6 +73,7 @@ async function handleMarketIntelligenceRoutes(ctx) {
         vertical,
         region: searchParams.get('region') || undefined,
       });
+      aiControlPlaneStatus.setComponentStatus('MARKET_INTELLIGENCE', 'HEALTHY');
       sendJson(res, 200, out);
       return true;
     }
@@ -81,6 +83,7 @@ async function handleMarketIntelligenceRoutes(ctx) {
         patternType: searchParams.get('pattern_type') || undefined,
         limit: searchParams.get('limit') || undefined,
       });
+      aiControlPlaneStatus.setComponentStatus('MARKET_INTELLIGENCE', 'HEALTHY');
       sendJson(res, 200, out);
       return true;
     }
@@ -94,6 +97,7 @@ async function handleMarketIntelligenceRoutes(ctx) {
         predictionWindow: searchParams.get('prediction_window') || undefined,
         forceRefresh: String(searchParams.get('refresh') || 'false') === 'true',
       });
+      aiControlPlaneStatus.setComponentStatus('MARKET_INTELLIGENCE', 'HEALTHY');
       sendJson(res, 200, out);
       return true;
     }
@@ -103,10 +107,12 @@ async function handleMarketIntelligenceRoutes(ctx) {
         problemType,
         limit: searchParams.get('limit') || undefined,
       });
+      aiControlPlaneStatus.setComponentStatus('MARKET_INTELLIGENCE', 'HEALTHY');
       sendJson(res, 200, out);
       return true;
     }
   } catch (err) {
+    aiControlPlaneStatus.setComponentStatus('MARKET_INTELLIGENCE', 'DEGRADED');
     logger.error('[MarketIntelligenceRoutes] erro ao processar rota de market intelligence', err);
     sendJson(res, 500, {
       error: 'internal_error',

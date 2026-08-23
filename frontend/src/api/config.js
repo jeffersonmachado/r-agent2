@@ -348,4 +348,55 @@ export async function saveTenantAiCredentials(credentials, tenantId = null) {
   }
 }
 
+/**
+ * Lista os providers de IA registrados (built-ins + custom).
+ *
+ * @returns {Promise<{success: boolean, providers: Array}>}
+ */
+export async function listAiProviders() {
+  try {
+    return await fetchJson('/ai-providers', {
+      method: 'GET',
+    });
+  } catch (error) {
+    logger.error('Erro ao listar providers de IA', error);
+    throw error;
+  }
+}
+
+/**
+ * Cria um provider de IA custom.
+ *
+ * @param {Object} provider - { key, label, kind, baseUrl, defaultModel, models }
+ * @returns {Promise<{success: boolean, provider: Object}>}
+ */
+export async function createAiProvider(provider) {
+  try {
+    return await fetchJson('/ai-providers', {
+      method: 'POST',
+      body: JSON.stringify(provider),
+    });
+  } catch (error) {
+    logger.error('Erro ao criar provider de IA', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove um provider de IA custom (built-ins não podem ser removidos).
+ *
+ * @param {string} key - Chave do provider
+ * @returns {Promise<{success: boolean}>}
+ */
+export async function deleteAiProvider(key) {
+  try {
+    return await fetchJson(`/ai-providers/${encodeURIComponent(key)}`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    logger.error('Erro ao remover provider de IA', error);
+    throw error;
+  }
+}
+
 

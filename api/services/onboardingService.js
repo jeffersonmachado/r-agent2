@@ -55,7 +55,7 @@ const ONBOARDING_CHECKLIST = {
   // 🔴 OBRIGATÓRIO — validado automaticamente
   configure_ai_provider: {
     label: 'Configurar provider de IA',
-    description: 'Configure OpenAI, DeepSeek ou Anthropic para o motor de IA',
+    description: 'Configure OpenAI, DeepSeek, Anthropic ou Kimi para o motor de IA',
     required: true,
     category: 'required',
     autoDetect: true,

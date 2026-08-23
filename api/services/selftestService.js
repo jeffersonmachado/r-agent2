@@ -597,6 +597,60 @@ async function safeCheckVoiceRuntime() {
   }
 }
 
+function mapSelftestToComponentStatus(selftestStatus) {
+  if (selftestStatus === 'healthy') return 'HEALTHY';
+  if (selftestStatus === 'unhealthy') return 'BLOCKED';
+  return 'DEGRADED';
+}
+
+/**
+ * Check do AI Control Plane (resiliência/fail-safe/degraded mode).
+ *
+ * Deriva DATABASE e OBSERVABILITY dos sinais já coletados e agrega o status
+ * do control plane via `api/services/aiControlPlaneStatus`. Componentes não
+ * observados ficam UNKNOWN no relatório (honestidade), mas não são tratados
+ * como falha detectada no selftest — a porta de operação crítica
+ * (`criticalOperationAllowed`) é quem bloqueia UNKNOWN de componente
+ * SAFETY_CRITICAL.
+ *
+ * @param {{db: object, eventLedger: object}} signals
+ * @returns {{status: string, details: object, error: string|null}}
+ */
+function safeCheckAiControlPlane({ db, eventLedger } = {}) {
+  try {
+    // eslint-disable-next-line global-require
+    const aiControlPlaneStatus = require('./aiControlPlaneStatus');
+
+    if (db && db.status) {
+      aiControlPlaneStatus.setComponentStatus('DATABASE', mapSelftestToComponentStatus(db.status));
+    }
+    if (eventLedger && eventLedger.status) {
+      // OBSERVABILITY degradada nunca vira BLOCKED a partir de um único sinal
+      // de ledger (item 25): métricas indisponíveis degradam, não bloqueiam.
+      aiControlPlaneStatus.setComponentStatus(
+        'OBSERVABILITY',
+        eventLedger.status === 'healthy' ? 'HEALTHY' : 'DEGRADED',
+      );
+    }
+
+    const report = aiControlPlaneStatus.getControlPlaneReport();
+    const cpStatus = report.aiControlPlaneStatus;
+
+    let status = 'healthy';
+    if (cpStatus === 'BLOCKED') status = 'unhealthy';
+    else if (cpStatus === 'DEGRADED' || cpStatus === 'SAFE_MODE' || cpStatus === 'RECOVERING') status = 'degraded';
+    // HEALTHY e UNKNOWN não são falha detectada no selftest.
+
+    return {
+      status,
+      details: report,
+      error: status === 'unhealthy' ? 'ai_control_plane_blocked' : null,
+    };
+  } catch (err) {
+    return { status: 'degraded', error: safeErrorMessage(err, 'ai_control_plane_check_failed') };
+  }
+}
+
 /**
  * Executa selftest read-only.
  *
@@ -618,7 +672,9 @@ async function runSelftest() {
     safeCheckVoiceRuntime(),
   ]);
 
-  const checks = { db, redis, rag, publicTokens, executionQueue, eventLedger, eventDispatchRuntime, flowExecutionLedger, pbxEventRuntime, voiceRuntime };
+  const aiControlPlane = safeCheckAiControlPlane({ db, eventLedger });
+
+  const checks = { db, redis, rag, publicTokens, executionQueue, eventLedger, eventDispatchRuntime, flowExecutionLedger, pbxEventRuntime, voiceRuntime, aiControlPlane };
   const values = Object.values(checks);
 
   const anyUnhealthy = values.some((c) => c && c.status === 'unhealthy');

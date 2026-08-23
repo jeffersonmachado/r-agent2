@@ -195,6 +195,50 @@ function createConfigController({ service, deps }) {
       }
     },
 
+    async listAiProviders(req, res) {
+      try {
+        const authResult = ensureAuth(req, res);
+        if (!authResult) return;
+        const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+        if (!ensurePermission(req, res, 'config', 'read', isSuperAdminUser)) return;
+        const providers = await service.listAiProviders();
+        deps.sendJson(res, 200, { success: true, providers });
+      } catch (err) {
+        deps.logger.error('Erro ao listar providers de IA:', err);
+        deps.sendJson(res, 500, { error: 'Erro ao listar providers de IA', message: err.message });
+      }
+    },
+
+    async createAiProvider(req, res) {
+      if (!ensureJson(req, res)) return;
+      try {
+        const authResult = ensureAuth(req, res);
+        if (!authResult) return;
+        const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+        if (!ensurePermission(req, res, 'config', 'update', isSuperAdminUser)) return;
+        const body = await deps.parseJsonBody(req);
+        const provider = await service.createAiProvider(body || {});
+        deps.sendJson(res, 201, { success: true, provider });
+      } catch (err) {
+        deps.logger.warn('Erro ao criar provider de IA:', err);
+        deps.sendJson(res, 400, { error: 'invalid_request', message: err.message || 'Erro ao criar provider' });
+      }
+    },
+
+    async deleteAiProvider(req, res) {
+      try {
+        const authResult = ensureAuth(req, res);
+        if (!authResult) return;
+        const isSuperAdminUser = deps.isSuperAdmin(authResult.agent);
+        if (!ensurePermission(req, res, 'config', 'update', isSuperAdminUser)) return;
+        const result = await service.deleteAiProvider(decodeURIComponent(String(req.params.key)));
+        deps.sendJson(res, 200, { success: true, ...result });
+      } catch (err) {
+        const status = err && err.code === 'BUILTIN_PROVIDER_UNDELETABLE' ? 400 : 404;
+        deps.sendJson(res, status, { error: 'invalid_request', message: err.message || 'Erro ao remover provider' });
+      }
+    },
+
     async updateConfig(req, res) {
       if (!ensureJson(req, res)) return;
       // Sobrescreve a configuração inteira e reinicia o servidor: exige auth + config:update.
@@ -251,8 +295,12 @@ function createConfigController({ service, deps }) {
           deps.badRequest(res, 'Provider e apiKey são obrigatórios');
           return;
         }
-        if (provider !== 'openai' && provider !== 'anthropic') {
-          deps.badRequest(res, 'Provider deve ser "openai" ou "anthropic"');
+        // eslint-disable-next-line global-require
+        const aiProviderRegistryService = require('../../services/aiProviderRegistryService');
+        const supported = await aiProviderRegistryService.isSupportedProvider(provider);
+        if (!supported) {
+          const ids = await aiProviderRegistryService.getProviderIds();
+          deps.badRequest(res, `Provider deve ser um dos suportados: ${ids.join(', ')}`);
           return;
         }
         if (!String(apiKey).trim()) {

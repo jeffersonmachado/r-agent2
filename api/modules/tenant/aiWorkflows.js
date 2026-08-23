@@ -254,70 +254,23 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 async function getTenantAiProviderStatus({ tenantId, tenantAIService }) {
   const { getAiProviderForTenant } = require('../../../engine/aiProviderManager');
 
-  const tenantAiConfig = await tenantAIService.getAIConfig(tenantId);
-  if (!tenantAiConfig || !tenantAiConfig.primary || !tenantAiConfig.configured) {
-    return {
-      hasValidProvider: false,
-      tenantId,
-    };
-  }
-
+  // A engine decide o provider (roteamento engine-wide). O tenant tem provider
+  // válido quando há pelo menos UM provider registrado com credencial salva.
   const provider = getAiProviderForTenant(tenantId);
-  const hasValidProvider = provider !== null
+  const hasRegisteredProvider = provider !== null
     && typeof provider === 'object'
     && typeof provider.generate === 'function';
 
-  let finalIsValid = hasValidProvider;
-  if (!hasValidProvider && tenantAiConfig.primary) {
-    const primaryProvider = tenantAiConfig.primary;
-    const apiKey = await tenantAIService.getDecryptedAPIKey(tenantId, primaryProvider);
-
-    if (apiKey && apiKey.trim()) {
-      try {
-        if (primaryProvider === 'openai') {
-          const response = await fetch('https://api.openai.com/v1/models', {
-            method: 'GET',
-            headers: { Authorization: `Bearer ${apiKey.trim()}` },
-            signal: AbortSignal.timeout(10000),
-          });
-          if (response.ok) {
-            const data = await response.json().catch(() => null);
-            finalIsValid = !!(data && Array.isArray(data.data));
-          } else {
-            finalIsValid = false;
-          }
-        } else if (primaryProvider === 'anthropic') {
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'x-api-key': apiKey.trim(),
-              'anthropic-version': '2023-06-01',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'claude-3-haiku-20240307',
-              max_tokens: 10,
-              messages: [{ role: 'user', content: 'test' }],
-            }),
-            signal: AbortSignal.timeout(10000),
-          });
-          if (response.ok) {
-            const data = await response.json().catch(() => null);
-            finalIsValid = !!(data && data.content);
-          } else {
-            finalIsValid = false;
-          }
-        }
-      } catch {
-        finalIsValid = false;
-      }
-    } else {
-      finalIsValid = false;
-    }
+  let hasAnyCredential = false;
+  try {
+    const statusMap = await tenantAIService.getCredentialStatusMap(tenantId);
+    hasAnyCredential = Object.values(statusMap || {}).some(Boolean);
+  } catch {
+    hasAnyCredential = false;
   }
 
   return {
-    hasValidProvider: finalIsValid,
+    hasValidProvider: hasRegisteredProvider && hasAnyCredential,
     tenantId,
   };
 }
@@ -328,29 +281,19 @@ async function validateProviderCredentials(provider, apiKey) {
     return { valid: false, error: 'Token não pode estar vazio' };
   }
 
+  // Fonte única de providers: registry dinâmico (built-ins + custom).
+  // eslint-disable-next-line global-require
+  const aiProviderRegistryService = require('../../services/aiProviderRegistryService');
+  const def = await aiProviderRegistryService.getProviderDef(String(provider || '').trim().toLowerCase());
+  if (!def) {
+    return { valid: false, error: 'Provider não suportado' };
+  }
+
+  const baseUrl = def.baseUrl.replace(/\/$/, '');
+
   try {
-    if (provider === 'openai') {
-      const response = await fetch('https://api.openai.com/v1/models', {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${cleanApiKey}` },
-        signal: AbortSignal.timeout(10000),
-      });
-
-      if (response.ok) {
-        const data = await response.json().catch(() => null);
-        return Array.isArray(data?.data)
-          ? { valid: true, error: null }
-          : { valid: false, error: 'Resposta inválida da API OpenAI' };
-      }
-
-      const errorData = await response.json().catch(() => ({}));
-      if (response.status === 401) return { valid: false, error: 'Token inválido ou expirado' };
-      if (response.status === 403) return { valid: false, error: 'Token não tem permissão para acessar a API' };
-      return { valid: false, error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}` };
-    }
-
-    if (provider === 'anthropic') {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+    if (def.kind === 'anthropic') {
+      const response = await fetch(`${baseUrl}/messages`, {
         method: 'POST',
         headers: {
           'x-api-key': cleanApiKey,
@@ -358,7 +301,7 @@ async function validateProviderCredentials(provider, apiKey) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
+          model: def.validationModel || 'claude-haiku-4-5-20251001',
           max_tokens: 10,
           messages: [{ role: 'user', content: 'test' }],
         }),
@@ -369,7 +312,7 @@ async function validateProviderCredentials(provider, apiKey) {
         const data = await response.json().catch(() => null);
         return data?.content
           ? { valid: true, error: null }
-          : { valid: false, error: 'Resposta inválida da API Anthropic' };
+          : { valid: false, error: `Resposta inválida da API ${def.label}` };
       }
 
       const errorData = await response.json().catch(() => ({}));
@@ -378,7 +321,24 @@ async function validateProviderCredentials(provider, apiKey) {
       return { valid: false, error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}` };
     }
 
-    return { valid: false, error: 'Provider não suportado' };
+    // openai-sdk e openai-compatible: valida via GET /models com Bearer
+    const response = await fetch(`${baseUrl}/models`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${cleanApiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (response.ok) {
+      const data = await response.json().catch(() => null);
+      return Array.isArray(data?.data)
+        ? { valid: true, error: null }
+        : { valid: false, error: `Resposta inválida da API ${def.label}` };
+    }
+
+    const errorData = await response.json().catch(() => ({}));
+    if (response.status === 401) return { valid: false, error: 'Token inválido ou expirado' };
+    if (response.status === 403) return { valid: false, error: 'Token não tem permissão para acessar a API' };
+    return { valid: false, error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}` };
   } catch (validationError) {
     if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
       return { valid: false, error: 'Timeout ao validar token. Verifique sua conexão com a internet.' };

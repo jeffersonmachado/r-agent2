@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-22T12:57:42.513Z",
+  "generatedAt": "2026-08-23T01:58:12.586Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": null,
-  "zipHash": null,
+  "zipName": "r-agent2-20260822-102905.zip",
+  "zipHash": "eb1a72953d73ce3b508b9170b9f595a7edb9de57b49d65eeeb600e85188bba3c",
   "manifestHash": "c2c9debb9e30233e981d19ea5bae19ef35df50e765fcfe1116c92cd5006e56e1",
   "replayHash": "a938d8356d44389f419f09ff959df371d390c3b1a012e7a5f27d1d5ed3c5d2cc",
   "governanceHash": "9e91f2c14ab4d941299b1a961076f94015e7f20f0d1c68a21c88e13de637ff07",
@@ -28,5 +28,5 @@
   "autonomousReady": true,
   "mandatoryFailures": [],
   "ok": true,
-  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 0."
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260822-102905.zip. Package: ÍNTEGRO. Validadores falhos: 0."
 }

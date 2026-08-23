@@ -73,6 +73,7 @@ function frontendRoutesPlugin() {
                           (url.startsWith('/channel-accounts/') || (url === '/channel-accounts' && isApiRequest)) ||
                           (url === '/whatsapp' || url.startsWith('/whatsapp/')) ||
                           (url === '/ai' || url.startsWith('/ai/')) ||
+                          url.startsWith('/ai-providers') ||
                           url.startsWith('/flow-templates') ||
                           url.startsWith('/flows') ||
                           url.startsWith('/health') ||
@@ -466,6 +467,11 @@ const viteConfig = defineConfig(({ mode }) => {
         },
       },
       '^/whatsapp/': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+      },
+      '^/ai-providers': {
         target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
@@ -930,7 +936,7 @@ const viteConfig = defineConfig(({ mode }) => {
     // Configuração para garantir que o React seja incluído corretamente
     commonjsOptions: {
       // Inclui arquivos CommonJS do backend e todos os node_modules CommonJS
-      include: [/engine\/utils\/.*\.js$/, /node_modules\/.*/],
+      include: [/engine\/utils\/.*\.js$/, /engine\/aiProviderRegistry\.js$/, /node_modules\/.*/],
       transformMixedEsModules: true,
       // Garante que todos os módulos CommonJS sejam processados corretamente
       requireReturnsDefault: 'auto',
@@ -965,6 +971,7 @@ const viteConfig = defineConfig(({ mode }) => {
       join(__dirname, '..', 'engine', 'utils', 'typeCompatibility.js'),
       join(__dirname, '..', 'engine', 'utils', 'templateRenderer.js'),
       join(__dirname, '..', 'engine', 'utils', 'jsonSchemaValidator.js'),
+      join(__dirname, '..', 'engine', 'aiProviderRegistry.js'),
     ],
     exclude: [
       // pdfjs-dist faz import() interno com caminho dinâmico para o worker.

@@ -1,15 +1,44 @@
-import React from 'react';
-import { validateProviderToken, saveTenantAiCredentials } from '../../api/config';
+import React, { useState, useEffect, useCallback } from 'react';
+import { validateProviderToken, saveTenantAiCredentials, listAiProviders, createAiProvider, deleteAiProvider, getTenantAiConfig } from '../../api/config';
 import logger from '../../utils/logger';
+
+const providerLabel = (providers, p) => {
+  if (!p) return '—';
+  const def = providers.find((x) => x.key === p || x.id === p);
+  return def ? def.label : String(p);
+};
 
 export function ConfigAiTab({ 
   editedConfig, agent, targetTenantId, loadingTenantAiConfig, tenantAiConfig,
-  providerAutoValidation, apiKey, apiKeyProvider, validatingApiKey, apiKeyValidationStatus,
+  apiKey, apiKeyProvider, validatingApiKey, apiKeyValidationStatus,
   savingTenantAiConfig, savingTenantAiCredentials, credentialsValidatedAndSaved,
   setTenantAiConfig, setApiKey, setApiKeyProvider, setApiKeyValidationStatus,
   setValidatingApiKey, setSavingTenantAiCredentials, setCredentialsValidatedAndSaved,
-  setProviderAutoValidationNonce, showToast
+  showToast
 }) {
+  const [providers, setProviders] = useState([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [savingProvider, setSavingProvider] = useState(false);
+  const [deletingProviderKey, setDeletingProviderKey] = useState(null);
+  const [newProvider, setNewProvider] = useState({ key: '', label: '', kind: 'openai-compatible', baseUrl: '', defaultModel: '', models: '' });
+
+  const loadProviders = useCallback(async () => {
+    setProvidersLoading(true);
+    try {
+      const res = await listAiProviders();
+      setProviders(Array.isArray(res?.providers) ? res.providers : []);
+    } catch (err) {
+      logger.error('Erro ao listar providers de IA', err);
+    } finally {
+      setProvidersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProviders();
+  }, [loadProviders]);
+
   return (
 <div className="space-y-6">
   <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
@@ -43,69 +72,61 @@ export function ConfigAiTab({
       }
 
       const tenantToUse = targetTenantId || agent?.tenantId;
-      const currentConfig = tenantAiConfig || {
-        tenantId: tenantToUse || null,
-        primary: null,
-        secondary: null,
-        configured: false,
-        model: null,
-        temperature: null,
-        max_tokens: null
+      const configuredCount = providers.filter((p) => !!tenantAiConfig?.providers?.[p.key]?.hasCredential).length;
+
+      const handleAddProvider = async () => {
+        if (!newProvider.key.trim() || !newProvider.label.trim() || !newProvider.baseUrl.trim() || !newProvider.defaultModel.trim()) {
+          showToast('Preencha key, label, baseUrl e defaultModel', 'warning');
+          return;
+        }
+        const models = newProvider.models
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => {
+            const [value, ...rest] = line.split('|').map((s) => s.trim());
+            return { value, label: rest.join(' | ') || value };
+          });
+        setSavingProvider(true);
+        try {
+          await createAiProvider({
+            key: newProvider.key.trim(),
+            label: newProvider.label.trim(),
+            kind: newProvider.kind,
+            baseUrl: newProvider.baseUrl.trim(),
+            defaultModel: newProvider.defaultModel.trim(),
+            models,
+          });
+          showToast(`Provider "${newProvider.label.trim()}" criado`, 'success');
+          setNewProvider({ key: '', label: '', kind: 'openai-compatible', baseUrl: '', defaultModel: '', models: '' });
+          setShowAddForm(false);
+          await loadProviders();
+        } catch (err) {
+          const msg = err?.body?.message || err?.message || 'Erro ao criar provider';
+          showToast(`Erro: ${msg}`, 'error');
+        } finally {
+          setSavingProvider(false);
+        }
       };
 
-      const providerLabel = (p) => {
-        if (!p) return '—';
-        if (p === 'openai') return 'OpenAI';
-        if (p === 'deepseek') return 'DeepSeek';
-        if (p === 'anthropic') return 'Anthropic (Claude)';
-        return String(p);
+      const handleDeleteProvider = async (def) => {
+        if (def.isBuiltin) {
+          showToast(`Provider "${def.label}" é integrado e não pode ser removido`, 'warning');
+          return;
+        }
+        if (!window.confirm(`Remover o provider "${def.label}"?`)) return;
+        setDeletingProviderKey(def.key);
+        try {
+          await deleteAiProvider(def.key);
+          showToast(`Provider "${def.label}" removido`, 'success');
+          await loadProviders();
+        } catch (err) {
+          const msg = err?.body?.message || err?.message || 'Erro ao remover provider';
+          showToast(`Erro: ${msg}`, 'error');
+        } finally {
+          setDeletingProviderKey(null);
+        }
       };
-
-      const providerStatus = (() => {
-        // Status do provider (similar ao indicador de WebSocket)
-        if (!currentConfig.primary) {
-          return {
-            dotColor: 'rgb(156, 163, 175)', // cinza
-            dotPulse: false,
-            text: 'Não configurado',
-            title: 'Provider primário de IA não configurado para este tenant.',
-          };
-        }
-
-        if (providerAutoValidation.validating) {
-          return {
-            dotColor: 'rgb(59, 130, 246)', // azul
-            dotPulse: true,
-            text: `Validando (${providerLabel(currentConfig.primary)})...`,
-            title: 'Validando credenciais salvas do provider (chamada real).',
-          };
-        }
-
-        if (providerAutoValidation.status) {
-          if (providerAutoValidation.status.valid) {
-            return {
-              dotColor: 'rgb(16, 185, 129)', // verde
-              dotPulse: true,
-              text: `Válido (${providerLabel(currentConfig.primary)})`,
-              title: 'Provider validado com sucesso (API Key válida).',
-            };
-          }
-          return {
-            dotColor: 'rgb(239, 68, 68)', // vermelho
-            dotPulse: false,
-            text: `Inválido (${providerLabel(currentConfig.primary)})`,
-            title: `Provider inválido: ${providerAutoValidation.status.error || 'erro desconhecido'}`,
-          };
-        }
-
-        // Durante carga inicial, assume validação em andamento
-        return {
-          dotColor: 'rgb(59, 130, 246)', // azul
-          dotPulse: true,
-          text: `Validando (${providerLabel(currentConfig.primary)})...`,
-          title: 'Validando credenciais salvas do provider...',
-        };
-      })();
 
       return (
         <div className="space-y-4">
@@ -117,216 +138,135 @@ export function ConfigAiTab({
               )}
             </p>
             <p className="text-xs text-text-secondary mt-1">
-              Esta configuração é específica para este tenant. Cada tenant precisa ter seu próprio provider configurado.
+              A engine decide qual provider usar em runtime (roteamento com circuit breaker e failover). Aqui você gerencia os providers e suas credenciais.
             </p>
           </div>
 
-          {/* Indicador de status do provider (estilo WebSocket) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              title={providerStatus.title}
-              style={{
-                display: 'inline-block',
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: providerStatus.dotColor,
-                animation: providerStatus.dotPulse
-                  ? 'pulse 2s ease 0s infinite normal none running pulse'
-                  : 'none',
-              }}
-            />
-            <span style={{ fontSize: 14, color: 'rgb(102, 102, 102)' }}>
-              {providerStatus.text}
-            </span>
-          </div>
-
-          <div className="mb-4 p-4 bg-status-warning/10 rounded-lg border border-status-warning/30">
+          <div className="p-4 bg-status-info/10 rounded-lg border border-status-info/30">
             <p className="text-sm text-text-primary">
-              <strong>⚠️ Importante:</strong> Cada tenant DEVE ter uma configuração específica de provider de IA. 
-              Esta configuração é obrigatória para que o tenant possa usar os recursos de IA.
+              <strong>🔌 Credenciais:</strong> {configuredCount} de {providers.length} providers com chave configurada para este tenant.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block mb-2 text-sm font-medium text-text-primary">
-                Provider Primário (Obrigatório)
-              </label>
-                <select
-                  value={currentConfig.primary || ''}
-                  onChange={(e) => {
-                    const newPrimary = e.target.value || null;
-                    setTenantAiConfig({
-                      ...currentConfig,
-                      primary: newPrimary,
-                      configured: !!newPrimary,
-                      // Reset modelo quando provider muda (modelos são específicos por provider)
-                      model: null
-                    });
-                    // Reset estado de credenciais quando provider muda
-                    setCredentialsValidatedAndSaved(false);
-                    setApiKeyValidationStatus(null);
-                  }}
-                className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+          {/* Provedores (data grid) */}
+          <div className="pt-4 border-t border-border-default space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-lg font-medium text-text-primary">Provedores disponíveis ({providers.length})</h4>
+              <button
+                type="button"
+                onClick={() => setShowAddForm((v) => !v)}
+                className="px-3 py-1.5 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 text-sm font-medium flex items-center gap-1"
               >
-                <option value="">Selecione um provider...</option>
-                <option value="openai">OpenAI</option>
-                <option value="deepseek">DeepSeek</option>
-                <option value="anthropic">Anthropic (Claude)</option>
-              </select>
+                <span aria-hidden>＋</span>
+                <span>Novo</span>
+              </button>
             </div>
 
-            <div>
-              <label className="block mb-2 text-sm font-medium text-text-primary">
-                Provider Secundário (Opcional)
-              </label>
-              <select
-                value={currentConfig.secondary || ''}
-                onChange={(e) => {
-                  const newSecondary = e.target.value || null;
-                  setTenantAiConfig({
-                    ...currentConfig,
-                    secondary: newSecondary
-                  });
-                }}
-                disabled={!currentConfig.primary}
-                className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="">Nenhum</option>
-                {currentConfig.primary !== 'openai' && <option value="openai">OpenAI</option>}
-                {currentConfig.primary !== 'deepseek' && <option value="deepseek">DeepSeek</option>}
-                {currentConfig.primary !== 'anthropic' && <option value="anthropic">Anthropic (Claude)</option>}
-              </select>
-            </div>
-          </div>
-
-          {/* Modelo e Parâmetros */}
-          {currentConfig.primary && (
-            <div className="pt-6 border-t border-border-default space-y-4">
-              <h4 className="text-lg font-medium text-text-primary">Modelo e Parâmetros</h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">
-                    Modelo
-                  </label>
-                  <select
-                    value={currentConfig.model || ''}
-                    onChange={(e) => {
-                      setTenantAiConfig({
-                        ...currentConfig,
-                        model: e.target.value || null
-                      });
-                    }}
-                    className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                  >
-                    <option value="">Padrão do provider</option>
-                    {currentConfig.primary === 'openai' && (
-                      <>
-                        <optgroup label="GPT-5.5">
-                          <option value="gpt-5.5">GPT-5.5</option>
-                          <option value="gpt-5.5-pro">GPT-5.5 Pro</option>
-                        </optgroup>
-                        <optgroup label="GPT-5.4">
-                          <option value="gpt-5.4">GPT-5.4</option>
-                          <option value="gpt-5.4-pro">GPT-5.4 Pro</option>
-                          <option value="gpt-5.4-mini">GPT-5.4 Mini</option>
-                          <option value="gpt-5.4-nano">GPT-5.4 Nano</option>
-                        </optgroup>
-                        <optgroup label="GPT-5">
-                          <option value="gpt-5">GPT-5</option>
-                          <option value="gpt-5-mini">GPT-5 Mini</option>
-                          <option value="gpt-5-nano">GPT-5 Nano</option>
-                        </optgroup>
-                        <optgroup label="Codex">
-                          <option value="gpt-5-codex">GPT-5 Codex</option>
-                          <option value="gpt-5.3-codex">GPT-5.3 Codex</option>
-                        </optgroup>
-                        <optgroup label="GPT-4.1">
-                          <option value="gpt-4.1">GPT-4.1</option>
-                          <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
-                          <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
-                        </optgroup>
-                        <optgroup label="o-Series (raciocínio)">
-                          <option value="o4">o4</option>
-                          <option value="o4-mini">o4-mini</option>
-                          <option value="o3">o3</option>
-                          <option value="o3-mini">o3-mini</option>
-                        </optgroup>
-                        <optgroup label="GPT-4 (legado)">
-                          <option value="gpt-4o">GPT-4o</option>
-                          <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                          <option value="gpt-4">GPT-4</option>
-                          <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                        </optgroup>
-                      </>
-                    )}
-                    {currentConfig.primary === 'deepseek' && (
-                      <>
-                        <option value="deepseek-chat">DeepSeek Chat (V3)</option>
-                        <option value="deepseek-reasoner">DeepSeek Reasoner (R1)</option>
-                      </>
-                    )}
-                    {currentConfig.primary === 'anthropic' && (
-                      <>
-                        <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
-                        <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-                        <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
-                        <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
-                      </>
-                    )}
-                  </select>
+            {showAddForm && (
+              <div className="p-4 rounded-lg border border-border-default bg-bg-primary space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1 text-xs font-medium text-text-secondary">Key (id)</label>
+                    <input value={newProvider.key} onChange={(e) => setNewProvider((s) => ({ ...s, key: e.target.value }))} placeholder="meu-provider" className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary" />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-xs font-medium text-text-secondary">Label</label>
+                    <input value={newProvider.label} onChange={(e) => setNewProvider((s) => ({ ...s, label: e.target.value }))} placeholder="Meu Provider" className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary" />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-xs font-medium text-text-secondary">Kind</label>
+                    <select value={newProvider.kind} onChange={(e) => setNewProvider((s) => ({ ...s, kind: e.target.value }))} className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary">
+                      <option value="openai-compatible">openai-compatible</option>
+                      <option value="openai-sdk">openai-sdk</option>
+                      <option value="anthropic">anthropic</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-xs font-medium text-text-secondary">Base URL</label>
+                    <input value={newProvider.baseUrl} onChange={(e) => setNewProvider((s) => ({ ...s, baseUrl: e.target.value }))} placeholder="https://api.exemplo.com/v1" className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary" />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-xs font-medium text-text-secondary">Modelo padrão</label>
+                    <input value={newProvider.defaultModel} onChange={(e) => setNewProvider((s) => ({ ...s, defaultModel: e.target.value }))} placeholder="modelo-default" className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary" />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-xs font-medium text-text-secondary">Modelos (um por linha: valor|Label)</label>
+                    <textarea value={newProvider.models} onChange={(e) => setNewProvider((s) => ({ ...s, models: e.target.value }))} placeholder={'modelo-a|Modelo A\nmodelo-b|Modelo B'} rows={2} className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-sm text-text-primary" />
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">
-                    Temperatura (0-2)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    value={currentConfig.temperature ?? ''}
-                    onChange={(e) => {
-                      const value = e.target.value === '' ? null : parseFloat(e.target.value);
-                      setTenantAiConfig({
-                        ...currentConfig,
-                        temperature: value
-                      });
-                    }}
-                    placeholder="Padrão: 0.7"
-                    className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-2 text-sm font-medium text-text-primary">
-                    Max Tokens
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={currentConfig.max_tokens ?? ''}
-                    onChange={(e) => {
-                      const value = e.target.value === '' ? null : parseInt(e.target.value);
-                      setTenantAiConfig({
-                        ...currentConfig,
-                        max_tokens: value
-                      });
-                    }}
-                    placeholder="Padrão: 2000"
-                    className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                  />
+                <div className="flex gap-2 justify-end">
+                  <button type="button" onClick={() => setShowAddForm(false)} className="px-3 py-1.5 rounded-lg bg-bg-secondary text-text-primary text-sm font-medium border border-border-default">Cancelar</button>
+                  <button type="button" onClick={handleAddProvider} disabled={savingProvider} className="px-3 py-1.5 rounded-lg bg-accent-primary text-white text-sm font-medium disabled:opacity-50">
+                    {savingProvider ? 'Salvando...' : 'Salvar provider'}
+                  </button>
                 </div>
               </div>
+            )}
+
+            <div className="space-y-2">
+              {providersLoading ? (
+                <p className="text-sm text-text-secondary">Carregando providers...</p>
+              ) : providers.length === 0 ? (
+                <p className="text-sm text-text-secondary">Nenhum provider disponível.</p>
+              ) : (
+                providers.map((def) => {
+                  const key = def.key || def.id;
+                  const hasKey = !!(tenantAiConfig?.providers?.[key]?.hasCredential);
+                  const isDeleting = deletingProviderKey === key;
+                  return (
+                    <div key={key} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border-default bg-bg-primary">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-text-primary truncate">{def.label || key}</p>
+                          {def.isBuiltin ? (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-bg-secondary text-text-secondary border border-border-default">integrado</span>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-text-secondary truncate">{def.kind} · {def.baseUrl}</p>
+                        <p className="text-xs text-text-secondary truncate">modelo: {def.defaultModel}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${hasKey ? 'bg-status-success/20 text-status-success' : 'bg-bg-secondary text-text-secondary'}`}>
+                          {hasKey ? 'Chave configurada' : 'Sem chave'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setApiKeyProvider(key);
+                            setApiKeyValidationStatus(null);
+                            setCredentialsValidatedAndSaved(false);
+                            showToast(`Provider ${def.label || key} selecionado — informe a API key abaixo`, 'info');
+                            requestAnimationFrame(() => {
+                              const inputEl = document.getElementById('ai-api-key-input');
+                              if (inputEl) {
+                                inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                setTimeout(() => inputEl.focus(), 350);
+                              }
+                            });
+                          }}
+                          className="px-2 py-1 rounded text-xs font-medium bg-bg-secondary text-text-primary hover:bg-accent-primary/10 border border-border-default"
+                        >
+                          Configurar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProvider(def)}
+                          disabled={isDeleting || def.isBuiltin}
+                          title={def.isBuiltin ? 'Provider integrado não pode ser removido' : 'Remover provider'}
+                          className="px-2 py-1 rounded text-xs font-medium text-status-error hover:bg-status-error/10 border border-border-default disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {isDeleting ? '…' : '🗑'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          )}
+          </div>
 
           {/* Credenciais */}
-          {currentConfig.primary && (
+          {(
             <div className="pt-6 border-t border-border-default space-y-4">
               <h4 className="text-lg font-medium text-text-primary">Credenciais</h4>
 
@@ -349,8 +289,9 @@ export function ConfigAiTab({
                   className="w-full px-3 py-2 bg-bg-secondary border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
                 >
                   <option value="">Selecione um provider...</option>
-                  {currentConfig.primary && <option value={currentConfig.primary}>{currentConfig.primary === 'openai' ? 'OpenAI' : currentConfig.primary === 'deepseek' ? 'DeepSeek' : 'Anthropic (Claude)'}</option>}
-                  {currentConfig.secondary && <option value={currentConfig.secondary}>{currentConfig.secondary === 'openai' ? 'OpenAI' : currentConfig.secondary === 'deepseek' ? 'DeepSeek' : 'Anthropic (Claude)'}</option>}
+                  {providers.map((def) => (
+                    <option key={def.key || def.id} value={def.key || def.id}>{def.label || def.key}</option>
+                  ))}
                 </select>
               </div>
 
@@ -390,6 +331,7 @@ export function ConfigAiTab({
                   <div className="relative flex-1">
                     <input
                       type="password"
+                      id="ai-api-key-input"
                       value={apiKey}
                       onChange={(e) => {
                         setApiKey(e.target.value);
@@ -443,9 +385,9 @@ export function ConfigAiTab({
                         });
 
                         if (result.valid) {
-                          showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : apiKeyProvider === 'deepseek' ? 'DeepSeek' : 'Anthropic'} válida!`, 'success');
+                          showToast(`API Key ${providerLabel(providers, apiKeyProvider)} válida!`, 'success');
                         } else {
-                          showToast(`API Key ${apiKeyProvider === 'openai' ? 'OpenAI' : apiKeyProvider === 'deepseek' ? 'DeepSeek' : 'Anthropic'} inválida: ${result.error || 'Erro desconhecido'}`, 'error');
+                          showToast(`API Key ${providerLabel(providers, apiKeyProvider)} inválida: ${result.error || 'Erro desconhecido'}`, 'error');
                         }
                       } catch (error) {
                         logger.error('Erro ao validar API Key', error);
@@ -507,8 +449,15 @@ export function ConfigAiTab({
                         provider: apiKeyProvider,
                         apiKey: apiKey.trim()
                       }, targetTenantId || undefined);
-                      // Força revalidação automática do provider após salvar credenciais
-                      setProviderAutoValidationNonce((n) => n + 1);
+                      // Atualiza o status "Chave configurada" por provider sem limpar o banner de sucesso
+                      try {
+                        const refreshed = await getTenantAiConfig(targetTenantId || undefined);
+                        if (refreshed?.providers) {
+                          setTenantAiConfig((prev) => ({ ...(prev || {}), providers: refreshed.providers }));
+                        }
+                      } catch (refreshErr) {
+                        logger.warn('Não foi possível atualizar o status de credenciais', refreshErr);
+                      }
                       // Se a API Key foi validada antes de salvar, marca como validada e salva
                       if (apiKeyValidationStatus && apiKeyValidationStatus.valid) {
                         setCredentialsValidatedAndSaved(true);
@@ -527,7 +476,7 @@ export function ConfigAiTab({
                       setSavingTenantAiCredentials(false);
                     }
                   }}
-                  disabled={savingTenantAiConfig || savingTenantAiCredentials || !apiKeyProvider || !apiKey.trim() || !apiKeyValidationStatus?.valid}
+                  disabled={savingTenantAiConfig || savingTenantAiCredentials || !apiKeyProvider || !apiKey.trim()}
                   className="px-4 py-2 rounded-lg bg-accent-primary text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
                 >
                   {savingTenantAiCredentials ? (
@@ -546,13 +495,10 @@ export function ConfigAiTab({
             </div>
           )}
 
-          {currentConfig.configured && credentialsValidatedAndSaved && (
+          {credentialsValidatedAndSaved && (
             <div className="p-3 bg-status-success/10 rounded-lg border border-status-success/30">
               <p className="text-sm text-status-success">
-                ✓ Configuração de IA ativa para este tenant
-              </p>
-              <p className="text-xs text-status-success mt-1">
-                Provider configurado e credenciais validadas e salvas com sucesso.
+                ✓ Credenciais validadas e salvas com sucesso
               </p>
             </div>
           )}

@@ -10,6 +10,7 @@
 const { registerAiProvider, setTenantAiConfig, getAiProviderForTenant } = require('../../engine/aiProviderManager');
 const config = require('../utils/config');
 const logger = require('../utils/logger');
+const aiControlPlaneStatus = require('./aiControlPlaneStatus');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -265,7 +266,7 @@ function createAnthropicProvider() {
           );
         }
 
-        const model = config.get('ai.anthropic.model', 'claude-3-sonnet-20240229');
+        const model = config.get('ai.anthropic.model', 'claude-sonnet-5');
         logger.debug('🤖 Anthropic: Iniciando geração', {
           // Observabilidade do "porquê" (origem) da chamada:
           source: context?.source || null,
@@ -388,6 +389,164 @@ function createAnthropicProvider() {
 
 
 /**
+ * Factory genérica para providers OpenAI-compatible (DeepSeek, Kimi, Mistral, Groq…).
+ * A definição vem do registry central (`engine/aiProviderRegistry.js`).
+ */
+function createOpenAICompatibleProvider(def) {
+  if (!def || !def.id || !def.baseUrl) {
+    throw new Error('createOpenAICompatibleProvider: definição de provider inválida');
+  }
+  const providerId = def.id;
+  const label = def.label || providerId;
+
+  return {
+    async generate(prompt, context) {
+      try {
+        const tenantId = context?.tenantId || null;
+        if (!tenantId) {
+          throw new Error(`${label}: tenantId é obrigatório para resolver credenciais por tenant`);
+        }
+        let apiKey = null;
+        try {
+          // eslint-disable-next-line global-require
+          const { getDecryptedAPIKey } = require('./tenantAIService');
+          apiKey = await getDecryptedAPIKey(safeToString(tenantId), providerId);
+        } catch (e) {
+          logger.warn(`⚠️ ${label}: falha ao obter API key do tenant (DB)`, { tenantId, error: safeErrorMessage(e) });
+        }
+
+        if (!apiKey) {
+          throw Object.assign(
+            new Error(`${label} API key não configurada para o tenant: ${tenantId}`),
+            { code: 'AI_PROVIDER_NOT_CONFIGURED' },
+          );
+        }
+
+        const model = config.get(`ai.${providerId}.model`, def.defaultModel);
+        logger.debug(`🤖 ${label}: Iniciando geração`, {
+          source: context?.source || null,
+          executionId: context?.executionId || null,
+          model,
+          promptLength: prompt.length,
+        });
+
+        const url = `${def.baseUrl.replace(/\/$/, '')}/chat/completions`;
+        const response = await fetch(url, {
+          method: 'POST',
+          signal: context?.signal || undefined,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 1000,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error?.message || `${label} API error: ${response.status}`;
+          const e = new Error(errorMessage);
+          e.status = response.status;
+          e.code = errorData?.error?.code || null;
+          throw e;
+        }
+
+        const data = await response.json();
+        return {
+          text: data.choices?.[0]?.message?.content || `[Resposta vazia da ${label}]`,
+          usage: data.usage || null,
+        };
+      } catch (error) {
+        logger.error(`❌ ${label}: Erro ao gerar resposta`, {
+          message: safeErrorMessage(error),
+          stack: error.stack,
+        });
+        throw error;
+      }
+    },
+  };
+}
+
+/**
+ * Factory genérica para providers Anthropic-compatible (custom).
+ * Usa o formato /messages com x-api-key + anthropic-version (fetch direto).
+ */
+function createAnthropicCompatibleProvider(def) {
+  if (!def || !def.id || !def.baseUrl) {
+    throw new Error('createAnthropicCompatibleProvider: definição de provider inválida');
+  }
+  const providerId = def.id;
+  const label = def.label || providerId;
+
+  return {
+    async generate(prompt, context) {
+      try {
+        const tenantId = context?.tenantId || null;
+        if (!tenantId) {
+          throw new Error(`${label}: tenantId é obrigatório para resolver credenciais por tenant`);
+        }
+        let apiKey = null;
+        try {
+          // eslint-disable-next-line global-require
+          const { getDecryptedAPIKey } = require('./tenantAIService');
+          apiKey = await getDecryptedAPIKey(safeToString(tenantId), providerId);
+        } catch (e) {
+          logger.warn(`⚠️ ${label}: falha ao obter API key do tenant (DB)`, { tenantId, error: safeErrorMessage(e) });
+        }
+
+        if (!apiKey) {
+          throw Object.assign(
+            new Error(`${label} API key não configurada para o tenant: ${tenantId}`),
+            { code: 'AI_PROVIDER_NOT_CONFIGURED' },
+          );
+        }
+
+        const model = config.get(`ai.${providerId}.model`, def.defaultModel);
+        const url = `${def.baseUrl.replace(/\/$/, '')}/messages`;
+        const response = await fetch(url, {
+          method: 'POST',
+          signal: context?.signal || undefined,
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 1000,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error?.message || `${label} API error: ${response.status}`;
+          const e = new Error(errorMessage);
+          e.status = response.status;
+          e.code = errorData?.error?.type || errorData?.error?.code || null;
+          throw e;
+        }
+
+        const data = await response.json();
+        return {
+          text: data.content?.[0]?.text || `[Resposta vazia da ${label}]`,
+          usage: data.usage || null,
+        };
+      } catch (error) {
+        logger.error(`❌ ${label}: Erro ao gerar resposta`, {
+          message: safeErrorMessage(error),
+          stack: error.stack,
+        });
+        throw error;
+      }
+    },
+  };
+}
+
+/**
  * Provider de IA usando DeepSeek (API OpenAI-compatible)
  */
 function createDeepSeekProvider() {
@@ -465,6 +624,83 @@ function createDeepSeekProvider() {
 
 
 /**
+ * Provider de IA usando Kimi (Moonshot AI — API OpenAI-compatible)
+ */
+function createKimiProvider() {
+  return {
+    async generate(prompt, context) {
+      try {
+        const tenantId = context?.tenantId || null;
+        if (!tenantId) {
+          throw new Error('Kimi: tenantId é obrigatório para resolver credenciais por tenant');
+        }
+        let apiKey = null;
+        try {
+          // eslint-disable-next-line global-require
+          const { getDecryptedAPIKey } = require('./tenantAIService');
+          apiKey = await getDecryptedAPIKey(safeToString(tenantId), 'kimi');
+        } catch (e) {
+          logger.warn('⚠️ Kimi: falha ao obter API key do tenant (DB)', { tenantId, error: safeErrorMessage(e) });
+        }
+
+        if (!apiKey) {
+          throw Object.assign(
+            new Error(`Kimi API key não configurada para o tenant: ${tenantId}`),
+            { code: 'AI_PROVIDER_NOT_CONFIGURED' },
+          );
+        }
+
+        const model = config.get('ai.kimi.model', 'moonshot-v1-8k');
+        logger.debug('🤖 Kimi: Iniciando geração', {
+          source: context?.source || null,
+          executionId: context?.executionId || null,
+          model,
+          promptLength: prompt.length,
+        });
+
+        // Kimi (Moonshot) é OpenAI-compatible: usa fetch direto
+        const url = 'https://api.moonshot.ai/v1/chat/completions';
+        const response = await fetch(url, {
+          method: 'POST',
+          signal: context?.signal || undefined,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 1000,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          const errorMessage = errorData.error?.message || `Kimi API error: ${response.status}`;
+          const e = new Error(errorMessage);
+          e.status = response.status;
+          e.code = errorData?.error?.code || null;
+          throw e;
+        }
+
+        const data = await response.json();
+        return {
+          text: data.choices?.[0]?.message?.content || '[Resposta vazia da Kimi]',
+          usage: data.usage || null,
+        };
+      } catch (error) {
+        logger.error('❌ Kimi: Erro ao gerar resposta', {
+          message: safeErrorMessage(error),
+          stack: error.stack,
+        });
+        throw error;
+      }
+    },
+  };
+}
+
+
+/**
  * Inicializa os providers de IA baseado na configuração
  * Carrega configurações do banco de dados (PostgreSQL) ou do config.json como fallback
  */
@@ -473,7 +709,9 @@ async function initializeAiProviders() {
     // Tenta registrar OpenAI se configurado
     try {
       const openaiProvider = createOpenAIProvider();
-      registerAiProvider('openai', openaiProvider);
+      registerAiProvider('openai', {
+        generate: aiControlPlaneStatus.wrapProviderGenerate('openai', openaiProvider.generate.bind(openaiProvider)),
+      });
       logger.info('✅ Provider OpenAI registrado');
     } catch (err) {
       logger.warn('⚠️  OpenAI não configurado', { message: safeErrorMessage(err) });
@@ -482,101 +720,67 @@ async function initializeAiProviders() {
     // Tenta registrar Anthropic se configurado
     try {
       const anthropicProvider = createAnthropicProvider();
-      registerAiProvider('anthropic', anthropicProvider);
+      registerAiProvider('anthropic', {
+        generate: aiControlPlaneStatus.wrapProviderGenerate('anthropic', anthropicProvider.generate.bind(anthropicProvider)),
+      });
       logger.info('✅ Provider Anthropic registrado');
     } catch (err) {
       logger.warn('⚠️  Anthropic não configurado', { message: safeErrorMessage(err) });
     }
 
-    // Tenta registrar DeepSeek se configurado
+    // Sincroniza built-ins no banco e registra os providers OpenAI-compatible
+    // a partir do registry de runtime (built-ins + custom do DB). Adicionar um
+    // provider custom via UI = nova linha em ai_providers → registrado aqui.
+    let runtimeProviders = {};
     try {
-      const deepseekProvider = createDeepSeekProvider();
-      registerAiProvider('deepseek', deepseekProvider);
-      logger.info('✅ Provider DeepSeek registrado');
+      // eslint-disable-next-line global-require
+      const aiProviderRegistryService = require('./aiProviderRegistryService');
+      await aiProviderRegistryService.ensureBuiltinProviders();
+      runtimeProviders = await aiProviderRegistryService.getRuntimeProviders();
     } catch (err) {
-      logger.warn('⚠️  DeepSeek não configurado', { message: safeErrorMessage(err) });
+      logger.warn('⚠️  Registry de providers indisponível; usando built-ins estáticos', { message: safeErrorMessage(err) });
+      // eslint-disable-next-line global-require
+      const { AI_PROVIDERS } = require('../../engine/aiProviderRegistry');
+      runtimeProviders = Object.fromEntries(
+        Object.entries(AI_PROVIDERS).map(([id, def]) => [id, { id, label: def.label, kind: def.kind, baseUrl: def.baseUrl, defaultModel: def.defaultModel, models: def.models || [] }]),
+      );
     }
 
-    // Tenta carregar configurações do banco de dados
-    let tenantsLoaded = 0;
-    try {
-      const { listAllTenants } = require('./superAdminService');
-      const { getAIConfig } = require('./tenantAIService');
-      
-      // Lista todos os tenants do banco
-      const tenants = await listAllTenants();
-      
-      // Para cada tenant, carrega a configuração de IA
-      for (const tenant of tenants) {
-        try {
-          const tenantId = tenant.tenant_key || tenant.id;
-          const aiConfig = await getAIConfig(tenantId);
-          
-          if (aiConfig && aiConfig.configured && aiConfig.primary) {
-            setTenantAiConfig(tenantId, {
-              primary: aiConfig.primary,
-              secondary: aiConfig.secondary,
-            });
-            logger.info(`✅ Configurado provider de IA para tenant: ${tenantId} (primary: ${aiConfig.primary})`);
-            tenantsLoaded++;
-          }
-        } catch (err) {
-          logger.debug(`Não foi possível carregar configuração de IA para tenant ${tenant.tenant_key || tenant.id}`, { error: safeErrorMessage(err) });
-        }
-      }
-      
-      logger.info(`✅ Providers de IA inicializados. Tenants configurados do banco: ${tenantsLoaded}`);
-    } catch (err) {
-      logger.warn('⚠️  Não foi possível carregar configurações do banco, usando config.json como fallback', { error: safeErrorMessage(err) });
-      
-      // Fallback: carrega do config.json (para migração gradual)
-      const aiConfig = config.get('ai', {});
-      const tenantConfig = aiConfig.tenants || {};
+    for (const def of Object.values(runtimeProviders)) {
+      // openai (SDK) e anthropic (SDK) já foram registrados explicitamente acima.
+      if (def.id === 'openai' || def.id === 'anthropic') continue;
 
-      // Configura tenants específicos (apenas configurações explícitas)
-      for (const [tenantId, tenantAiConfig] of Object.entries(tenantConfig)) {
-        if (!tenantAiConfig.primary) {
-          logger.warn(`⚠️  Tenant ${tenantId} não tem provider primário configurado, ignorando`);
-          continue;
-        }
-        
-        setTenantAiConfig(tenantId, {
-          primary: tenantAiConfig.primary,
-          secondary: tenantAiConfig.secondary,
+      try {
+        const provider = def.kind === 'anthropic'
+          ? createAnthropicCompatibleProvider(def)
+          : createOpenAICompatibleProvider(def);
+        registerAiProvider(def.id, {
+          generate: aiControlPlaneStatus.wrapProviderGenerate(def.id, provider.generate.bind(provider)),
         });
-        logger.info(`✅ Configurado provider de IA para tenant: ${tenantId} (primary: ${tenantAiConfig.primary})`);
-        tenantsLoaded++;
+        logger.info(`✅ Provider ${def.label} registrado`);
+      } catch (err) {
+        logger.warn(`⚠️  ${def.label} não configurado`, { message: safeErrorMessage(err) });
       }
-      
-      logger.info(`✅ Providers de IA inicializados. Tenants configurados do config.json: ${tenantsLoaded}`);
     }
-    
-    // Configuração automática obrigatória para o tenant "system"
+
+    // A seleção de provider por tenant agora é decisão da ENGINE (roteamento
+    // engine-wide com circuit breaker + failover). Não sincronizamos mais
+    // primary/secondary do banco/config.json para o runtime.
+    logger.info('ℹ️  Seleção de provider por tenant é decidida pela engine (roteamento engine-wide)');
+
+    // Model Registry (providerRegistry) observável: HEALTHY se houver pelo
+    // menos um provider registrado; BLOCKED caso contrário (roteamento sem
+    // rota homologada deve falhar fechado, nunca escolher modelo arbitrário).
     try {
-      const { getAiProviderForTenant, setTenantAiConfig, isProviderRegistered } = require('../../engine/aiProviderManager');
-      const systemProvider = getAiProviderForTenant('system');
-      if (!systemProvider) {
-        // Configura com o primeiro provider disponível (prioriza openai, depois anthropic)
-        const preferredProviders = ['openai', 'anthropic'];
-        let configured = false;
-        
-        for (const providerId of preferredProviders) {
-          if (isProviderRegistered(providerId)) {
-            setTenantAiConfig('system', { primary: providerId });
-            logger.info(`✅ Configurado provider de IA para tenant "system": ${providerId}`);
-            configured = true;
-            break;
-          }
-        }
-        
-        if (!configured) {
-          logger.warn('⚠️  Tenant "system" não pôde ser configurado - nenhum provider de IA disponível');
-        }
-      } else {
-        logger.debug('ℹ️  Tenant "system" já possui provider configurado');
-      }
+      const { getRegisteredProviderIds } = require('../../engine/aiProviderManager');
+      const registered = getRegisteredProviderIds();
+      aiControlPlaneStatus.setComponentStatus(
+        'MODEL_REGISTRY',
+        registered.length > 0 ? 'HEALTHY' : 'BLOCKED',
+      );
     } catch (err) {
-      logger.warn('⚠️  Erro ao configurar tenant "system"', { error: safeErrorMessage(err) });
+      aiControlPlaneStatus.setComponentStatus('MODEL_REGISTRY', 'UNKNOWN');
+      logger.warn('⚠️  Erro ao avaliar status do Model Registry', { error: safeErrorMessage(err) });
     }
   } catch (err) {
     logger.error('❌ Erro ao inicializar providers de IA', err);
@@ -712,5 +916,8 @@ module.exports = {
   generateAiResponse,
   createOpenAIProvider,
   createAnthropicProvider,
+  createKimiProvider,
+  createOpenAICompatibleProvider,
+  createAnthropicCompatibleProvider,
 };
 

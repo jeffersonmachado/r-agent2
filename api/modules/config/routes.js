@@ -25,6 +25,9 @@ function createConfigRoutes({ buildDeps }) {
   router.put('/tenants/current/ai-config', (req, res) => controllerFor(req, res).saveCurrentTenantAiConfig(req, res));
   router.put('/tenants/current/ai-credentials', (req, res) => controllerFor(req, res).saveCurrentTenantAiCredentials(req, res));
   router.post('/tenants/:tenantKey/ai-credentials/test', (req, res) => controllerFor(req, res).testTenantAiCredentials(req, res));
+  router.get('/ai-providers', (req, res) => controllerFor(req, res).listAiProviders(req, res));
+  router.post('/ai-providers', (req, res) => controllerFor(req, res).createAiProvider(req, res));
+  router.delete('/ai-providers/:key', (req, res) => controllerFor(req, res).deleteAiProvider(req, res));
   router.put('/config', (req, res) => controllerFor(req, res).updateConfig(req, res));
   router.get('/server/process-manager', (req, res) => controllerFor(req, res).getProcessManager(req, res));
   router.post('/config/validate-provider-token', (req, res) => controllerFor(req, res).validateProviderToken(req, res));

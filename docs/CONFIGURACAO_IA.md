@@ -1,38 +1,37 @@
 # Configuração de Providers de IA
 
+> ⚠️ **Atualizado (2026-08):** `primary`/`secondary` estão **obsoletos** e não dirigem mais o roteamento. A engine agora decide o provider: roteia por todos os providers registrados com credencial, com circuit breaker + failover. Providers são geridos via `engine/aiProviderRegistry.js` (built-ins) + tabela `ai_providers` (custom) + endpoints `/ai-providers`. Veja `docs/CONFIGURAR_IA_TENANT_SYSTEM.md`.
+
 ## Estado atual
 
-O projeto usa providers reais, com configuração por tenant e credenciais criptografadas no banco.
+O projeto usa providers reais, com credenciais criptografadas no banco por tenant.
 
-- providers suportados: `openai`, `anthropic`
-- configuração por tenant: `primary` obrigatório, `secondary` opcional
+- providers suportados (built-in): `openai`, `anthropic`, `deepseek`, `kimi`, `mistral`, `groq` (+ custom via `/ai-providers`)
+- seleção de provider: **decisão da engine** (roteamento engine-wide, sem `primary`/`secondary`)
 - credenciais: salvas no banco e protegidas por `ENCRYPTION_KEY`
 
 ## Hierarquia operacional
 
-1. credenciais do tenant no banco
-2. configuração do tenant no banco (`primary` / `secondary`)
-3. fallback temporário via `config.json` apenas para migração controlada
+1. credenciais do tenant no banco (`tenant_ai_credentials`)
+2. providers registrados (`engine/aiProviderRegistry.js` + `ai_providers`)
+3. roteamento engine-wide com circuit breaker + failover (não há mais fallback via `config.json`)
 
 Não há provider `fallback` estático como caminho oficial.
 
-## Fallback do provider secundário
+## Roteamento da engine
 
-O provider secundário não entra automaticamente só por existir.
+Sem config explícita por tenant, `getAiProviderForTenant` tenta os providers registrados em ordem:
 
-Ele só pode ser usado se:
-
-- o tenant tiver `secondary` configurado
-- `fallbacks.aiProviderSecondary=true` estiver definido explicitamente em `api/data/config.json`
-
-Sem essa flag, o runtime usa apenas o provider primário e falha de forma observável.
+- pula provider sem credencial (`AI_PROVIDER_NOT_CONFIGURED`);
+- continua em falha transitória/rate-limit/timeout;
+- para imediatamente em bloqueios duros (policy denial, modelo aposentado, budget).
 
 ## Configuração recomendada
 
-Use a UI de configuração do tenant para:
+Use a aba IA (⚙️ Configuração → 🤖 IA) para:
 
-- definir `primary`
-- opcionalmente definir `secondary`
+- registrar providers (built-ins + custom);
+- salvar/validar a API key de cada provider.
 - salvar a API key do provider selecionado
 
 ## Dependências

@@ -1,6 +1,8 @@
 # Processo de Verificação de Provider de IA Válido
 
-Este documento detalha o processo completo de verificação de provider de IA válido para tenants.
+> ⚠️ **ATUALIZADO (2026-08) — este runbook está HISTÓRICO.** A seleção de provider agora é decisão da **engine** (roteamento engine-wide, sem `primary`/`secondary`). A verificação atual está em `getTenantAiProviderStatus` (`api/modules/tenant/aiWorkflows.js`): `hasValidProvider = (engine resolve provider) && (ao menos um provider com credencial para o tenant)`. Consulte os docs atuais: `docs/CONFIGURACAO_IA.md`, `docs/REQUISITOS_PROVIDER_VALIDO.md` e `docs/CONFIGURAR_IA_TENANT_SYSTEM.md`. O conteúdo abaixo descreve o modelo antigo e foi mantido apenas como referência.
+
+Este documento detalha o processo de verificação de provider de IA válido para tenants.
 
 ## Visão Geral
 

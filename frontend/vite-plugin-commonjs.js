@@ -15,7 +15,8 @@ export function vitePluginCommonJS() {
     async load(id) {
       // Verifica se é um arquivo CommonJS do backend
       // O id pode ser um caminho absoluto ou relativo
-      if (!id.includes('engine/utils/') || !id.endsWith('.js')) {
+      const isBackendCjs = id.includes('engine/utils/') || id.includes('engine/aiProviderRegistry.js');
+      if (!isBackendCjs || !id.endsWith('.js')) {
         return null;
       }
 

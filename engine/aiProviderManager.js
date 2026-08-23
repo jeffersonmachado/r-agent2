@@ -21,6 +21,7 @@
 
 // engine → api (acesso a logger/config) é best-effort
 const logger = require('../api/utils/logger');
+const { classifyProviderError, PROVIDER_ERROR_CATEGORY } = require('./aiControlPlaneResilience');
 let config = null;
 try {
   // eslint-disable-next-line global-require
@@ -61,6 +62,72 @@ const DEFAULT_AI_TIMEOUT_MS = 30000;
 function resolveAiTimeoutMs() {
   const raw = Number(process.env.ENGINE_AI_TIMEOUT_MS);
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_AI_TIMEOUT_MS;
+}
+
+/**
+ * Constrói um "provider composto" que tenta cada provider da lista em ordem.
+ *
+ * Semântica:
+ * - Cada entry tem `{ id, generate }` (generate já vinculado à instância).
+ * - O primeiro provider que responder com sucesso vence.
+ * - Em falha, tenta o próximo (registrando warning; erro de "não configurado"
+ *   para o tenant é apenas debug, pois é esperado no roteamento engine-wide).
+ * - Se todos falharem, lança o último erro.
+ *
+ * @param {string} normalizedTenantId
+ * @param {string} tenantId - tenantId original (para logs)
+ * @param {Array<{id: string, generate: Function}>} providerList
+ * @returns {AiProvider}
+ */
+function buildCompositeProvider(normalizedTenantId, tenantId, providerList) {
+  const timeoutMs = resolveAiTimeoutMs();
+  const entries = providerList.map((entry) => ({
+    id: entry.id,
+    generate: withAiTimeout(entry.generate, timeoutMs),
+  }));
+
+  return {
+    async generate(prompt, context) {
+      let lastError = null;
+      for (const entry of entries) {
+        try {
+          logger.debug('🔄 Roteamento engine: tentando provider', {
+            tenantId: normalizedTenantId,
+            providerId: entry.id,
+          });
+          const result = await entry.generate(prompt, context);
+          logger.debug('✅ Roteamento engine: provider funcionou', {
+            tenantId,
+            providerId: entry.id,
+            hasText: !!result?.text,
+          });
+          return result;
+        } catch (err) {
+          lastError = err;
+          const classification = classifyProviderError(err);
+          const isHardBlock =
+            classification.category === PROVIDER_ERROR_CATEGORY.POLICY_DENIAL
+            || classification.category === PROVIDER_ERROR_CATEGORY.RETIRED_MODEL
+            || classification.category === PROVIDER_ERROR_CATEGORY.BUDGET_BLOCK;
+          const notConfigured = err && err.code === 'AI_PROVIDER_NOT_CONFIGURED';
+          const log = notConfigured ? logger.debug : logger.warn;
+          log.call(logger, '⚠️ Roteamento engine: provider falhou', {
+            tenantId: normalizedTenantId,
+            providerId: entry.id,
+            code: err?.code || null,
+            error: err?.message || String(err),
+            category: classification.category,
+          });
+          // Bloqueios duros (policy denial, modelo aposentado, budget) não
+          // cascateiam para outro provider — param imediatamente.
+          if (isHardBlock) {
+            throw err;
+          }
+        }
+      }
+      throw lastError || new Error(`Nenhum provider de IA disponível para o tenant: ${normalizedTenantId}`);
+    },
+  };
 }
 
 /**
@@ -203,9 +270,26 @@ function resolveAiProviderForTenant(normalizedTenantId, tenantId) {
   
   const cfg = tenantConfig.get(normalizedTenantId);
   if (!cfg) {
-    logger.warn('⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant', { tenantId });
-    logger.debug('📋 Tenants configurados', { tenants: Array.from(tenantConfig.keys()) });
-    return null;
+    // Sem configuração explícita por tenant: a engine decide, roteando por
+    // TODOS os providers registrados. Cada provider falha rápido quando o
+    // tenant não possui credencial (code AI_PROVIDER_NOT_CONFIGURED).
+    const registeredIds = Array.from(providerRegistry.keys());
+    if (registeredIds.length === 0) {
+      logger.warn('⚠️ getAiProviderForTenant: Nenhum provider registrado', { tenantId });
+      return null;
+    }
+    logger.debug('ℹ️ getAiProviderForTenant: Sem config por tenant — roteando por todos os providers registrados', {
+      tenantId,
+      providers: registeredIds,
+    });
+    return buildCompositeProvider(
+      normalizedTenantId,
+      tenantId,
+      registeredIds.map((id) => ({
+        id,
+        generate: providerRegistry.get(id).generate.bind(providerRegistry.get(id)),
+      })),
+    );
   }
 
   logger.debug('✅ getAiProviderForTenant: Configuração encontrada', {
