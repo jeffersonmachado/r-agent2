@@ -48,6 +48,33 @@ async function getRagHealth(tenantId, options = {}, documentsCache, persistFn, m
       await markConsistentFn(finalTenantId);
     }
 
+    // Direção inversa (auto-reparo): documento com index_status != 'indexed' mas
+    // que já possui chunks vetorizados no pgvector fica invisível para retrieval,
+    // pois a busca vetorial exige index_status='indexed' (cláusula EXISTS em
+    // vector_store.search). Corrige o estado para 'indexed' com base nos chunks
+    // realmente vetorizados (embedding não-nulo).
+    const embeddedChunksByDoc = await postgresVectorStore.countChunksWithEmbeddingByDocument({ tenantId: finalTenantId });
+    const staleNotIndexedDocIds = docs
+      .filter((document) => document.indexStatus !== 'indexed' && Number(embeddedChunksByDoc[document.id] || 0) > 0)
+      .map((document) => document.id);
+
+    if (staleNotIndexedDocIds.length > 0) {
+      const reason = `Documento com chunks vetorizados mas index_status != indexed (${staleNotIndexedDocIds.length} doc(s)); corrigido para indexed`;
+      warnings.push({
+        code: 'RAG_STALE_INDEX_STATUS_WITH_CHUNKS',
+        message: reason,
+        details: { tenantId: finalTenantId, documentIds: staleNotIndexedDocIds },
+      });
+
+      for (const documentId of staleNotIndexedDocIds) {
+        const document = documentsCache.get(documentId);
+        if (!document) continue;
+        setIndexState(document, 'indexed', { chunksCount: Number(embeddedChunksByDoc[documentId] || 1) });
+        documentsCache.set(documentId, document);
+        await persistFn(document);
+      }
+    }
+
     if ((vectorCounts.documents || 0) > total) {
       warnings.push({
         code: 'RAG_VECTOR_AHEAD',

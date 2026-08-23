@@ -205,6 +205,28 @@ async function countChunksByDocument({ tenantId }) {
   return map;
 }
 
+async function countChunksWithEmbeddingByDocument({ tenantId }) {
+  const tenantKey = normalizeTenantKey(tenantId);
+  if (!tenantKey) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
+  const sequelize = requireSequelize();
+
+  const [rows] = await sequelize.query(
+    `
+      SELECT document_id, COUNT(*)::int AS chunks
+      FROM rag_chunks
+      WHERE tenant_key = :tenantKey AND embedding IS NOT NULL
+      GROUP BY document_id
+    `,
+    { replacements: { tenantKey } }
+  );
+
+  const map = {};
+  for (const r of rows || []) {
+    map[String(r.document_id)] = Number(r.chunks || 0);
+  }
+  return map;
+}
+
 async function deleteTenantVectors(tenantId) {
   const tenantKey = normalizeTenantKey(tenantId);
   if (!tenantKey) throw Object.assign(new Error('tenantId é obrigatório'), { code: 'TENANT_REQUIRED' });
@@ -278,6 +300,7 @@ module.exports = {
   similaritySearch,
   countVectorDocs,
   countChunksByDocument,
+  countChunksWithEmbeddingByDocument,
   deleteTenantVectors,
   deleteDocumentVectors,
   deleteOrphanedChunksForTenant,
