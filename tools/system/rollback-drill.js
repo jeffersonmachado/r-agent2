@@ -28,10 +28,11 @@ function toNumber(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-async function reqJson(baseUrl, endpoint, { method = 'GET', token = null, body = null } = {}) {
+async function reqJson(baseUrl, endpoint, { method = 'GET', token = null, body = null, tenantId = null } = {}) {
   const url = `${String(baseUrl).replace(/\/+$/, '')}${endpoint}`;
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (tenantId) headers['X-Tenant-Id'] = String(tenantId);
 
   const startedAt = Date.now();
   const response = await fetch(url, {
@@ -267,7 +268,7 @@ async function run() {
 
     const token = auth.token;
 
-    const preSelf = await reqJson(baseUrl, '/health/selftest', { token });
+    const preSelf = await reqJson(baseUrl, '/health/selftest', { token, tenantId: auth.tenantId });
     report.checks.preSelftest = {
       ok: preSelf.ok,
       status: preSelf.status,
@@ -278,7 +279,7 @@ async function run() {
       throw new Error('pre_selftest_failed');
     }
 
-    const orders = await reqJson(baseUrl, '/api/orders/metrics', { token });
+    const orders = await reqJson(baseUrl, '/api/orders/metrics', { token, tenantId: auth.tenantId });
     report.checks.orders = {
       ok: orders.ok,
       status: orders.status,
@@ -287,7 +288,7 @@ async function run() {
     };
     if (!orders.ok) throw new Error('orders_metrics_failed');
 
-    const fast = await reqJson(baseUrl, '/api/physical/metrics', { token });
+    const fast = await reqJson(baseUrl, '/api/physical/metrics', { token, tenantId: auth.tenantId });
     report.checks.fastService = {
       ok: fast.ok,
       status: fast.status,
@@ -296,7 +297,7 @@ async function run() {
     };
     if (!fast.ok) throw new Error('physical_metrics_failed');
 
-    const versions = await reqJson(baseUrl, '/api/pbx/config-versions?limit=30', { token });
+    const versions = await reqJson(baseUrl, '/api/pbx/config-versions?limit=30', { token, tenantId: auth.tenantId });
     if (!versions.ok) throw new Error('pbx_versions_failed');
 
     const items = Array.isArray(versions.payload?.items) ? versions.payload.items : [];
@@ -321,6 +322,7 @@ async function run() {
         method: 'POST',
         token,
         body: {},
+        tenantId: auth.tenantId,
       });
       pbxResult.applyExecuted = true;
       pbxResult.rollbackResponse = {
@@ -333,7 +335,7 @@ async function run() {
         throw new Error('pbx_rollback_apply_failed');
       }
 
-      const audit = await reqJson(baseUrl, '/api/pbx/audit?hours=2&limit=200', { token });
+      const audit = await reqJson(baseUrl, '/api/pbx/audit?hours=2&limit=200', { token, tenantId: auth.tenantId });
       if (audit.ok) {
         const events = Array.isArray(audit.payload?.items) ? audit.payload.items : [];
         pbxResult.auditFound = events.some((ev) => String(ev?.action || '') === 'pbx.dialplan.rollback');
@@ -371,7 +373,7 @@ async function run() {
       };
     }
 
-    const postSelf = await reqJson(baseUrl, '/health/selftest', { token });
+    const postSelf = await reqJson(baseUrl, '/health/selftest', { token, tenantId: auth.tenantId });
     report.checks.postSelftest = {
       ok: postSelf.ok,
       status: postSelf.status,
