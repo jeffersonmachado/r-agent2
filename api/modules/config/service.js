@@ -149,7 +149,7 @@ function evaluateIntegrationReadiness(configData = {}) {
 
   const provider = readPath(configData, 'billing.provider');
   if (!provider || typeof provider !== 'string' || !provider.trim()) {
-    addMissing('billing.provider', 'Provider de billing obrigatório (asaas ou mercado_pago)');
+    addMissing('billing.provider', 'Provider de billing obrigatório (asaas, mercado_pago ou sandbox)');
   }
 
   const normalizedProvider = String(provider || '').trim().toLowerCase();
@@ -177,6 +177,9 @@ function evaluateIntegrationReadiness(configData = {}) {
         addMissing(path, 'Campo obrigatório para provider Mercado Pago');
       }
     }
+  } else if (normalizedProvider === 'sandbox' || normalizedProvider === 'mock') {
+    // Provider sandbox/mock (PROVIDER_SANDBOX em api/integrations/paymentProvider.js):
+    // modo de teste sem credenciais reais — nenhum campo adicional é exigido.
   } else if (provider) {
     addMissing('billing.provider', `Provider inválido: ${provider}`);
   }
@@ -531,4 +534,5 @@ function createConfigService({ deps }) {
 
 module.exports = {
   createConfigService,
+  evaluateIntegrationReadiness,
 };
