@@ -4,7 +4,7 @@
     "blockingFailures": 0,
     "infraErrors": 0
   },
-  "accepted": true,
+  "accepted": false,
   "bestKnown": {
     "executionId": "mesh-canonical-recovered-1787343988620",
     "passRate": 1,
@@ -17,6 +17,34 @@
     "updatedAt": "2026-08-21T20:26:39.852Z"
   },
   "history": [
+    {
+      "executionId": "mesh-2026-08-23T17-45-00-334Z",
+      "passRate": 0.9411764705882353,
+      "blockingFailures": 1,
+      "infraErrors": 0,
+      "at": "2026-08-23T17:56:09.092Z"
+    },
+    {
+      "executionId": "mesh-2026-08-23T17-30-00-386Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-23T17:40:14.402Z"
+    },
+    {
+      "executionId": "mesh-2026-08-23T17-15-00-198Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-23T17:24:34.350Z"
+    },
+    {
+      "executionId": "mesh-2026-08-23T16-45-00-214Z",
+      "passRate": 1,
+      "blockingFailures": 0,
+      "infraErrors": 0,
+      "at": "2026-08-23T17:03:40.461Z"
+    },
     {
       "executionId": "mesh-2026-08-23T16-00-00-362Z",
       "passRate": 1,
@@ -128,34 +156,6 @@
       "blockingFailures": 1,
       "infraErrors": 0,
       "at": "2026-08-23T08:41:15.077Z"
-    },
-    {
-      "executionId": "mesh-2026-08-23T07-45-00-377Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-23T08:10:59.321Z"
-    },
-    {
-      "executionId": "mesh-2026-08-23T07-15-00-176Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-23T07:40:37.835Z"
-    },
-    {
-      "executionId": "mesh-2026-08-23T06-45-00-203Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-23T07:10:56.798Z"
-    },
-    {
-      "executionId": "mesh-2026-08-23T06-15-00-183Z",
-      "passRate": 0.9411764705882353,
-      "blockingFailures": 1,
-      "infraErrors": 0,
-      "at": "2026-08-23T06:41:15.490Z"
     }
   ]
 }

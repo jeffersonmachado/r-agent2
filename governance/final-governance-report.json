@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-23T16:20:29.987Z",
+  "generatedAt": "2026-08-23T18:00:22.807Z",
   "engine": "final-governance-engine/v1",
   "artifactType": "final-governance-report",
   "artifactVersion": "2.0.0",
-  "runId": "rap-governed-20260823154724969-85f85d1c",
-  "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
+  "runId": "rap-governed-20260823164704322-69bd7aae",
+  "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
   "strictMode": true,
   "finalDecision": "AUTONOMOUS_READY_GO",
   "autonomousReady": true,
@@ -18,14 +18,14 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20260823154724969-85f85d1c",
-      "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
+      "runId": "rap-governed-20260823164704322-69bd7aae",
+      "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
       "reason": null,
       "runContext": {
-        "runId": "rap-governed-20260823154724969-85f85d1c",
-        "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-        "startedAt": "2026-08-23T15:47:25.259Z",
-        "generatedAt": "2026-08-23T16:20:27.328Z",
+        "runId": "rap-governed-20260823164704322-69bd7aae",
+        "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+        "startedAt": "2026-08-23T16:47:04.562Z",
+        "generatedAt": "2026-08-23T18:00:18.655Z",
         "status": "RUNNING",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
@@ -33,57 +33,57 @@
         "policyVersion": "1.0.1",
         "policyFingerprint": "81140947773b9817c0cb96407c4f83aea14b2383734470c3cc56d749081af8fe",
         "lastGovernedStage": "final-governance",
-        "lastSourceVerificationAt": "2026-08-23T16:20:27.328Z",
+        "lastSourceVerificationAt": "2026-08-23T18:00:18.655Z",
         "stageHistory": [
           {
             "stage": "final-governance",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T15:50:53.017Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T17:23:24.905Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T15:51:29.938Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T17:24:26.715Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T15:55:21.412Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T17:29:20.264Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T15:56:02.217Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T17:30:09.747Z"
           },
           {
             "stage": "final-consistency",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T15:57:09.385Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T17:31:35.924Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T15:57:09.768Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T17:31:36.464Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T16:18:50.434Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T17:57:53.898Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T16:19:33.182Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T17:58:44.785Z"
           },
           {
             "stage": "final-consistency",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T16:20:27.051Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T18:00:17.949Z"
           },
           {
             "stage": "final-governance",
-            "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
-            "verifiedAt": "2026-08-23T16:20:27.328Z"
+            "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
+            "verifiedAt": "2026-08-23T18:00:18.655Z"
           }
         ]
       }
@@ -95,8 +95,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20260823154724969-85f85d1c",
-      "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
+      "runId": "rap-governed-20260823164704322-69bd7aae",
+      "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
       "reason": null,
       "dimensions": 78,
       "dimensionsAt10": 78,
@@ -110,8 +110,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20260823154724969-85f85d1c",
-      "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
+      "runId": "rap-governed-20260823164704322-69bd7aae",
+      "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
       "reason": null,
       "selfProofStatus": "PASS",
       "verifierPassed": true,
@@ -126,8 +126,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20260823154724969-85f85d1c",
-      "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
+      "runId": "rap-governed-20260823164704322-69bd7aae",
+      "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
       "reason": null,
       "decision": "GO",
       "failedChecks": 0
@@ -139,8 +139,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20260823154724969-85f85d1c",
-      "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
+      "runId": "rap-governed-20260823164704322-69bd7aae",
+      "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
       "reason": null,
       "decision": "AUTONOMOUS_READY_GO",
       "fingerprintStatus": "FRESH",
@@ -153,8 +153,8 @@
       "status": "PASS",
       "pass": true,
       "severity": "OK",
-      "runId": "rap-governed-20260823154724969-85f85d1c",
-      "sourceFingerprint": "18136b782538422fd9f38e2b2d4a344b4b0ef2f90d8e033e1d24dea1b25ecbff",
+      "runId": "rap-governed-20260823164704322-69bd7aae",
+      "sourceFingerprint": "0491981e450629e0233d1ed0dc419da6a8c1487f65512c0129cb9a34477a4cc4",
       "reason": null,
       "decision": "AUTONOMOUS_READY_GO",
       "blockerCount": 0
@@ -195,9 +195,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260823-131602.payload.zip",
-      "computed": "dc9192fc60dd58ed23a5241b…",
-      "recorded": "dc9192fc60dd58ed23a5241b…",
+      "zipName": "r-agent2-20260823-145439.payload.zip",
+      "computed": "dddbfebf96cdd1595eda414f…",
+      "recorded": "dddbfebf96cdd1595eda414f…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },
