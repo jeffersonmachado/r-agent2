@@ -16,6 +16,11 @@ module.exports = {
   
   // Proteção contra travamentos
   bail: 1, // Para após primeiro teste falhar (útil para debug)
+
+  // Testes deixam handles abertos (Sequelize/timers) — sem forceExit o Jest
+  // imprime "Jest did not exit" e trava o `system:validate` (execSync) para
+  // sempre. Os testes já passaram; o forceExit só evita o hang de saída.
+  forceExit: true,
   
   // Limpeza automática
   clearMocks: true,
