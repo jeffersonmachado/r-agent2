@@ -849,6 +849,16 @@ async function indexDocument(document, tenantId) {
       sourceVersion,
     });
 
+    // Corpus do tenant mudou: invalida cache de respostas para não servir
+    // respostas stale até o TTL expirar.
+    const invalidatedCache = ragResponseCache.invalidateTenant(tenantId);
+    if (invalidatedCache > 0) {
+      logger.debug('[RAGService] Cache de respostas invalidado após indexação', {
+        tenantId,
+        invalidated: invalidatedCache,
+      });
+    }
+
     return {
       success: result.success,
       documentId: result.documentId,
@@ -1365,6 +1375,9 @@ async function cleanOrphanedDocuments(tenantId, documentIds) {
       removedChunks: result.removedChunks,
       orphanedDocuments: result.orphanedDocuments?.length || 0
     });
+
+    // Corpus do tenant mudou: invalida cache de respostas.
+    ragResponseCache.invalidateTenant(tenantId);
     
     return {
       success: result.success,
