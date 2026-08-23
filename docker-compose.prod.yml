@@ -35,7 +35,10 @@ services:
       RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
       RAG_INTERNAL_TOKEN: "${RAG_INTERNAL_TOKEN:?RAG_INTERNAL_TOKEN obrigatória}"
       # PostgreSQL - Configuração de produção
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:-StrongPass}@postgres:5432/${POSTGRES_DB:-results_saas}}
+      # PROD_DATABASE_URL dedicada: o DATABASE_URL do .env de dev aponta para
+      # localhost e vazaria para o container; credenciais alinhadas ao serviço
+      # postgres abaixo (POSTGRES_USER/PASSWORD/DB).
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:-StrongPass}@postgres:5432/${POSTGRES_DB:-results_saas}}
       PGHOST: ${PGHOST:-postgres}
       PGUSER: ${POSTGRES_USER:-results_app}
       PGPASSWORD: ${POSTGRES_PASSWORD:-StrongPass}
@@ -188,7 +191,7 @@ services:
       LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-4o-mini}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-r_agent2}}
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:-StrongPass}@postgres:5432/${POSTGRES_DB:-results_saas}}
     expose:
       - "8000"
     volumes:
