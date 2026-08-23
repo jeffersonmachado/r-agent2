@@ -18,6 +18,7 @@ const WELCOME_MESSAGE = {
 
 export function AskAiWidget() {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -95,7 +96,7 @@ export function AskAiWidget() {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-6 z-[1000] w-[380px] max-w-[calc(100vw-2rem)] rounded-xl border border-border-default bg-bg-elevated shadow-2xl flex flex-col overflow-hidden"
+        <div className="fixed bottom-24 left-6 z-[1000] w-[380px] max-w-[calc(100vw-2rem)] rounded-xl border border-border-default bg-bg-elevated shadow-2xl flex flex-col overflow-hidden"
           role="dialog"
           aria-label="Perguntar à IA"
           data-testid="ask-ai-panel"
@@ -186,17 +187,31 @@ export function AskAiWidget() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setOpen((previous) => !previous)}
-        className="fixed bottom-6 right-6 z-[1000] flex items-center gap-2 rounded-full bg-accent-primary text-white px-4 py-3 shadow-lg hover:opacity-90 transition-opacity"
-        aria-label={open ? 'Fechar assistente de IA' : 'Perguntar à IA'}
-        title="Perguntar à IA"
-        data-testid="ask-ai-toggle"
-      >
-        <span className="text-xl leading-none" aria-hidden="true">{open ? '×' : '🤖'}</span>
-        {!open && <span className="text-sm font-medium">Perguntar à IA</span>}
-      </button>
+      <div className="fixed bottom-6 left-6 z-[1000] flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setOpen((previous) => !previous)}
+          className={`flex items-center rounded-full bg-accent-primary text-white shadow-lg hover:opacity-90 transition-opacity ${
+            collapsed ? 'justify-center w-12 h-12' : 'gap-2 px-4 py-3'
+          }`}
+          aria-label={open ? 'Fechar assistente de IA' : 'Perguntar à IA'}
+          title={open ? 'Fechar' : 'Perguntar à IA'}
+          data-testid="ask-ai-toggle"
+        >
+          <span className="text-xl leading-none" aria-hidden="true">{open ? '×' : '🤖'}</span>
+          {!collapsed && <span className="text-sm font-medium">Perguntar à IA</span>}
+        </button>
+        <button
+          type="button"
+          onClick={() => setCollapsed((previous) => !previous)}
+          className="flex items-center justify-center w-9 h-9 rounded-full bg-bg-elevated border border-border-default text-text-secondary shadow-md hover:text-text-primary transition-colors"
+          aria-label={collapsed ? 'Expandir assistente de IA' : 'Reduzir assistente de IA'}
+          title={collapsed ? 'Expandir' : 'Reduzir'}
+          data-testid="ask-ai-collapse"
+        >
+          <span aria-hidden="true">{collapsed ? '›' : '‹'}</span>
+        </button>
+      </div>
     </>
   );
 }
