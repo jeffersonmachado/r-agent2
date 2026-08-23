@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-08-23T03:34:22.621Z",
+  "generatedAt": "2026-08-23T16:19:36.533Z",
   "engine": "package-integrity-engine/v1",
   "pass": true,
   "decision": "PACKAGE_INTEGRITY_GO",
-  "packageName": "r-agent2-20260823-003153.zip",
-  "packageHash": "51d8e0978bc45f6a850b6a2bcf3d62a6d626bcbb344fc565312973120ed235a3",
-  "generatedAt_pkg": "2026-08-23T03:34:17Z",
-  "gitCommit": "28b83776",
-  "evidenceManifestHash": "f764f0664acca2463fccf27ac01d9f077d079e53d3a512ee4b986aa0d4f3abfd",
+  "packageName": "r-agent2-20260823-131602.zip",
+  "packageHash": "3a1e39e0a55470abcab3c43c85dd86c69d26abfb6460027aa173cd0ff383e6ff",
+  "generatedAt_pkg": "2026-08-23T16:19:30Z",
+  "gitCommit": "f7d12203",
+  "evidenceManifestHash": "2c3a5c81e5190262cd582beb216f0ff6b860e875ffeed51362ff34bbb2d3487a",
   "checks": [
     {
       "check": "zip_hash",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260823-003153.zip",
-      "computed": "51d8e0978bc45f6a850b6a2bcf3d62a6d626bcbb344fc565312973120ed235a3",
-      "recorded": "51d8e0978bc45f6a850b6a2bcf3d62a6d626bcbb344fc565312973120ed235a3",
+      "zipName": "r-agent2-20260823-131602.zip",
+      "computed": "3a1e39e0a55470abcab3c43c85dd86c69d26abfb6460027aa173cd0ff383e6ff",
+      "recorded": "3a1e39e0a55470abcab3c43c85dd86c69d26abfb6460027aa173cd0ff383e6ff",
       "hashSource": "sidecar-manifest",
-      "sizeBytes": 41772313,
+      "sizeBytes": 41788575,
       "match": true,
       "reason": null
     },
@@ -25,7 +25,7 @@
       "check": "zip_name_alignment",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260823-003153.zip",
+      "zipName": "r-agent2-20260823-131602.zip",
       "mismatches": [],
       "reason": null
     },
@@ -33,7 +33,7 @@
       "check": "evidence_manifest_hash",
       "pass": true,
       "severity": "OK",
-      "computed": "f764f0664acca2463fccf27ac01d9f077d079e53d3a512ee4b986aa0d4f3abfd",
+      "computed": "2c3a5c81e5190262cd582beb216f0ff6b860e875ffeed51362ff34bbb2d3487a",
       "note": "No stored hash baseline to compare against"
     },
     {
@@ -43,8 +43,8 @@
       "validatorOk": true,
       "selfContained": true,
       "missingEntries": 0,
-      "reportedZip": "r-agent2-20260823-003153.zip",
-      "actualZip": "r-agent2-20260823-003153.zip",
+      "reportedZip": "r-agent2-20260823-131602.zip",
+      "actualZip": "r-agent2-20260823-131602.zip",
       "zipMatch": true,
       "reason": null
     }
@@ -52,5 +52,5 @@
   "failedChecks": 0,
   "criticalChecks": 0,
   "failureReasons": [],
-  "summary": "Pacote r-agent2-20260823-003153.zip íntegro. Todos os hashes correspondem."
+  "summary": "Pacote r-agent2-20260823-131602.zip íntegro. Todos os hashes correspondem."
 }
