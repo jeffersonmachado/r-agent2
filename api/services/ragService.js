@@ -468,6 +468,32 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     const serviceUrl = getRagServiceUrl(tenantId);
     const timeout = getRagQueryTimeout(tenantId);
     
+    // Repassa a credencial de LLM do tenant (mesma gerida em Configuração > IA)
+    // ao rag-service via header interno, para que a geração use a chave do
+    // tenant em vez de depender de OPENAI_API_KEY global. Falha ao resolver a
+    // chave não bloqueia: o rag-service cai no fallback sem LLM.
+    let ragLlmHeaders = {};
+    try {
+      // Só resolve a credencial quando a conexão Sequelize já está estabelecida
+      // (em testes de unidade não há DB: getSequelize() retorna null e evita o
+      // connect() implícito de getDecryptedAPIKey).
+      // eslint-disable-next-line global-require
+      const { getSequelize } = require('../db/sequelize');
+      if (getSequelize()) {
+        // eslint-disable-next-line global-require
+        const { getDecryptedAPIKey } = require('./tenantAIService');
+        const tenantLlmApiKey = await getDecryptedAPIKey(tenantId, 'openai');
+        if (tenantLlmApiKey) {
+          ragLlmHeaders = { 'X-RAG-LLM-API-Key': tenantLlmApiKey };
+        }
+      }
+    } catch (llmKeyError) {
+      logger.warn('[RAGService] Falha ao resolver credencial de LLM do tenant', {
+        tenantId,
+        error: safeErrorMessage(llmKeyError),
+      });
+    }
+    
     const response = await fetchRagWithBreaker(
       `${serviceUrl}/rag/query`,
       {
@@ -475,6 +501,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
         headers: {
           'Content-Type': 'application/json',
           ...getRagInternalHeaders(),
+          ...ragLlmHeaders,
         },
         body: JSON.stringify(requestBody),
       },

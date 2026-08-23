@@ -45,6 +45,7 @@ def generate_response(
     max_tokens: int = 1000,
     temperature: float = 0.7,
     system_prompt: Optional[str] = None,
+    api_key_override: Optional[str] = None,
 ) -> str:
     """
     Gera resposta usando LLM.
@@ -60,7 +61,7 @@ def generate_response(
     settings = get_settings()
     
     if settings.llm_provider == "openai" and OPENAI_AVAILABLE:
-        api_key = settings.openai_api_key
+        api_key = api_key_override or settings.openai_api_key
         if not api_key:
             logger.error("OpenAI API key não configurada. Verifique a variável de ambiente OPENAI_API_KEY ou llm_api_key nas configurações.")
             raise ValueError("OpenAI API key não configurada. Configure OPENAI_API_KEY ou llm_api_key.")

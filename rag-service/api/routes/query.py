@@ -2,7 +2,7 @@
 Endpoint de consulta RAG.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from models.query import QueryRequest, QueryResponse, Source, QueryMetadata
 from services.embedding_service import generate_embedding
 from services.vector_store import get_vector_store, normalize_tenant_id
@@ -17,6 +17,15 @@ import logging
 import re
 
 logger = logging.getLogger(__name__)
+
+# Piso de relevância para aceitar chunks na resposta. Chunks com score abaixo
+# deste limiar são considerados ruído e não devem fundamentar resposta (evita
+# respostas incoerentes quando o corpus não cobre a pergunta).
+# Alinhado ao piso absoluto do fallback de minScore (max(0.3, min_score * 0.8)):
+# o pipeline já garante score >= 0.45 (ou >= 0.36 no fallback), então este piso
+# só atua como rede de segurança contra matches sub-0.3 (nunca descarta matches
+# válidos como o de 0.4942 de "O que é o RAP?").
+MIN_RELEVANCE_SCORE = 0.3
 
 router = APIRouter()
 
@@ -253,7 +262,7 @@ def calculate_confidence(chunks: list, min_score: float) -> float:
 
 
 @router.post("/query", response_model=QueryResponse)
-def query_rag(request: QueryRequest):
+def query_rag(request: QueryRequest, http_request: Request):
     """
     Consulta RAG.
     
@@ -261,6 +270,10 @@ def query_rag(request: QueryRequest):
     """
     try:
         settings = get_settings()
+        
+        # Credencial de LLM do tenant repassada pelo backend (Configuração > IA).
+        # Nunca é logada nem incluída na resposta; ausente cai no fallback sem LLM.
+        llm_api_key_override = http_request.headers.get("X-RAG-LLM-API-Key") or None
         
         # Validações
         if not request.query or not request.query.strip():
@@ -551,6 +564,16 @@ def query_rag(request: QueryRequest):
                 metadata=source_metadata
             ))
         
+        # Piso de relevância: descarta chunks abaixo do limiar para não
+        # fundamentar resposta em conteúdo irrelevante (evita resposta incoerente).
+        best_score = max((chunk.score or 0.0 for chunk in chunks), default=0.0)
+        if chunks and best_score < MIN_RELEVANCE_SCORE:
+            logger.info(
+                f"Melhor score {best_score:.4f} abaixo do piso de relevância {MIN_RELEVANCE_SCORE}; tratando como sem resultado",
+                extra={'tenant_id': request.tenantId, 'chunks': len(chunks)},
+            )
+            chunks = []
+        
         if not chunks:
             # Registra falha para aprendizado
             try:
@@ -607,6 +630,7 @@ def query_rag(request: QueryRequest):
                 max_tokens=max_tokens,
                 temperature=settings.llm_temperature,
                 system_prompt=security_system_prompt,
+                api_key_override=llm_api_key_override,
             )
             
             # Valida se a resposta não é muito curta ou genérica
@@ -618,15 +642,22 @@ def query_rag(request: QueryRequest):
                 
         except Exception as e:
             logger.error(f"Erro ao gerar resposta com LLM: {e}", exc_info=True)
-            # Tenta fornecer informação dos chunks mesmo sem LLM
-            if chunks and len(chunks) > 0:
+            # Fallback sem LLM: só usa chunks com relevância mínima; caso
+            # contrário responde honestamente em vez de devolver conteúdo
+            # irrelevante (evita respostas incoerentes).
+            best_score = max((chunk.score or 0.0 for chunk in chunks), default=0.0)
+            if chunks and best_score >= MIN_RELEVANCE_SCORE:
                 # Fallback inteligente: usa o primeiro chunk como resposta base
                 first_chunk = chunks[0]
                 response_text = f"Com base nas informações disponíveis: {first_chunk.content[:300]}..."
                 if len(chunks) > 1:
                     response_text += f"\n\nHá {len(chunks)} fontes de informação relacionadas disponíveis."
             else:
-                response_text = "Não tenho informação suficiente sobre isso. Posso transferir você para um atendente humano?"
+                response_text = (
+                    "Não tenho informação suficiente sobre isso. Posso transferir você para um atendente humano?"
+                    if scope['domain'] == 'OPERATIONAL'
+                    else "A documentação técnica disponível não cobre este tema."
+                )
         
         # Determina se foi sucesso (chunks encontrados e resposta válida)
         is_success = len(chunks) > 0 and response_text and len(response_text.strip()) >= 20
