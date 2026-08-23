@@ -231,7 +231,15 @@ def index_document(request: IndexRequest):
         # Chunks aceitos no batch corrente: o Postgres só enxerga o que já foi
         # commitado, então a dedup intra-documento compara contra esta lista.
         batch_accepted = []
-        
+
+        # RPA artifacts (fonte `rpa-artifact`) são evidências operacionais de
+        # alta cardinalidade: cada execução é distinta (executionId/timestamps),
+        # mas o boilerplate compartilhado entre execuções faz o dedup semântico
+        # (limiar 0.97) descartar chunks de execuções legítimas. Para essa fonte
+        # o dedup semântico é desativado; o dedup estrutural (content_hash) em
+        # ETAPA 3 continua cobrindo duplicatas exatas do mesmo conteúdo.
+        skip_semantic_dedup = (metadata.source == 'rpa-artifact')
+
         for chunk, embedding in zip(chunks, embeddings):
             # Normaliza embedding
             normalized_emb = normalize_embedding(embedding)
@@ -242,28 +250,29 @@ def index_document(request: IndexRequest):
             metadata_dict['semantic_hash'] = semantic_hash
             chunk.metadata = ChunkMetadata(**metadata_dict)
             
-            # Verifica duplicidade semântica
-            semantic_check = check_semantic_duplicate(
-                tenant_id,
-                normalized_emb,
-                semantic_hash,
-                source_id,
-                batch_accepted=batch_accepted
-            )
-            
-            if semantic_check.get('is_duplicate'):
-                duplicate_count += 1
-                logger.info(
-                    f"[INDEX] Chunk duplicado semanticamente detectado, descartando",
-                    extra={
-                        'document_id': document_id,
-                        'chunk_id': chunk.id[:16] + '...',
-                        'tenant_id': tenant_id,
-                        'similarity': semantic_check.get('similarity'),
-                        'existing_chunk_id': semantic_check.get('existing_chunk', {}).get('chunk_id'),
-                    }
+            if not skip_semantic_dedup:
+                # Verifica duplicidade semântica
+                semantic_check = check_semantic_duplicate(
+                    tenant_id,
+                    normalized_emb,
+                    semantic_hash,
+                    source_id,
+                    batch_accepted=batch_accepted
                 )
-                continue  # Descarta chunk duplicado
+                
+                if semantic_check.get('is_duplicate'):
+                    duplicate_count += 1
+                    logger.info(
+                        f"[INDEX] Chunk duplicado semanticamente detectado, descartando",
+                        extra={
+                            'document_id': document_id,
+                            'chunk_id': chunk.id[:16] + '...',
+                            'tenant_id': tenant_id,
+                            'similarity': semantic_check.get('similarity'),
+                            'existing_chunk_id': semantic_check.get('existing_chunk', {}).get('chunk_id'),
+                        }
+                    )
+                    continue  # Descarta chunk duplicado
             
             # Registra chunk nos índices de deduplicação
             chunk_content_hash = getattr(chunk.metadata, 'content_hash', None) or generate_content_hash(chunk.content)

@@ -46,6 +46,20 @@ def isolate_embedding_and_vector_store(monkeypatch):
         ],
     )
     monkeypatch.setattr(index_routes, "get_vector_store", lambda _tenant_id: store)
+    # Hermeticidade: estes são testes HTTP de unidade, não integração pgvector.
+    # Isola a dedup estrutural/semântica para não depender de resíduo no
+    # Postgres real de execuções anteriores. Testes que exercitam a dedup
+    # sobrescrevem estas funções com monkeypatch próprio.
+    monkeypatch.setattr(
+        index_routes,
+        "check_structural_duplicate",
+        lambda *args, **kwargs: {"is_duplicate": False},
+    )
+    monkeypatch.setattr(
+        index_routes,
+        "check_semantic_duplicate",
+        lambda *args, **kwargs: {"is_duplicate": False, "similarity": 0.0},
+    )
 
 
 def test_index_document_success():
@@ -161,3 +175,70 @@ def test_index_document_long_content():
     data = response.json()
     assert data["success"] is True, data
     assert data["chunksCreated"] > 1  # Deve gerar múltiplos chunks
+
+
+def test_index_rpa_artifact_skips_semantic_dedup(monkeypatch):
+    """
+    RPA artifacts são evidências de alta cardinalidade: mesmo que o dedup
+    semântico sinalize duplicidade (boilerplate similar entre execuções),
+    os chunks devem ser indexados. O dedup estrutural (content_hash) em ETAPA 3
+    continua sendo a proteção contra duplicatas exatas.
+    """
+    monkeypatch.setattr(
+        index_routes,
+        "check_semantic_duplicate",
+        lambda *args, **kwargs: {"is_duplicate": True, "similarity": 1.0, "reason": "semantic_hash_exact_duplicate"},
+    )
+
+    document = {
+        "id": "test-rpa-001",
+        "tenantId": "test-tenant",
+        "domain": "SYSTEM",
+        "classification": "SUPPORT",
+        "sensitivity": "CONFIDENTIAL",
+        "title": "RPA: support-inbox-nota-ui",
+        "content": "Execução RPA: Nota Interna em Ticket\nResultado: SUCESSO\nRoteiro (passos):\n1. navigate -> /workspace\n2. click caixa de entrada",
+        "metadata": {
+            "source": "rpa-artifact",
+            "category": "rpa-execution",
+        },
+        "status": "active",
+    }
+
+    response = client.post("/rag/index", json={"document": document})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True, data
+    assert data["chunksCreated"] > 0  # Não pode ser descartado como duplicado
+
+
+def test_index_non_rpa_artifact_still_deduped(monkeypatch):
+    """
+    Para fontes não-RPA, o dedup semântico permanece ativo: chunks duplicados
+    são descartados e o documento não gera chunks novos.
+    """
+    monkeypatch.setattr(
+        index_routes,
+        "check_semantic_duplicate",
+        lambda *args, **kwargs: {"is_duplicate": True, "similarity": 1.0, "reason": "semantic_hash_exact_duplicate"},
+    )
+
+    document = {
+        "id": "test-kb-001",
+        "tenantId": "test-tenant",
+        "domain": "OPERATIONAL",
+        "classification": "PRODUCTION",
+        "title": "Artigo de conhecimento",
+        "content": "Conteúdo de conhecimento que seria duplicado semanticamente.",
+        "metadata": {
+            "source": "knowledge-base",
+            "category": "faq",
+        },
+        "status": "active",
+    }
+
+    response = client.post("/rag/index", json={"document": document})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True, data
+    assert data["chunksCreated"] == 0  # Todos os chunks eram duplicados semânticos
