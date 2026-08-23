@@ -42,6 +42,16 @@ fi
 # Navega para o diretório do serviço RAG
 cd "$RAG_SERVICE_DIR"
 
+# Carrega o .env (RAG_INTERNAL_TOKEN, DATABASE_URL etc.) para o processo uvicorn.
+# Sem isso o serviço sobe bloqueado: [SECURITY] RAG_INTERNAL_TOKEN ausente.
+if [ -f ".env" ]; then
+    echo "📋 Carregando .env do rag-service..."
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+fi
+
 # Verifica se há um ambiente virtual
 if [ -d "venv" ]; then
     echo "📦 Usando ambiente virtual..."
