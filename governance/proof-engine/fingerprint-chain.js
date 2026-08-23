@@ -131,6 +131,7 @@ const SKIP_REL_DIRS = new Set([
   'qa/qa-waves/generated-seeds',
   'qa/qa-waves/generated-ui-steps',
   'qa/qa-waves/generated-validators',
+  'core/rpa/reports', // bug-memory/evidência runtime gerada — nunca prova
 ]);
 
 /** Arquivos gerados/credenciais dentro de raízes-fonte. */

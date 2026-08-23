@@ -266,6 +266,7 @@ describe('HARD-027 — superfície de prova cobre todo o runtime provado', () =>
       'qa/mesh/intelligence/history/stability-x.json': JSON.stringify({ v: 1 }),
       'api/data/config.json': JSON.stringify({ v: 1 }),
       'core/rpa/config/rpa-token.json': JSON.stringify({ token: 'a' }),
+      'core/rpa/reports/bugs/bug-memory.json': JSON.stringify({ v: 1 }),
     };
     const writeAll = (version) => {
       for (const [relPath, content] of Object.entries(generated)) {
