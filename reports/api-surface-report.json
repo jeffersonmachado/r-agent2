@@ -21774,5 +21774,9 @@
         "p3": "skipped"
       }
     }
-  ]
+  ],
+  "runId": "rap-governed-20260823024529416-7d3bd815",
+  "sourceFingerprint": "c5d3d58f2d2842def4e327adf7a821a047423a3f86de2f41dd45f0000f3805ad",
+  "artifactType": "api-surface-report",
+  "artifactVersion": "1.0.0"
 }
