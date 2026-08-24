@@ -2551,9 +2551,17 @@ class ActionExecutor {
       return null;
     }
     await this.context.tracing.start({
-      screenshots: options.screenshots !== false,
+      // Screenshots no trace ficam desligados por padrão: o uiTrace do replay
+      // já embute capturas ANTES/DEPOIS por passo, e os screenshots dedicados
+      // do RPA são persistidos como blobs `rpa/screenshot`. Ligar aqui só
+      // triplica o mesmo conteúdo visual e explode o tamanho do ZIP.
+      screenshots: options.screenshots === true,
+      // Snapshots do DOM ficam ligados: essenciais para o replay visual
+      // auditável (estado da tela por passo), com custo muito baixo.
       snapshots: options.snapshots !== false,
-      sources: options.sources !== false,
+      // Fontes das páginas ficam desligadas por padrão: não são necessárias
+      // para auditoria e são o maior fator de peso do trace.
+      sources: options.sources === true,
     });
     this.tracePath = null;
     return true;

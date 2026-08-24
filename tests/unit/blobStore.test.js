@@ -45,6 +45,15 @@ describe('lib/blobStore', () => {
     expect(await store.has('a/b')).toBe(false);
   });
 
+  it('listKeys lista todas as chaves relativas ao rootDir', async () => {
+    await store.put(Buffer.from('x'), '00/abc');
+    await store.put(Buffer.from('y'), 'ff/def');
+    await store.put(Buffer.from('z'), 'nested/key');
+
+    const keys = store.listKeys().sort();
+    expect(keys).toEqual(['00/abc', 'ff/def', 'nested/key'].sort());
+  });
+
   it('rejeita key com path traversal', async () => {
     await expect(store.put(Buffer.from('x'), '../evil')).rejects.toThrow(/blob_key_invalid/);
   });

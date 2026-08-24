@@ -24,6 +24,7 @@ const path = require('path');
 const { createArtifactStore } = require('../../lib/artifactStore');
 const { createBlobStore } = require('../../lib/blobStore');
 const { getSequelize, connect } = require('../db/sequelize');
+const { Op } = require('sequelize');
 const { resolveRuntimePath } = require('../utils/runtimePaths');
 const logger = require('../utils/logger');
 const { normalizeTenantKey, redactDeep, redactText } = require('../../lib/rpaSecurity');
@@ -420,6 +421,156 @@ async function indexExecutionInRag({
   }
 }
 
+/**
+ * Varre o blob store e remove blobs órfãos — arquivos em disco que não são
+ * referenciados por nenhuma linha `runtime_artifacts.storage_key`.
+ *
+ * O `remove()` do artifact store apaga apenas a linha do Postgres; os bytes
+ * ficavam órfãos no disco para sempre. Este sweep é a contraparte de garbage
+ * collection, seguro para blobs content-addressed (um blob só é removido
+ * quando NENHUMA linha o referencia).
+ *
+ * @param {{ dryRun?: boolean }} options
+ * @returns {Promise<{totalFiles, referenced, orphaned, removed, freedBytes, dryRun, reason?}>}
+ */
+async function sweepOrphanedBlobs({ dryRun = true } = {}) {
+  try {
+    const store = await ensureStore();
+    if (store.backend !== 'postgres') {
+      return {
+        totalFiles: 0,
+        referenced: 0,
+        orphaned: 0,
+        removed: 0,
+        freedBytes: 0,
+        dryRun,
+        reason: 'backend_nao_postgres',
+      };
+    }
+
+    const blobStore = createBlobStore({ rootDir: resolveRuntimePath('artifacts', 'blobs') });
+    const keys = blobStore.listKeys();
+
+    const RuntimeArtifact = require('../db/models/RuntimeArtifact')();
+    const rows = await RuntimeArtifact.findAll({
+      attributes: ['storage_key'],
+      where: { storage_key: { [Op.ne]: null } },
+      raw: true,
+    });
+    const referenced = new Set((rows || []).map((row) => row.storage_key).filter(Boolean));
+
+    let removed = 0;
+    let freedBytes = 0;
+    let orphaned = 0;
+    for (const key of keys) {
+      if (referenced.has(key)) continue;
+      orphaned += 1;
+      const abs = path.join(blobStore.rootDir, key);
+      try {
+        const stat = fs.statSync(abs);
+        freedBytes += stat.size;
+        if (!dryRun) {
+          fs.unlinkSync(abs);
+          removed += 1;
+        }
+      } catch (_) {
+        // Arquivo sumiu entre a listagem e a remoção — ignora.
+      }
+    }
+
+    return {
+      totalFiles: keys.length,
+      referenced: referenced.size,
+      orphaned,
+      removed,
+      freedBytes,
+      dryRun,
+    };
+  } catch (error) {
+    logger.warn('[rpaArtifactPersistence] Falha no sweep de blobs órfãos', {
+      error: String(error?.message || error),
+    });
+    return {
+      totalFiles: 0,
+      referenced: 0,
+      orphaned: 0,
+      removed: 0,
+      freedBytes: 0,
+      dryRun,
+      reason: String(error?.message || error),
+    };
+  }
+}
+
+/**
+ * Varre `runtime_artifacts` e remove metadados órfãos — linhas com
+ * `storage_key` cujo blob não existe mais em disco (inverso do
+ * `sweepOrphanedBlobs`). Linhas de artefatos binários (trace/screenshot)
+ * cujo payload foi perdido não são recuperáveis: remover o metadado mantém o
+ * inventário de artefatos consistente com o blob store.
+ *
+ * @param {{ dryRun?: boolean }} options
+ * @returns {Promise<{totalRows, dangling, removed, dryRun, reason?}>}
+ */
+async function sweepOrphanedArtifactMetadata({ dryRun = true } = {}) {
+  try {
+    const store = await ensureStore();
+    if (store.backend !== 'postgres') {
+      return {
+        totalRows: 0,
+        dangling: 0,
+        removed: 0,
+        dryRun,
+        reason: 'backend_nao_postgres',
+      };
+    }
+
+    const blobStore = createBlobStore({ rootDir: resolveRuntimePath('artifacts', 'blobs') });
+    const RuntimeArtifact = require('../db/models/RuntimeArtifact')();
+
+    const rows = await RuntimeArtifact.findAll({
+      attributes: ['id', 'storage_key'],
+      where: { storage_key: { [Op.ne]: null } },
+      raw: true,
+    });
+
+    const danglingIds = [];
+    for (const row of rows || []) {
+      if (!row.storage_key) continue;
+      try {
+        if (!(await blobStore.has(row.storage_key))) danglingIds.push(row.id);
+      } catch (_) {
+        danglingIds.push(row.id);
+      }
+    }
+
+    let removed = 0;
+    if (!dryRun && danglingIds.length > 0) {
+      removed = await RuntimeArtifact.destroy({
+        where: { id: { [Op.in]: danglingIds } },
+      });
+    }
+
+    return {
+      totalRows: (rows || []).length,
+      dangling: danglingIds.length,
+      removed,
+      dryRun,
+    };
+  } catch (error) {
+    logger.warn('[rpaArtifactPersistence] Falha no sweep de metadados órfãos', {
+      error: String(error?.message || error),
+    });
+    return {
+      totalRows: 0,
+      dangling: 0,
+      removed: 0,
+      dryRun,
+      reason: String(error?.message || error),
+    };
+  }
+}
+
 module.exports = {
   KIND_RECORDING,
   KIND_REPLAY,
@@ -435,5 +586,7 @@ module.exports = {
   getTraceBuffer,
   getScreenshotBuffer,
   indexExecutionInRag,
+  sweepOrphanedBlobs,
+  sweepOrphanedArtifactMetadata,
   resetStoreForTests,
 };

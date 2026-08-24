@@ -60,6 +60,45 @@ const activeExecutions = new Map();
 // Armazena gravações manuais em andamento
 const activeRecordings = new Map();
 
+/**
+ * Remove arquivos transitórios de RPA após persistência bem-sucedida no
+ * artifact store. O blob store passa a ser a cópia durável; manter o ZIP de
+ * trace em `rpa/traces/` e os PNGs em disco duplicava os bytes (o mesmo
+ * conteúdo ficava em disco E no blob store, crescendo sem limite).
+ */
+function cleanupTransientRpaFiles(tracePath, resultsObj, outcome) {
+  if (outcome && outcome.trace && tracePath && fs.existsSync(tracePath)) {
+    try {
+      fs.unlinkSync(tracePath);
+    } catch (error) {
+      logger.warn('[rpaService] Falha ao remover trace transitório', {
+        tracePath,
+        error: safeErrorMessage(error),
+      });
+    }
+  }
+
+  if (outcome && outcome.screenshots > 0) {
+    const screenshotPaths = Array.isArray(resultsObj && resultsObj.screenshots)
+      ? resultsObj.screenshots
+      : [];
+    for (const shotPath of screenshotPaths) {
+      const filePath = typeof shotPath === 'string'
+        ? shotPath
+        : (shotPath && (shotPath.path || shotPath.filePath));
+      if (!filePath || typeof filePath !== 'string') continue;
+      try {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      } catch (error) {
+        logger.warn('[rpaService] Falha ao remover screenshot transitório', {
+          filePath,
+          error: safeErrorMessage(error),
+        });
+      }
+    }
+  }
+}
+
 // Barramento em processo para mudanças de estado das execuções RPA.
 // Consumidores (adapter do QA Mesh) assinam eventos em vez de fazer polling.
 const { EventEmitter } = require('events');
@@ -427,6 +466,10 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             status: finalStatus,
           });
           execution.artifactPersistence = outcome;
+          // Higiene de disco: após persistir no artifact store (blob store),
+          // os arquivos transitórios locais (trace ZIP + screenshots PNG) não
+          // são mais necessários. Remover evita duplicar bytes em disco.
+          cleanupTransientRpaFiles(tracePath, resultsObj, outcome);
           const incomplete = Boolean(outcome.error)
             || outcome.executionManifest !== true
             || (resultsObj != null && outcome.replay !== true);
@@ -572,9 +615,11 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
       try {
         if (runner.executor?.startTracing) {
           await runner.executor.startTracing({
-            screenshots: true,
+            // Snapshots do DOM permanecem (essencial para o replay visual
+            // auditável). Screenshots e sources ficam desligados por padrão
+            // no executor (ver actionExecutor.startTracing): o uiTrace já
+            // embute capturas ANTES/DEPOIS e os sources não são necessários.
             snapshots: true,
-            sources: true,
           });
         }
       } catch (traceStartError) {
