@@ -13,9 +13,26 @@ const PIPELINE_ACTIVE_LOCK_PATH = path.join(__dirname, '..', 'pipeline', '.activ
 const MESH_RUNNING_LOCK_PATH = path.join(__dirname, 'mesh-running.lock');
 const CRITICAL_CRON = '*/15 * * * *';
 const REGRESSION_CRON = '0 2 * * *';
+// Frequências configuráveis do scheduler crítico. A UI expõe apenas o rótulo
+// amigável; a expressão cron fica interna (nunca é mostrada ao usuário final).
+const CRITICAL_FREQUENCY_PRESETS = Object.freeze({
+  '15min': { cron: '*/15 * * * *', label: 'A cada 15 minutos' },
+  '30min': { cron: '*/30 * * * *', label: 'A cada 30 minutos' },
+  '1h': { cron: '0 * * * *', label: 'A cada 1 hora' },
+  '2h': { cron: '0 */2 * * *', label: 'A cada 2 horas' },
+  '6h': { cron: '0 */6 * * *', label: 'A cada 6 horas' },
+  '12h': { cron: '0 */12 * * *', label: 'A cada 12 horas' },
+  'daily': { cron: '0 0 * * *', label: 'Uma vez por dia' },
+});
+const DEFAULT_FREQUENCY_KEY = '15min';
 
 let activeLock = false;
 let activeTasks = [];
+// Estado de ligado/desligado do scheduler. Default ligado; a env var força
+// desligado (fail-closed) e a preferência persistida (via UI) também é
+// respeitada no próximo start.
+let schedulerEnabled = process.env.QA_MESH_SCHEDULER_DISABLED !== 'true';
+let criticalFrequencyKey = DEFAULT_FREQUENCY_KEY;
 
 function isMeshAlreadyRunning() {
   // Verifica lock persistente em disco
@@ -152,19 +169,29 @@ async function runScheduledMesh(kind = 'critical') {
   }
 }
 
+function currentFrequencyPreset() {
+  return CRITICAL_FREQUENCY_PRESETS[criticalFrequencyKey] || CRITICAL_FREQUENCY_PRESETS[DEFAULT_FREQUENCY_KEY];
+}
+
 function buildScheduleStatus() {
   const state = safeReadState();
+  const preset = currentFrequencyPreset();
   return {
-    enabled: true,
+    enabled: schedulerEnabled,
     lock: activeLock || state.activeLock,
+    frequency: {
+      key: criticalFrequencyKey,
+      label: preset.label,
+      cron: preset.cron,
+    },
     schedule: {
       smokeOnDeploy: 'deploy',
-      critical: CRITICAL_CRON,
+      critical: preset.cron,
       regression: REGRESSION_CRON,
     },
     nextRuns: {
       smokeOnDeploy: 'on_deploy',
-      critical: CRITICAL_CRON,
+      critical: preset.cron,
       regression: REGRESSION_CRON,
     },
     lastExecution: {
@@ -175,15 +202,10 @@ function buildScheduleStatus() {
   };
 }
 
-function startScheduler() {
-  if (process.env.QA_MESH_SCHEDULER_DISABLED === 'true') {
-    return { enabled: false, reason: 'QA_MESH_SCHEDULER_DISABLED' };
-  }
-  if (activeTasks.length > 0) {
-    return buildScheduleStatus();
-  }
+function startCronTasks() {
+  const criticalCron = currentFrequencyPreset().cron;
   activeTasks = [
-    cron.schedule(CRITICAL_CRON, () => {
+    cron.schedule(criticalCron, () => {
       runScheduledMesh('critical').catch((error) => {
         // eslint-disable-next-line no-console
         console.error(`[qa-mesh/meshScheduler] critical falhou: ${error.message || error}`);
@@ -196,6 +218,28 @@ function startScheduler() {
       });
     }),
   ];
+  schedulerEnabled = true;
+}
+
+function startScheduler() {
+  if (process.env.QA_MESH_SCHEDULER_DISABLED === 'true') {
+    schedulerEnabled = false;
+    return { enabled: false, reason: 'QA_MESH_SCHEDULER_DISABLED' };
+  }
+  // Preferência persistida: se o usuário desligou pela UI, permanece desligado
+  // após reinício (até religar explicitamente).
+  const persisted = safeReadState();
+  if (persisted.enabled === false) {
+    schedulerEnabled = false;
+    return { enabled: false, reason: 'disabled_by_user' };
+  }
+  if (persisted.criticalFrequencyKey && CRITICAL_FREQUENCY_PRESETS[persisted.criticalFrequencyKey]) {
+    criticalFrequencyKey = persisted.criticalFrequencyKey;
+  }
+  if (activeTasks.length > 0) {
+    return buildScheduleStatus();
+  }
+  startCronTasks();
   return buildScheduleStatus();
 }
 
@@ -205,6 +249,40 @@ function stopScheduler() {
     if (task?.destroy) task.destroy();
   });
   activeTasks = [];
+  schedulerEnabled = false;
+}
+
+/**
+ * Liga/desliga o scheduler em runtime (controle via UI de configuração).
+ * A preferência é persistida (RAP-078: dbStateStore + export JSON) e respeitada
+ * no próximo start do processo. Se QA_MESH_SCHEDULER_DISABLED=true, permanece
+ * desligado (fail-closed) — a UI não pode religar contra uma env var de kill.
+ */
+function setSchedulerEnabled(enabled, frequencyKey) {
+  const next = Boolean(enabled);
+  const requestedKey = CRITICAL_FREQUENCY_PRESETS[frequencyKey] ? frequencyKey : criticalFrequencyKey;
+  const frequencyChanged = requestedKey !== criticalFrequencyKey;
+  criticalFrequencyKey = requestedKey;
+
+  if (next) {
+    if (process.env.QA_MESH_SCHEDULER_DISABLED === 'true') {
+      writeState({ ...safeReadState(), enabled: false, criticalFrequencyKey });
+      return buildScheduleStatus();
+    }
+    if (activeTasks.length > 0) {
+      // Se só a frequência mudou (já estava ligado), reinicia os timers com a nova cadência.
+      if (frequencyChanged) {
+        stopScheduler();
+        startCronTasks();
+      }
+    } else {
+      startCronTasks();
+    }
+  } else {
+    stopScheduler();
+  }
+  writeState({ ...safeReadState(), enabled: schedulerEnabled, criticalFrequencyKey });
+  return buildScheduleStatus();
 }
 
 module.exports = {
@@ -212,9 +290,12 @@ module.exports = {
   PIPELINE_ACTIVE_LOCK_PATH,
   CRITICAL_CRON,
   REGRESSION_CRON,
+  CRITICAL_FREQUENCY_PRESETS,
+  DEFAULT_FREQUENCY_KEY,
   selectScenariosForSchedule,
   buildScheduleStatus,
   runScheduledMesh,
   startScheduler,
   stopScheduler,
+  setSchedulerEnabled,
 };

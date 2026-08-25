@@ -114,9 +114,9 @@ async function advancePipeline(execution, onProgress = null) {
   // Inicializa replay se não existir
   let replay = execution._replay;
   const recording = execution._recording;
-  const shouldRecordReplay = process.env.ENABLE_PIPELINE_REPLAY !== 'false';
+  const shouldRecordReplay = process.env.ENABLE_PIPELINE_REPLAY === 'true';
   
-  if (shouldRecordReplay && !replay) {
+  if (!replay) {
     const tenantId =
       execution?.options?.tenantId ||
       execution?.payload?.tenantId ||
@@ -129,6 +129,7 @@ async function advancePipeline(execution, onProgress = null) {
       tenantId,
       context: 'pipeline',
       enableScreenshots: false,
+      enabled: shouldRecordReplay,
     });
     
     const prefix = tenantId ? `${tenantId}-` : '';

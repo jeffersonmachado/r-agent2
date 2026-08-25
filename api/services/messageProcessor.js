@@ -274,8 +274,10 @@ async function processWhatsAppMessage(message, value, deps) {
     });
   }
 
-  // Inicializa replay (opcional)
-  const shouldRecordReplay = process.env.ENABLE_MESSAGE_REPLAY !== 'false';
+  // Replay é exclusivo de interações via UI (RPA browser). Processamento de
+  // mensagem é backend e não é interação via UI — grava apenas o "recording"
+  // operacional; replay fica opt-in via ENABLE_MESSAGE_REPLAY=true.
+  const shouldRecordReplay = process.env.ENABLE_MESSAGE_REPLAY === 'true';
   const shouldRecord = process.env.ENABLE_MESSAGE_RECORDING !== 'false';
   let replay = null;
   let replayId = null;

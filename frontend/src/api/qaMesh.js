@@ -33,6 +33,13 @@ export async function getQaMeshScheduler() {
   return fetchJson('/qa-mesh/scheduler');
 }
 
+export async function setQaMeshScheduler(enabled, frequencyKey) {
+  return fetchJson('/qa-mesh/scheduler', {
+    method: 'POST',
+    body: JSON.stringify({ enabled, frequencyKey }),
+  });
+}
+
 export async function runQaMesh(options = {}) {
   return fetchJson('/qa-mesh/run', {
     method: 'POST',

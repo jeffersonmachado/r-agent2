@@ -170,10 +170,13 @@ function runQaManual(options = {}) {
   const { changedFiles, source = 'manual' } = options;
 
   // Inicializa replay
+  // Replay é exclusivo de interações via UI (RPA browser). Execução de QA é
+  // backend — replay fica opt-in via ENABLE_QA_REPLAY=true.
   const replay = new ReplaySystem({
     storagePath: resolveRuntimePath('replays', 'qa'),
     context: 'qa',
     enableScreenshots: false,
+    enabled: process.env.ENABLE_QA_REPLAY === 'true',
   });
 
   // Inicializa gravação

@@ -6,7 +6,7 @@ const { execSync } = require('child_process');
 const os = require('os');
 const { isInPipeline } = require('../../pipeline/guard');
 const { loadRegistry, refreshRegistry, runMesh, loadHistory, normalizeExecutionRecord } = require('../../qa-mesh/meshRunner');
-const { buildScheduleStatus, runScheduledMesh, startScheduler } = require('../../qa-mesh/meshScheduler');
+const { buildScheduleStatus, runScheduledMesh, startScheduler, setSchedulerEnabled } = require('../../qa-mesh/meshScheduler');
 const { enqueueExecution, getExecution, getAllExecutions, appendLog, updateExecution } = require('../../qa-mesh/executionQueue');
 const { emitEvent } = require('./websocketService');
 const qaWavesLogger = require('../utils/qaWavesLogger');
@@ -484,6 +484,10 @@ function getMeshSchedulerStatus() {
   return buildScheduleStatus();
 }
 
+function setMeshSchedulerEnabled(enabled, frequencyKey) {
+  return setSchedulerEnabled(enabled, frequencyKey);
+}
+
 async function runScheduled(kind) {
   return runScheduledMesh(kind);
 }
@@ -499,6 +503,7 @@ module.exports = {
   queueScenarioReplay,
   getQueuedExecutionStatus,
   getMeshSchedulerStatus,
+  setMeshSchedulerEnabled,
   getAllExecutions,
   runScheduled,
   getStabilitySnapshot,

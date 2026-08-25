@@ -110,6 +110,35 @@ function createQaMeshRoutes({ buildDeps }) {
     deps.sendJson(res, 200, deps.getMeshSchedulerStatus());
   });
 
+  router.post('/qa-mesh/scheduler', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const auth = deps.requireAuth(req);
+    if (!auth.valid) {
+      deps.sendJson(res, 401, { error: 'unauthorized', message: auth.error });
+      return;
+    }
+    if (!enforceDevelopmentClassification(deps, req, res)) return;
+    if (!deps.hasJsonContentType(req)) {
+      deps.badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await deps.parseJsonBody(req);
+      if (typeof body?.enabled !== 'boolean') {
+        deps.sendJson(res, 400, { error: 'invalid_body', message: 'Campo enabled (boolean) é obrigatório' });
+        return;
+      }
+      if (body?.frequencyKey != null && typeof body.frequencyKey !== 'string') {
+        deps.sendJson(res, 400, { error: 'invalid_body', message: 'Campo frequencyKey deve ser string' });
+        return;
+      }
+      deps.sendJson(res, 200, deps.setMeshSchedulerEnabled(body.enabled, body.frequencyKey));
+    } catch (error) {
+      deps.logger.error('Erro ao alterar scheduler do qa-mesh:', error);
+      deps.sendJson(res, 500, { error: 'internal_error', message: error.message || 'Erro ao alterar scheduler do qa-mesh' });
+    }
+  });
+
   router.get('/qa/stability', (req, res) => {
     const deps = buildDeps(req, res);
     const auth = deps.requireAuth(req);

@@ -368,7 +368,9 @@ async function scrapeUrl(url, options = {}) {
   const tenantId = options.tenantId || null;
 
   // Inicializa replay (opcional)
-  const shouldRecordReplay = process.env.ENABLE_SCRAPING_REPLAY !== 'false';
+  // Replay é exclusivo de interações via UI (RPA browser). Scraping é backend —
+  // replay fica opt-in via ENABLE_SCRAPING_REPLAY=true.
+  const shouldRecordReplay = process.env.ENABLE_SCRAPING_REPLAY === 'true';
   let replay = null;
   let replayId = null;
   // Inicializa recording (opcional) — nunca pode quebrar o scraping

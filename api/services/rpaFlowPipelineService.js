@@ -93,12 +93,14 @@ async function executeRpaFlowPipeline(flow, options = {}) {
     };
   }
 
-  // Inicializa replay
+  // Replay é exclusivo de interações via UI (RPA browser). O pipeline RPA é
+  // orquestração backend — replay fica opt-in via ENABLE_RPA_PIPELINE_REPLAY=true.
   const replay = new ReplaySystem({
     storagePath: resolveRuntimePath('replays', 'rpa-pipeline'),
     tenantId,
     context: 'rpa-pipeline',
     enableScreenshots: false,
+    enabled: process.env.ENABLE_RPA_PIPELINE_REPLAY === 'true',
   });
 
   // Inicializa gravação

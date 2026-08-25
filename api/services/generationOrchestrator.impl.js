@@ -658,11 +658,14 @@ async function orchestrateGeneration(payload, options = {}) {
   };
 
   // Inicializa Sistema de Replay
+  // Replay é exclusivo de interações via UI (RPA browser). Geração é backend —
+  // replay fica opt-in via ENABLE_GENERATION_REPLAY=true.
   const replay = new ReplaySystem({
     storagePath: resolveRuntimePath('replays', 'generation'),
     tenantId,
     context: 'generation',
     enableScreenshots: false,
+    enabled: process.env.ENABLE_GENERATION_REPLAY === 'true',
   });
 
   const replayId = `${tenantId}-generate-${payload.name || 'unknown'}-${Date.now()}`;

@@ -5,46 +5,91 @@ import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { Button } from '../styles/Button';
 import { CrudPageBase } from '../modules/crud-base';
+import { Dialog } from '../components/Dialog';
+import { ReplayPlayer, normalizeReplaySteps, normalizeTypedEntries, normalizeAssertions } from '../components/replay';
+import { getRpaReplay } from '../api/flows';
 import * as qaMeshApi from '../api/qaMesh';
+
+// Opções de frequência com rótulos amigáveis (nunca expõe a expressão cron).
+const FREQUENCY_OPTIONS = [
+  { key: '15min', label: 'A cada 15 minutos' },
+  { key: '30min', label: 'A cada 30 minutos' },
+  { key: '1h', label: 'A cada 1 hora' },
+  { key: '2h', label: 'A cada 2 horas' },
+  { key: '6h', label: 'A cada 6 horas' },
+  { key: '12h', label: 'A cada 12 horas' },
+  { key: 'daily', label: 'Uma vez por dia' },
+];
+
+const STATUS_LABELS = {
+  GO: 'GO',
+  NO_GO: 'NO GO',
+  passed: 'aprovado',
+  failed: 'falhou',
+  skipped: 'ignorado',
+  infra_error: 'erro de infra',
+  environment_missing: 'ambiente ausente',
+  pipeline_required: 'exige pipeline',
+  flaky: 'instável',
+  completed: 'concluído',
+  running: 'em execução',
+  queued: 'na fila',
+  'N/A': 'n/d',
+};
+
+const CRITICALITY_LABELS = {
+  blocking: 'bloqueante',
+  critical: 'crítica',
+  high: 'alta',
+  medium: 'média',
+  low: 'baixa',
+};
+
+const TYPE_LABELS = {
+  regression: 'regressão',
+  smoke: 'fumaça',
+  unit: 'unitário',
+  integration: 'integração',
+};
 
 function StatusBadge({ value }) {
   const palette = {
-    GO: 'bg-green-100 text-green-800',
-    NO_GO: 'bg-red-100 text-red-800',
-    passed: 'bg-green-100 text-green-800',
-    failed: 'bg-red-100 text-red-800',
-    skipped: 'bg-yellow-100 text-yellow-800',
-    infra_error: 'bg-orange-100 text-orange-800',
-    environment_missing: 'bg-amber-100 text-amber-800',
-    pipeline_required: 'bg-amber-100 text-amber-800',
-    flaky: 'bg-fuchsia-100 text-fuchsia-800',
-    completed: 'bg-green-100 text-green-800',
-    running: 'bg-blue-100 text-blue-800',
-    queued: 'bg-slate-100 text-slate-700',
-    'N/A': 'bg-slate-100 text-slate-700',
+    GO: 'border border-status-success/20 bg-status-success/10 text-status-success',
+    NO_GO: 'border border-status-error/20 bg-status-error/10 text-status-error',
+    passed: 'border border-status-success/20 bg-status-success/10 text-status-success',
+    failed: 'border border-status-error/20 bg-status-error/10 text-status-error',
+    skipped: 'border border-status-warning/20 bg-status-warning/10 text-status-warning',
+    infra_error: 'border border-status-warning/20 bg-status-warning/10 text-status-warning',
+    environment_missing: 'border border-status-warning/20 bg-status-warning/10 text-status-warning',
+    pipeline_required: 'border border-status-warning/20 bg-status-warning/10 text-status-warning',
+    flaky: 'border border-accent-primary/20 bg-accent-primary/10 text-accent-hover',
+    completed: 'border border-status-success/20 bg-status-success/10 text-status-success',
+    running: 'border border-status-info/20 bg-status-info/10 text-status-info',
+    queued: 'border border-border-default bg-text-secondary/10 text-text-secondary',
+    'N/A': 'border border-border-default bg-text-secondary/10 text-text-secondary',
   };
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${palette[value] || palette['N/A']}`}>
-      {value}
+      {STATUS_LABELS[value] || value}
     </span>
   );
 }
 
 function OriginBadge({ value }) {
   const palette = {
-    pipeline: 'bg-emerald-100 text-emerald-800',
-    scheduler: 'bg-sky-100 text-sky-800',
-    manual_run: 'bg-slate-100 text-slate-700',
-    manual_replay: 'bg-violet-100 text-violet-800',
-    unknown: 'bg-slate-100 text-slate-700',
-    'N/A': 'bg-slate-100 text-slate-700',
+    pipeline: 'border border-status-success/20 bg-status-success/10 text-status-success',
+    scheduler: 'border border-status-info/20 bg-status-info/10 text-status-info',
+    manual_run: 'border border-border-default bg-text-secondary/10 text-text-secondary',
+    manual_replay: 'border border-accent-primary/20 bg-accent-primary/10 text-accent-hover',
+    unknown: 'border border-border-default bg-text-secondary/10 text-text-secondary',
+    'N/A': 'border border-border-default bg-text-secondary/10 text-text-secondary',
   };
 
   const labels = {
     pipeline: 'pipeline oficial',
     scheduler: 'agendada',
-    manual_run: 'manual UI',
-    manual_replay: 'replay UI',
+    manual_run: 'manual',
+    manual_replay: 'replay',
     unknown: 'origem indefinida',
     'N/A': 'n/d',
   };
@@ -104,6 +149,19 @@ function getHistoryDisplayPath(execution) {
   return execution?.historyPath || 'n/d';
 }
 
+function formatTimestamp(value) {
+  if (!value) return 'n/d';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function QaMeshPage() {
   const { isAuthenticated, loading: authLoading, agent } = useAuth();
   const { navigate } = useRouter();
@@ -123,6 +181,14 @@ export function QaMeshPage() {
   });
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [schedulerBusy, setSchedulerBusy] = useState(false);
+  const [frequencyKey, setFrequencyKey] = useState('15min');
+  const [expandedScenarioId, setExpandedScenarioId] = useState(null);
+  const [replayModal, setReplayModal] = useState(null);
+  const [replayData, setReplayData] = useState(null);
+  const [replayLoading, setReplayLoading] = useState(false);
+  const [replayError, setReplayError] = useState(null);
+  const [replayFullscreen, setReplayFullscreen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate('/login');
@@ -145,6 +211,7 @@ export function QaMeshPage() {
       setOfficialHistory(officialHistoryData.results || []);
       setOfficialReference(officialReferenceData);
       setScheduler(schedulerData);
+      if (schedulerData?.frequency?.key) setFrequencyKey(schedulerData.frequency.key);
       if (!executionStatus && latestData) {
         setExecutionStatus(latestData);
       }
@@ -191,7 +258,16 @@ export function QaMeshPage() {
 
   const domainOptions = useMemo(() => ['all', ...Array.from(new Set(registry.map((item) => item.domain))).sort()], [registry]);
   const criticalityOptions = useMemo(() => ['all', ...Array.from(new Set(registry.map((item) => item.criticality))).sort()], [registry]);
-  const statusOptions = ['all', 'passed', 'failed', 'infra_error', 'environment_missing', 'pipeline_required', 'flaky', 'skipped'];
+  const statusOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'passed', label: 'Aprovados' },
+    { value: 'failed', label: 'Falharam' },
+    { value: 'infra_error', label: 'Erro de infra' },
+    { value: 'environment_missing', label: 'Ambiente ausente' },
+    { value: 'pipeline_required', label: 'Exige pipeline' },
+    { value: 'flaky', label: 'Instáveis' },
+    { value: 'skipped', label: 'Ignorados' },
+  ];
 
   const latestOfficial = officialReference?.execution || officialHistory[0] || null;
   const officialExecutionId = officialReference?.executionId || latestOfficial?.executionId || null;
@@ -212,24 +288,44 @@ export function QaMeshPage() {
   const visibleHistory = viewMode === 'official' ? officialHistory : history;
   const evolution = visibleHistory.slice(0, 6);
 
+  // Último resultado POR cenário no histórico (mesma regra "último resultado
+  // vence" do coverage gate). A lista não pode depender só da "última execução"
+  // — que às vezes é um smoke pequeno (workspace-core) sem os demais cenários,
+  // o que deixava tudo "N/A" mesmo com o cenário validado no run canônico.
+  const scenarioResultsMap = useMemo(() => {
+    const map = {};
+    // Execução em andamento (WebSocket) tem prioridade máxima (mais recente).
+    for (const result of (executionStatus?.results || [])) {
+      if (result?.id) map[result.id] = result;
+    }
+    const sources = viewMode === 'official' ? officialHistory : history;
+    for (const entry of sources) {
+      for (const result of (entry?.results || [])) {
+        if (result?.id && !map[result.id]) map[result.id] = result;
+      }
+    }
+    // Referência oficial (run canônico, 131 cenários) é o fallback autoritativo.
+    // O canônico fica fora da janela de histórico recente (MAX_HISTORY_FILES=5),
+    // então sem ele os cenários não-blocking apareceriam "N/A" mesmo validados.
+    for (const result of (officialReference?.execution?.results || [])) {
+      if (result?.id && !map[result.id]) map[result.id] = result;
+    }
+    return map;
+  }, [history, officialHistory, executionStatus, officialReference, viewMode]);
+
   const filteredRegistry = useMemo(() => {
     return registry.filter((scenario) => {
       if (filters.domain !== 'all' && scenario.domain !== filters.domain) return false;
       if (filters.criticality !== 'all' && scenario.criticality !== filters.criticality) return false;
       if (filters.status !== 'all') {
-        const result = scenarioResults.find((item) => item.id === scenario.id);
+        const result = scenarioResultsMap[scenario.id];
         if (getDisplayStatus(result) !== filters.status) return false;
       }
       return true;
     });
-  }, [registry, filters, scenarioResults]);
+  }, [registry, filters, scenarioResultsMap]);
 
   const canRun = agent?.role === 'admin' || agent?.role === 'supervisor';
-
-  const replayBlockedReason = (scenario) => {
-    if (!scenario?.requiresOfficialPipeline) return null;
-    return 'Este cenário exige o pipeline oficial. Use npm run pipeline ou PIPELINE_BYPASS=1 fora da UI.';
-  };
 
   const copyText = async (value, label) => {
     if (!value) {
@@ -281,8 +377,48 @@ export function QaMeshPage() {
     }));
   };
 
-  const handleReplay = async (scenarioId) => {
-    await startExecution(() => qaMeshApi.replayQaMeshScenario(scenarioId));
+  const handleReplay = async (scenario) => {
+    setReplayModal(scenario);
+    setReplayData(null);
+    setReplayError(null);
+    setReplayLoading(true);
+    try {
+      const data = await getRpaReplay(`${scenario.id}.json`);
+      setReplayData(data || null);
+    } catch (error) {
+      setReplayError(error?.message || 'Falha ao carregar o replay');
+    } finally {
+      setReplayLoading(false);
+    }
+  };
+
+  const replaySteps = useMemo(() => normalizeReplaySteps(replayData), [replayData]);
+  const replayTyped = useMemo(() => normalizeTypedEntries(replayData), [replayData]);
+  const replayAssertions = useMemo(() => normalizeAssertions(replayData), [replayData]);
+
+  const applyScheduler = async (enabled, nextFrequencyKey) => {
+    setSchedulerBusy(true);
+    try {
+      const updated = await qaMeshApi.setQaMeshScheduler(enabled, nextFrequencyKey);
+      setScheduler(updated);
+      if (updated?.frequency?.key) setFrequencyKey(updated.frequency.key);
+      showToast(enabled ? 'Verificação automática atualizada' : 'Verificação automática desligada', 'success');
+    } catch (error) {
+      showToast(error.message || 'Erro ao alterar a verificação automática', 'error');
+    } finally {
+      setSchedulerBusy(false);
+    }
+  };
+
+  const handleToggleScheduler = () => {
+    if (scheduler == null) return;
+    applyScheduler(!scheduler.enabled, frequencyKey);
+  };
+
+  const handleFrequencyChange = (event) => {
+    const nextKey = event.target.value;
+    setFrequencyKey(nextKey);
+    applyScheduler(true, nextKey);
   };
 
   if (authLoading || loading) {
@@ -296,11 +432,11 @@ export function QaMeshPage() {
 
   return (
     <CrudPageBase>
-      <section className="mb-6 rounded-2xl border border-border-default bg-[linear-gradient(135deg,rgba(31,31,31,0.98),rgba(31,31,31,0.94)_58%,rgba(94,106,210,0.14))] p-6 shadow-sm">
+      <section className="mb-6 rounded-2xl border border-border-default bg-bg-elevated p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="max-w-3xl">
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b7c2ff]">QA Mesh</div>
-            <h1 className="mt-2 text-3xl font-bold text-text-primary">Unified Execution Mesh</h1>
+            <div className="text-xs font-semibold uppercase tracking-widest text-accent-hover">QA Mesh</div>
+            <h1 className="mt-2 text-3xl font-bold text-text-primary">Malha Unificada de Execução</h1>
             <p className="mt-2 text-sm text-text-secondary">
               Operação unificada de QA + RPA com execução assíncrona, replay universal e gate real.
             </p>
@@ -316,8 +452,8 @@ export function QaMeshPage() {
         </div>
       </section>
 
-      <section className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        <div className="font-semibold uppercase tracking-[0.16em] text-amber-800">Leitura operacional</div>
+      <section className="mb-6 rounded-xl border border-status-warning/20 bg-status-warning/10 p-4 text-sm text-text-primary">
+        <div className="font-semibold uppercase tracking-wider text-status-warning">Leitura operacional</div>
         <div className="mt-2">
           {viewMode === 'official'
             ? 'Esta visão mostra apenas execuções marcadas como pipeline oficial. Use-a para ler a evidência canônica de validate/release.'
@@ -328,6 +464,53 @@ export function QaMeshPage() {
       <section className="mb-6 flex flex-wrap gap-2">
         <Button onClick={() => setViewMode('all')} disabled={viewMode === 'all'}>Visão mista</Button>
         <Button onClick={() => setViewMode('official')} disabled={viewMode === 'official'}>Apenas pipeline oficial</Button>
+      </section>
+
+      <section className="mb-6 rounded-xl border border-border-default bg-bg-elevated p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-lg font-semibold text-text-primary">Verificação automática</div>
+            <div className="text-sm text-text-secondary">
+              A plataforma reexecuta os testes importantes sozinha, de tempos em tempos.
+              Deixe ligado apenas durante o desenvolvimento ou ao investigar um problema.
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${scheduler?.enabled ? 'border-status-success/20 bg-status-success/10 text-status-success' : 'border-border-default bg-text-secondary/10 text-text-secondary'}`}>
+              <span className={`h-2 w-2 rounded-full ${scheduler?.enabled ? 'bg-status-success' : 'bg-text-secondary'}`} />
+              {scheduler?.enabled ? 'Ligada' : 'Desligada'}
+            </span>
+            <Button onClick={handleToggleScheduler} disabled={schedulerBusy || scheduler == null}>
+              {schedulerBusy ? 'Aplicando...' : (scheduler?.enabled ? 'Desligar' : 'Ligar')}
+            </Button>
+          </div>
+        </div>
+
+        {scheduler?.enabled ? (
+          <div className="rounded-lg border border-border-default bg-bg-primary p-3">
+            <label htmlFor="scheduler-frequency" className="mb-2 block text-sm font-medium text-text-primary">
+              Com que frequência os testes devem rodar?
+            </label>
+            <select
+              id="scheduler-frequency"
+              value={frequencyKey}
+              onChange={handleFrequencyChange}
+              disabled={schedulerBusy}
+              className="rounded-md border border-border-default bg-bg-primary px-3 py-2 text-sm text-text-primary"
+            >
+              {FREQUENCY_OPTIONS.map((option) => (
+                <option key={option.key} value={option.key}>{option.label}</option>
+              ))}
+            </select>
+            <div className="mt-2 text-xs text-text-secondary">
+              Atual: {scheduler?.frequency?.label || 'A cada 15 minutos'} · Última verificação: {scheduler?.lastExecution?.at ? scheduler.lastExecution.at : 'ainda não houve'}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-border-default bg-bg-primary p-3 text-sm text-text-secondary">
+            Verificação automática desligada. Os testes não serão executados sozinhos.
+          </div>
+        )}
       </section>
 
       <section className="mb-6 grid gap-4 md:grid-cols-6">
@@ -351,41 +534,41 @@ export function QaMeshPage() {
         </div>
         <div className="rounded-xl border border-border-default bg-bg-elevated p-4">
           <div className="text-xs uppercase text-text-secondary">Falhas críticas</div>
-          <div className="mt-2 text-2xl font-semibold text-red-600">
+          <div className="mt-2 text-2xl font-semibold text-status-error">
             {scenarioResults.filter((item) => item.criticality === 'blocking' && item.status !== 'passed').length}
           </div>
         </div>
         <div className="rounded-xl border border-border-default bg-bg-elevated p-4">
           <div className="text-xs uppercase text-text-secondary">Bloqueios pipeline</div>
-          <div className={`mt-2 text-2xl font-semibold ${pipelineBlockedCount > 0 ? 'text-amber-700' : 'text-text-primary'}`}>
+          <div className={`mt-2 text-2xl font-semibold ${pipelineBlockedCount > 0 ? 'text-status-warning' : 'text-text-primary'}`}>
             {pipelineBlockedCount}
           </div>
         </div>
       </section>
 
-      <section className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Referência oficial atual</div>
+      <section className="mb-6 rounded-xl border border-status-success/20 bg-status-success/10 p-4 text-sm text-text-primary">
+        <div className="text-xs font-semibold uppercase tracking-wider text-status-success">Referência oficial atual</div>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-emerald-200 bg-white/80 p-3">
-            <div className="text-xs uppercase text-emerald-700">Execution ID oficial</div>
-            <div className="mt-2 break-all font-mono text-sm text-emerald-950">{officialExecutionId || 'nenhuma execução oficial identificada'}</div>
+          <div className="rounded-lg border border-status-success/20 bg-bg-primary p-3">
+            <div className="text-xs uppercase text-status-success">ID da execução oficial</div>
+            <div className="mt-2 break-all font-mono text-sm text-text-primary">{officialExecutionId || 'nenhuma execução oficial identificada'}</div>
             <div className="mt-3">
-              <Button onClick={() => copyText(officialExecutionId, 'executionId oficial')} disabled={!officialExecutionId}>Copiar executionId</Button>
+              <Button onClick={() => copyText(officialExecutionId, 'ID da execução oficial')} disabled={!officialExecutionId}>Copiar ID da execução</Button>
             </div>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-white/80 p-3">
-            <div className="text-xs uppercase text-emerald-700">Histórico correspondente</div>
-            <div className="mt-2 break-all font-mono text-sm text-emerald-950">{officialHistoryPath || 'aguardando execução oficial marcada'}</div>
+          <div className="rounded-lg border border-status-success/20 bg-bg-primary p-3">
+            <div className="text-xs uppercase text-status-success">Histórico correspondente</div>
+            <div className="mt-2 break-all font-mono text-sm text-text-primary">{officialHistoryPath || 'aguardando execução oficial marcada'}</div>
             <div className="mt-3">
-              <Button onClick={() => copyText(officialHistoryPath, 'historyPath oficial')} disabled={!officialHistoryPath}>Copiar historyPath</Button>
+              <Button onClick={() => copyText(officialHistoryPath, 'histórico oficial')} disabled={!officialHistoryPath}>Copiar histórico</Button>
             </div>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-white/80 p-3">
-            <div className="text-xs uppercase text-emerald-700">Como ler</div>
-            <div className="mt-2 text-sm text-emerald-950">
-              Use este executionId como referência canônica. Execuções fora desta trilha continuam visíveis apenas como sinal operacional.
+          <div className="rounded-lg border border-status-success/20 bg-bg-primary p-3">
+            <div className="text-xs uppercase text-status-success">Como ler</div>
+            <div className="mt-2 text-sm text-text-primary">
+              Use este ID de execução como referência canônica. Execuções fora desta trilha continuam visíveis apenas como sinal operacional.
             </div>
-            <div className="mt-3 text-xs text-emerald-800">
+            <div className="mt-3 text-xs text-text-secondary">
               gate oficial: {officialReference?.gate || 'n/d'}
             </div>
           </div>
@@ -433,7 +616,7 @@ export function QaMeshPage() {
                   {item.executionId}
                 </div>
                 {getPipelineBlockedSummaryCount(item) > 0 ? (
-                  <div className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-amber-700">
+                  <div className="mt-2 text-xs font-medium uppercase tracking-wider text-status-warning">
                     bloqueio de pipeline: {getPipelineBlockedSummaryCount(item)}
                   </div>
                 ) : null}
@@ -474,11 +657,6 @@ export function QaMeshPage() {
             <div className="mt-2 text-sm text-text-primary">{(activeExecution?.summary?.reasons || []).join(', ') || 'sem bloqueios'}</div>
           </div>
         </div>
-        {viewMode !== 'official' ? (
-          <div className="mt-3 text-xs text-text-secondary">
-            Scheduler ativo: {scheduler?.nextRuns?.critical || 'n/d'}
-          </div>
-        ) : null}
       </section>
 
       <section className="mb-6 rounded-xl border border-border-default bg-bg-elevated p-4">
@@ -495,14 +673,14 @@ export function QaMeshPage() {
             onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}
             className="rounded-md border border-border-default bg-bg-primary px-3 py-2 text-sm"
           >
-            {statusOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+            {statusOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
           <select
             value={filters.criticality}
             onChange={(event) => setFilters((prev) => ({ ...prev, criticality: event.target.value }))}
             className="rounded-md border border-border-default bg-bg-primary px-3 py-2 text-sm"
           >
-            {criticalityOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+            {criticalityOptions.map((item) => <option key={item} value={item}>{item === 'all' ? 'Todos' : CRITICALITY_LABELS[item] || item}</option>)}
           </select>
         </div>
 
@@ -513,74 +691,87 @@ export function QaMeshPage() {
             </div>
           ) : null}
           {filteredRegistry.map((scenario) => {
-            const result = scenarioResults.find((item) => item.id === scenario.id);
+            const result = scenarioResultsMap[scenario.id];
             const isCriticalFailure = scenario.criticality === 'blocking' && result && result.status !== 'passed';
-            const replayRestriction = replayBlockedReason(scenario);
+            const isExpanded = expandedScenarioId === scenario.id;
             return (
-              <div key={scenario.id} className={`rounded-lg border p-3 ${isCriticalFailure ? 'border-red-400 bg-red-50' : 'border-border-default bg-bg-primary'}`}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
+              <div key={scenario.id} className={`rounded-lg border p-4 ${isCriticalFailure ? 'border-status-error/30 bg-status-error/10' : 'border-border-default bg-bg-primary'}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <div className="font-medium text-text-primary">{scenario.flow}</div>
-                    <div className="text-xs text-text-secondary">
-                      {scenario.id} | {scenario.domain} | {scenario.type} | {scenario.criticality}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-full border border-border-default bg-text-secondary/10 px-2 py-0.5 text-xs text-text-secondary">{scenario.domain}</span>
+                      <span className={`rounded-full border px-2 py-0.5 text-xs ${scenario.criticality === 'blocking' ? 'border-status-error/20 bg-status-error/10 text-status-error' : 'border-border-default bg-text-secondary/10 text-text-secondary'}`}>
+                        {CRITICALITY_LABELS[scenario.criticality] || scenario.criticality}
+                      </span>
+                      <span className="rounded-full border border-border-default bg-text-secondary/10 px-2 py-0.5 text-xs text-text-secondary">{TYPE_LABELS[scenario.type] || scenario.type}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <StatusBadge value={getDisplayStatus(result)} />
-                    <Button
-                      onClick={() => handleReplay(scenario.id)}
-                      disabled={running || Boolean(replayRestriction)}
-                      title={replayRestriction || undefined}
-                    >
-                      Reproduzir cenário
+                    <Button onClick={() => handleReplay(scenario)}>
+                      Replay
                     </Button>
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-text-secondary">
-                  Assertions: {(scenario.assertions || []).join(', ') || 'n/d'}
+
+                <div className="mt-3 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedScenarioId(isExpanded ? null : scenario.id)}
+                    className="text-xs font-medium text-accent-hover hover:underline"
+                  >
+                    {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'}
+                  </button>
                 </div>
-                {replayRestriction ? (
-                  <div className="mt-2 text-sm text-amber-700">
-                    Execução local bloqueada: este cenário só roda pelo pipeline oficial.
-                  </div>
-                ) : null}
-                {result ? (
-                  <>
-                    <div className="mt-2 text-sm text-text-primary">
-                      Início: {result.startedAt} | Fim: {result.finishedAt}
-                    </div>
-                    <div className="mt-2 text-sm text-text-secondary">
-                      Tipo: {getDisplayFailureType(result)} | Causa provável: {result.rootCauseHint || 'n/d'}
-                    </div>
-                    {isPipelineRequiredResult(result) ? (
-                      <div className="mt-2 text-sm text-amber-700">
-                        Falha operacional: a execução foi barrada por exigir o pipeline oficial, antes do fluxo funcional ser validado.
-                      </div>
+
+                {isExpanded ? (
+                  <div className="mt-3 space-y-2 rounded-md border border-border-default bg-bg-secondary/40 p-3 text-sm">
+                    <div className="font-mono text-xs text-text-secondary">id: {scenario.id}</div>
+                    {scenario.assertions?.length ? (
+                      <div className="text-text-secondary">Assertions: {(scenario.assertions || []).join(', ')}</div>
                     ) : null}
-                    <div className="mt-2 text-sm text-text-secondary">
-                      Erro principal: {result.errorMessage || 'n/d'}
-                    </div>
-                    <div className="mt-2 text-sm text-text-secondary">
-                      Artefatos: {(result.artifacts || []).map((item) => item.path).join(' | ') || 'n/d'}
-                    </div>
-                    <div className="mt-2 rounded-md bg-slate-950 p-3 font-mono text-xs text-slate-100">
-                      {(result.logs || []).slice(0, 8).map((log, index) => (
-                        <div key={`${result.id}-${index}`}>{log.message || JSON.stringify(log)}</div>
-                      ))}
-                      {(result.errors || []).length > 0 ? (
-                        <div className="mt-2 text-red-300">{result.errors.map((item) => item.error || item).join(' | ')}</div>
-                      ) : null}
-                    </div>
-                    <div className="mt-2 flex gap-2">
-                      <Button
-                        onClick={() => handleReplay(scenario.id)}
-                        disabled={running || Boolean(replayRestriction)}
-                        title={replayRestriction || undefined}
-                      >
-                        Corrigir e reexecutar
-                      </Button>
-                    </div>
-                  </>
+                    {result ? (
+                      <>
+                        <div className="text-text-secondary">
+                          {formatTimestamp(result.startedAt)} → {formatTimestamp(result.finishedAt)}
+                        </div>
+                        {getDisplayStatus(result) !== 'passed' ? (
+                          <>
+                            {result.failureType || isPipelineRequiredResult(result) ? (
+                              <div className="text-text-secondary">
+                                Tipo de falha: {getDisplayFailureType(result)}{result.rootCauseHint ? ` · Causa: ${result.rootCauseHint}` : ''}
+                              </div>
+                            ) : null}
+                            {isPipelineRequiredResult(result) ? (
+                              <div className="text-status-warning">Falha operacional: a execução foi barrada por exigir o pipeline oficial.</div>
+                            ) : null}
+                            {result.errorMessage ? <div className="text-status-error">Erro: {result.errorMessage}</div> : null}
+                            {result.logs?.length || result.errors?.length ? (
+                              <details className="rounded-md bg-bg-secondary p-2">
+                                <summary className="cursor-pointer text-xs text-text-secondary">Log técnico ({(result.logs || []).length} linhas)</summary>
+                                <div className="mt-2 space-y-1 font-mono text-xs text-text-primary">
+                                  {(result.logs || []).slice(0, 8).map((log, index) => (
+                                    <div key={`${result.id}-${index}`}>{log.message || JSON.stringify(log)}</div>
+                                  ))}
+                                  {result.errors?.length ? (
+                                    <div className="text-status-error">{result.errors.map((item) => item.error || item).join(' | ')}</div>
+                                  ) : null}
+                                </div>
+                              </details>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {result.artifacts?.length ? (
+                          <div className="text-text-secondary">
+                            Evidência: {(result.artifacts || []).map((item) => (item?.path ? item.path.split('/').pop() : null)).filter(Boolean).join(', ')}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <div className="text-text-secondary">Sem execução registrada para este cenário.</div>
+                    )}
+                  </div>
                 ) : null}
               </div>
             );
@@ -613,7 +804,7 @@ export function QaMeshPage() {
                 </div>
               </div>
               <div className="mt-2 text-sm text-text-secondary">
-                coverage {Math.round((item.summary?.executionCoverage || 0) * 100)}% | attempted {item.summary?.attempted ?? 0} | failed {item.summary?.failed ?? 0}
+                cobertura {Math.round((item.summary?.executionCoverage || 0) * 100)}% | tentados {item.summary?.attempted ?? 0} | falhas {item.summary?.failed ?? 0}
               </div>
               <div className="mt-2 text-xs text-text-secondary">
                 canônica: {isOfficialPipelineExecution(item) ? 'sim' : 'não'}
@@ -622,7 +813,7 @@ export function QaMeshPage() {
                 histórico: {getHistoryDisplayPath(item)}
               </div>
               {getPipelineBlockedSummaryCount(item) > 0 ? (
-                <div className="mt-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                <div className="mt-2 inline-flex rounded-full border border-status-warning/20 bg-status-warning/10 px-3 py-1 text-xs font-semibold text-status-warning">
                   bloqueio de pipeline: {getPipelineBlockedSummaryCount(item)}
                 </div>
               ) : null}
@@ -630,6 +821,55 @@ export function QaMeshPage() {
           ))}
         </div>
       </section>
+      <Dialog
+        isOpen={Boolean(replayModal)}
+        onClose={() => {
+          setReplayModal(null);
+          setReplayFullscreen(false);
+        }}
+        title={replayModal ? `Replay — ${replayModal.flow}` : 'Replay'}
+        size={replayFullscreen ? 'full' : 'lg'}
+        headerActions={
+          <button
+            type="button"
+            onClick={() => setReplayFullscreen((prev) => !prev)}
+            className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors duration-fast focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+            aria-label={replayFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            title={replayFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+          >
+            {replayFullscreen ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3" />
+              </svg>
+            )}
+          </button>
+        }
+      >
+        {replayLoading ? (
+          <div className="p-4 text-sm text-text-secondary">Carregando replay...</div>
+        ) : replayError ? (
+          <div className="space-y-3 p-4">
+            <div className="text-sm text-status-error">{replayError}</div>
+            <a
+              href={`/rpa-replays?scenarioId=${encodeURIComponent(replayModal?.id || '')}`}
+              className="inline-block text-sm text-accent-hover hover:underline"
+            >
+              Abrir em Replays RPA
+            </a>
+          </div>
+        ) : (
+          <ReplayPlayer
+            steps={replaySteps}
+            typedEntries={replayTyped}
+            assertions={replayAssertions}
+            title={replayModal?.flow || null}
+          />
+        )}
+      </Dialog>
       <ToastContainer />
     </CrudPageBase>
   );

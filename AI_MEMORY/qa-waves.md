@@ -22,6 +22,12 @@ QA Waves are governed journeys and scenario waves. They connect seeds, business 
 - Auto-correction must generate evidence, never hide a failing journey.
 - Scenario inference is allowed only when linked to explicit journey/domain metadata and validated runtime behavior.
 
+## QA Mesh scheduler configurável (2026-08-25)
+
+- `qa-mesh/meshScheduler.js`: presets de frequência (`15min/30min/1h/2h/6h/12h/daily`) + toggle on/off persistido em `scheduler-state.json`; fail-closed via env quando o estado não é confiável.
+- API: `POST /qa-mesh/scheduler` (`{ enabled, frequencyKey }`, DEVELOPMENT) → `setMeshSchedulerEnabled`; frontend na tela QA Mesh (`QaMeshPage.jsx`) com rótulos amigáveis.
+- Regressão: `qa-mesh/__tests__/scheduler.test.js`.
+
 ## AI as journey owner (2026-08-12)
 
 - The AI agent is the **primary actor** for journey QA. It must: infer business needs → configure the journey → execute it **via browser as a normal user** → identify failures and gaps → fix them → register the journey as an executable QA scenario.

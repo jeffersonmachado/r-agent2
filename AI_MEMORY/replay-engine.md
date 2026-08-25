@@ -22,3 +22,12 @@ Replay engine responsibilities:
 - `docs/rpa-reliability-handbook/01-architecture.md`
 - `docs/rpa-reliability-handbook/12-api-and-replay-contract.md`
 
+## Player reutilizável de replay (frontend, 2026-08-25)
+
+- Componente único e consistente: `frontend/src/components/replay/`:
+  - `ReplayPlayer.jsx` — player passo a passo (navegação, autoplay + velocidade, "Somente falhas", "Ir para erro", material de treinamento, seções de evidência: timeline/mutation diff/side effects/snapshots). Props: `steps`, `typedEntries`, `assertions`, `evidence`, `onStepChange`, `focusStepAt`.
+  - `replayNormalizer.js` — normaliza os 3 formatos (QA Mesh, RPA browser, QA Waves) para o esquema comum de passos; também `normalizeReplayEvidence` e `normalizeTypedEntries`/`normalizeAssertions`.
+  - `index.js` — barrel export.
+- Consumidores: `QaMeshPage.jsx` (botão Replay → modal) e `RpaReplaysPage.jsx` (modo ▶️ Play, com sync bidirecional via `onStepChange`/`focusStepAt` por timestamp).
+- O `ReplaySystem` (`lib/replaySystem.js`) tem opção `enabled` (default `true`); serviços backend usam `enabled: false` por padrão (ver `AI_MEMORY/replay-governance.md`).
+

@@ -6,6 +6,7 @@ import { Button } from '../styles/Button';
 import { Dialog } from '../components/Dialog';
 import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays, listRpaExecutionArtifacts, downloadRpaExecutionArtifact } from '../api/flows';
 import logger from '../utils/logger';
+import { ReplayPlayer, normalizeReplaySteps, normalizeTypedEntries, normalizeReplayEvidence } from '../components/replay';
 
 const STRICT_REASON_LABELS = {
   page_null_blocking_journey: 'Page nula em jornada blocking',
@@ -52,6 +53,7 @@ export function RpaReplaysPage() {
   const [showReplayModal, setShowReplayModal] = useState(false);
   const [replayStepByStep, setReplayStepByStep] = useState(false);
   const [currentReplayStep, setCurrentReplayStep] = useState(0);
+  const [focusStepAt, setFocusStepAt] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showOnlyFailures, setShowOnlyFailures] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1000); // ms entre passos (1000ms = 1 segundo)
@@ -486,6 +488,17 @@ export function RpaReplaysPage() {
       missing: required.filter((item) => !observed.includes(item)),
     };
   }, [replayData]);
+  const normalizedReplaySteps = useMemo(() => normalizeReplaySteps(replayData), [replayData]);
+  const normalizedReplayTyped = useMemo(() => normalizeTypedEntries(replayData), [replayData]);
+  const normalizedReplayEvidence = useMemo(
+    () => normalizeReplayEvidence(replayData, normalizedReplaySteps),
+    [replayData, normalizedReplaySteps],
+  );
+  const handlePlayerStepChange = (index, step) => {
+    if (!step?.at) return;
+    const found = replaySteps.findIndex((item) => item.timestamp === step.at);
+    if (found >= 0) setCurrentReplayStep(found);
+  };
   const replayEvidenceMap = useMemo(() => {
     const steps = Array.isArray(replayData?.steps) ? replayData.steps : [];
     const mutations = replayData?.mutations || replayData?.mutationDiff || replayData?.stateDiff || [];
@@ -2512,201 +2525,15 @@ export function RpaReplaysPage() {
               )}
 
               {/* Modo Step-by-Step */}
-              {replayStepByStep && totalSteps > 0 && currentStep && (
-                <div className="mt-4 space-y-4">
-                  {/* Controles de navegação e velocidade */}
-                  <div className="bg-bg-primary rounded-lg border border-border-default p-3 space-y-3">
-                    {/* Controles de navegação */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          onClick={goToFirst}
-                          disabled={currentReplayStep === 0}
-                          variant="default"
-                          size="sm"
-                          className="text-xs"
-                        >
-                          ⏮️ Primeiro
-                        </Button>
-                        <Button
-                          onClick={goToPrevious}
-                          disabled={currentReplayStep === 0}
-                          variant="default"
-                          size="sm"
-                          className="text-xs"
-                        >
-                          ⏪ Anterior
-                        </Button>
-                      </div>
-                      
-                      <div className="flex-1 mx-4">
-                        <div className="text-center text-xs text-text-secondary mb-1">
-                          Passo {currentReplayStep + 1} de {totalSteps}
-                        </div>
-                        <div className="w-full bg-bg-secondary rounded-full h-2">
-                          <div
-                            className="bg-accent-primary h-2 rounded-full transition-all"
-                            style={{ width: `${((currentReplayStep + 1) / totalSteps) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Button
-                          onClick={goToNext}
-                          disabled={currentReplayStep >= totalSteps - 1}
-                          variant="default"
-                          size="sm"
-                          className="text-xs"
-                        >
-                          Próximo ⏩
-                        </Button>
-                        <Button
-                          onClick={goToLast}
-                          disabled={currentReplayStep >= totalSteps - 1}
-                          variant="default"
-                          size="sm"
-                          className="text-xs"
-                        >
-                          Último ⏭️
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Controles de reprodução e velocidade */}
-                    <div className="flex items-center justify-between pt-2 border-t border-border-default">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          onClick={togglePlayPause}
-                          variant={isPlaying ? "danger" : "default"}
-                          size="sm"
-                          className="text-xs"
-                          data-testid="replay-play-button"
-                        >
-                          {isPlaying ? '⏸️ Pausar' : '▶️ Reproduzir'}
-                        </Button>
-                        <span className="text-xs text-text-tertiary">
-                          {isPlaying ? 'Reproduzindo...' : 'Pausado'}
-                        </span>
-                        <Button
-                          onClick={jumpToFirstErrorStep}
-                          variant="default"
-                          size="sm"
-                          className="text-xs"
-                        >
-                          ⛳ Ir para erro
-                        </Button>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1 text-xs text-text-secondary">
-                          <input
-                            type="checkbox"
-                            checked={showOnlyFailures}
-                            onChange={(e) => setShowOnlyFailures(e.target.checked)}
-                          />
-                          Mostrar apenas falhas
-                        </label>
-                        <label className="text-xs text-text-secondary">
-                          Velocidade:
-                        </label>
-                        <select
-                          value={playbackSpeed}
-                          onChange={(e) => handleSpeedChange(Number(e.target.value))}
-                          className="px-2 py-1 text-xs bg-bg-secondary border border-border-default rounded text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
-                          disabled={isPlaying}
-                        >
-                          <option value={5000}>🐌 Muito Lento (5s)</option>
-                          <option value={2000}>🐢 Lento (2s)</option>
-                          <option value={1000}>🚶 Normal (1s)</option>
-                          <option value={500}>🏃 Rápido (0.5s)</option>
-                          <option value={200}>⚡ Muito Rápido (0.2s)</option>
-                          <option value={100}>🚀 Máxima (0.1s)</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── Modo Treinamento ── */}
-                  {trainingMode && currentStep && (() => {
-                    const stepData = currentStep.type === 'trace-step' ? currentStep.data : null;
-                    const trainingDesc = stepData?.trainingDescription;
-                    const trainingHint = stepData?.trainingHint;
-                    const expectedVisual = stepData?.expectedVisual;
-                    const actor = stepData?.actor;
-                    const hasTraining = trainingDesc || trainingHint || expectedVisual;
-                    if (!hasTraining) return null;
-                    return (
-                      <div className="p-3 rounded-lg bg-accent-primary/10 border border-accent-primary/30 space-y-2">
-                        <div className="text-xs font-semibold text-accent-primary flex items-center gap-1">
-                          🎓 Material de Treinamento
-                          {actor && <span className="text-text-tertiary font-normal">· {actor}</span>}
-                        </div>
-                        {trainingDesc && (
-                          <div className="text-xs text-text-primary leading-relaxed">
-                            <span className="text-text-tertiary">📖 </span>
-                            {trainingDesc}
-                          </div>
-                        )}
-                        {trainingHint && (
-                          <div className="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
-                            <span className="text-text-tertiary">💡 Dica: </span>
-                            {trainingHint}
-                          </div>
-                        )}
-                        {expectedVisual && (
-                          <div className="text-xs text-text-secondary leading-relaxed">
-                            <span className="text-text-tertiary">👁️ Visual esperado: </span>
-                            {expectedVisual}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                  {/* ── Fim Modo Treinamento ── */}
-
-                  {/* Conteúdo do passo atual - APENAS Screenshots */}
-                  {((currentStep.type === 'screen' && currentStep.data.screenshot)
-                    || (currentStep.type === 'action' && lastScreenshot)
-                    || (currentStep.type === 'trace-step' && (currentStep.data.screenshotAfter || currentStep.data.screenshotBefore))) && (
-                    <div className="bg-bg-secondary rounded-lg p-4 border border-border-default">
-                      <div className="mb-2">
-                        <span className="text-xs font-semibold text-text-tertiary">
-                          📸 Tela
-                        </span>
-                        {(currentStep.type === 'screen'
-                          ? currentStep.data.timestamp
-                          : (currentStep.type === 'trace-step'
-                            ? (currentStep.data.finishedAt || currentStep.data.startedAt)
-                            : lastScreenshot?.timestamp)) && (
-                          <span className="text-xs text-text-tertiary ml-2">
-                            {formatDate(
-                              currentStep.type === 'screen' 
-                                ? currentStep.data.timestamp 
-                                : (currentStep.type === 'trace-step'
-                                  ? (currentStep.data.finishedAt || currentStep.data.startedAt)
-                                  : lastScreenshot.timestamp)
-                            )}
-                          </span>
-                        )}
-                        {currentStep.type === 'action' && (
-                          <span className="text-xs text-text-tertiary ml-2">
-                            (última tela)
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-2">
-                        <img
-                          src={currentStep.type === 'trace-step'
-                            ? (currentStep.data.screenshotAfter || currentStep.data.screenshotBefore)
-                            : `data:image/png;base64,${currentStep.type === 'screen' ? currentStep.data.screenshot : lastScreenshot.screenshot}`}
-                          alt={`Screenshot do passo ${currentReplayStep + 1}`}
-                          data-testid="replay-image"
-                          className="max-w-full h-auto rounded border border-border-default"
-                        />
-                      </div>
-                    </div>
-                  )}
+              {replayStepByStep && normalizedReplaySteps.length > 0 && (
+                <div className="mt-4">
+                  <ReplayPlayer
+                    steps={normalizedReplaySteps}
+                    typedEntries={normalizedReplayTyped}
+                    evidence={normalizedReplayEvidence}
+                    onStepChange={handlePlayerStepChange}
+                    focusStepAt={focusStepAt}
+                  />
                 </div>
               )}
 
@@ -2855,6 +2682,7 @@ export function RpaReplaysPage() {
                               onClick={() => {
                                 setReplayStepByStep(true);
                                 setCurrentReplayStep(stepIndex);
+                                setFocusStepAt(step.timestamp || null);
                               }}
                             >
                               <div className="flex items-start justify-between gap-2">
@@ -2913,6 +2741,7 @@ export function RpaReplaysPage() {
                               onClick={() => {
                                 setReplayStepByStep(true);
                                 setCurrentReplayStep(stepIndex);
+                                setFocusStepAt(step.timestamp || null);
                               }}
                             >
                               <div className="flex items-start justify-between gap-2">
@@ -2984,6 +2813,7 @@ export function RpaReplaysPage() {
                               onClick={() => {
                                 setReplayStepByStep(true);
                                 setCurrentReplayStep(stepIndex);
+                                setFocusStepAt(step.timestamp || null);
                               }}
                             >
                               <div className="flex items-start justify-between gap-2">
@@ -3027,7 +2857,7 @@ export function RpaReplaysPage() {
                               key={`log-event-${step.index}`}
                               id={`step-${stepIndex}`}
                               className={`p-2 rounded border text-xs ${cls} ${isCurrentStep ? 'ring-2 ring-accent-primary' : ''}`}
-                              onClick={() => { setReplayStepByStep(true); setCurrentReplayStep(stepIndex); }}
+                              onClick={() => { setReplayStepByStep(true); setCurrentReplayStep(stepIndex); setFocusStepAt(step.timestamp || null); }}
                             >
                               <div className="flex gap-2">
                                 <div className="flex-1 min-w-0">

@@ -17,7 +17,7 @@ jest.mock('../meshRunner', () => ({
 
 const fs = require('fs');
 const meshRunner = require('../meshRunner');
-const { selectScenariosForSchedule, runScheduledMesh } = require('../meshScheduler');
+const { selectScenariosForSchedule, runScheduledMesh, setSchedulerEnabled, buildScheduleStatus } = require('../meshScheduler');
 
 describe('qa-mesh/meshScheduler', () => {
   const registry = [
@@ -84,5 +84,54 @@ describe('qa-mesh/meshScheduler', () => {
       writeCanonicalOutputs: false,
       scenarioIds: ['smoke-core', 'technical-pbx'],
     }));
+  });
+});
+
+describe('qa-mesh/meshScheduler — setSchedulerEnabled', () => {
+  let originalEnv;
+
+  beforeEach(() => {
+    originalEnv = process.env.QA_MESH_SCHEDULER_DISABLED;
+    delete process.env.QA_MESH_SCHEDULER_DISABLED;
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    setSchedulerEnabled(false);
+    if (originalEnv === undefined) delete process.env.QA_MESH_SCHEDULER_DISABLED;
+    else process.env.QA_MESH_SCHEDULER_DISABLED = originalEnv;
+  });
+
+  test('desativa o scheduler e reflete no status', () => {
+    const status = setSchedulerEnabled(false);
+    expect(status.enabled).toBe(false);
+    expect(buildScheduleStatus().enabled).toBe(false);
+  });
+
+  test('reativa o scheduler e reflete no status', () => {
+    setSchedulerEnabled(false);
+    const status = setSchedulerEnabled(true);
+    expect(status.enabled).toBe(true);
+    expect(buildScheduleStatus().enabled).toBe(true);
+  });
+
+  test('env var QA_MESH_SCHEDULER_DISABLED mantém desligado (fail-closed)', () => {
+    process.env.QA_MESH_SCHEDULER_DISABLED = 'true';
+    const status = setSchedulerEnabled(true);
+    expect(status.enabled).toBe(false);
+  });
+
+  test('altera a frequência e reflete no status', () => {
+    const status = setSchedulerEnabled(true, '1h');
+    expect(status.enabled).toBe(true);
+    expect(status.frequency.key).toBe('1h');
+    expect(status.frequency.label).toBe('A cada 1 hora');
+  });
+
+  test('ignora chave de frequência inválida', () => {
+    setSchedulerEnabled(true, '15min');
+    const status = setSchedulerEnabled(true, 'inexistente');
+    expect(status.frequency.key).toBe('15min');
   });
 });

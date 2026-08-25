@@ -1,41 +1,32 @@
 {
-  "generatedAt": "2026-08-24T16:46:15.421Z",
+  "generatedAt": "2026-08-25T08:57:14.067Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260824-134414.zip",
-  "zipHash": "45f298dae82938a3d3a9a5083d5424f5d8b0fe5fa59763edf1d328e1d45c58d3",
-  "manifestHash": "2e37c27a4423edc32103a3964ae5157dd9b049811f721e6bc597393d78ce5d20",
+  "zipName": null,
+  "zipHash": null,
+  "manifestHash": "3a6902a8aba25d757f33046acf18d58a82438baa57a34eacb73a4651c0aa2a9f",
   "replayHash": "437ad3d8f5e2d867f67d578b3470d0b63d86dbc148bddf80dd21378e518d7ee7",
-  "governanceHash": "252eefae0d250d687c3452711b4c404b5565280dae390623aa140dbabca79a66",
-  "readinessHash": "3247b51064556d280a36ba2ccc54daa7bda9c631efecf7179d24b1203a6c5350",
+  "governanceHash": "edea0d836d54804a24b001e4b5894ad200e49a53b9ffbc21fb84594f712a898c",
+  "readinessHash": "75d3beea50afb969841102a9ee440f2454a42886e3639d471405a40e4a496fdc",
   "consistencyHash": "f0b63188d308c127d9a07f4f4ffee6f2f1443b10fdbdfa671834ce6888d910bd",
   "contaminationHash": "f142c7c01239a93c9c74a4b9e91e1eec62019d0fc2a060603a8f6264d5606cd3",
-  "packageIntegrityHash": "fd3fad0bbe0de5a9a678494e870e3793c261521e5353e7ef3cc037d625ba6966",
+  "packageIntegrityHash": "c69af5d378abd06156f80d7d06e71d2bcdf108ad78ac3cb8a2ef4e8f7204cf85",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "47cd5e9b8d4100a5447fd9e85441bb556b3d052d2dc6d7dd659248b9dec83381",
-  "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
+  "gateHash": "b58987d0627c33b134c428d834ce49d255bd9d1d4804b9347de1d0e3de19838b",
+  "recalculatedReadinessHash": "9987274c3ca0757dcf308f5c8d9051d7048f1c0bdac5b79ab4ea265236eb2bd9",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | scorecard: open blockers=2 | scorecard: open gaps=2 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
-    "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "finalGovernance": "AUTONOMOUS_READY_GO",
+    "readiness": "AUTONOMOUS_READY_GO",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
-  "autonomousReady": false,
-  "mandatoryFailures": [
-    {
-      "engine": "finalGovernance",
-      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | scorecard: open blockers=2 | scorecard: open gaps=2 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
-    },
-    {
-      "engine": "readiness",
-      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
-    }
-  ],
-  "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260824-134414.zip. Package: ÍNTEGRO. Validadores falhos: 2."
+  "autonomousReady": true,
+  "mandatoryFailures": [],
+  "ok": true,
+  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 0."
 }

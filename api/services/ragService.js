@@ -222,8 +222,9 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     throw new Error('tenantId é obrigatório');
   }
 
-  // Inicializa replay (opcional, pode ser desabilitado para performance)
-  const shouldRecordReplay = process.env.ENABLE_RAG_REPLAY !== 'false';
+  // Replay é exclusivo de interações via UI (RPA browser). Consulta RAG é
+  // backend e não é interação via UI — replay fica opt-in via ENABLE_RAG_REPLAY=true.
+  const shouldRecordReplay = process.env.ENABLE_RAG_REPLAY === 'true';
   const shouldRecord = process.env.ENABLE_RAG_RECORDING !== 'false';
   let replay = null;
   let replayId = null;
