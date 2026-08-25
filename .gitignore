@@ -48,11 +48,13 @@ rpa/replay/
 rpa/reports/
 rpa/screenshots/
 rpa/flows/
+core/rpa/reports/
 
 # Artefatos gerados por execução / debug local
 data/executions/
 recordings/
 replays/
+cache/
 
 # Dumps/importações locais (não versionar)
 remote-dumps/
