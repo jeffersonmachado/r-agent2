@@ -1588,6 +1588,10 @@ export function RpaReplaysPage() {
                             <span className="font-mono">{replay.replayId || replay.id || '-'}</span>
                           </div>
                           <div className="text-text-secondary">
+                            <span className="text-text-tertiary">Gravação (origem):</span>{' '}
+                            <span className="font-mono">{replay.recordingName || replay.recordingId || '-'}</span>
+                          </div>
+                          <div className="text-text-secondary">
                             <span className="text-text-tertiary">Execution ID:</span>{' '}
                             <span className="font-mono">{replay.executionId || '-'}</span>
                           </div>

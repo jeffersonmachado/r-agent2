@@ -32,6 +32,7 @@ const {
   getReplay: getPersistedReplay,
   getTraceBuffer,
   getScreenshotBuffer,
+  getExecutionArtifactReality,
 } = require('./rpaArtifactPersistence');
 const {
   belongsToTenant,
@@ -965,18 +966,23 @@ async function getExecutionArtifact(executionId, kind, index = null, tenantId = 
 async function listExecutionArtifacts(tenantId = 'system') {
   const scopedTenantId = normalizeTenantKey(tenantId);
   const manifests = await listExecutionManifests(scopedTenantId);
+  // Disponibilidade de binários (trace/screenshot) derivada das linhas reais
+  // do store — o manifesto pode ficar desatualizado se os binários forem
+  // removidos depois da persistência (sweep de metadados órfãos).
+  const reality = await getExecutionArtifactReality(scopedTenantId);
   const items = [];
   for (const meta of manifests) {
     const manifest = await getExecutionManifest(meta.refId, scopedTenantId);
     if (!manifest) continue;
+    const executionId = manifest.executionId || meta.refId;
     items.push({
-      executionId: manifest.executionId || meta.refId,
+      executionId,
       recordingId: manifest.recordingId || null,
       status: manifest.status || null,
       hasRecording: !!manifest.recording,
-      hasTrace: !!manifest.trace,
+      hasTrace: reality.traces.has(executionId),
       hasReplay: !!manifest.replay,
-      screenshots: Number(manifest.screenshots || 0),
+      screenshots: reality.screenshots.get(executionId) || 0,
       startedAt: manifest.startedAt || null,
       finishedAt: manifest.finishedAt || null,
       persistedAt: manifest.persistedAt || meta.createdAt || null,
@@ -1067,6 +1073,10 @@ function listReplayFiles({
           || extractJsonStringField(prefix, 'tenant_key')
           || 'system',
         replayId: extractJsonStringField(prefix, 'replayId') || extractJsonStringField(prefix, 'id') || entry.name.replace(/\.json$/i, ''),
+        // Origem do replay: o roteiro/gravação (recordingId) que originou esta
+        // execução. Exposto no card da UI para responder "de onde veio este replay".
+        recordingId: extractJsonStringField(prefix, 'recordingId') || null,
+        recordingName: extractJsonStringField(prefix, 'recordingName') || null,
         // Em artefatos legados finalizados, scenarioId/seedId ficavam após o
         // array journeySteps (fora do prefixo lido). Para replays QA Waves,
         // recordingId é gravado com o mesmo valor de scenario.id.

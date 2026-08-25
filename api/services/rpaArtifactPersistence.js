@@ -571,6 +571,110 @@ async function sweepOrphanedArtifactMetadata({ dryRun = true } = {}) {
   }
 }
 
+/**
+ * Retorna a disponibilidade REAL dos binários persistidos (trace + screenshots)
+ * a partir das linhas `runtime_artifacts`, sem confiar no manifesto. Usada pela
+ * listagem de artefatos para nunca anunciar um binário que não existe mais
+ * (ex.: metadado removido por sweep de órfãos).
+ *
+ * @param {string} tenantKey
+ * @returns {Promise<{traces: Set<string>, screenshots: Map<string, number>}>}
+ */
+async function getExecutionArtifactReality(tenantKey = 'system') {
+  const tkey = normalizeTenantKey(tenantKey);
+  const sequelize = getSequelize();
+  if (!sequelize) return { traces: new Set(), screenshots: new Map() };
+  const { QueryTypes } = require('sequelize');
+
+  const traces = new Set();
+  const screenshots = new Map();
+
+  const traceRows = await sequelize.query(
+    'SELECT ref_id FROM runtime_artifacts WHERE kind = :kind AND tenant_key = :tkey',
+    { replacements: { kind: KIND_TRACE, tkey }, type: QueryTypes.SELECT },
+  );
+  for (const row of traceRows || []) traces.add(row.ref_id);
+
+  const shotRows = await sequelize.query(
+    "SELECT regexp_replace(ref_id, '-\\d+$', '') AS exec_id, COUNT(*)::int AS count FROM runtime_artifacts WHERE kind = :kind AND tenant_key = :tkey GROUP BY exec_id",
+    { replacements: { kind: KIND_SCREENSHOT, tkey }, type: QueryTypes.SELECT },
+  );
+  for (const row of shotRows || []) screenshots.set(row.exec_id, Number(row.count));
+
+  return { traces, screenshots };
+}
+
+/**
+ * Reconcilia os manifestos de execução (`rpa/execution`) com a realidade dos
+ * binários persistidos. Quando o manifesto declara `trace: true` ou
+ * `screenshots: N` mas as linhas correspondentes não existem mais, corrige o
+ * manifesto e re-assina. Dry-run por padrão.
+ *
+ * @param {{ dryRun?: boolean }} options
+ * @returns {Promise<{checked:number, reconciled:number, traceFixed:number, screenshotsFixed:number, dryRun:boolean, reason?:string}>}
+ */
+async function reconcileExecutionManifests({ dryRun = true } = {}) {
+  const store = await ensureStore();
+  if (store.backend !== 'postgres') {
+    return { checked: 0, reconciled: 0, traceFixed: 0, screenshotsFixed: 0, dryRun, reason: 'backend_nao_postgres' };
+  }
+
+  const manifestsMeta = await listExecutionManifests();
+  const result = { checked: 0, reconciled: 0, traceFixed: 0, screenshotsFixed: 0, dryRun };
+
+  // Realidade agregada por tenant presente nos manifestos.
+  const tenants = new Set((manifestsMeta || []).map((m) => m.tenantKey || 'system'));
+  const realityByTenant = new Map();
+  for (const t of tenants) {
+    realityByTenant.set(t, await getExecutionArtifactReality(t));
+  }
+
+  for (const meta of manifestsMeta || []) {
+    const tenantKey = normalizeTenantKey(meta.tenantKey || 'system');
+    const manifest = await getExecutionManifest(meta.refId, tenantKey);
+    if (!manifest) continue;
+    result.checked += 1;
+
+    const executionId = manifest.executionId || meta.refId;
+    const reality = realityByTenant.get(tenantKey) || { traces: new Set(), screenshots: new Map() };
+    const hasTrace = reality.traces.has(executionId);
+    const realScreenshots = reality.screenshots.get(executionId) || 0;
+
+    let changed = false;
+    if (manifest.trace === true && !hasTrace) {
+      manifest.trace = false;
+      delete manifest.traceFileName;
+      changed = true;
+      result.traceFixed += 1;
+    }
+    if (Number(manifest.screenshots || 0) !== realScreenshots) {
+      manifest.screenshots = realScreenshots;
+      changed = true;
+      result.screenshotsFixed += 1;
+    }
+
+    if (changed) {
+      result.reconciled += 1;
+      if (!dryRun) {
+        const governance = manifest.governance || {
+          goNoGo: manifest.status === 'completed' ? 'GO' : 'NO_GO',
+          isOperational: manifest.status === 'completed',
+          blockers: manifest.status === 'completed' ? [] : [{ reason: 'rpa_execution_not_completed' }],
+        };
+        delete manifest.replayHash;
+        delete manifest.replayChecksum;
+        delete manifest.governanceSignature;
+        delete manifest.integrity;
+        delete manifest.signedAt;
+        const signed = signReplayArtifact(manifest, { governance, tenantId: tenantKey });
+        await store.write({ kind: KIND_EXECUTION, refId: executionId, tenantKey, payload: signed });
+      }
+    }
+  }
+
+  return result;
+}
+
 module.exports = {
   KIND_RECORDING,
   KIND_REPLAY,
@@ -588,5 +692,7 @@ module.exports = {
   indexExecutionInRag,
   sweepOrphanedBlobs,
   sweepOrphanedArtifactMetadata,
+  getExecutionArtifactReality,
+  reconcileExecutionManifests,
   resetStoreForTests,
 };
