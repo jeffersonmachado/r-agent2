@@ -74,7 +74,7 @@ export function RpaReplaysPage() {
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
-  const [replayInfoCollapsed, setReplayInfoCollapsed] = useState(false);
+  const [replayInfoCollapsed, setReplayInfoCollapsed] = useState(true);
   const [replayEvidenceTab, setReplayEvidenceTab] = useState('states');
   const [trainingMode, setTrainingMode] = useState(false);
   
@@ -378,7 +378,8 @@ export function RpaReplaysPage() {
   /**
    * Unifica o replay persistido no banco para o padrão único de exibição:
    * - as telas (screenshots) viram itens próprios na lista de passos (modelo .json);
-   * - os passos NÃO exibem "Antes/Depois" embutido (as telas são itens separados);
+   * - os passos mantêm a tela no display (screenshotBefore/After resolvido para
+   *   objectURL), para não remover a imagem do passo;
    * - cada tela recebe um timestamp único para a sincronização log↔player não
    *   confundir a tela com o passo pai.
    */
@@ -417,6 +418,17 @@ export function RpaReplaysPage() {
     }));
     if (!urlByIndex.size) return data;
 
+    const resolve = (v) => {
+      if (typeof v !== 'string') return v;
+      if (pathToIndex.has(v)) return urlByIndex.get(pathToIndex.get(v)) || null;
+      return v;
+    };
+
+    // Passos mantêm a tela no display (screenshotBefore/After → objectURL).
+    const mappedSteps = steps.map((step) => (step && typeof step === 'object'
+      ? { ...step, screenshotBefore: resolve(step.screenshotBefore), screenshotAfter: resolve(step.screenshotAfter) }
+      : step));
+
     // Telas (screens) com timestamp único: deslocado do passo pai para nunca
     // colidir na busca por timestamp do player.
     const screens = [];
@@ -435,14 +447,7 @@ export function RpaReplaysPage() {
       });
     }
 
-    // Passos sem screenshotBefore/After: as telas são itens próprios da lista.
-    const cleanedSteps = steps.map((step) => {
-      if (!step || typeof step !== 'object') return step;
-      const { screenshotBefore, screenshotAfter, ...rest } = step;
-      return rest;
-    });
-
-    return { ...data, steps: cleanedSteps, screens };
+    return { ...data, steps: mappedSteps, screens };
   };
 
   const handleViewReplay = async (filename) => {

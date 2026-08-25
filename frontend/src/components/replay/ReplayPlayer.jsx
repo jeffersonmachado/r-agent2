@@ -229,27 +229,27 @@ export function ReplayPlayer({
             ) : null}
 
             {hasScreenshot ? (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 space-y-3">
                 {active.screenshotBefore || active.screenshot ? (
-                  <figure>
+                  <figure className="overflow-hidden rounded border border-border-default bg-bg-secondary">
                     <img
                       src={active.screenshotBefore || active.screenshot}
                       alt={active.screenshotBefore ? "Antes" : "Tela"}
-                      className="w-full rounded border border-border-default"
+                      className="w-full h-auto max-h-[70vh] object-contain"
                     />
-                    <figcaption className="mt-1 text-xs text-text-secondary">
+                    <figcaption className="px-2 py-1 text-xs text-text-secondary">
                       {active.screenshotBefore ? "Antes" : "Tela"}
                     </figcaption>
                   </figure>
                 ) : null}
                 {active.screenshotAfter ? (
-                  <figure>
+                  <figure className="overflow-hidden rounded border border-border-default bg-bg-secondary">
                     <img
                       src={active.screenshotAfter}
                       alt="Depois"
-                      className="w-full rounded border border-border-default"
+                      className="w-full h-auto max-h-[70vh] object-contain"
                     />
-                    <figcaption className="mt-1 text-xs text-text-secondary">Depois</figcaption>
+                    <figcaption className="px-2 py-1 text-xs text-text-secondary">Depois</figcaption>
                   </figure>
                 ) : null}
               </div>
