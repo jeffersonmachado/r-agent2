@@ -352,7 +352,8 @@ export function RpaReplaysPage() {
     setReplayEvidenceTab('states');
     try {
       const data = await getRpaExecutionArtifactJson(executionId, 'replay');
-      setReplayData(data);
+      const resolved = await resolveExecutionScreenshots(data, executionId);
+      setReplayData(resolved);
     } catch (err) {
       logger.error('[RpaReplaysPage] Erro ao carregar replay da execução:', err);
       showToast('Erro ao carregar replay da execução', 'error', 4000);
@@ -372,6 +373,53 @@ export function RpaReplaysPage() {
       logger.error('[RpaReplaysPage] Erro ao carregar screenshot:', err);
       showToast('Erro ao carregar screenshot', 'error', 4000);
     }
+  };
+
+  /**
+   * Resolve os paths absolutos de screenshots (screenshotBefore/After) de um
+   * replay persistido no banco para objectURLs servíveis, baixando os binários
+   * reais via API. Evita <img> quebrado no ReplayPlayer quando o replay aponta
+   * para paths do filesystem que não são URLs.
+   */
+  const resolveExecutionScreenshots = async (data, executionId) => {
+    const shots = Array.isArray(data?.screenshots) ? data.screenshots : [];
+    if (!shots.length || !Array.isArray(data?.steps)) return data;
+
+    const pathToIndex = new Map();
+    shots.forEach((p, i) => { if (typeof p === 'string') pathToIndex.set(p, i); });
+
+    const needed = new Set();
+    for (const step of data.steps) {
+      for (const key of ['screenshotBefore', 'screenshotAfter']) {
+        const v = step?.[key];
+        if (typeof v === 'string' && pathToIndex.has(v)) needed.add(pathToIndex.get(v));
+      }
+    }
+    if (!needed.size) return data;
+
+    const urlByIndex = new Map();
+    await Promise.all(Array.from(needed).map(async (idx) => {
+      try {
+        const { blob } = await downloadRpaExecutionArtifact(executionId, 'screenshot', idx);
+        urlByIndex.set(idx, URL.createObjectURL(blob));
+      } catch (_) {
+        // screenshot indisponível: mantém null (placeholder sem imagem)
+      }
+    }));
+    if (!urlByIndex.size) return data;
+
+    const resolve = (v) => {
+      if (typeof v !== 'string') return v;
+      if (pathToIndex.has(v)) return urlByIndex.get(pathToIndex.get(v)) || null;
+      return v;
+    };
+
+    return {
+      ...data,
+      steps: data.steps.map((step) => (step && typeof step === 'object'
+        ? { ...step, screenshotBefore: resolve(step.screenshotBefore), screenshotAfter: resolve(step.screenshotAfter) }
+        : step)),
+    };
   };
 
   const handleViewReplay = async (filename) => {

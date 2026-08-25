@@ -21,7 +21,15 @@ function timestampOf(value) {
 
 function toScreenshotSrc(value) {
   if (!value || typeof value !== 'string') return null;
-  if (/^(data:image\/|https?:\/\/|\/)/i.test(value)) return value;
+  const trimmed = value.trim();
+  // Data URLs (base64), object URLs (blob:) e URLs absolutas http(s) são
+  // servíveis diretamente.
+  if (/^(data:image\/|blob:|https?:\/\/)/i.test(trimmed)) return trimmed;
+  // Rotas relativas servíveis pela aplicação.
+  if (/^\/(api|uploads|static|assets|replays|recordings|rpa)\//i.test(trimmed)) return trimmed;
+  // Paths absolutos de filesystem (/opt, /home, /var, /tmp, /usr, /root, C:\,
+  // etc.) não são URLs servíveis pelo navegador — não renderizar, para evitar
+  // <img> quebrado (404).
   return null;
 }
 
