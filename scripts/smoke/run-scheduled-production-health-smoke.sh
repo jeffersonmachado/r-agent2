@@ -17,6 +17,11 @@
 #   - Frontend em http://localhost:8080 (docker nginx: 8080 -> 80)
 #   - PostgreSQL, Redis e rag-service acessíveis (.env carregado via --env-file)
 #
+# Política de agendamento: este cron respeita a MESMA política do QA Mesh
+# (opt-in explícito + fail-closed). Sem enabled:true persistido (toggle da UI)
+# ou QA_MESH_SCHEDULER_ENABLED=true — ou com QA_MESH_SCHEDULER_DISABLED=true —
+# o smoke é pulado (SKIP) e não gera/atualiza evidência.
+#
 # Se a stack não estiver no ar, o script registra SKIP no log e sai 0 (não
 # gera evidência falsa nem quebra o cron; o gate degradará para STALE/NO_GO
 # de forma explícita quando a evidência vencer).
@@ -51,6 +56,22 @@ reachable() {
   code="$(curl -s -o /dev/null --max-time 10 -w '%{http_code}' "$1" 2>/dev/null)"
   [[ "$code" != "000" && -n "$code" ]]
 }
+
+# ── Alinhamento com a política de agendamento do QA Mesh ──
+# O smoke contínuo é uma execução agendada; respeita a MESMA política do
+# scheduler do QA Mesh (opt-in explícito + fail-closed):
+#   - QA_MESH_SCHEDULER_DISABLED=true  → kill-switch, sempre desliga.
+#   - caso contrário, só roda se o estado persistido tiver enabled:true
+#     (toggle na UI) ou QA_MESH_SCHEDULER_ENABLED=true.
+if [ "${QA_MESH_SCHEDULER_DISABLED:-}" = "true" ]; then
+  log "SKIP scheduler_disabled_env (política QA Mesh) — smoke não executado"
+  exit 0
+fi
+scheduler_enabled="$(node -e "const fs=require('fs');try{const s=JSON.parse(fs.readFileSync('$PROJECT_ROOT/qa-mesh/scheduler-state.json','utf8'));process.stdout.write(s.enabled===true?'true':'false')}catch(e){process.stdout.write('false')}" 2>/dev/null)"
+if [ "$scheduler_enabled" != "true" ] && [ "${QA_MESH_SCHEDULER_ENABLED:-}" != "true" ]; then
+  log "SKIP scheduler_not_explicitly_enabled (política QA Mesh) — smoke não executado"
+  exit 0
+fi
 
 if ! reachable "$API_URL/"; then
   log "SKIP api=$API_URL indisponível — smoke não executado"
