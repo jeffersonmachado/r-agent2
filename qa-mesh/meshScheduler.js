@@ -31,7 +31,11 @@ let activeTasks = [];
 // Estado de ligado/desligado do scheduler. Default ligado; a env var força
 // desligado (fail-closed) e a preferência persistida (via UI) também é
 // respeitada no próximo start.
-let schedulerEnabled = process.env.QA_MESH_SCHEDULER_DISABLED !== 'true';
+// Habilitação do agendamento é EXPLÍCITA (opt-in): por padrão DESLIGADO. Só liga
+// quando o usuário ativar pela UI (estado persistido `enabled:true`) ou via env
+// QA_MESH_SCHEDULER_ENABLED=true. QA_MESH_SCHEDULER_DISABLED=true é o kill-switch
+// fail-closed que sempre vence.
+let schedulerEnabled = false;
 let criticalFrequencyKey = DEFAULT_FREQUENCY_KEY;
 
 function isMeshAlreadyRunning() {
@@ -158,6 +162,7 @@ async function runScheduledMesh(kind = 'critical') {
       closeGovernanceDbAfterIntegration: false,
     });
     writeState({
+      ...safeReadState(),
       activeLock: false,
       lastExecutionAt: new Date().toISOString(),
       lastExecutionKind: kind,
@@ -222,21 +227,32 @@ function startCronTasks() {
 }
 
 function startScheduler() {
+  // Kill-switch fail-closed sempre vence.
   if (process.env.QA_MESH_SCHEDULER_DISABLED === 'true') {
     schedulerEnabled = false;
     return { enabled: false, reason: 'QA_MESH_SCHEDULER_DISABLED' };
   }
-  // Preferência persistida: se o usuário desligou pela UI, permanece desligado
-  // após reinício (até religar explicitamente).
+
   const persisted = safeReadState();
-  if (persisted.enabled === false) {
-    schedulerEnabled = false;
-    return { enabled: false, reason: 'disabled_by_user' };
+  // Limpa lock obsoleto de um processo anterior (reinício do server).
+  if (persisted.activeLock === true) {
+    writeState({ ...persisted, activeLock: false });
+    persisted.activeLock = false;
   }
   if (persisted.criticalFrequencyKey && CRITICAL_FREQUENCY_PRESETS[persisted.criticalFrequencyKey]) {
     criticalFrequencyKey = persisted.criticalFrequencyKey;
   }
+
+  // Habilitação EXPLÍCITA (opt-in): estado persistido enabled:true (toggle da UI)
+  // ou env QA_MESH_SCHEDULER_ENABLED=true. Sem isso, o bootstrap NÃO inicia o mesh.
+  const explicitlyEnabled = persisted.enabled === true || process.env.QA_MESH_SCHEDULER_ENABLED === 'true';
+  if (!explicitlyEnabled) {
+    schedulerEnabled = false;
+    return { enabled: false, reason: 'not_explicitly_enabled' };
+  }
+
   if (activeTasks.length > 0) {
+    schedulerEnabled = true;
     return buildScheduleStatus();
   }
   startCronTasks();

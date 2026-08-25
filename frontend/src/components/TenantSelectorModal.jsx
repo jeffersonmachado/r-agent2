@@ -3,7 +3,7 @@
  * Aparece após login de super-admin para escolher qual tenant acessar.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '../styles/themeContext';
 import { Button } from '../styles/Button';
@@ -71,6 +71,7 @@ export function TenantSelectorModal({
   const [selectedTenantId, setSelectedTenantId] = useState(null);
   const [error, setError] = useState('');
   const [filterText, setFilterText] = useState('');
+  const filterInputRef = useRef(null);
 
   const tenantsOverrideKey = Array.isArray(tenantsOverride)
     ? tenantsOverride.map((t) => String(t?.id || '')).join('|')
@@ -92,6 +93,24 @@ export function TenantSelectorModal({
     if (!isOpen) {
       setFilterText('');
     }
+  }, [isOpen]);
+
+  // Quando o modal está aberto, desabilita o conteúdo de fundo (app em #root)
+  // para impedir interação e navegação por teclado nas telas atrás do modal.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const root = document.getElementById('root');
+    if (!root) return undefined;
+    const previousInert = root.inert;
+    const previousAriaHidden = root.getAttribute('aria-hidden');
+    root.inert = true;
+    root.setAttribute('aria-hidden', 'true');
+    if (filterInputRef.current) filterInputRef.current.focus();
+    return () => {
+      root.inert = previousInert;
+      if (previousAriaHidden === null) root.removeAttribute('aria-hidden');
+      else root.setAttribute('aria-hidden', previousAriaHidden);
+    };
   }, [isOpen]);
 
   // Em modo de seleção explícita, não permite “herdar” tenant anterior ao abrir.
@@ -333,6 +352,9 @@ export function TenantSelectorModal({
       tabIndex={-1}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tenant-selector-title"
         style={{
           background: theme.colors.bg.secondary,
           borderRadius: '16px',
@@ -356,6 +378,7 @@ export function TenantSelectorModal({
           }}
         >
           <h2
+            id="tenant-selector-title"
             style={{
               margin: 0,
               fontSize: '20px',
@@ -387,6 +410,7 @@ export function TenantSelectorModal({
           {/* Campo de filtro */}
           <div style={{ marginBottom: '16px' }}>
             <input
+              ref={filterInputRef}
               type="text"
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}

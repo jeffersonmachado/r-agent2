@@ -17,7 +17,7 @@ jest.mock('../meshRunner', () => ({
 
 const fs = require('fs');
 const meshRunner = require('../meshRunner');
-const { selectScenariosForSchedule, runScheduledMesh, setSchedulerEnabled, buildScheduleStatus } = require('../meshScheduler');
+const { selectScenariosForSchedule, runScheduledMesh, setSchedulerEnabled, buildScheduleStatus, startScheduler } = require('../meshScheduler');
 
 describe('qa-mesh/meshScheduler', () => {
   const registry = [
@@ -133,5 +133,36 @@ describe('qa-mesh/meshScheduler — setSchedulerEnabled', () => {
     setSchedulerEnabled(true, '15min');
     const status = setSchedulerEnabled(true, 'inexistente');
     expect(status.frequency.key).toBe('15min');
+  });
+});
+
+describe('qa-mesh/meshScheduler — startScheduler (habilitação explícita)', () => {
+  let originalEnabledEnv;
+  let originalDisabledEnv;
+
+  beforeEach(() => {
+    originalEnabledEnv = process.env.QA_MESH_SCHEDULER_ENABLED;
+    originalDisabledEnv = process.env.QA_MESH_SCHEDULER_DISABLED;
+    delete process.env.QA_MESH_SCHEDULER_ENABLED;
+    delete process.env.QA_MESH_SCHEDULER_DISABLED;
+  });
+
+  afterEach(() => {
+    if (originalEnabledEnv === undefined) delete process.env.QA_MESH_SCHEDULER_ENABLED;
+    else process.env.QA_MESH_SCHEDULER_ENABLED = originalEnabledEnv;
+    if (originalDisabledEnv === undefined) delete process.env.QA_MESH_SCHEDULER_DISABLED;
+    else process.env.QA_MESH_SCHEDULER_DISABLED = originalDisabledEnv;
+  });
+
+  test('permanece desligado por padrão (sem enabled:true nem env opt-in)', () => {
+    const status = startScheduler();
+    expect(status).toMatchObject({ enabled: false, reason: 'not_explicitly_enabled' });
+  });
+
+  test('kill-switch QA_MESH_SCHEDULER_DISABLED=true vence qualquer estado', () => {
+    process.env.QA_MESH_SCHEDULER_DISABLED = 'true';
+    process.env.QA_MESH_SCHEDULER_ENABLED = 'true';
+    const status = startScheduler();
+    expect(status).toMatchObject({ enabled: false, reason: 'QA_MESH_SCHEDULER_DISABLED' });
   });
 });
