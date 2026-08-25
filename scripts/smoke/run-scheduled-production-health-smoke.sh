@@ -22,6 +22,10 @@
 # ou QA_MESH_SCHEDULER_ENABLED=true — ou com QA_MESH_SCHEDULER_DISABLED=true —
 # o smoke é pulado (SKIP) e não gera/atualiza evidência.
 #
+# Serviços de DEV: antes de validar a stack Docker, o script derruba os serviços
+# de dev (API node, frontend Vite, RAG uvicorn) para liberar :3001/:5173/:8001 e
+# evitar conflito de porta (o Docker expõe a API em :3001).
+#
 # Se a stack não estiver no ar, o script registra SKIP no log e sai 0 (não
 # gera evidência falsa nem quebra o cron; o gate degradará para STALE/NO_GO
 # de forma explícita quando a evidência vencer).
@@ -57,6 +61,19 @@ reachable() {
   [[ "$code" != "000" && -n "$code" ]]
 }
 
+# Derruba os serviços de dev (API node, frontend Vite, RAG uvicorn) para liberar
+# as portas :3001/:5173/:8001 antes do prod-like validar a stack Docker — sem
+# isso o Docker não consegue expor a API em :3001 (conflito de porta). Chamado
+# apenas depois do gate de política (agendamento explicitamente habilitado).
+stop_dev_services() {
+  log "STOP dev services (liberando 3001/5173/8001 para a stack Docker)"
+  pkill -f "node api/server\.js" 2>/dev/null && log "  API dev encerrada" || log "  API dev não estava rodando"
+  pkill -f "vite --configLoader" 2>/dev/null && log "  frontend Vite encerrado" || log "  frontend Vite não estava rodando"
+  pkill -f "uvicorn main:app" 2>/dev/null && log "  RAG uvicorn encerrado" || log "  RAG uvicorn não estava rodando"
+  # SIGTERM é assíncrono: aguarda as portas serem liberadas antes do reachability.
+  sleep 2
+}
+
 # ── Alinhamento com a política de agendamento do QA Mesh ──
 # O smoke contínuo é uma execução agendada; respeita a MESMA política do
 # scheduler do QA Mesh (opt-in explícito + fail-closed):
@@ -72,6 +89,9 @@ if [ "$scheduler_enabled" != "true" ] && [ "${QA_MESH_SCHEDULER_ENABLED:-}" != "
   log "SKIP scheduler_not_explicitly_enabled (política QA Mesh) — smoke não executado"
   exit 0
 fi
+
+# ── Derruba os serviços de dev antes do prod-like (evita conflito de porta) ──
+stop_dev_services
 
 if ! reachable "$API_URL/"; then
   log "SKIP api=$API_URL indisponível — smoke não executado"
