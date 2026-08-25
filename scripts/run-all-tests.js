@@ -9,6 +9,28 @@
  * Retorna exit code 0 se todos passarem, 1 caso contrário.
  */
 
+// Carrega variáveis do .env antes de disparar os subprocessos. O RPA
+// (core/rpa/cli.js) exige REPLAY_SIGNING_KEY/ENCRYPTION_KEY (mínimo 32 bytes)
+// para assinar replays; sem isso todos os testes RPA falham com
+// `replay_signing_key_required_min_32_bytes`.
+try {
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+} catch (e) {
+  const envPath = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    envContent.split('\n').forEach((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0 && !process.env[key]) {
+          process.env[key] = valueParts.join('=').replace(/^["']|["']$/g, '');
+        }
+      }
+    });
+  }
+}
+
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
