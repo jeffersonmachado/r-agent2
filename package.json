@@ -288,7 +288,7 @@
     "rag:restart": "sudo systemctl restart r-agent2-rag",
     "rag:logs": "sudo journalctl -u r-agent2-rag -f",
     "rag:restart:script": "./scripts/restart-rag-service.sh",
-    "rag:dev": "cd rag-service && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "rag:dev": "cd rag-service && ./venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8001 --env-file .env",
     "rag:dev:logs": "tail -f /tmp/rag-service-dev.log",
     "rag:sync": "node scripts/rag-sync.js",
     "rag:sync:all": "node scripts/rag-sync.js --all",
