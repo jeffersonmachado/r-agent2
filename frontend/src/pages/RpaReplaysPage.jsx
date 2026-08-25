@@ -377,9 +377,10 @@ export function RpaReplaysPage() {
 
   /**
    * Unifica o replay persistido no banco para o padrão único de exibição:
-   * - resolve screenshotBefore/After (paths absolutos) para objectURLs;
-   * - gera `screens` (telas) no modelo do .json, uma por screenshot, para que
-   *   as telas apareçam como itens na lista de passos.
+   * - as telas (screenshots) viram itens próprios na lista de passos (modelo .json);
+   * - os passos NÃO exibem "Antes/Depois" embutido (as telas são itens separados);
+   * - cada tela recebe um timestamp único para a sincronização log↔player não
+   *   confundir a tela com o passo pai.
    */
   const unifyExecutionReplay = async (data, executionId) => {
     const shots = Array.isArray(data?.screenshots) ? data.screenshots : [];
@@ -416,30 +417,32 @@ export function RpaReplaysPage() {
     }));
     if (!urlByIndex.size) return data;
 
-    const resolve = (v) => {
-      if (typeof v !== 'string') return v;
-      if (pathToIndex.has(v)) return urlByIndex.get(pathToIndex.get(v)) || null;
-      return v;
-    };
-
-    const mappedSteps = steps.map((step) => (step && typeof step === 'object'
-      ? { ...step, screenshotBefore: resolve(step.screenshotBefore), screenshotAfter: resolve(step.screenshotAfter) }
-      : step));
-
-    // Telas no modelo do .json: cada screenshot vira uma tela na lista de passos.
+    // Telas (screens) com timestamp único: deslocado do passo pai para nunca
+    // colidir na busca por timestamp do player.
     const screens = [];
+    let screenCounter = 0;
     for (const [idx, meta] of metaForIndex.entries()) {
       const url = urlByIndex.get(idx);
       if (!url) continue;
+      const baseMs = meta.timestamp ? new Date(meta.timestamp).getTime() : Date.now();
+      const at = new Date(baseMs + screenCounter + 1).toISOString();
+      screenCounter += 1;
       screens.push({
         screenId: `screen-${idx + 1}`,
         step: `${meta.kind}: ${meta.stepName || 'passo'}`,
-        timestamp: meta.timestamp,
+        timestamp: at,
         screenshot: url,
       });
     }
 
-    return { ...data, steps: mappedSteps, screens };
+    // Passos sem screenshotBefore/After: as telas são itens próprios da lista.
+    const cleanedSteps = steps.map((step) => {
+      if (!step || typeof step !== 'object') return step;
+      const { screenshotBefore, screenshotAfter, ...rest } = step;
+      return rest;
+    });
+
+    return { ...data, steps: cleanedSteps, screens };
   };
 
   const handleViewReplay = async (filename) => {

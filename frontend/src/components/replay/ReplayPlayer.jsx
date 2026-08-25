@@ -234,10 +234,12 @@ export function ReplayPlayer({
                   <figure>
                     <img
                       src={active.screenshotBefore || active.screenshot}
-                      alt="Antes"
+                      alt={active.screenshotBefore ? "Antes" : "Tela"}
                       className="w-full rounded border border-border-default"
                     />
-                    <figcaption className="mt-1 text-xs text-text-secondary">Antes</figcaption>
+                    <figcaption className="mt-1 text-xs text-text-secondary">
+                      {active.screenshotBefore ? "Antes" : "Tela"}
+                    </figcaption>
                   </figure>
                 ) : null}
                 {active.screenshotAfter ? (
