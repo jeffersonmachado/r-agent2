@@ -318,7 +318,10 @@
     "convertedFromTest": true,
     "convertedAt": "2026-01-24T19:28:23.162Z",
     "originalStepsCount": 21,
-    "assertsCount": 11
+    "assertsCount": 11,
+    "authOptions": {
+      "loginStrategy": "ui"
+    }
   },
   "source": "automatic"
 }

@@ -80,19 +80,34 @@ function ensureStore() {
     });
   }
 
-  try {
-    const content = fs.readFileSync(STORE_PATH, 'utf8');
-    return normalizeStoreDocument(JSON.parse(content));
-  } catch (error) {
-    console.error(`Erro ao ler store: ${error.message}`);
-    return {
-      version: STORE_DEFAULT_VERSION,
-      scenarios: [],
-      history: {},
-      updatedAt: nowIso(),
-      format: 'object',
-    };
+  // A escrita é atômica (temp + rename), mas dois processos podem escrever
+  // concorrentemente e um ler o arquivo no meio do rename de outro → JSON.parse
+  // falha. Re-tenta a leitura antes de cair no fallback VAZIO, que causava
+  // sobrescrita destrutiva do store (397 cenários → 1) quando um job em
+  // background materializava draft IA durante outra execução.
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const content = fs.readFileSync(STORE_PATH, 'utf8');
+      return normalizeStoreDocument(JSON.parse(content));
+    } catch (error) {
+      if (attempt < 3) {
+        // A outra escrita (temp + rename) é rápida; sleep síncrono curto
+        // para o rename concluir antes de re-ler.
+        const sleepBuffer = new Int32Array(new SharedArrayBuffer(4));
+        Atomics.wait(sleepBuffer, 0, 0, attempt * 15);
+        continue;
+      }
+      console.error(`Erro ao ler store (após ${attempt} tentativas): ${error.message}`);
+    }
   }
+
+  return {
+    version: STORE_DEFAULT_VERSION,
+    scenarios: [],
+    history: {},
+    updatedAt: nowIso(),
+    format: 'object',
+  };
 }
 
 function saveStore(store) {

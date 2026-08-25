@@ -208,6 +208,9 @@ class RpaTestRunner {
           firstStep: recordingData.steps?.[0],
           autoLogin: recordingData?.metadata?.autoLogin !== false && data.autoLogin !== false,
           templateData: mergedData,
+          // Respeita a estratégia de login declarada pelo seed/recording
+          // (ex.: loginStrategy "ui" para rotas restritas a super_admin como /chat).
+          authOptions: recordingData?.metadata?.authOptions,
           // Mantém compatibilidade com o config atual do runner
           frontendBaseUrl: process.env.TEST_FRONTEND_URL || config.urls?.frontend,
         });

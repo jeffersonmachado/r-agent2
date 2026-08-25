@@ -13,6 +13,9 @@
 // (core/rpa/cli.js) exige REPLAY_SIGNING_KEY/ENCRYPTION_KEY (mínimo 32 bytes)
 // para assinar replays; sem isso todos os testes RPA falham com
 // `replay_signing_key_required_min_32_bytes`.
+const path = require('path');
+const fs = require('fs');
+
 try {
   require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 } catch (e) {
@@ -32,8 +35,6 @@ try {
 }
 
 const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
 
 const colors = {
   reset: '\x1b[0m',
