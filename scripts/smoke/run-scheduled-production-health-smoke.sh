@@ -11,8 +11,10 @@
 # wrapper existe para ser agendado (cron diário) e manter o gate verde.
 #
 # Pré-requisitos (stack viva REAL — o modo production_health recusa fixture):
-#   - API em http://localhost:3001
-#   - Frontend em http://localhost:5173
+#   prod-like requer containers no Docker local (docker-compose.yml) para
+#   simular o ambiente real (não usa Vite/dev server nem fixtures):
+#   - API em http://localhost:3001   (docker: 3001 -> 3001)
+#   - Frontend em http://localhost:8080 (docker nginx: 8080 -> 80)
 #   - PostgreSQL, Redis e rag-service acessíveis (.env carregado via --env-file)
 #
 # Se a stack não estiver no ar, o script registra SKIP no log e sai 0 (não
@@ -31,7 +33,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOG_DIR="$PROJECT_ROOT/logs/qa"
 LOG_FILE="$LOG_DIR/scheduled-production-health-smoke.log"
 API_URL="${API_URL:-http://localhost:3001}"
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173}"
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:8080}"
 
 mkdir -p "$LOG_DIR"
 

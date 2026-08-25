@@ -31,8 +31,12 @@ const { buildAgendamentoFlowSteps } = require('../../api/services/qa/journeyStep
 const { buildAgendamentoOperationalSeedSpec } = require('../../api/services/qa/seeds/agendamentoOperationalSeed');
 
 const PROD_LIKE_SMOKE_DIR = path.join(process.cwd(), 'qa', 'smoke', 'prod-like');
-const DEFAULT_FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:15173';
-const DEFAULT_API_URL = process.env.API_URL || 'http://localhost:13001';
+
+// Prod-like exige stack REAL em containers no Docker local (docker-compose.yml),
+// que publica: API em localhost:3001 (3001:3001) e frontend nginx em
+// localhost:8080 (8080:80). Não usa Vite (5173) nem fixtures.
+const DEFAULT_FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+const DEFAULT_API_URL = process.env.API_URL || 'http://localhost:3001';
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
