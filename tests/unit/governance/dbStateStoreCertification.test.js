@@ -74,4 +74,10 @@ describe('dbStateStore — DB-first & certification mode', () => {
     expect(fs.existsSync(target)).toBe(true);
     fs.rmSync(tmp, { recursive: true, force: true });
   });
+
+  test('sanitizeRefId normaliza chaves com barra para refId válido (sem /)', () => {
+    expect(dbStateStore.sanitizeRefId('qa-mesh/scheduler-state.json')).toBe('qa-mesh-scheduler-state.json');
+    expect(dbStateStore.sanitizeRefId('qa/checkpoints/state/current-wave.json')).toBe('qa-checkpoints-state-current-wave.json');
+    expect(dbStateStore.sanitizeRefId('')).toBe('unknown');
+  });
 });

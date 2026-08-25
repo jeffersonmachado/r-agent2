@@ -29,7 +29,7 @@ let cachedStore = null;
 
 function sanitizeRefId(value) {
   return String(value || 'unknown')
-    .replace(/[^A-Za-z0-9._/-]/g, '-')
+    .replace(/[^A-Za-z0-9._-]/g, '-')
     .replace(/^-+/, '')
     .slice(0, 255) || 'unknown';
 }
@@ -158,4 +158,4 @@ async function load(stateKey, fallback = null) {
 
 function resetStoreForTests() { cachedStore = null; }
 
-module.exports = { save, saveSyncExport, load, loadFromDb, isCertificationMode, KIND, writeExport, readExport, resetStoreForTests };
+module.exports = { save, saveSyncExport, load, loadFromDb, isCertificationMode, KIND, writeExport, readExport, sanitizeRefId, resetStoreForTests };
