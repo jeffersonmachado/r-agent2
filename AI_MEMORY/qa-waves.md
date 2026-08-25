@@ -22,11 +22,17 @@ QA Waves are governed journeys and scenario waves. They connect seeds, business 
 - Auto-correction must generate evidence, never hide a failing journey.
 - Scenario inference is allowed only when linked to explicit journey/domain metadata and validated runtime behavior.
 
-## QA Mesh scheduler configurável (2026-08-25)
+## QA Mesh scheduler — habilitação explícita (2026-08-25)
 
-- `qa-mesh/meshScheduler.js`: presets de frequência (`15min/30min/1h/2h/6h/12h/daily`) + toggle on/off persistido em `scheduler-state.json`; fail-closed via env quando o estado não é confiável.
-- API: `POST /qa-mesh/scheduler` (`{ enabled, frequencyKey }`, DEVELOPMENT) → `setMeshSchedulerEnabled`; frontend na tela QA Mesh (`QaMeshPage.jsx`) com rótulos amigáveis.
-- Regressão: `qa-mesh/__tests__/scheduler.test.js`.
+- **Opt-in explícito (default OFF).** O scheduler do mesh só liga quando:
+  - o estado persistido (`qa-mesh/scheduler-state.json`; fonte canônica no DB via `dbStateStore`) tem `enabled:true` (toggle na UI), **ou**
+  - `QA_MESH_SCHEDULER_ENABLED=true` (env, opt-in explícito).
+- **Fail-closed:** `QA_MESH_SCHEDULER_DISABLED=true` é kill-switch que sempre vence (a UI não consegue religar contra ele).
+- Bootstrap (`qaMeshService.js` → `startScheduler()`) NÃO inicia o mesh sem habilitação explícita; também limpa `activeLock` obsoleto de reinícios anteriores.
+- Presets de frequência: `15min/30min/1h/2h/6h/12h/daily` (default `15min`), persistidos em `criticalFrequencyKey`.
+- API: `POST /qa-mesh/scheduler` (`{ enabled, frequencyKey }`, DEVELOPMENT) → `setMeshSchedulerEnabled`; frontend na tela QA Mesh (`QaMeshPage.jsx`).
+- **Cron do smoke prod-like alinhado:** `scripts/smoke/run-scheduled-production-health-smoke.sh` (crontab 04:23) aplica a MESMA política antes de rodar — sem `enabled:true`/`QA_MESH_SCHEDULER_ENABLED=true`, ou com `QA_MESH_SCHEDULER_DISABLED=true`, o smoke é pulado (SKIP).
+- Regressão: `qa-mesh/__tests__/scheduler.test.js` (opt-in default-off + kill-switch).
 
 ## AI as journey owner (2026-08-12)
 
