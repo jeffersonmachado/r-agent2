@@ -4,7 +4,7 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Dialog } from '../components/Dialog';
-import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays, listRpaExecutionArtifacts, downloadRpaExecutionArtifact } from '../api/flows';
+import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays, listRpaExecutionArtifacts, downloadRpaExecutionArtifact, getRpaExecutionArtifactJson } from '../api/flows';
 import logger from '../utils/logger';
 import { ReplayPlayer, normalizeReplaySteps, normalizeTypedEntries, normalizeReplayEvidence } from '../components/replay';
 
@@ -51,6 +51,12 @@ export function RpaReplaysPage() {
   const [replayData, setReplayData] = useState(null);
   const [loadingReplay, setLoadingReplay] = useState(false);
   const [showReplayModal, setShowReplayModal] = useState(false);
+  const [showRecordingModal, setShowRecordingModal] = useState(false);
+  const [recordingData, setRecordingData] = useState(null);
+  const [loadingRecording, setLoadingRecording] = useState(false);
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false);
+  const [screenshotUrl, setScreenshotUrl] = useState(null);
+  const [screenshotLabel, setScreenshotLabel] = useState('');
   const [replayStepByStep, setReplayStepByStep] = useState(false);
   const [currentReplayStep, setCurrentReplayStep] = useState(0);
   const [focusStepAt, setFocusStepAt] = useState(null);
@@ -278,6 +284,93 @@ export function RpaReplaysPage() {
     } catch (err) {
       logger.error('[RpaReplaysPage] Erro ao baixar artefato:', err);
       showToast(`Erro ao baixar ${kind}`, 'error', 5000);
+    }
+  };
+
+  // --- Visualização inline de artefatos persistidos no banco ---
+
+  const formatRecordingText = (recording) => {
+    if (!recording) return '';
+    const lines = [];
+    const name = recording.name || recording.id || '(sem nome)';
+    const journey = recording.metadata?.journey || recording.data?.journey || '';
+    const vertical = recording.metadata?.vertical || recording.data?.vertical || '';
+    const version = recording.version || '';
+    lines.push(`Roteiro: ${name}`);
+    if (recording.id) lines.push(`Recording ID: ${recording.id}`);
+    if (journey) lines.push(`Jornada: ${journey}`);
+    if (vertical) lines.push(`Vertical: ${vertical}`);
+    if (version) lines.push(`Versão: ${version}`);
+    if (recording.metadata?.purpose) {
+      lines.push('');
+      lines.push('Objetivo:');
+      lines.push(recording.metadata.purpose);
+    }
+    const steps = Array.isArray(recording.steps) ? recording.steps : [];
+    if (steps.length) {
+      lines.push('');
+      lines.push(`Passos (${steps.length}):`);
+      steps.forEach((step, i) => {
+        const type = String(step.type || step.actionType || 'action').toUpperCase();
+        const label = step.name || step.description || '(sem nome)';
+        const target = step.selector || step.url || '';
+        const value = step.value != null && step.value !== ''
+          ? `  [valor: ${typeof step.value === 'string' ? step.value : JSON.stringify(step.value)}]`
+          : '';
+        const critical = step.critical ? '  [crítico]' : '';
+        lines.push(`${String(i + 1).padStart(2, '0')}. ${type} — ${label}${target ? ` → ${target}` : ''}${value}${critical}`);
+      });
+    }
+    return lines.join('\n');
+  };
+
+  const handleViewRecording = async (executionId) => {
+    setShowRecordingModal(true);
+    setRecordingData(null);
+    setLoadingRecording(true);
+    try {
+      const data = await getRpaExecutionArtifactJson(executionId, 'recording');
+      setRecordingData(data);
+    } catch (err) {
+      logger.error('[RpaReplaysPage] Erro ao carregar roteiro da execução:', err);
+      showToast('Erro ao carregar roteiro da execução', 'error', 4000);
+    } finally {
+      setLoadingRecording(false);
+    }
+  };
+
+  const handleViewExecutionReplay = async (executionId, recordingId) => {
+    setSelectedReplay(recordingId || executionId);
+    setShowReplayModal(true);
+    setLoadingReplay(true);
+    setReplayData(null);
+    setReplayStepByStep(false);
+    setCurrentReplayStep(0);
+    setIsPlaying(false);
+    setShowOnlyFailures(false);
+    setIsFullscreen(false);
+    setReplayEvidenceTab('states');
+    try {
+      const data = await getRpaExecutionArtifactJson(executionId, 'replay');
+      setReplayData(data);
+    } catch (err) {
+      logger.error('[RpaReplaysPage] Erro ao carregar replay da execução:', err);
+      showToast('Erro ao carregar replay da execução', 'error', 4000);
+    } finally {
+      setLoadingReplay(false);
+    }
+  };
+
+  const handleViewScreenshot = async (executionId, index) => {
+    try {
+      const { blob } = await downloadRpaExecutionArtifact(executionId, 'screenshot', index);
+      const url = URL.createObjectURL(blob);
+      setScreenshotUrl(url);
+      setScreenshotLabel(`${executionId} — ${Number(index) + 1}`);
+      setShowScreenshotModal(true);
+    } catch (err) {
+      logger.error('[RpaReplaysPage] Erro ao carregar screenshot:', err);
+      showToast('Erro ao carregar screenshot', 'error', 4000);
     }
   };
 
@@ -1129,7 +1222,7 @@ export function RpaReplaysPage() {
                         <td className="py-2 pr-4">
                           <div className="flex flex-wrap items-center gap-2">
                             {item.hasRecording && (
-                              <Button size="sm" variant="default" onClick={() => downloadArtifact(item.executionId, 'recording')}>
+                              <Button size="sm" variant="default" onClick={() => handleViewRecording(item.executionId)}>
                                 📜 Roteiro
                               </Button>
                             )}
@@ -1139,12 +1232,12 @@ export function RpaReplaysPage() {
                               </Button>
                             )}
                             {item.hasReplay && (
-                              <Button size="sm" variant="default" onClick={() => downloadArtifact(item.executionId, 'replay')}>
+                              <Button size="sm" variant="default" onClick={() => handleViewExecutionReplay(item.executionId, item.recordingId)}>
                                 ▶️ Replay
                               </Button>
                             )}
                             {Array.from({ length: Number(item.screenshots || 0) }).map((_, idx) => (
-                              <Button key={idx} size="sm" variant="default" onClick={() => downloadArtifact(item.executionId, 'screenshot', idx)}>
+                              <Button key={idx} size="sm" variant="default" onClick={() => handleViewScreenshot(item.executionId, idx)}>
                                 📸 {idx + 1}
                               </Button>
                             ))}
@@ -3071,6 +3164,53 @@ export function RpaReplaysPage() {
               {deletingSelected ? 'Removendo...' : 'Remover Selecionados'}
             </Button>
           </div>
+        </div>
+      </Dialog>
+
+      {/* Modal de visualização do roteiro (texto formatado) */}
+      <Dialog
+        isOpen={showRecordingModal}
+        onClose={() => {
+          setShowRecordingModal(false);
+          setRecordingData(null);
+        }}
+        title={`📜 Roteiro${recordingData?.id ? `: ${recordingData.id}` : ''}`}
+        size="xl"
+      >
+        <div className="flex-1 min-h-0 overflow-y-auto" style={{ minHeight: '420px' }}>
+          {loadingRecording ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-primary mx-auto mb-2"></div>
+              <p className="text-text-secondary">Carregando roteiro...</p>
+            </div>
+          ) : recordingData ? (
+            <pre className="whitespace-pre-wrap font-mono text-sm text-text-primary bg-bg-primary rounded-lg border border-border-default p-4 leading-relaxed">
+              {formatRecordingText(recordingData)}
+            </pre>
+          ) : (
+            <p className="text-text-secondary py-8 text-center">Roteiro não disponível.</p>
+          )}
+        </div>
+      </Dialog>
+
+      {/* Modal de visualização de screenshot */}
+      <Dialog
+        isOpen={showScreenshotModal}
+        onClose={() => {
+          setShowScreenshotModal(false);
+          if (screenshotUrl) URL.revokeObjectURL(screenshotUrl);
+          setScreenshotUrl(null);
+          setScreenshotLabel('');
+        }}
+        title={`📸 Screenshot ${screenshotLabel}`}
+        size="xl"
+      >
+        <div className="flex-1 min-h-0 overflow-auto p-2 bg-bg-primary rounded-lg" style={{ minHeight: '420px' }}>
+          {screenshotUrl ? (
+            <img src={screenshotUrl} alt={screenshotLabel} className="mx-auto max-w-full h-auto rounded border border-border-default" />
+          ) : (
+            <p className="text-text-secondary py-8 text-center">Screenshot não disponível.</p>
+          )}
         </div>
       </Dialog>
 

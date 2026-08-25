@@ -285,6 +285,23 @@ export async function downloadRpaExecutionArtifact(executionId, kind, index = nu
 }
 
 /**
+ * Busca um artefato JSON de execução RPA persistido (roteiro ou replay) para
+ * visualização inline, sem forçar download.
+ *
+ * @param {string} executionId
+ * @param {'recording'|'replay'} kind
+ * @returns {Promise<any>}
+ */
+export function getRpaExecutionArtifactJson(executionId, kind) {
+  if (!executionId) {
+    return Promise.reject(new Error('getRpaExecutionArtifactJson: executionId é obrigatório'));
+  }
+  return fetchJson(`/api/test-executions/${encodeURIComponent(executionId)}/artifact/${encodeURIComponent(kind)}`, {
+    method: 'GET',
+  });
+}
+
+/**
  * Remove um fluxo.
  *
  * @param {string} flowId
