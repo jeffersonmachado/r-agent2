@@ -84,6 +84,12 @@ function normalizeAction(action, index) {
 }
 
 function normalizeScreen(screen, index) {
+  const rawShot = screen.screenshot;
+  const screenshot = rawShot
+    ? (typeof rawShot === 'string' && /^(data:image\/|blob:|https?:\/\/)/i.test(rawShot)
+      ? rawShot
+      : `data:image/png;base64,${rawShot}`)
+    : null;
   return {
     id: screen.screenId || `screen-${index + 1}`,
     index: index + 1,
@@ -96,7 +102,7 @@ function normalizeScreen(screen, index) {
     description: screen.signatureData?.url || screen.signatureData?.title || null,
     screenshotBefore: null,
     screenshotAfter: null,
-    screenshot: screen.screenshot ? `data:image/png;base64,${screen.screenshot}` : null,
+    screenshot,
     isError: false,
   };
 }

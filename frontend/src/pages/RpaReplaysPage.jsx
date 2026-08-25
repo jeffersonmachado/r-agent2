@@ -352,7 +352,7 @@ export function RpaReplaysPage() {
     setReplayEvidenceTab('states');
     try {
       const data = await getRpaExecutionArtifactJson(executionId, 'replay');
-      const resolved = await resolveExecutionScreenshots(data, executionId);
+      const resolved = await unifyExecutionReplay(data, executionId);
       setReplayData(resolved);
     } catch (err) {
       logger.error('[RpaReplaysPage] Erro ao carregar replay da execução:', err);
@@ -376,29 +376,37 @@ export function RpaReplaysPage() {
   };
 
   /**
-   * Resolve os paths absolutos de screenshots (screenshotBefore/After) de um
-   * replay persistido no banco para objectURLs servíveis, baixando os binários
-   * reais via API. Evita <img> quebrado no ReplayPlayer quando o replay aponta
-   * para paths do filesystem que não são URLs.
+   * Unifica o replay persistido no banco para o padrão único de exibição:
+   * - resolve screenshotBefore/After (paths absolutos) para objectURLs;
+   * - gera `screens` (telas) no modelo do .json, uma por screenshot, para que
+   *   as telas apareçam como itens na lista de passos.
    */
-  const resolveExecutionScreenshots = async (data, executionId) => {
+  const unifyExecutionReplay = async (data, executionId) => {
     const shots = Array.isArray(data?.screenshots) ? data.screenshots : [];
-    if (!shots.length || !Array.isArray(data?.steps)) return data;
+    const steps = Array.isArray(data?.steps) ? data.steps : [];
+    if (!shots.length || !steps.length) return data;
 
     const pathToIndex = new Map();
     shots.forEach((p, i) => { if (typeof p === 'string') pathToIndex.set(p, i); });
 
-    const needed = new Set();
-    for (const step of data.steps) {
+    // Associa cada screenshot (before/after) ao seu passo pai (nome + timestamp).
+    const metaForIndex = new Map();
+    for (const step of steps) {
       for (const key of ['screenshotBefore', 'screenshotAfter']) {
         const v = step?.[key];
-        if (typeof v === 'string' && pathToIndex.has(v)) needed.add(pathToIndex.get(v));
+        if (typeof v === 'string' && pathToIndex.has(v) && !metaForIndex.has(pathToIndex.get(v))) {
+          metaForIndex.set(pathToIndex.get(v), {
+            stepName: step.name || step.action || null,
+            timestamp: step.timestamp || step.startedAt || null,
+            kind: key === 'screenshotBefore' ? 'Antes' : 'Depois',
+          });
+        }
       }
     }
-    if (!needed.size) return data;
+    if (!metaForIndex.size) return data;
 
     const urlByIndex = new Map();
-    await Promise.all(Array.from(needed).map(async (idx) => {
+    await Promise.all(Array.from(metaForIndex.keys()).map(async (idx) => {
       try {
         const { blob } = await downloadRpaExecutionArtifact(executionId, 'screenshot', idx);
         urlByIndex.set(idx, URL.createObjectURL(blob));
@@ -414,12 +422,24 @@ export function RpaReplaysPage() {
       return v;
     };
 
-    return {
-      ...data,
-      steps: data.steps.map((step) => (step && typeof step === 'object'
-        ? { ...step, screenshotBefore: resolve(step.screenshotBefore), screenshotAfter: resolve(step.screenshotAfter) }
-        : step)),
-    };
+    const mappedSteps = steps.map((step) => (step && typeof step === 'object'
+      ? { ...step, screenshotBefore: resolve(step.screenshotBefore), screenshotAfter: resolve(step.screenshotAfter) }
+      : step));
+
+    // Telas no modelo do .json: cada screenshot vira uma tela na lista de passos.
+    const screens = [];
+    for (const [idx, meta] of metaForIndex.entries()) {
+      const url = urlByIndex.get(idx);
+      if (!url) continue;
+      screens.push({
+        screenId: `screen-${idx + 1}`,
+        step: `${meta.kind}: ${meta.stepName || 'passo'}`,
+        timestamp: meta.timestamp,
+        screenshot: url,
+      });
+    }
+
+    return { ...data, steps: mappedSteps, screens };
   };
 
   const handleViewReplay = async (filename) => {
@@ -630,6 +650,16 @@ export function RpaReplaysPage() {
     };
   }, [replayData]);
   const normalizedReplaySteps = useMemo(() => normalizeReplaySteps(replayData), [replayData]);
+  // Padrão único de exibição: título "Passo N"; o nome/step original vira descrição.
+  const displayReplaySteps = useMemo(() => normalizedReplaySteps.map((s, i) => {
+    const title = `Passo ${i + 1}`;
+    const name = s.title && s.title !== title ? s.title : null;
+    return {
+      ...s,
+      title,
+      description: name ? (s.description ? `${name} — ${s.description}` : name) : s.description,
+    };
+  }), [normalizedReplaySteps]);
   const normalizedReplayTyped = useMemo(() => normalizeTypedEntries(replayData), [replayData]);
   const normalizedReplayEvidence = useMemo(
     () => normalizeReplayEvidence(replayData, normalizedReplaySteps),
@@ -2670,10 +2700,10 @@ export function RpaReplaysPage() {
               )}
 
               {/* Modo Step-by-Step */}
-              {replayStepByStep && normalizedReplaySteps.length > 0 && (
+              {replayStepByStep && displayReplaySteps.length > 0 && (
                 <div className="mt-4">
                   <ReplayPlayer
-                    steps={normalizedReplaySteps}
+                    steps={displayReplaySteps}
                     typedEntries={normalizedReplayTyped}
                     evidence={normalizedReplayEvidence}
                     onStepChange={handlePlayerStepChange}
@@ -2894,7 +2924,7 @@ export function RpaReplaysPage() {
                                   <div className="flex items-center gap-1 mb-1">
                                     <span className="text-xs">🔧</span>
                                     <div className="font-mono text-text-primary font-semibold truncate">
-                                      {action.type}
+                                      Passo {stepIndex + 1}: {action.type}
                                     </div>
                                   </div>
                                   {action.selector && (
@@ -2966,7 +2996,7 @@ export function RpaReplaysPage() {
                                   <div className="flex items-center gap-1 mb-1">
                                     <span className="text-xs">📸</span>
                                     <div className="text-text-primary font-semibold">
-                                      Tela
+                                      Passo {stepIndex + 1}: Tela
                                     </div>
                                   </div>
                                   {screen.step && (
