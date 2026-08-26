@@ -124,7 +124,7 @@ const CrmDashboardPage = lazyPage(() => import('./pages/crm/CrmDashboardPage'), 
 const DemoPage = React.lazy(() => import('./pages/DemoPage'));
 const DashboardV2 = lazyPage(() => import('./pages/DashboardV2'), 'DashboardV2');
 import { UserMenu } from './components/UserMenu';
-import { TenantGate } from './components/TenantGate';
+import { TenantGate, shouldBlockPageForTenant } from './components/TenantGate';
 import { PwaUpdateManager } from './components/PwaUpdateManager';
 import { BundleVersionGuard } from './components/BundleVersionGuard';
 import { PrimaryRail } from './components/PrimaryRail';
@@ -1109,13 +1109,18 @@ function AppWithAuth() {
     </Suspense>
   );
 
+  // Requisito: página só abre com agente + tenant. Quando o perfil permite
+  // escolher o tenant (super-admin sem tenant efetivo), o shell pode existir,
+  // mas o CONTEÚDO da página fica bloqueado até o TenantGate fechar.
+  const tenantGateActive = shouldBlockPageForTenant({ isAuthenticated, agent });
+
   // Se chegou aqui, está autenticado OU é rota pública
   if (!newNavigationEnabled) {
     return (
       <div className="support-content-wrapper rap-legacy-shell">
         <UserMenu tenantLabel={subNavTenantLabel} verticalLabels={subNavVerticalLabels} />
         <TenantGate />
-        {pageContent}
+        {tenantGateActive ? null : pageContent}
         <AskAiWidget />
       </div>
     );
@@ -1140,7 +1145,7 @@ function AppWithAuth() {
           <CommandPalette agent={agent} />
           <TutorDock />
           <TenantGate />
-          {pageContent}
+          {tenantGateActive ? null : pageContent}
         </div>
       </div>
 

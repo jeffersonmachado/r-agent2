@@ -9,27 +9,36 @@ import { TenantSelectorModal } from './TenantSelectorModal';
  *   bloqueia a UI e exige seleção explícita de um tenant.
  *
  * Motivação: após restart do backend, /auth/me pode voltar com tenantId="system".
+ *
+ * A função `shouldBlockPageForTenant` é a fonte única da decisão: quando true,
+ * o shell pode existir, mas o CONTEÚDO da página não deve ser renderizado até
+ * que o tenant seja escolhido (requisito: página só abre com agente + tenant).
  */
+export function shouldBlockPageForTenant({ isAuthenticated, agent }) {
+  if (!isAuthenticated) return false;
+  if (!agent) return false;
+  const isSuperAdmin = checkIsSuperAdmin(agent);
+  if (!isSuperAdmin) return false;
+  // O gate só deve abrir quando ainda não existe tenant efetivo confirmado.
+  // Isso permite que o super-admin opere no tenant "system" caso o selecione explicitamente.
+  try {
+    const effective = localStorage.getItem('auth_effective_tenant_id');
+    if (effective && typeof effective === 'string' && effective.trim()) {
+      return false;
+    }
+  } catch {
+    // se localStorage falhar, cai na regra antiga por segurança
+  }
+  return !agent.tenantId || agent.tenantId === 'system';
+}
+
 export function TenantGate() {
   const { isAuthenticated, agent, updateAgent } = useAuth();
 
-  const shouldShowTenantGate = useMemo(() => {
-    if (!isAuthenticated) return false;
-    if (!agent) return false;
-    const isSuperAdmin = checkIsSuperAdmin(agent);
-    if (!isSuperAdmin) return false;
-    // O gate só deve abrir quando ainda não existe tenant efetivo confirmado.
-    // Isso permite que o super-admin opere no tenant "system" caso o selecione explicitamente.
-    try {
-      const effective = localStorage.getItem('auth_effective_tenant_id');
-      if (effective && typeof effective === 'string' && effective.trim()) {
-        return false;
-      }
-    } catch {
-      // se localStorage falhar, cai na regra antiga por segurança
-    }
-    return !agent.tenantId || agent.tenantId === 'system';
-  }, [isAuthenticated, agent]);
+  const shouldShowTenantGate = useMemo(
+    () => shouldBlockPageForTenant({ isAuthenticated, agent }),
+    [isAuthenticated, agent]
+  );
 
   if (!shouldShowTenantGate) return null;
 
