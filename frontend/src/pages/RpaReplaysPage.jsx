@@ -77,7 +77,7 @@ export function RpaReplaysPage() {
   const [replayInfoCollapsed, setReplayInfoCollapsed] = useState(true);
   const [replayRoteiro, setReplayRoteiro] = useState(null);
   const [replayRoteiroLoading, setReplayRoteiroLoading] = useState(false);
-  const [replayRoteiroCollapsed, setReplayRoteiroCollapsed] = useState(false);
+  const [replayRoteiroCollapsed, setReplayRoteiroCollapsed] = useState(true);
   const [replayEvidenceTab, setReplayEvidenceTab] = useState('states');
   const [trainingMode, setTrainingMode] = useState(false);
   
@@ -292,6 +292,32 @@ export function RpaReplaysPage() {
 
   // --- Visualização inline de artefatos persistidos no banco ---
 
+  const deriveRecordingObjective = (recording) => {
+    if (!recording) return '';
+    const steps = Array.isArray(recording.steps) ? recording.steps : [];
+    if (!steps.length) return '';
+    const targetUrl = steps.find((s) => s.type === 'navigate')?.url || '';
+    const typeCounts = {};
+    steps.forEach((s) => {
+      const t = String(s.type || 'action').toLowerCase();
+      typeCounts[t] = (typeCounts[t] || 0) + 1;
+    });
+    const typeSummary = Object.entries(typeCounts)
+      .map(([t, n]) => (n > 1 ? `${t} ×${n}` : t))
+      .join(', ');
+    const checks = steps
+      .map((s) => {
+        if (s.type === 'assert' || s.action === 'assert') {
+          return s.textContains || s.text || s.expected || s.value;
+        }
+        return null;
+      })
+      .filter(Boolean)
+      .map((v) => `"${v}"`);
+    const checkSummary = checks.length ? ` — verifica ${checks.join(', ')}` : '';
+    return `Executar ${steps.length} passos de UI (${typeSummary})${targetUrl ? ` contra ${targetUrl}` : ''}${checkSummary}.`;
+  };
+
   const formatRecordingText = (recording) => {
     if (!recording) return '';
     const lines = [];
@@ -304,10 +330,11 @@ export function RpaReplaysPage() {
     if (journey) lines.push(`Jornada: ${journey}`);
     if (vertical) lines.push(`Vertical: ${vertical}`);
     if (version) lines.push(`Versão: ${version}`);
-    if (recording.metadata?.purpose) {
+    const objective = recording.metadata?.purpose || recording.description || deriveRecordingObjective(recording);
+    if (objective) {
       lines.push('');
       lines.push('Objetivo:');
-      lines.push(recording.metadata.purpose);
+      lines.push(objective);
     }
     const steps = Array.isArray(recording.steps) ? recording.steps : [];
     if (steps.length) {
