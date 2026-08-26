@@ -94,6 +94,7 @@ export function RpaReplaysPage() {
   const [sortBy, setSortBy] = useState('date'); // 'date', 'name', 'size', 'duration'
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc', 'desc'
   const [displayMode, setDisplayMode] = useState(() => localStorage.getItem('rpaReplaysDisplayMode') || 'card');
+  const [replayKind, setReplayKind] = useState('ui'); // 'ui' (RPA/UI) | 'api' (QA Mesh resumo)
   const [selectedFilenames, setSelectedFilenames] = useState([]);
   const [deletingSelected, setDeletingSelected] = useState(false);
   const [showDeleteSelectedConfirm, setShowDeleteSelectedConfirm] = useState(false);
@@ -167,7 +168,7 @@ export function RpaReplaysPage() {
   // Carrega lista de replays
   useEffect(() => {
     loadReplays();
-  }, [currentPage, pageSize, searchText, filterResult, filterDateRange, filterSource, filterWaveId, filterJourneyId, filterScenarioId, filterSeedId, filterExecutionId, sortBy, sortOrder]);
+  }, [currentPage, pageSize, searchText, filterResult, filterDateRange, filterSource, filterWaveId, filterJourneyId, filterScenarioId, filterSeedId, filterExecutionId, sortBy, sortOrder, replayKind]);
 
   const loadReplays = async (options = {}) => {
     const requestedPage = options.page || currentPage;
@@ -197,6 +198,7 @@ export function RpaReplaysPage() {
         scenarioId: filterScenarioId.trim(),
         seedId: filterSeedId.trim(),
         executionId: filterExecutionId.trim(),
+        kind: replayKind,
         sortBy,
         sortOrder,
       });
@@ -1132,6 +1134,12 @@ export function RpaReplaysPage() {
     setSortOrder(column === 'name' ? 'asc' : 'desc');
   };
 
+  const switchKind = (kind) => {
+    if (kind === replayKind) return;
+    setReplayKind(kind);
+    setCurrentPage(1);
+  };
+
   const toggleReplaySelection = (filename) => {
     setSelectedFilenames((prev) => {
       if (prev.includes(filename)) return prev.filter((item) => item !== filename);
@@ -1239,6 +1247,32 @@ export function RpaReplaysPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 rounded border border-border-default bg-bg-primary p-1">
+              <button
+                type="button"
+                onClick={() => switchKind('ui')}
+                className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                  replayKind === 'ui'
+                    ? 'bg-accent-primary text-white'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
+                }`}
+                title="Replays de interface/execução RPA (browser)"
+              >
+                🖥️ Replays RPA
+              </button>
+              <button
+                type="button"
+                onClick={() => switchKind('api')}
+                className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                  replayKind === 'api'
+                    ? 'bg-accent-primary text-white'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
+                }`}
+                title="Resumos de execução do QA Mesh (adapter API)"
+              >
+                🔌 QA Mesh (API)
+              </button>
+            </div>
             <div className="flex items-center gap-2 rounded border border-border-default bg-bg-primary p-1">
               <button
                 type="button"

@@ -202,6 +202,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
       const scenarioId = req.query.scenarioId;
       const seedId = req.query.seedId;
       const executionId = req.query.executionId;
+      const kind = req.query.kind;
       const replayList = deps.listReplayFiles({
         limit,
         offset,
@@ -216,6 +217,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
         scenarioId,
         seedId,
         executionId,
+        kind,
         tenantId,
       });
       const payload = {
@@ -238,6 +240,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
           scenarioId: scenarioId || '',
           seedId: seedId || '',
           executionId: executionId || '',
+          kind: kind || '',
         },
       };
       deps.sendJson(res, 200, payload);

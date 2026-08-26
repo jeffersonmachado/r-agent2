@@ -213,6 +213,7 @@ describe('test-executions replay routes', () => {
           scenarioId: 'scenario-01',
           seedId: 'seed-01',
           executionId: 'exec-01',
+          kind: '',
         },
       })
     );

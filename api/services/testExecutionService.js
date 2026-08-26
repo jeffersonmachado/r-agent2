@@ -230,6 +230,17 @@ function matchesReplayFilters(replay, filters) {
     if (normalizeText(replay.source) !== filters.source) return false;
   }
 
+  // Separação por natureza do replay:
+  // - api: resumos de QA Mesh (adapter API) — source qa|hybrid, sem UI.
+  // - ui: replays de interface/execução RPA — todo o resto.
+  if (filters.kind === 'api') {
+    const src = normalizeText(replay.source);
+    if (src !== 'qa' && src !== 'hybrid') return false;
+  } else if (filters.kind === 'ui') {
+    const src = normalizeText(replay.source);
+    if (src === 'qa' || src === 'hybrid') return false;
+  }
+
   if (filters.waveId) {
     if (normalizeText(replay.waveId) !== filters.waveId) return false;
   }
@@ -1005,6 +1016,7 @@ function listReplayFiles({
   scenarioId = '',
   seedId = '',
   executionId = '',
+  kind = '',
   tenantId = 'system',
 } = {}) {
   const scopedTenantId = normalizeTenantKey(tenantId);
@@ -1019,6 +1031,7 @@ function listReplayFiles({
     scenarioId: normalizeText(scenarioId).trim(),
     seedId: normalizeText(seedId).trim(),
     executionId: normalizeText(executionId).trim(),
+    kind: normalizeText(kind).trim(),
     tenantId: scopedTenantId,
   };
   const safeSortBy = String(sortBy || 'date');

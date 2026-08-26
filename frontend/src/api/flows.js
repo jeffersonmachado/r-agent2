@@ -176,6 +176,7 @@ export function listRpaReplays(options = {}) {
   if (options.scenarioId) params.set('scenarioId', String(options.scenarioId));
   if (options.seedId) params.set('seedId', String(options.seedId));
   if (options.executionId) params.set('executionId', String(options.executionId));
+  if (options.kind) params.set('kind', String(options.kind));
 
   const suffix = params.toString();
   // Use unified API endpoint /api/test-executions/replays

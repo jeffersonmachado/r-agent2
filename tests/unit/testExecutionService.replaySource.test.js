@@ -113,6 +113,36 @@ describe('testExecutionService.listReplayFiles — filtro source de replays QA W
     const ids = result.files.map((file) => file.replayId);
     expect(ids).not.toContain('qa_wave_replay_catalog_ghi');
   });
+
+  test('filtro kind=api retorna só resumos QA Mesh (source qa/hybrid); kind=ui exclui', () => {
+    writeReplay('mesh_api_summary.json', {
+      replayId: 'mesh_api_summary',
+      type: 'qa_mesh_replay_summary',
+      source: 'qa',
+      status: 'success',
+    });
+    writeReplay('mesh_hybrid_summary.json', {
+      replayId: 'mesh_hybrid_summary',
+      type: 'qa_mesh_replay_summary',
+      source: 'hybrid',
+      status: 'success',
+    });
+    writeReplay('rpa_ui_replay.json', {
+      replayId: 'rpa_ui_replay',
+      status: 'success',
+    });
+
+    const api = listReplayFiles({ kind: 'api' });
+    const apiIds = api.files.map((file) => file.replayId);
+    expect(apiIds).toEqual(expect.arrayContaining(['mesh_api_summary', 'mesh_hybrid_summary']));
+    expect(apiIds).not.toContain('rpa_ui_replay');
+
+    const ui = listReplayFiles({ kind: 'ui' });
+    const uiIds = ui.files.map((file) => file.replayId);
+    expect(uiIds).toContain('rpa_ui_replay');
+    expect(uiIds).not.toContain('mesh_api_summary');
+    expect(uiIds).not.toContain('mesh_hybrid_summary');
+  });
 });
 
 describe('qaWavesExecutionService.writeReplayArtifact — origem de produto no artefato', () => {
