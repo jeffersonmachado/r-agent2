@@ -43,11 +43,8 @@ async function handleRpaExecutionRoutes(ctx) {
       const config = body.config || {};
       const data = body.data || {};
       const token = req.token || null;
-      const actor = req.agent
-        ? { agentId: req.agent.id || null, username: req.agent.username || null, role: req.agent.role || null }
-        : null;
 
-      const result = await executeRecording(recordingId, config, data, token, tenantId, actor);
+      const result = await executeRecording(recordingId, config, data, token, tenantId, 'api');
       sendJson(res, 200, result);
     } catch (error) {
       logger.error('Erro ao executar RPA:', error);

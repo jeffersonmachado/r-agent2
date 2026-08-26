@@ -342,8 +342,6 @@ function createTestExecutionsRoutes({ buildDeps }) {
         authToken: req.token || null,
         tenantId,
         agentId: auth.agent?.id || null,
-        username: auth.agent?.username || null,
-        role: auth.agent?.role || null,
       });
       deps.sendJson(res, 202, execution);
     } catch (error) {

@@ -109,25 +109,24 @@ describe('rpaArtifactPersistence', () => {
     expect(await getReplay('rpa-exec-0002', 'outro-tenant')).toBeNull();
   });
 
-  it('registra o autor (actor) no replay e no manifesto de execução', async () => {
-    const actor = { agentId: 'agent-1', username: 'systemadmin', role: 'super_admin' };
+  it('registra a origem (origin) no replay e no manifesto de execução', async () => {
     const results = { success: true, steps: [], errors: [], screenshots: [] };
 
     await persistExecutionArtifacts({
-      recording: { id: 'rec-actor', steps: [] },
-      recordingId: 'rec-actor',
-      executionId: 'rpa-exec-actor',
+      recording: { id: 'rec-origin', steps: [] },
+      recordingId: 'rec-origin',
+      executionId: 'rpa-exec-origin',
       results,
       tenantKey: 'system',
       status: 'completed',
-      actor,
+      origin: 'mesh',
     });
 
-    const replay = await getReplay('rpa-exec-actor');
-    expect(replay.actor).toEqual(actor);
+    const replay = await getReplay('rpa-exec-origin');
+    expect(replay.origin).toBe('mesh');
 
-    const manifest = await getExecutionManifest('rpa-exec-actor');
-    expect(manifest.actor).toEqual(actor);
+    const manifest = await getExecutionManifest('rpa-exec-origin');
+    expect(manifest.origin).toBe('mesh');
   });
 
   it('rejeita replay adulterado mesmo quando o hash do store foi recalculado', async () => {

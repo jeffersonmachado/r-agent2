@@ -166,6 +166,7 @@ async function executeScenario(scenario, adapterContext = {}) {
       scenario.data || {},
       null,
       tenantId,
+      'mesh',
     );
 
     const result = await waitForExecution(start.executionId, effectiveWaitTimeout, { ...adapterContext, tenantId });

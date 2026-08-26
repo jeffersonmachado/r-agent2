@@ -150,7 +150,7 @@ async function persistExecutionArtifacts({
   startedAt = null,
   finishedAt = null,
   status = null,
-  actor = null,
+  origin = null,
 } = {}) {
   const outcome = {
     backend: null,
@@ -184,7 +184,7 @@ async function persistExecutionArtifacts({
     // 2. Replay/resultado — sempre persistido se disponível.
     let signedReplay = null;
     if (results != null) {
-      const safeResults = redactDeep({ ...results, tenantId: scopedTenantKey, executionId: safeExecutionId, actor: actor || null });
+      const safeResults = redactDeep({ ...results, tenantId: scopedTenantKey, executionId: safeExecutionId, origin: origin || null });
       const governance = {
         goNoGo: safeResults.success === true ? 'GO' : 'NO_GO',
         isOperational: safeResults.success === true,
@@ -228,7 +228,7 @@ async function persistExecutionArtifacts({
       finishedAt: finishedAt || null,
       persistedAt: new Date().toISOString(),
       tenantKey: scopedTenantKey,
-      actor: actor || null,
+      origin: origin || null,
     };
     const signedManifest = signReplayArtifact(manifest, {
       governance: {

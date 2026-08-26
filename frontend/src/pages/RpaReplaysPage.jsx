@@ -1858,6 +1858,14 @@ export function RpaReplaysPage() {
                           </span>
                         </div>
 
+                        {(replay.origin || replay.source === 'qa' || replay.source === 'hybrid') && (
+                          <div className="mt-2">
+                            <span className="inline-flex items-center rounded border border-border-default bg-bg-primary px-2 py-0.5 text-xs text-text-secondary">
+                              📍 Origem: {replay.origin || 'mesh'}
+                            </span>
+                          </div>
+                        )}
+
                         {(replay.description || replay.criticality || replay.adapter) && (
                           <div className="mt-2 rounded border border-border-default bg-bg-primary p-2 space-y-1.5">
                             {replay.description && (

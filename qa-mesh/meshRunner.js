@@ -1653,6 +1653,7 @@ function buildSyntheticReplay(scenario, result, baseDir) {
     type: 'qa_mesh_replay_summary',
     summaryType,
     source: scenario.source,
+    origin: 'mesh',
     command: scenario.command ? [scenario.command, ...(scenario.commandArgs || [])] : null,
     recordingId: scenario.rpaRecordingId || null,
     description: scenario.description || null,
