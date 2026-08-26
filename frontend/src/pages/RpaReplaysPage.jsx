@@ -686,6 +686,32 @@ export function RpaReplaysPage() {
       : [];
     return fallback;
   }, [replayData]);
+  const qaMeshSummary = useMemo(() => {
+    if (!replayData) return null;
+    const isSummary = replayData.type === 'qa_mesh_replay_summary'
+      || replayData.summaryType === 'api_replay_summary'
+      || replayData.summaryType === 'hybrid_replay_summary';
+    if (!isSummary) return null;
+    const flowLabel = replayData.flow || replayData.training?.businessFlow || replayData.scenarioId || '—';
+    const domainLabel = replayData.training?.domain || '';
+    const commandText = Array.isArray(replayData.command)
+      ? replayData.command.join(' ')
+      : (typeof replayData.command === 'string' ? replayData.command : '');
+    const assertions = Array.isArray(replayData.assertions) ? replayData.assertions : [];
+    const errors = Array.isArray(replayData.errors) ? replayData.errors : [];
+    const adapterLabel = (replayData.summaryType === 'hybrid_replay_summary' || replayData.source === 'hybrid')
+      ? 'hybrid'
+      : 'api';
+    return {
+      flowLabel,
+      domainLabel,
+      commandText,
+      assertions,
+      errors,
+      adapterLabel,
+      passed: errors.length === 0,
+    };
+  }, [replayData]);
   const mutationDiffEntries = useMemo(() => {
     const before = replayData?.beforeSnapshot || {};
     const after = replayData?.afterSnapshot || {};
@@ -2282,6 +2308,76 @@ export function RpaReplaysPage() {
                   </div>
                 )}
               </div>
+
+              {/* Resumo do QA Mesh (adapter API) — sem telas/ações por design */}
+              {qaMeshSummary && (
+                <div className="bg-bg-secondary rounded-lg border border-border-default">
+                  <div className="flex items-center justify-between p-4 border-b border-border-default">
+                    <div className="text-sm font-semibold text-text-primary">📊 Resumo do QA Mesh</div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-bg-tertiary border border-border-default text-text-secondary">
+                      🔌 Adapter: {qaMeshSummary.adapterLabel}
+                    </span>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <span className="text-text-tertiary text-xs block mb-1">Cenário validado</span>
+                      <p className="text-text-primary text-sm font-mono break-all">
+                        {qaMeshSummary.flowLabel}
+                        {replayData.scenarioId ? ` (${replayData.scenarioId})` : ''}
+                      </p>
+                    </div>
+                    {qaMeshSummary.domainLabel && (
+                      <div>
+                        <span className="text-text-tertiary text-xs block mb-1">Domínio</span>
+                        <p className="text-text-primary text-xs">{qaMeshSummary.domainLabel}</p>
+                      </div>
+                    )}
+                    {qaMeshSummary.commandText && (
+                      <div>
+                        <span className="text-text-tertiary text-xs block mb-1">Comando executado</span>
+                        <pre className="text-xs font-mono bg-bg-primary border border-border-default rounded p-2 whitespace-pre-wrap break-all text-text-primary">
+                          {qaMeshSummary.commandText}
+                        </pre>
+                      </div>
+                    )}
+                    {qaMeshSummary.assertions.length > 0 && (
+                      <div>
+                        <span className="text-text-tertiary text-xs block mb-1">Asserções</span>
+                        <ul className="space-y-1">
+                          {qaMeshSummary.assertions.map((assertion, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs">
+                              <span className={qaMeshSummary.passed ? 'text-status-success shrink-0' : 'text-status-error shrink-0'}>
+                                {qaMeshSummary.passed ? '✓' : '✗'}
+                              </span>
+                              <span className="text-text-primary break-words">{assertion}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-text-tertiary text-xs block mb-1">Resultado</span>
+                      <p className={`text-xs font-semibold ${qaMeshSummary.passed ? 'text-status-success' : 'text-status-error'}`}>
+                        {qaMeshSummary.passed
+                          ? `✓ Sem erros · ${replayData.durationMs != null ? `${replayData.durationMs}ms` : formatDuration(replayData.duration || 0)}`
+                          : `✗ ${qaMeshSummary.errors.length} erro(s)`}
+                      </p>
+                    </div>
+                    {qaMeshSummary.errors.length > 0 && (
+                      <div>
+                        <span className="text-text-tertiary text-xs block mb-1">Erros</span>
+                        <ul className="space-y-1">
+                          {qaMeshSummary.errors.map((err, i) => (
+                            <li key={i} className="text-xs text-status-error break-words">
+                              {typeof err === 'string' ? err : (err?.message || err?.error || JSON.stringify(err))}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {operationalTimeline.length > 0 && (
                 <div className="bg-bg-secondary rounded-lg border border-border-default mt-4" data-testid="replay-state-timeline">
