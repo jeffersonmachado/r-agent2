@@ -173,6 +173,13 @@ function extractJsonStringField(prefix, key) {
   }
 }
 
+function extractJsonBoolField(prefix, key) {
+  const pattern = new RegExp(`"${key}"\\s*:\\s*(true|false)`);
+  const match = pattern.exec(prefix);
+  if (!match) return null;
+  return match[1] === 'true';
+}
+
 function makeError(message, code = 'BAD_REQUEST') {
   const error = new Error(message);
   error.code = code;
@@ -1099,6 +1106,12 @@ function listReplayFiles({
         // Artefatos legados de QA Waves não gravavam `source`; deriva a origem
         // de produto a partir do tipo para que o filtro source=qa-waves os encontre.
         source: explicitSource || (replayType === 'qa_wave_rpa_replay' ? 'qa-waves' : null),
+        // Detalhe do cenário (QA Mesh): objetivo/criticidade/adapter/fallback
+        // ficam no prefixo e são expostos direto no card da listagem.
+        description: extractJsonStringField(prefix, 'description'),
+        criticality: extractJsonStringField(prefix, 'criticality'),
+        adapter: extractJsonStringField(prefix, 'adapter'),
+        fallback: extractJsonBoolField(prefix, 'fallback'),
         waveId: extractJsonStringField(prefix, 'waveId'),
         journeyId: extractJsonStringField(prefix, 'journeyId'),
         seedId: extractJsonStringField(prefix, 'seedId'),
