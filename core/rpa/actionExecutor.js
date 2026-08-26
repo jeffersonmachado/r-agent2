@@ -2210,6 +2210,12 @@ class ActionExecutor {
    */
   async executeAssert(action, data) {
     try {
+      // Evidência do contrato da asserção: preserva O QUE foi verificado
+      // (expected) e o valor observado (actual) no replay — não apenas
+      // "passou/falhou". Sem isso, o artefato fica com expected/actual null.
+      let assertExpected = null;
+      let assertActual = null;
+
       // ============================================
       // VALIDAÇÃO DE PÁGINA COMPLETA (nova funcionalidade)
       // ============================================
@@ -2276,7 +2282,14 @@ class ActionExecutor {
           };
         }
 
-        return { success: true };
+        return {
+          success: true,
+          expected: { validationMode, page: action.page },
+          actual: {
+            url: action.page.url ? this.page.url() : null,
+            title: action.page.title ? await this.page.title() : null,
+          },
+        };
       }
 
       // ============================================
@@ -2292,7 +2305,11 @@ class ActionExecutor {
             code: 'RPA_ACTION_FAILED',
           };
         }
-        return { success: true };
+        return {
+          success: true,
+          expected: { title: action.title },
+          actual: { title: actualTitle },
+        };
       }
 
       // ============================================
@@ -2361,6 +2378,8 @@ class ActionExecutor {
             error: action.message || `Elemento ${exists ? 'existe' : 'não existe'} quando esperado ${action.exists ? 'existir' : 'não existir'}`,
           };
         }
+        assertExpected = { exists: action.exists };
+        assertActual = { exists };
       }
 
       // Verifica visibilidade
@@ -2373,6 +2392,8 @@ class ActionExecutor {
             code: 'RPA_ACTION_FAILED',
           };
         }
+        assertExpected = { visible: action.visible };
+        assertActual = { visible: isVisible };
       }
 
       // Verifica texto (contém)
@@ -2397,6 +2418,12 @@ class ActionExecutor {
             code: 'RPA_ACTION_FAILED',
           };
         }
+        assertExpected = { textContains: expectedText };
+        const matchIndex = actualText.indexOf(expectedText);
+        const excerpt = matchIndex >= 0
+          ? `…${actualText.slice(Math.max(0, matchIndex - 40), matchIndex + expectedText.length + 40)}…`
+          : String(actualText || '').slice(0, 120);
+        assertActual = { text: excerpt };
       }
 
       // Verifica texto (exato) — apenas quando `textContains` não foi solicitado
@@ -2409,6 +2436,8 @@ class ActionExecutor {
             error: action.message || `Texto esperado "${expectedText}", recebido "${actualText}"`,
           };
         }
+        assertExpected = { text: expectedText };
+        assertActual = { text: String(actualText || '').slice(0, 400) };
       }
 
       // Verifica valor
@@ -2423,7 +2452,11 @@ class ActionExecutor {
           if (isInputLike) {
             const bodyText = await this.page.locator('body').textContent();
             if (bodyText && bodyText.includes(expectedValue)) {
-              return { success: true };
+              return {
+                success: true,
+                expected: { value: expectedValue },
+                actual: { bodyContains: expectedValue },
+              };
             }
           }
           return {
@@ -2431,6 +2464,8 @@ class ActionExecutor {
             error: action.message || `Valor esperado "${expectedValue}", recebido "${actualValue}"`,
           };
         }
+        assertExpected = { value: expectedValue };
+        assertActual = { value: actualValue };
       }
 
       // Verifica contagem
@@ -2442,9 +2477,15 @@ class ActionExecutor {
             error: action.message || `Contagem esperada ${action.count}, recebida ${actualCount}`,
           };
         }
+        assertExpected = { count: action.count };
+        assertActual = { count: actualCount };
       }
 
-      return { success: true };
+      return {
+        success: true,
+        expected: assertExpected,
+        actual: assertActual,
+      };
     } catch (error) {
       return { 
         success: false, 

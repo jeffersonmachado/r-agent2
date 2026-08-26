@@ -1783,16 +1783,43 @@ function pruneOldHistory({ historyDir = HISTORY_DIR, maxFiles = MAX_HISTORY_FILE
   return { removed: toRemove.length, keptCanonical: Math.min(canonical.length, maxFiles) };
 }
 
-function pruneOldEvidence() {
-  const dirs = listEntriesNewestFirst(EVIDENCE_DIR, { directories: true });
-  if (dirs.length <= MAX_EVIDENCE_DIRS) return;
-  const toRemove = dirs.slice(MAX_EVIDENCE_DIRS);
+/**
+ * Execuções canônicas (release/mesh completo) geram diretórios de evidência
+ * que são a prova de cobertura do release. A retenção cega por contagem
+ * podava o replay/evidência canônica quando o scheduler enchia a janela com
+ * runs parciais — o mesmo bug documentado em pruneOldHistory, agora para o
+ * diretório de evidência. Canônicos têm janela própria e nunca são podados
+ * por runs não-canônicos.
+ */
+function isCanonicalEvidenceDir(dirPath) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(dirPath, 'summary.json'), 'utf8'));
+    return Boolean(parsed && (parsed.isCanonicalExecution === true
+      || (parsed.summary && parsed.summary.isCanonicalExecution === true)));
+  } catch (_) {
+    return false;
+  }
+}
+
+function pruneOldEvidence({ evidenceDir = EVIDENCE_DIR, maxDirs = MAX_EVIDENCE_DIRS } = {}) {
+  const dirs = listEntriesNewestFirst(evidenceDir, { directories: true });
+  const canonical = [];
+  const nonCanonical = [];
+  for (const dir of dirs) {
+    if (isCanonicalEvidenceDir(path.join(evidenceDir, dir))) canonical.push(dir);
+    else nonCanonical.push(dir);
+  }
+  const toRemove = [
+    ...nonCanonical.slice(maxDirs),
+    ...canonical.slice(maxDirs),
+  ];
   for (const dir of toRemove) {
-    try { fs.rmSync(path.join(EVIDENCE_DIR, dir), { recursive: true, force: true }); } catch (_) { /* ignore */ }
+    try { fs.rmSync(path.join(evidenceDir, dir), { recursive: true, force: true }); } catch (_) { /* ignore */ }
   }
   if (toRemove.length > 0) {
-    console.log(`[mesh:cleanup] Removidos ${toRemove.length} diretorios de evidencia antigos (mantidos ${MAX_EVIDENCE_DIRS})`);
+    console.log(`[mesh:cleanup] Removidos ${toRemove.length} diretorios de evidencia antigos (mantidos ${maxDirs} por classe; canonicos preservados)`);
   }
+  return { removed: toRemove.length, keptCanonical: Math.min(canonical.length, maxDirs) };
 }
 
 function cleanStaleLocks() {
@@ -2551,6 +2578,7 @@ module.exports = {
   applyGovernanceIntegrations,
   loadHistory,
   pruneOldHistory,
+  pruneOldEvidence,
   diffAgainstPrevious,
   executeScenarioWithFallback,
   classifyScenarioResult,
