@@ -402,6 +402,7 @@ export function RpaReplaysPage() {
     setLoadingReplay(true);
     setReplayData(null);
     setReplayRoteiro(null);
+    setReplayRoteiroCollapsed(true);
     setReplayStepByStep(false);
     setCurrentReplayStep(0);
     setIsPlaying(false);
@@ -515,6 +516,7 @@ export function RpaReplaysPage() {
     setLoadingReplay(true);
     setReplayData(null);
     setReplayRoteiro(null);
+    setReplayRoteiroCollapsed(true);
     setReplayStepByStep(false);
     setCurrentReplayStep(0);
     setIsPlaying(false);
