@@ -277,7 +277,7 @@ function assertExecutableRecording(recording, recordingId) {
  * @param {Object} data - Dados adicionais
  * @returns {Promise<Object>} Resultado da execução
  */
-async function executeRecording(recordingId, config = {}, data = {}, authToken = null, tenantId = 'system') {
+async function executeRecording(recordingId, config = {}, data = {}, authToken = null, tenantId = 'system', actor = null) {
   const scopedTenantId = normalizeTenantKey(tenantId);
   recordingId = normalizeJsonName(recordingId);
   const executionId = `rpa-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -296,6 +296,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
     devtools: config.devtools !== undefined ? config.devtools : !resolvedHeadless,
     // Trace visual SEMPRE gerado, em diretório de runtime fora do workspace.
     traceDir: resolveRuntimePath('rpa', 'traces'),
+    actor: actor || null,
   });
 
   // Armazena execução
@@ -464,6 +465,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
             startedAt: execution.startTime,
             finishedAt: execution.endTime || null,
             status: finalStatus,
+            actor: actor || null,
           });
           execution.artifactPersistence = outcome;
           // Higiene de disco: após persistir no artifact store (blob store),
@@ -1634,6 +1636,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           startedAt: execution.startTime,
           finishedAt: execution.endTime,
           status: execution.status,
+          actor: actor || null,
         });
       } catch (persistenceError) {
         execution.artifactPersistence = {

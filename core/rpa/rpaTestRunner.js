@@ -64,6 +64,7 @@ class RpaTestRunner {
       enableReplay: options.enableReplay !== undefined ? options.enableReplay : true,
       devtools: options.devtools !== undefined ? options.devtools : false,
       traceDir: options.traceDir || null,
+      actor: options.actor || null,
     };
     this.results = [];
   }
@@ -172,6 +173,7 @@ class RpaTestRunner {
         tenantId: deterministic.tenantId,
         executionId: deterministic.createId('rpa-execution', recordingData.id || recordingData.name || 'recording'),
         deterministic: deterministic.snapshot(),
+        actor: this.options.actor || null,
       });
     }
 

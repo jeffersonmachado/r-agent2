@@ -751,7 +751,7 @@ function persistReplayIfChanged(filePath, originalPayload, nextPayload) {
   }
 }
 
-async function createExecution(payload = {}, { authToken, tenantId = null } = {}) {
+async function createExecution(payload = {}, { authToken, tenantId = null, agentId = null, username = null, role = null } = {}) {
   const source = String(payload.source || 'qa_waves').toLowerCase();
 
   if (source === 'qa_waves') {
@@ -785,12 +785,14 @@ async function createExecution(payload = {}, { authToken, tenantId = null } = {}
       throw makeError('recordingId obrigatorio para source=rpa_tests', 'BAD_REQUEST');
     }
 
+    const actor = agentId ? { agentId, username: username || null, role: role || null } : null;
     const result = await executeRecording(
       recordingId,
       payload.config || {},
       payload.data || {},
       authToken || null,
-      normalizeTenantKey(tenantId)
+      normalizeTenantKey(tenantId),
+      actor
     );
 
     return {
