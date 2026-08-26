@@ -4,7 +4,7 @@ import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
 import { Dialog } from '../components/Dialog';
-import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays, listRpaExecutionArtifacts, downloadRpaExecutionArtifact, getRpaExecutionArtifactJson } from '../api/flows';
+import { listRpaReplays, getRpaReplay, deleteRpaReplay, deleteAllRpaReplays, listRpaRecordings, listRpaExecutionArtifacts, downloadRpaExecutionArtifact, getRpaExecutionArtifactJson } from '../api/flows';
 import logger from '../utils/logger';
 import { ReplayPlayer, normalizeReplaySteps, normalizeTypedEntries, normalizeReplayEvidence } from '../components/replay';
 
@@ -75,6 +75,9 @@ export function RpaReplaysPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [replayInfoCollapsed, setReplayInfoCollapsed] = useState(true);
+  const [replayRoteiro, setReplayRoteiro] = useState(null);
+  const [replayRoteiroLoading, setReplayRoteiroLoading] = useState(false);
+  const [replayRoteiroCollapsed, setReplayRoteiroCollapsed] = useState(false);
   const [replayEvidenceTab, setReplayEvidenceTab] = useState('states');
   const [trainingMode, setTrainingMode] = useState(false);
   
@@ -318,10 +321,37 @@ export function RpaReplaysPage() {
           ? `  [valor: ${typeof step.value === 'string' ? step.value : JSON.stringify(step.value)}]`
           : '';
         const critical = step.critical ? '  [crítico]' : '';
-        lines.push(`${String(i + 1).padStart(2, '0')}. ${type} — ${label}${target ? ` → ${target}` : ''}${value}${critical}`);
+        const assertion = [];
+        if (step.textContains !== undefined && step.textContains !== null) assertion.push(`contém "${step.textContains}"`);
+        if (step.text !== undefined && step.text !== null) assertion.push(`texto "${step.text}"`);
+        if (step.exists !== undefined && step.exists !== null) assertion.push(`existe=${step.exists}`);
+        if (step.visible !== undefined && step.visible !== null) assertion.push(`visível=${step.visible}`);
+        if (step.count !== undefined && step.count !== null) assertion.push(`contagem=${step.count}`);
+        const assertionText = assertion.length ? `  [${assertion.join('; ')}]` : '';
+        lines.push(`${String(i + 1).padStart(2, '0')}. ${type} — ${label}${target ? ` → ${target}` : ''}${value}${assertionText}${critical}`);
       });
     }
     return lines.join('\n');
+  };
+
+  // Carrega o roteiro (gravação de origem) associado a um replay para exibição
+  // inline no modal do replay — não em seção separada.
+  const loadReplayRoteiro = async (recordingId) => {
+    setReplayRoteiro(null);
+    setReplayRoteiroLoading(true);
+    try {
+      if (!recordingId) return;
+      const { recordings } = await listRpaRecordings();
+      const list = Array.isArray(recordings) ? recordings : [];
+      const match = list.find((r) => r.id === recordingId || r.fileNameId === recordingId);
+      if (match?.recording) {
+        setReplayRoteiro(match.recording);
+      }
+    } catch (err) {
+      logger.warn('[RpaReplaysPage] Erro ao carregar roteiro do replay:', err);
+    } finally {
+      setReplayRoteiroLoading(false);
+    }
   };
 
   const handleViewRecording = async (executionId) => {
@@ -344,6 +374,7 @@ export function RpaReplaysPage() {
     setShowReplayModal(true);
     setLoadingReplay(true);
     setReplayData(null);
+    setReplayRoteiro(null);
     setReplayStepByStep(false);
     setCurrentReplayStep(0);
     setIsPlaying(false);
@@ -354,6 +385,7 @@ export function RpaReplaysPage() {
       const data = await getRpaExecutionArtifactJson(executionId, 'replay');
       const resolved = await unifyExecutionReplay(data, executionId);
       setReplayData(resolved);
+      loadReplayRoteiro(resolved?.recordingId || recordingId);
     } catch (err) {
       logger.error('[RpaReplaysPage] Erro ao carregar replay da execução:', err);
       showToast('Erro ao carregar replay da execução', 'error', 4000);
@@ -455,6 +487,7 @@ export function RpaReplaysPage() {
     setShowReplayModal(true);
     setLoadingReplay(true);
     setReplayData(null);
+    setReplayRoteiro(null);
     setReplayStepByStep(false);
     setCurrentReplayStep(0);
     setIsPlaying(false);
@@ -471,6 +504,7 @@ export function RpaReplaysPage() {
         hasScreens: !!data?.screens 
       });
       setReplayData(data);
+      loadReplayRoteiro(data?.recordingId || data?.id);
     } catch (err) {
       const errorDetails = {
         filename,
@@ -1889,6 +1923,7 @@ export function RpaReplaysPage() {
           setShowReplayModal(false);
           setSelectedReplay(null);
           setReplayData(null);
+          setReplayRoteiro(null);
           setReplayStepByStep(false);
           setCurrentReplayStep(0);
           setIsPlaying(false);
@@ -2152,6 +2187,38 @@ export function RpaReplaysPage() {
               </div>
             )}
           </div>
+
+              {/* Roteiro (gravação de origem) inline no replay */}
+              <div className="bg-bg-secondary rounded-lg border border-border-default">
+                <button
+                  type="button"
+                  onClick={() => setReplayRoteiroCollapsed(!replayRoteiroCollapsed)}
+                  className="flex items-center gap-2 w-full p-4 text-left text-sm font-semibold text-text-primary hover:text-accent-primary transition-colors"
+                >
+                  <span className={`collapse-btn-vertical ${replayRoteiroCollapsed ? 'collapsed' : ''}`}></span>
+                  <span>📜 Roteiro{replayRoteiro?.id ? `: ${replayRoteiro.id}` : ''}</span>
+                  {replayRoteiroLoading && (
+                    <span className="ml-2 inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-accent-primary"></span>
+                  )}
+                </button>
+                {!replayRoteiroCollapsed && (
+                  <div className="px-4 pb-4">
+                    {replayRoteiroLoading ? (
+                      <p className="text-xs text-text-tertiary">Carregando roteiro...</p>
+                    ) : replayRoteiro ? (
+                      <pre className="text-xs text-text-secondary font-mono whitespace-pre-wrap bg-bg-primary border border-border-default rounded p-3 max-h-64 overflow-y-auto">
+                        {formatRecordingText(replayRoteiro)}
+                      </pre>
+                    ) : (
+                      <p className="text-xs text-text-tertiary">
+                        {replayData?.recordingId
+                          ? `Roteiro "${replayData.recordingId}" não encontrado.`
+                          : 'Este replay não referencia uma gravação (roteiro).'}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {operationalTimeline.length > 0 && (
                 <div className="bg-bg-secondary rounded-lg border border-border-default mt-4" data-testid="replay-state-timeline">

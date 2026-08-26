@@ -202,6 +202,18 @@ export function getRpaReplay(filename) {
 }
 
 /**
+ * Lista as gravações (roteiros) RPA disponíveis, incluindo os passos do
+ * roteiro (steps) e o objeto completo da gravação.
+ *
+ * @returns {Promise<{recordings: Array<{id: string, fileNameId: string, name: string, steps: Array, recording: Object}>}>}
+ */
+export function listRpaRecordings() {
+  return fetchJson('/api/test-executions/recordings', {
+    method: 'GET',
+  });
+}
+
+/**
  * Remove um arquivo de replay RPA.
  *
  * @param {string} filename
