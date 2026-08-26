@@ -699,9 +699,10 @@ export function RpaReplaysPage() {
       : (typeof replayData.command === 'string' ? replayData.command : '');
     const assertions = Array.isArray(replayData.assertions) ? replayData.assertions : [];
     const errors = Array.isArray(replayData.errors) ? replayData.errors : [];
-    const adapterLabel = (replayData.summaryType === 'hybrid_replay_summary' || replayData.source === 'hybrid')
-      ? 'hybrid'
-      : 'api';
+    const adapterLabel = replayData.adapter
+      || (replayData.summaryType === 'hybrid_replay_summary' || replayData.source === 'hybrid'
+        ? 'hybrid'
+        : 'api');
     return {
       flowLabel,
       domainLabel,
@@ -709,6 +710,10 @@ export function RpaReplaysPage() {
       assertions,
       errors,
       adapterLabel,
+      description: replayData.description || null,
+      criticality: replayData.criticality || null,
+      journeyId: replayData.journeyId || null,
+      fallback: Boolean(replayData.fallback),
       passed: errors.length === 0,
     };
   }, [replayData]);
@@ -2314,11 +2319,24 @@ export function RpaReplaysPage() {
                 <div className="bg-bg-secondary rounded-lg border border-border-default">
                   <div className="flex items-center justify-between p-4 border-b border-border-default">
                     <div className="text-sm font-semibold text-text-primary">📊 Resumo do QA Mesh</div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-bg-tertiary border border-border-default text-text-secondary">
-                      🔌 Adapter: {qaMeshSummary.adapterLabel}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {qaMeshSummary.fallback && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-status-warning/20 text-status-warning border border-status-warning/30">
+                          ⚠️ fallback
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-bg-tertiary border border-border-default text-text-secondary">
+                        🔌 Adapter: {qaMeshSummary.adapterLabel}
+                      </span>
+                    </div>
                   </div>
                   <div className="p-4 space-y-3">
+                    {qaMeshSummary.description && (
+                      <div>
+                        <span className="text-text-tertiary text-xs block mb-1">Objetivo</span>
+                        <p className="text-text-primary text-xs">{qaMeshSummary.description}</p>
+                      </div>
+                    )}
                     <div>
                       <span className="text-text-tertiary text-xs block mb-1">Cenário validado</span>
                       <p className="text-text-primary text-sm font-mono break-all">
@@ -2326,10 +2344,27 @@ export function RpaReplaysPage() {
                         {replayData.scenarioId ? ` (${replayData.scenarioId})` : ''}
                       </p>
                     </div>
-                    {qaMeshSummary.domainLabel && (
-                      <div>
-                        <span className="text-text-tertiary text-xs block mb-1">Domínio</span>
-                        <p className="text-text-primary text-xs">{qaMeshSummary.domainLabel}</p>
+                    {(qaMeshSummary.domainLabel || qaMeshSummary.criticality || qaMeshSummary.journeyId) && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {qaMeshSummary.domainLabel && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-bg-tertiary border border-border-default text-text-secondary">
+                            Domínio: {qaMeshSummary.domainLabel}
+                          </span>
+                        )}
+                        {qaMeshSummary.criticality && (
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                            qaMeshSummary.criticality === 'blocking'
+                              ? 'bg-status-error/10 text-status-error border-status-error/30'
+                              : 'bg-bg-tertiary border-border-default text-text-secondary'
+                          }`}>
+                            Criticidade: {qaMeshSummary.criticality}
+                          </span>
+                        )}
+                        {qaMeshSummary.journeyId && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-bg-tertiary border border-border-default text-text-secondary">
+                            Jornada: {qaMeshSummary.journeyId}
+                          </span>
+                        )}
                       </div>
                     )}
                     {qaMeshSummary.commandText && (
