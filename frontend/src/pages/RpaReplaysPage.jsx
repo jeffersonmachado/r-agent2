@@ -2949,6 +2949,30 @@ export function RpaReplaysPage() {
                                       </span>
                                     </div>
                                   )}
+                                  {action.expected != null && (
+                                    <div className="text-text-secondary mt-1 break-all">
+                                      <span className="text-text-tertiary">🎯 Esperado:</span>{' '}
+                                      <span className="text-xs font-mono whitespace-pre-wrap">
+                                        {formatValue(action.expected)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {action.actual != null && (
+                                    <div className="text-text-secondary mt-1 break-all">
+                                      <span className="text-text-tertiary">👁️ Observado:</span>{' '}
+                                      <span className="text-xs font-mono whitespace-pre-wrap">
+                                        {formatValue(action.actual)}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {action.contract != null && (
+                                    <div className="text-text-secondary mt-1 break-all">
+                                      <span className="text-text-tertiary">📋 Contrato:</span>{' '}
+                                      <span className="text-xs font-mono whitespace-pre-wrap">
+                                        {formatValue(action.contract)}
+                                      </span>
+                                    </div>
+                                  )}
                                   {action.step && (
                                     <div className="text-text-tertiary mt-1 text-xs">
                                       {action.step}
