@@ -1024,22 +1024,14 @@ export function QaWavesPage() {
       </header>
 
       {/* Navegação por domínio */}
-      <nav style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderBottom: '2px solid var(--color-border-default)', marginBottom: 16, paddingBottom: 8 }}>
+      <nav className="qa-domain-pills" aria-label="Verticais">
         {(journeysTree || []).map((domain) => (
           <button
             key={domain.id}
             type="button"
             onClick={() => handleSelectDomain(domain.id)}
-            style={{
-              padding: '6px 14px',
-              border: '1px solid var(--color-border-default)',
-              borderRadius: 999,
-              background: selectedDomainId === domain.id ? 'var(--color-accent-primary)' : 'transparent',
-              color: selectedDomainId === domain.id ? '#fff' : 'var(--color-text-secondary)',
-              fontWeight: selectedDomainId === domain.id ? 700 : 400,
-              cursor: 'pointer',
-              fontSize: 13,
-            }}
+            className={`qa-domain-pill${selectedDomainId === domain.id ? ' qa-domain-pill--active' : ''}`}
+            aria-pressed={selectedDomainId === domain.id}
           >
             {domain.name || domain.id}
           </button>
@@ -1069,7 +1061,7 @@ export function QaWavesPage() {
               type="button"
               title="Nova jornada"
               onClick={() => setShowNewJourneyForm((v) => !v)}
-              style={{ fontSize: 13, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--color-border-default)', background: 'transparent', cursor: 'pointer', color: 'var(--color-accent-primary)' }}
+              className="qa-btn-ghost"
             >
               + Jornada
             </button>

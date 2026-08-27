@@ -21,9 +21,10 @@
 .qa-waves-panel {
   margin-bottom: 1rem;
   border: 1px solid var(--color-border-default);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 1rem;
   background: var(--color-bg-elevated);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 }
 
 .qa-waves-main {
@@ -51,8 +52,24 @@
 }
 
 .qa-waves-section-title {
-  margin: 0 0 0.75rem;
+  position: relative;
+  margin: 0 0 0.85rem;
+  padding-left: 0.7rem;
   color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.qa-waves-section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.12rem;
+  bottom: 0.12rem;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--color-accent-primary), var(--color-node-start));
 }
 
 .qa-business-filters-grid {
@@ -432,28 +449,119 @@
 
 .qa-waves-filter-grid input,
 .qa-waves-filter-grid select,
-.qa-waves-filter-grid button,
-.qa-waves-page button {
+.qa-waves-page input,
+.qa-waves-page select,
+.qa-waves-page textarea {
   border: 1px solid var(--color-border-default);
   background: var(--color-bg-secondary);
   color: var(--color-text-primary);
-  border-radius: 0.45rem;
-  padding: 0.5rem 0.65rem;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.qa-waves-filter-grid button,
+.qa-waves-page input:focus,
+.qa-waves-page select:focus,
+.qa-waves-page textarea:focus {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16);
+}
+
 .qa-waves-page button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
 }
 
-.qa-waves-filter-grid button:hover,
-.qa-waves-page button:hover {
+.qa-waves-page button:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  border-color: var(--color-border-hover);
   background: var(--color-bg-hover);
+}
+
+.qa-waves-page button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .qa-waves-page button:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.5;
+}
+
+.qa-waves-page button.qa-btn-primary {
+  background: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.qa-waves-page button.qa-btn-primary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: #fff;
+}
+
+.qa-waves-page button.qa-btn-ghost {
+  background: transparent;
+  color: var(--color-accent-primary);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.qa-waves-page button.qa-btn-ghost:hover:not(:disabled) {
+  background: var(--color-accent-light);
+  color: var(--color-accent-hover);
+  border-color: var(--color-accent-primary);
+}
+
+/* ── Navegação por vertical (pills) ── */
+.qa-domain-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0.35rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--color-border-default);
+  border-radius: 0.75rem;
+  background: var(--color-bg-secondary);
+}
+
+.qa-domain-pills button.qa-domain-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.qa-domain-pills button.qa-domain-pill:hover:not(.qa-domain-pill--active) {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-default);
+}
+
+.qa-domain-pills button.qa-domain-pill--active {
+  color: #fff;
+  background: var(--color-accent-primary);
+  border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 3px var(--color-accent-light);
 }
 
 .qa-waves-waves-grid {
