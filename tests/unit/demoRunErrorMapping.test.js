@@ -132,7 +132,15 @@ describe('qaWavesScenarioService — inferPlatformScenarioIds', () => {
     return require('../../api/services/qaWavesScenarioService');
   }
 
-  test('runScenarioExecution propaga PIPELINE_ONLY_SCENARIO para cenário pipeline-only existente', () => {
+  test('cenário pipeline-only agora executa (sem bloqueio por pipeline)', async () => {
+    jest.doMock('../../api/services/qaWavesExecutionService', () => ({
+      executePreparedWaveScenarios: jest.fn(async () => ({
+        executionId: 'exec-1',
+        replayId: 'replay-1',
+        replayIds: ['replay-1'],
+        platformScenarioIds: ['biz-pipeline-only'],
+      })),
+    }));
     const registryEntry = { id: 'biz-pipeline-only', requiresOfficialPipeline: true };
     const svc = loadServiceWithRegistry([registryEntry]);
     // injeta cenário no store via upsert
@@ -163,12 +171,10 @@ describe('qaWavesScenarioService — inferPlatformScenarioIds', () => {
       ],
       seeds: [],
     });
-    const result = svc.runScenarioExecution({ mode: 'real', scenarioIds: ['demo-pipeline-only'] });
+    const result = await svc.runScenarioExecution({ mode: 'real', scenarioIds: ['demo-pipeline-only'] });
     try {
-      expect(result.status).toBe('blocked');
-      expect(result.blocked).toHaveLength(1);
-      expect(result.blocked[0].code).toBe('PIPELINE_ONLY_SCENARIO');
-      expect(result.blocked[0].message).toContain('pipeline oficial');
+      expect(result.status).not.toBe('blocked');
+      expect(result.executionId).toBe('exec-1');
     } finally {
       svc.deleteScenario('demo-pipeline-only');
     }

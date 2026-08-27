@@ -7,7 +7,6 @@ const { belongsToTenant, normalizeTenantKey } = require('../../lib/rpaSecurity')
 const { adaptAiScenario } = require('../modules/qa-waves/aiScenarioAdapter');
 const { validateScenarioCompatibility } = require('../modules/qa-waves/waveScenarioSchema');
 const { EXECUTABLE_SCENARIO_STATUS } = require('../modules/qa-waves/waveScenario.constants');
-const { isInPipeline } = require('../../pipeline/guard');
 const { writeJsonAtomic } = require('../utils/atomicJsonFile');
 const {
   inferJourney,
@@ -562,25 +561,6 @@ function listLatestScenarios(filters = {}) {
   };
 }
 
-function getMeshRegistryPipelineRequiredIds() {
-  try {
-    const registryPath = path.join(__dirname, '../../qa-mesh/meshRegistry.json');
-    const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
-    return new Set(
-      registry.filter((s) => s.requiresOfficialPipeline === true).map((s) => s.id)
-    );
-  } catch (_) {
-    return new Set();
-  }
-}
-
-function filterLocalRunnable(scenarioIds) {
-  if (isInPipeline()) return scenarioIds;
-  const pipelineRequired = getMeshRegistryPipelineRequiredIds();
-  const runnable = scenarioIds.filter((id) => !pipelineRequired.has(id));
-  return runnable;
-}
-
 function collectDeclaredPlatformScenarioIds(scenario) {
   const explicit = Array.isArray(scenario?.platformScenarioIds)
     ? scenario.platformScenarioIds.filter(Boolean)
@@ -597,37 +577,11 @@ function collectDeclaredPlatformScenarioIds(scenario) {
   return Array.from(new Set([...explicit, ...platform, ...suggested]));
 }
 
-// Versão "soft" — retorna [] sem erro se não houver platformScenarioIds (usado em geração de exemplos)
+// Retorna os platformScenarioIds declarados (explícitos, platform.* ou suggested),
+// sem erro — persistência/inferência preservam IDs; a checagem mandatória de
+// vínculo de execução acontece apenas em runScenarioExecution.
 function tryInferPlatformScenarioIds(scenario) {
-  const merged = collectDeclaredPlatformScenarioIds(scenario);
-  return merged; // Persistência preserva IDs; filtragem local só ocorre ao executar.
-}
-
-// Versão "hard" — lança erro mandatório se não houver platformScenarioIds (usado na execução)
-function inferPlatformScenarioIds(scenario) {
-  const context = isInPipeline() ? 'pipeline' : 'local';
-  const declared = collectDeclaredPlatformScenarioIds(scenario);
-  if (declared.length > 0) {
-    const runnable = filterLocalRunnable(declared);
-    if (runnable.length > 0) return runnable;
-    // IDs declarados existem, mas TODOS exigem o pipeline oficial e foram
-    // filtrados do contexto local. Erro distinto para não confundir com
-    // cenário sem declaração.
-    const error = new Error(
-      `Cenário "${scenario?.id}" só é executável no pipeline oficial (contexto: ${context}). ` +
-      `Todos os platformScenarioIds declarados exigem o pipeline: ${declared.join(', ')}.`
-    );
-    error.code = 'PIPELINE_ONLY_SCENARIO';
-    throw error;
-  }
-
-  // Sem platformScenarioIds → erro mandatório. Cenários devem declarar explicitamente qual(is) adapters usar.
-  const error = new Error(
-    `Cenário "${scenario?.id}" requer platformScenarioIds explícito para execução (contexto: ${context}). ` +
-    `Configure no Waves ou deixe para a plataforma fornecer.`
-  );
-  error.code = 'MISSING_PLATFORM_SCENARIO_IDS';
-  throw error;
+  return collectDeclaredPlatformScenarioIds(scenario);
 }
 
 function inferScenario(input = {}) {
@@ -967,26 +921,20 @@ function runScenarioExecution(payload = {}) {
       throw error;
     }
 
-    // Recurso de ambiente: vínculo com cenário de plataforma executável local.
+    // Recurso de ambiente: vínculo com cenário de plataforma. Sem vínculo não
+    // há o que executar; com vínculo, o cenário RODA — se depender de recurso
+    // indisponível (ex.: WhatsApp não configurado), a execução falha com o
+    // motivo real, sem bloqueio por pipeline.
     const declared = collectDeclaredPlatformScenarioIds(scenario);
-    const localIds = filterLocalRunnable(declared);
     if (declared.length === 0) {
       blockedScenarios.push({
         scenario,
         code: 'MISSING_PLATFORM_SCENARIO_IDS',
-        message: `Cenário "${scenario.id}" sem platformScenarioIds — recurso não disponível no ambiente local.`,
+        message: `Cenário "${scenario.id}" sem platformScenarioIds — não há vínculo de execução.`,
       });
       continue;
     }
-    if (localIds.length === 0) {
-      blockedScenarios.push({
-        scenario,
-        code: 'PIPELINE_ONLY_SCENARIO',
-        message: `Cenário "${scenario.id}" só é executável no pipeline oficial — recurso não disponível no ambiente local.`,
-      });
-      continue;
-    }
-    runnableEntries.push({ scenario, platformScenarioIds: localIds });
+    runnableEntries.push({ scenario, platformScenarioIds: declared });
   }
 
   const replayEnabled = payload.replay !== false

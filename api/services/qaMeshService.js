@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const os = require('os');
-const { isInPipeline } = require('../../pipeline/guard');
 const { loadRegistry, refreshRegistry, runMesh, loadHistory, normalizeExecutionRecord } = require('../../qa-mesh/meshRunner');
 const { buildScheduleStatus, runScheduledMesh, startScheduler, setSchedulerEnabled } = require('../../qa-mesh/meshScheduler');
 const { enqueueExecution, getExecution, getAllExecutions, appendLog, updateExecution } = require('../../qa-mesh/executionQueue');
@@ -389,13 +388,6 @@ function queueScenarioReplay(scenarioId, options = {}) {
   const registry = loadRegistry();
   const scenario = registry.find((item) => item.id === scenarioId);
   if (!scenario) throw new Error('Cenário não encontrado');
-  if (scenario.requiresOfficialPipeline && process.env.PIPELINE_BYPASS !== '1' && !isInPipeline()) {
-    const error = new Error(
-      'Este cenário exige o pipeline oficial e não pode ser reproduzido pela UI local. Execute: npm run pipeline. Para uso local explícito, use PIPELINE_BYPASS=1.'
-    );
-    error.code = 'PIPELINE_REQUIRED';
-    throw error;
-  }
   // Alinhado com queueMeshRun: tenant ausente → null explícito (escopo resolvido
   // downstream), nunca fallback silencioso para 'system'.
   const tenantId = options.tenantId == null ? null : normalizeTenantKey(options.tenantId);
