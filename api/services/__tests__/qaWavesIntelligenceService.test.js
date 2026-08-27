@@ -109,4 +109,19 @@ describe('qaWavesIntelligenceService', () => {
     expect(intelligenceService.listDrafts({ tenantId: 'tenant-a' })[0].status).toBe('draft_ai');
     expect(intelligenceService.listDrafts({ tenantId: 'tenant-b' })[0].status).toBe('approved');
   });
+
+  test('analyzeCoverageGaps escopa existingScenarios pela vertical', () => {
+    const result = intelligenceService.analyzeCoverageGaps(
+      { vertical: 'fitness', tenantId: 'system' },
+      [
+        { id: 'fitness-1', vertical: 'fitness', journeyId: 'leads', tenantId: 'system' },
+        { id: 'beauty-1', vertical: 'beauty', journeyId: 'booking', tenantId: 'system' },
+        { id: 'fitness-2', vertical: 'fitness', waveId: 'fitness-wave', journeyId: 'checkout', tenantId: 'system' },
+      ],
+    );
+
+    expect(result.totalRequired).toBe(2);
+    expect(result.missingScenarios).toEqual(expect.arrayContaining(['fitness-1', 'fitness-2']));
+    expect(result.missingScenarios).not.toContain('beauty-1');
+  });
 });

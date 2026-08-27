@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchJson } from '../../api/client';
 import { useToast } from '../Toast';
-import { CoverageSummaryStrip } from './CoverageSummaryStrip';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,7 +69,6 @@ export function CoverageGapsTab({ domainId = null }) {
   const [coverage, setCoverage] = useState(null);
   const [gaps, setGaps] = useState(null);
   const [drafts, setDrafts] = useState([]);
-  const [governance, setGovernance] = useState([]);
   const [loadingCoverage, setLoadingCoverage] = useState(false);
   const [loadingGaps, setLoadingGaps] = useState(false);
   const [businessGaps, setBusinessGaps] = useState(null);
@@ -152,15 +150,6 @@ export function CoverageGapsTab({ domainId = null }) {
     }
   }, []);
 
-  const loadGovernance = useCallback(async () => {
-    try {
-      const data = await fetchJson('/api/qa-waves/governance');
-      setGovernance(Array.isArray(data?.items) ? data.items : []);
-    } catch (_) {
-      // silencioso
-    }
-  }, []);
-
   const loadBusinessGaps = useCallback(async () => {
     const seq = ++businessGapsSeqRef.current;
     setLoadingBusinessGaps(true);
@@ -178,9 +167,8 @@ export function CoverageGapsTab({ domainId = null }) {
   useEffect(() => {
     loadCoverage();
     loadDrafts();
-    loadGovernance();
     loadBusinessGaps();
-  }, [loadCoverage, loadDrafts, loadGovernance, loadBusinessGaps]);
+  }, [loadCoverage, loadDrafts, loadBusinessGaps]);
 
   // ─── Análise de gaps ─────────────────────────────────────────────────────
 
@@ -328,9 +316,6 @@ export function CoverageGapsTab({ domainId = null }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Cobertura de execução consolidada (mesh) ── */}
-      <CoverageSummaryStrip />
-
       {/* ── Revisão da Vertical (IA infere + QA persiste) ── */}
       <section className="qa-waves-panel">
         <div className="flex justify-between items-center mb-3">
@@ -820,65 +805,6 @@ export function CoverageGapsTab({ domainId = null }) {
               <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-status-warning)', background: 'var(--color-bg-secondary)', borderRadius: 4, padding: '4px 8px' }}>
                 ⚠ Este cenário NÃO será executado até ser aprovado manualmente.
               </div>
-            )}
-          </div>
-        ))}
-      </section>
-
-      {/* ── Governança ── */}
-      <section className="qa-waves-panel">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="qa-waves-section-title mb-0">Governança de Waves</h2>
-          <button type="button" onClick={loadGovernance} style={{ fontSize: 12 }}>↻</button>
-        </div>
-
-        {governance.length === 0 && (
-          <p className="qa-empty">Nenhum relatório de governança disponível. Execute uma avaliação via API.</p>
-        )}
-
-        {governance.map((report) => (
-          <div
-            key={report.waveId}
-            style={{
-              border: `2px solid ${report.status === 'GO' ? 'var(--color-status-success)' : 'var(--color-status-error)'}`,
-              borderRadius: 8,
-              padding: 12,
-              marginBottom: 10,
-              background: 'var(--color-bg-elevated)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-              <div>
-                <strong style={{ fontSize: 14 }}>{report.waveId}</strong>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                  Avaliado em: {report.evaluatedAt ? new Date(report.evaluatedAt).toLocaleString('pt-BR') : '—'}
-                </div>
-              </div>
-              <div style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: report.status === 'GO' ? 'var(--color-status-success)' : 'var(--color-status-error)',
-              }}>
-                {report.status}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 8, fontSize: 13 }}>
-              <div>Cobertura: <strong>{pct(report.coverage)}</strong></div>
-              <div>Qualidade: <strong>{pct(report.quality)}</strong></div>
-              <div>Falhas críticas: <strong style={{ color: report.criticalFailures > 0 ? 'var(--color-status-error)' : 'inherit' }}>{report.criticalFailures}</strong></div>
-              <div>Cenários: <strong>{report.coveredScenarios}/{report.totalScenarios}</strong></div>
-            </div>
-
-            {(report.reasons || []).length > 0 && (
-              <details style={{ marginTop: 8 }}>
-                <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                  {report.reasons.length} motivo(s)
-                </summary>
-                <ul style={{ margin: '4px 0 0 16px', fontSize: 11 }}>
-                  {report.reasons.map((r, i) => <li key={i}>{r}</li>)}
-                </ul>
-              </details>
             )}
           </div>
         ))}

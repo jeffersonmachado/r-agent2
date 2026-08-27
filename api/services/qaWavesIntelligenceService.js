@@ -185,8 +185,15 @@ function analyzeCoverageGaps({ vertical, journey = null, tenantId = 'system' }, 
     );
   }
 
-  // Mescla com cenários fornecidos explicitamente (overrides pontuais)
-  const tenantScenarios = existingScenarios.filter((scenario) => belongsToTenant(scenario, scopedTenantId));
+  // Mescla com cenários fornecidos explicitamente (overrides pontuais),
+  // mantendo o escopo vertical/jornada para não contaminar o resultado.
+  let tenantScenarios = existingScenarios.filter((scenario) => belongsToTenant(scenario, scopedTenantId));
+  if (vertical) {
+    tenantScenarios = tenantScenarios.filter((s) => s.vertical === vertical || (s.waveId && String(s.waveId).startsWith(vertical)));
+  }
+  if (journey) {
+    tenantScenarios = tenantScenarios.filter((s) => s.journeyId === journey || s.journey === journey);
+  }
   const overrideById = new Map(tenantScenarios.map((s) => [s.id || s.scenarioId, s]));
   const allRelevant = relevantScenarios.map((s) => overrideById.get(s.id) || s);
   // Adiciona qualquer cenário extra não presente no store (e.g. drafts passados manualmente)

@@ -334,36 +334,27 @@ export function QaWavesPage() {
       };
     }
 
-    // Novo modelo: calcular totais dos steps que já vêm com stats do backend
-    let totalAllDomains = 0;
-    for (const domain of journeysTree) {
-      for (const journey of domain?.journeys || []) {
-        for (const step of journey?.steps || []) {
-          totalAllDomains += step.totalScenarios || 0;
-        }
-      }
-    }
-
+    // Totais por JORNADA (não por step — os steps duplicam os stats da jornada).
     let totalSelectedDomain = 0;
     let criticalSelectedDomain = 0;
+    let executedSelectedDomain = 0;
     const scenarioIds = [];
-    
+
     for (const journey of selectedDomain?.journeys || []) {
-      for (const step of journey?.steps || []) {
-        const stepScenarios = step.totalScenarios || 0;
-        totalSelectedDomain += stepScenarios;
-        criticalSelectedDomain += step.criticalFailures || 0;
-        // Usar scenarioItems (carregados separadamente) para IDs
-        for (const scenario of scenarioItems) {
-          if (scenario.journeyId === journey.journeyId && scenarioIds.indexOf(scenario.id) === -1) {
-            scenarioIds.push(scenario.id);
-          }
+      const totalScenarios = journey.totalScenarios || 0;
+      totalSelectedDomain += totalScenarios;
+      criticalSelectedDomain += journey.criticalFailures || 0;
+      executedSelectedDomain += Math.round(((journey.executedRate || 0) / 100) * totalScenarios);
+
+      for (const scenario of scenarioItems) {
+        if (scenario.journeyId === journey.journeyId && scenarioIds.indexOf(scenario.id) === -1) {
+          scenarioIds.push(scenario.id);
         }
       }
     }
 
-    const coverage = totalAllDomains > 0
-      ? Math.min(100, Math.round((totalSelectedDomain / totalAllDomains) * 100))
+    const coverage = totalSelectedDomain > 0
+      ? Math.min(100, Math.round((executedSelectedDomain / totalSelectedDomain) * 100))
       : 0;
 
     return {
@@ -372,7 +363,7 @@ export function QaWavesPage() {
       coverage,
       scenarioIds,
     };
-  }, [journeysTree, selectedDomain, scenarioItems]);
+  }, [selectedDomain, scenarioItems]);
 
   async function loadJourneyStatus() {
     const response = await fetchJson('/api/qa-waves/journey-status', { suppressErrorLog: true });
@@ -1162,11 +1153,6 @@ export function QaWavesPage() {
                 onChange={(event) => setInferGoal(event.target.value)}
                 placeholder="Objetivo para inferência IA"
               />
-              <select value={selectedDomainId} onChange={(event) => setSelectedDomainId(event.target.value)}>
-                {(journeysTree || []).map((domain) => (
-                  <option key={domain.id} value={domain.id}>{domain.name || domain.id}</option>
-                ))}
-              </select>
               <select value={inferenceJourneyId} onChange={(event) => setInferenceJourneyId(event.target.value)}>
                 <option value="auto">Jornada automática</option>
                 {availableJourneys.map((journey) => (
