@@ -85,7 +85,7 @@ export function QaWavesPage() {
   const [executionItems, setExecutionItems] = useState([]);
   const [selectedScenarioId, setSelectedScenarioId] = useState('');
   const [scenarioEditor, setScenarioEditor] = useState('');
-  const [inferGoal, setInferGoal] = useState('aula experimental');
+  const [inferGoal, setInferGoal] = useState('');
   const [inferenceJourneyId, setInferenceJourneyId] = useState('auto');
   const [journeyReview, setJourneyReview] = useState(null);
   const [loadingJourneyReview, setLoadingJourneyReview] = useState(false);
@@ -334,31 +334,28 @@ export function QaWavesPage() {
       };
     }
 
-    // Totais por JORNADA (não por step — os steps duplicam os stats da jornada).
-    let totalSelectedDomain = 0;
+    // Cenários reais de QA deste domínio (mesmo critério da lista "Cenários").
+    const scenarioIds = (scenarioItems || [])
+      .filter((s) => s.vertical === selectedDomain.id)
+      .map((s) => s.id);
+
     let criticalSelectedDomain = 0;
     let executedSelectedDomain = 0;
-    const scenarioIds = [];
+    let totalScenariosSelected = 0;
 
     for (const journey of selectedDomain?.journeys || []) {
       const totalScenarios = journey.totalScenarios || 0;
-      totalSelectedDomain += totalScenarios;
+      totalScenariosSelected += totalScenarios;
       criticalSelectedDomain += journey.criticalFailures || 0;
       executedSelectedDomain += Math.round(((journey.executedRate || 0) / 100) * totalScenarios);
-
-      for (const scenario of scenarioItems) {
-        if (scenario.journeyId === journey.journeyId && scenarioIds.indexOf(scenario.id) === -1) {
-          scenarioIds.push(scenario.id);
-        }
-      }
     }
 
-    const coverage = totalSelectedDomain > 0
-      ? Math.min(100, Math.round((executedSelectedDomain / totalSelectedDomain) * 100))
+    const coverage = totalScenariosSelected > 0
+      ? Math.min(100, Math.round((executedSelectedDomain / totalScenariosSelected) * 100))
       : 0;
 
     return {
-      totalItems: totalSelectedDomain,
+      totalItems: scenarioIds.length,
       criticalItems: criticalSelectedDomain,
       coverage,
       scenarioIds,
@@ -1103,8 +1100,25 @@ export function QaWavesPage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
         <section className="qa-waves-panel qa-waves-business-content" style={{ marginBottom: 0 }}>
-          <div className="qa-journey-actions">
-            <h2 className="qa-waves-section-title">Jornada e Cenários</h2>
+          <h2 className="qa-waves-section-title">Jornada e Cenários</h2>
+          <article className="qa-domain-summary-card">
+            <h3>Resumo consolidado do domínio</h3>
+            <div className="qa-domain-summary-metrics">
+              <div>
+                <strong>{domainSummary.totalItems}</strong>
+                <span>Cenários</span>
+              </div>
+              <div>
+                <strong>{domainSummary.criticalItems}</strong>
+                <span>Críticos</span>
+              </div>
+              <div>
+                <strong>{domainSummary.coverage}%</strong>
+                <span>Cobertura</span>
+              </div>
+            </div>
+          </article>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
             <div className="qa-journey-actions-buttons">
               <select value={selectedSeedId} onChange={(event) => setSelectedSeedId(event.target.value)}>
                 <option value="">Todas as seeds</option>
@@ -1138,7 +1152,7 @@ export function QaWavesPage() {
                 ↗ Abrir replay
               </button>
             </div>
-            <div className="qa-journey-actions-buttons" style={{ marginTop: 8 }}>
+            <div className="qa-journey-actions-buttons">
               <input
                 type="text"
                 value={inferGoal}
@@ -1242,24 +1256,6 @@ export function QaWavesPage() {
               )}
             </div>
           )}
-
-          <article className="qa-domain-summary-card">
-            <h3>Resumo consolidado do domínio</h3>
-            <div className="qa-domain-summary-metrics">
-              <div>
-                <strong>{domainSummary.totalItems}</strong>
-                <span>Itens</span>
-              </div>
-              <div>
-                <strong>{domainSummary.criticalItems}</strong>
-                <span>Críticos</span>
-              </div>
-              <div>
-                <strong>{domainSummary.coverage}%</strong>
-                <span>Cobertura</span>
-              </div>
-            </div>
-          </article>
 
           {showExecutionsModal && (
             <div
@@ -1423,12 +1419,11 @@ export function QaWavesPage() {
                 {(scenarioItems || [])
                   .filter((item) => {
                     const byDomain = !selectedDomainId || !item.vertical || item.vertical === selectedDomainId;
-                    const byJourney = !selectedJourneyId || item.journeyId === selectedJourneyId;
                     const byScenario = !filters.scenario || `${item.id} ${item.name}`.toLowerCase().includes(filters.scenario.toLowerCase());
                     const bySeed = !filters.seed || (item.seeds || []).some((seed) => String(seed.id).toLowerCase().includes(filters.seed.toLowerCase()));
                     const byDateStart = !filters.dateStart || new Date(item.updatedAt || item.createdAt || 0).getTime() >= new Date(`${filters.dateStart}T00:00:00`).getTime();
                     const byDateEnd = !filters.dateEnd || new Date(item.updatedAt || item.createdAt || 0).getTime() <= new Date(`${filters.dateEnd}T23:59:59`).getTime();
-                    return byDomain && byJourney && byScenario && bySeed && byDateStart && byDateEnd;
+                    return byDomain && byScenario && bySeed && byDateStart && byDateEnd;
                   })
                   .map((item) => {
                     const selected = item.id === selectedScenarioId;
