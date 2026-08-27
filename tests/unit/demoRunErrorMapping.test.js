@@ -163,12 +163,12 @@ describe('qaWavesScenarioService — inferPlatformScenarioIds', () => {
       ],
       seeds: [],
     });
+    const result = svc.runScenarioExecution({ mode: 'real', scenarioIds: ['demo-pipeline-only'] });
     try {
-      svc.runScenarioExecution({ mode: 'real', scenarioIds: ['demo-pipeline-only'] });
-      throw new Error('deveria ter lançado');
-    } catch (err) {
-      expect(err.code).toBe('PIPELINE_ONLY_SCENARIO');
-      expect(err.message).toContain('pipeline oficial');
+      expect(result.status).toBe('blocked');
+      expect(result.blocked).toHaveLength(1);
+      expect(result.blocked[0].code).toBe('PIPELINE_ONLY_SCENARIO');
+      expect(result.blocked[0].message).toContain('pipeline oficial');
     } finally {
       svc.deleteScenario('demo-pipeline-only');
     }
@@ -203,11 +203,11 @@ describe('qaWavesScenarioService — inferPlatformScenarioIds', () => {
       ],
       seeds: [],
     });
+    const result = svc.runScenarioExecution({ mode: 'real', scenarioIds: ['demo-sem-ids'] });
     try {
-      svc.runScenarioExecution({ mode: 'real', scenarioIds: ['demo-sem-ids'] });
-      throw new Error('deveria ter lançado');
-    } catch (err) {
-      expect(err.code).toBe('MISSING_PLATFORM_SCENARIO_IDS');
+      expect(result.status).toBe('blocked');
+      expect(result.blocked).toHaveLength(1);
+      expect(result.blocked[0].code).toBe('MISSING_PLATFORM_SCENARIO_IDS');
     } finally {
       svc.deleteScenario('demo-sem-ids');
     }

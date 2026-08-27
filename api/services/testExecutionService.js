@@ -768,6 +768,19 @@ async function createExecution(payload = {}, { authToken, tenantId = null } = {}
       tenantId,
     });
 
+    if (run.status === 'blocked') {
+      return {
+        executionId: null,
+        replayId: null,
+        replayIds: [],
+        source,
+        status: 'blocked',
+        blocked: Array.isArray(run.blocked) ? run.blocked : [],
+        message: run.message || null,
+        acceptedAt: new Date().toISOString(),
+      };
+    }
+
     return {
       executionId: run.executionId || null,
       replayId: run.replayId || null,
@@ -776,6 +789,7 @@ async function createExecution(payload = {}, { authToken, tenantId = null } = {}
       status: 'processing',
       acceptedAt: new Date().toISOString(),
       pollAfterMs: 5000,
+      blocked: Array.isArray(run.blocked) ? run.blocked : [],
     };
   }
 

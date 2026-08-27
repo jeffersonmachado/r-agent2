@@ -921,9 +921,15 @@ function runScenarioExecution(payload = {}) {
     throw error;
   }
 
-  for (const scenario of scenarios) {
-    const isDevMode = payloadAllowsDevExecution(payload);
+  const isDevMode = payloadAllowsDevExecution(payload);
 
+  // Partição: cenários executáveis vs bloqueados por recurso não disponível
+  // no ambiente (sem platformScenarioIds ou pipeline-only). Em vez de abortar
+  // toda a onda, os bloqueados são reportados como falha com motivo claro.
+  const runnableEntries = [];   // { scenario, platformScenarioIds }
+  const blockedScenarios = [];  // { scenario, code, message }
+
+  for (const scenario of scenarios) {
     // FASE 15 — draft_ai NUNCA executa como evidência: rascunho gerado por IA
     // exige aprovação explícita (approved/active/regression). A regra vale
     // inclusive em devMode/allowNonExecutableStatus — não há bypass.
@@ -939,14 +945,13 @@ function runScenarioExecution(payload = {}) {
     }
 
     const validation = validateScenarioCompatibility(scenario);
-    if (!validation.valid) {
-      // Preserva o código específico quando a violação inclui ausência de
-      // platformScenarioIds — contrato consumido pelo mapeamento de erros do
-      // demo run (regressão: demoRunErrorMapping.test.js).
-      const missingIds = (validation.errors || [])
-        .some((item) => item && item.code === 'missing_platform_scenario_ids');
+    // A ausência de platformScenarioIds deixa de ser erro fatal: vira bloqueio
+    // por recurso de ambiente (reportado, não aborta a onda).
+    const nonEnvErrors = (validation.errors || [])
+      .filter((item) => item && item.code !== 'missing_platform_scenario_ids');
+    if (!validation.valid && nonEnvErrors.length > 0) {
       const error = new Error(`Scenario invalido: ${scenario.id}`);
-      error.code = missingIds ? 'MISSING_PLATFORM_SCENARIO_IDS' : 'BAD_REQUEST';
+      error.code = 'BAD_REQUEST';
       error.details = validation;
       throw error;
     }
@@ -961,16 +966,58 @@ function runScenarioExecution(payload = {}) {
       };
       throw error;
     }
+
+    // Recurso de ambiente: vínculo com cenário de plataforma executável local.
+    const declared = collectDeclaredPlatformScenarioIds(scenario);
+    const localIds = filterLocalRunnable(declared);
+    if (declared.length === 0) {
+      blockedScenarios.push({
+        scenario,
+        code: 'MISSING_PLATFORM_SCENARIO_IDS',
+        message: `Cenário "${scenario.id}" sem platformScenarioIds — recurso não disponível no ambiente local.`,
+      });
+      continue;
+    }
+    if (localIds.length === 0) {
+      blockedScenarios.push({
+        scenario,
+        code: 'PIPELINE_ONLY_SCENARIO',
+        message: `Cenário "${scenario.id}" só é executável no pipeline oficial — recurso não disponível no ambiente local.`,
+      });
+      continue;
+    }
+    runnableEntries.push({ scenario, platformScenarioIds: localIds });
   }
 
-  const replayEnabled = payload.replay !== false && scenarios.every((item) => item.validations?.requireReplay !== false);
+  const replayEnabled = payload.replay !== false
+    && runnableEntries.every(({ scenario }) => scenario.validations?.requireReplay !== false);
   if (!replayEnabled) {
     const error = new Error('Replay deve estar habilitado para executar Waves RPA');
     error.code = 'BAD_REQUEST';
     throw error;
   }
 
-  const governanceFindings = evaluateGovernanceBeforeRun({ scenarios, replayEnabled });
+  const blockedSummary = blockedScenarios.map(({ scenario, code, message }) => ({
+    scenarioId: scenario.id,
+    vertical: scenario.vertical,
+    journey: scenario.journeyId || scenario.journey,
+    code,
+    message,
+  }));
+
+  if (runnableEntries.length === 0) {
+    return {
+      status: 'blocked',
+      executionId: null,
+      replayId: null,
+      replayIds: [],
+      blocked: blockedSummary,
+      message: 'Nenhum cenário executável localmente: todos dependem de recursos não disponíveis no ambiente.',
+    };
+  }
+
+  const runnableScenarios = runnableEntries.map(({ scenario }) => scenario);
+  const governanceFindings = evaluateGovernanceBeforeRun({ scenarios: runnableScenarios, replayEnabled });
   const blocking = governanceFindings.find((finding) => finding.level === 'NO_GO' && finding.code === 'invalid_step');
   if (blocking) {
     const error = new Error('Governanca bloqueou execucao por step invalido');
@@ -981,22 +1028,22 @@ function runScenarioExecution(payload = {}) {
 
   const selectedSeedIds = Array.isArray(payload.seedIds) ? payload.seedIds : [];
   const expanded = [];
-  for (const scenario of scenarios) {
+  for (const { scenario, platformScenarioIds } of runnableEntries) {
     const seeds = Array.isArray(scenario.seeds) ? scenario.seeds : [];
     const filtered = selectedSeedIds.length > 0
       ? seeds.filter((seed) => selectedSeedIds.includes(seed.id))
       : seeds.filter((seed) => isSeedExecutableForEvidence(seed));
 
     if (filtered.length === 0) {
-      expanded.push({ scenario, seed: null });
+      expanded.push({ scenario, seed: null, platformScenarioIds });
       continue;
     }
 
-    filtered.forEach((seed) => expanded.push({ scenario, seed }));
+    filtered.forEach((seed) => expanded.push({ scenario, seed, platformScenarioIds }));
   }
 
   const platformScenarioIds = Array.from(new Set(
-    scenarios.flatMap((scenario) => inferPlatformScenarioIds(scenario))
+    expanded.flatMap((entry) => entry.platformScenarioIds)
   ));
 
   if (platformScenarioIds.length === 0) {
@@ -1007,11 +1054,15 @@ function runScenarioExecution(payload = {}) {
 
   const { executePreparedWaveScenarios } = require('./qaWavesExecutionService');
   return executePreparedWaveScenarios({
-    expanded,
+    expanded: expanded.map(({ scenario, seed }) => ({ scenario, seed })),
     platformScenarioIds,
     governanceFindings,
     tenantId: scopedTenantId,
-  });
+    blockedScenarios,
+  }).then((result) => ({
+    ...result,
+    blocked: blockedSummary,
+  }));
 }
 
 function payloadAllowsDevExecution(payload = {}) {

@@ -1598,7 +1598,7 @@ function monitorExecution(executionId, replayArtifacts, options = {}) {
     });
 }
 
-async function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanceFindings, tenantId = null, runtimeOptions = {} }) {
+async function executePreparedWaveScenarios({ expanded, platformScenarioIds, governanceFindings, tenantId = null, runtimeOptions = {}, blockedScenarios = [] }) {
   const preparedExpanded = await hydrateOperationalSeeds(expanded, tenantId, runtimeOptions);
   const scenarioContext = preparedExpanded.map(({ scenario, seed }) => ({
     scenarioId: scenario.id,
@@ -1625,6 +1625,31 @@ async function executePreparedWaveScenarios({ expanded, platformScenarioIds, gov
     executionOrigin: 'qa_waves_real',
     scenarioContext,
     tenantId,
+  });
+
+  // Cenários bloqueados por recurso de ambiente (sem platformScenarioIds ou
+  // pipeline-only) viram artefatos de replay com falha explícita, para que a
+  // falha fique visível na listagem de replays e não seja perdida.
+  const blockedArtifacts = (blockedScenarios || []).map(({ scenario, code, message }) => {
+    const artifact = writeReplayArtifact({
+      executionId: queued.executionId,
+      replayId: makeId('qa_wave_replay_blocked'),
+      scenario,
+      seed: null,
+      status: 'failed',
+      platformScenarioIds: [],
+      tenantId: tenantId || 'system',
+    });
+    updateReplayArtifact(artifact, {
+      status: 'failed',
+      result: 'failed',
+      executionStatus: 'failed',
+      finishedAt: new Date().toISOString(),
+      endTime: new Date().toISOString(),
+      errors: [{ code, message }],
+      blockedReason: code,
+    });
+    return artifact;
   });
 
   const replayArtifacts = preparedExpanded.map(({ scenario, seed, preExecutionBlockers }) => {
@@ -1696,6 +1721,7 @@ async function executePreparedWaveScenarios({ expanded, platformScenarioIds, gov
     executionId: queued.executionId,
     replayId: primaryReplayId,
     replayIds,
+    blockedReplayIds: blockedArtifacts.map((artifact) => artifact.replayId),
     platformScenarioIds,
     governance: governanceFindings,
   };

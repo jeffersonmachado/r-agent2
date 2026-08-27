@@ -796,11 +796,26 @@ export function QaWavesPage() {
         }),
       });
 
+      if (response?.status === 'blocked') {
+        const blocked = Array.isArray(response.blocked) ? response.blocked : [];
+        const detail = blocked.length > 0
+          ? blocked.map((item) => `${item.scenarioId} (${item.code})`).join(', ')
+          : (response.message || 'Nenhum cenário executável localmente.');
+        notifyError(`Nenhum cenário executado: ${detail}`);
+        await Promise.all([loadJourneyStatus(), loadStepStatus()]);
+        return;
+      }
+
       const legacyRun = response?.compatibility || null;
       const resolvedReplayId = response.replayId || legacyRun?.replayId || '';
       setRunReplayId(resolvedReplayId);
       setCurrentExecutionId(response.executionId || '');
-      notifySuccess(`Execução real enfileirada. executionId=${response.executionId} replayId=${resolvedReplayId || 'n/a'}`);
+      const blockedCount = Array.isArray(response.blocked) ? response.blocked.length : 0;
+      notifySuccess(
+        blockedCount > 0
+          ? `Execução enfileirada (${blockedCount} cenário(s) bloqueado(s) por recurso indisponível). executionId=${response.executionId}`
+          : `Execução real enfileirada. executionId=${response.executionId} replayId=${resolvedReplayId || 'n/a'}`
+      );
       await Promise.all([loadJourneyStatus(), loadStepStatus()]);
     } catch (err) {
       if (err?.status === 409 || err?.code === 'EXECUTION_ALREADY_RUNNING') {
