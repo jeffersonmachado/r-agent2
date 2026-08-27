@@ -122,14 +122,14 @@ function buildQaWavesRouteDeps() {
     getWaveExecutionHistory,
     clearWaveExecutions,
     // Intelligence
-    getCoverageSummary: () => getCoverageSummary(),
+    getCoverageSummary: (options) => getCoverageSummary(options),
     analyzeWaveCoverageGaps: analyzeCoverageGaps,
     generateWaveScenarioDraft: generateScenarioDraft,
     generateWaveSeedsForScenario: generateSeedsForScenario,
     listWaveDrafts: listDrafts,
     approveWaveDraft: approveDraft,
     rejectWaveDraft: rejectDraft,
-    getBusinessGaps: () => getBusinessGaps(),
+    getBusinessGaps: (options) => getBusinessGaps(options),
     // Governance
     evaluateWaveGovernance,
     listWaveGovernanceReports: listGovernanceReports,

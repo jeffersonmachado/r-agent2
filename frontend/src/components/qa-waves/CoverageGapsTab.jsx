@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchJson } from '../../api/client';
 import { useToast } from '../Toast';
 import { CoverageSummaryStrip } from './CoverageSummaryStrip';
@@ -66,7 +66,7 @@ function StatusPill({ status }) {
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
-export function CoverageGapsTab() {
+export function CoverageGapsTab({ domainId = null }) {
   const [coverage, setCoverage] = useState(null);
   const [gaps, setGaps] = useState(null);
   const [drafts, setDrafts] = useState([]);
@@ -79,7 +79,7 @@ export function CoverageGapsTab() {
   const [loadingReview, setLoadingReview] = useState(null);
   const [verticalReview, setVerticalReview] = useState(null);
   const [loadingVerticalReview, setLoadingVerticalReview] = useState(false);
-  const [verticalReviewTarget, setVerticalReviewTarget] = useState('fitness');
+  const [verticalReviewTarget, setVerticalReviewTarget] = useState(domainId || 'fitness');
   const [recordJourney, setRecordJourney] = useState(false);
   const { showToast, ToastContainer } = useToast();
 
@@ -95,30 +95,53 @@ export function CoverageGapsTab() {
 
   // Formulário de gap
   const [gapForm, setGapForm] = useState({
-    vertical: 'fitness',
+    vertical: domainId || 'fitness',
     journey: '',
     stage: '',
     gap: '',
     context: '',
   });
   const [analysisFilters, setAnalysisFilters] = useState({
-    vertical: 'fitness',
+    vertical: domainId || 'fitness',
     journey: '',
   });
+
+  // Drafts de IA também ficam escopados pelo domínio selecionado.
+  const visibleDrafts = useMemo(() => {
+    if (!domainId) return drafts;
+    return drafts.filter((draft) => draft.vertical === domainId);
+  }, [drafts, domainId]);
+
+  // Sequência de requisições: evita que respostas de um domínio anterior
+  // (stale) sobrescrevam o resultado do domínio selecionado. Uma ref por
+  // endpoint, pois as respostas chegam de forma independente.
+  const coverageSeqRef = useRef(0);
+  const businessGapsSeqRef = useRef(0);
+
+  // Quando o domínio muda (pills no topo), reescopar a vertical do formulário,
+  // da revisão e da análise de gaps.
+  useEffect(() => {
+    if (!domainId) return;
+    setVerticalReviewTarget(domainId);
+    setGapForm((prev) => (prev.vertical === domainId ? prev : { ...prev, vertical: domainId }));
+    setAnalysisFilters((prev) => (prev.vertical === domainId ? prev : { ...prev, vertical: domainId }));
+  }, [domainId]);
 
   // ─── Carregamento inicial ────────────────────────────────────────────────
 
   const loadCoverage = useCallback(async () => {
+    const seq = ++coverageSeqRef.current;
     setLoadingCoverage(true);
     try {
-      const data = await fetchJson('/api/qa-waves/intelligence/coverage');
-      setCoverage(data);
+      const query = domainId ? `?vertical=${encodeURIComponent(domainId)}` : '';
+      const data = await fetchJson(`/api/qa-waves/intelligence/coverage${query}`);
+      if (seq === coverageSeqRef.current) setCoverage(data);
     } catch (err) {
-      notifyError(err?.message || 'Falha ao carregar cobertura');
+      if (seq === coverageSeqRef.current) notifyError(err?.message || 'Falha ao carregar cobertura');
     } finally {
-      setLoadingCoverage(false);
+      if (seq === coverageSeqRef.current) setLoadingCoverage(false);
     }
-  }, [notifyError]);
+  }, [domainId, notifyError]);
 
   const loadDrafts = useCallback(async () => {
     try {
@@ -139,16 +162,18 @@ export function CoverageGapsTab() {
   }, []);
 
   const loadBusinessGaps = useCallback(async () => {
+    const seq = ++businessGapsSeqRef.current;
     setLoadingBusinessGaps(true);
     try {
-      const data = await fetchJson('/api/qa-waves/intelligence/business-gaps');
-      setBusinessGaps(data);
+      const query = domainId ? `?vertical=${encodeURIComponent(domainId)}` : '';
+      const data = await fetchJson(`/api/qa-waves/intelligence/business-gaps${query}`);
+      if (seq === businessGapsSeqRef.current) setBusinessGaps(data);
     } catch (_) {
       // silencioso
     } finally {
-      setLoadingBusinessGaps(false);
+      if (seq === businessGapsSeqRef.current) setLoadingBusinessGaps(false);
     }
-  }, []);
+  }, [domainId]);
 
   useEffect(() => {
     loadCoverage();
@@ -732,11 +757,11 @@ export function CoverageGapsTab() {
           <button type="button" onClick={loadDrafts} style={{ fontSize: 12 }}>↻</button>
         </div>
 
-        {drafts.length === 0 && (
+        {visibleDrafts.length === 0 && (
           <p className="qa-empty">Nenhum rascunho de IA pendente.</p>
         )}
 
-        {drafts.map((draft) => (
+        {visibleDrafts.map((draft) => (
           <div
             key={draft.id}
             style={{

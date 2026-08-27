@@ -110,7 +110,6 @@ export function QaWavesPage() {
     activeReplayDetailsRef.current = details;
     setActiveReplayDetailsState(details);
   };
-  const [activeTab, setActiveTab] = useState('jornadas');
   const [showExecutionsModal, setShowExecutionsModal] = useState(false);
   const [showNewJourneyForm, setShowNewJourneyForm] = useState(false);
   const [newJourneyFields, setNewJourneyFields] = useState({ id: '', title: '', vertical: '' });
@@ -317,6 +316,13 @@ export function QaWavesPage() {
       })),
     }));
   }, [journeysTree, journeyStatus]);
+
+  // Sidebar mostra apenas o domínio selecionado (a navegação entre domínios
+  // agora é feita pelos pills no topo).
+  const sidebarTree = useMemo(() => {
+    if (!selectedDomainId) return treeForSidebar;
+    return treeForSidebar.filter((domain) => domain.id === selectedDomainId);
+  }, [treeForSidebar, selectedDomainId]);
 
   const domainSummary = useMemo(() => {
     if (!selectedDomain) {
@@ -948,6 +954,27 @@ export function QaWavesPage() {
     }
   }
 
+  function handleSelectDomain(domainId) {
+    const domain = (journeysTree || []).find((item) => item.id === domainId);
+    if (!domain) return;
+    setSelectedDomainId(domainId);
+    const firstJourney = domain.journeys?.[0];
+    const nextJourneyId = firstJourney?.journeyId || '';
+    setSelectedJourneyId(nextJourneyId);
+    setInferenceJourneyId(nextJourneyId || 'auto');
+    const firstScenario = (scenarioItems || []).find((s) => s?.journeyId === nextJourneyId);
+    if (firstScenario) {
+      const firstScenarioWithSemanticSteps = ensureScenarioSemanticSteps(firstScenario);
+      setSelectedScenarioId(firstScenarioWithSemanticSteps.id);
+      setSelectedSeedId(firstScenarioWithSemanticSteps.seeds?.[0]?.id || '');
+      setScenarioEditor(JSON.stringify(firstScenarioWithSemanticSteps, null, 2));
+    } else {
+      setSelectedScenarioId('');
+      setSelectedSeedId('');
+      setScenarioEditor('');
+    }
+  }
+
   function labelJourneySource(source) {
     if (source === 'ai') return 'IA';
     if (source === 'inferred') return 'Template';
@@ -1005,43 +1032,28 @@ export function QaWavesPage() {
         </div>
       </header>
 
-      {/* Navegação de tabs */}
-      <nav style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border-default)', marginBottom: 16 }}>
-        {[
-          { id: 'jornadas', label: 'Jornadas e Cenários' },
-          { id: 'cenarios', label: 'Cenários' },
-          { id: 'cobertura', label: 'Cobertura e Gaps' },
-          { id: 'docs', label: '📚 Documentação' },
-        ].map((tab) => (
+      {/* Navegação por domínio */}
+      <nav style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderBottom: '2px solid var(--color-border-default)', marginBottom: 16, paddingBottom: 8 }}>
+        {(journeysTree || []).map((domain) => (
           <button
-            key={tab.id}
+            key={domain.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleSelectDomain(domain.id)}
             style={{
-              padding: '8px 20px',
-              border: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid var(--color-accent-primary)' : '2px solid transparent',
-              background: 'transparent',
-              fontWeight: activeTab === tab.id ? 700 : 400,
-              color: activeTab === tab.id ? 'var(--color-accent-primary)' : 'var(--color-text-secondary)',
+              padding: '6px 14px',
+              border: '1px solid var(--color-border-default)',
+              borderRadius: 999,
+              background: selectedDomainId === domain.id ? 'var(--color-accent-primary)' : 'transparent',
+              color: selectedDomainId === domain.id ? '#fff' : 'var(--color-text-secondary)',
+              fontWeight: selectedDomainId === domain.id ? 700 : 400,
               cursor: 'pointer',
-              fontSize: 14,
-              marginBottom: -2,
+              fontSize: 13,
             }}
           >
-            {tab.label}
+            {domain.name || domain.id}
           </button>
         ))}
       </nav>
-
-      {/* Tab: Cobertura e Gaps */}
-      {activeTab === 'cobertura' && <CoverageGapsTab />}
-
-      {/* Tab: Documentação */}
-      {activeTab === 'docs' && <QaWavesDocsTab />}
-
-      {/* Tab: Jornadas e Cenários (sidebar compartilhado) */}
-      {(activeTab === 'jornadas' || activeTab === 'cenarios') && (<>
       {currentExecutionId && (
         <div style={{ marginBottom: '16px' }}>
           <ExecutionProgress
@@ -1098,7 +1110,7 @@ export function QaWavesPage() {
             </div>
           )}
           <JourneyTree
-            domains={treeForSidebar}
+            domains={sidebarTree}
             selectedDomainId={selectedDomainId}
             selectedJourneyId={selectedJourneyId}
             onSelectJourney={handleSelectJourney}
@@ -1106,8 +1118,8 @@ export function QaWavesPage() {
           />
         </section>
 
-        {activeTab === 'jornadas' && (
-        <section className="qa-waves-panel qa-waves-business-content">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+        <section className="qa-waves-panel qa-waves-business-content" style={{ marginBottom: 0 }}>
           <div className="qa-journey-actions">
             <h2 className="qa-waves-section-title">Jornada e Cenários</h2>
             <div className="qa-journey-actions-buttons">
@@ -1423,40 +1435,22 @@ export function QaWavesPage() {
           />
 
         </section>
-        )}
 
-        {activeTab === 'cenarios' && (
-          <section className="qa-waves-panel qa-waves-business-content">
+          <section className="qa-waves-panel qa-waves-business-content" style={{ marginBottom: 0 }}>
             <div className="qa-journey-actions">
               <h2 className="qa-waves-section-title">Cenários</h2>
-              <div className="qa-journey-actions-buttons">
-                <button
-                  type="button"
-                  onClick={() => runScenarioReal([selectedScenarioId])}
-                  disabled={!selectedScenarioId || executionPolling.isPolling}
-                  className="qa-btn-primary"
-                  data-testid="qa-waves-run-button"
-                  title={executionPolling.isPolling ? 'Execução em andamento. Aguarde a conclusão.' : ''}
-                >
-                  ▶ Executar cenário
-                </button>
-                <button type="button" onClick={inferScenario}>✦ IA</button>
-                <button type="button" onClick={validateScenario}>✓ Validar</button>
-                <button type="button" onClick={saveScenario}>⎘ Salvar</button>
-                <button type="button" onClick={createBlankScenario}>+ Novo</button>
-                <button type="button" onClick={generateSeeds}>◎ Seeds</button>
-              </div>
             </div>
             <div className="qa-scenario-editor-grid">
               <div className="qa-scenario-list-panel">
                 {(scenarioItems || [])
                   .filter((item) => {
+                    const byDomain = !selectedDomainId || !item.vertical || item.vertical === selectedDomainId;
                     const byJourney = !selectedJourneyId || item.journeyId === selectedJourneyId;
                     const byScenario = !filters.scenario || `${item.id} ${item.name}`.toLowerCase().includes(filters.scenario.toLowerCase());
                     const bySeed = !filters.seed || (item.seeds || []).some((seed) => String(seed.id).toLowerCase().includes(filters.seed.toLowerCase()));
                     const byDateStart = !filters.dateStart || new Date(item.updatedAt || item.createdAt || 0).getTime() >= new Date(`${filters.dateStart}T00:00:00`).getTime();
                     const byDateEnd = !filters.dateEnd || new Date(item.updatedAt || item.createdAt || 0).getTime() <= new Date(`${filters.dateEnd}T23:59:59`).getTime();
-                    return byJourney && byScenario && bySeed && byDateStart && byDateEnd;
+                    return byDomain && byJourney && byScenario && bySeed && byDateStart && byDateEnd;
                   })
                   .map((item) => {
                     const selected = item.id === selectedScenarioId;
@@ -1702,9 +1696,14 @@ export function QaWavesPage() {
               </div>
             </div>
           </section>
-        )}
+        </div>
       </div>
-      </>)}
+
+      {/* Seção: Cobertura e Gaps (escopada por domínio) */}
+      <CoverageGapsTab domainId={selectedDomainId} />
+
+      {/* Seção: Documentação (escopada por domínio) */}
+      <QaWavesDocsTab domainId={selectedDomainId} />
 
       {/* bloco antigo removido */}
       {false && (

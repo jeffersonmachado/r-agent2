@@ -1,11 +1,51 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchJson } from '../../api/client';
 
-export function QaWavesDocsTab() {
+const DOMAIN_DOC_ALIASES = {
+  beauty: ['beauty'],
+  fitness: ['fitness'],
+  food: ['food'],
+  clinic: ['clinic', 'clinica'],
+  services: ['services', 'servicos'],
+  market: ['market', 'mercado'],
+  omnichannel: ['omnichannel'],
+  core: ['core'],
+};
+
+/**
+ * Determina se um documento (roteiro ou diagrama) pertence ao domínio, pelo
+ * prefixo do nome do arquivo. Trata aliases (clinic/clinica, market/mercado,
+ * services/servicos).
+ */
+export function isDocForDomain(fileName, domainId) {
+  if (!fileName || !domainId) return false;
+  const aliases = DOMAIN_DOC_ALIASES[domainId] || [domainId];
+  const base = String(fileName).toLowerCase();
+  return aliases.some((alias) => {
+    const a = String(alias).toLowerCase();
+    return base.startsWith(`jornada-${a}-`)
+      || base.startsWith(`vertical-${a}-`)
+      || base === `vertical-${a}.md`
+      || base.startsWith(`journey-${a}-`)
+      || base.startsWith(`treinamento-${a}-`)
+      || base.startsWith(`treinamento-jornada-${a}-`);
+  });
+}
+
+export function QaWavesDocsTab({ domainId = null }) {
   const [activeType, setActiveType] = useState('roteiros');
   const [files, setFiles] = useState([]);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const visibleFiles = useMemo(() => {
+    if (!domainId) return files;
+    return files.filter((file) => isDocForDomain(file.name, domainId));
+  }, [files, domainId]);
+
+  useEffect(() => {
+    setSelectedDoc(null);
+  }, [domainId]);
 
   const loadFiles = useCallback(async (type) => {
     setLoading(true);
@@ -94,7 +134,7 @@ export function QaWavesDocsTab() {
               borderBottom: activeType === type ? '2px solid var(--color-accent-primary)' : '2px solid transparent',
             }}
           >
-            {type === 'roteiros' ? '📝 Roteiros' : '📊 Diagramas'} ({files.length})
+            {type === 'roteiros' ? '📝 Roteiros' : '📊 Diagramas'} ({visibleFiles.length})
           </button>
         ))}
       </div>
@@ -102,9 +142,13 @@ export function QaWavesDocsTab() {
       {loading && <p className="text-xs text-muted">Carregando...</p>}
 
       {/* ── File list ── */}
+      {!selectedDoc && !loading && visibleFiles.length === 0 && (
+        <p className="text-xs text-muted">Nenhum documento para este domínio.</p>
+      )}
+
       {!selectedDoc && !loading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {files.map(f => (
+          {visibleFiles.map(f => (
             <button
               key={f.name}
               onClick={() => loadDoc(activeType, f.name)}

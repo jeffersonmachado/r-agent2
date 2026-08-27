@@ -25,6 +25,14 @@ vi.mock('../components/qa-waves/StepBreakdown', () => ({
   default: () => <div data-testid="step-breakdown" />,
 }));
 
+vi.mock('../components/qa-waves/CoverageGapsTab', () => ({
+  CoverageGapsTab: ({ domainId }) => <div data-testid="coverage-gaps-tab" data-domain={domainId || ''} />,
+}));
+
+vi.mock('../components/qa-waves/QaWavesDocsTab', () => ({
+  QaWavesDocsTab: ({ domainId }) => <div data-testid="qa-waves-docs-tab" data-domain={domainId || ''} />,
+}));
+
 vi.mock('../context/WebSocketContext', () => ({
   useWebSocketContext: () => ({
     connected: true,
@@ -176,10 +184,6 @@ describe('pages/QaWavesPage', () => {
 
     render(<QaWavesPage />);
 
-    // Navega para a aba de Cenários onde fica o editor
-    const abaTab = await screen.findByRole('button', { name: /^cenários$/i });
-    await user.click(abaTab);
-
     await screen.findByRole('heading', { name: 'Edição guiada do cenário' });
     expect(screen.queryByRole('textbox', { name: /descrição/i })).toBeInTheDocument();
 
@@ -302,10 +306,6 @@ describe('pages/QaWavesPage', () => {
 
     render(<QaWavesPage />);
 
-    // Navega para a aba de Cenários onde fica o editor e o botão Executar cenário
-    const abaTab2 = await screen.findByRole('button', { name: /^cenários$/i });
-    await user.click(abaTab2);
-
     await screen.findByRole('heading', { name: 'Edição guiada do cenário' });
 
     await user.click(screen.getByRole('button', { name: /executar cenário/i }));
@@ -315,10 +315,6 @@ describe('pages/QaWavesPage', () => {
         'success'
       );
     });
-
-    // Volta para aba Jornadas onde fica o botão "Abrir replay"
-    const abaJornadas = screen.getByRole('button', { name: /jornadas e cenários/i });
-    await user.click(abaJornadas);
 
     await user.click(screen.getByRole('button', { name: /abrir replay/i }));
 
