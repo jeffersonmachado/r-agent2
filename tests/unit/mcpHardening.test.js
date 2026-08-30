@@ -166,9 +166,13 @@ describe('MCP Hardening — boundary HTTP /mcp', () => {
     expect(ctx.permissions).toContain('crm.read');
     expect(ctx.permissions).not.toContain('*');
 
-    // Mapeamento canônico role→classificação (experience-segregation).
+    // Mapeamento canônico (experience-segregation): tenant role não concede
+    // classificação de plataforma; auditor puro é PRODUCTION.
     expect(buildMcpAuthContext({
       agent: { id: 'a1', role: 'auditor', tenantId: 'tenant-a' }, headers: {},
+    }).classification).toBe('PRODUCTION');
+    expect(buildMcpAuthContext({
+      agent: { id: 'a1', role: 'auditor', platformRole: 'support_n2', tenantId: 'tenant-a' }, headers: {},
     }).classification).toBe('SUPPORT');
     const sa = buildMcpAuthContext({
       agent: { id: 'sa1', role: 'super_admin', tenantId: 'tenant-b' }, tenantId: 'tenant-b', headers: {},

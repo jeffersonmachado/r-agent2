@@ -46,19 +46,15 @@ function defaultAgentDirectory() {
   };
 }
 
-/** Mapeia classificação → papel sintético para reutilizar o Domain Router. */
-function roleForClassification(classification) {
-  if (classification === 'DEVELOPMENT') return 'super_admin';
-  if (classification === 'SUPPORT') return 'auditor';
-  return 'user';
-}
-
 /**
  * Knowledge scope do especialista: calculado pelo Domain Router a partir da
  * classificação — NUNCA escolhido pelo prompt/conteúdo do agente.
+ * O ator sintético carrega a classificação explícita (eixo de plataforma),
+ * não um tenant role: desde 2026-08-27 tenant role não deriva classificação
+ * (ex.: auditor puro é PRODUCTION).
  */
 function knowledgeScopeFor(classification) {
-  const scope = resolveRetrievalScope({ actor: { role: roleForClassification(classification) } });
+  const scope = resolveRetrievalScope({ actor: { platformClassification: normalizeClassification(classification) } });
   return {
     domain: scope.scope.domain,
     classifications: [...scope.scope.classifications],

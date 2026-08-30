@@ -8,7 +8,7 @@ export function WorkspaceInsights({ insights, loading }) {
   return (
     <section className="workspace-card workspace-scroll">
       <h2 className="text-xl font-semibold">Insights IA</h2>
-      <p className="workspace-muted text-sm mb-4">Riscos, oportunidades, atraso, churn, upsell e sinais QA/RPA.</p>
+      <p className="workspace-muted text-sm mb-4">Riscos, oportunidades, atraso, churn, upsell e sinais de instabilidade operacional.</p>
       {loading ? <div className="workspace-skeleton-stack"><div className="workspace-skeleton h-16"></div><div className="workspace-skeleton h-16"></div></div> : null}
       {!loading && items.length === 0 ? <p className="workspace-muted">Sem insights críticos no momento.</p> : null}
       {items.map((insight, index) => (

@@ -3,14 +3,17 @@ import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { Button } from '../styles/Button';
-import { listQueues, getTicketMessages } from '../api/tickets';
+import { listQueues } from '../api/tickets';
 import { usePhoneMasking } from '../hooks/usePhoneMasking';
 import { MaskedPhone } from '../components/MaskedPhone';
 import {
   listInboxConversations,
+  getInboxConversation,
+  replyInboxConversation,
   assignInboxConversation,
   transferInboxConversation,
   addInboxNote,
+  createCaseFromConversation,
 } from '../api/inbox';
 import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
@@ -18,7 +21,9 @@ import { useIncrementalList, useLoadMoreSentinel } from '../hooks/useIncremental
 import { CrudPageBase } from '../modules/crud-base';
 
 export function InboxPage() {
-  const { isAuthenticated, loading: authLoading, agent } = useAuth();
+  const { isAuthenticated, loading: authLoading, agent, capabilities } = useAuth();
+  // Capability do tenant: atendimento com chamados (SLA, filas, prioridade).
+  const caseManagementEnabled = capabilities?.caseManagement === true;
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { enabled: phoneMaskingEnabled } = usePhoneMasking();
@@ -28,6 +33,7 @@ export function InboxPage() {
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [queues, setQueues] = useState([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('open');
@@ -42,6 +48,8 @@ export function InboxPage() {
   const [transferQueue, setTransferQueue] = useState('');
   const [transferAssigned, setTransferAssigned] = useState('');
   const [noteText, setNoteText] = useState('');
+  const [replyText, setReplyText] = useState('');
+  const [creatingCase, setCreatingCase] = useState(false);
 
   // Cache id→nome de atendente e sequência para descartar respostas obsoletas
   const agentNameCacheRef = useRef(new Map());
@@ -149,13 +157,13 @@ export function InboxPage() {
     try {
       const data = await listInboxConversations({
         status: statusFilter === 'open' ? undefined : statusFilter,
-        queue: queueFilter || undefined,
-        assignedTo: assignedFilterDebounced || undefined,
+        channelType: channelFilter || undefined,
         limit: 500,
         offset: 0,
       });
       if (seq !== loadTicketsSeqRef.current) return; // resposta obsoleta (filtro mudou)
-      const list = Array.isArray(data?.tickets) ? data.tickets : [];
+      // Contrato novo: { conversations, total }
+      const list = Array.isArray(data?.conversations) ? data.conversations : (Array.isArray(data?.tickets) ? data.tickets : []);
       const listWithDisplay = await resolveAssignedToDisplay(list);
       if (seq !== loadTicketsSeqRef.current) return; // resposta obsoleta (filtro mudou)
       setTickets(listWithDisplay);
@@ -172,21 +180,28 @@ export function InboxPage() {
         setLoading(false);
       }
     }
-  }, [assignedFilterDebounced, queueFilter, resolveAssignedToDisplay, selectedTicket, showToast, statusFilter]);
+  }, [channelFilter, resolveAssignedToDisplay, selectedTicket, showToast, statusFilter]);
 
   const loadMessages = useCallback(async (ticketId) => {
     if (!ticketId) {
       setMessages([]);
+      setNotes([]);
       return;
     }
     try {
-      const data = await getTicketMessages(ticketId);
+      // Contrato novo: GET /inbox/conversations/:id → { conversation, messages, notes }
+      const data = await getInboxConversation(ticketId);
       if (Array.isArray(data)) {
         setMessages(data);
-      } else if (Array.isArray(data?.messages)) {
-        setMessages(data.messages);
+        setNotes([]);
       } else {
-        setMessages([]);
+        setMessages(Array.isArray(data?.messages) ? data.messages : []);
+        // Notas internas: primeira classe no payload; fallback para
+        // metadata.notes da conversa (persistência de conversa sem ticket).
+        const apiNotes = Array.isArray(data?.notes)
+          ? data.notes
+          : (Array.isArray(data?.conversation?.metadata?.notes) ? data.conversation.metadata.notes : []);
+        setNotes(apiNotes);
       }
     } catch (err) {
       logger.error('[Inbox] Erro ao carregar mensagens', err);
@@ -197,27 +212,31 @@ export function InboxPage() {
         console.error('Erro ao exibir toast:', toastErr);
       }
       setMessages([]);
+      setNotes([]);
     }
   }, []);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      loadQueues();
+      if (caseManagementEnabled) {
+        loadQueues();
+      }
       loadTickets();
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, caseManagementEnabled]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       loadTickets();
     }
-  }, [assignedFilterDebounced, authLoading, isAuthenticated, queueFilter, statusFilter]);
+  }, [authLoading, channelFilter, isAuthenticated, statusFilter]);
 
   useEffect(() => {
     if (selectedTicket?.id) {
       loadMessages(selectedTicket.id);
     } else {
       setMessages([]);
+      setNotes([]);
     }
   }, [loadMessages, selectedTicket]);
 
@@ -241,6 +260,7 @@ export function InboxPage() {
     setTransferQueue('');
     setTransferAssigned('');
     setNoteText('');
+    setReplyText('');
   };
 
   const getSlaMinutes = useCallback((ticket) => {
@@ -268,11 +288,17 @@ export function InboxPage() {
       list = list.filter((t) => Array.isArray(t.tags) && t.tags.some((x) => String(x).toLowerCase().includes(tag)));
     }
 
-    if (channelFilter) {
-      list = list.filter((t) => String(t.channelType || '').toLowerCase() === channelFilter);
+    // Filtros de chamado (atendente, fila, SLA) só fazem sentido com caseManagement
+    if (caseManagementEnabled && assignedFilterDebounced.trim()) {
+      const term = assignedFilterDebounced.trim().toLowerCase();
+      list = list.filter((t) => String(t.assignedToDisplay || t.assignedTo || '').toLowerCase().includes(term));
     }
 
-    if (slaMaxMinutes.trim()) {
+    if (caseManagementEnabled && queueFilter) {
+      list = list.filter((t) => String(t.queue || '') === queueFilter);
+    }
+
+    if (caseManagementEnabled && slaMaxMinutes.trim()) {
       const maxMin = Number(slaMaxMinutes);
       if (Number.isFinite(maxMin) && maxMin >= 0) {
         list = list.filter((t) => {
@@ -284,10 +310,10 @@ export function InboxPage() {
     }
 
     return list;
-  }, [channelFilter, getSlaMinutes, slaMaxMinutes, tagFilter, tickets]);
+  }, [assignedFilterDebounced, caseManagementEnabled, getSlaMinutes, queueFilter, slaMaxMinutes, tagFilter, tickets]);
 
   const displayedTickets = useMemo(() => {
-    if (!prioritizeSla) return filteredTickets;
+    if (!caseManagementEnabled || !prioritizeSla) return filteredTickets;
     return [...filteredTickets].sort((a, b) => {
       const aExceeded = isSlaExceeded(a) ? 1 : 0;
       const bExceeded = isSlaExceeded(b) ? 1 : 0;
@@ -296,7 +322,7 @@ export function InboxPage() {
       const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return bDate - aDate;
     });
-  }, [filteredTickets, prioritizeSla]);
+  }, [caseManagementEnabled, filteredTickets, prioritizeSla]);
 
   // Lista pode chegar a 500 conversas: renderiza em blocos de 200
   // (IntersectionObserver + botão manual como fallback).
@@ -330,16 +356,51 @@ export function InboxPage() {
     }
   };
 
+  const handleReply = async () => {
+    if (!selectedTicket) return;
+    if (!replyText.trim()) {
+      showToast('Digite uma resposta antes de enviar', 'warning');
+      return;
+    }
+    try {
+      await replyInboxConversation(selectedTicket.id, replyText);
+      setReplyText('');
+      await loadMessages(selectedTicket.id);
+      showToast('Resposta enviada', 'success');
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'Erro ao enviar resposta';
+      showToast(message, 'error');
+    }
+  };
+
+  const handleCreateCase = async () => {
+    if (!selectedTicket || !caseManagementEnabled) return;
+    setCreatingCase(true);
+    try {
+      const result = await createCaseFromConversation(selectedTicket.id, {});
+      showToast(`Chamado criado: ${result?.case?.id || 'ok'}`, 'success');
+    } catch (err) {
+      if (err?.status === 403 && err?.body?.error === 'capability_disabled') {
+        showToast('Case Management não está ativo para este tenant', 'warning');
+      } else {
+        const message = err?.response?.data?.message || err?.message || 'Erro ao criar chamado';
+        showToast(message, 'error');
+      }
+    } finally {
+      setCreatingCase(false);
+    }
+  };
+
   const handleTransfer = async () => {
     if (!selectedTicket) return;
-    if (!transferQueue) {
+    if (caseManagementEnabled && !transferQueue) {
       showToast('Informe a fila para transferir', 'warning');
       return;
     }
     try {
       const updated = await transferInboxConversation(selectedTicket.id, {
-        queue: transferQueue,
-        assignedTo: transferAssigned ? transferAssigned : null,
+        queue: caseManagementEnabled ? transferQueue : undefined,
+        assigneeId: transferAssigned ? transferAssigned : undefined,
       });
       setSelectedTicket(updated);
       await loadTickets();
@@ -357,8 +418,9 @@ export function InboxPage() {
       return;
     }
     try {
-      const updated = await addInboxNote(selectedTicket.id, noteText);
-      setSelectedTicket(updated);
+      // POST /notes retorna apenas { ok: true } (contrato do módulo); a nota
+      // é relida via GET da conversa (notes first-class no payload).
+      await addInboxNote(selectedTicket.id, noteText);
       setNoteText('');
       await loadMessages(selectedTicket.id);
       showToast('Nota adicionada', 'success');
@@ -470,19 +532,21 @@ export function InboxPage() {
               ))}
             </select>
           </label>
-          <label>
-            Fila
-            <select
-              className="support-form-select"
-              value={queueFilter}
-              onChange={(e) => setQueueFilter(e.target.value)}
-            >
-              <option value="">Todas</option>
-              {queues.map((q) => (
-                <option key={q} value={q}>{q}</option>
-              ))}
-            </select>
-          </label>
+          {caseManagementEnabled ? (
+            <label>
+              Fila
+              <select
+                className="support-form-select"
+                value={queueFilter}
+                onChange={(e) => setQueueFilter(e.target.value)}
+              >
+                <option value="">Todas</option>
+                {queues.map((q) => (
+                  <option key={q} value={q}>{q}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label>
             Atendente
             <input
@@ -515,23 +579,27 @@ export function InboxPage() {
               <option value="webchat">Webchat</option>
             </select>
           </label>
-          <label>
-            SLA máx (min)
-            <input
-              className="support-form-input"
-              value={slaMaxMinutes}
-              onChange={(e) => setSlaMaxMinutes(e.target.value)}
-              placeholder="ex: 30"
-            />
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <input
-              type="checkbox"
-              checked={prioritizeSla}
-              onChange={(e) => setPrioritizeSla(e.target.checked)}
-            />
-            Priorizar SLA estourado
-          </label>
+          {caseManagementEnabled ? (
+            <label>
+              SLA máx (min)
+              <input
+                className="support-form-input"
+                value={slaMaxMinutes}
+                onChange={(e) => setSlaMaxMinutes(e.target.value)}
+                placeholder="ex: 30"
+              />
+            </label>
+          ) : null}
+          {caseManagementEnabled ? (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <input
+                type="checkbox"
+                checked={prioritizeSla}
+                onChange={(e) => setPrioritizeSla(e.target.checked)}
+              />
+              Priorizar SLA estourado
+            </label>
+          ) : null}
           <Button onClick={loadTickets} disabled={loading} className="support-button">
             Atualizar
           </Button>
@@ -627,16 +695,18 @@ export function InboxPage() {
               <div className="support-details-section">
                 <div className="support-form-group">
                   <label className="support-form-label">Transferir</label>
-                  <select
-                    className="support-form-select"
-                    value={transferQueue}
-                    onChange={(e) => setTransferQueue(e.target.value)}
-                  >
-                    <option value="">Selecione a fila</option>
-                    {queues.map((q) => (
-                      <option key={q} value={q}>{q}</option>
-                    ))}
-                  </select>
+                  {caseManagementEnabled ? (
+                    <select
+                      className="support-form-select"
+                      value={transferQueue}
+                      onChange={(e) => setTransferQueue(e.target.value)}
+                    >
+                      <option value="">Selecione a fila</option>
+                      {queues.map((q) => (
+                        <option key={q} value={q}>{q}</option>
+                      ))}
+                    </select>
+                  ) : null}
                   <input
                     className="support-form-input"
                     value={transferAssigned}
@@ -647,11 +717,33 @@ export function InboxPage() {
                 </div>
               </div>
 
+              {caseManagementEnabled ? (
+                <div className="support-details-section">
+                  <Button onClick={handleCreateCase} disabled={creatingCase} className="support-button-full">
+                    {creatingCase ? 'Criando chamado...' : 'Criar chamado'}
+                  </Button>
+                </div>
+              ) : null}
+
+              <div className="support-details-section">
+                <div className="support-form-group">
+                  <label className="support-form-label">Responder</label>
+                  <textarea
+                    className="support-form-textarea"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Escreva a resposta para o cliente"
+                    rows={3}
+                  />
+                  <Button onClick={handleReply} className="support-button-full">Enviar resposta</Button>
+                </div>
+              </div>
+
               <div className="support-details-section">
                 <div className="support-form-group">
                   <label className="support-form-label">Notas internas</label>
                   <textarea
-                    className="support-form-textarea"
+                    className="support-form-textarea support-note-textarea"
                     value={noteText}
                     onChange={(e) => setNoteText(e.target.value)}
                     placeholder="Escreva uma nota interna"
@@ -659,6 +751,21 @@ export function InboxPage() {
                   />
                   <Button onClick={handleAddNote} className="support-button-full">Salvar nota</Button>
                 </div>
+                {notes.length > 0 ? (
+                  <div className="support-notes-list" style={{ marginTop: '8px' }}>
+                    {notes.map((note, index) => (
+                      <div key={`${note.at || note.timestamp || 'note'}-${index}`} className="mb-2">
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                          {`Nota • ${note.authorUsername || note.authorName || note.author || agent?.username || 'system'}`}
+                          {' · '}{formatDate(note.at || note.timestamp)}
+                        </div>
+                        <div style={{ color: 'var(--color-status-warning)' }}>
+                          {note.note || note.text || '-'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div className="support-details-section">
@@ -679,17 +786,24 @@ export function InboxPage() {
                       </Button>
                     </div>
                   ) : null}
-                  {visibleMessages.map((msg) => (
-                    <div key={msg.id || msg.timestamp} className="mb-2">
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
-                        {msg.sender === 'note' ? `Nota • ${msg.authorName || agent?.username || 'system'}` : msg.sender}
-                        {' · '}{formatDate(msg.timestamp)}
+                  {visibleMessages.map((msg) => {
+                    // Contrato novo (channel_messages): { direction, body: { text }, createdAt };
+                    // compat legado (ledger do ticket): { sender, text, timestamp }.
+                    const senderLabel = msg.sender || (msg.direction === 'out' ? 'agent' : 'customer');
+                    const messageText = msg.text || msg.body?.text || '-';
+                    const messageAt = msg.timestamp || msg.createdAt;
+                    return (
+                      <div key={msg.id || messageAt} className="mb-2">
+                        <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
+                          {msg.sender === 'note' ? `Nota • ${msg.authorName || agent?.username || 'system'}` : senderLabel}
+                          {' · '}{formatDate(messageAt)}
+                        </div>
+                        <div style={{ color: msg.sender === 'note' ? 'var(--color-status-warning)' : 'var(--color-text-primary)' }}>
+                          {messageText}
+                        </div>
                       </div>
-                      <div style={{ color: msg.sender === 'note' ? 'var(--color-status-warning)' : 'var(--color-text-primary)' }}>
-                        {msg.text || '-'}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

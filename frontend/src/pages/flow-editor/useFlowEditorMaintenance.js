@@ -30,19 +30,19 @@ export function useFlowEditorMaintenance({
       const result = await getReplay(sessionId.trim());
       setReplay(result);
       setReplayCollapsed(false);
-      showToast('Replay carregado com sucesso', 'success', 2000);
+      showToast('Revisão de sessão carregada com sucesso', 'success', 2000);
     } catch (err) {
-      logger.error('Erro ao carregar replay', err);
+      logger.error('Erro ao carregar revisão de sessão', err);
       setReplayError(err instanceof Error ? err.message : String(err));
       setReplay(null);
-      showToast('Erro ao carregar replay', 'error', 3000);
+      showToast('Erro ao carregar revisão de sessão', 'error', 3000);
     } finally {
       setLoadingReplay(false);
     }
   }, [sessionId, setLoadingReplay, setReplayError, setReplay, setReplayCollapsed, showToast]);
 
   const handleSeekNode = useCallback((nodeId, index) => {
-    // index is kept for API compatibility with replay callbacks.
+    // index is kept for API compatibility with session review callbacks.
     void index;
 
     if (nodeId && editorRef.current?.editor?.current) {

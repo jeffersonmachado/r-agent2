@@ -48,8 +48,8 @@ const CONTEXT_PRESETS = {
   },
 };
 
-export function ContextPanel({ agent, currentPath, tenantLabel = '', onClose }) {
-  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
+export function ContextPanel({ agent, currentPath, tenantLabel = '', onClose, capabilities }) {
+  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu, capabilities), [agent, capabilities]);
   const { activeArea } = useMemo(
     () => buildWorkspaceAreas(filteredMenu, currentPath),
     [filteredMenu, currentPath],

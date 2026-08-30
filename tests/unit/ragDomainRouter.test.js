@@ -42,15 +42,21 @@ describe('resolveRetrievalScope', () => {
     expect(result.reason).toContain('cannot_access_system_domain');
   });
 
-  test('usuário SUPPORT acessa SYSTEM/SUPPORT mas não DEVELOPMENT', () => {
+  test('auditor de tenant puro é PRODUCTION e NÃO acessa SYSTEM', () => {
     const result = resolveRetrievalScope({ actor: { role: 'auditor' }, requestedDomain: 'SYSTEM' });
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain('cannot_access_system_domain');
+  });
+
+  test('usuário SUPPORT (platformRole concedido server-side) acessa SYSTEM/SUPPORT mas não DEVELOPMENT', () => {
+    const result = resolveRetrievalScope({ actor: { role: 'auditor', platformRole: 'support_n2' }, requestedDomain: 'SYSTEM' });
     expect(result.allowed).toBe(true);
     expect(result.scope.domain).toBe('SYSTEM');
     expect(result.scope.classifications).toEqual(['SUPPORT']);
   });
 
   test('usuário SUPPORT no domínio OPERATIONAL vê PRODUCTION e SUPPORT', () => {
-    const result = resolveRetrievalScope({ actor: { role: 'auditor' } });
+    const result = resolveRetrievalScope({ actor: { role: 'auditor', platformRole: 'support_n2' } });
     expect(result.scope.classifications).toEqual(['PRODUCTION', 'SUPPORT']);
   });
 
@@ -68,6 +74,11 @@ describe('resolveRetrievalScope', () => {
 
   test('role desconhecido é tratado como PRODUCTION', () => {
     const result = resolveRetrievalScope({ actor: { role: 'hacker' }, requestedDomain: 'SYSTEM' });
+    expect(result.allowed).toBe(false);
+  });
+
+  test('platformRole desconhecido não amplia: cai no fallback por role', () => {
+    const result = resolveRetrievalScope({ actor: { role: 'operator', platformRole: 'root_god' }, requestedDomain: 'SYSTEM' });
     expect(result.allowed).toBe(false);
   });
 });

@@ -2067,7 +2067,7 @@ async function runFlowScenario(definition, ctx) {
 
   if (definition.code === 'CORE-BIZ-INBOX') {
     const listed = await api.get('/inbox/conversations?limit=50');
-    const conversations = listed?.tickets || listed?.items || [];
+    const conversations = listed?.conversations || listed?.tickets || listed?.items || [];
     const target = conversations.find((item) => item.status !== 'closed') || conversations[0];
     if (!target?.id) {
       throw new Error('Nenhuma conversa elegível encontrada na inbox');
@@ -2079,7 +2079,7 @@ async function runFlowScenario(definition, ctx) {
     await api.post(`/inbox/conversations/${encodeURIComponent(target.id)}/notes`, { note });
 
     const reloaded = await api.get('/inbox/conversations?limit=50');
-    const updated = (reloaded?.tickets || reloaded?.items || []).find((item) => item.id === target.id);
+    const updated = (reloaded?.conversations || reloaded?.tickets || reloaded?.items || []).find((item) => item.id === target.id);
     if (!updated) {
       throw new Error('Conversa atribuída sumiu da listagem da inbox');
     }
@@ -2091,6 +2091,49 @@ async function runFlowScenario(definition, ctx) {
       detail: 'Conversa atribuída e anotada na inbox',
       ids: { conversationId: target.id },
       evidence: { assignedTo: updated.assignedTo },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-CASES') {
+    const listed = await api.get('/inbox/conversations?limit=50');
+    const conversations = listed?.conversations || listed?.tickets || listed?.items || [];
+    const eligible = conversations.filter((item) => item && item.id);
+    if (eligible.length < 2) {
+      throw new Error('Cenario requer ao menos 2 conversas na inbox para provar multi-conversation case');
+    }
+
+    const [first, second] = eligible;
+
+    const created = await api.post(`/inbox/conversations/${encodeURIComponent(first.id)}/case`, {
+      subject: `Chamado QA ${runId}`,
+      priority: 'medium',
+    });
+    const caseData = created?.case || created;
+    if (!caseData?.id) {
+      throw new Error('Criacao de chamado a partir da conversa nao retornou ID');
+    }
+
+    await api.post(`/cases/${encodeURIComponent(caseData.id)}/conversations`, {
+      conversationId: second.id,
+    });
+
+    const loaded = await api.get(`/cases/${encodeURIComponent(caseData.id)}`);
+    const linkedConversations = loaded?.conversations || [];
+    const linkedIds = linkedConversations.map((item) => item.id);
+    if (!linkedIds.includes(first.id) || !linkedIds.includes(second.id)) {
+      throw new Error('Chamado nao consolidou as duas conversas vinculadas');
+    }
+
+    const list = await api.get('/cases?limit=50');
+    const cases = list?.cases || list?.items || [];
+    if (!cases.some((item) => item.id === caseData.id)) {
+      throw new Error('Chamado criado nao apareceu na listagem de chamados');
+    }
+
+    return {
+      detail: 'Chamado criado a partir da inbox consolidando 2 conversas',
+      ids: { caseId: caseData.id, conversationIds: [first.id, second.id] },
+      evidence: { linkedConversations: linkedIds.length },
     };
   }
 

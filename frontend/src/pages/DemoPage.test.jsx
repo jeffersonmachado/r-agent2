@@ -7,10 +7,18 @@ import { fetchJson } from '../api/client';
 
 const testDoubles = vi.hoisted(() => ({
   showToast: vi.fn(),
+  auth: { agent: { id: 'a-dev', role: 'super_admin', classification: 'DEVELOPMENT' } },
 }));
 
 vi.mock('../api/client', () => ({
   fetchJson: vi.fn(),
+}));
+
+vi.mock('../context/authContext', () => ({
+  useAuth: () => ({
+    agent: testDoubles.auth.agent,
+    capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
+  }),
 }));
 
 vi.mock('../components/Toast', () => ({
@@ -105,6 +113,7 @@ function mockFetch(url) {
 describe('pages/DemoPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    testDoubles.auth.agent = { id: 'a-dev', role: 'super_admin', classification: 'DEVELOPMENT' };
     fetchJson.mockImplementation(mockFetch);
   });
 
@@ -141,5 +150,32 @@ describe('pages/DemoPage', () => {
       expect(fetchJson).toHaveBeenCalledWith('/api/demo/run', expect.any(Object));
       expect(testDoubles.showToast).toHaveBeenCalledWith(expect.stringMatching(/executionId=meshq-demo-1/), 'success');
     });
+  });
+
+  it('agente DEVELOPMENT vê as superfícies técnicas (QA Waves, QA health, Replay)', async () => {
+    render(<DemoPage />);
+
+    await screen.findByText('RAP Commercial Demo');
+
+    expect(screen.getByText('QA Waves visivel')).toBeInTheDocument();
+    expect(screen.getByText('QA health')).toBeInTheDocument();
+    expect(screen.getByText(/Replay ready/)).toBeInTheDocument();
+    expect(screen.getByText(/QA -> Replay/)).toBeInTheDocument();
+  });
+
+  it('agente PRODUCTION não vê superfícies técnicas da demo', async () => {
+    testDoubles.auth.agent = { id: 'a-prod', role: 'operator' };
+    render(<DemoPage />);
+
+    await screen.findByText('RAP Commercial Demo');
+
+    expect(screen.queryByText('QA Waves visivel')).not.toBeInTheDocument();
+    expect(screen.queryByText('QA health')).not.toBeInTheDocument();
+    expect(screen.queryByText(/QA -> Replay/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Replay ready/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Abrir QA Waves/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Abrir replay/i })).not.toBeInTheDocument();
+    // Conteúdo operacional permanece
+    expect(screen.getByText('Leads gerados')).toBeInTheDocument();
   });
 });

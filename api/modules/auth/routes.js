@@ -1,6 +1,20 @@
 'use strict';
 
 const express = require('express');
+const { getClassificationForAgent } = require('../agent-os/experience-segregation');
+
+/**
+ * Garante que o payload do agent expõe a classificação de plataforma
+ * (eixo independente do tenant role) sem remover nenhum campo existente.
+ */
+function withClassificationPayload(agent) {
+  if (!agent || typeof agent !== 'object') return agent;
+  return {
+    ...agent,
+    platformRole: agent.platformRole || null,
+    classification: getClassificationForAgent(agent),
+  };
+}
 
 function createAuthRoutes({
   sendJson,
@@ -86,7 +100,7 @@ function createAuthRoutes({
 
       sendJson(res, 200, {
         token: result.token,
-        agent: result.agent,
+        agent: withClassificationPayload(result.agent),
       });
     } catch (err) {
       if (err instanceof SyntaxError || err?.type === 'entity.parse.failed') {
@@ -286,7 +300,7 @@ function createAuthRoutes({
       return;
     }
 
-    sendJson(res, 200, { agent: validation.agent });
+    sendJson(res, 200, { agent: withClassificationPayload(validation.agent) });
   });
 
   return router;

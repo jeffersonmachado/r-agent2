@@ -61,7 +61,7 @@ export function TicketMaintenancePage() {
 
   // Carrega métricas do sistema
   const loadMetrics = useCallback(async () => {
-    // Importante para automações (RPA) e UX:
+    // Importante para automações e UX:
     // a seção de métricas (incluindo o botão "Gerenciar Filas") só renderiza quando `metrics` não é null.
     // Se o backend estiver lento, deixamos um placeholder imediatamente para a UI não "sumir".
     setMetrics((prev) => prev ?? {

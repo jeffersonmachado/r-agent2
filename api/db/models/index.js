@@ -31,6 +31,7 @@ const getFlowTemplate = require('./FlowTemplate');
 const getChannelAccount = require('./ChannelAccount');
 const getChannelConversation = require('./ChannelConversation');
 const getChannelMessage = require('./ChannelMessage');
+const getCaseConversation = require('./CaseConversation');
 const getOutboundQueueItem = require('./OutboundQueueItem');
 const getTicketEvent = require('./TicketEvent');
 const getQueueAssignmentState = require('./QueueAssignmentState');
@@ -207,6 +208,7 @@ const FlowTemplate = () => getFlowTemplate();
 const ChannelAccount = () => getChannelAccount();
 const ChannelConversation = () => getChannelConversation();
 const ChannelMessage = () => getChannelMessage();
+const CaseConversation = () => getCaseConversation();
 const OutboundQueueItem = () => getOutboundQueueItem();
 const TicketEvent = () => getTicketEvent();
 const QueueAssignmentState = () => getQueueAssignmentState();
@@ -841,6 +843,7 @@ module.exports = {
   ChannelAccount,
   ChannelConversation,
   ChannelMessage,
+  CaseConversation,
   OutboundQueueItem,
   TicketEvent,
   QueueAssignmentState,

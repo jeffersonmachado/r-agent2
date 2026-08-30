@@ -5,7 +5,9 @@
  *
  * Consome a fonte única da política em
  * `api/modules/agent-os/experience-segregation.js`:
- *   super_admin → DEVELOPMENT; auditor → SUPPORT; demais → PRODUCTION.
+ *   platformClassification explícito → usa; platformRole (server-side) →
+ *   SUPPORT/DEVELOPMENT conforme mapeamento; super_admin → DEVELOPMENT;
+ *   demais (inclui auditor de tenant) → PRODUCTION.
  * Hierarquia: DEVELOPMENT > SUPPORT > PRODUCTION.
  *
  * Uso (Express):

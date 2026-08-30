@@ -109,6 +109,14 @@ async function clickWithRetry(page, getLocator, attempts = 4) {
     });
   });
 
+  // Mock tenant capabilities (authContext chama após login; defesa em depth
+  // junto com o fallback não-crítico do client.js)
+  await context.route(/^https?:\/\/[^/]+\/api\/tenant\/capabilities(?:\?|$)/, async (route) => {
+    await jsonResponse(route, 200, {
+      capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
+    });
+  });
+
   // Mock tickets (UserMenu may request them)
   await context.route(/^https?:\/\/[^/]+\/tickets(?:\/|\?|$)/, async (route) => {
     await jsonResponse(route, 200, { tickets: [], total: 0 });

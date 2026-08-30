@@ -76,8 +76,10 @@ async function handleAiChatbotOrchestratorRoutes({ req, res, method, pathname, d
       // cliente: 400 estruturado, nunca 500. FLOW_* vem do flowPreValidator
       // (ex.: FLOW_DISCONNECTED — nós não alcançáveis a partir do start).
       // AI_PROVIDER_NOT_CONFIGURED: tenant sem credencial de IA configurada.
+      // AI_GENERATION_FAILED: provider de IA indisponível ou resposta
+      // inválida/não parseável — falha agregada esperada, 400 estruturado.
       const code = err && err.code;
-      if (code === 'BAD_REQUEST' || code === 'VALIDATION_ERROR' || code === 'AI_PROVIDER_NOT_CONFIGURED' || (typeof code === 'string' && code.startsWith('FLOW_'))) {
+      if (code === 'BAD_REQUEST' || code === 'VALIDATION_ERROR' || code === 'AI_PROVIDER_NOT_CONFIGURED' || code === 'AI_GENERATION_FAILED' || (typeof code === 'string' && code.startsWith('FLOW_'))) {
         sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
         return true;
       }
@@ -147,9 +149,10 @@ async function handleAiChatbotOrchestratorRoutes({ req, res, method, pathname, d
     } catch (err) {
       // Mesma política do /ai/chatbot/generate: erros de validação (payload ou
       // fluxo gerado inválido — FLOW_* do flowPreValidator) são erros do
-      // cliente: 400 estruturado, nunca 500. AI_PROVIDER_NOT_CONFIGURED idem.
+      // cliente: 400 estruturado, nunca 500. AI_PROVIDER_NOT_CONFIGURED e
+      // AI_GENERATION_FAILED (IA indisponível/resposta inválida) idem.
       const code = err && err.code;
-      if (code === 'BAD_REQUEST' || code === 'VALIDATION_ERROR' || code === 'AI_PROVIDER_NOT_CONFIGURED' || (typeof code === 'string' && code.startsWith('FLOW_'))) {
+      if (code === 'BAD_REQUEST' || code === 'VALIDATION_ERROR' || code === 'AI_PROVIDER_NOT_CONFIGURED' || code === 'AI_GENERATION_FAILED' || (typeof code === 'string' && code.startsWith('FLOW_'))) {
         sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
         return true;
       }

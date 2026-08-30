@@ -52,6 +52,8 @@ function createRouteRegistry(routers) {
     { router: routers.domainOperationsRouter },
     { router: routers.domainBusinessRouter },
     { router: routers.crmRouter },
+    { router: routers.tenantCapabilitiesRouter },
+    { router: routers.casesRouter },
     { router: routers.frontendFallbackRouter },
   ];
 }

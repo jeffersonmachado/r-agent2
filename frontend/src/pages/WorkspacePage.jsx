@@ -4,22 +4,25 @@ import {
   createWorkspaceEntity,
   executeWorkspaceAutoActions,
   getWorkspaceActions,
-  getWorkspaceAutoCorrections,
+  getWorkspaceIncidentRuns,
   getWorkspaceInsights,
   getWorkspaceTimeline,
   listWorkspaceEntities,
 } from '../api/workspace';
 import { WorkspaceLayout } from '../modules/workspace/WorkspaceLayout';
+import { getWorkspaceTabEventType } from '../modules/workspace/workspaceDevSurface';
+import { useAuth } from '../context/authContext';
+import { getAgentClassification } from '../utils/classification';
 
 function isFailureEvent(event = {}) {
   return /falha|erro|failed|failure|error|regression|bug/i.test(`${event.summary || ''} ${JSON.stringify(event.payload || {})}`);
 }
 
-function computeHealthSummary({ entity = {}, timeline = {}, insights = {}, actions = {}, autocorrections = {} }) {
+function computeHealthSummary({ entity = {}, timeline = {}, insights = {}, actions = {}, incidents = {} }) {
   const items = timeline.items || [];
   const allInsights = [...(insights.items || []), ...(insights.persisted || [])];
   const actionItems = actions.items || [];
-  const autoRuns = autocorrections.items || [];
+  const autoRuns = incidents.items || [];
   const now = Date.now();
   const latestEvent = items[0] || null;
   const openTickets = items.filter((item) => item.type === 'ticket' && /open|waiting|assigned|in_progress|paused/i.test(String(item.payload?.status || ''))).length;
@@ -63,6 +66,8 @@ function computeHealthSummary({ entity = {}, timeline = {}, insights = {}, actio
 }
 
 export function WorkspacePage() {
+  const { agent } = useAuth();
+  const classification = getAgentClassification(agent);
   const [entities, setEntities] = useState([]);
   const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [query, setQuery] = useState('');
@@ -71,24 +76,15 @@ export function WorkspacePage() {
   const [timeline, setTimeline] = useState({ items: [], total: 0, limit: 30, offset: 0, hasMore: false });
   const [insights, setInsights] = useState({ items: [], persisted: [] });
   const [actions, setActions] = useState({ items: [], suggestion: null });
-  const [autocorrections, setAutoCorrections] = useState({ items: [], total: 0 });
+  const [incidentRuns, setIncidentRuns] = useState({ items: [], total: 0 });
   const [entitySummaries, setEntitySummaries] = useState({});
   const [loadingEntities, setLoadingEntities] = useState(false);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [loadingActions, setLoadingActions] = useState(false);
-  const [loadingAutoCorrections, setLoadingAutoCorrections] = useState(false);
+  const [loadingIncidentRuns, setLoadingIncidentRuns] = useState(false);
 
-  const tabType = useMemo(() => ({
-    Conversas: 'message',
-    Tickets: 'ticket',
-    Tarefas: 'task',
-    Agenda: 'schedule',
-    Projetos: 'project',
-    Documentos: 'document',
-    Pagamentos: 'payment',
-    'QA/RPA': 'evidence',
-  }[activeTab] || ''), [activeTab]);
+  const tabType = useMemo(() => getWorkspaceTabEventType(activeTab), [activeTab]);
 
   const filteredEntities = useMemo(() => entities.filter((entity) => {
     const summary = entitySummaries[entity.id] || {};
@@ -110,8 +106,8 @@ export function WorkspacePage() {
     timeline,
     insights,
     actions,
-    autocorrections,
-  }), [selectedEntity, timeline, insights, actions, autocorrections]);
+    incidents: incidentRuns,
+  }), [selectedEntity, timeline, insights, actions, incidentRuns]);
 
   const loadEntities = useCallback(async (nextQuery = query) => {
     setLoadingEntities(true);
@@ -135,20 +131,20 @@ export function WorkspacePage() {
     setLoadingTimeline(true);
     setLoadingInsights(true);
     setLoadingActions(true);
-    setLoadingAutoCorrections(true);
+    setLoadingIncidentRuns(true);
     try {
-      const [timelineResult, insightsResult, actionsResult, autoCorrectionResult] = await Promise.all([
+      const [timelineResult, insightsResult, actionsResult, incidentRunsResult] = await Promise.all([
         getWorkspaceTimeline(entityId, { limit: 30, offset, type: tabType }),
         getWorkspaceInsights(entityId),
         getWorkspaceActions(entityId),
-        getWorkspaceAutoCorrections(entityId),
+        getWorkspaceIncidentRuns(entityId),
       ]);
       setTimeline((current) => append
         ? { ...timelineResult, items: [...(current.items || []), ...(timelineResult.items || [])] }
         : timelineResult);
       setInsights(insightsResult);
       setActions(actionsResult);
-      setAutoCorrections(autoCorrectionResult);
+      setIncidentRuns(incidentRunsResult);
       setEntitySummaries((current) => ({
         ...current,
         [entityId]: computeHealthSummary({
@@ -156,14 +152,14 @@ export function WorkspacePage() {
           timeline: timelineResult,
           insights: insightsResult,
           actions: actionsResult,
-          autocorrections: autoCorrectionResult,
+          incidents: incidentRunsResult,
         }),
       }));
     } finally {
       setLoadingTimeline(false);
       setLoadingInsights(false);
       setLoadingActions(false);
-      setLoadingAutoCorrections(false);
+      setLoadingIncidentRuns(false);
     }
   }, [entities, tabType]);
 
@@ -242,11 +238,12 @@ export function WorkspacePage() {
       timeline={timeline}
       insights={insights}
       actions={actions}
-      autocorrections={autocorrections}
+      incidents={incidentRuns}
       loadingTimeline={loadingTimeline}
       loadingInsights={loadingInsights}
       loadingActions={loadingActions}
-      loadingAutoCorrections={loadingAutoCorrections}
+      loadingIncidents={loadingIncidentRuns}
+      classification={classification}
       onQueryChange={setQuery}
       onSidebarFilterChange={setSidebarFilter}
       onSelectEntity={setSelectedEntityId}

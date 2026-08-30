@@ -32,7 +32,7 @@ import { ConfigWebhooksTab } from './config/ConfigWebhooksTab';
  * Permite visualizar e editar o arquivo config.json.
  */
 export function ConfigPage() {
-  const { isAuthenticated, loading: authLoading, agent } = useAuth();
+  const { isAuthenticated, loading: authLoading, agent, capabilities, updateCapabilities } = useAuth();
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { themeName } = useTheme();
@@ -140,6 +140,7 @@ export function ConfigPage() {
   const [phoneMaskingEnabled, setPhoneMaskingEnabled] = useState(false);
   const [loadingPhoneMasking, setLoadingPhoneMasking] = useState(false);
   const [savingPhoneMasking, setSavingPhoneMasking] = useState(false);
+  const [savingCapabilities, setSavingCapabilities] = useState(false);
   const [apiKey, setApiKey] = useState(''); // Campo de apiKey (sempre vazio ao carregar, nunca exibido)
   const [apiKeyProvider, setApiKeyProvider] = useState(''); // Provider para o qual a apiKey será salva
   const [validatingApiKey, setValidatingApiKey] = useState(false);
@@ -374,6 +375,22 @@ export function ConfigPage() {
       setLoadingPhoneMasking(false);
     }
   }, []);
+
+  // Capacidades de atendimento do tenant (Case Management) — editável por owner/admin/super_admin.
+  // O estado de exibição vem direto do authContext (capabilities); em caso de erro o contexto não muda.
+  const canManageCapabilities = ['owner', 'admin', 'super_admin'].includes(agent?.role);
+  const handleUpdateCapabilities = useCallback(async (partialCapabilities) => {
+    setSavingCapabilities(true);
+    try {
+      await updateCapabilities(partialCapabilities);
+      showToast('Capacidades de atendimento atualizadas', 'success');
+    } catch (err) {
+      logger.warn('Falha ao atualizar capacidades do tenant:', err);
+      showToast(err?.message || 'Erro ao atualizar capacidades de atendimento', 'error');
+    } finally {
+      setSavingCapabilities(false);
+    }
+  }, [updateCapabilities, showToast]);
 
   // Carrega configuração de IA quando a aba IA está ativa ou quando o tenant muda
   useEffect(() => {
@@ -1095,6 +1112,10 @@ export function ConfigPage() {
                 setSavingPhoneMasking={setSavingPhoneMasking}
                 showToast={showToast}
                 upsertTenantSetting={upsertTenantSetting}
+                capabilities={capabilities}
+                canManageCapabilities={canManageCapabilities}
+                savingCapabilities={savingCapabilities}
+                onUpdateCapabilities={handleUpdateCapabilities}
               />
             )}
           </div>

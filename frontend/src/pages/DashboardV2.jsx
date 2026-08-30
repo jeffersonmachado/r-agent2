@@ -37,7 +37,7 @@ function formatPct(x) {
 }
 
 export function DashboardV2() {
-  const { agent } = useAuth();
+  const { agent, capabilities } = useAuth();
   const [general, setGeneral] = useState(null);
   const [queues, setQueues] = useState([]);
   const [versionInfo, setVersionInfo] = useState(null);
@@ -73,11 +73,11 @@ export function DashboardV2() {
   }, []);
 
   const visibleRoutes = useMemo(() => {
-    const tree = filterNavigationTree(agent, navigationMenu);
+    const tree = filterNavigationTree(agent, navigationMenu, capabilities);
     return flattenNavigationLeaves(tree)
       .filter((item) => item.path && !item.hiddenInSidebar)
       .slice(0, 5);
-  }, [agent]);
+  }, [agent, capabilities]);
 
   const backlogTop = useMemo(() => {
     return [...queues]

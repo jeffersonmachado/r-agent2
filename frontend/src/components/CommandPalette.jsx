@@ -3,11 +3,11 @@ import { filterNavigationTree } from '../utils/menuPermissions';
 import { navigationMenu, flattenNavigationLeaves } from '../navigation/menu';
 import { useRouter } from '../hooks/useRouter';
 
-export function CommandPalette({ agent }) {
+export function CommandPalette({ agent, capabilities }) {
   const { navigate } = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
+  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu, capabilities), [agent, capabilities]);
   const entries = useMemo(
     () => flattenNavigationLeaves(filteredMenu).filter((item) => item.path),
     [filteredMenu],

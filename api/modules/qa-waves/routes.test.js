@@ -268,10 +268,29 @@ describe('qa-waves routes', () => {
     expect(deps.listWaves).not.toHaveBeenCalled();
   });
 
-  test('GET /api/qa-waves/waves deve retornar 403 classification_required para auditor (SUPPORT < DEVELOPMENT)', async () => {
+  test('GET /api/qa-waves/waves deve retornar 403 classification_required para auditor de tenant puro (PRODUCTION < DEVELOPMENT)', async () => {
     await startWithDeps((d) => {
       d.requireAuth.mockImplementation((req) => {
         req.agent = { id: 'agent-aud', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+        return { valid: true, agent: req.agent };
+      });
+    });
+
+    const res = await request(port, 'GET', '/api/qa-waves/waves');
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({
+      error: 'classification_required',
+      required: 'DEVELOPMENT',
+      classification: 'PRODUCTION',
+    });
+    expect(deps.listWaves).not.toHaveBeenCalled();
+  });
+
+  test('GET /api/qa-waves/waves deve retornar 403 classification_required para auditor com platformRole support (SUPPORT < DEVELOPMENT)', async () => {
+    await startWithDeps((d) => {
+      d.requireAuth.mockImplementation((req) => {
+        req.agent = { id: 'agent-aud', username: 'auditor', role: 'auditor', platformRole: 'support_n2', tenantId: 'tenant-x' };
         return { valid: true, agent: req.agent };
       });
     });

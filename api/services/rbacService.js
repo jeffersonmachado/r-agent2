@@ -48,6 +48,13 @@ const ROLE_PERMISSIONS = {
     { resource: 'tickets', action: 'assign' },
     { resource: 'tickets', action: 'close' },
     { resource: 'tickets', action: 'list_all' },
+    // Inbox (conversas omnichannel)
+    { resource: 'inbox', action: 'read' },
+    { resource: 'inbox', action: 'assign' },
+    { resource: 'inbox', action: 'update' },
+    { resource: 'inbox', action: 'reply' },
+    { resource: 'inbox', action: 'transfer' },
+    { resource: 'inbox', action: 'create' },
     // Filas
     { resource: 'queues', action: 'create' },
     { resource: 'queues', action: 'read' },
@@ -144,6 +151,13 @@ const ROLE_PERMISSIONS = {
     { resource: 'tickets', action: 'assign' },
     { resource: 'tickets', action: 'close' },
     { resource: 'tickets', action: 'list_all' },
+    // Inbox (conversas omnichannel)
+    { resource: 'inbox', action: 'read' },
+    { resource: 'inbox', action: 'assign' },
+    { resource: 'inbox', action: 'update' },
+    { resource: 'inbox', action: 'reply' },
+    { resource: 'inbox', action: 'transfer' },
+    { resource: 'inbox', action: 'create' },
     // Filas
     { resource: 'queues', action: 'create' },
     { resource: 'queues', action: 'read' },
@@ -286,6 +300,13 @@ const ROLE_PERMISSIONS = {
     { resource: 'tickets', action: 'assign' },
     { resource: 'tickets', action: 'close' },
     { resource: 'tickets', action: 'list_all' },
+    // Inbox (conversas omnichannel)
+    { resource: 'inbox', action: 'read' },
+    { resource: 'inbox', action: 'assign' },
+    { resource: 'inbox', action: 'update' },
+    { resource: 'inbox', action: 'reply' },
+    { resource: 'inbox', action: 'transfer' },
+    { resource: 'inbox', action: 'create' },
     // Filas
     { resource: 'queues', action: 'read' },
     { resource: 'queues', action: 'list_all' },
@@ -346,6 +367,13 @@ const ROLE_PERMISSIONS = {
     { resource: 'tickets', action: 'assign' }, // Pode atribuir para si mesmo
     { resource: 'tickets', action: 'close' }, // Pode fechar tickets atribuídos a si
     { resource: 'tickets', action: 'update' }, // Pode atualizar tickets atribuídos a si
+    // Inbox (conversas omnichannel)
+    { resource: 'inbox', action: 'read' },
+    { resource: 'inbox', action: 'assign' },
+    { resource: 'inbox', action: 'update' },
+    { resource: 'inbox', action: 'reply' },
+    { resource: 'inbox', action: 'transfer' },
+    { resource: 'inbox', action: 'create' },
     // Filas (apenas leitura)
     { resource: 'queues', action: 'read' },
     // Agentes (apenas próprio perfil)
@@ -376,6 +404,7 @@ const ROLE_PERMISSIONS = {
     // Apenas leitura e auditoria
     { resource: 'tickets', action: 'read' },
     { resource: 'tickets', action: 'list_all' },
+    { resource: 'inbox', action: 'read' },
     { resource: 'queues', action: 'read' },
     { resource: 'agents', action: 'read' },
     { resource: 'agents', action: 'list_all' },
@@ -398,6 +427,7 @@ const ROLE_PERMISSIONS = {
   readonly: [
     // Apenas leitura básica
     { resource: 'tickets', action: 'read' },
+    { resource: 'inbox', action: 'read' },
     { resource: 'queues', action: 'read' },
     { resource: 'agents', action: 'read' },
     { resource: 'flows', action: 'read' },

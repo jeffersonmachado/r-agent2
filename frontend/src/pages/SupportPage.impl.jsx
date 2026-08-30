@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/authContext';
+import { getAgentClassification } from '../utils/classification';
 import { useRouter } from '../hooks/useRouter';
 import { useToast } from '../components/Toast';
 import { useConfirmDialog } from '../components/ConfirmDialog';
@@ -89,6 +90,9 @@ function AiSummaryContent({ summary, loading }) {
 }
 
 function SupportPageInner({ agent, isAuthenticated, showToast, confirm, phoneMaskingEnabled, ToastContainer, ConfirmDialog }) {
+  // Ações de diagnóstico (revisão técnica da sessão, teste de fluxo) são
+  // superfícies internas da plataforma: escondidas para PRODUCTION.
+  const isInternalProfile = getAgentClassification(agent) !== 'PRODUCTION';
   const controller = useSupportPageController({
     agent,
     isAuthenticated,
@@ -274,8 +278,8 @@ function SupportPageInner({ agent, isAuthenticated, showToast, confirm, phoneMas
                     <AIInsightsMiniCard
                       ai={runtimeViewModel.ai}
                       execution={runtimeViewModel.execution}
-                      onReplay={() => showToast('Replay de atendimento acionado', 'info')}
-                      onTestFlow={() => showToast('Teste de fluxo acionado', 'info')}
+                      onReplay={isInternalProfile ? () => showToast('Revisão de atendimento acionada', 'info') : undefined}
+                      onTestFlow={isInternalProfile ? () => showToast('Teste de fluxo acionado', 'info') : undefined}
                     />
                     <JourneyMiniCard
                       journey={runtimeViewModel.journey}

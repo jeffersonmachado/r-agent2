@@ -7,6 +7,8 @@ import { Input } from '../styles/Input';
 import { Dialog } from './Dialog';
 import logger from '../utils/logger';
 import { loadFlowGenerationPrefs, saveFlowGenerationPrefs } from '../utils/flowGenerationPreferences.js';
+import { useAuth } from '../context/authContext';
+import { getAgentClassification } from '../utils/classification';
 
 function parsePromptIndicatorFromFinalPrompt(finalPrompt) {
   const raw = String(finalPrompt || '');
@@ -49,6 +51,9 @@ function parsePromptIndicatorFromFinalPrompt(finalPrompt) {
  * Diálogo para gerar fluxos a partir de descrições em linguagem natural.
  */
 export function FlowGeneratorDialog({ onFlowGenerated, onCancel }) {
+  const { agent } = useAuth();
+  // Geração de teste automatizado é superfície de engenharia: apenas DEVELOPMENT.
+  const isDevelopment = getAgentClassification(agent) === 'DEVELOPMENT';
   const [description, setDescription] = useState('');
   const [flowName, setFlowName] = useState('');
   const [flowId, setFlowId] = useState('');
@@ -75,7 +80,7 @@ export function FlowGeneratorDialog({ onFlowGenerated, onCancel }) {
   const [faqExclusions, setFaqExclusions] = useState(null);
   const [showFaqExclusions, setShowFaqExclusions] = useState(false);
 
-  // RPA (teste)
+  // Teste automatizado de UI (engenharia)
   const [generateRpaTest, setGenerateRpaTest] = useState(false);
   const [rpaMode, setRpaMode] = useState('infer');
 
@@ -278,7 +283,7 @@ export function FlowGeneratorDialog({ onFlowGenerated, onCancel }) {
         scrapingTargetsCount: Array.isArray(scrapingTargets) ? scrapingTargets.filter(Boolean).length : 0,
         includeQuestions,
         questionsCount: effectiveQuestions.length,
-        generateRpaTest,
+        generateRpaTest: isDevelopment && generateRpaTest,
         rpaMode,
         maxFixAttempts,
         subflowMax,
@@ -296,7 +301,7 @@ export function FlowGeneratorDialog({ onFlowGenerated, onCancel }) {
           : [],
         includeQuestions,
         questions: effectiveQuestions,
-        generateRpaTest,
+        generateRpaTest: isDevelopment && generateRpaTest,
         rpaMode,
         maxFixAttempts,
         subflowMax,
@@ -916,7 +921,8 @@ export function FlowGeneratorDialog({ onFlowGenerated, onCancel }) {
                 )}
               </div>
 
-              {/* RPA */}
+              {/* Teste automatizado: superfície de engenharia (apenas DEVELOPMENT) */}
+              {isDevelopment ? (
               <div className="space-y-2">
                 <label className="flex items-center gap-2 cursor-pointer text-text-primary">
                   <input
@@ -946,6 +952,7 @@ export function FlowGeneratorDialog({ onFlowGenerated, onCancel }) {
                   </div>
                 )}
               </div>
+              ) : null}
 
               {/* Performance / Arquitetura */}
               <div className="space-y-2">

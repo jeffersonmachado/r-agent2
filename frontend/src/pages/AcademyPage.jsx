@@ -324,8 +324,8 @@ export function AcademyPage() {
               <h2 className="academy-section-title">Missões de treinamento</h2>
               {!missions || missions.length === 0 ? (
                 <p className="academy-state">
-                  Nenhuma missão disponível ainda. Missões são geradas a partir de replays
-                  operacionais reais (anonimizados) pela administração da plataforma.
+                  Nenhuma missão disponível ainda. Missões são geradas a partir de jornadas
+                  operacionais reais (anonimizadas) pela administração da plataforma.
                 </p>
               ) : (
                 <div className="academy-missions-list">

@@ -119,10 +119,11 @@ Rotina agregadora de aprendizado — automatiza o trecho não-humano do pipeline
 
 - Validador: `api/modules/agent-os/experience-segregation.js`
 - Política: PRODUCTION / SUPPORT / DEVELOPMENT
+- **Classificação é independente do tenant role** (desde 2026-08-27): `getClassificationForAgent` resolve por (1) `platformClassification` explícita server-side, (2) `platformRole` (`users.platform_role`: support_n1/n2/n3, customer_success, platform_support → SUPPORT; engineer, qa_engineer, devops, platform_engineer, developer → DEVELOPMENT), (3) fallback `role === 'super_admin'` → DEVELOPMENT, (4) demais → PRODUCTION. **Tenant role `auditor` NÃO concede mais Platform Support automaticamente** — sem `platformRole`, auditor é PRODUCTION. A classificação é congelada no `agent_snapshot` da sessão (fonte server-side); o frontend consome `classification`/`platformRole` de `/auth/me` via `frontend/src/utils/classification.js`.
 - Rotas de Replay, QA Waves, Seeds, RPA permanecem ocultas para usuários operacionais
 - Modelo: segregação **in-app** (mesma SPA/API) — não existe app separado para suporte/dev. A rota `/dev` existe por design (Central Dev) e está classificada DEVELOPMENT.
-- Guards: itens `/dev*` no menu exigem `roles: ['super_admin']` (`frontend/src/navigation/menu.js`); guard de rota `PROTECTED_PATH_PREFIXES` (`/dev`, `/qa`, `/qa-mesh`, `/rpa*`) em `frontend/src/utils/menuPermissions.js` bloqueia acesso direto por URL para não super_admin; backend usa `requireClassification('DEVELOPMENT')` (ex.: `/dev/qa-waves/*`) e `isSuperAdmin` (ex.: `/dev/files*`).
-- Gate bloqueante: `npm run validate:visibility-policy` (PASS em 2026-08-03, 0 violações).
+- Guards: itens `/dev*` no menu exigem `roles: ['super_admin']` (`frontend/src/navigation/menu.js`); o item `/rpa-replays` usa `classifications: ['SUPPORT','DEVELOPMENT']` (não mais role auditor); guard de rota `PROTECTED_PATH_PREFIXES` (`/dev`, `/qa`, `/qa-mesh`, `/rpa*`, `/generate-system`) em `frontend/src/utils/menuPermissions.js` bloqueia acesso direto por URL para não super_admin; backend usa `requireClassification('DEVELOPMENT')` (ex.: `/dev/qa-waves/*`) e `isSuperAdmin` (ex.: `/dev/files*`).
+- Gates bloqueantes: `npm run validate:visibility-policy` (rotas/menu/APIs) e `npm run validate:experience-segregation` (conteúdo técnico proibido em superfícies PRODUCTION; exemptions auditáveis em `config/experience-segregation-exemptions.json`).
 - Apps standalone em `dev/` (fora do pacote operacional e do pipeline de release): `dev/qa-waves-ui/` (protótipo legado, ver `AI_MEMORY/qa-waves.md`) e `dev/work-management/` (Gestão de Trabalho extraída da SPA em 2026-07-28; roda isolado na porta 5177).
 
 ## Migration

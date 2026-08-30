@@ -35,8 +35,8 @@ export function SupportEvidenceCard({
   return (
     <SupportCard
       id="support-section-evidence"
-      title="Evidências relacionadas"
-      subtitle="Melhor prova disponível para apoiar a resposta atual"
+      title="Fontes da base de conhecimento"
+      subtitle="Melhores fontes da base para apoiar a resposta atual"
       badge={(
         <div className="text-xs text-text-tertiary">
           {loading ? 'Carregando…' : `${items.length} item(ns)`}
@@ -77,7 +77,7 @@ export function SupportEvidenceCard({
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
               <Button type="button" onClick={() => onOpenSource(evidence)} style={{ width: 'auto' }}>Abrir origem</Button>
-              <Button type="button" onClick={() => onCopyEvidence(evidence)} style={{ width: 'auto' }}>Copiar evidência</Button>
+              <Button type="button" onClick={() => onCopyEvidence(evidence)} style={{ width: 'auto' }}>Copiar fonte</Button>
               <Button type="button" onClick={() => onUseAsReply(evidence)} style={{ width: 'auto' }}>Usar na resposta</Button>
             </div>
           </div>
@@ -85,8 +85,8 @@ export function SupportEvidenceCard({
       ) : (
         <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
           {evidenceResult?.reasoning?.reason
-            ? `Nenhuma evidência forte foi encontrada: ${formatSupportEvidenceReason(evidenceResult.reasoning.reason) || formatEvidenceLabel(evidenceResult.reasoning.reason)}.`
-            : 'Nenhuma evidência histórica relevante foi encontrada para o contexto atual.'}
+            ? `Nenhuma fonte forte foi encontrada: ${formatSupportEvidenceReason(evidenceResult.reasoning.reason) || formatEvidenceLabel(evidenceResult.reasoning.reason)}.`
+            : 'Nenhuma fonte histórica relevante foi encontrada para o contexto atual.'}
         </div>
       )}
     </SupportCard>

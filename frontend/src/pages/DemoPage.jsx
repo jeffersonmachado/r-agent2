@@ -4,8 +4,15 @@ import { useToast } from '../components/Toast';
 import { getDemoState, runDemoFlow } from '../api/demo';
 import { WorkspaceTimeline } from '../modules/workspace/WorkspaceTimeline';
 import { WorkspaceInsights } from '../modules/workspace/WorkspaceInsights';
-import JourneyStatusCard from '../components/qa-waves/JourneyStatusCard';
-import { ReplayDetailsModal } from '../components/qa-waves/ReplayDetailsModal';
+import {
+  DEMO_OPERATIONAL_SUBTITLE,
+  DEMO_TECHNICAL_SUBTITLE,
+  DemoDevDetailsModal,
+  DemoDevQaSection,
+  DemoDevReplayBadge,
+  getDemoJourneyStage,
+  getDemoReplayDetails,
+} from '../components/qa-waves/DemoDevSurface';
 import {
   AIInsightsMiniCard,
   TicketSummaryCard,
@@ -14,6 +21,8 @@ import {
   QuickActionsPanel,
 } from '../components/support/attendance';
 import { CrmBadge, CrmCard } from '../components/crm';
+import { useAuth } from '../context/authContext';
+import { getAgentClassification } from '../utils/classification';
 
 function normalizeVertical(value) {
   return String(value || '').toLowerCase() === 'beauty' ? 'beauty' : 'fitness';
@@ -57,6 +66,10 @@ function toCustomerSummary(ticket, lead) {
 }
 
 export function DemoPage() {
+  const { agent } = useAuth();
+  // Superfícies técnicas da demo (diagnóstico de plataforma) só aparecem
+  // para engenharia. A demo operacional mostra apenas linguagem PRODUCTION.
+  const isDevelopment = getAgentClassification(agent) === 'DEVELOPMENT';
   const [vertical, setVertical] = useState(parseVerticalFromLocation());
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -126,9 +139,6 @@ export function DemoPage() {
     [state, firstLead]
   );
 
-  const qaJourney = state?.journey?.qaJourneyStatus || state?.journey?.active || null;
-  const qaStepStatuses = state?.journey?.qaStepStatuses || [];
-
   const quickActions = {
     onToggleMode: () => showToast('Modo de execucao disponivel no atendimento operacional.', 'info'),
     onOpenTemplate: () => showToast('Templates reutilizam o modulo de atendimento existente.', 'info'),
@@ -145,7 +155,9 @@ export function DemoPage() {
           <div>
             <span className="demo-overline">DEMO COMERCIAL UNIFICADA</span>
             <h1>{state?.executiveSummary?.title || 'RAP Commercial Demo'}</h1>
-            <p>{state?.executiveSummary?.subtitle || 'Cliente -> IA -> Operacao -> Automacao -> Resultado -> QA -> Replay'}</p>
+            <p>{isDevelopment
+              ? (state?.executiveSummary?.subtitle || DEMO_TECHNICAL_SUBTITLE)
+              : DEMO_OPERATIONAL_SUBTITLE}</p>
           </div>
           <div className="demo-hero-actions">
             <div className="demo-vertical-switch" role="group" aria-label="Selecionar vertical da demo">
@@ -175,7 +187,9 @@ export function DemoPage() {
           <article className="demo-kpi"><span>Tickets criados</span><strong>{state?.indicators?.ticketsCreated ?? '-'}</strong></article>
           <article className="demo-kpi"><span>SLA</span><strong>{state?.indicators?.sla ?? '-'}</strong></article>
           <article className="demo-kpi"><span>IA confidence</span><strong>{state?.indicators?.iaConfidence ?? '-'}</strong></article>
-          <article className="demo-kpi"><span>QA health</span><strong>{state?.indicators?.qaHealth ?? '-'}</strong></article>
+          {isDevelopment ? (
+            <article className="demo-kpi"><span>QA health</span><strong>{state?.indicators?.qaHealth ?? '-'}</strong></article>
+          ) : null}
           <article className="demo-kpi"><span>ROI estimado</span><strong>{state?.indicators?.roiEstimated ?? '-'}</strong></article>
         </section>
 
@@ -190,7 +204,7 @@ export function DemoPage() {
               <JourneyMiniCard
                 journey={{
                   name: state?.journey?.active?.journeyName || state?.seed?.journey?.name || '-',
-                  stage: state?.qaWaves?.stage || '-',
+                  stage: getDemoJourneyStage(state, isDevelopment),
                   nextStage: state?.seed?.expectedOutcome?.nextStage || '-',
                 }}
                 execution={{
@@ -205,51 +219,18 @@ export function DemoPage() {
                   nextBestAction: state?.ai?.nextBestAction || '-',
                 }}
                 execution={{ mode: state?.automation?.mode || '-' }}
-                onReplay={() => setActiveReplayDetails(state?.replay?.details || null)}
-                onTestFlow={handleRunDemo}
+                onReplay={isDevelopment ? () => setActiveReplayDetails(getDemoReplayDetails(state)) : undefined}
+                onTestFlow={isDevelopment ? handleRunDemo : undefined}
               />
               <QuickActionsPanel executionMode={state?.automation?.mode || 'Bot'} {...quickActions} />
             </section>
 
-            <section className="demo-grid demo-grid--qa">
-              <JourneyStatusCard journey={qaJourney} stepStatuses={qaStepStatuses} />
-              <CrmCard>
-                <h3 className="demo-card-title">QA Waves visivel</h3>
-                <div className="demo-list">
-                  <div><span>Wave atual</span><strong>{state?.qaWaves?.wave || '-'}</strong></div>
-                  <div><span>Etapa</span><strong>{state?.qaWaves?.stage || '-'}</strong></div>
-                  <div><span>Coverage</span><strong>{state?.qaWaves?.coverage ?? '-'}%</strong></div>
-                  <div><span>Gaps</span><strong>{state?.qaWaves?.gaps ?? '-'}</strong></div>
-                  <div><span>Go/No-Go</span><strong>{state?.qaWaves?.goNoGo || '-'}</strong></div>
-                  <div><span>Replay vinculado</span><strong>{state?.qaWaves?.replayLinked || '-'}</strong></div>
-                </div>
-                <div className="demo-actions-row">
-                  <button
-                    type="button"
-                    className="demo-link-button"
-                    onClick={() => {
-                      if (!state?.replay?.replayId) {
-                        showToast('Nenhum replay disponivel para esta demo.', 'warning');
-                        return;
-                      }
-                      window.open(`/dev/rpa-replays?source=qa-waves&search=${encodeURIComponent(state.replay.replayId)}`, '_blank', 'noopener,noreferrer');
-                    }}
-                  >
-                    Abrir replay
-                  </button>
-                  <button
-                    type="button"
-                    className="demo-link-button"
-                    onClick={() => window.open('/dev/qa-waves', '_blank', 'noopener,noreferrer')}
-                  >
-                    Abrir QA Waves
-                  </button>
-                </div>
-              </CrmCard>
-            </section>
+            {isDevelopment ? (
+              <DemoDevQaSection state={state} showToast={showToast} />
+            ) : null}
 
             <section className="demo-grid demo-grid--workspace">
-              <WorkspaceTimeline timeline={state?.timeline || { items: [] }} loading={false} onLoadMore={() => {}} />
+              <WorkspaceTimeline timeline={state?.timeline || { items: [] }} loading={false} classification={getAgentClassification(agent)} onLoadMore={() => {}} />
               <WorkspaceInsights
                 insights={{
                   items: [
@@ -274,7 +255,9 @@ export function DemoPage() {
                 <div className="demo-badges">
                   <CrmBadge label={`Leads ${state?.crm?.leadCount ?? 0}`} variant="info" />
                   <CrmBadge label={`Conversao ${state?.indicators?.conversion || '-'}`} variant="success" />
-                  <CrmBadge label={`Replay ${state?.indicators?.replayStatus || '-'}`} variant="warning" />
+                  {isDevelopment ? (
+                    <DemoDevReplayBadge indicators={state?.indicators} />
+                  ) : null}
                 </div>
                 <ul className="demo-simple-list">
                   {(state?.crm?.leads || []).slice(0, 5).map((lead) => (
@@ -299,10 +282,12 @@ export function DemoPage() {
           </>
         ) : null}
 
-        <ReplayDetailsModal
-          details={activeReplayDetails}
-          onClose={() => setActiveReplayDetails(null)}
-        />
+        {isDevelopment ? (
+          <DemoDevDetailsModal
+            details={activeReplayDetails}
+            onClose={() => setActiveReplayDetails(null)}
+          />
+        ) : null}
 
         <ToastContainer />
       </div>

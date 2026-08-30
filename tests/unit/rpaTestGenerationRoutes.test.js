@@ -63,7 +63,9 @@ function baseDeps(overrides) {
     logger: { info: () => {}, warn: () => {}, error: () => {} },
     flows: new Map(),
     requireAuth: (req) => {
-      req.agent = { id: 'qa-agent', role: 'auditor', tenantId: 'system' };
+      // SUPPORT exige platform role concedido server-side (2026-08-27):
+      // tenant role sozinho (auditor puro) é PRODUCTION.
+      req.agent = { id: 'qa-agent', role: 'auditor', platformRole: 'support_n2', tenantId: 'system' };
       req.tenantId = 'system';
       return { valid: true, agent: req.agent };
     },

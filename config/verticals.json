@@ -86,9 +86,19 @@
       "label": "Campanhas",
       "aliases": []
     },
+    "case_management": {
+      "kind": "capability",
+      "label": "Gestão de Cases",
+      "aliases": []
+    },
     "crm": {
       "kind": "capability",
       "label": "CRM",
+      "aliases": []
+    },
+    "customer_service": {
+      "kind": "capability",
+      "label": "Atendimento ao Cliente",
       "aliases": []
     },
     "knowledge": {

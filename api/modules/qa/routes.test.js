@@ -51,7 +51,8 @@ function buildServer(agent) {
 }
 
 const SUPER_ADMIN = { id: 'a1', username: 'systemadmin', role: 'super_admin', tenantId: 'system' };
-const AUDITOR = { id: 'a3', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+// Auditor com platform role de suporte (SUPPORT); tenant role sozinho é PRODUCTION desde 2026-08-27.
+const AUDITOR = { id: 'a3', username: 'auditor', role: 'auditor', platformRole: 'support_n2', tenantId: 'tenant-x' };
 const OPERATOR = { id: 'a2', username: 'operador', role: 'operator', tenantId: 'tenant-x' };
 
 describe('qa routes — superfície de engenharia exige DEVELOPMENT', () => {
@@ -81,7 +82,7 @@ describe('qa routes — superfície de engenharia exige DEVELOPMENT', () => {
     expect(res.status).toBe(403);
   });
 
-  test('auditor (SUPPORT) recebe 403 em /qa/latest (QA é DEVELOPMENT)', async () => {
+  test('auditor com platformRole support (SUPPORT) recebe 403 em /qa/latest (QA é DEVELOPMENT)', async () => {
     await start(AUDITOR);
     const res = await request(port, 'GET', '/qa/latest');
     expect(res.status).toBe(403);

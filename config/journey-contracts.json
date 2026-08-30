@@ -254,6 +254,13 @@
       "missingCapabilities": [],
       "confidence": 0.75
     },
+    "cases": {
+      "requiredCapabilities": [
+        "cases"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.75
+    },
     "campaigns": {
       "requiredCapabilities": [
         "campaigns"

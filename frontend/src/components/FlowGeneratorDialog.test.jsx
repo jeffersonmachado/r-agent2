@@ -30,10 +30,22 @@ vi.mock('../api/auth', () => ({
   getTenantId: () => 'tenant-test',
 }));
 
+const authDouble = vi.hoisted(() => ({
+  agent: { id: 'a-dev', role: 'super_admin', classification: 'DEVELOPMENT' },
+}));
+
+vi.mock('../context/authContext', () => ({
+  useAuth: () => ({
+    agent: authDouble.agent,
+    capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
+  }),
+}));
+
 describe('components/FlowGeneratorDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    authDouble.agent = { id: 'a-dev', role: 'super_admin', classification: 'DEVELOPMENT' };
   });
 
   afterEach(() => {
@@ -151,6 +163,23 @@ describe('components/FlowGeneratorDialog', () => {
     const [_desc, options] = mockGenerateFlowFromDescription.mock.calls[0];
     expect(options).toMatchObject({ includeQuestions: true });
     expect(options.questions).toEqual(expect.arrayContaining(['Pergunta A?', 'Pergunta B?']));
+  });
+
+  it('exibe a opção de teste RPA apenas para DEVELOPMENT', async () => {
+    const user = userEvent.setup();
+    render(<FlowGeneratorDialog onFlowGenerated={vi.fn()} onCancel={vi.fn()} />);
+
+    await openAdvanced(user);
+    expect(screen.getByText('Gerar teste RPA (opcional)')).toBeInTheDocument();
+  });
+
+  it('esconde a opção de teste RPA para PRODUCTION', async () => {
+    authDouble.agent = { id: 'a-prod', role: 'operator' };
+    const user = userEvent.setup();
+    render(<FlowGeneratorDialog onFlowGenerated={vi.fn()} onCancel={vi.fn()} />);
+
+    await openAdvanced(user);
+    expect(screen.queryByText('Gerar teste RPA (opcional)')).not.toBeInTheDocument();
   });
 });
 

@@ -8,6 +8,7 @@
 
 'use strict';
 
+const crypto = require('crypto');
 const { getSequelize } = require('../db/sequelize');
 const { ChannelConversation, ChannelMessage, Ticket } = require('../db/models');
 const { backfillPersistedMessageMedia } = require('./channelGatewayService');
@@ -112,12 +113,118 @@ async function listConversations({ tenantId, status = null, channelType = null, 
     contactId: r.contact_id || null,
     status: r.status,
     currentTicketId: r.current_ticket_id || null,
+    assignedTo: r.assigned_to || null,
+    metadata: r.metadata && typeof r.metadata === 'object' ? r.metadata : {},
     lastMessageAt: r.last_message_at ? new Date(r.last_message_at).toISOString() : null,
     createdAt: r.created_at ? new Date(r.created_at).toISOString() : (r.createdAt?.toISOString?.() || null),
     updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : (r.updatedAt?.toISOString?.() || null),
   }));
 
   return { total: count, items };
+}
+
+function mapConversationRow(r) {
+  if (!r) return null;
+  return {
+    id: r.id,
+    tenantId: r.tenant_key,
+    channelType: r.channel_type,
+    externalId: r.external_id,
+    contactId: r.contact_id || null,
+    status: r.status,
+    currentTicketId: r.current_ticket_id || null,
+    assignedTo: r.assigned_to || null,
+    metadata: r.metadata && typeof r.metadata === 'object' ? r.metadata : {},
+    lastMessageAt: r.last_message_at ? new Date(r.last_message_at).toISOString() : null,
+    createdAt: r.created_at ? new Date(r.created_at).toISOString() : (r.createdAt?.toISOString?.() || null),
+    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : (r.updatedAt?.toISOString?.() || null),
+  };
+}
+
+async function getConversation({ tenantId, conversationId } = {}) {
+  if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
+  if (!conversationId || typeof conversationId !== 'string') throw new Error('conversationId é obrigatório');
+  if (!dbAvailable()) return null;
+
+  const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
+  const row = await ConversationModel.findOne({
+    where: { tenant_key: tenantId, id: safeToString(conversationId) },
+  });
+  return mapConversationRow(row);
+}
+
+const UPDATABLE_CONVERSATION_FIELDS = ['status', 'assigned_to', 'metadata', 'current_ticket_id', 'last_message_at'];
+
+async function updateConversation({ tenantId, conversationId, patch = {} } = {}) {
+  if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
+  if (!conversationId || typeof conversationId !== 'string') throw new Error('conversationId é obrigatório');
+  if (!dbAvailable()) return null;
+
+  const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
+  const row = await ConversationModel.findOne({
+    where: { tenant_key: tenantId, id: safeToString(conversationId) },
+  });
+  if (!row) return null;
+
+  const safePatch = { updated_at: new Date() };
+  for (const field of UPDATABLE_CONVERSATION_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(patch, field)) {
+      safePatch[field] = patch[field];
+    }
+  }
+  await row.update(safePatch);
+  return mapConversationRow(row);
+}
+
+async function createMessage({ tenantId, conversationId, channelType, direction, type, body = {}, externalMessageId = null, status = null } = {}) {
+  if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
+  if (!conversationId || typeof conversationId !== 'string') throw new Error('conversationId é obrigatório');
+  if (!dbAvailable()) {
+    const err = new Error('persistence_required: sequelize indisponível para channel_messages');
+    err.code = 'persistence_required';
+    throw err;
+  }
+
+  const MessageModel = typeof ChannelMessage === 'function' ? ChannelMessage() : ChannelMessage;
+  const now = new Date();
+  const id = `cmsg-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+  const dir = direction === 'out' ? 'out' : 'in';
+
+  const row = await MessageModel.create({
+    id,
+    tenant_key: tenantId,
+    conversation_id: conversationId,
+    channel_type: safeToString(channelType, 'unknown') || 'unknown',
+    direction: dir,
+    type: safeToString(type, 'text') || 'text',
+    body: body && typeof body === 'object' ? body : {},
+    external_message_id: externalMessageId ? safeToString(externalMessageId) : null,
+    status: status || (dir === 'out' ? 'pending' : 'received'),
+    created_at: now,
+    updated_at: now,
+  });
+
+  // Best-effort: mantém a conversa com last_message_at fresco.
+  try {
+    const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
+    await ConversationModel.update(
+      { last_message_at: now, updated_at: now },
+      { where: { tenant_key: tenantId, id: conversationId } },
+    );
+  } catch (_) {
+    // não falhar a persistência da mensagem por causa do touch da conversa
+  }
+
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    direction: row.direction,
+    type: row.type,
+    body: enrichBodyMediaUrl(row.body || {}),
+    externalMessageId: row.external_message_id || null,
+    status: row.status,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : now.toISOString(),
+  };
 }
 
 async function listConversationMessages({ tenantId, conversationId, limit = 200, offset = 0 } = {}) {
@@ -168,5 +275,8 @@ async function listConversationMessages({ tenantId, conversationId, limit = 200,
 module.exports = {
   listConversations,
   listConversationMessages,
+  getConversation,
+  updateConversation,
+  createMessage,
 };
 

@@ -149,9 +149,9 @@ export function FlowEditorPage() {
   const { showToast, ToastContainer } = useToast();
   const lastErrorRef = useRef(null);
   
-  // Estados para replay de sessão
+  // Estados para revisão da sessão simulada
   const [sessionId, setSessionId] = useState('');
-  const [replay, setReplay] = useState(null);
+  const [sessionReplay, setReplay] = useState(null);
   const [loadingReplay, setLoadingReplay] = useState(false);
   const [replayError, setReplayError] = useState(null);
   const [replayCollapsed, setReplayCollapsed] = useState(() => {
@@ -899,7 +899,7 @@ export function FlowEditorPage() {
           loadingReplay={loadingReplay}
           handleLoadReplay={handleLoadReplay}
           replayError={replayError}
-          replay={replay}
+          sessionReplay={sessionReplay}
           handleSeekNode={handleSeekNode}
         />
       </div>

@@ -47,7 +47,10 @@ function buildServer(agent) {
 }
 
 const SUPER_ADMIN = { id: 'a1', username: 'systemadmin', role: 'super_admin', tenantId: 'system' };
-const AUDITOR = { id: 'a3', username: 'auditor', role: 'auditor', tenantId: 'tenant-x' };
+// Auditor com platform role de suporte concedido server-side (SUPPORT).
+// Tenant role sozinho (auditor puro) é PRODUCTION desde 2026-08-27.
+const AUDITOR = { id: 'a3', username: 'auditor', role: 'auditor', platformRole: 'support_n2', tenantId: 'tenant-x' };
+const TENANT_AUDITOR = { id: 'a4', username: 'auditor-tenant', role: 'auditor', tenantId: 'tenant-x' };
 const OPERATOR = { id: 'a2', username: 'operador', role: 'operator', tenantId: 'tenant-x' };
 
 describe('test-executions routes — replay exige classificação SUPPORT', () => {
@@ -78,10 +81,17 @@ describe('test-executions routes — replay exige classificação SUPPORT', () =
     expect(res.body).toMatchObject({ error: 'classification_required', required: 'SUPPORT' });
   });
 
-  test('auditor (SUPPORT) acessa recordings', async () => {
+  test('auditor com platformRole support (SUPPORT) acessa recordings', async () => {
     await start(AUDITOR);
     const res = await request(port, 'GET', '/api/test-executions/recordings');
     expect(res.status).toBe(200);
+  });
+
+  test('auditor de tenant puro (PRODUCTION) recebe 403 em recordings', async () => {
+    await start(TENANT_AUDITOR);
+    const res = await request(port, 'GET', '/api/test-executions/recordings');
+    expect(res.status).toBe(403);
+    expect(res.body).toMatchObject({ error: 'classification_required', required: 'SUPPORT' });
   });
 
   test('super_admin (DEVELOPMENT) acessa recordings', async () => {

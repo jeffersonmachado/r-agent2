@@ -49,6 +49,15 @@ function getChannelConversationModel() {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      assigned_to: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      metadata: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: {},
+      },
       last_message_at: {
         type: DataTypes.DATE,
         allowNull: true,

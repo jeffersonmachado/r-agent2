@@ -1,8 +1,9 @@
 /**
- * ManualsTab — manuais operacionais ilustrados gerados de replays reais.
+ * ManualsTab — manuais operacionais ilustrados gerados a partir de jornadas.
  *
- * Usuários veem e baixam os manuais do tenant; admins (owner/admin/super_admin)
- * também podem gerar um novo manual a partir de um replay (QA Waves/RPA).
+ * Usuários veem e baixam os manuais do tenant. A geração técnica de novos
+ * manuais (a partir de gravações de jornada) é restrita a perfis internos da
+ * plataforma (classificação SUPPORT/DEVELOPMENT) com papel de admin.
  * Imagens e o .md são servidos pela API com auth — por isso blob + objectURL.
  */
 
@@ -10,6 +11,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as academyApi from '../../api/academy';
 import { Button } from '../../styles/Button';
 import logger from '../../utils/logger';
+import { useAuth } from '../../context/authContext';
+import { isPlatformInternal } from '../../utils/classification';
 
 function formatDate(value) {
   if (!value) return '—';
@@ -117,7 +120,7 @@ function ManualCard({ manual }) {
               <strong>Passo {step.order} — {step.name}</strong>
               <span className="academy-muted">
                 {' '}{step.label}
-                {step.success === false ? ' (falhou no replay)' : ''}
+                {step.success === false ? ' (passo não concluído)' : ''}
               </span>
               {step.image && (
                 <ManualStepImage
@@ -135,6 +138,9 @@ function ManualCard({ manual }) {
 }
 
 export function ManualsTab({ isAdmin }) {
+  const { agent } = useAuth();
+  // Geração técnica de manuais: apenas perfis internos da plataforma.
+  const canGenerate = Boolean(isAdmin) && isPlatformInternal(agent);
   const [manuals, setManuals] = useState(null);
   const [replays, setReplays] = useState(null);
   const [selectedReplayId, setSelectedReplayId] = useState('');
@@ -163,7 +169,7 @@ export function ManualsTab({ isAdmin }) {
   }, [loadManuals]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canGenerate) return;
     academyApi.getReplays()
       .then((data) => {
         if (!mountedRef.current) return;
@@ -175,7 +181,7 @@ export function ManualsTab({ isAdmin }) {
         logger.warn('[ManualsTab] replays indisponíveis', replayError);
         if (mountedRef.current) setReplays([]);
       });
-  }, [isAdmin]);
+  }, [canGenerate]);
 
   const handleGenerate = useCallback(async () => {
     if (!selectedReplayId) return;
@@ -199,11 +205,11 @@ export function ManualsTab({ isAdmin }) {
     <section aria-label="Manuais operacionais">
       <h2 className="academy-section-title">Manuais operacionais</h2>
       <p className="academy-muted">
-        Manuais ilustrados gerados automaticamente a partir de replays reais das jornadas
+        Manuais ilustrados gerados automaticamente a partir das jornadas operacionais
         (telas capturadas em execução, dados anonimizados).
       </p>
 
-      {isAdmin && (
+      {canGenerate && (
         <div className="academy-manual-generator" data-testid="manual-generator">
           <h3>Gerar novo manual</h3>
           {replays === null ? (
@@ -253,7 +259,7 @@ export function ManualsTab({ isAdmin }) {
         <p className="academy-state">Carregando manuais…</p>
       ) : manuals.length === 0 ? (
         <p className="academy-state">
-          Nenhum manual gerado ainda. Manuais são criados a partir de replays
+          Nenhum manual gerado ainda. Manuais são criados a partir de jornadas
           operacionais reais pela administração da plataforma.
         </p>
       ) : (

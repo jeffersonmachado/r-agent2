@@ -41,7 +41,7 @@ export function WorkspaceHeader({ entity, summary, onCreateTask, onCreateFollowU
       <div className="workspace-header-actions">
         <div className="workspace-card workspace-header-card max-w-sm">
           <strong>Próxima melhor ação</strong>
-          <p className="workspace-muted text-sm mt-1">{summary?.qaFailures > 0 ? 'Existe falha QA/RPA exigindo revisão técnica.' : 'Insights e ações são calculados a partir da timeline unificada.'}</p>
+          <p className="workspace-muted text-sm mt-1">{summary?.qaFailures > 0 ? 'Existe incidente operacional exigindo atenção.' : 'Insights e ações são calculados a partir da timeline unificada.'}</p>
         </div>
         <div className="workspace-header-button-row">
           <button className="workspace-secondary-button" type="button" onClick={onCreateTask}>Criar tarefa</button>

@@ -30,6 +30,20 @@ const {
 let cachedPrompts = null;
 
 /**
+ * Erro de geração por IA (provider indisponível ou resposta inválida).
+ * Carrega `code: 'AI_GENERATION_FAILED'` para que as rotas do orquestrador
+ * respondam 400 estruturado (falha agregada), nunca 500.
+ *
+ * @param {string} message Mensagem de erro
+ * @returns {Error} Erro com código AI_GENERATION_FAILED
+ */
+function aiGenerationError(message) {
+  const err = new Error(message);
+  err.code = 'AI_GENERATION_FAILED';
+  return err;
+}
+
+/**
  * Carrega os prompts de teste RPA do arquivo de configuração.
  * 
  * @returns {Object} Prompts carregados
@@ -439,7 +453,7 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
         aiResponse: aiResponse,
         hasText: !!aiResponse?.text
       });
-      throw new Error('Resposta da IA não contém texto válido');
+      throw aiGenerationError('Resposta da IA não contém texto válido');
     }
     
     // Verifica se a IA está disponível (detecta mensagens de erro comuns)
@@ -451,7 +465,7 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
       logger.error('IA não está disponível', {
         responseText: responseText.substring(0, 200)
       });
-      throw new Error('Serviço de IA não está disponível no momento. Por favor, verifique a configuração da IA e tente novamente.');
+      throw aiGenerationError('Serviço de IA não está disponível no momento. Por favor, verifique a configuração da IA e tente novamente.');
     }
     
     // Parseia a resposta da IA
@@ -462,7 +476,7 @@ async function generateRpaTestFromFlow(flow, dependencies, options = {}) {
         responseText: aiResponse.text.substring(0, 1000),
         responseLength: aiResponse.text.length
       });
-      throw new Error('Falha ao parsear resposta da IA. A resposta pode não estar em formato JSON válido. Verifique se o serviço de IA está configurado corretamente.');
+      throw aiGenerationError('Falha ao parsear resposta da IA. A resposta pode não estar em formato JSON válido. Verifique se o serviço de IA está configurado corretamente.');
     }
     
     // Constrói o teste RPA completo

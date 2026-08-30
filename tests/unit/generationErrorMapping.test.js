@@ -129,6 +129,29 @@ describe('POST /flows/generate — mapeamento de erros', () => {
     expect(res.body).toHaveProperty('error', 'bad_request');
     expect(res.body.message).toContain('não alcançáveis');
   });
+  test('erro de geração por IA (AI_GENERATION_FAILED) retorna 400 (não 500)', async () => {
+    // Falha observada (QA Mesh 2026-08-29, execução mesh-2026-08-29T05-57-35-390Z,
+    // CORE-BIZ-FLOWS-EDITOR): provider OpenAI sem créditos (429) e resposta da
+    // IA não parseável vazavam como "500 Internal Server Error: Falha ao
+    // parsear resposta da IA". O rpaTestGeneratorService passa a lançar com
+    // code AI_GENERATION_FAILED e a rota responde falha agregada estruturada.
+    const deps = baseDeps({
+      orchestrateGeneration: async () => {
+        throw Object.assign(new Error('Falha ao parsear resposta da IA.'), { code: 'AI_GENERATION_FAILED' });
+      },
+    });
+    const res = {};
+    await handleFlowGenerationRoutes({
+      req: makeReq({ name: 'x', description: 'y' }, '/flows/generate'),
+      res,
+      method: 'POST',
+      pathname: '/flows/generate',
+      deps,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty('error', 'bad_request');
+    expect(res.body.message).toContain('parsear resposta da IA');
+  });
 });
 
 describe('POST /flows/generate/dry-run — mapeamento de erros', () => {
@@ -185,6 +208,25 @@ describe('POST /ai/rpa/generate — mapeamento de erros', () => {
     expect(res.statusCode).toBe(400);
     expect(res.body).toHaveProperty('error', 'bad_request');
     expect(res.body.message).toContain('Fallback');
+  });
+
+  test('erro de geração por IA (AI_GENERATION_FAILED) retorna 400 (não 500)', async () => {
+    // Mesma falha observada em mesh-2026-08-29T05-57-35-390Z: 500 vazado por
+    // resposta de IA não parseável no /ai/rpa/generate.
+    require('../../api/services/generationOrchestrator').orchestrateGeneration.mockImplementationOnce(async () => {
+      throw Object.assign(new Error('Falha ao parsear resposta da IA.'), { code: 'AI_GENERATION_FAILED' });
+    });
+    const res = {};
+    await handleAiChatbotOrchestratorRoutes({
+      req: makeReq({ userInput: 'Plano RPA simples de boas-vindas' }, '/ai/rpa/generate'),
+      res,
+      method: 'POST',
+      pathname: '/ai/rpa/generate',
+      deps: baseDeps(),
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty('error', 'bad_request');
+    expect(res.body.message).toContain('parsear resposta da IA');
   });
 });
 

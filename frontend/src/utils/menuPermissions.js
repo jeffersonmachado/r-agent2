@@ -4,6 +4,7 @@
  */
 
 import { navigationMenu, flattenNavigationLeaves, normalizeNavigationPath } from '../navigation/menu';
+import { getAgentClassification } from './classification';
 
 /**
  * Definição de itens do menu com suas permissões.
@@ -16,6 +17,8 @@ export const menuItems = flattenNavigationLeaves(navigationMenu)
     icon: item.icon || '•',
     permission: item.permission || null,
     roles: item.roles,
+    classifications: item.classifications,
+    capability: item.capability,
     hiddenInSidebar: item.hiddenInSidebar,
     hiddenInSubNav: item.hiddenInSubNav,
   }));
@@ -30,6 +33,11 @@ const ROLE_PERMISSIONS = {
     { resource: 'tenant', action: 'manage' },
     { resource: 'tickets', action: 'read' },
     { resource: 'tickets', action: 'list_all' },
+    { resource: 'inbox', action: 'read' },
+    { resource: 'inbox', action: 'assign' },
+    { resource: 'inbox', action: 'update' },
+    { resource: 'inbox', action: 'reply' },
+    { resource: 'inbox', action: 'transfer' },
     { resource: 'flows', action: 'read' },
     { resource: 'flows', action: 'update' },
     { resource: 'config', action: 'read' },
@@ -64,6 +72,11 @@ const ROLE_PERMISSIONS = {
   admin: [
     { resource: 'tickets', action: 'read' },
     { resource: 'tickets', action: 'list_all' },
+    { resource: 'inbox', action: 'read' },
+    { resource: 'inbox', action: 'assign' },
+    { resource: 'inbox', action: 'update' },
+    { resource: 'inbox', action: 'reply' },
+    { resource: 'inbox', action: 'transfer' },
     { resource: 'flows', action: 'read' },
     { resource: 'flows', action: 'update' },
     { resource: 'config', action: 'read' },
@@ -99,6 +112,11 @@ const ROLE_PERMISSIONS = {
   manager: [
     { resource: 'tickets', action: 'read' },
     { resource: 'tickets', action: 'list_all' },
+    { resource: 'inbox', action: 'read' },
+    { resource: 'inbox', action: 'assign' },
+    { resource: 'inbox', action: 'update' },
+    { resource: 'inbox', action: 'reply' },
+    { resource: 'inbox', action: 'transfer' },
     { resource: 'flows', action: 'read' },
     { resource: 'config', action: 'read' },
     { resource: 'agents', action: 'list_all' },
@@ -126,6 +144,11 @@ const ROLE_PERMISSIONS = {
   ],
   operator: [
     { resource: 'tickets', action: 'read' },
+    { resource: 'inbox', action: 'read' },
+    { resource: 'inbox', action: 'assign' },
+    { resource: 'inbox', action: 'update' },
+    { resource: 'inbox', action: 'reply' },
+    { resource: 'inbox', action: 'transfer' },
     { resource: 'flows', action: 'read' },
     { resource: 'quick_replies', action: 'read' },
     { resource: 'departments', action: 'read' },
@@ -137,6 +160,7 @@ const ROLE_PERMISSIONS = {
   auditor: [
     { resource: 'tickets', action: 'read' },
     { resource: 'tickets', action: 'list_all' },
+    { resource: 'inbox', action: 'read' },
     { resource: 'audit', action: 'read' },
     { resource: 'audit', action: 'export' },
     { resource: 'reports', action: 'read' },
@@ -145,6 +169,7 @@ const ROLE_PERMISSIONS = {
   ],
   readonly: [
     { resource: 'tickets', action: 'read' },
+    { resource: 'inbox', action: 'read' },
     { resource: 'flows', action: 'read' },
     { resource: 'quick_replies', action: 'read' },
     { resource: 'departments', action: 'read' },
@@ -282,19 +307,34 @@ export function isSuperAdmin(agent) {
  * Filtra itens do menu baseado nas permissões do agente.
  *
  * @param {Object} agent - Agente autenticado
+ * @param {Object} [capabilities] - Capacidades do tenant (para itens com `capability`)
  * @returns {Array} Itens do menu que o agente pode ver
  */
-export function getVisibleMenuItems(agent) {
+export function getVisibleMenuItems(agent, capabilities) {
   if (!agent) {
     return [];
   }
 
-  return menuItems.filter((item) => canAccessMenuItem(agent, item));
+  return menuItems.filter((item) => canAccessMenuItem(agent, item, capabilities));
 }
 
-export function canAccessMenuItem(agent, item) {
+export function canAccessMenuItem(agent, item, capabilities) {
   if (!agent || !item) {
     return false;
+  }
+
+  // Capacidade do tenant é um gate de funcionalidade, não de papel:
+  // aplica-se a qualquer agente (inclusive super_admin).
+  if (item.capability && capabilities?.[item.capability] !== true) {
+    return false;
+  }
+
+  // Itens restritos por classificação de experiência (PRODUCTION/SUPPORT/DEVELOPMENT).
+  // Sem classificação conhecida, getAgentClassification retorna PRODUCTION (fail-closed).
+  if (item.classifications && Array.isArray(item.classifications)) {
+    if (!item.classifications.includes(getAgentClassification(agent))) {
+      return false;
+    }
   }
 
   if (isSuperAdmin(agent)) {
@@ -319,12 +359,12 @@ export function canAccessMenuItem(agent, item) {
   return hasPermission(agent, item.permission.resource, item.permission.action);
 }
 
-export function filterNavigationTree(agent, nodes = []) {
+export function filterNavigationTree(agent, nodes = [], capabilities) {
   if (!agent) return [];
 
   return nodes.reduce((acc, node) => {
     const visibleChildren = Array.isArray(node.children)
-      ? filterNavigationTree(agent, node.children)
+      ? filterNavigationTree(agent, node.children, capabilities)
       : [];
 
     const currentNode = {
@@ -332,7 +372,7 @@ export function filterNavigationTree(agent, nodes = []) {
       children: visibleChildren,
     };
 
-    const isAccessible = canAccessMenuItem(agent, currentNode);
+    const isAccessible = canAccessMenuItem(agent, currentNode, capabilities);
     const hasVisibleChildren = visibleChildren.length > 0;
 
     if (isAccessible || hasVisibleChildren) {
@@ -347,11 +387,11 @@ export function filterNavigationTree(agent, nodes = []) {
  * exigem super_admin, inclusive para paths sem mapeamento explícito no menu
  * (allowUnknown não se aplica a esses prefixos).
  * Inclui aliases legados fora de /dev que renderizam páginas de engenharia
- * (ver main.jsx): '/rpa-seeds', '/system-status'.
+ * (ver main.jsx): '/rpa-seeds', '/system-status', '/generate-system'.
  * '/rpa-replays' NÃO está aqui: é ferramenta de investigação SUPPORT — o acesso
- * é decidido pelo item de menu (roles super_admin + auditor) em canAccessPath.
+ * é decidido pelo item de menu (classifications SUPPORT + DEVELOPMENT) em canAccessPath.
  */
-const PROTECTED_PATH_PREFIXES = ['/dev', '/qa', '/qa-mesh', '/rpa', '/rpa-seeds', '/system-status'];
+const PROTECTED_PATH_PREFIXES = ['/dev', '/qa', '/qa-mesh', '/rpa', '/rpa-seeds', '/system-status', '/generate-system'];
 
 function isProtectedPath(targetPath) {
   return PROTECTED_PATH_PREFIXES.some(
@@ -366,10 +406,12 @@ function isProtectedPath(targetPath) {
  * @param {string} path - URL/rota atual
  * @param {Object} options
  * @param {boolean} options.allowUnknown - Quando true, rotas sem mapeamento explícito são permitidas
+ * @param {Object} [options.capabilities] - Capacidades do tenant; rotas com `capability`
+ *   no item de menu (ex.: '/cases' exige caseManagement) são negadas sem ela (fail-closed)
  * @returns {boolean}
  */
 export function canAccessPath(agent, path, options = {}) {
-  const { allowUnknown = true } = options;
+  const { allowUnknown = true, capabilities } = options;
   const targetPath = normalizeNavigationPath(path);
 
   if (!agent) {
@@ -389,5 +431,5 @@ export function canAccessPath(agent, path, options = {}) {
     return allowUnknown;
   }
 
-  return canAccessMenuItem(agent, item);
+  return canAccessMenuItem(agent, item, capabilities);
 }

@@ -384,7 +384,7 @@ export function SuperAdminPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>Usuários: {metrics.usage.usuarios || 0}</div>
                   <div>Agentes IA: {metrics.usage.agentes_ia || 0}</div>
-                  <div>Execuções RPA: {metrics.usage.execucoes_rpa || 0}</div>
+                  <div>Execuções de automação: {metrics.usage.execucoes_rpa || 0}</div>
                   <div>Tokens IA: {metrics.usage.tokens_ia || 0}</div>
                 </div>
               </div>

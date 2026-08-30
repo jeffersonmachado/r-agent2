@@ -5,10 +5,14 @@ import { WorkspaceHeader } from './WorkspaceHeader';
 import { WorkspaceTimeline } from './WorkspaceTimeline';
 import { WorkspaceInsights } from './WorkspaceInsights';
 import { WorkspaceActions } from './WorkspaceActions';
-import { WorkspaceQaRpaPanel } from './WorkspaceQaRpaPanel';
 import { WorkspaceRightRail } from './WorkspaceRightRail';
-
-const tabs = ['Resumo', 'Timeline', 'Conversas', 'Tickets', 'Tarefas', 'Agenda', 'Projetos', 'Documentos', 'Pagamentos', 'QA/RPA', 'Insights IA', 'Ações'];
+import {
+  DEV_SURFACE_TAB,
+  WorkspaceQaRpaPanel,
+  buildDevSurfacePanelProps,
+  getWorkspaceTabs,
+  isDevSurfaceVisible,
+} from './workspaceDevSurface';
 
 export function WorkspaceLayout({
   entities,
@@ -23,11 +27,12 @@ export function WorkspaceLayout({
   timeline,
   insights,
   actions,
-  autocorrections,
+  incidents,
   loadingTimeline,
   loadingInsights,
   loadingActions,
-  loadingAutoCorrections,
+  loadingIncidents,
+  classification = 'PRODUCTION',
   onQueryChange,
   onSidebarFilterChange,
   onSelectEntity,
@@ -38,10 +43,12 @@ export function WorkspaceLayout({
   onCreateTask,
   onCreateFollowUp,
 }) {
+  const tabs = getWorkspaceTabs(classification);
+  const devSurfaceVisible = isDevSurfaceVisible(classification);
   const showTimeline = ['Resumo', 'Timeline', 'Conversas', 'Tickets', 'Tarefas', 'Agenda', 'Projetos', 'Documentos', 'Pagamentos'].includes(activeTab);
   const showInsights = ['Resumo', 'Insights IA'].includes(activeTab);
   const showActions = ['Resumo', 'Ações'].includes(activeTab);
-  const showQaPanel = activeTab === 'QA/RPA';
+  const showQaPanel = devSurfaceVisible && activeTab === DEV_SURFACE_TAB;
 
   return (
     <div className="workspace-page">
@@ -53,6 +60,7 @@ export function WorkspaceLayout({
           loading={loadingEntities}
           query={query}
           activeFilter={sidebarFilter}
+          classification={classification}
           onQueryChange={onQueryChange}
           onFilterChange={onSidebarFilterChange}
           onSelect={onSelectEntity}
@@ -86,9 +94,9 @@ export function WorkspaceLayout({
             <div className="workspace-grid">
               <div className="workspace-center-column">
                 {showQaPanel ? (
-                  <WorkspaceQaRpaPanel autocorrections={autocorrections} loading={loadingAutoCorrections} timeline={timeline} />
+                  <WorkspaceQaRpaPanel {...buildDevSurfacePanelProps({ incidents, loading: loadingIncidents, timeline })} />
                 ) : showTimeline ? (
-                  <WorkspaceTimeline timeline={timeline} loading={loadingTimeline} onLoadMore={onLoadMoreTimeline} />
+                  <WorkspaceTimeline timeline={timeline} loading={loadingTimeline} classification={classification} onLoadMore={onLoadMoreTimeline} />
                 ) : (
                   <WorkspaceInsights insights={insights} loading={loadingInsights} />
                 )}
@@ -102,10 +110,11 @@ export function WorkspaceLayout({
                   summary={selectedSummary}
                   insights={insights}
                   actions={actions}
-                  autocorrections={autocorrections}
+                  incidents={incidents}
                   loadingInsights={loadingInsights}
                   loadingActions={loadingActions}
-                  loadingAutoCorrections={loadingAutoCorrections}
+                  loadingIncidents={loadingIncidents}
+                  classification={classification}
                 />
               </div>
             </div>

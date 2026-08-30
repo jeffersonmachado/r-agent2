@@ -3,9 +3,9 @@
 /**
  * Guards de acesso das rotas /rpa/* (fonte única da matriz Replay×RPA):
  *
- * - SUPPORT (auditor+): leitura/diagnóstico — GET/DELETE /rpa/recordings*,
+ * - SUPPORT (platform role de suporte, ex.: support_n1..n3): leitura/diagnóstico — GET/DELETE /rpa/recordings*,
  *   GET /rpa/execution/:id e GET /rpa/execution/:id/report (leitura pura).
- * - DEVELOPMENT (super_admin): escrita técnica — gravação (POST /rpa/record/start,
+ * - DEVELOPMENT (super_admin / platform role de engenharia): escrita técnica — gravação (POST /rpa/record/start,
  *   POST /rpa/record/stop/:id, GET /rpa/record/status/:id — status de gravação
  *   em andamento é controle da sessão de gravação) e controle de execução
  *   (POST /rpa/execute/:id, POST /rpa/execution/:id/cancel|continue|next).

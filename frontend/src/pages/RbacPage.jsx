@@ -40,7 +40,7 @@ const RESOURCE_LABELS = {
   departments:   'Departamentos',
   bulk_messaging:'Disparos em Massa',
   rag:           'RAG / IA',
-  rpa:           'RPA',
+  rpa:           'Automação',
   ai:            'IA',
   projects:      'Projetos',
   workspace:     'Workspace',

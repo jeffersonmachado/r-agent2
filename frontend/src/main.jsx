@@ -22,6 +22,8 @@ const FlowEditorPage = lazyPage(() => import('./pages/FlowEditorPage'), 'FlowEdi
 const BpmnEditorPage = lazyPage(() => import('./pages/BpmnEditorPage'), 'BpmnEditorPage');
 const SupportPage = lazyPage(() => import('./pages/SupportPage'), 'SupportPage');
 const InboxPage = lazyPage(() => import('./pages/InboxPage'), 'InboxPage');
+const CasesPage = lazyPage(() => import('./pages/CasesPage'), 'CasesPage');
+const PlatformSupportPage = lazyPage(() => import('./pages/PlatformSupportPage'), 'PlatformSupportPage');
 const TicketMaintenancePage = lazyPage(() => import('./pages/TicketMaintenancePage'), 'TicketMaintenancePage');
 const ConfigPage = lazyPage(() => import('./pages/ConfigPage'), 'ConfigPage');
 const AgentsPage = lazyPage(() => import('./pages/AgentsPage'), 'AgentsPage');
@@ -341,7 +343,7 @@ function App() {
 
 function AppWithAuth() {
   const { currentPath, navigate } = useRouter();
-  const { isAuthenticated, loading, agent } = useAuth();
+  const { isAuthenticated, loading, agent, capabilities } = useAuth();
   const [newNavigationEnabled, setNewNavigationEnabled] = React.useState(true);
   const [tenantProfile, setTenantProfile] = React.useState(null);
   const [isContextPanelOpen, setIsContextPanelOpen] = React.useState(false);
@@ -419,6 +421,8 @@ function AppWithAuth() {
   const isSupport = isRoute('/support');
   const isWorkspace = isRoute('/workspace');
   const isInbox = isRoute('/inbox');
+  const isCases = isRoute('/cases');
+  const isPlatformSupport = isRoute('/platform-support');
   const isMaintenance = isRoute('/maintenance');
   const isConfig = isRoute('/config');
   const isAgents = isRoute('/agents');
@@ -567,7 +571,7 @@ function AppWithAuth() {
     const allRoutes = [
       isStorefront, isStorefrontOrder, isStorefrontOrderStatus,
       isKiosk, isPanel, isStation,
-      isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+      isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isCases, isPlatformSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
       isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
       isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaReplaysAlias, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isSystemStatusAlias, isStackVersions, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
       isMarketing, isAccessControl, isSolutions, isNodeMarketplace, isSsoScim, isBackup,
@@ -589,7 +593,7 @@ function AppWithAuth() {
     }
   }, [
     isStorefront, isStorefrontOrder, isStorefrontOrderStatus,
-    isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
+    isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isCases, isPlatformSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isStackVersions, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
             isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
@@ -826,7 +830,8 @@ function AppWithAuth() {
 
   // Guardas de acesso por módulo/ação (RBAC) para evitar bypass por URL direta.
   // Super Admin sempre pode acessar rotas existentes no frontend.
-  const hasRouteAccess = isDemo || isSuperAdmin || canAccessPath(agent, currentPath);
+  // Rotas gated por capability do tenant (ex.: /cases) exigem a capacidade ligada.
+  const hasRouteAccess = isSuperAdmin || canAccessPath(agent, currentPath, { capabilities });
   if (!hasRouteAccess) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -884,6 +889,10 @@ function AppWithAuth() {
     pageContent = <WorkspacePage />;
   } else if (isInbox) {
     pageContent = <InboxPage />;
+  } else if (isCases) {
+    pageContent = <CasesPage />;
+  } else if (isPlatformSupport) {
+    pageContent = <PlatformSupportPage />;
   } else if (isMaintenance) {
     pageContent = <TicketMaintenancePage />;
   } else if (isConfig) {
@@ -1128,21 +1137,23 @@ function AppWithAuth() {
 
   return (
     <div className={`rap-enterprise-shell ${isContextPanelOpen ? 'is-context-panel-open' : ''} ${isSecondaryNavCollapsed ? 'is-secondary-nav-collapsed' : ''}`}>
-      <PrimaryRail agent={agent} currentPath={currentPath} />
+      <PrimaryRail agent={agent} currentPath={currentPath} capabilities={capabilities} />
       <SecondaryNav
         agent={agent}
         currentPath={currentPath}
         onCollapsedChange={setIsSecondaryNavCollapsed}
+        capabilities={capabilities}
       />
 
       <div className="rap-enterprise-main">
         <AreaHeader
           agent={agent}
           currentPath={currentPath}
+          capabilities={capabilities}
           actionsSlot={<UserMenu showNavigation={false} tenantLabel={subNavTenantLabel} verticalLabels={subNavVerticalLabels} />}
         />
         <div className="rap-page">
-          <CommandPalette agent={agent} />
+          <CommandPalette agent={agent} capabilities={capabilities} />
           <TutorDock />
           <TenantGate />
           {tenantGateActive ? null : pageContent}
@@ -1166,6 +1177,7 @@ function AppWithAuth() {
           currentPath={currentPath}
           tenantLabel={subNavTenantLabel}
           onClose={() => setIsContextPanelOpen(false)}
+          capabilities={capabilities}
         />
       ) : null}
       <AskAiWidget />

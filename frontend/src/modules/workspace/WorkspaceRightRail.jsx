@@ -1,4 +1,5 @@
 import React from 'react';
+import { getOperationalLabels, isDevSurfaceVisible } from './workspaceDevSurface';
 
 function Card({ title, children, loading = false }) {
   return (
@@ -9,10 +10,12 @@ function Card({ title, children, loading = false }) {
   );
 }
 
-export function WorkspaceRightRail({ summary, insights, actions, autocorrections, loadingInsights, loadingActions, loadingAutoCorrections }) {
+export function WorkspaceRightRail({ summary, insights, actions, incidents, loadingInsights, loadingActions, loadingIncidents, classification = 'PRODUCTION' }) {
+  const labels = getOperationalLabels(classification);
+  const devSurfaceVisible = isDevSurfaceVisible(classification);
   const insightItems = [...(insights?.items || []), ...(insights?.persisted || [])];
   const pendingActions = (actions?.items || []).filter((item) => item.status === 'pending');
-  const criticalFailures = (autocorrections?.items || []).filter((item) => item.diagnosis?.risk === 'high' || item.validation_result?.status === 'failed');
+  const criticalFailures = (incidents?.items || []).filter((item) => item.diagnosis?.risk === 'high' || item.validation_result?.status === 'failed');
 
   return (
     <aside className="workspace-right-rail">
@@ -33,7 +36,7 @@ export function WorkspaceRightRail({ summary, insights, actions, autocorrections
         <div className="workspace-metric-list mt-3">
           <div><span>Tickets abertos</span><strong>{summary?.openTickets ?? 0}</strong></div>
           <div><span>SLA em risco</span><strong>{summary?.delayed ?? 0}</strong></div>
-          <div><span>Falhas QA/RPA</span><strong>{summary?.qaFailures ?? 0}</strong></div>
+          <div><span>{labels.failuresMetric}</span><strong>{summary?.qaFailures ?? 0}</strong></div>
           <div><span>Pagamentos pendentes</span><strong>{summary?.pendingPayments ?? 0}</strong></div>
         </div>
       </Card>
@@ -55,10 +58,12 @@ export function WorkspaceRightRail({ summary, insights, actions, autocorrections
         {pendingActions.length === 0 ? <p className="workspace-muted text-sm">Nenhuma ação pendente.</p> : null}
       </Card>
 
-      <Card title="Falhas QA/RPA" loading={loadingAutoCorrections}>
-        {criticalFailures.slice(0, 3).map((item) => <div key={item.id} className="workspace-rail-item"><strong>{item.diagnosis?.affectedModule || item.source_type}</strong><p>{item.diagnosis?.rootCause || 'Falha detectada'}</p></div>)}
-        {criticalFailures.length === 0 ? <p className="workspace-muted text-sm">Nenhuma falha crítica em aberto.</p> : null}
-      </Card>
+      {devSurfaceVisible ? (
+        <Card title={labels.failuresCardTitle} loading={loadingIncidents}>
+          {criticalFailures.slice(0, 3).map((item) => <div key={item.id} className="workspace-rail-item"><strong>{item.diagnosis?.affectedModule || item.source_type}</strong><p>{item.diagnosis?.rootCause || labels.failureDetected}</p></div>)}
+          {criticalFailures.length === 0 ? <p className="workspace-muted text-sm">{labels.failuresEmpty}</p> : null}
+        </Card>
+      ) : null}
 
       <Card title="Produtividade">
         <div className="workspace-metric-list">

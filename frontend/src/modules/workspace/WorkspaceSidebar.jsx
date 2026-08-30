@@ -1,4 +1,5 @@
 import React from 'react';
+import { getOperationalLabels, getSidebarFilters } from './workspaceDevSurface';
 
 function formatLastActivity(value) {
   if (!value) return 'sem atividade recente';
@@ -9,20 +10,16 @@ function formatLastActivity(value) {
   }
 }
 
-const filters = [
-  { id: 'all', label: 'Todos' },
-  { id: 'risk', label: 'Em risco' },
-  { id: 'qa', label: 'Falha QA/RPA' },
-  { id: 'active', label: 'Ativos' },
-];
+export function WorkspaceSidebar({ entities = [], entitySummaries = {}, selectedId, loading, query, activeFilter, classification = 'PRODUCTION', onQueryChange, onFilterChange, onSelect, onCreateDemo }) {
+  const filters = getSidebarFilters(classification);
+  const labels = getOperationalLabels(classification);
 
-export function WorkspaceSidebar({ entities = [], entitySummaries = {}, selectedId, loading, query, activeFilter, onQueryChange, onFilterChange, onSelect, onCreateDemo }) {
   return (
     <aside className="workspace-panel workspace-sidebar">
       <div className="mb-4">
         <p className="workspace-kicker text-xs uppercase tracking-[0.24em]">RAP Workspace</p>
         <h2 className="text-3xl mt-1">Clientes 360</h2>
-        <p className="workspace-muted text-sm mt-2">Entidades unificadas por contato, conversa, ticket, QA/RPA e operação.</p>
+        <p className="workspace-muted text-sm mt-2">{labels.sidebarDescription}</p>
       </div>
 
       <input
@@ -72,7 +69,7 @@ export function WorkspaceSidebar({ entities = [], entitySummaries = {}, selected
             <div className="workspace-entity-meta mt-3">
               <span className="workspace-pill subtle">{entity.type || 'contact'}</span>
               <span className={`workspace-pill ${summary.healthTone || 'healthy'}`}>{summary.healthLabel || 'Saudável'}</span>
-              {summary.hasQaFailure ? <span className="workspace-pill critical">QA/RPA</span> : null}
+              {summary.hasQaFailure ? <span className="workspace-pill critical">{labels.failurePill}</span> : null}
               {summary.riskLevel && summary.riskLevel !== 'Estável' ? <span className="workspace-pill warning">{summary.riskLevel}</span> : null}
             </div>
             <div className="workspace-muted text-xs mt-3">Última atividade: {formatLastActivity(summary.lastActivityAt || entity.updated_at)}</div>

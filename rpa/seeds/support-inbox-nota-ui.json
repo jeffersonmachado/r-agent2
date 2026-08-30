@@ -63,7 +63,7 @@
       "name": "Aguardar painel de notas internas",
       "type": "wait",
       "critical": false,
-      "selector": "textarea.support-form-textarea",
+      "selector": "textarea.support-note-textarea",
       "timeout": 20000
     },
     {
@@ -71,7 +71,7 @@
       "type": "fill",
       "critical": false,
       "timeout": 10000,
-      "selector": "textarea.support-form-textarea",
+      "selector": "textarea.support-note-textarea",
       "value": "Nota interna registrada via RPA QA — jornada de atendimento (support ticket flow)."
     },
     {

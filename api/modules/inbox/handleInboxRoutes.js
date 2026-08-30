@@ -1,6 +1,10 @@
 'use strict';
 
-const { createInboxService } = require('./service');
+// Handler legado (ticket-based). Mantido para compatibilidade com testes e
+// callers antigos; usa a implementação ticket-based preservada em
+// ./legacyTicketService. O inbox novo (ChannelConversation-based) vive em
+// ./service + ./controller + ./routes.
+const { createInboxService } = require('./legacyTicketService');
 
 async function handleInboxRoutes(ctx) {
   const { req, res, method, pathname, deps } = ctx;

@@ -250,11 +250,36 @@ async function runHumanHandoffProof(baseUrl, auth) {
   const warnings = [];
   const phoneNumberId = String(process.env.TEST_WHATSAPP_PHONE_NUMBER_ID || 'test_phone_id');
 
+  // Seed idempotente da conta de canal: sem channel_accounts(whatsapp, phoneNumberId)
+  // o webhook não resolve tenant (resolveTenantForWebhook) e a conversa nunca é
+  // criada — ambientes frescos (ex.: docker-compose.test.yml) falhariam no handoff.
+  const accounts = await reqJson(`${baseUrl}/channel-accounts?limit=200`, {
+    method: 'GET',
+    token: auth.token,
+  }).catch(() => null);
+  const accountItems = Array.isArray(accounts?.payload?.accounts) ? accounts.payload.accounts : [];
+  const hasWhatsappAccount = accountItems.some((a) => (
+    a?.type === 'whatsapp' && String(a?.external_id || a?.externalId || '') === phoneNumberId && a?.status === 'active'
+  ));
+  if (!hasWhatsappAccount) {
+    const seeded = await reqJson(`${baseUrl}/channel-accounts`, {
+      method: 'POST',
+      token: auth.token,
+      body: { type: 'whatsapp', externalId: phoneNumberId, status: 'active', config: {} },
+    }).catch((err) => ({ ok: false, status: 0, payload: { error: err.message } }));
+    if (seeded.ok) {
+      warnings.push('channel_account_seeded_for_webhook');
+    } else {
+      warnings.push(`channel_account_seed_failed:${seeded.status}`);
+    }
+  }
+
   const seedWebhook = await reqJson(`${baseUrl}/webhooks/whatsapp`, {
     method: 'POST',
     body: buildWebhookPayload({ phoneNumber, messageText: initialMessage, phoneNumberId }),
   });
   let ticketId = null;
+  let conversationId = null;
   if (!seedWebhook.ok) {
     warnings.push(`initial_customer_webhook_failed:${seedWebhook.status}`);
   }
@@ -264,6 +289,33 @@ async function runHumanHandoffProof(baseUrl, auth) {
       method: 'GET',
       token: auth.token,
     }).catch(() => null);
+    // Contrato novo do Inbox (2026-08): payload.conversations (ChannelConversation;
+    // caseId = current_ticket_id). Fallback legado: payload.tickets.
+    const conversations = Array.isArray(inbox?.payload?.conversations) ? inbox.payload.conversations : [];
+    const convMatch = conversations
+      .filter((item) => {
+        const phone = String(item?.externalId || item?.contactId || item?.metadata?.phoneNumber || item?.phoneNumber || '');
+        return phone === phoneNumber || phone === phoneNumber.replace(/^\+/, '');
+      })
+      .sort((left, right) => toTime(right?.updatedAt || right?.createdAt) - toTime(left?.updatedAt || left?.createdAt))[0];
+    if (convMatch?.id) {
+      conversationId = String(convMatch.id);
+      if (convMatch.caseId) {
+        ticketId = String(convMatch.caseId);
+        break;
+      }
+      // Conversa sem case (auto-create desligado): cria o case a partir da conversa.
+      const createCase = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(conversationId)}/case`, {
+        method: 'POST',
+        token: auth.token,
+        body: { subject: initialMessage },
+      });
+      if (createCase.ok && createCase.payload?.case?.id) {
+        ticketId = String(createCase.payload.case.id);
+        warnings.push('case_created_from_conversation');
+        break;
+      }
+    }
     const tickets = Array.isArray(inbox?.payload?.tickets) ? inbox.payload.tickets : [];
     const match = tickets
       .filter((item) => String(item?.phoneNumber || item?.contact?.phone || '') === phoneNumber)
@@ -292,6 +344,18 @@ async function runHumanHandoffProof(baseUrl, auth) {
     warnings.push('initial_customer_webhook_not_linked_fallback_manual_ticket');
   }
 
+  // Transfer opera sobre conversationId no Inbox desacoplado: quando o ticket
+  // veio do fallback manual, resolve a conversa vinculada (caseId = ticketId).
+  if (!conversationId && ticketId) {
+    const inbox = await reqJson(`${baseUrl}/inbox/conversations?limit=200&offset=0`, {
+      method: 'GET',
+      token: auth.token,
+    }).catch(() => null);
+    const conversations = Array.isArray(inbox?.payload?.conversations) ? inbox.payload.conversations : [];
+    const byCase = conversations.find((item) => String(item?.caseId || '') === ticketId);
+    if (byCase?.id) conversationId = String(byCase.id);
+  }
+
   const takeover = await reqJson(`${baseUrl}/tickets/${encodeURIComponent(ticketId)}/takeover`, {
     method: 'POST',
     token: auth.token,
@@ -306,7 +370,8 @@ async function runHumanHandoffProof(baseUrl, auth) {
   });
   expect(assign.ok, `enterprise_ticket_assign_failed:${assign.status}`);
 
-  const transfer = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(ticketId)}/transfer`, {
+  expect(conversationId, 'enterprise_conversation_not_resolved');
+  const transfer = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(conversationId)}/transfer`, {
     method: 'POST',
     token: auth.token,
     body: { queue: transferQueue, assignedTo: null },

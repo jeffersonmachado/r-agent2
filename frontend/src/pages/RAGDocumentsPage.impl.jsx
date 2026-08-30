@@ -2611,9 +2611,9 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-2xl font-bold text-status-warning">{domainStats.rpa}</div>
-                        <span className="text-sm font-semibold text-status-warning">⚙️ RPA</span>
+                        <span className="text-sm font-semibold text-status-warning">⚙️ Automação</span>
                       </div>
-                      <div className="text-xs text-text-secondary">Documentos do domínio RPA</div>
+                      <div className="text-xs text-text-secondary">Documentos do domínio de automação</div>
                     </div>
                   )}
                   {domainStats.none > 0 && (
@@ -2684,7 +2684,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                   : 'bg-status-error/10 border-status-error/30'
               }`}>
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-lg font-semibold text-text-primary">RPA</h4>
+                  <h4 className="text-lg font-semibold text-text-primary">Automação</h4>
                   <span className={`px-2 py-1 rounded text-xs ${
                     domainsConfig.domains.rpa.enabled 
                       ? 'bg-status-success/20 text-status-success' 
@@ -2759,7 +2759,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
               )}
               {domainsConfig?.domains?.rpa && (
                 <option value="rpa">
-                  RPA {domainsConfig.domains.rpa.enabled ? '✓' : '✗'}
+                  Automação {domainsConfig.domains.rpa.enabled ? '✓' : '✗'}
                 </option>
               )}
             </select>
@@ -2825,7 +2825,7 @@ Responda APENAS com "SIM" ou "NÃO" (sem aspas, sem explicações).`;
                           ? 'bg-status-info/20 text-status-info border border-status-info/30' 
                           : 'bg-status-warning/20 text-status-warning border border-status-warning/30'
                       }`}>
-                        {getDocumentDomain(doc) === 'chatbot' ? '🤖 Chatbot' : '⚙️ RPA'}
+                        {getDocumentDomain(doc) === 'chatbot' ? '🤖 Chatbot' : '⚙️ Automação'}
                       </span>
                     )}
                     <span className={`text-xs px-2 py-1 rounded ${

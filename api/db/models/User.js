@@ -55,6 +55,11 @@ function getUserModel() {
         defaultValue: 'admin',
         comment: 'Role aplicado pelo RBAC (owner/admin/manager/operator/auditor/readonly/super_admin)',
       },
+      platform_role: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment: 'Platform role interno RAP (support_n1..n3, engineer, etc.); NULL = usuário de tenant sem acesso a plataforma',
+      },
       is_active: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

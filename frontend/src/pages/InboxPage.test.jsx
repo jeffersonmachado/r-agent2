@@ -3,18 +3,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent, cleanup } from '@testing-library/react';
 
 const listInboxConversations = vi.fn();
+const getInboxConversation = vi.fn();
+const replyInboxConversation = vi.fn();
+const createCaseFromConversation = vi.fn();
 const getAgentNameById = vi.fn();
+
+const authDouble = vi.hoisted(() => ({
+  capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
+}));
 
 vi.mock('../api/inbox', () => ({
   listInboxConversations: (...args) => listInboxConversations(...args),
+  getInboxConversation: (...args) => getInboxConversation(...args),
+  replyInboxConversation: (...args) => replyInboxConversation(...args),
   assignInboxConversation: vi.fn(),
   transferInboxConversation: vi.fn(),
   addInboxNote: vi.fn(),
+  createCaseFromConversation: (...args) => createCaseFromConversation(...args),
 }));
 
 vi.mock('../api/tickets', () => ({
-  listQueues: vi.fn(async () => []),
-  getTicketMessages: vi.fn(async () => []),
+  listQueues: vi.fn(async () => ['comercial', 'suporte']),
 }));
 
 vi.mock('../api/auth', () => ({
@@ -29,6 +38,7 @@ vi.mock('../context/authContext', async () => {
       isAuthenticated: true,
       loading: false,
       agent: { id: 'agent-1', username: 'test' },
+      capabilities: authDouble.capabilities,
     }),
   };
 });
@@ -68,12 +78,23 @@ vi.mock('../utils/logger', () => ({
 
 import { InboxPage } from './InboxPage';
 
+const baseConversation = {
+  id: 'c1',
+  status: 'waiting',
+  channelType: 'whatsapp',
+  customerName: 'Ana',
+  createdAt: '2026-08-01T10:00:00Z',
+  updatedAt: '2026-08-01T10:05:00Z',
+};
+
 describe('pages/InboxPage', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     localStorage.clear();
-    listInboxConversations.mockResolvedValue({ tickets: [] });
+    authDouble.capabilities = { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' };
+    listInboxConversations.mockResolvedValue({ conversations: [], total: 0 });
+    getInboxConversation.mockResolvedValue({ conversation: baseConversation, messages: [] });
     getAgentNameById.mockResolvedValue({ agent: { name: 'Agente X' } });
   });
 
@@ -84,39 +105,136 @@ describe('pages/InboxPage', () => {
     localStorage.clear();
   });
 
-  it('faz debounce do filtro Atendente em vez de refetch a cada tecla', async () => {
+  it('usa o contrato novo de listagem ({ conversations, total }) com status e canal server-side', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    expect(listInboxConversations).toHaveBeenCalled();
+    const lastCall = listInboxConversations.mock.calls.at(-1)[0];
+    expect(lastCall).toMatchObject({ limit: 500, offset: 0 });
+    expect(lastCall.assignedTo).toBeUndefined();
+    expect(lastCall.queue).toBeUndefined();
+    expect(screen.getByText('Ana')).toBeInTheDocument();
+  });
+
+  it('caseManagement ligado: mostra Criar chamado, filtro de fila e SLA', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    expect(screen.getByText('SLA máx (min)')).toBeInTheDocument();
+    expect(screen.getByText('Priorizar SLA estourado')).toBeInTheDocument();
+    expect(screen.getByText('Fila')).toBeInTheDocument();
+
+    // Seleciona a conversa para abrir o painel de detalhes
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(screen.getByRole('button', { name: 'Criar chamado' })).toBeInTheDocument();
+  });
+
+  it('caseManagement desligado: sem Criar chamado, sem SLA e sem seletor de fila', async () => {
+    authDouble.capabilities = { inbox: true, caseManagement: false, caseCreationPolicy: 'manual' };
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    expect(screen.queryByText('SLA máx (min)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Priorizar SLA estourado')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fila')).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(screen.queryByRole('button', { name: 'Criar chamado' })).not.toBeInTheDocument();
+    // Responder continua disponível no modo caixa de entrada simples
+    expect(screen.getByRole('button', { name: 'Enviar resposta' })).toBeInTheDocument();
+  });
+
+  it('reply usa POST /inbox/conversations/:id/reply', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    replyInboxConversation.mockResolvedValue({ message: { id: 'm1' } });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Escreva a resposta para o cliente'), { target: { value: 'Olá!' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enviar resposta' }));
+    });
+
+    expect(replyInboxConversation).toHaveBeenCalledWith('c1', 'Olá!');
+  });
+
+  it('criar chamado chama o endpoint de case e avisa quando a capability está desligada', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    createCaseFromConversation.mockResolvedValue({ case: { id: 'case-1' } });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Criar chamado' }));
+    });
+
+    expect(createCaseFromConversation).toHaveBeenCalledWith('c1', {});
+  });
+
+  it('filtro Atendente filtra client-side (sem refetch a cada tecla)', async () => {
+    const uuid = '123e4567-e89b-42d3-a456-426614174000';
+    listInboxConversations.mockResolvedValue({
+      conversations: [
+        { ...baseConversation, id: 'c1', assignedTo: uuid, customerName: 'Ana' },
+        { ...baseConversation, id: 'c2', assignedTo: 'outro', customerName: 'Bruno' },
+      ],
+      total: 2,
+    });
+
     await act(async () => {
       render(<InboxPage />);
     });
 
     const callsAfterMount = listInboxConversations.mock.calls.length;
     expect(callsAfterMount).toBeGreaterThan(0);
+    expect(getAgentNameById).toHaveBeenCalledTimes(1);
 
     const input = screen.getByPlaceholderText('ID ou username');
 
-    // Digita 3 caracteres sem avançar o relógio: nenhum refetch imediato
     await act(async () => {
-      fireEvent.change(input, { target: { value: 'a' } });
-      fireEvent.change(input, { target: { value: 'ab' } });
-      fireEvent.change(input, { target: { value: 'abc' } });
-    });
-
-    expect(listInboxConversations.mock.calls.length).toBe(callsAfterMount);
-
-    // Após 400ms de debounce, exatamente um refetch com o valor final
-    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Agente' } });
       vi.advanceTimersByTime(400);
     });
 
-    expect(listInboxConversations.mock.calls.length).toBe(callsAfterMount + 1);
-    const lastCall = listInboxConversations.mock.calls.at(-1)[0];
-    expect(lastCall.assignedTo).toBe('abc');
+    // Sem refetch: o filtro é client-side no contrato novo
+    expect(listInboxConversations.mock.calls.length).toBe(callsAfterMount);
+    expect(screen.getByText('Ana')).toBeInTheDocument();
+    expect(screen.queryByText('Bruno')).not.toBeInTheDocument();
   });
 
   it('cacheia resolução de id→nome de atendente entre cargas', async () => {
     const uuid = '123e4567-e89b-42d3-a456-426614174000';
     listInboxConversations.mockResolvedValue({
-      tickets: [{ id: 't1', assignedTo: uuid, createdAt: '2026-08-01T10:00:00Z' }],
+      conversations: [{ ...baseConversation, assignedTo: uuid }],
+      total: 1,
     });
 
     await act(async () => {
@@ -126,13 +244,9 @@ describe('pages/InboxPage', () => {
     const nameCallsAfterFirstLoad = getAgentNameById.mock.calls.length;
     expect(nameCallsAfterFirstLoad).toBe(1);
 
-    // Segunda carga com o mesmo uuid: não resolve novamente
-    const input = screen.getByPlaceholderText('ID ou username');
+    // Segunda carga (botão Atualizar) com o mesmo uuid: não resolve novamente
     await act(async () => {
-      fireEvent.change(input, { target: { value: 'x' } });
-    });
-    await act(async () => {
-      vi.advanceTimersByTime(400);
+      fireEvent.click(screen.getByRole('button', { name: 'Atualizar' }));
     });
 
     expect(listInboxConversations.mock.calls.length).toBeGreaterThan(1);

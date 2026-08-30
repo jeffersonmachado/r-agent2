@@ -2,28 +2,28 @@ import React, { useMemo, useState } from 'react';
 import { useTheme } from '../styles/themeContext';
 
 /**
- * Timeline de conversa baseada no replay retornado pelo backend.
+ * Timeline de conversa baseada na sessão retornada pelo backend.
  *
  * Props:
- * - replay: qualquer estrutura retornada por buildConversationReplay;
+ * - conversation: qualquer estrutura retornada por buildConversationReplay;
  *   assumimos, para UI, que existe um array `messages` com:
  *   { from, text, at, nodeId? }
  * - onSeekNode?: (nodeId: string|null, index: number) => void
  */
-export function ConversationTimeline({ replay, onSeekNode }) {
+export function ConversationTimeline({ conversation, onSeekNode }) {
   const { theme } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const timeline = useMemo(() => {
-    if (!replay || !Array.isArray(replay.messages)) return [];
-    return replay.messages.map((m, idx) => ({
+    if (!conversation || !Array.isArray(conversation.messages)) return [];
+    return conversation.messages.map((m, idx) => ({
       idx,
       from: m.from,
       text: m.text,
       at: m.at,
       nodeId: m.nodeId || null,
     }));
-  }, [replay]);
+  }, [conversation]);
 
   const handleSelectIndex = (idx) => {
     setCurrentIndex(idx);

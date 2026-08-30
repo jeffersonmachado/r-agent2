@@ -17,6 +17,7 @@
 const {
   isIgnorableOnboardingNoise,
   isIgnorableAuthProbeNoise,
+  isNavigationAbortNoise,
   isIgnorablePageNoise,
 } = require('../../api/utils/rpaPageNoiseFilters');
 
@@ -80,6 +81,46 @@ describe('isIgnorableOnboardingNoise (comportamento preservado)', () => {
   });
 });
 
+describe('isNavigationAbortNoise', () => {
+  /**
+   * Regressão (QA Mesh 2026-08-28, execuções mesh-2026-08-28T18-01-39,
+   * mesh-2026-08-28T19-28-53, mesh-2026-08-28T20-39-26): fitness-matricula-
+   * cancelamento/checkout falharam/flapperam com request_failed
+   * net::ERR_ABORTED em /api/qa-waves/intelligence/* abortados pela navegação
+   * gravada /dev/qa-waves → /support, com todos os passos funcionais PASS.
+   */
+  test('request_failed net::ERR_ABORTED é ruído (abort iniciado pela página)', () => {
+    expect(isNavigationAbortNoise({
+      type: 'request_failed',
+      url: 'http://localhost:5173/api/qa-waves/intelligence/business-gaps?vertical=beauty',
+      method: 'GET',
+      failure: 'net::ERR_ABORTED',
+    })).toBe(true);
+  });
+
+  test('request_failed com outra falha NÃO é ruído de navegação', () => {
+    expect(isNavigationAbortNoise({
+      type: 'request_failed',
+      url: 'http://localhost:5173/api/qa-waves/scenarios',
+      method: 'GET',
+      failure: 'net::ERR_CONNECTION_REFUSED',
+    })).toBe(false);
+    expect(isNavigationAbortNoise({
+      type: 'request_failed',
+      url: 'http://localhost:5173/api/qa-waves/scenarios',
+      method: 'GET',
+      failure: 'net::ERR_TIMED_OUT',
+    })).toBe(false);
+  });
+
+  test('page_error com ERR_ABORTED no texto NÃO é ruído de navegação', () => {
+    expect(isNavigationAbortNoise({
+      type: 'page_error',
+      message: 'TypeError: x is not a function (net::ERR_ABORTED)',
+    })).toBe(false);
+  });
+});
+
 describe('isIgnorablePageNoise (combinado)', () => {
   test('combina sonda de auth e ruído de onboarding', () => {
     expect(isIgnorablePageNoise({
@@ -96,5 +137,14 @@ describe('isIgnorablePageNoise (combinado)', () => {
       text: 'Failed to load resource: the server responded with a status of 500 (Internal Server Error)',
       url: 'http://localhost:5173/api/tickets',
     })).toBe(false);
+  });
+
+  test('abort de navegação entra no filtro combinado', () => {
+    expect(isIgnorablePageNoise({
+      type: 'request_failed',
+      url: 'http://localhost:5173/api/qa-waves/step-status?journeyId=beauty_new_customer',
+      method: 'GET',
+      failure: 'net::ERR_ABORTED',
+    })).toBe(true);
   });
 });

@@ -61,6 +61,8 @@ const { createWebScrapingExpressRouter } = require('../composition/web-scraping'
 const { createWebhooksExpressRouter } = require('../composition/webhooks');
 const { createVoiceExpressRouter } = require('../composition/voice');
 const { createWorkspaceExpressRouter } = require('../composition/workspace');
+const { createTenantCapabilitiesExpressRouter } = require('../composition/tenant-capabilities');
+const { createCasesExpressRouter } = require('../composition/cases');
 
 const { createDomainOperationsRoutes } = require('../modules/domain-operations/routes');
 const { createDomainBusinessRoutes } = require('../modules/domain-business/routes');
@@ -153,6 +155,8 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const agentOsRouter = createAgentOsExpressRouter({ buildCoreRoutingContext });
   const cognitiveRouter = createCognitiveExpressRouter({ buildCoreRoutingContext });
   const learningCoreRouter = createLearningCoreExpressRouter({ buildCoreRoutingContext });
+  const tenantCapabilitiesRouter = createTenantCapabilitiesExpressRouter();
+  const casesRouter = createCasesExpressRouter();
 
   // --- Routers de domínio (via composition) ---
   const ticketRouter = createTicketExpressRouter();
@@ -219,6 +223,8 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     domainOperationsRouter,
     domainBusinessRouter,
     crmRouter,
+    tenantCapabilitiesRouter,
+    casesRouter,
     frontendFallbackRouter,
     agentOsRouter,
     cognitiveRouter,

@@ -622,17 +622,23 @@ async function reconcileExecutionManifests({ dryRun = true } = {}) {
   }
 
   const manifestsMeta = await listExecutionManifests();
-  const result = { checked: 0, reconciled: 0, traceFixed: 0, screenshotsFixed: 0, dryRun };
+  const result = { checked: 0, reconciled: 0, traceFixed: 0, screenshotsFixed: 0, skippedUnknownTenant: 0, dryRun };
+
+  // Fail-closed: manifesto sem tenantKey NÃO é atribuído a 'system' por
+  // fallback — tenant desconhecido é pulado e contado (system-scope-audit:
+  // RUNTIME_FAIL_OPEN proibido em runtime).
+  const knownManifests = (manifestsMeta || []).filter((m) => m && typeof m.tenantKey === 'string' && m.tenantKey.trim());
+  result.skippedUnknownTenant = (manifestsMeta || []).length - knownManifests.length;
 
   // Realidade agregada por tenant presente nos manifestos.
-  const tenants = new Set((manifestsMeta || []).map((m) => m.tenantKey || 'system'));
+  const tenants = new Set(knownManifests.map((m) => normalizeTenantKey(m.tenantKey)));
   const realityByTenant = new Map();
   for (const t of tenants) {
     realityByTenant.set(t, await getExecutionArtifactReality(t));
   }
 
-  for (const meta of manifestsMeta || []) {
-    const tenantKey = normalizeTenantKey(meta.tenantKey || 'system');
+  for (const meta of knownManifests) {
+    const tenantKey = normalizeTenantKey(meta.tenantKey);
     const manifest = await getExecutionManifest(meta.refId, tenantKey);
     if (!manifest) continue;
     result.checked += 1;

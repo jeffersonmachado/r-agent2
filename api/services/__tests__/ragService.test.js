@@ -211,7 +211,9 @@ describe('ragService', () => {
       await ragService.queryRag(
         'Como investigar este incidente?',
         'tenant-001',
-        { actor: { id: 'auditor-1', role: 'auditor' } },
+        // SUPPORT exige platform role concedido server-side (2026-08-27);
+        // tenant role auditor puro é PRODUCTION.
+        { actor: { id: 'auditor-1', role: 'auditor', platformRole: 'support_n2' } },
         { roles: ['forjada'], agentId: 'forjado' }
       );
 

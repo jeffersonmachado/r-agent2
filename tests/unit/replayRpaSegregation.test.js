@@ -4,15 +4,16 @@
  * Segregação Replay×RPA (W2-B / HARD-007):
  *
  * Matriz esperada nas rotas /rpa/* (api/modules/rpa-tests/):
- * - SUPPORT (auditor): leitura/diagnóstico — GET/DELETE /rpa/recordings,
+ * - SUPPORT (platform role de suporte, ex.: auditor + platformRole support_n2):
+ *   leitura/diagnóstico — GET/DELETE /rpa/recordings,
  *   GET /rpa/execution/:id, GET /rpa/execution/:id/report.
- * - DEVELOPMENT (super_admin): escrita técnica — POST /rpa/record/start,
+ * - DEVELOPMENT (super_admin / platformRole engineer): escrita técnica — POST /rpa/record/start,
  *   POST /rpa/record/stop/:id, GET /rpa/record/status/:id, POST /rpa/execute/:id,
  *   POST /rpa/execution/:id/(cancel|continue|next).
- * - PRODUCTION (demais roles): 403 em qualquer rota /rpa/.
+ * - PRODUCTION (demais roles, inclui auditor de tenant puro): 403 em qualquer rota /rpa/.
  *
  * Coerência de política: SUPPORT_VISIBLE_ROUTES só lista rotas de replay que o
- * frontend realmente expõe a auditor (página /rpa-replays, nunca /dev/*).
+ * frontend realmente expõe a suporte de plataforma (página /rpa-replays, nunca /dev/*).
  */
 
 const fs = require('fs');
@@ -22,7 +23,7 @@ const { handleRpaRecordingsRoutes } = require('../../api/modules/rpa-tests/handl
 const { handleRpaExecutionRoutes } = require('../../api/modules/rpa-tests/handleRpaExecutionRoutes');
 const { SUPPORT_VISIBLE_ROUTES } = require('../../api/modules/agent-os/experience-segregation');
 
-const buildCtx = ({ method, pathname, role }) => {
+const buildCtx = ({ method, pathname, role, platformRole = null }) => {
   const responses = [];
   const sendJson = (res, status, payload) => {
     responses.push({ status, payload });
@@ -30,7 +31,7 @@ const buildCtx = ({ method, pathname, role }) => {
 
   const req = {
     method,
-    agent: { id: `agent-${role}`, username: role, role, tenantId: 'tenant-qa' },
+    agent: { id: `agent-${role}`, username: role, role, platformRole, tenantId: 'tenant-qa' },
     headers: {},
   };
 
@@ -67,8 +68,8 @@ const runExecution = (args) => {
 };
 
 describe('Segregação Replay×RPA — escrita técnica exige DEVELOPMENT', () => {
-  test('SUPPORT (auditor) em POST /rpa/record/start → 403 classification_required DEVELOPMENT', async () => {
-    const { handled, responses } = await runRecordings({ method: 'POST', pathname: '/rpa/record/start', role: 'auditor' });
+  test('SUPPORT (auditor + platformRole support_n2) em POST /rpa/record/start → 403 classification_required DEVELOPMENT', async () => {
+    const { handled, responses } = await runRecordings({ method: 'POST', pathname: '/rpa/record/start', role: 'auditor', platformRole: 'support_n2' });
 
     expect(handled).toBe(true);
     expect(responses).toHaveLength(1);
@@ -78,9 +79,9 @@ describe('Segregação Replay×RPA — escrita técnica exige DEVELOPMENT', () =
     expect(responses[0].payload.classification).toBe('SUPPORT');
   });
 
-  test('SUPPORT (auditor) em POST /rpa/record/stop/:id e GET /rpa/record/status/:id → 403', async () => {
-    const stop = await runRecordings({ method: 'POST', pathname: '/rpa/record/stop/rec-1', role: 'auditor' });
-    const status = await runRecordings({ method: 'GET', pathname: '/rpa/record/status/rec-1', role: 'auditor' });
+  test('SUPPORT (auditor + platformRole support_n2) em POST /rpa/record/stop/:id e GET /rpa/record/status/:id → 403', async () => {
+    const stop = await runRecordings({ method: 'POST', pathname: '/rpa/record/stop/rec-1', role: 'auditor', platformRole: 'support_n2' });
+    const status = await runRecordings({ method: 'GET', pathname: '/rpa/record/status/rec-1', role: 'auditor', platformRole: 'support_n2' });
 
     expect(stop.responses[0].status).toBe(403);
     expect(stop.responses[0].payload.required).toBe('DEVELOPMENT');
@@ -88,11 +89,11 @@ describe('Segregação Replay×RPA — escrita técnica exige DEVELOPMENT', () =
     expect(status.responses[0].payload.required).toBe('DEVELOPMENT');
   });
 
-  test('SUPPORT (auditor) em POST /rpa/execute/:id e controles de execução → 403', async () => {
-    const execute = await runExecution({ method: 'POST', pathname: '/rpa/execute/rec-1', role: 'auditor' });
-    const cancel = await runExecution({ method: 'POST', pathname: '/rpa/execution/exec-1/cancel', role: 'auditor' });
-    const cont = await runExecution({ method: 'POST', pathname: '/rpa/execution/exec-1/continue', role: 'auditor' });
-    const next = await runExecution({ method: 'POST', pathname: '/rpa/execution/exec-1/next', role: 'auditor' });
+  test('SUPPORT (auditor + platformRole support_n2) em POST /rpa/execute/:id e controles de execução → 403', async () => {
+    const execute = await runExecution({ method: 'POST', pathname: '/rpa/execute/rec-1', role: 'auditor', platformRole: 'support_n2' });
+    const cancel = await runExecution({ method: 'POST', pathname: '/rpa/execution/exec-1/cancel', role: 'auditor', platformRole: 'support_n2' });
+    const cont = await runExecution({ method: 'POST', pathname: '/rpa/execution/exec-1/continue', role: 'auditor', platformRole: 'support_n2' });
+    const next = await runExecution({ method: 'POST', pathname: '/rpa/execution/exec-1/next', role: 'auditor', platformRole: 'support_n2' });
 
     for (const result of [execute, cancel, cont, next]) {
       expect(result.handled).toBe(true);
@@ -113,19 +114,28 @@ describe('Segregação Replay×RPA — escrita técnica exige DEVELOPMENT', () =
 });
 
 describe('Segregação Replay×RPA — leitura/diagnóstico permanece SUPPORT', () => {
-  test('SUPPORT (auditor) em GET /rpa/recordings → permitido', async () => {
-    const { handled, responses } = await runRecordings({ method: 'GET', pathname: '/rpa/recordings', role: 'auditor' });
+  test('SUPPORT (auditor + platformRole support_n2) em GET /rpa/recordings → permitido', async () => {
+    const { handled, responses } = await runRecordings({ method: 'GET', pathname: '/rpa/recordings', role: 'auditor', platformRole: 'support_n2' });
 
     expect(handled).toBe(true);
     expect(responses[0].status).toBe(200);
     expect(responses[0].payload.recordings).toEqual([]);
   });
 
-  test('SUPPORT (auditor) em GET /rpa/execution/:id (status, leitura pura) → permitido', async () => {
-    const { responses } = await runExecution({ method: 'GET', pathname: '/rpa/execution/exec-1', role: 'auditor' });
+  test('SUPPORT (auditor + platformRole support_n2) em GET /rpa/execution/:id (status, leitura pura) → permitido', async () => {
+    const { responses } = await runExecution({ method: 'GET', pathname: '/rpa/execution/exec-1', role: 'auditor', platformRole: 'support_n2' });
 
     expect(responses[0].status).toBe(200);
     expect(responses[0].payload.id).toBe('exec-1');
+  });
+
+  test('auditor de tenant puro (PRODUCTION) em GET /rpa/recordings → 403', async () => {
+    const { handled, responses } = await runRecordings({ method: 'GET', pathname: '/rpa/recordings', role: 'auditor' });
+
+    expect(handled).toBe(true);
+    expect(responses[0].status).toBe(403);
+    expect(responses[0].payload.error).toBe('classification_required');
+    expect(responses[0].payload.classification).toBe('PRODUCTION');
   });
 });
 
@@ -157,13 +167,15 @@ describe('Coerência de política SUPPORT ↔ frontend (página de replays)', ()
     expect(SUPPORT_VISIBLE_ROUTES.some((route) => route.startsWith('/dev/'))).toBe(false);
   });
 
-  test('menu.js expõe o item rpa-replays a auditor no alias /rpa-replays', () => {
+  test('menu.js expõe o item rpa-replays à classificação SUPPORT no alias /rpa-replays', () => {
     const menuSource = fs.readFileSync(path.join(frontendRoot, 'navigation', 'menu.js'), 'utf8');
     const itemLine = menuSource.split('\n').find((line) => line.includes("id: 'rpa-replays'"));
 
     expect(itemLine).toBeDefined();
     expect(itemLine).toContain("path: '/rpa-replays'");
-    expect(itemLine).toContain("'auditor'");
+    // Política 2026-08-27: visibilidade por classificação de plataforma,
+    // não por tenant role (auditor de tenant é PRODUCTION).
+    expect(itemLine).toContain("'SUPPORT'");
   });
 
   test('menuPermissions.js não trata /rpa-replays como prefixo protegido super_admin-only', () => {

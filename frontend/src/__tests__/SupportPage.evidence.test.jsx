@@ -193,7 +193,7 @@ describe('SupportPage evidence integration', () => {
     await waitFor(() => {
       expect(screen.getByText(/Entidade resolvida/i)).toBeInTheDocument();
       expect(screen.getByText(/customer/i)).toBeInTheDocument();
-      expect(screen.getByText(/Evidências relacionadas/i)).toBeInTheDocument();
+      expect(screen.getByText(/Fontes da base de conhecimento/i)).toBeInTheDocument();
       expect(screen.getByText(/price notice/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Informamos anteriormente o reajuste previsto em contrato./i).length).toBeGreaterThan(0);
       expect(screen.getByText(/fallback indexado/i)).toBeInTheDocument();
@@ -226,8 +226,8 @@ describe('SupportPage evidence integration', () => {
     fireEvent.click(ticketCard);
 
     await waitFor(() => {
-      expect(screen.getByText(/Nenhuma evidência forte foi encontrada/i)).toBeInTheDocument();
-      expect(screen.getByText(/Quando houver uma evidência forte/i)).toBeInTheDocument();
+      expect(screen.getByText(/Nenhuma fonte forte foi encontrada/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Abrir origem/i })).not.toBeInTheDocument();
     });
   });
 

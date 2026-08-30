@@ -68,3 +68,37 @@ describe('QA & RPA navigation structure', () => {
     expect(flattenNavigationLeaves([qualidade]).map((l) => l.path)).toEqual(['/qa', '/qa/stability', '/qa-mesh']);
   });
 });
+
+describe('itens de menu: inbox, chamados e replays', () => {
+  const leaves = flattenNavigationLeaves(navigationMenu);
+
+  it('Caixa de Entrada usa o recurso inbox (não tickets)', () => {
+    const inbox = leaves.find((l) => l.id === 'inbox');
+    expect(inbox).toBeTruthy();
+    expect(inbox.path).toBe('/inbox');
+    expect(inbox.permission).toEqual({ resource: 'inbox', action: 'read' });
+  });
+
+  it('Chamados (/cases) existe e é gated pela capability caseManagement', () => {
+    const cases = leaves.find((l) => l.id === 'cases');
+    expect(cases).toBeTruthy();
+    expect(cases.path).toBe('/cases');
+    expect(cases.label).toBe('Chamados');
+    expect(cases.permission).toEqual({ resource: 'tickets', action: 'read' });
+    expect(cases.capability).toBe('caseManagement');
+  });
+
+  it('/rpa-replays usa classifications SUPPORT/DEVELOPMENT (sem gate por roles)', () => {
+    const replays = leaves.find((l) => l.id === 'rpa-replays');
+    expect(replays).toBeTruthy();
+    expect(replays.roles).toBeUndefined();
+    expect(replays.classifications).toEqual(['SUPPORT', 'DEVELOPMENT']);
+  });
+
+  it('/platform-support existe com classifications SUPPORT/DEVELOPMENT', () => {
+    const platformSupport = leaves.find((l) => l.id === 'platform-support');
+    expect(platformSupport).toBeTruthy();
+    expect(platformSupport.path).toBe('/platform-support');
+    expect(platformSupport.classifications).toEqual(['SUPPORT', 'DEVELOPMENT']);
+  });
+});

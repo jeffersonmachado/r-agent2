@@ -4,6 +4,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import * as authApi from '../api/auth';
+import { getTenantCapabilities, updateTenantCapabilities, DEFAULT_TENANT_CAPABILITIES } from '../api/tenantCapabilities';
 import logger from '../utils/logger';
 
 const AuthContext = createContext(null);
@@ -13,6 +14,7 @@ const AuthContext = createContext(null);
  */
 export function AuthProvider({ children }) {
   const [agent, setAgent] = useState(null);
+  const [capabilities, setCapabilities] = useState(DEFAULT_TENANT_CAPABILITIES);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
@@ -21,6 +23,21 @@ export function AuthProvider({ children }) {
   const hasLoadedAgentRef = React.useRef(false);
   const retryCountRef = React.useRef(0);
   const retryTimerRef = React.useRef(null);
+
+  /**
+   * Carrega as capacidades operacionais do tenant (inbox, case management...).
+   * Falha de fetch mantém o default seguro e apenas loga — nunca bloqueia a sessão.
+   */
+  const loadCapabilities = useCallback(async () => {
+    try {
+      const result = await getTenantCapabilities();
+      if (result && result.capabilities && typeof result.capabilities === 'object') {
+        setCapabilities({ ...DEFAULT_TENANT_CAPABILITIES, ...result.capabilities });
+      }
+    } catch (err) {
+      logger.warn('Erro ao carregar capacidades do tenant; mantendo defaults', err);
+    }
+  }, []);
 
   /**
    * Carrega informações do agente autenticado.
@@ -75,6 +92,9 @@ export function AuthProvider({ children }) {
       setAgent(agentToSet);
       setIsAuthenticated(true);
       retryCountRef.current = 0;
+
+      // Capacidades do tenant acompanham a sessão autenticada (fonte: servidor)
+      loadCapabilities();
       
       // Atualiza informações do agente no localStorage (preservando originalTenantId)
       if (agentToSet) {
@@ -149,7 +169,7 @@ export function AuthProvider({ children }) {
       setLoading(false);
       isLoadingAgentRef.current = false;
     }
-  }, []);
+  }, [loadCapabilities]);
 
   /**
    * Faz login.
@@ -170,13 +190,16 @@ export function AuthProvider({ children }) {
       setAgent(result.agent);
       setIsAuthenticated(true);
       setLoading(false);
-      
+
+      // Capacidades do tenant acompanham o login (fonte: servidor)
+      loadCapabilities();
+
       return result;
     } catch (err) {
       logger.error('Erro ao fazer login', err);
       throw err;
     }
-  }, []);
+  }, [loadCapabilities]);
 
   /**
    * Faz logout.
@@ -189,6 +212,7 @@ export function AuthProvider({ children }) {
     } finally {
       setAgent(null);
       setIsAuthenticated(false);
+      setCapabilities(DEFAULT_TENANT_CAPABILITIES);
     }
   }, []);
 
@@ -229,15 +253,30 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  /**
+   * Atualiza capacidades do tenant no servidor e reflete no contexto.
+   * Re-lança o erro para o chamador decidir (ex.: 403 para não admin/owner).
+   */
+  const updateCapabilities = useCallback(async (partialCapabilities) => {
+    const result = await updateTenantCapabilities(partialCapabilities);
+    if (result && result.capabilities && typeof result.capabilities === 'object') {
+      setCapabilities({ ...DEFAULT_TENANT_CAPABILITIES, ...result.capabilities });
+    }
+    return result;
+  }, []);
+
   const value = useMemo(() => ({
     agent,
+    capabilities,
     loading,
     isAuthenticated,
     login,
     logout,
     reloadAgent: loadAgent,
     updateAgent,
-  }), [agent, loading, isAuthenticated, login, logout, loadAgent, updateAgent]);
+    refreshCapabilities: loadCapabilities,
+    updateCapabilities,
+  }), [agent, capabilities, loading, isAuthenticated, login, logout, loadAgent, updateAgent, loadCapabilities, updateCapabilities]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

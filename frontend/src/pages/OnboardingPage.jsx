@@ -34,11 +34,14 @@ function updateNestedConfigValue(baseConfig, configPath, nextValue) {
 }
 
 export function OnboardingPage() {
-  const { agent: currentAgent, isAuthenticated, loading: authLoading } = useAuth();
+  const { agent: currentAgent, isAuthenticated, loading: authLoading, capabilities, updateCapabilities } = useAuth();
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
 
   const [onboarding, setOnboarding] = useState(null);
+  // Step inicial: modo de atendimento (caixa única vs. chamados).
+  const [attendanceMode, setAttendanceMode] = useState(null);
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [segment, setSegment] = useState('');
   const [cannotStartOnboarding, setCannotStartOnboarding] = useState(false);
@@ -70,6 +73,31 @@ export function OnboardingPage() {
       navigate('/login');
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  // Reflete a capability atual do tenant na escolha inicial (fonte: servidor)
+  useEffect(() => {
+    if (attendanceMode === null && capabilities) {
+      setAttendanceMode(capabilities.caseManagement === false ? 'simple' : 'cases');
+    }
+  }, [capabilities, attendanceMode]);
+
+  const handleSelectAttendanceMode = async (mode) => {
+    setAttendanceMode(mode);
+    setAttendanceSaving(true);
+    try {
+      await updateCapabilities({ caseManagement: mode === 'cases' });
+    } catch (err) {
+      // 403: usuário sem papel admin/owner — segue com o default sem bloquear.
+      if (err?.status === 403) {
+        logger.warn('Sem permissão para salvar modo de atendimento; seguindo com default', err);
+      } else {
+        logger.error('Erro ao salvar modo de atendimento', err);
+        showToast('Não foi possível salvar o modo de atendimento agora', 'error');
+      }
+    } finally {
+      setAttendanceSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -332,6 +360,46 @@ export function OnboardingPage() {
         <h1>🚀 Onboarding - Configuração Inicial</h1>
       </div>
 
+      {/* Step inicial: modo de atendimento */}
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
+        <h2 className="text-xl font-semibold text-text-primary mb-1">Como sua empresa atende seus clientes?</h2>
+        <p className="text-sm text-text-secondary mb-4">
+          Essa escolha define se a operação usa apenas a caixa de entrada ou também chamados com acompanhamento.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" role="group" aria-label="Modo de atendimento">
+          <button
+            type="button"
+            disabled={attendanceSaving}
+            onClick={() => handleSelectAttendanceMode('simple')}
+            className={`text-left p-5 rounded-xl border-2 transition-all ${
+              attendanceMode === 'simple'
+                ? 'border-accent-primary bg-accent-primary/10'
+                : 'border-border-default bg-bg-secondary hover:border-border-hover'
+            }`}
+          >
+            <h3 className="text-lg font-semibold text-text-primary mb-1">Atendimento simples</h3>
+            <p className="text-sm text-text-secondary">
+              Receber e responder mensagens, ligações e contatos em uma caixa de entrada única.
+            </p>
+          </button>
+          <button
+            type="button"
+            disabled={attendanceSaving}
+            onClick={() => handleSelectAttendanceMode('cases')}
+            className={`text-left p-5 rounded-xl border-2 transition-all ${
+              attendanceMode === 'cases'
+                ? 'border-accent-primary bg-accent-primary/10'
+                : 'border-border-default bg-bg-secondary hover:border-border-hover'
+            }`}
+          >
+            <h3 className="text-lg font-semibold text-text-primary mb-1">Atendimento com chamados</h3>
+            <p className="text-sm text-text-secondary">
+              Acompanhar solicitações até a resolução, com responsável, status, prioridade e SLA.
+            </p>
+          </button>
+        </div>
+      </div>
+
       {cannotStartOnboarding && !onboarding?.startedAt && (
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
           <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
@@ -587,9 +655,9 @@ export function OnboardingPage() {
           <div className="mt-6">
             <Button
               variant="primary"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/workspace')}
             >
-              Ir para Dashboard
+              Ir para o Workspace
             </Button>
           </div>
         )}

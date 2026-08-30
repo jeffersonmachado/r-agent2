@@ -36,7 +36,7 @@ export function FlowEditorRightPanel({
   loadingReplay,
   handleLoadReplay,
   replayError,
-  replay,
+  sessionReplay,
   handleSeekNode,
 }) {
   return (
@@ -284,10 +284,10 @@ export function FlowEditorRightPanel({
                   )}
                 </div>
 
-                {/* Replay de Sessão - com colapso vertical */}
+                {/* Revisão de Sessão - com colapso vertical */}
                 <div className={`flex flex-col ${replayCollapsed ? 'section-collapsed' : 'section-expanded'} section-container`}>
                   <div className="section-header">
-                    <span className="section-header-title">Replay de Sessão</span>
+                    <span className="section-header-title">Revisão de Sessão</span>
                     <button
                       className={`collapse-btn-vertical ${replayCollapsed ? 'collapsed' : ''}`}
                       onClick={() => setReplayCollapsed(!replayCollapsed)}
@@ -326,12 +326,12 @@ export function FlowEditorRightPanel({
                             Erro: {replayError}
                           </div>
                         )}
-                        {replay && (
+                        {sessionReplay && (
                           <div className="space-y-3">
-                            <ConversationTimeline replay={replay} onSeekNode={handleSeekNode} />
-                            {replay.simulation && (
+                            <ConversationTimeline conversation={sessionReplay} onSeekNode={handleSeekNode} />
+                            {sessionReplay.simulation && (
                               <div className="mt-3 pt-3 border-t border-border-default">
-                                <SimulationPanel simulation={replay.simulation} />
+                                <SimulationPanel simulation={sessionReplay.simulation} />
                               </div>
                             )}
                           </div>

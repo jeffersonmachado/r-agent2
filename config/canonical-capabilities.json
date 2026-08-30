@@ -8,80 +8,170 @@
       "domain": "crm",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["crm.read"],
-      "tools": ["crm.searchCustomer"],
-      "intents": ["criar_lead", "qualificar_lead", "agendar", "remarcar_agendamento", "cancelar_agendamento", "consultar_status", "abrir_ticket", "enviar_proposta"]
+      "permissions": [
+        "crm.read"
+      ],
+      "tools": [
+        "crm.searchCustomer"
+      ],
+      "intents": [
+        "criar_lead",
+        "qualificar_lead",
+        "agendar",
+        "remarcar_agendamento",
+        "cancelar_agendamento",
+        "consultar_status",
+        "abrir_ticket",
+        "enviar_proposta"
+      ]
     },
     "crm.write": {
       "name": "Escrita de Clientes/Leads",
       "domain": "crm",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["crm.write"],
-      "tools": ["crm.createLead", "crm.updateLead"],
-      "intents": ["criar_lead", "qualificar_lead"]
+      "permissions": [
+        "crm.write"
+      ],
+      "tools": [
+        "crm.createLead",
+        "crm.updateLead"
+      ],
+      "intents": [
+        "criar_lead",
+        "qualificar_lead"
+      ]
     },
     "crm.opportunity": {
       "name": "Gestão de Oportunidades",
       "domain": "crm",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["crm.write"],
-      "tools": ["crm.createOpportunity"],
-      "intents": ["enviar_proposta"]
+      "permissions": [
+        "crm.write"
+      ],
+      "tools": [
+        "crm.createOpportunity"
+      ],
+      "intents": [
+        "enviar_proposta"
+      ]
     },
     "schedule.read": {
       "name": "Consulta de Agenda",
       "domain": "schedule",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["agenda.read"],
-      "tools": ["schedule.listAppointments"],
-      "intents": ["agendar", "remarcar_agendamento", "cancelar_agendamento", "consultar_status"]
+      "permissions": [
+        "agenda.read"
+      ],
+      "tools": [
+        "schedule.listAppointments"
+      ],
+      "intents": [
+        "agendar",
+        "remarcar_agendamento",
+        "cancelar_agendamento",
+        "consultar_status"
+      ]
     },
     "schedule.manage": {
       "name": "Gestão de Agendamentos",
       "domain": "schedule",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["agenda.write"],
-      "tools": ["schedule.createAppointment", "schedule.rescheduleAppointment", "schedule.cancelAppointment"],
-      "intents": ["agendar", "remarcar_agendamento", "cancelar_agendamento"]
+      "permissions": [
+        "agenda.write"
+      ],
+      "tools": [
+        "schedule.createAppointment",
+        "schedule.rescheduleAppointment",
+        "schedule.cancelAppointment"
+      ],
+      "intents": [
+        "agendar",
+        "remarcar_agendamento",
+        "cancelar_agendamento"
+      ]
     },
     "messaging.send": {
       "name": "Envio de Mensagens",
       "domain": "messaging",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["channel.send"],
-      "tools": ["messaging.sendWhatsAppMessage"],
-      "intents": ["agendar", "remarcar_agendamento", "cancelar_agendamento", "enviar_proposta"]
+      "permissions": [
+        "channel.send"
+      ],
+      "tools": [
+        "messaging.sendWhatsAppMessage"
+      ],
+      "intents": [
+        "agendar",
+        "remarcar_agendamento",
+        "cancelar_agendamento",
+        "enviar_proposta"
+      ]
     },
-    "ticket.manage": {
-      "name": "Gestão de Tickets de Atendimento",
-      "domain": "support",
+    "inbox.manage": {
+      "name": "Gestão da Inbox Omnichannel",
+      "domain": "customer_service",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["ticket.write", "conversation.transfer"],
-      "tools": ["support.createTicket", "support.transferConversation"],
-      "intents": ["abrir_ticket", "transferir_humano"]
+      "permissions": [
+        "inbox.read",
+        "inbox.reply",
+        "inbox.assign"
+      ],
+      "tools": [],
+      "intents": [
+        "transferir_humano"
+      ]
+    },
+    "case.manage": {
+      "name": "Gestão de Cases/Chamados",
+      "domain": "case_management",
+      "kind": "business",
+      "visibility": "PRODUCTION",
+      "permissions": [
+        "tickets.read",
+        "tickets.write",
+        "case.link"
+      ],
+      "tools": [
+        "support.createTicket",
+        "support.transferConversation"
+      ],
+      "intents": [
+        "abrir_ticket",
+        "transferir_humano"
+      ]
     },
     "campaign.manage": {
       "name": "Gestão de Campanhas",
       "domain": "campaign",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["campaign.write"],
-      "tools": ["campaign.createCampaign"],
-      "intents": ["iniciar_campanha"]
+      "permissions": [
+        "campaign.write"
+      ],
+      "tools": [
+        "campaign.createCampaign"
+      ],
+      "intents": [
+        "iniciar_campanha"
+      ]
     },
     "voice.call": {
       "name": "Originação de Chamadas",
       "domain": "voice",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["pbx.call"],
-      "tools": ["voice.originateCall"],
+      "permissions": [
+        "pbx.call"
+      ],
+      "tools": [
+        "voice.originateCall"
+      ],
       "intents": []
     },
     "workspace.insight": {
@@ -89,18 +179,30 @@
       "domain": "workspace",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["workspace.write"],
-      "tools": ["workspace.generateInsight"],
-      "intents": ["consultar_metricas"]
+      "permissions": [
+        "workspace.write"
+      ],
+      "tools": [
+        "workspace.generateInsight"
+      ],
+      "intents": [
+        "consultar_metricas"
+      ]
     },
     "knowledge.operational": {
       "name": "Conhecimento Operacional (RAG OPERATIONAL)",
       "domain": "knowledge",
       "kind": "business",
       "visibility": "PRODUCTION",
-      "permissions": ["knowledge.read"],
-      "tools": ["knowledge.searchOperational"],
-      "intents": ["consultar_status"]
+      "permissions": [
+        "knowledge.read"
+      ],
+      "tools": [
+        "knowledge.searchOperational"
+      ],
+      "intents": [
+        "consultar_status"
+      ]
     }
   },
   "technicalCapabilities": {
@@ -109,8 +211,12 @@
       "domain": "knowledge",
       "kind": "technical",
       "visibility": "SUPPORT",
-      "permissions": ["knowledge.system"],
-      "tools": ["knowledge.searchSystem"],
+      "permissions": [
+        "knowledge.system"
+      ],
+      "tools": [
+        "knowledge.searchSystem"
+      ],
       "intents": []
     },
     "support.diagnose": {
@@ -118,7 +224,9 @@
       "domain": "platform_support",
       "kind": "technical",
       "visibility": "SUPPORT",
-      "permissions": ["support.diagnose"],
+      "permissions": [
+        "support.diagnose"
+      ],
       "tools": [],
       "intents": []
     },
@@ -127,8 +235,12 @@
       "domain": "platform_support",
       "kind": "technical",
       "visibility": "SUPPORT",
-      "permissions": ["audit.replay"],
-      "tools": ["audit.listReplays"],
+      "permissions": [
+        "audit.replay"
+      ],
+      "tools": [
+        "audit.listReplays"
+      ],
       "intents": []
     },
     "qa.waves": {
@@ -136,8 +248,12 @@
       "domain": "qa",
       "kind": "technical",
       "visibility": "DEVELOPMENT",
-      "permissions": ["qa.waves"],
-      "tools": ["qa.getWaveStatus"],
+      "permissions": [
+        "qa.waves"
+      ],
+      "tools": [
+        "qa.getWaveStatus"
+      ],
       "intents": []
     },
     "qa.mesh": {
@@ -145,7 +261,9 @@
       "domain": "qa",
       "kind": "technical",
       "visibility": "DEVELOPMENT",
-      "permissions": ["qa.mesh"],
+      "permissions": [
+        "qa.mesh"
+      ],
       "tools": [],
       "intents": []
     }
@@ -154,13 +272,14 @@
     "crm.search": "crm.read",
     "agenda.read": "schedule.read",
     "agenda.book": "schedule.manage",
-    "ticket.read": "ticket.manage",
-    "ticket.create": "ticket.manage",
+    "ticket.manage": "case.manage",
+    "ticket.read": "case.manage",
+    "ticket.create": "case.manage",
     "campaign.execute": "campaign.manage",
     "pbx.call": "voice.call",
     "knowledge.search": "knowledge.operational",
     "workspace.read": "workspace.insight",
-    "inbox.process": "ticket.manage",
+    "inbox.process": "inbox.manage",
     "replay.view": "audit.replay",
     "qa.wave.execute": "qa.waves",
     "qa.mesh.run": "qa.mesh",
@@ -172,10 +291,10 @@
     "profile_update": "crm.write",
     "timeline_management": "crm.read",
     "task_creation": "crm.write",
-    "ticket_creation": "ticket.manage",
+    "ticket_creation": "case.manage",
     "issue_diagnosis": "knowledge.operational",
     "faq_lookup": "knowledge.operational",
-    "handoff_human": "ticket.manage",
+    "handoff_human": "case.manage",
     "appointment_booking": "schedule.manage",
     "availability_check": "schedule.read",
     "reminder_send": "messaging.send",

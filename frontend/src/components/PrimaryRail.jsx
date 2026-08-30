@@ -82,11 +82,12 @@ function RailIcon({ icon }) {
   }
 }
 
-export function PrimaryRail({ agent, currentPath }) {
-  const { agent: authAgent, logout } = useAuth();
+export function PrimaryRail({ agent, currentPath, capabilities }) {
+  const { agent: authAgent, logout, capabilities: authCapabilities } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
+  const effectiveCapabilities = capabilities || authCapabilities;
+  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu, effectiveCapabilities), [agent, effectiveCapabilities]);
   const { areas, activeArea } = useMemo(
     () => buildWorkspaceAreas(filteredMenu, currentPath),
     [filteredMenu, currentPath],

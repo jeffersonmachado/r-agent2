@@ -198,6 +198,12 @@ async function clickWithRetry(page, getLocator, attempts = 4) {
     });
   });
 
+  await context.route(/^https?:\/\/[^/]+\/api\/tenant\/capabilities(?:\?|$)/, async (route) => {
+    await jsonResponse(route, 200, {
+      capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
+    });
+  });
+
   await context.route(/^https?:\/\/[^/]+\/api\/intelligence(?:\/|\?|$)/, async (route, request) => {
     const url = new URL(request.url());
     const pathname = url.pathname;

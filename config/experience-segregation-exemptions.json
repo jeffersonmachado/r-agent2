@@ -1,0 +1,25 @@
+{
+  "description": "Exceções justificadas e auditáveis do validador validate:experience-segregation. Cada entrada permite um literal técnico específico (rule) em um arquivo PRODUCTION (path) porque o conteúdo só é renderizado para classificações internas (SUPPORT/DEVELOPMENT) via gate de classificação em runtime. Nunca usar para esconder vazamento real.",
+  "exemptions": [
+    {
+      "path": "frontend/src/components/FlowGeneratorDialog.jsx",
+      "rule": "rpa_term",
+      "reason": "Rótulo 'Gerar teste RPA (opcional)' renderizado SOMENTE quando getAgentClassification(agent) === 'DEVELOPMENT' (gate isDevelopment no componente; payload também força generateRpaTest=false para os demais perfis)."
+    },
+    {
+      "path": "frontend/src/components/PlanSelectionModal.jsx",
+      "rule": "rpa_term",
+      "reason": "Linha 'Exec. RPA' dos limites do plano renderizada SOMENTE para getAgentClassification(agent) === 'DEVELOPMENT' (gate isDevelopment); perfis operacionais veem apenas limites de valor de negócio."
+    },
+    {
+      "path": "frontend/src/components/academy/ManualsTab.jsx",
+      "rule": "replay",
+      "reason": "Seletor de gravação de jornada e textos do gerador de manuais renderizados SOMENTE quando isAdmin && isPlatformInternal(agent) (gate canGenerate); textos visíveis a PRODUCTION foram sanitizados para 'jornadas operacionais'."
+    },
+    {
+      "path": "frontend/src/pages/PlatformSupportPage.jsx",
+      "rule": "replay",
+      "reason": "Hub interno de suporte da plataforma: a página inteira é gated por getAgentClassification(agent) — perfis PRODUCTION veem apenas mensagem de acesso restrito; links 'Replays de diagnóstico' (/rpa-replays) e auditoria só renderizam para SUPPORT/DEVELOPMENT."
+    }
+  ]
+}

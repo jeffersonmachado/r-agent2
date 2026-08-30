@@ -44,9 +44,11 @@ describe('inbox module', () => {
     expect(paths).toEqual([
       { path: '/inbox/conversations', methods: ['get'] },
       { path: '/inbox/conversations/:conversationId', methods: ['get'] },
+      { path: '/inbox/conversations/:conversationId/reply', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/assign', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/transfer', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/notes', methods: ['post'] },
+      { path: '/inbox/conversations/:conversationId/case', methods: ['post'] },
     ]);
   });
 

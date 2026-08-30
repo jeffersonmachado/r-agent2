@@ -73,9 +73,9 @@ describe('Cognitive DTO — /api/cognitive/process segregado por classificação
     expect(result.message).toBeNull();
   });
 
-  test('SUPPORT (auditor) recebe outputs para diagnóstico', async () => {
+  test('SUPPORT (auditor + platformRole support_n2) recebe outputs para diagnóstico', async () => {
     const { deps, sent } = buildDeps();
-    await handleCognitiveRoutes(buildCtx({ agent: { id: 'u2', role: 'auditor', tenantId: 'tenant-a' }, deps }));
+    await handleCognitiveRoutes(buildCtx({ agent: { id: 'u2', role: 'auditor', platformRole: 'support_n2', tenantId: 'tenant-a' }, deps }));
 
     const result = sent[0].data.result;
     expect(result.outputs).toEqual(FULL_RESULT.outputs);

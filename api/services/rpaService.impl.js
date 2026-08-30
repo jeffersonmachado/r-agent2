@@ -1442,8 +1442,29 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
         // results.transientNetworkRecovery (transparência, não silêncio).
         const recoveredFailedUrls = networkRecoveryTracker.recoveredUrls();
         const pageErrorPartition = partitionPageErrors(relevantPageErrorsRaw, recoveredFailedUrls);
-        const relevantPageErrors = pageErrorPartition.relevant;
-        const recoveredTransientRequests = pageErrorPartition.recoveredTransient;
+        // Blip net::ERR_NETWORK_CHANGED com recuperação comprovada (resposta
+        // < 400 posterior na mesma execução) é ruído do ambiente do cliente,
+        // não defeito da página — sai da lista crítica com evidência.
+        const networkChangedUrls = networkRecoveryTracker.networkChangedRecoveredUrls();
+        const networkChangedBlips = [];
+        const relevantAfterNetworkChanged = [];
+        for (const entry of pageErrorPartition.relevant) {
+          if (
+            entry
+            && String(entry.type || '').toLowerCase() === 'request_failed'
+            && String(entry.failure || '') === 'net::ERR_NETWORK_CHANGED'
+            && networkChangedUrls.has(String(entry.url || ''))
+          ) {
+            networkChangedBlips.push(entry);
+          } else {
+            relevantAfterNetworkChanged.push(entry);
+          }
+        }
+        const relevantPageErrors = relevantAfterNetworkChanged;
+        const recoveredTransientRequests = [
+          ...pageErrorPartition.recoveredTransient,
+          ...networkChangedBlips,
+        ];
         if (recoveredTransientRequests.length > 0) {
           addLog('info', `🔁 ${recoveredTransientRequests.length} falha(s) de rede transitória(s) recuperada(s) via retry da aplicação`, {
             recovered: recoveredTransientRequests.map((entry) => entry.url),
@@ -1490,12 +1511,18 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
           (entry) => String(entry?.level || '').toLowerCase() === 'error' && !isIgnorablePageNoise(entry)
         );
         // Assinaturas transitórias ("Failed to fetch", "API temporariamente
-        // indisponível") são consequência dos blips recuperados acima: só
-        // saem da lista crítica quando houve falha de rede recuperada na
-        // mesma execução. Erros funcionais permanecem críticos sempre.
+        // indisponível", "Request timeout") são consequência de blips de rede
+        // recuperados OU de aborts iniciados pela própria página
+        // (net::ERR_ABORTED em navegação SPA/unmount/timeout de cliente):
+        // saem da lista crítica quando houve falha recuperada na mesma
+        // execução ou quando a URL do request consta entre os aborts de
+        // página. Erros funcionais permanecem críticos sempre.
         const consolePartition = partitionConsoleErrors(
           criticalConsoleErrorsRaw,
-          recoveredTransientRequests.length > 0,
+          {
+            hasRecoveredTransient: recoveredTransientRequests.length > 0,
+            abortedUrls: networkRecoveryTracker.abortedUrls(),
+          },
         );
         const criticalConsoleErrors = consolePartition.relevant;
         if (recoveredTransientRequests.length > 0 || consolePartition.suppressed.length > 0) {

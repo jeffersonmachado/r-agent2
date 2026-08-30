@@ -12,8 +12,8 @@ function titleFromPath(pathname) {
   return last.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function LegacySubNav({ agent, currentPath, rightSlot = null, tenantLabel = '', verticalLabels = [] }) {
-  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
+export function LegacySubNav({ agent, currentPath, rightSlot = null, tenantLabel = '', verticalLabels = [], capabilities }) {
+  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu, capabilities), [agent, capabilities]);
   const trail = useMemo(() => findNavigationTrail(filteredMenu, currentPath), [filteredMenu, currentPath]);
   const parentWithLinks = [...trail].reverse().find((node) => Array.isArray(node.children) && node.children.some((child) => child.path));
   const contextualItems = (parentWithLinks?.children || [])

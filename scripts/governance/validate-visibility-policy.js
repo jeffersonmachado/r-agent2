@@ -8,9 +8,13 @@
  * PRODUCTION / SUPPORT / DEVELOPMENT:
  *
  * 1. Todo item de `frontend/src/navigation/menu.js` cujo path comece com
- *    /dev, /qa, /qa-mesh ou /rpa deve ter roles ⊆ ['super_admin'] (item e
- *    seções ancestrais que definam roles). Exceção SUPPORT documentada:
- *    '/rpa-replays' (replay/leitura) admite roles ⊆ ['super_admin', 'auditor'].
+ *    /dev, /qa, /qa-mesh ou /rpa deve ter gate restritivo: roles ⊆
+ *    ['super_admin'] OU classifications ⊆ ['DEVELOPMENT'] (item e seções
+ *    ancestrais). Exceção SUPPORT documentada: '/rpa-replays' (replay/leitura)
+ *    admite roles ⊆ ['super_admin', 'auditor'] OU classifications ⊆
+ *    ['SUPPORT', 'DEVELOPMENT']. Desde 2026-08-27 a classificação é
+ *    independente do tenant role (platformRole server-side) — o gate por
+ *    `classifications` é a forma canônica; roles seguem aceitos p/ legado.
  * 2. Nenhum path de PRODUCTION_HIDDEN_ROUTES (fonte única:
  *    api/modules/agent-os/experience-segregation.js) pode aparecer em seção
  *    de menu visível a roles operacionais.
@@ -85,7 +89,22 @@ function isSupportAllowedRoute(routePath) {
   return SUPPORT_ALLOWED_MENU_ROUTES.some((allowed) => matchesPrefix(routePath, allowed));
 }
 
-function hasAllowedRoles(routePath, roles) {
+// Gates por classificação (canônico desde 2026-08-27 — classificação
+// independente do tenant role, resolvida server-side via platformRole).
+const DEVELOPMENT_CLASSIFICATIONS = ['DEVELOPMENT'];
+const SUPPORT_CLASSIFICATIONS = ['SUPPORT', 'DEVELOPMENT'];
+
+function hasAllowedClassifications(routePath, classifications) {
+  if (!Array.isArray(classifications) || classifications.length === 0) return false;
+  const allowed = isSupportAllowedRoute(routePath)
+    ? SUPPORT_CLASSIFICATIONS
+    : DEVELOPMENT_CLASSIFICATIONS;
+  return classifications.every((c) => allowed.includes(c));
+}
+
+function hasAllowedGate(routePath, node) {
+  if (node && hasAllowedClassifications(routePath, node.classifications)) return true;
+  const roles = node && node.roles;
   if (isSupportAllowedRoute(routePath)) {
     return (
       Array.isArray(roles) &&
@@ -107,26 +126,33 @@ function collectMenuViolations(navigationMenu) {
       if (routePath && (isProtectedPath(routePath) || isProductionHidden(routePath))) {
         const policy = isProtectedPath(routePath) ? 'protected_prefix' : 'production_hidden_route';
         const expectedRoles = isSupportAllowedRoute(routePath) ? SUPPORT_ALLOWED_ROLES : SUPER_ADMIN_ONLY;
+        const expectedClassifications = isSupportAllowedRoute(routePath)
+          ? SUPPORT_CLASSIFICATIONS
+          : DEVELOPMENT_CLASSIFICATIONS;
 
-        if (!hasAllowedRoles(routePath, node.roles)) {
+        if (!hasAllowedGate(routePath, node)) {
           violations.push({
             type: `menu_item_exposed_${policy}`,
             id: node.id || null,
             path: routePath,
             roles: node.roles || null,
+            classifications: node.classifications || null,
             expected: expectedRoles,
+            expectedClassifications,
           });
         }
 
         for (const ancestor of ancestors) {
-          if (ancestor.roles && !hasAllowedRoles(routePath, ancestor.roles)) {
+          if ((ancestor.roles || ancestor.classifications) && !hasAllowedGate(routePath, ancestor)) {
             violations.push({
               type: `menu_section_exposed_${policy}`,
               id: node.id || null,
               path: routePath,
               section: ancestor.id || ancestor.label || null,
-              sectionRoles: ancestor.roles,
+              sectionRoles: ancestor.roles || null,
+              sectionClassifications: ancestor.classifications || null,
               expected: expectedRoles,
+              expectedClassifications,
             });
           }
         }

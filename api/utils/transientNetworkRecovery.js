@@ -13,6 +13,12 @@
  * são consequência direta desses blips: só são suprimidos quando houve pelo
  * menos uma falha recuperada na mesma execução. Erros funcionais e exceções
  * JS (page_error) nunca são descartados.
+ *
+ * "Request timeout"/"Request timed out" (2026-08-28, mesh-2026-08-28T20-39-26):
+ * o http client do frontend aborta requests lentos em 30s e retenta com
+ * sucesso (as mesmas URLs constam como recuperadas na mesma execução). A
+ * assinatura só é suprimida com recuperação comprovada — API persistentemente
+ * lenta/fora continua reprovando (sem recovery, sem supressão).
  */
 
 const TRANSIENT_CONSOLE_PATTERNS = [
@@ -21,6 +27,7 @@ const TRANSIENT_CONSOLE_PATTERNS = [
   /api n[ãa]o acess[íi]vel/i,
   /err_network_changed/i,
   /err_connection_refused/i,
+  /request\s+(?:timed\s+out|timeout)/i,
 ];
 
 function eventTimeMs(entry) {
@@ -85,16 +92,52 @@ function partitionPageErrors(pageErrors = [], recoveredUrls = new Set()) {
 
 /**
  * Separa erros de console críticos de assinaturas transitórias. Assinaturas
- * transitórias só são suprimidas quando hasRecoveredTransient é true (houve
- * blip de rede recuperado na mesma execução).
+ * transitórias são suprimidas quando:
+ *   - hasRecoveredTransient é true (houve blip de rede recuperado na mesma
+ *     execução) — comportamento original; ou
+ *   - a URL do request consta em abortedUrls (request_failed
+ *     net::ERR_ABORTED na mesma execução): o abort foi iniciado pela própria
+ *     página (navegação SPA/unmount/timeout de cliente) e o erro de console é
+ *     a superfície desse mesmo cancelamento — ver isNavigationAbortNoise em
+ *     api/utils/rpaPageNoiseFilters.js. Entradas sem URL no texto são
+ *     suprimidas quando houve QUALQUER abort de página na execução (toast
+ *     genérico consequente). Falhas de rede reais (ERR_CONNECTION_* etc.)
+ *     nunca entram em abortedUrls e continuam críticas.
+ *
+ * @param {Array<object>} consoleErrors
+ * @param {boolean|{hasRecoveredTransient?: boolean, abortedUrls?: Set<string>}} [options]
+ *   boolean legado equivale a { hasRecoveredTransient: options }.
  */
-function partitionConsoleErrors(consoleErrors = [], hasRecoveredTransient = false) {
+function extractRequestPaths(text) {
+  const paths = new Set();
+  const pattern = /(?:\\?["']?)(?:url|path)(?:\\?["']?)\s*:\s*\\?"([^"\\]+)\\?"/g;
+  let match = pattern.exec(text);
+  while (match) {
+    paths.add(match[1]);
+    match = pattern.exec(text);
+  }
+  return [...paths];
+}
+
+function partitionConsoleErrors(consoleErrors = [], options = false) {
+  const opts = typeof options === 'boolean'
+    ? { hasRecoveredTransient: options }
+    : (options || {});
+  const hasRecoveredTransient = opts.hasRecoveredTransient === true;
+  const abortedUrls = opts.abortedUrls instanceof Set ? opts.abortedUrls : new Set();
   const relevant = [];
   const suppressed = [];
   for (const entry of consoleErrors || []) {
     const text = String(entry && (entry.text || entry.message) || '');
     const isTransientSignature = TRANSIENT_CONSOLE_PATTERNS.some((pattern) => pattern.test(text));
-    if (isTransientSignature && hasRecoveredTransient) {
+    if (!isTransientSignature) {
+      relevant.push(entry);
+      continue;
+    }
+    const paths = extractRequestPaths(text);
+    const matchesAborted = paths.some((p) => [...abortedUrls].some((url) => url.includes(p)));
+    const genericWithoutUrl = paths.length === 0 && abortedUrls.size > 0;
+    if (hasRecoveredTransient || matchesAborted || genericWithoutUrl) {
       suppressed.push(entry);
     } else {
       relevant.push(entry);
@@ -139,6 +182,37 @@ function createNetworkRecoveryTracker({ maxFailed = 500 } = {}) {
         timestamp,
       }));
       return computeRecoveredFailedUrls([...failedRequests, ...syntheticResponses]);
+    },
+    abortedUrls() {
+      return new Set(
+        failedRequests
+          .filter((entry) => entry && entry.failure === 'net::ERR_ABORTED' && entry.url)
+          .map((entry) => entry.url),
+      );
+    },
+    /**
+     * URLs cujo request_failed foi net::ERR_NETWORK_CHANGED (troca de
+     * interface de rede do cliente — blip do ambiente, nunca resposta da
+     * plataforma) E houve pelo menos uma resposta < 400 DEPOIS da falha na
+     * mesma execução (prova de que a pilha de rede recuperou). Sem sucesso
+     * posterior, a falha continua crítica — queda real de rede reprova.
+     */
+    networkChangedRecoveredUrls() {
+      let lastSuccessAt = 0;
+      for (const at of lastSuccessByUrl.values()) {
+        if (at > lastSuccessAt) lastSuccessAt = at;
+      }
+      return new Set(
+        failedRequests
+          .filter((entry) => (
+            entry
+            && entry.failure === 'net::ERR_NETWORK_CHANGED'
+            && entry.url
+            && lastSuccessAt > 0
+            && entry.timestamp < lastSuccessAt
+          ))
+          .map((entry) => entry.url),
+      );
     },
     failedCount() {
       return failedRequests.length;

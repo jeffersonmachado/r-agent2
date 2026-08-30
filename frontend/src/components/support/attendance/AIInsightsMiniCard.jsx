@@ -28,10 +28,16 @@ export function AIInsightsMiniCard({ ai, execution, onReplay, onTestFlow }) {
         ) : null}
         <div><span>Modo:</span> <strong>{execution?.mode || '-'}</strong></div>
       </div>
-      <div className="attendance-mini-actions">
-        <button type="button" onClick={onReplay} title="Replay do atendimento">▶ Replay</button>
-        <button type="button" onClick={onTestFlow} title="Testar fluxo de bot">⚙ Testar fluxo</button>
-      </div>
+      {onReplay || onTestFlow ? (
+        <div className="attendance-mini-actions">
+          {onReplay ? (
+            <button type="button" onClick={onReplay} title="Replay do atendimento">▶ Replay</button>
+          ) : null}
+          {onTestFlow ? (
+            <button type="button" onClick={onTestFlow} title="Testar fluxo de bot">⚙ Testar fluxo</button>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync; jornadas com \"manual\": true dentro de verticais geradas também são preservadas.",
-  "generatedAt": "2026-07-27T22:38:39.897Z",
+  "generatedAt": "2026-08-29T02:38:25.160Z",
   "source": "qa-waves/journey-coverage/*.json",
   "verticals": [
     {
@@ -10,6 +10,38 @@
         {
           "journey": "beauty_booking",
           "scenarios": [
+            {
+              "scenarioId": "business-e2e-beauty_booking",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-scheduling",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-payment",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-crm_updates",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-notifications",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-beauty_booking-schedule_service_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-beauty_booking-calendar_writable",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-beauty_booking-payment_gateway_available",
+              "status": "approved"
+            },
             {
               "scenarioId": "business-b2",
               "status": "approved"
@@ -60,6 +92,22 @@
               "status": "approved"
             },
             {
+              "scenarioId": "business-e2e-beauty_new_customer",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-beauty_new_customer-lead_capture_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-beauty_new_customer-schedule_service_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-beauty_new_customer-payment_gateway_available",
+              "status": "approved"
+            },
+            {
               "scenarioId": "business-b1",
               "status": "approved"
             },
@@ -79,6 +127,18 @@
           "scenarios": [
             {
               "scenarioId": "clinic-ticket-manutencao",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-clinic_default_journey",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-clinic_default_journey-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-clinic_default_journey-schedule_service_available",
               "status": "approved"
             },
             {
@@ -393,6 +453,15 @@
           ]
         },
         {
+          "journey": "cases",
+          "scenarios": [
+            {
+              "scenarioId": "business-core-biz-cases",
+              "status": "active"
+            }
+          ]
+        },
+        {
           "journey": "instagram_messenger",
           "scenarios": [
             {
@@ -433,6 +502,15 @@
           "scenarios": [
             {
               "scenarioId": "business-core-biz-knowledge-graph",
+              "status": "active"
+            }
+          ]
+        },
+        {
+          "journey": "leads",
+          "scenarios": [
+            {
+              "scenarioId": "fitness-matricula-leads",
               "status": "active"
             }
           ]
@@ -595,6 +673,10 @@
             {
               "scenarioId": "business-core-biz-rag-documents",
               "status": "active"
+            },
+            {
+              "scenarioId": "business-core-biz-rag-segregation",
+              "status": "active"
             }
           ]
         },
@@ -683,6 +765,10 @@
             },
             {
               "scenarioId": "business-core-flow-support-ticket-notfound",
+              "status": "active"
+            },
+            {
+              "scenarioId": "support-inbox-nota-ui",
               "status": "active"
             }
           ]
@@ -792,14 +878,30 @@
             },
             {
               "scenarioId": "fitness_full_agendamento_whatsapp_e2e_pagamento_confirmacao",
-              "status": "active"
+              "status": "approved"
             },
             {
               "scenarioId": "fitness_full_agendamento_avaliacao_e_pagamento_whatsapp",
-              "status": "active"
+              "status": "approved"
             },
             {
               "scenarioId": "fitness-matricula-agendamento-ui",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-agendamento",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-agendamento-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-agendamento-schedule_service_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-agendamento-calendar_writable",
               "status": "approved"
             }
           ]
@@ -813,11 +915,27 @@
             },
             {
               "scenarioId": "fitness_full_cancelamento_assinatura_whatsapp_retentativa",
-              "status": "active"
+              "status": "approved"
             },
             {
               "scenarioId": "fitness_full_cancelamento_plano_whatsapp_e2e_reembolso_acesso",
-              "status": "active"
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-cancelamento",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-cancelamento-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-cancelamento-membership_validation_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-cancelamento-billing_validation_active",
+              "status": "approved"
             }
           ]
         },
@@ -830,11 +948,27 @@
             },
             {
               "scenarioId": "fitness_full_checkin_sem_reserva_com_pagamento_pendente_whatsapp",
-              "status": "active"
+              "status": "approved"
             },
             {
               "scenarioId": "fitness_full_checkin_whatsapp_qr_com_biometria_e_trava_de_acesso",
-              "status": "active"
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-checkin",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-checkin-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-checkin-membership_validation_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-checkin-access_decision_active",
+              "status": "approved"
             }
           ]
         },
@@ -847,21 +981,53 @@
             },
             {
               "scenarioId": "fitness_full_whatsapp_checkout_pix_confirmacao_e2e",
-              "status": "active"
+              "status": "approved"
             },
             {
               "scenarioId": "fitness_full_whatsapp_checkout_pix_aprovacao_pospagamento",
-              "status": "active"
+              "status": "approved"
             },
             {
               "scenarioId": "fitness_full_whatsapp_checkout_pix_aprovacao_e2e",
-              "status": "active"
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-checkout",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-checkout-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-checkout-billing_validation_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-checkout-payment_gateway_available",
+              "status": "approved"
             }
           ]
         },
         {
           "journey": "fitness_active_customer",
           "scenarios": [
+            {
+              "scenarioId": "business-e2e-fitness_active_customer",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_active_customer-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_active_customer-membership_validation_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_active_customer-access_decision_active",
+              "status": "approved"
+            },
             {
               "scenarioId": "business-f1",
               "status": "approved"
@@ -878,10 +1044,53 @@
         },
         {
           "journey": "fitness_customer_checkin",
-          "manual": true,
           "scenarios": [
             {
-              "scenarioId": "business-fit-flow-checkin",
+              "scenarioId": "business-e2e-fitness_customer_checkin",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-customer_identification",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-membership_validation",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-access_decision",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-turnstile_release",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-attendance_record",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-crm_update",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-crm_contact_exists",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-membership_exists",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-credential_exists",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-device_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_customer_checkin-attendance_database_accessible",
               "status": "approved"
             }
           ]
@@ -889,6 +1098,18 @@
         {
           "journey": "fitness_new_customer",
           "scenarios": [
+            {
+              "scenarioId": "business-e2e-fitness_new_customer",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_new_customer-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-fitness_new_customer-membership_validation_active",
+              "status": "approved"
+            },
             {
               "scenarioId": "business-fit-flow-checkin",
               "status": "approved"
@@ -919,6 +1140,22 @@
               "status": "approved"
             },
             {
+              "scenarioId": "business-e2e-leads",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-lead_capture",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-leads-lead_capture_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-leads-customer_identification_active",
+              "status": "approved"
+            },
+            {
               "scenarioId": "business-fit-flow-lead-funnel",
               "status": "approved"
             }
@@ -933,7 +1170,23 @@
             },
             {
               "scenarioId": "fitness_full_onboarding_whatsapp_primeiro_acesso_e2e",
-              "status": "active"
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-onboarding",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "cap-onboarding",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-onboarding-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-onboarding-onboarding_flow_active",
+              "status": "approved"
             }
           ]
         },
@@ -946,11 +1199,31 @@
             },
             {
               "scenarioId": "fitness_full_renovacao_whatsapp_pagamento_falha_recuperacao",
-              "status": "active"
+              "status": "approved"
             },
             {
               "scenarioId": "fitness_full_renovacao_whatsapp_plano_anual_cartao_expirado_com_recuperacao",
-              "status": "active"
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-renovacao",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-renovacao-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-renovacao-membership_validation_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-renovacao-billing_validation_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-renovacao-payment_gateway_available",
+              "status": "approved"
             }
           ]
         }
@@ -962,6 +1235,22 @@
         {
           "journey": "food_customer_journey",
           "scenarios": [
+            {
+              "scenarioId": "business-e2e-food_customer_journey",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-food_customer_journey-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-food_customer_journey-order_service_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-food_customer_journey-payment_gateway_available",
+              "status": "approved"
+            },
             {
               "scenarioId": "business-food-flow-order",
               "status": "approved"
@@ -984,6 +1273,22 @@
               "status": "approved"
             },
             {
+              "scenarioId": "business-e2e-food_order_flow",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-food_order_flow-order_service_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-food_order_flow-storefront_channel_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-food_order_flow-payment_gateway_available",
+              "status": "approved"
+            },
+            {
               "scenarioId": "business-food-scr-01",
               "status": "approved"
             }
@@ -999,6 +1304,22 @@
           "scenarios": [
             {
               "scenarioId": "market-publicacao-no",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-market_default_journey",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-market_default_journey-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-market_default_journey-order_service_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-market_default_journey-payment_gateway_available",
               "status": "approved"
             },
             {
@@ -1025,6 +1346,22 @@
           "scenarios": [
             {
               "scenarioId": "services-ativacao-solucao",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-e2e-services_default_journey",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-services_default_journey-customer_identification_active",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-services_default_journey-schedule_service_available",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "precond-services_default_journey-payment_gateway_available",
               "status": "approved"
             },
             {

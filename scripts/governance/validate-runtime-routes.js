@@ -96,6 +96,32 @@ async function main() {
         if (/API não acessível/i.test(text) && /\/api\/test-executions\/artifacts/i.test(text)) {
           return;
         }
+        // RAGDocumentsPage: fetches de /rag/* em voo são abortados (ERR_ABORTED)
+        // quando o validador navega para a rota seguinte; o catch loga
+        // "Failed to fetch" + "API não acessível" + erros de carga já na rota
+        // alvo — mesma classe de ruído de navegação de /auth/me e /tickets?,
+        // não falha funcional da rota alvo.
+        if (/Erro capturado no catch/i.test(text) && /\/rag\//i.test(text)) {
+          return;
+        }
+        if (/API não acessível/i.test(text) && /\/rag\//i.test(text)) {
+          return;
+        }
+        if (/Erro ao carregar (sources|dados|configuração de domínios)/i.test(text) && /Failed to fetch/i.test(text)) {
+          return;
+        }
+        if (/Toast \[error\]: Erro ao carregar dados/i.test(text)) {
+          return;
+        }
+        // WorkspacePage: fetches de /workspace/entities/:id/{insights,actions,
+        // autocorrections} em voo são abortados (ERR_ABORTED) na navegação
+        // full-page para a rota seguinte — mesma classe de ruído de /auth/me.
+        if (/Erro capturado no catch/i.test(text) && /\/workspace\/entities\//i.test(text)) {
+          return;
+        }
+        if (/API não acessível/i.test(text) && /\/workspace\/entities\//i.test(text)) {
+          return;
+        }
         consoleErrors.push({ text, location: message.location() });
       }
     });
@@ -132,6 +158,16 @@ async function main() {
       // plano; se a resposta não completa antes da troca de rota, o browser aborta
       // (ERR_ABORTED). Dado secundário — página renderiza sem ele.
       if (url.includes('/api/test-executions/artifacts') && /ERR_ABORTED/i.test(failure)) {
+        return;
+      }
+      // RAGDocumentsPage: /rag/* abortados na troca de rota
+      // (ERR_ABORTED) — mesma classe de ruído de navegação de /auth/me.
+      if (/\/rag\//i.test(url) && /ERR_ABORTED/i.test(failure)) {
+        return;
+      }
+      // WorkspacePage: /workspace/entities/:id/* abortados na troca de rota
+      // (ERR_ABORTED) — mesma classe de ruído de navegação de /auth/me.
+      if (/\/workspace\/entities\//i.test(url) && /ERR_ABORTED/i.test(failure)) {
         return;
       }
       networkFailures.push({

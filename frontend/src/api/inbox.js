@@ -2,7 +2,8 @@ import { fetchJson } from './client';
 import logger from '../utils/logger';
 
 /**
- * API do Inbox (conversas/tickets unificados).
+ * API do Inbox (conversas ChannelConversation-based).
+ * Contrato: GET /inbox/conversations?status&channelType&limit&offset → { conversations, total }
  */
 
 export function listInboxConversations(options = {}) {
@@ -10,11 +11,8 @@ export function listInboxConversations(options = {}) {
   if (options.status) {
     params.append('status', options.status);
   }
-  if (options.queue) {
-    params.append('queue', options.queue);
-  }
-  if (options.assignedTo) {
-    params.append('assignedTo', options.assignedTo);
+  if (options.channelType) {
+    params.append('channelType', options.channelType);
   }
   if (options.limit !== undefined) {
     params.append('limit', String(options.limit));
@@ -37,32 +35,52 @@ export function getInboxConversation(conversationId) {
   });
 }
 
-export function assignInboxConversation(conversationId, assignedTo) {
+export function replyInboxConversation(conversationId, body) {
+  if (!conversationId) {
+    return Promise.reject(new Error('replyInboxConversation: conversationId é obrigatório'));
+  }
+  const text = body != null ? String(body).trim() : '';
+  if (!text) {
+    return Promise.reject(new Error('replyInboxConversation: body é obrigatório'));
+  }
+
+  logger.info('Respondendo conversa (inbox)', { conversationId });
+
+  return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ body: text }),
+  });
+}
+
+export function assignInboxConversation(conversationId, assigneeId) {
   if (!conversationId) {
     return Promise.reject(new Error('assignInboxConversation: conversationId é obrigatório'));
   }
 
-  logger.info('Atribuindo conversa (inbox)', { conversationId, assignedTo });
+  logger.info('Atribuindo conversa (inbox)', { conversationId, assigneeId });
 
   return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/assign`, {
     method: 'POST',
-    body: JSON.stringify(assignedTo ? { assignedTo } : {}),
+    body: JSON.stringify(assigneeId ? { assigneeId } : {}),
   });
 }
 
-export function transferInboxConversation(conversationId, { queue, assignedTo } = {}) {
+export function transferInboxConversation(conversationId, { queue, assigneeId } = {}) {
   if (!conversationId) {
     return Promise.reject(new Error('transferInboxConversation: conversationId é obrigatório'));
   }
-  if (!queue) {
-    return Promise.reject(new Error('transferInboxConversation: queue é obrigatório'));
+  if (!queue && !assigneeId) {
+    return Promise.reject(new Error('transferInboxConversation: informe queue ou assigneeId'));
   }
 
-  logger.info('Transferindo conversa (inbox)', { conversationId, queue, assignedTo });
+  logger.info('Transferindo conversa (inbox)', { conversationId, queue, assigneeId });
 
-  const body = { queue };
-  if (assignedTo !== undefined) {
-    body.assignedTo = assignedTo;
+  const body = {};
+  if (queue) {
+    body.queue = queue;
+  }
+  if (assigneeId) {
+    body.assigneeId = assigneeId;
   }
 
   return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/transfer`, {
@@ -85,5 +103,30 @@ export function addInboxNote(conversationId, note) {
   return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/notes`, {
     method: 'POST',
     body: JSON.stringify({ note: text }),
+  });
+}
+
+/**
+ * Cria chamado a partir da conversa (requer capability caseManagement do tenant).
+ * 403 { error: 'capability_disabled' } quando a capacidade está desligada.
+ */
+export function createCaseFromConversation(conversationId, { subject, priority } = {}) {
+  if (!conversationId) {
+    return Promise.reject(new Error('createCaseFromConversation: conversationId é obrigatório'));
+  }
+
+  logger.info('Criando chamado a partir da conversa (inbox)', { conversationId });
+
+  const body = {};
+  if (subject) {
+    body.subject = subject;
+  }
+  if (priority) {
+    body.priority = priority;
+  }
+
+  return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/case`, {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }

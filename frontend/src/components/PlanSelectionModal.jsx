@@ -4,6 +4,8 @@
 
 import React, { useState } from 'react';
 import { Button } from '../styles/Button';
+import { useAuth } from '../context/authContext';
+import { getAgentClassification } from '../utils/classification';
 
 const PLAN_INFO = {
   free: {
@@ -61,6 +63,10 @@ const PLAN_INFO = {
 };
 
 export function PlanSelectionModal({ isOpen, onClose, currentPlan, onSelectPlan, tenantName }) {
+  const { agent } = useAuth();
+  // Limites técnicos de execução automatizada só aparecem para engenharia da plataforma;
+  // planos comunicam valor operacional para os demais perfis.
+  const isDevelopment = getAgentClassification(agent) === 'DEVELOPMENT';
   const [selectedPlan, setSelectedPlan] = useState(currentPlan || 'trial');
   const [loading, setLoading] = useState(false);
 
@@ -193,10 +199,12 @@ export function PlanSelectionModal({ isOpen, onClose, currentPlan, onSelectPlan,
                       <span className="text-text-secondary">Agentes IA:</span>
                       <span className="ml-2 font-medium text-text-primary">{plan.limits.agentes_ia}</span>
                     </div>
-                    <div>
-                      <span className="text-text-secondary">Exec. RPA:</span>
-                      <span className="ml-2 font-medium text-text-primary">{plan.limits.execucoes_rpa}</span>
-                    </div>
+                    {isDevelopment ? (
+                      <div>
+                        <span className="text-text-secondary">Exec. RPA:</span>
+                        <span className="ml-2 font-medium text-text-primary">{plan.limits.execucoes_rpa}</span>
+                      </div>
+                    ) : null}
                     <div>
                       <span className="text-text-secondary">Tokens IA:</span>
                       <span className="ml-2 font-medium text-text-primary">{plan.limits.tokens_ia}</span>

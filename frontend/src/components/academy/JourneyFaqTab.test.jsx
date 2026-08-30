@@ -49,12 +49,20 @@ describe('JourneyFaqTab — segregação de fontes internas (HARD-014)', () => {
     expect(screen.queryByText(/journey-preconditions\.json/)).toBeNull();
   });
 
-  it('SUPPORT (auditor) vê as fontes internas', async () => {
-    mocks.agent = { id: 'a2', username: 'au', role: 'auditor' };
+  it('SUPPORT (auditor + platformRole support_n2) vê as fontes internas', async () => {
+    mocks.agent = { id: 'a2', username: 'au', role: 'auditor', platformRole: 'support_n2' };
     render(<JourneyFaqTab isAdmin={false} />);
 
     await waitFor(() => expect(screen.getByTestId('faq-faq-1')).toBeTruthy());
     expect(screen.getByText(/journey-preconditions\.json/)).toBeTruthy();
+  });
+
+  it('auditor de tenant puro (PRODUCTION) não vê as fontes internas', async () => {
+    mocks.agent = { id: 'a2b', username: 'au-tenant', role: 'auditor' };
+    render(<JourneyFaqTab isAdmin={false} />);
+
+    await waitFor(() => expect(screen.getByTestId('faq-faq-1')).toBeTruthy());
+    expect(screen.queryByText(/journey-preconditions\.json/)).toBeNull();
   });
 
   it('DEVELOPMENT (super_admin) vê as fontes internas', async () => {
@@ -69,7 +77,10 @@ describe('JourneyFaqTab — segregação de fontes internas (HARD-014)', () => {
 describe('JourneyFaqTab — helpers de classificação (lógica pura)', () => {
   it('resolveAgentClassification espelha a política do backend', () => {
     expect(resolveAgentClassification({ role: 'super_admin' })).toBe('DEVELOPMENT');
-    expect(resolveAgentClassification({ role: 'auditor' })).toBe('SUPPORT');
+    expect(resolveAgentClassification({ role: 'auditor' })).toBe('PRODUCTION');
+    expect(resolveAgentClassification({ role: 'auditor', platformRole: 'support_n2' })).toBe('SUPPORT');
+    expect(resolveAgentClassification({ role: 'operator', platformRole: 'engineer' })).toBe('DEVELOPMENT');
+    expect(resolveAgentClassification({ role: 'operator', classification: 'SUPPORT' })).toBe('SUPPORT');
     expect(resolveAgentClassification({ role: 'admin' })).toBe('PRODUCTION');
     expect(resolveAgentClassification({ role: 'owner' })).toBe('PRODUCTION');
     expect(resolveAgentClassification({ role: 'operator' })).toBe('PRODUCTION');
@@ -77,8 +88,9 @@ describe('JourneyFaqTab — helpers de classificação (lógica pura)', () => {
   });
 
   it('canViewInternalSources libera apenas SUPPORT/DEVELOPMENT', () => {
-    expect(canViewInternalSources({ role: 'auditor' })).toBe(true);
+    expect(canViewInternalSources({ role: 'auditor', platformRole: 'support_n2' })).toBe(true);
     expect(canViewInternalSources({ role: 'super_admin' })).toBe(true);
+    expect(canViewInternalSources({ role: 'auditor' })).toBe(false);
     expect(canViewInternalSources({ role: 'operator' })).toBe(false);
     expect(canViewInternalSources({ role: 'admin' })).toBe(false);
   });

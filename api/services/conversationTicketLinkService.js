@@ -23,6 +23,7 @@ const { getSequelize } = require('../db/sequelize');
 const { ChannelConversation, Ticket: TicketGetter } = require('../db/models');
 const queueService = require('./queueService');
 const { checkLimit } = require('./planLimitsService');
+const { getTenantCapabilities } = require('./tenantCapabilitiesService');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -152,6 +153,22 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   // Mantém compatibilidade via flag, mas evita "sistema sem tickets" quando não configurado.
   const createOnInbound = config.get('tickets.createOnInbound', true) === true;
 
+  // Gating por tenant: caseManagement desabilitado → inbound cria/atualiza APENAS
+  // a conversa (+ channel message pelo caller); nenhum ticket é criado.
+  // Falha ao ler a capability → fail-safe LEGADO (cria ticket) para não derrubar inbound.
+  let caseManagementEnabled = true;
+  try {
+    const capabilities = await getTenantCapabilities(effectiveTenantId);
+    caseManagementEnabled = capabilities.caseManagement !== false;
+  } catch (err) {
+    logger.warn('[ConversationTicketLink] Falha ao ler capability caseManagement; aplicando comportamento legado (cria ticket)', {
+      tenantId: effectiveTenantId,
+      error: safeErrorMessage(err),
+    });
+    caseManagementEnabled = true;
+  }
+  const shouldCreateTicket = createOnInbound && caseManagementEnabled;
+
   const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
   const now = new Date();
 
@@ -187,8 +204,8 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
 
   // Sem DB, seguimos com comportamento best-effort: cria ticket por sessionId (whatsapp) e sem conversationId
   if (!conversation) {
-    if (!createOnInbound) {
-      return { conversation: null, ticket: null, createdTicket: false };
+    if (!shouldCreateTicket) {
+      return { conversation: null, ticket: null, createdTicket: false, created: false };
     }
 
     const sessionId = buildSessionId({
@@ -234,6 +251,13 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
       },
     });
     return { conversation: null, ticket, createdTicket: true };
+  }
+
+  // Capability caseManagement desabilitada: apenas conversa (+ channel message
+  // persistida pelo caller); nunca cria nem reutiliza ticket.
+  if (!caseManagementEnabled) {
+    await touchConversation({ tenantId: effectiveTenantId, conversationId: conversation.id });
+    return { conversation, ticket: null, createdTicket: false, created: false };
   }
 
   // 1) Tenta achar ticket em memória pelo conversationId
@@ -305,8 +329,8 @@ async function resolveOrCreateTicketFromIncomingMessage(tenantId, channelType, e
   }
 
   // 4) Cria ticket novo sem modo de atendimento implícito.
-  if (!createOnInbound) {
-    return { conversation, ticket: null, createdTicket: false };
+  if (!shouldCreateTicket) {
+    return { conversation, ticket: null, createdTicket: false, created: false };
   }
 
   // Quota mensal (best-effort): limita criação de tickets/“conversas” por mês.

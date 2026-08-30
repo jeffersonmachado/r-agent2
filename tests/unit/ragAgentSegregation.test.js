@@ -38,6 +38,22 @@ describe('RAG segregation — agentes e cross-domain', () => {
     expect(denied.allowed).toBe(false);
     expect(denied.retrievalPolicy).toBe('deny');
 
+    // Auditor de tenant (role de negócio) SEM platformRole é PRODUCTION: sem SYSTEM.
+    const tenantAuditor = resolveRetrievalScope({
+      actor: { role: 'auditor' },
+      requestedDomain: 'SYSTEM',
+    });
+    expect(tenantAuditor.allowed).toBe(false);
+    expect(tenantAuditor.retrievalPolicy).toBe('deny');
+
+    // Auditor com platformRole de suporte concedido server-side acessa SYSTEM[SUPPORT].
+    const platformAuditor = resolveRetrievalScope({
+      actor: { role: 'auditor', platformRole: 'support_n2' },
+      requestedDomain: 'SYSTEM',
+    });
+    expect(platformAuditor.allowed).toBe(true);
+    expect(platformAuditor.scope.classifications).toEqual(['SUPPORT']);
+
     // Input/prompt nunca escolhe domínio: sem ator, sempre OPERATIONAL restritivo.
     const anonymous = resolveRetrievalScope({ actor: null, requestedDomain: 'SYSTEM' });
     expect(anonymous.allowed).toBe(false);

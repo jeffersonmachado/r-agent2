@@ -20,6 +20,9 @@
  *   - DEVELOPMENT: path === '/dev' ou começa com '/dev/', ou o item de menu
  *     tem roles exatamente ['super_admin'] e está sob um ancestral de
  *     engenharia (id contém 'dev', 'engineering' ou 'super-admin').
+ *   - Classificação declarada no menu (`classifications`) tem precedência
+ *     sobre heurísticas de path/seção: um item restrito a SUPPORT/DEVELOPMENT
+ *     nunca é PRODUCTION, mesmo com path neutro (ex.: '/platform-support').
  *   - SUPPORT: algum segmento do path ou da seção é de suporte/diagnóstico
  *     operacional: 'qa', 'qa-mesh', 'audit', 'diagnostics', 'system-status',
  *     'channel-health'. (A página '/support' — Central de Atendimento — é de
@@ -89,6 +92,7 @@ function flattenMenu(nodes, context = {}) {
     const ancestors = [...(context.ancestors || []), node.id];
     const roles = node.roles || context.roles || null;
     const permission = node.permission || context.permission || null;
+    const classifications = node.classifications || context.classifications || null;
     if (typeof node.path === 'string') {
       entries.push({
         path: node.path,
@@ -97,11 +101,12 @@ function flattenMenu(nodes, context = {}) {
         ancestors,
         roles,
         permission,
+        classifications,
         hiddenInSidebar: Boolean(node.hiddenInSidebar),
       });
     }
     if (Array.isArray(node.children)) {
-      entries.push(...flattenMenu(node.children, { section, ancestors, roles, permission }));
+      entries.push(...flattenMenu(node.children, { section, ancestors, roles, permission, classifications }));
     }
   }
   return entries;
@@ -185,6 +190,15 @@ function classifyPage(pagePath, menuEntry) {
   if (isEngineeringEntry(menuEntry)) {
     return 'DEVELOPMENT';
   }
+  // Classificação declarada no menu (classifications) é autoridade sobre a
+  // experiência alvo: item restrito a SUPPORT/DEVELOPMENT nunca é PRODUCTION.
+  const declared = menuEntry && Array.isArray(menuEntry.classifications)
+    ? menuEntry.classifications
+    : null;
+  if (declared && declared.length > 0 && !declared.includes('PRODUCTION')) {
+    if (declared.includes('SUPPORT')) return 'SUPPORT';
+    return 'DEVELOPMENT';
+  }
   if (hasSupportSegment(pagePath) || (menuEntry && hasSupportSegment(menuEntry.section))) {
     return 'SUPPORT';
   }
@@ -233,8 +247,13 @@ function scanFrontendRoutes({ rootDir, mainFile, menuFile }) {
       path: pagePath,
       roles: menuEntry ? menuEntry.roles : null,
       permission,
+      classifications: menuEntry ? menuEntry.classifications : null,
       section: menuEntry ? menuEntry.section : null,
-      guarded: Boolean(menuEntry && (menuEntry.roles || menuEntry.permission)),
+      guarded: Boolean(menuEntry && (
+        menuEntry.roles
+        || menuEntry.permission
+        || (Array.isArray(menuEntry.classifications) && !menuEntry.classifications.includes('PRODUCTION'))
+      )),
       classification: classifyPage(pagePath, menuEntry),
       source: 'frontend/src/main.jsx',
     };

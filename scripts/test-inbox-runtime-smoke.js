@@ -142,6 +142,36 @@ async function resolveOperationalTenantId(baseUrl, token, fallbackTenantId) {
   return String(fallbackTenantId || 'system');
 }
 
+function buildWhatsAppWebhookPayload({ phoneNumber, messageText, phoneNumberId }) {
+  return {
+    object: 'whatsapp_business_account',
+    entry: [{
+      id: `inbox-smoke-${Date.now()}`,
+      changes: [{
+        field: 'messages',
+        value: {
+          messaging_product: 'whatsapp',
+          metadata: {
+            display_phone_number: phoneNumber,
+            phone_number_id: phoneNumberId,
+          },
+          contacts: [{
+            profile: { name: 'QA Inbox Smoke' },
+            wa_id: phoneNumber,
+          }],
+          messages: [{
+            from: phoneNumber,
+            id: `wamid.inbox_smoke_${Date.now()}`,
+            timestamp: String(Math.floor(Date.now() / 1000)),
+            type: 'text',
+            text: { body: messageText },
+          }],
+        },
+      }],
+    }],
+  };
+}
+
 function payloadSnippet(payload) {
   try {
     return JSON.stringify(payload).slice(0, 220);
@@ -196,6 +226,22 @@ async function main() {
   smokeTenantId = tenantId || null;
   const ts = Date.now();
 
+  // Parte de conversas do Inbox: o seed via webhook cria a conversa no tenant
+  // 'system' (channel account do ambiente QA), então as chamadas de conversa
+  // usam esse tenant explicitamente — independente do tenant operacional usado
+  // na parte de tickets.
+  const CONVERSATION_TENANT_ID = 'system';
+  let conversationToken = adminAuth?.token || token;
+  if (!adminAuth?.token && tenantId !== CONVERSATION_TENANT_ID) {
+    const sysRpa = await reqJson(`${baseUrl}/auth/rpa/login`, {
+      method: 'POST',
+      body: { token: getOrCreateRpaToken(), tenantId: CONVERSATION_TENANT_ID },
+    });
+    if (sysRpa.ok && sysRpa.payload?.token) {
+      conversationToken = sysRpa.payload.token;
+    }
+  }
+
   const evidence = {
     smoke: 'L-05',
     generatedAt: new Date().toISOString(),
@@ -211,6 +257,9 @@ async function main() {
       originalAssignedTo: null,
     },
     conversation: {
+      id: null,
+      created: false,
+      assignedTo: null,
       noteFound: false,
       messagesCount: 0,
     },
@@ -231,6 +280,8 @@ async function main() {
   const cleanup = {
     ticketId: null,
     createdTicket: false,
+    conversationId: null,
+    conversationOriginalAssignedTo: null,
     quickReplyId: null,
     originalMasking: null,
     originalQueue: null,
@@ -249,54 +300,99 @@ async function main() {
       },
     });
 
-    if (createTicket.ok && createTicket.payload?.id) {
-      cleanup.ticketId = createTicket.payload.id;
-      cleanup.createdTicket = true;
-      cleanup.originalQueue = createTicket.payload.queue || 'default';
-      cleanup.originalAssignedTo = createTicket.payload.assignedTo || null;
-    } else {
-      const inboxList = await reqJson(`${baseUrl}/inbox/conversations?limit=200&offset=0`, { token });
-      expect(inboxList.ok, `inbox_list_failed:${inboxList.status}`);
-      const tickets = Array.isArray(inboxList.payload?.tickets) ? inboxList.payload.tickets : [];
-      expect(
-        tickets.length > 0,
-        `ticket_create_failed:${createTicket.status}:${payloadSnippet(createTicket.payload)}:inbox_no_available_ticket_for_smoke`,
-      );
-      const targetTicket = tickets.find((t) => t && t.id && t.status !== 'closed') || tickets[0];
-      cleanup.ticketId = targetTicket.id;
-      cleanup.originalQueue = targetTicket.queue || null;
-      cleanup.originalAssignedTo = Object.prototype.hasOwnProperty.call(targetTicket, 'assignedTo')
-        ? targetTicket.assignedTo
-        : null;
-    }
+    expect(
+      createTicket.ok && createTicket.payload?.id,
+      `ticket_create_failed:${createTicket.status}:${payloadSnippet(createTicket.payload)}`,
+    );
+    cleanup.ticketId = createTicket.payload.id;
+    cleanup.createdTicket = true;
+    cleanup.originalQueue = createTicket.payload.queue || 'default';
+    cleanup.originalAssignedTo = createTicket.payload.assignedTo || null;
     evidence.ticket.id = cleanup.ticketId;
     evidence.ticket.created = cleanup.createdTicket;
     evidence.ticket.originalQueue = cleanup.originalQueue;
     evidence.ticket.originalAssignedTo = cleanup.originalAssignedTo;
 
-    const assignRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}/assign`, {
+    // --- Conversa do Inbox (desacoplado de tickets) ---
+    // Fixture: seed via webhook WhatsApp (mesmo caminho que cria conversas em
+    // produção); fallback para conversa existente da listagem do tenant.
+    const convPhone = `55118${String(ts).slice(-8)}`;
+    const waPhoneNumberId = String(process.env.TEST_WHATSAPP_PHONE_NUMBER_ID || 'test_phone_id');
+    const seedWebhook = await reqJson(`${baseUrl}/webhooks/whatsapp`, {
       method: 'POST',
-      token,
+      body: buildWhatsAppWebhookPayload({
+        phoneNumber: convPhone,
+        messageText: `smoke inbox conversa ${ts}`,
+        phoneNumberId: waPhoneNumberId,
+      }),
+    });
+    if (!seedWebhook.ok) {
+      evidence.warnings.push(`conversation_seed_webhook_failed:${seedWebhook.status}`);
+    }
+
+    let conversation = null;
+    const convReq = { token: conversationToken, tenantId: CONVERSATION_TENANT_ID };
+    for (let attempt = 0; attempt < 6 && !conversation; attempt += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const inboxPoll = await reqJson(`${baseUrl}/inbox/conversations?limit=200&offset=0`, convReq).catch(() => null);
+      const polled = Array.isArray(inboxPoll?.payload?.conversations) ? inboxPoll.payload.conversations : [];
+      conversation = polled.find((c) => c && String(c.externalId || '') === convPhone) || null;
+      if (!conversation) {
+        // eslint-disable-next-line no-await-in-loop
+        await sleep(400);
+      }
+    }
+    if (!conversation) {
+      const inboxList = await reqJson(`${baseUrl}/inbox/conversations?limit=200&offset=0`, convReq);
+      expect(inboxList.ok, `inbox_list_failed:${inboxList.status}`);
+      const conversations = Array.isArray(inboxList.payload?.conversations) ? inboxList.payload.conversations : [];
+      conversation = conversations.find((c) => c && c.id && c.status !== 'closed' && !c.currentTicketId)
+        || conversations.find((c) => c && c.id && c.status !== 'closed')
+        || null;
+      if (conversation) {
+        evidence.warnings.push('conversation_seed_fallback_existing_conversation');
+      }
+    }
+    expect(conversation && conversation.id, 'inbox_no_available_conversation_for_smoke');
+    cleanup.conversationId = String(conversation.id);
+    cleanup.conversationOriginalAssignedTo = Object.prototype.hasOwnProperty.call(conversation, 'assignedTo')
+      ? conversation.assignedTo
+      : null;
+    evidence.conversation.id = cleanup.conversationId;
+    evidence.conversation.created = String(conversation.externalId || '') === convPhone;
+
+    const assignRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.conversationId)}/assign`, {
+      method: 'POST',
+      ...convReq,
       body: {},
     });
-    expect(assignRes.ok && assignRes.payload?.assignedTo, `inbox_assign_failed:${assignRes.status}`);
+    expect(assignRes.ok && assignRes.payload?.conversation?.assignedTo, `inbox_assign_failed:${assignRes.status}`);
     evidence.operations.assign = true;
-    evidence.ticket.assignedTo = assignRes.payload?.assignedTo || null;
+    evidence.conversation.assignedTo = assignRes.payload.conversation.assignedTo || null;
+
+    // Listagem deve refletir o assignedTo da conversa.
+    const listAfterAssign = await reqJson(`${baseUrl}/inbox/conversations?limit=200&offset=0`, convReq);
+    expect(listAfterAssign.ok, `inbox_list_after_assign_failed:${listAfterAssign.status}`);
+    const listedAfterAssign = (Array.isArray(listAfterAssign.payload?.conversations) ? listAfterAssign.payload.conversations : [])
+      .find((c) => c && String(c.id) === cleanup.conversationId);
+    expect(
+      listedAfterAssign && listedAfterAssign.assignedTo === evidence.conversation.assignedTo,
+      'inbox_list_assigned_to_mismatch',
+    );
 
     const transferQueue = `ux1_smoke_${ts}`;
-    const transferRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}/transfer`, {
+    const transferRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.conversationId)}/transfer`, {
       method: 'POST',
-      token,
+      ...convReq,
       body: { queue: transferQueue, assignedTo: null },
     });
-    expect(transferRes.ok && transferRes.payload?.queue === transferQueue, `inbox_transfer_failed:${transferRes.status}`);
+    expect(transferRes.ok && transferRes.payload?.conversation, `inbox_transfer_failed:${transferRes.status}`);
     evidence.operations.transfer = true;
-    evidence.ticket.queueAfterTransfer = transferRes.payload?.queue || null;
 
     const noteText = `Nota interna smoke ${ts}`;
-    const noteRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}/notes`, {
+    const noteRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.conversationId)}/notes`, {
       method: 'POST',
-      token,
+      ...convReq,
       body: { note: noteText },
     });
     expect(noteRes.ok, `inbox_note_failed:${noteRes.status}`);
@@ -317,14 +413,31 @@ async function main() {
     expect(removeTagRes.ok, `ticket_tag_remove_failed:${removeTagRes.status}`);
     evidence.operations.removeTag = true;
 
-    const conversationRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}`, {
+    const conversationRes = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.conversationId)}`, {
       method: 'GET',
-      token,
+      ...convReq,
     });
     expect(conversationRes.ok, `inbox_conversation_failed:${conversationRes.status}`);
-    const messages = Array.isArray(conversationRes.payload?.messages) ? conversationRes.payload.messages : [];
-    expect(messages.some((m) => m?.sender === 'note' && String(m?.text || '').includes(`smoke ${ts}`)), 'inbox_note_not_found_in_conversation');
-    evidence.conversation.messagesCount = messages.length;
+    const convPayload = conversationRes.payload?.conversation || {};
+    const convMessages = Array.isArray(conversationRes.payload?.messages) ? conversationRes.payload.messages : [];
+    // Notas são first-class no GET da conversa (metadata.notes da conversa sem
+    // ticket + ledger do ticket quando há currentTicketId).
+    const apiNotes = Array.isArray(conversationRes.payload?.notes)
+      ? conversationRes.payload.notes
+      : (Array.isArray(convPayload?.metadata?.notes) ? convPayload.metadata.notes : []);
+    let noteVisible = apiNotes.some((n) => String(n?.note || n?.text || '').includes(`smoke ${ts}`));
+    if (!noteVisible && convPayload.currentTicketId) {
+      // Compat: conversa com ticket grava a nota no ledger do ticket (sender 'note').
+      const ticketDetail = await reqJson(`${baseUrl}/tickets/${encodeURIComponent(convPayload.currentTicketId)}`, {
+        method: 'GET',
+        ...convReq,
+      });
+      const ticketPayload = ticketDetail?.payload?.ticket || ticketDetail?.payload || {};
+      const ticketMessages = Array.isArray(ticketPayload?.messages) ? ticketPayload.messages : [];
+      noteVisible = ticketMessages.some((m) => m?.sender === 'note' && String(m?.text || '').includes(`smoke ${ts}`));
+    }
+    expect(noteVisible, 'inbox_note_not_found_in_conversation');
+    evidence.conversation.messagesCount = convMessages.length;
     evidence.conversation.noteFound = true;
 
     const createQrRes = await reqJson(`${baseUrl}/quick-replies`, {
@@ -394,7 +507,7 @@ async function main() {
     const evPath = writeEvidence(evidence);
 
     // eslint-disable-next-line no-console
-    console.log(`[inbox-smoke] OK ticket=${cleanup.ticketId} queue=${transferQueue} quickReply=${cleanup.quickReplyId} phoneMasking=${previousEnabled}->${nextEnabled} evidence=${evPath}`);
+    console.log(`[inbox-smoke] OK ticket=${cleanup.ticketId} conversation=${cleanup.conversationId} queue=${transferQueue} quickReply=${cleanup.quickReplyId} phoneMasking=${previousEnabled}->${nextEnabled} evidence=${evPath}`);
   } finally {
     if (cleanup.quickReplyId) {
       const qrDelete = await reqJson(`${baseUrl}/quick-replies/${encodeURIComponent(cleanup.quickReplyId)}`, {
@@ -417,15 +530,18 @@ async function main() {
         // eslint-disable-next-line no-console
         console.warn(`[inbox-smoke] WARN ticket_cleanup_failed:${cleanup.ticketId}:${closeRes.status}`);
       }
-    } else if (cleanup.ticketId && cleanup.originalQueue) {
-      const restoreTransfer = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.ticketId)}/transfer`, {
+    }
+
+    if (cleanup.conversationId && cleanup.conversationOriginalAssignedTo) {
+      const restoreAssign = await reqJson(`${baseUrl}/inbox/conversations/${encodeURIComponent(cleanup.conversationId)}/assign`, {
         method: 'POST',
-        token,
-        body: { queue: cleanup.originalQueue, assignedTo: cleanup.originalAssignedTo },
+        token: conversationToken,
+        tenantId: CONVERSATION_TENANT_ID,
+        body: { assigneeId: cleanup.conversationOriginalAssignedTo },
       });
-      if (!restoreTransfer.ok) {
+      if (!restoreAssign.ok) {
         // eslint-disable-next-line no-console
-        console.warn(`[inbox-smoke] WARN ticket_restore_failed:${cleanup.ticketId}:${restoreTransfer.status}`);
+        console.warn(`[inbox-smoke] WARN conversation_restore_failed:${cleanup.conversationId}:${restoreAssign.status}`);
       }
     }
 

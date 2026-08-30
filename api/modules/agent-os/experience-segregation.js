@@ -26,8 +26,17 @@ const logger = require('../../utils/logger');
 
 /**
  * Classificações de experiência e hierarquia (fonte única da política).
- * Mesma regra do Cognitive Core (api/modules/cognitive/routes.js):
- * super_admin → DEVELOPMENT; auditor → SUPPORT; demais papéis → PRODUCTION.
+ *
+ * Política (2026-08-27): tenantRole e platformClassification são eixos
+ * INDEPENDENTES. O role de negócio do tenant (owner/admin/operator/auditor/...)
+ * NÃO concede acesso a plataforma — um auditor de tenant é PRODUCTION.
+ * Classificação de plataforma só vem de fonte server-side:
+ *   1. `agent.platformClassification` explícito (setado server-side);
+ *   2. `agent.platformRole` (coluna users.platform_role), mapeado via
+ *      PLATFORM_ROLE_CLASSIFICATION;
+ *   3. fallback legado reduzido: role `super_admin` → DEVELOPMENT
+ *      (flag de plataforma, mantida);
+ *   4. caso contrário → PRODUCTION.
  */
 const CLASSIFICATIONS = Object.freeze({
   PRODUCTION: 'PRODUCTION',
@@ -41,10 +50,39 @@ const CLASSIFICATION_RANK = Object.freeze({
   DEVELOPMENT: 3,
 });
 
+/**
+ * Mapeamento platformRole (lowercase) → classificação de plataforma.
+ * Platform roles são concedidos server-side (coluna users.platform_role);
+ * usuários de tenant têm platform_role NULL e caem no fallback.
+ */
+const PLATFORM_ROLE_CLASSIFICATION = Object.freeze({
+  support_n1: CLASSIFICATIONS.SUPPORT,
+  support_n2: CLASSIFICATIONS.SUPPORT,
+  support_n3: CLASSIFICATIONS.SUPPORT,
+  customer_success: CLASSIFICATIONS.SUPPORT,
+  platform_support: CLASSIFICATIONS.SUPPORT,
+  engineer: CLASSIFICATIONS.DEVELOPMENT,
+  qa_engineer: CLASSIFICATIONS.DEVELOPMENT,
+  devops: CLASSIFICATIONS.DEVELOPMENT,
+  platform_engineer: CLASSIFICATIONS.DEVELOPMENT,
+  developer: CLASSIFICATIONS.DEVELOPMENT,
+});
+
 function getClassificationForAgent(agent) {
+  // 1. Classificação explícita, setada server-side.
+  const explicit = String(agent?.platformClassification || '').trim().toUpperCase();
+  if (Object.prototype.hasOwnProperty.call(CLASSIFICATIONS, explicit)) {
+    return CLASSIFICATIONS[explicit];
+  }
+  // 2. Platform role concedido server-side.
+  const platformRole = String(agent?.platformRole || '').trim().toLowerCase();
+  if (platformRole && PLATFORM_ROLE_CLASSIFICATION[platformRole]) {
+    return PLATFORM_ROLE_CLASSIFICATION[platformRole];
+  }
+  // 3. Fallback legado reduzido: super_admin é flag de plataforma.
   const role = String(agent?.role || '').trim().toLowerCase();
   if (role === 'super_admin') return CLASSIFICATIONS.DEVELOPMENT;
-  if (role === 'auditor') return CLASSIFICATIONS.SUPPORT;
+  // 4. Demais roles de tenant (inclui auditor) → PRODUCTION.
   return CLASSIFICATIONS.PRODUCTION;
 }
 
@@ -172,6 +210,7 @@ module.exports = {
   classificationMeets,
   CLASSIFICATIONS,
   CLASSIFICATION_RANK,
+  PLATFORM_ROLE_CLASSIFICATION,
   PRODUCTION_VISIBLE_ROUTES,
   PRODUCTION_HIDDEN_ROUTES,
   SUPPORT_VISIBLE_ROUTES,

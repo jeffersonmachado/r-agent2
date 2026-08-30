@@ -24,8 +24,9 @@ const { resolveActorToolPermissions } = require('../../utils/actorToolPermission
 
 /**
  * Classificação de experiência do ator — delega à fonte única da política
- * (api/modules/agent-os/experience-segregation.js):
- * super_admin → DEVELOPMENT; auditor → SUPPORT; demais papéis → PRODUCTION.
+ * (api/modules/agent-os/experience-segregation.js): platformClassification/
+ * platformRole server-side primeiro; super_admin → DEVELOPMENT; demais
+ * (inclui auditor de tenant) → PRODUCTION.
  */
 function resolveActorClassification(agent) {
   return getClassificationForAgent(agent);

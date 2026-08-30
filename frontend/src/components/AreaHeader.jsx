@@ -8,8 +8,9 @@ export function AreaHeader({
   currentPath,
   actionsSlot = null,
   rightSlot = null,
+  capabilities,
 }) {
-  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
+  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu, capabilities), [agent, capabilities]);
   const trail = useMemo(() => findNavigationTrail(filteredMenu, currentPath), [filteredMenu, currentPath]);
 
   const pageTitle = trail[trail.length - 1]?.label || 'Espaço de Trabalho';

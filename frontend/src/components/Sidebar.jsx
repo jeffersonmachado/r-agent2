@@ -102,8 +102,8 @@ function SidebarSection({ node, currentPath, openMap, onToggle, isCurrentSection
   );
 }
 
-export function LegacySidebar({ agent, currentPath, resolvedVerticalKeys = [] }) {
-  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
+export function LegacySidebar({ agent, currentPath, resolvedVerticalKeys = [], capabilities }) {
+  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu, capabilities), [agent, capabilities]);
   const [openMap, setOpenMap] = useState(() => getInitialOpenMap(filteredMenu, currentPath));
   const activeTopLevel = useMemo(() => getTopLevelNode(filteredMenu, currentPath), [filteredMenu, currentPath]);
   const resolvedVerticals = useMemo(

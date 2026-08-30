@@ -44,6 +44,8 @@ describe('route registry', () => {
       domainOperationsRouter: 'domain-operations',
       domainBusinessRouter: 'domain-business',
       crmRouter: 'crm',
+      tenantCapabilitiesRouter: 'tenant-capabilities',
+      casesRouter: 'cases',
       frontendFallbackRouter: 'frontend-fallback',
     });
 
@@ -52,8 +54,12 @@ describe('route registry', () => {
     // Orders: módulo api/modules/order montado (pedidos das verticais food/market);
     // sem a montagem as páginas /orders, /kitchen e /dispatch recebiam 404.
     expect(registry.find((entry) => entry.router === 'order')).toEqual({ router: 'order' });
-    expect(registry[registry.length - 3]).toEqual({ router: 'domain-business' });
-    expect(registry[registry.length - 2]).toEqual({ router: 'crm' });
+    expect(registry.find((entry) => entry.router === 'domain-business')).toEqual({ router: 'domain-business' });
+    expect(registry.find((entry) => entry.router === 'crm')).toEqual({ router: 'crm' });
+    // Tenant capabilities (/api/tenant/capabilities) e Cases (/cases) montados
+    // antes do fallback terminal.
+    expect(registry.find((entry) => entry.router === 'tenant-capabilities')).toEqual({ router: 'tenant-capabilities' });
+    expect(registry.find((entry) => entry.router === 'cases')).toEqual({ router: 'cases' });
     expect(registry[registry.length - 1]).toEqual({ router: 'frontend-fallback' });
   });
 });

@@ -13,8 +13,11 @@ import { redirectToLogin } from '../utils/index';
 import { getBasePath } from '../utils/index';
 
 // Timeout aumentado para requisições longas (QA Waves pode demorar ao buscar muitos dados)
-// Em desenvolvimento com proxy do Vite, o timeout pode ser maior
-const DEFAULT_TIMEOUT_MS = process.env.NODE_ENV === 'development' ? 30000 : 15000;
+// Em desenvolvimento com proxy do Vite, o timeout pode ser maior: o dev server
+// divide a mesma máquina com API + DB + browser (QA/RPA), e endpoints de
+// análise (qa-waves/intelligence/*) legitimamente excedem 30s sob contenção.
+// Produção permanece 15s (API dedicada).
+const DEFAULT_TIMEOUT_MS = process.env.NODE_ENV === 'development' ? 90000 : 15000;
 
 /**
  * Constrói a URL a partir da base e do path relativo.
@@ -397,6 +400,15 @@ export async function fetchJson(path, init) {
         (path.includes('/system/websocket/connections') || 
          path.includes('/analytics/metrics'));
 
+	      // Leitura opcional de capabilities do tenant: o authContext chama
+	      // `GET /api/tenant/capabilities` logo após o login e já possui default
+	      // seguro no chamador (DEFAULT_TENANT_CAPABILITIES). Um 401/403 aqui NÃO
+	      // pode derrubar a sessão (sem removeToken/redirect): basta propagar o
+	      // erro para o catch do chamador, que aplica o fallback.
+	      const isOptionalTenantCapabilitiesRead =
+	        (init?.method || 'GET').toUpperCase() === 'GET' &&
+	        path.includes('/api/tenant/capabilities');
+
 	      // Não há polling de pipeline (progresso via WebSocket).
 	      const isPipelineStatusNotFoundForLogs = false;
 	
@@ -473,7 +485,7 @@ export async function fetchJson(path, init) {
         // 401 é condição esperada de sessão inválida/expirada: log como warning.
         logger.warn('Erro 401 (Unauthorized) detectado', logData);
         
-        if (!isAuthRoute && typeof window !== 'undefined' && !isOnLoginPage) {
+        if (!isAuthRoute && typeof window !== 'undefined' && !isOnLoginPage && !isOptionalTenantCapabilitiesRead) {
           // Remove o token inválido
           logger.debug('[HTTP Client] Removendo token inválido...');
           removeToken();

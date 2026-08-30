@@ -16,7 +16,7 @@ const productItems = [
   },
   {
     title: 'Operação e Qualidade',
-    desc: 'Métricas em tempo real, monitoramento de SLA e replay de atendimentos.',
+    desc: 'Métricas em tempo real, monitoramento de SLA e revisão de atendimentos.',
   },
 ];
 

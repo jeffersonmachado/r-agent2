@@ -20,6 +20,7 @@ const { cacheTenantContext, invalidateTenantCache } = require('./tenantService')
 const { getSequelize } = require('../db/sequelize');
 const { User, Session, Tenant, TenantContext } = require('../db/models');
 const { checkLimit } = require('./planLimitsService');
+const { getClassificationForAgent } = require('../modules/agent-os/experience-segregation');
 
 // ---------------------------------------------------------------------------
 // Configurações
@@ -183,13 +184,15 @@ function buildAgentFromUserRow(userRow) {
     const role = isSuper ? 'super_admin' : normalizeRole(safeGet(userRow, 'role'));
     const email = safeGet(userRow, 'email', '');
     const username = safeGet(userRow, 'username') || (email ? email.split('@')[0] : null);
+    const platformRole = safeGet(userRow, 'platform_role', null) || null;
 
-    return {
+    const agent = {
     id: safeGet(userRow, 'id'),
     tenantId: safeGet(userRow, 'tenant_key', null),
     username,
     email,
     role,
+    platformRole,
     name: safeGet(userRow, 'name'),
     active: safeGet(userRow, 'is_active', true) !== false,
     status: safeGet(userRow, 'status', 'active'),
@@ -198,6 +201,10 @@ function buildAgentFromUserRow(userRow) {
     updatedAt: safeGet(userRow, 'updated_at') ? new Date(safeGet(userRow, 'updated_at')).toISOString() : (safeGet(userRow, 'updatedAt')?.toISOString?.() || null),
     lastLoginAt: safeGet(userRow, 'last_login_at') ? new Date(safeGet(userRow, 'last_login_at')).toISOString() : (safeGet(userRow, 'lastLoginAt')?.toISOString?.() || null),
     };
+    // Classificação de plataforma derivada de fonte server-side (platformRole),
+    // nunca do tenant role. Entra no agent_snapshot da sessão.
+    agent.platformClassification = getClassificationForAgent(agent);
+    return agent;
   } catch (_) { return null; }
 }
 

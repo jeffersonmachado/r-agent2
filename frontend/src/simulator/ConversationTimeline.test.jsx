@@ -18,7 +18,7 @@ describe('simulator/ConversationTimeline', () => {
   });
 
   it('mostra mensagem vazia quando não há replay', () => {
-    const { container } = renderWithTheme(<ConversationTimeline replay={null} onSeekNode={vi.fn()} />);
+    const { container } = renderWithTheme(<ConversationTimeline conversation={null} onSeekNode={vi.fn()} />);
 
     // Procura pelo texto ou pela estrutura do componente
     const message = screen.queryByText(/Nenhuma mensagem para exibir/i) ||
@@ -46,7 +46,7 @@ describe('simulator/ConversationTimeline', () => {
       ],
     };
 
-    const { container } = renderWithTheme(<ConversationTimeline replay={replay} onSeekNode={onSeekNode} />);
+    const { container } = renderWithTheme(<ConversationTimeline conversation={replay} onSeekNode={onSeekNode} />);
 
     // Verifica que o componente renderizou
     expect(container.querySelector('.conversation-timeline')).toBeTruthy();
@@ -97,7 +97,7 @@ describe('simulator/ConversationTimeline', () => {
       ],
     };
 
-    const { container } = renderWithTheme(<ConversationTimeline replay={replay} onSeekNode={vi.fn()} />);
+    const { container } = renderWithTheme(<ConversationTimeline conversation={replay} onSeekNode={vi.fn()} />);
 
     // Verifica que o componente renderizou
     expect(container.querySelector('.conversation-timeline')).toBeTruthy();
@@ -144,7 +144,7 @@ describe('simulator/ConversationTimeline', () => {
       ],
     };
 
-    const { container } = renderWithTheme(<ConversationTimeline replay={replay} />);
+    const { container } = renderWithTheme(<ConversationTimeline conversation={replay} />);
 
     // Verifica que o componente renderizou
     expect(container.querySelector('.conversation-timeline')).toBeTruthy();
@@ -178,7 +178,7 @@ describe('simulator/ConversationTimeline', () => {
       messages: [],
     };
 
-    const { container } = renderWithTheme(<ConversationTimeline replay={replay} onSeekNode={vi.fn()} />);
+    const { container } = renderWithTheme(<ConversationTimeline conversation={replay} onSeekNode={vi.fn()} />);
 
     // Verifica que o componente renderizou
     expect(container.querySelector('.conversation-timeline')).toBeTruthy();
@@ -216,7 +216,7 @@ describe('simulator/ConversationTimeline', () => {
       ],
     };
 
-    const { container } = renderWithTheme(<ConversationTimeline replay={replay} onSeekNode={onSeekNode} />);
+    const { container } = renderWithTheme(<ConversationTimeline conversation={replay} onSeekNode={onSeekNode} />);
 
     // Verifica que o componente renderizou
     expect(container.querySelector('.conversation-timeline')).toBeTruthy();

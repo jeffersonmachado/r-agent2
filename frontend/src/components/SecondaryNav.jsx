@@ -75,14 +75,14 @@ function buildSections(activeArea) {
     .filter((section) => section.items.length > 0);
 }
 
-export function SecondaryNav({ agent, currentPath, onCollapsedChange }) {
+export function SecondaryNav({ agent, currentPath, onCollapsedChange, capabilities }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [collapsedSections, setCollapsedSections] = useState({});
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
   const prevPathRef = useRef(currentPath);
 
-  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu), [agent]);
+  const filteredMenu = useMemo(() => filterNavigationTree(agent, navigationMenu, capabilities), [agent, capabilities]);
   const { activeArea } = useMemo(
     () => buildWorkspaceAreas(filteredMenu, currentPath),
     [filteredMenu, currentPath],

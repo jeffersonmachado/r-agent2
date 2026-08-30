@@ -4,8 +4,9 @@
  * Regressão: as rotas do execution-ledger (diagnóstico, classificação
  * SUPPORT) respondiam 200 para papel operacional (admin → PRODUCTION) —
  * achado da API Surface Wave (2026-07-28). Agora exigem
- * checkClassification('SUPPORT') após o requireAuth: admin recebe 403
- * classification_required; auditor (SUPPORT) e super_admin (DEVELOPMENT)
+ * checkClassification('SUPPORT') após o requireAuth: admin e auditor de
+ * tenant puro (ambos PRODUCTION) recebem 403 classification_required;
+ * platform role de suporte (SUPPORT) e super_admin (DEVELOPMENT)
  * passam pela hierarquia DEVELOPMENT > SUPPORT > PRODUCTION.
  */
 
@@ -70,8 +71,21 @@ describe('execution-ledger — classificação SUPPORT obrigatória', () => {
     }
   });
 
-  test('auditor (SUPPORT) atravessa a classificação', async () => {
+  test('auditor de tenant puro (PRODUCTION) recebe 403 classification_required', async () => {
     const { server, port } = await startServer({ id: 'a2', role: 'auditor', tenantId: 't1' });
+    try {
+      const res = await get(port, '/api/executions');
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe('classification_required');
+      expect(res.body.required).toBe('SUPPORT');
+    } finally {
+      server.closeAllConnections();
+      await new Promise((r) => server.close(r));
+    }
+  });
+
+  test('platform role de suporte (SUPPORT) atravessa a classificação', async () => {
+    const { server, port } = await startServer({ id: 'a2', role: 'auditor', platformRole: 'support_n2', tenantId: 't1' });
     try {
       const res = await get(port, '/api/executions');
       // 503 (serviço indisponível no teste) prova que passou por auth + classificação

@@ -1,4 +1,5 @@
 import React from 'react';
+import { getOperationalLabels, sanitizeOperationalEvent } from './workspaceDevSurface';
 
 const icons = {
   message: '💬',
@@ -35,14 +36,15 @@ function formatDate(value) {
   }
 }
 
-export function WorkspaceTimeline({ timeline, loading, onLoadMore }) {
-  const items = timeline?.items || [];
+export function WorkspaceTimeline({ timeline, loading, classification = 'PRODUCTION', onLoadMore }) {
+  const labels = getOperationalLabels(classification);
+  const items = (timeline?.items || []).map((event) => sanitizeOperationalEvent(event, classification));
   return (
     <section className="workspace-card workspace-scroll">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-xl font-semibold">Timeline operacional</h2>
-          <p className="workspace-muted text-sm">Mensagens, tickets, tarefas, agenda, projetos, documentos, pagamentos e evidências QA/RPA.</p>
+          <p className="workspace-muted text-sm">{labels.timelineDescription}</p>
         </div>
         {timeline?.total ? <span className="workspace-pill">{timeline.total} eventos</span> : null}
       </div>
@@ -51,11 +53,11 @@ export function WorkspaceTimeline({ timeline, loading, onLoadMore }) {
       {!loading && items.length === 0 ? <div className="workspace-empty-state"><strong>Nenhum evento relacionado.</strong><p className="workspace-muted text-sm mt-2">Quando a entidade tiver histórico operacional, a timeline será exibida aqui.</p></div> : null}
 
       {items.map((event) => (
-        <article key={`${event.type}-${event.refId}-${event.createdAt}`} className={`workspace-timeline-item ${tones[event.type] || 'default'}`}>
+        <article key={`${event.type}-${event.refId || event.id || event.createdAt}-${event.createdAt}`} className={`workspace-timeline-item ${tones[event.type] || 'default'}`}>
           <div className={`workspace-timeline-dot ${tones[event.type] || 'default'}`}>{icons[event.type] || '•'}</div>
           <div>
             <div className="flex flex-wrap items-center gap-2 workspace-timeline-topline">
-              <span className="workspace-pill subtle">{event.type}</span>
+              <span className="workspace-pill subtle">{event.displayType || event.type}</span>
               <span className="workspace-muted text-xs">Origem {event.source}</span>
               <span className="workspace-muted text-xs">{formatDate(event.createdAt)}</span>
               {typeof event.confidence === 'number' ? <span className="workspace-pill subtle">Confiança {Math.round(event.confidence * 100)}%</span> : null}

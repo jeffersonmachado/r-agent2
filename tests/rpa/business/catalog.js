@@ -1535,6 +1535,23 @@ const FLOW_SCENARIOS = [
     validations: { requireBackendValidation: true },
   },
   {
+    code: 'CORE-BIZ-CASES',
+    journey: 'cases',
+    name: 'Core cases: chamado criado a partir da inbox consolidando múltiplas conversas',
+    vertical: 'core',
+    type: 'flow',
+    criticality: 'blocker',
+    preconditions: ['Tenant autenticado', 'Duas conversas elegíveis na caixa de entrada'],
+    assertions: [
+      'Chamado criado a partir da conversa da inbox',
+      'Segunda conversa vinculada ao chamado',
+      'Chamado consolida as duas conversas',
+      'Chamado presente na listagem de chamados',
+    ],
+    integrations: ['inbox-service', 'case-service', 'api'],
+    validations: { requireBackendValidation: true },
+  },
+  {
     code: 'CORE-BIZ-CAMPAIGNS',
     journey: 'campaigns',
     name: 'Core campanhas: campanha de e-mail publicada e campanha em massa criada e removida',

@@ -30,14 +30,38 @@ function createRes() {
 }
 
 describe('getClassificationForAgent', () => {
-  test('super_admin é DEVELOPMENT', () => {
+  test('platformClassification explícito (server-side) é respeitado', () => {
+    expect(getClassificationForAgent({ role: 'operator', platformClassification: 'SUPPORT' })).toBe('SUPPORT');
+    expect(getClassificationForAgent({ role: 'auditor', platformClassification: 'DEVELOPMENT' })).toBe('DEVELOPMENT');
+    expect(getClassificationForAgent({ role: 'auditor', platformClassification: 'support' })).toBe('SUPPORT');
+  });
+
+  test('platformClassification inválido é ignorado e cai no próximo eixo', () => {
+    expect(getClassificationForAgent({ role: 'auditor', platformClassification: 'GODMODE' })).toBe('PRODUCTION');
+  });
+
+  test('platformRole de suporte é SUPPORT', () => {
+    for (const platformRole of ['support_n1', 'support_n2', 'support_n3', 'customer_success', 'platform_support']) {
+      expect(getClassificationForAgent({ role: 'operator', platformRole })).toBe('SUPPORT');
+      expect(getClassificationForAgent({ role: 'auditor', platformRole })).toBe('SUPPORT');
+    }
+  });
+
+  test('platformRole de engenharia é DEVELOPMENT', () => {
+    for (const platformRole of ['engineer', 'qa_engineer', 'devops', 'platform_engineer', 'developer']) {
+      expect(getClassificationForAgent({ role: 'operator', platformRole })).toBe('DEVELOPMENT');
+    }
+    expect(getClassificationForAgent({ role: 'auditor', platformRole: 'Engineer' })).toBe('DEVELOPMENT');
+  });
+
+  test('super_admin é DEVELOPMENT (fallback legado, flag de plataforma)', () => {
     expect(getClassificationForAgent({ role: 'super_admin' })).toBe('DEVELOPMENT');
     expect(getClassificationForAgent({ role: 'SUPER_ADMIN' })).toBe('DEVELOPMENT');
   });
 
-  test('auditor é SUPPORT', () => {
-    expect(getClassificationForAgent({ role: 'auditor' })).toBe('SUPPORT');
-    expect(getClassificationForAgent({ role: 'Auditor' })).toBe('SUPPORT');
+  test('auditor de tenant SEM platformRole é PRODUCTION', () => {
+    expect(getClassificationForAgent({ role: 'auditor' })).toBe('PRODUCTION');
+    expect(getClassificationForAgent({ role: 'Auditor' })).toBe('PRODUCTION');
   });
 
   test('demais papéis operacionais são PRODUCTION', () => {
@@ -66,7 +90,7 @@ describe('requireClassification', () => {
     middleware(reqDev, createRes(), nextDev);
     expect(nextDev).toHaveBeenCalledTimes(1);
 
-    const reqSupport = { agent: { role: 'auditor' }, method: 'GET', url: '/x' };
+    const reqSupport = { agent: { role: 'auditor', platformRole: 'support_n2' }, method: 'GET', url: '/x' };
     const nextSupport = jest.fn();
     middleware(reqSupport, createRes(), nextSupport);
     expect(nextSupport).toHaveBeenCalledTimes(1);
@@ -79,20 +103,57 @@ describe('requireClassification', () => {
     expect(resProd.statusCode).toBe(403);
   });
 
-  test('DEVELOPMENT exige super_admin (auditor é negado)', () => {
-    const middleware = requireClassification('DEVELOPMENT');
-    const res = createRes();
-    const next = jest.fn();
+  test('auditor de tenant puro é PRODUCTION: negado em SUPPORT e DEVELOPMENT', () => {
+    const resSupport = createRes();
+    const nextSupport = jest.fn();
+    requireClassification('SUPPORT')({ agent: { role: 'auditor' }, method: 'GET', url: '/rpa-replays' }, resSupport, nextSupport);
+    expect(nextSupport).not.toHaveBeenCalled();
+    expect(resSupport.statusCode).toBe(403);
+    expect(resSupport.body).toEqual({
+      error: 'classification_required',
+      required: 'SUPPORT',
+      classification: 'PRODUCTION',
+    });
 
-    middleware({ agent: { role: 'auditor' }, method: 'GET', url: '/api/qa-waves/waves' }, res, next);
+    const resDev = createRes();
+    const nextDev = jest.fn();
+    requireClassification('DEVELOPMENT')({ agent: { role: 'auditor' }, method: 'GET', url: '/api/qa-waves/waves' }, resDev, nextDev);
+    expect(nextDev).not.toHaveBeenCalled();
+    expect(resDev.statusCode).toBe(403);
+    expect(resDev.body).toEqual({
+      error: 'classification_required',
+      required: 'DEVELOPMENT',
+      classification: 'PRODUCTION',
+    });
+  });
 
-    expect(next).not.toHaveBeenCalled();
-    expect(res.statusCode).toBe(403);
-    expect(res.body).toEqual({
+  test('auditor com platformRole support_n2 passa em SUPPORT mas não em DEVELOPMENT', () => {
+    const agent = { role: 'auditor', platformRole: 'support_n2' };
+
+    const nextSupport = jest.fn();
+    requireClassification('SUPPORT')({ agent, method: 'GET', url: '/rpa-replays' }, createRes(), nextSupport);
+    expect(nextSupport).toHaveBeenCalledTimes(1);
+
+    const resDev = createRes();
+    const nextDev = jest.fn();
+    requireClassification('DEVELOPMENT')({ agent, method: 'GET', url: '/api/qa-waves/waves' }, resDev, nextDev);
+    expect(nextDev).not.toHaveBeenCalled();
+    expect(resDev.statusCode).toBe(403);
+    expect(resDev.body).toEqual({
       error: 'classification_required',
       required: 'DEVELOPMENT',
       classification: 'SUPPORT',
     });
+  });
+
+  test('platformRole engineer passa em DEVELOPMENT', () => {
+    const next = jest.fn();
+    requireClassification('DEVELOPMENT')(
+      { agent: { role: 'operator', platformRole: 'engineer' }, method: 'GET', url: '/api/qa-waves/waves' },
+      createRes(),
+      next,
+    );
+    expect(next).toHaveBeenCalledTimes(1);
   });
 
   test('operator recebe 403 com payload padronizado em rota DEVELOPMENT', () => {
@@ -168,8 +229,10 @@ describe('checkClassification (helper para rotas com deps.sendJson)', () => {
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
-  test('auditor passa em rota SUPPORT mas não em DEVELOPMENT', () => {
-    expect(checkClassification({ agent: { role: 'auditor' } }, 'SUPPORT').allowed).toBe(true);
-    expect(checkClassification({ agent: { role: 'auditor' } }, 'DEVELOPMENT').allowed).toBe(false);
+  test('auditor puro é negado em SUPPORT; auditor com platformRole support passa em SUPPORT mas não em DEVELOPMENT', () => {
+    expect(checkClassification({ agent: { role: 'auditor' } }, 'SUPPORT').allowed).toBe(false);
+    const platformAuditor = { role: 'auditor', platformRole: 'support_n2' };
+    expect(checkClassification({ agent: platformAuditor }, 'SUPPORT').allowed).toBe(true);
+    expect(checkClassification({ agent: platformAuditor }, 'DEVELOPMENT').allowed).toBe(false);
   });
 });

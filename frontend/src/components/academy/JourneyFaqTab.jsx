@@ -3,7 +3,7 @@
  *
  * As perguntas são geradas deterministicamente a partir das fontes governadas
  * da jornada (contratos, pré-condições, criticidade, skill graph e cenários
- * aprovados de QA Waves) — nunca de inferência livre. O admin do tenant
+ * aprovados de qualidade) — nunca de inferência livre. O admin do tenant
  * inclui/exclui cada pergunta; usuários comuns veem apenas as incluídas.
  * O FAQ incluído é consumido pelo Tutor como fonte `curated_faq`.
  */
@@ -12,19 +12,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as academyApi from '../../api/academy';
 import { useAuth } from '../../context/authContext';
 import { Button } from '../../styles/Button';
+import { getAgentClassification, isPlatformInternal } from '../../utils/classification';
 import logger from '../../utils/logger';
 
 /**
- * Classificação de experiência do agente — mesma regra do backend
- * (api/modules/agent-os/experience-segregation.js):
- * super_admin → DEVELOPMENT; auditor → SUPPORT; demais papéis → PRODUCTION.
- * Derivada SEMPRE do principal autenticado (auth context), nunca de payload.
+ * Classificação de experiência do agente — delega ao util canônico
+ * (frontend/src/utils/classification.js), espelho da política do backend
+ * (api/modules/agent-os/experience-segregation.js): tenant role NÃO concede
+ * acesso a plataforma (auditor de tenant é PRODUCTION). Derivada SEMPRE do
+ * principal autenticado (auth context), nunca de payload.
+ * Reexportado para não quebrar imports existentes.
  */
 export function resolveAgentClassification(agent) {
-  const role = String((agent && agent.role) || '').trim().toLowerCase();
-  if (role === 'super_admin') return 'DEVELOPMENT';
-  if (role === 'auditor') return 'SUPPORT';
-  return 'PRODUCTION';
+  return getAgentClassification(agent);
 }
 
 /**
@@ -33,7 +33,7 @@ export function resolveAgentClassification(agent) {
  * O dado continua persistido no backend — só a apresentação é segregada.
  */
 export function canViewInternalSources(agent) {
-  return resolveAgentClassification(agent) !== 'PRODUCTION';
+  return isPlatformInternal(agent);
 }
 
 const CATEGORY_LABELS = {

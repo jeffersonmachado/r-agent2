@@ -62,7 +62,14 @@ export const navigationMenu = [
             id: 'inbox',
             label: 'Caixa de Entrada',
             path: '/inbox',
+            permission: { resource: 'inbox', action: 'read' },
+          },
+          {
+            id: 'cases',
+            label: 'Chamados',
+            path: '/cases',
             permission: { resource: 'tickets', action: 'read' },
+            capability: 'caseManagement',
           },
           {
             id: 'maintenance',
@@ -336,6 +343,14 @@ export const navigationMenu = [
         ],
       },
       {
+        id: 'suporte-plataforma',
+        label: 'Suporte da Plataforma',
+        classifications: ['SUPPORT', 'DEVELOPMENT'],
+        children: [
+          { id: 'platform-support', label: 'Platform Support', path: '/platform-support', classifications: ['SUPPORT', 'DEVELOPMENT'] },
+        ],
+      },
+      {
         id: 'qualidade',
         label: 'Qualidade',
         roles: ['super_admin'],
@@ -366,7 +381,7 @@ export const navigationMenu = [
               { id: 'dev-qa-waves-enterprise-governance', label: 'QA Waves Enterprise', path: '/dev/qa-waves/enterprise-governance', permission: { resource: 'reports', action: 'read' }, roles: ['super_admin'] },
               { id: 'dev-qa-gaps', label: 'QA Gaps', path: '/dev/qa-gaps', permission: { resource: 'reports', action: 'read' }, roles: ['super_admin'] },
               { id: 'rpa-test', label: 'Teste RPA', path: '/dev/rpa-test', permission: { resource: 'flows', action: 'read' }, roles: ['super_admin'] },
-              { id: 'rpa-replays', label: 'Replays RPA', path: '/rpa-replays', permission: { resource: 'reports', action: 'read' }, roles: ['super_admin', 'auditor'] },
+              { id: 'rpa-replays', label: 'Replays RPA', path: '/rpa-replays', permission: { resource: 'reports', action: 'read' }, classifications: ['SUPPORT', 'DEVELOPMENT'] },
               { id: 'rpa-seeds', label: 'Seeds RPA', path: '/dev/rpa-seeds', permission: { resource: 'flows', action: 'read' }, roles: ['super_admin'] },
             ],
           },

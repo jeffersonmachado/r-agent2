@@ -66,14 +66,39 @@ function isIgnorableAuthProbeNoise(entry) {
 }
 
 /**
+ * Abort iniciado pela própria página: net::ERR_ABORTED é emitido pelo browser
+ * quando a PÁGINA cancela a requisição — navegação SPA para outra rota,
+ * AbortController de unmount ou timeout de cliente que o app retenta. Nunca
+ * indica falha do servidor/plataforma (essas chegam como ERR_CONNECTION_*,
+ * ERR_TIMED_OUT, 5xx etc.).
+ *
+ * Falha observada (QA Mesh 2026-08-28, execuções mesh-2026-08-28T18-01-39,
+ * mesh-2026-08-28T19-28-53 e mesh-2026-08-28T20-39-26): os cenários de
+ * browser fitness-matricula-cancelamento/checkout falharam/flapperam com
+ * request_failed net::ERR_ABORTED em /api/qa-waves/intelligence/* e
+ * /api/qa-waves/step-status — requests em voo abortados no instante em que a
+ * gravação navega de /dev/qa-waves para /support. Todos os passos funcionais
+ * passaram. Um abort não recuperado por retry é consequência da navegação
+ * gravada, não defeito: se a página de destino quebrar, os passos funcionais
+ * reprovam a execução.
+ */
+function isNavigationAbortNoise(entry) {
+  if (!entry || typeof entry !== 'object') return false;
+  const type = asText(entry.type || '').trim().toLowerCase();
+  if (type !== 'request_failed') return false;
+  return asText(entry.failure).trim() === 'net::ERR_ABORTED';
+}
+
+/**
  * Filtro combinado usado pela validação de página do RPA.
  */
 function isIgnorablePageNoise(entry) {
-  return isIgnorableOnboardingNoise(entry) || isIgnorableAuthProbeNoise(entry);
+  return isIgnorableOnboardingNoise(entry) || isIgnorableAuthProbeNoise(entry) || isNavigationAbortNoise(entry);
 }
 
 module.exports = {
   isIgnorableOnboardingNoise,
   isIgnorableAuthProbeNoise,
+  isNavigationAbortNoise,
   isIgnorablePageNoise,
 };

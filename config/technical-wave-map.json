@@ -35,6 +35,16 @@
         "suítes de tenant isolation e migrations (npm run wave:db-integrity)",
         "API Surface Wave — reports/api-surface-report.json (probe anônimo seguro: POST /server/restart retorna 401 sem derrubar o servidor)"
       ]
+    },
+    "customer-service": {
+      "modules": ["cases"],
+      "rationale": "Case Management (/cases, página /cases) é capacidade operacional opcional do tenant (capability case.manage, PRODUCTION), transversal às verticais — não é jornada de negócio de uma vertical específica nem suporte interno da plataforma.",
+      "backing": [
+        "API Surface Wave — reports/api-surface-report.json (probe real de existência/auth das rotas /cases*)",
+        "Page Surface Wave — reports/page-surface-report.json (navegação real da página /cases)",
+        "suítes Jest de Case Management e capability gating (tests/unit/cases*, tests/unit/tenantCapabilities*, tests/unit/inbox*)",
+        "smoke de inbox omnichannel (scripts/test-inbox-runtime-smoke.js)"
+      ]
     }
   }
 }

@@ -284,7 +284,9 @@ function resolveRetrievalScope({ actor = null, requestedDomain = null } = {}) {
     };
   }
 
-  // Adapter: role → classification (legado)
+  // Adapter: classificação explícita ou derivada de fonte server-side
+  // (platformRole/platformClassification via getClassificationForAgent);
+  // tenant role (ex.: auditor) NÃO concede classificação de plataforma.
   const classification = actor.classification
     || getClassificationForAgent(actor)
     || 'PRODUCTION';

@@ -91,11 +91,12 @@ async function handleFlowGenerationRoutes(ctx) {
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON invalido no corpo da requisicao');
-      } else if (err && (err.code === 'BAD_REQUEST' || err.code === 'VALIDATION_ERROR' || err.code === 'AI_PROVIDER_NOT_CONFIGURED' || (typeof err.code === 'string' && err.code.startsWith('FLOW_')))) {
+      } else if (err && (err.code === 'BAD_REQUEST' || err.code === 'VALIDATION_ERROR' || err.code === 'AI_PROVIDER_NOT_CONFIGURED' || err.code === 'AI_GENERATION_FAILED' || (typeof err.code === 'string' && err.code.startsWith('FLOW_')))) {
         // FLOW_* vem do flowPreValidator (ex.: FLOW_DISCONNECTED — nós não
         // alcançáveis a partir do start): erro do fluxo gerado, não falha
         // interna. AI_PROVIDER_NOT_CONFIGURED: tenant sem credencial de IA —
-        // erro de configuração do cliente. 400 estruturado, nunca 500.
+        // erro de configuração do cliente. AI_GENERATION_FAILED: provider de IA
+        // indisponível ou resposta inválida (falha agregada). 400 estruturado, nunca 500.
         sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });
       } else if (err && err.code === 'NOT_FOUND') {
         sendJson(res, 404, { error: 'not_found', message: err.message });
@@ -152,7 +153,7 @@ async function handleFlowGenerationRoutes(ctx) {
     } catch (err) {
       if (err instanceof SyntaxError) {
         badRequest(res, 'JSON invalido no corpo da requisicao');
-      } else if (err && (err.code === 'BAD_REQUEST' || err.code === 'VALIDATION_ERROR' || err.code === 'AI_PROVIDER_NOT_CONFIGURED' || (typeof err.code === 'string' && err.code.startsWith('FLOW_')))) {
+      } else if (err && (err.code === 'BAD_REQUEST' || err.code === 'VALIDATION_ERROR' || err.code === 'AI_PROVIDER_NOT_CONFIGURED' || err.code === 'AI_GENERATION_FAILED' || (typeof err.code === 'string' && err.code.startsWith('FLOW_')))) {
         // Mesmo mapeamento do /flows/generate: FLOW_* é erro do fluxo gerado,
         // AI_PROVIDER_NOT_CONFIGURED é configuração ausente do tenant.
         sendJson(res, 400, { error: 'bad_request', message: err.message, details: err.details });

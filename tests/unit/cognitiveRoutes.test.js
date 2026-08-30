@@ -117,7 +117,7 @@ describe('Cognitive Core — rotas /api/cognitive', () => {
     expect(deps.cognitiveOrchestrator.toolRegistry.list).not.toHaveBeenCalled();
   });
 
-  test('GET /tools nega Tool Registry técnico a SUPPORT (auditor → 403)', async () => {
+  test('GET /tools nega Tool Registry técnico a auditor de tenant puro (PRODUCTION → 403)', async () => {
     const { deps, sent } = buildDeps();
     await handleCognitiveRoutes(buildCtx({
       method: 'GET',
@@ -127,6 +127,20 @@ describe('Cognitive Core — rotas /api/cognitive', () => {
     }));
     expect(sent[0].code).toBe(403);
     expect(sent[0].data.error).toBe('classification_required');
+    expect(deps.cognitiveOrchestrator.toolRegistry.list).not.toHaveBeenCalled();
+  });
+
+  test('GET /tools nega Tool Registry técnico a SUPPORT (platformRole support → 403)', async () => {
+    const { deps, sent } = buildDeps();
+    await handleCognitiveRoutes(buildCtx({
+      method: 'GET',
+      pathname: '/api/cognitive/tools',
+      agent: { id: 'u2', role: 'auditor', platformRole: 'support_n2', tenantId: 'tenant-a' },
+      deps,
+    }));
+    expect(sent[0].code).toBe(403);
+    expect(sent[0].data.error).toBe('classification_required');
+    expect(sent[0].data.classification).toBe('SUPPORT');
     expect(deps.cognitiveOrchestrator.toolRegistry.list).not.toHaveBeenCalled();
   });
 
@@ -195,9 +209,10 @@ describe('Cognitive Core — rotas /api/cognitive', () => {
   });
 
   describe('mapeamento de ator', () => {
-    test('classificação por papel: super_admin=DEVELOPMENT, auditor=SUPPORT, demais=PRODUCTION', () => {
+    test('classificação por papel: super_admin=DEVELOPMENT, auditor de tenant=PRODUCTION, platformRole support=SUPPORT', () => {
       expect(_internal.resolveActorClassification({ role: 'super_admin' })).toBe('DEVELOPMENT');
-      expect(_internal.resolveActorClassification({ role: 'auditor' })).toBe('SUPPORT');
+      expect(_internal.resolveActorClassification({ role: 'auditor' })).toBe('PRODUCTION');
+      expect(_internal.resolveActorClassification({ role: 'auditor', platformRole: 'support_n2' })).toBe('SUPPORT');
       expect(_internal.resolveActorClassification({ role: 'operator' })).toBe('PRODUCTION');
       expect(_internal.resolveActorClassification({ role: 'admin' })).toBe('PRODUCTION');
     });

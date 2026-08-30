@@ -11,7 +11,7 @@ function createInboxController({ service, deps }) {
   }
 
   function ensurePermission(req, res, action) {
-    const permResult = deps.requirePermission(req, 'tickets', action);
+    const permResult = deps.requirePermission(req, 'inbox', action);
     if (!permResult.allowed) {
       deps.sendJson(res, 403, { error: 'forbidden', message: permResult.error });
       return false;
@@ -27,92 +27,79 @@ function createInboxController({ service, deps }) {
     return true;
   }
 
+  async function respondServiceResult(res, out) {
+    if (!out.ok) {
+      if (out.kind === 'bad_request') {
+        deps.badRequest(res, out.message);
+        return;
+      }
+      deps.sendJson(res, out.status, out.payload);
+      return;
+    }
+    deps.sendJson(res, out.status, out.payload);
+  }
+
+  async function runWithBody(req, res, handler, logMessage) {
+    if (!ensureJson(req, res)) return;
+    try {
+      const out = await handler(await deps.parseJsonBody(req));
+      await respondServiceResult(res, out);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        deps.badRequest(res, 'JSON inválido no corpo da requisição');
+        return;
+      }
+      deps.logger.error(logMessage, err);
+      deps.sendJson(res, 500, { error: 'internal_error' });
+    }
+  }
+
   return {
     async list(req, res) {
       if (!ensureAuth(req, res) || !ensurePermission(req, res, 'read')) return;
-      const out = service.listConversations(req);
-      deps.sendJson(res, 200, out);
+      try {
+        const out = await service.listConversations(req);
+        await respondServiceResult(res, out);
+      } catch (err) {
+        deps.logger.error('Erro ao listar conversas (inbox):', err);
+        deps.sendJson(res, 500, { error: 'internal_error' });
+      }
     },
 
     async get(req, res) {
       if (!ensureAuth(req, res) || !ensurePermission(req, res, 'read')) return;
-      const out = service.getConversation(req);
-      if (!out.ok) {
-        deps.sendJson(res, out.status, out.payload);
-        return;
+      try {
+        const out = await service.getConversation(req);
+        await respondServiceResult(res, out);
+      } catch (err) {
+        deps.logger.error('Erro ao obter conversa (inbox):', err);
+        deps.sendJson(res, 500, { error: 'internal_error' });
       }
-      deps.sendJson(res, 200, out.ticket);
+    },
+
+    async reply(req, res) {
+      if (!ensureAuth(req, res) || !ensurePermission(req, res, 'reply')) return;
+      await runWithBody(req, res, (body) => service.reply(req, body), 'Erro ao responder conversa (inbox):');
     },
 
     async assign(req, res) {
       if (!ensureAuth(req, res) || !ensurePermission(req, res, 'assign')) return;
-      if (!ensureJson(req, res)) return;
-
-      try {
-        const out = await service.assignConversation(req, await deps.parseJsonBody(req));
-        if (!out.ok) {
-          deps.sendJson(res, out.status, out.payload);
-          return;
-        }
-        deps.sendJson(res, out.status, out.payload);
-      } catch (err) {
-        if (err instanceof SyntaxError) {
-          deps.badRequest(res, 'JSON inválido no corpo da requisição');
-          return;
-        }
-        deps.logger.error('Erro ao atribuir ticket (inbox):', err);
-        deps.sendJson(res, 500, { error: 'internal_error' });
-      }
+      await runWithBody(req, res, (body) => service.assignConversation(req, body), 'Erro ao atribuir conversa (inbox):');
     },
 
     async transfer(req, res) {
-      if (!ensureAuth(req, res) || !ensurePermission(req, res, 'update')) return;
-      if (!ensureJson(req, res)) return;
-
-      try {
-        const out = await service.transferConversation(req, await deps.parseJsonBody(req));
-        if (!out.ok) {
-          if (out.kind === 'bad_request') {
-            deps.badRequest(res, out.message);
-            return;
-          }
-          deps.sendJson(res, out.status, out.payload);
-          return;
-        }
-        deps.sendJson(res, out.status, out.payload);
-      } catch (err) {
-        if (err instanceof SyntaxError) {
-          deps.badRequest(res, 'JSON inválido no corpo da requisição');
-          return;
-        }
-        deps.logger.error('Erro ao transferir ticket (inbox):', err);
-        deps.sendJson(res, 500, { error: 'internal_error' });
-      }
+      if (!ensureAuth(req, res) || !ensurePermission(req, res, 'transfer')) return;
+      await runWithBody(req, res, (body) => service.transferConversation(req, body), 'Erro ao transferir conversa (inbox):');
     },
 
     async notes(req, res) {
       if (!ensureAuth(req, res) || !ensurePermission(req, res, 'update')) return;
-      if (!ensureJson(req, res)) return;
+      await runWithBody(req, res, (body) => service.addNote(req, body), 'Erro ao adicionar nota (inbox):');
+    },
 
-      try {
-        const out = await service.addNote(req, await deps.parseJsonBody(req));
-        if (!out.ok) {
-          if (out.kind === 'bad_request') {
-            deps.badRequest(res, out.message);
-            return;
-          }
-          deps.sendJson(res, out.status, out.payload);
-          return;
-        }
-        deps.sendJson(res, out.status, out.payload);
-      } catch (err) {
-        if (err instanceof SyntaxError) {
-          deps.badRequest(res, 'JSON inválido no corpo da requisição');
-          return;
-        }
-        deps.logger.error('Erro ao adicionar nota (inbox):', err);
-        deps.sendJson(res, 500, { error: 'internal_error' });
-      }
+    async createCase(req, res) {
+      if (!ensureAuth(req, res) || !ensurePermission(req, res, 'create')) return;
+      await runWithBody(req, res, (body) => service.createCase(req, body), 'Erro ao criar case a partir da conversa (inbox):');
     },
   };
 }

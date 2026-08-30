@@ -235,6 +235,7 @@ function createDomainOperationsRoutes({ buildDeps }) {
       return {
         requireAuth: ctx.requireAuth,
         requirePermission: ctx.requirePermission,
+        requireTenant: ctx.requireTenant,
         sendJson: ctx.sendJson,
         badRequest: ctx.badRequest,
         hasJsonContentType: ctx.hasJsonContentType,

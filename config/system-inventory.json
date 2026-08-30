@@ -1,20 +1,20 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-23T01:07:03.398Z",
+  "generatedAt": "2026-08-28T21:54:18.465Z",
   "counts": {
-    "total": 2918,
+    "total": 2939,
     "byKind": {
-      "api": 778,
-      "field": 1642,
-      "model": 175,
-      "page": 139,
+      "api": 787,
+      "field": 1650,
+      "model": 176,
+      "page": 141,
       "relation": 9,
-      "table": 175
+      "table": 176
     },
     "byClassification": {
-      "PRODUCTION": 2694,
-      "DEVELOPMENT": 133,
-      "SUPPORT": 91
+      "PRODUCTION": 2713,
+      "DEVELOPMENT": 134,
+      "SUPPORT": 92
     },
     "orphaned": 0
   },
@@ -369,6 +369,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "e36a2682aedd98e1b65b3c00135cebe7a438552b7fc0e70edd379a58b187c87a"
+    },
+    {
+      "id": "api:DELETE:/cases/:id/conversations/:conversationId",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/cases/:id/conversations/:conversationId",
+      "module": "cases",
+      "source": "api/modules/cases/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:update",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "customer-service",
+      "linkedJourneys": [],
+      "fingerprint": "3a8ed3f56d92c270b1f12be302071fd6f9c84cdc9a96f9c8196de55c17f9b1ce"
     },
     {
       "id": "api:DELETE:/channel-accounts/:id",
@@ -4710,6 +4730,27 @@
       "fingerprint": "2ece77b053093f3045e5e9ba2113527a19f0fdab878f7abc2f62d89da3681ded"
     },
     {
+      "id": "api:GET:/api/tenant/capabilities",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/tenant/capabilities",
+      "module": "tenant-capabilities",
+      "source": "api/modules/tenant-capabilities/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "tenant_config"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "854ca725be718d20f6c133c3dd1f41a776d71e2422fddd968b90d353e5e75160"
+    },
+    {
       "id": "api:GET:/api/test-executions/:executionId",
       "kind": "api",
       "method": "GET",
@@ -5298,6 +5339,46 @@
       ],
       "linkedDomains": [],
       "fingerprint": "9b27b986af06683ea6f8ee0a80e855b8a706e2a5af9d8446e22adda1488cda54"
+    },
+    {
+      "id": "api:GET:/cases",
+      "kind": "api",
+      "method": "GET",
+      "path": "/cases",
+      "module": "cases",
+      "source": "api/modules/cases/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:read",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "customer-service",
+      "linkedJourneys": [],
+      "fingerprint": "4af820c554ac63d3bfd6c5c897b037ebc931c79beff941100fa07c5224eeb298"
+    },
+    {
+      "id": "api:GET:/cases/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/cases/:id",
+      "module": "cases",
+      "source": "api/modules/cases/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:read",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "customer-service",
+      "linkedJourneys": [],
+      "fingerprint": "b7693b3ab827b8f8a357c4bd03a6360caa2fdfccf7a7506dbe2613b07b246abd"
     },
     {
       "id": "api:GET:/channel-accounts",
@@ -12645,6 +12726,26 @@
       "fingerprint": "1e437d86f41999f9d731616210287951962bd5031d277a5a4b5bf8264a9c2c08"
     },
     {
+      "id": "api:POST:/cases/:id/conversations",
+      "kind": "api",
+      "method": "POST",
+      "path": "/cases/:id/conversations",
+      "module": "cases",
+      "source": "api/modules/cases/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:update",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "customer-service",
+      "linkedJourneys": [],
+      "fingerprint": "37155fa27840335ec95bc0d1e2e288738b440bfc940ba87267bc327e1f1275d0"
+    },
+    {
       "id": "api:POST:/channel-accounts",
       "kind": "api",
       "method": "POST",
@@ -13136,6 +13237,30 @@
       "fingerprint": "4188103e3899355600b13f156afd9dde3b32657d73c45104086d2662998e7b84"
     },
     {
+      "id": "api:POST:/inbox/conversations/:conversationId/case",
+      "kind": "api",
+      "method": "POST",
+      "path": "/inbox/conversations/:conversationId/case",
+      "module": "domain-operations",
+      "source": "api/modules/inbox/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:create",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "conversations_chat",
+        "inbox",
+        "operations_dashboard"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "78280977f0cf5832b6c7721ebd04f8e838fdc37f81e8818a94e33b02428a8fe7"
+    },
+    {
       "id": "api:POST:/inbox/conversations/:conversationId/notes",
       "kind": "api",
       "method": "POST",
@@ -13160,16 +13285,16 @@
       "fingerprint": "deb789d864cd0f55af91db8dd05306f5f9e566b8354115bfd2378aab108ebd73"
     },
     {
-      "id": "api:POST:/inbox/conversations/:conversationId/transfer",
+      "id": "api:POST:/inbox/conversations/:conversationId/reply",
       "kind": "api",
       "method": "POST",
-      "path": "/inbox/conversations/:conversationId/transfer",
+      "path": "/inbox/conversations/:conversationId/reply",
       "module": "domain-operations",
       "source": "api/modules/inbox/routes.js",
       "authRequired": true,
       "authorization": [
         "ensureAuth",
-        "ensurePermission:update",
+        "ensurePermission:reply",
         "requireAuth"
       ],
       "classification": "PRODUCTION",
@@ -13181,7 +13306,31 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "403884500ba2db9fc0eb0282c9c299f6121d940c217a9cf7ef3a68f34a8418a4"
+      "fingerprint": "265c899fd0cc6a5d711c708eba4253305f21f4f234f3c346a19ef8d58dda7ae7"
+    },
+    {
+      "id": "api:POST:/inbox/conversations/:conversationId/transfer",
+      "kind": "api",
+      "method": "POST",
+      "path": "/inbox/conversations/:conversationId/transfer",
+      "module": "domain-operations",
+      "source": "api/modules/inbox/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:transfer",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "conversations_chat",
+        "inbox",
+        "operations_dashboard"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2854404aac4c59d67e93eab5bdc66e66255253436fa9a6feb5f7b573704d3bcc"
     },
     {
       "id": "api:POST:/instagram/send",
@@ -13848,6 +13997,24 @@
       "technicalWave": "resilience",
       "linkedJourneys": [],
       "fingerprint": "221e679e33bc61f79aeb17cf2be100da1523125400ee6c2b2f283a62e63eba1c"
+    },
+    {
+      "id": "api:POST:/qa-mesh/scheduler",
+      "kind": "api",
+      "method": "POST",
+      "path": "/qa-mesh/scheduler",
+      "module": "qa-mesh",
+      "source": "api/modules/qa-mesh/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth"
+      ],
+      "classification": "DEVELOPMENT",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "resilience",
+      "linkedJourneys": [],
+      "fingerprint": "a985b4998c473739c3c56655b9eb8ab6ba8b3b9ab18aa1ccbb54ceed24c1fa7d"
     },
     {
       "id": "api:POST:/qa/operational-status/check-operation",
@@ -15486,6 +15653,27 @@
       ],
       "linkedDomains": [],
       "fingerprint": "945aec0d6328c7ecf31dcbb697f6630f0d60c950699142d9d36e4e560f32dbf0"
+    },
+    {
+      "id": "api:PUT:/api/tenant/capabilities",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/api/tenant/capabilities",
+      "module": "tenant-capabilities",
+      "source": "api/modules/tenant-capabilities/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "tenant_config"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "568d77e786318cdcb16444b4297ae87eeb06ddec6d66bf3e87d135a4b3e650cd"
     },
     {
       "id": "api:PUT:/auth/agents/:id",
@@ -19842,6 +20030,96 @@
       "fingerprint": "f5ac9d7739368f1f7dce79157b6fb6bb62e7e9f9b9a578c97e9e50d019bd8d9f"
     },
     {
+      "id": "field:CaseConversation.case_id",
+      "kind": "field",
+      "model": "CaseConversation",
+      "field": "case_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CaseConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "04bb6c38017501aeb84d3b389b737d4e484963e029b2d0584827608b6d6305a3"
+    },
+    {
+      "id": "field:CaseConversation.conversation_id",
+      "kind": "field",
+      "model": "CaseConversation",
+      "field": "conversation_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CaseConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "da1424ce9d298e0cdc4bdce3f168adb6ba39448653940e10333592b0473ad614"
+    },
+    {
+      "id": "field:CaseConversation.id",
+      "kind": "field",
+      "model": "CaseConversation",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CaseConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "42b96f50abd9228ed96181734a4de855084bc0eb2eae3789cf33cf731bbce3e5"
+    },
+    {
+      "id": "field:CaseConversation.metadata",
+      "kind": "field",
+      "model": "CaseConversation",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CaseConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "cb94eb0a5f0eec35bad8db4c84b3b7cf2133ef49931b78be52ae78d3acdf03c2"
+    },
+    {
+      "id": "field:CaseConversation.tenant_key",
+      "kind": "field",
+      "model": "CaseConversation",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CaseConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8a73c4995307255891ce5cbfe845a7f4bdcb93ca33f0d291047e0d85a61607ed"
+    },
+    {
       "id": "field:CcCampaign.click2callEnabled",
       "kind": "field",
       "model": "CcCampaign",
@@ -20767,6 +21045,26 @@
       "fingerprint": "a1dcdefed5d3af9aec3946a9865ea9e05b55b564ed44f95ff5cdaed39c535e5b"
     },
     {
+      "id": "field:ChannelConversation.assigned_to",
+      "kind": "field",
+      "model": "ChannelConversation",
+      "field": "assigned_to",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ChannelConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "channel_accounts"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "62c7adc5003273f9b9ddc9817dd4c73460cd198651c20f22ee9c3a0d3669c2e7"
+    },
+    {
       "id": "field:ChannelConversation.channel_type",
       "kind": "field",
       "model": "ChannelConversation",
@@ -20885,6 +21183,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "984caea879ded7d3c20c69dfcb7de66b4344c1097fac147e9b3ef6f87d24d8e0"
+    },
+    {
+      "id": "field:ChannelConversation.metadata",
+      "kind": "field",
+      "model": "ChannelConversation",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ChannelConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "channel_accounts"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "30e2a66c8921e37e57e64cc10da43a19201333f567061b806733739626ecf428"
     },
     {
       "id": "field:ChannelConversation.status",
@@ -45103,6 +45421,24 @@
       "fingerprint": "73bd3e606d4c1595f744e33c92518d62695f35e5b187888231ea7f17c7a3e9b1"
     },
     {
+      "id": "field:User.platform_role",
+      "kind": "field",
+      "model": "User",
+      "field": "platform_role",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/User.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1f3317dbec66a3d47240960e0133c0ab9495bc730d4eeacdd229d42fd2a6aad3"
+    },
+    {
       "id": "field:User.role",
       "kind": "field",
       "model": "User",
@@ -48678,6 +49014,23 @@
       "fingerprint": "9a7dae69f11c793dd41f2618cc9c8b5f128f40bd350a901e829ee443381d7740"
     },
     {
+      "id": "model:CaseConversation",
+      "kind": "model",
+      "model": "CaseConversation",
+      "tableName": "case_conversations",
+      "fieldCount": 5,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CaseConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "conversations_chat"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "fd43e5258c257ecc79ec1de845d409130411ce38ceebb42bbfccf951730dd33b"
+    },
+    {
       "id": "model:CcCampaign",
       "kind": "model",
       "model": "CcCampaign",
@@ -48791,7 +49144,7 @@
       "kind": "model",
       "model": "ChannelConversation",
       "tableName": "channel_conversations",
-      "fieldCount": 8,
+      "fieldCount": 10,
       "hasTenantId": true,
       "classification": "PRODUCTION",
       "source": "api/db/models/ChannelConversation.js",
@@ -48802,7 +49155,7 @@
         "conversations_chat"
       ],
       "linkedDomains": [],
-      "fingerprint": "010fc4d56e1e4581e01fa34d566371fa942cf946495d8ae9b029002e20865752"
+      "fingerprint": "1074bb97a49cd05d81b5f02e5a3bdd8392aef75d4225c059658b5431090dac38"
     },
     {
       "id": "model:ChannelMessage",
@@ -51029,7 +51382,7 @@
       "kind": "model",
       "model": "User",
       "tableName": "users",
-      "fieldCount": 20,
+      "fieldCount": 21,
       "hasTenantId": true,
       "classification": "PRODUCTION",
       "source": "api/db/models/User.js",
@@ -51037,7 +51390,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "3f350342c678e8664a27de67ebf618c1f681f6e2772610284211a802f7da20cb"
+      "fingerprint": "04f7cb61bb046c755bc07e704da5140c08d9b75be08cfb6497b226674be192c7"
     },
     {
       "id": "model:UserCertification",
@@ -51292,6 +51645,7 @@
       "path": "/academy",
       "roles": null,
       "permission": "workspace:read",
+      "classifications": null,
       "section": "cockpit",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51302,7 +51656,7 @@
         "academy_learning"
       ],
       "linkedDomains": [],
-      "fingerprint": "daaf968ed5ac029c9504a6e0f79c629e231563da204d7d76d297c959c761b401"
+      "fingerprint": "1d16b5d821c7f31c128aabd47ca9fa92a0b14b7b11b058d7e34f5f0d4ed66841"
     },
     {
       "id": "page:/access-control",
@@ -51316,6 +51670,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51326,7 +51681,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "e146b033e09730961355dc72aff3c974fc70db18508760cb7fed4a4c1f3b64f6"
+      "fingerprint": "a3f8d3db8d1c9b9f7487882a9ad35b9b84768dc8f380b61da37a0c76baa7e115"
     },
     {
       "id": "page:/admin/agents",
@@ -51336,6 +51691,7 @@
         "super_admin"
       ],
       "permission": null,
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -51344,7 +51700,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "2a0a91ad3818e6a125bb4bb495c8583510af17bebccff45ca5f592f4fccfb1ce"
+      "fingerprint": "9758247f9909acc994f46f7bebd6c2bd648b2c70d96c9bf770da19578485615e"
     },
     {
       "id": "page:/agenda",
@@ -51358,6 +51714,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51368,7 +51725,7 @@
         "agenda"
       ],
       "linkedDomains": [],
-      "fingerprint": "2dc18c57a48de0a3bc2fe6a453a90e9dd00294a29a2ad9e2972efc013c989272"
+      "fingerprint": "a248d55449b25e70d7ad20fc0f8afbdc8147a20d91584a3ac12a8633a381e6a7"
     },
     {
       "id": "page:/agents",
@@ -51376,6 +51733,7 @@
       "path": "/agents",
       "roles": null,
       "permission": "agents:list_all",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51386,7 +51744,7 @@
         "agents"
       ],
       "linkedDomains": [],
-      "fingerprint": "85a688feaba26b98b9a262ea7fc809a15ff9b9a31db51588330e4d63799f9327"
+      "fingerprint": "2df10873e447e1f6bd0d44c119add73fae28e9f4c427274d2db04dbf39f4184d"
     },
     {
       "id": "page:/ai-tools",
@@ -51394,6 +51752,7 @@
       "path": "/ai-tools",
       "roles": null,
       "permission": "tickets:read",
+      "classifications": null,
       "section": "automacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51405,7 +51764,7 @@
         "ai_tools"
       ],
       "linkedDomains": [],
-      "fingerprint": "12c8f3c30262e4ac19dce6d5ca55ba2b9b4a920a0f108e59de6aced5f7e37dda"
+      "fingerprint": "0731e4658fb489c83eb3b120b75e72a8e7ce776eb780d72af28b6de7863c40cb"
     },
     {
       "id": "page:/analytics",
@@ -51413,6 +51772,7 @@
       "path": "/analytics",
       "roles": null,
       "permission": "reports:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51423,7 +51783,7 @@
         "analytics"
       ],
       "linkedDomains": [],
-      "fingerprint": "c6413eff53de00a64243a755eaf3a5a7e51805ef67cd9e342aac4f31594cb657"
+      "fingerprint": "4ec5ca55667e8d3574e1450df42e75ec3e61a95323c7dc6e30693c067d506ee9"
     },
     {
       "id": "page:/audit",
@@ -51435,6 +51795,7 @@
         "super_admin"
       ],
       "permission": "audit:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "SUPPORT",
@@ -51443,7 +51804,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "support-diagnostics",
       "linkedJourneys": [],
-      "fingerprint": "7a894e5bc8e184a84d6229f5351bf8371a224cc21a099cc5c394143c8ac5ffa8"
+      "fingerprint": "5b16e6de3adae67b0bb3f99159238c3c5c9d55e082fe0a927779b9792b3d2993"
     },
     {
       "id": "page:/automations",
@@ -51457,6 +51818,7 @@
         "super_admin"
       ],
       "permission": "config:update",
+      "classifications": null,
       "section": "automacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51467,7 +51829,7 @@
         "automations"
       ],
       "linkedDomains": [],
-      "fingerprint": "93664d77b6a2dc0bcc7451e9b7b122015e7359eee3158eb0f5d8359826bc0fa5"
+      "fingerprint": "485d5599ec66e71aebc60c4dd29058273ca5e51e2ab109ea2efb1a6e70119a1d"
     },
     {
       "id": "page:/backup",
@@ -51479,6 +51841,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51489,7 +51852,7 @@
         "backup_restore"
       ],
       "linkedDomains": [],
-      "fingerprint": "b4790ec2a401c442d0ea59d7d658e57aea1c39d95dfe7cbd7cfbcd7192912dbd"
+      "fingerprint": "bbaa358374f03fd36aa6cbab86258351d586f1697e712ed9b4d1acaf88f86afe"
     },
     {
       "id": "page:/beauty",
@@ -51497,6 +51860,7 @@
       "path": "/beauty",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -51510,7 +51874,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "6ac01d62fae06c66b27667c50b4c0fb6834032a57eb9563f35cfd289c34067ba"
+      "fingerprint": "726caf84ebe7cbe337797ec536863094b0108804fe8d7b06f3ceb1d5e15c5a43"
     },
     {
       "id": "page:/beauty/bundles",
@@ -51524,6 +51888,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51537,7 +51902,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "be3c7828c8bd406cb685f6cb53e1ccdaa605e6a6b2289153d0d1f2d38e5d0a0a"
+      "fingerprint": "ebe2f153a41cfc32a25a595212d95ef825b97a3778677b06de56b532a1bf7232"
     },
     {
       "id": "page:/beauty/campaigns",
@@ -51551,6 +51916,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51565,7 +51931,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "1b18f888244b5442eef2d0e7501ea0ccc46f5154377041df16271dae9682a42e"
+      "fingerprint": "d5e1aceb8e03c64853dbcdd1779b004712ff43e455d876a3579c4a3b8df6df8a"
     },
     {
       "id": "page:/beauty/customers",
@@ -51579,6 +51945,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51592,7 +51959,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "c1970f2004d48649eea6ed331511a5df101df9a23020e27ea6b0573c76fde2db"
+      "fingerprint": "41cf7474e0e7b9defafa47cd844c728e7287cbd35c547e26152f0a292329b6d8"
     },
     {
       "id": "page:/beauty/leads",
@@ -51606,6 +51973,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51620,7 +51988,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "5056305dbe3842bb94f296ab0bd66f455b0971c4d3df43e632df2f287fe6dd0b"
+      "fingerprint": "8b94f35e2b21dc23359f5d49c33488ec888d7e2123a644b088a6129f87770ece"
     },
     {
       "id": "page:/beauty/payments",
@@ -51634,6 +52002,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51647,7 +52016,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "505972755e274908060d642643001e56854b89f91421ea97ce9744f909fc0fd7"
+      "fingerprint": "531e457fe243108ab1c6844dc582170c94430d11ccc45b3947cce70ff9e6ff6a"
     },
     {
       "id": "page:/beauty/schedule",
@@ -51661,6 +52030,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51674,7 +52044,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "003b6b2e64a81850097491ca8996534b37bdd72fcea7fd75c27725ba4fb2c30f"
+      "fingerprint": "e3416493cedc04a063f31488e9a680ad56bd5eb4ff18b7b2ccca6e197097449d"
     },
     {
       "id": "page:/beauty/services",
@@ -51688,6 +52058,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51701,7 +52072,7 @@
       "linkedDomains": [
         "beauty"
       ],
-      "fingerprint": "087f70c806670d1ff0083e06426e797bdc618a34723192dc2e01aa85c29da1ea"
+      "fingerprint": "d5989471c04768ef10755280ee33d60e4f90279e531114db923ded2751e92e9b"
     },
     {
       "id": "page:/bpmn-editor",
@@ -51713,6 +52084,7 @@
         "super_admin"
       ],
       "permission": "flows:read",
+      "classifications": null,
       "section": "automacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51725,7 +52097,7 @@
       "linkedDomains": [
         "bpmn"
       ],
-      "fingerprint": "6c6c3121fa575ed8b149cd9cb790df5119498d09925436169d441efe293c3743"
+      "fingerprint": "39161aadacf741a6969b771e333285984b04d8c23d3fc3767db4497927dc083d"
     },
     {
       "id": "page:/bulk-messaging",
@@ -51739,6 +52111,7 @@
         "super_admin"
       ],
       "permission": "bulk_messaging:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51749,7 +52122,26 @@
         "bulk_messaging"
       ],
       "linkedDomains": [],
-      "fingerprint": "c14039c9130eafff1bd291522f273e828058617ff99d2a42ea3d84ba50f78cb5"
+      "fingerprint": "fc30c3bfeec3775e7e4f811ad66cc8bc56cc6edd911e28823dfd3968353205aa"
+    },
+    {
+      "id": "page:/cases",
+      "kind": "page",
+      "path": "/cases",
+      "roles": null,
+      "permission": "tickets:read",
+      "classifications": null,
+      "section": "relacionamento",
+      "guarded": true,
+      "classification": "PRODUCTION",
+      "source": "frontend/src/main.jsx",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "cases"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ebbaba2af2fb33fb1ad478f1b15d9036494025df2944a5804bdc944293823fab"
     },
     {
       "id": "page:/channel-accounts",
@@ -51763,6 +52155,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51773,7 +52166,7 @@
         "channel_accounts"
       ],
       "linkedDomains": [],
-      "fingerprint": "1b27d2fa590f1fa1397307bb9f92340dd51f11a1319e8e56f3e736217b421669"
+      "fingerprint": "711c656af4a71e4f13f07fdefa7a302a7fcad2df0621aae5fdb6155b962fb23f"
     },
     {
       "id": "page:/channel-health",
@@ -51787,6 +52180,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "SUPPORT",
@@ -51795,7 +52189,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "970d3b2741b7ddbb9d1c3adce3125f3035e2d272daab9a934188526a1b1400e0"
+      "fingerprint": "3fe0393c8fa4050e16a97f42406ff9ad5d8d9b722f20a4310ba17289ee9ca0de"
     },
     {
       "id": "page:/chat",
@@ -51805,6 +52199,7 @@
         "super_admin"
       ],
       "permission": "tickets:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -51813,7 +52208,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "a84678ae0a15b404179c0e91a2d46a12b3806886aebe836b9ce358763cc1a10b"
+      "fingerprint": "3cb0c59c19f25a14f5ff4c472cc9c607b061b7151d409778aa90bc625da1211f"
     },
     {
       "id": "page:/chat-humano",
@@ -51827,6 +52222,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51837,7 +52233,7 @@
         "conversations_chat"
       ],
       "linkedDomains": [],
-      "fingerprint": "797199be60629a0f320efbf2564be8e4a495cc57827d07ae05d563d25e831860"
+      "fingerprint": "c00e3925f76283b37e52fb24265d64d9857bd4da7e4d8905f36ea318241b7648"
     },
     {
       "id": "page:/config",
@@ -51845,6 +52241,7 @@
       "path": "/config",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": "plataforma",
       "guarded": false,
       "classification": "PRODUCTION",
@@ -51855,7 +52252,7 @@
         "tenant_config"
       ],
       "linkedDomains": [],
-      "fingerprint": "88ba21c36f26d039bf2acc9196574fedf7709124da005a09450a0de47826d59e"
+      "fingerprint": "b3a9f6d725226a36d9d82bb57f406e8cb4722b6cad35784c7db60795ccbc16f0"
     },
     {
       "id": "page:/crm",
@@ -51869,6 +52266,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51879,7 +52277,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "d04f11604dbd0fe37707b3033d317192b9c4a97f4ba0c2eaafd17523aa30323f"
+      "fingerprint": "a8ce83fac79c9f0cbdf41b267915ed3c94399c48fda95c075d62e72a088d4058"
     },
     {
       "id": "page:/crm/accounts",
@@ -51893,6 +52291,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51904,7 +52303,7 @@
         "channel_accounts"
       ],
       "linkedDomains": [],
-      "fingerprint": "9e7e6bf7c8d9bcc45aefe9ec83ed37932f65c1a8fb77798f707991ee7c191266"
+      "fingerprint": "3bd84ae60b8e0d61b1212097d40a6b275b3028ba8ccca912b0f8244d990bad33"
     },
     {
       "id": "page:/crm/activities",
@@ -51918,6 +52317,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51928,7 +52328,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "0f3a5a589dabc595702c25e7f2a1706c468614c92cb9bbf174ff83e3e12bfdff"
+      "fingerprint": "cb23347e32119204831782315b0998a28d506cde2a77c6773771ea7c40ed1537"
     },
     {
       "id": "page:/crm/analytics",
@@ -51942,6 +52342,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -51953,7 +52354,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "2371a2a5142ad7015615386e46f374bd565b32ec59bb7f3279f1931d8c631271"
+      "fingerprint": "98e0cfcabb07cbb6efd7ecec38ba4b1424000a85476187d182e959e3336e38e7"
     },
     {
       "id": "page:/crm/audit",
@@ -51967,6 +52368,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "SUPPORT",
@@ -51975,7 +52377,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "support-diagnostics",
       "linkedJourneys": [],
-      "fingerprint": "e26640747109774df11f116aa1c71639292111032d2120082c8fabb937bed756"
+      "fingerprint": "db4177c4ff6c8a138675755005a017c0f8275161ba9f81ab709ac2cb62036428"
     },
     {
       "id": "page:/crm/campaigns",
@@ -51989,6 +52391,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52000,7 +52403,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "dd59bbfdd5c7d5e09503f1dcddb0f1fe930ecf29872079dbb940fc224d5d197b"
+      "fingerprint": "c5670c42849c116895ea3bace41ce939657472565fa7444647560114cbc196ea"
     },
     {
       "id": "page:/crm/contacts",
@@ -52014,6 +52417,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52024,7 +52428,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "fff23e9e71ea6e25ffb7a80f6122f072b056f9db5fb4db281d4402d3655944da"
+      "fingerprint": "d93df614a7651c1e76f03cf704807557039ec8ec97ee3e94810020ad0802fd7d"
     },
     {
       "id": "page:/crm/dashboard",
@@ -52038,6 +52442,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52049,7 +52454,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "81af775b8de38faf38298701eb0875c526a5dcd54c58db11e29bef2802882585"
+      "fingerprint": "72b17ecf0b1e3f5e99dddeeb4fecbd08e10faa50b244b1e3a4c54123e07fbb98"
     },
     {
       "id": "page:/crm/leads",
@@ -52063,6 +52468,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52074,7 +52480,7 @@
         "leads"
       ],
       "linkedDomains": [],
-      "fingerprint": "c253f9eb6b1390bfbb175e4318749329aaf8bae94abc8b3c57cd58b6dd6a23da"
+      "fingerprint": "321625f014591b7a4bb4e7aef2c02353a93ac43a2f7d8b60a34af9fc7c15088a"
     },
     {
       "id": "page:/crm/opportunities",
@@ -52088,6 +52494,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52098,7 +52505,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "5c988204425c97b9b7bdf859613632b48d2dfecbf9b8c9efc635282eff6ec2e4"
+      "fingerprint": "b23a59620ea0424c78dcdda9a8690f05ad5b8ee03fb0e8bce30f6888b15f90e0"
     },
     {
       "id": "page:/crm/pipelines",
@@ -52112,6 +52519,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52122,7 +52530,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "9c1a690f7c16685741f9a5294395ef9c0f91b13365796b44cb6ccfd60fe677fc"
+      "fingerprint": "c1850ca4597d12112e490ef4ff91b3a342cacf42b095fbca11d2c524b1f5a1b3"
     },
     {
       "id": "page:/crm/rbac",
@@ -52136,6 +52544,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52147,7 +52556,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "c584895fedb5572ab6deb0ad799ea2543aa8f9bb2ae486900a4224b4295f564a"
+      "fingerprint": "e71ec121d89ad6d8ebf425a67d0655bcd3009eed311f33f8bdf3bd4b45f69709"
     },
     {
       "id": "page:/crm/reports",
@@ -52161,6 +52570,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52171,7 +52581,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "c1dd347053c5ce035dbef37c008669f2b39d37137e36099b2fa78e62b2840c67"
+      "fingerprint": "5847e3ad33e76d70f4807f5b5e134890f62018e55cd9c5a26a262e0c5479c055"
     },
     {
       "id": "page:/crm/webhooks",
@@ -52185,6 +52595,7 @@
         "super_admin"
       ],
       "permission": "crm:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52196,7 +52607,7 @@
         "webhooks"
       ],
       "linkedDomains": [],
-      "fingerprint": "2078b67ae66062fd5018c4cbd1ac5e14536c5e5cc1f190c5efe477360a70bdae"
+      "fingerprint": "9675bbbce3e6ef435625aff64932f0cde9df93e6d724f0b9d7ea392174a87a40"
     },
     {
       "id": "page:/dashboard",
@@ -52204,6 +52615,7 @@
       "path": "/dashboard",
       "roles": null,
       "permission": "workspace:read",
+      "classifications": null,
       "section": "cockpit",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52214,7 +52626,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "88d97b6a1a447fe38613f965e81534b802f2f9a9c8c36f3c988d8e4d0cca2677"
+      "fingerprint": "84f4f382acb6986bce1fb2eb69b99c9c14e9a1f31327b407b5286e4eab442ba9"
     },
     {
       "id": "page:/dashboard-legacy",
@@ -52222,6 +52634,7 @@
       "path": "/dashboard-legacy",
       "roles": null,
       "permission": "workspace:read",
+      "classifications": null,
       "section": "cockpit",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52232,7 +52645,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "c99dd2fb49714b18d49899549821de6a8bdcce8aeaf250320d866a87fc0dab81"
+      "fingerprint": "b21b68c9ff0b986347afb4248e16248967f348e9835e4eceee9a1de6ef2e8887"
     },
     {
       "id": "page:/demo",
@@ -52240,6 +52653,7 @@
       "path": "/demo",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -52250,7 +52664,7 @@
         "demo"
       ],
       "linkedDomains": [],
-      "fingerprint": "c479a1dbd07d048df0c62e2dc58959bdc83e839bd5865eb0bd3ba26a9e491ac5"
+      "fingerprint": "c7126a509c7662811124b1e8a79702e3d1b249069f26f9cab64e163ba3232179"
     },
     {
       "id": "page:/departments",
@@ -52258,6 +52672,7 @@
       "path": "/departments",
       "roles": null,
       "permission": "departments:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52268,7 +52683,7 @@
         "departments"
       ],
       "linkedDomains": [],
-      "fingerprint": "056b2e2dd7bc89355f912556ddd29083fc7123e8edef9367619ec09571e8848d"
+      "fingerprint": "c53469bad763e8c4fd97cba0ba90c316394af6c68792d6c1bb789d3741253828"
     },
     {
       "id": "page:/dev",
@@ -52278,6 +52693,7 @@
         "super_admin"
       ],
       "permission": null,
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52286,7 +52702,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "b227c46fdaef97c5566c03f9effc232acc508357ad530a910c9fe6320bbf231d"
+      "fingerprint": "1614bceb0c954171222fbf97843c99cbdb3b4c493714628e8ba9e3713a05659d"
     },
     {
       "id": "page:/dev-dashboard",
@@ -52296,6 +52712,7 @@
         "super_admin"
       ],
       "permission": null,
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52304,7 +52721,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "1ee6072784b9813a800c266b37ce9b55fb8df6562dc739a2b16f4441b3a42fda"
+      "fingerprint": "f57d37b5b15d30e211634296470ca17c28dabd2b9875c57c1badc7d707e936fb"
     },
     {
       "id": "page:/dev/qa-audit",
@@ -52314,6 +52731,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52322,7 +52740,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "support-diagnostics",
       "linkedJourneys": [],
-      "fingerprint": "2c4d0aad9831bc7496edce060dfda5c04a8c3e7ce2e89941d6217236efbaca2c"
+      "fingerprint": "baf89d235c0188ffeaf4b664c9a544ed0f54ec8c762f8f12a3fb6890c417cdb9"
     },
     {
       "id": "page:/dev/qa-gaps",
@@ -52332,6 +52750,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52340,7 +52759,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "fea3bd62104a40e0f8d4bf52bd1e39670632184b49944075d0b6ce8006ad5005"
+      "fingerprint": "3e2122eee52631b4400a0f96a40d30c2660f5c2c5ec0a13f2e0211baf559b244"
     },
     {
       "id": "page:/dev/qa-waves",
@@ -52350,6 +52769,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52358,7 +52778,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "74f77e6a371cb6d12abeac19b882d9a1da0a98a19fc3bae09792c0879a57b18c"
+      "fingerprint": "856ba5db72cbcce34d68b0793ece0cd3d8ed77db3cad49d4deaa90b949b6fbc6"
     },
     {
       "id": "page:/dev/qa-waves/enterprise-governance",
@@ -52368,6 +52788,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52376,7 +52797,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "ea7218f8b90b19dc60bdd6dfddf3bc3a97d98dba45aa7105db923aedc6578566"
+      "fingerprint": "baf93807fd435634265252232ba10130db05f44cc004197f57d0b79fd320e2f6"
     },
     {
       "id": "page:/dev/qa-waves/operational-health",
@@ -52386,6 +52807,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52394,7 +52816,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "d7b0bf069256b4feabfeb1b670d1ff78ade1efaff0f57dea0f7143ff248122f3"
+      "fingerprint": "6b0a84a16f394da87e695330107fd82c61cd3bfeb126ca6522d4d483a82c35b0"
     },
     {
       "id": "page:/dev/rpa-replays",
@@ -52402,6 +52824,7 @@
       "path": "/dev/rpa-replays",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "DEVELOPMENT",
@@ -52410,7 +52833,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "99cdeb0b15a5915c5a0ff94c4f8e7242c33b84657d45288b64eec0ca41daaf3d"
+      "fingerprint": "22106e1ff88b57b10daf13f4c6446b2535e93fa80a9ebb5a90d035e411a69d73"
     },
     {
       "id": "page:/dev/rpa-seeds",
@@ -52420,6 +52843,7 @@
         "super_admin"
       ],
       "permission": "flows:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52428,7 +52852,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "8595edf0228aed231b9e728820ff0f55996b6642285c9ea19c191e4f5f5237f4"
+      "fingerprint": "85830c71b96e8fe7a63459993f4c53bcc4e8293657bae0e4d73c6bfe1145bd82"
     },
     {
       "id": "page:/dev/rpa-test",
@@ -52438,6 +52862,7 @@
         "super_admin"
       ],
       "permission": "flows:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52446,7 +52871,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "c736c712a2d04700d101e02a33d906fd9f900214a51d7c6994b3f08c9514e6cf"
+      "fingerprint": "65fc526bc787153389f21408f4d3678ef662462022265047714f3edd5a0b4eb6"
     },
     {
       "id": "page:/dev/stack-versions",
@@ -52456,6 +52881,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52464,7 +52890,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "3771933025e6fdc9f1335513b0d4145c9b2fa51b9b427ba1d86821a2a7e0a1ef"
+      "fingerprint": "d6cd369e34d58c05ea213b832754e9de261cb73f50b016ea740a7e385373f5a4"
     },
     {
       "id": "page:/dev/system-status",
@@ -52474,6 +52900,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52482,7 +52909,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "94ae616d410049feacc0b0ea7f502f69ed071d90d06afabeea52b248f1a6d516"
+      "fingerprint": "18061417287eab6af0370c2fa3253176a47bb0042c52196a9990864040ce5945"
     },
     {
       "id": "page:/developer-keys",
@@ -52496,6 +52923,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52506,7 +52934,7 @@
         "developer"
       ],
       "linkedDomains": [],
-      "fingerprint": "b979a3acad9c37d9d5dcead2221a1a4d8974135ffc9bb847e071f91d76b6dd84"
+      "fingerprint": "7349b7c8bbb74dac8b1986e52b875338b7fbf5161d7c64e7a1d372c8cd59b079"
     },
     {
       "id": "page:/dispatch",
@@ -52514,6 +52942,7 @@
       "path": "/dispatch",
       "roles": null,
       "permission": "reports:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52524,7 +52953,7 @@
         "kitchen_dispatch"
       ],
       "linkedDomains": [],
-      "fingerprint": "7acfbd9bfe23ee06ff56bdd6a1c5940116b77b88e096791c8a94ef60d6fef4b7"
+      "fingerprint": "4c6717758368adccc6f7a27c23d116ee0158bfd64dd9919ef90be36d907fd673"
     },
     {
       "id": "page:/editor",
@@ -52532,6 +52961,7 @@
       "path": "/editor",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": "automacao",
       "guarded": false,
       "classification": "PRODUCTION",
@@ -52542,7 +52972,7 @@
         "flows_editor_rpa_replay"
       ],
       "linkedDomains": [],
-      "fingerprint": "eec013b3a980a5fcbcf3415ae99a9737a615ff337f65d7bd785e9de198a1857b"
+      "fingerprint": "f4e35f56901dc144e2f131bd3e3d3ff83545e988058d8d40186d571d2695e30f"
     },
     {
       "id": "page:/export",
@@ -52554,6 +52984,7 @@
         "super_admin"
       ],
       "permission": "reports:export",
+      "classifications": null,
       "section": "inteligencia",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52564,7 +52995,7 @@
         "export"
       ],
       "linkedDomains": [],
-      "fingerprint": "a09a1a14fc09cbff024504360699b2012e3074095a9ad5cadc7796194989a6d9"
+      "fingerprint": "a061246861efe63f943983f0218d5d81527dc4860a921c5c6642cc6219278641"
     },
     {
       "id": "page:/failed-messages",
@@ -52572,6 +53003,7 @@
       "path": "/failed-messages",
       "roles": null,
       "permission": "tickets:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52582,7 +53014,7 @@
         "failed_messages"
       ],
       "linkedDomains": [],
-      "fingerprint": "186425c2fef07c1430f7807145b04554183ba1a5a299b9fdae51899a4b9f89e7"
+      "fingerprint": "60b8c62f073c07e2894673937adbd2f622240d65d145efc162b6bac64e9daa24"
     },
     {
       "id": "page:/faq",
@@ -52590,6 +53022,7 @@
       "path": "/faq",
       "roles": null,
       "permission": "rag:update",
+      "classifications": null,
       "section": "inteligencia",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52600,7 +53033,7 @@
         "faq"
       ],
       "linkedDomains": [],
-      "fingerprint": "c4b20203f8e2d43c296028e8601133fa4967cdc27114291daf9207f63f5b4b5e"
+      "fingerprint": "e28d90f848c97ba5ebefaa611e22c087a8148f6e2186f6b2c7d41904f89409f6"
     },
     {
       "id": "page:/fila-fisica",
@@ -52614,6 +53047,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52624,7 +53058,7 @@
         "physical_queue_kiosk_station_panel_fila"
       ],
       "linkedDomains": [],
-      "fingerprint": "9926efe7bd14bb4301ea599e1fce01302146266ed18762b621e0346332043a12"
+      "fingerprint": "3d2a0de68be242d86c2a03a6341f94588edbb89b2464a28a261999516e1a47d9"
     },
     {
       "id": "page:/fitness",
@@ -52632,6 +53066,7 @@
       "path": "/fitness",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -52646,7 +53081,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "6ce68fb574bc4b936bc0105866b1e47d3b5dccd47d45378658af19abecf90a5b"
+      "fingerprint": "c6cf230e544a2bc3e36eeaf1e9886b3df1620fd674c437cb335272eceb3f968f"
     },
     {
       "id": "page:/fitness/attendance",
@@ -52660,6 +53095,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52674,7 +53110,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "0f1e0c7b044eeebf46bf0f5abccdad991549fc7bcf4d4dcaece724424badcbe9"
+      "fingerprint": "11539a308b0c6cc7a3d261119a3a5970124a0d955bf2df5a4ce6f6f84e0c7deb"
     },
     {
       "id": "page:/fitness/memberships",
@@ -52688,6 +53124,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52702,7 +53139,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "9d95ab8db251bc2c62dd705afbc195de82170f0eb734506ff3680337c92f3e52"
+      "fingerprint": "89cb5561e002730e5463488ee2eb898bdc55521225d1ab7beea8c8f36dd0740a"
     },
     {
       "id": "page:/fitness/students",
@@ -52716,6 +53153,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52730,7 +53168,7 @@
       "linkedDomains": [
         "fitness"
       ],
-      "fingerprint": "7a04b9249a3096911c5d5af3eb1715882bb093bd85f0f941fded519dbb9bda9f"
+      "fingerprint": "b230fd5fd4c8125b8b2152e79fd5133e4b1568eb6c91637a8538b00a049c5c34"
     },
     {
       "id": "page:/generate-system",
@@ -52740,6 +53178,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -52748,14 +53187,15 @@
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "b69a8f068a9fb409eeff4fe6dab08d00a1ef46da0c2b5f32505df6a06702a496"
+      "fingerprint": "b388292c5ea9840df8e32a21d1df1494a142f9d271b81a7e06da20bac094f803"
     },
     {
       "id": "page:/inbox",
       "kind": "page",
       "path": "/inbox",
       "roles": null,
-      "permission": "tickets:read",
+      "permission": "inbox:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52766,7 +53206,7 @@
         "inbox"
       ],
       "linkedDomains": [],
-      "fingerprint": "604ad54593782bb641bce45e2f45373e83f4d5d2b965d194899afb4cfffe0a65"
+      "fingerprint": "aaf4fd2da06300a6f9ae3cc13bda8a722f4081082c857bfb4ec54710cb4c6989"
     },
     {
       "id": "page:/kiosk",
@@ -52774,6 +53214,7 @@
       "path": "/kiosk",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -52784,7 +53225,7 @@
         "physical_queue_kiosk_station_panel_fila"
       ],
       "linkedDomains": [],
-      "fingerprint": "65e9ae48b69955e4b6251ace80de04661e6853d0fff13573ee656cbf2bb1833e"
+      "fingerprint": "5b3da465291cf4a23b61e80222affc0edc9628cd49d88ae96ee7634bc6a61658"
     },
     {
       "id": "page:/kitchen",
@@ -52792,6 +53233,7 @@
       "path": "/kitchen",
       "roles": null,
       "permission": "reports:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52802,7 +53244,7 @@
         "kitchen_dispatch"
       ],
       "linkedDomains": [],
-      "fingerprint": "4a0a3448bd46e126fef099afa8a23024e900e8c8ef4cecf7c2e0b7bc36153df1"
+      "fingerprint": "cc6f25ebcbc39766f92cf59470864f1de9a46dc58d472738fac33ca69c061ea3"
     },
     {
       "id": "page:/knowledge-base",
@@ -52810,6 +53252,7 @@
       "path": "/knowledge-base",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": "inteligencia",
       "guarded": false,
       "classification": "PRODUCTION",
@@ -52821,7 +53264,7 @@
         "knowledge_graph"
       ],
       "linkedDomains": [],
-      "fingerprint": "606c94f8b1210ea57ade99bf5a4cb024d9e81578ec5737b2d71bfe27fd790b01"
+      "fingerprint": "4a9b27bdc74a0b36d224f31974afedaa8ac692c7f31aa37ef25793608d2d7a33"
     },
     {
       "id": "page:/login",
@@ -52829,6 +53272,7 @@
       "path": "/login",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -52839,7 +53283,7 @@
         "login"
       ],
       "linkedDomains": [],
-      "fingerprint": "beb44ea28f512f7bee78f9429f0ed4a853a2d0ec003d21b52b68d8d32cccd4ed"
+      "fingerprint": "b4005d862c83c9d353af0d140cac658cdbe3cc941fdc69c62d15636569e13ebb"
     },
     {
       "id": "page:/maintenance",
@@ -52847,6 +53291,7 @@
       "path": "/maintenance",
       "roles": null,
       "permission": "tickets:list_all",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52857,7 +53302,7 @@
         "maintenance"
       ],
       "linkedDomains": [],
-      "fingerprint": "2e378e1ba04d4b9a0071c8314dbc166885044f4314fd0e0920848075f8d29c2a"
+      "fingerprint": "2389f18bcd3f2183c34b874fc85c4e49bc6f0d718d9da517fc391bd25ed6dcb5"
     },
     {
       "id": "page:/marketing",
@@ -52871,6 +53316,7 @@
         "super_admin"
       ],
       "permission": "bulk_messaging:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52881,7 +53327,7 @@
         "marketing"
       ],
       "linkedDomains": [],
-      "fingerprint": "9f61d99bbf299bc9cc51d07f417e320669eb02579d9fc8d805638a8c52ca9b15"
+      "fingerprint": "147c375aa34d2d1fd12ad56eddc8ee90cd3dd49c238bd70f27ba9bb366b9b325"
     },
     {
       "id": "page:/mfa",
@@ -52895,6 +53341,7 @@
         "super_admin"
       ],
       "permission": "config:update",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52905,7 +53352,7 @@
         "mfa"
       ],
       "linkedDomains": [],
-      "fingerprint": "2c4acb52de2fb8331c30dc94fc286d5cf28d8c1cb5a8309cb56ab7d6156d6dca"
+      "fingerprint": "05f5ef4541a269de850ac4e26e185b20e229836d59e1690e663d92222e7b2339"
     },
     {
       "id": "page:/node-marketplace",
@@ -52919,6 +53366,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "automacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52929,7 +53377,7 @@
         "agent_marketplace"
       ],
       "linkedDomains": [],
-      "fingerprint": "59a54bf840b3ecadc2aa1393cbd71d7329e6885dbbeb9f01cee25623e5a1d96d"
+      "fingerprint": "cffa51212f449684b3bd588e23bf355ec52f1578ee4485732fd289b6655f0866"
     },
     {
       "id": "page:/onboarding",
@@ -52937,6 +53385,7 @@
       "path": "/onboarding",
       "roles": null,
       "permission": "tenant:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52947,7 +53396,7 @@
         "onboarding"
       ],
       "linkedDomains": [],
-      "fingerprint": "f2e29e5acc24ba6749ded25e595264d6afff9f363f91cf76ddeb6cf406796051"
+      "fingerprint": "77ba0b48d38f85b9d505446d5bb7f876725d809ae8f855f5c6183fc754faf36f"
     },
     {
       "id": "page:/operations-dashboard",
@@ -52961,6 +53410,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52971,7 +53421,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "cade5dbe05e3c8b93608ace31e4b9e89e6384cd0cfa8275ae9732e994896e097"
+      "fingerprint": "f3b5dd071e3b798499bd1a0614cdf5e9b48c21d375d58d87c6298686c2ea7a46"
     },
     {
       "id": "page:/orders",
@@ -52979,6 +53429,7 @@
       "path": "/orders",
       "roles": null,
       "permission": "reports:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -52989,7 +53440,7 @@
         "orders"
       ],
       "linkedDomains": [],
-      "fingerprint": "a0cc81da00880636b506d2766ce7073a8bee568970ce4056f4e86a758df7eb30"
+      "fingerprint": "e01ac655149eba9ae9e0ea95ccaa8c5748a1ee5ac5cdcb039698692759c5bd36"
     },
     {
       "id": "page:/panel",
@@ -52997,6 +53448,7 @@
       "path": "/panel",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53007,7 +53459,7 @@
         "physical_queue_kiosk_station_panel_fila"
       ],
       "linkedDomains": [],
-      "fingerprint": "b6aa48d209d83e1954be9cf770b8473685c24af22e098a519733cdb6c599e9a5"
+      "fingerprint": "053e5f9f635e37c9bb79c86f240ac9db65cc3931b98e21c952b7cdffaa79f48c"
     },
     {
       "id": "page:/pbx",
@@ -53021,6 +53473,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53031,7 +53484,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "2a5dd250867e9aee5a0b2d3551439993e64f68bb8df36fd1e4e58bd977d50559"
+      "fingerprint": "c6c6b583fc62438af46686a9b8e000ab02755ca6ce2cdfe1812578622cba8069"
     },
     {
       "id": "page:/pbx/acls",
@@ -53045,6 +53498,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53055,7 +53509,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "333013be3cfdf1ebbfde17188b1ba5201ba7d22a1a000e1bf15a920d41d827b0"
+      "fingerprint": "1f7aa82f20d015617d1f419d2680396147f720a670471f93a8d254905f4ff7b5"
     },
     {
       "id": "page:/pbx/cc/callbacks",
@@ -53069,6 +53523,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53079,7 +53534,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "5a624c1e6fbd90be6b1fd88797b8621115526e91f6173f11f3e965c1458b31e6"
+      "fingerprint": "adcf57f68ac0135ec6cd710776bda0a00c0ee34bd3736579cc6f03629c5c1fbe"
     },
     {
       "id": "page:/pbx/cc/campaign-list",
@@ -53093,6 +53548,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53103,7 +53559,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "8063b1aa5e975aa0a99170004a88c703ce841e87b14d1a9f2fdfe538df0ac39d"
+      "fingerprint": "80b153a765f5d7609ecdfc8d3657942d5811e2e8a535c32e7b6306a495a59d1b"
     },
     {
       "id": "page:/pbx/cc/campaigns",
@@ -53117,6 +53573,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53129,7 +53586,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "b489e0304f8b67ac5ad4f2feb92d8d4d3c03a35be990c2d161f8e62ed02a9d71"
+      "fingerprint": "f5acb15dc791549a160627225e1da1f20edd1835e88c111acf956478c042f802"
     },
     {
       "id": "page:/pbx/cc/click2call",
@@ -53143,6 +53600,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53153,7 +53611,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "69a35129fbe2c36732536889ceb5dbed66e286c9b4c78877fdf2e9a3b275b505"
+      "fingerprint": "09b942aa986c0defb19a406ad95704c3dcd483883e41b408b6b3d7fe1de7e4d4"
     },
     {
       "id": "page:/pbx/cc/contact-reasons",
@@ -53167,6 +53625,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53177,7 +53636,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "927c6b0037958a0d9f262abd39ead53c678aa1fc4dab4b707abb457c0a6ed1bf"
+      "fingerprint": "f0ef0cfb4d6240295dc8fbc7312909b46a708e644dad27e7705204784b5732fa"
     },
     {
       "id": "page:/pbx/cc/pause-reasons",
@@ -53191,6 +53650,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53201,7 +53661,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "05bf5299fec1cb1434e5d52f5a201950c14dfb97a0079752578fa8077b8196c2"
+      "fingerprint": "f44f581c03e60871ad57e2731254bef7af433a19045f83b2bb37b99a9b538cac"
     },
     {
       "id": "page:/pbx/cdr",
@@ -53215,6 +53675,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53225,7 +53686,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "c5ce1e2d18563da6cf4a7800eb03730baa8367119c6e3e99e3a36b3da7520262"
+      "fingerprint": "c9bc7e836c7d4042dee869d497fe77a8961a4eb8c9f36c945294b9cae8486a2f"
     },
     {
       "id": "page:/pbx/dialplan",
@@ -53239,6 +53700,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53249,7 +53711,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "d6f316303f34df87b303db9f3035e0d2c695207a7284be8045d6e524a442656d"
+      "fingerprint": "a32e73eceacbbd2fb17b4de5b49a5c8ae037f98a48668c8b4a22f2f65a0b5b79"
     },
     {
       "id": "page:/pbx/dids",
@@ -53263,6 +53725,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53273,7 +53736,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "d04e60881029fba0bef173dca1ebae26ca82ec05ae4707a193752fbf94837e06"
+      "fingerprint": "47f8864a416843c6804b8c4492ffe90fe87cacbb086444b0677ee6614c093e49"
     },
     {
       "id": "page:/pbx/extensions",
@@ -53287,6 +53750,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53297,7 +53761,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "71b4badb3c70cecef5814f0e32d77c01ce650edb64658f86306e04cf034dbb52"
+      "fingerprint": "8cab4f938b7aa66c4153e16b5adc9b81d90258353a7888079bb32c5f3e75db27"
     },
     {
       "id": "page:/pbx/governance",
@@ -53311,6 +53775,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53323,7 +53788,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "3463516c391d1194bb5f9d1a5bde64dfe11ed8ae34768fb281425254b45ea13b"
+      "fingerprint": "c51bc1a3ba5386aaf9a3f5c805287a200029de3d341c8696eacaea455201d65d"
     },
     {
       "id": "page:/pbx/ivr",
@@ -53337,6 +53802,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53347,7 +53813,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "d818fabc67f7781a02fe44b4bb89f4c314911b0860b373f5a903247b97ba8b3b"
+      "fingerprint": "d6e6314333dee4f82d3f7f6eb7d7cbfd12b07b15066df5a3471e21d453f51963"
     },
     {
       "id": "page:/pbx/media",
@@ -53361,6 +53827,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53371,7 +53838,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "c43d7c293394a3242ba9e1e0faf94697eb1957b23c0556f88db80caaf1dd3345"
+      "fingerprint": "0b3be4cdc37318eda1d7b4908e529e874cbae738a59669ae607a1b413a25c37a"
     },
     {
       "id": "page:/pbx/operator-panel",
@@ -53385,6 +53852,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53397,7 +53865,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "2b12102162ac47d9241ed2214ad207714305dc6d4ef5ce14cfd4f62a2024e363"
+      "fingerprint": "6b487f02e3f93082bc5b944c0d7ebd72061ad63d40861cea935842491f5405dd"
     },
     {
       "id": "page:/pbx/queue-members",
@@ -53411,6 +53879,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53423,7 +53892,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "cac47a972658602b8befd265a7b2c64c478d51ee2a240137a59c72911efe0c81"
+      "fingerprint": "4d8a54a3da04119b53b73d2bf1fc52075c45e5ca1549fafee660737a9686a949"
     },
     {
       "id": "page:/pbx/queues",
@@ -53437,6 +53906,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53449,7 +53919,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "872c1324c083961dd0485b1bca3e85c9621ab5ebfddeda8208ece57395550911"
+      "fingerprint": "772b6adb7a0fcbb62e2afa6c6f6d2872180b5c70351b11753b8ad4745f45d1a1"
     },
     {
       "id": "page:/pbx/recordings",
@@ -53463,6 +53933,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53473,7 +53944,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "39f1849807419023a52bcb70e8849d117d03cd2be86a0e1c461a1405286f8eb4"
+      "fingerprint": "25f325ef87bc55b66a68478985230422c81e026568316a10fbf1d0be0bf9c192"
     },
     {
       "id": "page:/pbx/referencia/xml",
@@ -53487,6 +53958,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53497,7 +53969,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "b53437fa035c09c399a5f267147e6a7d8c372f018cde2673ab50e022225dbef8"
+      "fingerprint": "a5e1de45cc33761a09fd3f09bf61352c3ca69cf635bf0937f36f32b3e0fdf31e"
     },
     {
       "id": "page:/pbx/routes",
@@ -53511,6 +53983,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53521,7 +53994,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "14d7785cc114b55b65da26bada5614b16ba57cf4095a3892b720b9e03f68be81"
+      "fingerprint": "d26049817a7322352847f67074dddccb5b08ef45d78cc0cba132427b33fec57c"
     },
     {
       "id": "page:/pbx/trunks",
@@ -53535,6 +54008,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53545,7 +54019,7 @@
       "linkedDomains": [
         "pbx"
       ],
-      "fingerprint": "b7fb75a6bb0a47959d59d04b02dc21f592ac6847349071efbcdb3d24ec110272"
+      "fingerprint": "0b8bc7c47aa31fd6556c07a7aef5dd8499e850d4d2ff3972bf9661ef9e5193bb"
     },
     {
       "id": "page:/plan-usage",
@@ -53557,6 +54031,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53567,7 +54042,27 @@
         "plan_usage"
       ],
       "linkedDomains": [],
-      "fingerprint": "4821a29d489f9e314dbf9c84c0aeb7fff766e38c7e1cec4fbffc5530954052a2"
+      "fingerprint": "01736f0faae137d5b13c1fed74a51380d44b8ae96a15391fe3084965e0ce47a7"
+    },
+    {
+      "id": "page:/platform-support",
+      "kind": "page",
+      "path": "/platform-support",
+      "roles": null,
+      "permission": null,
+      "classifications": [
+        "SUPPORT",
+        "DEVELOPMENT"
+      ],
+      "section": "plataforma",
+      "guarded": true,
+      "classification": "SUPPORT",
+      "source": "frontend/src/main.jsx",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "support-diagnostics",
+      "linkedJourneys": [],
+      "fingerprint": "8aecae3269cb3c8ed1983f7bd716ac639c149b915f4367c5c395911fa4dc2ba7"
     },
     {
       "id": "page:/product-docs",
@@ -53575,6 +54070,7 @@
       "path": "/product-docs",
       "roles": null,
       "permission": "rag:read",
+      "classifications": null,
       "section": "inteligencia",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53585,7 +54081,7 @@
         "product_docs"
       ],
       "linkedDomains": [],
-      "fingerprint": "119d6739d4ad48d4597f3624425c4fd468d03a5706c25819c4f9aa7ffcd6bffb"
+      "fingerprint": "742934959a43bd7e8bcb02b11551855a3b10016d13a52a1c7f46ad4a4c10ba4a"
     },
     {
       "id": "page:/projects",
@@ -53600,6 +54096,7 @@
         "super_admin"
       ],
       "permission": "projects:read",
+      "classifications": null,
       "section": "automacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53610,7 +54107,7 @@
         "projects"
       ],
       "linkedDomains": [],
-      "fingerprint": "ef98423c0c9a0c7259e1cc26c1c44c0f66a0d0ea53d042db34bc18eecf831eb2"
+      "fingerprint": "53440cd41a5e49bc430709080d8ebaedca3daf0ac027f4546a2f7972bb818dc6"
     },
     {
       "id": "page:/qa",
@@ -53620,6 +54117,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "SUPPORT",
@@ -53628,7 +54126,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "b8d696c13821dc07a3866b4b35591385d964962d9f8da3b50caf56560864da47"
+      "fingerprint": "a7d57f74120f395e7c4b2bb1b37a58f9957d5b21b91beab5e74163c3950c8e8a"
     },
     {
       "id": "page:/qa-mesh",
@@ -53638,6 +54136,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "SUPPORT",
@@ -53646,7 +54145,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "05e79b391bbf1c34df4cc2c561c96d94bd0c4dab6b402654f0de3055c4e5f7e0"
+      "fingerprint": "2cd4f9458a728e7d8185011deeb46acdbbf63d2f26b74f17197a788954e7c971"
     },
     {
       "id": "page:/qa/stability",
@@ -53656,6 +54155,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "SUPPORT",
@@ -53664,7 +54164,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "8dcaf6285712cd08044d2c06af88ddd5919a770f223a0777a27bb24aa7a1868e"
+      "fingerprint": "734e8c24af5808667368baf70c767ef136953f89ed6bd636fecea0cfd4c7390f"
     },
     {
       "id": "page:/quick-replies",
@@ -53672,6 +54172,7 @@
       "path": "/quick-replies",
       "roles": null,
       "permission": "quick_replies:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53682,7 +54183,7 @@
         "quick_replies"
       ],
       "linkedDomains": [],
-      "fingerprint": "1a61683bc9544591eb1535a1b577a39caec0961377f85dcb43c956be67bafb2b"
+      "fingerprint": "765bedb485411057f885108824d763ba517a16d0fb5ff8e0b2b72838f195a0ff"
     },
     {
       "id": "page:/r-agent2/crm",
@@ -53690,6 +54191,7 @@
       "path": "/r-agent2/crm",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53700,7 +54202,7 @@
         "capability_crm_updates"
       ],
       "linkedDomains": [],
-      "fingerprint": "76d1b55a7b9bbffeed34c60c49f1aa22bff9ab2be07b9f9e1535b36c7da8bb95"
+      "fingerprint": "5d33819b812b31fc344e1943cd80647effab8efeb34945ce9387ef4266af1615"
     },
     {
       "id": "page:/rag-documents",
@@ -53708,6 +54210,7 @@
       "path": "/rag-documents",
       "roles": null,
       "permission": "rag:read",
+      "classifications": null,
       "section": "inteligencia",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53718,7 +54221,7 @@
         "rag_documents"
       ],
       "linkedDomains": [],
-      "fingerprint": "3f4bc0bd8acc4742a95815721dd1d9d67371a5716df0a09b26cfd52c6526cc0f"
+      "fingerprint": "691f463d65cbfa8d0c692a3aa35eb521d272266cc2c3506d18d3543a08963b5a"
     },
     {
       "id": "page:/rbac",
@@ -53730,6 +54233,7 @@
         "super_admin"
       ],
       "permission": "agents:update",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53740,17 +54244,20 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "0c2505b638f722c66a556a5166ba60d07e9032a7d01ad602cc0449061829629f"
+      "fingerprint": "8c1e01260cbe0ea343add2391089a8680f2573a921ef799b12d19bc558202fa3"
     },
     {
       "id": "page:/rpa-replays",
       "kind": "page",
       "path": "/rpa-replays",
       "roles": [
-        "super_admin",
-        "auditor"
+        "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": [
+        "SUPPORT",
+        "DEVELOPMENT"
+      ],
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -53759,7 +54266,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "95340b028987340fb8609b3b738870b615d302b8dd17ac60602729159d0388ba"
+      "fingerprint": "69c852d9c531cfa4a439bdb1c3a0fde5d03d71e7f986cbd32e8e58dffcffd096"
     },
     {
       "id": "page:/rpa-seeds",
@@ -53767,6 +54274,7 @@
       "path": "/rpa-seeds",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "DEVELOPMENT",
@@ -53775,7 +54283,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "resilience",
       "linkedJourneys": [],
-      "fingerprint": "1a13e7a5bd340f71125076f1613557c89dcdf778eb0e350de1dcc941bf9cb7e5"
+      "fingerprint": "5640a0fde8d1d9135a619eaf59e5e2e15928d70c6d3cb2752f0676c4ee057cd5"
     },
     {
       "id": "page:/saas",
@@ -53783,6 +54291,7 @@
       "path": "/saas",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53793,7 +54302,7 @@
         "saas_storefront"
       ],
       "linkedDomains": [],
-      "fingerprint": "f4b83f746067ed7902a527eb14e6800ee4099a1a81c5148cf0673ec789ad034b"
+      "fingerprint": "2815b23f5af4c0c2f7baec3d5e3bc57ebf8fa47eaad8e584363900b49531962d"
     },
     {
       "id": "page:/saas/pricing",
@@ -53801,6 +54310,7 @@
       "path": "/saas/pricing",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53811,7 +54321,7 @@
         "saas_storefront"
       ],
       "linkedDomains": [],
-      "fingerprint": "251cdc22347496a37589e2a7fa6650da7d09b1124e6c79bc6536a318d25d346c"
+      "fingerprint": "997bd5398b2c6689d7dbcdd94dac54504c47b7f36bde8fcba55e51f1509ad3fe"
     },
     {
       "id": "page:/saas/products",
@@ -53819,6 +54329,7 @@
       "path": "/saas/products",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53829,7 +54340,7 @@
         "saas_storefront"
       ],
       "linkedDomains": [],
-      "fingerprint": "1dc746df2774c7b572d2428e83ce925f2af0ce94b0f6dafe8724764774e32b3f"
+      "fingerprint": "f792ca3736c5ef6654e34356843ed9ac192b5694188ec165966e8afd8c1e7cfd"
     },
     {
       "id": "page:/saas/signup",
@@ -53837,6 +54348,7 @@
       "path": "/saas/signup",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53847,7 +54359,7 @@
         "saas_storefront"
       ],
       "linkedDomains": [],
-      "fingerprint": "2233c90adaccdcd815adfd0fe03a2d6f28e22527cad3ba9f6a661244fbb25f43"
+      "fingerprint": "a2f5fc1b9bbb36210f39b02f8f0c63f002a11f318948a5ef0518ea37792a90b9"
     },
     {
       "id": "page:/saas/solutions",
@@ -53855,6 +54367,7 @@
       "path": "/saas/solutions",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53866,7 +54379,7 @@
         "solutions"
       ],
       "linkedDomains": [],
-      "fingerprint": "7fd8b1cc41c0a774310504c7d38af5064e94a44bb71f4673d0888f333bcb87ac"
+      "fingerprint": "f67c471742aa769aced2fe4e8abf2174ca9cc6f53fb09fe34e4bac001674e653"
     },
     {
       "id": "page:/segmentation",
@@ -53874,6 +54387,7 @@
       "path": "/segmentation",
       "roles": null,
       "permission": "tickets:read",
+      "classifications": null,
       "section": "automacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53884,7 +54398,7 @@
         "segmentation"
       ],
       "linkedDomains": [],
-      "fingerprint": "ac01d7706d05fd61918449c78e7fa797280cc1a12eab9940ca32fd2ad69a20c3"
+      "fingerprint": "b4a53424b984d3a34c69ba401a48b4ddef4828ba7b622c6f617b306cc7b78192"
     },
     {
       "id": "page:/sla-policies",
@@ -53898,6 +54412,7 @@
         "super_admin"
       ],
       "permission": "reports:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53908,7 +54423,7 @@
         "sla"
       ],
       "linkedDomains": [],
-      "fingerprint": "865ef7b78c80545e09ffcdbc58782358aee0b47dc6d4d80a07c25dcb8f59ecb9"
+      "fingerprint": "bd1cff4f6b774963b11aef094b3b0c776c531d2d2dd1fb6bf50eeff4504b6041"
     },
     {
       "id": "page:/solutions",
@@ -53922,6 +54437,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "automacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53932,7 +54448,7 @@
         "solutions"
       ],
       "linkedDomains": [],
-      "fingerprint": "07fb076707a0733101cb68b9f3fdf379dc7ace240d4e8da1c56c738061f31885"
+      "fingerprint": "0f6bea3e0ff8a6fb8bb2d7061c96549ff481ef8745566f80f335204ddfd1313b"
     },
     {
       "id": "page:/sso-scim",
@@ -53944,6 +54460,7 @@
         "super_admin"
       ],
       "permission": "config:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -53954,7 +54471,7 @@
         "sso_scim"
       ],
       "linkedDomains": [],
-      "fingerprint": "1ff8fcebef2e85251d9736b2d52314ab32c041c05748854d24ff08731c805e37"
+      "fingerprint": "afbedc173e283c11e4b7470eebf9589b634830b1f7d3c408bb69096051ac08f9"
     },
     {
       "id": "page:/station",
@@ -53962,6 +54479,7 @@
       "path": "/station",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53972,7 +54490,7 @@
         "physical_queue_kiosk_station_panel_fila"
       ],
       "linkedDomains": [],
-      "fingerprint": "314fa3d4198e21c3630ae0a64914696f538655899865a0cb074390dfa777a157"
+      "fingerprint": "3275e0dc8d1a327c34c78f19453f42ec68feaf5537e67ae2ba65e6fdc0984569"
     },
     {
       "id": "page:/storefront",
@@ -53980,6 +54498,7 @@
       "path": "/storefront",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -53990,7 +54509,7 @@
         "saas_storefront"
       ],
       "linkedDomains": [],
-      "fingerprint": "73b6dd0a75a864c3817ea44cc576b6c1b4b85d19deb64795a9ade1b466e5adac"
+      "fingerprint": "1def500cf29230b955bb8faa4377b7dd214a458cae0c46dd1933e5146770f3e8"
     },
     {
       "id": "page:/storefront/order",
@@ -53998,6 +54517,7 @@
       "path": "/storefront/order",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "PRODUCTION",
@@ -54009,7 +54529,7 @@
         "saas_storefront"
       ],
       "linkedDomains": [],
-      "fingerprint": "705de04365859314898b096c911f15bc7be2c18a0e60afbe2923bfd271a55d3b"
+      "fingerprint": "9815521e0615cf8fb9fd7bfd477073eb20c0f91bed1a0cd176616464b547373e"
     },
     {
       "id": "page:/super-admin",
@@ -54019,6 +54539,7 @@
         "super_admin"
       ],
       "permission": null,
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "DEVELOPMENT",
@@ -54027,7 +54548,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "platform",
       "linkedJourneys": [],
-      "fingerprint": "ff66b44ab033d98e87805821eef0eaccc14caaa528f9fd6194d799339e16e715"
+      "fingerprint": "81b01307f2e8158f55fc3225659963be7c4171ff19a066591549a0acf9d1e444"
     },
     {
       "id": "page:/supervisor",
@@ -54035,6 +54556,7 @@
       "path": "/supervisor",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": "operacao",
       "guarded": false,
       "classification": "PRODUCTION",
@@ -54045,7 +54567,7 @@
         "supervisor"
       ],
       "linkedDomains": [],
-      "fingerprint": "4d25990b1f05c6c06ab0a0bf9716462230db2de3b610f6c5e7a5ed7c7a1bf2c3"
+      "fingerprint": "5de3edca5b518095a2ed028c1564c2cdf3bcb0a3c57cee2f20fab2e54449b817"
     },
     {
       "id": "page:/support",
@@ -54053,6 +54575,7 @@
       "path": "/support",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": "relacionamento",
       "guarded": false,
       "classification": "PRODUCTION",
@@ -54063,7 +54586,7 @@
         "support_ticket_flow"
       ],
       "linkedDomains": [],
-      "fingerprint": "068ae9c93d6362d0c0149c56613f498787011882acfd2b90f7554ba642feb0e4"
+      "fingerprint": "b7d8c9f70a92a9617d21c3e1dd936296dce910553fba4edf1ea732ba1c7a1f11"
     },
     {
       "id": "page:/system-status",
@@ -54071,6 +54594,7 @@
       "path": "/system-status",
       "roles": null,
       "permission": null,
+      "classifications": null,
       "section": null,
       "guarded": false,
       "classification": "DEVELOPMENT",
@@ -54079,7 +54603,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "observability",
       "linkedJourneys": [],
-      "fingerprint": "009551f0c444445fb8f61eac648a20841df3276fd6f2f55182bbbe577d4a8ff2"
+      "fingerprint": "57103f965f561ee3fdfbfa4296f51ff5f38aa27ad5c8ffba4204ab351119ea8a"
     },
     {
       "id": "page:/tasks",
@@ -54093,6 +54617,7 @@
         "super_admin"
       ],
       "permission": "config:update",
+      "classifications": null,
       "section": "automacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54103,7 +54628,7 @@
         "tasks"
       ],
       "linkedDomains": [],
-      "fingerprint": "c4968a9a85490f784e93cea3741cb708f894f6a50342720b224cd215363c39b1"
+      "fingerprint": "cb58baae8eef68963bdb87989e665c4a81c79b5fe36d530eac0ef18aa3157d35"
     },
     {
       "id": "page:/tenant-intelligence",
@@ -54111,6 +54636,7 @@
       "path": "/tenant-intelligence",
       "roles": null,
       "permission": "reports:read",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54122,7 +54648,7 @@
         "tenant_config"
       ],
       "linkedDomains": [],
-      "fingerprint": "9fa169d55995d4516378853fdbaff9641eb4f6b88cadddf42ee34238535f162b"
+      "fingerprint": "f8defe222e9e360006a27a10e8d54ac8346cbef02a3822592e021c0ec9cd9f89"
     },
     {
       "id": "page:/tenants",
@@ -54134,6 +54660,7 @@
         "super_admin"
       ],
       "permission": "tenant:read",
+      "classifications": null,
       "section": "plataforma",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54144,7 +54671,7 @@
         "tenants"
       ],
       "linkedDomains": [],
-      "fingerprint": "5a7e8c28aa0b240214f424e04d70e828aeb69439bc32e6b6b6bcb425f5248831"
+      "fingerprint": "2d26631461ac530993f858598727d9ecb78fa721b85ac4de49a8896dc86d9d96"
     },
     {
       "id": "page:/vertical/dashboard",
@@ -54158,6 +54685,7 @@
         "super_admin"
       ],
       "permission": null,
+      "classifications": null,
       "section": "verticais",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54168,7 +54696,7 @@
         "operations_dashboard"
       ],
       "linkedDomains": [],
-      "fingerprint": "154c0bb735439b57b74fbb938e8ffbbabb791ef31fc39383acea37fdaea660d3"
+      "fingerprint": "aacdc51fd0fd1a1bf3e896d7f73e966322a356f271403afeebf3534636afb661"
     },
     {
       "id": "page:/web-scraping",
@@ -54176,6 +54704,7 @@
       "path": "/web-scraping",
       "roles": null,
       "permission": "rag:create",
+      "classifications": null,
       "section": "inteligencia",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54186,7 +54715,7 @@
         "web_scraping"
       ],
       "linkedDomains": [],
-      "fingerprint": "22e1af861660bfff2bcd78cfe6d1123df4f41978fb9eff3290d8e8d2590bd34e"
+      "fingerprint": "7eeadcc4e96c3930c86b105a0b0a55f0a0beb0ce566cf6aab43b1da4417ce8ff"
     },
     {
       "id": "page:/whatsapp-connections",
@@ -54200,6 +54729,7 @@
         "super_admin"
       ],
       "permission": "config:update",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54210,7 +54740,7 @@
         "whatsapp_connections"
       ],
       "linkedDomains": [],
-      "fingerprint": "035b78995cb1239679b533094e63fe6153609bfe6908cf1ead84ca791866be8b"
+      "fingerprint": "25a5ff4662b3b4cd8ebc6a24ec367cb6dc33a5c85bb7fe7cd63070a67123f553"
     },
     {
       "id": "page:/whatsapp-ivr",
@@ -54224,6 +54754,7 @@
         "super_admin"
       ],
       "permission": "config:update",
+      "classifications": null,
       "section": "operacao",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54234,7 +54765,7 @@
         "whatsapp_connections"
       ],
       "linkedDomains": [],
-      "fingerprint": "ea954a595f8d52f2af56234d08d27b48700c1202d8e61bbf5d852d5b2ed8dc88"
+      "fingerprint": "2e976e133354ab2e8d85c3e43800031b53b5648102fe52a2c7bab7af302067dc"
     },
     {
       "id": "page:/whatsapp-templates",
@@ -54242,6 +54773,7 @@
       "path": "/whatsapp-templates",
       "roles": null,
       "permission": "flows:read",
+      "classifications": null,
       "section": "relacionamento",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54253,7 +54785,7 @@
         "whatsapp_connections"
       ],
       "linkedDomains": [],
-      "fingerprint": "aec0bf6b8dd114b7d1d22ed63ad39985c6cb5fe0d7aefd63acee576b126eae05"
+      "fingerprint": "fa1d4b7f84ff4357872d3c9c26d4fca2b8f87b733418b113aa24a5561bbf571b"
     },
     {
       "id": "page:/workspace",
@@ -54261,6 +54793,7 @@
       "path": "/workspace",
       "roles": null,
       "permission": "workspace:read",
+      "classifications": null,
       "section": "cockpit",
       "guarded": true,
       "classification": "PRODUCTION",
@@ -54271,7 +54804,7 @@
       "linkedDomains": [
         "workspace"
       ],
-      "fingerprint": "17ba6be687b9319cb9ac4b86f46945d9eecef7cc04d5df13b206313c26baba6e"
+      "fingerprint": "b05b7c2bf44fe0eaf2b98f1ca3b22bc5ad60b639e771e03db78e96f5e2db4c69"
     },
     {
       "id": "relation:AuditLog.actor_user_id->users.id",
@@ -55163,6 +55696,49 @@
       ],
       "linkedDomains": [],
       "fingerprint": "9c488b9ce56d0d9477388478a3c95c5865563704a3e95f8c495f726f11caa69b"
+    },
+    {
+      "id": "table:case_conversations",
+      "kind": "table",
+      "table": "case_conversations",
+      "model": "CaseConversation",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "case_id"
+          ],
+          "name": "case_conversations_tenant_key_case_id_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "conversation_id"
+          ],
+          "name": "case_conversations_tenant_key_conversation_id_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "case_id",
+            "conversation_id"
+          ],
+          "name": "case_conversations_unique_link",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/CaseConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "conversations_chat"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6219d9639d6e5f35c3cbeae60821e61b712f4ae75bad365dc1046fc447af299a"
     },
     {
       "id": "table:cc_campaign_list",

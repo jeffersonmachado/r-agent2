@@ -56,6 +56,9 @@ function frontendRoutesPlugin() {
                           url.startsWith('/queues') ||
                           // /inbox é página SPA; somente subrotas /inbox/* são API
                           (url.startsWith('/inbox/') || (url === '/inbox' && isApiRequest)) ||
+                          // /cases é página SPA (Chamados); /cases e /cases/* são API quando Accept JSON
+                          (url === '/cases' && isApiRequest) ||
+                          url.startsWith('/cases/') ||
                           (url.startsWith('/supervisor/') && url !== '/supervisor') ||
                           (url.startsWith('/qa-mesh/') && url !== '/qa-mesh') ||
                           // /qa e /qa/stability são páginas SPA; endpoints /qa/* (stability,
@@ -364,6 +367,24 @@ const viteConfig = defineConfig(({ mode }) => {
             }
           }
           // Para /inbox/conversations e outros métodos, faz proxy para API
+          return undefined;
+        },
+      },
+      // /cases é página SPA (Chamados) em navegação (text/html) e API quando
+      // Accept JSON; subrotas (/cases/:id, /cases/:id/conversations) são sempre API.
+      '^/cases': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
+        bypass(req) {
+          if (req.method === 'GET' && (req.url || '').split('?')[0] === '/cases') {
+            const acceptHeader = req.headers.accept || '';
+            const isNavigation = acceptHeader.includes('text/html') &&
+                                 !acceptHeader.includes('application/json');
+            if (isNavigation) {
+              return false;
+            }
+          }
           return undefined;
         },
       },
