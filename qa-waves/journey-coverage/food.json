@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T16:47:55.459Z",
+  "generatedAt": "2026-08-30T00:33:43.997Z",
   "vertical": "food",
   "maturity": "production-like",
   "replaySupported": true,
@@ -10,6 +10,101 @@
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
+        {
+          "scenarioId": "business-e2e-food_customer_journey",
+          "scenario": "E2E: food_customer_journey",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_food_customer_journey_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-food_customer_journey-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-food_customer_journey-order_service_available",
+          "scenario": "Precondição: Order Service Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_order_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-food_customer_journey-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
         {
           "scenarioId": "business-food-flow-order",
           "scenario": "Food pedido via WhatsApp até confirmação",
@@ -80,6 +175,101 @@
               "expected": {
                 "backendEntity": "order",
                 "statusUpdated": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-e2e-food_order_flow",
+          "scenario": "E2E: food_order_flow",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_food_order_flow_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-food_order_flow-order_service_available",
+          "scenario": "Precondição: Order Service Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_order_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-food_order_flow-storefront_channel_active",
+          "scenario": "Precondição: Storefront Channel Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_storefront_channel_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-food_order_flow-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
               }
             }
           ]

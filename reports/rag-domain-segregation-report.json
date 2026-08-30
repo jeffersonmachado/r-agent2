@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T03:16:32.405Z",
+  "generatedAt": "2026-08-30T00:15:53.262Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -38,9 +38,13 @@
     {
       "domain": "SYSTEM",
       "classification": "SUPPORT",
-      "count": 1823
+      "count": 2070
     }
   ],
   "details": [],
-  "status": "PASS"
+  "status": "PASS",
+  "runId": "rap-governed-20260829225801068-83ffd1b3",
+  "sourceFingerprint": "d407df6a2ae8bdbaf150b403f887fc1d97c0464a5716bcb2bbb2d3984141613e",
+  "artifactType": "rag-domain-segregation-report",
+  "artifactVersion": "1.0.0"
 }

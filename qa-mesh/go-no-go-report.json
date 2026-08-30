@@ -1,33 +1,33 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-08-24T20-45-33-754Z",
+  "executionId": "mesh-2026-08-29T23-02-44-953Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "GO",
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-08-24T20-45-33-754Z",
-    "startedAt": "2026-08-24T20:45:33.754Z",
+    "executionId": "mesh-2026-08-29T23-02-44-953Z",
+    "startedAt": "2026-08-29T23:02:44.954Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-08-24T21:49:02.255Z",
-    "registryTotal": 131,
+    "promotedAt": "2026-08-30T00:11:08.310Z",
+    "registryTotal": 132,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-08-24T20-45-33-754Z",
+    "executionId": "mesh-2026-08-29T23-02-44-953Z",
     "tenantId": "system",
-    "timestamp": "2026-08-24T20:45:33.754Z",
+    "timestamp": "2026-08-29T23:02:44.954Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 131,
-    "attempted": 131,
-    "executed": 131,
-    "total": 131,
-    "passed": 131,
+    "registryTotal": 132,
+    "attempted": 132,
+    "executed": 132,
+    "total": 132,
+    "passed": 132,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
@@ -67,14 +67,14 @@
         "total": 2
       },
       "core": {
-        "passed": 84,
+        "passed": 85,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 84
+        "total": 85
       },
       "fitness": {
         "passed": 15,
@@ -233,15 +233,19 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-08-24T20-45-33-754Z",
-      "startedAt": "2026-08-24T20:45:33.754Z",
+      "executionId": "mesh-2026-08-29T23-02-44-953Z",
+      "startedAt": "2026-08-29T23:02:44.954Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-08-24T21:49:02.255Z",
-      "registryTotal": 131,
+      "promotedAt": "2026-08-30T00:11:08.310Z",
+      "registryTotal": 132,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "generatedAt": "2026-08-24T21:49:02.256Z"
+  "generatedAt": "2026-08-30T00:11:08.311Z",
+  "runId": "rap-governed-20260829225801068-83ffd1b3",
+  "sourceFingerprint": "d407df6a2ae8bdbaf150b403f887fc1d97c0464a5716bcb2bbb2d3984141613e",
+  "artifactType": "go-no-go-report",
+  "artifactVersion": "1.0.0"
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T16:47:55.459Z",
+  "generatedAt": "2026-08-30T00:33:43.997Z",
   "vertical": "services",
   "maturity": "production-like",
   "replaySupported": true,
@@ -33,6 +33,101 @@
               "expected": {
                 "backendEntity": "solution",
                 "activationRegistered": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-e2e-services_default_journey",
+          "scenario": "E2E: services_default_journey",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_services_default_journey_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-services_default_journey-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-services_default_journey-schedule_service_available",
+          "scenario": "Precondição: Schedule Service Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_schedule_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-services_default_journey-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
               }
             }
           ]

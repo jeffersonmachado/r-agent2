@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-24T16:43:20.094Z",
-  "artifact": "r-agent2-20260824-134414.payload.zip",
+  "generatedAt": "2026-08-30T00:25:33.750Z",
+  "artifact": "r-agent2-20260829-213044.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260824-134414.payload.zip",
-        "computedHash": "c29e59b94c91aceec733d31bf84b95ba765cf3ced89ed1423851aec4914e914b",
-        "recordedHash": "c29e59b94c91aceec733d31bf84b95ba765cf3ced89ed1423851aec4914e914b",
+        "zipName": "r-agent2-20260829-213044.payload.zip",
+        "computedHash": "0d6da85268478a66f127fafb5f013f586b2db0c828766576b483391d03ec604b",
+        "recordedHash": "0d6da85268478a66f127fafb5f013f586b2db0c828766576b483391d03ec604b",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260824-134414.payload.manifest.json"
+        "subject": "r-agent2-20260829-213044.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260824-134414.payload.zip"
+        "subject": "r-agent2-20260829-213044.payload.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "0a7848b66bd95559725d1c04…"
+        "storedChainRoot": "819cf41e435e1874ceeb3f28…"
       }
     },
     {
@@ -99,9 +99,9 @@
     }
   ],
   "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
-  "runId": "rap-governed-20260824161315242-323c7dec",
-  "sourceFingerprint": "021b59547d6613c2fb012d32c25385c0a2fb336caab7b04f52f2d38845a69e41",
+  "runId": "rap-governed-20260829225801068-83ffd1b3",
+  "sourceFingerprint": "d407df6a2ae8bdbaf150b403f887fc1d97c0464a5716bcb2bbb2d3984141613e",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-08-24T16:46:11.795Z"
+  "reboundAt": "2026-08-30T00:32:12.223Z"
 }

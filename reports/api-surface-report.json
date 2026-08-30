@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-08-23T01:17:53.589Z",
-  "commit": "b67aaf3a005012485dcb86ce333ddccf4693ed51",
+  "generatedAt": "2026-08-29T22:59:17.845Z",
+  "commit": "58b12b76949457159e774cd750143a0b19aa0a7e",
   "baseUrl": "http://localhost:3001",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 778,
+    "items": 787,
     "byState": {
-      "VALIDATED": 754,
+      "VALIDATED": 763,
       "NOT_APPLICABLE": 21,
       "VISITED": 3
     }
@@ -649,6 +649,30 @@
     },
     {
       "id": "api:DELETE:/bulk-campaigns/:campaignId",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:DELETE:/cases/:id/conversations/:conversationId",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -4592,10 +4616,7 @@
           "status": 401,
           "notFoundFallback": false
         },
-        "p2": {
-          "status": 200,
-          "notFoundFallback": false
-        },
+        "p2": "network-error",
         "p3": "skipped"
       }
     },
@@ -5719,7 +5740,7 @@
         {
           "name": "developmentReachable",
           "passed": true,
-          "detail": "super_admin alcançou a rota (500)"
+          "detail": "super_admin alcançou a rota (200)"
         }
       ],
       "probes": {
@@ -5732,7 +5753,7 @@
           "notFoundFallback": false
         },
         "p3": {
-          "status": 500,
+          "status": 200,
           "notFoundFallback": false
         }
       }
@@ -6624,6 +6645,33 @@
         },
         "p2": {
           "status": 400,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/api/tenant/capabilities",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 200,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -7591,6 +7639,60 @@
     },
     {
       "id": "api:GET:/bulk-campaigns/:campaignId",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 404,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/cases",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 200,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:GET:/cases/:id",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -10291,7 +10393,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 500,
+          "status": 200,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -17620,6 +17722,30 @@
       }
     },
     {
+      "id": "api:POST:/cases/:id/conversations",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:POST:/channel-accounts",
       "state": "VALIDATED",
       "assertions": [
@@ -18338,7 +18464,55 @@
       }
     },
     {
+      "id": "api:POST:/inbox/conversations/:conversationId/case",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:POST:/inbox/conversations/:conversationId/notes",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/inbox/conversations/:conversationId/reply",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -19195,6 +19369,44 @@
     },
     {
       "id": "api:POST:/qa-mesh/run",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION rejeitado com 403 em rota DEVELOPMENT"
+        },
+        {
+          "name": "developmentReachable",
+          "passed": true,
+          "detail": "NOT_APPLICABLE por design: P3 em método mutável executaria efeito real com token autorizado; alcançabilidade por DEVELOPMENT comprovada pelas rotas GET do mesmo módulo e pelos cenários de mesh",
+          "notApplicable": true
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": {
+          "status": 403,
+          "notFoundFallback": false
+        },
+        "p3": "skipped"
+      }
+    },
+    {
+      "id": "api:POST:/qa-mesh/scheduler",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -21281,6 +21493,30 @@
       }
     },
     {
+      "id": "api:PUT:/api/tenant/capabilities",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:PUT:/auth/agents/:id",
       "state": "VALIDATED",
       "assertions": [
@@ -21775,8 +22011,8 @@
       }
     }
   ],
-  "runId": "rap-governed-20260824161315242-323c7dec",
-  "sourceFingerprint": "021b59547d6613c2fb012d32c25385c0a2fb336caab7b04f52f2d38845a69e41",
+  "runId": "rap-governed-20260829225801068-83ffd1b3",
+  "sourceFingerprint": "d407df6a2ae8bdbaf150b403f887fc1d97c0464a5716bcb2bbb2d3984141613e",
   "artifactType": "api-surface-report",
   "artifactVersion": "1.0.0"
 }

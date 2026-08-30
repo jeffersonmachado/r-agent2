@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T16:47:55.459Z",
+  "generatedAt": "2026-08-30T00:33:43.997Z",
   "vertical": "core",
   "kind": "system",
   "maturity": "system",
@@ -406,6 +406,26 @@
           "integrations": [],
           "steps": [
             "Tenant autenticado"
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "core",
+      "journey": "cases",
+      "replaySupport": false,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-core-biz-cases",
+          "scenario": "Core cases: chamado criado a partir da inbox consolidando múltiplas conversas",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado",
+            "Duas conversas elegíveis na caixa de entrada"
           ]
         }
       ]

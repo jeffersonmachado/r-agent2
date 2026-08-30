@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-24T16:47:06.092Z",
-  "artifact": "r-agent2-20260824-134414.payload.zip",
+  "generatedAt": "2026-08-30T00:32:56.802Z",
+  "artifact": "r-agent2-20260829-213044.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260824-134414.payload.zip",
-        "computedHash": "ecc16c3d5a6ca31a86f05911a9255f04058dd27b0a1a3fb1ca83fe92a6a16410",
-        "recordedHash": "ecc16c3d5a6ca31a86f05911a9255f04058dd27b0a1a3fb1ca83fe92a6a16410",
+        "zipName": "r-agent2-20260829-213044.payload.zip",
+        "computedHash": "70a7c15ce42c0150f4e888203a46f1d33c00407e1671b2ec711170289fcd47c5",
+        "recordedHash": "70a7c15ce42c0150f4e888203a46f1d33c00407e1671b2ec711170289fcd47c5",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260824-134414.payload.manifest.json"
+        "subject": "r-agent2-20260829-213044.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260824-134414.payload.zip"
+        "subject": "r-agent2-20260829-213044.payload.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "e9e7ede86359ff62ee29126d…"
+        "storedChainRoot": "5b9e61f90df2ae2223aa0706…"
       }
     },
     {
@@ -99,8 +99,8 @@
     }
   ],
   "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
-  "runId": "rap-governed-20260824161315242-323c7dec",
-  "sourceFingerprint": "021b59547d6613c2fb012d32c25385c0a2fb336caab7b04f52f2d38845a69e41",
+  "runId": "rap-governed-20260829225801068-83ffd1b3",
+  "sourceFingerprint": "d407df6a2ae8bdbaf150b403f887fc1d97c0464a5716bcb2bbb2d3984141613e",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0"
 }

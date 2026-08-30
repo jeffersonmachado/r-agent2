@@ -1,7 +1,7 @@
 # Platform Status
 
-- Generated at: 2026-08-24T16:47:55.459Z
-- Canonical mesh execution: mesh-2026-08-24T14-53-32-378Z
+- Generated at: 2026-08-30T00:33:43.997Z
+- Canonical mesh execution: mesh-2026-08-29T23-02-44-953Z
 - Canonical mesh decision: GO
 - Readiness decision: AUTONOMOUS_READY_GO
 - Readiness score: 100
@@ -13,7 +13,7 @@
 - none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-08-24T14-53-32-378Z.json
+- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-08-29T23-02-44-953Z.json
 - Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json

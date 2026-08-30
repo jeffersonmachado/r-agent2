@@ -1,29 +1,29 @@
 {
-  "generatedAt": "2026-08-21T21:29:50.732Z",
+  "generatedAt": "2026-08-29T14:05:41.721Z",
   "ok": true,
-  "apiBaseUrl": "http://localhost:3001",
-  "authMode": "rpa",
+  "apiBaseUrl": "http://localhost:13001",
+  "authMode": "admin",
   "tenantId": "system",
   "dependencyResults": [
     {
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1787347746887 callId=call-voice-tts-asr-1787347746887 selftest=FAIL realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=admin flowId=flow-voice-tts-asr-smoke-1788012334824 callId=call-voice-tts-asr-1788012334824 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
       "name": "l04",
       "ok": true,
       "status": 0,
-      "stdout": "[Config] Configuração carregada de /opt/results/ria/r-agent2/api/data/config.json\n[2026-08-21T21:29:37.017Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-08-21T21:29:37.407Z] [INFO] [Sequelize] Conexão fechada\n[2026-08-21T21:29:37.515Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-08-21T21:29:37.545Z] [INFO] [Sequelize] Conexão fechada\n[2026-08-21T21:29:38.623Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-08-21T21:29:38.791Z] [INFO] [PBX CallEvents] scan concluído\n{\n  \"consumer\": \"pbx_cdr_l04_1787347778623\",\n  \"scanned\": 1,\n  \"emitted\": 3,\n  \"cursor\": {\n    \"calldate\": \"2026-08-21T21:30:37.408Z\",\n    \"cdrId\": \"cdr-l04-1787347775613\"\n  }\n}\n[2026-08-21T21:29:39.752Z] [DEBUG] 🔍 getAiProviderForTenant: Buscando provider\n{\n  \"tenantId\": \"tenant-1785061894087-4n7ygpw\"\n}\n[2026-08-21T21:29:39.753Z] [DEBUG] 📋 Tenants configurados\n{\n  \"tenants\": []\n}\n[2026-08-21T21:29:39.883Z] [INFO] [Sequelize] Conexão fechada\n[2026-08-21T21:29:39.992Z] [INFO] [Sequelize] Conectado ao PostgreSQL com sucesso\n[2026-08-21T21:29:40.026Z] [INFO] [Sequelize] Conexão fechada\n[pbx-call-events-runtime-smoke] OK auth=rpa_scoped flowId=flow-pbx-call-events-runtime-smoke-1787347775613 executionId=fx-1787347779737-7632f286c15b latencyMs=20 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
-      "stderr": "[2026-08-21T21:29:39.753Z] [WARN] ⚠️ getAiProviderForTenant: Nenhuma configuração encontrada para tenant\n{\n  \"tenantId\": \"tenant-1785061894087-4n7ygpw\"\n}"
+      "stdout": "[pbx-call-events-runtime-smoke] OK auth=admin flowId=flow-pbx-call-events-runtime-smoke-1788012338374 executionId=fx-1788012339973-77d7799d5fb1 latencyMs=44 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
+      "stderr": ""
     },
     {
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1787347783936-cw1mfnr queue=ux1_smoke_1787347783844 quickReply=qr-1787347784601-vb7lwvtym phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1788012340652-yfdtpsl conversation=conv-1788012340723-6369370a0133 queue=ux1_smoke_1788012340631 quickReply=qr-1788012340848-4isdo3ezt phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],

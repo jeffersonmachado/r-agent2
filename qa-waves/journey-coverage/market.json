@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T16:47:55.459Z",
+  "generatedAt": "2026-08-30T00:33:43.997Z",
   "vertical": "market",
   "maturity": "production-like",
   "replaySupported": true,
@@ -33,6 +33,101 @@
               "expected": {
                 "backendEntity": "node",
                 "nodePublished": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-e2e-market_default_journey",
+          "scenario": "E2E: market_default_journey",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_market_default_journey_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-market_default_journey-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-market_default_journey-order_service_available",
+          "scenario": "Precondição: Order Service Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_order_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-market_default_journey-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
               }
             }
           ]

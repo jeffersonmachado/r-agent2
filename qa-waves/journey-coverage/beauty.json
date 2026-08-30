@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T16:47:55.459Z",
+  "generatedAt": "2026-08-30T00:33:43.997Z",
   "vertical": "beauty",
   "maturity": "production-like",
   "replaySupported": true,
@@ -10,6 +10,197 @@
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
+        {
+          "scenarioId": "business-e2e-beauty_booking",
+          "scenario": "E2E: beauty_booking",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_beauty_booking_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-scheduling",
+          "scenario": "Validação: Scheduling",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_scheduling_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-payment",
+          "scenario": "Validação: Payment",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_payment_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-crm_updates",
+          "scenario": "Validação: Crm Updates",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_crm_updates_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-notifications",
+          "scenario": "Validação: Notifications",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_notifications_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-beauty_booking-schedule_service_available",
+          "scenario": "Precondição: Schedule Service Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_schedule_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-beauty_booking-calendar_writable",
+          "scenario": "Precondição: Calendar Writable",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_calendar_writable_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-beauty_booking-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
         {
           "scenarioId": "business-b2",
           "scenario": "Beauty reagendamento",
@@ -148,6 +339,101 @@
               "expected": {
                 "backendEntity": "payment",
                 "paymentConfirmed": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-e2e-beauty_new_customer",
+          "scenario": "E2E: beauty_new_customer",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_beauty_new_customer_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-beauty_new_customer-lead_capture_active",
+          "scenario": "Precondição: Lead Capture Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_lead_capture_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-beauty_new_customer-schedule_service_available",
+          "scenario": "Precondição: Schedule Service Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_schedule_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-beauty_new_customer-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
               }
             }
           ]

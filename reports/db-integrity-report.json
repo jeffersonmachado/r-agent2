@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-21T20:30:42.378Z",
+  "generatedAt": "2026-08-29T22:58:49.803Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "b8d10edbfa23b1b19afa13143efacbbe74ae0d77",
+  "commit": "58b12b76949457159e774cd750143a0b19aa0a7e",
   "dbAvailable": true,
   "totals": {
-    "models": 174,
-    "validated": 174,
+    "models": 176,
+    "validated": 176,
     "visited": 0,
     "failed": 0,
-    "warnings": 31
+    "warnings": 32
   },
   "relationTotals": {
     "relations": 9,
@@ -698,6 +698,58 @@
       ]
     },
     {
+      "id": "model:AiProvider",
+      "table": "ai_providers",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/AiProvider.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=ai_providers"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260822000000-create-ai-providers.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope ausente (model global?)"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'ai_providers' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "10 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
       "id": "model:AuditEvent",
       "table": "audit_events",
       "state": "VALIDATED",
@@ -1053,6 +1105,58 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "19 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:CaseConversation",
+      "table": "case_conversations",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/CaseConversation.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=case_conversations"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260827000002-create-case-conversations.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'case_conversations' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "5 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -1448,7 +1552,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260119000002-create-channel-conversations.js"
+          "detail": "migrations: api/db/migrations/20260119000002-create-channel-conversations.js, api/db/migrations/20260827000003-add-assigned-to-channel-conversations.js"
         },
         {
           "name": "tenantScope",
@@ -1468,7 +1572,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "8 colunas do model presentes"
+          "detail": "10 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -8319,7 +8423,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20250111000002-create-users.js, api/db/migrations/20250111000003-create-tenant-users.js, api/db/migrations/20250111000007-create-audit-logs.js, api/db/migrations/20250111000009-add-auth-columns-to-users.js, api/db/migrations/20250111000010-create-sessions.js, api/db/migrations/20250111000011-add-user-auth-meta-columns.js, api/db/migrations/20250111000013-create-audit-events.js, api/db/migrations/20260120000001-hardening-users-tenant-key-not-null.js, api/db/migrations/20260206010000-add-user-mfa-secrets.js, api/db/migrations/20260423000001-create-project-management.js"
+          "detail": "migrations: api/db/migrations/20250111000002-create-users.js, api/db/migrations/20250111000003-create-tenant-users.js, api/db/migrations/20250111000007-create-audit-logs.js, api/db/migrations/20250111000009-add-auth-columns-to-users.js, api/db/migrations/20250111000010-create-sessions.js, api/db/migrations/20250111000011-add-user-auth-meta-columns.js, api/db/migrations/20250111000013-create-audit-events.js, api/db/migrations/20260120000001-hardening-users-tenant-key-not-null.js, api/db/migrations/20260206010000-add-user-mfa-secrets.js, api/db/migrations/20260423000001-create-project-management.js, api/db/migrations/20260827000001-add-platform-role-to-users.js"
         },
         {
           "name": "tenantScope",
@@ -8339,7 +8443,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "20 colunas do model presentes"
+          "detail": "21 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -9464,6 +9568,6 @@
       ]
     }
   ],
-  "runId": "rap-governed-20260824161315242-323c7dec",
-  "sourceFingerprint": "021b59547d6613c2fb012d32c25385c0a2fb336caab7b04f52f2d38845a69e41"
+  "runId": "rap-governed-20260829225801068-83ffd1b3",
+  "sourceFingerprint": "d407df6a2ae8bdbaf150b403f887fc1d97c0464a5716bcb2bbb2d3984141613e"
 }

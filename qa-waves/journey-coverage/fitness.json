@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T16:47:55.459Z",
+  "generatedAt": "2026-08-30T00:33:43.997Z",
   "vertical": "fitness",
   "maturity": "production-like",
   "replaySupported": true,
@@ -23,7 +23,7 @@
         {
           "scenarioId": "fitness_full_agendamento_whatsapp_e2e_pagamento_confirmacao",
           "scenario": "E2E no WhatsApp: agendar aula (pilates) com escolha de unidade, checagem de elegibilidade, pagamento e confirmação com política de cancelamento",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -130,7 +130,7 @@
         {
           "scenarioId": "fitness_full_agendamento_avaliacao_e_pagamento_whatsapp",
           "scenario": "WhatsApp: agendar avaliação física com personal, validar disponibilidade, pagamento antecipado e confirmação com política de cancelamento",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -298,6 +298,101 @@
               }
             }
           ]
+        },
+        {
+          "scenarioId": "business-e2e-agendamento",
+          "scenario": "E2E: agendamento",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_agendamento_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-agendamento-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-agendamento-schedule_service_available",
+          "scenario": "Precondição: Schedule Service Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_schedule_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-agendamento-calendar_writable",
+          "scenario": "Precondição: Calendar Writable",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_calendar_writable_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
         }
       ]
     },
@@ -320,7 +415,7 @@
         {
           "scenarioId": "fitness_full_cancelamento_assinatura_whatsapp_retentativa",
           "scenario": "Cancelamento E2E via WhatsApp com retenção, confirmação de identidade, efetivação imediata e liberação de acesso (alto risco)",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -420,7 +515,7 @@
         {
           "scenarioId": "fitness_full_cancelamento_plano_whatsapp_e2e_reembolso_acesso",
           "scenario": "WhatsApp: cancelamento E2E de plano anual com cobrança recente, confirmação de identidade, cálculo de reembolso e bloqueio de acesso",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -522,6 +617,101 @@
               "expected": "Se o reembolso não puder ser calculado automaticamente, assistente abre ticket com prioridade alta, coleta dados mínimos e confirma protocolo sem bloquear o cancelamento."
             }
           ]
+        },
+        {
+          "scenarioId": "business-e2e-cancelamento",
+          "scenario": "E2E: cancelamento",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_cancelamento_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-cancelamento-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-cancelamento-membership_validation_active",
+          "scenario": "Precondição: Membership Validation Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_membership_validation_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-cancelamento-billing_validation_active",
+          "scenario": "Precondição: Billing Validation Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_billing_validation_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
         }
       ]
     },
@@ -544,7 +734,7 @@
         {
           "scenarioId": "fitness_full_checkin_sem_reserva_com_pagamento_pendente_whatsapp",
           "scenario": "Check-in via WhatsApp sem reserva ativa e com pagamento pendente: orientar, bloquear entrada e oferecer regularização",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -636,7 +826,7 @@
         {
           "scenarioId": "fitness_full_checkin_whatsapp_qr_com_biometria_e_trava_de_acesso",
           "scenario": "Check-in completo via WhatsApp com QR dinâmico, validação de biometria na catraca e liberação de acesso (alto risco)",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -737,6 +927,101 @@
               "expected": "Se houver falha na integração com controle de acesso, sistema orienta procedimento seguro: apresentar documento na recepção, sem liberar acesso por mensagem, e registra incidente."
             }
           ]
+        },
+        {
+          "scenarioId": "business-e2e-checkin",
+          "scenario": "E2E: checkin",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_checkin_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-checkin-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-checkin-membership_validation_active",
+          "scenario": "Precondição: Membership Validation Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_membership_validation_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-checkin-access_decision_active",
+          "scenario": "Precondição: Access Decision Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_access_decision_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
         }
       ]
     },
@@ -759,7 +1044,7 @@
         {
           "scenarioId": "fitness_full_whatsapp_checkout_pix_confirmacao_e2e",
           "scenario": "WhatsApp: checkout completo de plano mensal com PIX e confirmação de matrícula (E2E) para academia",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -867,7 +1152,7 @@
         {
           "scenarioId": "fitness_full_whatsapp_checkout_pix_aprovacao_pospagamento",
           "scenario": "Checkout end-to-end no WhatsApp: compra de plano mensal + matrícula, pagamento via Pix, aprovação e liberação imediata de acesso",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -964,7 +1249,7 @@
         {
           "scenarioId": "fitness_full_whatsapp_checkout_pix_aprovacao_e2e",
           "scenario": "WhatsApp checkout completo: compra de plano mensal com cupom, PIX, aprovação e liberação imediata de acesso no app",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -1063,6 +1348,101 @@
               "expected": "Tempo total entre geração do PIX e confirmação ao usuário no WhatsApp dentro do SLA definido para risco alto (ex.: notificação <= 120s após evento de aprovação)."
             }
           ]
+        },
+        {
+          "scenarioId": "business-e2e-checkout",
+          "scenario": "E2E: checkout",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_checkout_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-checkout-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-checkout-billing_validation_active",
+          "scenario": "Precondição: Billing Validation Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_billing_validation_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-checkout-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
         }
       ]
     },
@@ -1072,6 +1452,101 @@
       "replaySupport": true,
       "qaSupport": true,
       "scenarios": [
+        {
+          "scenarioId": "business-e2e-fitness_active_customer",
+          "scenario": "E2E: fitness_active_customer",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_fitness_active_customer_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_active_customer-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_active_customer-membership_validation_active",
+          "scenario": "Precondição: Membership Validation Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_membership_validation_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_active_customer-access_decision_active",
+          "scenario": "Precondição: Access Decision Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_access_decision_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
         {
           "scenarioId": "business-f1",
           "scenario": "Fitness novo aluno até pagamento e ativação",
@@ -1477,6 +1952,77 @@
       "qaSupport": true,
       "scenarios": [
         {
+          "scenarioId": "business-e2e-fitness_new_customer",
+          "scenario": "E2E: fitness_new_customer",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_fitness_new_customer_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_new_customer-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-fitness_new_customer-membership_validation_active",
+          "scenario": "Precondição: Membership Validation Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_membership_validation_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
           "scenarioId": "business-fit-flow-checkin",
           "scenario": "Fitness check-in e controle de acesso",
           "status": "approved",
@@ -1619,6 +2165,101 @@
           ]
         },
         {
+          "scenarioId": "business-e2e-leads",
+          "scenario": "E2E: leads",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_leads_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-lead_capture",
+          "scenario": "Validação: Lead Capture",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_lead_capture_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-leads-lead_capture_active",
+          "scenario": "Precondição: Lead Capture Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_lead_capture_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-leads-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
           "scenarioId": "business-fit-flow-lead-funnel",
           "scenario": "Fitness funil de lead: captado, qualificado e convertido em cliente",
           "status": "approved",
@@ -1649,7 +2290,7 @@
         {
           "scenarioId": "fitness_full_onboarding_whatsapp_primeiro_acesso_e2e",
           "scenario": "[Manual] Onboarding de novo aluno via WhatsApp — primeiro acesso completo",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -1761,6 +2402,101 @@
               "expected": "Em caso de dúvida fora do fluxo, assistente aplica fallback e oferece handoff humano."
             }
           ]
+        },
+        {
+          "scenarioId": "business-e2e-onboarding",
+          "scenario": "E2E: onboarding",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_onboarding_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-onboarding",
+          "scenario": "Validação: Onboarding",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_onboarding_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-onboarding-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-onboarding-onboarding_flow_active",
+          "scenario": "Precondição: Onboarding Flow Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_onboarding_flow_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
         }
       ]
     },
@@ -1783,7 +2519,7 @@
         {
           "scenarioId": "fitness_full_renovacao_whatsapp_pagamento_falha_recuperacao",
           "scenario": "Renovação de plano via WhatsApp com falha de pagamento no cartão, recuperação com PIX e confirmação de renovação sem duplicidade",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -1900,7 +2636,7 @@
         {
           "scenarioId": "fitness_full_renovacao_whatsapp_plano_anual_cartao_expirado_com_recuperacao",
           "scenario": "Renovação E2E via WhatsApp de plano anual com cartão expirado, oferta de atualização de pagamento e confirmação de renovação sem duplicidade de cobrança",
-          "status": "active",
+          "status": "approved",
           "channels": [
             "whatsapp",
             "chat",
@@ -1986,6 +2722,125 @@
             {
               "stepId": "step_014",
               "expected": "Se o pagamento não for confirmado em até 15 minutos, o assistente deve oferecer reenvio do link ou alternativa (PIX/boleto, se disponível) sem reiniciar a jornada e sem perder contexto."
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-e2e-renovacao",
+          "scenario": "E2E: renovacao",
+          "status": "approved",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_renovacao_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-renovacao-customer_identification_active",
+          "scenario": "Precondição: Customer Identification Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_customer_identification_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-renovacao-membership_validation_active",
+          "scenario": "Precondição: Membership Validation Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_membership_validation_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-renovacao-billing_validation_active",
+          "scenario": "Precondição: Billing Validation Active",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_billing_validation_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-renovacao-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "approved",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
             }
           ]
         }
