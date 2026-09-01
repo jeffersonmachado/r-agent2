@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-01T14-03-31-032Z",
+  "executionId": "mesh-2026-09-01T20-18-39-989Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-09-01T14-03-31-032Z",
+    "executionId": "mesh-2026-09-01T20-18-39-989Z",
     "tenantId": "system",
-    "timestamp": "2026-09-01T14:03:31.032Z",
+    "timestamp": "2026-09-01T20:18:39.989Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -237,11 +237,11 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-01T14-03-31-032Z",
-      "startedAt": "2026-09-01T14:03:31.032Z",
+      "executionId": "mesh-2026-09-01T20-18-39-989Z",
+      "startedAt": "2026-09-01T20:18:39.989Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-01T15:47:18.141Z",
+      "promotedAt": "2026-09-01T22:51:25.254Z",
       "registryTotal": 132,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
@@ -249,14 +249,14 @@
   },
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-01T14-03-31-032Z",
-    "startedAt": "2026-09-01T14:03:31.032Z",
+    "executionId": "mesh-2026-09-01T20-18-39-989Z",
+    "startedAt": "2026-09-01T20:18:39.989Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-01T15:47:18.141Z",
+    "promotedAt": "2026-09-01T22:51:25.254Z",
     "registryTotal": 132,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
-  "generatedAt": "2026-09-01T15:47:18.142Z"
+  "generatedAt": "2026-09-01T22:51:25.255Z"
 }
