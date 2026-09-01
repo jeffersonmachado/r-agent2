@@ -1,7 +1,7 @@
 {
   "artifactType": "final-readiness-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-01T23:05:16.705Z",
+  "generatedAt": "2026-09-01T23:18:42.013Z",
   "runId": "rap-governed-20260901190048981-4278fc93",
   "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
   "policyId": "RAP-AGENT-CONSTITUTION",

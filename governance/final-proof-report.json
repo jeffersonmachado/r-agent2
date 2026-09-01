@@ -1,7 +1,7 @@
 {
   "artifactType": "final-proof-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-01T23:05:16.704Z",
+  "generatedAt": "2026-09-01T23:18:42.013Z",
   "runId": "rap-governed-20260901190048981-4278fc93",
   "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
   "policyId": "RAP-AGENT-CONSTITUTION",
@@ -9,7 +9,7 @@
   "policyFingerprint": "9bc535ad0feaeb48c5ace3360e78acc233d78dc0a58c0470a3630eab941178c0",
   "finalDecision": "NO_GO",
   "autonomousReady": false,
-  "blockerCount": 40,
+  "blockerCount": 2,
   "missingArtifacts": [],
   "fingerprintStatus": "FRESH",
   "fingerprintChain": {
