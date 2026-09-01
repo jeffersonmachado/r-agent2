@@ -1,16 +1,16 @@
 {
   "pass": true,
-  "currentZipName": "r-agent2-20260829-213044.zip",
-  "governedArtifact": "r-agent2-20260829-213044.payload.zip",
+  "currentZipName": "r-agent2-20260901-085141.zip",
+  "governedArtifact": "r-agent2-20260901-085141.payload.zip",
   "hash": "ea1d71bedff7582dcc71ac2a5fc85d14f725b2bf67b5075c7a599e4403dd5bd9",
   "overallConsistencyScore": 100,
   "allChecksPass": true,
   "regeneratedAt": "2026-06-12T08:42:07.733Z",
   "source": "clean-governance.js",
-  "generatedAt": "2026-08-30T00:32:11.527Z",
-  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260829-213044.manifest.json",
-  "currentZipManifest": "dist/r-agent2-20260829-213044.manifest.json",
-  "currentZipTimestamp": "2026-08-30T00:32:10Z",
+  "generatedAt": "2026-09-01T11:53:26.363Z",
+  "currentZipSha256Note": "SHA256 stored in sidecar manifest to avoid circular hash dependency — see dist/r-agent2-20260901-085141.manifest.json",
+  "currentZipManifest": "dist/r-agent2-20260901-085141.manifest.json",
+  "currentZipTimestamp": "2026-09-01T11:53:25Z",
   "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-  "reboundAt": "2026-08-30T00:32:11.871Z"
+  "reboundAt": "2026-09-01T11:53:26.686Z"
 }
