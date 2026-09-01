@@ -145,9 +145,17 @@ describe('Configuração de IA por Tenant', () => {
       if (response.status === 200) {
         expect(response.body).toBeDefined();
         
-        // Outras seções devem estar presentes
-        // (api, chatbot, queues, features, etc.)
-        expect(response.body).toHaveProperty('api');
+        if (response.body.public === true) {
+          // Anônimo (pré-login): visão pública sanitizada — apenas features e
+          // prontidão de integrações; nunca seções internas como `api`.
+          expect(response.body).toHaveProperty('features');
+          expect(response.body).toHaveProperty('configValidation');
+          expect(response.body).not.toHaveProperty('api');
+        } else {
+          // Autenticado: payload completo — outras seções devem estar presentes
+          // (api, chatbot, queues, features, etc.)
+          expect(response.body).toHaveProperty('api');
+        }
       }
     });
   });

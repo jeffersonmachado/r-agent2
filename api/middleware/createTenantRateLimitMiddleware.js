@@ -35,11 +35,21 @@ function shouldRunTenantRateLimit(pathname, method) {
   ));
   const isSuperAdminRoute = pathname.startsWith('/super-admin');
 
+  // GET /config é público por design: o controller responde a visão sanitizada
+  // (readPublicConfig) para chamadas pré-login (onboarding/páginas públicas).
+  // Sem esta isenção, em produção o rate limit por tenant exigiria tenant_id
+  // e devolveria 403 tenant_validation_failed antes do handler — quebrando o
+  // pré-login. Apenas o GET exato é isento; PUT /config e /config/* seguem
+  // protegidos por tenant rate limit + auth no controller.
+  const isPublicConfigRead =
+    method === 'GET' && (pathname === '/config' || normalizedPathname === '/config');
+
   return (
     !isPublicRoute &&
     !isAuthRoute &&
     !isProviderWebhookRoute &&
     !isSuperAdminRoute &&
+    !isPublicConfigRead &&
     method !== 'OPTIONS'
   );
 }
