@@ -76,7 +76,11 @@ cleanup_stale_tmp_dirs() {
 
 contains_forbidden_tokens() {
   local file="$1"
-  tr '[:lower:]' '[:upper:]' < "$file" | grep -Eq '"PLACEHOLDER"[[:space:]]*:[[:space:]]*TRUE|"TRANSITIONAL"[[:space:]]*:[[:space:]]*TRUE|"STATUS"[[:space:]]*:[[:space:]]*"PENDING"|NO_GO|PENDING'
+  # NO_GO/PENDING exigem fronteiras não-identifier: valores de decisão reais
+  # ("decision":"NO_GO") continuam bloqueando, mas rótulos legítimos como
+  # "go_no_go" (chave de termo) ou "DELIVERED_PENDING_SCORECARD" (estado
+  # deferido transitório) não são contaminação.
+  tr '[:lower:]' '[:upper:]' < "$file" | grep -Eq '"PLACEHOLDER"[[:space:]]*:[[:space:]]*TRUE|"TRANSITIONAL"[[:space:]]*:[[:space:]]*TRUE|"STATUS"[[:space:]]*:[[:space:]]*"PENDING"|(^|[^A-Z0-9_])NO_GO([^A-Z0-9_]|$)|(^|[^A-Z0-9_])PENDING([^A-Z0-9_]|$)'
 }
 
 if [[ -f "$SCRIPT_DIR/release-governance-blocklist.sh" ]]; then
