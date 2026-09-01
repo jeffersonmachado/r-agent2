@@ -7,12 +7,17 @@ const { isInPipeline } = require('../guard');
 
 const ROOT = path.join(__dirname, '..', '..');
 
-if (process.env.PIPELINE_BYPASS !== '1' && !isInPipeline()) {
-  console.error(
-    '[pipeline/entrypoints/runQaMesh] qa:mesh exige execução via npm run pipeline.\n'
-    + 'Para uso local explicito: PIPELINE_BYPASS=1 npm run qa:mesh'
+// Execução direta (CLI local ou disparada pela UI) é permitida: fora do
+// pipeline oficial o mesh roda como execução manual NÃO canônica
+// (executionOrigin=manual_run, sem promover outputs canônicos de governança).
+// A promoção canônica (go-no-go-report, release-gate, histórico canônico)
+// continua exclusiva do pipeline oficial (RUNNING_IN_PIPELINE=1) —
+// ver qa-mesh/meshRunner.js (isCanonicalExecution).
+if (!isInPipeline()) {
+  console.warn(
+    '[pipeline/entrypoints/runQaMesh] Execução direta: rodando como manual_run (não canônico).\n'
+    + 'Para evidência canônica de governança: npm run pipeline'
   );
-  process.exit(1);
 }
 
 const result = spawnSync('node', ['qa-mesh/meshRunner.js', ...process.argv.slice(2)], {
