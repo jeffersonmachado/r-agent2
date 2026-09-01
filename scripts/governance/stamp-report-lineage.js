@@ -72,6 +72,7 @@ async function main() {
       'reports/api-surface-report.json',
       'reports/page-surface-report.json',
       'reports/visibility-policy-report.json',
+      'reports/experience-segregation-report.json',
       'reports/rag-domain-segregation-report.json',
       'reports/inventory-build-report.json',
       'reports/rate-limit-validation-report.json',

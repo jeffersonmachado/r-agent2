@@ -56,6 +56,9 @@ export const navigationMenu = [
             label: 'Central de Atendimento',
             path: '/support',
             permission: { resource: 'tickets', action: 'read' },
+            // Superfície legada ticket-based (deprecated): a experiência canônica
+            // é Inbox (/inbox) + Chamados (/cases). Exige a capability caseManagement.
+            capability: 'caseManagement',
             keywords: ['tickets', 'conversas', 'workspace'],
           },
           {

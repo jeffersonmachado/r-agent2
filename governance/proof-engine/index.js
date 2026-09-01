@@ -66,6 +66,11 @@ const REQUIRED_ARTIFACT_SPECS = [
   { id: 'governance_signature',    path: 'governance/proof-signature.json',                                   domain: 'governance',    packageRequired: true },
   { id: 'cleanup_proof',           path: 'governance/cleanup-proof.json',                                     domain: 'governance',    packageRequired: true },
   { id: 'final_readiness',         path: 'governance/final-readiness-report.json',                            domain: 'governance',    packageRequired: true },
+  // Segregação de experiência (PRODUCTION/SUPPORT/DEVELOPMENT): evidência de
+  // release obrigatória, consumida pelo Master Scorecard (RAP-014/RAP-015) e
+  // verificada pelo delivered-release verifier. reports/ não entra no ZIP —
+  // o sidecar auditável vai em dist/governance/ no two-pass.
+  { id: 'experience_segregation',  path: 'reports/experience-segregation-report.json',                        domain: 'governance',    packageRequired: false },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

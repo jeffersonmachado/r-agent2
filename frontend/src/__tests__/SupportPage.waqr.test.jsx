@@ -122,7 +122,12 @@ vi.mock('../api/auth', () => ({
 const mockAgent = { id: 'agent1', username: 'agent1', tenantId: 'tenant1' };
 
 async function setup({ wsEvents = [], expectedPhone = '5511999999999' } = {}) {
-  useAuth.mockReturnValue({ agent: mockAgent, isAuthenticated: true, loading: false });
+  useAuth.mockReturnValue({
+    agent: mockAgent,
+    isAuthenticated: true,
+    loading: false,
+    capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
+  });
   useWebSocketContext.mockReturnValue({
     connected: true,
     authenticated: true,

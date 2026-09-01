@@ -275,6 +275,8 @@
     "ticket.manage": "case.manage",
     "ticket.read": "case.manage",
     "ticket.create": "case.manage",
+    "support.createTicket": "case.manage",
+    "support.transferConversation": "case.manage",
     "campaign.execute": "campaign.manage",
     "pbx.call": "voice.call",
     "knowledge.search": "knowledge.operational",
@@ -311,5 +313,14 @@
     "knowledge_retrieval": "knowledge.operational",
     "content_summarization": "knowledge.operational",
     "gap_detection": "knowledge.operational"
+  },
+  "deprecatedAliases": {
+    "_note": "Aliases legados mantidos para compatibilidade (nunca remover grants existentes). Código novo DEVE usar os ids canônicos. A resolução alias→canônico acontece em src/core/cognitive/capability-registry (resolveId). Nomenclatura 'support.*' é reservada ao suporte interno da plataforma (platform_support); não introduzir 'support.*' para Customer Service/Case Management.",
+    "ticket.manage": { "canonical": "case.manage", "deprecatedAt": "2026-08-28", "reason": "Ticket legado unificado em Case Management." },
+    "ticket.read": { "canonical": "case.manage", "deprecatedAt": "2026-08-28", "reason": "Ticket legado unificado em Case Management." },
+    "ticket.create": { "canonical": "case.manage", "deprecatedAt": "2026-08-28", "reason": "Ticket legado unificado em Case Management." },
+    "inbox.process": { "canonical": "inbox.manage", "deprecatedAt": "2026-08-28", "reason": "Inbox omnichannel (ChannelConversation) substitui o processamento ticket-based." },
+    "support.createTicket": { "canonical": "case.manage", "deprecatedAt": "2026-09-01", "reason": "Tool id legado; 'support.*' é reservado ao suporte interno da plataforma." },
+    "support.transferConversation": { "canonical": "case.manage", "deprecatedAt": "2026-09-01", "reason": "Tool id legado; 'support.*' é reservado ao suporte interno da plataforma." }
   }
 }

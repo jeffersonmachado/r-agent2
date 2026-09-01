@@ -80,6 +80,17 @@ if [[ -z "$AUDIT_ONLY_ZIP" ]]; then
 fi
 
 # ── padrões proibidos no artefato de release ──────────────────────────────────
+# GATE DE PROVENIÊNCIA (caminho legado — o fluxo padrão via two-pass-release.sh
+# já aplica este mesmo gate no início do pipeline): release oficial exige
+# worktree limpo (`git status --porcelain` vazio) ANTES de qualquer geração.
+# NUNCA commit automático: worktree sujo = NO_GO DIRTY_WORKTREE.
+if [[ -z "$AUDIT_ONLY_ZIP" ]]; then
+  step "GATE DIRTY_WORKTREE: snapshot do worktree no início do pipeline..."
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/check-clean-worktree.js" --root "$PROJECT_ROOT" \
+    || fail "DIRTY_WORKTREE — release bloqueada: commite ou descarte as pendências antes do release"
+  ok "Worktree limpo no snapshot inicial"
+fi
+
 # Qualquer match abaixo representa BLOQUEIO de release.
 FORBIDDEN_PATTERNS=(
   '(^|/)node_modules/'
@@ -322,7 +333,8 @@ ZIP_BASENAME="$(basename "$LATEST_ZIP")"
 ZIP_SIZE="$(du -h "$LATEST_ZIP" | cut -f1)"
 ZIP_HASH="$(sha256sum "$LATEST_ZIP" | awk '{print $1}')"
 RELEASE_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "n/a")"
+GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null || echo "n/a")"
+GIT_TREE="$(git -C "$PROJECT_ROOT" rev-parse 'HEAD^{tree}' 2>/dev/null || echo "n/a")"
 GIT_BRANCH="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "n/a")"
 
 # Extrair fingerprints do proof report para rastreabilidade de consistência
@@ -355,7 +367,9 @@ cat > "$MANIFEST_FILE" <<EOF
   "files": ${FILE_COUNT:-0},
   "generated_at": "$RELEASE_DATE",
   "git_commit": "$GIT_COMMIT",
+  "git_tree": "$GIT_TREE",
   "git_branch": "$GIT_BRANCH",
+  "cleanWorktree": true,
   "generated_by": "scripts/release-package.sh",
   "audit": "passed",
   "fingerprints": {

@@ -54,13 +54,18 @@ describe('WorkspacePage — segregação por classificação', () => {
     expect(screen.getByText('Falha QA/RPA')).toBeTruthy();
   });
 
-  it('SUPPORT vê a tab QA/RPA (perfil interno)', async () => {
+  it('SUPPORT NÃO vê a tab QA/RPA (superfície de engenharia é DEVELOPMENT-only)', async () => {
     testDoubles.auth.agent = { id: 'a-sup', role: 'auditor', classification: 'SUPPORT' };
     render(<WorkspacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('QA/RPA')).toBeTruthy();
+      expect(screen.getByText('Resumo')).toBeTruthy();
     });
+
+    expect(screen.queryByText('QA/RPA')).toBeNull();
+    expect(screen.queryByText('Falha QA/RPA')).toBeNull();
+    // SUPPORT recebe os mesmos rótulos sanitizados de outcome operacional
+    expect(screen.getByText('Incidentes operacionais')).toBeTruthy();
   });
 
   it('PRODUCTION sanitiza eventos técnicos da timeline', async () => {

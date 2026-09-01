@@ -1,3 +1,12 @@
+/**
+ * @deprecated Superfície legada de atendimento ticket-based.
+ *
+ * A experiência canônica de atendimento é o Inbox omnichannel (/inbox,
+ * baseado em ChannelConversation) + Chamados (/cases, Case Management).
+ * Esta página permanece apenas por compatibilidade legada e é gated pela
+ * capability do tenant `caseManagement`: tenants no modo de atendimento
+ * simples (caseManagement=false) veem a tela de capability ausente.
+ */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/authContext';
 import { getAgentClassification } from '../utils/classification';
@@ -491,11 +500,16 @@ function SupportPageInner({ agent, isAuthenticated, showToast, confirm, phoneMas
 }
 
 export function SupportPage() {
-  const { agent, isAuthenticated, loading: authLoading } = useAuth();
+  const { agent, isAuthenticated, loading: authLoading, capabilities } = useAuth();
   const { navigate } = useRouter();
   const { showToast, ToastContainer } = useToast();
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const { enabled: phoneMaskingEnabled } = usePhoneMasking();
+
+  // Guard de capability (mesmo padrão do CasesPage): a Central de Atendimento
+  // legada é ticket-based e só faz sentido com Case Management ativo.
+  const caseManagementEnabled = capabilities?.caseManagement === true;
+  const canManageCapabilities = ['owner', 'admin', 'super_admin'].includes(String(agent?.role || '').toLowerCase());
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -515,6 +529,34 @@ export function SupportPage() {
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  if (!caseManagementEnabled) {
+    return (
+      <CrudPageBase title="💬 Atendimento" hideHeader>
+        <div className="support-header">
+          <h1>💬 Central de Atendimento</h1>
+        </div>
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-6 text-center">
+          <h2 className="text-xl font-semibold text-text-primary mb-2">Case Management não está ativo</h2>
+          <p className="text-sm text-text-secondary mb-4">
+            Este tenant está no modo de atendimento simples (caixa de entrada única).
+            A Central de Atendimento legada foi substituída pelo Inbox omnichannel.
+          </p>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            <Button variant="primary" onClick={() => navigate('/inbox')}>
+              Ir para Caixa de Entrada
+            </Button>
+            {canManageCapabilities ? (
+              <Button onClick={() => navigate('/config')}>
+                Ativar em Configurações
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <ToastContainer />
+      </CrudPageBase>
+    );
   }
 
   return (

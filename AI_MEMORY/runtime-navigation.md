@@ -9,7 +9,7 @@ Authenticated as `systemadmin`, role `super_admin`, tenant `system`.
 
 | Rota solicitada | Rota canonica real | Alias/Redirect | Componente | Status | Observacoes |
 |---|---|---|---|---|---|
-| `/support` | `/support` | none observed | `SupportPage` | Validated | Renders Central de Atendimento with ticket inbox and support actions. |
+| `/support` | `/support` | none observed | `SupportPage` | Validated (deprecated) | Central de Atendimento legada ticket-based. Desde 2026-09-01 é gated pela capability `caseManagement` (menu "Central de Atendimento" oculto e acesso direto fail-closed com guard de capability quando desligada). Superfície canônica: Inbox (`/inbox`) + Chamados (`/cases`). |
 | `/rpa-replays` | `/dev/rpa-replays` | `/rpa-replays` redirected to `/workspace` as unknown authenticated route | `RpaReplaysPage` | Canonical alias validated; requested path is not direct | Menu source: Plataforma/Super Admin/Replays RPA. |
 | `/rag-documents` | `/rag-documents` | none observed | `RAGDocumentsPage` | Validated | Rendered in authenticated runtime; no console/network failures in the 2026-08-14 run. |
 | `/system-status` | `/dev/system-status` | `/system-status` returned 404 JSON | `SystemStatusPage` | Canonical alias validated; requested path is gap | Menu source: Operacoes/Monitoramento/Status do Sistema. |

@@ -8,6 +8,10 @@
  *   1. package manifest existe e é válido
  *   2. runId está presente e consistente
  *   3. sourceFingerprint recalculado == sourceFingerprint do proof == manifest
+ *   3b. proveniência git: gitCommit existe no repo, git tree bate, worktree
+ *       limpo ou HEAD == commit declarado (SOURCE_COMMIT_MISMATCH em divergência)
+ *   3c. package hash binding: sha256 do payload == sha256 do manifest
+ *   3d. experience-segregation: relatório existe, PASS e mesmo sourceFingerprint
  *   4. inventoryFingerprint, scenarioFingerprint, policyFingerprint recalculados
  *   5. proof freshness (recalcula, não confia em status armazenado)
  *   6. artifact run consistency (todos artifacts com runId == current)
@@ -27,11 +31,14 @@
 const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
+const { execFileSync } = require('child_process');
 
 const args = process.argv.slice(2);
 const rootIdx = args.indexOf('--root');
 const ROOT  = rootIdx !== -1 ? path.resolve(args[rootIdx + 1]) : process.cwd();
 const STRICT = args.includes('--strict');
+const gitRootIdx = args.indexOf('--git-root');
+const GIT_ROOT_ARG = gitRootIdx !== -1 ? path.resolve(args[gitRootIdx + 1]) : null;
 
 function readJson(relPath) {
   const abs = path.join(ROOT, relPath);
@@ -157,6 +164,159 @@ function checkSourceFingerprint(manifest) {
     proofMatch:          !!fromProof,
     manifestMatch:       !!fromManifest,
   });
+}
+
+// ─── 3b. Source commit provenance (package ↔ git ↔ manifest) ────────────────
+function resolveGitRoot() {
+  if (GIT_ROOT_ARG && fs.existsSync(path.join(GIT_ROOT_ARG, '.git'))) return GIT_ROOT_ARG;
+  if (process.env.RAP_PROVENANCE_GIT_ROOT
+    && fs.existsSync(path.join(process.env.RAP_PROVENANCE_GIT_ROOT, '.git'))) {
+    return process.env.RAP_PROVENANCE_GIT_ROOT;
+  }
+  if (fs.existsSync(path.join(ROOT, '.git'))) return ROOT;
+  return null;
+}
+
+function runGitProbe(gitRoot, gitArgs) {
+  try {
+    return {
+      ok: true,
+      out: String(execFileSync('git', gitArgs, {
+        cwd: gitRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }) || '').trim(),
+    };
+  } catch (err) {
+    if (err && Number(err.status) === 0 && typeof err.stdout === 'string') {
+      return { ok: true, out: String(err.stdout || '').trim() };
+    }
+    return { ok: false, out: '' };
+  }
+}
+
+/**
+ * Prova a cadeia package ↔ git tree ↔ gitCommit ↔ manifest ↔ package:
+ *   1. manifest declara git_commit/git_tree (40-char SHA) e cleanWorktree=true;
+ *   2. o gitCommit EXISTE no repositório;
+ *   3. `git rev-parse <commit>^{tree}` == git_tree declarada;
+ *   4. worktree limpo na verificação OU HEAD == commit declarado
+ *      (verificação reproduzível do mesmo source);
+ *   5. sha256 do payload em dist/release == sha256 do manifest (pacote não
+ *      adulterado — não basta consistência interna de hashes do ZIP).
+ * Divergência = NO_GO SOURCE_COMMIT_MISMATCH / PACKAGE_HASH_MISMATCH.
+ */
+function checkSourceCommitProvenance(manifest) {
+  const gate = makeGate('source_commit_provenance');
+  if (!manifest) {
+    return fail(gate, 'SOURCE_COMMIT_MISMATCH — manifest ausente; proveniência não verificável.');
+  }
+
+  const commit = String(manifest.git_commit || '');
+  const declaredTree = String(manifest.git_tree || '');
+  if (!/^[0-9a-f]{40}$/i.test(commit)) {
+    return fail(gate, 'SOURCE_COMMIT_MISMATCH — manifest sem git_commit full (40-char SHA).');
+  }
+  if (!/^[0-9a-f]{40}$/i.test(declaredTree)) {
+    return fail(gate, 'SOURCE_COMMIT_MISMATCH — manifest sem git_tree (40-char SHA).');
+  }
+  if (manifest.cleanWorktree !== true) {
+    return fail(gate, 'SOURCE_COMMIT_MISMATCH — manifest não declara cleanWorktree=true (release sobre worktree sujo é inválido).');
+  }
+
+  const gitRoot = resolveGitRoot();
+  if (!gitRoot) {
+    return fail(gate, 'SOURCE_COMMIT_MISMATCH — repositório git indisponível para provar proveniência (use --git-root ou RAP_PROVENANCE_GIT_ROOT).');
+  }
+
+  const commitProbe = runGitProbe(gitRoot, ['rev-parse', '--verify', `${commit}^{commit}`]);
+  if (!commitProbe.ok || commitProbe.out.toLowerCase() !== commit.toLowerCase()) {
+    return fail(gate, `SOURCE_COMMIT_MISMATCH — git_commit ${commit.slice(0, 12)}… não existe no repositório.`);
+  }
+
+  const treeProbe = runGitProbe(gitRoot, ['rev-parse', `${commit}^{tree}`]);
+  if (!treeProbe.ok || treeProbe.out.toLowerCase() !== declaredTree.toLowerCase()) {
+    return fail(gate, 'SOURCE_COMMIT_MISMATCH — git_tree declarada diverge de `git rev-parse <commit>^{tree}`.', {
+      declared: declaredTree.slice(0, 16),
+      actual: treeProbe.out ? treeProbe.out.slice(0, 16) : null,
+    });
+  }
+
+  const headProbe = runGitProbe(gitRoot, ['rev-parse', 'HEAD']);
+  const porcelainProbe = runGitProbe(gitRoot, ['status', '--porcelain']);
+  const headMatches = headProbe.ok && headProbe.out.toLowerCase() === commit.toLowerCase();
+  const worktreeClean = porcelainProbe.ok && porcelainProbe.out === '';
+  if (!worktreeClean && !headMatches) {
+    return fail(gate, 'SOURCE_COMMIT_MISMATCH — worktree sujo na verificação e HEAD diverge do commit declarado (source não reproduzível).', {
+      head: headProbe.out ? headProbe.out.slice(0, 12) : null,
+      declared: commit.slice(0, 12),
+    });
+  }
+
+  return pass(gate, {
+    gitCommit: commit.slice(0, 12),
+    gitTree: declaredTree.slice(0, 12),
+    headMatches,
+    worktreeClean,
+  });
+}
+
+function checkPackageHashBinding(manifest) {
+  const gate = makeGate('package_hash_binding');
+  if (!manifest) {
+    return fail(gate, 'PACKAGE_HASH_MISMATCH — manifest ausente; binding do pacote não verificável.');
+  }
+  const declared = String(manifest.sha256 || '');
+  if (!/^[0-9a-f]{64}$/i.test(declared)) {
+    return fail(gate, 'PACKAGE_HASH_MISMATCH — manifest sem sha256 (64-hex) do artefato governado.');
+  }
+  const artifactName = String(manifest.artifact || '');
+  if (!artifactName) {
+    return fail(gate, 'PACKAGE_HASH_MISMATCH — manifest sem nome do artefato.');
+  }
+  const artifactPath = path.join(ROOT, 'dist', 'release', artifactName);
+  if (!fs.existsSync(artifactPath)) {
+    return fail(gate, `PACKAGE_HASH_MISMATCH — artefato governado ausente: dist/release/${artifactName}.`);
+  }
+  const actual = crypto.createHash('sha256').update(fs.readFileSync(artifactPath)).digest('hex');
+  if (actual.toLowerCase() !== declared.toLowerCase()) {
+    return fail(gate, 'PACKAGE_HASH_MISMATCH — sha256 do pacote diverge do manifest (pacote adulterado).', {
+      declared: declared.slice(0, 16),
+      actual: actual.slice(0, 16),
+    });
+  }
+  return pass(gate, { artifact: artifactName, sha256: declared.slice(0, 16) });
+}
+
+// ─── 3c. Experience segregation evidence ─────────────────────────────────────
+/**
+ * O relatório do validate:experience-segregation precisa provar execução para
+ * o MESMO sourceFingerprint do release: existe, status PASS e lineage igual ao
+ * do manifest — senão NO_GO (relatório de outro run/source não é evidência).
+ */
+function checkExperienceSegregation(manifest) {
+  const gate = makeGate('experience_segregation');
+
+  const report = readJson('reports/experience-segregation-report.json');
+  if (!report) {
+    return fail(gate, 'EXPERIENCE_SEGREGATION_NO_GO — reports/experience-segregation-report.json ausente.');
+  }
+  if (report.status !== 'PASS') {
+    return fail(gate, `EXPERIENCE_SEGREGATION_NO_GO — status=${report.status || 'UNKNOWN'}.`);
+  }
+  const manifestFp = manifest?.sourceFingerprint || null;
+  if (manifestFp) {
+    if (!report.sourceFingerprint) {
+      return fail(gate, 'EXPERIENCE_SEGREGATION_NO_GO — relatório sem sourceFingerprint (lineage ausente).');
+    }
+    if (report.sourceFingerprint !== manifestFp) {
+      return fail(gate, 'EXPERIENCE_SEGREGATION_NO_GO — sourceFingerprint do relatório diverge do release.', {
+        report: String(report.sourceFingerprint).slice(0, 16),
+        manifest: String(manifestFp).slice(0, 16),
+      });
+    }
+  }
+  return pass(gate, { status: report.status, sourceFingerprint: report.sourceFingerprint ? String(report.sourceFingerprint).slice(0, 16) : null });
 }
 
 // ─── 4. Fingerprint chain ────────────────────────────────────────────────────
@@ -425,6 +585,9 @@ function verify() {
     manifestCheck,
     checkRunId(manifest),
     checkSourceFingerprint(manifest),
+    checkSourceCommitProvenance(manifest),
+    checkPackageHashBinding(manifest),
+    checkExperienceSegregation(manifest),
     checkFingerprintChain(),
     checkProofFreshness(),
     checkArtifactRunConsistency(),

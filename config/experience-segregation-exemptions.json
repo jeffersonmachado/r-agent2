@@ -1,5 +1,5 @@
 {
-  "description": "Exceções justificadas e auditáveis do validador validate:experience-segregation. Cada entrada permite um literal técnico específico (rule) em um arquivo PRODUCTION (path) porque o conteúdo só é renderizado para classificações internas (SUPPORT/DEVELOPMENT) via gate de classificação em runtime. Nunca usar para esconder vazamento real.",
+  "description": "Exceções justificadas e auditáveis do validador validate:experience-segregation. Cada entrada permite uma regra específica (rule) em um arquivo (path) com justificativa obrigatória (reason). Abrange: (A) literais técnicos em superfícies PRODUCTION que só são renderizados para classificações internas (SUPPORT/DEVELOPMENT) via gate de classificação em runtime; (B) regras do contrato /support (capability caseManagement); (C) imports/JSX de engenharia em superfícies SUPPORT e o gate DEVELOPMENT-only da dev surface. Nunca usar para esconder vazamento real nem contornar gate de capability.",
   "exemptions": [
     {
       "path": "frontend/src/components/FlowGeneratorDialog.jsx",

@@ -175,6 +175,7 @@ describe('SupportPage evidence integration', () => {
       agent: { id: 'agent1', username: 'agent1', tenantId: 'tenant1' },
       isAuthenticated: true,
       loading: false,
+      capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
     });
     useWebSocketContext.mockReturnValue({
       connected: true,

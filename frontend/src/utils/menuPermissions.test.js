@@ -168,4 +168,30 @@ describe('menuPermissions', () => {
     expect(canAccessMenuItem(superAdminAgent, casesItem, { caseManagement: false })).toBe(false);
     expect(canAccessMenuItem(superAdminAgent, casesItem, { caseManagement: true })).toBe(true);
   });
+
+  it('nega /support (Central de Atendimento legada) sem capability caseManagement e permite com ela', () => {
+    const operatorAgent = { id: 'agent-op', username: 'op', role: 'operator', tenantId: 'demo-tenant' };
+
+    // Sem capabilities informadas → fail-closed
+    expect(canAccessPath(operatorAgent, '/support')).toBe(false);
+    // Capability desligada (tenant simple) → negado
+    expect(canAccessPath(operatorAgent, '/support', { capabilities: { caseManagement: false } })).toBe(false);
+    // Capability ligada + permissão tickets:read → permitido (compatibilidade legada)
+    expect(canAccessPath(operatorAgent, '/support', { capabilities: { caseManagement: true } })).toBe(true);
+    // Inbox continua acessível para o tenant simple (superfície canônica)
+    expect(canAccessPath(operatorAgent, '/inbox', { capabilities: { caseManagement: false } })).toBe(true);
+  });
+
+  it('Central de Atendimento (/support) some do menu quando caseManagement está desligada', () => {
+    // O nó-pai 'relacionamento' também tem path '/support'; o item real é o leaf.
+    const supportItem = menuItems.find((item) => item.path === '/support' && item.label === 'Central de Atendimento');
+    expect(supportItem).toBeTruthy();
+    expect(supportItem.capability).toBe('caseManagement');
+
+    expect(canAccessMenuItem(adminAgent, supportItem, { caseManagement: false })).toBe(false);
+    expect(canAccessMenuItem(adminAgent, supportItem, { caseManagement: true })).toBe(true);
+    // Capability é gate de tenant: vale inclusive para super_admin
+    expect(canAccessMenuItem(superAdminAgent, supportItem, { caseManagement: false })).toBe(false);
+    expect(canAccessMenuItem(superAdminAgent, supportItem, { caseManagement: true })).toBe(true);
+  });
 });

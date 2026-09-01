@@ -1046,6 +1046,10 @@
           "journey": "fitness_customer_checkin",
           "scenarios": [
             {
+              "scenarioId": "business-fit-flow-checkin",
+              "status": "approved"
+            },
+            {
               "scenarioId": "business-e2e-fitness_customer_checkin",
               "status": "approved"
             },

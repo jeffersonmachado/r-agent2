@@ -88,6 +88,15 @@ describe('itens de menu: inbox, chamados e replays', () => {
     expect(cases.capability).toBe('caseManagement');
   });
 
+  it('Central de Atendimento legada (/support) é gated pela capability caseManagement', () => {
+    const support = leaves.find((l) => l.id === 'support');
+    expect(support).toBeTruthy();
+    expect(support.path).toBe('/support');
+    expect(support.label).toBe('Central de Atendimento');
+    expect(support.permission).toEqual({ resource: 'tickets', action: 'read' });
+    expect(support.capability).toBe('caseManagement');
+  });
+
   it('/rpa-replays usa classifications SUPPORT/DEVELOPMENT (sem gate por roles)', () => {
     const replays = leaves.find((l) => l.id === 'rpa-replays');
     expect(replays).toBeTruthy();

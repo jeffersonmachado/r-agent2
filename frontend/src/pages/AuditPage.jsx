@@ -160,7 +160,7 @@ export function AuditPage() {
           <div className="text-center">
             <h1 className="text-3xl font-bold text-text-primary mb-4">🚫 Acesso Negado</h1>
             <p className="text-text-secondary mb-6">Você não tem permissão para visualizar logs de auditoria.</p>
-            <NavigationLink to="/support">
+            <NavigationLink to="/workspace">
               <Button>Voltar</Button>
             </NavigationLink>
           </div>

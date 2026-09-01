@@ -88,6 +88,16 @@ write_release_manifest() {
   local git_commit="$6"
   local git_branch="$7"
 
+  # runId/sourceFingerprint do run atual + proveniência git do snapshot inicial
+  # (GIT_TREE/GIT_REF capturados pelo gate DIRTY_WORKTREE no início do pipeline).
+  local current_run_path="$PROJECT_ROOT/governance/.current-run.json"
+  local run_id="null"
+  local source_fp="null"
+  if [[ -f "$current_run_path" ]]; then
+    run_id="$(node -e "try{const r=require('$current_run_path');process.stdout.write(JSON.stringify(r.runId||null))}catch(_){process.stdout.write('null')}" 2>/dev/null || echo "null")"
+    source_fp="$(node -e "try{const r=require('$current_run_path');process.stdout.write(JSON.stringify(r.sourceFingerprint||null))}catch(_){process.stdout.write('null')}" 2>/dev/null || echo "null")"
+  fi
+
   cat > "$manifest_path" <<EOF
 {
   "artifact": "$zip_name",
@@ -96,7 +106,12 @@ write_release_manifest() {
   "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "git_commit": "$git_commit",
+  "git_tree": "${GIT_TREE:-n/a}",
   "git_branch": "$git_branch",
+  "git_ref": "${GIT_REF:-n/a}",
+  "cleanWorktree": true,
+  "runId": $run_id,
+  "sourceFingerprint": $source_fp,
   "generated_by": "scripts/two-pass-release.sh",
   "audit": "passed",
   "status": "final",
@@ -146,7 +161,10 @@ write_payload_manifest() {
   "architecture": "envelope-payload-split",
   "governanceModel": "payload-centric",
   "git_commit": "$git_commit",
+  "git_tree": "${GIT_TREE:-n/a}",
   "git_branch": "$git_branch",
+  "git_ref": "${GIT_REF:-n/a}",
+  "cleanWorktree": true,
   "generated_by": "scripts/two-pass-release.sh",
   "status": "immutable",
   "audit": "passed"
@@ -394,6 +412,34 @@ command -v node >/dev/null 2>&1  || fail "'node' não encontrado"
 command -v unzip >/dev/null 2>&1 || fail "'unzip' não encontrado — extração limpa é obrigatória"
 ok "Pré-condições verificadas"
 
+# ── GATE DE PROVENIÊNCIA: worktree limpo no INÍCIO do pipeline ───────────────
+# RELEASE OFICIAL exige `git status --porcelain` vazio ANTES de qualquer
+# geração: o pacote precisa corresponder exatamente ao gitCommit declarado no
+# manifest (regressão real: r-agent2-20260829-213044 registrou 58b12b76 com o
+# working tree sujo). Artefatos de governança (governance/*.json, reports/*)
+# mudam DURANTE o two-pass — por isso o snapshot é feito uma única vez aqui,
+# antes da limpeza e de qualquer geração. NUNCA commit automático.
+step "GATE DIRTY_WORKTREE: snapshot do worktree no início do pipeline..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/check-clean-worktree.js" --root "$PROJECT_ROOT" \
+  || fail "DIRTY_WORKTREE — release bloqueada: commite ou descarte as pendências antes do release"
+ok "Worktree limpo no snapshot inicial"
+
+# Proveniência git capturada no snapshot inicial (40-char SHA + tree SHA).
+GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null || echo "n/a")"
+GIT_TREE="$(git -C "$PROJECT_ROOT" rev-parse 'HEAD^{tree}' 2>/dev/null || echo "n/a")"
+GIT_BRANCH="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "n/a")"
+GIT_REF="$(git -C "$PROJECT_ROOT" symbolic-ref -q HEAD 2>/dev/null || echo "DETACHED")"
+ok "Proveniência: commit=$GIT_COMMIT tree=$GIT_TREE ref=$GIT_REF"
+
+# ── GATE EXPERIENCE-SEGREGATION: evidência fresca em todo release oficial ────
+# O relatório é consumido pelo Master Scorecard (RAP-014/RAP-015), entra no
+# Evidence Manifest e é verificado pelo delivered-release verifier — precisa
+# ser gerado no MESMO release, antes da materialização dos proof reports.
+step "GATE experience-segregation: gerando relatório do release..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-experience-segregation.js" \
+  || fail "experience-segregation FAIL — release bloqueada"
+ok "reports/experience-segregation-report.json PASS (evidência do release)"
+
 # ── Limpeza inicial ───────────────────────────────────────────────────────────
 step "Limpando artefatos de runtime e teste..."
 bash "$PROJECT_ROOT/scripts/clean-test-artifacts.sh" 2>/dev/null || true
@@ -475,15 +521,18 @@ ok "H_provisional  : $H_PROVISIONAL"
 # CRÍTICO: "audit": "passed" obrigatório para package-validator --audited-only funcionar
 cat > "$DIST_DIR/${RELEASE_NAME}.manifest.json" <<EOF
 {
-  "artifact":     "${RELEASE_NAME}.zip",
-  "sha256":       "$H_PROVISIONAL",
-  "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "git_commit":   "$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "n/a")",
-  "git_branch":   "$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "n/a")",
-  "audit":        "passed",
-  "pipeline":     "two-pass-immutable",
-  "pass":         "1-provisional",
-  "note":         "Provisional — sha256 será atualizado no PASS 4 para H_final"
+  "artifact":      "${RELEASE_NAME}.zip",
+  "sha256":        "$H_PROVISIONAL",
+  "generated_at":  "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "git_commit":    "$GIT_COMMIT",
+  "git_tree":      "$GIT_TREE",
+  "git_branch":    "$GIT_BRANCH",
+  "git_ref":       "$GIT_REF",
+  "cleanWorktree": true,
+  "audit":         "passed",
+  "pipeline":      "two-pass-immutable",
+  "pass":          "1-provisional",
+  "note":          "Provisional — sha256 será atualizado no PASS 4 para H_final"
 }
 EOF
 ok "Manifest provisional gerado"
@@ -606,8 +655,6 @@ node_with_workspace_env "$PROJECT_ROOT/governance/package-validator.js" --zip "$
 
 # 4b. Criar manifest final (dist/RELEASE.manifest.json — membro da chain)
 step "Gerando manifest final com H_final..."
-GIT_COMMIT="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo "n/a")"
-GIT_BRANCH="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "n/a")"
 ZIP_SIZE="$(du -h "$FINAL_ZIP" | cut -f1)"
 
 write_release_manifest "$FINAL_ZIP" "$DIST_DIR/${RELEASE_NAME}.manifest.json" \
@@ -681,7 +728,8 @@ for f in \
   "governance/package-validation-report.json" \
   "governance/package-integrity-report.json" \
   "governance/self-proving-report.json" \
-  "governance/final-governance-report.json"; do
+  "governance/final-governance-report.json" \
+  "reports/experience-segregation-report.json"; do
   [[ -f "$PROJECT_ROOT/$f" ]] && cp "$PROJECT_ROOT/$f" "$DIST_DIR/$(basename $f)" || true
 done
 ok "Relatórios propagados"
@@ -725,7 +773,8 @@ for f in \
   "final-governance-report.json" \
   "governance-attestation.json" \
   "governance-chain.json" \
-  "replay-integrity-report.json"; do
+  "replay-integrity-report.json" \
+  "experience-segregation-report.json"; do
   [[ -f "$DIST_DIR/$f" ]] && mv "$DIST_DIR/$f" "$GOV_DIR/$f" || true
 done
 ok "Relatórios movidos para dist/governance/"

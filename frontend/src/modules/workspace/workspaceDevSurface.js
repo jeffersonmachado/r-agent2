@@ -7,15 +7,19 @@
  * e NUNCA embolem literais técnicos — um scanner de governança verifica isso.
  *
  * Política:
+ * - DEVELOPMENT: superfície de engenharia completa (tab QA/RPA, painel,
+ *   labels e detalhe técnico de eventos).
+ * - SUPPORT: NÃO recebe a superfície de engenharia do workspace. Diagnóstico
+ *   operacional para SUPPORT vive em superfícies próprias
+ *   (PlatformSupportPage / SupportEvidenceCard), nunca aqui.
  * - PRODUCTION (operação do cliente): linguagem sanitizada de outcome
  *   operacional; sem evidence IDs, refs técnicas ou links de replay.
- * - SUPPORT/DEVELOPMENT (plataforma interna): detalhe técnico completo.
  */
 import { WorkspaceQaRpaPanel } from './WorkspaceQaRpaPanel';
 
 export { WorkspaceQaRpaPanel };
 
-/** Tab técnica do workspace (apenas perfis internos). */
+/** Tab técnica do workspace (apenas DEVELOPMENT). */
 export const DEV_SURFACE_TAB = 'QA/RPA';
 
 /** Tipo de evento de timeline associado à tab técnica. */
@@ -24,7 +28,7 @@ export const DEV_SURFACE_EVENT_TYPE = 'evidence';
 const BASE_TABS = ['Resumo', 'Timeline', 'Conversas', 'Tickets', 'Tarefas', 'Agenda', 'Projetos', 'Documentos', 'Pagamentos'];
 const TAIL_TABS = ['Insights IA', 'Ações'];
 
-/** Filtro técnico da sidebar (apenas perfis internos veem o rótulo técnico). */
+/** Filtro técnico da sidebar (apenas DEVELOPMENT vê o rótulo técnico). */
 const DEV_SURFACE_SIDEBAR_FILTER = { id: 'qa', label: 'Falha QA/RPA' };
 const SANITIZED_SIDEBAR_FILTER = { id: 'qa', label: 'Incidentes operacionais' };
 
@@ -61,18 +65,21 @@ export const SANITIZED_EVENT_SOURCE = 'operação';
 export const SANITIZED_EVENT_TYPE_LABEL = 'operacional';
 
 /**
- * A superfície de engenharia só é visível para perfis internos da plataforma.
+ * A superfície de engenharia é DEVELOPMENT-only.
+ * SUPPORT não recebe a tab/painel QA/RPA do Workspace: diagnóstico operacional
+ * para SUPPORT é exposto via componentes próprios (PlatformSupportPage /
+ * SupportEvidenceCard), nunca reutilizando a superfície de engenharia.
  *
  * @param {string} classification - PRODUCTION | SUPPORT | DEVELOPMENT
  * @returns {boolean}
  */
 export function isDevSurfaceVisible(classification) {
-  return classification === 'SUPPORT' || classification === 'DEVELOPMENT';
+  return classification === 'DEVELOPMENT';
 }
 
 /**
  * Tabs do workspace conforme a classificação do agente.
- * PRODUCTION nunca vê a tab técnica.
+ * PRODUCTION e SUPPORT nunca veem a tab técnica.
  */
 export function getWorkspaceTabs(classification) {
   if (isDevSurfaceVisible(classification)) {
@@ -133,8 +140,8 @@ function isTechnicalEvent(event = {}) {
 
 /**
  * Sanitiza um evento de timeline para a classificação informada.
- * - PRODUCTION: eventos técnicos viram outcome operacional, sem IDs/refs/links.
- * - SUPPORT/DEVELOPMENT: detalhe técnico preservado.
+ * - DEVELOPMENT: detalhe técnico preservado.
+ * - SUPPORT/PRODUCTION: eventos técnicos viram outcome operacional, sem IDs/refs/links.
  */
 export function sanitizeOperationalEvent(event = {}, classification) {
   if (isDevSurfaceVisible(classification)) {

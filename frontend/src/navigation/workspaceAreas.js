@@ -38,7 +38,9 @@ const AREA_BLUEPRINTS = [
       '/marketing',
     ],
     legacyAnchorIds: ['relacionamento'],
-    fallbackPath: '/support',
+    // Fallback canônico da área de Atendimento: o Inbox omnichannel é a
+    // superfície principal; '/support' é legada e gated por caseManagement.
+    fallbackPath: '/inbox',
     excludeNodeIds: ['crm'],
   },
   {

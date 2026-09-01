@@ -97,6 +97,7 @@ beforeEach(() => {
     agent: { id: 'agent1', name: 'João Silva' },
     isAuthenticated: true,
     loading: false,
+    capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
   });
 
   // Mock API calls - return empty/minimal data for simplicity

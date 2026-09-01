@@ -35,6 +35,7 @@ const REQUIRED_FILES = [
   'governance/evidence-manifest.json',
   'governance/final-proof-report.json',
   'governance/package-validation-report.json',
+  'reports/experience-segregation-report.json',
 ];
 
 const OPTIONAL_FILES = [

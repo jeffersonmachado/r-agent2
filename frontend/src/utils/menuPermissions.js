@@ -422,14 +422,24 @@ export function canAccessPath(agent, path, options = {}) {
     return isSuperAdmin(agent);
   }
 
-  const item = menuItems.find((menuItem) => {
+  const matchingItems = menuItems.filter((menuItem) => {
     const basePath = normalizeNavigationPath(menuItem.path);
     return targetPath === basePath || targetPath.startsWith(`${basePath}/`);
   });
 
-  if (!item) {
+  if (matchingItems.length === 0) {
     return allowUnknown;
   }
 
-  return canAccessMenuItem(agent, item, capabilities);
+  // Capability é gate de tenant (fail-closed): nós-pai com path (ex.: a seção
+  // 'relacionamento', também '/support') não declaram capability, então o gate
+  // precisa ser verificado em TODOS os itens que mapeiam a rota — caso
+  // contrário o nó-pai sem capability contornaria a exigência do item real.
+  for (const matchingItem of matchingItems) {
+    if (matchingItem.capability && capabilities?.[matchingItem.capability] !== true) {
+      return false;
+    }
+  }
+
+  return canAccessMenuItem(agent, matchingItems[0], capabilities);
 }
