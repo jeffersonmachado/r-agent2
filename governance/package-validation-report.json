@@ -1,9 +1,24 @@
 {
-  "generatedAt": "2026-09-01T23:29:11.121Z",
-  "ok": false,
-  "zipPath": null,
-  "zipName": null,
+  "generatedAt": "2026-09-01T23:31:36.374Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260901-202937.payload.zip",
+  "zipName": "r-agent2-20260901-202937.payload.zip",
+  "zipSha256": "75bc6dffb2950a7c8d10aeb73f0849efc21121f829aef04b8f7ee8e27b1d2f9a",
+  "payloadCentric": false,
+  "envelopePath": null,
+  "selectionMode": "audited",
+  "candidateFallbackUsed": false,
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260901-202937.manifest.json",
+  "manifestAudit": "passed",
+  "auditSatisfied": true,
+  "selfContainmentCheck": {
+    "passed": true,
+    "missing": []
+  },
   "requiredEntries": [
+    "governance/final-proof-report.json",
+    "governance/evidence-manifest.json",
+    "governance/blocker-engine.js",
+    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -25,9 +40,21 @@
     "governance/cleanup-proof.json",
     "governance/final-readiness-report.json"
   ],
+  "entryCount": 5870,
   "missingEntries": [],
-  "error": "artifact_missing:none_found_in_dist",
-  "deferred": true,
-  "phase": "PRE_PACKAGE",
-  "status": "DEFERRED"
+  "ok": true,
+  "error": null,
+  "packageBinding": {
+    "boundTo": "r-agent2-20260901-202937.zip",
+    "sha256": "75bc6dffb2950a7c8d10aeb73f0849efc21121f829aef04b8f7ee8e27b1d2f9a",
+    "immutable": true,
+    "selfProving": true,
+    "offlineAuditable": true,
+    "zipName": "r-agent2-20260901-202937.payload.zip"
+  },
+  "audit": "passed",
+  "runId": "rap-governed-20260901190048981-4278fc93",
+  "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
+  "artifactType": "package-validation-report",
+  "artifactVersion": "1.0.0"
 }
