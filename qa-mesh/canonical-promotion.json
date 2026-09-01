@@ -1,15 +1,15 @@
 {
-  "executionId": "mesh-2026-08-29T23-02-44-953Z",
-  "startedAt": "2026-08-29T23:02:44.954Z",
+  "executionId": "mesh-2026-09-01T09-33-46-299Z",
+  "startedAt": "2026-09-01T09:33:46.299Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
-  "promotedAt": "2026-08-30T00:11:08.310Z",
+  "promotedAt": "2026-09-01T10:42:33.872Z",
   "registryTotal": 132,
   "goNoGo": "GO",
   "criterion": "serialized_canonical_execution",
-  "finishedAt": "2026-08-30T00:11:08.311Z",
+  "finishedAt": "2026-09-01T10:42:33.873Z",
   "summaryPath": "/opt/results/ria/r-agent2/qa-mesh/meshReport.json",
   "goNoGoPath": "/opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json",
   "metricsPath": "/opt/results/ria/r-agent2/qa-mesh/metrics.json",
-  "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-08-29T23-02-44-953Z.json"
+  "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-01T09-33-46-299Z.json"
 }
