@@ -1,41 +1,32 @@
 {
-  "generatedAt": "2026-09-01T12:01:47.658Z",
+  "generatedAt": "2026-09-01T15:50:35.381Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260901-090004.zip",
-  "zipHash": "6d80ee2e9fcf486c7de594dee2f2c05fb135519298317cf2aedd59daf7b4341e",
-  "manifestHash": "0444fd932ffc45446270d00e62348b4812ce95ca3a0052e7b445bd5b62afc78c",
-  "replayHash": "a72cb8fc8087ad593ff1ae58d1e8810ed09acc561c222f565d24a756bf60303c",
-  "governanceHash": "00f895baa65a29a008066baef8833b606835a0e0e02a9c930716c928b8541869",
-  "readinessHash": "8cdd5b6f020d648d55265dc2de8e1fbb94fcd4e2e1d5affbfc2dcbc66f2c96d3",
-  "consistencyHash": "c3e72f3827fd774c2149513b5193976c9c2540cf2c0c081fa0cfe3fb9fd86bce",
-  "contaminationHash": "3f8ee131eeb79e47e76d0dad8a804e2f2d997cc1f33ba99ff70dae758119e709",
-  "packageIntegrityHash": "076af1f1ced8d7d163766611e7714243288fc9589359829d31be826b8b87abc0",
+  "zipName": null,
+  "zipHash": null,
+  "manifestHash": "36c97c94de67fc7e67d32cb4a2815d85a386f335ef5a3693cec91a5e2a3c0a81",
+  "replayHash": "832af5bcb1b2b2dbdc80a818bbbecd3e4f3017f235dab333a953ce4b876e1f3f",
+  "governanceHash": "d70c9a145b2f9f04f888f90b97928cea03b67677f47a41c24d98530f55952c4a",
+  "readinessHash": "acbe5519b164fc2a8ea84b615b36e2b5e6c6962bebc5249b1f0662deba18f846",
+  "consistencyHash": "d73f505a01ce105090252eafece0d4d634eee2545ebfed111930893e2431f6f3",
+  "contaminationHash": "d8ffb9899f84a82eb7e5d52d26209002fe7de7ddd8db5937278c29ea5d51718d",
+  "packageIntegrityHash": "cd12c2c20dad42579afaa926b2df0fabe40e8e5e841e671e1931d062e32b7356",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "12ba8f5a28d6f6cd3ee712e27e5e077050f388834301ef068e354cc6aee8d8ec",
+  "gateHash": "d7c13cdad6ede77ab9021f424eca9e1db4c184d1da5109fec699d289c6e51069",
   "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-014: score=7 target=10 | RAP-014: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-014: open blockers=1 | RAP-014: open gaps=1 | RAP-015: score=7 target=10 | RAP-015: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-015: open blockers=1 | RAP-015: open gaps=1 | RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | scorecard: open blockers=4 | scorecard: open gaps=4 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
-    "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "finalGovernance": "AUTONOMOUS_READY_GO",
+    "readiness": "AUTONOMOUS_READY_GO",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
-  "autonomousReady": false,
-  "mandatoryFailures": [
-    {
-      "engine": "finalGovernance",
-      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-014: score=7 target=10 | RAP-014: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-014: open blockers=1 | RAP-014: open gaps=1 | RAP-015: score=7 target=10 | RAP-015: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-015: open blockers=1 | RAP-015: open gaps=1 | RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | scorecard: open blockers=4 | scorecard: open gaps=4 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
-    },
-    {
-      "engine": "readiness",
-      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
-    }
-  ],
-  "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260901-090004.zip. Package: ÍNTEGRO. Validadores falhos: 2."
+  "autonomousReady": true,
+  "mandatoryFailures": [],
+  "ok": true,
+  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 0."
 }

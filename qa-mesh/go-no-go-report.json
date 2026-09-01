@@ -1,25 +1,25 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-01T09-33-46-299Z",
+  "executionId": "mesh-2026-09-01T14-03-31-032Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "GO",
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-01T09-33-46-299Z",
-    "startedAt": "2026-09-01T09:33:46.299Z",
+    "executionId": "mesh-2026-09-01T14-03-31-032Z",
+    "startedAt": "2026-09-01T14:03:31.032Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-01T10:42:33.872Z",
+    "promotedAt": "2026-09-01T15:47:18.141Z",
     "registryTotal": 132,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-09-01T09-33-46-299Z",
+    "executionId": "mesh-2026-09-01T14-03-31-032Z",
     "tenantId": "system",
-    "timestamp": "2026-09-01T09:33:46.299Z",
+    "timestamp": "2026-09-01T14:03:31.032Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -233,19 +233,19 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-01T09-33-46-299Z",
-      "startedAt": "2026-09-01T09:33:46.299Z",
+      "executionId": "mesh-2026-09-01T14-03-31-032Z",
+      "startedAt": "2026-09-01T14:03:31.032Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-01T10:42:33.872Z",
+      "promotedAt": "2026-09-01T15:47:18.141Z",
       "registryTotal": 132,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "generatedAt": "2026-09-01T10:42:33.872Z",
-  "runId": "rap-governed-20260901092914602-46fd763c",
-  "sourceFingerprint": "707c23aa066bf2932286f47ddba4e1d008e59ec12757567ebb026223e4ec9816",
+  "generatedAt": "2026-09-01T15:47:18.141Z",
+  "runId": "rap-governed-20260901121635928-6854fe09",
+  "sourceFingerprint": "c6cd304e76a4cbc9da8275147f665aaf7024759aff2ac909ebc13bdbef795373",
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0"
 }
