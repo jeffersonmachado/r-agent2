@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-01T23:10:21.795Z",
+  "generatedAt": "2026-09-01T23:29:11.121Z",
   "ok": false,
   "zipPath": null,
   "zipName": null,
@@ -29,9 +29,5 @@
   "error": "artifact_missing:none_found_in_dist",
   "deferred": true,
   "phase": "PRE_PACKAGE",
-  "status": "DEFERRED",
-  "runId": "rap-governed-20260901190048981-4278fc93",
-  "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
-  "artifactType": "package-validation-report",
-  "artifactVersion": "1.0.0"
+  "status": "DEFERRED"
 }
