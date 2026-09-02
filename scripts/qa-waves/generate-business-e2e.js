@@ -54,6 +54,44 @@ const BUSINESS_E2E_TEMPLATES = {
     ],
   },
 
+  bakery_encomenda_flow: {
+    name: 'Encomenda Completa de Padaria',
+    channels: ['whatsapp', 'webchat'],
+    risk: 'high',
+    priority: 'high',
+    steps: [
+      { type: 'send_message', category: 'CLIENT_ACTION', adapter: 'api', order: 1,
+        description: 'Cliente envia mensagem "Quero encomendar um bolo para sábado"',
+        expected: { messageReceived: true, intentDetected: 'order_request' } },
+      { type: 'validate_intent', category: 'AI_DECISION', adapter: 'api', order: 2,
+        description: 'IA classifica intenção como encomenda e registra o pedido',
+        expected: { orderCreated: true, orderStatus: 'created' } },
+      { type: 'send_message', category: 'HUMAN_ACTION', adapter: 'api', order: 3,
+        description: 'Atendente confirma valor, sabor e data de retirada',
+        expected: { replySent: true, orderConfirmed: true, paymentLinkSent: true } },
+      { type: 'validate_backend', category: 'VALIDATION', adapter: 'api', order: 4,
+        description: 'Pagamento confirmado e encomenda entra na produção',
+        expected: { paymentConfirmed: true, orderStatus: 'preparing' } },
+      { type: 'wait_for_event', category: 'SYSTEM_EVENT', adapter: 'api', order: 5,
+        description: 'Sistema notifica cliente quando a encomenda fica pronta',
+        expected: { customerNotified: true, orderStatus: 'ready' } },
+      { type: 'send_message', category: 'CLIENT_ACTION', adapter: 'api', order: 6,
+        description: 'Cliente confirma retirada da encomenda',
+        expected: { messageReceived: true, pickupConfirmed: true } },
+      { type: 'validate_flow_transition', category: 'VALIDATION', adapter: 'api', order: 7,
+        description: 'Encomenda é marcada como entregue após a retirada',
+        expected: { orderStatus: 'delivered', fulfillmentOk: true } },
+    ],
+    validations: { requireBackendValidation: true, requireReplay: true },
+    assertions: [
+      'Encomenda registrada a partir da conversa',
+      'IA classificou intenção de encomenda corretamente',
+      'Pagamento confirmado antes da produção',
+      'Cliente notificado quando encomenda ficou pronta',
+      'Entrega confirmada após retirada',
+    ],
+  },
+
   fitness_customer_checkin: {
     name: 'Check-in Completo de Aluno Fitness',
     channels: ['whatsapp', 'app'],
@@ -221,6 +259,11 @@ function run() {
       support_ticket_flow: 'core',
       booking_flow: 'core',
       payment_charge_flow: 'core',
+      bakery_encomenda_flow: 'bakery',
+      bakery_balcao_retirada: 'bakery',
+      bakery_producao_fornada: 'bakery',
+      bakery_estoque_perdas: 'bakery',
+      bakery_reativacao_cliente: 'bakery',
     };
 
     const scenario = {

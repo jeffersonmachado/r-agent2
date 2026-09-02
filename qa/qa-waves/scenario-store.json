@@ -43308,6 +43308,1298 @@
       "platform": {
         "platformScenarioIds": []
       }
+    },
+    {
+      "id": "business-e2e-cases",
+      "waveId": "wave-business-cases",
+      "vertical": "core",
+      "journey": "cases",
+      "name": "E2E: cases",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_cases_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar cases",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "cases: validado"
+      ],
+      "requiredCapabilities": [
+        "cases"
+      ],
+      "confidence": 0.75,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar cases"
+      ]
+    },
+    {
+      "id": "cap-cases",
+      "waveId": "wave-cap-cases",
+      "vertical": "core",
+      "journey": "cases",
+      "name": "Validação: Cases",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_cases_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Cases",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Cases operacional"
+      ],
+      "requiredCapabilities": [
+        "cases"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Cases"
+      ]
+    },
+    {
+      "id": "cap-order_management",
+      "waveId": "wave-cap-bakery_encomenda_flow",
+      "vertical": "bakery",
+      "journey": "bakery_encomenda_flow",
+      "name": "Validação: Order Management",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_order_management_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Order Management",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Order Management operacional"
+      ],
+      "requiredCapabilities": [
+        "order_management"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Order Management"
+      ]
+    },
+    {
+      "id": "cap-production_tracking",
+      "waveId": "wave-cap-bakery_encomenda_flow",
+      "vertical": "bakery",
+      "journey": "bakery_encomenda_flow",
+      "name": "Validação: Production Tracking",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_production_tracking_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Production Tracking",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Production Tracking operacional"
+      ],
+      "requiredCapabilities": [
+        "production_tracking"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Production Tracking"
+      ]
+    },
+    {
+      "id": "cap-retention",
+      "waveId": "wave-cap-bakery_encomenda_flow",
+      "vertical": "bakery",
+      "journey": "bakery_encomenda_flow",
+      "name": "Validação: Retention",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_retention_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Retention",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Retention operacional"
+      ],
+      "requiredCapabilities": [
+        "retention"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Retention"
+      ]
+    },
+    {
+      "id": "business-e2e-bakery_balcao_retirada",
+      "waveId": "wave-business-bakery_balcao_retirada",
+      "vertical": "bakery",
+      "journey": "bakery_balcao_retirada",
+      "name": "E2E: bakery_balcao_retirada",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_bakery_balcao_retirada_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar bakery_balcao_retirada",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "order_management: validado",
+        "payment: validado",
+        "production_tracking: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "order_management",
+        "payment",
+        "production_tracking",
+        "notifications"
+      ],
+      "confidence": 0.67,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar order management",
+        "Validar payment",
+        "Validar production tracking",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "business-e2e-bakery_producao_fornada",
+      "waveId": "wave-business-bakery_producao_fornada",
+      "vertical": "bakery",
+      "journey": "bakery_producao_fornada",
+      "name": "E2E: bakery_producao_fornada",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_bakery_producao_fornada_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar bakery_producao_fornada",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "production_planning: validado",
+        "capacity_management: validado",
+        "production_tracking: validado",
+        "notifications: validado"
+      ],
+      "requiredCapabilities": [
+        "production_planning",
+        "capacity_management",
+        "production_tracking",
+        "notifications"
+      ],
+      "confidence": 0.63,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar production planning",
+        "Validar capacity management",
+        "Validar production tracking",
+        "Validar notifications"
+      ]
+    },
+    {
+      "id": "cap-production_planning",
+      "waveId": "wave-cap-bakery_producao_fornada",
+      "vertical": "bakery",
+      "journey": "bakery_producao_fornada",
+      "name": "Validação: Production Planning",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_production_planning_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Production Planning",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Production Planning operacional"
+      ],
+      "requiredCapabilities": [
+        "production_planning"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Production Planning"
+      ]
+    },
+    {
+      "id": "cap-capacity_management",
+      "waveId": "wave-cap-bakery_producao_fornada",
+      "vertical": "bakery",
+      "journey": "bakery_producao_fornada",
+      "name": "Validação: Capacity Management",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_capacity_management_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Capacity Management",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Capacity Management operacional"
+      ],
+      "requiredCapabilities": [
+        "capacity_management"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Capacity Management"
+      ]
+    },
+    {
+      "id": "business-e2e-bakery_estoque_perdas",
+      "waveId": "wave-business-bakery_estoque_perdas",
+      "vertical": "bakery",
+      "journey": "bakery_estoque_perdas",
+      "name": "E2E: bakery_estoque_perdas",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_bakery_estoque_perdas_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar bakery_estoque_perdas",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "inventory_monitoring: validado",
+        "stock_alerts: validado",
+        "loss_tracking: validado",
+        "crm_updates: validado"
+      ],
+      "requiredCapabilities": [
+        "inventory_monitoring",
+        "stock_alerts",
+        "loss_tracking",
+        "crm_updates"
+      ],
+      "confidence": 0.63,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar inventory monitoring",
+        "Validar stock alerts",
+        "Validar loss tracking",
+        "Validar crm updates"
+      ]
+    },
+    {
+      "id": "cap-inventory_monitoring",
+      "waveId": "wave-cap-bakery_estoque_perdas",
+      "vertical": "bakery",
+      "journey": "bakery_estoque_perdas",
+      "name": "Validação: Inventory Monitoring",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_inventory_monitoring_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Inventory Monitoring",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Inventory Monitoring operacional"
+      ],
+      "requiredCapabilities": [
+        "inventory_monitoring"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Inventory Monitoring"
+      ]
+    },
+    {
+      "id": "cap-stock_alerts",
+      "waveId": "wave-cap-bakery_estoque_perdas",
+      "vertical": "bakery",
+      "journey": "bakery_estoque_perdas",
+      "name": "Validação: Stock Alerts",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_stock_alerts_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Stock Alerts",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Stock Alerts operacional"
+      ],
+      "requiredCapabilities": [
+        "stock_alerts"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Stock Alerts"
+      ]
+    },
+    {
+      "id": "cap-loss_tracking",
+      "waveId": "wave-cap-bakery_estoque_perdas",
+      "vertical": "bakery",
+      "journey": "bakery_estoque_perdas",
+      "name": "Validação: Loss Tracking",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_loss_tracking_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Loss Tracking",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Loss Tracking operacional"
+      ],
+      "requiredCapabilities": [
+        "loss_tracking"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Loss Tracking"
+      ]
+    },
+    {
+      "id": "business-e2e-bakery_reativacao_cliente",
+      "waveId": "wave-business-bakery_reativacao_cliente",
+      "vertical": "bakery",
+      "journey": "bakery_reativacao_cliente",
+      "name": "E2E: bakery_reativacao_cliente",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "risk": "critical",
+      "priority": "critical",
+      "steps": [
+        {
+          "id": "step_e2e_bakery_reativacao_cliente_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar bakery_reativacao_cliente",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "customer_identification: validado",
+        "lead_capture: validado",
+        "campaign_management: validado",
+        "crm_updates: validado",
+        "retention: validado"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "lead_capture",
+        "campaign_management",
+        "crm_updates",
+        "retention"
+      ],
+      "confidence": 0.67,
+      "trainingEnabled": true,
+      "trainingDifficulty": "intermediate",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar customer identification",
+        "Validar lead capture",
+        "Validar campaign management",
+        "Validar crm updates",
+        "Validar retention"
+      ]
+    },
+    {
+      "id": "cap-campaign_management",
+      "waveId": "wave-cap-bakery_reativacao_cliente",
+      "vertical": "bakery",
+      "journey": "bakery_reativacao_cliente",
+      "name": "Validação: Campaign Management",
+      "source": "auto-generated-cap",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_cap_campaign_management_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Campaign Management",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Capability Campaign Management operacional"
+      ],
+      "requiredCapabilities": [
+        "campaign_management"
+      ],
+      "confidence": 0.9,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "3min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Validar capability Campaign Management"
+      ]
+    },
+    {
+      "id": "business-e2e-bakery_encomenda_flow",
+      "waveId": "wave-business-bakery_encomenda_flow",
+      "vertical": "bakery",
+      "journey": "bakery_encomenda_flow",
+      "name": "Encomenda Completa de Padaria",
+      "source": "auto-generated-e2e",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp",
+        "webchat"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_bakery_encomenda_flow_001",
+          "order": 1,
+          "type": "send_message",
+          "category": "CLIENT_ACTION",
+          "adapter": "api",
+          "description": "Cliente envia mensagem \"Quero encomendar um bolo para sábado\"",
+          "expected": {
+            "messageReceived": true,
+            "intentDetected": "order_request"
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_002",
+          "order": 2,
+          "type": "validate_intent",
+          "category": "AI_DECISION",
+          "adapter": "api",
+          "description": "IA classifica intenção como encomenda e registra o pedido",
+          "expected": {
+            "orderCreated": true,
+            "orderStatus": "created"
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_003",
+          "order": 3,
+          "type": "send_message",
+          "category": "HUMAN_ACTION",
+          "adapter": "api",
+          "description": "Atendente confirma valor, sabor e data de retirada",
+          "expected": {
+            "replySent": true,
+            "orderConfirmed": true,
+            "paymentLinkSent": true
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_004",
+          "order": 4,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Pagamento confirmado e encomenda entra na produção",
+          "expected": {
+            "paymentConfirmed": true,
+            "orderStatus": "preparing"
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_005",
+          "order": 5,
+          "type": "wait_for_event",
+          "category": "SYSTEM_EVENT",
+          "adapter": "api",
+          "description": "Sistema notifica cliente quando a encomenda fica pronta",
+          "expected": {
+            "customerNotified": true,
+            "orderStatus": "ready"
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_006",
+          "order": 6,
+          "type": "send_message",
+          "category": "CLIENT_ACTION",
+          "adapter": "api",
+          "description": "Cliente confirma retirada da encomenda",
+          "expected": {
+            "messageReceived": true,
+            "pickupConfirmed": true
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_007",
+          "order": 7,
+          "type": "validate_flow_transition",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Encomenda é marcada como entregue após a retirada",
+          "expected": {
+            "orderStatus": "delivered",
+            "fulfillmentOk": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "assertions": [
+        "Encomenda registrada a partir da conversa",
+        "IA classificou intenção de encomenda corretamente",
+        "Pagamento confirmado antes da produção",
+        "Cliente notificado quando encomenda ficou pronta",
+        "Entrega confirmada após retirada"
+      ],
+      "requiredCapabilities": [
+        "customer_identification",
+        "order_management",
+        "payment",
+        "production_tracking",
+        "notifications",
+        "retention"
+      ],
+      "confidence": 0.7,
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "10min",
+      "trainingPrerequisites": [
+        "Acesso à plataforma RAP"
+      ],
+      "trainingObjectives": [
+        "Encomenda registrada a partir da conversa",
+        "IA classificou intenção de encomenda corretamente",
+        "Pagamento confirmado antes da produção",
+        "Cliente notificado quando encomenda ficou pronta",
+        "Entrega confirmada após retirada"
+      ]
+    },
+    {
+      "id": "precond-bakery_encomenda_flow-order_service_available",
+      "waveId": "wave-precond-bakery_encomenda_flow",
+      "vertical": "bakery",
+      "journey": "bakery_encomenda_flow",
+      "name": "Precondição: Order Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Order Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Order Service Available"
+      ]
+    },
+    {
+      "id": "precond-bakery_encomenda_flow-payment_gateway_available",
+      "waveId": "wave-precond-bakery_encomenda_flow",
+      "vertical": "bakery",
+      "journey": "bakery_encomenda_flow",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "precond-bakery_encomenda_flow-storefront_channel_active",
+      "waveId": "wave-precond-bakery_encomenda_flow",
+      "vertical": "bakery",
+      "journey": "bakery_encomenda_flow",
+      "name": "Precondição: Storefront Channel Active",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_storefront_channel_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Storefront Channel Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Storefront Channel Active atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Storefront Channel Active"
+      ]
+    },
+    {
+      "id": "precond-bakery_balcao_retirada-order_service_available",
+      "waveId": "wave-precond-bakery_balcao_retirada",
+      "vertical": "bakery",
+      "journey": "bakery_balcao_retirada",
+      "name": "Precondição: Order Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Order Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Order Service Available"
+      ]
+    },
+    {
+      "id": "precond-bakery_balcao_retirada-payment_gateway_available",
+      "waveId": "wave-precond-bakery_balcao_retirada",
+      "vertical": "bakery",
+      "journey": "bakery_balcao_retirada",
+      "name": "Precondição: Payment Gateway Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Payment Gateway Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Payment Gateway Available"
+      ]
+    },
+    {
+      "id": "precond-bakery_producao_fornada-order_service_available",
+      "waveId": "wave-precond-bakery_producao_fornada",
+      "vertical": "bakery",
+      "journey": "bakery_producao_fornada",
+      "name": "Precondição: Order Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Order Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Order Service Available"
+      ]
+    },
+    {
+      "id": "precond-bakery_estoque_perdas-inventory_service_available",
+      "waveId": "wave-precond-bakery_estoque_perdas",
+      "vertical": "bakery",
+      "journey": "bakery_estoque_perdas",
+      "name": "Precondição: Inventory Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_inventory_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Inventory Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Inventory Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Inventory Service Available"
+      ]
+    },
+    {
+      "id": "precond-bakery_reativacao_cliente-crm_service_available",
+      "waveId": "wave-precond-bakery_reativacao_cliente",
+      "vertical": "bakery",
+      "journey": "bakery_reativacao_cliente",
+      "name": "Precondição: Crm Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_crm_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Crm Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Crm Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Crm Service Available"
+      ]
+    },
+    {
+      "id": "precond-bakery_reativacao_cliente-campaign_service_available",
+      "waveId": "wave-precond-bakery_reativacao_cliente",
+      "vertical": "bakery",
+      "journey": "bakery_reativacao_cliente",
+      "name": "Precondição: Campaign Service Available",
+      "source": "auto-generated-precond",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "risk": "high",
+      "priority": "high",
+      "steps": [
+        {
+          "id": "step_precond_campaign_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Campaign Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "assertions": [
+        "Precondição Campaign Service Available atendida"
+      ],
+      "trainingEnabled": true,
+      "trainingDifficulty": "beginner",
+      "trainingDuration": "2min",
+      "trainingPrerequisites": [],
+      "trainingObjectives": [
+        "Validar precondição Campaign Service Available"
+      ]
     }
   ],
   "history": {

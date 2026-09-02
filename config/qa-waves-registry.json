@@ -132,6 +132,63 @@
           "retencao"
         ]
       }
+    },
+    "bakery": {
+      "bakery_encomenda_flow": {
+        "name": "Encomenda Completa Padaria",
+        "steps": [
+          "descoberta",
+          "pedido_encomenda",
+          "confirmacao_pagamento",
+          "producao",
+          "pronto_retirada",
+          "entrega",
+          "retencao"
+        ]
+      },
+      "bakery_balcao_retirada": {
+        "name": "Atendimento Balcão e Retirada",
+        "steps": [
+          "descoberta",
+          "pedido_balcao",
+          "pagamento",
+          "producao",
+          "chamada_cliente",
+          "retirada",
+          "retencao"
+        ]
+      },
+      "bakery_producao_fornada": {
+        "name": "Produção e Capacidade de Fornada",
+        "steps": [
+          "planejamento_fornada",
+          "janela_pico",
+          "producao",
+          "disponibilidade_forno",
+          "ajuste_capacidade"
+        ]
+      },
+      "bakery_estoque_perdas": {
+        "name": "Estoque, Reposição e Perdas",
+        "steps": [
+          "monitoramento_estoque",
+          "alerta_nivel_baixo",
+          "reposicao",
+          "registro_perda",
+          "analise_giro"
+        ]
+      },
+      "bakery_reativacao_cliente": {
+        "name": "Reativação de Cliente Recorrente",
+        "steps": [
+          "deteccao_inatividade",
+          "elegibilidade_reativacao",
+          "campanha_rapida",
+          "resposta_campanha",
+          "conversao",
+          "retencao"
+        ]
+      }
     }
   },
 
@@ -160,6 +217,17 @@
       "journeys": [
         { "id": "food_order_flow",       "name": "Order Flow" },
         { "id": "food_customer_journey", "name": "Jornada Cliente Food" }
+      ]
+    },
+    {
+      "id": "bakery",
+      "name": "Padaria",
+      "journeys": [
+        { "id": "bakery_encomenda_flow",     "name": "Encomenda Completa" },
+        { "id": "bakery_balcao_retirada",    "name": "Balcão e Retirada" },
+        { "id": "bakery_producao_fornada",   "name": "Produção e Fornada" },
+        { "id": "bakery_estoque_perdas",     "name": "Estoque e Perdas" },
+        { "id": "bakery_reativacao_cliente", "name": "Reativação de Cliente" }
       ]
     },
     {

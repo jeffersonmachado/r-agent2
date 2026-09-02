@@ -59,6 +59,11 @@ function mapJourneyToDomain(journeyId) {
     support_ticket_flow: 'core',
     booking_flow: 'core',
     payment_charge_flow: 'core',
+    bakery_encomenda_flow: 'bakery',
+    bakery_balcao_retirada: 'bakery',
+    bakery_producao_fornada: 'bakery',
+    bakery_estoque_perdas: 'bakery',
+    bakery_reativacao_cliente: 'bakery',
   };
   return m[journeyId] || 'core';
 }

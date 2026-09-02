@@ -49,9 +49,9 @@ const DEFAULT_TEMPLATES = [
     category: 'Bakery', name: 'Bakery', slug: 'bakery',
     description: 'Template para padarias e confeitarias',
     icon: '🥖', color: '#eab308',
-    journeys: ['customer-support', 'billing', 'retention'],
-    agents: ['support-agent', 'crm-agent'],
-    kpis: ['vendas', 'faturamento', 'csat'],
+    journeys: ['bakery-encomendas', 'bakery-balcao-retirada', 'bakery-producao-fornada', 'bakery-estoque-perdas', 'bakery-reativacao-cliente'],
+    agents: ['support-agent', 'crm-agent', 'scheduling-agent'],
+    kpis: ['vendas', 'ticket-medio', 'utilizacao-forno', 'fulfillment', 'perda-descarte', 'retencao', 'csat'],
   },
   {
     category: 'Services', name: 'Services', slug: 'services',

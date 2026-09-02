@@ -42,6 +42,14 @@ const VERTICAL_CAPABILITIES = {
     order_flow: ['customer_identification', 'order_management', 'payment', 'notifications', 'delivery_tracking'],
     customer_journey: ['customer_identification', 'order_management', 'payment', 'crm_updates', 'notifications', 'retention'],
   },
+  bakery: {
+    base: ['customer_identification', 'order_management', 'payment', 'notifications'],
+    encomenda_flow: ['customer_identification', 'order_management', 'payment', 'production_tracking', 'notifications', 'retention'],
+    balcao_retirada: ['customer_identification', 'order_management', 'payment', 'production_tracking', 'notifications'],
+    producao_fornada: ['production_planning', 'capacity_management', 'production_tracking', 'notifications'],
+    estoque_perdas: ['inventory_monitoring', 'stock_alerts', 'loss_tracking', 'crm_updates'],
+    reativacao_cliente: ['customer_identification', 'lead_capture', 'campaign_management', 'crm_updates', 'retention'],
+  },
   clinic: {
     base: ['customer_identification', 'scheduling', 'crm_updates', 'notifications'],
     default_journey: ['customer_identification', 'scheduling', 'payment', 'crm_updates', 'notifications', 'checkin'],

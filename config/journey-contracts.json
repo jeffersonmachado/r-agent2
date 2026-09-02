@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "generatedAt": "2026-07-27T05:11:59.000Z",
+  "version": 5,
+  "generatedAt": "2026-09-02T03:28:45.401Z",
   "journeys": {
     "omnichannel_engagement": {
       "requiredCapabilities": [
@@ -708,6 +708,60 @@
       ],
       "missingCapabilities": [],
       "confidence": 0.75
+    },
+    "bakery_encomenda_flow": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "order_management",
+        "payment",
+        "production_tracking",
+        "notifications",
+        "retention"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.7
+    },
+    "bakery_balcao_retirada": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "order_management",
+        "payment",
+        "production_tracking",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.67
+    },
+    "bakery_producao_fornada": {
+      "requiredCapabilities": [
+        "production_planning",
+        "capacity_management",
+        "production_tracking",
+        "notifications"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.63
+    },
+    "bakery_estoque_perdas": {
+      "requiredCapabilities": [
+        "inventory_monitoring",
+        "stock_alerts",
+        "loss_tracking",
+        "crm_updates"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.63
+    },
+    "bakery_reativacao_cliente": {
+      "requiredCapabilities": [
+        "customer_identification",
+        "lead_capture",
+        "campaign_management",
+        "crm_updates",
+        "retention"
+      ],
+      "missingCapabilities": [],
+      "confidence": 0.67
     }
   }
 }

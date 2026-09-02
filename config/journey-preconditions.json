@@ -827,5 +827,56 @@
     ],
     "optional": [],
     "timeout": 15000
+  },
+  "bakery_encomenda_flow": {
+    "required": [
+      "order_service_available",
+      "payment_gateway_available",
+      "storefront_channel_active"
+    ],
+    "optional": [
+      "notification_service_active",
+      "production_tracking_available"
+    ],
+    "timeout": 20000
+  },
+  "bakery_balcao_retirada": {
+    "required": [
+      "order_service_available",
+      "payment_gateway_available"
+    ],
+    "optional": [
+      "notification_service_active"
+    ],
+    "timeout": 20000
+  },
+  "bakery_producao_fornada": {
+    "required": [
+      "order_service_available"
+    ],
+    "optional": [
+      "notification_service_active",
+      "production_tracking_available"
+    ],
+    "timeout": 20000
+  },
+  "bakery_estoque_perdas": {
+    "required": [
+      "inventory_service_available"
+    ],
+    "optional": [
+      "notification_service_active"
+    ],
+    "timeout": 20000
+  },
+  "bakery_reativacao_cliente": {
+    "required": [
+      "crm_service_available",
+      "campaign_service_available"
+    ],
+    "optional": [
+      "notification_service_active"
+    ],
+    "timeout": 20000
   }
 }

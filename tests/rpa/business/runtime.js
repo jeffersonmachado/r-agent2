@@ -447,6 +447,90 @@ async function convertBeautyLead(api, lead, suffix, campaignId) {
   return { customer: subject, item };
 }
 
+// ── Helpers bakery (mesmos primitivos genéricos de marketing/CRM, com
+// nomenclatura e vertical próprios para não poluir a cobertura beauty) ──
+
+async function createBakeryCampaign(api, suffix) {
+  const name = `QA Bakery Combo ${suffix}`;
+  const list = await api.get('/api/marketing/email-campaigns?limit=200');
+  const existing = (list?.items || []).find((item) => item.name === name);
+  if (existing) return existing;
+  const out = await api.post('/api/marketing/email-campaigns', {
+    name,
+    subject: `Combo Padaria QA ${suffix}`,
+    bodyText: 'Campanha rápida de combo criada para jornada de negócio bakery.',
+    minScore: 0,
+  });
+  return out.campaign || out.item || out;
+}
+
+async function createBakeryLead(api, suffix, campaignId) {
+  await ensureDbConnection();
+  const marketingService = require('../../../api/services/marketing/marketingService');
+  const out = await marketingService.upsertLead({
+    tenantId: TEST_TENANT_ID,
+    externalId: `qa-bakery-lead-${suffix}`,
+    name: `Cliente Padaria ${suffix}`,
+    email: `bakery-${suffix}@example.com`,
+    phone: '+5511999996000',
+    attributesPatch: {
+      campaignId,
+      source: 'business_qa',
+    },
+  });
+  return out.lead || out.item || out;
+}
+
+async function convertBakeryLead(api, lead, suffix, campaignId) {
+  await ensureDbConnection();
+  const accessControlService = require('../../../api/modules/access-control/accessControlService');
+  const marketingService = require('../../../api/services/marketing/marketingService');
+  const { emitJourneyEvent } = require('../../../api/services/vertical/customerJourneyEngine');
+  const customerId = `qa-bakery-customer-${suffix}`;
+  const subject = await accessControlService.ensureSubject({
+    tenantId: TEST_TENANT_ID,
+    customerId,
+    verticalProfile: 'bakery',
+    metadata: {
+      name: lead.name || `Cliente Padaria ${suffix}`,
+      phone: lead.phone || null,
+      email: lead.email || null,
+      leadId: lead.id,
+      campaignId,
+      source: 'business_qa',
+    },
+  });
+  await marketingService.updateLead({
+    tenantId: TEST_TENANT_ID,
+    leadId: lead.id,
+    stage: 'customer',
+    attributesPatch: {
+      convertedSubjectId: subject.id,
+      convertedCustomerId: customerId,
+      campaignId,
+    },
+  });
+  const item = await emitJourneyEvent({
+    tenantId: TEST_TENANT_ID,
+    vertical: 'bakery',
+    eventType: 'pre_service',
+    subjectId: subject.id,
+    customerId,
+    channel: 'internal',
+    triggeredBy: 'business_qa',
+    correlationId: lead.id,
+    idempotencyKey: `business_qa_convert:${TEST_TENANT_ID}:${lead.id}`,
+    payload: {
+      sourceEvent: 'lead_converted',
+      leadId: lead.id,
+      campaignId,
+      convertedSubjectId: subject.id,
+    },
+    metadata: { source: 'business_qa' },
+  });
+  return { customer: subject, item };
+}
+
 async function createBeautyAppointment(api, params) {
   const startAt = params.startAt || new Date(Date.now() + 2 * 3600000).toISOString();
   const endAt = params.endAt || new Date(Date.now() + 3 * 3600000).toISOString();
@@ -955,6 +1039,113 @@ async function runFlowScenario(definition, ctx) {
       detail: `Solution pack instalado para segmento ${target.segment}`,
       ids: { segment: target.segment, packId: target.id || null },
       evidence: { availablePacks: items.length },
+    };
+  }
+
+  if (definition.code === 'BAKERY-FLOW-ENCOMENDA') {
+    // Encomenda de padaria sobre o primitivo de Case Management da plataforma:
+    // aberta (ticket) → produção assumida (takeover) → entrega (close).
+    const phoneSuffix = String(Date.now()).slice(-8);
+    const ticket = await api.post('/tickets', {
+      phoneNumber: `+55117${phoneSuffix}`,
+      queue: 'support',
+      initialMessage: 'Encomenda de padaria QA: bolo de aniversario para retirada',
+    });
+    const ticketId = ticket?.id || ticket?.ticket?.id;
+    if (!ticketId) {
+      throw new Error('Encomenda (ticket) nao retornou ID');
+    }
+
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/takeover`, {});
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/close`, {});
+
+    const closed = await api.get(`/tickets/${encodeURIComponent(ticketId)}`);
+    const status = String(closed?.status || '').toLowerCase();
+    if (status !== 'closed') {
+      throw new Error('Encomenda nao foi encerrada (entrega nao confirmada)');
+    }
+
+    return {
+      detail: 'Encomenda aberta, producao assumida e entrega confirmada',
+      ids: { ticketId },
+      evidence: { finalStatus: status },
+    };
+  }
+
+  if (definition.code === 'BAKERY-FLOW-PEDIDO-STATUS') {
+    // Pedido de padaria avança no ciclo produção/entrega (primitivo /orders).
+    const listed = await api.get('/orders?limit=20');
+    const orders = Array.isArray(listed?.orders) ? listed.orders : [];
+    const order = orders[0] || null;
+    if (!order?.id) {
+      return {
+        detail: 'Endpoint de pedidos respondeu, sem pedidos elegiveis para transicao',
+        ids: {},
+        evidence: { totalOrders: listed?.total || 0 },
+      };
+    }
+
+    const currentStatus = String(order.status || '').toLowerCase();
+    const nextByStatus = {
+      created: 'confirmed',
+      confirmed: 'preparing',
+      preparing: 'ready',
+      ready: 'dispatched',
+      dispatched: 'delivered',
+    };
+    const nextStatus = nextByStatus[currentStatus];
+    if (!nextStatus) {
+      return {
+        detail: `Pedido em status terminal (${currentStatus}), sem transicao aplicavel`,
+        ids: { orderId: order.id },
+        evidence: { currentStatus },
+      };
+    }
+
+    await api.put(`/orders/${encodeURIComponent(order.id)}/status`, { status: nextStatus });
+    const after = await api.get(`/orders/${encodeURIComponent(order.id)}`);
+    const observedStatus = String(after?.order?.status || after?.status || '').toLowerCase();
+    if (observedStatus !== nextStatus) {
+      throw new Error('Status do pedido nao refletiu a atualizacao');
+    }
+
+    return {
+      detail: `Pedido padaria transicionado de ${currentStatus} para ${nextStatus}`,
+      ids: { orderId: order.id },
+      evidence: { from: currentStatus, to: nextStatus },
+    };
+  }
+
+  if (definition.code === 'BAKERY-FLOW-CAMPANHA-COMBO') {
+    // Campanha rápida de combo (janela ociosa) sobre o primitivo de marketing.
+    const campaign = await createBakeryCampaign(api, `${runId}-bakery-combo`);
+    await publishCampaign(api, campaign.id);
+    let match = null;
+    for (let attempt = 0; attempt < 3 && !match; attempt += 1) {
+      const list = await api.get('/api/marketing/email-campaigns?limit=200');
+      match = (list?.items || []).find((item) => item.id === campaign.id);
+      if (!match && attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
+    if (!match) {
+      throw new Error('Campanha de combo nao apareceu na listagem');
+    }
+    return { detail: 'Campanha de combo criada e disparada', ids: { campaignId: campaign.id } };
+  }
+
+  if (definition.code === 'BAKERY-FLOW-CLIENTE-RECORRENTE') {
+    // Cliente recorrente/reativação sobre os primitivos de leads + CRM.
+    const campaign = await createBakeryCampaign(api, `${runId}-bakery-reativacao`);
+    const lead = await createBakeryLead(api, `${runId}-bakery-reativacao`, campaign.id);
+    await qualifyLead(api, lead.id);
+    const conversion = await convertBakeryLead(api, lead, `${runId}-bakery-reativacao`, campaign.id);
+    if (!conversion?.customer?.id) {
+      throw new Error('Cliente recorrente nao foi reativado (conversao falhou)');
+    }
+    return {
+      detail: 'Cliente recorrente qualificado e reativado',
+      ids: { leadId: lead.id, subjectId: conversion.customer.id, campaignId: campaign.id },
     };
   }
 
