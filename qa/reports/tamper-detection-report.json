@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-01T23:36:46.815Z",
-  "artifact": "r-agent2-20260902-093749.payload.zip",
+  "generatedAt": "2026-09-02T12:40:12.858Z",
+  "artifact": "r-agent2-20260902-094157.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260902-093749.payload.zip",
-        "computedHash": "1157642bab522e3b97e331dd42db601d184c157ed16b825063ba7cd4268d0786",
-        "recordedHash": "1157642bab522e3b97e331dd42db601d184c157ed16b825063ba7cd4268d0786",
+        "zipName": "r-agent2-20260902-094157.payload.zip",
+        "computedHash": "42405abc1e5e407c911bef2589c539cbd8c4d46fe630e95e6f90e38e40f9284d",
+        "recordedHash": "42405abc1e5e407c911bef2589c539cbd8c4d46fe630e95e6f90e38e40f9284d",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260902-093749.payload.manifest.json"
+        "subject": "r-agent2-20260902-094157.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260902-093749.payload.zip"
+        "subject": "r-agent2-20260902-094157.payload.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "f4f2fa4c1929c12f4378451d…"
+        "storedChainRoot": "e3ffa84521b9403bfb53c92c…"
       }
     },
     {
@@ -63,7 +63,7 @@
       "pass": true,
       "severity": "HIGH",
       "details": {
-        "totalReplays": 8,
+        "totalReplays": 9,
         "allValid": true,
         "invalidReplays": []
       }
@@ -103,5 +103,5 @@
   "sourceFingerprint": "60899b5ea8b87f4a4ccfeb0833397d0401f54461fabdec1075d46919d4f253e0",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-09-02T12:39:22.070Z"
+  "reboundAt": "2026-09-02T12:43:32.080Z"
 }

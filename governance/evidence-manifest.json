@@ -1,14 +1,444 @@
 {
-  "artifactType": "evidence-manifest",
-  "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-02T12:41:09.874Z",
+  "generatedAt": "2026-09-02T12:45:09.706Z",
+  "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
   "runId": "rap-governed-20260902111243459-dafbb2c9",
   "sourceFingerprint": "60899b5ea8b87f4a4ccfeb0833397d0401f54461fabdec1075d46919d4f253e0",
-  "policyId": "RAP-AGENT-CONSTITUTION",
-  "policyVersion": "1.0.3",
-  "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
+  "artifactType": "evidence-manifest",
+  "artifactVersion": "1.0.0",
   "status": "PASS",
-  "finalDecision": "AUTONOMOUS_READY_GO",
+  "artifacts": [
+    {
+      "id": "smoke_summary",
+      "domain": "foundation",
+      "path": "qa/smoke-evidence.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/smoke-evidence.json",
+      "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/smoke-evidence.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "df59f5537b53740682f2623fbf4dc4fd31ef09ed2676474a2bf115e50bf10e4c",
+      "checksum": "df59f5537b53740682f2623fbf4dc4fd31ef09ed2676474a2bf115e50bf10e4c",
+      "timestamp": "2026-08-21T01:26:02.857Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "smoke_l01",
+      "domain": "foundation",
+      "path": "qa/l01-physical-queue-evidence.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l01-physical-queue-evidence.json",
+      "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l01-physical-queue-evidence.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "05a3fc8079a291d6986cd5b3314d9ff5e2568489174f90db5fb32a3296d3ae1c",
+      "checksum": "05a3fc8079a291d6986cd5b3314d9ff5e2568489174f90db5fb32a3296d3ae1c",
+      "timestamp": "2026-09-02T12:26:35.543Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "smoke_l02",
+      "domain": "foundation",
+      "path": "qa/l02-ura-publish-rollback-evidence.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l02-ura-publish-rollback-evidence.json",
+      "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l02-ura-publish-rollback-evidence.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "9987d73179615a4da2cafadc1f249fc0332b7b6dbebdc55376d3c4b116ffed6b",
+      "checksum": "9987d73179615a4da2cafadc1f249fc0332b7b6dbebdc55376d3c4b116ffed6b",
+      "timestamp": "2026-09-02T12:27:20.554Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "smoke_l03",
+      "domain": "foundation",
+      "path": "qa/l03-pbx-voice-tts-asr-evidence.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "87392ed12b3f3e99719a60bf2443fb3ed5a2f53e48952eeaebb9c51263d13658",
+      "checksum": "87392ed12b3f3e99719a60bf2443fb3ed5a2f53e48952eeaebb9c51263d13658",
+      "timestamp": "2026-09-02T12:26:35.094Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "smoke_l04",
+      "domain": "foundation",
+      "path": "qa/l04-pbx-call-events-runtime-evidence.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
+      "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "4b55a977bb6a25a0db83af31bf0c312849662b7c81d8a3b544bd1d9f9ea37e20",
+      "checksum": "4b55a977bb6a25a0db83af31bf0c312849662b7c81d8a3b544bd1d9f9ea37e20",
+      "timestamp": "2026-09-02T12:26:17.516Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "smoke_l05",
+      "domain": "foundation",
+      "path": "qa/l05-chatpro-omnichannel-evidence.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "d0bef81a88356a58d9f39f05e1e1c47778ee69b104262a7d476c6e0cce3fa9c9",
+      "checksum": "d0bef81a88356a58d9f39f05e1e1c47778ee69b104262a7d476c6e0cce3fa9c9",
+      "timestamp": "2026-09-02T12:25:22.447Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "prod_like_smoke",
+      "domain": "operational",
+      "path": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
+      "sourcePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "15516ff08bebf274d8463cf2af5c3d80efb81aa74eccd10f5212ffd768f78489",
+      "checksum": "15516ff08bebf274d8463cf2af5c3d80efb81aa74eccd10f5212ffd768f78489",
+      "timestamp": "2026-09-02T12:32:26.006Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "human_handoff",
+      "domain": "human_handoff",
+      "path": "qa/enterprise/human-handoff-full-validation.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/enterprise/human-handoff-full-validation.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-full-validation.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "04415e885302b9f0f4000019c1d5cdabfd8cb092c246de596d3babe59172146d",
+      "checksum": "04415e885302b9f0f4000019c1d5cdabfd8cb092c246de596d3babe59172146d",
+      "timestamp": "2026-08-29T14:16:50.591Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [
+        "human_handoff_full_validation"
+      ],
+      "journeyLinkage": [
+        "human_handoff_full_validation"
+      ],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "human_handoff_screenshots",
+      "domain": "human_handoff",
+      "path": "qa/enterprise/human-handoff-screenshots.json",
+      "sourcePath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-screenshots.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-screenshots.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "0c43cf00598a3898b47e836a8b26338eae20c087ef54f5ffa981348d84380b33",
+      "checksum": "0c43cf00598a3898b47e836a8b26338eae20c087ef54f5ffa981348d84380b33",
+      "timestamp": "2026-09-01T17:09:00.689Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [
+        "human_handoff_full_validation"
+      ],
+      "journeyLinkage": [
+        "human_handoff_full_validation"
+      ],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "pbx_prod_like",
+      "domain": "pbx",
+      "path": "qa/enterprise/pbx-voice-flow-prod-like.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/enterprise/pbx-voice-flow-prod-like.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-voice-flow-prod-like.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "8990382f091a0643d7e44b7d5dbd61778044efa1769a27967a4304e61a28da9e",
+      "checksum": "8990382f091a0643d7e44b7d5dbd61778044efa1769a27967a4304e61a28da9e",
+      "timestamp": "2026-09-02T12:44:21.212Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [
+        "pbx_voice_flow_prod_like"
+      ],
+      "journeyLinkage": [
+        "pbx_voice_flow_prod_like"
+      ],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "pbx_asr_transcript",
+      "domain": "pbx",
+      "path": "qa/enterprise/pbx-asr-transcript.json",
+      "sourcePath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "eb413741110abbb7e416e6d2c62ca1b4d64521765c10a2804a4680529b5b1b3a",
+      "checksum": "eb413741110abbb7e416e6d2c62ca1b4d64521765c10a2804a4680529b5b1b3a",
+      "timestamp": "2026-09-02T12:44:50.050Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [
+        "pbx_voice_flow_prod_like"
+      ],
+      "journeyLinkage": [
+        "pbx_voice_flow_prod_like"
+      ],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "pbx_tts_prompts",
+      "domain": "pbx",
+      "path": "qa/enterprise/pbx-tts-prompts.json",
+      "sourcePath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "6e8cb1ceb669961c18e3c3d4c247e8ea0ea9dbb67748781def69045dc921b470",
+      "checksum": "6e8cb1ceb669961c18e3c3d4c247e8ea0ea9dbb67748781def69045dc921b470",
+      "timestamp": "2026-09-02T12:44:50.051Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [
+        "pbx_voice_flow_prod_like"
+      ],
+      "journeyLinkage": [
+        "pbx_voice_flow_prod_like"
+      ],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "pbx_recordings_metadata",
+      "domain": "pbx",
+      "path": "qa/enterprise/pbx-recordings-metadata.json",
+      "sourcePath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "52b4343cdf6285a4d507a5504545a26e9fe684181dcc67536ee75987e14989a8",
+      "checksum": "52b4343cdf6285a4d507a5504545a26e9fe684181dcc67536ee75987e14989a8",
+      "timestamp": "2026-09-02T12:44:50.051Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [
+        "pbx_voice_flow_prod_like"
+      ],
+      "journeyLinkage": [
+        "pbx_voice_flow_prod_like"
+      ],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "omnichannel_replay",
+      "domain": "omnichannel",
+      "path": "qa/enterprise/omnichannel-unified-replay.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/enterprise/omnichannel-unified-replay.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-unified-replay.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "80a83c2bd251acf34066ccb1c4a1aac38e92dd2f671cd78107c738f6836d7071",
+      "checksum": "80a83c2bd251acf34066ccb1c4a1aac38e92dd2f671cd78107c738f6836d7071",
+      "timestamp": "2026-08-29T14:16:50.592Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [
+        "omnichannel_unified_replay"
+      ],
+      "journeyLinkage": [
+        "omnichannel_unified_replay"
+      ],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "omnichannel_crm_mutations",
+      "domain": "omnichannel",
+      "path": "qa/enterprise/omnichannel-crm-mutations.json",
+      "sourcePath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-crm-mutations.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-crm-mutations.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "1d618ca65f910ab0bb068760a9834636c2ce6de96d81cee2fa436a1a3e164a3f",
+      "checksum": "1d618ca65f910ab0bb068760a9834636c2ce6de96d81cee2fa436a1a3e164a3f",
+      "timestamp": "2026-09-01T17:09:00.565Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [
+        "omnichannel_unified_replay"
+      ],
+      "journeyLinkage": [
+        "omnichannel_unified_replay"
+      ],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "digital_twin_snapshots",
+      "domain": "digital_twin",
+      "path": "qa/enterprise/digital-twin-snapshots.json",
+      "sourcePath": "/opt/results/ria/r-agent2/qa/enterprise/digital-twin-snapshots.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/digital-twin-snapshots.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "7dfccdef4e878c90d61024ca124b63256bc6b8031340a06bcd4bddf34e5ce608",
+      "checksum": "7dfccdef4e878c90d61024ca124b63256bc6b8031340a06bcd4bddf34e5ce608",
+      "timestamp": "2026-09-01T17:09:00.597Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "final_decision"
+      ]
+    },
+    {
+      "id": "qa_waves_governance",
+      "domain": "governance",
+      "path": "qa/qa-waves-enterprise-governance.json",
+      "sourcePath": "/home/jmachado/.local/share/ragent2-runtime/qa/qa-waves-enterprise-governance.json",
+      "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/qa-waves-enterprise-governance.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "43b936d56c4751a1fbe827cc08f6ff7a2077d1b98f955bf83e2b7c6b5544f7ad",
+      "checksum": "43b936d56c4751a1fbe827cc08f6ff7a2077d1b98f955bf83e2b7c6b5544f7ad",
+      "timestamp": "2026-09-02T11:18:08.998Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "proof_based_governance"
+      ]
+    },
+    {
+      "id": "governance_signature",
+      "domain": "governance",
+      "path": "governance/proof-signature.json",
+      "sourcePath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "6ea4c181ee126ebe06e5808621e29b895056a95d9254bb7c81a53de70b60f362",
+      "checksum": "6ea4c181ee126ebe06e5808621e29b895056a95d9254bb7c81a53de70b60f362",
+      "timestamp": "2026-09-02T12:44:50.051Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "proof_based_governance"
+      ]
+    },
+    {
+      "id": "cleanup_proof",
+      "domain": "governance",
+      "path": "governance/cleanup-proof.json",
+      "sourcePath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "28349c49dede3da8482760cd5524b594b36f1ca36f99dbcd91a29691c2a7f39a",
+      "checksum": "28349c49dede3da8482760cd5524b594b36f1ca36f99dbcd91a29691c2a7f39a",
+      "timestamp": "2026-09-02T12:44:50.115Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "proof_based_governance"
+      ]
+    },
+    {
+      "id": "final_readiness",
+      "domain": "governance",
+      "path": "governance/final-readiness-report.json",
+      "sourcePath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
+      "exists": true,
+      "packageRequired": true,
+      "hash": "6ad3d4d39a3fac87bd2f5542b1b41c8b27cee5cd3e1ab3cdf1fb82055e534363",
+      "checksum": "6ad3d4d39a3fac87bd2f5542b1b41c8b27cee5cd3e1ab3cdf1fb82055e534363",
+      "timestamp": "2026-09-02T12:44:21.192Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "proof_based_governance"
+      ]
+    },
+    {
+      "id": "experience_segregation",
+      "domain": "governance",
+      "path": "reports/experience-segregation-report.json",
+      "sourcePath": "/opt/results/ria/r-agent2/reports/experience-segregation-report.json",
+      "resolvedPath": "/opt/results/ria/r-agent2/reports/experience-segregation-report.json",
+      "exists": true,
+      "packageRequired": false,
+      "hash": "bf435e81d2cf2c9e1ae9473da6262b36b8dc38be4a22e015f7949036caa2a0e0",
+      "checksum": "bf435e81d2cf2c9e1ae9473da6262b36b8dc38be4a22e015f7949036caa2a0e0",
+      "timestamp": "2026-09-02T12:44:21.211Z",
+      "proofStatus": "valid",
+      "semanticViolations": [],
+      "replayLinkage": [],
+      "journeyLinkage": [],
+      "governanceLinkage": [
+        "proof_based_governance"
+      ]
+    }
+  ],
   "fingerprints": {
     "sourceFingerprint": "60899b5ea8b87f4a4ccfeb0833397d0401f54461fabdec1075d46919d4f253e0",
     "inventoryFingerprint": "f3c73596c92d95cd6178fbca4b5c593c9aa99577636d3140cfb7b4d1b33d5fb4",
