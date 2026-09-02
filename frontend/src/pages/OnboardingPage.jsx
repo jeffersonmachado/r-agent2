@@ -601,6 +601,7 @@ export function OnboardingPage() {
             <option value="financeiro">Financeiro</option>
             <option value="cobranca">Cobrança</option>
             <option value="academia">Academia</option>
+            <option value="padaria">Padaria</option>
           </select>
           <div className="text-xs text-text-tertiary">
             Afeta quais templates de fluxo serão criados para o seu tenant.

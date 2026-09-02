@@ -1,0 +1,370 @@
+{
+  "id": "padaria-padrao",
+  "name": "Atendimento Padaria",
+  "description": "Template completo para atendimento de padaria com encomendas, retirada no balcão, horários de fornada, campanhas de reativação e fallback integrado",
+  "icon": "🥖",
+  "flow": {
+    "tenantId": "<tenant-id>",
+    "id": "padaria-padrao",
+    "name": "Atendimento Padaria",
+    "version": 1,
+    "nodes": [
+      {
+        "id": "start",
+        "type": "start",
+        "config": {},
+        "next": "welcome"
+      },
+      {
+        "id": "welcome",
+        "type": "message",
+        "config": {
+          "text": "🥖 Olá! Bem-vindo à Padaria Pão Quente!\n\nEstou aqui para ajudar você com:\n\n🎂 Encomendas (bolos, tortas e kits festa)\n🛍️ Pedidos para retirada no balcão\n🔥 Horários das fornadas do dia\n💰 Promoções e combos\n📞 Contato e localização\n❓ Perguntas frequentes\n\nComo posso ajudá-lo hoje?"
+        },
+        "next": "collect-intent"
+      },
+      {
+        "id": "collect-intent",
+        "type": "user_input",
+        "config": {
+          "variable": "user_message"
+        },
+        "next": "router-intent"
+      },
+      {
+        "id": "router-intent",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "encomenda"
+              },
+              "next": "start-encomenda"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "bolo"
+              },
+              "next": "start-encomenda"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "torta"
+              },
+              "next": "start-encomenda"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "retirada"
+              },
+              "next": "show-balcao"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "balcão"
+              },
+              "next": "show-balcao"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "fornada"
+              },
+              "next": "show-fornada"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "pão quente"
+              },
+              "next": "show-fornada"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "promoção"
+              },
+              "next": "show-promocoes"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "combo"
+              },
+              "next": "show-promocoes"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "desconto"
+              },
+              "next": "show-promocoes"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "contato"
+              },
+              "next": "contact-info"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "localização"
+              },
+              "next": "contact-info"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "endereço"
+              },
+              "next": "contact-info"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "atendente"
+              },
+              "next": "human-support"
+            },
+            {
+              "condition": {
+                "op": "contains",
+                "var": "user_message",
+                "value": "humano"
+              },
+              "next": "human-support"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "default-response"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "start-encomenda",
+        "type": "message",
+        "config": {
+          "text": "🎂 Encomendas\n\nTrabalhamos com bolos, tortas, salgados e kits festa sob encomenda!\n\n📅 Prazo mínimo: 48h de antecedência\n💵 Sinal de 50% para confirmar a produção\n\nPara registrar sua encomenda, preciso de algumas informações:\n\n1️⃣ Qual seu nome?"
+        },
+        "next": "collect-name"
+      },
+      {
+        "id": "collect-name",
+        "type": "user_input",
+        "config": {
+          "variable": "client_name"
+        },
+        "next": "ask-encomenda-item"
+      },
+      {
+        "id": "ask-encomenda-item",
+        "type": "message",
+        "config": {
+          "text": "2️⃣ O que você gostaria de encomendar? (ex.: bolo de chocolate 2kg, kit festa para 20 pessoas)"
+        },
+        "next": "collect-encomenda-item"
+      },
+      {
+        "id": "collect-encomenda-item",
+        "type": "user_input",
+        "config": {
+          "variable": "order_item"
+        },
+        "next": "ask-encomenda-date"
+      },
+      {
+        "id": "ask-encomenda-date",
+        "type": "message",
+        "config": {
+          "text": "3️⃣ Para qual data e horário você precisa da encomenda?"
+        },
+        "next": "collect-encomenda-date"
+      },
+      {
+        "id": "collect-encomenda-date",
+        "type": "user_input",
+        "config": {
+          "variable": "pickup_date"
+        },
+        "next": "confirm-encomenda"
+      },
+      {
+        "id": "confirm-encomenda",
+        "type": "message",
+        "config": {
+          "text": "✅ Encomenda Registrada!\n\n📋 Resumo:\n• Nome: {{client_name}}\n• Item: {{order_item}}\n• Retirada: {{pickup_date}}\n\n📞 Nossa equipe entrará em contato para confirmar valores e o sinal de 50%.\n\n🥐 Obrigado por encomendar com a Padaria Pão Quente!\n\nDeseja mais alguma informação?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "show-balcao",
+        "type": "message",
+        "config": {
+          "text": "🛍️ Pedidos para Retirada no Balcão\n\nVocê pode pedir por aqui e retirar no balcão sem fila!\n\n1️⃣ Me diga o que deseja (ex.: 10 pães francês, 1 pão na chapa, 1 café)\n2️⃣ Confirmamos o valor e o horário de retirada\n3️⃣ Chamamos você quando estiver pronto\n\nO que você gostaria de pedir?"
+        },
+        "next": "collect-balcao-order"
+      },
+      {
+        "id": "collect-balcao-order",
+        "type": "user_input",
+        "config": {
+          "variable": "balcao_order"
+        },
+        "next": "confirm-balcao"
+      },
+      {
+        "id": "confirm-balcao",
+        "type": "message",
+        "config": {
+          "text": "✅ Pedido de balcão registrado!\n\n📋 Pedido: {{balcao_order}}\n\n⏱️ Assim que sair da fornada chamamos você para a retirada.\n\nDeseja mais alguma coisa?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "show-fornada",
+        "type": "message",
+        "config": {
+          "text": "🔥 Fornadas do Dia\n\n🌅 MANHÃ\n• Pão francês: 6h, 8h e 10h\n• Pão de queijo: 7h e 9h\n\n☀️ TARDE\n• Pão francês: 14h e 16h\n• Cucas e bolos caseiros: 15h\n\n🌙 NOITE\n• Pão italiano e baguete: 18h\n\n💡 Dica: chegue até 15 minutos após a fornada para garantir o pão quentinho!\n\nDeseja fazer um pedido para retirada?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "show-promocoes",
+        "type": "message",
+        "config": {
+          "text": "💰 Promoções e Combos\n\n☕ COMBO CAFÉ DA MANHÃ\n• 2 pães na chapa + 2 cafés\n• R$ 19,90\n\n🎂 COMBO FESTA\n• Bolo 1kg + 50 salgados + 20 doces\n• R$ 189,90\n\n🥖 CLIENTE RECORRENTE\n• A cada 10 compras no balcão, a 11ª sai com 20% de desconto\n\nQuer aproveitar algum combo? É só me dizer qual!"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "ask-more-info",
+        "type": "user_input",
+        "config": {
+          "variable": "more_info"
+        },
+        "next": "router-more-info"
+      },
+      {
+        "id": "router-more-info",
+        "type": "router",
+        "config": {
+          "rules": [
+            {
+              "condition": {
+                "op": "contains",
+                "var": "more_info",
+                "value": "encomenda"
+              },
+              "next": "goodbye"
+            },
+            {
+              "condition": {
+                "op": "always"
+              },
+              "next": "goodbye"
+            }
+          ]
+        },
+        "next": null
+      },
+      {
+        "id": "contact-info",
+        "type": "message",
+        "config": {
+          "text": "📞 Contato e Localização:\n\n📍 Endereço:\nRua do Trigo, 123\nCentro - CEP 12345-678\n\n📱 Telefone:\n(11) 3456-7890\nWhatsApp: (11) 98765-4321\n\n🕐 Horário de Funcionamento:\nSegunda a Sábado: 6h às 20h\nDomingo: 6h às 13h\n\nComo posso ajudá-lo?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "human-support",
+        "type": "message",
+        "config": {
+          "text": "👤 Transferindo para atendimento humano...\n\nAguarde um momento enquanto conecto você com um de nossos atendentes."
+        },
+        "next": "do-handoff"
+      },
+      {
+        "id": "do-handoff",
+        "type": "handoff",
+        "config": {
+          "queue": "atendimento"
+        },
+        "next": "end"
+      },
+      {
+        "id": "default-response",
+        "type": "message",
+        "config": {
+          "text": "🤔 Não entendi completamente sua solicitação.\n\nPosso ajudar você com:\n• Encomendas (bolos, tortas, kits festa)\n• Pedidos para retirada no balcão\n• Horários das fornadas\n• Promoções e combos\n• Contato e localização\n\nO que você gostaria de saber?"
+        },
+        "next": "ask-more-info"
+      },
+      {
+        "id": "goodbye",
+        "type": "message",
+        "config": {
+          "text": "🥖 Foi um prazer ajudá-lo!\n\nEsperamos você na Padaria Pão Quente — sempre tem uma fornada saindo!\n\nQualquer dúvida, estamos à disposição.\n\nAté logo! ☕"
+        },
+        "next": "end"
+      },
+      {
+        "id": "fallback",
+        "type": "fallback",
+        "config": {
+          "maxAttempts": 3,
+          "confidenceThreshold": 0.75,
+          "enableEmotionCheck": true,
+          "escalationMode": "ticket",
+          "allowReturnToBot": true,
+          "queue": "default",
+          "safeReturnNode": "welcome"
+        },
+        "next": {
+          "retry": "collect-intent",
+          "options": "collect-intent",
+          "human": "end",
+          "end": "end"
+        }
+      },
+      {
+        "id": "end",
+        "type": "end",
+        "config": {},
+        "next": null
+      }
+    ],
+    "metadata": {
+      "description": "Template completo para atendimento de padaria com encomendas, retirada no balcão, fornadas, reativação e suporte",
+      "author": "Sistema R-Agent2",
+      "version": "1.0.0",
+      "category": "atendimento",
+      "tags": ["padaria", "bakery", "encomendas", "balcao", "fornada", "atendimento"]
+    }
+  }
+}

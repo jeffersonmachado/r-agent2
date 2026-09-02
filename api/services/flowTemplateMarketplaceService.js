@@ -198,6 +198,14 @@ function getSeedSpec() {
       tags: ['solution', 'segment:academia', 'academia', 'crossfit', 'atendimento'],
       icon: '💪',
     },
+    {
+      id: 'segment-padaria',
+      file: 'padaria-padrao.json',
+      name: 'Padaria - atendimento completo',
+      description: 'Atendimento completo para padaria com encomendas, retirada no balcão, fornadas, reativação e fallback.',
+      tags: ['solution', 'segment:padaria', 'padaria', 'bakery', 'atendimento'],
+      icon: '🥖',
+    },
   ];
 }
 

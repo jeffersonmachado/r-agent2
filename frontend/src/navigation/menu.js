@@ -486,6 +486,15 @@ export const verticalWorkspaces = {
       { id: 'vertical-dashboard-cobranca', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
     ],
   },
+  padaria: {
+    id: 'padaria',
+    label: 'Padaria',
+    color: '#d97706',
+    description: 'Encomendas, balcão, fornadas e reativação da vertical Padaria.',
+    items: [
+      { id: 'vertical-dashboard-padaria', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+    ],
+  },
 };
 
 const VERTICAL_INFERENCE_RULES = {
@@ -523,6 +532,7 @@ const VERTICAL_INFERENCE_RULES = {
   educacao: ['educacao', 'educação', 'escola', 'curso', 'ensino', 'aluno'],
   financeiro: ['financeiro', 'financeira', 'banco', 'fintech', 'credito', 'crédito'],
   cobranca: ['cobranca', 'cobrança', 'negociacao', 'negociação', 'recuperacao', 'recuperação'],
+  padaria: ['bakery', 'padaria', 'confeitaria', 'panificadora'],
 };
 
 const VERTICAL_ALIAS_RULES = {
@@ -535,6 +545,7 @@ const VERTICAL_ALIAS_RULES = {
   educacao: ['educacao', 'educação'],
   financeiro: ['financeiro', 'financeira', 'fintech'],
   cobranca: ['cobranca', 'cobrança'],
+  padaria: ['bakery', 'padaria', 'confeitaria', 'panificadora'],
 };
 
 function normalizeVerticalAlias(value) {

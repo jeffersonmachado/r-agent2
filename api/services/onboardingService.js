@@ -374,6 +374,8 @@ function getOnboardingTemplatePlan(segment) {
     financeiro: [...base, 'mkt-cobranca', 'mkt-atualizacao-cadastral'],
     cobranca: [...base, 'mkt-cobranca'],
     academia: [...base, 'mkt-segment-academia-crossfit', 'mkt-agendamento', 'mkt-onboarding-cliente'],
+    padaria: [...base, 'mkt-segment-padaria', 'mkt-status-pedido-servico', 'mkt-onboarding-cliente'],
+    bakery: [...base, 'mkt-segment-padaria', 'mkt-status-pedido-servico', 'mkt-onboarding-cliente'],
   };
 
   return {

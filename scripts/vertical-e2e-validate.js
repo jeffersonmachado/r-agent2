@@ -2,10 +2,10 @@
 'use strict';
 
 /**
- * Vertical Beauty & Fitness — E2E validation script
+ * Vertical Beauty, Fitness & Bakery — E2E validation script
  *
  * WHAT IT VALIDATES
- *   1. Jest integration tests (Beauty + Fitness) pass
+ *   1. Jest integration tests (Beauty + Fitness + Bakery) pass
  *   2. Notification adapter stubs return explicit status objects
  *   3. Job timeout wrapper logic works correctly
  *
@@ -128,6 +128,16 @@ function withJobTimeout(promise, timeoutMs, label) {
     } catch (err) {
       var summary = summarizeJestFailure(err);
       check('All Fitness E2E scenarios pass', false, summary || err.message);
+    }
+  });
+
+  await runSection('Bakery integration tests (Jest)', async function () {
+    try {
+      runJestTestFile('tests/integration/verticalBakeryEndToEnd.test.js');
+      check('All Bakery E2E scenarios pass', true);
+    } catch (err) {
+      var summary = summarizeJestFailure(err);
+      check('All Bakery E2E scenarios pass', false, summary || err.message);
     }
   });
 

@@ -33,7 +33,23 @@ describe('vertical workspace resolution', () => {
   it('mostra todas as verticais para super-admin no dashboard vertical', () => {
     expect(getWorkspaceKeysForPath('/vertical/dashboard', {
       includeAllVerticals: true,
-    })).toEqual(['beauty', 'fitness', 'ecommerce', 'varejo', 'servicos', 'saude', 'educacao', 'financeiro', 'cobranca']);
+    })).toEqual(['beauty', 'fitness', 'ecommerce', 'varejo', 'servicos', 'saude', 'educacao', 'financeiro', 'cobranca', 'padaria']);
+  });
+
+  it('infere padaria pelo contexto do tenant', () => {
+    expect(inferWorkspaceKeyFromTenantContext({ ramo_atividade: 'Padaria e confeitaria artesanal' })).toBe('padaria');
+    expect(inferWorkspaceKeyFromTenantContext({ ramo_atividade: 'Panificadora bakery' })).toBe('padaria');
+  });
+
+  it('resolve padaria por settings do tenant (segment ou vertical bakery)', () => {
+    expect(inferWorkspaceKeyFromTenantProfile({
+      tenant: { settings: { segment: 'padaria' } },
+      context: null,
+    })).toBe('padaria');
+    expect(inferWorkspaceKeyFromTenantProfile({
+      tenant: { settings: { vertical: 'bakery' } },
+      context: null,
+    })).toBe('padaria');
   });
 });
 

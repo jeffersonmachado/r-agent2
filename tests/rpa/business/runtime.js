@@ -1149,6 +1149,119 @@ async function runFlowScenario(definition, ctx) {
     };
   }
 
+  if (definition.code === 'BAKERY-FLOW-BALCAO-RETIRADA') {
+    // Atendimento de balcão com retirada sobre o primitivo de Case Management:
+    // pedido no balcão (ticket) → produção assumida (takeover) → cliente
+    // chamado (message) → retirada confirmada (close).
+    const phoneSuffix = String(Date.now()).slice(-8);
+    const ticket = await api.post('/tickets', {
+      phoneNumber: `+55116${phoneSuffix}`,
+      queue: 'support',
+      initialMessage: 'Pedido no balcao QA: pao na chapa e cafe para retirada',
+    });
+    const ticketId = ticket?.id || ticket?.ticket?.id;
+    if (!ticketId) {
+      throw new Error('Pedido de balcao (ticket) nao retornou ID');
+    }
+
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/takeover`, {});
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/message`, {
+      message: 'Pedido pronto! Cliente chamado para retirada no balcao.',
+    });
+    await api.post(`/tickets/${encodeURIComponent(ticketId)}/close`, {});
+
+    const closed = await api.get(`/tickets/${encodeURIComponent(ticketId)}`);
+    const status = String(closed?.status || '').toLowerCase();
+    if (status !== 'closed') {
+      throw new Error('Retirada nao confirmada (pedido de balcao nao encerrado)');
+    }
+
+    return {
+      detail: 'Pedido de balcao registrado, produzido e retirado',
+      ids: { ticketId },
+      evidence: { finalStatus: status },
+    };
+  }
+
+  if (definition.code === 'BAKERY-FLOW-PRODUCAO-FORNADA') {
+    // Fornada de padaria: o pedido avança pelo ciclo de produção até ficar
+    // pronto (disponibilidade do forno refletida no status), primitivo /orders.
+    const listed = await api.get('/orders?limit=20');
+    const orders = Array.isArray(listed?.orders) ? listed.orders : [];
+    const nextByStatus = {
+      created: 'confirmed',
+      confirmed: 'preparing',
+      preparing: 'ready',
+    };
+    const order = orders.find((item) => nextByStatus[String(item?.status || '').toLowerCase()]) || null;
+    if (!order?.id) {
+      return {
+        detail: 'Endpoint de pedidos respondeu, sem fornada elegivel para producao',
+        ids: {},
+        evidence: { totalOrders: listed?.total || 0 },
+      };
+    }
+
+    const transitions = [];
+    let currentStatus = String(order.status || '').toLowerCase();
+    while (nextByStatus[currentStatus]) {
+      const nextStatus = nextByStatus[currentStatus];
+      await api.put(`/orders/${encodeURIComponent(order.id)}/status`, { status: nextStatus });
+      transitions.push({ from: currentStatus, to: nextStatus });
+      currentStatus = nextStatus;
+    }
+
+    const after = await api.get(`/orders/${encodeURIComponent(order.id)}`);
+    const observedStatus = String(after?.order?.status || after?.status || '').toLowerCase();
+    if (observedStatus !== currentStatus) {
+      throw new Error('Status da fornada nao refletiu o ciclo de producao');
+    }
+
+    return {
+      detail: `Fornada avancou ${transitions.length} etapa(s) ate ${currentStatus}`,
+      ids: { orderId: order.id },
+      evidence: { transitions, finalStatus: observedStatus },
+    };
+  }
+
+  if (definition.code === 'BAKERY-FLOW-ESTOQUE-PERDAS') {
+    // Perda de estoque: registrada como incidente operacional vinculado ao
+    // pedido (primitivo /orders/:id/incidents abre ticket de perda).
+    const listed = await api.get('/orders?limit=20');
+    const orders = Array.isArray(listed?.orders) ? listed.orders : [];
+    const order = orders.find((item) => item?.id) || null;
+    if (!order) {
+      return {
+        detail: 'Endpoint de pedidos respondeu, sem pedido elegivel para registro de perda',
+        ids: {},
+        evidence: { totalOrders: listed?.total || 0 },
+      };
+    }
+
+    const incident = await api.post(`/orders/${encodeURIComponent(order.id)}/incidents`, {
+      type: 'perda_estoque',
+      queue: 'Estoque',
+      message: 'Perda de estoque QA: fornada descartada ao fim do dia',
+      idempotencyKey: `business-qa:${definition.code}:${runId}`,
+    });
+    const ticketId = incident?.ticketId || incident?.ticket?.id;
+    if (!ticketId) {
+      throw new Error('Registro de perda nao retornou ticket');
+    }
+
+    const ticket = await api.get(`/tickets/${encodeURIComponent(ticketId)}`);
+    const status = String(ticket?.status || '').toLowerCase();
+    if (!status) {
+      throw new Error('Ticket de perda nao encontrado no backend');
+    }
+
+    return {
+      detail: 'Perda de estoque registrada e vinculada ao pedido',
+      ids: { orderId: order.id, ticketId },
+      evidence: { incidentType: 'perda_estoque', ticketStatus: status, idempotent: Boolean(incident?.idempotent) },
+    };
+  }
+
   if (definition.code === 'CORE-FLOW-SUPPORT-TICKET') {
     const phoneSuffix = String(Date.now()).slice(-8);
     const ticket = await api.post('/tickets', {
