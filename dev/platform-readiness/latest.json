@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-01T23:37:40.724Z",
-  "finalDecision": "AUTONOMOUS_READY_GO",
-  "platformMaturity": "enterprise-ready",
-  "canonicalMeshExecutionId": "mesh-2026-09-01T20-18-39-989Z",
+  "generatedAt": "2026-09-02T10:18:04.655Z",
+  "finalDecision": "NO_GO:AUTONOMOUS_READY_GO",
+  "platformMaturity": "enterprise-partial",
+  "canonicalMeshExecutionId": "mesh-2026-09-02T03-37-01-227Z",
   "canonicalMeshArtifacts": {
-    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-01T20-18-39-989Z.json",
+    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-02T03-37-01-227Z.json",
     "summaryPath": "/opt/results/ria/r-agent2/qa-mesh/meshReport.json",
     "goNoGoPath": "/opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json",
     "metricsPath": "/opt/results/ria/r-agent2/qa-mesh/metrics.json"
@@ -19,11 +19,11 @@
     "readinessScore": 85
   },
   "qaCoverage": {
-    "executionId": "mesh-2026-09-01T20-18-39-989Z",
+    "executionId": "mesh-2026-09-02T03-37-01-227Z",
     "percent": 100,
     "observedFailureFreePercent": 100,
-    "registryDeclaredTotal": 132,
-    "canonicalRegistryTotal": 132,
+    "registryDeclaredTotal": 136,
+    "canonicalRegistryTotal": 136,
     "blockingDomains": [],
     "status": "GO"
   },
@@ -36,7 +36,8 @@
       "payment_charge_flow",
       "food_order_status_flow",
       "market_node_publish_flow",
-      "clinic_calendar_block_flow"
+      "clinic_calendar_block_flow",
+      "bakery_encomenda_flow"
     ],
     "supportedJourneys": [
       "support_ticket_flow",
@@ -44,6 +45,7 @@
       "booking_flow",
       "payment_charge_flow",
       "food_order_status_flow",
+      "bakery_encomenda_flow",
       "market_node_publish_flow",
       "clinic_calendar_block_flow",
       "agendamento"
@@ -62,7 +64,8 @@
       "food",
       "services",
       "clinic",
-      "market"
+      "market",
+      "bakery"
     ],
     "coveredVerticals": [
       "beauty",
@@ -70,7 +73,8 @@
       "food",
       "services",
       "clinic",
-      "market"
+      "market",
+      "bakery"
     ]
   },
   "qaWaves": {
@@ -111,7 +115,7 @@
     }
   },
   "docsValidation": {
-    "generatedAt": "2026-09-01T23:37:40.724Z",
+    "generatedAt": "2026-09-02T10:18:04.655Z",
     "filesScanned": 363,
     "totalMarkdownLinks": 245,
     "brokenMarkdownLinks": [],
@@ -287,6 +291,37 @@
         "market_default_journey"
       ],
       "classification": "production-like"
+    },
+    {
+      "vertical": "bakery",
+      "scenarioCount": 27,
+      "executedScenarios": 4,
+      "journeyCount": 5,
+      "assertionCount": 23,
+      "integrationCount": 3,
+      "channels": [
+        "api",
+        "webchat",
+        "whatsapp"
+      ],
+      "replayRequired": 18,
+      "backendAssertions": 23,
+      "implemented": true,
+      "tested": true,
+      "validated": true,
+      "productionLike": true,
+      "enterpriseReady": true,
+      "sellable": true,
+      "blockers": [],
+      "qaFailures": [],
+      "journeys": [
+        "bakery_balcao_retirada",
+        "bakery_encomenda_flow",
+        "bakery_estoque_perdas",
+        "bakery_producao_fornada",
+        "bakery_reativacao_cliente"
+      ],
+      "classification": "production-like"
     }
   ],
   "productionValidation": [
@@ -297,7 +332,7 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 111,
+      "scenarioCount": 117,
       "blocker": false
     },
     {
@@ -307,7 +342,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 34,
+      "scenarioCount": 35,
       "blocker": false
     },
     {
@@ -317,7 +352,7 @@
       "evidence": [
         "qa/enterprise/pbx-voice-flow-prod-like.json"
       ],
-      "scenarioCount": 373,
+      "scenarioCount": 398,
       "blocker": false
     },
     {
@@ -337,7 +372,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 75,
+      "scenarioCount": 76,
       "blocker": false
     },
     {
@@ -357,7 +392,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 83,
+      "scenarioCount": 93,
       "blocker": false
     },
     {
@@ -377,7 +412,7 @@
       "evidence": [
         "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
       ],
-      "scenarioCount": 66,
+      "scenarioCount": 70,
       "blocker": false
     },
     {
@@ -387,11 +422,27 @@
       "evidence": [
         "qa/enterprise/omnichannel-unified-replay.json"
       ],
-      "scenarioCount": 35,
+      "scenarioCount": 38,
       "blocker": false
     }
   ],
-  "blockingGaps": [],
+  "blockingGaps": [
+    {
+      "id": "gap-proof-stale-fingerprints",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "evidence": {
+        "diverged": [
+          "sourceFingerprint",
+          "scenarioRegistryFingerprint",
+          "policyFingerprint",
+          "chainFingerprint"
+        ]
+      },
+      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    }
+  ],
   "nonBlockingGaps": [],
   "enterpriseProofs": {
     "proofs": {
@@ -406,23 +457,23 @@
       "autonomous_ready": false
     },
     "foundationProdLikeCount": 4,
-    "verticalProdLikeCount": 6,
-    "omnichannelScenarioCount": 6,
+    "verticalProdLikeCount": 7,
+    "omnichannelScenarioCount": 7,
     "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-09-01T23:37:57.360Z",
+    "generatedAt": "2026-09-02T10:18:35.953Z",
     "runId": "rap-governed-20260901190048981-4278fc93",
     "artifactType": "final-proof-report",
     "artifactVersion": "2.0.0",
-    "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
+    "sourceFingerprint": "8d3e93aac89b2587286fdcc29459cae7a5f75f2d5fc04e58769ae4ac762bac35",
     "inventoryFingerprint": "f3c73596c92d95cd6178fbca4b5c593c9aa99577636d3140cfb7b4d1b33d5fb4",
-    "scenarioFingerprint": "a88e8b9ba8bb6b48413ceaab7e717d28eaf0dda8afb6dacf1190176cac095e85",
-    "policyFingerprint": "9bc535ad0feaeb48c5ace3360e78acc233d78dc0a58c0470a3630eab941178c0",
-    "evidenceFingerprint": "c01f4cd541ebed100e56821b7ff046a3f4d0e45e8356eafaa8941b113f3c2ba6",
-    "chainFingerprint": "c01f4cd541ebed100e56821b7ff046a3f4d0e45e8356eafaa8941b113f3c2ba6",
-    "fingerprintGeneratedAt": "2026-09-01T23:37:57.360Z",
-    "fingerprintStatus": "FRESH",
+    "scenarioFingerprint": "3194c867512ac71d9ee4ae57c99ffa1132e200fbdefcf01a3a66207a56112a5b",
+    "policyFingerprint": "37bf9d53b3f14782451b5359e31e076f04e254726d366c1179831e0dff55f8ad",
+    "evidenceFingerprint": "81639df7149012c18e4c16aa3d1ede4b667153cbd2db7ac683338d04e9f24b80",
+    "chainFingerprint": "81639df7149012c18e4c16aa3d1ede4b667153cbd2db7ac683338d04e9f24b80",
+    "fingerprintGeneratedAt": "2026-09-02T10:18:35.953Z",
+    "fingerprintStatus": "STALE",
     "proofCoverage": {
       "total": 21,
       "valid": 21,
@@ -432,9 +483,10 @@
     "invalidReferences": [],
     "blockerCount": 0,
     "replayCoverage": {
-      "required": 7,
-      "found": 7,
+      "required": 8,
+      "found": 8,
       "matched": [
+        "bakery_encomenda_flow",
         "booking_flow",
         "clinic_calendar_block_flow",
         "fitness_customer_checkin",
@@ -450,14 +502,14 @@
       "percent": 100
     },
     "prodLikeCoverage": {
-      "required": 6,
-      "found": 6,
+      "required": 7,
+      "found": 7,
       "percent": 100
     },
     "verticalCoverage": {
       "status": "VALIDATED",
-      "validated": 6,
-      "required": 6,
+      "validated": 7,
+      "required": 7,
       "percent": 100,
       "invalidClaims": []
     },
@@ -2821,7 +2873,7 @@
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-09-01T23:37:56.896Z",
+      "generatedAt": "2026-09-02T10:18:35.127Z",
       "expectedZipName": "r-agent2-20260901-203416.payload.zip",
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
@@ -2834,7 +2886,7 @@
       "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-09-01T23:37:57.359Z",
+      "generatedAt": "2026-09-02T10:18:35.952Z",
       "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260901-203416.payload.zip",
       "zipName": "r-agent2-20260901-203416.payload.zip",
       "zipSha256": "1157642bab522e3b97e331dd42db601d184c157ed16b825063ba7cd4268d0786",
@@ -2888,10 +2940,10 @@
       }
     },
     "evidenceManifest": {
-      "generatedAt": "2026-09-01T23:37:56.896Z",
+      "generatedAt": "2026-09-02T10:18:35.127Z",
       "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
       "runId": "rap-governed-20260901190048981-4278fc93",
-      "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
+      "sourceFingerprint": "8d3e93aac89b2587286fdcc29459cae7a5f75f2d5fc04e58769ae4ac762bac35",
       "artifactType": "evidence-manifest",
       "artifactVersion": "1.0.0",
       "status": "PASS",
@@ -2923,9 +2975,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l01-physical-queue-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "3f28a32a8a751e9e99715507003328dacf5b442fe08324a373c3f9c2ea3c6450",
-          "checksum": "3f28a32a8a751e9e99715507003328dacf5b442fe08324a373c3f9c2ea3c6450",
-          "timestamp": "2026-09-01T22:46:19.515Z",
+          "hash": "36f6fd8c78d29fd0584f3f337ced36c54418f66a50e0d42568a2261a8cdfd282",
+          "checksum": "36f6fd8c78d29fd0584f3f337ced36c54418f66a50e0d42568a2261a8cdfd282",
+          "timestamp": "2026-09-02T04:42:13.199Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -2942,9 +2994,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l02-ura-publish-rollback-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "12ca967abdd86faa7ed3564dd5115ee056592d42a4c882d5a45e263f428e3c68",
-          "checksum": "12ca967abdd86faa7ed3564dd5115ee056592d42a4c882d5a45e263f428e3c68",
-          "timestamp": "2026-09-01T22:47:22.131Z",
+          "hash": "5497f71014a09298e01800423305f453d60126947ff499801ce82235ffd171f6",
+          "checksum": "5497f71014a09298e01800423305f453d60126947ff499801ce82235ffd171f6",
+          "timestamp": "2026-09-02T04:43:17.487Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -2961,9 +3013,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "180a6640e70a39dd2874d5da6d01872db6524654b825f079f8fa0ea83936d41a",
-          "checksum": "180a6640e70a39dd2874d5da6d01872db6524654b825f079f8fa0ea83936d41a",
-          "timestamp": "2026-09-01T22:46:19.044Z",
+          "hash": "fb18e644bd013f0c8a26e25c1998d1da8d2ca44b957fff22dc7e9befd43d5585",
+          "checksum": "fb18e644bd013f0c8a26e25c1998d1da8d2ca44b957fff22dc7e9befd43d5585",
+          "timestamp": "2026-09-02T04:42:12.023Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -2980,9 +3032,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e721fc265d3ea595fcbdad3dcdc39c54c1d04392f14c89a98e2e9aa849fc2bf8",
-          "checksum": "e721fc265d3ea595fcbdad3dcdc39c54c1d04392f14c89a98e2e9aa849fc2bf8",
-          "timestamp": "2026-09-01T22:46:04.081Z",
+          "hash": "1d0fad3601b31f8fa24e87b17daeb2455d3111add51ae768cac2de1b1c735b5b",
+          "checksum": "1d0fad3601b31f8fa24e87b17daeb2455d3111add51ae768cac2de1b1c735b5b",
+          "timestamp": "2026-09-02T04:41:51.526Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -2999,9 +3051,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "c23f27dee6ae7f368972ed8e8179fd031d845943aa103f31a2429dfcab1b40f3",
-          "checksum": "c23f27dee6ae7f368972ed8e8179fd031d845943aa103f31a2429dfcab1b40f3",
-          "timestamp": "2026-09-01T22:45:06.009Z",
+          "hash": "20c5a8796e89aedd0b7494a161149522a47e0acad569064186a3d416852f0d59",
+          "checksum": "20c5a8796e89aedd0b7494a161149522a47e0acad569064186a3d416852f0d59",
+          "timestamp": "2026-09-02T04:40:46.716Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3018,9 +3070,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e2636daf00be8ea9974f3eeec8281da4c3f403c7cecb617ac70f3c7965d823ab",
-          "checksum": "e2636daf00be8ea9974f3eeec8281da4c3f403c7cecb617ac70f3c7965d823ab",
-          "timestamp": "2026-09-01T23:00:10.754Z",
+          "hash": "37c9c13ee6067870ed224c0f776d8591c3b6bf205b99cc1733ee3f0b33c7d30e",
+          "checksum": "37c9c13ee6067870ed224c0f776d8591c3b6bf205b99cc1733ee3f0b33c7d30e",
+          "timestamp": "2026-09-02T10:16:22.949Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3085,7 +3137,7 @@
           "packageRequired": true,
           "hash": "89fe9663fe6acae215cd1def7a16c286d8d837abd264cb9309420f08ce49635e",
           "checksum": "89fe9663fe6acae215cd1def7a16c286d8d837abd264cb9309420f08ce49635e",
-          "timestamp": "2026-09-01T23:36:47.320Z",
+          "timestamp": "2026-09-01T23:43:28.204Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3106,9 +3158,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "256477d908adf08a451c881abd2f72cdc6b405864bf7dd938f846531fce748d5",
-          "checksum": "256477d908adf08a451c881abd2f72cdc6b405864bf7dd938f846531fce748d5",
-          "timestamp": "2026-09-01T23:37:40.726Z",
+          "hash": "2458ac42b9e548450cfccdb12ffaf2e1ad8af5f80fef23ed801165757390e459",
+          "checksum": "2458ac42b9e548450cfccdb12ffaf2e1ad8af5f80fef23ed801165757390e459",
+          "timestamp": "2026-09-02T10:18:04.659Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3129,9 +3181,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "5f8d0300b76ec2f624f0dac29bea3b99c5b94120a84bc5fa23d5e83b27c11745",
-          "checksum": "5f8d0300b76ec2f624f0dac29bea3b99c5b94120a84bc5fa23d5e83b27c11745",
-          "timestamp": "2026-09-01T23:37:40.726Z",
+          "hash": "b6a84c9f876664af60adbd76f97cdb1175292ef9fdabf57ffeab2b741872cfad",
+          "checksum": "b6a84c9f876664af60adbd76f97cdb1175292ef9fdabf57ffeab2b741872cfad",
+          "timestamp": "2026-09-02T10:18:04.659Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3152,9 +3204,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "8576e59d7b866b96f12811ebfb27865c470dad76e0c288de24b3ca49a9813216",
-          "checksum": "8576e59d7b866b96f12811ebfb27865c470dad76e0c288de24b3ca49a9813216",
-          "timestamp": "2026-09-01T23:37:40.726Z",
+          "hash": "962447d35e52490e11df3fd6046a70654b41a064568397ce7f901634574797ec",
+          "checksum": "962447d35e52490e11df3fd6046a70654b41a064568397ce7f901634574797ec",
+          "timestamp": "2026-09-02T10:18:04.659Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3259,9 +3311,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "85c73d038a50d9ff84a5868a7a377561189dc0f731f7ed79afdeed1c101ce77e",
-          "checksum": "85c73d038a50d9ff84a5868a7a377561189dc0f731f7ed79afdeed1c101ce77e",
-          "timestamp": "2026-09-01T23:37:40.727Z",
+          "hash": "8ce694f6e73a27700406b9ba38e17918ac2302b53cfd308fd4030b79767a6589",
+          "checksum": "8ce694f6e73a27700406b9ba38e17918ac2302b53cfd308fd4030b79767a6589",
+          "timestamp": "2026-09-02T10:18:04.661Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3278,9 +3330,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "06f28917a5507ef776194bc2f26218e1a9d1c6a6c1cb4fd273a805c02f905208",
-          "checksum": "06f28917a5507ef776194bc2f26218e1a9d1c6a6c1cb4fd273a805c02f905208",
-          "timestamp": "2026-09-01T23:37:40.785Z",
+          "hash": "234cde4dfdc88bd42dbe8063da24ff54ff00aa0bcba3e556b85e5f03537363e9",
+          "checksum": "234cde4dfdc88bd42dbe8063da24ff54ff00aa0bcba3e556b85e5f03537363e9",
+          "timestamp": "2026-09-02T10:18:04.844Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3297,9 +3349,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ddab5a59c0e02dd6d3a9b5f0e950542bd3b0c6c5679bb3fd27b9761ec1315bba",
-          "checksum": "ddab5a59c0e02dd6d3a9b5f0e950542bd3b0c6c5679bb3fd27b9761ec1315bba",
-          "timestamp": "2026-09-01T23:36:47.235Z",
+          "hash": "473a1cbe68153e14b2062475d7854ab24fa4c88de19bff6226be690ea3df5c45",
+          "checksum": "473a1cbe68153e14b2062475d7854ab24fa4c88de19bff6226be690ea3df5c45",
+          "timestamp": "2026-09-01T23:43:28.184Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3316,9 +3368,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/reports/experience-segregation-report.json",
           "exists": true,
           "packageRequired": false,
-          "hash": "66cd67781f88a803b55f2deb2d798f3c43f1c38258a12181091b049233ef3dba",
-          "checksum": "66cd67781f88a803b55f2deb2d798f3c43f1c38258a12181091b049233ef3dba",
-          "timestamp": "2026-09-01T23:36:47.314Z",
+          "hash": "aa106438b1dd2f2d6087bf5473a2fff35ebb57dce0b21bafb32c3297ae5ca67b",
+          "checksum": "aa106438b1dd2f2d6087bf5473a2fff35ebb57dce0b21bafb32c3297ae5ca67b",
+          "timestamp": "2026-09-01T23:43:28.203Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3329,16 +3381,21 @@
         }
       ],
       "fingerprints": {
-        "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
+        "sourceFingerprint": "8d3e93aac89b2587286fdcc29459cae7a5f75f2d5fc04e58769ae4ac762bac35",
         "inventoryFingerprint": "f3c73596c92d95cd6178fbca4b5c593c9aa99577636d3140cfb7b4d1b33d5fb4",
-        "scenarioRegistryFingerprint": "a88e8b9ba8bb6b48413ceaab7e717d28eaf0dda8afb6dacf1190176cac095e85",
-        "policyFingerprint": "9bc535ad0feaeb48c5ace3360e78acc233d78dc0a58c0470a3630eab941178c0",
-        "chainFingerprint": "c01f4cd541ebed100e56821b7ff046a3f4d0e45e8356eafaa8941b113f3c2ba6"
+        "scenarioRegistryFingerprint": "3194c867512ac71d9ee4ae57c99ffa1132e200fbdefcf01a3a66207a56112a5b",
+        "policyFingerprint": "37bf9d53b3f14782451b5359e31e076f04e254726d366c1179831e0dff55f8ad",
+        "chainFingerprint": "81639df7149012c18e4c16aa3d1ede4b667153cbd2db7ac683338d04e9f24b80"
       }
     },
     "fingerprintChain": {
-      "status": "FRESH",
-      "diverged": [],
+      "status": "STALE",
+      "diverged": [
+        "sourceFingerprint",
+        "scenarioRegistryFingerprint",
+        "policyFingerprint",
+        "chainFingerprint"
+      ],
       "registered": {
         "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
         "inventoryFingerprint": "f3c73596c92d95cd6178fbca4b5c593c9aa99577636d3140cfb7b4d1b33d5fb4",
@@ -3347,14 +3404,14 @@
         "chainFingerprint": "c01f4cd541ebed100e56821b7ff046a3f4d0e45e8356eafaa8941b113f3c2ba6"
       },
       "current": {
-        "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
+        "sourceFingerprint": "8d3e93aac89b2587286fdcc29459cae7a5f75f2d5fc04e58769ae4ac762bac35",
         "inventoryFingerprint": "f3c73596c92d95cd6178fbca4b5c593c9aa99577636d3140cfb7b4d1b33d5fb4",
-        "scenarioRegistryFingerprint": "a88e8b9ba8bb6b48413ceaab7e717d28eaf0dda8afb6dacf1190176cac095e85",
-        "policyFingerprint": "9bc535ad0feaeb48c5ace3360e78acc233d78dc0a58c0470a3630eab941178c0",
-        "chainFingerprint": "c01f4cd541ebed100e56821b7ff046a3f4d0e45e8356eafaa8941b113f3c2ba6"
+        "scenarioRegistryFingerprint": "3194c867512ac71d9ee4ae57c99ffa1132e200fbdefcf01a3a66207a56112a5b",
+        "policyFingerprint": "37bf9d53b3f14782451b5359e31e076f04e254726d366c1179831e0dff55f8ad",
+        "chainFingerprint": "81639df7149012c18e4c16aa3d1ede4b667153cbd2db7ac683338d04e9f24b80"
       }
     },
-    "proofStatus": "FRESH",
+    "proofStatus": "STALE",
     "proofQualityScore": {
       "score": 100,
       "raw": 120,
@@ -3468,7 +3525,7 @@
         "governanceCoverageOk": true,
         "packageValidationOk": true,
         "evidenceManifestValid": true,
-        "fingerprintsFresh": true,
+        "fingerprintsFresh": false,
         "intelligenceStable": true,
         "crossReportConsistent": true,
         "verticalCoverageValid": true
@@ -3484,9 +3541,25 @@
         "allPassed": true
       }
     },
-    "finalDecision": "AUTONOMOUS_READY_GO",
+    "finalDecision": "NO_GO:AUTONOMOUS_READY_GO",
     "deferredGates": [],
-    "blockingGaps": []
+    "blockingGaps": [
+      {
+        "id": "gap-proof-stale-fingerprints",
+        "severity": "critical",
+        "area": "proof-governance",
+        "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+        "evidence": {
+          "diverged": [
+            "sourceFingerprint",
+            "scenarioRegistryFingerprint",
+            "policyFingerprint",
+            "chainFingerprint"
+          ]
+        },
+        "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+      }
+    ]
   },
   "operationalDigitalTwin": {
     "status": "complete",
@@ -3515,8 +3588,8 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 449,
-    "executableScenarioCount": 440,
+    "scenarioCount": 479,
+    "executableScenarioCount": 445,
     "executableJourneyIds": [
       "0cf4b599-167e-419a-907d-20104fa295c8",
       "0e4ca104-adfe-473d-89ad-785c5e8f24d7",
@@ -3564,6 +3637,7 @@
       "agent-validation-qa-agent-20260901185430",
       "agent-validation-qa-agent-20260901191255",
       "agent-validation-qa-agent-20260901215048",
+      "agent-validation-qa-agent-20260902034558",
       "agent_factory",
       "agent_marketplace",
       "agent_orchestrator",
@@ -3575,6 +3649,8 @@
       "audio_transcribe",
       "automations",
       "backup_restore",
+      "bakery_encomenda_flow",
+      "bakery_reativacao_cliente",
       "bdd5400d-2117-45c9-8e7a-bf218b0a31a3",
       "beauty_booking",
       "beauty_new_customer",
@@ -3689,10 +3765,12 @@
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
   ],
-  "noGoReasons": [],
+  "noGoReasons": [
+    "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]"
+  ],
   "productionReadiness": {
-    "status": "AUTONOMOUS_READY_GO",
-    "classification": "enterprise-ready",
+    "status": "NO_GO:AUTONOMOUS_READY_GO",
+    "classification": "enterprise-partial",
     "productionLikeFlows": [
       "WhatsApp",
       "Chat",
@@ -3711,10 +3789,26 @@
     "evidenceBased": true,
     "missingProofs": []
   },
-  "automaticGapBacklog": [],
+  "automaticGapBacklog": [
+    {
+      "id": "gap-proof-stale-fingerprints",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "evidence": {
+        "diverged": [
+          "sourceFingerprint",
+          "scenarioRegistryFingerprint",
+          "policyFingerprint",
+          "chainFingerprint"
+        ]
+      },
+      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    }
+  ],
   "journeyCoverage": {
     "beauty": {
-      "generatedAt": "2026-09-01T23:37:40.724Z",
+      "generatedAt": "2026-09-02T10:18:04.655Z",
       "vertical": "beauty",
       "maturity": "production-like",
       "replaySupported": true,
@@ -4178,7 +4272,7 @@
       ]
     },
     "fitness": {
-      "generatedAt": "2026-09-01T23:37:40.724Z",
+      "generatedAt": "2026-09-02T10:18:04.655Z",
       "vertical": "fitness",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7028,7 +7122,7 @@
       ]
     },
     "food": {
-      "generatedAt": "2026-09-01T23:37:40.724Z",
+      "generatedAt": "2026-09-02T10:18:04.655Z",
       "vertical": "food",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7318,7 +7412,7 @@
       ]
     },
     "services": {
-      "generatedAt": "2026-09-01T23:37:40.724Z",
+      "generatedAt": "2026-09-02T10:18:04.655Z",
       "vertical": "services",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7476,7 +7570,7 @@
       ]
     },
     "clinic": {
-      "generatedAt": "2026-09-01T23:37:40.724Z",
+      "generatedAt": "2026-09-02T10:18:04.655Z",
       "vertical": "clinic",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7618,7 +7712,7 @@
       ]
     },
     "market": {
-      "generatedAt": "2026-09-01T23:37:40.724Z",
+      "generatedAt": "2026-09-02T10:18:04.655Z",
       "vertical": "market",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7785,8 +7879,694 @@
         }
       ]
     },
+    "bakery": {
+      "generatedAt": "2026-09-02T10:18:04.655Z",
+      "vertical": "bakery",
+      "maturity": "production-like",
+      "replaySupported": true,
+      "journeys": [
+        {
+          "vertical": "bakery",
+          "journey": "bakery_balcao_retirada",
+          "replaySupport": true,
+          "qaSupport": false,
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-bakery_balcao_retirada",
+              "scenario": "E2E: bakery_balcao_retirada",
+              "status": "draft_ai",
+              "channels": [
+                "whatsapp"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_e2e_bakery_balcao_retirada_1",
+                  "expected": {
+                    "ok": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_balcao_retirada-order_service_available",
+              "scenario": "Precondição: Order Service Available",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_order_service_available_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_balcao_retirada-payment_gateway_available",
+              "scenario": "Precondição: Payment Gateway Available",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_payment_gateway_available_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "vertical": "bakery",
+          "journey": "bakery_encomenda_flow",
+          "replaySupport": true,
+          "qaSupport": true,
+          "scenarios": [
+            {
+              "scenarioId": "cap-order_management",
+              "scenario": "Validação: Order Management",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_order_management_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "cap-production_tracking",
+              "scenario": "Validação: Production Tracking",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_production_tracking_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "cap-retention",
+              "scenario": "Validação: Retention",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_retention_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "business-e2e-bakery_encomenda_flow",
+              "scenario": "Encomenda Completa de Padaria",
+              "status": "draft_ai",
+              "channels": [
+                "whatsapp",
+                "webchat"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "send_message",
+                "validate_intent",
+                "send_message",
+                "validate_backend",
+                "wait_for_event",
+                "send_message",
+                "validate_flow_transition"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_bakery_encomenda_flow_001",
+                  "expected": {
+                    "messageReceived": true,
+                    "intentDetected": "order_request"
+                  }
+                },
+                {
+                  "stepId": "step_bakery_encomenda_flow_002",
+                  "expected": {
+                    "orderCreated": true,
+                    "orderStatus": "created"
+                  }
+                },
+                {
+                  "stepId": "step_bakery_encomenda_flow_003",
+                  "expected": {
+                    "replySent": true,
+                    "orderConfirmed": true,
+                    "paymentLinkSent": true
+                  }
+                },
+                {
+                  "stepId": "step_bakery_encomenda_flow_004",
+                  "expected": {
+                    "paymentConfirmed": true,
+                    "orderStatus": "preparing"
+                  }
+                },
+                {
+                  "stepId": "step_bakery_encomenda_flow_005",
+                  "expected": {
+                    "customerNotified": true,
+                    "orderStatus": "ready"
+                  }
+                },
+                {
+                  "stepId": "step_bakery_encomenda_flow_006",
+                  "expected": {
+                    "messageReceived": true,
+                    "pickupConfirmed": true
+                  }
+                },
+                {
+                  "stepId": "step_bakery_encomenda_flow_007",
+                  "expected": {
+                    "orderStatus": "delivered",
+                    "fulfillmentOk": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_encomenda_flow-order_service_available",
+              "scenario": "Precondição: Order Service Available",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_order_service_available_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_encomenda_flow-payment_gateway_available",
+              "scenario": "Precondição: Payment Gateway Available",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_payment_gateway_available_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_encomenda_flow-storefront_channel_active",
+              "scenario": "Precondição: Storefront Channel Active",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_storefront_channel_active_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "business-bakery-flow-encomenda",
+              "scenario": "Padaria encomenda aberta até entrega",
+              "status": "approved",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [],
+              "operationalAssertions": []
+            },
+            {
+              "scenarioId": "business-bakery-flow-pedido-status",
+              "scenario": "Padaria pedido avança produção até entrega",
+              "status": "approved",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [],
+              "operationalAssertions": []
+            }
+          ]
+        },
+        {
+          "vertical": "bakery",
+          "journey": "bakery_estoque_perdas",
+          "replaySupport": true,
+          "qaSupport": false,
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-bakery_estoque_perdas",
+              "scenario": "E2E: bakery_estoque_perdas",
+              "status": "draft_ai",
+              "channels": [
+                "whatsapp"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_e2e_bakery_estoque_perdas_1",
+                  "expected": {
+                    "ok": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "cap-inventory_monitoring",
+              "scenario": "Validação: Inventory Monitoring",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_inventory_monitoring_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "cap-stock_alerts",
+              "scenario": "Validação: Stock Alerts",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_stock_alerts_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "cap-loss_tracking",
+              "scenario": "Validação: Loss Tracking",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_loss_tracking_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_estoque_perdas-inventory_service_available",
+              "scenario": "Precondição: Inventory Service Available",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_inventory_service_available_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "vertical": "bakery",
+          "journey": "bakery_producao_fornada",
+          "replaySupport": true,
+          "qaSupport": false,
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-bakery_producao_fornada",
+              "scenario": "E2E: bakery_producao_fornada",
+              "status": "draft_ai",
+              "channels": [
+                "whatsapp"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_e2e_bakery_producao_fornada_1",
+                  "expected": {
+                    "ok": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "cap-production_planning",
+              "scenario": "Validação: Production Planning",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_production_planning_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "cap-capacity_management",
+              "scenario": "Validação: Capacity Management",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_capacity_management_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_producao_fornada-order_service_available",
+              "scenario": "Precondição: Order Service Available",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_order_service_available_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "vertical": "bakery",
+          "journey": "bakery_reativacao_cliente",
+          "replaySupport": true,
+          "qaSupport": true,
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-bakery_reativacao_cliente",
+              "scenario": "E2E: bakery_reativacao_cliente",
+              "status": "draft_ai",
+              "channels": [
+                "whatsapp"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_e2e_bakery_reativacao_cliente_1",
+                  "expected": {
+                    "ok": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "cap-campaign_management",
+              "scenario": "Validação: Campaign Management",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_cap_campaign_management_1",
+                  "expected": {
+                    "capabilityValid": true,
+                    "status": "operational"
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_reativacao_cliente-crm_service_available",
+              "scenario": "Precondição: Crm Service Available",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_crm_service_available_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "precond-bakery_reativacao_cliente-campaign_service_available",
+              "scenario": "Precondição: Campaign Service Available",
+              "status": "draft_ai",
+              "channels": [
+                "api"
+              ],
+              "preconditions": [],
+              "integrations": [
+                "api"
+              ],
+              "steps": [
+                "validate_backend"
+              ],
+              "operationalAssertions": [
+                {
+                  "stepId": "step_precond_campaign_service_available_1",
+                  "expected": {
+                    "preconditionMet": true,
+                    "serviceAvailable": true
+                  }
+                }
+              ]
+            },
+            {
+              "scenarioId": "business-bakery-flow-campanha-combo",
+              "scenario": "Padaria campanha rápida de combo em janela ociosa",
+              "status": "approved",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [],
+              "operationalAssertions": []
+            },
+            {
+              "scenarioId": "business-bakery-flow-cliente-recorrente",
+              "scenario": "Padaria lead recorrente qualificado e reativado",
+              "status": "approved",
+              "channels": [],
+              "preconditions": [],
+              "integrations": [],
+              "steps": [],
+              "operationalAssertions": []
+            }
+          ]
+        }
+      ]
+    },
     "core": {
-      "generatedAt": "2026-09-01T23:37:40.724Z",
+      "generatedAt": "2026-09-02T10:18:04.655Z",
       "vertical": "core",
       "kind": "system",
       "maturity": "system",

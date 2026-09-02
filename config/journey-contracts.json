@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "generatedAt": "2026-09-02T03:28:45.401Z",
+  "version": 6,
+  "generatedAt": "2026-09-02T10:20:30.456Z",
   "journeys": {
     "omnichannel_engagement": {
       "requiredCapabilities": [
@@ -18,7 +18,7 @@
         "support_ticket_reply"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.81
     },
     "fitness_customer_checkin": {
       "requiredCapabilities": [
@@ -44,21 +44,21 @@
         "scheduling"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "capability_crm_updates": {
       "requiredCapabilities": [
         "crm_updates"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "capability_lead_capture": {
       "requiredCapabilities": [
         "lead_capture"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "payment_charge_flow": {
       "requiredCapabilities": [
@@ -85,7 +85,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.81
+      "confidence": 0.93
     },
     "clinic_default_journey": {
       "requiredCapabilities": [
@@ -95,7 +95,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.81
+      "confidence": 0.93
     },
     "agendamento": {
       "requiredCapabilities": [
@@ -105,7 +105,7 @@
         "crm_update"
       ],
       "missingCapabilities": [],
-      "confidence": 0.87
+      "confidence": 0.93
     },
     "cancelamento": {
       "requiredCapabilities": [
@@ -116,7 +116,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.85
+      "confidence": 0.97
     },
     "checkin": {
       "requiredCapabilities": [
@@ -127,7 +127,7 @@
         "attendance_record"
       ],
       "missingCapabilities": [],
-      "confidence": 0.85
+      "confidence": 0.97
     },
     "checkout": {
       "requiredCapabilities": [
@@ -138,7 +138,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.91
+      "confidence": 0.97
     },
     "fitness_active_customer": {
       "requiredCapabilities": [
@@ -149,7 +149,7 @@
         "crm_update"
       ],
       "missingCapabilities": [],
-      "confidence": 0.85
+      "confidence": 0.97
     },
     "fitness_new_customer": {
       "requiredCapabilities": [
@@ -170,7 +170,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.93
     },
     "onboarding": {
       "requiredCapabilities": [
@@ -180,7 +180,7 @@
         "onboarding"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.93
     },
     "renovacao": {
       "requiredCapabilities": [
@@ -192,7 +192,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.88
+      "confidence": 1
     },
     "food_customer_journey": {
       "requiredCapabilities": [
@@ -201,7 +201,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.72
+      "confidence": 0.9
     },
     "food_order_flow": {
       "requiredCapabilities": [
@@ -210,7 +210,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.72
+      "confidence": 0.9
     },
     "market_default_journey": {
       "requiredCapabilities": [
@@ -220,7 +220,7 @@
         "crm_updates"
       ],
       "missingCapabilities": [],
-      "confidence": 0.81
+      "confidence": 0.93
     },
     "services_default_journey": {
       "requiredCapabilities": [
@@ -231,126 +231,126 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.85
+      "confidence": 0.97
     },
     "orders": {
       "requiredCapabilities": [
         "orders"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "projects": {
       "requiredCapabilities": [
         "projects"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "inbox": {
       "requiredCapabilities": [
         "inbox"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "cases": {
       "requiredCapabilities": [
         "cases"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "campaigns": {
       "requiredCapabilities": [
         "campaigns"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "quick_replies": {
       "requiredCapabilities": [
         "quick_replies"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "webhooks": {
       "requiredCapabilities": [
         "webhooks"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "tasks": {
       "requiredCapabilities": [
         "tasks"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "billing": {
       "requiredCapabilities": [
         "billing"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "marketing": {
       "requiredCapabilities": [
         "marketing"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "automations": {
       "requiredCapabilities": [
         "automations"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "sla": {
       "requiredCapabilities": [
         "sla"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "deliveries": {
       "requiredCapabilities": [
         "deliveries"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "developer": {
       "requiredCapabilities": [
         "developer"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "whatsapp_connections": {
       "requiredCapabilities": [
         "whatsapp_connections"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "analytics": {
       "requiredCapabilities": [
         "analytics"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "operational_intelligence": {
       "requiredCapabilities": [
         "operational_intelligence"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "calendar": {
       "requiredCapabilities": [
@@ -364,350 +364,350 @@
         "academy_learning"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "physical_queue_kiosk_station_panel_fila": {
       "requiredCapabilities": [
         "physical_queue_kiosk_station_panel_fila"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "public_tokens": {
       "requiredCapabilities": [
         "public_tokens"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "process_runtime": {
       "requiredCapabilities": [
         "process_runtime"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "solutions": {
       "requiredCapabilities": [
         "solutions"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "rbac_access_control": {
       "requiredCapabilities": [
         "rbac_access_control"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "templates": {
       "requiredCapabilities": [
         "templates"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "operations_dashboard": {
       "requiredCapabilities": [
         "operations_dashboard"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "cognitive_assistant": {
       "requiredCapabilities": [
         "cognitive_assistant"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "supervisor": {
       "requiredCapabilities": [
         "supervisor"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "queues": {
       "requiredCapabilities": [
         "queues"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "departments": {
       "requiredCapabilities": [
         "departments"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "export": {
       "requiredCapabilities": [
         "export"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "demo": {
       "requiredCapabilities": [
         "demo"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "agent_factory": {
       "requiredCapabilities": [
         "agent_factory"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "agent_marketplace": {
       "requiredCapabilities": [
         "agent_marketplace"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "agent_orchestrator": {
       "requiredCapabilities": [
         "agent_orchestration"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "agent_registry": {
       "requiredCapabilities": [
         "agent_registry"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "journey_registry": {
       "requiredCapabilities": [
         "journey_registry"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "knowledge_graph": {
       "requiredCapabilities": [
         "knowledge_graph"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "rap_learn": {
       "requiredCapabilities": [
         "rap_learn"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "ai_governance": {
       "requiredCapabilities": [
         "ai_governance"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "flows_editor_rpa_replay": {
       "requiredCapabilities": [
         "flows_editor_rpa_replay"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "rag_documents": {
       "requiredCapabilities": [
         "rag_documents"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.65
     },
     "knowledge_base": {
       "requiredCapabilities": [
         "knowledge_base"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "product_docs": {
       "requiredCapabilities": [
         "product_docs"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "channel_accounts": {
       "requiredCapabilities": [
         "channel_accounts"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "instagram_messenger": {
       "requiredCapabilities": [
         "instagram_messenger"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "segmentation": {
       "requiredCapabilities": [
         "segmentation"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "tickets_tags": {
       "requiredCapabilities": [
         "tickets_tags"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "tenant_config": {
       "requiredCapabilities": [
         "tenant_config"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "conversations_chat": {
       "requiredCapabilities": [
         "conversations_chat"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "ai_tools": {
       "requiredCapabilities": [
         "ai_tools"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "audio_transcribe": {
       "requiredCapabilities": [
         "audio_transcribe"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "voice_event_ledger": {
       "requiredCapabilities": [
         "voice_event_ledger"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "backup_restore": {
       "requiredCapabilities": [
         "backup_restore"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "web_scraping": {
       "requiredCapabilities": [
         "web_scraping"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "agenda": {
       "requiredCapabilities": [
         "agenda"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "agents": {
       "requiredCapabilities": [
         "agents"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "bulk_messaging": {
       "requiredCapabilities": [
         "bulk_messaging"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "failed_messages": {
       "requiredCapabilities": [
         "failed_messages"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "kitchen_dispatch": {
       "requiredCapabilities": [
         "kitchen_dispatch"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "faq": {
       "requiredCapabilities": [
         "faq"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "login": {
       "requiredCapabilities": [
         "login"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "mfa": {
       "requiredCapabilities": [
         "mfa"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "sso_scim": {
       "requiredCapabilities": [
         "sso_scim"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "maintenance": {
       "requiredCapabilities": [
         "maintenance"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "plan_usage": {
       "requiredCapabilities": [
         "plan_usage"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "saas_storefront": {
       "requiredCapabilities": [
         "saas_storefront"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "tenants": {
       "requiredCapabilities": [
         "tenants"
       ],
       "missingCapabilities": [],
-      "confidence": 0.75
+      "confidence": 0.59
     },
     "bakery_encomenda_flow": {
       "requiredCapabilities": [
@@ -719,7 +719,7 @@
         "retention"
       ],
       "missingCapabilities": [],
-      "confidence": 0.7
+      "confidence": 1
     },
     "bakery_balcao_retirada": {
       "requiredCapabilities": [
@@ -730,7 +730,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.67
+      "confidence": 0.85
     },
     "bakery_producao_fornada": {
       "requiredCapabilities": [
@@ -740,7 +740,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.63
+      "confidence": 0.87
     },
     "bakery_estoque_perdas": {
       "requiredCapabilities": [
@@ -750,7 +750,7 @@
         "crm_updates"
       ],
       "missingCapabilities": [],
-      "confidence": 0.63
+      "confidence": 0.93
     },
     "bakery_reativacao_cliente": {
       "requiredCapabilities": [
@@ -761,7 +761,7 @@
         "retention"
       ],
       "missingCapabilities": [],
-      "confidence": 0.67
+      "confidence": 0.97
     }
   }
 }

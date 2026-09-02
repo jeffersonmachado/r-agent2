@@ -1,0 +1,686 @@
+{
+  "generatedAt": "2026-09-02T10:18:04.655Z",
+  "vertical": "bakery",
+  "maturity": "production-like",
+  "replaySupported": true,
+  "journeys": [
+    {
+      "vertical": "bakery",
+      "journey": "bakery_balcao_retirada",
+      "replaySupport": true,
+      "qaSupport": false,
+      "scenarios": [
+        {
+          "scenarioId": "business-e2e-bakery_balcao_retirada",
+          "scenario": "E2E: bakery_balcao_retirada",
+          "status": "draft_ai",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_bakery_balcao_retirada_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_balcao_retirada-order_service_available",
+          "scenario": "Precondição: Order Service Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_order_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_balcao_retirada-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "bakery",
+      "journey": "bakery_encomenda_flow",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "cap-order_management",
+          "scenario": "Validação: Order Management",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_order_management_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-production_tracking",
+          "scenario": "Validação: Production Tracking",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_production_tracking_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-retention",
+          "scenario": "Validação: Retention",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_retention_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-e2e-bakery_encomenda_flow",
+          "scenario": "Encomenda Completa de Padaria",
+          "status": "draft_ai",
+          "channels": [
+            "whatsapp",
+            "webchat"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "send_message",
+            "validate_intent",
+            "send_message",
+            "validate_backend",
+            "wait_for_event",
+            "send_message",
+            "validate_flow_transition"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_bakery_encomenda_flow_001",
+              "expected": {
+                "messageReceived": true,
+                "intentDetected": "order_request"
+              }
+            },
+            {
+              "stepId": "step_bakery_encomenda_flow_002",
+              "expected": {
+                "orderCreated": true,
+                "orderStatus": "created"
+              }
+            },
+            {
+              "stepId": "step_bakery_encomenda_flow_003",
+              "expected": {
+                "replySent": true,
+                "orderConfirmed": true,
+                "paymentLinkSent": true
+              }
+            },
+            {
+              "stepId": "step_bakery_encomenda_flow_004",
+              "expected": {
+                "paymentConfirmed": true,
+                "orderStatus": "preparing"
+              }
+            },
+            {
+              "stepId": "step_bakery_encomenda_flow_005",
+              "expected": {
+                "customerNotified": true,
+                "orderStatus": "ready"
+              }
+            },
+            {
+              "stepId": "step_bakery_encomenda_flow_006",
+              "expected": {
+                "messageReceived": true,
+                "pickupConfirmed": true
+              }
+            },
+            {
+              "stepId": "step_bakery_encomenda_flow_007",
+              "expected": {
+                "orderStatus": "delivered",
+                "fulfillmentOk": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_encomenda_flow-order_service_available",
+          "scenario": "Precondição: Order Service Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_order_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_encomenda_flow-payment_gateway_available",
+          "scenario": "Precondição: Payment Gateway Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_payment_gateway_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_encomenda_flow-storefront_channel_active",
+          "scenario": "Precondição: Storefront Channel Active",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_storefront_channel_active_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-bakery-flow-encomenda",
+          "scenario": "Padaria encomenda aberta até entrega",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-bakery-flow-pedido-status",
+          "scenario": "Padaria pedido avança produção até entrega",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    },
+    {
+      "vertical": "bakery",
+      "journey": "bakery_estoque_perdas",
+      "replaySupport": true,
+      "qaSupport": false,
+      "scenarios": [
+        {
+          "scenarioId": "business-e2e-bakery_estoque_perdas",
+          "scenario": "E2E: bakery_estoque_perdas",
+          "status": "draft_ai",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_bakery_estoque_perdas_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-inventory_monitoring",
+          "scenario": "Validação: Inventory Monitoring",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_inventory_monitoring_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-stock_alerts",
+          "scenario": "Validação: Stock Alerts",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_stock_alerts_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-loss_tracking",
+          "scenario": "Validação: Loss Tracking",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_loss_tracking_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_estoque_perdas-inventory_service_available",
+          "scenario": "Precondição: Inventory Service Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_inventory_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "bakery",
+      "journey": "bakery_producao_fornada",
+      "replaySupport": true,
+      "qaSupport": false,
+      "scenarios": [
+        {
+          "scenarioId": "business-e2e-bakery_producao_fornada",
+          "scenario": "E2E: bakery_producao_fornada",
+          "status": "draft_ai",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_bakery_producao_fornada_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-production_planning",
+          "scenario": "Validação: Production Planning",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_production_planning_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-capacity_management",
+          "scenario": "Validação: Capacity Management",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_capacity_management_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_producao_fornada-order_service_available",
+          "scenario": "Precondição: Order Service Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_order_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "bakery",
+      "journey": "bakery_reativacao_cliente",
+      "replaySupport": true,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-e2e-bakery_reativacao_cliente",
+          "scenario": "E2E: bakery_reativacao_cliente",
+          "status": "draft_ai",
+          "channels": [
+            "whatsapp"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_e2e_bakery_reativacao_cliente_1",
+              "expected": {
+                "ok": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "cap-campaign_management",
+          "scenario": "Validação: Campaign Management",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_cap_campaign_management_1",
+              "expected": {
+                "capabilityValid": true,
+                "status": "operational"
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_reativacao_cliente-crm_service_available",
+          "scenario": "Precondição: Crm Service Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_crm_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "precond-bakery_reativacao_cliente-campaign_service_available",
+          "scenario": "Precondição: Campaign Service Available",
+          "status": "draft_ai",
+          "channels": [
+            "api"
+          ],
+          "preconditions": [],
+          "integrations": [
+            "api"
+          ],
+          "steps": [
+            "validate_backend"
+          ],
+          "operationalAssertions": [
+            {
+              "stepId": "step_precond_campaign_service_available_1",
+              "expected": {
+                "preconditionMet": true,
+                "serviceAvailable": true
+              }
+            }
+          ]
+        },
+        {
+          "scenarioId": "business-bakery-flow-campanha-combo",
+          "scenario": "Padaria campanha rápida de combo em janela ociosa",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        },
+        {
+          "scenarioId": "business-bakery-flow-cliente-recorrente",
+          "scenario": "Padaria lead recorrente qualificado e reativado",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
+        }
+      ]
+    }
+  ]
+}

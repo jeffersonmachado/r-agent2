@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-01T23:37:57.359Z",
+  "generatedAt": "2026-09-02T10:18:35.952Z",
   "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260901-203416.payload.zip",
   "zipName": "r-agent2-20260901-203416.payload.zip",
   "zipSha256": "1157642bab522e3b97e331dd42db601d184c157ed16b825063ba7cd4268d0786",
@@ -50,9 +50,5 @@
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
-  },
-  "runId": "rap-governed-20260901190048981-4278fc93",
-  "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
-  "artifactType": "package-validation-report",
-  "artifactVersion": "1.0.0"
+  }
 }
