@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T12:44:50.049Z",
+  "generatedAt": "2026-09-02T17:53:11.721Z",
   "vertical": "bakery",
   "maturity": "production-like",
   "replaySupported": true,
@@ -8,7 +8,7 @@
       "vertical": "bakery",
       "journey": "bakery_balcao_retirada",
       "replaySupport": true,
-      "qaSupport": false,
+      "qaSupport": true,
       "scenarios": [
         {
           "scenarioId": "business-e2e-bakery_balcao_retirada",
@@ -80,6 +80,16 @@
               }
             }
           ]
+        },
+        {
+          "scenarioId": "business-bakery-flow-balcao-retirada",
+          "scenario": "Padaria pedido no balcão até retirada pelo cliente",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
         }
       ]
     },
@@ -333,7 +343,7 @@
       "vertical": "bakery",
       "journey": "bakery_estoque_perdas",
       "replaySupport": true,
-      "qaSupport": false,
+      "qaSupport": true,
       "scenarios": [
         {
           "scenarioId": "business-e2e-bakery_estoque_perdas",
@@ -453,6 +463,16 @@
               }
             }
           ]
+        },
+        {
+          "scenarioId": "business-bakery-flow-estoque-perdas",
+          "scenario": "Padaria perda de estoque registrada e vinculada ao pedido",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
         }
       ]
     },
@@ -460,7 +480,7 @@
       "vertical": "bakery",
       "journey": "bakery_producao_fornada",
       "replaySupport": true,
-      "qaSupport": false,
+      "qaSupport": true,
       "scenarios": [
         {
           "scenarioId": "business-e2e-bakery_producao_fornada",
@@ -556,6 +576,16 @@
               }
             }
           ]
+        },
+        {
+          "scenarioId": "business-bakery-flow-producao-fornada",
+          "scenario": "Padaria fornada avança produção até disponibilidade",
+          "status": "approved",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [],
+          "operationalAssertions": []
         }
       ]
     },

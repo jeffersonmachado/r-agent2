@@ -39,5 +39,5 @@
 ## bakery
 - Classification: production-like
 - Journeys: 5
-- Scenarios: 27
+- Scenarios: 30
 - Blockers: none
