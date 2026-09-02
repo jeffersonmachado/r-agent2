@@ -287,24 +287,36 @@ async function listCaseConversations({ tenantKey, caseId } = {}) {
     order: [['created_at', 'ASC']],
   });
 
-  const conversations = [];
-  for (const link of links) {
+  const conversationIds = links.map((link) => {
     const json = typeof link.toJSON === 'function' ? link.toJSON() : link;
-    try {
-      // eslint-disable-next-line no-await-in-loop
-      const conversation = await channelConversationService.getConversation({
-        tenantId: tenant,
-        conversationId: json.conversation_id,
-      });
-      if (conversation) conversations.push(conversation);
-    } catch (err) {
-      logger.warn('[CaseService] Falha ao carregar conversa vinculada (ignorado)', {
-        tenantKey: tenant,
-        caseId,
-        conversationId: json.conversation_id,
-        error: safeErrorMessage(err),
-      });
-    }
+    return json.conversation_id;
+  });
+
+  // Uma query em lote (id IN (...)) em vez de um findOne por link (N+1).
+  // Falha na leitura mantém a semântica anterior: conversas indisponíveis são
+  // ignoradas (lista vazia) com warn, nunca derrubam a listagem.
+  let fetched = [];
+  try {
+    fetched = await channelConversationService.listConversationsByIds({
+      tenantId: tenant,
+      ids: conversationIds,
+    });
+  } catch (err) {
+    logger.warn('[CaseService] Falha ao carregar conversas vinculadas em lote (ignorado)', {
+      tenantKey: tenant,
+      caseId,
+      error: safeErrorMessage(err),
+    });
+    fetched = [];
+  }
+
+  const byId = new Map(fetched.map((conversation) => [conversation.id, conversation]));
+  const conversations = [];
+  for (const conversationId of conversationIds) {
+    const conversation = byId.get(safeToString(conversationId));
+    // Preserva a estrutura anterior: ordem dos links (created_at ASC) e
+    // duplicatas quando o mesmo conversation_id aparece em mais de um link.
+    if (conversation) conversations.push(conversation);
   }
 
   return conversations;

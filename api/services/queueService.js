@@ -65,6 +65,12 @@ const {
   findActiveTicketBySession,
   findActiveTicketByConversation,
 } = require('./queue/queueTicketLookup');
+const {
+  createTicketLookupIndex,
+  indexTicket,
+  unindexTicket,
+  clearTicketLookupIndex,
+} = require('./queue/queueTicketLookupIndex');
 const { updateConversationForTicket } = require('./queue/queueTicketConversationSync');
 const { buildNewQueueTicket } = require('./queue/queueTicketFactory');
 const WorkspaceLinkAutomationService = require('./workspace/WorkspaceLinkAutomationService');
@@ -139,6 +145,16 @@ const tickets = new Map();
 /** @type {Map<string, Set<string>>} */
 const queues = new Map(); // queueName -> Set<ticketId>
 
+// Índice secundário (tenant → session/conversation → ticketIds) para os
+// lookups do hot path inbound. Mantido nos mesmos pontos de mutação do Map
+// principal (create/update/hydrate/retention). O Map `tickets` continua sendo
+// a fonte da verdade; o índice só restringe os candidatos.
+const ticketLookupIndex = createTicketLookupIndex();
+
+function reindexTicket(ticket) {
+  indexTicket(ticketLookupIndex, ticket);
+}
+
 // Singleton: o serviço é stateless (só referencia models/logger), não precisa
 // ser instanciado a cada ticket criado.
 const workspaceLinkAutomationService = new WorkspaceLinkAutomationService();
@@ -155,7 +171,7 @@ function dbAvailable() {
  * @returns {Ticket|null}
  */
 function upsertTicketFromDbRow(row) {
-  return upsertTicketInRuntimeCache({ row, tickets, queues });
+  return upsertTicketInRuntimeCache({ row, tickets, queues, lookupIndex: ticketLookupIndex, indexTicket });
 }
 
 function persistTicketBestEffort(ticket) {
@@ -176,6 +192,9 @@ async function initialize() {
     queues,
     fromDbRow,
     addTicketToQueueIndex,
+    lookupIndex: ticketLookupIndex,
+    indexTicket,
+    clearTicketLookupIndex,
   });
 }
 
@@ -229,6 +248,7 @@ function createTicket({ tenantId, sessionId, queue, lastUserMessage, context = {
   });
 
   tickets.set(id, ticket);
+  indexTicket(ticketLookupIndex, ticket);
 
   // Adiciona à fila
   addTicketToQueueIndex({ queues, queueName: queue, ticketId: id });
@@ -298,7 +318,7 @@ function getTicket(ticketId) {
 function getTicketBySession(sessionId) {
   // Compatibilidade: se tenantId vier como 2º argumento, filtra hard por tenant
   const tenantId = arguments.length > 1 ? (arguments[1] || null) : null;
-  return _getTicketBySession(sessionId, tenantId, { tickets, findActiveTicketBySession });
+  return _getTicketBySession(sessionId, tenantId, { tickets, findActiveTicketBySession, lookupIndex: ticketLookupIndex });
 }
 
 /**
@@ -309,7 +329,7 @@ function getTicketBySession(sessionId) {
  * @returns {Ticket|null}
  */
 function getTicketByConversationId(conversationId, tenantId) {
-  return _getTicketByConversationId(conversationId, tenantId, { tickets, findActiveTicketByConversation });
+  return _getTicketByConversationId(conversationId, tenantId, { tickets, findActiveTicketByConversation, lookupIndex: ticketLookupIndex });
 }
 
 /**
@@ -357,6 +377,7 @@ function updateTicket(ticketId, patch = {}) {
     moveTicketAcrossQueueIndexes,
     applyTicketPatch,
     persistTicketBestEffort,
+    reindexTicket,
   });
 }
 
@@ -515,6 +536,8 @@ function cleanupOldTickets(maxAgeDays = 7) {
     tickets,
     maxAgeDays,
     onDeleteTicket: deleteTicketBestEffort,
+    lookupIndex: ticketLookupIndex,
+    unindexTicket,
   });
 
   if (cleaned > 0) {

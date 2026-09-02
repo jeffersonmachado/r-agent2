@@ -68,12 +68,15 @@ function fromDbRow(row) {
   };
 }
 
-function upsertTicketInRuntimeCache({ row, tickets, queues }) {
+function upsertTicketInRuntimeCache({ row, tickets, queues, lookupIndex = null, indexTicket = null }) {
   if (!row) return null;
   const ticket = fromDbRow(row);
   if (!ticket?.id) return null;
 
   tickets.set(ticket.id, ticket);
+  if (typeof indexTicket === 'function' && lookupIndex) {
+    indexTicket(lookupIndex, ticket);
+  }
   if (!queues.has(ticket.queue)) queues.set(ticket.queue, new Set());
   queues.get(ticket.queue).add(ticket.id);
 

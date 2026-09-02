@@ -29,6 +29,7 @@ const { getTicketBySession } = require('./queueService');
 const { getTicketByConversationId, updateOutboundMessageMeta } = require('./queueService');
 const outboundQueueService = require('./outboundQueueService');
 const { OutboundQueueItem } = require('../db/models');
+const webhookAccountCache = require('./channelAccountResolutionCache');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -284,7 +285,7 @@ async function resolveWhatsAppAccountForBackfill(tenantId) {
   return rows[0];
 }
 
-async function backfillPersistedMessageMedia({ tenantId, messageRow }) {
+async function backfillPersistedMessageMedia({ tenantId, messageRow, account = null }) {
   if (!tenantId || !messageRow) return false;
   if (!dbAvailable()) return false;
 
@@ -311,15 +312,15 @@ async function backfillPersistedMessageMedia({ tenantId, messageRow }) {
     return false;
   }
 
-  const account = await resolveWhatsAppAccountForBackfill(tenantId);
-  if (!account) {
+  const resolvedAccount = account || await resolveWhatsAppAccountForBackfill(tenantId);
+  if (!resolvedAccount) {
     return false;
   }
 
   await persistInboundMediaIfNeeded({
     tenantId,
     channelType: 'whatsapp',
-    account,
+    account: resolvedAccount,
     messageNormalized: normalized,
   });
 
@@ -356,6 +357,14 @@ async function resolveTenantForWebhook(channelType, payload) {
 
     if (!externalId) return { tenantId: null, account: null };
 
+    // Cache em memória (TTL curto): cardinalidade de accounts é baixíssima e
+    // este findOne rodava a cada webhook/batch. Invalidado no CRUD de
+    // channel_accounts (channelAccountsService).
+    const cachedAccount = webhookAccountCache.getCachedAccount(channelType, safeToString(externalId));
+    if (cachedAccount) {
+      return { tenantId: cachedAccount.tenant_key, account: cachedAccount };
+    }
+
     const account = await AccountModel.findOne({
       where: {
         type: channelType,
@@ -366,6 +375,8 @@ async function resolveTenantForWebhook(channelType, payload) {
     });
 
     if (!account) return { tenantId: null, account: null };
+
+    webhookAccountCache.setCachedAccount(channelType, safeToString(externalId), account);
 
     return {
       tenantId: account.tenant_key,
@@ -827,33 +838,75 @@ async function updateStatus(channelType, statusPayload, options = {}) {
 
   const now = new Date();
 
+  // Casa entries com rows uma única vez; entries sem mensagem persistida são
+  // ignorados (mesma semântica do `continue` anterior, inclusive p/ outbound).
+  const matched = [];
   for (const entry of entries) {
-    const { externalMessageId, status, reasonCode, errorType, lastError } = entry;
-
-    const row = messageByExternalId.get(externalMessageId);
+    const row = messageByExternalId.get(entry.externalMessageId);
     if (!row) continue;
+    matched.push({ entry, row });
+  }
 
+  // Updates de channel_messages em lote, agrupados por status: 1 UPDATE por
+  // status distinto em vez de 1 UPDATE por mensagem. external_message_id é
+  // UNIQUE por (tenant_key, channel_type) e os models não têm hooks de
+  // instância, então o bulk update é equivalente ao row.update anterior
+  // (erro de DB continua propagando, como antes).
+  const messageIdsByStatus = new Map();
+  for (const { entry } of matched) {
+    let ids = messageIdsByStatus.get(entry.status);
+    if (!ids) { ids = []; messageIdsByStatus.set(entry.status, ids); }
+    ids.push(entry.externalMessageId);
+  }
+  for (const [status, ids] of messageIdsByStatus) {
     // eslint-disable-next-line no-await-in-loop
-    await row.update({ status, updated_at: now });
-    updated++;
+    await MessageModel.update(
+      { status, updated_at: now },
+      {
+        where: {
+          tenant_key: tenantId,
+          channel_type: channelType,
+          external_message_id: { [Op.in]: ids },
+        },
+      },
+    );
+    updated += ids.length;
+  }
 
-    // Atualiza status no outbound_queue (quando houver correlação por external_message_id).
-    // Importante: outboundQueueService.processDue só reprocessa itens SEM external_message_id,
-    // então marcar "failed" aqui não causa retries de mensagens já enviadas ao canal.
-    try {
-      const outRow = outboundByExternalId.get(externalMessageId);
-      if (outRow) {
-        // eslint-disable-next-line no-await-in-loop
-        await outRow.update({
-          status,
-          reason_code: status === 'failed' ? reasonCode : outRow.reason_code,
-          last_error: status === 'failed' ? (lastError || outRow.last_error || 'delivery_failed') : outRow.last_error,
-          updated_at: now,
-        }).catch(() => null);
+  // Updates do outbound_queue em lote, agrupados por (status, reason_code,
+  // last_error). Filtrados por id (PK): antes só a row MAIS RECENTE por
+  // external_message_id era atualizada — filtrar por external_message_id
+  // atualizaria também duplicatas antigas. Best-effort como antes.
+  // Importante: outboundQueueService.processDue só reprocessa itens SEM external_message_id,
+  // então marcar "failed" aqui não causa retries de mensagens já enviadas ao canal.
+  const outboundGroups = new Map(); // signature -> { fields, ids }
+  for (const { entry } of matched) {
+    const outRow = outboundByExternalId.get(entry.externalMessageId);
+    if (!outRow || outRow.id == null) continue;
+    const { status, reasonCode, lastError } = entry;
+    const fields = status === 'failed'
+      ? {
+        status,
+        reason_code: reasonCode,
+        last_error: lastError || outRow.last_error || 'delivery_failed',
+        updated_at: now,
       }
+      : { status, updated_at: now };
+    const signature = JSON.stringify(fields);
+    let group = outboundGroups.get(signature);
+    if (!group) { group = { fields, ids: [] }; outboundGroups.set(signature, group); }
+    group.ids.push(outRow.id);
+  }
+  for (const group of outboundGroups.values()) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await OutModel.update(group.fields, { where: { id: { [Op.in]: group.ids } } }).catch(() => null);
     } catch (_) {}
+  }
 
-    // Best-effort: propaga status para o ledger do ticket (UI atual)
+  // Best-effort: propaga status para o ledger do ticket (UI atual)
+  for (const { entry, row } of matched) {
+    const { externalMessageId, status, reasonCode, errorType, lastError } = entry;
     try {
       const conversationId = row.conversation_id ? safeToString(row.conversation_id) : null;
       if (conversationId) {
@@ -891,6 +944,7 @@ module.exports = {
   sendMessage,
   updateStatus,
   backfillPersistedMessageMedia,
+  resolveWhatsAppAccountForBackfill,
   // utilidades (para futuras UIs)
   encryptConfig,
   decryptConfig,

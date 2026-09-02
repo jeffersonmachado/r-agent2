@@ -12,6 +12,7 @@ const { getSequelize } = require('../db/sequelize');
 const { ChannelAccount: ChannelAccountGetter } = require('../db/models');
 const { encrypt, decrypt } = require('../utils/crypto');
 const { checkLimit } = require('./planLimitsService');
+const webhookAccountCache = require('./channelAccountResolutionCache');
 const https = require('https');
 
 function dbAvailable() {
@@ -121,6 +122,9 @@ async function createAccount({ tenantId, type, externalId = null, status = 'acti
   };
 
   await Model.create(payload);
+  // Invalida resolução webhook→account (misses não são cacheados, mas o par
+  // type/external_id pode ter ficado stale por TTL em caminhos antigos).
+  webhookAccountCache.invalidateCachedAccount(payload.type, payload.external_id);
   return { success: true, account: { id, tenantId, type: payload.type, status: payload.status, externalId: payload.external_id } };
 }
 
@@ -131,6 +135,9 @@ async function updateAccount({ tenantId, id, patch = {} } = {}) {
   const row = await Model.findOne({ where: { id, tenant_key: tenantId } });
   if (!row) return { success: false, error: 'not_found' };
 
+  const prevType = safeToString(row.type);
+  const prevExternalId = row.external_id ? safeToString(row.external_id) : null;
+
   const updates = {};
   if (patch.type) updates.type = safeToString(patch.type);
   if (patch.status) updates.status = safeToString(patch.status);
@@ -139,6 +146,13 @@ async function updateAccount({ tenantId, id, patch = {} } = {}) {
   updates.updated_at = new Date();
 
   await row.update(updates);
+  // Invalida o cache de resolução webhook→account nos pares antigo e novo
+  // (type/external_id/status podem ter mudado).
+  webhookAccountCache.invalidateCachedAccount(prevType, prevExternalId);
+  webhookAccountCache.invalidateCachedAccount(
+    updates.type || prevType,
+    Object.prototype.hasOwnProperty.call(updates, 'external_id') ? updates.external_id : prevExternalId,
+  );
   return { success: true, account: fromDbRow(row, { includeConfig: false }) };
 }
 
@@ -148,6 +162,8 @@ async function deleteAccount({ tenantId, id } = {}) {
   const Model = model();
   const deleted = await Model.destroy({ where: { id, tenant_key: tenantId } });
   if (!deleted) return { success: false, error: 'not_found' };
+  // Sem o external_id em mãos, limpa o cache inteiro (cardinalidade baixa).
+  webhookAccountCache.clearAccountCache();
   return { success: true, deletedId: id };
 }
 

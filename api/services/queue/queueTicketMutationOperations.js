@@ -42,6 +42,7 @@ function updateTicket(ticketId, patch = {}, {
   moveTicketAcrossQueueIndexes,
   applyTicketPatch,
   persistTicketBestEffort,
+  reindexTicket = null,
 }) {
   const ticket = tickets.get(ticketId);
   if (!ticket) return null;
@@ -54,6 +55,11 @@ function updateTicket(ticketId, patch = {}, {
   }
 
   applyTicketPatch(ticket, patch);
+  // applyTicketPatch é Object.assign: se o patch tocou sessionId/
+  // conversationId/tenantId, o índice secundário precisa refletir isso.
+  if (typeof reindexTicket === 'function') {
+    reindexTicket(ticket);
+  }
   persistTicketBestEffort(ticket);
   return ticket;
 }

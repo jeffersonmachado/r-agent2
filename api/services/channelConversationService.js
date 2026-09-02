@@ -11,7 +11,8 @@
 const crypto = require('crypto');
 const { getSequelize } = require('../db/sequelize');
 const { ChannelConversation, ChannelMessage, Ticket } = require('../db/models');
-const { backfillPersistedMessageMedia } = require('./channelGatewayService');
+const logger = require('../utils/logger');
+const { backfillPersistedMessageMedia, resolveWhatsAppAccountForBackfill } = require('./channelGatewayService');
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -227,6 +228,47 @@ async function createMessage({ tenantId, conversationId, channelType, direction,
   };
 }
 
+/**
+ * Agenda o backfill de mídia legada FORA do hot path de leitura.
+ *
+ * Fire-and-forget intencional:
+ * - a listagem retorna imediatamente com os dados persistidos;
+ * - mensagens WhatsApp sem mediaUrl são backfilled em background (a account é
+ *   resolvida uma única vez por lote, não por mensagem);
+ * - erros são logados (best-effort) e nunca viram unhandledRejection;
+ * - sem intervals/timers: não segura o event loop em shutdown.
+ */
+function scheduleMediaBackfill({ tenantId, rows }) {
+  const candidates = (rows || []).filter((row) => {
+    if (!row) return false;
+    if (safeToString(row.channel_type, '').trim().toLowerCase() !== 'whatsapp') return false;
+    const body = row.body && typeof row.body === 'object' ? row.body : {};
+    return safeToString(body.mediaUrl || body.url || '').trim() === '';
+  });
+  if (candidates.length === 0) return;
+
+  setImmediate(() => {
+    (async () => {
+      let account = null;
+      let accountResolved = false;
+      for (const row of candidates) {
+        if (!accountResolved) {
+          account = await resolveWhatsAppAccountForBackfill(tenantId);
+          accountResolved = true;
+        }
+        if (!account) return;
+        // eslint-disable-next-line no-await-in-loop
+        await backfillPersistedMessageMedia({ tenantId, messageRow: row, account });
+      }
+    })().catch((err) => {
+      logger.warn('[channelConversationService] Backfill de mídia em background falhou (best-effort)', {
+        tenantId,
+        error: safeToString(err && err.message),
+      });
+    });
+  });
+}
+
 async function listConversationMessages({ tenantId, conversationId, limit = 200, offset = 0 } = {}) {
   if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
   if (!conversationId || typeof conversationId !== 'string') throw new Error('conversationId é obrigatório');
@@ -247,16 +289,7 @@ async function listConversationMessages({ tenantId, conversationId, limit = 200,
     offset: safeOffset,
   });
 
-  for (const row of rows) {
-    try {
-      await backfillPersistedMessageMedia({
-        tenantId,
-        messageRow: row,
-      });
-    } catch (_) {
-      // best-effort: não falhar a listagem por backfill de mídia legado.
-    }
-  }
+  scheduleMediaBackfill({ tenantId, rows });
 
   const items = rows.map(r => ({
     id: r.id,
@@ -272,9 +305,33 @@ async function listConversationMessages({ tenantId, conversationId, limit = 200,
   return { total: count, items };
 }
 
+/**
+ * Busca conversas por ids em UMA query (evita N+1 de getConversation por link
+ * em listCaseConversations). Retorna os objetos mapeados (mapConversationRow),
+ * sem garantia de ordem — o caller ordena conforme sua estrutura.
+ */
+async function listConversationsByIds({ tenantId, ids } = {}) {
+  if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
+  if (!dbAvailable()) return [];
+
+  const uniqueIds = Array.from(new Set((Array.isArray(ids) ? ids : []).map((id) => safeToString(id)).filter(Boolean)));
+  if (uniqueIds.length === 0) return [];
+
+  const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
+  const sequelize = ConversationModel.sequelize;
+  const Op = sequelize.constructor.Op;
+
+  const rows = await ConversationModel.findAll({
+    where: { tenant_key: tenantId, id: { [Op.in]: uniqueIds } },
+  });
+
+  return rows.map(mapConversationRow).filter(Boolean);
+}
+
 module.exports = {
   listConversations,
   listConversationMessages,
+  listConversationsByIds,
   getConversation,
   updateConversation,
   createMessage,

@@ -30,12 +30,12 @@ function getTicket(ticketId, { tickets }) {
   return tickets.get(ticketId) || null;
 }
 
-function getTicketBySession(sessionId, tenantId, { tickets, findActiveTicketBySession }) {
-  return findActiveTicketBySession({ tickets, sessionId, tenantId });
+function getTicketBySession(sessionId, tenantId, { tickets, findActiveTicketBySession, lookupIndex = null }) {
+  return findActiveTicketBySession({ tickets, sessionId, tenantId, lookupIndex });
 }
 
-function getTicketByConversationId(conversationId, tenantId, { tickets, findActiveTicketByConversation }) {
-  return findActiveTicketByConversation({ tickets, conversationId, tenantId });
+function getTicketByConversationId(conversationId, tenantId, { tickets, findActiveTicketByConversation, lookupIndex = null }) {
+  return findActiveTicketByConversation({ tickets, conversationId, tenantId, lookupIndex });
 }
 
 function getTicketMessages(ticketId, { tickets }) {

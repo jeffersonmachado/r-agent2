@@ -63,10 +63,12 @@ jest.mock('../../api/db/models', () => ({
 
 const mockGetConversation = jest.fn();
 const mockUpdateConversation = jest.fn();
+const mockListConversationsByIds = jest.fn();
 
 jest.mock('../../api/services/channelConversationService', () => ({
   getConversation: (...args) => mockGetConversation(...args),
   updateConversation: (...args) => mockUpdateConversation(...args),
+  listConversationsByIds: (...args) => mockListConversationsByIds(...args),
 }));
 
 const mockCreateTicket = jest.fn();
@@ -111,6 +113,11 @@ describe('caseService', () => {
       mockState.conversations.set(key, updated);
       return updated;
     });
+    mockListConversationsByIds.mockImplementation(async ({ tenantId, ids }) => (
+      (ids || [])
+        .map((id) => mockState.conversations.get(`${tenantId}:${id}`))
+        .filter(Boolean)
+    ));
     mockCreateTicket.mockImplementation(({ tenantId, queue, context }) => {
       const id = `${queue}-1`;
       const row = mockTicketRow({
@@ -220,6 +227,51 @@ describe('caseService', () => {
 
     const conversations = await caseService.listCaseConversations({ tenantKey: 'tenant-1', caseId: 'cases-1' });
     expect(conversations.map((c) => c.id).sort()).toEqual(['conv-1', 'conv-2']);
+  });
+
+  test('listCaseConversations faz 1 query em lote (sem N+1 por link) e preserva ordem dos links', async () => {
+    mockState.tickets.set('cases-1', mockTicketRow({
+      id: 'cases-1',
+      tenant_key: 'tenant-1',
+      queue: 'cases',
+      status: 'waiting',
+      context: {},
+    }));
+    seedConversation({ id: 'conv-1', tenantId: 'tenant-1' });
+    seedConversation({ id: 'conv-2', tenantId: 'tenant-1', channelType: 'instagram', externalId: 'user2' });
+    await caseService.linkConversationToCase({ tenantKey: 'tenant-1', caseId: 'cases-1', conversationId: 'conv-1' });
+    await caseService.linkConversationToCase({ tenantKey: 'tenant-1', caseId: 'cases-1', conversationId: 'conv-2' });
+
+    mockGetConversation.mockClear();
+    mockListConversationsByIds.mockClear();
+
+    const conversations = await caseService.listCaseConversations({ tenantKey: 'tenant-1', caseId: 'cases-1' });
+
+    expect(conversations.map((c) => c.id)).toEqual(['conv-1', 'conv-2']);
+    expect(mockListConversationsByIds).toHaveBeenCalledTimes(1);
+    expect(mockListConversationsByIds).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      ids: ['conv-1', 'conv-2'],
+    });
+    // N+1 eliminado: nenhum findOne por link.
+    expect(mockGetConversation).not.toHaveBeenCalled();
+  });
+
+  test('listCaseConversations ignora falha da leitura em lote (sem derrubar a listagem)', async () => {
+    mockState.tickets.set('cases-1', mockTicketRow({
+      id: 'cases-1',
+      tenant_key: 'tenant-1',
+      queue: 'cases',
+      status: 'waiting',
+      context: {},
+    }));
+    seedConversation({ id: 'conv-1', tenantId: 'tenant-1' });
+    await caseService.linkConversationToCase({ tenantKey: 'tenant-1', caseId: 'cases-1', conversationId: 'conv-1' });
+
+    mockListConversationsByIds.mockRejectedValueOnce(new Error('db down'));
+
+    const conversations = await caseService.listCaseConversations({ tenantKey: 'tenant-1', caseId: 'cases-1' });
+    expect(conversations).toEqual([]);
   });
 
   test('linkConversationToCase é idempotente', async () => {

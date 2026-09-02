@@ -1,6 +1,6 @@
 'use strict';
 
-function cleanupOldTickets({ tickets, maxAgeDays = 7, onDeleteTicket }) {
+function cleanupOldTickets({ tickets, maxAgeDays = 7, onDeleteTicket, lookupIndex = null, unindexTicket = null }) {
   const now = Date.now();
   const maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
   let cleaned = 0;
@@ -11,6 +11,9 @@ function cleanupOldTickets({ tickets, maxAgeDays = 7, onDeleteTicket }) {
     if (ticketAge <= maxAge) continue;
 
     tickets.delete(ticketId);
+    if (typeof unindexTicket === 'function' && lookupIndex) {
+      unindexTicket(lookupIndex, ticketId);
+    }
     if (typeof onDeleteTicket === 'function') {
       onDeleteTicket(ticketId);
     }

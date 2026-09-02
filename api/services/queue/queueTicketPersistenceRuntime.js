@@ -81,7 +81,7 @@ function deleteTicketBestEffort(ticketId) {
 // Alinhado ao auto-cleanup de tickets fechados (ticketMaxAgeDays = 7, queueTicketRetention).
 const BOOT_CLOSED_TICKET_MAX_AGE_DAYS = 7;
 
-async function initializeRuntimeCache({ tickets, queues, fromDbRow, addTicketToQueueIndex }) {
+async function initializeRuntimeCache({ tickets, queues, fromDbRow, addTicketToQueueIndex, lookupIndex = null, indexTicket = null, clearTicketLookupIndex = null }) {
   if (!dbAvailable()) return;
   try {
     const TicketModel = typeof TicketGetter === 'function' ? TicketGetter() : TicketGetter;
@@ -103,10 +103,16 @@ async function initializeRuntimeCache({ tickets, queues, fromDbRow, addTicketToQ
 
     tickets.clear();
     queues.clear();
+    if (typeof clearTicketLookupIndex === 'function' && lookupIndex) {
+      clearTicketLookupIndex(lookupIndex);
+    }
 
     for (const row of rows) {
       const ticket = fromDbRow(row);
       tickets.set(ticket.id, ticket);
+      if (typeof indexTicket === 'function' && lookupIndex) {
+        indexTicket(lookupIndex, ticket);
+      }
       addTicketToQueueIndex({ queues, queueName: ticket.queue, ticketId: ticket.id });
     }
 
