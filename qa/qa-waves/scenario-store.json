@@ -43355,7 +43355,35 @@
       ],
       "trainingObjectives": [
         "Validar cases"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "cases",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_cases_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar cases",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.741Z",
+      "updatedAt": "2026-09-02T03:45:58.741Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-cases",
@@ -43404,7 +43432,36 @@
       ],
       "trainingObjectives": [
         "Validar capability Cases"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "cases",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_cases_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Cases",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.742Z",
+      "updatedAt": "2026-09-02T03:45:58.742Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-order_management",
@@ -43453,7 +43510,44 @@
       ],
       "trainingObjectives": [
         "Validar capability Order Management"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_encomenda_flow",
+      "journeySteps": [
+        "descoberta",
+        "pedido_encomenda",
+        "confirmacao_pagamento",
+        "producao",
+        "pronto_retirada",
+        "entrega",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_order_management_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Order Management",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.742Z",
+      "updatedAt": "2026-09-02T03:45:58.742Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-production_tracking",
@@ -43502,7 +43596,44 @@
       ],
       "trainingObjectives": [
         "Validar capability Production Tracking"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_encomenda_flow",
+      "journeySteps": [
+        "descoberta",
+        "pedido_encomenda",
+        "confirmacao_pagamento",
+        "producao",
+        "pronto_retirada",
+        "entrega",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_production_tracking_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Production Tracking",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.743Z",
+      "updatedAt": "2026-09-02T03:45:58.743Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-retention",
@@ -43551,7 +43682,44 @@
       ],
       "trainingObjectives": [
         "Validar capability Retention"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_encomenda_flow",
+      "journeySteps": [
+        "descoberta",
+        "pedido_encomenda",
+        "confirmacao_pagamento",
+        "producao",
+        "pronto_retirada",
+        "entrega",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_retention_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Retention",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.743Z",
+      "updatedAt": "2026-09-02T03:45:58.743Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-bakery_balcao_retirada",
@@ -43611,7 +43779,43 @@
         "Validar payment",
         "Validar production tracking",
         "Validar notifications"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_balcao_retirada",
+      "journeySteps": [
+        "descoberta",
+        "pedido_balcao",
+        "pagamento",
+        "producao",
+        "chamada_cliente",
+        "retirada",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_bakery_balcao_retirada_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar bakery_balcao_retirada",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.743Z",
+      "updatedAt": "2026-09-02T03:45:58.743Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-bakery_producao_fornada",
@@ -43668,7 +43872,41 @@
         "Validar capacity management",
         "Validar production tracking",
         "Validar notifications"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_producao_fornada",
+      "journeySteps": [
+        "planejamento_fornada",
+        "janela_pico",
+        "producao",
+        "disponibilidade_forno",
+        "ajuste_capacidade"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_bakery_producao_fornada_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar bakery_producao_fornada",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.744Z",
+      "updatedAt": "2026-09-02T03:45:58.744Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-production_planning",
@@ -43717,7 +43955,42 @@
       ],
       "trainingObjectives": [
         "Validar capability Production Planning"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_producao_fornada",
+      "journeySteps": [
+        "planejamento_fornada",
+        "janela_pico",
+        "producao",
+        "disponibilidade_forno",
+        "ajuste_capacidade"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_production_planning_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Production Planning",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.744Z",
+      "updatedAt": "2026-09-02T03:45:58.744Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-capacity_management",
@@ -43766,7 +44039,42 @@
       ],
       "trainingObjectives": [
         "Validar capability Capacity Management"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_producao_fornada",
+      "journeySteps": [
+        "planejamento_fornada",
+        "janela_pico",
+        "producao",
+        "disponibilidade_forno",
+        "ajuste_capacidade"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_capacity_management_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Capacity Management",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.744Z",
+      "updatedAt": "2026-09-02T03:45:58.744Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-bakery_estoque_perdas",
@@ -43823,7 +44131,41 @@
         "Validar stock alerts",
         "Validar loss tracking",
         "Validar crm updates"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_estoque_perdas",
+      "journeySteps": [
+        "monitoramento_estoque",
+        "alerta_nivel_baixo",
+        "reposicao",
+        "registro_perda",
+        "analise_giro"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_bakery_estoque_perdas_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar bakery_estoque_perdas",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.745Z",
+      "updatedAt": "2026-09-02T03:45:58.745Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-inventory_monitoring",
@@ -43872,7 +44214,42 @@
       ],
       "trainingObjectives": [
         "Validar capability Inventory Monitoring"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_estoque_perdas",
+      "journeySteps": [
+        "monitoramento_estoque",
+        "alerta_nivel_baixo",
+        "reposicao",
+        "registro_perda",
+        "analise_giro"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_inventory_monitoring_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Inventory Monitoring",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.745Z",
+      "updatedAt": "2026-09-02T03:45:58.745Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-stock_alerts",
@@ -43921,7 +44298,42 @@
       ],
       "trainingObjectives": [
         "Validar capability Stock Alerts"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_estoque_perdas",
+      "journeySteps": [
+        "monitoramento_estoque",
+        "alerta_nivel_baixo",
+        "reposicao",
+        "registro_perda",
+        "analise_giro"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_stock_alerts_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Stock Alerts",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.745Z",
+      "updatedAt": "2026-09-02T03:45:58.745Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-loss_tracking",
@@ -43970,7 +44382,42 @@
       ],
       "trainingObjectives": [
         "Validar capability Loss Tracking"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_estoque_perdas",
+      "journeySteps": [
+        "monitoramento_estoque",
+        "alerta_nivel_baixo",
+        "reposicao",
+        "registro_perda",
+        "analise_giro"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_loss_tracking_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Loss Tracking",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.746Z",
+      "updatedAt": "2026-09-02T03:45:58.746Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-bakery_reativacao_cliente",
@@ -44030,7 +44477,42 @@
         "Validar campaign management",
         "Validar crm updates",
         "Validar retention"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_reativacao_cliente",
+      "journeySteps": [
+        "deteccao_inatividade",
+        "elegibilidade_reativacao",
+        "campanha_rapida",
+        "resposta_campanha",
+        "conversao",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_e2e_bakery_reativacao_cliente_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar bakery_reativacao_cliente",
+          "expected": {
+            "ok": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.746Z",
+      "updatedAt": "2026-09-02T03:45:58.746Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "cap-campaign_management",
@@ -44079,7 +44561,43 @@
       ],
       "trainingObjectives": [
         "Validar capability Campaign Management"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_reativacao_cliente",
+      "journeySteps": [
+        "deteccao_inatividade",
+        "elegibilidade_reativacao",
+        "campanha_rapida",
+        "resposta_campanha",
+        "conversao",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_cap_campaign_management_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Validar capability Campaign Management",
+          "expected": {
+            "capabilityValid": true,
+            "status": "operational"
+          },
+          "timeoutMs": 15000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.746Z",
+      "updatedAt": "2026-09-02T03:45:58.746Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "business-e2e-bakery_encomenda_flow",
@@ -44221,7 +44739,123 @@
         "Pagamento confirmado antes da produção",
         "Cliente notificado quando encomenda ficou pronta",
         "Entrega confirmada após retirada"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_encomenda_flow",
+      "journeySteps": [
+        "descoberta",
+        "pedido_encomenda",
+        "confirmacao_pagamento",
+        "producao",
+        "pronto_retirada",
+        "entrega",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_bakery_encomenda_flow_001",
+          "order": 1,
+          "type": "send_message",
+          "category": "CLIENT_ACTION",
+          "adapter": "api",
+          "description": "Cliente envia mensagem \"Quero encomendar um bolo para sábado\"",
+          "expected": {
+            "messageReceived": true,
+            "intentDetected": "order_request"
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_002",
+          "order": 2,
+          "type": "validate_intent",
+          "category": "AI_DECISION",
+          "adapter": "api",
+          "description": "IA classifica intenção como encomenda e registra o pedido",
+          "expected": {
+            "orderCreated": true,
+            "orderStatus": "created"
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_003",
+          "order": 3,
+          "type": "send_message",
+          "category": "HUMAN_ACTION",
+          "adapter": "api",
+          "description": "Atendente confirma valor, sabor e data de retirada",
+          "expected": {
+            "replySent": true,
+            "orderConfirmed": true,
+            "paymentLinkSent": true
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_004",
+          "order": 4,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Pagamento confirmado e encomenda entra na produção",
+          "expected": {
+            "paymentConfirmed": true,
+            "orderStatus": "preparing"
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_005",
+          "order": 5,
+          "type": "wait_for_event",
+          "category": "SYSTEM_EVENT",
+          "adapter": "api",
+          "description": "Sistema notifica cliente quando a encomenda fica pronta",
+          "expected": {
+            "customerNotified": true,
+            "orderStatus": "ready"
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_006",
+          "order": 6,
+          "type": "send_message",
+          "category": "CLIENT_ACTION",
+          "adapter": "api",
+          "description": "Cliente confirma retirada da encomenda",
+          "expected": {
+            "messageReceived": true,
+            "pickupConfirmed": true
+          },
+          "timeoutMs": 20000
+        },
+        {
+          "id": "step_bakery_encomenda_flow_007",
+          "order": 7,
+          "type": "validate_flow_transition",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Encomenda é marcada como entregue após a retirada",
+          "expected": {
+            "orderStatus": "delivered",
+            "fulfillmentOk": true
+          },
+          "timeoutMs": 20000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.747Z",
+      "updatedAt": "2026-09-02T03:45:58.747Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_encomenda_flow-order_service_available",
@@ -44263,7 +44897,44 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Order Service Available"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_encomenda_flow",
+      "journeySteps": [
+        "descoberta",
+        "pedido_encomenda",
+        "confirmacao_pagamento",
+        "producao",
+        "pronto_retirada",
+        "entrega",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.747Z",
+      "updatedAt": "2026-09-02T03:45:58.747Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_encomenda_flow-payment_gateway_available",
@@ -44305,7 +44976,44 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_encomenda_flow",
+      "journeySteps": [
+        "descoberta",
+        "pedido_encomenda",
+        "confirmacao_pagamento",
+        "producao",
+        "pronto_retirada",
+        "entrega",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.748Z",
+      "updatedAt": "2026-09-02T03:45:58.748Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_encomenda_flow-storefront_channel_active",
@@ -44347,7 +45055,44 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Storefront Channel Active"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_encomenda_flow",
+      "journeySteps": [
+        "descoberta",
+        "pedido_encomenda",
+        "confirmacao_pagamento",
+        "producao",
+        "pronto_retirada",
+        "entrega",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_storefront_channel_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Storefront Channel Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.748Z",
+      "updatedAt": "2026-09-02T03:45:58.748Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_balcao_retirada-order_service_available",
@@ -44389,7 +45134,44 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Order Service Available"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_balcao_retirada",
+      "journeySteps": [
+        "descoberta",
+        "pedido_balcao",
+        "pagamento",
+        "producao",
+        "chamada_cliente",
+        "retirada",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.748Z",
+      "updatedAt": "2026-09-02T03:45:58.748Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_balcao_retirada-payment_gateway_available",
@@ -44431,7 +45213,44 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Payment Gateway Available"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_balcao_retirada",
+      "journeySteps": [
+        "descoberta",
+        "pedido_balcao",
+        "pagamento",
+        "producao",
+        "chamada_cliente",
+        "retirada",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.749Z",
+      "updatedAt": "2026-09-02T03:45:58.749Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_producao_fornada-order_service_available",
@@ -44473,7 +45292,42 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Order Service Available"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_producao_fornada",
+      "journeySteps": [
+        "planejamento_fornada",
+        "janela_pico",
+        "producao",
+        "disponibilidade_forno",
+        "ajuste_capacidade"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_order_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Order Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.749Z",
+      "updatedAt": "2026-09-02T03:45:58.749Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_estoque_perdas-inventory_service_available",
@@ -44515,7 +45369,42 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Inventory Service Available"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_estoque_perdas",
+      "journeySteps": [
+        "monitoramento_estoque",
+        "alerta_nivel_baixo",
+        "reposicao",
+        "registro_perda",
+        "analise_giro"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_inventory_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Inventory Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.750Z",
+      "updatedAt": "2026-09-02T03:45:58.750Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_reativacao_cliente-crm_service_available",
@@ -44557,7 +45446,43 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Crm Service Available"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_reativacao_cliente",
+      "journeySteps": [
+        "deteccao_inatividade",
+        "elegibilidade_reativacao",
+        "campanha_rapida",
+        "resposta_campanha",
+        "conversao",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_crm_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Crm Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.750Z",
+      "updatedAt": "2026-09-02T03:45:58.750Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     },
     {
       "id": "precond-bakery_reativacao_cliente-campaign_service_available",
@@ -44599,7 +45524,132 @@
       "trainingPrerequisites": [],
       "trainingObjectives": [
         "Validar precondição Campaign Service Available"
-      ]
+      ],
+      "tenantId": "system",
+      "journeyId": "bakery_reativacao_cliente",
+      "journeySteps": [
+        "deteccao_inatividade",
+        "elegibilidade_reativacao",
+        "campanha_rapida",
+        "resposta_campanha",
+        "conversao",
+        "retencao"
+      ],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_precond_campaign_service_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Campaign Service Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "seeds": [],
+      "validators": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.750Z",
+      "updatedAt": "2026-09-02T03:45:58.750Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
+    },
+    {
+      "id": "agent-validation-qa-agent-20260902034558",
+      "waveId": "agent-os-qa-agent-20260902034558",
+      "vertical": "agent-os",
+      "journeyId": "agent-validation-qa-agent-20260902034558",
+      "name": "Agent Validation: QA Factory Agent 20260902034558",
+      "description": "Validação automatizada do agente qa-agent-20260902034558",
+      "source": "agent-factory",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "risk": "medium",
+      "priority": "high",
+      "validators": [
+        {
+          "id": "capabilities_valid",
+          "type": "capability",
+          "expected": "all_present"
+        },
+        {
+          "id": "tools_configured",
+          "type": "tool",
+          "expected": "configured"
+        },
+        {
+          "id": "permissions_verified",
+          "type": "permission",
+          "expected": "granted"
+        }
+      ],
+      "steps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "validations": {
+        "requireReplay": true,
+        "slaMs": 30000
+      },
+      "tenantId": "system",
+      "journey": "agent-validation-qa-agent-20260902034558",
+      "journeySteps": [],
+      "journeySource": "manual",
+      "baseTemplateId": "customer_lifecycle_v1",
+      "platformScenarioIds": [],
+      "semanticSteps": [
+        {
+          "id": "step_001",
+          "order": 1,
+          "type": "validate_capabilities",
+          "enabled": true
+        },
+        {
+          "id": "step_002",
+          "order": 2,
+          "type": "validate_tools",
+          "enabled": true
+        },
+        {
+          "id": "step_003",
+          "order": 3,
+          "type": "validate_permissions",
+          "enabled": true
+        }
+      ],
+      "seeds": [],
+      "executionStatus": "queued",
+      "createdAt": "2026-09-02T03:45:58.751Z",
+      "updatedAt": "2026-09-02T03:45:58.751Z",
+      "platform": {
+        "platformScenarioIds": []
+      }
     }
   ],
   "history": {
@@ -49507,7 +50557,17 @@
           "scenario upserted"
         ]
       }
+    ],
+    "system::agent-validation-qa-agent-20260902034558": [
+      {
+        "version": "v1",
+        "changedBy": "system",
+        "changedAt": "2026-09-02T03:45:58.751Z",
+        "changes": [
+          "scenario upserted"
+        ]
+      }
     ]
   },
-  "updatedAt": "2026-09-01T21:50:49.009Z"
+  "updatedAt": "2026-09-02T03:45:58.892Z"
 }

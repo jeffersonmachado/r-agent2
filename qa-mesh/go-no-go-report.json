@@ -1,33 +1,33 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-01T20-18-39-989Z",
+  "executionId": "mesh-2026-09-02T03-37-01-227Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "GO",
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-01T20-18-39-989Z",
-    "startedAt": "2026-09-01T20:18:39.989Z",
+    "executionId": "mesh-2026-09-02T03-37-01-227Z",
+    "startedAt": "2026-09-02T03:37:01.227Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-01T22:51:25.254Z",
-    "registryTotal": 132,
+    "promotedAt": "2026-09-02T04:47:13.052Z",
+    "registryTotal": 136,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-09-01T20-18-39-989Z",
+    "executionId": "mesh-2026-09-02T03-37-01-227Z",
     "tenantId": "system",
-    "timestamp": "2026-09-01T20:18:39.989Z",
+    "timestamp": "2026-09-02T03:37:01.227Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 132,
-    "attempted": 132,
-    "executed": 132,
-    "total": 132,
-    "passed": 132,
+    "registryTotal": 136,
+    "attempted": 136,
+    "executed": 136,
+    "total": 136,
+    "passed": 136,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
@@ -55,6 +55,16 @@
         "environment_missing": 0,
         "flaky": 0,
         "total": 12
+      },
+      "bakery": {
+        "passed": 4,
+        "fallbackPassed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "infra_error": 0,
+        "environment_missing": 0,
+        "flaky": 0,
+        "total": 4
       },
       "clinic": {
         "passed": 2,
@@ -167,6 +177,12 @@
         "byType": {},
         "successRate": 1
       },
+      "bakery": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "clinic": {
         "total": 0,
         "blocking": 0,
@@ -233,19 +249,15 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-01T20-18-39-989Z",
-      "startedAt": "2026-09-01T20:18:39.989Z",
+      "executionId": "mesh-2026-09-02T03-37-01-227Z",
+      "startedAt": "2026-09-02T03:37:01.227Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-01T22:51:25.254Z",
-      "registryTotal": 132,
+      "promotedAt": "2026-09-02T04:47:13.052Z",
+      "registryTotal": 136,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "generatedAt": "2026-09-01T22:51:25.255Z",
-  "runId": "rap-governed-20260901190048981-4278fc93",
-  "sourceFingerprint": "60bee8e3ef73e9a1774c59aaa9d1a419efba6438466673908a4d67ed5d85c440",
-  "artifactType": "go-no-go-report",
-  "artifactVersion": "1.0.0"
+  "generatedAt": "2026-09-02T04:47:13.052Z"
 }
