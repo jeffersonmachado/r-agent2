@@ -17,6 +17,12 @@ const { generateStabilitySnapshot } = require('../qa/mesh/intelligence/stability
 const { persistStabilitySnapshot } = require('../qa/mesh/intelligence/stabilityHistory');
 const { runLearningPipeline } = require('../qa/mesh/intelligence/learning');
 const { loadBlockingJourneyEvidence } = require('./blockingJourneyEvidence');
+const {
+  isBusinessBatchEnabled,
+  planBusinessBatches,
+  executeBusinessBatches,
+  parseBusinessQaReportPathFromLogs,
+} = require('./businessBatchRunner');
 const { isBlockingJourney: isRegistryBlockingJourney } = require('../qa/contracts/journeyCriticality');
 const { belongsToTenant, normalizeTenantKey } = require('../lib/rpaSecurity');
 
@@ -1075,25 +1081,22 @@ function extractEvidenceHints(artifacts = []) {
   return hints.filter(Boolean);
 }
 
-function parseBusinessQaReportPathFromLogs(logs = []) {
-  for (const entry of logs) {
-    const line = compactText(entry?.message || entry);
-    if (!line) continue;
-    const match = line.match(/- json:\s*(\/\S+business-qa-[^\s]+\.json)/i);
-    if (match && match[1]) return match[1];
-  }
-  return null;
-}
-
 function extractBusinessQaHints(result) {
   const hints = [];
+  // parseBusinessQaReportPathFromLogs agora vive em businessBatchRunner.js
+  // (fonte única do regex — compartilhada com a fase de batch).
   const reportPath = parseBusinessQaReportPathFromLogs(result?.logs || []);
   if (!reportPath) return hints;
 
   const report = safeReadJson(reportPath, null);
   if (!report || !Array.isArray(report.scenarios)) return hints;
 
-  const failedScenarios = report.scenarios.filter((item) => item && item.status === 'FAIL');
+  // Com batching (QA_MESH_BUSINESS_BATCH, default ON), UM relatório cobre N
+  // cenários: restringe os hints FAIL ao `scenarioCode` do cenário em questão,
+  // para que a falha de um código nunca contamine o diagnóstico dos demais.
+  const scenarioCode = result?.scenarioCode ? String(result.scenarioCode) : null;
+  const failedScenarios = report.scenarios.filter((item) => item && item.status === 'FAIL'
+    && (!scenarioCode || String(item.code) === scenarioCode));
   for (const scenario of failedScenarios) {
     const rootCause = compactText(scenario?.resumo?.causaRaiz);
     if (rootCause) hints.push(rootCause);
@@ -1179,6 +1182,22 @@ function detectFailureType(diagnostics = []) {
       failureType: 'hidden_element',
       status: 'hidden_element',
       rootCauseHint: 'Elemento alvo existe, mas ficou oculto/inacessível para clique no cenário.',
+    };
+  }
+  if (
+    text.includes('business_batch_missing_scenario') ||
+    text.includes('business_batch_crashed') ||
+    text.includes('business_batch_report_missing')
+  ) {
+    // Falha estrutural do batch business (cenário ausente no relatório ou
+    // processo/relatório íntegro indisponível): falha explícita, nunca
+    // reclassificada como environment_missing pelo token "missing" do erro.
+    // Assinaturas transitórias (socket/fetch) já foram tratadas pelo retry
+    // em modo single antes da classificação.
+    return {
+      failureType: 'functional_failure',
+      status: 'failed',
+      rootCauseHint: 'Execução em batch do business QA não produziu resultado íntegro para o cenário.',
     };
   }
   if (
@@ -1999,6 +2018,18 @@ async function executeScenarioWithFallback(scenario, context) {
     };
   }
 
+  // Batch business (QA_MESH_BUSINESS_BATCH, default ON): o resultado já foi
+  // produzido pela pré-execução (1 processo por modo) e é injetado aqui como
+  // adapterResult — a normalização operacional abaixo permanece intacta.
+  // take() CONSOME o resultado: o retry transitório re-executa o cenário
+  // isolado no modo single (--code=<CODE> original), não a saída do batch.
+  const batchedResult = context?.businessBatch && typeof context.businessBatch.take === 'function'
+    ? context.businessBatch.take(scenario.id)
+    : null;
+  if (batchedResult) {
+    return normalizeOperationalResult(batchedResult);
+  }
+
   try {
     const adapterResult = await adapter.executeScenario(scenario, {
       repoRoot: ROOT_DIR,
@@ -2132,10 +2163,36 @@ async function runMeshInner(options = {}, tenantId = 'system') {
     }
   };
 
+  // Pré-execução em batch dos cenários business (QA_MESH_BUSINESS_BATCH,
+  // default ON): agrupa os cenários business SELECIONADOS por modo
+  // (screens/flows/journeys) e executa UM processo por modo com
+  // `--code=A,B,C`. Os adapterResults são injetados no loop normal por
+  // cenário via businessBatch.take() — ver qa-mesh/businessBatchRunner.js.
+  let businessBatch = null;
+  if (isBusinessBatchEnabled(options)) {
+    const batchPlans = planBusinessBatches(scenarios);
+    if (batchPlans.length > 0) {
+      appendLog('BUSINESS_BATCH_START', 'info', {
+        batches: batchPlans.map((plan) => ({ mode: plan.mode, codes: plan.codes })),
+      });
+      businessBatch = await executeBusinessBatches(batchPlans, {
+        repoRoot: ROOT_DIR,
+        evidenceDir,
+        appendLog,
+      });
+    }
+  }
+
   for (const [index, scenario] of scenarios.entries()) {
     const scenarioMode = (options.scenarioModeById && options.scenarioModeById[scenario.id]) || null;
     const effectiveScenario = applyScenarioMode(scenario, scenarioMode);
-    const scenarioStartedAt = nowIso();
+    // Cenários em batch executaram na pré-execução: usa a janela real do
+    // processo do batch como startedAt/finishedAt (peek não consome).
+    const batchPeek = businessBatch && typeof businessBatch.peek === 'function'
+      ? businessBatch.peek(effectiveScenario.id)
+      : null;
+    const loopStartedAt = nowIso();
+    const scenarioStartedAt = batchPeek?.startedAt || loopStartedAt;
     console.log('EXECUTING_SCENARIO', effectiveScenario.id);
     appendLog('EXECUTING_SCENARIO', 'info', { scenarioId: effectiveScenario.id, index: index + 1, total: registryTotal, mode: effectiveScenario.runtimeMode || 'default' });
     options.onScenarioStart?.({
@@ -2147,6 +2204,7 @@ async function runMeshInner(options = {}, tenantId = 'system') {
     let adapterResult = await executeScenarioWithFallback(effectiveScenario, {
       executionMode: options.executionMode || options.operationalMode || 'operational_go',
       appendLog,
+      businessBatch,
       onStepProgress: options.onStepProgress
         ? (meta) => options.onStepProgress({ ...meta, scenarioId: effectiveScenario.id })
         : null,
@@ -2171,6 +2229,9 @@ async function runMeshInner(options = {}, tenantId = 'system') {
         const retryResult = await executeScenarioWithFallback(effectiveScenario, {
           executionMode: options.executionMode || options.operationalMode || 'operational_go',
           appendLog,
+          // businessBatch.take() já consumiu o resultado do batch na primeira
+          // tentativa — o retry cai no spawn isolado do cenário (modo single).
+          businessBatch,
           onStepProgress: options.onStepProgress
             ? (meta) => options.onStepProgress({ ...meta, scenarioId: effectiveScenario.id })
             : null,
@@ -2192,7 +2253,10 @@ async function runMeshInner(options = {}, tenantId = 'system') {
         appendLog('TRANSIENT_ENV_RETRY_ABORTED', 'error', { scenarioId: effectiveScenario.id, message: retryError.message });
       }
     }
-    const scenarioFinishedAt = nowIso();
+    // Timestamps do batch só se aplicam quando o resultado FINAL veio do
+    // batch; após retry em modo single vale o relógio atual.
+    const resultCameFromBatch = Boolean(adapterResult?.businessBatch);
+    const scenarioFinishedAt = resultCameFromBatch ? (batchPeek?.finishedAt || nowIso()) : nowIso();
     const result = {
       id: effectiveScenario.id,
       domain: effectiveScenario.domain,
@@ -2200,10 +2264,13 @@ async function runMeshInner(options = {}, tenantId = 'system') {
       source: effectiveScenario.source,
       flow: effectiveScenario.flow,
       journeyId: effectiveScenario.journeyId || effectiveScenario.journey || null,
+      // scenarioCode business: filtra os hints do relatório do batch por código
+      // (extractBusinessQaHints) para que falhas não vazem entre cenários.
+      scenarioCode: effectiveScenario.scenarioCode || null,
       criticality: effectiveScenario.criticality,
       adapter: effectiveScenario.adapter,
       status: adapterResult.status,
-      startedAt: scenarioStartedAt,
+      startedAt: resultCameFromBatch ? scenarioStartedAt : loopStartedAt,
       finishedAt: scenarioFinishedAt,
       logs: adapterResult.logs || [],
       metrics: adapterResult.metrics || {},

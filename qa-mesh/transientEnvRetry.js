@@ -31,8 +31,11 @@ const TRANSIENT_ENV_PATTERNS = [
  * stdout do adapter de negócio (subprocesso). Espelha a extração que o
  * meshRunner faz em collectScenarioDiagnostics — sem ela, falhas como
  * "fetch failed (UND_ERR_SOCKET)" do business-b1 não eram vistas pelo retry.
+ * Com batching (QA_MESH_BUSINESS_BATCH), o relatório cobre N cenários:
+ * `scenarioCode` restringe os hints à entrada do próprio cenário, para que a
+ * falha de um código não dispare retry indevido nos demais.
  */
-function extractBusinessQaReportHints(logs) {
+function extractBusinessQaReportHints(logs, scenarioCode = null) {
   const fs = require('fs');
   const hints = [];
   let reportPath = null;
@@ -54,6 +57,7 @@ function extractBusinessQaReportHints(logs) {
   if (!report || !Array.isArray(report.scenarios)) return hints;
   for (const scenario of report.scenarios) {
     if (!scenario || scenario.status !== 'FAIL') continue;
+    if (scenarioCode && String(scenario.code) !== String(scenarioCode)) continue;
     const rootCause = String(scenario?.resumo?.causaRaiz || '').trim();
     if (rootCause) hints.push(rootCause);
     const failedStep = Array.isArray(scenario.etapas)
@@ -82,7 +86,10 @@ function isTransientEnvFailure(adapterResult) {
   for (const log of adapterResult.logs || []) {
     if (log) haystacks.push(String(log.message || ''));
   }
-  for (const hint of extractBusinessQaReportHints(adapterResult.logs || [])) {
+  for (const hint of extractBusinessQaReportHints(
+    adapterResult.logs || [],
+    adapterResult.businessBatch?.code || null,
+  )) {
     haystacks.push(hint);
   }
   if (adapterResult.errorMessage) haystacks.push(String(adapterResult.errorMessage));
