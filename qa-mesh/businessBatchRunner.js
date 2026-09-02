@@ -143,6 +143,15 @@ function planBusinessBatches(scenarios = []) {
 }
 
 /**
+ * Código do cenário numa entrada do relatório business-qa.
+ * O campo canônico do relatório é `codigo` (pt-BR, ver reporting.js:
+ * `codigo: definition.code`); `code` é aceito como fallback defensivo.
+ */
+function reportEntryCode(item) {
+  return item?.codigo || item?.code || null;
+}
+
+/**
  * Extrai os erros da entrada do PRÓPRIO cenário no relatório do batch
  * (causa raiz + primeiro detalhe de etapa FAIL). Nunca olha outras entradas.
  */
@@ -293,7 +302,7 @@ async function executeBusinessBatches(plans, context = {}) {
           ...processFailureDetails(processResult, processError),
         ];
       } else {
-        const entry = reportEntries.find((item) => item && String(item.code) === String(code));
+        const entry = reportEntries.find((item) => item && String(reportEntryCode(item)) === String(code));
         if (!entry) {
           // Relatório íntegro mas SEM a entrada do cenário: nunca skipped/passed.
           status = 'failed';

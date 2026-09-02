@@ -1095,8 +1095,9 @@ function extractBusinessQaHints(result) {
   // cenários: restringe os hints FAIL ao `scenarioCode` do cenário em questão,
   // para que a falha de um código nunca contamine o diagnóstico dos demais.
   const scenarioCode = result?.scenarioCode ? String(result.scenarioCode) : null;
+  // O campo canônico do relatório é `codigo` (pt-BR); `code` é fallback.
   const failedScenarios = report.scenarios.filter((item) => item && item.status === 'FAIL'
-    && (!scenarioCode || String(item.code) === scenarioCode));
+    && (!scenarioCode || String(item.codigo || item.code) === scenarioCode));
   for (const scenario of failedScenarios) {
     const rootCause = compactText(scenario?.resumo?.causaRaiz);
     if (rootCause) hints.push(rootCause);

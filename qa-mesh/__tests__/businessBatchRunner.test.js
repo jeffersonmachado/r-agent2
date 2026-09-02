@@ -50,8 +50,11 @@ function writeBatchReport(dir, name, scenarios) {
 }
 
 function reportEntry(code, status, causaRaiz = null) {
+  // Shape REAL do relatório business-qa (tests/rpa/business/reporting.js):
+  // o campo canônico é `codigo` (pt-BR), não `code`. Manter assim para o
+  // teste pegar regressões de atribuição code-vs-codigo.
   return {
-    code,
+    codigo: code,
     status,
     etapas: status === 'FAIL'
       ? [{ nome: 'flow-validation', status: 'FAIL', detalhe: `detalhe ${code}` }]

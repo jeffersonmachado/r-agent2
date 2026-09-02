@@ -57,7 +57,8 @@ function extractBusinessQaReportHints(logs, scenarioCode = null) {
   if (!report || !Array.isArray(report.scenarios)) return hints;
   for (const scenario of report.scenarios) {
     if (!scenario || scenario.status !== 'FAIL') continue;
-    if (scenarioCode && String(scenario.code) !== String(scenarioCode)) continue;
+    // Campo canônico do relatório: `codigo` (pt-BR); `code` é fallback.
+    if (scenarioCode && String(scenario.codigo || scenario.code) !== String(scenarioCode)) continue;
     const rootCause = String(scenario?.resumo?.causaRaiz || '').trim();
     if (rootCause) hints.push(rootCause);
     const failedStep = Array.isArray(scenario.etapas)
