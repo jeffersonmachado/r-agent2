@@ -8,7 +8,7 @@ const {
 
 describe('platform readiness replay coverage', () => {
   test('uses the declared required replay journeys as denominator', () => {
-    expect(REQUIRED_REPLAY_JOURNEYS).toHaveLength(7);
+    expect(REQUIRED_REPLAY_JOURNEYS).toHaveLength(8);
     expect(calculateReplayCoveragePercent(REQUIRED_REPLAY_JOURNEYS)).toBe(100);
   });
 
@@ -21,7 +21,7 @@ describe('platform readiness replay coverage', () => {
   });
 
   test('reports partial coverage against the same canonical set', () => {
-    expect(calculateReplayCoveragePercent(REQUIRED_REPLAY_JOURNEYS.slice(0, 2))).toBe(28.57);
+    expect(calculateReplayCoveragePercent(REQUIRED_REPLAY_JOURNEYS.slice(0, 2))).toBe(25);
   });
 });
 

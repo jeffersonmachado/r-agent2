@@ -78,7 +78,7 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(summary.linksSource).toMatch(/ausente\/inválido/);
   });
 
-  test('config real versionado produz os 90 links esperados contra o snapshot real (modo CI)', () => {
+  test('config real versionado produz os 93 links esperados contra o snapshot real (modo CI)', () => {
     // Reproduz exatamente o modo snapshot do CI: cenários do baseline
     // versionado, sem qa-mesh/meshRegistry.json. Antes da correção este
     // cenário rendia apenas 7 links (2 diretos) com os arquivos verticais
@@ -88,8 +88,8 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
       linksConfigPath: REAL_LINKS_CONFIG_PATH,
     });
 
-    expect(summary.total).toBe(90);
-    expect(summary.bySource['journey-coverage']).toBe(85);
+    expect(summary.total).toBe(93);
+    expect(summary.bySource['journey-coverage']).toBe(88);
     expect(summary.bySource['scenario-name']).toBe(5);
 
     // Links diretos críticos que sumiram no CI antes da correção:
@@ -108,6 +108,14 @@ describe('coverage-gate: fonte estável de ligação jornada ↔ cenário', () =
     expect(links.support_ticket_flow.scenarioIds).toContain('business-core-flow-support-ticket');
     expect(links.booking_flow.scenarioIds).toContain('business-core-flow-booking');
     expect(links.payment_charge_flow.scenarioIds).toContain('business-core-flow-payment-charge');
+
+    // Vertical bakery (fase 2): baseline regerado sobre a execução canônica
+    // do mesh (136 cenários, business-bakery-* 4/4 GO) — as jornadas bakery
+    // ligadas aos cenários executáveis do mesh, e `cases` ao cenário
+    // business-core-biz-cases que o baseline anterior não continha.
+    expect(links.bakery_encomenda_flow.scenarioIds).toContain('business-bakery-flow-encomenda');
+    expect(links.bakery_reativacao_cliente.scenarioIds).toContain('business-bakery-flow-campanha-combo');
+    expect(links.cases.scenarioIds).toContain('business-core-biz-cases');
 
     // Jornadas capability_* (core de sistema): ligadas aos cenários
     // business-core-cap-* executados no mesh.

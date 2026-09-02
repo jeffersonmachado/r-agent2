@@ -1340,6 +1340,104 @@ async function maybeCollectFoodApiFallbackSnapshot({
   });
 }
 
+function buildBakeryApiFallbackSnapshot({ baseSnapshot, order, eventLedgerItems, stepId }) {
+  const snapshot = clone(baseSnapshot || {});
+  const orderRecord = order || {};
+  const dbOrderBase = snapshot?.db?.order || {};
+  const apiOrdersBase = snapshot?.api?.orders || {};
+  const orderId = orderRecord.id || dbOrderBase.id || apiOrdersBase.orderId || null;
+  const status = orderRecord.status || dbOrderBase.status || apiOrdersBase.status || null;
+  const events = Array.isArray(eventLedgerItems) ? eventLedgerItems : [];
+
+  return {
+    ...snapshot,
+    state: status === 'confirmed' ? 'order_confirmed' : (snapshot?.state || null),
+    db: {
+      ...(snapshot?.db || {}),
+      order: {
+        ...dbOrderBase,
+        exists: Boolean(orderId),
+        id: orderId,
+        status,
+        count: orderId ? Math.max(Number(dbOrderBase.count || 0), 1) : Number(dbOrderBase.count || 0),
+      },
+    },
+    api: {
+      ...(snapshot?.api || {}),
+      orders: {
+        ...apiOrdersBase,
+        orderId,
+        status,
+      },
+    },
+    events: {
+      ...(snapshot?.events || {}),
+      order_status: {
+        ...((snapshot?.events || {}).order_status || {}),
+        count: events.length,
+        available: true,
+      },
+    },
+    metadata: {
+      ...(snapshot?.metadata || {}),
+      sources: {
+        ...((snapshot?.metadata || {}).sources || {}),
+        orders: true,
+        eventLedger: true,
+        api: true,
+      },
+      sourceErrors: Array.isArray(snapshot?.metadata?.sourceErrors)
+        ? snapshot.metadata.sourceErrors.filter(Boolean)
+        : [],
+      stepId,
+    },
+  };
+}
+
+async function maybeCollectBakeryApiFallbackSnapshot({
+  journeyId,
+  seedEvidence,
+  stepId,
+  snapshot,
+} = {}) {
+  if (journeyId !== 'bakery_encomenda_flow') return snapshot;
+  if (!seedEvidence?.page || !seedEvidence?.orderId) return snapshot;
+
+  const needsOperationalFallback = !snapshot?.db?.order?.exists
+    || !snapshot?.api?.orders?.orderId
+    || !snapshot?.db?.order?.status
+    || !snapshot?.api?.orders?.status
+    || !snapshot?.events?.order_status?.available
+    || (
+      stepId === 'step_update_bakery_order_status'
+      && Number(snapshot?.events?.order_status?.count || 0) === 0
+    );
+  if (!needsOperationalFallback) return snapshot;
+
+  const encodedOrderId = encodeURIComponent(seedEvidence.orderId);
+  const [orderResponse, eventLedgerResponse] = await Promise.all([
+    browserApiFetch(seedEvidence.page, `/orders/${encodedOrderId}`, { method: 'GET' }).catch(() => null),
+    browserApiFetch(
+      seedEvidence.page,
+      `/api/event-ledger?subjectType=order&subjectId=${encodedOrderId}&type=OrderStatusChanged&limit=20`,
+      { method: 'GET' },
+    ).catch(() => null),
+  ]);
+
+  const order = orderResponse?.body?.order || orderResponse?.body || null;
+  const eventLedgerItems = eventLedgerResponse?.body?.items
+    || eventLedgerResponse?.body?.events
+    || eventLedgerResponse?.body
+    || [];
+
+  return buildBakeryApiFallbackSnapshot({
+    baseSnapshot: snapshot,
+    order,
+    eventLedgerItems,
+    stepId,
+  });
+}
+
 function buildMarketApiFallbackSnapshot({ baseSnapshot, catalogItems, publishedItems, stepId, nodeId }) {
   const snapshot = clone(baseSnapshot || {});
   const catalog = Array.isArray(catalogItems) ? catalogItems : [];
@@ -1961,6 +2059,62 @@ async function seedFoodFlowReal(page, baseUrl, tenantName) {
   };
 }
 
+async function seedBakeryFlowReal(page, baseUrl, tenantName) {
+  await page.goto(`${baseUrl}/orders`, { waitUntil: 'domcontentloaded' });
+  await ensureAuthenticated(page, baseUrl);
+  await ensureTenantSelected(page, tenantName);
+
+  const browserContext = await getBrowserContext(page);
+  const suffix = String(Date.now());
+  const tokenResponse = await browserApiFetch(page, '/public-tokens', {
+    method: 'POST',
+    body: JSON.stringify({
+      kind: 'storefront',
+      meta: {
+        name: `QA Waves Bakery ${suffix}`,
+        description: 'Prod-like bakery seed token',
+      },
+      expiresInSec: 3600,
+    }),
+  });
+
+  if (!tokenResponse?.ok || !tokenResponse?.body?.token?.token) {
+    throw new Error(`bakery_public_token_create_failed:${tokenResponse?.status || 'unknown'}`);
+  }
+
+  const created = await browserApiFetch(page, `/storefront/orders?token=${encodeURIComponent(tokenResponse.body.token.token)}`, {
+    method: 'POST',
+    body: JSON.stringify({
+      customerName: 'QA Waves Bakery Customer',
+      customerPhone: `+5511988${suffix.slice(-6)}`,
+      items: [{
+        name: 'Bolo de encomenda QA',
+        qty: 1,
+        price: 89.9,
+        notes: 'bakery_encomenda_flow',
+      }],
+      notes: 'QA Waves prod-like bakery seed',
+      deliveryType: 'pickup',
+      idempotencyKey: `qa-waves-bakery-${suffix}`,
+    }),
+  });
+
+  const order = created?.body?.order || created?.body?.item || created?.body;
+  if (!created?.ok || !order?.id) {
+    throw new Error(`bakery_order_seed_failed:${created?.status || 'unknown'}`);
+  }
+
+  if (!order?.id) {
+    throw new Error('Smoke prod-like não recebeu orderId do fluxo bakery.');
+  }
+
+  return {
+    tenantId: browserContext.tenantId,
+    orderId: order.id,
+    status: 'ready',
+  };
+}
+
 async function seedPaymentFlowReal(page, baseUrl, tenantName) {
   await page.goto(`${baseUrl}/operations-dashboard`, { waitUntil: 'domcontentloaded' });
   await ensureAuthenticated(page, baseUrl);
@@ -2330,6 +2484,66 @@ function buildProdLikeFoodFlowSteps({ baseUrl, orderId, seedEvidence }) {
   ];
 }
 
+function buildProdLikeBakeryFlowSteps({ baseUrl, orderId, seedEvidence }) {
+  return [
+    {
+      id: 'step_access_bakery_orders_module',
+      actionType: 'navigate',
+      journeyId: 'bakery_encomenda_flow',
+      url: `${baseUrl}/orders`,
+      selectorUsed: 'main',
+      async execute(page) {
+        await page.goto(`${baseUrl}/orders`, { waitUntil: 'domcontentloaded' });
+        await ensureTenantSelected(page);
+        await page.waitForLoadState('networkidle').catch(() => {});
+      },
+    },
+    (() => {
+      const step = {
+      id: 'step_update_bakery_order_status',
+      actionType: 'update_order_status',
+      journeyId: 'bakery_encomenda_flow',
+      mutationExpected: true,
+      selectorUsed: 'order-status-fetch',
+      url: `${baseUrl}/orders`,
+      async execute(page) {
+        const updated = await browserApiFetch(page, `/orders/${encodeURIComponent(orderId)}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'confirmed' }),
+        });
+        if (!updated.ok) {
+          throw new Error(`bakery_order_status_update_failed:${updated.status}`);
+        }
+        step.networkEvents = buildSyntheticNetworkEvents(updated.meta);
+        const order = updated.body?.order || updated.body?.item || updated.body;
+        if (!order?.id) {
+          throw new Error('bakery_order_status_missing_order');
+        }
+        seedEvidence.orderId = order.id;
+      },
+      };
+      return step;
+    })(),
+    {
+      id: 'step_assert_bakery_order_backend',
+      actionType: 'assert_backend_state',
+      journeyId: 'bakery_encomenda_flow',
+      selectorUsed: 'order-detail-fetch',
+      url: `${baseUrl}/orders`,
+      async execute(page) {
+        if (!seedEvidence.orderId) {
+          throw Object.assign(new Error('bakery_order_missing_id_after_status_update'), { blockingAssertion: true });
+        }
+        const detail = await browserApiFetch(page, `/orders/${encodeURIComponent(seedEvidence.orderId)}`, { method: 'GET' });
+        const order = detail.body?.order || detail.body?.item || detail.body;
+        if (!detail.ok || !order || String(order.status || '').toLowerCase() !== 'confirmed') {
+          throw Object.assign(new Error('bakery_order_backend_state_not_available'), { blockingAssertion: true });
+        }
+      },
+    },
+  ];
+}
+
 function buildProdLikeMarketFlowSteps({ baseUrl, seedEvidence }) {
   return [
     {
@@ -2646,6 +2860,12 @@ async function collectSnapshotForStep(journeyId, seedEvidence, phase, stepId) {
   });
 
   snapshot = await maybeCollectFoodApiFallbackSnapshot({
+    journeyId,
+    seedEvidence,
+    stepId,
+    snapshot,
+  });
+  snapshot = await maybeCollectBakeryApiFallbackSnapshot({
     journeyId,
     seedEvidence,
     stepId,
@@ -3207,6 +3427,23 @@ async function runFinalOperationalSmoke(options = {}) {
       });
 
       page = await ensureActivePage();
+      const bakerySeed = await seedBakeryFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
+      const bakerySeedEvidence = {
+        ...bakerySeed,
+        page,
+        status: 'ready',
+      };
+      const bakery = await runRealFlow({
+        journeyId: 'bakery_encomenda_flow',
+        seedEvidence: bakerySeedEvidence,
+        steps: buildProdLikeBakeryFlowSteps({
+          baseUrl: DEFAULT_FRONTEND_URL,
+          orderId: bakerySeed.orderId,
+          seedEvidence: bakerySeedEvidence,
+        }),
+      });
+
+      page = await ensureActivePage();
       const marketSeed = await seedMarketFlowReal(page, DEFAULT_FRONTEND_URL, tenantInfo.tenantName);
       const marketSeedEvidence = {
         ...marketSeed,
@@ -3267,7 +3504,7 @@ async function runFinalOperationalSmoke(options = {}) {
       cleanupResults.push({ journeyId: 'clinic_calendar_block_flow', result: await cleanupProdLikeFlow(page, clinic) });
       cleanupResults.push({ journeyId: 'agendamento', result: await cleanupProdLikeFlow(page, agendamento) });
 
-      const flows = [support, fitness, booking, payment, food, market, clinic, agendamento];
+      const flows = [support, fitness, booking, payment, food, bakery, market, clinic, agendamento];
       const environment = {
         mode,
         frontendUrl: DEFAULT_FRONTEND_URL,

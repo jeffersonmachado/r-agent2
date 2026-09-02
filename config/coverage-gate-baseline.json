@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T03:32:12.704Z",
+  "generatedAt": "2026-09-02T10:23:37.899Z",
   "scenarios": [
     {
       "id": "business-b1",
@@ -75,6 +75,152 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "B2"
+    },
+    {
+      "id": "business-bakery-flow-campanha-combo",
+      "domain": "bakery",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Padaria campanha rápida de combo em janela ociosa",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Campanha de combo criada",
+        "Campanha disparada",
+        "Campanha visível na listagem"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "medium",
+      "adapter": "api",
+      "impactScopes": [
+        "bakery",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "bakery_reativacao_cliente",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=BAKERY-FLOW-CAMPANHA-COMBO"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "BAKERY-FLOW-CAMPANHA-COMBO"
+    },
+    {
+      "id": "business-bakery-flow-cliente-recorrente",
+      "domain": "bakery",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Padaria lead recorrente qualificado e reativado",
+      "steps": [
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Lead de cliente recorrente registrado",
+        "Lead qualificado",
+        "Cliente reativado convertido"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "medium",
+      "adapter": "api",
+      "impactScopes": [
+        "bakery",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "bakery_reativacao_cliente",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=BAKERY-FLOW-CLIENTE-RECORRENTE"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "BAKERY-FLOW-CLIENTE-RECORRENTE"
+    },
+    {
+      "id": "business-bakery-flow-encomenda",
+      "domain": "bakery",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Padaria encomenda aberta até entrega",
+      "steps": [
+        "Tenant autenticado",
+        "Case Management ativo"
+      ],
+      "assertions": [
+        "Encomenda registrada",
+        "Produção assumida pelo atendente",
+        "Entrega confirmada no encerramento"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "high",
+      "adapter": "api",
+      "impactScopes": [
+        "bakery",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "bakery_encomenda_flow",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=BAKERY-FLOW-ENCOMENDA"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "BAKERY-FLOW-ENCOMENDA"
+    },
+    {
+      "id": "business-bakery-flow-pedido-status",
+      "domain": "bakery",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Padaria pedido avança produção até entrega",
+      "steps": [
+        "Módulo de pedidos ativo",
+        "Tenant autenticado"
+      ],
+      "assertions": [
+        "Pedido localizado",
+        "Status avançado no ciclo produção/entrega",
+        "Atualização refletida no backend"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "medium",
+      "adapter": "api",
+      "impactScopes": [
+        "bakery",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "bakery_encomenda_flow",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=BAKERY-FLOW-PEDIDO-STATUS"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "BAKERY-FLOW-PEDIDO-STATUS"
     },
     {
       "id": "business-beauty-flow-appointment",
@@ -1089,6 +1235,44 @@
         "PIPELINE_BYPASS": "1"
       },
       "scenarioCode": "CORE-BIZ-CAMPAIGNS"
+    },
+    {
+      "id": "business-core-biz-cases",
+      "domain": "core",
+      "type": "regression",
+      "source": "qa",
+      "flow": "Core cases: chamado criado a partir da inbox consolidando múltiplas conversas",
+      "steps": [
+        "Tenant autenticado",
+        "Duas conversas elegíveis na caixa de entrada"
+      ],
+      "assertions": [
+        "Chamado criado a partir da conversa da inbox",
+        "Segunda conversa vinculada ao chamado",
+        "Chamado consolida as duas conversas",
+        "Chamado presente na listagem de chamados"
+      ],
+      "rpaRecordingId": null,
+      "criticality": "blocking",
+      "adapter": "api",
+      "impactScopes": [
+        "core",
+        "ci",
+        "telemetry"
+      ],
+      "requiresOfficialPipeline": true,
+      "journeyId": "cases",
+      "command": "node",
+      "commandArgs": [
+        "core/rpa/cli.js",
+        "business",
+        "--mode=flows",
+        "--code=CORE-BIZ-CASES"
+      ],
+      "env": {
+        "PIPELINE_BYPASS": "1"
+      },
+      "scenarioCode": "CORE-BIZ-CASES"
     },
     {
       "id": "business-core-biz-channel-accounts",
@@ -4055,105 +4239,17 @@
       "flow": "Fitness Matrícula — Agendamento de Aula Experimental via UI",
       "steps": [
         {
-          "id": "step_001",
+          "id": "step_precond_calendar_writable_1",
           "order": 1,
-          "type": "trigger_channel_event",
-          "category": "CLIENT_ACTION",
-          "actor": "customer",
-          "name": "Usuário abre menu Construtor → Tarefas",
-          "description": "Usuário autenticado navega pelo menu lateral até a página de Tarefas",
-          "adapter": "chat",
-          "channel": "chat",
-          "expected": {
-            "page": "/tasks"
-          },
-          "timeoutMs": 15000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
-        },
-        {
-          "id": "step_002",
-          "order": 2,
-          "type": "provide_data",
-          "category": "CLIENT_ACTION",
-          "actor": "customer",
-          "name": "Usuário preenche e cria a tarefa",
-          "description": "Preenche título 'Aula experimental QA' e prazo no painel Nova tarefa e clica em Criar tarefa",
-          "adapter": "chat",
-          "channel": "chat",
-          "expected": {
-            "toast": "Tarefa criada"
-          },
-          "timeoutMs": 15000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
-        },
-        {
-          "id": "step_003",
-          "order": 3,
-          "type": "provide_data",
-          "category": "CLIENT_ACTION",
-          "actor": "customer",
-          "name": "Usuário preenche o formulário de agendamento",
-          "description": "Abre o modal Agendar da tarefa e preenche data/hora, finalidade e notas",
-          "adapter": "schedulingService",
-          "channel": "chat",
-          "expected": {
-            "modal": "Novo Agendamento"
-          },
-          "timeoutMs": 15000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
-        },
-        {
-          "id": "step_004",
-          "order": 4,
-          "type": "create_booking",
-          "category": "SYSTEM_EVENT",
-          "actor": "system",
-          "name": "Sistema cria o agendamento",
-          "description": "Backend persiste o agendamento via POST /api/schedules",
-          "adapter": "schedulingService",
-          "channel": "api",
-          "expected": {
-            "backendEntity": "booking",
-            "created": true
-          },
-          "timeoutMs": 15000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
-        },
-        {
-          "id": "step_005",
-          "order": 5,
-          "type": "validate_response",
+          "type": "validate_backend",
           "category": "VALIDATION",
-          "actor": "system",
-          "name": "UI confirma Agendamento criado",
-          "description": "Toast de sucesso 'Agendamento criado' é exibido ao usuário",
-          "adapter": "semanticValidator",
-          "channel": "chat",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Writable",
           "expected": {
-            "toast": "Agendamento criado"
+            "preconditionMet": true,
+            "serviceAvailable": true
           },
-          "timeoutMs": 20000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
+          "timeoutMs": 10000
         }
       ],
       "assertions": [
@@ -4167,111 +4263,23 @@
         "agendamento"
       ],
       "requiresOfficialPipeline": false,
-      "scenarioId": "fitness-matricula-agendamento-ui",
+      "scenarioId": "precond-agendamento-calendar_writable",
       "semanticSteps": [
         {
-          "id": "step_001",
+          "id": "step_precond_calendar_writable_1",
           "order": 1,
-          "type": "trigger_channel_event",
-          "category": "CLIENT_ACTION",
-          "actor": "customer",
-          "name": "Usuário abre menu Construtor → Tarefas",
-          "description": "Usuário autenticado navega pelo menu lateral até a página de Tarefas",
-          "adapter": "chat",
-          "channel": "chat",
-          "expected": {
-            "page": "/tasks"
-          },
-          "timeoutMs": 15000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
-        },
-        {
-          "id": "step_002",
-          "order": 2,
-          "type": "provide_data",
-          "category": "CLIENT_ACTION",
-          "actor": "customer",
-          "name": "Usuário preenche e cria a tarefa",
-          "description": "Preenche título 'Aula experimental QA' e prazo no painel Nova tarefa e clica em Criar tarefa",
-          "adapter": "chat",
-          "channel": "chat",
-          "expected": {
-            "toast": "Tarefa criada"
-          },
-          "timeoutMs": 15000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
-        },
-        {
-          "id": "step_003",
-          "order": 3,
-          "type": "provide_data",
-          "category": "CLIENT_ACTION",
-          "actor": "customer",
-          "name": "Usuário preenche o formulário de agendamento",
-          "description": "Abre o modal Agendar da tarefa e preenche data/hora, finalidade e notas",
-          "adapter": "schedulingService",
-          "channel": "chat",
-          "expected": {
-            "modal": "Novo Agendamento"
-          },
-          "timeoutMs": 15000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
-        },
-        {
-          "id": "step_004",
-          "order": 4,
-          "type": "create_booking",
-          "category": "SYSTEM_EVENT",
-          "actor": "system",
-          "name": "Sistema cria o agendamento",
-          "description": "Backend persiste o agendamento via POST /api/schedules",
-          "adapter": "schedulingService",
-          "channel": "api",
-          "expected": {
-            "backendEntity": "booking",
-            "created": true
-          },
-          "timeoutMs": 15000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
-        },
-        {
-          "id": "step_005",
-          "order": 5,
-          "type": "validate_response",
+          "type": "validate_backend",
           "category": "VALIDATION",
-          "actor": "system",
-          "name": "UI confirma Agendamento criado",
-          "description": "Toast de sucesso 'Agendamento criado' é exibido ao usuário",
-          "adapter": "semanticValidator",
-          "channel": "chat",
+          "adapter": "api",
+          "description": "Verificar precondição: Calendar Writable",
           "expected": {
-            "toast": "Agendamento criado"
+            "preconditionMet": true,
+            "serviceAvailable": true
           },
-          "timeoutMs": 20000,
-          "enabled": true,
-          "evidence": null,
-          "startedAt": null,
-          "finishedAt": null,
-          "durationMs": null
+          "timeoutMs": 10000
         }
       ],
-      "wave": "wave-fitness-matricula",
+      "wave": "wave-precond-agendamento",
       "journeyId": "agendamento",
       "scenarioStatus": "approved",
       "executionMode": "semantic"
@@ -4283,11 +4291,19 @@
       "source": "seed",
       "flow": "Fitness Matrícula — Cancelamento de Matrícula",
       "steps": [
-        "navigate",
-        "assert",
-        "navigate",
-        "wait",
-        "assert"
+        {
+          "id": "step_precond_billing_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
       ],
       "assertions": [
         "execução RPA seed concluída sem erro crítico"
@@ -4300,11 +4316,25 @@
         "cancelamento"
       ],
       "requiresOfficialPipeline": false,
-      "scenarioId": "fitness-matricula-cancelamento",
-      "semanticSteps": [],
-      "wave": "wave-fitness-matricula",
+      "scenarioId": "precond-cancelamento-billing_validation_active",
+      "semanticSteps": [
+        {
+          "id": "step_precond_billing_validation_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Billing Validation Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "wave": "wave-precond-cancelamento",
       "journeyId": "cancelamento",
-      "scenarioStatus": "deprecated",
+      "scenarioStatus": "approved",
       "executionMode": "semantic"
     },
     {
@@ -4314,11 +4344,19 @@
       "source": "seed",
       "flow": "Fitness Matrícula — Check-in Diário na Academia",
       "steps": [
-        "navigate",
-        "assert",
-        "navigate",
-        "wait",
-        "assert"
+        {
+          "id": "step_precond_access_decision_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Access Decision Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
       ],
       "assertions": [
         "execução RPA seed concluída sem erro crítico"
@@ -4331,11 +4369,25 @@
         "checkin"
       ],
       "requiresOfficialPipeline": false,
-      "scenarioId": "fitness-matricula-checkin",
-      "semanticSteps": [],
-      "wave": "wave-fitness-matricula",
+      "scenarioId": "precond-checkin-access_decision_active",
+      "semanticSteps": [
+        {
+          "id": "step_precond_access_decision_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Access Decision Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "wave": "wave-precond-checkin",
       "journeyId": "checkin",
-      "scenarioStatus": "deprecated",
+      "scenarioStatus": "approved",
       "executionMode": "semantic"
     },
     {
@@ -4345,11 +4397,19 @@
       "source": "seed",
       "flow": "Fitness Matrícula — Checkout e Pagamento",
       "steps": [
-        "navigate",
-        "assert",
-        "navigate",
-        "wait",
-        "assert"
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
       ],
       "assertions": [
         "execução RPA seed concluída sem erro crítico"
@@ -4362,11 +4422,25 @@
         "checkout"
       ],
       "requiresOfficialPipeline": false,
-      "scenarioId": "fitness-matricula-checkout",
-      "semanticSteps": [],
-      "wave": "wave-fitness-matricula",
+      "scenarioId": "precond-checkout-payment_gateway_available",
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "wave": "wave-precond-checkout",
       "journeyId": "checkout",
-      "scenarioStatus": "deprecated",
+      "scenarioStatus": "approved",
       "executionMode": "semantic"
     },
     {
@@ -4731,11 +4805,19 @@
       "source": "seed",
       "flow": "Fitness Matrícula — Onboarding do Novo Aluno",
       "steps": [
-        "navigate",
-        "assert",
-        "navigate",
-        "wait",
-        "assert"
+        {
+          "id": "step_precond_onboarding_flow_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Onboarding Flow Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
       ],
       "assertions": [
         "execução RPA seed concluída sem erro crítico"
@@ -4748,11 +4830,25 @@
         "onboarding"
       ],
       "requiresOfficialPipeline": false,
-      "scenarioId": "fitness-matricula-onboarding",
-      "semanticSteps": [],
-      "wave": "wave-fitness-matricula",
+      "scenarioId": "precond-onboarding-onboarding_flow_active",
+      "semanticSteps": [
+        {
+          "id": "step_precond_onboarding_flow_active_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Onboarding Flow Active",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "wave": "wave-precond-onboarding",
       "journeyId": "onboarding",
-      "scenarioStatus": "deprecated",
+      "scenarioStatus": "approved",
       "executionMode": "semantic"
     },
     {
@@ -4762,11 +4858,19 @@
       "source": "seed",
       "flow": "Fitness Matrícula — Renovação de Matrícula",
       "steps": [
-        "navigate",
-        "assert",
-        "navigate",
-        "wait",
-        "assert"
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
       ],
       "assertions": [
         "execução RPA seed concluída sem erro crítico"
@@ -4779,11 +4883,25 @@
         "renovacao"
       ],
       "requiresOfficialPipeline": false,
-      "scenarioId": "fitness-matricula-renovacao",
-      "semanticSteps": [],
-      "wave": "wave-fitness-matricula",
+      "scenarioId": "precond-renovacao-payment_gateway_available",
+      "semanticSteps": [
+        {
+          "id": "step_precond_payment_gateway_available_1",
+          "order": 1,
+          "type": "validate_backend",
+          "category": "VALIDATION",
+          "adapter": "api",
+          "description": "Verificar precondição: Payment Gateway Available",
+          "expected": {
+            "preconditionMet": true,
+            "serviceAvailable": true
+          },
+          "timeoutMs": 10000
+        }
+      ],
+      "wave": "wave-precond-renovacao",
       "journeyId": "renovacao",
-      "scenarioStatus": "deprecated",
+      "scenarioStatus": "approved",
       "executionMode": "semantic"
     },
     {
@@ -5381,6 +5499,22 @@
       "status": "passed"
     },
     {
+      "scenarioId": "business-bakery-flow-campanha-combo",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-bakery-flow-cliente-recorrente",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-bakery-flow-encomenda",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-bakery-flow-pedido-status",
+      "status": "passed"
+    },
+    {
       "scenarioId": "business-beauty-flow-appointment",
       "status": "passed"
     },
@@ -5490,6 +5624,10 @@
     },
     {
       "scenarioId": "business-core-biz-campaigns",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "business-core-biz-cases",
       "status": "passed"
     },
     {
@@ -5894,6 +6032,14 @@
     },
     {
       "scenarioId": "workspace-core",
+      "status": "passed"
+    },
+    {
+      "scenarioId": "mesh-pipeline-only",
+      "status": "environment_missing"
+    },
+    {
+      "scenarioId": "workspace-core-status-separation",
       "status": "passed"
     }
   ]

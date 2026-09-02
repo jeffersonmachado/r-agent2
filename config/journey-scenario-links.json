@@ -1,9 +1,147 @@
 {
   "version": 1,
   "description": "Declaração versionada jornada → cenários para o coverage gate. Gerada por scripts/governance/sync-journey-scenario-links.js a partir de qa-waves/journey-coverage/*.json (artefatos do platform-readiness). Nunca reescrita em runtime; regenerar só com npm run coverage-gate:links. Verticais com \"manual\": true são mantidas à mão e preservadas pelo sync; jornadas com \"manual\": true dentro de verticais geradas também são preservadas.",
-  "generatedAt": "2026-09-02T04:48:45.897Z",
+  "generatedAt": "2026-09-02T10:34:36.535Z",
   "source": "qa-waves/journey-coverage/*.json",
   "verticals": [
+    {
+      "vertical": "bakery",
+      "journeys": [
+        {
+          "journey": "bakery_balcao_retirada",
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-bakery_balcao_retirada",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_balcao_retirada-order_service_available",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_balcao_retirada-payment_gateway_available",
+              "status": "draft_ai"
+            }
+          ]
+        },
+        {
+          "journey": "bakery_encomenda_flow",
+          "scenarios": [
+            {
+              "scenarioId": "cap-order_management",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "cap-production_tracking",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "cap-retention",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "business-e2e-bakery_encomenda_flow",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_encomenda_flow-order_service_available",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_encomenda_flow-payment_gateway_available",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_encomenda_flow-storefront_channel_active",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "business-bakery-flow-encomenda",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-bakery-flow-pedido-status",
+              "status": "approved"
+            }
+          ]
+        },
+        {
+          "journey": "bakery_estoque_perdas",
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-bakery_estoque_perdas",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "cap-inventory_monitoring",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "cap-stock_alerts",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "cap-loss_tracking",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_estoque_perdas-inventory_service_available",
+              "status": "draft_ai"
+            }
+          ]
+        },
+        {
+          "journey": "bakery_producao_fornada",
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-bakery_producao_fornada",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "cap-production_planning",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "cap-capacity_management",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_producao_fornada-order_service_available",
+              "status": "draft_ai"
+            }
+          ]
+        },
+        {
+          "journey": "bakery_reativacao_cliente",
+          "scenarios": [
+            {
+              "scenarioId": "business-e2e-bakery_reativacao_cliente",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "cap-campaign_management",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_reativacao_cliente-crm_service_available",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "precond-bakery_reativacao_cliente-campaign_service_available",
+              "status": "draft_ai"
+            },
+            {
+              "scenarioId": "business-bakery-flow-campanha-combo",
+              "status": "approved"
+            },
+            {
+              "scenarioId": "business-bakery-flow-cliente-recorrente",
+              "status": "approved"
+            }
+          ]
+        }
+      ]
+    },
     {
       "vertical": "beauty",
       "journeys": [
@@ -1092,6 +1230,11 @@
             {
               "scenarioId": "precond-fitness_customer_checkin-attendance_database_accessible",
               "status": "approved"
+            },
+            {
+              "scenarioId": "business-fit-flow-checkin",
+              "status": "approved",
+              "manual": true
             }
           ]
         },

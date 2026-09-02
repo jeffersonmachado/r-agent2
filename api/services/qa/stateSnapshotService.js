@@ -148,7 +148,7 @@ function getRequiredSources(journeyId) {
   if (normalized === 'fitness_customer_checkin') {
     return ['db', 'api', 'crm', 'devices', 'attendance'];
   }
-  if (normalized === 'food_order_status_flow') {
+  if (normalized === 'food_order_status_flow' || normalized === 'bakery_encomenda_flow') {
     return ['db', 'api', 'orders'];
   }
   if (normalized === 'booking_flow') {
@@ -1171,7 +1171,7 @@ async function collectOperationalSnapshot(options = {}) {
     collected = await collectSupportTicketSnapshot(ctx, models);
   } else if (ctx.journeyId === 'fitness_customer_checkin') {
     collected = await collectFitnessCheckinSnapshot(ctx, models);
-  } else if (ctx.journeyId === 'food_order_status_flow') {
+  } else if (ctx.journeyId === 'food_order_status_flow' || ctx.journeyId === 'bakery_encomenda_flow') {
     collected = await collectFoodOrderSnapshot(ctx, models);
   } else if (ctx.journeyId === 'booking_flow') {
     collected = await collectBookingSnapshot(ctx, models);
@@ -1719,7 +1719,7 @@ async function collectEntityScopedSnapshot(options = {}) {
     return collectFitnessStepScopedSnapshot(ctx, models, stepId);
   }
 
-  if (stepContract.journeyId === 'food_order_status_flow') {
+  if (stepContract.journeyId === 'food_order_status_flow' || stepContract.journeyId === 'bakery_encomenda_flow') {
     return collectFoodOrderStepScopedSnapshot(ctx, models, stepId);
   }
 

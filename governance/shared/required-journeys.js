@@ -20,13 +20,14 @@ const PROD_LIKE_JOURNEY_VERTICAL = Object.freeze({
   food_order_status_flow: 'food',
   market_node_publish_flow: 'market',
   clinic_calendar_block_flow: 'clinic',
+  bakery_encomenda_flow: 'bakery',
 });
 
 /** Jornadas prod-like obrigatórias no replay coverage. */
 const REQUIRED_REPLAY_JOURNEYS = Object.freeze(Object.keys(PROD_LIKE_JOURNEY_VERTICAL));
 
 /** Verticais obrigatórias na cobertura prod-like. */
-const REQUIRED_VERTICALS = Object.freeze(['beauty', 'fitness', 'food', 'services', 'clinic', 'market']);
+const REQUIRED_VERTICALS = Object.freeze(['beauty', 'fitness', 'food', 'services', 'clinic', 'market', 'bakery']);
 
 module.exports = {
   PROD_LIKE_JOURNEY_VERTICAL,

@@ -9,6 +9,9 @@
  *   preservada quando some dos artefatos (ex.: `calendar`, ligada por
  *   declaração a business-core-cap-scheduling — o mesh não emite journeyId
  *   'calendar', então ela nunca aparece em qa-waves/journey-coverage).
+ * - cenário com "manual": true dentro de uma jornada regenerada é mesclado
+ *   de volta (ex.: `fitness_customer_checkin` → business-fit-flow-checkin,
+ *   ligação HARD-016 que os artefatos gerados não emitem).
  * Jornadas NÃO manuais ausentes da regeneração são removidas (o sync reflete
  * a realidade dos artefatos).
  *
@@ -39,6 +42,29 @@ function preserveManualEntries(generatedVerticals, existing) {
       target.journeys.push(journey);
       journeyCount += 1;
       scenarioRefCount += (journey.scenarios || []).length;
+    }
+  }
+
+  // Cenários com "manual": true dentro de jornadas que TAMBÉM existem na
+  // regeneração: sem este merge o sync descartava a ligação manual ao regerar
+  // a jornada a partir dos artefatos (regressão observada em
+  // fitness_customer_checkin → business-fit-flow-checkin, HARD-016).
+  for (const existingVertical of existingVerticals) {
+    if (!existingVertical || !Array.isArray(existingVertical.journeys)) continue;
+    const target = verticals.find((v) => v.vertical === existingVertical.vertical);
+    if (!target) continue;
+    for (const journey of existingVertical.journeys) {
+      if (!journey || typeof journey.journey !== 'string' || !Array.isArray(journey.scenarios)) continue;
+      const targetJourney = target.journeys.find((j) => j && j.journey === journey.journey);
+      if (!targetJourney) continue;
+      for (const scenario of journey.scenarios) {
+        if (!scenario || scenario.manual !== true || typeof scenario.scenarioId !== 'string') continue;
+        const already = (targetJourney.scenarios || [])
+          .some((item) => item && item.scenarioId === scenario.scenarioId);
+        if (already) continue;
+        targetJourney.scenarios = [...(targetJourney.scenarios || []), scenario];
+        scenarioRefCount += 1;
+      }
     }
   }
 

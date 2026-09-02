@@ -378,6 +378,69 @@ const FOOD_ORDER_STATUS_FLOW = {
 };
 
 /**
+ * BAKERY ENCOMENDA FLOW (bakery_encomenda_flow)
+ *
+ * Jornada operacional minima de encomendas de padaria:
+ *   1. Operador acessa o modulo de pedidos
+ *   2. Confirma encomenda real (MUTACAO)
+ *   3. Valida persistencia da encomenda no backend
+ */
+const BAKERY_ENCOMENDA_FLOW = {
+  step_access_bakery_orders_module: {
+    stepId: 'step_access_bakery_orders_module',
+    actionType: 'navigate',
+    journeyId: 'bakery_encomenda_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['browser_navigation'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+
+  step_update_bakery_order_status: {
+    stepId: 'step_update_bakery_order_status',
+    actionType: 'update_order_status',
+    journeyId: 'bakery_encomenda_flow',
+    mutationExpected: true,
+    expectedMutations: ['order_status_changed'],
+    expectedSideEffects: ['event_ledger_recorded'],
+    snapshotRequired: true,
+    snapshotScope: 'entity',
+    entityScope: ['order', 'event_ledger'],
+    proofRequirements: ['incremental_snapshot', 'network_proof', 'observed_mutations'],
+    networkProofRequired: true,
+    networkEndpoints: [
+      { method: 'PUT', pathPattern: /\/orders\/[^/]+\/status(?:\?|$)/, status: [200, 201] },
+    ],
+    expectedNetworkEvents: [
+      { method: 'PUT', path: '/orders/:orderId/status' },
+    ],
+  },
+
+  step_assert_bakery_order_backend: {
+    stepId: 'step_assert_bakery_order_backend',
+    actionType: 'assert_backend_state',
+    journeyId: 'bakery_encomenda_flow',
+    mutationExpected: false,
+    expectedMutations: [],
+    expectedSideEffects: [],
+    snapshotRequired: false,
+    requiresIncrementalDiff: false,
+    requiresMutationLinkage: false,
+    requiresProvenance: false,
+    snapshotScope: 'global',
+    entityScope: [],
+    proofRequirements: ['state_assertion'],
+    networkProofRequired: false,
+    networkEndpoints: [],
+  },
+};
+
+/**
  * MARKET NODE PUBLISH FLOW (market_node_publish_flow)
  *
  * Jornada operacional minima de mercado:
@@ -777,6 +840,8 @@ const OPERATIONAL_STEP_REGISTRY = new Map([
   ...Object.entries(FITNESS_CUSTOMER_CHECKIN_FLOW).map(([, spec]) => [spec.stepId, spec]),
   // Food flow
   ...Object.entries(FOOD_ORDER_STATUS_FLOW).map(([, spec]) => [spec.stepId, spec]),
+  // Bakery flow
+  ...Object.entries(BAKERY_ENCOMENDA_FLOW).map(([, spec]) => [spec.stepId, spec]),
   // Market flow
   ...Object.entries(MARKET_NODE_PUBLISH_FLOW).map(([, spec]) => [spec.stepId, spec]),
   // Clinic flow
@@ -803,6 +868,10 @@ const ACTION_TYPE_REGISTRY = new Map([
   ),
   // Food flow
   ...Object.entries(FOOD_ORDER_STATUS_FLOW).map(([, spec]) =>
+    [`${spec.journeyId}:${spec.actionType}`, spec]
+  ),
+  // Bakery flow
+  ...Object.entries(BAKERY_ENCOMENDA_FLOW).map(([, spec]) =>
     [`${spec.journeyId}:${spec.actionType}`, spec]
   ),
   // Market flow
@@ -834,6 +903,7 @@ const JOURNEY_STEPS_REGISTRY = {
   support_ticket_flow: SUPPORT_TICKET_FLOW,
   fitness_customer_checkin: FITNESS_CUSTOMER_CHECKIN_FLOW,
   food_order_status_flow: FOOD_ORDER_STATUS_FLOW,
+  bakery_encomenda_flow: BAKERY_ENCOMENDA_FLOW,
   market_node_publish_flow: MARKET_NODE_PUBLISH_FLOW,
   clinic_calendar_block_flow: CLINIC_CALENDAR_BLOCK_FLOW,
   booking_flow: BOOKING_FLOW,
@@ -1198,6 +1268,7 @@ module.exports = {
   SUPPORT_TICKET_FLOW,
   FITNESS_CUSTOMER_CHECKIN_FLOW,
   FOOD_ORDER_STATUS_FLOW,
+  BAKERY_ENCOMENDA_FLOW,
   MARKET_NODE_PUBLISH_FLOW,
   CLINIC_CALENDAR_BLOCK_FLOW,
   BOOKING_FLOW,
