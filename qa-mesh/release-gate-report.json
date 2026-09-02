@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-02T11-23-26-639Z",
+  "executionId": "mesh-2026-09-02T16-32-17-900Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -21,17 +21,17 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-09-02T11-23-26-639Z",
+    "executionId": "mesh-2026-09-02T16-32-17-900Z",
     "tenantId": "system",
-    "timestamp": "2026-09-02T11:23:26.639Z",
+    "timestamp": "2026-09-02T16:32:17.900Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
-    "registryTotal": 136,
-    "attempted": 136,
-    "executed": 136,
-    "total": 136,
-    "passed": 136,
+    "registryTotal": 139,
+    "attempted": 139,
+    "executed": 139,
+    "total": 139,
+    "passed": 139,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
@@ -61,14 +61,14 @@
         "total": 12
       },
       "bakery": {
-        "passed": 4,
+        "passed": 7,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
         "flaky": 0,
-        "total": 4
+        "total": 7
       },
       "clinic": {
         "passed": 2,
@@ -253,26 +253,26 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-02T11-23-26-639Z",
-      "startedAt": "2026-09-02T11:23:26.639Z",
+      "executionId": "mesh-2026-09-02T16-32-17-900Z",
+      "startedAt": "2026-09-02T16:32:17.900Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-02T12:31:11.911Z",
-      "registryTotal": 136,
+      "promotedAt": "2026-09-02T17:41:48.992Z",
+      "registryTotal": 139,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-02T11-23-26-639Z",
-    "startedAt": "2026-09-02T11:23:26.639Z",
+    "executionId": "mesh-2026-09-02T16-32-17-900Z",
+    "startedAt": "2026-09-02T16:32:17.900Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-02T12:31:11.911Z",
-    "registryTotal": 136,
+    "promotedAt": "2026-09-02T17:41:48.992Z",
+    "registryTotal": 139,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
-  "generatedAt": "2026-09-02T12:31:11.911Z"
+  "generatedAt": "2026-09-02T17:41:48.993Z"
 }
