@@ -11,7 +11,7 @@ const getRun = require('../../db/models/GovernanceRun');
 const { computePolicyFingerprint } = require('../../../governance/proof-engine/fingerprint-chain');
 
 const POLICY_ID = 'RAP-AGENT-CONSTITUTION';
-const POLICY_VERSION = '1.0.2';
+const POLICY_VERSION = '1.0.3';
 const CONSTITUTION_PATH = path.resolve(__dirname, '../../../governance/RAP_AGENT_CONSTITUTION.md');
 
 function policyError(code, message) { const error = new Error(`${code}: ${message}`); error.code = code; return error; }
