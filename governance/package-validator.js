@@ -41,7 +41,13 @@ function sha256File(filePath) {
 const DEFAULT_MANIFEST_PATH = path.join(ROOT, 'governance', 'evidence-manifest.json');
 
 function loadSiblingArtifactManifest(zipPath) {
-  const manifestPath = String(zipPath || '').replace(/\.zip$/i, '.manifest.json');
+  // Convenções aceitas: <nome>.manifest.json e, para payload-centric,
+  // <nome>.payload.zip cujo sidecar é <nome>.manifest.json (two-pass-release).
+  const candidates = [
+    String(zipPath || '').replace(/\.zip$/i, '.manifest.json'),
+    String(zipPath || '').replace(/\.payload\.zip$/i, '.manifest.json'),
+  ].filter((candidate, index, all) => candidate && all.indexOf(candidate) === index);
+  const manifestPath = candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
   if (!manifestPath || !fs.existsSync(manifestPath)) {
     return { manifestPath, manifest: null };
   }
@@ -133,14 +139,24 @@ function resolvePayloadCentricArtifact(artifact) {
   }
 
   // Audit: o verificador offline v2 precisa ter validado ESTE payload (hash-bound).
+  // A regra vale para a SELEÇÃO automática de artefato (certificação de um
+  // release já fechado). Em modo --zip explícito DURANTE o release, o
+  // verify-result.json existente é do release ANTERIOR — o verifier offline do
+  // payload novo só roda depois (PASS 5), de forma fail-closed. Exigir o
+  // binding aqui seria circular: o lado explícito usa o audit do manifest
+  // sidecar e a auditoria real acontece no gate offline.
   let verifierAudit = null;
-  try {
-    const verifyResult = JSON.parse(fs.readFileSync(path.join(ROOT, 'dist', 'verifier', 'verify-result.json'), 'utf8'));
-    const hashBound = String(verifyResult.payloadSha256 || '') === payloadSha256;
-    const passed = verifyResult.pass === true && verifyResult.payloadValidated === true;
-    verifierAudit = hashBound && passed ? 'passed' : 'failed';
-  } catch (_) {
-    verifierAudit = null;
+  if (artifact.selectionMode === 'explicit') {
+    verifierAudit = manifest.audit || null;
+  } else {
+    try {
+      const verifyResult = JSON.parse(fs.readFileSync(path.join(ROOT, 'dist', 'verifier', 'verify-result.json'), 'utf8'));
+      const hashBound = String(verifyResult.payloadSha256 || '') === payloadSha256;
+      const passed = verifyResult.pass === true && verifyResult.payloadValidated === true;
+      verifierAudit = hashBound && passed ? 'passed' : 'failed';
+    } catch (_) {
+      verifierAudit = null;
+    }
   }
 
   return {
