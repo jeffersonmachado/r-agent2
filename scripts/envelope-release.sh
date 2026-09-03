@@ -1,42 +1,25 @@
 #!/usr/bin/env bash
 # =============================================================================
-# envelope-release.sh — NEW ARCHITECTURE: PAYLOAD + ENVELOPE
+# envelope-release.sh — DEPRECADO (2026-09-03)
 #
-# OBJETIVO: Eliminar problema circular de ZIP contendo ele mesmo.
-# Implementar arquitetura limpa com separação clara:
+# Este script é um caminho de release ÓRFÃO (sem npm script nem caller no
+# pipeline canônico) que materializava GO SINTÉTICO sobre governança NO_GO:
+# escrevia finalDecision='GO', pass=true, ok=true em dist/governance/
+# independentemente dos engines (o anti-padrão eliminado no two-pass-release).
+# Manter um segundo caminho de release capaz de fabricar GO é proibido.
 #
-#   PAYLOAD     = dist/release/<RELEASE>.payload.zip
-#               = artefato governado (imutável, SHA256 definitivo)
-#               = contém apenas runtime da aplicação (sem governança interna)
-#
-#   MANIFEST    = dist/release/<RELEASE>.manifest.json
-#               = governa o PAYLOAD com SHA256 real
-#               = não governa o ENVELOPE
-#
-#   ENVELOPE    = dist/release/<RELEASE>.zip
-#               = ZIP entregue ao usuário
-#               = contém: payload + manifest + governance + signatures + verifier + docs
-#
-# PIPELINE:
-#   1. limpar dist/release/ + governance/ + signatures/ + verifier/
-#   2. gerar PAYLOAD base
-#   3. calcular SHA256 real do PAYLOAD
-#   4. gerar MANIFEST do PAYLOAD
-#   5. gerar GOVERNANCE baseado no PAYLOAD
-#   6. gerar SIGNATURES baseado no PAYLOAD
-#   7. rodar VALIDATOR no PAYLOAD
-#   8. rodar VERIFIER no PAYLOAD
-#   9. gerar SELF-PROVING-REPORT (PAYLOAD-aware)
-#   10. criar ENVELOPE final
-#   11. rodar auditoria final
-#
-# USO:
-#   bash scripts/envelope-release.sh
-#   bash scripts/envelope-release.sh --skip-frontend
-#   bash scripts/envelope-release.sh --skip-audit
-#   bash scripts/envelope-release.sh --dry-run
-#
+# O caminho canônico de release é:
+#   bash scripts/two-pass-release.sh
+# que sela o payload somente com governança canônica GO (seal-time gate),
+# deriva o envelope da decisão do payload e assina com Ed25519.
 # =============================================================================
+
+echo "DEPRECADO: envelope-release.sh foi desativado (fabricava GO sintético sobre NO_GO)." >&2
+echo "Use o caminho canônico: bash scripts/two-pass-release.sh" >&2
+exit 1
+
+# O código legado abaixo é inalcançável (exit 1 acima) e será removido em
+# limpeza futura; mantido temporariamente apenas para referência histórica.
 
 set -euo pipefail
 IFS=$'\n\t'

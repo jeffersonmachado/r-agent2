@@ -236,12 +236,24 @@ function buildMinimalValidRoot(dir, provenance) {
     violations: [],
   });
 
+  // Payload + manifest + envelope + attestation completos via fixture
+  // compartilhada (o gate payload_governance exige a estrutura real de dist/).
+  const { buildReleaseFixture } = require('../../helpers/releaseEnvelopeFixture');
+  buildReleaseFixture(dir, {}, {
+    releaseId: '20260820-000000',
+    runId,
+    sourceFingerprint,
+    gitCommit: provenance.commitB,
+    gitTree: provenance.treeB,
+  });
+  // Regravar o manifest com os campos completos exigidos pelos demais gates
+  // (a fixture escreve o manifest base; aqui ele é estendido e a attestation
+  // é re-emitida contra o manifest final para manter manifestSha256 coerente).
   const payloadPath = path.join(dir, 'dist', 'release', 'r-agent2-20260820-000000.payload.zip');
-  fs.mkdirSync(path.dirname(payloadPath), { recursive: true });
-  fs.writeFileSync(payloadPath, 'immutable payload bytes', 'utf8');
   const packageFingerprint = crypto.createHash('sha256').update(fs.readFileSync(payloadPath)).digest('hex');
   const proofFingerprint = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, 'governance', 'final-proof-report.json'))).digest('hex');
   const scorecardFingerprint = crypto.createHash('sha256').update(fs.readFileSync(path.join(dir, 'governance', 'rap-master-scorecard.json'))).digest('hex');
+  const manifestPath = path.join(dir, 'dist', 'release', 'r-agent2-20260820-000000.manifest.json');
   writeJson(dir, 'dist/release/r-agent2-20260820-000000.manifest.json', {
     ...lineage('package-manifest'),
     artifact: path.basename(payloadPath),
@@ -262,6 +274,19 @@ function buildMinimalValidRoot(dir, provenance) {
     createdAt: generatedAt,
     audit: 'passed',
   });
+  // Re-emitir attestation contra o manifest final (manifestSha256 coberto).
+  const { signAttestation } = require('../../../governance/release-attestation');
+  const manifestSha = crypto.createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex');
+  writeJson(dir, 'dist/signatures/release-attestation.sig', signAttestation({
+    releaseId: '20260820-000000',
+    runId,
+    sourceFingerprint,
+    gitCommit: provenance.commitB,
+    gitTree: provenance.treeB,
+    payloadSha256: packageFingerprint,
+    manifestSha256: manifestSha,
+    finalDecision: 'AUTONOMOUS_READY_GO',
+  }));
 
   return { runId, sourceFingerprint, fingerprints };
 }

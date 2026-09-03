@@ -100,6 +100,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Attestation Ed25519: a chave privada NUNCA está no repositório. Em CI,
+      # vem do secret RAP_RELEASE_ATTESTATION_PRIVATE_KEY (PEM base64). Sem o
+      # secret configurado, o passo falha — release sem assinatura autenticada
+      # não é release (fail-closed, por design).
+      - name: Provisionar chave de attestation Ed25519 (runtime root, fora do checkout)
+        run: |
+          KEY_DIR="$RUNNER_TEMP/release-keys"
+          mkdir -p "$KEY_DIR" && chmod 700 "$KEY_DIR"
+          if [[ -z "${RAP_RELEASE_ATTESTATION_PRIVATE_KEY_B64}" ]]; then
+            echo "ERRO: secret RAP_RELEASE_ATTESTATION_PRIVATE_KEY não configurado — attestation Ed25519 é obrigatório"
+            exit 1
+          fi
+          printf '%s' "${RAP_RELEASE_ATTESTATION_PRIVATE_KEY_B64}" | base64 -d > "$KEY_DIR/release-attestation-private.pem"
+          chmod 600 "$KEY_DIR/release-attestation-private.pem"
+          node -e "
+            const fs=require('fs'), crypto=require('crypto');
+            const priv=fs.readFileSync('$KEY_DIR/release-attestation-private.pem','utf8');
+            const pub=crypto.createPublicKey(priv).export({type:'spki',format:'pem'});
+            fs.writeFileSync('$KEY_DIR/release-attestation-public.pem', pub, {mode:0o644});
+          "
+          echo "RAP_RELEASE_KEY_DIR=$KEY_DIR" >> "$GITHUB_ENV"
+          echo "Chave de attestation provisionada (privada 0600 fora do checkout)"
+        env:
+          RAP_RELEASE_ATTESTATION_PRIVATE_KEY_B64: ${{ secrets.RAP_RELEASE_ATTESTATION_PRIVATE_KEY }}
+
       - name: Generate release artifacts
         if: ${{ github.event.inputs.skip_build != 'true' }}
         run: npm run zip:release

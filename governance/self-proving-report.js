@@ -22,6 +22,7 @@ const path   = require('path');
 const crypto = require('crypto');
 const { verifyChain, loadChain, sha256File, resolveArtifact } = require('./governance-chain');
 const { verifySeal } = require('./sign-governance');
+const { withLineage } = require('./report-lineage');
 
 const ROOT        = path.join(__dirname, '..');
 const REPORT_PATH = path.join(ROOT, 'governance', 'self-proving-report.json');
@@ -561,7 +562,7 @@ function generateSelfProvingReport() {
     dimMap[dimension || 'unknown'] = rest;
   }
 
-  return {
+  return withLineage({
     generatedAt:    new Date().toISOString(),
     schemaVersion:  '1.0.0',
     artifact:       zipName,
@@ -607,7 +608,7 @@ function generateSelfProvingReport() {
     summary: pass
       ? `Pacote ${zipName} é completamente self-proving. Score: ${score}/100.`
       : `Pacote ${zipName} FALHOU na auto-prova. Falhas: [${gate.failedGates.join(', ')}]. Score: ${score}/100.`,
-  };
+  }, 'self-proving-report', { includeGit: true });
 }
 
 // ─── Wrapper que persiste em disco ────────────────────────────────────────────

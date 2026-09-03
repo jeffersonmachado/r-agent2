@@ -15,6 +15,7 @@
 const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
+const { withLineage } = require('./report-lineage');
 
 const ROOT        = path.join(__dirname, '..');
 const REPORT_PATH = path.join(ROOT, 'governance', 'package-integrity-report.json');
@@ -195,7 +196,7 @@ function runPackageIntegrityEngine() {
   const latest    = findLatestZip();
   const manifest  = latest ? findSidecarManifest(latest.zipPath) : null;
 
-  return {
+  return withLineage({
     generatedAt:    new Date().toISOString(),
     engine:         'package-integrity-engine/v1',
     pass,
@@ -212,7 +213,7 @@ function runPackageIntegrityEngine() {
     summary: pass
       ? `Pacote ${latest?.zip} íntegro. Todos os hashes correspondem.`
       : `${failed.length} falha(s) de integridade detectada(s). Pacote não pode ser liberado.`,
-  };
+  }, 'package-integrity-report', { includeGit: true });
 }
 
 module.exports = {

@@ -319,6 +319,34 @@ function checkExperienceSegregation(manifest) {
   return pass(gate, { status: report.status, sourceFingerprint: report.sourceFingerprint ? String(report.sourceFingerprint).slice(0, 16) : null });
 }
 
+// ─── 3d. Payload governance (fonte da verdade = governança DENTRO do payload) ─
+/**
+ * Abre o payload entregue e exige que a governança canônica embutida
+ * (r-agent2/governance/) seja GO, do mesmo run/fingerprint do manifest, com o
+ * envelope derivado idêntico e attestation Ed25519 válida. Elimina o fluxo
+ * NO_GO-interno → envelope-GO (root cause do release r-agent2-20260903-134904).
+ */
+function checkPayloadGovernance() {
+  const gate = makeGate('payload_governance');
+  let verify;
+  try {
+    verify = require('../scripts/verify-payload-governance').verifyPayloadGovernance;
+  } catch (error) {
+    return fail(gate, `VERIFIER_ERROR — verify-payload-governance indisponível: ${error.message}`);
+  }
+  let result;
+  try {
+    result = verify({ root: ROOT });
+  } catch (error) {
+    return fail(gate, `VERIFIER_ERROR — ${error.message}`);
+  }
+  if (!result || result.pass !== true) {
+    const reasons = (result?.failedGates || []).map((g) => `${g.id}: ${g.reason}`).join(' | ');
+    return fail(gate, `PAYLOAD_GOVERNANCE_NO_GO — ${reasons || 'sem detalhe'}`);
+  }
+  return pass(gate, { gates: result.gates.length });
+}
+
 // ─── 4. Fingerprint chain ────────────────────────────────────────────────────
 function checkFingerprintChain() {
   const gate = makeGate('fingerprint_chain');
@@ -598,6 +626,7 @@ function verify() {
     checkSourceCommitProvenance(manifest),
     checkPackageHashBinding(manifest),
     checkExperienceSegregation(manifest),
+    checkPayloadGovernance(),
     checkFingerprintChain(),
     checkProofFreshness(),
     checkArtifactRunConsistency(),

@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { resolveEvidenceCandidates, resolveWorkspacePath, getRuntimeRoot } = require('../../tools/system/lib/runtime-paths');
 const { validatePackage } = require('../package-validator');
+const { withLineage } = require('../report-lineage');
 const { runCrossReportValidation, classifyPbxMaturity, THRESHOLDS } = require('../cross-report-validator');
 const { computeFingerprintChain, compareFingerprintChains } = require('./fingerprint-chain');
 const { calculateSetCoverage } = require('../../qa/coverage/setCoverage');
@@ -938,7 +939,10 @@ function buildFinalProofReport(context = {}) {
   } catch (error) {
     const errorMessage = String(error?.message || error || '');
     const deferred = errorMessage.includes('artifact_missing');
-    packageValidation = {
+    // Lineage na origem: este objeto é exportado standalone para
+    // governance/package-validation-report.json pelo platform-readiness —
+    // sem lineage aqui, RAP-052/054 caem com ARTIFACT_RUN_ID_MISSING.
+    packageValidation = withLineage({
       generatedAt: new Date().toISOString(),
       ok: false, zipPath: null, zipName: null,
       requiredEntries: requiredArtifacts.filter((a) => a.packageRequired).map((a) => a.path),
@@ -947,7 +951,7 @@ function buildFinalProofReport(context = {}) {
       deferred,
       phase: deferred ? 'PRE_PACKAGE' : 'POST_PACKAGE',
       status: deferred ? 'DEFERRED' : 'FAIL',
-    };
+    }, 'package-validation-report', { rootDir: ROOT, includeGit: true });
   }
 
   // Proof coverage

@@ -299,14 +299,20 @@ fi
 
 # Signatures externas apontam para payload correto
 SIG_FILES=()
-for ext in json sig; do
+# Preferir .sig (HMAC signatureVersion=2 carrega sha256 do subject); JSONs
+# auxiliares (governance-attestation.json) podem não ter campo de hash.
+for ext in sig json; do
   for f in "$DIST_SIG"/*.$ext; do [[ -f "$f" ]] && SIG_FILES+=("$f"); done
 done
 if [[ "${#SIG_FILES[@]}" -gt 0 ]]; then
-  SIG_FILE="${SIG_FILES[0]}"
-  S_SHA="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(j.payloadSha256||j.artifactSha256||j.sha256||'')}catch(e){}" "$SIG_FILE" 2>/dev/null || echo '')"
-  if [[ "$S_SHA" == "$PAYLOAD_SHA" ]]; then
-    ok "signatures.payloadSha256 confere"
+  S_SHA=""
+  SIG_FILE=""
+  for candidate in "${SIG_FILES[@]}"; do
+    VAL="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(j.payloadSha256||j.artifactSha256||(j.attestation&&j.attestation.payloadSha256)||j.sha256||'')}catch(e){}" "$candidate" 2>/dev/null || echo '')"
+    if [[ -n "$VAL" ]]; then S_SHA="$VAL"; SIG_FILE="$candidate"; break; fi
+  done
+  if [[ -n "$S_SHA" && "$S_SHA" == "$PAYLOAD_SHA" ]]; then
+    ok "signatures.payloadSha256 confere ($(basename "$SIG_FILE"))"
   else
     fail "signatures.payloadSha256 STALE — sig='$S_SHA' real='$PAYLOAD_SHA'"
   fi
@@ -343,13 +349,24 @@ if [[ -n "$SP_PATH" && -f "$SP_PATH" ]]; then
   SP_PKG_INT="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(String(j.packageIntegrityPass))}catch(e){}" "$SP_PATH" 2>/dev/null || echo '')"
   SP_STALE="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(String(j.staleReferencesFound||0))}catch(e){process.stdout.write('0')}" "$SP_PATH" 2>/dev/null || echo '0')"
   SP_MANIFEST_HASH="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(j.manifestHash||'')}catch(e){}" "$SP_PATH" 2>/dev/null || echo '')"
-  REAL_MANIFEST_HASH="$(sha256sum "$MANIFEST_PATH" | awk '{print $1}')"
+  SP_RUN_ID="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(j.runId||'')}catch(e){}" "$SP_PATH" 2>/dev/null || echo '')"
+  SP_FP="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(j.sourceFingerprint||'')}catch(e){}" "$SP_PATH" 2>/dev/null || echo '')"
+  M_RUN_ID="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(j.runId||'')}catch(e){}" "$MANIFEST_PATH" 2>/dev/null || echo '')"
+  M_FP="$(node -e "try{const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')); process.stdout.write(j.sourceFingerprint||'')}catch(e){}" "$MANIFEST_PATH" 2>/dev/null || echo '')"
 
   [[ "$SP_STATUS" == "PASS" ]]   && ok "self-proving.selfProofStatus=PASS"       || fail "self-proving.selfProofStatus='$SP_STATUS' (esperado PASS)"
   [[ "$SP_PKG_OK"  == "true" ]]  && ok "self-proving.packageValidationOk=true"   || fail "self-proving.packageValidationOk='$SP_PKG_OK'"
   [[ "$SP_PKG_INT" == "true" ]]  && ok "self-proving.packageIntegrityPass=true"  || fail "self-proving.packageIntegrityPass='$SP_PKG_INT'"
   [[ "$SP_STALE"   == "0" ]]     && ok "self-proving.staleReferencesFound=0"     || fail "self-proving.staleReferencesFound=$SP_STALE (deve ser 0)"
-  [[ "$SP_MANIFEST_HASH" == "$REAL_MANIFEST_HASH" ]] && ok "self-proving.manifestHash confere" || fail "self-proving.manifestHash STALE — sp='$SP_MANIFEST_HASH' real='$REAL_MANIFEST_HASH'"
+  # Lineage: o relatório real (engine) prova mesmo run/fingerprint do manifest —
+  # vínculo mais forte que o manifestHash sintético do modelo anterior.
+  [[ -n "$SP_RUN_ID" && "$SP_RUN_ID" == "$M_RUN_ID" ]] && ok "self-proving.runId confere com manifest" || fail "self-proving.runId STALE/ausente — sp='$SP_RUN_ID' manifest='$M_RUN_ID'"
+  [[ -n "$SP_FP" && "$SP_FP" == "$M_FP" ]] && ok "self-proving.sourceFingerprint confere com manifest" || fail "self-proving.sourceFingerprint STALE/ausente"
+  # Campo legado opcional: se presente, deve conferir com o manifest real.
+  if [[ -n "$SP_MANIFEST_HASH" ]]; then
+    REAL_MANIFEST_HASH="$(sha256sum "$MANIFEST_PATH" | awk '{print $1}')"
+    [[ "$SP_MANIFEST_HASH" == "$REAL_MANIFEST_HASH" ]] && ok "self-proving.manifestHash confere" || fail "self-proving.manifestHash STALE — sp='$SP_MANIFEST_HASH' real='$REAL_MANIFEST_HASH'"
+  fi
 else
   fail "self-proving-report.json ausente em $DIST_VER/"
 fi
@@ -369,7 +386,10 @@ done
 
 FOUND_TOKENS=false
 for f in "${ARTIFACT_FILES[@]}"; do
-  if tr '[:lower:]' '[:upper:]' < "$f" | grep -Eq '"PLACEHOLDER"[[:space:]]*:[[:space:]]*TRUE|"TRANSITIONAL"[[:space:]]*:[[:space:]]*TRUE|STATUS.*PENDING|NO_GO'; then
+  # Fronteiras não-identifier (alinhado ao verify-v2): decisões reais NO_GO/
+  # PENDING bloqueiam; rótulos legítimos ("go_no_go", estados deferidos
+  # transitórios como DELIVERED_PENDING_SCORECARD) não são contaminação.
+  if tr '[:lower:]' '[:upper:]' < "$f" | grep -Eq '"PLACEHOLDER"[[:space:]]*:[[:space:]]*TRUE|"TRANSITIONAL"[[:space:]]*:[[:space:]]*TRUE|"STATUS"[[:space:]]*:[[:space:]]*"PENDING"|(^|[^A-Z0-9_])NO_GO([^A-Z0-9_]|$)|(^|[^A-Z0-9_])PENDING([^A-Z0-9_]|$)'; then
     fail "token proibido encontrado em $(basename "$f")"
     FOUND_TOKENS=true
   fi

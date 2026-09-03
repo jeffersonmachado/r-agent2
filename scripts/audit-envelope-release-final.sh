@@ -52,7 +52,11 @@ cleanup_stale_tmp_dirs() {
 
 contains_forbidden_tokens() {
   local file="$1"
-  tr '[:lower:]' '[:upper:]' < "$file" | grep -Eq '"PLACEHOLDER"[[:space:]]*:[[:space:]]*TRUE|"TRANSITIONAL"[[:space:]]*:[[:space:]]*TRUE|"STATUS"[[:space:]]*:[[:space:]]*"PENDING"|NO_GO|PENDING'
+  # Alinhado ao verify-enterprise-governance-v2.sh: NO_GO/PENDING exigem
+  # fronteiras não-identifier — decisões reais ("decision":"NO_GO") bloqueiam,
+  # mas rótulos legítimos ("go_no_go", "DELIVERED_PENDING_SCORECARD") não são
+  # contaminação.
+  tr '[:lower:]' '[:upper:]' < "$file" | grep -Eq '"PLACEHOLDER"[[:space:]]*:[[:space:]]*TRUE|"TRANSITIONAL"[[:space:]]*:[[:space:]]*TRUE|"STATUS"[[:space:]]*:[[:space:]]*"PENDING"|(^|[^A-Z0-9_])NO_GO([^A-Z0-9_]|$)|(^|[^A-Z0-9_])PENDING([^A-Z0-9_]|$)'
 }
 
 if [[ -f "$SCRIPT_DIR/release-governance-blocklist.sh" ]]; then
@@ -200,7 +204,7 @@ for g in "$DIST_GOV"/*.json "$IN_GOV"/*.json; do
 done
 
 step "5. Validar signatures externas e internas opcionais"
-for req in governance.sig release.sig package.manifest.sig replay.sig; do
+for req in governance.sig release.sig package.manifest.sig replay.sig release-attestation.sig; do
   [[ -f "$DIST_SIG/$req" ]] || fail "signature externa ausente: $req"
   if [[ -d "$IN_SIG" ]]; then
     [[ -f "$IN_SIG/$req" ]] || warn "signature interna ausente: $req"
@@ -213,20 +217,31 @@ validate_sig_dir() {
   for s in governance.sig release.sig package.manifest.sig replay.sig; do
     local p="$dir/$s"
     [[ -f "$p" ]] || continue
+    # Sigs Model A (sign-governance): HMAC-SHA256 real com chave fora do
+    # pacote. Offline não é possível recomputar o HMAC (por design — a chave
+    # não viaja); valida-se a estrutura e a autenticidade é ancorada no
+    # attestation Ed25519 (verificado pelo passo 10 → verify-payload-governance).
     local ok_sig
     ok_sig="$(node -e "
       const fs=require('fs');
-      const crypto=require('crypto');
-      const p=process.argv[1];
-      const payloadSha=process.argv[2];
-      const j=JSON.parse(fs.readFileSync(p,'utf8'));
-      const s=require('path').basename(p);
-      const expected=crypto.createHash('sha256').update(payloadSha+':'+s+':'+(j.releaseId||'')).digest('hex');
-      const ok=(j.artifact && (j.artifactSha256===payloadSha || j.payloadSha256===payloadSha) && j.algorithm==='sha256' && (j.status==='valid' || j.status==='final') && j.placeholder===false && j.transitional===false && j.signature===expected);
+      const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));
+      const ok=(j && j.signatureVersion===2 && j.algorithm==='hmac-sha256' && typeof j.seal==='string' && /^[0-9a-f]{64}$/.test(j.seal) && typeof j.gitCommit==='string' && /^[0-9a-f]{40}$/.test(j.gitCommit));
       process.stdout.write(String(ok));
-    " "$p" "$PAYLOAD_SHA" 2>/dev/null || echo false)"
-    [[ "$ok_sig" == "true" ]] || fail "signature $scope inválida: $s"
+    " "$p" 2>/dev/null || echo false)"
+    [[ "$ok_sig" == "true" ]] || fail "signature $scope inválida: $s (esperado HMAC-SHA256 signatureVersion=2)"
   done
+  # Attestation Ed25519: estrutura mínima aqui; verificação criptográfica real
+  # acontece no verify-payload-governance.js (passo 10).
+  local att="$dir/release-attestation.sig"
+  if [[ -f "$att" ]]; then
+    local ok_att
+    ok_att="$(node -e "
+      const j=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));
+      const ok=(j && j.algorithm==='ed25519' && typeof j.signature==='string' && j.signature.length>0 && j.attestation && typeof j.attestation.payloadSha256==='string');
+      process.stdout.write(String(ok));
+    " "$att" 2>/dev/null || echo false)"
+    [[ "$ok_att" == "true" ]] || fail "release-attestation.sig $scope malformado"
+  fi
 }
 
 validate_sig_dir "$DIST_SIG" "externa"
@@ -239,7 +254,9 @@ if [[ -d "$IN_SIG" ]]; then
 fi
 
 step "6. Validar verifier externo e interno"
-for vf in verify-enterprise-governance.sh verify-enterprise-governance-v2.sh verify-result.json; do
+# verify-result.json NÃO é obrigatório: é autogratificação escrita pela própria
+# execução do verifier — a prova real são os gates desta auditoria (passo 10).
+for vf in verify-enterprise-governance.sh verify-enterprise-governance-v2.sh verify-payload-governance.js release-attestation-public-key.json; do
   [[ -f "$DIST_VER/$vf" ]] || fail "verifier externo ausente: $vf"
   if [[ -d "$IN_VER" ]]; then
     [[ -f "$IN_VER/$vf" ]] || warn "verifier interno ausente: $vf"
@@ -248,17 +265,19 @@ done
 [[ -x "$DIST_VER/verify-enterprise-governance.sh" ]] || fail "verify-enterprise-governance.sh externo não executável"
 [[ -x "$DIST_VER/verify-enterprise-governance-v2.sh" ]] || fail "verify-enterprise-governance-v2.sh externo não executável"
 
-step "7. Validar verify-result"
+step "7. Validar verify-result (contrato estrutural, se presente)"
 if [[ -f "$DIST_VER/verify-result.json" ]]; then
   VR_OK="$(node -e "const j=JSON.parse(require('fs').readFileSync('$DIST_VER/verify-result.json','utf8')); process.stdout.write(String(j && j.governedArtifactType==='payload' && typeof j.status==='string' && typeof j.payloadValidated==='boolean' && typeof j.envelopeValidated==='boolean'));" 2>/dev/null || echo false)"
-  [[ "$VR_OK" == "true" ]] && ok "verify-result válido" || fail "verify-result inválido"
+  [[ "$VR_OK" == "true" ]] && ok "verify-result dentro do contrato estrutural" || fail "verify-result inválido"
 else
-  fail "verify-result ausente"
+  warn "verify-result.json ausente — não é evidência por si só (autogratificação)"
 fi
 
 step "8. Validar self-proving/package-validation/package-integrity"
 if [[ -f "$DIST_GOV/self-proving-report.json" ]]; then
-  SP_OK="$(node -e "const fs=require('fs'),crypto=require('crypto'); const j=JSON.parse(fs.readFileSync('$DIST_GOV/self-proving-report.json','utf8')); const manifestHash=crypto.createHash('sha256').update(fs.readFileSync('$MANIFEST_PATH')).digest('hex'); process.stdout.write(String(j.pass===true&&j.verifierPassed===true&&j.selfProofStatus==='PASS'&&j.governedArtifactType==='payload'&&j.payloadValidated===true&&j.envelopeValidated===true&&j.offlineAuditability===true&&j.packageValidationOk===true&&j.packageIntegrityPass===true&&j.staleReferencesFound===0&&j.manifestHash===manifestHash));" 2>/dev/null || echo false)"
+  # Contrato do self-proving REAL (engine self-proving-report.js): pass,
+  # verifierPassed, integridade de pacote, zero referências stale.
+  SP_OK="$(node -e "const j=JSON.parse(require('fs').readFileSync('$DIST_GOV/self-proving-report.json','utf8')); process.stdout.write(String(j.pass===true&&j.verifierPassed===true&&j.selfProofStatus==='PASS'&&j.packageValidationOk===true&&j.packageIntegrityPass===true&&j.staleReferencesFound===0));" 2>/dev/null || echo false)"
   [[ "$SP_OK" == "true" ]] && ok "self-proving completo" || fail "self-proving incompleto"
 fi
 if [[ -f "$DIST_GOV/package-validation-report.json" ]]; then

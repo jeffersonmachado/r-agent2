@@ -94,13 +94,17 @@ do
   [[ -f "$DIST_DIR/governance/$f" ]] && ok "dist/governance/$f" || fail "dist/governance/$f AUSENTE"
 done
 
-for f in package.manifest.sig governance.sig release.sig replay.sig; do
+for f in package.manifest.sig governance.sig release.sig replay.sig release-attestation.sig; do
   [[ -f "$DIST_DIR/signatures/$f" ]] && ok "dist/signatures/$f" || fail "dist/signatures/$f AUSENTE"
 done
 
 [[ -f "$DIST_DIR/verifier/verify-enterprise-governance.sh" ]] && ok "dist/verifier/verify-enterprise-governance.sh" || fail "dist/verifier/verify-enterprise-governance.sh AUSENTE"
 [[ -f "$DIST_DIR/verifier/verify-enterprise-governance-v2.sh" ]] && ok "dist/verifier/verify-enterprise-governance-v2.sh" || fail "dist/verifier/verify-enterprise-governance-v2.sh AUSENTE"
-[[ -f "$DIST_DIR/verifier/verify-result.json" ]] && ok "dist/verifier/verify-result.json" || fail "dist/verifier/verify-result.json AUSENTE"
+[[ -f "$DIST_DIR/verifier/verify-payload-governance.js" ]] && ok "dist/verifier/verify-payload-governance.js" || fail "dist/verifier/verify-payload-governance.js AUSENTE"
+[[ -f "$DIST_DIR/verifier/release-attestation-public-key.json" ]] && ok "dist/verifier/release-attestation-public-key.json" || fail "dist/verifier/release-attestation-public-key.json AUSENTE"
+# verify-result.json é autogratificação (escrito pela própria execução do
+# verifier no passo 6) — presença não é gate; a prova real é o passo 6.
+[[ -f "$DIST_DIR/verifier/verify-result.json" ]] && ok "dist/verifier/verify-result.json" || warn "dist/verifier/verify-result.json ausente (será escrito pelo passo 6)"
 
 step "5. Verificando dist/ raiz sem artefatos inesperados..."
 # Regra canônica (AGENTS.md): "dist/ deve permanecer limpo, EXCETO ZIPs e

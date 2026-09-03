@@ -198,27 +198,23 @@ materialize_payload_governance() {
   node_with_workspace_env -e "require('$PROJECT_ROOT/governance/export-governance-artifacts').exportGovernanceArtifacts()" >/dev/null 2>&1 \
     || warn "export-governance-artifacts não concluiu no PASS 5"
 
-  # Revalidar o payload saneado: o saneamento (PASS 4b) mudou o sha256 do
-  # payload, mas package-validation-report.json registra o hash pré-saneamento.
-  # Atualizar o binding do package-validation para o payload final (nome + hash
-  # do payload saneado) ANTES de re-assinar — sign-governance reconstrói a
-  # governance-chain e o checkPackageIntegrity do final-governance-engine lê
-  # esse relatório para comparar o hash do ZIP físico.
-  step "Atualizando package binding para o payload saneado..."
-  node_with_workspace_env -e "
-    const fs = require('fs');
-    const p = '$PROJECT_ROOT/governance/package-validation-report.json';
-    const j = JSON.parse(fs.readFileSync(p, 'utf8'));
-    j.zipName = '$payload_name';
-    j.zipPath = '$DIST_DIR/release/$payload_name';
-    j.zipSha256 = '$payload_hash';
-    j.packageBinding = { ...(j.packageBinding || {}), sha256: '$payload_hash', zipName: '$payload_name' };
-    j.ok = true;
-    j.audit = 'passed';
-    fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
-  " 2>/dev/null \
-    && ok "package-validation-report atualizado para o payload" \
-    || warn "falha ao atualizar package-validation-report"
+  # Revalidar o payload saneado DE VERDADE: o saneamento (PASS 4b) mudou o
+  # sha256 do payload. PROIBIDO patchar ok=true no relatório (anti-padrão que
+  # fabricava GO sobre NO_GO — root cause do release r-agent2-20260903-134904).
+  # O package-validator revalida o artefato efetivamente entregue e regrava o
+  # relatório (com lineage na origem) — se reprovar, o release é bloqueado.
+  step "Revalidando payload saneado (package-validation FINAL real)..."
+  node_with_workspace_env "$PROJECT_ROOT/governance/package-validator.js" \
+    --zip "$DIST_DIR/release/$payload_name" --audited-only \
+    && ok "package-validation FINAL real gravado para o payload entregue" \
+    || fail "package-validator reprovou o payload saneado — release bloqueada"
+
+  # Package integrity FINAL real contra o payload + manifest pós-saneamento
+  # (mesmo princípio: resultado de engine, nunca escrita sintética).
+  step "Reavaliando package-integrity contra o payload entregue..."
+  node_with_workspace_env "$PROJECT_ROOT/governance/package-integrity-engine.js" >/dev/null 2>&1 \
+    && ok "package-integrity FINAL real: PACKAGE_INTEGRITY_GO" \
+    || fail "package-integrity-engine reprovou o payload entregue — release bloqueada"
 
   # Re-assinar contra o payload final: as assinaturas do PASS 2 foram emitidas
   # contra H_provisional; o rebind patcheou os campos mas NÃO recomputou os selos
@@ -243,7 +239,7 @@ materialize_payload_governance() {
     || warn "tamper-detector reportou falha no PASS 5"
 
   node_with_workspace_env "$PROJECT_ROOT/scripts/governance/stamp-report-lineage.js" >/dev/null 2>&1 \
-    || warn "stamp-report-lineage não concluiu no PASS 5"
+    || fail "stamp-report-lineage falhou no PASS 5 — artefatos sem lineage não podem ser certificados"
 
   node_with_workspace_env "$PROJECT_ROOT/governance/revalidate-master-scorecard.js" >/dev/null \
     || fail "Master Scorecard não validou para o payload"
@@ -273,37 +269,119 @@ materialize_payload_governance() {
       || fail "Artifact governado obrigatório ausente: governance/$report_name"
   done
 
-  # Materializar o CONTRATO payload-centric do modelo envelope-governed no
-  # dist/governance/ + dist/signatures/ + dist/verifier/. Este é o contrato
-  # rígido que verify-enterprise-governance-v2.sh e audit-envelope-release-final.sh
-  # validam (payload-governance.json, chainRoot=payload_hash, attestation.payloadRef,
-  # self-proving estrito, sigs sha256(payloadHash:sigName:releaseId), verify-result).
-  # Os relatórios Model A (cadeia criptográfica real) permanecem em governance/.
-  step "Materializando contrato payload-centric (Modelo B) em dist/..."
+  # Materializar o ENVELOPE DERIVADO da governança canônica do PAYLOAD.
+  # Regra absoluta: o envelope COPIA e VINCULA a decisão canônica embutida no
+  # payload — nunca a inventa. package-validation/package-integrity/self-proving
+  # do envelope são os relatórios REAIS produzidos pelos engines nesta fase
+  # (revalidados contra o payload entregue), não escritas sintéticas com GO.
+  step "Derivando envelope da governança canônica do payload (fail-closed)..."
+  node_with_workspace_env -e "
+    const fs=require('fs'), crypto=require('crypto'), path=require('path'), os=require('os');
+    const { execFileSync } = require('child_process');
+    const { normalizeDecision } = require('$PROJECT_ROOT/governance/canonical-decision');
+    const { withLineage } = require('$PROJECT_ROOT/governance/report-lineage');
+    const payload='$payload_name', sha='$payload_hash', releaseId='$release_id';
+    const govDir='$gov_dir';
+    const manifestPath='$manifest_path';
+    const now=new Date().toISOString();
+
+    // 1. Decisão canônica DENTRO do payload (fonte da verdade). Se for NO_GO,
+    //    o release aborta — envelope GO sobre payload NO_GO é proibido.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(),'rap-envelope-derive-'));
+    execFileSync('unzip',['-qq',path.join('$DIST_DIR','release',payload),'r-agent2/governance/final-governance-report.json','-d',tmp],{stdio:'pipe'});
+    const canonicalPath = path.join(tmp,'r-agent2/governance/final-governance-report.json');
+    const canonical = JSON.parse(fs.readFileSync(canonicalPath,'utf8'));
+    const canonicalSha = crypto.createHash('sha256').update(fs.readFileSync(canonicalPath)).digest('hex');
+    const canonicalDecision = normalizeDecision(canonical.finalDecision || canonical.decision);
+    fs.rmSync(tmp,{recursive:true,force:true});
+    if (canonicalDecision !== 'GO') {
+      console.error('PAYLOAD_CANONICAL_NO_GO — ' + (canonical.finalDecision||'null'));
+      process.exit(1);
+    }
+    const runId = canonical.runId || null;
+    const sourceFingerprint = canonical.sourceFingerprint || null;
+
+    const w=(f,j)=>fs.writeFileSync(path.join(govDir,f), JSON.stringify(j,null,2)+'\n');
+    w('payload-governance.json',{governedArtifact:payload,governedHash:sha,architecture:'payload-centric',createdAt:now,releaseTimestamp:releaseId,envelopeAware:true,runId,sourceFingerprint,payloadGovernance:{isGovernedArtifact:true,isEnvelopeArtifact:false},transitional:false,placeholder:false,status:'final'});
+    w('governance-chain.json',{architecture:'payload-centric',chainRoot:sha,releaseId,runId,payloadRef:payload,transitional:false});
+    w('governance-attestation.json',{architecture:'payload-centric',finalDecision:canonical.finalDecision,canonicalDecision,releaseId,runId,payloadRef:payload,canonicalSha256:canonicalSha,transitional:false});
+
+    // 2. final-governance-report do envelope = CÓPIA DERIVADA vinculada por hash.
+    w('final-governance-report.json', withLineage({
+      generatedAt:now,
+      finalDecision: canonical.finalDecision,
+      decision: canonicalDecision,
+      pass: canonicalDecision==='GO',
+      canonicalSource:'payload:r-agent2/governance/final-governance-report.json',
+      canonicalSha256: canonicalSha,
+      derivedFromCanonical:true,
+      payload, payloadSha256: sha,
+      packagePhase:'FINAL',
+      payloadModel:'minimal-envelope-governed',
+      producer:'two-pass-release/envelope-derivation',
+      transitional:false, placeholder:false, status:'final',
+    }, 'final-governance-report', { includeGit: true }));
+
+    // 3. package-validation/package-integrity do envelope = relatórios REAIS do
+    //    workspace (revalidados contra o payload entregue acima), vinculados ao
+    //    hash do payload e à decisão canônica.
+    for (const f of ['package-validation-report.json','package-integrity-report.json']) {
+      const real = JSON.parse(fs.readFileSync(path.join('$PROJECT_ROOT','governance',f),'utf8'));
+      real.payloadSha256 = sha;
+      real.finalDecision = canonical.finalDecision;
+      real.canonicalSource = 'payload:r-agent2/governance/' + f;
+      real.derivedFromCanonical = true;
+      real.status = 'final'; real.transitional = false; real.placeholder = false;
+      w(f, real);
+    }
+    console.log('envelope derivado da decisão canônica: ' + canonical.finalDecision);
+  " 2>/dev/null \
+    && ok "Envelope derivado da governança canônica do payload" \
+    || fail "Governança canônica do payload não é GO — release bloqueada (proibido promover NO_GO→GO)"
+
+  # Self-proving REAL do artefato entregue (engine, nunca escrita sintética).
+  step "Self-proving real do artefato entregue..."
+  node_with_workspace_env "$PROJECT_ROOT/governance/self-proving-report.js" >/dev/null 2>&1 || true
+  node_with_workspace_env -e "
+    const r = require('$PROJECT_ROOT/governance/self-proving-report.json');
+    if (r.pass !== true) { console.error('SELF_PROVING_FAIL — ' + (r.summary||'pass=false')); process.exit(1); }
+  " || fail "self-proving real FAIL — release bloqueada (proibido materializar PASS sintético)"
+  cp "$PROJECT_ROOT/governance/self-proving-report.json" "$gov_dir/self-proving-report.json"
+  ok "self-proving real PASS copiado para o envelope"
+
+  # Attestation Ed25519: autenticação real do release (chave privada fora do
+  # pacote/repositório; pública distribuída no verifier). Cobre releaseId,
+  # runId, sourceFingerprint, gitCommit, gitTree, payloadSha256, manifestSha256
+  # e a decisão canônica — modificar qualquer campo invalida a assinatura.
+  step "Assinando attestation Ed25519 do release..."
   node_with_workspace_env -e "
     const fs=require('fs'), crypto=require('crypto'), path=require('path');
-    const payload='$payload_name', sha='$payload_hash', releaseId='$release_id';
-    const govDir='$gov_dir', sigDir='$sig_dir', verDir='$ver_dir';
-    const manifestPath='$manifest_path';
-    const manifestSha=crypto.createHash('sha256').update(fs.readFileSync(manifestPath)).digest('hex');
-    const now=new Date().toISOString();
-    const w=(f,j)=>fs.writeFileSync(path.join(govDir,f), JSON.stringify(j,null,2)+'\n');
-    w('payload-governance.json',{governedArtifact:payload,governedHash:sha,architecture:'payload-centric',createdAt:now,releaseTimestamp:releaseId,envelopeAware:true,payloadGovernance:{isGovernedArtifact:true,isEnvelopeArtifact:false},transitional:false,placeholder:false,status:'final'});
-    w('governance-chain.json',{architecture:'payload-centric',chainRoot:sha,releaseId:releaseId,payloadRef:payload,transitional:false});
-    w('governance-attestation.json',{architecture:'payload-centric',finalDecision:'GO',releaseId:releaseId,payloadRef:payload,transitional:false});
-    w('self-proving-report.json',{generatedAt:now,schemaVersion:'2.1.0',pass:true,verifierPassed:true,selfProofStatus:'PASS',governedArtifactType:'payload',governedArtifact:payload,payloadHash:sha,manifestHash:manifestSha,envelopeValidated:true,payloadValidated:true,offlineAuditability:true,packageValidationOk:true,packageIntegrityPass:true,staleReferencesFound:0,architecture:'envelope-payload-split',payloadModel:'minimal-envelope-governed',payloadSelfContained:false,releaseTimestamp:releaseId,transitional:false,placeholder:false,status:'final'});
-    w('package-validation-report.json',{generatedAt:now,ok:true,pass:true,payload:payload,payloadSha256:sha,finalDecision:'GO',transitional:false,placeholder:false,status:'final'});
-    w('package-integrity-report.json',{generatedAt:now,pass:true,ok:true,payload:payload,payloadSha256:sha,finalDecision:'GO',transitional:false,placeholder:false,status:'final'});
-    w('final-governance-report.json',{generatedAt:now,finalDecision:'GO',pass:true,ok:true,payload:payload,payloadSha256:sha,payloadModel:'minimal-envelope-governed',payloadSelfContained:false,transitional:false,placeholder:false,status:'final'});
-    for(const sigName of ['governance.sig','release.sig','package.manifest.sig','replay.sig']){
-      const sig={schemaVersion:'1.0.0',artifact:payload,artifactSha256:sha,algorithm:'sha256',placeholder:false,transitional:false,releaseId:releaseId,payloadRef:payload,payloadSha256:sha,signatureType:'sha256',signature:crypto.createHash('sha256').update(sha+':'+sigName+':'+releaseId).digest('hex'),status:'valid',signedAt:now};
-      fs.writeFileSync(path.join(sigDir,sigName), JSON.stringify(sig,null,2)+'\n');
-    }
-    fs.writeFileSync(path.join(verDir,'verify-result.json'), JSON.stringify({generatedAt:now,status:'PASS',pass:true,payloadValidated:true,envelopeValidated:true,governedArtifactType:'payload',payload:payload,payloadSha256:sha},null,2)+'\n');
-    console.log('payload contract ok');
+    const { signAttestation } = require('$PROJECT_ROOT/governance/release-attestation');
+    const manifest = JSON.parse(fs.readFileSync('$manifest_path','utf8'));
+    const canonical = JSON.parse(fs.readFileSync(path.join('$gov_dir','final-governance-report.json'),'utf8'));
+    const manifestSha = crypto.createHash('sha256').update(fs.readFileSync('$manifest_path')).digest('hex');
+    const sig = signAttestation({
+      releaseId: '$release_id',
+      runId: manifest.runId || canonical.runId,
+      sourceFingerprint: manifest.sourceFingerprint || canonical.sourceFingerprint,
+      gitCommit: manifest.git_commit,
+      gitTree: manifest.git_tree,
+      payloadSha256: '$payload_hash',
+      manifestSha256: manifestSha,
+      finalDecision: canonical.finalDecision,
+    });
+    fs.writeFileSync(path.join('$sig_dir','release-attestation.sig'), JSON.stringify(sig,null,2)+'\n');
+    console.log('attestation ed25519 ok fp=' + sig.publicKeyFingerprint.slice(0,16));
   " 2>/dev/null \
-    && ok "Contrato payload-centric materializado" \
-    || fail "Falha ao materializar contrato payload-centric"
+    && ok "release-attestation.sig (Ed25519) emitido" \
+    || fail "Falha ao assinar attestation Ed25519 — chave ausente? rode: node governance/release-attestation.js keygen"
+  # Chave pública RESOLVIDA (env > keyDir > repo) — a que corresponde à chave
+  # que assinou, mesmo quando provisionada via secret store/CI.
+  node_with_workspace_env -e "
+    require('$PROJECT_ROOT/governance/release-attestation')
+      .exportResolvedPublicKey('$ver_dir/release-attestation-public-key.json');
+  " || fail "Falha ao exportar chave pública resolvida para o verifier"
+  cp "$SCRIPT_DIR/verify-payload-governance.js" "$ver_dir/verify-payload-governance.js"
 
   cp "$SCRIPT_DIR/verify-enterprise-governance.sh" "$ver_dir/verify-enterprise-governance.sh"
   cp "$SCRIPT_DIR/verify-enterprise-governance-v2.sh" "$ver_dir/verify-enterprise-governance-v2.sh"
@@ -410,6 +488,15 @@ command -v zip >/dev/null 2>&1   || fail "'zip' não encontrado"
 command -v sha256sum >/dev/null 2>&1 || fail "'sha256sum' não encontrado"
 command -v node >/dev/null 2>&1  || fail "'node' não encontrado"
 command -v unzip >/dev/null 2>&1 || fail "'unzip' não encontrado — extração limpa é obrigatória"
+# Attestation Ed25519: a chave privada vive FORA do pacote/repositório (runtime
+# root ou env RAP_RELEASE_ATTESTATION_PRIVATE_KEY — secret store/CI). Sem ela
+# não há assinatura autenticada do release — falhar cedo.
+node_with_workspace_env -e "
+  const m = require('$PROJECT_ROOT/governance/release-attestation');
+  m.loadPrivateKey();
+  m.loadPublicKey();
+" 2>/dev/null \
+  || fail "Chave de attestation ausente — rode: node governance/release-attestation.js keygen (ou provisione RAP_RELEASE_ATTESTATION_PRIVATE_KEY)"
 ok "Pré-condições verificadas"
 
 # ── GATE DE PROVENIÊNCIA: worktree limpo no INÍCIO do pipeline ───────────────
@@ -605,6 +692,42 @@ for f in \
   [[ -f "$PROJECT_ROOT/$f" ]] && cp "$PROJECT_ROOT/$f" "$DIST_DIR/governance-artifacts/$(basename $f)" || true
 done
 ok "dist/governance-artifacts/ populado com artefatos do PASS 2"
+
+# ══════════════════════════════════════════════════════════════════════════════
+pass "PASS 2.9 — CONVERGENCE GATE: governança real ANTES de selar o payload"
+# ══════════════════════════════════════════════════════════════════════════════
+# O payload carrega o estado de governance/ no momento do zip. Se esse estado
+# for NO_GO, o pacote nasce NO_GO e nenhuma fase posterior pode promovê-lo
+# (root cause do release r-agent2-20260903-134904: payload selado NO_GO +
+# envelope GO sintético). Aqui os engines reais rodam contra o pacote
+# provisional e o seal-time-gate avalia os artefatos PRODUZIDOS por eles:
+#   SEAL_GO      → payload selado com decisão GO real;
+#   SEAL_PENDING → apenas dims da fase DELIVERED pendentes (RAP-055/056):
+#                  selagem permitida, o PASS 5 bloqueia até o fixpoint real;
+#   SEAL_NO_GO   → release ABORTADA. Payload nunca é selado com NO_GO.
+step "Validando pacote provisional (package-validation real com lineage)..."
+node_with_workspace_env "$PROJECT_ROOT/governance/package-validator.js" \
+  --zip "$PROVISIONAL_ZIP" --audited-only \
+  && ok "Pacote provisional validado (package-validation-report.json)" \
+  || fail "package-validator reprovou o pacote provisional — payload não será selado"
+
+step "Re-materializando proof reports com pacote provisional presente..."
+node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js" >/dev/null 2>&1 \
+  && ok "platform-readiness GO (pré-selo)" \
+  || warn "platform-readiness pré-selo não retornou GO (seal-time-gate decide)"
+
+step "Stamp de lineage (backstop bloqueante pré-selo)..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/stamp-report-lineage.js" >/dev/null 2>&1 \
+  || fail "stamp-report-lineage falhou — artefatos sem lineage não podem ser selados"
+
+step "Reavaliando engines de certificação (pré-selo)..."
+node_with_workspace_env "$PROJECT_ROOT/governance/revalidate-master-scorecard.js" >/dev/null 2>&1 || true
+node_with_workspace_env "$PROJECT_ROOT/governance/final-consistency-gate.js" >/dev/null 2>&1 || true
+node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null 2>&1 || true
+
+step "SEAL-TIME GATE: avaliando estado canônico produzido pelos engines..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/seal-time-gate.js" \
+  || fail "CANONICAL_NO_GO — release abortada: governança real não convergiu antes de selar o payload"
 
 # ══════════════════════════════════════════════════════════════════════════════
 pass "PASS 3 — RECONSTRUÇÃO DO PACOTE FINAL"
@@ -816,6 +939,12 @@ cp "$SCRIPT_DIR/release-governance-ci.sh" "$VER_DIR/release-governance-ci.sh"
 cp "$SCRIPT_DIR/test-payload-contamination-regression.sh" "$VER_DIR/test-payload-contamination-regression.sh"
 cp "$SCRIPT_DIR/release-governance-blocklist.sh" "$VER_DIR/release-governance-blocklist.sh"
 cp "$SCRIPT_DIR/release-payload-blocklist.sh" "$VER_DIR/release-payload-blocklist.sh"
+cp "$SCRIPT_DIR/verify-payload-governance.js" "$VER_DIR/verify-payload-governance.js"
+# Chave pública RESOLVIDA (env > keyDir > repo) — par da chave que assinará.
+node_with_workspace_env -e "
+  require('$PROJECT_ROOT/governance/release-attestation')
+    .exportResolvedPublicKey('$VER_DIR/release-attestation-public-key.json');
+" || fail "Falha ao exportar chave pública resolvida para dist/verifier/"
 chmod +x "$VER_DIR/verify-enterprise-governance.sh" \
   "$VER_DIR/verify-enterprise-governance-v2.sh" \
   "$VER_DIR/audit-envelope-release-final.sh" \
@@ -911,6 +1040,14 @@ VERIFIER="$SCRIPT_DIR/verify-enterprise-governance.sh"
 [[ -x "$VERIFIER" ]] || chmod +x "$VERIFIER"
 
 if bash "$VERIFIER"; then
+  # ── Gate fail-closed da governança DO PAYLOAD (fonte da verdade) ─────────
+  # O verifier offline acima valida o envelope; este gate abre o payload e
+  # exige que a governança canônica embutida seja GO, do mesmo run/fingerprint,
+  # com envelope derivado idêntico e attestation Ed25519 válida.
+  step "Verificando governança canônica do payload (fail-closed)..."
+  node_with_workspace_env "$PROJECT_ROOT/scripts/verify-payload-governance.js" --root "$PROJECT_ROOT" \
+    || fail "payload governance NO_GO — release bloqueada"
+
   # ── Revalidação pós-packaging (gap estrutural de pacote já resolvido) ─────
   step "Revalidando platform-readiness com o pacote final (gap transitório resolvido)..."
   if node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js" 2>/dev/null; then

@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const { findLatestReleaseArtifact, listArtifacts } = require('../tools/system/lib/release-artifact');
+const { withLineage } = require('./report-lineage');
 
 const ROOT = path.join(__dirname, '..');
 const DEFAULT_REPORT_PATH = path.join(ROOT, 'governance', 'package-validation-report.json');
@@ -266,7 +267,9 @@ function validatePackage(options = {}) {
   const selfContainmentPassed = selfContainment.passed;
   const ok = missingEntries.length === 0 && auditSatisfied && selfContainmentPassed;
 
-  return {
+  // Lineage na origem (ver governance/report-lineage.js): o relatório nasce
+  // com runId/sourceFingerprint/artifactType — sem depender do stamp posterior.
+  return withLineage({
     generatedAt: new Date().toISOString(),
     zipPath: artifact.zipPath,
     zipName: artifact.zip,
@@ -298,7 +301,7 @@ function validatePackage(options = {}) {
       selfProving: selfContainmentPassed,
       offlineAuditable: selfContainmentPassed,
     },
-  };
+  }, 'package-validation-report', { includeGit: true });
 }
 
 function writeReport(report, reportPath = DEFAULT_REPORT_PATH) {
@@ -341,7 +344,7 @@ if (require.main === module) {
     const manifest = loadEvidenceManifest();
     const errorMessage = String(error?.message || error || '');
     const deferred = errorMessage.includes('artifact_missing');
-    const report = {
+    const report = withLineage({
       generatedAt: new Date().toISOString(),
       ok: false,
       error: errorMessage,
@@ -354,7 +357,7 @@ if (require.main === module) {
           .filter((artifactRecord) => artifactRecord && artifactRecord.packageRequired === true)
           .map((artifactRecord) => artifactRecord.path)
         : [],
-    };
+    }, 'package-validation-report', { includeGit: true });
     writeReport(report);
     // eslint-disable-next-line no-console
     console.error(`[package-validator] error=${report.error}${deferred ? ' (DEFERRED: package not created yet)' : ''}`);

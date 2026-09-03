@@ -296,19 +296,25 @@ done
 
 for sig in "$DIST_SIG"/*.sig; do
   [[ -f "$sig" ]] || continue
+  SIG_NAME="$(basename "$sig")"
+  if [[ "$SIG_NAME" == "release-attestation.sig" ]]; then
+    # Attestation Ed25519: verificada criptograficamente no passo 7.5 pelo
+    # verify-payload-governance.js (chave pública disponível no verifier).
+    continue
+  fi
+  # Sigs Model A (sign-governance): HMAC-SHA256 real com chave fora do pacote.
+  # Offline não é possível recomputar o HMAC (por design — a chave não viaja);
+  # valida-se a estrutura e a autenticidade é ancorada no attestation Ed25519.
   SIG_CHECK="$(node -e "
     const fs=require('fs');
-    const crypto=require('crypto');
     const p=process.argv[1];
-    const payloadSha=process.argv[2];
     const j=JSON.parse(fs.readFileSync(p,'utf8'));
-    const sigName=require('path').basename(p);
-    const expected=crypto.createHash('sha256').update(payloadSha+':'+sigName+':'+(j.releaseId||'')).digest('hex');
-    const ok=(j.placeholder===false && j.transitional===false && (j.status==='valid' || j.status==='final') && j.artifact && j.algorithm==='sha256' && (j.payloadSha256===payloadSha || j.artifactSha256===payloadSha) && j.signature===expected);
+    const ok=(j && j.signatureVersion===2 && j.algorithm==='hmac-sha256' && typeof j.seal==='string' && j.seal.length===64 && typeof j.gitCommit==='string' && /^[0-9a-f]{40}$/.test(j.gitCommit));
     process.stdout.write(String(ok));
-  " "$sig" "$PAYLOAD_SHA" 2>/dev/null || echo false)"
-  [[ "$SIG_CHECK" == "true" ]] || fail "Signature externa inválida: $(basename "$sig")"
+  " "$sig" 2>/dev/null || echo false)"
+  [[ "$SIG_CHECK" == "true" ]] || fail "Signature externa inválida: $SIG_NAME (esperado HMAC-SHA256 signatureVersion=2)"
 done
+[[ -f "$DIST_SIG/release-attestation.sig" ]] || fail "release-attestation.sig (Ed25519) ausente em dist/signatures"
 
 step "5. Validando estrutura interna do payload (modelo mínimo envelope-governed)"
 TMP="$(mktemp -d -t r-agent2-audit-XXXXXX)"
@@ -327,7 +333,7 @@ fi
 IN_GOV_DIR="$TMP/payload/r-agent2/dist/governance"
 IN_SIG_DIR="$TMP/payload/r-agent2/dist/signatures"
 if [[ -d "$IN_GOV_DIR" ]]; then
-  warn "Payload contém governance interno; no modelo mínimo isso é opcional e não é fonte de verdade"
+  warn "Payload contém dist/governance interno redundante (a fonte canônica é r-agent2/governance — validada no passo 7.5)"
   for json in "$IN_GOV_DIR"/*.json; do
     [[ -f "$json" ]] || continue
     contains_forbidden_tokens "$json" && fail "Governance interno contém tokens proibidos: $(basename "$json")"
@@ -342,7 +348,7 @@ if [[ -d "$IN_SIG_DIR" ]]; then
 fi
 
 step "6. Validando verifier offline externo"
-for vf in verify-enterprise-governance.sh verify-enterprise-governance-v2.sh verify-result.json; do
+for vf in verify-enterprise-governance.sh verify-enterprise-governance-v2.sh verify-payload-governance.js release-attestation-public-key.json; do
   [[ -f "$DIST_VER/$vf" ]] || fail "Verifier externo incompleto: falta $vf"
 done
 if [[ ! -x "$DIST_VER/verify-enterprise-governance.sh" ]]; then
@@ -355,18 +361,37 @@ fi
 [[ -x "$DIST_VER/verify-enterprise-governance-v2.sh" ]] || fail "verify-enterprise-governance-v2.sh não executável"
 
 step "7. Validando verify-result e self-proving"
+# verify-result.json é ESCRITO por esta própria execução ao final — não é
+# evidência (autogratificação). Se existir de uma execução anterior, valida-se
+# apenas o contrato estrutural; a prova real são os gates desta execução.
 if [[ -f "$DIST_VER/verify-result.json" ]]; then
   VR_OK="$(node -e "const j=JSON.parse(require('fs').readFileSync('$DIST_VER/verify-result.json','utf8')); const ok=(j && j.governedArtifactType==='payload' && typeof j.status==='string' && typeof j.payloadValidated==='boolean' && typeof j.envelopeValidated==='boolean'); process.stdout.write(String(ok));" 2>/dev/null || echo false)"
   [[ "$VR_OK" == "true" ]] || fail "verify-result.json fora do contrato estrutural"
 else
-  fail "verify-result.json ausente"
+  warn "verify-result.json ausente — será escrito por esta execução (não é evidência por si só)"
 fi
 
 if [[ -f "$DIST_GOV/self-proving-report.json" ]]; then
-  SP_OK="$(node -e "const fs=require('fs'),crypto=require('crypto'); const j=JSON.parse(fs.readFileSync('$DIST_GOV/self-proving-report.json','utf8')); const manifestHash=crypto.createHash('sha256').update(fs.readFileSync('$MANIFEST_PATH')).digest('hex'); const ok=(j.pass===true&&j.verifierPassed===true&&j.selfProofStatus==='PASS'&&j.governedArtifactType==='payload'&&j.payloadValidated===true&&j.envelopeValidated===true&&j.offlineAuditability===true&&j.packageValidationOk===true&&j.packageIntegrityPass===true&&j.staleReferencesFound===0&&j.manifestHash===manifestHash); process.stdout.write(String(ok));" 2>/dev/null || echo false)"
-  [[ "$SP_OK" == "true" ]] || fail "self-proving-report.json incompleto"
+  # Contrato do self-proving REAL (engine self-proving-report.js): pass,
+  # verifierPassed, integridade de pacote, zero referências stale.
+  SP_OK="$(node -e "const j=JSON.parse(require('fs').readFileSync('$DIST_GOV/self-proving-report.json','utf8')); const ok=(j.pass===true&&j.verifierPassed===true&&j.selfProofStatus==='PASS'&&j.packageValidationOk===true&&j.packageIntegrityPass===true&&j.staleReferencesFound===0); process.stdout.write(String(ok));" 2>/dev/null || echo false)"
+  [[ "$SP_OK" == "true" ]] || fail "self-proving-report.json não é PASS real (engine)"
 else
   fail "self-proving-report.json ausente"
+fi
+
+step "7.5. Governança canônica DO PAYLOAD (fail-closed, fonte da verdade)"
+# Abre o payload e exige: decisão canônica GO, mesmo run/fingerprint que o
+# manifest, envelope derivado idêntico à canônica, scorecard 78/78, package
+# reports reais PASS e attestation Ed25519 válida. NO_GO→GO é impossível aqui.
+PAYLOAD_GOV_VERIFIER="$DIST_VER/verify-payload-governance.js"
+[[ -f "$PAYLOAD_GOV_VERIFIER" ]] || PAYLOAD_GOV_VERIFIER="$SCRIPT_DIR/verify-payload-governance.js"
+[[ -f "$PAYLOAD_GOV_VERIFIER" ]] || fail "verify-payload-governance.js não encontrado"
+if node "$PAYLOAD_GOV_VERIFIER" --payload "$PAYLOAD_PATH" --manifest "$MANIFEST_PATH" \
+    --envelope-governance "$DIST_GOV" --signatures "$DIST_SIG" --verifier "$DIST_VER"; then
+  ok "Governança canônica do payload verificada (PAYLOAD_GOVERNANCE_VERIFIED)"
+else
+  fail "Governança canônica do payload NO_GO — verificação reprovada"
 fi
 
 step "8. Verificando referências antigas proibidas"
