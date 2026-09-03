@@ -1,11 +1,11 @@
 # Enterprise Readiness
 
-- Decision: AUTONOMOUS_READY_GO
+- Decision: NO_GO:AUTONOMOUS_READY_GO
 - Canonical mesh execution: mesh-2026-09-03T00-04-04-694Z
 - Enterprise readiness: autonomous-ready
-- Production readiness: AUTONOMOUS_READY_GO
-- Blocking gaps: 0
+- Production readiness: NO_GO:AUTONOMOUS_READY_GO
+- Blocking gaps: 1
 - Blocking domains: none
 
 ## Hard blockers
-- Nenhum
+- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)

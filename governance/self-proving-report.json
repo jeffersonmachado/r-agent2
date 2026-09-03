@@ -116,8 +116,8 @@
   "passCount": 10,
   "totalDimensions": 10,
   "summary": "Pacote r-agent2-20260903-134904.zip é completamente self-proving. Score: 100/100.",
-  "runId": "rap-governed-20260903164037846-c796debe",
-  "sourceFingerprint": "67bda919f3f8b2de577bf04b6e7bbe6b68d8e9dd814d4df803ef1831c816b61f",
+  "runId": "rap-governed-20260903180300306-36ecbf93",
+  "sourceFingerprint": "a8862e30690bdb6b08edc5bd0662663863024ad4091250d4df998418bfe8c4c2",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0"
 }
