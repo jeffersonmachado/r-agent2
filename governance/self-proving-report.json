@@ -141,8 +141,8 @@
   "summary": "Pacote r-agent2-20260903-172155.payload.zip FALHOU na auto-prova. Falhas: [verifierPassed, manifestInsideDist, staleReferencesFound, governanceChainValid, immutable]. Score: 0/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260903202039929-412c60c5",
-  "sourceFingerprint": "0a2841c5bcce6773ae72c874ee6738c3e956d9db9c1bc93d942b5f0e52461d01",
+  "runId": "rap-governed-20260903202659531-699fc141",
+  "sourceFingerprint": "1d961afe6805ff613644a5006372a6bb68548164a169e8930fdbeeb631489751",
   "gitCommit": "6ecbf65fb4ae8e71934bafee51bbeef748d4d390",
   "gitTree": "325822d044a7383f79b6982edd0bb4b00550b810"
 }
