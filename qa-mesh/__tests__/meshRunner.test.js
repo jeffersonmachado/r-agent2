@@ -23,6 +23,7 @@ process.env.QA_MESH_STABILITY_HISTORY_DIR = path.join(MESH_TEST_TMP, 'stability-
 process.env.QA_MESH_LEARN_DIR = path.join(MESH_TEST_TMP, 'learning');
 process.env.QA_MESH_HISTORY_DIR = path.join(MESH_TEST_TMP, 'meshHistory');
 process.env.QA_MESH_EVIDENCE_DIR = path.join(MESH_TEST_TMP, 'meshEvidence');
+process.env.QA_MESH_INTELLIGENCE_DIR = path.join(MESH_TEST_TMP, 'intelligence');
 
 jest.mock('../adapters/apiAdapter', () => ({
   executeScenario: jest.fn(),
