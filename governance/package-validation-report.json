@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T19:50:41.720Z",
+  "generatedAt": "2026-09-03T19:57:43.093Z",
   "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-converge-provisional.zip",
   "zipName": "r-agent2-converge-provisional.zip",
   "zipSha256": "bd94f462bff329944ec8dfe9f3489cee33cd60beb5a3280378f9ca4a3c055ff3",
@@ -33,8 +33,8 @@
   },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260903193504885-17c5feed",
-  "sourceFingerprint": "845e0e1108578dcf647cb831ec28e404c4139da1ac55b9cd269fc7f7914779b0",
-  "gitCommit": "3ef898af30881c45b5b14a0f2ac47b8f0b74e6e2",
-  "gitTree": "3e37149223077eb714cba093d9ff521a0a952aea"
+  "runId": "rap-governed-20260903195647640-95d36ea5",
+  "sourceFingerprint": "ccf29d5378c4954b91f239809e5fe6d32b919d9aa704bdfce4c9471520202ed0",
+  "gitCommit": "4567e4896b1f7b156f832c811b52bdf9a07a5b41",
+  "gitTree": "aba13ff5400db3c4f0288d3a99406d9b197c04ea"
 }
