@@ -257,13 +257,31 @@ async function autoLoginBeforeSteps(page, params = {}) {
   }
 
   // Garante autenticação (token RPA -> fallback UI)
-  const authResult = await ensureAuthenticated(page, {
-    ...(params.authOptions || {}),
-    apiBaseUrl,
-    // Ajuda o fluxo de pós-login a navegar corretamente
-    frontendBaseUrl: baseUrl,
-  });
-
+  //
+  // Guarda de tempo global: os waits internos têm timeouts próprios, mas o fluxo encadeia várias estratégias (RPA + UI + gotos + modais) e um await sem timeout em qualquer ponto da cadeia congela o runner sequencial do mesh — observado: rpa-whatsapp-connections-rpa pendurado 182min no login (2026-09-03). Com esta guarda o pior caso falha rápido e o cenário segue a semântica normal de falha, em vez de congelar o mesh sequencial.
+  const autoLoginTimeoutMs = Number(process.env.RPA_AUTOLOGIN_TIMEOUT_MS) || 120000;
+  let autoLoginTimer = null;
+  const authEnvelope = await Promise.race([
+    ensureAuthenticated(page, {
+      ...(params.authOptions || {}),
+      apiBaseUrl,
+      // Ajuda o fluxo de pós-login a navegar corretamente
+      frontendBaseUrl: baseUrl,
+    }).then((result) => ({ kind: 'auth', result })),
+    new Promise((resolve) => {
+      autoLoginTimer = setTimeout(() => resolve({ kind: 'timeout', result: null }), autoLoginTimeoutMs);
+    }),
+  ]);
+  clearTimeout(autoLoginTimer);
+  if (authEnvelope.kind === 'timeout') {
+    return {
+      success: false,
+      loggedIn: false,
+      error: `auto_login_timeout: login não concluído em ${autoLoginTimeoutMs}ms (guarda global RPA_AUTOLOGIN_TIMEOUT_MS)`,
+      timeout: true,
+    };
+  }
+  const authResult = authEnvelope.result;
   if (authResult.success && authResult.loggedIn && targetUrl && allowAutoLoginForTarget) {
     const targetPath = (() => {
       try { return new URL(targetUrl).pathname; } catch (_) { return null; }
