@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-03T20:56:59.555Z",
+  "generatedAt": "2026-09-03T21:03:08.291Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260903-175457.zip",
+  "artifact": "r-agent2-20260903-180107.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/r-agent2-20260903-175457.zip",
+  "packageInsideDistPath": "dist/r-agent2-20260903-180107.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/r-agent2-20260903-175457.manifest.json",
+  "manifestInsideDistPath": "dist/r-agent2-20260903-180107.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,11 +43,11 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "9fd3b5b9f82c6ebb4fcbba4af938b54f",
+    "chainRoot": "ab5d2877623a24fc320c16b4ea4139f6",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    "finalDecision": "AUTONOMOUS_READY_GO"
   },
   "replayValidation": {
     "pass": true,
@@ -80,8 +80,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "2298a9cbd824129a5c4973559d186a32940c0b3fef49523e14ac4f28fb059724",
-    "zipName": "r-agent2-20260903-175457.zip",
+    "sidecarHash": "a4fa1a2689f17cf13ed1a2a91378988860685bcf86c18d285d41a73313388f39",
+    "zipName": "r-agent2-20260903-180107.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -115,11 +115,11 @@
   "pass": true,
   "passCount": 10,
   "totalDimensions": 10,
-  "summary": "Pacote r-agent2-20260903-175457.zip é completamente self-proving. Score: 100/100.",
+  "summary": "Pacote r-agent2-20260903-180107.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260903205336902-2dab4134",
   "sourceFingerprint": "e6742301bbd2b51d6d4ceeae3b38b70a0f6670a34c84c2d596039b1442ed2fec",
-  "gitCommit": "15440dd3ae88f781f9fde7c340c4ad33b2ea62e6",
-  "gitTree": "418b51402b975987252717a55738b72eaeada5e8"
+  "gitCommit": "ee249a035666582e76b31ae8ffd9cdedd422ad3b",
+  "gitTree": "72620e335d747ccb6bf16fec38c3fd262056208e"
 }
