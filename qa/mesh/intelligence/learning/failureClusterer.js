@@ -1,10 +1,10 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 
-const ROOT = path.join(__dirname, '..', '..', '..', '..');
-const OUTPUT_PATH = path.join(ROOT, 'qa', 'mesh', 'intelligence', 'learning', 'failures.clustered.json');
+const { learnPath } = require('./paths');
+
+const OUTPUT_PATH = learnPath('failures.clustered.json');
 
 function probableCause(item) {
   const type = String(item.type || '').toLowerCase();

@@ -1,10 +1,10 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 
-const ROOT = path.join(__dirname, '..', '..', '..', '..');
-const MEMORY_PATH = path.join(ROOT, 'qa', 'mesh', 'intelligence', 'learning', 'learningMemory.json');
+const { learnPath } = require('./paths');
+
+const MEMORY_PATH = learnPath('learningMemory.json');
 
 function safeReadJson(filePath, fallback) {
   try {

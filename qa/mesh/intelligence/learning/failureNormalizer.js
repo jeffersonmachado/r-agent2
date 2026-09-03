@@ -1,10 +1,10 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 
-const ROOT = path.join(__dirname, '..', '..', '..', '..');
-const OUTPUT_PATH = path.join(ROOT, 'qa', 'mesh', 'intelligence', 'learning', 'failures.normalized.json');
+const { learnPath } = require('./paths');
+
+const OUTPUT_PATH = learnPath('failures.normalized.json');
 
 function compact(value) {
   return String(value || '')

@@ -1,10 +1,10 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 
-const ROOT = path.join(__dirname, '..', '..', '..', '..');
-const OUTPUT_PATH = path.join(ROOT, 'qa', 'mesh', 'intelligence', 'learning', 'fixPlans.json');
+const { learnPath } = require('./paths');
+
+const OUTPUT_PATH = learnPath('fixPlans.json');
 
 function targetsByModule(moduleName) {
   if (moduleName === 'pbx') return ['scripts/test-pbx-voice-tts-asr-smoke.js', 'qa-mesh/meshRunner.js'];

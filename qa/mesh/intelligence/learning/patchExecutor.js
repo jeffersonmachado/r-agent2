@@ -1,10 +1,10 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 
-const ROOT = path.join(__dirname, '..', '..', '..', '..');
-const OUTPUT_PATH = path.join(ROOT, 'qa', 'mesh', 'intelligence', 'learning', 'patchExecutions.json');
+const { learnPath } = require('./paths');
+
+const OUTPUT_PATH = learnPath('patchExecutions.json');
 
 function executePatchPlans(fixPlans, mode = process.env.RAP_LEARN_MODE || 'suggestion-only') {
   const executions = (fixPlans.plans || []).map((plan) => {

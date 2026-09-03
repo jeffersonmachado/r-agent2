@@ -12,12 +12,17 @@ const path = require('path');
 // O mesmo vale para o snapshot/histórico de estabilidade (engine rico
 // restaurado em 2026-09-03 grava stabilitySnapshot.json e history/index.json):
 // sem redirect, os testes sobrescrevem o snapshot canônico e injetam pontos
-// sintéticos na série temporal da StabilityPage.
+// sintéticos na série temporal da StabilityPage. Idem para os artefatos do
+// learning pipeline (failures.ranked.json, fixPlans.json, learningMemory.json
+// etc. em qa/mesh/intelligence/learning/), consumidos via /qa/learn/*.
 const MESH_TEST_TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-runner-test-'));
 process.env.QA_MESH_HISTORY_CHAIN_PATH = path.join(MESH_TEST_TMP, 'execution-history.jsonl');
 process.env.QA_MESH_BASELINE_PATH = path.join(MESH_TEST_TMP, 'baseline.json');
 process.env.QA_MESH_STABILITY_SNAPSHOT_PATH = path.join(MESH_TEST_TMP, 'stabilitySnapshot.json');
 process.env.QA_MESH_STABILITY_HISTORY_DIR = path.join(MESH_TEST_TMP, 'stability-history');
+process.env.QA_MESH_LEARN_DIR = path.join(MESH_TEST_TMP, 'learning');
+process.env.QA_MESH_HISTORY_DIR = path.join(MESH_TEST_TMP, 'meshHistory');
+process.env.QA_MESH_EVIDENCE_DIR = path.join(MESH_TEST_TMP, 'meshEvidence');
 
 jest.mock('../adapters/apiAdapter', () => ({
   executeScenario: jest.fn(),
