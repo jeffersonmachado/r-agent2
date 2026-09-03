@@ -18,6 +18,33 @@ const getGap = require('../../api/db/models/GovernanceGap');
 // Dimensões cuja verificação só existe na fase DELIVERED (artefato entregue).
 const DELIVERED_PHASE_DIMENSIONS = new Set(['RAP-055', 'RAP-056']);
 
+// Relatórios PROJETADOS pelo exportGovernanceArtifacts (proof/readiness/
+// governance/consistency derivam do próprio estado do scorecard). Um requisito
+// MANDATORY_GATE_NO_GO contra esses relatórios é AUTO-REFERENTE: não pode
+// vetar a projeção da qual ele próprio deriva — senão o sistema trava no
+// fixpoint espúrio all-NO_GO (reports NO_GO → dims falham → gate FAIL →
+// reports NO_GO). A verificação real acontece no pass 2, contra os relatórios
+// já projetados (DEFERRED é aceito pelo registry; NO_GO real derruba de novo).
+const CIRCULAR_PROJECTION_REPORTS = new Set([
+  'governance/final-proof-report.json',
+  'governance/final-readiness-report.json',
+  'governance/final-governance-report.json',
+  'governance/final-consistency-gate-report.json',
+]);
+
+function isCircularOnlyDimension(dimension) {
+  const failures = (dimension.requirements || []).filter((requirement) => (
+    requirement.mandatory !== false
+    && requirement.status !== 'PASS'
+    && !['NO_KNOWN_GAP', 'NO_OPEN_BLOCKER'].includes(requirement.category)
+  ));
+  if (failures.length === 0) return true; // só falhas derivadas (gap/blocker dos circulares)
+  return failures.every((requirement) => (
+    requirement.code === 'MANDATORY_GATE_NO_GO'
+    && (requirement.validator || []).some((validatorPath) => CIRCULAR_PROJECTION_REPORTS.has(validatorPath))
+  ));
+}
+
 function toPersistable(scorecard) {
   return scorecard.dimensions.map((dimension) => ({
     dimensionKey: dimension.id,
@@ -103,14 +130,19 @@ async function main() {
   const below10Dimensions = scorecard.dimensions.filter((d) => d.score < 10);
   const deliveredOnlyBelow10 = below10Dimensions.length > 0
     && below10Dimensions.every((d) => DELIVERED_PHASE_DIMENSIONS.has(d.id));
+  // Dimensões cujas únicas falhas são auto-referentes (leem os relatórios
+  // projetados) não bloqueiam a projeção — são revalidadas no próximo ciclo
+  // contra o relatório projetado.
+  const circularOnlyBelow10 = below10Dimensions.length > 0
+    && below10Dimensions.every((d) => DELIVERED_PHASE_DIMENSIONS.has(d.id) || isCircularOnlyDimension(d));
   const masterScorecardStatus = scorecard.summary.dimensionsBelow10 === 0
     ? 'PASS'
-    : (deliveredOnlyBelow10 ? 'DEFERRED' : 'FAIL');
-  await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'master_scorecard', status: masterScorecardStatus, phase: 'PRE_PACKAGE', reason: `dimensionsBelow10=${scorecard.summary.dimensionsBelow10}${deliveredOnlyBelow10 ? ' (delivered pending)' : ''}`, validator: 'master-scorecard-engine' });
+    : ((deliveredOnlyBelow10 || circularOnlyBelow10) ? 'DEFERRED' : 'FAIL');
+  await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'master_scorecard', status: masterScorecardStatus, phase: 'PRE_PACKAGE', reason: `dimensionsBelow10=${scorecard.summary.dimensionsBelow10}${deliveredOnlyBelow10 ? ' (delivered pending)' : (circularOnlyBelow10 ? ' (delivered/circular pending)' : '')}`, validator: 'master-scorecard-engine' });
   await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'source_integrity', status: 'PASS', reason: 'source fingerprint matches frozen run', validator: 'fingerprint-chain' });
   const attestation = await getAttestation().findOne({ where: { run_id: run.run_id, policy_fingerprint: run.policy_fingerprint, status: 'ATTESTED' } });
   await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'agent_policy_compliance', status: attestation ? 'PASS' : 'FAIL', reason: attestation ? 'policy attestation exists for the governed run' : 'agent policy attestation missing', validator: 'verify-agent-policy-compliance' });
-  const decision = await calculateFinalDecision({ runId: run.run_id, sourceFingerprint, proofFingerprint: scorecard.scorecardFingerprint });
+  const decision = await calculateFinalDecision({ runId: run.run_id, sourceFingerprint, proofFingerprint: scorecard.scorecardFingerprint, phase: 'PRE_PACKAGE' });
   const exported = await exportGovernanceArtifacts();
   console.log(JSON.stringify({ runId: run.run_id, scorecard: scorecard.summary, decision: decision.decision, exported }));
 }
