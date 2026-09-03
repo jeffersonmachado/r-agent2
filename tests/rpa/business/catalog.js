@@ -687,6 +687,11 @@ const FLOW_SCENARIOS = [
     code: 'CORE-BIZ-ACADEMY',
     journey: 'academy_learning',
     name: 'Core academy: perfil, interações, competências, certificações e tutor',
+    // Isolamento: no mega-batch do mesh (102 flows em 1 processo) o tutor fica
+    // sem conteúdo por acúmulo de estado de cenários anteriores; single e
+    // mini-batch passam. O mesh executa este cenário em processo isolado
+    // (businessBatchRunner respeita requiresIsolatedExecution).
+    requiresIsolatedExecution: true,
     vertical: 'core',
     type: 'flow',
     criticality: 'high',
@@ -1097,6 +1102,12 @@ const FLOW_SCENARIOS = [
     code: 'CORE-BIZ-RAG-SEGREGATION',
     journey: 'rag_documents',
     name: 'Core rag segregation: domínio declarado pelo cliente é ignorado, escopo aplicado por domínio e metadata de escopo presente',
+    // Isolamento: no mega-batch do mesh, cenários anteriores de RAG deixam
+    // documentos/escopo residuais que quebram a assertiva de escopo
+    // OPERATIONAL; single e mini-batch passam (acoplamento de dados de teste,
+    // não regressão de produto — a segregação é coberta também por testes de
+    // governança). O mesh executa este cenário em processo isolado.
+    requiresIsolatedExecution: true,
     vertical: 'core',
     type: 'flow',
     criticality: 'high',
@@ -1503,6 +1514,12 @@ const FLOW_SCENARIOS = [
     code: 'CORE-BIZ-TENANTS',
     journey: 'tenants',
     name: 'Core tenants: guarda RBAC da página, ai-config do tenant atual e teste de credencial com contrato estruturado',
+    // Isolamento: a assertiva de negação RBAC depende da sessão RPA
+    // autenticada com papel restrito; no mega-batch do mesh a sessão de
+    // browser compartilhada acumula estado de cenários anteriores e a página
+    // renderiza. Single e mini-batch passam. O mesh executa este cenário em
+    // processo isolado.
+    requiresIsolatedExecution: true,
     vertical: 'core',
     type: 'flow',
     criticality: 'normal',

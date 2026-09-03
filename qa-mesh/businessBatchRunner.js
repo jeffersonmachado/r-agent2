@@ -88,6 +88,9 @@ function isBusinessBatchEnabled(options = {}) {
  * Retorna { mode, code } ou null.
  */
 function getBusinessBatchInfo(scenario = {}) {
+  // Cenários declarados requiresIsolatedExecution no catálogo (sensíveis a
+  // estado compartilhado de browser/seed) seguem o spawn single original.
+  if (scenario.requiresIsolatedExecution === true) return null;
   if (scenario.adapter !== 'api' || scenario.command !== 'node') return null;
   const args = Array.isArray(scenario.commandArgs) ? scenario.commandArgs : [];
   if (args[0] !== 'core/rpa/cli.js' || args[1] !== 'business') return null;

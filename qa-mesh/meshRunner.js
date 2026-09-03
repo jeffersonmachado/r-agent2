@@ -342,6 +342,9 @@ function normalizeBusinessScenario(item) {
     steps: item.preconditions || [],
     impactScopes: [item.vertical, 'ci', 'telemetry'],
     scenarioCode: item.code,
+    // Cenários sensíveis a estado compartilhado (browser/seed) são excluídos
+    // do batching e executados em processo isolado (ver businessBatchRunner).
+    requiresIsolatedExecution: item.requiresIsolatedExecution === true,
     requiresOfficialPipeline: true,
   });
 }

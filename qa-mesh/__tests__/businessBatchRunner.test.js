@@ -130,6 +130,16 @@ describe('qa-mesh/businessBatchRunner', () => {
       expect(getBusinessBatchInfo({ adapter: 'api', command: 'npm', commandArgs: ['run', 'x'] })).toBeNull();
       expect(getBusinessBatchInfo(businessScenario('S1', 'screens'))).toEqual({ mode: 'screens', code: 'S1' });
     });
+
+    test('cenário requiresIsolatedExecution é excluído do batch (spawn single preservado)', () => {
+      const isolated = businessScenario('F9', 'flows', { requiresIsolatedExecution: true });
+      expect(getBusinessBatchInfo(isolated)).toBeNull();
+
+      const plans = planBusinessBatches([isolated, businessScenario('F1', 'flows')]);
+      expect(plans).toHaveLength(1);
+      expect(plans[0].mode).toBe('flows');
+      expect(plans[0].codes).toEqual(['F1']);
+    });
   });
 
   describe('executeBusinessBatches', () => {
