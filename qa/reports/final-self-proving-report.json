@@ -1,24 +1,24 @@
 {
-  "generatedAt": "2026-09-03T15:46:17.525Z",
+  "generatedAt": "2026-09-03T15:50:33.946Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260903-124439.zip",
-  "zipHash": "87505662c8c590a284950500f3110f56a8e730918eadce3ed61032b4974c0054",
-  "manifestHash": "4a18d8c88267a702aa4944443c1919d72817a6166dafed1ce0a5b19e574f5714",
-  "replayHash": "79d4b7bc0417f610ddd65e4dce39a674fbec48f9296d557ce65a0a6eebdd803b",
-  "governanceHash": "b8fecf2e578c3a850abd253f799d9f73c9b46246ee29747b0f20d10983a7dc78",
-  "readinessHash": "9566440cde45e178e90a08c01e957e1faa0c2388d7965e8ea9d1b240b54afb3f",
-  "consistencyHash": "5b5cf0c834e7c8cd63ba8f73292655d36e3c1295d93c38bf164034f2f8b73da5",
-  "contaminationHash": "f822e74dcfae6c3fbed5e09f1e2820b90b613ef2339c78ed93a0c1a020dbe5c2",
-  "packageIntegrityHash": "8677ab1636bd60c696faa4547ce1e0f597e303398cc5fc1735be4b8a49bf53fc",
+  "zipName": "r-agent2-20260903-124904.zip",
+  "zipHash": "0e508a9a330accceb1c10e74c884ec6cafc4796f640e9406a4f5aa679db01ed4",
+  "manifestHash": "13c05d3c18a5faa34baca68a01ee0d5015ba26aec187808678d4114dc3b4bd01",
+  "replayHash": "64aa90da2f3872d5a9d0950774bd25564bd41d0b7c104f1a2331523a1283fadb",
+  "governanceHash": "4ff9fa4dda59ea17132bf0b83e31188126ff76d6311087425b917061d34108a4",
+  "readinessHash": "23fdf5976e9835063d04a54a50f58cd17eba9fdf64d29359b6afa2c4e207917b",
+  "consistencyHash": "cf219916a8b57d2b3d7c10dd9d36790916097caf4192a8b529e6b2b2760d72a8",
+  "contaminationHash": "49e9c7a358b4459af5d6d9358c3da7955b1af804802a72f6f96450f3415a8435",
+  "packageIntegrityHash": "7c797cdc148824619090f5663ee68bae4045acf0b35d4d03ef06ee7663fcb3a7",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "224a389fd8c952d0c54969c05057932435efc24e5da01dadcb4a0e10e62a6c35",
+  "gateHash": "9f9df0444cec461a5b4b12b35a1043f6aee813c08cb23a6c6af7d0349a0d868e",
   "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open blockers=2 | scorecard: open gaps=5 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | STALE_ARTIFACT: artifact predates the certification run | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | scorecard: open blockers=2 | scorecard: open gaps=2 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
     "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
@@ -29,7 +29,7 @@
   "mandatoryFailures": [
     {
       "engine": "finalGovernance",
-      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open blockers=2 | scorecard: open gaps=5 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | STALE_ARTIFACT: artifact predates the certification run | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
+      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | scorecard: open blockers=2 | scorecard: open gaps=2 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
     },
     {
       "engine": "readiness",
@@ -37,5 +37,5 @@
     }
   ],
   "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260903-124439.zip. Package: ÍNTEGRO. Validadores falhos: 2."
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260903-124904.zip. Package: ÍNTEGRO. Validadores falhos: 2."
 }
