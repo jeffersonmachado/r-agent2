@@ -1,24 +1,9 @@
 {
-  "generatedAt": "2026-09-03T18:23:46.443Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260903-150605.zip",
-  "zipName": "r-agent2-20260903-150605.zip",
-  "zipSha256": "539ef79ab73861c142353134b35b68afd079ff688968524add1a2c7ee42f91fc",
-  "payloadCentric": false,
-  "envelopePath": null,
-  "selectionMode": "audited",
-  "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260903-150605.manifest.json",
-  "manifestAudit": "passed",
-  "auditSatisfied": true,
-  "selfContainmentCheck": {
-    "passed": true,
-    "missing": []
-  },
+  "generatedAt": "2026-09-03T18:48:12.004Z",
+  "ok": false,
+  "zipPath": null,
+  "zipName": null,
   "requiredEntries": [
-    "governance/final-proof-report.json",
-    "governance/evidence-manifest.json",
-    "governance/blocker-engine.js",
-    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -40,21 +25,15 @@
     "governance/cleanup-proof.json",
     "governance/final-readiness-report.json"
   ],
-  "entryCount": 5924,
   "missingEntries": [],
-  "ok": true,
-  "error": null,
-  "packageBinding": {
-    "boundTo": "r-agent2-20260903-150605.zip",
-    "sha256": "539ef79ab73861c142353134b35b68afd079ff688968524add1a2c7ee42f91fc",
-    "immutable": true,
-    "selfProving": true,
-    "offlineAuditable": true
-  },
+  "error": "artifact_missing:none_found_in_dist",
+  "deferred": true,
+  "phase": "PRE_PACKAGE",
+  "status": "DEFERRED",
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260903180300306-36ecbf93",
   "sourceFingerprint": "a8862e30690bdb6b08edc5bd0662663863024ad4091250d4df998418bfe8c4c2",
-  "gitCommit": "6304bf51f10a1b15eb3082ade332e29d0c712280",
-  "gitTree": "b8c00db7ac224464c72078ba9971f969cad9489b"
+  "gitCommit": "433415ef1aa2fcce2a6ac2acb2c0f37ed3f656c1",
+  "gitTree": "b12619996f5f1248feef67ca16bc325daa420eb8"
 }
