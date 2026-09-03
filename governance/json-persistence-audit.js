@@ -122,6 +122,10 @@ const BASENAME_CLASSIFIED = {
   'omnichannel-unified-replay.json': 'ARTIFACT_STORAGE',
   'enterprise-proof-report.json': 'ARTIFACT_STORAGE',
   'meshRegistry.json': 'DB_CANONICAL_JSON_EXPORT',
+  // Estado de checkpoints (qa/checkpoints/state/progress.json) referenciado com
+  // diretório dinâmico (ex.: leitura em qa/mesh/intelligence/stabilityEngine.js);
+  // a escrita canônica já é classificada pelo padrão ^qa/checkpoints/.
+  'progress.json': 'DB_CANONICAL_JSON_EXPORT',
 };
 
 // Caminhos de runtime que NÃO devem conter escritas JSON não classificadas.
