@@ -440,6 +440,14 @@ node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-experience-se
   || fail "experience-segregation FAIL — release bloqueada"
 ok "reports/experience-segregation-report.json PASS (evidência do release)"
 
+# Re-stamp de lineage imediato: o relatório recém-gerado NÃO carrega
+# runId/sourceFingerprint/artifactType/artifactVersion. Sem o stamp, o Master
+# Scorecard (RAP-014/RAP-015, requireLineage) falha com INVALID_ARTIFACT nas
+# avaliações de readiness que rodam antes do stamp da PASS 5.
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/stamp-report-lineage.js" >/dev/null 2>&1 \
+  && ok "lineage re-stampado após gate experience-segregation" \
+  || warn "stamp-report-lineage não concluiu após gate experience-segregation (revalidado na PASS 5)"
+
 # ── Limpeza inicial ───────────────────────────────────────────────────────────
 step "Limpando artefatos de runtime e teste..."
 bash "$PROJECT_ROOT/scripts/clean-test-artifacts.sh" 2>/dev/null || true
@@ -696,6 +704,18 @@ for a in "$DIST_DIR"/r-agent2-*.approval.json "$DIST_DIR/release"/r-agent2-*.app
   fi
 done
 ok "dist/ contém apenas o manifest atual: $CURRENT_MANIFEST"
+
+# Re-stamp de lineage ANTES do readiness POST_PACKAGE: artefatos regenerados
+# mid-flight (experience-segregation no gate inicial, package-validation/
+# package-integrity no packaging, replay-integrity/hardening) perdem
+# runId/sourceFingerprint. Sem o stamp, o scorecard avaliado pelo readiness
+# falha com INVALID_ARTIFACT/FOREIGN_RUN_ARTIFACT e as projeções circulares
+# (final-proof/readiness/governance) ficam presas em
+# PASS_WITH_DEFERRED_PACKAGE_GATE — bloqueando o Final Consistency na PASS 5.
+step "Re-stamp de lineage pré-readiness POST_PACKAGE..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/stamp-report-lineage.js" >/dev/null 2>&1 \
+  && ok "lineage re-stampado antes do readiness POST_PACKAGE" \
+  || warn "stamp-report-lineage não concluiu antes do readiness POST_PACKAGE (revalidado na PASS 5)"
 
 # POST_PACKAGE: re-materializar proof reports com o pacote presente. O estado
 # PRE_PACKAGE (PASS_WITH_DEFERRED_PACKAGE_GATE) precisa subir para
