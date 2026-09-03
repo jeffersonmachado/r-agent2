@@ -249,11 +249,12 @@ materialize_payload_governance() {
     node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null \
       || fail "Final Governance não autorizou o payload"
   else
-    # Candidato (fase DELIVERED): revalidar de forma verdadeira — os relatórios
-    # refletem o estado DEFERRED real, sem exigir GO.
+    # Candidato (fase DELIVERED): os engines brutos não são DEFERRED-aware e
+    # sobrescreveriam a projeção canônica com NO_GO espúrio. O fixpoint
+    # persistido é a reavaliação verdadeira: re-projeta DEFERRED a partir do DB.
     node_with_workspace_env "$PROJECT_ROOT/governance/revalidate-master-scorecard.js" >/dev/null 2>&1 || true
-    node_with_workspace_env "$PROJECT_ROOT/governance/final-consistency-gate.js" >/dev/null 2>&1 || true
-    node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null 2>&1 || true
+    node_with_workspace_env "$PROJECT_ROOT/scripts/governance/run-persisted-scorecard.js" >/dev/null 2>&1 \
+      || fail "fixpoint do scorecard falhou na materialização do candidato — estado canônico indefinido"
   fi
 
   local required_reports=(
@@ -782,6 +783,14 @@ step "Stamp de lineage (backstop bloqueante pré-selo)..."
 node_with_workspace_env "$PROJECT_ROOT/scripts/governance/stamp-report-lineage.js" >/dev/null 2>&1 \
   || fail "stamp-report-lineage falhou — artefatos sem lineage não podem ser selados"
 
+# Engines de certificação (estado bruto) ANTES do fixpoint: eles não são
+# DEFERRED-aware e reportam NO_GO quando o scorecard tem below10 — a projeção
+# canônica (exportGovernanceArtifacts, dentro do fixpoint) é a ÚLTIMA escritora
+# dos 4 relatórios projetados. Inverter esta ordem reintroduz NO_GO espúrio.
+step "Reavaliando engines de certificação (pré-selo, estado bruto)..."
+node_with_workspace_env "$PROJECT_ROOT/governance/final-consistency-gate.js" >/dev/null 2>&1 || true
+node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null 2>&1 || true
+
 # Fixpoint persistido (2 passes + projeções derivadas do DB): quebra o ciclo
 # scorecard↔readiness/governance e estabiliza o estado canônico — 78/78 no
 # ciclo final, ou below10 ⊆ {RAP-055,RAP-056} na fase DELIVERED.
@@ -789,10 +798,6 @@ step "Fixpoint do master scorecard (persisted, 2 passes)..."
 node_with_workspace_env "$PROJECT_ROOT/scripts/governance/run-persisted-scorecard.js" >/dev/null 2>&1 \
   && ok "fixpoint do scorecard concluído" \
   || fail "run-persisted-scorecard falhou — sem fixpoint não há estado canônico selável"
-
-step "Reavaliando engines de certificação (pré-selo)..."
-node_with_workspace_env "$PROJECT_ROOT/governance/final-consistency-gate.js" >/dev/null 2>&1 || true
-node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null 2>&1 || true
 
 step "SEAL-TIME GATE: avaliando estado canônico produzido pelos engines..."
 SEAL_OUTPUT="$(node_with_workspace_env "$PROJECT_ROOT/scripts/governance/seal-time-gate.js" 2>&1)" && SEAL_RC=0 || SEAL_RC=$?

@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-03T18:51:32.761Z",
+  "generatedAt": "2026-09-03T20:00:32.593Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260903-155024.zip",
+  "artifact": "r-agent2-20260903-165920.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/r-agent2-20260903-155024.zip",
+  "packageInsideDistPath": "dist/r-agent2-20260903-165920.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/r-agent2-20260903-155024.manifest.json",
+  "manifestInsideDistPath": "dist/r-agent2-20260903-165920.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,7 +43,7 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "2ab693465410323d450457513dfc8854",
+    "chainRoot": "0cee624100c2f8706b5c50c3010ff256",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
@@ -80,8 +80,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "a86a605e570635e82fc3f63e69deea214288f05a5599de2867316dc53a86ba4f",
-    "zipName": "r-agent2-20260903-155024.zip",
+    "sidecarHash": "550966247dca575f88d0068fdbf8d55c349b637df52e819231c6fd03843e07a3",
+    "zipName": "r-agent2-20260903-165920.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -115,11 +115,11 @@
   "pass": true,
   "passCount": 10,
   "totalDimensions": 10,
-  "summary": "Pacote r-agent2-20260903-155024.zip é completamente self-proving. Score: 100/100.",
+  "summary": "Pacote r-agent2-20260903-165920.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260903195647640-95d36ea5",
   "sourceFingerprint": "ccf29d5378c4954b91f239809e5fe6d32b919d9aa704bdfce4c9471520202ed0",
-  "gitCommit": "b8ddf11dc0485dd9865f8297d339150d9851fc0c",
-  "gitTree": "41eadcc5a55f92909df944800ceb69244ffe0058"
+  "gitCommit": "ab47fa4c8f8889e057f43cea2260416a66eb2628",
+  "gitTree": "1acc11f29e1e26ad578ccb226f8c59aeca393fd4"
 }
