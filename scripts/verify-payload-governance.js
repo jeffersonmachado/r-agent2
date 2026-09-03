@@ -336,12 +336,16 @@ function runVerification(args, options) {
     } else {
       const below10 = scorecard.dimensions.filter((d) => Number(d.score) < 10);
       const blockers = Array.isArray(scorecard.blockers) ? scorecard.blockers.length : 0;
-      const gaps = Array.isArray(scorecard.gaps) ? scorecard.gaps.length : 0;
+      const allGaps = Array.isArray(scorecard.gaps) ? scorecard.gaps : [];
+      // Gaps com status DEFERRED pertencem às dimensões adiadas (RAP-055/056) —
+      // são a definição da fase DELIVERED, não violações. Apenas gaps abertos
+      // (não DEFERRED) invalidam — no candidato e no release final.
+      const gaps = allGaps.filter((g) => g && g.status !== 'DEFERRED').length;
       if (candidateMode) {
         const unexpected = below10.filter((d) => !DEFERRED_ALLOWED_BELOW10.has(d.id));
         if (unexpected.length > 0 || blockers > 0 || gaps > 0) {
           gates.push(fail(scorecardGate,
-            `CANDIDATE_SCORECARD_INVALID — candidato admite below10 ⊆ {RAP-055,RAP-056}; unexpected=[${unexpected.map((d) => d.id).join(',')}] blockers=${blockers} gaps=${gaps}`));
+            `CANDIDATE_SCORECARD_INVALID — candidato admite below10 ⊆ {RAP-055,RAP-056}; unexpected=[${unexpected.map((d) => d.id).join(',')}] blockers=${blockers} openGaps=${gaps}`));
         } else {
           gates.push(pass(scorecardGate, { deferredDimensions: below10.map((d) => d.id) }));
         }

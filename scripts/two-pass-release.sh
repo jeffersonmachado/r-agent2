@@ -216,28 +216,6 @@ materialize_payload_governance() {
     && ok "package-integrity FINAL real: PACKAGE_INTEGRITY_GO" \
     || fail "package-integrity-engine reprovou o payload entregue — release bloqueada"
 
-  # Re-assinar contra o payload final: as assinaturas do PASS 2 foram emitidas
-  # contra H_provisional; o rebind patcheou os campos mas NÃO recomputou os selos
-  # HMAC. Re-emitir agora (o ZIP final está em dist/release/*.payload.zip) e
-  # propagar para dist/signatures/ antes do tamper-detector. Este passo também
-  # reconstrói governance-chain.json com o package-validation já atualizado.
-  step "Re-assinando governança contra o payload final (H_final)..."
-  node_with_workspace_env "$PROJECT_ROOT/governance/sign-governance.js" >/dev/null 2>&1 \
-    && ok "Assinaturas re-emitidas contra H_final" \
-    || warn "sign-governance não concluiu no PASS 5"
-  for f in governance.sig release.sig package.manifest.sig replay.sig governance-attestation.json; do
-    for src in "$DIST_DIR/governance-artifacts/$f" "$DIST_DIR/$f" "$PROJECT_ROOT/governance/$f"; do
-      [[ -f "$src" ]] && cp "$src" "$sig_dir/$f" && break
-    done
-  done
-  # sign-governance re-cria dist/governance-artifacts/ (legado). A raiz de dist/
-  # no modelo envelope-governed só admite release|governance|signatures|verifier.
-  rm -rf "$DIST_DIR/governance-artifacts"
-
-  node_with_workspace_env "$PROJECT_ROOT/governance/tamper-detector.js" >/dev/null 2>&1 \
-    && ok "Tamper detection re-executado no PASS 5" \
-    || warn "tamper-detector reportou falha no PASS 5"
-
   node_with_workspace_env "$PROJECT_ROOT/scripts/governance/stamp-report-lineage.js" >/dev/null 2>&1 \
     || fail "stamp-report-lineage falhou no PASS 5 — artefatos sem lineage não podem ser certificados"
 
@@ -256,6 +234,32 @@ materialize_payload_governance() {
     node_with_workspace_env "$PROJECT_ROOT/scripts/governance/run-persisted-scorecard.js" >/dev/null 2>&1 \
       || fail "fixpoint do scorecard falhou na materialização do candidato — estado canônico indefinido"
   fi
+
+  # Re-assinar contra o payload final DEPOIS de todas as escritas em membros da
+  # chain (evidence-manifest, final-proof, final-readiness, final-consistency,
+  # cross-report, proof-signature, package-validation): stamp e fixpoint acima
+  # regravam esses relatórios — assinar antes quebraria a governance-chain
+  # (chainRoot divergente) e reprovaria o self-proving/tamper legítimos.
+  # As assinaturas do PASS 2 foram emitidas contra H_provisional; o rebind
+  # patcheou os campos mas NÃO recomputou os selos HMAC. Re-emitir agora (o ZIP
+  # final está em dist/release/*.payload.zip) e propagar para dist/signatures/
+  # antes do tamper-detector.
+  step "Re-assinando governança contra o payload final (H_final)..."
+  node_with_workspace_env "$PROJECT_ROOT/governance/sign-governance.js" >/dev/null 2>&1 \
+    && ok "Assinaturas re-emitidas contra H_final" \
+    || warn "sign-governance não concluiu no PASS 5"
+  for f in governance.sig release.sig package.manifest.sig replay.sig governance-attestation.json; do
+    for src in "$DIST_DIR/governance-artifacts/$f" "$DIST_DIR/$f" "$PROJECT_ROOT/governance/$f"; do
+      [[ -f "$src" ]] && cp "$src" "$sig_dir/$f" && break
+    done
+  done
+  # sign-governance re-cria dist/governance-artifacts/ (legado). A raiz de dist/
+  # no modelo envelope-governed só admite release|governance|signatures|verifier.
+  rm -rf "$DIST_DIR/governance-artifacts"
+
+  node_with_workspace_env "$PROJECT_ROOT/governance/tamper-detector.js" >/dev/null 2>&1 \
+    && ok "Tamper detection re-executado no PASS 5" \
+    || warn "tamper-detector reportou falha no PASS 5"
 
   local required_reports=(
     rap-master-scorecard.json

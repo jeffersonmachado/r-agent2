@@ -62,11 +62,16 @@ function checkPackageInsideDist(zipName) {
 }
 
 function checkManifestInsideDist(zipName) {
-  const manifestName = zipName.replace(/\.zip$/, '.manifest.json');
-  const candidates = [
+  // Layout normalizado: o payload <id>.payload.zip tem sidecar <id>.manifest.json
+  // (sem ".payload"); o envelope <id>.zip tem sidecar <id>.manifest.json.
+  const manifestNames = [
+    zipName.replace(/\.zip$/, '.manifest.json'),
+    zipName.replace(/\.payload\.zip$/, '.manifest.json'),
+  ].filter((name, index, all) => all.indexOf(name) === index);
+  const candidates = manifestNames.flatMap((manifestName) => [
     path.join(ROOT, 'dist', 'release', manifestName),
     path.join(ROOT, 'dist', manifestName),
-  ];
+  ]);
   const mPath = candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
   const exists = fs.existsSync(mPath);
   return { present: exists, path: path.relative(ROOT, mPath).replace(/\\/g, '/') };
@@ -78,16 +83,27 @@ function checkManifestInsideDist(zipName) {
 
 function detectStaleReferences(currentZipName) {
   const distDir = path.join(ROOT, 'dist');
-  const currentTs = (currentZipName.match(/r-agent2-(\d{8}-\d{6})\.zip$/) || [])[1] || '';
+  const releaseDir = path.join(distDir, 'release');
+  // Aceitar envelope (<id>.zip) e payload (<id>.payload.zip) — o artefato
+  // resolvido pode ser qualquer um dos dois; o timestamp é o identificador
+  // do release em ambos.
+  const currentTs = (currentZipName.match(/r-agent2-(\d{8}-\d{6})(?:\.payload)?\.zip$/) || [])[1] || '';
 
-  // ZIPs stale fisicamente presentes em dist/
-  const staleZips = fs.existsSync(distDir)
-    ? fs.readdirSync(distDir)
-        .filter((f) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(f) && f !== currentZipName)
-    : [];
+  // ZIPs stale fisicamente presentes em dist/ e dist/release/.
+  // Artefatos do MESMO release (envelope ↔ payload compartilham o timestamp)
+  // são irmãos legítimos, não stale.
+  const zipFileRegex = /^r-agent2-\d{8}-\d{6}(?:\.payload)?\.zip$/;
+  const isCurrentRelease = (f) => currentTs !== '' && f.includes(`r-agent2-${currentTs}`) && zipFileRegex.test(f);
+  const staleZips = [
+    ...(fs.existsSync(distDir) ? fs.readdirSync(distDir) : []),
+    ...(fs.existsSync(releaseDir) ? fs.readdirSync(releaseDir) : []),
+  ].filter((f) => zipFileRegex.test(f) && f !== currentZipName && !isCurrentRelease(f));
 
   // Hash do ZIP atual para comparação
-  const currentZipPath = path.join(distDir, currentZipName);
+  const currentZipPath = [
+    path.join(releaseDir, currentZipName),
+    path.join(distDir, currentZipName),
+  ].find((candidate) => fs.existsSync(candidate)) || path.join(distDir, currentZipName);
   const currentHash = fs.existsSync(currentZipPath)
     ? crypto.createHash('sha256').update(fs.readFileSync(currentZipPath)).digest('hex')
     : null;
@@ -95,8 +111,9 @@ function detectStaleReferences(currentZipName) {
   // Hashes dos ZIPs stale fisicamente presentes
   const staleHashes = [];
   for (const z of staleZips) {
-    const p = path.join(distDir, z);
-    if (fs.existsSync(p)) {
+    const p = [path.join(releaseDir, z), path.join(distDir, z)]
+      .find((candidate) => fs.existsSync(candidate));
+    if (p) {
       const h = crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
       if (h && h !== currentHash) staleHashes.push(h);
     }
@@ -110,6 +127,11 @@ function detectStaleReferences(currentZipName) {
   const staleFiles  = [];
 
   function checkFile(full) {
+    // Auto-referência: o self-proving-report anterior em disco sempre nomeia o
+    // artefato do ciclo passado — ele está sendo regenerado AGORA, portanto seu
+    // conteúdo stale não é evidência sobre o pacote atual. Excluí-lo evita o
+    // falso positivo estrutural (toda execução de um novo release falharia).
+    if (path.resolve(full) === path.resolve(REPORT_PATH)) return;
     let content;
     try { content = fs.readFileSync(full, 'utf8'); } catch (_) { return; }
     let hit = false;
