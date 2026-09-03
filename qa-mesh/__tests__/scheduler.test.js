@@ -10,6 +10,15 @@ jest.mock('fs', () => ({
   unlinkSync: jest.fn(),
 }));
 
+// isMeshAlreadyRunning() executa `ps aux | grep meshRunner\.js` de verdade
+// (execSync não era mockado): com um mesh real rodando na máquina, o teste
+// "execução agendada desabilita escrita canônica" falhava de forma intermitente
+// (runScheduledMesh retornava scheduler_locked e runMesh nunca era chamado).
+// Mock hermético: nenhum processo meshRunner vivo por padrão.
+jest.mock('child_process', () => ({
+  execSync: jest.fn(() => ''),
+}));
+
 jest.mock('../meshRunner', () => ({
   loadRegistry: jest.fn(() => []),
   runMesh: jest.fn(),
