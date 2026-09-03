@@ -4,6 +4,15 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+// Hermeticidade: runMesh anexa na cadeia append-only (executionHistoryChain)
+// e grava baseline.json. Sem redirect, execuções sintéticas de teste poluem a
+// cadeia real (quebra de integridade observada em 2026-09-03: appends
+// concorrentes de workers paralelos criaram fork na cadeia, NO_GO no
+// coverage gate) e sujam baseline.json no worktree.
+const MESH_TEST_TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-runner-test-'));
+process.env.QA_MESH_HISTORY_CHAIN_PATH = path.join(MESH_TEST_TMP, 'execution-history.jsonl');
+process.env.QA_MESH_BASELINE_PATH = path.join(MESH_TEST_TMP, 'baseline.json');
+
 jest.mock('../adapters/apiAdapter', () => ({
   executeScenario: jest.fn(),
 }));
