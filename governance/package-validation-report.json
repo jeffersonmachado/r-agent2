@@ -29,5 +29,9 @@
   "error": "artifact_missing:none_found_in_dist",
   "deferred": true,
   "phase": "PRE_PACKAGE",
-  "status": "DEFERRED"
+  "status": "DEFERRED",
+  "runId": "rap-governed-20260903120837149-1557e254",
+  "sourceFingerprint": "942206ea5c7a9296fde433df1b2feef7423a26f52d060cc0bed6a3c7a1cd3015",
+  "artifactType": "package-validation-report",
+  "artifactVersion": "1.0.0"
 }
