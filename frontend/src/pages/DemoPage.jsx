@@ -24,8 +24,11 @@ import { CrmBadge, CrmCard } from '../components/crm';
 import { useAuth } from '../context/authContext';
 import { getAgentClassification } from '../utils/classification';
 
+const SUPPORTED_VERTICALS = new Set(['fitness', 'beauty', 'bakery']);
+
 function normalizeVertical(value) {
-  return String(value || '').toLowerCase() === 'beauty' ? 'beauty' : 'fitness';
+  const normalized = String(value || '').toLowerCase();
+  return SUPPORTED_VERTICALS.has(normalized) ? normalized : 'fitness';
 }
 
 function parseVerticalFromLocation() {
@@ -174,6 +177,13 @@ export function DemoPage() {
                 onClick={() => updateVertical('beauty')}
               >
                 Beauty
+              </button>
+              <button
+                type="button"
+                className={vertical === 'bakery' ? 'is-active' : ''}
+                onClick={() => updateVertical('bakery')}
+              >
+                Padaria
               </button>
             </div>
             <button type="button" className="demo-run-button" onClick={handleRunDemo} disabled={running}>

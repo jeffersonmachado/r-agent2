@@ -7,9 +7,13 @@ const path = require('path');
 // Hermeticidade: os testes de integração runMesh anexam na cadeia append-only
 // e gravam baseline.json; sem redirect eles poluem o estado real (ver
 // meshRunner.test.js). Redirect antes de qualquer require do meshRunner.
+// Idem para o snapshot/histórico de estabilidade (engine rico restaurado em
+// 2026-09-03 grava stabilitySnapshot.json e history/index.json a cada runMesh).
 const MESH_BATCH_TEST_TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'business-batch-test-'));
 process.env.QA_MESH_HISTORY_CHAIN_PATH = path.join(MESH_BATCH_TEST_TMP, 'execution-history.jsonl');
 process.env.QA_MESH_BASELINE_PATH = path.join(MESH_BATCH_TEST_TMP, 'baseline.json');
+process.env.QA_MESH_STABILITY_SNAPSHOT_PATH = path.join(MESH_BATCH_TEST_TMP, 'stabilitySnapshot.json');
+process.env.QA_MESH_STABILITY_HISTORY_DIR = path.join(MESH_BATCH_TEST_TMP, 'stability-history');
 
 jest.mock('../adapters/apiAdapter', () => ({
   executeScenario: jest.fn(),

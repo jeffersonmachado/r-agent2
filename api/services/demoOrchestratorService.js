@@ -13,7 +13,13 @@ const { normalizeTenantKey } = require('../../lib/rpaSecurity');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const DEMO_SEEDS_DIR = path.join(ROOT_DIR, 'qa', 'demo-seeds');
-const SUPPORTED_VERTICALS = new Set(['fitness', 'beauty']);
+const SUPPORTED_VERTICALS = new Set(['fitness', 'beauty', 'bakery']);
+
+const DEMO_SEED_BY_VERTICAL = {
+  fitness: 'fitness-aula-experimental.json',
+  beauty: 'beauty-agendamento-servico.json',
+  bakery: 'bakery-balcao-retirada.json',
+};
 
 function normalizeVertical(value) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -30,9 +36,7 @@ function readJsonFileIfExists(filePath) {
 }
 
 function loadDemoSeed(vertical) {
-  const fileName = vertical === 'beauty'
-    ? 'beauty-agendamento-servico.json'
-    : 'fitness-aula-experimental.json';
+  const fileName = DEMO_SEED_BY_VERTICAL[vertical] || DEMO_SEED_BY_VERTICAL.fitness;
   return readJsonFileIfExists(path.join(DEMO_SEEDS_DIR, fileName));
 }
 

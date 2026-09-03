@@ -1,0 +1,74 @@
+{
+  "seedId": "demo-bakery-balcao-retirada",
+  "tenant": {
+    "id": "system",
+    "name": "Tenant Demo Padaria"
+  },
+  "persona": {
+    "name": "Carlos Nogueira",
+    "segment": "cliente_recorrente",
+    "goal": "pedido_balcao_retirada"
+  },
+  "headline": "RAP Demo - Padaria",
+  "summary": "Fluxo de pedido para retirada no balcao com atendimento, CRM, automacao, QA e replay.",
+  "initialIntent": "Quero encomendar paes e um bolo para retirar hoje no balcao.",
+  "messages": [
+    {
+      "role": "customer",
+      "text": "Bom dia! Quero encomendar 20 paes franceses e um bolo de chocolate para retirar as 17h."
+    },
+    {
+      "role": "assistant",
+      "text": "Perfeito. Pedido confirmado para retirada no balcao as 17:00. Posso incluir uma mensagem no bolo?"
+    }
+  ],
+  "journey": {
+    "id": "bakery_balcao_retirada",
+    "name": "Pedido Balcao Retirada Padaria",
+    "waveId": "bakery-balcao-retirada",
+    "scenarioId": "business-e2e-bakery_balcao_retirada"
+  },
+  "workspace": {
+    "entityId": null
+  },
+  "expectedOutcome": {
+    "intent": "pedido_balcao_retirada",
+    "confidence": 0.93,
+    "nextBestAction": "confirmar pedido e gerar ordem de producao",
+    "nextStage": "confirmacao",
+    "appointmentStatus": "retirada_confirmada",
+    "automation": "ordem_producao_automatica",
+    "automationStep": "create_production_order",
+    "automationMode": "autonomous",
+    "sla": "95%",
+    "conversion": "41%",
+    "automationsExecuted": 3,
+    "roiEstimated": "R$ 12.700/m"
+  },
+  "expectedTicket": {
+    "queue": "comercial",
+    "status": "open"
+  },
+  "expectedLead": {
+    "stage": "qualified",
+    "scoreMin": 70
+  },
+  "expectedAppointment": {
+    "status": "confirmed",
+    "timeWindow": "17:00-17:30"
+  },
+  "qaAssertions": {
+    "seedId": "seed_001",
+    "goNoGo": "GO",
+    "coverageMin": 85,
+    "maxCriticalGaps": 0
+  },
+  "expectedReplay": {
+    "source": "qa_waves",
+    "mustContain": [
+      "send_message",
+      "validate_intent",
+      "create_booking"
+    ]
+  }
+}

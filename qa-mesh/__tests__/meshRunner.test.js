@@ -9,9 +9,15 @@ const path = require('path');
 // cadeia real (quebra de integridade observada em 2026-09-03: appends
 // concorrentes de workers paralelos criaram fork na cadeia, NO_GO no
 // coverage gate) e sujam baseline.json no worktree.
+// O mesmo vale para o snapshot/histórico de estabilidade (engine rico
+// restaurado em 2026-09-03 grava stabilitySnapshot.json e history/index.json):
+// sem redirect, os testes sobrescrevem o snapshot canônico e injetam pontos
+// sintéticos na série temporal da StabilityPage.
 const MESH_TEST_TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'mesh-runner-test-'));
 process.env.QA_MESH_HISTORY_CHAIN_PATH = path.join(MESH_TEST_TMP, 'execution-history.jsonl');
 process.env.QA_MESH_BASELINE_PATH = path.join(MESH_TEST_TMP, 'baseline.json');
+process.env.QA_MESH_STABILITY_SNAPSHOT_PATH = path.join(MESH_TEST_TMP, 'stabilitySnapshot.json');
+process.env.QA_MESH_STABILITY_HISTORY_DIR = path.join(MESH_TEST_TMP, 'stability-history');
 
 jest.mock('../adapters/apiAdapter', () => ({
   executeScenario: jest.fn(),

@@ -129,6 +129,30 @@ describe('demo routes', () => {
     expect(response.body).toHaveProperty('demo.vertical', 'beauty');
   });
 
+  test('GET /api/demo/state should load state for bakery vertical', async () => {
+    await start();
+
+    const response = await request(port, 'GET', '/api/demo/state?vertical=bakery');
+
+    expect(response.status).toBe(200);
+    expect(deps.demoOrchestrator.getState).toHaveBeenCalledWith(
+      expect.objectContaining({ vertical: 'bakery', tenantId: 'system' })
+    );
+    expect(response.body).toHaveProperty('demo.vertical', 'bakery');
+  });
+
+  test('POST /api/demo/run should enqueue demo execution for bakery vertical', async () => {
+    await start();
+
+    const response = await request(port, 'POST', '/api/demo/run?vertical=bakery', {});
+
+    expect(response.status).toBe(202);
+    expect(deps.demoOrchestrator.runDemo).toHaveBeenCalledWith(
+      expect.objectContaining({ vertical: 'bakery', tenantId: 'system' })
+    );
+    expect(response.body).toHaveProperty('status', 'queued');
+  });
+
   test('POST /api/demo/run should enqueue demo execution', async () => {
     await start();
 
