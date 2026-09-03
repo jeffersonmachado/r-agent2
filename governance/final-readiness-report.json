@@ -1,9 +1,9 @@
 {
   "artifactType": "final-readiness-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-03T20:30:39.549Z",
-  "runId": "rap-governed-20260903202659531-699fc141",
-  "sourceFingerprint": "1d961afe6805ff613644a5006372a6bb68548164a169e8930fdbeeb631489751",
+  "generatedAt": "2026-09-03T20:33:42.486Z",
+  "runId": "rap-governed-20260903203324437-0cc9705e",
+  "sourceFingerprint": "d32c7e476edbdbfc52d2818819c361d97c094a188c39dc061a57c6c05cae7ab3",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.3",
   "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
