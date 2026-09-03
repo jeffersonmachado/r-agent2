@@ -35,10 +35,12 @@ function findLatestZip() {
   const distDir = path.join(ROOT, 'dist');
   if (!fs.existsSync(distDir)) return null;
   const releaseDir = path.join(distDir, 'release');
-  const searchDirs = [distDir, releaseDir].filter((dir) => fs.existsSync(dir));
+  // Layout normalizado: dist/release/<nome>.payload.zip é o artefato governado;
+  // o envelope <nome>.zip só existe na raiz de dist/ antes da normalização.
+  const searchDirs = [releaseDir, distDir].filter((dir) => fs.existsSync(dir));
   for (const dir of searchDirs) {
     const zips = fs.readdirSync(dir)
-      .filter((f) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(f))
+      .filter((f) => /^r-agent2-\d{8}-\d{6}(\.payload)?\.zip$/.test(f))
       .sort()
       .reverse();
     if (zips.length > 0) {
@@ -49,8 +51,12 @@ function findLatestZip() {
 }
 
 function findSidecarManifest(zipPath) {
-  const manifestPath = zipPath.replace(/\.zip$/, '.manifest.json');
-  if (!fs.existsSync(manifestPath)) return null;
+  const candidates = [
+    zipPath.replace(/\.zip$/, '.manifest.json'),
+    zipPath.replace(/\.payload\.zip$/, '.manifest.json'),
+  ].filter((candidate, index, all) => all.indexOf(candidate) === index);
+  const manifestPath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!manifestPath) return null;
   try { return JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch (_) { return null; }
 }
 
@@ -94,6 +100,12 @@ function checkZipNameAlignment() {
   if (!latest) return { check: 'zip_name_alignment', pass: false, severity: 'CRITICAL', reason: 'No ZIP found' };
 
   const expectedName = latest.zip;
+  // Envelope e payload do MESMO release são nomes equivalentes
+  // (<id>.zip ↔ <id>.payload.zip): relatórios gerados antes da normalização
+  // referenciam o envelope; o artefato governado entregue é o payload.
+  // A comparação normaliza o sufixo — timestamp divergente continua falhando.
+  const normalizeZipName = (name) => String(name || '').replace(/\.payload\.zip$/, '.zip');
+  const expectedNormalized = normalizeZipName(expectedName);
   const reports = [
     { file: 'governance/cross-report-validation.json',   field: 'expectedZipName' },
     { file: 'governance/package-validation-report.json', field: 'zipName'         },
@@ -105,7 +117,7 @@ function checkZipNameAlignment() {
     const data = readJsonSafe(file);
     if (!data) continue;
     const val = data[field];
-    if (val && val !== expectedName) {
+    if (val && normalizeZipName(val) !== expectedNormalized) {
       mismatches.push({ file, field, found: val, expected: expectedName });
     }
   }

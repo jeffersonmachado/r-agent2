@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T20:12:48.520Z",
+  "generatedAt": "2026-09-03T20:14:42.319Z",
   "runId": "rap-governed-20260903201233058-d5b177ee",
   "sourceFingerprint": "47fab8fba7ff732321672d0d7687b7699c4cefd7247e34bbb3343845b50af9f7",
   "artifactType": "report-contamination-report",
@@ -21,5 +21,6 @@
   ],
   "contaminations": [],
   "crossIssues": [],
-  "summary": "Nenhuma contaminação detectada em 42 arquivos."
+  "summary": "Nenhuma contaminação detectada em 42 arquivos.",
+  "reboundAt": "2026-09-03T20:15:08.842Z"
 }
