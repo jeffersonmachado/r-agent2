@@ -241,12 +241,20 @@ materialize_payload_governance() {
   node_with_workspace_env "$PROJECT_ROOT/scripts/governance/stamp-report-lineage.js" >/dev/null 2>&1 \
     || fail "stamp-report-lineage falhou no PASS 5 — artefatos sem lineage não podem ser certificados"
 
-  node_with_workspace_env "$PROJECT_ROOT/governance/revalidate-master-scorecard.js" >/dev/null \
-    || fail "Master Scorecard não validou para o payload"
-  node_with_workspace_env "$PROJECT_ROOT/governance/final-consistency-gate.js" >/dev/null \
-    || fail "Final Consistency não validou para o payload"
-  node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null \
-    || fail "Final Governance não autorizou o payload"
+  if [[ "${SEAL_DECISION:-SEAL_GO}" == "SEAL_GO" ]]; then
+    node_with_workspace_env "$PROJECT_ROOT/governance/revalidate-master-scorecard.js" >/dev/null \
+      || fail "Master Scorecard não validou para o payload"
+    node_with_workspace_env "$PROJECT_ROOT/governance/final-consistency-gate.js" >/dev/null \
+      || fail "Final Consistency não validou para o payload"
+    node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null \
+      || fail "Final Governance não autorizou o payload"
+  else
+    # Candidato (fase DELIVERED): revalidar de forma verdadeira — os relatórios
+    # refletem o estado DEFERRED real, sem exigir GO.
+    node_with_workspace_env "$PROJECT_ROOT/governance/revalidate-master-scorecard.js" >/dev/null 2>&1 || true
+    node_with_workspace_env "$PROJECT_ROOT/governance/final-consistency-gate.js" >/dev/null 2>&1 || true
+    node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null 2>&1 || true
+  fi
 
   local required_reports=(
     rap-master-scorecard.json
@@ -285,8 +293,10 @@ materialize_payload_governance() {
     const manifestPath='$manifest_path';
     const now=new Date().toISOString();
 
-    // 1. Decisão canônica DENTRO do payload (fonte da verdade). Se for NO_GO,
-    //    o release aborta — envelope GO sobre payload NO_GO é proibido.
+    // 1. Decisão canônica DENTRO do payload (fonte da verdade). Regra absoluta:
+    //    envelope GO exige canônica GO. Na fase DELIVERED (SEAL_PENDING) a
+    //    canônica é PASS_WITH_DEFERRED_PACKAGE_GATE — o envelope carrega essa
+    //    mesma decisão verdadeira (candidato), nunca GO.
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(),'rap-envelope-derive-'));
     execFileSync('unzip',['-qq',path.join('$DIST_DIR','release',payload),'r-agent2/governance/final-governance-report.json','-d',tmp],{stdio:'pipe'});
     const canonicalPath = path.join(tmp,'r-agent2/governance/final-governance-report.json');
@@ -294,32 +304,42 @@ materialize_payload_governance() {
     const canonicalSha = crypto.createHash('sha256').update(fs.readFileSync(canonicalPath)).digest('hex');
     const canonicalDecision = normalizeDecision(canonical.finalDecision || canonical.decision);
     fs.rmSync(tmp,{recursive:true,force:true});
+    const sealDecision = '${SEAL_DECISION:-SEAL_GO}';
+    const DEFERRED = 'PASS_WITH_DEFERRED_PACKAGE_GATE';
+    let candidate = false;
     if (canonicalDecision !== 'GO') {
-      console.error('PAYLOAD_CANONICAL_NO_GO — ' + (canonical.finalDecision||'null'));
-      process.exit(1);
+      if (sealDecision === 'SEAL_PENDING' && (canonical.finalDecision||canonical.decision) === DEFERRED) {
+        candidate = true;
+      } else {
+        console.error('PAYLOAD_CANONICAL_NO_GO — ' + (canonical.finalDecision||'null'));
+        process.exit(1);
+      }
     }
     const runId = canonical.runId || null;
     const sourceFingerprint = canonical.sourceFingerprint || null;
 
     const w=(f,j)=>fs.writeFileSync(path.join(govDir,f), JSON.stringify(j,null,2)+'\n');
-    w('payload-governance.json',{governedArtifact:payload,governedHash:sha,architecture:'payload-centric',createdAt:now,releaseTimestamp:releaseId,envelopeAware:true,runId,sourceFingerprint,payloadGovernance:{isGovernedArtifact:true,isEnvelopeArtifact:false},transitional:false,placeholder:false,status:'final'});
+    w('payload-governance.json',{governedArtifact:payload,governedHash:sha,architecture:'payload-centric',createdAt:now,releaseTimestamp:releaseId,envelopeAware:true,runId,sourceFingerprint,payloadGovernance:{isGovernedArtifact:true,isEnvelopeArtifact:false},transitional:false,placeholder:false,status: candidate?'candidate':'final'});
     w('governance-chain.json',{architecture:'payload-centric',chainRoot:sha,releaseId,runId,payloadRef:payload,transitional:false});
     w('governance-attestation.json',{architecture:'payload-centric',finalDecision:canonical.finalDecision,canonicalDecision,releaseId,runId,payloadRef:payload,canonicalSha256:canonicalSha,transitional:false});
 
     // 2. final-governance-report do envelope = CÓPIA DERIVADA vinculada por hash.
+    //    Em modo candidato, a decisão é a DEFERRED verdadeira (pass=false) —
+    //    jamais GO sintético.
     w('final-governance-report.json', withLineage({
       generatedAt:now,
       finalDecision: canonical.finalDecision,
       decision: canonicalDecision,
       pass: canonicalDecision==='GO',
+      candidate,
       canonicalSource:'payload:r-agent2/governance/final-governance-report.json',
       canonicalSha256: canonicalSha,
       derivedFromCanonical:true,
       payload, payloadSha256: sha,
-      packagePhase:'FINAL',
+      packagePhase: candidate?'DELIVERED_PHASE_CANDIDATE':'FINAL',
       payloadModel:'minimal-envelope-governed',
       producer:'two-pass-release/envelope-derivation',
-      transitional:false, placeholder:false, status:'final',
+      transitional:false, placeholder:false, status: candidate?'candidate':'final',
     }, 'final-governance-report', { includeGit: true }));
 
     // 3. package-validation/package-integrity do envelope = relatórios REAIS do
@@ -340,14 +360,20 @@ materialize_payload_governance() {
     || fail "Governança canônica do payload não é GO — release bloqueada (proibido promover NO_GO→GO)"
 
   # Self-proving REAL do artefato entregue (engine, nunca escrita sintética).
+  # No modo SEAL_GO o PASS é obrigatório; no candidato DEFERRED o relatório é
+  # copiado verdadeiro (pass=false reflete a fase, não adulteração).
   step "Self-proving real do artefato entregue..."
   node_with_workspace_env "$PROJECT_ROOT/governance/self-proving-report.js" >/dev/null 2>&1 || true
-  node_with_workspace_env -e "
-    const r = require('$PROJECT_ROOT/governance/self-proving-report.json');
-    if (r.pass !== true) { console.error('SELF_PROVING_FAIL — ' + (r.summary||'pass=false')); process.exit(1); }
-  " || fail "self-proving real FAIL — release bloqueada (proibido materializar PASS sintético)"
+  if [[ "${SEAL_DECISION:-SEAL_GO}" == "SEAL_GO" ]]; then
+    node_with_workspace_env -e "
+      const r = require('$PROJECT_ROOT/governance/self-proving-report.json');
+      if (r.pass !== true) { console.error('SELF_PROVING_FAIL — ' + (r.summary||'pass=false')); process.exit(1); }
+    " || fail "self-proving real FAIL — release bloqueada (proibido materializar PASS sintético)"
+    ok "self-proving real PASS copiado para o envelope"
+  else
+    ok "self-proving real (estado DEFERRED verdadeiro) copiado para o envelope"
+  fi
   cp "$PROJECT_ROOT/governance/self-proving-report.json" "$gov_dir/self-proving-report.json"
-  ok "self-proving real PASS copiado para o envelope"
 
   # Attestation Ed25519: autenticação real do release (chave privada fora do
   # pacote/repositório; pública distribuída no verifier). Cobre releaseId,
@@ -697,19 +723,55 @@ ok "dist/governance-artifacts/ populado com artefatos do PASS 2"
 pass "PASS 2.9 — CONVERGENCE GATE: governança real ANTES de selar o payload"
 # ══════════════════════════════════════════════════════════════════════════════
 # O payload carrega o estado de governance/ no momento do zip. Se esse estado
-# for NO_GO, o pacote nasce NO_GO e nenhuma fase posterior pode promovê-lo
+# for NO_GO real, o pacote nasce NO_GO e nenhuma fase posterior pode promovê-lo
 # (root cause do release r-agent2-20260903-134904: payload selado NO_GO +
 # envelope GO sintético). Aqui os engines reais rodam contra o pacote
-# provisional e o seal-time-gate avalia os artefatos PRODUZIDOS por eles:
+# provisional EM ORDEM DE DEPENDÊNCIA e o seal-time-gate avalia o resultado:
 #   SEAL_GO      → payload selado com decisão GO real;
-#   SEAL_PENDING → apenas dims da fase DELIVERED pendentes (RAP-055/056):
-#                  selagem permitida, o PASS 5 bloqueia até o fixpoint real;
-#   SEAL_NO_GO   → release ABORTADA. Payload nunca é selado com NO_GO.
+#   SEAL_PENDING → fase DELIVERED legítima (PASS_WITH_DEFERRED_PACKAGE_GATE,
+#                  below10 ⊆ {RAP-055,RAP-056}): sela um CANDIDATO com decisão
+#                  DEFERRED verdadeira de ponta a ponta (nunca envelope GO);
+#   SEAL_NO_GO   → release ABORTADA. Payload nunca é selado com NO_GO real.
 step "Validando pacote provisional (package-validation real com lineage)..."
 node_with_workspace_env "$PROJECT_ROOT/governance/package-validator.js" \
   --zip "$PROVISIONAL_ZIP" --audited-only \
   && ok "Pacote provisional validado (package-validation-report.json)" \
   || fail "package-validator reprovou o pacote provisional — payload não será selado"
+
+# Ordem de dependência (validada empiricamente): integrity consome o relatório
+# do validator; sign re-emite os selos HMAC contra o provisional; as sigs e o
+# atestado precisam ser sincronizados para dist/signatures e dist/governance
+# (o tamper-detector resolve esses diretórios primeiro — sem o sync ele lê os
+# artefatos do release ANTERIOR e reporta NO_GO espúrio); tamper e self-proving
+# consomem o estado assinado.
+step "Reavaliando package-integrity contra o pacote provisional..."
+node_with_workspace_env "$PROJECT_ROOT/governance/package-integrity-engine.js" >/dev/null 2>&1 \
+  && ok "package-integrity pré-selo: PACKAGE_INTEGRITY_GO" \
+  || fail "package-integrity reprovou o pacote provisional — payload não será selado"
+
+step "Re-assinando governança contra o pacote provisional (H_provisional)..."
+node_with_workspace_env "$PROJECT_ROOT/governance/sign-governance.js" >/dev/null 2>&1 \
+  && ok "Assinaturas HMAC re-emitidas contra H_provisional" \
+  || fail "sign-governance falhou no PASS 2.9"
+
+step "Sincronizando sigs/atestado para dist/ (tamper resolve dist/ primeiro)..."
+mkdir -p "$DIST_DIR/signatures" "$DIST_DIR/governance"
+for f in governance.sig release.sig package.manifest.sig replay.sig; do
+  [[ -f "$DIST_DIR/governance-artifacts/$f" ]] && cp "$DIST_DIR/governance-artifacts/$f" "$DIST_DIR/signatures/$f"
+done
+[[ -f "$PROJECT_ROOT/governance/governance-attestation.json" ]] \
+  && cp "$PROJECT_ROOT/governance/governance-attestation.json" "$DIST_DIR/governance/governance-attestation.json"
+ok "dist/signatures + dist/governance sincronizados com o estado assinado"
+
+step "Tamper detection pré-selo (estado assinado)..."
+node_with_workspace_env "$PROJECT_ROOT/governance/tamper-detector.js" >/dev/null 2>&1 \
+  && ok "tamper-detection pré-selo: GO" \
+  || fail "tamper-detector reprovou o estado pré-selo — payload não será selado"
+
+step "Self-proving do pacote provisional..."
+node_with_workspace_env "$PROJECT_ROOT/governance/self-proving-report.js" >/dev/null 2>&1 \
+  && ok "self-proving pré-selo PASS" \
+  || warn "self-proving pré-selo não PASS (seal-time-gate decide)"
 
 step "Re-materializando proof reports com pacote provisional presente..."
 node_with_workspace_env "$PROJECT_ROOT/tools/system/platform-readiness.js" >/dev/null 2>&1 \
@@ -720,14 +782,25 @@ step "Stamp de lineage (backstop bloqueante pré-selo)..."
 node_with_workspace_env "$PROJECT_ROOT/scripts/governance/stamp-report-lineage.js" >/dev/null 2>&1 \
   || fail "stamp-report-lineage falhou — artefatos sem lineage não podem ser selados"
 
+# Fixpoint persistido (2 passes + projeções derivadas do DB): quebra o ciclo
+# scorecard↔readiness/governance e estabiliza o estado canônico — 78/78 no
+# ciclo final, ou below10 ⊆ {RAP-055,RAP-056} na fase DELIVERED.
+step "Fixpoint do master scorecard (persisted, 2 passes)..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/run-persisted-scorecard.js" >/dev/null 2>&1 \
+  && ok "fixpoint do scorecard concluído" \
+  || fail "run-persisted-scorecard falhou — sem fixpoint não há estado canônico selável"
+
 step "Reavaliando engines de certificação (pré-selo)..."
-node_with_workspace_env "$PROJECT_ROOT/governance/revalidate-master-scorecard.js" >/dev/null 2>&1 || true
 node_with_workspace_env "$PROJECT_ROOT/governance/final-consistency-gate.js" >/dev/null 2>&1 || true
 node_with_workspace_env "$PROJECT_ROOT/governance/final-governance-engine.js" >/dev/null 2>&1 || true
 
 step "SEAL-TIME GATE: avaliando estado canônico produzido pelos engines..."
-node_with_workspace_env "$PROJECT_ROOT/scripts/governance/seal-time-gate.js" \
-  || fail "CANONICAL_NO_GO — release abortada: governança real não convergiu antes de selar o payload"
+SEAL_OUTPUT="$(node_with_workspace_env "$PROJECT_ROOT/scripts/governance/seal-time-gate.js" 2>&1)" && SEAL_RC=0 || SEAL_RC=$?
+echo "$SEAL_OUTPUT"
+[[ "$SEAL_RC" -eq 0 ]] || fail "CANONICAL_NO_GO — release abortada: governança real não convergiu antes de selar o payload"
+SEAL_DECISION="$(grep -oE 'SEAL_GO|SEAL_PENDING' <<< "$SEAL_OUTPUT" | tail -1)"
+[[ -n "$SEAL_DECISION" ]] || fail "seal-time-gate não emitiu decisão parseável"
+ok "Seal decision: $SEAL_DECISION"
 
 # ══════════════════════════════════════════════════════════════════════════════
 pass "PASS 3 — RECONSTRUÇÃO DO PACOTE FINAL"
@@ -1018,6 +1091,41 @@ if bash "$SCRIPT_DIR/check-dist-clean.sh" 2>/dev/null; then
   ok "dist/ estrutura normalizada verificada"
 else
   fail "check-dist-clean detectou problemas"
+fi
+
+# ── Fase DELIVERED: candidato selado com decisão DEFERRED verdadeira ─────────
+# SEAL_PENDING = scorecard com below10 ⊆ {RAP-055,RAP-056} (dimensões que só são
+# evidenciáveis contra o artefato ENTREGUE, via verify:delivered-release). O
+# candidato NÃO é release: payload=candidato, envelope=candidato (pass=false,
+# decisão PASS_WITH_DEFERRED_PACKAGE_GATE verbatim em ambos). O pipeline para
+# aqui com exit 1 — NUNCA materializa envelope GO sobre canônica não-GO.
+if [[ "${SEAL_DECISION:-SEAL_GO}" == "SEAL_PENDING" ]]; then
+  CANDIDATE_MARKER="$RELEASE_DIR/CANDIDATE-DEFERRED.json"
+  C_RUN_ID="$(node -e "try{const r=require('$PROJECT_ROOT/governance/.current-run.json');process.stdout.write(r.runId||'unknown')}catch(_){process.stdout.write('unknown')}" 2>/dev/null || echo "unknown")"
+  C_SOURCE_FP="$(node -e "try{const r=require('$PROJECT_ROOT/governance/.current-run.json');process.stdout.write(r.sourceFingerprint||'unknown')}catch(_){process.stdout.write('unknown')}" 2>/dev/null || echo "unknown")"
+  cat > "$CANDIDATE_MARKER" <<EOF
+{
+  "artifactType": "delivered-phase-candidate-marker",
+  "artifactVersion": "1.0.0",
+  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "releaseId": "${RELEASE_NAME}",
+  "runId": "${C_RUN_ID}",
+  "sourceFingerprint": "${C_SOURCE_FP}",
+  "payloadSha256": "${PAYLOAD_SHA}",
+  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+  "candidate": true,
+  "nextStep": "npm run verify:delivered-release && node --env-file-if-exists=.env scripts/governance/run-persisted-scorecard.js && npm run zip:release"
+}
+EOF
+  echo ""
+  echo -e "${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${YELLOW}║  CANDIDATO DELIVERED SELADO — DECISÃO DEFERRED VERDADEIRA   ║${NC}"
+  echo -e "${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
+  printf  "${YELLOW}║  Release     : %-47s ║${NC}\n" "${RELEASE_NAME}"
+  printf  "${YELLOW}║  Decisão     : %-47s ║${NC}\n" "PASS_WITH_DEFERRED_PACKAGE_GATE"
+  printf  "${YELLOW}║  Próximo     : %-47s ║${NC}\n" "verify:delivered-release → scorecard → zip:release"
+  echo -e "${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+  exit 1
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════

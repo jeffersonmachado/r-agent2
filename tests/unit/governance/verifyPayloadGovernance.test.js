@@ -17,7 +17,7 @@ const { buildReleaseFixture, makeFixtureDir } = require('../../helpers/releaseEn
 
 const VERIFIER = path.join(__dirname, '..', '..', '..', 'scripts', 'verify-payload-governance.js');
 
-function runVerifier(fixture) {
+function runVerifier(fixture, extraArgs = []) {
   const result = spawnSync(process.execPath, [
     VERIFIER,
     '--payload', fixture.payloadPath,
@@ -25,6 +25,7 @@ function runVerifier(fixture) {
     '--envelope-governance', fixture.envelopeGovDir,
     '--signatures', fixture.signaturesDir,
     '--verifier', fixture.verifierDir,
+    ...extraArgs,
   ], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
   return {
     exitCode: result.status,
@@ -218,6 +219,82 @@ describe('verify-payload-governance — suíte adversarial (toda adulteração r
       const result = runVerifier(fixture);
       expect(result.exitCode).toBe(1);
       expect(result.output).toContain('PAYLOAD_GOVERNANCE_NO_GO');
+      expect(gateStatus(result.output, testCase.gate)).toBe('FAIL');
+      expect(result.output).toContain(testCase.reason);
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+  }
+});
+
+// ─── Fase DELIVERED: candidato DEFERRED verdadeiro ───────────────────────────
+// Um candidato (below10 ⊆ {RAP-055,RAP-056}) carrega a decisão DEFERRED de
+// ponta a ponta: o modo estrito o REJEITA (não é release) e o modo --candidate
+// o aceita. Envelope GO sobre payload DEFERRED é reprovado em ambos.
+const DEFERRED = 'PASS_WITH_DEFERRED_PACKAGE_GATE';
+
+describe('verify-payload-governance --candidate — fase DELIVERED', () => {
+  test('candidato íntegro: estrito REJEITA, candidato ACEITA', () => {
+    const dir = makeFixtureDir();
+    const fixture = buildReleaseFixture(dir, {
+      payloadDecision: DEFERRED,
+      scorecardBelow10: ['RAP-055', 'RAP-056'],
+    });
+    const strict = runVerifier(fixture);
+    expect(strict.exitCode).toBe(1);
+    expect(strict.output).toContain('PAYLOAD_CANONICAL_NO_GO');
+
+    const candidate = runVerifier(fixture, ['--candidate']);
+    expect(candidate.exitCode).toBe(0);
+    expect(candidate.output).toContain('DELIVERED_PHASE_CANDIDATE_VERIFIED');
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  const candidateCases = [
+    {
+      name: 'envelope GO + payload DEFERRED (promoção proibida)',
+      tamper: { payloadDecision: DEFERRED, envelopeDecision: 'GO', scorecardBelow10: ['RAP-055', 'RAP-056'] },
+      gate: 'governance_decision_match',
+      reason: 'GOVERNANCE_DECISION_MISMATCH',
+    },
+    {
+      name: 'candidato com package-integrity NO_GO',
+      tamper: { payloadDecision: DEFERRED, payloadIntegrityDecision: 'PACKAGE_INTEGRITY_NO_GO', scorecardBelow10: ['RAP-055', 'RAP-056'] },
+      gate: 'payload_package_integrity',
+      reason: 'PAYLOAD_PACKAGE_INTEGRITY_NO_GO',
+    },
+    {
+      name: 'candidato com below10 fora de {RAP-055,RAP-056}',
+      tamper: { payloadDecision: DEFERRED, scorecardBelow10: ['RAP-052'] },
+      gate: 'payload_master_scorecard',
+      reason: 'CANDIDATE_SCORECARD_INVALID',
+    },
+    {
+      name: 'candidato com proof NO_GO',
+      tamper: { payloadDecision: DEFERRED, payloadProofDecision: 'NO_GO:X', scorecardBelow10: ['RAP-055', 'RAP-056'] },
+      gate: 'payload_proof',
+      reason: 'PAYLOAD_PROOF_NO_GO',
+    },
+    {
+      name: 'candidato com tamper NO_GO',
+      tamper: { payloadDecision: DEFERRED, payloadTamperDecision: 'TAMPER_NO_GO', scorecardBelow10: ['RAP-055', 'RAP-056'] },
+      gate: 'payload_tamper',
+      reason: 'PAYLOAD_TAMPER_NO_GO',
+    },
+    {
+      name: 'candidato com decisão arbitrária (não DEFERRED canônica)',
+      tamper: { payloadDecision: 'NO_GO:QUALQUER', scorecardBelow10: ['RAP-055', 'RAP-056'] },
+      gate: 'canonical_decision',
+      reason: 'CANDIDATE_DECISION_INVALID',
+    },
+  ];
+
+  for (const testCase of candidateCases) {
+    test(`FAIL: ${testCase.name}`, () => {
+      const dir = makeFixtureDir();
+      const fixture = buildReleaseFixture(dir, testCase.tamper);
+      const result = runVerifier(fixture, ['--candidate']);
+      expect(result.exitCode).toBe(1);
+      expect(result.output).toContain('DELIVERED_PHASE_CANDIDATE_NO_GO');
       expect(gateStatus(result.output, testCase.gate)).toBe('FAIL');
       expect(result.output).toContain(testCase.reason);
       fs.rmSync(dir, { recursive: true, force: true });

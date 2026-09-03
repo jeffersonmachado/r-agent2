@@ -34,6 +34,7 @@
  *
  * Uso:
  *   node verify-payload-governance.js --root <dir-com-dist-ou-envelope-extraído>
+ *   node verify-payload-governance.js --candidate --root <dir>   (fase DELIVERED: exige DEFERRED verbatim)
  *   node verify-payload-governance.js --payload <zip> --manifest <json> --envelope-governance <dir> --signatures <dir>
  */
 
@@ -46,6 +47,10 @@ const { execFileSync } = require('child_process');
 const GO_DECISIONS = new Set(['GO', 'AUTONOMOUS_READY_GO', 'AUTONOMOUS_READY', 'PASS', 'DELIVERED_RELEASE_VERIFIED']);
 const CANONICAL_REL = 'r-agent2/governance/final-governance-report.json';
 const PAYLOAD_GOV_REL = 'r-agent2/governance';
+// Fase DELIVERED: candidato selado com decisão DEFERRED verdadeira (RAP-055/056
+// só são evidenciáveis pós-selo, contra o artefato entregue). Nunca vira GO.
+const DEFERRED_DECISION = 'PASS_WITH_DEFERRED_PACKAGE_GATE';
+const DEFERRED_ALLOWED_BELOW10 = new Set(['RAP-055', 'RAP-056']);
 
 function normalizeDecision(decision) {
   return (typeof decision === 'string' && GO_DECISIONS.has(decision)) ? 'GO' : 'NO_GO';
@@ -134,6 +139,21 @@ function extractPayload(payloadPath) {
 
 // ─── Verificação principal ────────────────────────────────────────────────────
 function verifyPayloadGovernance(args) {
+  return runVerification(args, { candidateMode: false });
+}
+
+/**
+ * Verificação de CANDIDATO da fase DELIVERED: a governança canônica do payload
+ * deve carregar exatamente PASS_WITH_DEFERRED_PACKAGE_GATE (decisão DEFERRED
+ * verdadeira, nunca promovida a GO) e o envelope deve copiá-la verbatim.
+ * Um candidato NÃO é release: o modo estrito acima continua exigindo GO.
+ */
+function verifyDeferredCandidate(args) {
+  return runVerification(args, { candidateMode: true });
+}
+
+function runVerification(args, options) {
+  const candidateMode = options.candidateMode === true;
   const gates = [];
   const inputs = resolveInputs(args);
   let tmpDir = null;
@@ -149,22 +169,22 @@ function verifyPayloadGovernance(args) {
     const presence = makeGate('artifact_presence');
     if (!inputs.payloadPath || !fs.existsSync(inputs.payloadPath)) {
       gates.push(fail(presence, 'MISSING_PAYLOAD — payload.zip não encontrado'));
-      return finish(gates, cleanup);
+      return finish(gates, cleanup, candidateMode);
     }
     if (!inputs.manifestPath || !fs.existsSync(inputs.manifestPath)) {
       gates.push(fail(presence, 'MISSING_MANIFEST — manifest não encontrado'));
-      return finish(gates, cleanup);
+      return finish(gates, cleanup, candidateMode);
     }
     if (!inputs.envelopeGovDir) {
       gates.push(fail(presence, 'MISSING_ENVELOPE_GOVERNANCE — dist/governance não encontrado'));
-      return finish(gates, cleanup);
+      return finish(gates, cleanup, candidateMode);
     }
     gates.push(pass(presence));
 
     const manifest = readJson(inputs.manifestPath);
     if (!manifest) {
       gates.push(fail(makeGate('manifest_parse'), 'INVALID_ARTIFACT — manifest ilegível'));
-      return finish(gates, cleanup);
+      return finish(gates, cleanup, candidateMode);
     }
 
     // ── Gate 2: payload hash binding ────────────────────────────────────────
@@ -185,13 +205,20 @@ function verifyPayloadGovernance(args) {
     const canonPresence = makeGate('canonical_governance_presence');
     if (!canonical) {
       gates.push(fail(canonPresence, `MISSING_CANONICAL_GOVERNANCE — ${CANONICAL_REL} ausente no payload`));
-      return finish(gates, cleanup);
+      return finish(gates, cleanup, candidateMode);
     }
     gates.push(pass(canonPresence));
 
     const canonicalDecision = normalizeDecision(canonical.finalDecision || canonical.decision);
     const canonDecision = makeGate('canonical_decision');
-    if (canonicalDecision !== 'GO') {
+    if (candidateMode) {
+      if (canonical.finalDecision !== DEFERRED_DECISION) {
+        gates.push(fail(canonDecision,
+          `CANDIDATE_DECISION_INVALID — candidato DELIVERED exige finalDecision=${DEFERRED_DECISION}, encontrado=${canonical.finalDecision || 'null'}`));
+      } else {
+        gates.push(pass(canonDecision, { finalDecision: canonical.finalDecision }));
+      }
+    } else if (canonicalDecision !== 'GO') {
       gates.push(fail(canonDecision,
         `PAYLOAD_CANONICAL_NO_GO — finalDecision=${canonical.finalDecision || canonical.decision || 'null'}`));
     } else {
@@ -203,6 +230,14 @@ function verifyPayloadGovernance(args) {
     const decisionGate = makeGate('governance_decision_match');
     if (!envGov) {
       gates.push(fail(decisionGate, 'MISSING_ENVELOPE_GOVERNANCE — final-governance-report.json ausente no envelope'));
+    } else if (candidateMode) {
+      // Candidato: cópia verbatim — envelope GO + payload DEFERRED é mismatch.
+      if (envGov.finalDecision !== canonical.finalDecision) {
+        gates.push(fail(decisionGate,
+          `GOVERNANCE_DECISION_MISMATCH — envelope=${envGov.finalDecision} diverge da canônica do payload=${canonical.finalDecision}`));
+      } else {
+        gates.push(pass(decisionGate));
+      }
     } else {
       const envelopeDecision = normalizeDecision(envGov.finalDecision || envGov.decision);
       if (envelopeDecision !== canonicalDecision) {
@@ -244,7 +279,13 @@ function verifyPayloadGovernance(args) {
     const readiness = readJson(path.join(payloadGovDir, 'final-readiness-report.json'));
     const readinessGate = makeGate('payload_readiness');
     const readinessDecision = readiness?.finalDecision || readiness?.status;
-    if (readinessDecision !== 'AUTONOMOUS_READY_GO') {
+    if (candidateMode) {
+      if (readinessDecision !== DEFERRED_DECISION && readinessDecision !== 'AUTONOMOUS_READY_GO') {
+        gates.push(fail(readinessGate, `PAYLOAD_READINESS_NOT_GO — finalDecision=${readinessDecision || 'null'}`));
+      } else {
+        gates.push(pass(readinessGate, { finalDecision: readinessDecision }));
+      }
+    } else if (readinessDecision !== 'AUTONOMOUS_READY_GO') {
       gates.push(fail(readinessGate, `PAYLOAD_READINESS_NOT_GO — finalDecision=${readinessDecision || 'null'}`));
     } else {
       gates.push(pass(readinessGate));
@@ -296,11 +337,47 @@ function verifyPayloadGovernance(args) {
       const below10 = scorecard.dimensions.filter((d) => Number(d.score) < 10);
       const blockers = Array.isArray(scorecard.blockers) ? scorecard.blockers.length : 0;
       const gaps = Array.isArray(scorecard.gaps) ? scorecard.gaps.length : 0;
-      if (below10.length > 0 || blockers > 0 || gaps > 0) {
+      if (candidateMode) {
+        const unexpected = below10.filter((d) => !DEFERRED_ALLOWED_BELOW10.has(d.id));
+        if (unexpected.length > 0 || blockers > 0 || gaps > 0) {
+          gates.push(fail(scorecardGate,
+            `CANDIDATE_SCORECARD_INVALID — candidato admite below10 ⊆ {RAP-055,RAP-056}; unexpected=[${unexpected.map((d) => d.id).join(',')}] blockers=${blockers} gaps=${gaps}`));
+        } else {
+          gates.push(pass(scorecardGate, { deferredDimensions: below10.map((d) => d.id) }));
+        }
+      } else if (below10.length > 0 || blockers > 0 || gaps > 0) {
         gates.push(fail(scorecardGate,
           `MASTER_SCORECARD_NOT_10_OF_10 — ${scorecard.dimensions.length - below10.length}/${scorecard.dimensions.length} below10=[${below10.map((d) => d.id).join(',')}] blockers=${blockers} gaps=${gaps}`));
       } else {
         gates.push(pass(scorecardGate, { dimensions: scorecard.dimensions.length }));
+      }
+    }
+
+    // ── Gates exclusivos do candidato: proof + tamper do payload ────────────
+    if (candidateMode) {
+      const proof = readJson(path.join(payloadGovDir, 'final-proof-report.json'));
+      const proofGate = makeGate('payload_proof');
+      const proofDecision = proof?.finalDecision || proof?.decision;
+      const proofOk = proofDecision === 'AUTONOMOUS_READY_GO' || proofDecision === DEFERRED_DECISION;
+      if (!proof) {
+        gates.push(fail(proofGate, 'MISSING_ARTIFACT — final-proof-report.json ausente no payload'));
+      } else if (!proofOk) {
+        gates.push(fail(proofGate, `PAYLOAD_PROOF_NO_GO — finalDecision=${proofDecision || 'null'}`));
+      } else if (Array.isArray(proof.blockers) && proof.blockers.length > 0) {
+        gates.push(fail(proofGate, `PAYLOAD_PROOF_BLOCKERS — blockers=${proof.blockers.length}`));
+      } else {
+        gates.push(pass(proofGate));
+      }
+
+      const tamper = readJson(path.join(payloadGovDir, 'tamper-detection-report.json'));
+      const tamperGate = makeGate('payload_tamper');
+      const tamperDecision = tamper?.decision || tamper?.status;
+      if (!tamper) {
+        gates.push(fail(tamperGate, 'MISSING_ARTIFACT — tamper-detection-report.json ausente no payload'));
+      } else if (tamperDecision !== 'TAMPER_GO' && tamperDecision !== 'GO' && tamper.pass !== true) {
+        gates.push(fail(tamperGate, `PAYLOAD_TAMPER_NO_GO — decision=${tamperDecision || 'null'}`));
+      } else {
+        gates.push(pass(tamperGate));
       }
     }
 
@@ -416,20 +493,23 @@ function verifyPayloadGovernance(args) {
       gates.push(pass(provGate));
     }
 
-    return finish(gates, cleanup);
+    return finish(gates, cleanup, candidateMode);
   } catch (error) {
     gates.push(fail(makeGate('verifier_error'), `VERIFIER_ERROR — ${error.message}`));
-    return finish(gates, cleanup);
+    return finish(gates, cleanup, candidateMode);
   }
 }
 
-function finish(gates, cleanup) {
+function finish(gates, cleanup, candidateMode = false) {
   cleanup();
   const failed = gates.filter((g) => g.status === 'FAIL' && g.mandatory);
-  const decision = failed.length === 0 ? 'PAYLOAD_GOVERNANCE_VERIFIED' : 'PAYLOAD_GOVERNANCE_NO_GO';
+  const ok = failed.length === 0;
+  const decision = ok
+    ? (candidateMode ? 'DELIVERED_PHASE_CANDIDATE_VERIFIED' : 'PAYLOAD_GOVERNANCE_VERIFIED')
+    : (candidateMode ? 'DELIVERED_PHASE_CANDIDATE_NO_GO' : 'PAYLOAD_GOVERNANCE_NO_GO');
   return {
     decision,
-    pass: failed.length === 0,
+    pass: ok,
     failedGates: failed.map((g) => ({ id: g.id, reason: g.reason })),
     gates: gates.map((g) => ({ id: g.id, status: g.status, reason: g.reason || null })),
   };
@@ -448,7 +528,10 @@ function parseCliArgs(argv) {
 }
 
 if (require.main === module) {
-  const result = verifyPayloadGovernance(parseCliArgs(process.argv.slice(2)));
+  const cliArgs = parseCliArgs(process.argv.slice(2));
+  const result = cliArgs.candidate === true
+    ? verifyDeferredCandidate(cliArgs)
+    : verifyPayloadGovernance(cliArgs);
   console.log('─'.repeat(60));
   console.log('PAYLOAD GOVERNANCE GATES');
   console.log('─'.repeat(60));
@@ -461,4 +544,4 @@ if (require.main === module) {
   process.exit(result.pass ? 0 : 1);
 }
 
-module.exports = { verifyPayloadGovernance, normalizeDecision };
+module.exports = { verifyPayloadGovernance, verifyDeferredCandidate, normalizeDecision, DEFERRED_DECISION };

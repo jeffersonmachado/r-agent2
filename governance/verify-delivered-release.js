@@ -328,23 +328,39 @@ function checkExperienceSegregation(manifest) {
  */
 function checkPayloadGovernance() {
   const gate = makeGate('payload_governance');
-  let verify;
+  let verifyModule;
   try {
-    verify = require('../scripts/verify-payload-governance').verifyPayloadGovernance;
+    verifyModule = require('../scripts/verify-payload-governance');
   } catch (error) {
     return fail(gate, `VERIFIER_ERROR — verify-payload-governance indisponível: ${error.message}`);
   }
+  const { verifyPayloadGovernance, verifyDeferredCandidate } = verifyModule;
   let result;
+  let mode = 'FINAL';
   try {
-    result = verify({ root: ROOT });
+    result = verifyPayloadGovernance({ root: ROOT });
   } catch (error) {
     return fail(gate, `VERIFIER_ERROR — ${error.message}`);
   }
   if (!result || result.pass !== true) {
-    const reasons = (result?.failedGates || []).map((g) => `${g.id}: ${g.reason}`).join(' | ');
-    return fail(gate, `PAYLOAD_GOVERNANCE_NO_GO — ${reasons || 'sem detalhe'}`);
+    // Fase DELIVERED: candidato selado com decisão DEFERRED verdadeira de ponta
+    // a ponta (payload=candidato, envelope=candidato). Nunca promovido a GO.
+    let candidateResult = null;
+    try {
+      candidateResult = verifyDeferredCandidate({ root: ROOT });
+    } catch (error) {
+      return fail(gate, `VERIFIER_ERROR — ${error.message}`);
+    }
+    if (candidateResult && candidateResult.pass === true) {
+      mode = 'DELIVERED_PHASE_CANDIDATE';
+      result = candidateResult;
+    } else {
+      const strictReasons = (result?.failedGates || []).map((g) => `${g.id}: ${g.reason}`).join(' | ');
+      const candidateReasons = (candidateResult?.failedGates || []).map((g) => `${g.id}: ${g.reason}`).join(' | ');
+      return fail(gate, `PAYLOAD_GOVERNANCE_NO_GO — strict=[${strictReasons || 'sem detalhe'}] candidate=[${candidateReasons || 'sem detalhe'}]`);
+    }
   }
-  return pass(gate, { gates: result.gates.length });
+  return pass(gate, { mode, gates: result.gates.length, decision: result.decision });
 }
 
 // ─── 4. Fingerprint chain ────────────────────────────────────────────────────

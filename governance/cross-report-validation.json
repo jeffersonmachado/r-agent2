@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-03T16:50:36.019Z",
-  "expectedZipName": "r-agent2-20260903-134904.zip",
+  "generatedAt": "2026-09-03T18:07:12.968Z",
+  "expectedZipName": "r-agent2-20260903-150605.zip",
   "pbxMaturity": "enterprise-real",
   "contradictions": [],
   "blockers": [],
@@ -10,5 +10,5 @@
   "maximumAllowedReadiness": "autonomous-ready",
   "autonomousReadyBlocked": false,
   "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas.",
-  "reboundAt": "2026-09-03T16:50:36.351Z"
+  "reboundAt": "2026-09-03T18:07:13.399Z"
 }

@@ -2,16 +2,16 @@
 
 > Arquivo gerado por `governance/revalidate-master-scorecard.js`. Não editar manualmente.
 
-- Generated at: 2026-09-03T16:51:22.300Z
-- Run ID: rap-governed-20260903164037846-c796debe
-- Source fingerprint: 67bda919f3f8b2de577bf04b6e7bbe6b68d8e9dd814d4df803ef1831c816b61f
-- Scorecard fingerprint: 51fee76f4b9cafaca91d4f213e226318b5944f4a1efec234e4cdea884c659b10
-- Overall status: **VERIFIED**
+- Generated at: 2026-09-03T18:23:48.626Z
+- Run ID: rap-governed-20260903180300306-36ecbf93
+- Source fingerprint: a8862e30690bdb6b08edc5bd0662663863024ad4091250d4df998418bfe8c4c2
+- Scorecard fingerprint: 39d10279bd8fdd8d31d2a1fbf05084316239e917373a076b504ab1330869cf05
+- Overall status: **IN_PROGRESS**
 - Dimensions: 78
-- 10/10: 78
-- Below 10: 0
-- Open gaps: 0
-- Open blockers: 0
+- 10/10: 67
+- Below 10: 11
+- Open gaps: 18
+- Open blockers: 15
 
 ## Dimensões
 
@@ -22,10 +22,10 @@
 | RAP-003 | Cognitive Core | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-004 | Business Outcome Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-005 | Agent OS / Agent Supervisor | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-006 | Agent Factory Governance | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-006 | Agent Factory Governance | 6/10 | STALE | 7/11 | 2 | 2 |
 | RAP-007 | Tool Registry / Authorization | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-008 | Business Capabilities × Technical Tools | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-009 | MCP Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-009 | MCP Architecture | 6/10 | STALE | 8/11 | 1 | 1 |
 | RAP-010 | Multi-Tenant Isolation | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-011 | Principal / Identity Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-012 | Explicit Platform System | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -53,8 +53,8 @@
 | RAP-034 | Relational Dependency Planner | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-035 | Seed Provisioning | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-036 | Seed Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-037 | Learning Core | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-038 | Durable Process Runtime | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-037 | Learning Core | 6/10 | STALE | 8/11 | 1 | 1 |
+| RAP-038 | Durable Process Runtime | 6/10 | STALE | 8/11 | 1 | 1 |
 | RAP-039 | Event Semantics | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-040 | Canonical Taxonomy / Registries | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-041 | Run Immutability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -64,16 +64,16 @@
 | RAP-045 | Proof Freshness | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-046 | Proof Engine Semantics | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-047 | No Synthetic Proof | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-048 | Final Governance | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-049 | Readiness Engine | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-050 | Canonical Final Decision | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-051 | Cross-Engine Consistency | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-048 | Final Governance | 6/10 | STALE | 7/11 | 2 | 2 |
+| RAP-049 | Readiness Engine | 6/10 | STALE | 7/11 | 2 | 2 |
+| RAP-050 | Canonical Final Decision | 6/10 | STALE | 7/11 | 2 | 2 |
+| RAP-051 | Cross-Engine Consistency | 6/10 | IN_PROGRESS | 7/11 | 2 | 2 |
 | RAP-052 | Package Manifest | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-053 | Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-054 | Semantic Certification × Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-055 | Delivered Release Self-Verification | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-056 | Source/Proof/Manifest Equality | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-057 | Final Consistency Gate | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-055 | Delivered Release Self-Verification | 6/10 | INVALID | 8/11 | 2 | 0 |
+| RAP-056 | Source/Proof/Manifest Equality | 6/10 | INVALID | 9/11 | 1 | 0 |
+| RAP-057 | Final Consistency Gate | 6/10 | IN_PROGRESS | 7/11 | 2 | 2 |
 | RAP-058 | Security Fail-Closed | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-059 | Observability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-060 | Regression Safety | 10/10 | VERIFIED | 11/11 | 0 | 0 |

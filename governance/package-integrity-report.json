@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-03T16:50:39.246Z",
+  "generatedAt": "2026-09-03T18:20:20.564Z",
   "engine": "package-integrity-engine/v1",
   "pass": true,
   "decision": "PACKAGE_INTEGRITY_GO",
-  "packageName": "r-agent2-20260903-134904.zip",
-  "packageHash": "a985d3c8968d93655ea436a65d85982d04e389fd34942557da2b9517e9a00383",
-  "generatedAt_pkg": "2026-09-03T16:50:34Z",
-  "gitCommit": "22ffaab0cafc781f329ca66eecf6764614d5a87a",
-  "evidenceManifestHash": "8e05994e70d8cbcd967586f053b066235f74515f20bddad04e746c3638012afb",
+  "packageName": "r-agent2-20260903-150605.zip",
+  "packageHash": "539ef79ab73861c142353134b35b68afd079ff688968524add1a2c7ee42f91fc",
+  "generatedAt_pkg": "2026-09-03T18:07:12Z",
+  "gitCommit": "6304bf51f10a1b15eb3082ade332e29d0c712280",
+  "evidenceManifestHash": "a35b0b5c0c111df883752a47bff1e828d03ff1328bd87922fcdbd7260e349ed9",
   "checks": [
     {
       "check": "zip_hash",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260903-134904.zip",
-      "computed": "a985d3c8968d93655ea436a65d85982d04e389fd34942557da2b9517e9a00383",
-      "recorded": "a985d3c8968d93655ea436a65d85982d04e389fd34942557da2b9517e9a00383",
+      "zipName": "r-agent2-20260903-150605.zip",
+      "computed": "539ef79ab73861c142353134b35b68afd079ff688968524add1a2c7ee42f91fc",
+      "recorded": "539ef79ab73861c142353134b35b68afd079ff688968524add1a2c7ee42f91fc",
       "hashSource": "sidecar-manifest",
-      "sizeBytes": 43330594,
+      "sizeBytes": 43365920,
       "match": true,
       "reason": null
     },
@@ -25,7 +25,7 @@
       "check": "zip_name_alignment",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260903-134904.zip",
+      "zipName": "r-agent2-20260903-150605.zip",
       "mismatches": [],
       "reason": null
     },
@@ -33,7 +33,7 @@
       "check": "evidence_manifest_hash",
       "pass": true,
       "severity": "OK",
-      "computed": "8e05994e70d8cbcd967586f053b066235f74515f20bddad04e746c3638012afb",
+      "computed": "a35b0b5c0c111df883752a47bff1e828d03ff1328bd87922fcdbd7260e349ed9",
       "note": "No stored hash baseline to compare against"
     },
     {
@@ -43,8 +43,8 @@
       "validatorOk": true,
       "selfContained": true,
       "missingEntries": 0,
-      "reportedZip": "r-agent2-20260903-134904.zip",
-      "actualZip": "r-agent2-20260903-134904.zip",
+      "reportedZip": "r-agent2-20260903-150605.zip",
+      "actualZip": "r-agent2-20260903-150605.zip",
       "zipMatch": true,
       "reason": null
     }
@@ -52,9 +52,10 @@
   "failedChecks": 0,
   "criticalChecks": 0,
   "failureReasons": [],
-  "summary": "Pacote r-agent2-20260903-134904.zip íntegro. Todos os hashes correspondem.",
+  "summary": "Pacote r-agent2-20260903-150605.zip íntegro. Todos os hashes correspondem.",
+  "artifactType": "package-integrity-report",
+  "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260903180300306-36ecbf93",
   "sourceFingerprint": "a8862e30690bdb6b08edc5bd0662663863024ad4091250d4df998418bfe8c4c2",
-  "artifactType": "package-integrity-report",
-  "artifactVersion": "1.0.0"
+  "gitTree": "b8c00db7ac224464c72078ba9971f969cad9489b"
 }

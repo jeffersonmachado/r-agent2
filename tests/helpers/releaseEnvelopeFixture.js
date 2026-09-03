@@ -73,6 +73,8 @@ function buildScorecard(below10Ids = [], lin = lineage) {
  *   payloadPkgValLineage incluir lineage no pkg-val embutido (default true)
  *   payloadIntegrityDecision  (default PACKAGE_INTEGRITY_GO)
  *   payloadSelfProofPass (default true)
+ *   payloadProofDecision finalDecision do final-proof embutido (default = payloadDecision)
+ *   payloadTamperDecision  decision do tamper-detection embutido (default TAMPER_GO)
  *   scorecardBelow10     ids com score 6 no scorecard embutido (default [])
  *   envelopePkgValOk     (default true)
  *   envelopeIntegrityPass (default true)
@@ -149,6 +151,16 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
       overallSelfProofScore: 100,
     });
     writeJson(path.join(govDir, 'rap-master-scorecard.json'), buildScorecard(tamper.scorecardBelow10 || [], lin));
+    writeJson(path.join(govDir, 'final-proof-report.json'), {
+      ...lin('final-proof-report'),
+      finalDecision: tamper.payloadProofDecision || payloadDecision,
+      blockers: [],
+    });
+    writeJson(path.join(govDir, 'tamper-detection-report.json'), {
+      ...lin('tamper-detection-report'),
+      decision: tamper.payloadTamperDecision || 'TAMPER_GO',
+      pass: (tamper.payloadTamperDecision || 'TAMPER_GO') === 'TAMPER_GO',
+    });
   }
 
   // ── 2. Payload zip ─────────────────────────────────────────────────────────

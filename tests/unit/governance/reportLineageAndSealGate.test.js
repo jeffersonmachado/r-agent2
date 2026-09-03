@@ -97,7 +97,7 @@ describe('seal-time-gate — convergência antes de selar o payload', () => {
         }),
         blockers: [], gaps: [],
       },
-      governance: { finalDecision: 'NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055, RAP-056]' },
+      governance: { finalDecision: 'PASS_WITH_DEFERRED_PACKAGE_GATE' },
     });
     const result = evaluateSealState(dir);
     expect(result.decision).toBe('SEAL_PENDING');

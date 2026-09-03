@@ -13,10 +13,18 @@
  *   SEAL_GO:      scorecard 78/78 + final-governance GO + consistency GO
  *                 + readiness GO → o payload é selado com decisão GO real.
  *
- *   SEAL_PENDING: único below-10 ⊆ {RAP-055, RAP-056} (fase DELIVERED, que
- *                 estruturalmente só sobe após o primeiro pacote do run ser
- *                 entregue e verificado) → selagem permitida, mas o release
- *                 será bloqueado no PASS 5 (comportamento da tentativa A).
+ *   SEAL_GO:      scorecard 78/78 + final-governance GO + consistency GO
+ *                 + readiness GO → o payload é selado com decisão GO real.
+ *
+ *   SEAL_PENDING: fase DELIVERED legítima (modelo de fases pré-existente —
+ *                 PASS_WITH_DEFERRED_PACKAGE_GATE): hard gates verdes
+ *                 (package-validation ok, package-integrity GO, consistency
+ *                 GO, proof/readiness/governance ∈ {GO, DEFERRED}) e below10
+ *                 ⊆ {RAP-055, RAP-056} (só verificáveis no artefato entregue).
+ *                 A selagem produz um CANDIDATO com decisão DEFERRED verdadeira
+ *                 de ponta a ponta (payload=candidato, envelope=candidato) —
+ *                 NUNCA um envelope GO. O release final exige novo ciclo após
+ *                 a verificação do entregue (verify:delivered-release).
  *
  *   SEAL_NO_GO:   qualquer outra composição → release ABORTADA. O payload
  *                 nunca é selado com NO_GO fora da fase DELIVERED.
@@ -31,6 +39,10 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const DELIVERED_PHASE_DIMS = new Set(['RAP-055', 'RAP-056']);
 const GO_DECISIONS = new Set(['GO', 'AUTONOMOUS_READY_GO', 'AUTONOMOUS_READY']);
+// Único estado não-GO selável: a fase DEFERRED canônica dos engines (proof,
+// readiness e governance projetam exatamente esta decisão quando os únicos
+// gaps são os da fase DELIVERED). Qualquer outro NO_GO é falha real.
+const DEFERRED_DECISION = 'PASS_WITH_DEFERRED_PACKAGE_GATE';
 
 function readJson(relPath) {
   try {
@@ -65,13 +77,17 @@ function evaluateSealState(rootDir = ROOT) {
   const consistencyDecision = consistency?.decision || (consistency?.pass === true ? 'FINAL_CONSISTENCY_GO' : null);
   const consistencyGo = consistencyDecision === 'FINAL_CONSISTENCY_GO' || consistency?.pass === true;
 
-  const readiness = read('governance/final-readiness-report.json');
-  const readinessDecision = readiness?.finalDecision || readiness?.status || null;
-  const readinessGo = readinessDecision === 'AUTONOMOUS_READY_GO';
-
   const proof = read('governance/final-proof-report.json');
   const proofDecision = proof?.finalDecision || null;
   const proofGo = proofDecision === 'AUTONOMOUS_READY_GO';
+  const proofGoOrDeferred = GO_DECISIONS.has(proofDecision) || proofDecision === DEFERRED_DECISION;
+
+  const readiness = read('governance/final-readiness-report.json');
+  const readinessDecision = readiness?.finalDecision || readiness?.status || null;
+  const readinessGo = readinessDecision === 'AUTONOMOUS_READY_GO';
+  const readinessGoOrDeferred = GO_DECISIONS.has(readinessDecision) || readinessDecision === DEFERRED_DECISION;
+
+  const governanceDeferredOk = governanceGo || governanceDecision === DEFERRED_DECISION;
 
   const pkgValidation = read('governance/package-validation-report.json');
   if (!pkgValidation?.runId || !pkgValidation?.sourceFingerprint) {
@@ -87,25 +103,34 @@ function evaluateSealState(rootDir = ROOT) {
     failures.push(`PACKAGE_INTEGRITY_NO_GO — decision=${pkgIntegrity.decision || 'null'}`);
   }
 
+  // Hard failures (falhas reais — bloqueiam qualquer selagem):
   if (nonDeliveredBelow10.length > 0) {
     failures.push(`MASTER_SCORECARD_NOT_10_OF_10 — below10 fora da fase DELIVERED: [${nonDeliveredBelow10.join(',')}]`);
   }
-  if (!proofGo) failures.push(`FINAL_PROOF_NOT_PASS — ${proofDecision || 'null'}`);
-  if (!readinessGo) failures.push(`FINAL_READINESS_NOT_PASS — ${readinessDecision || 'null'}`);
+  if (!proofGoOrDeferred) failures.push(`FINAL_PROOF_NOT_PASS — ${proofDecision || 'null'}`);
+  if (!readinessGoOrDeferred) failures.push(`FINAL_READINESS_NOT_PASS — ${readinessDecision || 'null'}`);
   if (!consistencyGo) failures.push(`FINAL_CONSISTENCY_NOT_PASS — ${consistencyDecision || 'null'}`);
+  if (!governanceDeferredOk) failures.push(`FINAL_GOVERNANCE_NOT_GO — ${governanceDecision || 'null'}`);
 
   if (failures.length > 0) return { decision: 'SEAL_NO_GO', failures, warnings };
 
-  if (below10.length === 0 && governanceGo) {
+  // SEAL_GO: estado integralmente GO — payload nasce com decisão GO real.
+  if (below10.length === 0 && governanceGo && proofGo && readinessGo) {
     return { decision: 'SEAL_GO', failures, warnings };
   }
 
+  // SEAL_PENDING: fase DELIVERED legítima — hard gates verdes, decisões no
+  // máximo DEFERRED e below10 ⊆ {RAP-055,RAP-056}. O candidato é selado com a
+  // decisão DEFERRED verdadeira de ponta a ponta (nunca envelope GO); o
+  // release final exige o ciclo pós-entrega (verify:delivered-release).
   if (below10.length > 0 && below10.every((id) => DELIVERED_PHASE_DIMS.has(id))) {
-    warnings.push(`DELIVERED_PENDING — below10=[${below10.join(',')}] (fase DELIVERED; o PASS 5 bloqueia o release até o fixpoint real)`);
+    warnings.push(`DELIVERED_PENDING — below10=[${below10.join(',')}] decisions=[proof=${proofDecision}, readiness=${readinessDecision}, governance=${governanceDecision}] (fase DELIVERED legítima; candidato será selado com decisão DEFERRED verdadeira)`);
     return { decision: 'SEAL_PENDING', failures, warnings };
   }
 
-  failures.push(`FINAL_GOVERNANCE_NOT_GO — ${governanceDecision || 'null'}`);
+  // below10 vazio mas alguma decisão DEFERRED (não GO pleno): não é GO nem
+  // fase delivered — estado inconsistente, falhar fechado.
+  failures.push(`SEAL_STATE_INCONSISTENT — below10=[${below10.join(',')}] proof=${proofDecision} readiness=${readinessDecision} governance=${governanceDecision}`);
   return { decision: 'SEAL_NO_GO', failures, warnings };
 }
 
