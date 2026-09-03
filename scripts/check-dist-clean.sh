@@ -120,6 +120,14 @@ else
 fi
 
 step "6. Rodando verificação rígida v2..."
+if [[ "${CHECK_DIST_CLEAN_DEFERRED_CANDIDATE:-0}" == "1" ]]; then
+  # Fase DELIVERED: o candidato é selado com a decisão DEFERRED verdadeira
+  # (PASS_WITH_DEFERRED_PACKAGE_GATE) — o verifier estrito v2 exige GO e,
+  # por design, reprova o candidato. A verificação do candidato é feita pelo
+  # verify:delivered-release (verifyDeferredCandidate); o release GO final
+  # passa por este passo normalmente na tentativa SEAL_GO.
+  ok "verify-enterprise-governance-v2.sh adiado (candidato DEFERRED — verificação via verify:delivered-release)"
+else
 VERIFY_SCRIPT="$PROJECT_ROOT/scripts/verify-enterprise-governance-v2.sh"
 [[ -f "$DIST_DIR/verifier/verify-enterprise-governance-v2.sh" ]] && VERIFY_SCRIPT="$DIST_DIR/verifier/verify-enterprise-governance-v2.sh"
 VERIFY_ARGS=(--payload "${PAYLOAD_PATH:-}")
@@ -132,6 +140,7 @@ else
   fail "verify-enterprise-governance-v2.sh FAIL"
   warn "Resumo do verifier:"
   tail -n 25 /tmp/check-dist-verify.log | sed 's/^/    /' || true
+fi
 fi
 
 echo ""

@@ -1090,7 +1090,13 @@ release_envelope_validate_zip "$ENVELOPE_PATH" \
   || fail "Envelope contém entradas inesperadas"
 
 # Verificar estrutura resultante
+# Na fase DELIVERED (SEAL_PENDING) o candidato carrega a decisão DEFERRED
+# verdadeira — o verifier estrito dentro do check-dist-clean exige GO e é
+# adiado por design; a verificação do candidato ocorre no verify:delivered-release.
 step "Validando estrutura normalizada de dist/..."
+CHECK_DIST_CLEAN_DEFERRED_CANDIDATE=0
+[[ "${SEAL_DECISION:-SEAL_GO}" == "SEAL_PENDING" ]] && CHECK_DIST_CLEAN_DEFERRED_CANDIDATE=1
+export CHECK_DIST_CLEAN_DEFERRED_CANDIDATE
 bash "$SCRIPT_DIR/check-dist-clean.sh" 2>&1 | grep -E "(✓|✗|PASS|FAIL|check-dist)" || true
 if bash "$SCRIPT_DIR/check-dist-clean.sh" 2>/dev/null; then
   ok "dist/ estrutura normalizada verificada"

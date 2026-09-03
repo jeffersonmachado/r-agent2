@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-03T20:24:45.243Z",
+  "generatedAt": "2026-09-03T20:30:40.290Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260903-172155.payload.zip",
+  "artifact": "r-agent2-20260903-172747.payload.zip",
   "verifierExecuted": true,
   "verifierPassed": false,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/release/r-agent2-20260903-172155.payload.zip",
+  "packageInsideDistPath": "dist/release/r-agent2-20260903-172747.payload.zip",
   "manifestInsideDist": false,
-  "manifestInsideDistPath": "dist/release/r-agent2-20260903-172155.payload.manifest.json",
+  "manifestInsideDistPath": "dist/release/r-agent2-20260903-172747.payload.manifest.json",
   "staleReferencesFound": 16,
   "staleHashesFound": 0,
   "staleFilesAffected": [
@@ -60,7 +60,7 @@
   "governanceValidation": {
     "pass": false,
     "chainValid": false,
-    "chainRoot": "fe1cc40c23a253df7bb50647387274a8",
+    "chainRoot": "ab2df0f4f2ba17f655e7f1fdbd73dae2",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
@@ -97,8 +97,8 @@
     "pass": false,
     "chainIntact": false,
     "sigsValid": true,
-    "sidecarHash": "862f95fe70a39a1ef75c89bc33e9cbef2003b6ae44b4842761ec491c859c2600",
-    "zipName": "r-agent2-20260903-172155.payload.zip",
+    "sidecarHash": "97043bce91e0b698ba9eaa5be8f54c4da7ddf4e9edfd832c8fd8215808458e1a",
+    "zipName": "r-agent2-20260903-172747.payload.zip",
     "tamperDetectable": false,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -138,11 +138,11 @@
   "pass": false,
   "passCount": 4,
   "totalDimensions": 10,
-  "summary": "Pacote r-agent2-20260903-172155.payload.zip FALHOU na auto-prova. Falhas: [verifierPassed, manifestInsideDist, staleReferencesFound, governanceChainValid, immutable]. Score: 0/100.",
+  "summary": "Pacote r-agent2-20260903-172747.payload.zip FALHOU na auto-prova. Falhas: [verifierPassed, manifestInsideDist, staleReferencesFound, governanceChainValid, immutable]. Score: 0/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260903202659531-699fc141",
   "sourceFingerprint": "1d961afe6805ff613644a5006372a6bb68548164a169e8930fdbeeb631489751",
-  "gitCommit": "6ecbf65fb4ae8e71934bafee51bbeef748d4d390",
-  "gitTree": "325822d044a7383f79b6982edd0bb4b00550b810"
+  "gitCommit": "516c5beb165d6aa22e9cdb13b0f77b09211ae798",
+  "gitTree": "9cd9d82030071e323ac6b9a9564152fa7bc80c95"
 }
