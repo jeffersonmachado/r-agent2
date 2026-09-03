@@ -21,7 +21,7 @@
 #   - avalia o seal-time-gate (esperado: SEAL_PENDING na fase DELIVERED ou
 #     SEAL_GO quando 78/78).
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 NODE="node --env-file-if-exists=.env"
 
