@@ -1,14 +1,14 @@
 {
   "artifactType": "evidence-manifest",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-03T20:53:53.728Z",
+  "generatedAt": "2026-09-03T20:59:02.657Z",
   "runId": "rap-governed-20260903205336902-2dab4134",
   "sourceFingerprint": "e6742301bbd2b51d6d4ceeae3b38b70a0f6670a34c84c2d596039b1442ed2fec",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.3",
   "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
   "status": "PASS",
-  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+  "finalDecision": "AUTONOMOUS_READY_GO",
   "fingerprints": {
     "sourceFingerprint": "e6742301bbd2b51d6d4ceeae3b38b70a0f6670a34c84c2d596039b1442ed2fec",
     "inventoryFingerprint": "f3c73596c92d95cd6178fbca4b5c593c9aa99577636d3140cfb7b4d1b33d5fb4",
