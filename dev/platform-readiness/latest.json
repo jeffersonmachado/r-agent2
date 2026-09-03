@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-03T15:02:59.671Z",
-  "finalDecision": "NO_GO:AUTONOMOUS_READY_GO",
-  "platformMaturity": "enterprise-partial",
+  "generatedAt": "2026-09-03T15:06:17.012Z",
+  "finalDecision": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-001: score=5 target=10 | RAP-001: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-001: open blockers=1 | RAP-001: open gaps=3 | RAP-002: score=5 target=10 | RAP-002: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-002: open blockers=2 | RAP-002: open gaps=4 | RAP-003: score=5 target=10 | RAP-003: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-003: open blockers=1 | RAP-003: open gaps=3 | RAP-004: score=5 target=10 | RAP-004: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-004: open blockers=1 | RAP-004: open gaps=3 | RAP-005: score=5 target=10 | RAP-005: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-005: open blockers=1 | RAP-005: open gaps=3 | RAP-006: score=5 target=10 | RAP-006: mandatory requirement failures=tested,governed,regression-protected,no-known-gap,no-open-blocker | RAP-006: open blockers=1 | RAP-006: open gaps=3 | RAP-007: score=5 target=10 | RAP-007: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-007: open blockers=2 | RAP-007: open gaps=4 | RAP-008: score=5 target=10 | RAP-008: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-008: open blockers=2 | RAP-008: open gaps=4 | RAP-009: score=5 target=10 | RAP-009: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-009: open gaps=2 | RAP-010: score=5 target=10 | RAP-010: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-010: open blockers=2 | RAP-010: open gaps=4 | RAP-011: score=5 target=10 | RAP-011: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-011: open blockers=2 | RAP-011: open gaps=4 | RAP-012: score=5 target=10 | RAP-012: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-012: open blockers=2 | RAP-012: open gaps=4 | RAP-013: score=5 target=10 | RAP-013: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-013: open blockers=2 | RAP-013: open gaps=4 | RAP-014: score=5 target=10 | RAP-014: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-014: open blockers=2 | RAP-014: open gaps=4 | RAP-015: score=5 target=10 | RAP-015: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-015: open blockers=2 | RAP-015: open gaps=4 | RAP-016: score=5 target=10 | RAP-016: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-016: open blockers=2 | RAP-016: open gaps=4 | RAP-017: score=5 target=10 | RAP-017: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-017: open blockers=2 | RAP-017: open gaps=4 | RAP-018: score=5 target=10 | RAP-018: mandatory requirement failures=tested,governed,regression-protected,no-known-gap,no-open-blocker | RAP-018: open blockers=1 | RAP-018: open gaps=3 | RAP-019: score=5 target=10 | RAP-019: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-019: open blockers=2 | RAP-019: open gaps=4 | RAP-020: score=5 target=10 | RAP-020: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-020: open blockers=2 | RAP-020: open gaps=4 | RAP-021: score=5 target=10 | RAP-021: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-021: open gaps=2 | RAP-022: score=5 target=10 | RAP-022: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-022: open blockers=2 | RAP-022: open gaps=4 | RAP-023: score=5 target=10 | RAP-023: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-023: open blockers=2 | RAP-023: open gaps=4 | RAP-024: score=5 target=10 | RAP-024: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-024: open blockers=2 | RAP-024: open gaps=4 | RAP-025: score=5 target=10 | RAP-025: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-025: open blockers=2 | RAP-025: open gaps=4 | RAP-026: score=5 target=10 | RAP-026: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-026: open blockers=2 | RAP-026: open gaps=4 | RAP-027: score=5 target=10 | RAP-027: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-027: open blockers=2 | RAP-027: open gaps=4 | RAP-028: score=5 target=10 | RAP-028: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-028: open blockers=2 | RAP-028: open gaps=4 | RAP-029: score=5 target=10 | RAP-029: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-029: open blockers=2 | RAP-029: open gaps=4 | RAP-030: score=5 target=10 | RAP-030: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-030: open blockers=2 | RAP-030: open gaps=4 | RAP-031: score=5 target=10 | RAP-031: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-031: open blockers=2 | RAP-031: open gaps=4 | RAP-032: score=5 target=10 | RAP-032: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-032: open blockers=2 | RAP-032: open gaps=4 | RAP-033: score=5 target=10 | RAP-033: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-033: open blockers=2 | RAP-033: open gaps=4 | RAP-034: score=5 target=10 | RAP-034: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-034: open blockers=2 | RAP-034: open gaps=4 | RAP-035: score=5 target=10 | RAP-035: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-035: open blockers=2 | RAP-035: open gaps=4 | RAP-036: score=5 target=10 | RAP-036: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-036: open blockers=2 | RAP-036: open gaps=4 | RAP-037: score=5 target=10 | RAP-037: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-037: open gaps=2 | RAP-038: score=5 target=10 | RAP-038: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-038: open gaps=2 | RAP-039: score=5 target=10 | RAP-039: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-039: open blockers=1 | RAP-039: open gaps=3 | RAP-040: score=5 target=10 | RAP-040: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-040: open blockers=2 | RAP-040: open gaps=4 | RAP-041: score=5 target=10 | RAP-041: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-041: open gaps=2 | RAP-042: score=5 target=10 | RAP-042: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-042: open gaps=2 | RAP-043: score=5 target=10 | RAP-043: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-043: open gaps=2 | RAP-044: score=5 target=10 | RAP-044: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-044: open gaps=2 | RAP-045: score=5 target=10 | RAP-045: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-045: open gaps=2 | RAP-046: score=5 target=10 | RAP-046: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-046: open gaps=2 | RAP-047: score=5 target=10 | RAP-047: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-047: open blockers=1 | RAP-047: open gaps=3 | RAP-048: score=5 target=10 | RAP-048: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-048: open blockers=2 | RAP-048: open gaps=4 | RAP-049: score=5 target=10 | RAP-049: mandatory requirement failures=tested,regression-protected,no-known-gap | RAP-049: open gaps=2 | RAP-050: score=5 target=10 | RAP-050: mandatory requirement failures=tested,governed,regression-protected,no-known-gap,no-open-blocker | RAP-050: open blockers=1 | RAP-050: open gaps=3 | RAP-051: score=5 target=10 | RAP-051: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-051: open blockers=2 | RAP-051: open gaps=4 | RAP-052: score=5 target=10 | RAP-052: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-052: open blockers=2 | RAP-052: open gaps=4 | RAP-053: score=5 target=10 | RAP-053: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-053: open blockers=2 | RAP-053: open gaps=4 | RAP-054: score=5 target=10 | RAP-054: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=3 | RAP-055: score=5 target=10 | RAP-055: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap | RAP-055: open gaps=4 | RAP-056: score=5 target=10 | RAP-056: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap | RAP-056: open gaps=3 | RAP-057: score=5 target=10 | RAP-057: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-057: open blockers=2 | RAP-057: open gaps=4 | RAP-058: score=5 target=10 | RAP-058: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-058: open blockers=2 | RAP-058: open gaps=4 | RAP-059: score=5 target=10 | RAP-059: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-059: open blockers=1 | RAP-059: open gaps=3 | RAP-060: score=5 target=10 | RAP-060: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-060: open blockers=1 | RAP-060: open gaps=3 | RAP-061: score=5 target=10 | RAP-061: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-061: open blockers=2 | RAP-061: open gaps=4 | RAP-062: score=5 target=10 | RAP-062: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-062: open blockers=2 | RAP-062: open gaps=4 | RAP-063: score=5 target=10 | RAP-063: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-063: open blockers=2 | RAP-063: open gaps=4 | RAP-064: score=5 target=10 | RAP-064: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-064: open blockers=2 | RAP-064: open gaps=4 | RAP-065: score=5 target=10 | RAP-065: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-065: open blockers=2 | RAP-065: open gaps=4 | RAP-066: score=5 target=10 | RAP-066: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-066: open blockers=2 | RAP-066: open gaps=4 | RAP-067: score=5 target=10 | RAP-067: mandatory requirement failures=tested,runtime-validated,regression-protected,no-known-gap,no-open-blocker | RAP-067: open blockers=1 | RAP-067: open gaps=3 | RAP-068: score=5 target=10 | RAP-068: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-068: open blockers=2 | RAP-068: open gaps=4 | RAP-069: score=5 target=10 | RAP-069: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-069: open blockers=2 | RAP-069: open gaps=4 | RAP-070: score=5 target=10 | RAP-070: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-070: open blockers=2 | RAP-070: open gaps=4 | RAP-071: score=5 target=10 | RAP-071: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-071: open blockers=2 | RAP-071: open gaps=4 | RAP-072: score=5 target=10 | RAP-072: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-072: open blockers=2 | RAP-072: open gaps=4 | RAP-073: score=5 target=10 | RAP-073: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-073: open blockers=2 | RAP-073: open gaps=4 | RAP-074: score=5 target=10 | RAP-074: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-074: open blockers=2 | RAP-074: open gaps=4 | RAP-075: score=5 target=10 | RAP-075: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-075: open blockers=2 | RAP-075: open gaps=4 | RAP-076: score=5 target=10 | RAP-076: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-076: open blockers=2 | RAP-076: open gaps=4 | RAP-077: score=5 target=10 | RAP-077: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-077: open blockers=2 | RAP-077: open gaps=4 | RAP-078: score=5 target=10 | RAP-078: mandatory requirement failures=tested,runtime-validated,governed,regression-protected,no-known-gap,no-open-blocker | RAP-078: open blockers=2 | RAP-078: open gaps=4 | scorecard: open blockers=117 | scorecard: open gaps=276 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | FOREIGN_RUN_ARTIFACT: artifact runId rap-governed-20260903120837149-1557e254 differs from rap-governed-20260903150151968-eb67f977 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]]",
+  "platformMaturity": "autonomous-ready",
   "canonicalMeshExecutionId": "mesh-2026-09-03T00-04-04-694Z",
   "canonicalMeshArtifacts": {
     "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-03T00-04-04-694Z.json",
@@ -115,7 +115,7 @@
     }
   },
   "docsValidation": {
-    "generatedAt": "2026-09-03T15:02:59.671Z",
+    "generatedAt": "2026-09-03T15:06:17.012Z",
     "filesScanned": 363,
     "totalMarkdownLinks": 245,
     "brokenMarkdownLinks": [],
@@ -426,21 +426,7 @@
       "blocker": false
     }
   ],
-  "blockingGaps": [
-    {
-      "id": "gap-proof-stale-fingerprints",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
-      "evidence": {
-        "diverged": [
-          "sourceFingerprint",
-          "chainFingerprint"
-        ]
-      },
-      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
-    }
-  ],
+  "blockingGaps": [],
   "nonBlockingGaps": [],
   "enterpriseProofs": {
     "proofs": {
@@ -460,7 +446,7 @@
     "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-09-03T15:03:14.655Z",
+    "generatedAt": "2026-09-03T15:06:32.204Z",
     "runId": "rap-governed-20260903150151968-eb67f977",
     "artifactType": "final-proof-report",
     "artifactVersion": "2.0.0",
@@ -470,8 +456,8 @@
     "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
     "evidenceFingerprint": "f74719fb83c61bdb1016cddff4e1bb1e99a5363405069a0b1a7b9477e3d6ce5e",
     "chainFingerprint": "f74719fb83c61bdb1016cddff4e1bb1e99a5363405069a0b1a7b9477e3d6ce5e",
-    "fingerprintGeneratedAt": "2026-09-03T15:03:14.655Z",
-    "fingerprintStatus": "STALE",
+    "fingerprintGeneratedAt": "2026-09-03T15:06:32.204Z",
+    "fingerprintStatus": "FRESH",
     "proofCoverage": {
       "total": 21,
       "valid": 21,
@@ -2871,8 +2857,8 @@
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-09-03T15:03:14.360Z",
-      "expectedZipName": null,
+      "generatedAt": "2026-09-03T15:06:31.773Z",
+      "expectedZipName": "r-agent2-20260903-120445.zip",
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
       "blockers": [],
@@ -2884,11 +2870,26 @@
       "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-09-03T15:03:14.654Z",
-      "ok": false,
-      "zipPath": null,
-      "zipName": null,
+      "generatedAt": "2026-09-03T15:06:32.203Z",
+      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260903-120445.zip",
+      "zipName": "r-agent2-20260903-120445.zip",
+      "zipSha256": "01c024cbdaa8d4d5d443577dc18dfc0173cf0663a233971e5d243bfa8ad2b9e3",
+      "payloadCentric": false,
+      "envelopePath": null,
+      "selectionMode": "audited",
+      "candidateFallbackUsed": false,
+      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260903-120445.manifest.json",
+      "manifestAudit": "passed",
+      "auditSatisfied": true,
+      "selfContainmentCheck": {
+        "passed": true,
+        "missing": []
+      },
       "requiredEntries": [
+        "governance/final-proof-report.json",
+        "governance/evidence-manifest.json",
+        "governance/blocker-engine.js",
+        "governance/final-consistency-report.json",
         "qa/smoke-evidence.json",
         "qa/l01-physical-queue-evidence.json",
         "qa/l02-ura-publish-rollback-evidence.json",
@@ -2910,14 +2911,20 @@
         "governance/cleanup-proof.json",
         "governance/final-readiness-report.json"
       ],
+      "entryCount": 5913,
       "missingEntries": [],
-      "error": "artifact_missing:none_found_in_dist",
-      "deferred": true,
-      "phase": "PRE_PACKAGE",
-      "status": "DEFERRED"
+      "ok": true,
+      "error": null,
+      "packageBinding": {
+        "boundTo": "r-agent2-20260903-120445.zip",
+        "sha256": "01c024cbdaa8d4d5d443577dc18dfc0173cf0663a233971e5d243bfa8ad2b9e3",
+        "immutable": true,
+        "selfProving": true,
+        "offlineAuditable": true
+      }
     },
     "evidenceManifest": {
-      "generatedAt": "2026-09-03T15:03:14.361Z",
+      "generatedAt": "2026-09-03T15:06:31.774Z",
       "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
       "runId": "rap-governed-20260903150151968-eb67f977",
       "sourceFingerprint": "544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9",
@@ -3135,9 +3142,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "8cb48bccfa22716c918d9ac873d803de4a4453d36c146ce57130bfd124e70a16",
-          "checksum": "8cb48bccfa22716c918d9ac873d803de4a4453d36c146ce57130bfd124e70a16",
-          "timestamp": "2026-09-03T15:02:59.672Z",
+          "hash": "8786a6bd43ec8269229559927dd9975871067d71c35b5a3002b54d6be3319783",
+          "checksum": "8786a6bd43ec8269229559927dd9975871067d71c35b5a3002b54d6be3319783",
+          "timestamp": "2026-09-03T15:06:17.015Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3158,9 +3165,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "a9090536fa81f49318ffba00d314e3242636377c1dece9d8215685e5ac64681e",
-          "checksum": "a9090536fa81f49318ffba00d314e3242636377c1dece9d8215685e5ac64681e",
-          "timestamp": "2026-09-03T15:02:59.672Z",
+          "hash": "d0586d7e43ea9df5cd17ebb78d6537aeadb8c8897b26be752118cf6196577e2f",
+          "checksum": "d0586d7e43ea9df5cd17ebb78d6537aeadb8c8897b26be752118cf6196577e2f",
+          "timestamp": "2026-09-03T15:06:17.015Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3181,9 +3188,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "4ecb833c6bbcb9a5d87254cf8a0967b3d0fd413210b3e4b7b8bb3782f2615b0a",
-          "checksum": "4ecb833c6bbcb9a5d87254cf8a0967b3d0fd413210b3e4b7b8bb3782f2615b0a",
-          "timestamp": "2026-09-03T15:02:59.672Z",
+          "hash": "6988584eb1f00f9012349cc35b3a5e66c1c09cba647789b337fd2d4869ec08b7",
+          "checksum": "6988584eb1f00f9012349cc35b3a5e66c1c09cba647789b337fd2d4869ec08b7",
+          "timestamp": "2026-09-03T15:06:17.015Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3288,9 +3295,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "2187923c4588e3ac6f81a45b519bcc8e55294fa062f2b1cad36ea53dad024dfd",
-          "checksum": "2187923c4588e3ac6f81a45b519bcc8e55294fa062f2b1cad36ea53dad024dfd",
-          "timestamp": "2026-09-03T15:02:59.673Z",
+          "hash": "61ee10f939b4b1222aab9a6dfb4a83c4281995be1514e685ce8b5bf79da06ddf",
+          "checksum": "61ee10f939b4b1222aab9a6dfb4a83c4281995be1514e685ce8b5bf79da06ddf",
+          "timestamp": "2026-09-03T15:06:17.015Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3307,9 +3314,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "4cd5ac21cc5abd9c8dfa1559f11cd879c516144a6d3c58ea45ccfbf58896eeb4",
-          "checksum": "4cd5ac21cc5abd9c8dfa1559f11cd879c516144a6d3c58ea45ccfbf58896eeb4",
-          "timestamp": "2026-09-03T15:02:59.717Z",
+          "hash": "42ea6b3d166a4081d8896bf40b8cacbb3b1b10ff3929b250cb7f5683bb4350e2",
+          "checksum": "42ea6b3d166a4081d8896bf40b8cacbb3b1b10ff3929b250cb7f5683bb4350e2",
+          "timestamp": "2026-09-03T15:06:17.069Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3326,9 +3333,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "ed52330bcb5e0d62a85d78eab66df6f95a9b42c526aa65b3e18478d4a911cc0c",
-          "checksum": "ed52330bcb5e0d62a85d78eab66df6f95a9b42c526aa65b3e18478d4a911cc0c",
-          "timestamp": "2026-09-03T15:01:43.011Z",
+          "hash": "c2dbcda91c4a2835f1d5cfbe046a11efe4be391c5142434004d05ecb9b4bbeba",
+          "checksum": "c2dbcda91c4a2835f1d5cfbe046a11efe4be391c5142434004d05ecb9b4bbeba",
+          "timestamp": "2026-09-03T15:06:09.517Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3345,9 +3352,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/reports/experience-segregation-report.json",
           "exists": true,
           "packageRequired": false,
-          "hash": "3e9c5f3d1b735a62fff9dd68526fc073ccee661d08abc2c3a0866b1a991ecfbb",
-          "checksum": "3e9c5f3d1b735a62fff9dd68526fc073ccee661d08abc2c3a0866b1a991ecfbb",
-          "timestamp": "2026-09-03T15:02:30.049Z",
+          "hash": "c3ef47499df98aea24787687a2cb0937a72fb7bc6a9ba02e5065a5292a732194",
+          "checksum": "c3ef47499df98aea24787687a2cb0937a72fb7bc6a9ba02e5065a5292a732194",
+          "timestamp": "2026-09-03T15:04:45.263Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3366,17 +3373,14 @@
       }
     },
     "fingerprintChain": {
-      "status": "STALE",
-      "diverged": [
-        "sourceFingerprint",
-        "chainFingerprint"
-      ],
+      "status": "FRESH",
+      "diverged": [],
       "registered": {
-        "sourceFingerprint": "942206ea5c7a9296fde433df1b2feef7423a26f52d060cc0bed6a3c7a1cd3015",
+        "sourceFingerprint": "544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9",
         "inventoryFingerprint": "f3c73596c92d95cd6178fbca4b5c593c9aa99577636d3140cfb7b4d1b33d5fb4",
         "scenarioRegistryFingerprint": "b307a637f0b05260bb081bd2a93f0e74e87a1f684c2efb7e3153e7ebb4417557",
         "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
-        "chainFingerprint": "90d413e052b4cf0dae7b479797267dfabe6e7202c00b12dc0cef144a0a922a69"
+        "chainFingerprint": "f74719fb83c61bdb1016cddff4e1bb1e99a5363405069a0b1a7b9477e3d6ce5e"
       },
       "current": {
         "sourceFingerprint": "544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9",
@@ -3386,7 +3390,7 @@
         "chainFingerprint": "f74719fb83c61bdb1016cddff4e1bb1e99a5363405069a0b1a7b9477e3d6ce5e"
       }
     },
-    "proofStatus": "STALE",
+    "proofStatus": "FRESH",
     "proofQualityScore": {
       "score": 100,
       "raw": 120,
@@ -3498,9 +3502,9 @@
         "handoffFullyNormalized": true,
         "digitalTwinCoverageOk": true,
         "governanceCoverageOk": true,
-        "packageValidationOk": false,
+        "packageValidationOk": true,
         "evidenceManifestValid": true,
-        "fingerprintsFresh": false,
+        "fingerprintsFresh": true,
         "intelligenceStable": true,
         "crossReportConsistent": true,
         "verticalCoverageValid": true
@@ -3516,31 +3520,9 @@
         "allPassed": true
       }
     },
-    "finalDecision": "NO_GO:AUTONOMOUS_READY_GO",
-    "deferredGates": [
-      {
-        "id": "package-validation",
-        "phase": "PRE_PACKAGE",
-        "status": "DEFERRED",
-        "reason": "PACKAGE_NOT_CREATED_YET",
-        "title": "Package validation ainda não avaliável (pacote ainda não criado)"
-      }
-    ],
-    "blockingGaps": [
-      {
-        "id": "gap-proof-stale-fingerprints",
-        "severity": "critical",
-        "area": "proof-governance",
-        "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
-        "evidence": {
-          "diverged": [
-            "sourceFingerprint",
-            "chainFingerprint"
-          ]
-        },
-        "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
-      }
-    ]
+    "finalDecision": "AUTONOMOUS_READY_GO",
+    "deferredGates": [],
+    "blockingGaps": []
   },
   "operationalDigitalTwin": {
     "status": "complete",
@@ -3753,12 +3735,10 @@
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
   ],
-  "noGoReasons": [
-    "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]"
-  ],
+  "noGoReasons": [],
   "productionReadiness": {
-    "status": "NO_GO:AUTONOMOUS_READY_GO",
-    "classification": "enterprise-partial",
+    "status": "AUTONOMOUS_READY_GO",
+    "classification": "autonomous-ready",
     "productionLikeFlows": [
       "WhatsApp",
       "Chat",
@@ -3777,24 +3757,10 @@
     "evidenceBased": true,
     "missingProofs": []
   },
-  "automaticGapBacklog": [
-    {
-      "id": "gap-proof-stale-fingerprints",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
-      "evidence": {
-        "diverged": [
-          "sourceFingerprint",
-          "chainFingerprint"
-        ]
-      },
-      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
-    }
-  ],
+  "automaticGapBacklog": [],
   "journeyCoverage": {
     "beauty": {
-      "generatedAt": "2026-09-03T15:02:59.671Z",
+      "generatedAt": "2026-09-03T15:06:17.012Z",
       "vertical": "beauty",
       "maturity": "production-like",
       "replaySupported": true,
@@ -4258,7 +4224,7 @@
       ]
     },
     "fitness": {
-      "generatedAt": "2026-09-03T15:02:59.671Z",
+      "generatedAt": "2026-09-03T15:06:17.012Z",
       "vertical": "fitness",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7108,7 +7074,7 @@
       ]
     },
     "food": {
-      "generatedAt": "2026-09-03T15:02:59.671Z",
+      "generatedAt": "2026-09-03T15:06:17.012Z",
       "vertical": "food",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7398,7 +7364,7 @@
       ]
     },
     "services": {
-      "generatedAt": "2026-09-03T15:02:59.671Z",
+      "generatedAt": "2026-09-03T15:06:17.012Z",
       "vertical": "services",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7556,7 +7522,7 @@
       ]
     },
     "clinic": {
-      "generatedAt": "2026-09-03T15:02:59.671Z",
+      "generatedAt": "2026-09-03T15:06:17.012Z",
       "vertical": "clinic",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7698,7 +7664,7 @@
       ]
     },
     "market": {
-      "generatedAt": "2026-09-03T15:02:59.671Z",
+      "generatedAt": "2026-09-03T15:06:17.012Z",
       "vertical": "market",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7866,7 +7832,7 @@
       ]
     },
     "bakery": {
-      "generatedAt": "2026-09-03T15:02:59.671Z",
+      "generatedAt": "2026-09-03T15:06:17.012Z",
       "vertical": "bakery",
       "maturity": "production-like",
       "replaySupported": true,
@@ -8582,7 +8548,7 @@
       ]
     },
     "core": {
-      "generatedAt": "2026-09-03T15:02:59.671Z",
+      "generatedAt": "2026-09-03T15:06:17.012Z",
       "vertical": "core",
       "kind": "system",
       "maturity": "system",
