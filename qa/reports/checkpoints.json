@@ -1,0 +1,38 @@
+{
+  "progress": {
+    "currentWave": "WAVE-MESH",
+    "completedWaves": [
+      "WAVE-TEST-1777856573037",
+      "WAVE-TEST-1777856625497",
+      "WAVE-TEST-1777856760281",
+      "WAVE-TEST-1777856814256",
+      "WAVE-TEST-1777856964194",
+      "WAVE-TEST-1777858117664",
+      "WAVE-TEST-1777858768644",
+      "WAVE-TEST-1777859155948",
+      "WAVE-TEST-1785455356292",
+      "WAVE-TEST-1785476801434",
+      "WAVE-TEST-1785499527195",
+      "WAVE-TEST-1785502190279",
+      "WAVE-TEST-1785503709976",
+      "WAVE-TEST-1786708695466",
+      "WAVE-TEST-1786709201683",
+      "WAVE-TEST-1786709733728",
+      "WAVE-TEST-1786712292482",
+      "WAVE-TEST-1786737202318",
+      "WAVE-TEST-1787226844126",
+      "WAVE-TEST-1787694553415",
+      "WAVE-MESH"
+    ],
+    "failedWaves": [],
+    "globalStatus": "completed",
+    "lastSuccessfulCheckpoint": "WAVE-MESH"
+  },
+  "failures": [],
+  "totals": {
+    "waves": 21,
+    "activeFailures": 0,
+    "historicalFailures": 300
+  },
+  "finalizedAt": "2026-09-03T19:29:21.237Z"
+}

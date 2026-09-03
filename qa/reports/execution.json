@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-09-03T19:29:21.237Z",
+  "success": true,
+  "stepCount": 7,
+  "passedCount": 7,
+  "failedCount": 0,
+  "meshExecutionId": "mesh-20260903185903-qt4iaz",
+  "meshDecision": "GO",
+  "replayCriticalPassed": true,
+  "steps": [
+    {
+      "name": "validate-invariants",
+      "success": true,
+      "exitCode": 0,
+      "startedAt": "2026-09-03T18:59:03.249Z",
+      "finishedAt": "2026-09-03T18:59:03.405Z"
+    },
+    {
+      "name": "frontend-build",
+      "success": true,
+      "exitCode": 0,
+      "startedAt": "2026-09-03T18:59:03.405Z",
+      "finishedAt": "2026-09-03T18:59:20.292Z"
+    },
+    {
+      "name": "contracts",
+      "success": true,
+      "exitCode": 0,
+      "startedAt": "2026-09-03T18:59:20.293Z",
+      "finishedAt": "2026-09-03T18:59:22.869Z"
+    },
+    {
+      "name": "unit-tests",
+      "success": true,
+      "exitCode": 0,
+      "startedAt": "2026-09-03T18:59:22.870Z",
+      "finishedAt": "2026-09-03T19:00:14.549Z"
+    },
+    {
+      "name": "qa-mesh",
+      "success": true,
+      "exitCode": 0,
+      "startedAt": "2026-09-03T19:00:14.600Z",
+      "finishedAt": "2026-09-03T19:29:14.680Z"
+    },
+    {
+      "name": "qa-final-report",
+      "success": true,
+      "exitCode": 0,
+      "startedAt": "2026-09-03T19:29:14.700Z",
+      "finishedAt": "2026-09-03T19:29:14.719Z"
+    },
+    {
+      "name": "replay-critical",
+      "success": true,
+      "exitCode": 0,
+      "startedAt": "2026-09-03T19:29:14.740Z",
+      "finishedAt": "2026-09-03T19:29:20.648Z"
+    }
+  ]
+}

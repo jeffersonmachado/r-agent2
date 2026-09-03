@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-09-03T18:59:03.247Z",
+  "finishedAt": "2026-09-03T19:29:21.245Z",
+  "success": true,
+  "gateDecision": "GO",
+  "gateBlockers": [],
+  "stabilityScore": 100,
+  "meshDecision": "GO",
+  "steps": [
+    {
+      "name": "validate-invariants",
+      "success": true,
+      "exitCode": 0
+    },
+    {
+      "name": "frontend-build",
+      "success": true,
+      "exitCode": 0
+    },
+    {
+      "name": "contracts",
+      "success": true,
+      "exitCode": 0
+    },
+    {
+      "name": "unit-tests",
+      "success": true,
+      "exitCode": 0
+    },
+    {
+      "name": "qa-mesh",
+      "success": true,
+      "exitCode": 0
+    },
+    {
+      "name": "qa-final-report",
+      "success": true,
+      "exitCode": 0
+    },
+    {
+      "name": "replay-critical",
+      "success": true,
+      "exitCode": 0
+    }
+  ],
+  "artifacts": {
+    "fullReport": "/opt/results/ria/r-agent2/qa/reports/full-validation-report.json",
+    "execution": "/opt/results/ria/r-agent2/qa/reports/execution.json",
+    "stability": "/opt/results/ria/r-agent2/qa/reports/stability.json",
+    "learn": "/opt/results/ria/r-agent2/qa/reports/learn.json",
+    "checkpoints": "/opt/results/ria/r-agent2/qa/reports/checkpoints.json",
+    "releaseGate": "/opt/results/ria/r-agent2/qa/reports/release-gate.json"
+  }
+}

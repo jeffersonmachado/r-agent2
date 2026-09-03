@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-09-03T19:29:21.242Z",
+  "sandboxPath": null,
+  "skipped": true,
+  "reason": "no_fix_plans_generated",
+  "before": {
+    "score": 100,
+    "gate": "GO",
+    "replayPassed": true
+  },
+  "after": {
+    "score": 100,
+    "gate": "GO",
+    "replayPassed": true
+  },
+  "comparison": {
+    "scoreDelta": 0,
+    "regression": false,
+    "failureResolved": false,
+    "replayMaintained": true
+  },
+  "pipeline": {
+    "exitCode": 0,
+    "success": true
+  }
+}

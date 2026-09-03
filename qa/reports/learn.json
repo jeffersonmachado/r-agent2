@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-09-03T19:29:21.089Z",
+  "normalized": {
+    "generatedAt": "2026-09-03T19:29:21.087Z",
+    "total": 0,
+    "items": []
+  },
+  "clustered": {
+    "generatedAt": "2026-09-03T19:29:21.087Z",
+    "totalClusters": 0,
+    "clusters": []
+  },
+  "ranked": {
+    "generatedAt": "2026-09-03T19:29:21.088Z",
+    "totalRanked": 0,
+    "ranked": []
+  },
+  "suggestions": {
+    "generatedAt": "2026-09-03T19:29:21.088Z",
+    "totalSuggestions": 0,
+    "suggestions": []
+  },
+  "fixPlans": {
+    "generatedAt": "2026-09-03T19:29:21.088Z",
+    "totalPlans": 0,
+    "plans": []
+  },
+  "validationPlans": {
+    "generatedAt": "2026-09-03T19:29:21.088Z",
+    "totalValidationPlans": 0,
+    "plans": []
+  },
+  "patchExecutions": {
+    "generatedAt": "2026-09-03T19:29:21.088Z",
+    "mode": "suggestion-only",
+    "totalExecutions": 0,
+    "executions": []
+  },
+  "memory": {
+    "generatedAt": "2026-09-03T19:29:21.089Z",
+    "stats": {
+      "detected": 2,
+      "clustered": 2,
+      "prioritized": 2,
+      "suggested": 2,
+      "planned": 2,
+      "patched": 0,
+      "validated": 0,
+      "promoted": 0,
+      "rejected": 0
+    },
+    "entries": [
+      {
+        "failureSignature": "core.functional_failure.tutor.n.o.respondeu.com.conte.do.dispon.vel",
+        "clusterId": "cluster-1",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 72.3,
+        "plan": {
+          "failureSignature": "core.functional_failure.tutor.n.o.respondeu.com.conte.do.dispon.vel",
+          "clusterId": "cluster-1",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-03T19:29:14.574Z"
+      },
+      {
+        "failureSignature": "core.functional_failure.tutor.n.o.respondeu.com.conte.do.dispon.vel",
+        "clusterId": "cluster-1",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 72.3,
+        "plan": {
+          "failureSignature": "core.functional_failure.tutor.n.o.respondeu.com.conte.do.dispon.vel",
+          "clusterId": "cluster-1",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-03T14:24:08.844Z"
+      }
+    ]
+  }
+}

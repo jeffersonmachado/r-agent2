@@ -128,6 +128,7 @@ const SKIP_REL_DIRS = new Set([
   'qa-mesh/meshEvidence',
   'qa-mesh/gap-engine', // backlog/latest gerados
   'qa/mesh/intelligence/history', // snapshots diários gerados
+  'qa/mesh/intelligence/learning', // artefatos de aprendizado gerados a cada pipeline
   'qa/qa-waves/generated-seeds',
   'qa/qa-waves/generated-ui-steps',
   'qa/qa-waves/generated-validators',
@@ -137,6 +138,7 @@ const SKIP_REL_DIRS = new Set([
 /** Arquivos gerados/credenciais dentro de raízes-fonte. */
 const SKIP_REL_FILES = new Set([
   'core/rpa/config/rpa-token.json', // credencial de runtime — nunca prova
+  'qa/mesh/intelligence/stabilitySnapshot.json', // snapshot gerado a cada pipeline (ETAPA 4)
 ]);
 
 /** Políticas e contratos de jornada versionados (policyFingerprint). */

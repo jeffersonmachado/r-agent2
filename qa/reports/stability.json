@@ -1,0 +1,268 @@
+{
+  "snapshot": {
+    "executionId": "mesh-20260903185903-qt4iaz",
+    "generatedAt": "2026-09-03T19:29:21.084Z",
+    "global": {
+      "stabilityScore": 100,
+      "releaseReadiness": 100,
+      "flakyRate": 0,
+      "replayConsistency": 100,
+      "criticalFlowSuccess": 100
+    },
+    "domains": [
+      {
+        "name": "beauty",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 109841,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "bakery",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 217256,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "clinic",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 144122,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "core",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 199167,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "fitness",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 113510,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "food",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 180689,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "market",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 168500,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "services",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 144122,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "omnichannel",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 137709,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "bpmn",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 7363,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "pbx",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 26277,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      },
+      {
+        "name": "workspace",
+        "score": 100,
+        "passRate": 100,
+        "regressions": 0,
+        "recurringFailures": 0,
+        "avgRuntimeMs": 897,
+        "replayConsistency": 100,
+        "criticality": "medium"
+      }
+    ],
+    "channels": [
+      {
+        "name": "whatsapp",
+        "score": 80,
+        "passRate": 100,
+        "criticalFailures": 0,
+        "avgLatencyMs": 148965,
+        "replayConsistency": 100,
+        "confidenceScore": 80
+      },
+      {
+        "name": "chat",
+        "score": 80,
+        "passRate": 100,
+        "criticalFailures": 0,
+        "avgLatencyMs": 180935,
+        "replayConsistency": 100,
+        "confidenceScore": 80
+      },
+      {
+        "name": "pbx",
+        "score": 80,
+        "passRate": 100,
+        "criticalFailures": 0,
+        "avgLatencyMs": 74022,
+        "replayConsistency": 100,
+        "confidenceScore": 80
+      },
+      {
+        "name": "api",
+        "score": 80,
+        "passRate": 100,
+        "criticalFailures": 0,
+        "avgLatencyMs": 175115,
+        "replayConsistency": 100,
+        "confidenceScore": 80
+      }
+    ],
+    "verticals": [
+      {
+        "name": "beauty",
+        "scenarios": 12,
+        "criticalScenarios": 1,
+        "passed": 12,
+        "score": 100,
+        "passRate": 100,
+        "lastCriticalReplay": "2026-09-03T19:05:15.277Z",
+        "readiness": "ready"
+      },
+      {
+        "name": "fitness",
+        "scenarios": 15,
+        "criticalScenarios": 2,
+        "passed": 15,
+        "score": 100,
+        "passRate": 100,
+        "lastCriticalReplay": "2026-09-03T19:08:35.194Z",
+        "readiness": "ready"
+      },
+      {
+        "name": "food",
+        "scenarios": 4,
+        "criticalScenarios": 1,
+        "passed": 4,
+        "score": 100,
+        "passRate": 100,
+        "lastCriticalReplay": "2026-09-03T19:05:03.705Z",
+        "readiness": "ready"
+      },
+      {
+        "name": "services",
+        "scenarios": 2,
+        "criticalScenarios": 0,
+        "passed": 2,
+        "score": 100,
+        "passRate": 100,
+        "lastCriticalReplay": null,
+        "readiness": "ready"
+      },
+      {
+        "name": "bakery",
+        "scenarios": 7,
+        "criticalScenarios": 0,
+        "passed": 7,
+        "score": 100,
+        "passRate": 100,
+        "lastCriticalReplay": null,
+        "readiness": "ready"
+      },
+      {
+        "name": "clinic",
+        "scenarios": 2,
+        "criticalScenarios": 0,
+        "passed": 2,
+        "score": 100,
+        "passRate": 100,
+        "lastCriticalReplay": null,
+        "readiness": "ready"
+      },
+      {
+        "name": "market",
+        "scenarios": 3,
+        "criticalScenarios": 0,
+        "passed": 3,
+        "score": 100,
+        "passRate": 100,
+        "lastCriticalReplay": null,
+        "readiness": "ready"
+      }
+    ],
+    "failures": [],
+    "checkpoints": {
+      "currentWave": "WAVE-MESH",
+      "progress": {
+        "currentWave": "WAVE-MESH",
+        "completedWaves": [
+          "WAVE-MESH"
+        ],
+        "failedWaves": [],
+        "globalStatus": "completed",
+        "lastSuccessfulCheckpoint": "WAVE-MESH"
+      }
+    },
+    "releaseGate": {
+      "backendBuild": "pass",
+      "frontendBuild": "pass",
+      "technicalQA": "pass",
+      "businessQA": "pass",
+      "criticalReplay": "pass",
+      "artifactIntegrity": "pass"
+    }
+  },
+  "outputPath": "/opt/results/ria/r-agent2/qa/mesh/intelligence/stabilitySnapshot.json",
+  "score": 100
+}
