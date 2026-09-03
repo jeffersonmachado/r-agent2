@@ -383,9 +383,19 @@ function checkArtifactRunConsistency() {
     return fail(gate, 'INVALID_ARTIFACT — runId ausente no run atual.');
   }
 
+  // O delivered-release-verification-report.json é PRODUZIDO por este próprio
+  // verifier ao final de cada execução (único produtor legítimo — o
+  // stamp-report-lineage deliberadamente não o stampa, pois stampar fabricaria
+  // DELIVERED_RELEASE_VERIFIED fora da fase DELIVERED). A versão pré-existente
+  // em disco é portanto saída STALE do próprio produtor (run anterior), não um
+  // artefato de entrada deste gate: incluí-la no scan causaria um falso
+  // FOREIGN_RUN_ARTIFACT na primeira execução de cada novo run, exigindo uma
+  // segunda execução para passar. Excluí-la não relaxa o gate — qualquer outro
+  // artefato com runId estrangeiro continua FAIL.
+  const SELF_OUTPUT_REPORT = 'delivered-release-verification-report.json';
   const governanceFiles = fs.existsSync(path.join(ROOT, 'governance'))
     ? fs.readdirSync(path.join(ROOT, 'governance'))
-        .filter((f) => f.endsWith('.json') && !f.startsWith('.'))
+        .filter((f) => f.endsWith('.json') && !f.startsWith('.') && f !== SELF_OUTPUT_REPORT)
         .map((f) => `governance/${f}`)
     : [];
 

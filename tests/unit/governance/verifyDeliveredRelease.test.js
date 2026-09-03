@@ -473,6 +473,51 @@ describe('verify-delivered-release — fail-closed behavior', () => {
     expect(result.exitCode).toBe(1);
   });
 
+  // Regressão: o delivered-release-verification-report.json é saída do próprio
+  // verifier (único produtor legítimo). Sua versão pré-existente em disco vem
+  // do run ANTERIOR e não é artefato de entrada — não pode causar falso
+  // FOREIGN_RUN_ARTIFACT na primeira execução de um novo run.
+  test('PASS when only the verifier own stale output carries a foreign runId (first run of a new governed run)', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir, provenance);
+    writeJson(dir, 'governance/delivered-release-verification-report.json', {
+      generatedAt: '2026-08-19T23:59:00.000Z',
+      runId: 'rap-release-20260819-000000-previous',
+      sourceFingerprint: 'f'.repeat(64),
+      artifactType: 'delivered-release-verification-report',
+      artifactVersion: '1.0.0',
+      decision: 'DELIVERED_RELEASE_VERIFIED',
+      status: 'DELIVERED_RELEASE_VERIFIED',
+      finalDecision: 'AUTONOMOUS_READY',
+      gates: [],
+    });
+    const result = runVerifier(dir);
+    expect(result.error).toBeNull();
+    expect(parseGateStatuses(result.output).artifact_run_consistency).toBe('PASS');
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('DELIVERED_RELEASE_VERIFIED');
+    // E a execução regravou o relatório com o runId do run atual.
+    const rewritten = JSON.parse(
+      fs.readFileSync(path.join(dir, 'governance', 'delivered-release-verification-report.json'), 'utf8')
+    );
+    expect(rewritten.runId).toBe('rap-release-20260820-000000-testtest');
+  });
+
+  test('FAIL when verifier own output is stale AND another artifact is also foreign', () => {
+    const dir = makeTempDir();
+    buildMinimalValidRoot(dir, provenance);
+    writeJson(dir, 'governance/delivered-release-verification-report.json', {
+      runId: 'rap-release-20260819-000000-previous',
+      artifactType: 'delivered-release-verification-report',
+    });
+    updateJson(dir, 'governance/replay-hardening-report.json', (report) => {
+      report.runId = 'rap-release-99999999-000000-foreign';
+    });
+    const result = runVerifier(dir);
+    expect(parseGateStatuses(result.output).artifact_run_consistency).toBe('FAIL');
+    expect(result.exitCode).toBe(1);
+  });
+
   test('FAIL when fingerprint chain is UNREGISTERED', () => {
     const dir = makeTempDir();
     buildMinimalValidRoot(dir, provenance);
