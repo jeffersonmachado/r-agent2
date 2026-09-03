@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T15:24:20.357Z",
+  "generatedAt": "2026-09-03T15:31:20.102Z",
   "engine": "final-governance-engine/v1",
   "artifactType": "final-governance-report",
   "artifactVersion": "2.0.0",
@@ -25,7 +25,7 @@
         "runId": "rap-governed-20260903150151968-eb67f977",
         "sourceFingerprint": "544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9",
         "startedAt": "2026-09-03T15:01:52.077Z",
-        "generatedAt": "2026-09-03T15:24:18.414Z",
+        "generatedAt": "2026-09-03T15:31:17.887Z",
         "status": "RUNNING",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
@@ -33,7 +33,7 @@
         "policyVersion": "1.0.3",
         "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
         "lastGovernedStage": "final-governance",
-        "lastSourceVerificationAt": "2026-09-03T15:24:18.414Z",
+        "lastSourceVerificationAt": "2026-09-03T15:31:17.887Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -54,6 +54,21 @@
             "stage": "final-governance",
             "sourceFingerprint": "544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9",
             "verifiedAt": "2026-09-03T15:24:18.414Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9",
+            "verifiedAt": "2026-09-03T15:25:06.327Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9",
+            "verifiedAt": "2026-09-03T15:30:52.834Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9",
+            "verifiedAt": "2026-09-03T15:31:17.887Z"
           }
         ]
       }
@@ -190,9 +205,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260903-122246.zip",
-      "computed": "14469d147ae914d1e2dc0454…",
-      "recorded": "14469d147ae914d1e2dc0454…",
+      "zipName": "r-agent2-20260903-122949.zip",
+      "computed": "db9c4eed6f59eb95aa952960…",
+      "recorded": "db9c4eed6f59eb95aa952960…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },
