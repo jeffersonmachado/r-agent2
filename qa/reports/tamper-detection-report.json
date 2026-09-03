@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-09-03T16:47:40.452Z",
-  "artifact": "r-agent2-20260903-150605.payload.zip",
+  "artifact": "r-agent2-20260903-155024.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,7 +12,7 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260903-150605.payload.zip",
+        "zipName": "r-agent2-20260903-155024.payload.zip",
         "computedHash": "15f033295cd31452dbd5f86a740e2233529d061e4f2eb2785132c5612554c383",
         "recordedHash": "15f033295cd31452dbd5f86a740e2233529d061e4f2eb2785132c5612554c383",
         "match": true
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260903-150605.payload.manifest.json"
+        "subject": "r-agent2-20260903-155024.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260903-150605.payload.zip"
+        "subject": "r-agent2-20260903-155024.payload.zip"
       }
     },
     {
@@ -103,5 +103,5 @@
   "sourceFingerprint": "67bda919f3f8b2de577bf04b6e7bbe6b68d8e9dd814d4df803ef1831c816b61f",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-09-03T18:07:13.837Z"
+  "reboundAt": "2026-09-03T18:51:27.557Z"
 }

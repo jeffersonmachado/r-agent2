@@ -182,7 +182,7 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260903-150605.zip",
+      "zipName": "r-agent2-20260903-155024.zip",
       "computed": "a985d3c8968d93655ea436a6…",
       "recorded": "a985d3c8968d93655ea436a6…",
       "hashSource": "governance/package-validation-report.json",
@@ -223,5 +223,5 @@
   ],
   "highFailed": [],
   "summary": "4 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-054: open blockers=1 | RAP-054: open gaps=1 | scorecard: open blockers=2 | scorecard: open gaps=2 | INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
-  "reboundAt": "2026-09-03T18:07:13.836Z"
+  "reboundAt": "2026-09-03T18:51:27.557Z"
 }

@@ -1,9 +1,24 @@
 {
-  "generatedAt": "2026-09-03T18:48:12.004Z",
-  "ok": false,
-  "zipPath": null,
-  "zipName": null,
+  "generatedAt": "2026-09-03T18:51:44.904Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260903-155024.zip",
+  "zipName": "r-agent2-20260903-155024.zip",
+  "zipSha256": "a86a605e570635e82fc3f63e69deea214288f05a5599de2867316dc53a86ba4f",
+  "payloadCentric": false,
+  "envelopePath": null,
+  "selectionMode": "audited",
+  "candidateFallbackUsed": false,
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260903-155024.manifest.json",
+  "manifestAudit": "passed",
+  "auditSatisfied": true,
+  "selfContainmentCheck": {
+    "passed": true,
+    "missing": []
+  },
   "requiredEntries": [
+    "governance/final-proof-report.json",
+    "governance/evidence-manifest.json",
+    "governance/blocker-engine.js",
+    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -25,15 +40,21 @@
     "governance/cleanup-proof.json",
     "governance/final-readiness-report.json"
   ],
+  "entryCount": 5923,
   "missingEntries": [],
-  "error": "artifact_missing:none_found_in_dist",
-  "deferred": true,
-  "phase": "PRE_PACKAGE",
-  "status": "DEFERRED",
+  "ok": true,
+  "error": null,
+  "packageBinding": {
+    "boundTo": "r-agent2-20260903-155024.zip",
+    "sha256": "a86a605e570635e82fc3f63e69deea214288f05a5599de2867316dc53a86ba4f",
+    "immutable": true,
+    "selfProving": true,
+    "offlineAuditable": true
+  },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260903180300306-36ecbf93",
   "sourceFingerprint": "a8862e30690bdb6b08edc5bd0662663863024ad4091250d4df998418bfe8c4c2",
-  "gitCommit": "433415ef1aa2fcce2a6ac2acb2c0f37ed3f656c1",
-  "gitTree": "b12619996f5f1248feef67ca16bc325daa420eb8"
+  "gitCommit": "b8ddf11dc0485dd9865f8297d339150d9851fc0c",
+  "gitTree": "41eadcc5a55f92909df944800ceb69244ffe0058"
 }

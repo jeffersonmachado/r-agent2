@@ -1,41 +1,49 @@
 {
-  "generatedAt": "2026-09-03T18:46:34.888Z",
+  "generatedAt": "2026-09-03T18:51:30.384Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260903-150605.zip",
-  "zipHash": "539ef79ab73861c142353134b35b68afd079ff688968524add1a2c7ee42f91fc",
-  "manifestHash": "c1cd92369ce687b78479a4c5ad7940a898fb9b5f9757ffdd1141c02cc492ed2b",
-  "replayHash": "d14af63f656b93942ba4e4fa5778154b78d8c2891539dcd5e52510ad3386558a",
-  "governanceHash": "fdc03e85ef688231f89b8009a0ff05acb286fa5bc4667440c0eeeaa873ce975e",
-  "readinessHash": "2c21c97b85143d68513145ec8b9788547fb6a7d0d0c5f5361a60ca01e9236acd",
-  "consistencyHash": "e5e236cce70ae59e34f8b54a9d22d1bacf5c7e46d9093b6c29e0d1138c19af77",
-  "contaminationHash": "6fa981fabc5d621145f38bbd3a9043229e96754ed0ab20937252c735ed06355a",
-  "packageIntegrityHash": "d0b85b1fb98bd75312622812cc16433e200de66986a520518981778a3f9de33b",
+  "zipName": "r-agent2-20260903-155024.zip",
+  "zipHash": "a86a605e570635e82fc3f63e69deea214288f05a5599de2867316dc53a86ba4f",
+  "manifestHash": "211f08b65274f654260ba235d8a687232b88e3a9eaa854dd9d493c7098c858a2",
+  "replayHash": "e5451b9fa1a74cf1bd6a9aab1712d89c234213dd47d40747128e7e13d2658b5d",
+  "governanceHash": "599b1df54bfd9b8012c3a55a46b4b97c1b76e56b39ff2b0b1b554fd210b1bdf6",
+  "readinessHash": "a01378e83c4035c62ae25db4365c578c37c2085c7c70591635c6fff2e8d4c14b",
+  "consistencyHash": "b3e01f7389636ea7e1f59cbd1a248d54b5aef0c6404abff197b35e737743de04",
+  "contaminationHash": "3f4de38184a35d143b90e0f3bffc96d5012f668f7930a6fb23deaad8997f05a4",
+  "packageIntegrityHash": "207e4e7512c627f07b214c325326ad3c86dfa1d590a03624c8dfeb875e135444",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
   "gateHash": "f1c4a569f37dc133c5ed123cd38d2ca7e9ce12e9a021da1014c4eb76d0b74ffa",
-  "recalculatedReadinessHash": "9987274c3ca0757dcf308f5c8d9051d7048f1c0bdac5b79ab4ea265236eb2bd9",
+  "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
-    "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "packageIntegrity": "PACKAGE_INTEGRITY_NO_GO",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected a8862e30690bdb6b08edc5bd0662663863024ad4091250d4df998418bfe8c4c2, got 64f72b8be59fe7dd2dde366752b2583ac41515c3efcf29c983edf8c86eb97fed | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]",
     "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
-  "packageIntegrityOk": true,
+  "packageIntegrityOk": false,
   "allEnginesBlockedOrUnknown": false,
   "autonomousReady": false,
   "mandatoryFailures": [
     {
+      "engine": "packageIntegrity",
+      "decision": "PACKAGE_INTEGRITY_NO_GO"
+    },
+    {
       "engine": "finalGovernance",
-      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+      "decision": "NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected a8862e30690bdb6b08edc5bd0662663863024ad4091250d4df998418bfe8c4c2, got 64f72b8be59fe7dd2dde366752b2583ac41515c3efcf29c983edf8c86eb97fed | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]"
     },
     {
       "engine": "readiness",
       "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    },
+    {
+      "engine": "packageIntegrity.zipBinding",
+      "decision": "ZIP_HASH_NOT_BOUND"
     }
   ],
   "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260903-150605.zip. Package: ÍNTEGRO. Validadores falhos: 2."
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260903-155024.zip. Package: DIVERGENTE. Validadores falhos: 4."
 }
