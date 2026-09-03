@@ -1,14 +1,33 @@
 {
   "artifactType": "final-governance-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-03T16:47:28.933Z",
+  "generatedAt": "2026-09-03T16:48:44.085Z",
   "runId": "rap-governed-20260903164037846-c796debe",
   "sourceFingerprint": "67bda919f3f8b2de577bf04b6e7bbe6b68d8e9dd814d4df803ef1831c816b61f",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.3",
   "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
-  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-  "autonomousReady": false,
-  "allChecksPass": false,
-  "checks": []
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "autonomousReady": true,
+  "allChecksPass": true,
+  "checks": [
+    {
+      "id": "agent_policy_compliance",
+      "pass": true,
+      "status": "PASS",
+      "reason": "policy attestation exists for the governed run"
+    },
+    {
+      "id": "master_scorecard",
+      "pass": true,
+      "status": "PASS",
+      "reason": "dimensionsBelow10=0"
+    },
+    {
+      "id": "source_integrity",
+      "pass": true,
+      "status": "PASS",
+      "reason": "source fingerprint matches frozen run"
+    }
+  ]
 }
