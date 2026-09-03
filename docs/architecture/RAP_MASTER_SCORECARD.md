@@ -2,16 +2,16 @@
 
 > Arquivo gerado por `governance/revalidate-master-scorecard.js`. Não editar manualmente.
 
-- Generated at: 2026-09-02T17:57:40.926Z
-- Run ID: rap-governed-20260902162734373-afedf0c1
-- Source fingerprint: f1892590d06d92e25ad46573792e9015a17b3d63ef53506ea94e2086736727eb
-- Scorecard fingerprint: bec789a60fc258fdb85c9cf9d6f5b4a88ba165688b8b524a653f821bea0a7f54
-- Overall status: **VERIFIED**
+- Generated at: 2026-09-03T12:34:38.924Z
+- Run ID: rap-governed-20260903120837149-1557e254
+- Source fingerprint: 942206ea5c7a9296fde433df1b2feef7423a26f52d060cc0bed6a3c7a1cd3015
+- Scorecard fingerprint: a2be91bc434216765c83dc8420f1153edab79b2bd5e487fefadf390b77cf3dcf
+- Overall status: **IN_PROGRESS**
 - Dimensions: 78
-- 10/10: 78
-- Below 10: 0
-- Open gaps: 0
-- Open blockers: 0
+- 10/10: 72
+- Below 10: 6
+- Open gaps: 7
+- Open blockers: 4
 
 ## Dimensões
 
@@ -30,8 +30,8 @@
 | RAP-011 | Principal / Identity Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-012 | Explicit Platform System | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-013 | RAG / Knowledge Plane | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-014 | Production / Support / Development Segregation | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-015 | Replay × RPA Segregation | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-014 | Production / Support / Development Segregation | 7/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-015 | Replay × RPA Segregation | 7/10 | INVALID | 8/11 | 1 | 1 |
 | RAP-016 | RPA Runtime | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-017 | Replay Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-018 | Evidence Engine | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -68,11 +68,11 @@
 | RAP-049 | Readiness Engine | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-050 | Canonical Final Decision | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-051 | Cross-Engine Consistency | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-052 | Package Manifest | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-052 | Package Manifest | 6/10 | INVALID | 8/11 | 1 | 1 |
 | RAP-053 | Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-054 | Semantic Certification × Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-055 | Delivered Release Self-Verification | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-056 | Source/Proof/Manifest Equality | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-054 | Semantic Certification × Package Integrity | 6/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-055 | Delivered Release Self-Verification | 6/10 | IN_PROGRESS | 8/11 | 2 | 0 |
+| RAP-056 | Source/Proof/Manifest Equality | 6/10 | IN_PROGRESS | 9/11 | 1 | 0 |
 | RAP-057 | Final Consistency Gate | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-058 | Security Fail-Closed | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-059 | Observability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
