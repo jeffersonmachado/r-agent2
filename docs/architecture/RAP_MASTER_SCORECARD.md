@@ -2,28 +2,28 @@
 
 > Arquivo gerado por `governance/revalidate-master-scorecard.js`. Não editar manualmente.
 
-- Generated at: 2026-09-03T15:06:54.358Z
+- Generated at: 2026-09-03T15:25:05.732Z
 - Run ID: rap-governed-20260903150151968-eb67f977
 - Source fingerprint: 544c90384196b3a833cbdb287f48dc3023fc3a135b71139b730f678cf452e8f9
-- Scorecard fingerprint: 54e3c42a23a6b6ef10d7537d07886c4dbcb29c6b52b5f3cbfec6797a11ac145c
-- Overall status: **IN_PROGRESS**
+- Scorecard fingerprint: 06e354b0b4a6ddb565749387cb8c24da6f61475273f478d05e4e2289c270541f
+- Overall status: **VERIFIED**
 - Dimensions: 78
-- 10/10: 65
-- Below 10: 13
-- Open gaps: 16
-- Open blockers: 13
+- 10/10: 78
+- Below 10: 0
+- Open gaps: 0
+- Open blockers: 0
 
 ## Dimensões
 
 | ID | Dimensão | Score | Status | Mandatory PASS | Gaps | Blockers |
 |---|---|---:|---|---:|---:|---:|
-| RAP-001 | Arquitetura RAP / Autonomous Loop | 6/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-001 | Arquitetura RAP / Autonomous Loop | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-002 | Workspace / UX Operacional | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-003 | Cognitive Core | 6/10 | INVALID | 8/11 | 1 | 1 |
-| RAP-004 | Business Outcome Architecture | 6/10 | INVALID | 8/11 | 1 | 1 |
-| RAP-005 | Agent OS / Agent Supervisor | 6/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-003 | Cognitive Core | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-004 | Business Outcome Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-005 | Agent OS / Agent Supervisor | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-006 | Agent Factory Governance | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-007 | Tool Registry / Authorization | 6/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-007 | Tool Registry / Authorization | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-008 | Business Capabilities × Technical Tools | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-009 | MCP Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-010 | Multi-Tenant Isolation | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -35,7 +35,7 @@
 | RAP-016 | RPA Runtime | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-017 | Replay Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-018 | Evidence Engine | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-019 | Critical Causal Journey | 6/10 | INVALID | 7/11 | 2 | 2 |
+| RAP-019 | Critical Causal Journey | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-020 | System Inventory | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-021 | Inventory Freshness | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-022 | Coverage Architecture | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -43,7 +43,7 @@
 | RAP-024 | Behavioral Coverage | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-025 | Coverage Evidence Traceability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-026 | QA Mesh | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-027 | QA Waves | 6/10 | INVALID | 7/11 | 2 | 2 |
+| RAP-027 | QA Waves | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-028 | Model Introspection | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-029 | Entity Graph | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-030 | Model-Driven Journey Discovery | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -55,7 +55,7 @@
 | RAP-036 | Seed Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-037 | Learning Core | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-038 | Durable Process Runtime | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-039 | Event Semantics | 6/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-039 | Event Semantics | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-040 | Canonical Taxonomy / Registries | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-041 | Run Immutability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-042 | Artifact Lineage | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -63,7 +63,7 @@
 | RAP-044 | Fingerprint Chain | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-045 | Proof Freshness | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-046 | Proof Engine Semantics | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-047 | No Synthetic Proof | 6/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-047 | No Synthetic Proof | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-048 | Final Governance | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-049 | Readiness Engine | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-050 | Canonical Final Decision | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -71,11 +71,11 @@
 | RAP-052 | Package Manifest | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-053 | Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-054 | Semantic Certification × Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-055 | Delivered Release Self-Verification | 6/10 | INVALID | 8/11 | 2 | 0 |
-| RAP-056 | Source/Proof/Manifest Equality | 6/10 | INVALID | 9/11 | 1 | 0 |
+| RAP-055 | Delivered Release Self-Verification | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-056 | Source/Proof/Manifest Equality | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-057 | Final Consistency Gate | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-058 | Security Fail-Closed | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-059 | Observability | 6/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-059 | Observability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-060 | Regression Safety | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-061 | API Contract Consistency | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-062 | Database / Migration Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
@@ -84,7 +84,7 @@
 | RAP-065 | Idempotency / Duplicate Execution Safety | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-066 | Transactions / Concurrency Safety | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-067 | Retry / Circuit Breaker / External Resilience | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-068 | PBX / Voice Runtime Reliability | 7/10 | INVALID | 8/11 | 1 | 1 |
+| RAP-068 | PBX / Voice Runtime Reliability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-069 | Channel Security / Signature Validation | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-070 | Backup / Recovery / Disaster Recovery | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-071 | Deployment / Reproducibility | 10/10 | VERIFIED | 11/11 | 0 | 0 |
