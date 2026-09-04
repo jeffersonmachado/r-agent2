@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-03T21:03:08.291Z",
+  "generatedAt": "2026-09-04T01:23:35.035Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260903-180107.zip",
+  "artifact": "r-agent2-20260903-222137.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/r-agent2-20260903-180107.zip",
+  "packageInsideDistPath": "dist/r-agent2-20260903-222137.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/r-agent2-20260903-180107.manifest.json",
+  "manifestInsideDistPath": "dist/r-agent2-20260903-222137.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,11 +43,11 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "ab5d2877623a24fc320c16b4ea4139f6",
+    "chainRoot": "ca3d4fb4db905fea1776279156008a3e",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "AUTONOMOUS_READY_GO"
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
   },
   "replayValidation": {
     "pass": true,
@@ -69,6 +69,7 @@
     ]
   },
   "offlineAuditability": {
+    "dimension": "offlineAuditability",
     "pass": true,
     "verifierScriptPresent": true,
     "chainEnginePresent": true,
@@ -77,11 +78,12 @@
     "maturityEvaluator": true
   },
   "immutablePackageValidation": {
+    "dimension": "immutabilityStatus",
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "a4fa1a2689f17cf13ed1a2a91378988860685bcf86c18d285d41a73313388f39",
-    "zipName": "r-agent2-20260903-180107.zip",
+    "sidecarHash": "0db11cfc2106fcc85cf5b487d8dbee54a597e3012e6aae2784da5ef381949502",
+    "zipName": "r-agent2-20260903-222137.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -115,11 +117,114 @@
   "pass": true,
   "passCount": 10,
   "totalDimensions": 10,
-  "summary": "Pacote r-agent2-20260903-180107.zip é completamente self-proving. Score: 100/100.",
+  "packageSelfContainment": {
+    "pass": true,
+    "missingCore": [],
+    "missingGovArtifacts": [],
+    "govArtifactsDir": "dist/governance-artifacts/",
+    "selfContained": true
+  },
+  "packageSelfValidation": {
+    "pass": true,
+    "zipName": "r-agent2-20260903-222137.zip",
+    "alignedFiles": [
+      "governance/cross-report-validation.json",
+      "governance/package-validation-report.json",
+      "governance/final-consistency-report.json"
+    ],
+    "staleRefs": []
+  },
+  "cryptographicValidation": {
+    "pass": true,
+    "chainValid": true,
+    "chainRoot": "ca3d4fb4db905fea1776279156008a3e",
+    "signatures": [
+      {
+        "name": "governance.sig",
+        "present": true,
+        "valid": true
+      },
+      {
+        "name": "release.sig",
+        "present": true,
+        "valid": true
+      },
+      {
+        "name": "package.manifest.sig",
+        "present": true,
+        "valid": true
+      },
+      {
+        "name": "replay.sig",
+        "present": true,
+        "valid": true
+      }
+    ],
+    "allSigsValid": true
+  },
+  "replayIntegrity": {
+    "pass": true,
+    "replayCount": 9,
+    "allSigned": true,
+    "allSignaturesValid": true,
+    "replaySigPresent": true,
+    "replaySigValid": true,
+    "journeys": [
+      "support_ticket_flow",
+      "fitness_customer_checkin",
+      "booking_flow",
+      "payment_charge_flow",
+      "food_order_status_flow",
+      "bakery_encomenda_flow",
+      "market_node_publish_flow",
+      "clinic_calendar_block_flow",
+      "agendamento"
+    ]
+  },
+  "governanceIntegrity": {
+    "pass": true,
+    "overallConsistencyScore": 100,
+    "blockerCount": 0,
+    "allChecksPass": true,
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+  },
+  "attestationIntegrity": {
+    "pass": true,
+    "attestationValid": true,
+    "governanceLevel": "LEVEL_4_IMMUTABLE",
+    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "autonomousReady": true,
+    "selfContained": true
+  },
+  "tamperDetection": {
+    "pass": true,
+    "decision": "GO",
+    "failedChecks": 0,
+    "criticalChecks": 0
+  },
+  "reproducibility": {
+    "pass": true,
+    "packageLockPresent": true,
+    "frontendLockPresent": true,
+    "gitignorePresent": true,
+    "nodeVersionPinned": true,
+    "note": "Full determinism requires same git commit + same node version. ZIP timestamps vary.",
+    "gitCommitBound": true
+  },
+  "immutabilityStatus": {
+    "pass": true,
+    "chainIntact": true,
+    "sigsValid": true,
+    "sidecarHash": "0db11cfc2106fcc85cf5b487d8dbee54a597e3012e6aae2784da5ef381949502",
+    "zipName": "r-agent2-20260903-222137.zip",
+    "tamperDetectable": true,
+    "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
+  },
+  "summary": "Pacote r-agent2-20260903-222137.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260903205336902-2dab4134",
-  "sourceFingerprint": "e6742301bbd2b51d6d4ceeae3b38b70a0f6670a34c84c2d596039b1442ed2fec",
-  "gitCommit": "ee249a035666582e76b31ae8ffd9cdedd422ad3b",
-  "gitTree": "72620e335d747ccb6bf16fec38c3fd262056208e"
+  "runId": "rap-governed-20260904012054437-6710ff5a",
+  "sourceFingerprint": "1570d40f1e9b71e2f74328191c10a900e85583b2deedb36bb0ec7ecafb9e2a11",
+  "gitCommit": "431454fe6b8f45c29699018df40bc0a1c6c17a68",
+  "gitTree": "c17ca72ea6d8e573d2eef1a13dbddc4ba358998f"
 }
