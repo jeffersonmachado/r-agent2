@@ -12,5 +12,9 @@
   "currentZipManifest": "dist/r-agent2-20260904-094204.manifest.json",
   "currentZipTimestamp": "2026-09-04T12:43:48Z",
   "finalDecision": "AUTONOMOUS_READY_GO",
-  "reboundAt": "2026-09-04T12:43:49.904Z"
+  "reboundAt": "2026-09-04T12:43:49.904Z",
+  "runId": "rap-governed-20260904183520272-164607e2",
+  "sourceFingerprint": "785be7c141dd3f5b74a3b7864536edd2dfe57e867e40bee0eb59e453c0d3d222",
+  "artifactType": "final-consistency-report",
+  "artifactVersion": "1.0.0"
 }

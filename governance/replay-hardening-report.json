@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-28T16:54:52.356Z",
+  "generatedAt": "2026-09-04T19:02:07.192Z",
   "engine": "replay-hardening-engine/v2",
   "pass": true,
   "decision": "REPLAY_HARDENING_GO",
-  "totalReplaysAnalyzed": 10,
-  "hardenedReplays": 10,
+  "totalReplaysAnalyzed": 11,
+  "hardenedReplays": 11,
   "hashOnlyReplays": 0,
   "violations": 0,
   "uiViolations": 0,
@@ -72,6 +72,18 @@
       "replayEvidenceHash": "b8190840a2d171a9bed2a9815535f4c73f4d5eb7d41eebd6f5f8b905c0652cb5"
     },
     {
+      "journeyId": "bakery_encomenda_flow",
+      "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
+      "flowStatus": "GO",
+      "stepCount": 3,
+      "isVisualCritical": false,
+      "violations": [],
+      "hardened": true,
+      "replayDeterministicHash": "ef32226d8dd53cf740f44325589ba90d35f9342e53f9d14b3009969a8fd73860",
+      "replayExecutionHash": "eded3bdbb06e398ebaee553fb80aefa38707e0ed999a7aecc353f21d25e35522",
+      "replayEvidenceHash": "04ea7bf9cc72a6f9746a727346c4882bd0ed93d1e54c42f2a7a580318e9bde88"
+    },
+    {
       "journeyId": "market_node_publish_flow",
       "source": "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
       "flowStatus": "GO",
@@ -134,10 +146,9 @@
     }
   ],
   "allViolations": [],
-  "summary": "Todos os 10 replays passaram no hardening.",
-  "runId": "rap-governed-20260904122304805-dd508840",
-  "sourceFingerprint": "15e4915bc63f738b0501a750a3ce131795b83b6a0ad6edbe1666d635e781f47a",
+  "summary": "Todos os 11 replays passaram no hardening.",
+  "runId": "rap-governed-20260904183520272-164607e2",
+  "sourceFingerprint": "785be7c141dd3f5b74a3b7864536edd2dfe57e867e40bee0eb59e453c0d3d222",
   "artifactType": "replay-hardening-report",
-  "artifactVersion": "1.0.0",
-  "reboundAt": "2026-09-04T12:43:50.254Z"
+  "artifactVersion": "1.0.0"
 }
