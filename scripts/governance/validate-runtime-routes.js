@@ -96,6 +96,18 @@ async function main() {
         if (/API não acessível/i.test(text) && /\/api\/test-executions\/artifacts/i.test(text)) {
           return;
         }
+        // RpaReplaysPage (/dev/rpa-replays): fetches PRINCIPAIS de
+        // /api/test-executions/replays e /api/test-executions/recordings em voo
+        // são abortados (ERR_ABORTED) quando o validador navega para a rota
+        // seguinte; o catch loga as mesmas mensagens de ruído de navegação.
+        // Essas mensagens só ocorrem em falha de conexão/abort — erros HTTP
+        // reais (4xx/5xx) seguem outro caminho de log e continuam contados.
+        if (/Erro capturado no catch/i.test(text) && /\/api\/test-executions\/(replays|recordings)/i.test(text)) {
+          return;
+        }
+        if (/API não acessível/i.test(text) && /\/api\/test-executions\/(replays|recordings)/i.test(text)) {
+          return;
+        }
         // RAGDocumentsPage: fetches de /rag/* em voo são abortados (ERR_ABORTED)
         // quando o validador navega para a rota seguinte; o catch loga
         // "Failed to fetch" + "API não acessível" + erros de carga já na rota
@@ -158,6 +170,15 @@ async function main() {
       // plano; se a resposta não completa antes da troca de rota, o browser aborta
       // (ERR_ABORTED). Dado secundário — página renderiza sem ele.
       if (url.includes('/api/test-executions/artifacts') && /ERR_ABORTED/i.test(failure)) {
+        return;
+      }
+      // RpaReplaysPage (/dev/rpa-replays): listas de replays/recordings em voo
+      // são abortadas (ERR_ABORTED) na troca de rota — mesma classe de ruído de
+      // navegação de /auth/me. Falhas não-ABORTED continuam contadas.
+      if (url.includes('/api/test-executions/replays') && /ERR_ABORTED/i.test(failure)) {
+        return;
+      }
+      if (url.includes('/api/test-executions/recordings') && /ERR_ABORTED/i.test(failure)) {
         return;
       }
       // RAGDocumentsPage: /rag/* abortados na troca de rota
