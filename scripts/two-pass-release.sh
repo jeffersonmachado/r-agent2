@@ -1143,6 +1143,14 @@ EOF
   exit 1
 fi
 
+# SEAL_GO: a fase DELIVERED terminou em release GO — o marcador de candidato do
+# ciclo anterior (que aponta para um payload já substituído) é cruft obsoleto e
+# seria confundido com estado pendente; removê-lo mantém dist/release coerente.
+if [[ -f "$RELEASE_DIR/CANDIDATE-DEFERRED.json" ]]; then
+  rm -f "$RELEASE_DIR/CANDIDATE-DEFERRED.json"
+  ok "Marcador de candidato DEFERRED do ciclo anterior removido (release GO selado)"
+fi
+
 # ══════════════════════════════════════════════════════════════════════════════
 pass "PASS 5 — GATE: VERIFICADOR OFFLINE DE GOVERNANÇA"
 # ══════════════════════════════════════════════════════════════════════════════
