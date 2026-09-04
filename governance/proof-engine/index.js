@@ -68,10 +68,13 @@ const REQUIRED_ARTIFACT_SPECS = [
   { id: 'cleanup_proof',           path: 'governance/cleanup-proof.json',                                     domain: 'governance',    packageRequired: true },
   { id: 'final_readiness',         path: 'governance/final-readiness-report.json',                            domain: 'governance',    packageRequired: true },
   // Segregação de experiência (PRODUCTION/SUPPORT/DEVELOPMENT): evidência de
-  // release obrigatória, consumida pelo Master Scorecard (RAP-014/RAP-015) e
-  // verificada pelo delivered-release verifier. reports/ não entra no ZIP —
-  // o sidecar auditável vai em dist/governance/ no two-pass.
-  { id: 'experience_segregation',  path: 'reports/experience-segregation-report.json',                        domain: 'governance',    packageRequired: false },
+  // release obrigatória DENTRO do payload, consumida pelo Master Scorecard
+  // (RAP-014/RAP-015) e verificada pelo delivered-release verifier. A cópia
+  // canônica vive em governance/ (fonte, entra no ZIP); reports/ é a cópia de
+  // compatibilidade para consumidores fora do pacote. packageRequired=true →
+  // o package-validator exige o arquivo no payload e o payloadSha256 (coberto
+  // pela attestation Ed25519) vincula a prova de segregação ao release.
+  { id: 'experience_segregation',  path: 'governance/experience-segregation-report.json',                     domain: 'governance',    packageRequired: true },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

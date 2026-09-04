@@ -85,6 +85,21 @@ function buildScorecard(below10Ids = [], lin = lineage) {
  *   manifestOverrides    campos extras/alterados no manifest (pós-assinatura se afetar hash)
  *   cleanWorktree        default true
  *   omitPayloadGovernance  payload sem r-agent2/governance
+ *   consistencyDecision  finalDecision do final-consistency-report embutido
+ *                        (default PASS_WITH_DEFERRED_PACKAGE_GATE — snapshot PRE_PACKAGE)
+ *   consistencyPhase     phase do consistency report (default PRE_PACKAGE;
+ *                        'FINAL' + decisão DEFERRED → SEMANTIC_PHASE_MISMATCH)
+ *   consistencyTransitional  default true
+ *   omitExperienceSegregation  payload sem experience-segregation-report (Caso C)
+ *   expSegStatus         default 'PASS' ('FAIL' → Caso G)
+ *   expSegViolationCount default 0 (>0 → Caso F)
+ *   expSegRunId / expSegSourceFingerprint  lineage divergente (Casos D/E)
+ *   expSegNoLineage      remove runId/sourceFingerprint (ARTIFACT_RUN_ID_MISSING)
+ *   expSegHashMismatch   evidence-manifest registra hash errado (Caso H)
+ *   expSegNotPackageRequired  evidence-manifest sem packageRequired=true
+ *   buildEnvelope        constrói o envelope zip físico (release_hygiene)
+ *   envelopeExtraFiles   { path: content } extras dentro do envelope zip
+ *                        (ex.: 'r-agent2/dist/verifier/verify-result.json' → Caso A/B)
  */
 function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
   const RELEASE = identity.releaseId || RELEASE_ID;
@@ -161,6 +176,49 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
       decision: tamper.payloadTamperDecision || 'TAMPER_GO',
       pass: (tamper.payloadTamperDecision || 'TAMPER_GO') === 'TAMPER_GO',
     });
+
+    // Consistência PRE_PACKAGE (snapshot estrutural do payload): decisão
+    // DEFERRED exige phase=PRE_PACKAGE/transitional — o gate
+    // consistency_phase_semantics reprova DEFERRED apresentado como FINAL.
+    writeJson(path.join(govDir, 'final-consistency-report.json'), {
+      ...lin('final-consistency-report'),
+      finalDecision: tamper.consistencyDecision || 'PASS_WITH_DEFERRED_PACKAGE_GATE',
+      phase: tamper.consistencyPhase !== undefined ? tamper.consistencyPhase : 'PRE_PACKAGE',
+      transitional: tamper.consistencyTransitional !== undefined ? tamper.consistencyTransitional : true,
+      pass: true,
+    });
+
+    // Evidência de experience-segregation (packageRequired=true): prova de
+    // segregação PRODUCTION/SUPPORT/DEVELOPMENT embutida no payload, com hash
+    // registrado no evidence-manifest embutido.
+    if (!tamper.omitExperienceSegregation) {
+      const expSeg = {
+        ...lin('experience-segregation-report'),
+        status: tamper.expSegStatus || 'PASS',
+        violationCount: tamper.expSegViolationCount || 0,
+        violations: [],
+      };
+      if (tamper.expSegRunId) expSeg.runId = tamper.expSegRunId;
+      if (tamper.expSegSourceFingerprint) expSeg.sourceFingerprint = tamper.expSegSourceFingerprint;
+      if (tamper.expSegNoLineage) { delete expSeg.runId; delete expSeg.sourceFingerprint; }
+      const expSegPath = path.join(govDir, 'experience-segregation-report.json');
+      writeJson(expSegPath, expSeg);
+      const expSegHash = tamper.expSegHashMismatch ? '0'.repeat(64) : sha256File(expSegPath);
+      writeJson(path.join(govDir, 'evidence-manifest.json'), {
+        ...lin('evidence-manifest'),
+        status: 'PASS',
+        artifacts: [
+          {
+            id: 'experience_segregation',
+            path: 'governance/experience-segregation-report.json',
+            packageRequired: tamper.expSegNotPackageRequired === true ? false : true,
+            exists: true,
+            hash: expSegHash,
+            proofStatus: 'valid',
+          },
+        ],
+      });
+    }
   }
 
   // ── 2. Payload zip ─────────────────────────────────────────────────────────
@@ -281,6 +339,25 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
     publicKeyFingerprint: ATTESTATION.publicKeyFingerprint(pubPem),
   });
 
+  // ── 7. Envelope zip físico (opcional) ──────────────────────────────────────
+  // Construído quando o teste precisa validar a higiene do envelope
+  // (release_hygiene): verify-result stale, artefato de outro release, etc.
+  let envelopePath = null;
+  if (tamper.envelopeExtraFiles || tamper.buildEnvelope) {
+    const envTree = path.join(baseDir, 'envelope-tree');
+    const envReleaseDir = path.join(envTree, 'r-agent2', 'dist', 'release');
+    fs.mkdirSync(envReleaseDir, { recursive: true });
+    fs.copyFileSync(payloadPath, path.join(envReleaseDir, payloadName));
+    fs.copyFileSync(manifestPath, path.join(envReleaseDir, `r-agent2-${RELEASE}.manifest.json`));
+    for (const [rel, content] of Object.entries(tamper.envelopeExtraFiles || {})) {
+      const target = path.join(envTree, rel);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, typeof content === 'string' ? content : `${JSON.stringify(content, null, 2)}\n`);
+    }
+    envelopePath = path.join(releaseDir, `r-agent2-${RELEASE}.zip`);
+    execFileSync('zip', ['-qr', envelopePath, 'r-agent2/'], { cwd: envTree });
+  }
+
   return {
     baseDir,
     releaseId: RELEASE,
@@ -292,6 +369,7 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
     payloadSha256: payloadSha,
     manifestPath,
     manifestSha256: manifestSha,
+    envelopePath,
     envelopeGovDir: envGovDir,
     signaturesDir: sigDir,
     verifierDir: verDir,

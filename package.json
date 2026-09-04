@@ -140,6 +140,7 @@
     "validate:coverage-completeness": "node scripts/governance/validate-coverage-completeness.js",
     "validate:visibility-policy": "node scripts/governance/validate-visibility-policy.js",
     "validate:experience-segregation": "node scripts/governance/validate-experience-segregation.js",
+    "validate:release-hygiene": "node scripts/governance/validate-release-hygiene.js",
     "validate:vertical-registry": "node scripts/governance/validate-vertical-registry.js",
     "validate:coverage-gate": "node scripts/governance/validate-coverage-gate.js",
     "coverage-gate:snapshot": "node scripts/governance/coverage-gate-snapshot.js",

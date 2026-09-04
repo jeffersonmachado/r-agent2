@@ -371,11 +371,21 @@ function runFinalConsistencyGate() {
   const highs     = failed.filter((c) => c.severity === 'HIGH');
   const pass      = failed.length === 0;
 
+  // Fase semântica explícita: deriva da decisão canônica de readiness no
+  // momento da escrita. PRE_PACKAGE (decisão DEFERRED transitória) nunca se
+  // apresenta como consistência FINAL — elimina a ambiguidade de um relatório
+  // "final-consistency" que ainda depende do package gate.
+  const readinessNow = readJsonSafe('governance/final-readiness-report.json');
+  const readinessDecision = readinessNow?.finalDecision || readinessNow?.status || null;
+  const isPrePackage = readinessDecision === 'PASS_WITH_DEFERRED_PACKAGE_GATE';
+
   const report = {
     generatedAt:      new Date().toISOString(),
     engine:           'final-consistency-gate/v1',
     artifactType:     'final-consistency-report',
     artifactVersion:  '2.0.0',
+    phase:            isPrePackage ? 'PRE_PACKAGE' : 'FINAL',
+    transitional:     isPrePackage,
     runId:            runContext?.runId || null,
     sourceFingerprint: runContext?.sourceFingerprint || null,
     pass,

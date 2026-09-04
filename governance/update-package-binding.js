@@ -146,6 +146,16 @@ function run() {
     const authorDecision  = readinessReport?.finalDecision || readinessReport?.status;
     if (authorDecision) {
       consistency.finalDecision = authorDecision;
+      // Fase semântica explícita (GAP de higiene): um relatório chamado
+      // "final-consistency" com decisão PASS_WITH_DEFERRED_PACKAGE_GATE é uma
+      // avaliação PRE_PACKAGE transitória — nunca uma consistência FINAL.
+      // A consistência FINAL (pós package-gate) carrega decisão GO e
+      // phase='FINAL', transitional=false.
+      const isDeferred = authorDecision === 'PASS_WITH_DEFERRED_PACKAGE_GATE';
+      consistency.phase = isDeferred ? 'PRE_PACKAGE' : 'FINAL';
+      consistency.transitional = isDeferred;
+      consistency.artifactType = consistency.artifactType || 'final-consistency-report';
+      consistency.artifactVersion = consistency.artifactVersion || '1.0.0';
       if (consistency.finalDecisionConsistency) {
         consistency.finalDecisionConsistency.finalDecision = authorDecision;
         if (consistency.finalDecisionConsistency.reports) {

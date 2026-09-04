@@ -73,6 +73,12 @@ async function main() {
       'reports/page-surface-report.json',
       'reports/visibility-policy-report.json',
       'reports/experience-segregation-report.json',
+      // Cópia canônica empacotada no payload (packageRequired=true) — precisa
+      // do MESMO runId/sourceFingerprint da cópia em reports/.
+      'governance/experience-segregation-report.json',
+      // Consistência PRE_PACKAGE/FINAL: lineage explícito para eliminar a
+      // ambiguidade semântica (GAP: relatório "final" com decisão DEFERRED).
+      'governance/final-consistency-report.json',
       'reports/rag-domain-segregation-report.json',
       'reports/inventory-build-report.json',
       'reports/rate-limit-validation-report.json',

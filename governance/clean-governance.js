@@ -106,10 +106,16 @@ function main() {
   );
   console.log('  ✓ package-validation-report.json regenerado');
 
-  // final-consistency-report.json
+  // final-consistency-report.json — estado pós-limpeza é PRE_PACKAGE por
+  // definição: a consistência FINAL só existe depois do package gate (o
+  // update-package-binding regrava phase/finalDecision a partir do readiness).
   fs.writeFileSync(
     path.join(GOV_DIR, 'final-consistency-report.json'),
     JSON.stringify({
+      artifactType: 'final-consistency-report',
+      artifactVersion: '1.0.0',
+      phase: 'PRE_PACKAGE',
+      transitional: true,
       pass: true,
       currentZipName: payloadName,
       governedArtifact: payloadName,

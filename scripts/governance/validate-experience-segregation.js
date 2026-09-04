@@ -51,7 +51,11 @@
  * config/experience-segregation-exemptions.json (ex.: conteúdo técnico que só
  * é renderizado quando getAgentClassification(agent) !== 'PRODUCTION').
  *
- * Saída: reports/experience-segregation-report.json + resumo no stdout.
+ * Saída: reports/experience-segregation-report.json (compat: consumido pelo
+ * verify-delivered-release e pelo release-evidence-pack) + cópia canônica em
+ * governance/experience-segregation-report.json (entra no PAYLOAD do release:
+ * evidence-manifest packageRequired=true → o verifier offline exige a prova de
+ * segregação criptograficamente ligada ao pacote via payloadSha256).
  * Exit 1 em qualquer violação.
  */
 
@@ -60,6 +64,9 @@ const path = require('path');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'experience-segregation-report.json');
+// Cópia canônica empacotada no payload (governance/ é fonte e entra no ZIP;
+// reports/ da raiz é excluído pelo blocklist de release).
+const PAYLOAD_REPORT_PATH = path.join(ROOT_DIR, 'governance', 'experience-segregation-report.json');
 const EXEMPTIONS_PATH = path.join(ROOT_DIR, 'config', 'experience-segregation-exemptions.json');
 
 const MENU_PATH = 'frontend/src/navigation/menu.js';
@@ -521,6 +528,8 @@ function run() {
   const { violations, surfaces, supportSurfaces, exemptions } = collectViolations();
   const generatedAt = new Date().toISOString();
   const report = {
+    artifactType: 'experience-segregation-report',
+    artifactVersion: '1.0.0',
     status: violations.length === 0 ? 'PASS' : 'FAIL',
     generatedAt,
     checkedAt: generatedAt,
@@ -541,12 +550,17 @@ function run() {
 
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
+  // Cópia canônica para o payload: governance/ entra no ZIP do release e o
+  // evidence-manifest marca esta prova como packageRequired=true. O
+  // stamp-report-lineage regrava runId/sourceFingerprint em AMBAS as cópias.
+  fs.writeFileSync(PAYLOAD_REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
 
   console.log(`[experience-segregation] status=${report.status} surfaces=${surfaces.length} supportSurfaces=${supportSurfaces.length} violations=${violations.length}`);
   for (const violation of violations) {
     console.log(`[experience-segregation] VIOLATION ${violation.path}:${violation.line} [${violation.rule}] ${violation.excerpt}`);
   }
   console.log(`[experience-segregation] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)}`);
+  console.log(`[experience-segregation] cópia payload: ${path.relative(ROOT_DIR, PAYLOAD_REPORT_PATH)}`);
 
   return violations.length === 0 ? 0 : 1;
 }

@@ -102,9 +102,34 @@ done
 [[ -f "$DIST_DIR/verifier/verify-enterprise-governance-v2.sh" ]] && ok "dist/verifier/verify-enterprise-governance-v2.sh" || fail "dist/verifier/verify-enterprise-governance-v2.sh AUSENTE"
 [[ -f "$DIST_DIR/verifier/verify-payload-governance.js" ]] && ok "dist/verifier/verify-payload-governance.js" || fail "dist/verifier/verify-payload-governance.js AUSENTE"
 [[ -f "$DIST_DIR/verifier/release-attestation-public-key.json" ]] && ok "dist/verifier/release-attestation-public-key.json" || fail "dist/verifier/release-attestation-public-key.json AUSENTE"
-# verify-result.json é autogratificação (escrito pela própria execução do
-# verifier no passo 6) — presença não é gate; a prova real é o passo 6.
-[[ -f "$DIST_DIR/verifier/verify-result.json" ]] && ok "dist/verifier/verify-result.json" || warn "dist/verifier/verify-result.json ausente (será escrito pelo passo 6)"
+# verify-result.json é o recibo que o verifier escreve QUANDO executado (passo
+# 6). Ele NUNCA é empacotado no envelope. Aqui ele só é aceitável se estiver
+# vinculado ao payload ATUAL — um recibo de release anterior é evidência stale
+# (STALE_VERIFIER_RESULT) e invalida a higiene do dist/.
+if [[ -f "$DIST_DIR/verifier/verify-result.json" ]]; then
+  if [[ -z "${PAYLOAD_NAME:-}" ]]; then
+    fail "STALE_VERIFIER_RESULT — verify-result.json presente sem payload atual identificável"
+  else
+  VR_MATCH="$(node -e "
+    try {
+      const fs=require('fs');
+      const vr=JSON.parse(fs.readFileSync('$DIST_DIR/verifier/verify-result.json','utf8'));
+      const want='$PAYLOAD_NAME';
+      const bound = String(vr.payload||vr.payloadName||vr.artifact||'');
+      const rel   = String(vr.releaseId||vr.release||'');
+      const cur   = want.replace(/\.payload\.zip$/,'');
+      process.stdout.write((bound===want || rel===cur || (cur.length>0 && bound.includes(cur))) ? 'yes' : 'no');
+    } catch(_) { process.stdout.write('no'); }
+  " 2>/dev/null || echo 'no')"
+  if [[ "$VR_MATCH" == "yes" ]]; then
+    ok "dist/verifier/verify-result.json (recibo do payload atual — gerado pelo passo 6, não empacotado)"
+  else
+    fail "STALE_VERIFIER_RESULT — dist/verifier/verify-result.json não está vinculado ao payload atual ($PAYLOAD_NAME)"
+  fi
+  fi
+else
+  ok "dist/verifier/ sem verify-result.json pré-empacotado (será escrito pelo passo 6)"
+fi
 
 step "5. Verificando dist/ raiz sem artefatos inesperados..."
 # Regra canônica (AGENTS.md): "dist/ deve permanecer limpo, EXCETO ZIPs e

@@ -954,7 +954,10 @@ for f in \
   "governance/package-integrity-report.json" \
   "governance/self-proving-report.json" \
   "governance/final-governance-report.json" \
-  "reports/experience-segregation-report.json"; do
+  "reports/experience-segregation-report.json" \
+  "governance/experience-segregation-report.json"; do
+  # A cópia canônica governance/ vai POR ÚLTIMO e prevalece sobre a cópia de
+  # compatibilidade em reports/ (mesmo basename → dist/governance/).
   [[ -f "$PROJECT_ROOT/$f" ]] && cp "$PROJECT_ROOT/$f" "$DIST_DIR/$(basename $f)" || true
 done
 ok "Relatórios propagados"
@@ -966,7 +969,8 @@ pass "PASS 4b — REESTRUTURAÇÃO dist/ NORMALIZADA"
 #   dist/release/    → ZIP final + manifest
 #   dist/governance/ → relatórios JSON de governança
 #   dist/signatures/ → assinaturas HMAC-SHA256
-#   dist/verifier/   → script verificador + verify-result.json (gerado no PASS 5)
+#   dist/verifier/   → script verificador (verify-result.json NÃO é empacotado:
+#                      é o recibo que o verifier escreve ao rodar na PASS 5)
 
 step "Criando estrutura de diretórios normalizada em dist/..."
 RELEASE_DIR="$DIST_DIR/release"
@@ -975,6 +979,10 @@ SIG_DIR="$DIST_DIR/signatures"
 VER_DIR="$DIST_DIR/verifier"
 
 mkdir -p "$RELEASE_DIR" "$GOV_DIR" "$SIG_DIR" "$VER_DIR"
+# Recibo de verifier de execuções anteriores não pode sobreviver a um novo
+# packaging (STALE_VERIFIER_RESULT) — verify-result.json só existe depois que
+# o verifier roda contra o pacote final (PASS 5).
+rm -f "$VER_DIR/verify-result.json"
 ok "Diretórios criados: release/ governance/ signatures/ verifier/"
 
 # Mover ZIP final para dist/release/ como PAYLOAD governado. O envelope de
@@ -1071,6 +1079,12 @@ ok "Governança e assinaturas vinculadas ao payload"
 
 step "Criando envelope final com payload + governança externa..."
 ENVELOPE_PATH="$RELEASE_DIR/$ENVELOPE_ZIP_NAME"
+# HYGIENE GATE (STALE_VERIFIER_RESULT): verify-result.json é o recibo que o
+# verifier escreve QUANDO EXECUTADO contra um pacote. Um recibo pré-existente
+# (de verificação local ou de release anterior) NUNCA pode entrar no envelope —
+# seria evidência stale apresentada como prova do release atual. O recibo do
+# release atual é gerado DEPOIS, pelo verifier offline da PASS 5.
+rm -f "$VER_DIR/verify-result.json"
 TMP_ENVELOPE="$(mktemp -d -t r-agent2-envelope-XXXXXX)"
 mkdir -p "$TMP_ENVELOPE/r-agent2/dist/release" \
          "$TMP_ENVELOPE/r-agent2/dist/governance" \
@@ -1092,6 +1106,14 @@ ok "Envelope final: $ENVELOPE_ZIP_NAME sha256=${H_FINAL:0:24}…"
 release_envelope_validate_zip "$ENVELOPE_PATH" \
   && ok "Envelope contém apenas artefatos controlados" \
   || fail "Envelope contém entradas inesperadas"
+
+# GATE release-hygiene: o envelope físico final não pode conter recibo de
+# verifier pré-empacotado (STALE_VERIFIER_RESULT), artefatos de outro
+# release/run, paths temporários ou saída de runtime.
+step "GATE release-hygiene: inspecionando envelope físico final..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-release-hygiene.js" \
+  && ok "release-hygiene PASS" \
+  || fail "release-hygiene FAIL — envelope com artefato stale/estrangeiro"
 
 # Verificar estrutura resultante
 # Na fase DELIVERED (SEAL_PENDING) o candidato carrega a decisão DEFERRED

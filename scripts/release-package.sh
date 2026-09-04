@@ -160,7 +160,7 @@ WORKSPACE_BLOCKING_PATHS=(
   'rpa/replay'
 )
 
-REQUIRED_PROOF_REGEX='^(r-agent2/)?(qa/(smoke/?|smoke/prod-like/?|smoke-evidence\.json|l0[1-5]-.*-evidence\.json|smoke/prod-like/qa-waves-operational-prod-like-smoke\.json|enterprise/(human-handoff-full-validation|human-handoff-screenshots|pbx-voice-flow-prod-like|pbx-asr-transcript|pbx-tts-prompts|pbx-recordings-metadata|omnichannel-unified-replay|omnichannel-crm-mutations|digital-twin-snapshots)\.json|qa-waves-enterprise-governance\.json)|governance/(evidence-manifest|final-proof-report|package-validation-report|final-readiness-report|proof-signature|cleanup-proof|blocker-engine\.js|final-consistency-report)\.json|governance/blocker-engine\.js|governance/final-consistency-report\.json)$'
+REQUIRED_PROOF_REGEX='^(r-agent2/)?(qa/(smoke/?|smoke/prod-like/?|smoke-evidence\.json|l0[1-5]-.*-evidence\.json|smoke/prod-like/qa-waves-operational-prod-like-smoke\.json|enterprise/(human-handoff-full-validation|human-handoff-screenshots|pbx-voice-flow-prod-like|pbx-asr-transcript|pbx-tts-prompts|pbx-recordings-metadata|omnichannel-unified-replay|omnichannel-crm-mutations|digital-twin-snapshots)\.json|qa-waves-enterprise-governance\.json)|governance/(evidence-manifest|final-proof-report|package-validation-report|final-readiness-report|proof-signature|cleanup-proof|blocker-engine\.js|final-consistency-report|experience-segregation-report)\.json|governance/blocker-engine\.js|governance/final-consistency-report\.json)$'
 
 collect_workspace_contamination() {
   local found=()

@@ -31,6 +31,14 @@
  *   16. envelope self-proving pass
  *   17. attestation Ed25519 válida + campos == manifest/payload/decisão
  *   18. manifest cleanWorktree=true + gitCommit/gitTree 40-char
+ *   19. consistência: decisão DEFERRED exige phase=PRE_PACKAGE/transitional
+ *       (SEMANTIC_PHASE_MISMATCH — relatório "final" nunca carrega DEFERRED)
+ *   20. release_hygiene: envelope sem verify-result stale (STALE_VERIFIER_RESULT),
+ *       sem artefatos de outro release (FOREIGN_RELEASE_ARTIFACT), sem paths
+ *       temporários/runtime (TEMP_PATH_ARTIFACT/RUNTIME_ARTIFACT)
+ *   12b. payload_experience_segregation: evidência packageRequired dentro do
+ *       payload (EXPERIENCE_SEGREGATION_EVIDENCE_MISSING / NO_GO /
+ *       EVIDENCE_HASH_MISMATCH), runId/fingerprint == manifest
  *
  * Uso:
  *   node verify-payload-governance.js --root <dir-com-dist-ou-envelope-extraído>
@@ -128,6 +136,15 @@ function resolveInputs(args) {
   if (args.envelopeGovernance) inputs.envelopeGovDir = path.resolve(args.envelopeGovernance);
   if (args.signatures) inputs.signaturesDir = path.resolve(args.signatures);
   if (args.verifier) inputs.verifierDir = path.resolve(args.verifier);
+  if (args.envelope) inputs.envelopePath = path.resolve(args.envelope);
+  // Envelope zip: irmão do payload no mesmo diretório (r-agent2-*.zip não-payload).
+  if (!inputs.envelopePath && inputs.payloadPath) {
+    const dir = path.dirname(inputs.payloadPath);
+    try {
+      const envelope = fs.readdirSync(dir).find((f) => /^r-agent2-\d{8}-\d{6}\.zip$/.test(f));
+      if (envelope) inputs.envelopePath = path.join(dir, envelope);
+    } catch (_) { /* best effort */ }
+  }
   return inputs;
 }
 
@@ -357,6 +374,44 @@ function runVerification(args, options) {
       }
     }
 
+    // ── Gate 12b: evidência de experience-segregation DENTRO do payload ──────
+    // A prova de segregação PRODUCTION/SUPPORT/DEVELOPMENT é packageRequired:
+    // vive em governance/experience-segregation-report.json dentro do payload
+    // (vinculada ao release via payloadSha256, coberto pela attestation Ed25519)
+    // e deve ter hash registrado no evidence-manifest embutido.
+    const expSeg = readJson(path.join(payloadGovDir, 'experience-segregation-report.json'));
+    const expSegGate = makeGate('payload_experience_segregation');
+    if (!expSeg) {
+      gates.push(fail(expSegGate, 'EXPERIENCE_SEGREGATION_EVIDENCE_MISSING — governance/experience-segregation-report.json ausente no payload'));
+    } else if (expSeg.status !== 'PASS') {
+      gates.push(fail(expSegGate, `EXPERIENCE_SEGREGATION_NO_GO — status=${expSeg.status || 'null'}`));
+    } else if (Number(expSeg.violationCount || 0) > 0) {
+      gates.push(fail(expSegGate, `EXPERIENCE_SEGREGATION_NO_GO — violationCount=${expSeg.violationCount}`));
+    } else if (!expSeg.runId || !expSeg.sourceFingerprint) {
+      gates.push(fail(expSegGate, 'ARTIFACT_RUN_ID_MISSING — experience-segregation do payload sem lineage (runId/sourceFingerprint)'));
+    } else if (manifestRunId && expSeg.runId !== manifestRunId) {
+      gates.push(fail(expSegGate, `CROSS_RUN_ARTIFACT — experience-segregation.runId=${expSeg.runId} != ${manifestRunId}`));
+    } else if (manifestFp && expSeg.sourceFingerprint !== manifestFp) {
+      gates.push(fail(expSegGate, 'SOURCE_FINGERPRINT_MISMATCH — experience-segregation.sourceFingerprint diverge do manifest'));
+    } else {
+      // Binding de hash: o evidence-manifest do payload registra o sha256 da
+      // prova; deve conferir com o arquivo físico embutido.
+      const evidenceManifest = readJson(path.join(payloadGovDir, 'evidence-manifest.json'));
+      const expEntry = Array.isArray(evidenceManifest?.artifacts)
+        ? evidenceManifest.artifacts.find((a) => a && a.id === 'experience_segregation')
+        : null;
+      const recordedHash = expEntry ? (expEntry.hash || expEntry.sha256 || expEntry.checksum || null) : null;
+      const physicalHash = sha256File(path.join(payloadGovDir, 'experience-segregation-report.json'));
+      if (expEntry && expEntry.packageRequired !== true) {
+        gates.push(fail(expSegGate, 'EXPERIENCE_SEGREGATION_NOT_PACKAGE_REQUIRED — evidence-manifest não marca a prova como packageRequired'));
+      } else if (recordedHash && recordedHash !== physicalHash) {
+        gates.push(fail(expSegGate,
+          `EXPERIENCE_SEGREGATION_EVIDENCE_HASH_MISMATCH — manifest=${recordedHash.slice(0, 12)} != físico=${physicalHash.slice(0, 12)}`));
+      } else {
+        gates.push(pass(expSegGate, { violationCount: 0, hashBound: recordedHash === physicalHash }));
+      }
+    }
+
     // ── Gates exclusivos do candidato: proof + tamper do payload ────────────
     if (candidateMode) {
       const proof = readJson(path.join(payloadGovDir, 'final-proof-report.json'));
@@ -495,6 +550,75 @@ function runVerification(args, options) {
       gates.push(fail(provGate, 'DIRTY_WORKTREE — manifest não declara cleanWorktree=true'));
     } else {
       gates.push(pass(provGate));
+    }
+
+    // ── Gate 19: fase semântica da consistência ─────────────────────────────
+    // O payload carrega o snapshot PRÉ-package do final-consistency-report
+    // (estrutural: o pacote não pode conter a prova de si mesmo). Um relatório
+    // com decisão DEFERRED DEVE se declarar phase=PRE_PACKAGE/transitional —
+    // nunca FINAL. Um relatório "FINAL" com decisão DEFERRED é incoerência
+    // semântica (PASS_WITH_DEFERRED_PACKAGE_GATE apresentado como final).
+    const phaseGate = makeGate('consistency_phase_semantics');
+    const payloadConsistency = readJson(path.join(payloadGovDir, 'final-consistency-report.json'));
+    if (!payloadConsistency) {
+      gates.push(fail(phaseGate, 'MISSING_ARTIFACT — final-consistency-report.json ausente no payload'));
+    } else {
+      const consDecision = payloadConsistency.finalDecision || payloadConsistency.decision || null;
+      const consPhase = payloadConsistency.phase || null;
+      const consTransitional = payloadConsistency.transitional === true;
+      if (consDecision === DEFERRED_DECISION && (consPhase !== 'PRE_PACKAGE' || !consTransitional)) {
+        gates.push(fail(phaseGate,
+          `SEMANTIC_PHASE_MISMATCH — decisão ${DEFERRED_DECISION} exige phase=PRE_PACKAGE transitional=true; encontrado phase=${consPhase || 'null'} transitional=${payloadConsistency.transitional}`));
+      } else if (consPhase === 'FINAL' && consDecision === DEFERRED_DECISION) {
+        gates.push(fail(phaseGate,
+          'SEMANTIC_PHASE_MISMATCH — relatório FINAL não pode carregar decisão DEFERRED'));
+      } else {
+        gates.push(pass(phaseGate, { phase: consPhase, finalDecision: consDecision }));
+      }
+    }
+
+    // ── Gate 20: higiene do envelope/release ────────────────────────────────
+    // O envelope é camada de transporte limpa: NUNCA contém recibo de verifier
+    // pré-gerado (STALE_VERIFIER_RESULT), artefatos de outro release, paths
+    // temporários ou saída de runtime. verify-result.json só é produzido
+    // QUANDO o verifier roda contra o pacote entregue — fora do envelope.
+    const hygieneGate = makeGate('release_hygiene');
+    const hygieneIssues = [];
+    let envelopeEntries = null;
+    if (inputs.envelopePath && fs.existsSync(inputs.envelopePath)) {
+      try {
+        const listing = execFileSync('unzip', ['-Z1', inputs.envelopePath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+        envelopeEntries = listing.split(/\r?\n/g).map((e) => e.trim()).filter(Boolean);
+      } catch (error) {
+        hygieneIssues.push(`ENVELOPE_UNREADABLE — ${error.message}`);
+      }
+    }
+    if (envelopeEntries) {
+      const payloadName = path.basename(inputs.payloadPath);
+      const currentReleaseId = payloadName.replace(/\.payload\.zip$/, '');
+      for (const entry of envelopeEntries) {
+        if (/(^|\/)verify-result\.json$/.test(entry)) {
+          hygieneIssues.push(`STALE_VERIFIER_RESULT — ${entry} é recibo de execução do verifier e não pode ser empacotado`);
+        }
+        if (/(^|\/)tmp\//.test(entry) || /\/tmp\//.test(entry)) {
+          hygieneIssues.push(`TEMP_PATH_ARTIFACT — ${entry}`);
+        }
+        if (/\.(log|wal|shm|tmp)$/.test(entry)) {
+          hygieneIssues.push(`RUNTIME_ARTIFACT — ${entry}`);
+        }
+        if (!candidateMode && /CANDIDATE-DEFERRED\.json$/.test(entry)) {
+          hygieneIssues.push(`STALE_CANDIDATE_MARKER — ${entry} em release GO final`);
+        }
+        const m = entry.match(/r-agent2-(\d{8}-\d{6})/);
+        if (m && `r-agent2-${m[1]}` !== currentReleaseId) {
+          hygieneIssues.push(`FOREIGN_RELEASE_ARTIFACT — ${entry} pertence a r-agent2-${m[1]}, release atual é ${currentReleaseId}`);
+        }
+      }
+    }
+    if (hygieneIssues.length > 0) {
+      gates.push(fail(hygieneGate, hygieneIssues.join(' | ')));
+    } else {
+      gates.push(pass(hygieneGate, { envelopeScanned: envelopeEntries ? envelopeEntries.length : 0 }));
     }
 
     return finish(gates, cleanup, candidateMode);

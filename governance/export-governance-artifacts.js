@@ -111,6 +111,10 @@ async function exportGovernanceArtifacts() {
 
   const consistency = {
     ...artifactBase(run, 'final-consistency-gate-report'),
+    // Fase semântica: AUTONOMOUS_READY_GO = consistência FINAL (pós package
+    // gate); qualquer estado abaixo disso é avaliação PRE_PACKAGE transitória.
+    phase: autonomousReady ? 'FINAL' : 'PRE_PACKAGE',
+    transitional: !autonomousReady,
     decision: failedGates.length === 0 ? 'FINAL_CONSISTENCY_GO' : 'FINAL_CONSISTENCY_NO_GO',
     failures: failedGates.map((gate) => ({ id: gate.gate_key, reason: gate.reason || gate.status })),
   };
