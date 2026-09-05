@@ -1,20 +1,26 @@
 {
-  "generatedAt": "2026-09-05T20:48:10.311Z",
-  "status": "NO_GO:AUTONOMOUS_READY_GO",
+  "generatedAt": "2026-09-05T20:55:55.660Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
   "platformMaturity": "enterprise-partial",
   "backlog": [
     {
-      "id": "gap-proof-stale-fingerprints",
+      "id": "gap-proof-invalid-artifact-semantics",
       "severity": "critical",
       "area": "proof-governance",
-      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "title": "Proof artifacts presentes mas semanticamente invalidos (presenca != validade)",
       "evidence": {
-        "diverged": [
-          "sourceFingerprint",
-          "chainFingerprint"
+        "count": 1,
+        "artifacts": [
+          {
+            "id": "final_readiness",
+            "path": "governance/final-readiness-report.json",
+            "violations": [
+              "status_no_go"
+            ]
+          }
         ]
       },
-      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+      "suggestedFix": "Corrigir o conteudo dos artifacts (ok/valid/status, assertions, snapshots) e regerar as evidencias."
     }
   ],
   "blocking": 1,
