@@ -20,6 +20,7 @@ const {
 } = require('../../db/models');
 const logger = require('../../utils/logger');
 const { safeString, toPlain, toDate, clampLimit, offsetValue, uniqBy } = require('./workspaceUtils');
+const { sanitizeTimelineEvents } = require('./timelineSanitization');
 
 const SOURCE_TO_TIMELINE_TYPE = {
   conversation: 'conversation',
@@ -195,10 +196,12 @@ class WorkspaceTimelineService {
     return { items: sorted.slice(offset, offset + limit), total: sorted.length, limit, offset, hasMore: offset + limit < sorted.length, links: links.length };
   }
 
-  async getEntityTimeline({ tenantId, entityId, limit, offset, type = null }) {
+  async getEntityTimeline({ tenantId, entityId, limit, offset, type = null, classification, internal = false }) {
     const entity = await this.getEntity(tenantId, entityId);
     if (!entity) return null;
-    return this.buildTimelineFromLinks({ tenantId, entityId, type: type ? _timelineAlias(type) : null, limit: clampLimit(limit, 50, 100), offset: offsetValue(offset) });
+    const timeline = await this.buildTimelineFromLinks({ tenantId, entityId, type: type ? _timelineAlias(type) : null, limit: clampLimit(limit, 50, 100), offset: offsetValue(offset) });
+    if (internal) return timeline;
+    return { ...timeline, items: sanitizeTimelineEvents(timeline.items, classification) };
   }
 }
 

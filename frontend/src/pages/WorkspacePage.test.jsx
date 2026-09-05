@@ -308,3 +308,78 @@ describe('WorkspacePage — ações contextuais executáveis', () => {
     });
   });
 });
+
+
+describe('WorkspacePage — contrato de rede de incident runs por classificação', () => {
+  beforeEach(async () => {
+    testDoubles.router.navigate.mockClear();
+    testDoubles.toast.showToast.mockClear();
+    const api = await import('../api/workspace');
+    api.listWorkspaceEntities.mockClear();
+    api.getWorkspaceTimeline.mockClear();
+    api.getWorkspaceInsights.mockClear();
+    api.getWorkspaceActions.mockClear();
+    api.getWorkspaceIncidentRuns.mockClear();
+    api.listWorkspaceEntities.mockResolvedValue({
+      items: [{ id: 'e-1', type: 'contact', name: 'Cliente Rede', summary: { riskLevel: 'none' } }],
+      total: 1,
+    });
+  });
+
+  it('PRODUCTION não chama incident runs, mas chama timeline/insights/actions', async () => {
+    testDoubles.auth.agent = { id: 'a-prod', role: 'operator' };
+    const api = await import('../api/workspace');
+
+    render(<WorkspacePage />);
+
+    await waitFor(() => {
+      expect(api.getWorkspaceTimeline).toHaveBeenCalledWith('e-1', expect.objectContaining({ limit: 30 }));
+    });
+    expect(api.getWorkspaceInsights).toHaveBeenCalledWith('e-1');
+    expect(api.getWorkspaceActions).toHaveBeenCalledWith('e-1');
+    expect(api.getWorkspaceIncidentRuns).not.toHaveBeenCalled();
+  });
+
+  it('SUPPORT (platformRole support_n2) não chama incident runs', async () => {
+    testDoubles.auth.agent = { id: 'a-sup', role: 'auditor', platformRole: 'support_n2' };
+    const api = await import('../api/workspace');
+
+    render(<WorkspacePage />);
+
+    await waitFor(() => {
+      expect(api.getWorkspaceTimeline).toHaveBeenCalledWith('e-1', expect.objectContaining({ limit: 30 }));
+    });
+    expect(api.getWorkspaceInsights).toHaveBeenCalledWith('e-1');
+    expect(api.getWorkspaceActions).toHaveBeenCalledWith('e-1');
+    expect(api.getWorkspaceIncidentRuns).not.toHaveBeenCalled();
+  });
+
+  it('DEVELOPMENT (platformRole qa_engineer) chama incident runs uma vez', async () => {
+    testDoubles.auth.agent = { id: 'a-dev', role: 'admin', platformRole: 'qa_engineer' };
+    const api = await import('../api/workspace');
+
+    render(<WorkspacePage />);
+
+    await waitFor(() => {
+      expect(api.getWorkspaceIncidentRuns).toHaveBeenCalledTimes(1);
+    });
+    expect(api.getWorkspaceIncidentRuns).toHaveBeenCalledWith('e-1');
+  });
+
+  it('PRODUCTION renderiza o badge de saúde do header a partir do summary.riskLevel do servidor', async () => {
+    testDoubles.auth.agent = { id: 'a-prod', role: 'operator' };
+    const api = await import('../api/workspace');
+    api.listWorkspaceEntities.mockResolvedValue({
+      items: [{ id: 'e-crit', type: 'contact', name: 'Cliente Critico', summary: { riskLevel: 'critical' } }],
+      total: 1,
+    });
+
+    const { container } = render(<WorkspacePage />);
+
+    await waitFor(() => {
+      expect(container.querySelector('.workspace-health-badge')?.textContent).toContain('Crítico');
+    });
+    expect(container.querySelector('.workspace-health-badge')?.className).toContain('critical');
+    expect(api.getWorkspaceIncidentRuns).not.toHaveBeenCalled();
+  });
+});

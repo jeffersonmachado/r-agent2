@@ -39,6 +39,12 @@
  *   12b. payload_experience_segregation: evidência packageRequired dentro do
  *       payload (EXPERIENCE_SEGREGATION_EVIDENCE_MISSING / NO_GO /
  *       EVIDENCE_HASH_MISMATCH), runId/fingerprint == manifest
+ *   12c. final_status_projection_consistency: projeções derivadas DENTRO do
+ *       payload (docs/architecture/RAP_MASTER_SCORECARD.md, docs/governance/
+ *       PLATFORM_STATUS.md, ENTERPRISE_READINESS.md, _platform-status-source.json,
+ *       dev/platform-readiness/latest.json) devem refletir exatamente a canônica
+ *       embutida — decisão, score N/total, runId, sourceFingerprint
+ *       (FINAL_STATUS_PROJECTION_STALE / MISSING_PROJECTION)
  *
  * Uso:
  *   node verify-payload-governance.js --root <dir-com-dist-ou-envelope-extraído>
@@ -409,6 +415,125 @@ function runVerification(args, options) {
           `EXPERIENCE_SEGREGATION_EVIDENCE_HASH_MISMATCH — manifest=${recordedHash.slice(0, 12)} != físico=${physicalHash.slice(0, 12)}`));
       } else {
         gates.push(pass(expSegGate, { violationCount: 0, hashBound: recordedHash === physicalHash }));
+      }
+    }
+
+    // ── Gate 12c: projeções de status final do payload vs canônica embutida ──
+    // BLOCKER 2 (r-agent2-20260905-163709): a canônica do payload estava 78/78
+    // AUTONOMOUS_READY_GO mas os docs empacotados diziam 76/78, IN_PROGRESS e
+    // NO_GO. As projeções derivadas DENTRO do payload devem refletir exatamente
+    // a canônica embutida (decisão, score, runId, sourceFingerprint). Lógica
+    // espelhada de scripts/governance/validate-final-status-projection.js —
+    // duplicada aqui de propósito: este verifier é autocontido (sem requires
+    // do projeto) para rodar offline a partir de dist/verifier/.
+    const projGate = makeGate('final_status_projection_consistency');
+    {
+      const projIssues = [];
+      const payloadRoot = path.join(tmpDir, 'r-agent2');
+      const projDecision = canonical.finalDecision || canonical.decision;
+      const scDims = Array.isArray(scorecard?.dimensions) ? scorecard.dimensions : [];
+      const scSummary = scorecard?.summary || {};
+      const projTotal = scSummary.totalDimensions ?? (scDims.length || null);
+      const projAt10 = scSummary.dimensionsAt10 ?? (scDims.length ? scDims.filter((d) => Number(d.score) >= 10).length : null);
+      const projBelow10 = scSummary.dimensionsBelow10 ?? (scDims.length ? scDims.filter((d) => Number(d.score) < 10).length : null);
+      const projStatus = scorecard?.overallStatus || null;
+      const projRunId = canonical.runId || readiness?.runId || scorecard?.runId || null;
+      const projFp = canonical.sourceFingerprint || readiness?.sourceFingerprint || scorecard?.sourceFingerprint || null;
+
+      const scanScoreTokens = (content, rel) => {
+        if (projTotal == null || projAt10 == null) return;
+        const re = /(\d+)\s*\/\s*(\d+)/g;
+        let m;
+        while ((m = re.exec(content))) {
+          if (Number(m[2]) === projTotal && Number(m[1]) !== projAt10) {
+            projIssues.push(`STALE_SCORE — token=${m[0]} esperado=${projAt10}/${projTotal} em ${rel}`);
+          }
+        }
+      };
+      const scanJsonStrings = (value, rel) => {
+        if (typeof value === 'string') {
+          // Evidência embutida (base64/data URI) não é conteúdo decisório.
+          if (value.length <= 200) scanScoreTokens(value, rel);
+          return;
+        }
+        if (Array.isArray(value)) { value.forEach((item) => scanJsonStrings(item, rel)); return; }
+        if (value && typeof value === 'object') {
+          for (const item of Object.values(value)) scanJsonStrings(item, rel);
+        }
+      };
+
+      const mdSpecs = [
+        { rel: 'docs/governance/ENTERPRISE_READINESS.md', pattern: /Decision:\s*([^\s]+)/, expected: projDecision, label: 'Decision' },
+        { rel: 'docs/governance/PLATFORM_STATUS.md', pattern: /Readiness decision:\s*([^\s]+)/, expected: projDecision, label: 'Readiness decision' },
+        { rel: 'docs/architecture/RAP_MASTER_SCORECARD.md', pattern: /Overall status:\s*\*\*([A-Z_]+)\*\*/, expected: projStatus, label: 'Overall status' },
+      ];
+      for (const spec of mdSpecs) {
+        const full = path.join(payloadRoot, spec.rel);
+        if (!fs.existsSync(full)) {
+          projIssues.push(`MISSING_PROJECTION — ${spec.rel} ausente no payload`);
+          continue;
+        }
+        const content = fs.readFileSync(full, 'utf8');
+        if (spec.expected) {
+          const match = content.match(spec.pattern);
+          if (!match) {
+            projIssues.push(`PROJECTION_TOKEN_NOT_FOUND — ${spec.label} em ${spec.rel}`);
+          } else if (match[1].trim() !== spec.expected) {
+            projIssues.push(`STALE_DECISION — ${spec.rel}: ${spec.label}=${match[1].trim()} esperado=${spec.expected}`);
+          }
+        }
+        scanScoreTokens(content, spec.rel);
+      }
+
+      // Scorecard MD: linhas de sumário + lineage contra o scorecard embutido.
+      const scMdPath = path.join(payloadRoot, 'docs/architecture/RAP_MASTER_SCORECARD.md');
+      if (fs.existsSync(scMdPath)) {
+        const scMd = fs.readFileSync(scMdPath, 'utf8');
+        const summaryLines = [
+          { label: 'Dimensions', pattern: /^- Dimensions:\s*(\d+)/m, expectedValue: projTotal },
+          { label: '10/10', pattern: /^- 10\/10:\s*(\d+)/m, expectedValue: projAt10 },
+          { label: 'Below 10', pattern: /^- Below 10:\s*(\d+)/m, expectedValue: projBelow10 },
+        ];
+        for (const { label, pattern, expectedValue } of summaryLines) {
+          if (expectedValue == null) continue;
+          const match = scMd.match(pattern);
+          if (!match) projIssues.push(`MISSING_PROJECTION_LINE — "- ${label}:" em RAP_MASTER_SCORECARD.md`);
+          else if (Number(match[1]) !== expectedValue) projIssues.push(`STALE_SCORE — ${label}=${match[1]} esperado=${expectedValue} em RAP_MASTER_SCORECARD.md`);
+        }
+        if (projRunId) {
+          const match = scMd.match(/^- Run ID:\s*(\S+)/m);
+          if (!match) projIssues.push('MISSING_PROJECTION_LINE — "- Run ID:" em RAP_MASTER_SCORECARD.md');
+          else if (match[1] !== projRunId) projIssues.push(`STALE_RUN_ID — RAP_MASTER_SCORECARD.md Run ID=${match[1]} esperado=${projRunId}`);
+        }
+        if (projFp) {
+          const match = scMd.match(/^- Source fingerprint:\s*(\S+)/m);
+          if (!match) projIssues.push('MISSING_PROJECTION_LINE — "- Source fingerprint:" em RAP_MASTER_SCORECARD.md');
+          else if (match[1] !== projFp) projIssues.push('STALE_SOURCE_FINGERPRINT — RAP_MASTER_SCORECARD.md diverge da canônica');
+        }
+      }
+
+      for (const rel of ['docs/governance/_platform-status-source.json', 'dev/platform-readiness/latest.json']) {
+        const proj = readJson(path.join(payloadRoot, rel));
+        if (!proj) {
+          projIssues.push(`MISSING_PROJECTION — ${rel} ausente/ilegível no payload`);
+          continue;
+        }
+        if (projDecision && proj.finalDecision !== projDecision) {
+          projIssues.push(`STALE_DECISION — ${rel}: finalDecision=${proj.finalDecision || 'null'} esperado=${projDecision}`);
+        }
+        if (projRunId && proj.runId !== projRunId) {
+          projIssues.push(`STALE_RUN_ID — ${rel}: runId=${proj.runId || 'null'} esperado=${projRunId}`);
+        }
+        if (projFp && proj.sourceFingerprint !== projFp) {
+          projIssues.push(`STALE_SOURCE_FINGERPRINT — ${rel} diverge da canônica`);
+        }
+        scanJsonStrings(proj, rel);
+      }
+
+      if (projIssues.length > 0) {
+        gates.push(fail(projGate, `FINAL_STATUS_PROJECTION_STALE — ${projIssues.join(' | ')}`));
+      } else {
+        gates.push(pass(projGate, { projectionsChecked: 5 }));
       }
     }
 

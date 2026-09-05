@@ -811,6 +811,22 @@ SEAL_DECISION="$(grep -oE 'SEAL_GO|SEAL_PENDING' <<< "$SEAL_OUTPUT" | tail -1)"
 [[ -n "$SEAL_DECISION" ]] || fail "seal-time-gate não emitiu decisão parseável"
 ok "Seal decision: $SEAL_DECISION"
 
+# ── GATE FINAL_STATUS_PROJECTION: projeções frescas ANTES de selar o payload ─
+# BLOCKER 2 (r-agent2-20260905-163709): as projeções derivadas (PLATFORM_STATUS,
+# ENTERPRISE_READINESS, RAP_MASTER_SCORECARD, latest.json, _platform-status-source)
+# foram regeneradas na fase DELIVERED (decisão DEFERRED/NO_GO, 76/78) e o PASS 3
+# empacotou esse estado STALE mesmo com a canônica já em 78/78 GO. O
+# generate-zip.sh captura o WORKING TREE (não um git ref), então a ordem aqui é
+# decisiva: DEPOIS do seal-time-gate (canônica final conhecida) e ANTES do
+# rebuild do ZIP final, regeneramos as 5 projeções a partir dos JSONs canônicos
+# e validamos — divergência aborta a release (FINAL_STATUS_PROJECTION_STALE).
+step "GATE final-status-projection: regenerando projeções derivadas da canônica pós-selo..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/generate-final-status-projections.js" \
+  || fail "generate-final-status-projections falhou — projeções não regeneradas a partir da canônica"
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-final-status-projection.js" \
+  || fail "FINAL_STATUS_PROJECTION_STALE — projeções derivadas divergem da canônica pós-selo"
+ok "Projeções derivadas consistentes com a canônica (capturadas pelo PASS 3)"
+
 # ══════════════════════════════════════════════════════════════════════════════
 pass "PASS 3 — RECONSTRUÇÃO DO PACOTE FINAL"
 # ══════════════════════════════════════════════════════════════════════════════

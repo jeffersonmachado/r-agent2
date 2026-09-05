@@ -28,11 +28,19 @@ function isFailureEvent(event = {}) {
   return /falha|erro|failed|failure|error|regression|bug/i.test(`${event.summary || ''} ${JSON.stringify(event.payload || {})}`);
 }
 
-function computeHealthSummary({ entity = {}, timeline = {}, insights = {}, actions = {}, incidents = {} }) {
+const SERVER_RISK_HEALTH = {
+  critical: { healthLabel: 'Crítico', healthTone: 'critical' },
+  attention: { healthLabel: 'Atenção', healthTone: 'warning' },
+  none: { healthLabel: 'Saudável', healthTone: 'healthy' },
+};
+
+function computeHealthSummary({ entity = {}, timeline = {}, insights = {}, actions = {}, incidents = {}, classification = 'DEVELOPMENT' }) {
   const items = timeline.items || [];
   const allInsights = [...(insights.items || []), ...(insights.persisted || [])];
   const actionItems = actions.items || [];
-  const autoRuns = incidents.items || [];
+  // Incident runs são dados de engenharia: apenas DEVELOPMENT os consome (o
+  // backend retorna 403 classification_forbidden para as demais classificações).
+  const autoRuns = classification === 'DEVELOPMENT' ? (incidents.items || []) : [];
   const now = Date.now();
   const latestEvent = items[0] || null;
   const openTickets = items.filter((item) => item.type === 'ticket' && /open|waiting|assigned|in_progress|paused/i.test(String(item.payload?.status || ''))).length;
@@ -52,8 +60,15 @@ function computeHealthSummary({ entity = {}, timeline = {}, insights = {}, actio
   score += recentMessages >= 3 ? 6 : recentMessages > 0 ? 2 : 0;
   score = Math.max(0, Math.min(100, Math.round(score)));
 
-  const healthLabel = score >= 75 ? 'Saudável' : score >= 45 ? 'Atenção' : 'Crítico';
-  const healthTone = score >= 75 ? 'healthy' : score >= 45 ? 'warning' : 'critical';
+  let healthLabel = score >= 75 ? 'Saudável' : score >= 45 ? 'Atenção' : 'Crítico';
+  let healthTone = score >= 75 ? 'healthy' : score >= 45 ? 'warning' : 'critical';
+  // Sem acesso aos incident runs, a saúde do cabeçalho deriva do summary
+  // sanitizado do servidor (entity.summary.riskLevel).
+  const serverRisk = classification !== 'DEVELOPMENT' ? SERVER_RISK_HEALTH[entity?.summary?.riskLevel] : null;
+  if (serverRisk) {
+    healthLabel = serverRisk.healthLabel;
+    healthTone = serverRisk.healthTone;
+  }
   const riskLevel = qaFailures > 0 || delayed > 0 ? (qaFailures > 0 ? 'Crítico' : 'Atenção') : 'Estável';
 
   return {
@@ -120,7 +135,8 @@ export function WorkspacePage() {
     insights,
     actions,
     incidents: incidentRuns,
-  }), [selectedEntity, timeline, insights, actions, incidentRuns]);
+    classification,
+  }), [selectedEntity, timeline, insights, actions, incidentRuns, classification]);
 
   const loadEntities = useCallback(async (nextQuery = query) => {
     setLoadingEntities(true);
@@ -141,16 +157,17 @@ export function WorkspacePage() {
 
   const loadEntityData = useCallback(async (entityId, offset = 0, append = false) => {
     if (!entityId) return;
+    const canViewIncidents = classification === 'DEVELOPMENT';
     setLoadingTimeline(true);
     setLoadingInsights(true);
     setLoadingActions(true);
-    setLoadingIncidentRuns(true);
+    if (canViewIncidents) setLoadingIncidentRuns(true);
     try {
       const [timelineResult, insightsResult, actionsResult, incidentRunsResult] = await Promise.all([
         getWorkspaceTimeline(entityId, { limit: 30, offset, type: tabType }),
         getWorkspaceInsights(entityId),
         getWorkspaceActions(entityId),
-        getWorkspaceIncidentRuns(entityId),
+        canViewIncidents ? getWorkspaceIncidentRuns(entityId) : Promise.resolve({ items: [], total: 0 }),
       ]);
       setTimeline((current) => append
         ? { ...timelineResult, items: [...(current.items || []), ...(timelineResult.items || [])] }
@@ -162,9 +179,9 @@ export function WorkspacePage() {
       setLoadingTimeline(false);
       setLoadingInsights(false);
       setLoadingActions(false);
-      setLoadingIncidentRuns(false);
+      if (canViewIncidents) setLoadingIncidentRuns(false);
     }
-  }, [tabType]);
+  }, [tabType, classification]);
 
   useEffect(() => {
     if (selectedEntityId) {

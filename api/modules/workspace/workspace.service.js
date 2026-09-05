@@ -21,9 +21,9 @@ function createWorkspaceService(deps = {}) {
     getEntity: (tenantId, entityId) => entityService.getEntity({ tenantId, entityId }),
     createEntity: (tenantId, body = {}) => entityService.getOrCreateEntityFromContact({ tenantId, contact: { type: body.type, name: body.name, phone: body.phone, email: body.email, source: body.source || 'workspace', refId: body.refId, raw: body.metadata || {} } }),
     linkEntity: (tenantId, body = {}) => entityService.linkEntity({ tenantId, entityId: body.entityId || body.entity_id, sourceType: body.sourceType || body.source_type, sourceId: body.sourceId || body.source_id, confidence: body.confidence ?? 1 }),
-    getTimeline: (tenantId, entityId, query = {}) => timelineService.getEntityTimeline({ tenantId, entityId, limit: query.limit, offset: query.offset, type: query.type }),
+    getTimeline: (tenantId, entityId, query = {}, { classification } = {}) => timelineService.getEntityTimeline({ tenantId, entityId, limit: query.limit, offset: query.offset, type: query.type, classification }),
     getInsights: async (tenantId, entityId, { classification } = {}) => {
-      const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0 });
+      const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0, internal: true });
       if (!timeline) return null;
       await autoCorrectionService.ensureForEntityFailures({ tenantId, entityId, timeline });
       return insightService.generateInsights(entityId, { tenantId, timeline, includeTechnical: classification === 'DEVELOPMENT' });
@@ -33,7 +33,7 @@ function createWorkspaceService(deps = {}) {
       return { items, suggestion };
     },
     getAutoCorrections: async (tenantId, entityId) => {
-      const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0 });
+      const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0, internal: true });
       if (!timeline) return null;
       await autoCorrectionService.ensureForEntityFailures({ tenantId, entityId, timeline });
       return autoCorrectionService.listRunsForEntity({ tenantId, entityId });

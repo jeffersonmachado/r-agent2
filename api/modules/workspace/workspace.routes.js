@@ -4,6 +4,10 @@ const express = require('express');
 const { createWorkspaceService } = require('./workspace.service');
 const { createWorkspaceController } = require('./workspace.controller');
 
+const WORKSPACE_ROUTE_CLASSIFICATIONS = {
+  'GET /workspace/entities/:id/autocorrections': 'DEVELOPMENT',
+};
+
 function createWorkspaceRoutes({ buildDeps }) {
   const router = express.Router();
   const service = createWorkspaceService();
@@ -38,4 +42,4 @@ function createWorkspaceRoutes({ buildDeps }) {
   return router;
 }
 
-module.exports = { createWorkspaceRoutes };
+module.exports = { createWorkspaceRoutes, WORKSPACE_ROUTE_CLASSIFICATIONS };

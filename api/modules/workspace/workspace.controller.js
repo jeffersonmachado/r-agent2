@@ -27,7 +27,7 @@ function createWorkspaceController({ service, deps }) {
     createEntity: (req, res) => run(req, res, 'write', async (tenantId) => deps.sendJson(res, 201, { ok: true, entity: await service.createEntity(tenantId, await body(req, res)) }), 201),
     linkEntity: (req, res) => run(req, res, 'write', async (tenantId) => deps.sendJson(res, 201, { ok: true, link: await service.linkEntity(tenantId, await body(req, res)) }), 201),
     timeline: (req, res) => run(req, res, 'read', async (tenantId) => {
-      const result = await service.getTimeline(tenantId, req.params.id, query(req));
+      const result = await service.getTimeline(tenantId, req.params.id, query(req), { classification: getClassificationForAgent(req.agent) });
       if (!result) return deps.sendJson(res, 404, { error: 'not_found', message: 'Entidade nao encontrada' });
       deps.sendJson(res, 200, { ok: true, ...result });
     }),
@@ -37,6 +37,9 @@ function createWorkspaceController({ service, deps }) {
       deps.sendJson(res, 200, { ok: true, ...result });
     }),
     autocorrections: (req, res) => run(req, res, 'insight', async (tenantId) => {
+      if (getClassificationForAgent(req.agent) !== 'DEVELOPMENT') {
+        return deps.sendJson(res, 403, { error: 'classification_forbidden' });
+      }
       const result = await service.getAutoCorrections(tenantId, req.params.id);
       if (!result) return deps.sendJson(res, 404, { error: 'not_found', message: 'Entidade nao encontrada' });
       deps.sendJson(res, 200, { ok: true, ...result });

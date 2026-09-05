@@ -81,7 +81,7 @@ class WorkspaceInsightService {
   async generateInsights(entityId, options = {}) {
     const tenantId = options.tenantId;
     const includeTechnical = options.includeTechnical === true;
-    const timeline = options.timeline || await this.timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0 });
+    const timeline = options.timeline || await this.timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0, internal: true });
     if (!timeline) return null;
 
     const events = timeline.items || [];

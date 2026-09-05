@@ -1428,6 +1428,11 @@ function buildReport() {
 
   const report = {
     generatedAt: NOW,
+    // Lineage do run governado: as projeções persistidas (latest.json,
+    // _platform-status-source.json) carregam runId/sourceFingerprint para o
+    // gate FINAL_STATUS_PROJECTION_STALE detectar projeção de outro run.
+    runId: proofReport?.runId || null,
+    sourceFingerprint: proofReport?.sourceFingerprint || null,
     finalDecision,
     platformMaturity,
     canonicalMeshExecutionId: meshSummary.executionId,
@@ -1680,5 +1685,6 @@ module.exports = {
   hasProvenCrmMutation,
   persistReport,
   REQUIRED_REPLAY_JOURNEYS,
+  toMarkdownSections,
   _internal: { _computeMandatoryDecision },
 };

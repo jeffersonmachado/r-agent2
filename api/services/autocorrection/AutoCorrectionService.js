@@ -143,7 +143,7 @@ class AutoCorrectionService {
   }
 
   async ensureForEntityFailures({ tenantId, entityId, timeline = null }) {
-    const resolvedTimeline = timeline || (await this.timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0 }));
+    const resolvedTimeline = timeline || (await this.timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0, internal: true }));
     const items = resolvedTimeline?.items || [];
     const failedEvents = items.filter((event) => event.type === 'evidence' && this.isFailureEvent(event));
 

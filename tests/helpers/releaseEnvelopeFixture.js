@@ -57,7 +57,16 @@ function buildScorecard(below10Ids = [], lin = lineage) {
     const id = `RAP-${String(i).padStart(3, '0')}`;
     dimensions.push({ id, name: id, score: below10Ids.includes(id) ? 6 : 10, target: 10 });
   }
-  return { ...lin('rap-master-scorecard'), schema: 'rap-master-scorecard/v2', dimensions, blockers: [], gaps: [] };
+  const at10 = 78 - below10Ids.length;
+  return {
+    ...lin('rap-master-scorecard'),
+    schema: 'rap-master-scorecard/v2',
+    overallStatus: below10Ids.length > 0 ? 'IN_PROGRESS' : 'VERIFIED',
+    summary: { totalDimensions: 78, dimensionsAt10: at10, dimensionsBelow10: below10Ids.length },
+    dimensions,
+    blockers: [],
+    gaps: [],
+  };
 }
 
 /**
@@ -100,6 +109,12 @@ function buildScorecard(below10Ids = [], lin = lineage) {
  *   buildEnvelope        constrói o envelope zip físico (release_hygiene)
  *   envelopeExtraFiles   { path: content } extras dentro do envelope zip
  *                        (ex.: 'r-agent2/dist/verifier/verify-result.json' → Caso A/B)
+ *   omitPayloadProjections  payload sem as projeções derivadas (docs + latest.json)
+ *   projectionDecision   finalDecision das projeções embutidas (default = payloadDecision)
+ *   projectionStatusDecision  "Readiness decision" do PLATFORM_STATUS.md embutido
+ *   projectionScorecardMdAt10  valor da linha "10/10:" do scorecard MD embutido
+ *   projectionScorecardMdStatus  "Overall status" do scorecard MD embutido
+ *   projectionRunId / projectionSourceFingerprint  lineage das projeções embutidas
  */
 function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
   const RELEASE = identity.releaseId || RELEASE_ID;
@@ -165,7 +180,8 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
       selfProofStatus: (tamper.payloadSelfProofPass === false) ? 'FAIL' : 'PASS',
       overallSelfProofScore: 100,
     });
-    writeJson(path.join(govDir, 'rap-master-scorecard.json'), buildScorecard(tamper.scorecardBelow10 || [], lin));
+    const payloadScorecard = buildScorecard(tamper.scorecardBelow10 || [], lin);
+    writeJson(path.join(govDir, 'rap-master-scorecard.json'), payloadScorecard);
     writeJson(path.join(govDir, 'final-proof-report.json'), {
       ...lin('final-proof-report'),
       finalDecision: tamper.payloadProofDecision || payloadDecision,
@@ -218,6 +234,57 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
           },
         ],
       });
+    }
+
+    // Projeções derivadas da canônica embutida (gate final_status_projection_consistency):
+    // docs + latest.json devem refletir decisão/score/runId/fingerprint da
+    // governança canônica do payload. Tamper options adulteram UM aspecto.
+    if (!tamper.omitPayloadProjections) {
+      const projDecision = tamper.projectionDecision || payloadDecision;
+      const projRunId = tamper.projectionRunId || payloadRunId;
+      const projFp = tamper.projectionSourceFingerprint || payloadFp;
+      const scAt10 = tamper.projectionScorecardMdAt10 ?? payloadScorecard.summary.dimensionsAt10;
+      const scStatusMd = tamper.projectionScorecardMdStatus || payloadScorecard.overallStatus;
+      const statusDecision = tamper.projectionStatusDecision || projDecision;
+      const docsDir = path.join(payloadTree, 'r-agent2', 'docs');
+      const scorecardMd = [
+        '# RAP Master Scorecard',
+        '',
+        `- Generated at: ${payloadScorecard.generatedAt}`,
+        `- Run ID: ${projRunId}`,
+        `- Source fingerprint: ${projFp}`,
+        `- Overall status: **${scStatusMd}**`,
+        `- Dimensions: ${payloadScorecard.summary.totalDimensions}`,
+        `- 10/10: ${scAt10}`,
+        `- Below 10: ${payloadScorecard.summary.dimensionsBelow10}`,
+        '',
+      ].join('\n');
+      fs.mkdirSync(path.join(docsDir, 'architecture'), { recursive: true });
+      fs.mkdirSync(path.join(docsDir, 'governance'), { recursive: true });
+      fs.writeFileSync(path.join(docsDir, 'architecture', 'RAP_MASTER_SCORECARD.md'), scorecardMd);
+      fs.writeFileSync(path.join(docsDir, 'governance', 'PLATFORM_STATUS.md'), [
+        '# Platform Status',
+        '',
+        `- Generated at: ${payloadScorecard.generatedAt}`,
+        `- Readiness decision: ${statusDecision}`,
+        '- Readiness score: 100',
+        '',
+      ].join('\n'));
+      fs.writeFileSync(path.join(docsDir, 'governance', 'ENTERPRISE_READINESS.md'), [
+        '# Enterprise Readiness',
+        '',
+        `- Decision: ${projDecision}`,
+        '',
+      ].join('\n'));
+      const statusSource = {
+        generatedAt: payloadScorecard.generatedAt,
+        runId: projRunId,
+        sourceFingerprint: projFp,
+        finalDecision: projDecision,
+        productionReadiness: { status: projDecision },
+      };
+      writeJson(path.join(docsDir, 'governance', '_platform-status-source.json'), statusSource);
+      writeJson(path.join(payloadTree, 'r-agent2', 'dev', 'platform-readiness', 'latest.json'), statusSource);
     }
   }
 
