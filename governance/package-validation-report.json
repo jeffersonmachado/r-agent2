@@ -1,24 +1,9 @@
 {
-  "generatedAt": "2026-09-05T19:40:41.129Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260905-163709.payload.zip",
-  "zipName": "r-agent2-20260905-163709.payload.zip",
-  "zipSha256": "3c2713c2fba9d31a5c46fcab0a6404768bf630e88486b64b205d65116de91e66",
-  "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260905-163709.zip",
-  "selectionMode": "audited",
-  "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260905-163709.manifest.json",
-  "manifestAudit": "passed",
-  "auditSatisfied": true,
-  "selfContainmentCheck": {
-    "passed": true,
-    "missing": []
-  },
+  "generatedAt": "2026-09-05T20:48:28.501Z",
+  "ok": false,
+  "zipPath": null,
+  "zipName": null,
   "requiredEntries": [
-    "governance/final-proof-report.json",
-    "governance/evidence-manifest.json",
-    "governance/blocker-engine.js",
-    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -41,21 +26,15 @@
     "governance/final-readiness-report.json",
     "governance/experience-segregation-report.json"
   ],
-  "entryCount": 5948,
   "missingEntries": [],
-  "ok": true,
-  "error": null,
-  "packageBinding": {
-    "boundTo": "r-agent2-20260905-163709.payload.zip",
-    "sha256": "3c2713c2fba9d31a5c46fcab0a6404768bf630e88486b64b205d65116de91e66",
-    "immutable": true,
-    "selfProving": true,
-    "offlineAuditable": true
-  },
+  "error": "artifact_missing:none_found_in_dist",
+  "deferred": true,
+  "phase": "PRE_PACKAGE",
+  "status": "DEFERRED",
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260905193233775-79c723de",
-  "sourceFingerprint": "530e7ac791a0aa8bab7fb66521a282f1581c90cd51e78305803ccaa5d76f3558",
-  "gitCommit": "e4b2c83fd1799d2799b03794e180cd56c4fa134f",
-  "gitTree": "111eb1817bba26a0f755e200b654802582037a9c"
+  "runId": "rap-governed-20260905205026704-3b5f8481",
+  "sourceFingerprint": "bd5064445cdf689ef7b3f622130411043eb4ff48186b8cee9aa771c7a847b6d9",
+  "gitCommit": "5af4a30308feb767e7194bf39feb937da9c899c1",
+  "gitTree": "ceedda98fe2252841b654634445754e52cb34bc3"
 }
