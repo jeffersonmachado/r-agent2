@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "id": "gap-proof-invalid-artifact-semantics",
+    "severity": "critical",
+    "area": "proof-governance",
+    "title": "Proof artifacts presentes mas semanticamente invalidos (presenca != validade)",
+    "evidence": {
+      "count": 1,
+      "artifacts": [
+        {
+          "id": "final_readiness",
+          "path": "governance/final-readiness-report.json",
+          "violations": [
+            "status_no_go"
+          ]
+        }
+      ]
+    },
+    "suggestedFix": "Corrigir o conteudo dos artifacts (ok/valid/status, assertions, snapshots) e regerar as evidencias."
+  }
+]
