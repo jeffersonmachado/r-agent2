@@ -9,8 +9,9 @@
 'use strict';
 
 const crypto = require('crypto');
+const { Op, QueryTypes } = require('sequelize');
 const { getSequelize } = require('../db/sequelize');
-const { ChannelConversation, ChannelMessage, Ticket } = require('../db/models');
+const { ChannelConversation, ChannelMessage, Ticket, WorkspaceEntity, WorkspaceEntityLink } = require('../db/models');
 const logger = require('../utils/logger');
 const { backfillPersistedMessageMedia, resolveWhatsAppAccountForBackfill } = require('./channelGatewayService');
 
@@ -25,6 +26,105 @@ function safeToString(value, fallback = '') {
 
 function dbAvailable() {
   return !!getSequelize();
+}
+
+function escapeILikePattern(value) {
+  // PostgreSQL usa '\' como escape padrão de LIKE/ILIKE.
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
+function isWhatsAppLikeChannel(channelType) {
+  return safeToString(channelType).trim().toLowerCase().startsWith('whatsapp');
+}
+
+function resolveContactName(metadata, entityName) {
+  const fromMetadata = safeToString(metadata && (metadata.contactName || metadata.senderName)).trim();
+  if (fromMetadata) return fromMetadata;
+  const fromEntity = safeToString(entityName).trim();
+  return fromEntity || null;
+}
+
+function resolveUnreadCount(metadata) {
+  const unread = metadata && typeof metadata.unread === 'object' ? metadata.unread : null;
+  const count = unread ? Number(unread.count) : 0;
+  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+}
+
+/**
+ * Última mensagem de cada conversa da página em UMA query (DISTINCT ON),
+ * evitando N+1 por row.
+ */
+async function fetchLastMessagesByConversation({ sequelize, tenantId, conversationIds }) {
+  const map = new Map();
+  if (!sequelize || typeof sequelize.query !== 'function' || conversationIds.length === 0) return map;
+
+  const rows = await sequelize.query(
+    `SELECT DISTINCT ON (conversation_id) conversation_id, body, type, direction, created_at
+     FROM channel_messages
+     WHERE tenant_key = :tenantId AND conversation_id IN (:conversationIds)
+     ORDER BY conversation_id, created_at DESC`,
+    {
+      replacements: { tenantId, conversationIds },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  for (const row of rows || []) {
+    if (!row || !row.conversation_id) continue;
+    const body = row.body && typeof row.body === 'object' ? row.body : {};
+    const text = body.text != null ? safeToString(body.text).trim() : '';
+    map.set(safeToString(row.conversation_id), {
+      text: text || null,
+      type: safeToString(row.type, 'text') || 'text',
+      direction: safeToString(row.direction, 'in') || 'in',
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+    });
+  }
+  return map;
+}
+
+/**
+ * Nome do contato via WorkspaceEntityLink (source_type 'conversation') →
+ * WorkspaceEntity.name, em 2 queries batched para toda a página (sem N+1).
+ */
+async function fetchEntityNamesByConversation({ tenantId, conversationIds }) {
+  const map = new Map();
+  if (conversationIds.length === 0 || !WorkspaceEntityLink || !WorkspaceEntity) return map;
+
+  const LinkModel = typeof WorkspaceEntityLink === 'function' ? WorkspaceEntityLink() : WorkspaceEntityLink;
+  const EntityModel = typeof WorkspaceEntity === 'function' ? WorkspaceEntity() : WorkspaceEntity;
+  if (!LinkModel || typeof LinkModel.findAll !== 'function') return map;
+  if (!EntityModel || typeof EntityModel.findAll !== 'function') return map;
+
+  const sequelize = LinkModel.sequelize || (EntityModel && EntityModel.sequelize) || getSequelize();
+  const LinkOp = (sequelize && sequelize.constructor && sequelize.constructor.Op) || Op;
+
+  const links = await LinkModel.findAll({
+    where: {
+      tenant_id: tenantId,
+      source_type: 'conversation',
+      source_id: { [LinkOp.in]: conversationIds },
+    },
+    attributes: ['source_id', 'entity_id'],
+  });
+
+  const entityIds = Array.from(new Set((links || []).map((l) => l && l.entity_id).filter(Boolean)));
+  if (entityIds.length === 0) return map;
+
+  const entities = await EntityModel.findAll({
+    where: { tenant_id: tenantId, id: { [LinkOp.in]: entityIds } },
+    attributes: ['id', 'name'],
+  });
+  const nameByEntity = new Map((entities || []).map((e) => [e.id, e.name]));
+
+  for (const link of links || []) {
+    if (!link || !link.source_id) continue;
+    const name = nameByEntity.get(link.entity_id);
+    if (name && !map.has(link.source_id)) {
+      map.set(safeToString(link.source_id), name);
+    }
+  }
+  return map;
 }
 
 function buildInternalMediaUrl(mediaId) {
@@ -62,7 +162,7 @@ function enrichBodyMediaUrl(body) {
   return next;
 }
 
-async function listConversations({ tenantId, status = null, channelType = null, queue = null, limit = 100, offset = 0 } = {}) {
+async function listConversations({ tenantId, status = null, channelType = null, queue = null, q = null, limit = 100, offset = 0 } = {}) {
   if (!tenantId || typeof tenantId !== 'string') {
     throw new Error('tenantId é obrigatório');
   }
@@ -81,6 +181,17 @@ async function listConversations({ tenantId, status = null, channelType = null, 
   const channelTypeValue = safeToString(channelType).trim();
   if (statusValue) where.status = statusValue;
   if (channelTypeValue) where.channel_type = channelTypeValue;
+
+  const qValue = safeToString(q).trim();
+  if (qValue) {
+    const pattern = `%${escapeILikePattern(qValue)}%`;
+    where[Op.or] = [
+      { external_id: { [Op.iLike]: pattern } },
+      { contact_id: { [Op.iLike]: pattern } },
+      { 'metadata.contactName': { [Op.iLike]: pattern } },
+      { 'metadata.senderName': { [Op.iLike]: pattern } },
+    ];
+  }
 
   const queueValue = safeToString(queue).trim();
   if (queueValue) {
@@ -106,20 +217,52 @@ async function listConversations({ tenantId, status = null, channelType = null, 
     offset: safeOffset,
   });
 
-  const items = rows.map(r => ({
-    id: r.id,
-    tenantId: r.tenant_key,
-    channelType: r.channel_type,
-    externalId: r.external_id,
-    contactId: r.contact_id || null,
-    status: r.status,
-    currentTicketId: r.current_ticket_id || null,
-    assignedTo: r.assigned_to || null,
-    metadata: r.metadata && typeof r.metadata === 'object' ? r.metadata : {},
-    lastMessageAt: r.last_message_at ? new Date(r.last_message_at).toISOString() : null,
-    createdAt: r.created_at ? new Date(r.created_at).toISOString() : (r.createdAt?.toISOString?.() || null),
-    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : (r.updatedAt?.toISOString?.() || null),
-  }));
+  const conversationIds = rows.map((r) => r && r.id).filter(Boolean);
+
+  // Enrichment best-effort: falha na query batched não derruba a listagem.
+  let lastMessageByConversation = new Map();
+  try {
+    lastMessageByConversation = await fetchLastMessagesByConversation({ sequelize, tenantId, conversationIds });
+  } catch (err) {
+    logger.warn('[channelConversationService] Falha ao buscar últimas mensagens da página (best-effort)', {
+      tenantId,
+      error: safeToString(err && err.message),
+    });
+  }
+
+  let entityNameByConversation = new Map();
+  try {
+    entityNameByConversation = await fetchEntityNamesByConversation({ tenantId, conversationIds });
+  } catch (err) {
+    logger.warn('[channelConversationService] Falha ao resolver nomes de contato via workspace (best-effort)', {
+      tenantId,
+      error: safeToString(err && err.message),
+    });
+  }
+
+  const items = rows.map(r => {
+    const metadata = r.metadata && typeof r.metadata === 'object' ? r.metadata : {};
+    return {
+      id: r.id,
+      tenantId: r.tenant_key,
+      channelType: r.channel_type,
+      externalId: r.external_id,
+      contactId: r.contact_id || null,
+      status: r.status,
+      currentTicketId: r.current_ticket_id || null,
+      assignedTo: r.assigned_to || null,
+      metadata,
+      contactName: resolveContactName(metadata, entityNameByConversation.get(r.id)),
+      phoneNumber: isWhatsAppLikeChannel(r.channel_type)
+        ? (safeToString(r.contact_id || r.external_id).trim() || null)
+        : null,
+      lastMessage: lastMessageByConversation.get(r.id) || null,
+      unreadCount: resolveUnreadCount(metadata),
+      lastMessageAt: r.last_message_at ? new Date(r.last_message_at).toISOString() : null,
+      createdAt: r.created_at ? new Date(r.created_at).toISOString() : (r.createdAt?.toISOString?.() || null),
+      updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : (r.updatedAt?.toISOString?.() || null),
+    };
+  });
 
   return { total: count, items };
 }
@@ -177,6 +320,80 @@ async function updateConversation({ tenantId, conversationId, patch = {} } = {})
   return mapConversationRow(row);
 }
 
+/**
+ * Emissão de eventos de conversa via WebSocket: sempre best-effort
+ * (nunca quebra o request path, inclusive quando o WS não está inicializado).
+ */
+function emitConversationEvent(event, payload, options = {}) {
+  try {
+    // Lazy require para evitar ciclos de módulos.
+    // eslint-disable-next-line global-require
+    const { emitEvent } = require('./websocketService');
+    emitEvent(event, payload, options);
+  } catch (err) {
+    logger.warn('[channelConversationService] Falha ao emitir evento de conversa (best-effort)', {
+      event,
+      error: safeToString(err && err.message),
+    });
+  }
+}
+
+/**
+ * Atividade de mensagem inbound persistida:
+ * 1. incrementa metadata.unread.count + metadata.unread.lastInboundAt (merge
+ *    seguro, sem clobber das demais chaves de metadata);
+ * 2. emite conversation.message.received no WebSocket do tenant.
+ * Tudo best-effort: falhas são logadas e nunca quebram a persistência.
+ */
+async function registerInboundMessageActivity({ tenantId, conversationId, channelType, message = {} } = {}) {
+  if (!tenantId || !conversationId) return;
+
+  try {
+    if (dbAvailable()) {
+      const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
+      const row = await ConversationModel.findOne({
+        where: { tenant_key: tenantId, id: safeToString(conversationId) },
+      });
+      if (row && typeof row.update === 'function') {
+        const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+        const unread = metadata.unread && typeof metadata.unread === 'object' ? metadata.unread : {};
+        await row.update({
+          metadata: {
+            ...metadata,
+            unread: {
+              ...unread,
+              count: resolveUnreadCount(metadata) + 1,
+              lastInboundAt: new Date().toISOString(),
+            },
+          },
+          updated_at: new Date(),
+        });
+      }
+    }
+  } catch (err) {
+    logger.warn('[channelConversationService] Falha ao incrementar unread da conversa (best-effort)', {
+      tenantId,
+      conversationId,
+      error: safeToString(err && err.message),
+    });
+  }
+
+  const body = message.body && typeof message.body === 'object' ? message.body : {};
+  const text = body.text != null ? safeToString(body.text).slice(0, 200) : null;
+  emitConversationEvent('conversation.message.received', {
+    conversationId,
+    channelType: safeToString(channelType, 'unknown') || 'unknown',
+    tenantId,
+    message: {
+      id: message.id || null,
+      direction: message.direction || 'in',
+      type: safeToString(message.type, 'text') || 'text',
+      text,
+      createdAt: message.createdAt || new Date().toISOString(),
+    },
+  }, { tenantId });
+}
+
 async function createMessage({ tenantId, conversationId, channelType, direction, type, body = {}, externalMessageId = null, status = null } = {}) {
   if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
   if (!conversationId || typeof conversationId !== 'string') throw new Error('conversationId é obrigatório');
@@ -214,6 +431,21 @@ async function createMessage({ tenantId, conversationId, channelType, direction,
     );
   } catch (_) {
     // não falhar a persistência da mensagem por causa do touch da conversa
+  }
+
+  if (dir === 'in') {
+    await registerInboundMessageActivity({
+      tenantId,
+      conversationId,
+      channelType,
+      message: {
+        id: row.id,
+        direction: dir,
+        type: row.type,
+        body: row.body || {},
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : now.toISOString(),
+      },
+    });
   }
 
   return {
@@ -335,5 +567,6 @@ module.exports = {
   getConversation,
   updateConversation,
   createMessage,
+  registerInboundMessageActivity,
 };
 

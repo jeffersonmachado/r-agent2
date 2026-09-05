@@ -22,6 +22,7 @@ function createInboxRoutes({ buildDeps }) {
   router.post('/inbox/conversations/:conversationId/reply', (req, res) => controllerFor(req, res).reply(req, res));
   router.post('/inbox/conversations/:conversationId/assign', (req, res) => controllerFor(req, res).assign(req, res));
   router.post('/inbox/conversations/:conversationId/transfer', (req, res) => controllerFor(req, res).transfer(req, res));
+  router.post('/inbox/conversations/:conversationId/status', (req, res) => controllerFor(req, res).setStatus(req, res));
   router.post('/inbox/conversations/:conversationId/notes', (req, res) => controllerFor(req, res).notes(req, res));
   router.post(
     '/inbox/conversations/:conversationId/case',

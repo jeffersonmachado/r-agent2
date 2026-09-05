@@ -9,7 +9,7 @@ function formatDate(value) {
   }
 }
 
-export function WorkspaceHeader({ entity, summary, onCreateTask, onCreateFollowUp }) {
+export function WorkspaceHeader({ entity, summary, onCreateTask, onCreateFollowUp, onRegisterPayment, onSchedule }) {
   if (!entity) {
     return (
       <header className="workspace-header">
@@ -45,7 +45,9 @@ export function WorkspaceHeader({ entity, summary, onCreateTask, onCreateFollowU
         </div>
         <div className="workspace-header-button-row">
           <button className="workspace-secondary-button" type="button" onClick={onCreateTask}>Criar tarefa</button>
-          <button className="workspace-action-button" type="button" onClick={onCreateFollowUp}>Criar follow-up</button>
+          <button className="workspace-secondary-button" type="button" onClick={onCreateFollowUp}>Criar follow-up</button>
+          <button className="workspace-secondary-button" type="button" onClick={onRegisterPayment}>Registrar pagamento</button>
+          <button className="workspace-action-button" type="button" onClick={onSchedule}>Agendar</button>
         </div>
       </div>
     </header>

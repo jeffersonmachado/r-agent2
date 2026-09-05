@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  createPaymentEvent,
+  createResourceBooking,
   createWorkspaceAction,
   createWorkspaceEntity,
+  createWorkspaceTask,
   executeWorkspaceAutoActions,
   getWorkspaceActions,
   getWorkspaceIncidentRuns,
@@ -10,8 +13,15 @@ import {
   listWorkspaceEntities,
 } from '../api/workspace';
 import { WorkspaceLayout } from '../modules/workspace/WorkspaceLayout';
+import {
+  PaymentActionModal,
+  ScheduleActionModal,
+  TaskActionModal,
+} from '../modules/workspace/WorkspaceActionModals';
 import { getWorkspaceTabEventType } from '../modules/workspace/workspaceDevSurface';
 import { useAuth } from '../context/authContext';
+import { useRouter } from '../hooks/useRouter';
+import { useToast } from '../components/Toast';
 import { getAgentClassification } from '../utils/classification';
 
 function isFailureEvent(event = {}) {
@@ -68,6 +78,8 @@ function computeHealthSummary({ entity = {}, timeline = {}, insights = {}, actio
 export function WorkspacePage() {
   const { agent } = useAuth();
   const classification = getAgentClassification(agent);
+  const { navigate } = useRouter();
+  const { showToast, ToastContainer } = useToast();
   const [entities, setEntities] = useState([]);
   const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [query, setQuery] = useState('');
@@ -77,7 +89,8 @@ export function WorkspacePage() {
   const [insights, setInsights] = useState({ items: [], persisted: [] });
   const [actions, setActions] = useState({ items: [], suggestion: null });
   const [incidentRuns, setIncidentRuns] = useState({ items: [], total: 0 });
-  const [entitySummaries, setEntitySummaries] = useState({});
+  const [actionModal, setActionModal] = useState(null);
+  const [submittingAction, setSubmittingAction] = useState(false);
   const [loadingEntities, setLoadingEntities] = useState(false);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [loadingInsights, setLoadingInsights] = useState(false);
@@ -87,12 +100,12 @@ export function WorkspacePage() {
   const tabType = useMemo(() => getWorkspaceTabEventType(activeTab), [activeTab]);
 
   const filteredEntities = useMemo(() => entities.filter((entity) => {
-    const summary = entitySummaries[entity.id] || {};
-    if (sidebarFilter === 'risk') return summary.healthTone === 'critical' || summary.healthTone === 'warning';
-    if (sidebarFilter === 'qa') return summary.hasQaFailure;
-    if (sidebarFilter === 'active') return summary.status !== 'inativo';
+    const riskLevel = entity.summary?.riskLevel || 'none';
+    if (sidebarFilter === 'risk') return riskLevel === 'attention' || riskLevel === 'critical';
+    if (sidebarFilter === 'qa') return riskLevel === 'critical';
+    if (sidebarFilter === 'active') return riskLevel !== 'critical';
     return true;
-  }), [entities, entitySummaries, sidebarFilter]);
+  }), [entities, sidebarFilter]);
 
   const selectedEntity = useMemo(
     () => filteredEntities.find((entity) => entity.id === selectedEntityId)
@@ -145,29 +158,26 @@ export function WorkspacePage() {
       setInsights(insightsResult);
       setActions(actionsResult);
       setIncidentRuns(incidentRunsResult);
-      setEntitySummaries((current) => ({
-        ...current,
-        [entityId]: computeHealthSummary({
-          entity: entities.find((item) => item.id === entityId) || { id: entityId },
-          timeline: timelineResult,
-          insights: insightsResult,
-          actions: actionsResult,
-          incidents: incidentRunsResult,
-        }),
-      }));
     } finally {
       setLoadingTimeline(false);
       setLoadingInsights(false);
       setLoadingActions(false);
       setLoadingIncidentRuns(false);
     }
-  }, [entities, tabType]);
+  }, [tabType]);
 
   useEffect(() => {
     if (selectedEntityId) {
       loadEntityData(selectedEntityId, 0, false);
     }
   }, [selectedEntityId, loadEntityData, tabType]);
+
+  const refreshWorkspace = useCallback(async () => {
+    await loadEntities(query);
+    if (selectedEntityId) {
+      await loadEntityData(selectedEntityId, 0, false);
+    }
+  }, [loadEntities, loadEntityData, query, selectedEntityId]);
 
   const handleCreateDemo = useCallback(async () => {
     const suffix = new Date().toISOString().slice(11, 19).replace(/:/g, '');
@@ -202,57 +212,150 @@ export function WorkspacePage() {
     setActions(result);
   }, [selectedEntityId]);
 
-  const handleCreateTask = useCallback(async () => {
-    if (!selectedEntityId) return;
-    await createWorkspaceAction({
-      entityId: selectedEntityId,
-      type: 'task',
-      status: 'pending',
-      payload: { title: 'Nova tarefa criada no Workspace', source: 'workspace_header' },
-    });
-    setActions(await getWorkspaceActions(selectedEntityId));
-  }, [selectedEntityId]);
+  const closeActionModal = useCallback(() => setActionModal(null), []);
 
-  const handleCreateFollowUp = useCallback(async () => {
+  const runModalSubmit = useCallback(async (fn, successMessage, errorMessage) => {
     if (!selectedEntityId) return;
-    await createWorkspaceAction({
-      entityId: selectedEntityId,
-      type: 'followup',
-      status: 'pending',
-      payload: { title: 'Novo follow-up criado no Workspace', source: 'workspace_header' },
-    });
-    setActions(await getWorkspaceActions(selectedEntityId));
-  }, [selectedEntityId]);
+    setSubmittingAction(true);
+    try {
+      await fn();
+      showToast(successMessage, 'success');
+      closeActionModal();
+      await refreshWorkspace();
+    } catch {
+      showToast(errorMessage, 'error');
+    } finally {
+      setSubmittingAction(false);
+    }
+  }, [selectedEntityId, showToast, closeActionModal, refreshWorkspace]);
+
+  const handleSubmitTask = useCallback(async ({ title, description, dueDate, taskType }) => {
+    await runModalSubmit(
+      () => createWorkspaceTask({
+        entityId: selectedEntityId,
+        title,
+        description: description || undefined,
+        dueDate: dueDate || undefined,
+        type: taskType === 'followup' ? 'followup' : 'manual',
+      }),
+      taskType === 'followup' ? 'Follow-up criado com sucesso.' : 'Tarefa criada com sucesso.',
+      'Não foi possível salvar. Tente novamente.',
+    );
+  }, [selectedEntityId, runModalSubmit]);
+
+  const handleSubmitPayment = useCallback(async ({ amount, method, description }) => {
+    await runModalSubmit(
+      () => createPaymentEvent({
+        entityId: selectedEntityId,
+        amount,
+        status: 'pending',
+        type: 'payment',
+        metadata: { ...(method ? { method } : {}), ...(description ? { description } : {}) },
+      }),
+      'Pagamento registrado com sucesso.',
+      'Não foi possível registrar o pagamento.',
+    );
+  }, [selectedEntityId, runModalSubmit]);
+
+  const handleSubmitBooking = useCallback(async ({ resourceId, startsAt, endsAt, notes }) => {
+    await runModalSubmit(
+      () => createResourceBooking({
+        entityId: selectedEntityId,
+        resourceId,
+        startsAt,
+        endsAt,
+        metadata: notes ? { notes } : {},
+      }),
+      'Agendamento criado com sucesso.',
+      'Não foi possível criar o agendamento.',
+    );
+  }, [selectedEntityId, runModalSubmit]);
+
+  const handleExecuteSuggestion = useCallback((suggestion) => {
+    const action = suggestion?.action;
+    if (!action?.kind) {
+      handleCreateSuggestedAction(suggestion);
+      return;
+    }
+    if (action.kind === 'send_message') {
+      if (action.conversationId) {
+        navigate(`/inbox?conversationId=${encodeURIComponent(action.conversationId)}`);
+      }
+      return;
+    }
+    if (action.kind === 'schedule') {
+      setActionModal({ kind: 'schedule' });
+      return;
+    }
+    if (action.kind === 'create_task') {
+      setActionModal({ kind: 'task', taskType: 'task', prefillTitle: action.label || suggestion.label });
+      return;
+    }
+    if (action.kind === 'register_payment') {
+      setActionModal({ kind: 'payment' });
+      return;
+    }
+    if (action.kind === 'review_timeline') {
+      setActiveTab('Timeline');
+      return;
+    }
+    handleCreateSuggestedAction(suggestion);
+  }, [handleCreateSuggestedAction, navigate]);
 
   return (
-    <WorkspaceLayout
-      entities={filteredEntities}
-      selectedEntity={selectedEntity}
-      selectedSummary={selectedSummary}
-      selectedEntityId={selectedEntityId}
-      entitySummaries={entitySummaries}
-      loadingEntities={loadingEntities}
-      query={query}
-      sidebarFilter={sidebarFilter}
-      activeTab={activeTab}
-      timeline={timeline}
-      insights={insights}
-      actions={actions}
-      incidents={incidentRuns}
-      loadingTimeline={loadingTimeline}
-      loadingInsights={loadingInsights}
-      loadingActions={loadingActions}
-      loadingIncidents={loadingIncidentRuns}
-      classification={classification}
-      onQueryChange={setQuery}
-      onSidebarFilterChange={setSidebarFilter}
-      onSelectEntity={setSelectedEntityId}
-      onTabChange={setActiveTab}
-      onCreateDemo={handleCreateDemo}
-      onLoadMoreTimeline={handleLoadMoreTimeline}
-      onCreateSuggestedAction={handleCreateSuggestedAction}
-      onCreateTask={handleCreateTask}
-      onCreateFollowUp={handleCreateFollowUp}
-    />
+    <>
+      <WorkspaceLayout
+        entities={filteredEntities}
+        selectedEntity={selectedEntity}
+        selectedSummary={selectedSummary}
+        selectedEntityId={selectedEntityId}
+        loadingEntities={loadingEntities}
+        query={query}
+        sidebarFilter={sidebarFilter}
+        activeTab={activeTab}
+        timeline={timeline}
+        insights={insights}
+        actions={actions}
+        incidents={incidentRuns}
+        loadingTimeline={loadingTimeline}
+        loadingInsights={loadingInsights}
+        loadingActions={loadingActions}
+        loadingIncidents={loadingIncidentRuns}
+        classification={classification}
+        onQueryChange={setQuery}
+        onSidebarFilterChange={setSidebarFilter}
+        onSelectEntity={setSelectedEntityId}
+        onTabChange={setActiveTab}
+        onCreateDemo={handleCreateDemo}
+        onLoadMoreTimeline={handleLoadMoreTimeline}
+        onCreateSuggestedAction={handleCreateSuggestedAction}
+        onExecuteSuggestion={handleExecuteSuggestion}
+        onCreateTask={() => setActionModal({ kind: 'task', taskType: 'task' })}
+        onCreateFollowUp={() => setActionModal({ kind: 'task', taskType: 'followup' })}
+        onRegisterPayment={() => setActionModal({ kind: 'payment' })}
+        onSchedule={() => setActionModal({ kind: 'schedule' })}
+      />
+      <TaskActionModal
+        isOpen={actionModal?.kind === 'task'}
+        taskType={actionModal?.taskType || 'task'}
+        prefillTitle={actionModal?.prefillTitle || ''}
+        submitting={submittingAction}
+        onClose={closeActionModal}
+        onSubmit={handleSubmitTask}
+      />
+      <PaymentActionModal
+        isOpen={actionModal?.kind === 'payment'}
+        submitting={submittingAction}
+        onClose={closeActionModal}
+        onSubmit={handleSubmitPayment}
+      />
+      <ScheduleActionModal
+        isOpen={actionModal?.kind === 'schedule'}
+        submitting={submittingAction}
+        onClose={closeActionModal}
+        onSubmit={handleSubmitBooking}
+      />
+      <ToastContainer />
+    </>
   );
 }

@@ -8,6 +8,12 @@ const { safeString, toPlain } = require('./workspaceUtils');
 
 const OPEN_TICKET_STATUSES = new Set(['waiting', 'open', 'assigned', 'in_progress', 'paused']);
 
+function isTechnicalInsight(insight) {
+  const source = safeString(insight?.source).toLowerCase();
+  const type = safeString(insight?.type).toLowerCase();
+  return source === 'rpa' || source === 'qa' || type === 'qa_failure';
+}
+
 class WorkspaceInsightService {
   constructor(deps = {}) {
     this.WorkspaceInsight = deps.WorkspaceInsight || WorkspaceInsight;
@@ -74,6 +80,7 @@ class WorkspaceInsightService {
 
   async generateInsights(entityId, options = {}) {
     const tenantId = options.tenantId;
+    const includeTechnical = options.includeTechnical === true;
     const timeline = options.timeline || await this.timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0 });
     if (!timeline) return null;
 
@@ -113,8 +120,12 @@ class WorkspaceInsightService {
     const persisted = [...persistedExisting, ...persistedGenerated]
       .filter((item, index, arr) => arr.findIndex((candidate) => candidate.id === item.id) === index);
 
-    return { items: generated, persisted, total: generated.length + persisted.length };
+    const items = includeTechnical ? generated : generated.filter((item) => !isTechnicalInsight(item));
+    const visiblePersisted = includeTechnical ? persisted : persisted.filter((item) => !isTechnicalInsight(item));
+    return { items, persisted: visiblePersisted, total: items.length + visiblePersisted.length };
   }
 }
 
 module.exports = WorkspaceInsightService;
+module.exports.OPEN_TICKET_STATUSES = OPEN_TICKET_STATUSES;
+module.exports.isTechnicalInsight = isTechnicalInsight;

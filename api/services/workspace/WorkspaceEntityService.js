@@ -9,6 +9,7 @@ const {
   Ticket,
 } = require('../../db/models');
 const logger = require('../../utils/logger');
+const WorkspaceSummaryService = require('./WorkspaceSummaryService');
 const {
   safeString,
   normalizePhone,
@@ -24,6 +25,7 @@ class WorkspaceEntityService {
     this.MarketingLead = deps.MarketingLead || MarketingLead;
     this.ChannelConversation = deps.ChannelConversation || ChannelConversation;
     this.Ticket = deps.Ticket || Ticket;
+    this.summaryService = deps.summaryService || new WorkspaceSummaryService(deps);
     this.logger = deps.logger || logger;
   }
 
@@ -45,8 +47,11 @@ class WorkspaceEntityService {
       offset,
     });
 
+    const items = result.rows.map(toPlain);
+    const summaries = await this.summaryService.summarize({ tenantId, entities: items });
+
     return {
-      items: result.rows.map(toPlain),
+      items: items.map((item) => ({ ...item, summary: summaries.get(item.id) || this.summaryService.emptySummary(item) })),
       total: result.count,
       limit,
       offset,

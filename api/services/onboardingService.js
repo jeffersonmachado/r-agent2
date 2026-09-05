@@ -12,6 +12,34 @@ const { createAgent } = require('./authService');
 const { createQueue } = require('./queueService');
 const flowTemplateMarketplaceService = require('./flowTemplateMarketplaceService');
 const logger = require('../utils/logger');
+const verticalsRegistry = require('../../config/verticals.json');
+
+// IDs canônicos de verticais (kind === 'vertical' em config/verticals.json).
+const CANONICAL_VERTICAL_IDS = Object.keys(verticalsRegistry.domains || {})
+  .filter((id) => verticalsRegistry.domains[id] && verticalsRegistry.domains[id].kind === 'vertical');
+
+// Aliases declarados no registry resolvem para o ID canônico (ex.: academia→fitness).
+const VERTICAL_ALIAS_TO_ID = (() => {
+  const map = new Map();
+  for (const id of CANONICAL_VERTICAL_IDS) {
+    map.set(id, id);
+    for (const alias of verticalsRegistry.domains[id].aliases || []) {
+      map.set(safeTrim(alias).toLowerCase(), id);
+    }
+  }
+  return map;
+})();
+
+// Vertical canônica → chave de segmento do plano de templates (bySegment).
+const VERTICAL_TO_TEMPLATE_SEGMENT = {
+  beauty: 'servicos',
+  fitness: 'academia',
+  bakery: 'padaria',
+  food: 'varejo',
+  services: 'servicos',
+  clinic: 'saude',
+  market: 'varejo',
+};
 
 function safeToString(value, fallback = '') {
   if (value == null) return fallback;
@@ -69,6 +97,13 @@ const ONBOARDING_CHECKLIST = {
   },
 
   // 🟡 RECOMENDADO
+  connect_channel: {
+    label: 'Conectar um canal de atendimento',
+    description: 'Conecte pelo menos um canal (ex.: WhatsApp) para receber mensagens dos seus clientes. Voz é opcional.',
+    required: false,
+    category: 'recommended',
+    autoDetect: true,
+  },
   configure_billing: {
     label: 'Configurar billing',
     description: 'Configure o provider de cobrança (Asaas ou Mercado Pago)',
@@ -147,11 +182,82 @@ function hasAiProvider(tenant) {
 }
 
 /**
- * Verifica se o onboarding está bloqueando o acesso.
- * @returns {{ blocking: boolean, missingSteps: string[] }}
+ * Auto-detecção: verifica se o tenant tem pelo menos um canal conectado
+ * (channel_accounts com status diferente de 'disabled').
+ * Best-effort: falha de DB/tabela ausente não derruba o status de onboarding.
  */
-function isOnboardingBlocking(tenantId) {
-  const status = getOnboardingStatus(tenantId);
+async function hasConnectedChannel(tenantId) {
+  try {
+    const tenantKey = safeTrim(tenantId);
+    if (!tenantKey) return false;
+
+    // Requires tardios: mantém o serviço carregável em ambientes sem DB
+    // (testes unitários que mockam apenas os serviços de domínio).
+    // eslint-disable-next-line global-require
+    const { getSequelize } = require('../db/sequelize');
+    if (!getSequelize()) return false;
+
+    // eslint-disable-next-line global-require
+    const { ChannelAccount } = require('../db/models');
+    const Model = typeof ChannelAccount === 'function' ? ChannelAccount() : ChannelAccount;
+    // eslint-disable-next-line global-require
+    const { Op } = require('sequelize');
+    const count = await Model.count({
+      where: { tenant_key: tenantKey, status: { [Op.ne]: 'disabled' } },
+    });
+    return count > 0;
+  } catch (err) {
+    logger.warn('[Onboarding] Falha ao detectar canais conectados', {
+      tenantId: safeTrim(tenantId),
+      error: safeErrorMessage(err),
+    });
+    return false;
+  }
+}
+
+/**
+ * Persiste a vertical canônica do tenant em settings.vertical
+ * (fonte lida pela navegação para ativar workspaces verticais).
+ *
+ * @param {string} tenantId - ID do tenant
+ * @param {string|null} vertical - ID canônico (config/verticals.json) ou vazio para limpar
+ * @returns {Promise<{success: boolean, vertical?: string|null, error?: string}>}
+ */
+async function setTenantVertical(tenantId, vertical) {
+  const tenant = await getTenant(tenantId);
+  if (!tenant) {
+    return { success: false, error: 'tenant_not_found' };
+  }
+
+  const normalized = safeTrim(vertical).toLowerCase();
+  if (normalized && !CANONICAL_VERTICAL_IDS.includes(normalized)) {
+    return { success: false, error: 'invalid_vertical' };
+  }
+
+  const settings = {
+    ...(tenant.settings || {}),
+    vertical: normalized || null,
+  };
+
+  const result = await updateTenant(tenantId, { settings });
+  if (!result.success) {
+    return result;
+  }
+
+  logger.info('[Onboarding] Vertical do tenant atualizada', {
+    tenantId,
+    vertical: normalized || null,
+  });
+
+  return { success: true, vertical: normalized || null };
+}
+
+/**
+ * Verifica se o onboarding está bloqueando o acesso.
+ * @returns {Promise<{ blocking: boolean, missingSteps: string[] }>}
+ */
+async function isOnboardingBlocking(tenantId) {
+  const status = await getOnboardingStatus(tenantId);
   if (!status) return { blocking: false, missingSteps: [] };
   const missing = status.steps
     .filter(s => s.required && !s.completed)
@@ -161,12 +267,12 @@ function isOnboardingBlocking(tenantId) {
 
 /**
  * Obtém o status de onboarding de um tenant.
- * 
+ *
  * @param {string} tenantId - ID do tenant
- * @returns {Object} Status de onboarding
+ * @returns {Promise<Object|null>} Status de onboarding
  */
-function getOnboardingStatus(tenantId) {
-  const tenant = getTenant(tenantId);
+async function getOnboardingStatus(tenantId) {
+  const tenant = await getTenant(tenantId);
   if (!tenant) {
     return null;
   }
@@ -182,6 +288,9 @@ function getOnboardingStatus(tenantId) {
   }
   if (hasAiProvider(tenant) && !completedSteps.includes('configure_ai_provider')) {
     completedSteps = [...completedSteps, 'configure_ai_provider'];
+  }
+  if (!completedSteps.includes('connect_channel') && await hasConnectedChannel(tenantId)) {
+    completedSteps = [...completedSteps, 'connect_channel'];
   }
 
   // Calcula progresso
@@ -221,7 +330,7 @@ function getOnboardingStatus(tenantId) {
  * @returns {{success: boolean, onboarding?: Object, error?: string}}
  */
 async function completeOnboardingStep(tenantId, stepId) {
-  const tenant = getTenant(tenantId);
+  const tenant = await getTenant(tenantId);
   if (!tenant) {
     return { success: false, error: 'Tenant não encontrado' };
   }
@@ -269,7 +378,7 @@ async function completeOnboardingStep(tenantId, stepId) {
 
   return {
     success: true,
-    onboarding: getOnboardingStatus(tenantId),
+    onboarding: await getOnboardingStatus(tenantId),
   };
 }
 
@@ -303,7 +412,7 @@ function getNextStep(completedSteps) {
  * @returns {{success: boolean, onboarding?: Object, error?: string}}
  */
 async function startOnboarding(tenantId) {
-  const tenant = getTenant(tenantId);
+  const tenant = await getTenant(tenantId);
   if (!tenant) {
     return { success: false, error: 'Tenant não encontrado' };
   }
@@ -314,7 +423,7 @@ async function startOnboarding(tenantId) {
     // Onboarding já iniciado
     return {
       success: true,
-      onboarding: getOnboardingStatus(tenantId),
+      onboarding: await getOnboardingStatus(tenantId),
     };
   }
 
@@ -338,7 +447,7 @@ async function startOnboarding(tenantId) {
 
   return {
     success: true,
-    onboarding: getOnboardingStatus(tenantId),
+    onboarding: await getOnboardingStatus(tenantId),
   };
 }
 
@@ -378,9 +487,19 @@ function getOnboardingTemplatePlan(segment) {
     bakery: [...base, 'mkt-segment-padaria', 'mkt-status-pedido-servico', 'mkt-onboarding-cliente'],
   };
 
+  // Resolve IDs canônicos de vertical (config/verticals.json, ex.: fitness,
+  // clinic) e aliases para a chave de segmento do plano de templates.
+  let resolvedSegment = segment;
+  if (!bySegment[resolvedSegment]) {
+    const verticalId = VERTICAL_ALIAS_TO_ID.get(resolvedSegment);
+    if (verticalId && VERTICAL_TO_TEMPLATE_SEGMENT[verticalId]) {
+      resolvedSegment = VERTICAL_TO_TEMPLATE_SEGMENT[verticalId];
+    }
+  }
+
   return {
-    segment,
-    templateIds: Array.from(new Set(bySegment[segment] || [...base, 'mkt-onboarding-cliente'])),
+    segment: resolvedSegment,
+    templateIds: Array.from(new Set(bySegment[resolvedSegment] || [...base, 'mkt-onboarding-cliente'])),
   };
 }
 
@@ -390,7 +509,7 @@ function stableTenantTemplateId(tenantId, globalTemplateId) {
 }
 
 async function createInitialTemplates(tenantId, options = {}) {
-  const tenant = getTenant(tenantId);
+  const tenant = await getTenant(tenantId);
   if (!tenant) {
     return { success: false, error: 'Tenant não encontrado' };
   }
@@ -525,7 +644,7 @@ async function createInitialTemplates(tenantId, options = {}) {
  * @returns {{success: boolean, onboarding?: Object, error?: string}}
  */
 async function completeOnboarding(tenantId) {
-  const tenant = getTenant(tenantId);
+  const tenant = await getTenant(tenantId);
   if (!tenant) {
     return { success: false, error: 'Tenant não encontrado' };
   }
@@ -535,7 +654,7 @@ async function completeOnboarding(tenantId) {
   if (onboarding.completed) {
     return {
       success: true,
-      onboarding: getOnboardingStatus(tenantId),
+      onboarding: await getOnboardingStatus(tenantId),
     };
   }
 
@@ -559,7 +678,7 @@ async function completeOnboarding(tenantId) {
     },
   };
 
-  const result = updateTenant(tenantId, { settings });
+  const result = await updateTenant(tenantId, { settings });
   if (!result.success) {
     return result;
   }
@@ -568,7 +687,7 @@ async function completeOnboarding(tenantId) {
 
   return {
     success: true,
-    onboarding: getOnboardingStatus(tenantId),
+    onboarding: await getOnboardingStatus(tenantId),
   };
 }
 
@@ -579,5 +698,8 @@ module.exports = {
   startOnboarding,
   createInitialTemplates,
   completeOnboarding,
+  setTenantVertical,
+  hasConnectedChannel,
   ONBOARDING_CHECKLIST,
+  CANONICAL_VERTICAL_IDS,
 };

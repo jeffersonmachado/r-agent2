@@ -5,6 +5,10 @@ const {
   getTenantCapabilities,
   setTenantCapabilities,
 } = require('../../services/tenantCapabilitiesService');
+const {
+  setTenantVertical,
+  CANONICAL_VERTICAL_IDS,
+} = require('../../services/onboardingService');
 
 const CAPABILITY_MANAGER_ROLES = new Set(['owner', 'admin', 'super_admin']);
 
@@ -98,6 +102,61 @@ function createTenantCapabilitiesRoutes({ buildDeps }) {
         error: err && err.message,
       });
       deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar capabilities do tenant' });
+    }
+  });
+
+  router.put('/api/tenant/settings/vertical', async (req, res) => {
+    const deps = depsFor(req, res);
+    if (!ensureAuth(deps, req, res)) return;
+
+    const role = req.agent && req.agent.role;
+    if (!CAPABILITY_MANAGER_ROLES.has(role)) {
+      deps.sendJson(res, 403, { error: 'forbidden', message: 'Apenas owner/admin podem alterar a vertical do tenant' });
+      return;
+    }
+
+    const tenantKey = resolveTenantKey(req);
+    if (!tenantKey) {
+      deps.sendJson(res, 403, { error: 'tenant_required' });
+      return;
+    }
+
+    if (!deps.hasJsonContentType(req)) {
+      deps.badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+
+    let body;
+    try {
+      body = await deps.parseJsonBody(req);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        deps.badRequest(res, 'JSON inválido no corpo da requisição');
+        return;
+      }
+      throw err;
+    }
+
+    try {
+      const result = await setTenantVertical(tenantKey, body && body.vertical);
+      if (!result.success) {
+        if (result.error === 'tenant_not_found') {
+          deps.sendJson(res, 404, { error: result.error, message: 'tenant não encontrado' });
+          return;
+        }
+        deps.sendJson(res, 400, {
+          error: result.error,
+          message: `vertical deve ser um de: ${CANONICAL_VERTICAL_IDS.join(', ')} (ou vazio para limpar)`,
+        });
+        return;
+      }
+      deps.sendJson(res, 200, { vertical: result.vertical });
+    } catch (err) {
+      deps.logger.error('[TenantCapabilities] Erro ao atualizar vertical do tenant', {
+        tenantKey,
+        error: err && err.message,
+      });
+      deps.sendJson(res, 500, { error: 'internal_error', message: 'Erro ao atualizar vertical do tenant' });
     }
   });
 

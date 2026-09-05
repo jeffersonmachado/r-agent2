@@ -118,4 +118,196 @@ describe('workspace production core services', () => {
     expect(linkFindOrCreate).toHaveBeenCalledWith(expect.objectContaining({ defaults: expect.objectContaining({ source_type: 'autocorrection_run' }) }));
     expect(result.items[0].id).toBe('run-1');
   });
+
+  it('attaches batched summary with counts and riskLevel to entity listing', async () => {
+    const entities = [
+      { id: 'entity-a', tenant_id: 'tenant-1', name: 'Cliente A' },
+      { id: 'entity-b', tenant_id: 'tenant-1', name: 'Cliente B' },
+      { id: 'entity-c', tenant_id: 'tenant-1', name: 'Cliente C' },
+    ];
+    jest.doMock('../../db/models', () => ({
+      WorkspaceEntity: makeModel({ findAndCountAll: jest.fn().mockResolvedValue({ rows: entities, count: 3 }) }),
+      WorkspaceEntityLink: makeModel({
+        findAll: jest.fn().mockResolvedValue([
+          { entity_id: 'entity-a', source_type: 'ticket', source_id: 'ticket-1' },
+          { entity_id: 'entity-a', source_type: 'ticket', source_id: 'ticket-2' },
+          { entity_id: 'entity-b', source_type: 'ticket', source_id: 'ticket-3' },
+        ]),
+      }),
+      Ticket: makeModel({
+        findAll: jest.fn().mockResolvedValue([{ id: 'ticket-1' }, { id: 'ticket-2' }]),
+      }),
+      WorkspaceAction: makeModel({
+        findAll: jest.fn().mockResolvedValue([{ entity_id: 'entity-b', count: '3' }]),
+      }),
+      PaymentEvent: makeModel({ findAll: jest.fn().mockResolvedValue([]) }),
+      WorkspaceInsight: makeModel({ findAll: jest.fn().mockResolvedValue([]) }),
+      WorkspaceTimelineEvent: makeModel({
+        findAll: jest.fn().mockResolvedValue([{ entity_id: 'entity-a', last_at: '2026-08-01T10:00:00.000Z' }]),
+      }),
+      MarketingLead: makeModel({}),
+      ChannelConversation: makeModel({}),
+    }));
+
+    const WorkspaceEntityService = require('../workspace/WorkspaceEntityService');
+    const service = new WorkspaceEntityService({ logger: { warn: jest.fn() } });
+    const result = await service.listEntities({ tenantId: 'tenant-1' });
+
+    expect(result.total).toBe(3);
+    const byId = Object.fromEntries(result.items.map((item) => [item.id, item]));
+    expect(byId['entity-a'].summary).toEqual({
+      openTickets: 2,
+      pendingActions: 0,
+      pendingPayments: 0,
+      riskLevel: 'critical',
+      lastInteractionAt: '2026-08-01T10:00:00.000Z',
+    });
+    expect(byId['entity-b'].summary).toEqual({
+      openTickets: 0,
+      pendingActions: 3,
+      pendingPayments: 0,
+      riskLevel: 'attention',
+      lastInteractionAt: null,
+    });
+    expect(byId['entity-c'].summary).toEqual({
+      openTickets: 0,
+      pendingActions: 0,
+      pendingPayments: 0,
+      riskLevel: 'none',
+      lastInteractionAt: null,
+    });
+  });
+
+  it('hides QA/RPA technical insights for PRODUCTION and keeps them persisted for DEVELOPMENT', async () => {
+    const insightFindAll = jest.fn().mockResolvedValue([{ id: 'persisted-1', type: 'risk', source: 'RPA', description: 'Falha QA/RPA' }]);
+    const insightCreate = jest.fn().mockImplementation(async (data) => ({ toJSON: () => ({ id: 'new-1', ...data }) }));
+    jest.doMock('../../db/models', () => ({
+      WorkspaceInsight: makeModel({ findAll: insightFindAll, findOne: jest.fn().mockResolvedValue(null), create: insightCreate }),
+      WorkspaceEntity: makeModel({}),
+      WorkspaceEntityLink: makeModel({}),
+      WorkspaceTimelineEvent: makeModel({}),
+      Ticket: makeModel({}),
+      ChannelConversation: makeModel({}),
+      ChannelMessage: makeModel({}),
+      Schedule: makeModel({}),
+      Project: makeModel({}),
+      ProjectItem: makeModel({}),
+      RagDocument: makeModel({}),
+      Evidence: makeModel({}),
+      MarketingLead: makeModel({}),
+      Task: makeModel({}),
+      PaymentEvent: makeModel({}),
+      Tenant: makeModel({}),
+    }));
+
+    const WorkspaceInsightService = require('../workspace/WorkspaceInsightService');
+    const timeline = {
+      items: [
+        { type: 'evidence', summary: 'Falha no replay do fluxo', payload: { type: 'failure' }, refId: 'ev-1', createdAt: new Date().toISOString() },
+      ],
+    };
+    const buildService = () => new WorkspaceInsightService({
+      timelineService: { getEntityTimeline: jest.fn().mockResolvedValue(timeline) },
+      nlpService: { analyzeText: jest.fn().mockResolvedValue({}) },
+      logger: { warn: jest.fn() },
+    });
+
+    const production = await buildService().generateInsights('entity-1', { tenantId: 'tenant-1' });
+    expect(production.items).toEqual([]);
+    expect(production.persisted).toEqual([]);
+    expect(insightCreate).toHaveBeenCalled();
+
+    const support = await buildService().generateInsights('entity-1', { tenantId: 'tenant-1', includeTechnical: false });
+    expect(support.items).toEqual([]);
+
+    const development = await buildService().generateInsights('entity-1', { tenantId: 'tenant-1', includeTechnical: true });
+    expect(development.items).toHaveLength(1);
+    expect(development.items[0]).toEqual(expect.objectContaining({ type: 'risk', source: 'RPA', severity: 'critical' }));
+    expect(development.persisted).toHaveLength(2);
+  });
+
+  it('suggests next best action with outcome, risk and executable action descriptor', async () => {
+    jest.doMock('../../db/models', () => ({
+      WorkspaceAction: makeModel({}),
+      WorkspaceEntityLink: makeModel({
+        findOne: jest.fn().mockResolvedValue({ toJSON: () => ({ source_id: 'conv-9' }) }),
+      }),
+      WorkspaceInsight: makeModel({}),
+      WorkspaceEntity: makeModel({}),
+      WorkspaceTimelineEvent: makeModel({}),
+      Ticket: makeModel({}),
+      ChannelConversation: makeModel({}),
+      ChannelMessage: makeModel({}),
+      Schedule: makeModel({}),
+      Project: makeModel({}),
+      ProjectItem: makeModel({}),
+      RagDocument: makeModel({}),
+      Evidence: makeModel({}),
+      MarketingLead: makeModel({}),
+      Task: makeModel({}),
+      PaymentEvent: makeModel({}),
+      Tenant: makeModel({}),
+    }));
+
+    const WorkspaceActionService = require('../workspace/WorkspaceActionService');
+    const buildService = (insights) => {
+      const generateInsights = jest.fn().mockResolvedValue({ items: insights });
+      const service = new WorkspaceActionService({
+        insightService: { generateInsights },
+        operationsService: {},
+        logger: { warn: jest.fn() },
+      });
+      return { service, generateInsights };
+    };
+
+    const { service: delayService } = buildService([{ type: 'delay', severity: 'high', confidence: 0.86, source: 'system' }]);
+    const delay = await delayService.suggestNextBestAction({ tenantId: 'tenant-1', entityId: 'entity-1' });
+    expect(delay).toEqual(expect.objectContaining({
+      type: 'task',
+      label: 'Criar tarefa de resposta SLA',
+      expectedOutcome: 'Restabelecer o SLA e evitar escalacao',
+      risk: 'medium',
+    }));
+    expect(delay.action).toEqual({ kind: 'create_task', conversationId: null, label: 'Criar tarefa de resposta' });
+
+    const { service: riskService } = buildService([{ type: 'risk', severity: 'high', confidence: 0.9, source: 'system' }]);
+    const risk = await riskService.suggestNextBestAction({ tenantId: 'tenant-1', entityId: 'entity-1' });
+    expect(risk).toEqual(expect.objectContaining({ risk: 'medium', expectedOutcome: 'Reduzir o risco operacional e preservar o relacionamento' }));
+    expect(risk.action).toEqual({ kind: 'send_message', conversationId: 'conv-9', label: 'Enviar mensagem ao cliente' });
+
+    const { service: churnService } = buildService([{ type: 'churn', severity: 'high', confidence: 0.78, source: 'system' }]);
+    const churn = await churnService.suggestNextBestAction({ tenantId: 'tenant-1', entityId: 'entity-1' });
+    expect(churn).toEqual(expect.objectContaining({ type: 'followup', risk: 'low', expectedOutcome: 'Recuperar o relacionamento e evitar churn' }));
+    expect(churn.action).toEqual({ kind: 'send_message', conversationId: 'conv-9', label: 'Enviar mensagem de reativacao' });
+
+    const { service: upsellService } = buildService([{ type: 'upsell', severity: 'medium', confidence: 0.66, source: 'system' }]);
+    const upsell = await upsellService.suggestNextBestAction({ tenantId: 'tenant-1', entityId: 'entity-1' });
+    expect(upsell).toEqual(expect.objectContaining({ risk: 'low', expectedOutcome: 'Expandir o relacionamento com uma nova oferta' }));
+    expect(upsell.action).toEqual({ kind: 'send_message', conversationId: 'conv-9', label: 'Enviar proposta de expansao' });
+
+    const { service: fallbackService } = buildService([]);
+    const fallback = await fallbackService.suggestNextBestAction({ tenantId: 'tenant-1', entityId: 'entity-1' });
+    expect(fallback).toEqual(expect.objectContaining({
+      type: 'followup',
+      label: 'Registrar proximo contato',
+      reason: 'Nao ha riscos criticos detectados; manter cadencia de relacionamento.',
+      confidence: 0.55,
+      risk: 'low',
+    }));
+    expect(fallback.action).toEqual({ kind: 'schedule', conversationId: null, label: 'Agendar proximo contato' });
+
+    const { service: devService, generateInsights: devGenerate } = buildService([{ type: 'risk', severity: 'critical', source: 'RPA' }]);
+    const technical = await devService.suggestNextBestAction({ tenantId: 'tenant-1', entityId: 'entity-1', classification: 'DEVELOPMENT' });
+    expect(devGenerate).toHaveBeenCalledWith('entity-1', expect.objectContaining({ includeTechnical: true }));
+    expect(technical.action.kind).toBe('create_task');
+    expect(technical.risk).toBe('high');
+
+    const { service: prodService, generateInsights: prodGenerate } = buildService([]);
+    await prodService.suggestNextBestAction({ tenantId: 'tenant-1', entityId: 'entity-1', classification: 'SUPPORT' });
+    expect(prodGenerate).toHaveBeenCalledWith('entity-1', expect.objectContaining({ includeTechnical: false }));
+
+    const { service: defaultService, generateInsights: defaultGenerate } = buildService([]);
+    await defaultService.suggestNextBestAction({ tenantId: 'tenant-1', entityId: 'entity-1' });
+    expect(defaultGenerate).toHaveBeenCalledWith('entity-1', expect.objectContaining({ includeTechnical: false }));
+  });
 });

@@ -279,6 +279,122 @@ describe('inbox desacoplado (ChannelConversation-based)', () => {
     expect(deps.requirePermission).toHaveBeenCalledWith(expect.anything(), 'inbox', 'read');
   });
 
+  test('list repassa filtro q (busca livre) para o service de canais', async () => {
+    const deps = makeDeps();
+    const service = createInboxService(deps);
+
+    await service.listConversations(makeReq({ query: { q: '5511' } }));
+
+    expect(deps.channelConversationService.listConversations).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-1',
+      q: '5511',
+    }));
+  });
+
+  test('get reseta metadata.unread.count quando a conversa tem não-lidas', async () => {
+    const deps = makeDeps();
+    deps.channelConversationService.getConversation.mockResolvedValue(makeConversation({
+      metadata: { unread: { count: 3, lastInboundAt: '2026-08-27T10:00:00.000Z' }, origin: 'webhook' },
+    }));
+    const service = createInboxService(deps);
+
+    const out = await service.getConversation(makeReq());
+
+    expect(out.ok).toBe(true);
+    expect(deps.channelConversationService.updateConversation).toHaveBeenCalledWith(expect.objectContaining({
+      patch: {
+        metadata: {
+          unread: { count: 0, lastInboundAt: '2026-08-27T10:00:00.000Z' },
+          origin: 'webhook',
+        },
+      },
+    }));
+    expect(out.payload.conversation.metadata.unread.count).toBe(0);
+  });
+
+  test('get sem unread não grava metadata', async () => {
+    const deps = makeDeps();
+    const service = createInboxService(deps);
+
+    const out = await service.getConversation(makeReq());
+
+    expect(out.ok).toBe(true);
+    expect(deps.channelConversationService.updateConversation).not.toHaveBeenCalled();
+  });
+
+  test('setConversationStatus atualiza status e emite conversation.updated', async () => {
+    const deps = makeDeps();
+    const service = createInboxService(deps);
+
+    const out = await service.setConversationStatus(makeReq(), { status: 'resolved' });
+
+    expect(out.ok).toBe(true);
+    expect(out.payload.ok).toBe(true);
+    expect(out.payload.conversation.status).toBe('resolved');
+    expect(deps.channelConversationService.updateConversation).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-1',
+      conversationId: 'conv-1',
+      patch: { status: 'resolved' },
+    }));
+    expect(deps.emitEvent).toHaveBeenCalledWith('conversation.updated', expect.objectContaining({
+      conversationId: 'conv-1',
+      tenantId: 'tenant-1',
+      status: 'resolved',
+    }), { tenantId: 'tenant-1' });
+  });
+
+  test('setConversationStatus rejeita status fora do contrato (bad_request)', async () => {
+    const deps = makeDeps();
+    const service = createInboxService(deps);
+
+    const out = await service.setConversationStatus(makeReq(), { status: 'deleted' });
+
+    expect(out.ok).toBe(false);
+    expect(out.kind).toBe('bad_request');
+    expect(deps.channelConversationService.updateConversation).not.toHaveBeenCalled();
+  });
+
+  test('setConversationStatus em conversa inexistente → 404', async () => {
+    const deps = makeDeps();
+    deps.channelConversationService.getConversation.mockResolvedValue(null);
+    const service = createInboxService(deps);
+
+    const out = await service.setConversationStatus(makeReq(), { status: 'open' });
+
+    expect(out).toEqual({ ok: false, status: 404, payload: { error: 'conversation_not_found' } });
+  });
+
+  test('assign emite conversation.updated com assignedTo', async () => {
+    const deps = makeDeps();
+    const service = createInboxService(deps);
+
+    await service.assignConversation(makeReq(), { assigneeId: 'agent-9' });
+
+    expect(deps.emitEvent).toHaveBeenCalledWith('conversation.updated', expect.objectContaining({
+      conversationId: 'conv-1',
+      tenantId: 'tenant-1',
+      assignedTo: 'agent-9',
+    }), { tenantId: 'tenant-1' });
+  });
+
+  test('controller setStatus exige permissão inbox:update e responde 400 em status inválido', async () => {
+    const deps = makeDeps({
+      requireAuth: jest.fn(() => ({ valid: true })),
+      requirePermission: jest.fn(() => ({ allowed: true })),
+      sendJson: jest.fn(),
+      badRequest: jest.fn(),
+      hasJsonContentType: jest.fn(() => true),
+      parseJsonBody: jest.fn(async () => ({ status: 'bogus' })),
+    });
+    const service = createInboxService(deps);
+    const controller = createInboxController({ service, deps });
+
+    await controller.setStatus(makeReq(), {});
+
+    expect(deps.requirePermission).toHaveBeenCalledWith(expect.anything(), 'inbox', 'update');
+    expect(deps.badRequest).toHaveBeenCalled();
+  });
+
   test('router monta as rotas do contrato (inclui reply e case)', () => {
     const router = createInboxRoutes({ buildDeps: () => makeDeps() });
     const paths = router.stack
@@ -294,6 +410,7 @@ describe('inbox desacoplado (ChannelConversation-based)', () => {
       { path: '/inbox/conversations/:conversationId/reply', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/assign', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/transfer', methods: ['post'] },
+      { path: '/inbox/conversations/:conversationId/status', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/notes', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/case', methods: ['post'] },
     ]);

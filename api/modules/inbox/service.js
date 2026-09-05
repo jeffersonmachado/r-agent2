@@ -25,6 +25,7 @@ function parseConversationsQuery(req) {
   return {
     status: query.status ?? urlObj.searchParams.get('status'),
     channelType: query.channelType ?? urlObj.searchParams.get('channelType'),
+    q: query.q ?? urlObj.searchParams.get('q'),
     limitRaw: query.limit ?? urlObj.searchParams.get('limit'),
     offsetRaw: query.offset ?? urlObj.searchParams.get('offset'),
   };
@@ -35,6 +36,30 @@ function buildAuditMeta(req) {
     ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
     userAgent: req.headers['user-agent'] || 'unknown',
   };
+}
+
+const ALLOWED_CONVERSATION_STATUSES = ['open', 'pending', 'resolved', 'closed'];
+
+/**
+ * Emissão best-effort do evento realtime de atualização de conversa.
+ * Usa deps.emitEvent (websocketService.emitEvent na composição) e nunca
+ * quebra o request path.
+ */
+function emitConversationUpdated(deps, logger, { conversationId, tenantId, status, assignedTo }) {
+  try {
+    if (typeof deps.emitEvent !== 'function') return;
+    deps.emitEvent('conversation.updated', {
+      conversationId,
+      tenantId,
+      status: status || null,
+      assignedTo: assignedTo || null,
+    }, { tenantId });
+  } catch (err) {
+    logger.warn('[Inbox] Falha ao emitir conversation.updated (best-effort)', {
+      conversationId,
+      error: err && err.message,
+    });
+  }
 }
 
 function resolveTenantId(req) {
@@ -84,11 +109,12 @@ function createInboxService(deps) {
         return { ok: false, status: 403, payload: { error: 'tenant_required' } };
       }
 
-      const { status, channelType, limitRaw, offsetRaw } = parseConversationsQuery(req);
+      const { status, channelType, q, limitRaw, offsetRaw } = parseConversationsQuery(req);
       const result = await channels.listConversations({
         tenantId,
         status: status || null,
         channelType: channelType || null,
+        q: q || null,
         limit: limitRaw,
         offset: offsetRaw,
       });
@@ -106,6 +132,31 @@ function createInboxService(deps) {
       const loaded = await loadConversation(req);
       if (!loaded.ok) return loaded;
       const { tenantId, conversationId, conversation } = loaded;
+
+      // Reset de unread: o agente abriu o detalhe da conversa.
+      const conversationMetadata = conversation.metadata && typeof conversation.metadata === 'object'
+        ? conversation.metadata
+        : {};
+      const unread = conversationMetadata.unread && typeof conversationMetadata.unread === 'object'
+        ? conversationMetadata.unread
+        : {};
+      const unreadCount = Number(unread.count);
+      if (Number.isFinite(unreadCount) && unreadCount > 0) {
+        try {
+          const resetMetadata = { ...conversationMetadata, unread: { ...unread, count: 0 } };
+          await channels.updateConversation({
+            tenantId,
+            conversationId,
+            patch: { metadata: resetMetadata },
+          });
+          conversation.metadata = resetMetadata;
+        } catch (err) {
+          logger.warn('[Inbox] Falha ao resetar unread da conversa (best-effort)', {
+            conversationId,
+            error: err && err.message,
+          });
+        }
+      }
 
       const messagesResult = await channels.listConversationMessages({ tenantId, conversationId, limit: 500 });
       let messages = Array.isArray(messagesResult.items) ? messagesResult.items : [];
@@ -253,6 +304,13 @@ function createInboxService(deps) {
         patch: { assigned_to: assigneeId },
       });
 
+      emitConversationUpdated(deps, logger, {
+        conversationId,
+        tenantId,
+        status: (updated && updated.status) || conversation.status,
+        assignedTo: assigneeId,
+      });
+
       deps.logAction && deps.logAction({
         agentId: req.agent.id,
         username: req.agent.username,
@@ -298,6 +356,13 @@ function createInboxService(deps) {
         }) || { ...conversation, assignedTo: assigneeId };
       }
 
+      emitConversationUpdated(deps, logger, {
+        conversationId,
+        tenantId,
+        status: updated.status || conversation.status,
+        assignedTo: updated.assignedTo || null,
+      });
+
       deps.logAction && deps.logAction({
         agentId: req.agent.id,
         username: req.agent.username,
@@ -309,6 +374,49 @@ function createInboxService(deps) {
       });
 
       return { ok: true, status: 200, payload: { conversation: updated } };
+    },
+
+    async setConversationStatus(req, body) {
+      const status = body && body.status != null ? String(body.status).trim() : '';
+      if (!ALLOWED_CONVERSATION_STATUSES.includes(status)) {
+        return {
+          ok: false,
+          kind: 'bad_request',
+          message: `status inválido; permitidos: ${ALLOWED_CONVERSATION_STATUSES.join(', ')}`,
+        };
+      }
+
+      const loaded = await loadConversation(req);
+      if (!loaded.ok) return loaded;
+      const { tenantId, conversationId, conversation } = loaded;
+
+      const updated = await channels.updateConversation({
+        tenantId,
+        conversationId,
+        patch: { status },
+      });
+      if (!updated) {
+        return { ok: false, status: 404, payload: { error: 'conversation_not_found' } };
+      }
+
+      emitConversationUpdated(deps, logger, {
+        conversationId,
+        tenantId,
+        status: updated.status,
+        assignedTo: updated.assignedTo,
+      });
+
+      deps.logAction && deps.logAction({
+        agentId: req.agent.id,
+        username: req.agent.username,
+        action: 'conversation_status',
+        resource: 'conversation',
+        resourceId: conversationId,
+        details: { status, ticketId: conversation.currentTicketId || null, source: 'inbox' },
+        ...buildAuditMeta(req),
+      });
+
+      return { ok: true, status: 200, payload: { ok: true, conversation: updated } };
     },
 
     async addNote(req, body) {

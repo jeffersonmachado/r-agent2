@@ -670,6 +670,33 @@ async function persistIncoming({ tenantId, channelType, conversationKey, message
       logger.warn('[ChannelGateway] Workspace link best-effort falhou', { tenantId, channelType, error: safeToString(linkErr?.message || linkErr) });
     }
 
+    // Inbox realtime + unread: best-effort, nunca quebra a persistência.
+    if (messageNormalized.direction === 'in' || messageNormalized.direction === 'inbound') {
+      try {
+        // Lazy require para evitar ciclo (channelConversationService já requer este módulo).
+        // eslint-disable-next-line global-require
+        const { registerInboundMessageActivity } = require('./channelConversationService');
+        await registerInboundMessageActivity({
+          tenantId,
+          conversationId: conversation.id,
+          channelType,
+          message: {
+            id: created.id,
+            direction: 'in',
+            type: messageNormalized.type,
+            body: messageNormalized.body || {},
+            createdAt: created.created_at ? new Date(created.created_at).toISOString() : now.toISOString(),
+          },
+        });
+      } catch (activityErr) {
+        logger.warn('[ChannelGateway] Falha ao registrar atividade inbound (best-effort)', {
+          tenantId,
+          channelType,
+          error: safeToString(activityErr?.message || activityErr),
+        });
+      }
+    }
+
     return { persisted: true, idempotent: false, conversationId: conversation.id, messageId: created.id };
   } catch (err) {
     // Protege contra race: unique violation em external_message_id

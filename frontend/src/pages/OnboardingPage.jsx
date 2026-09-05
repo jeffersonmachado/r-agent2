@@ -18,6 +18,29 @@ function readSearchParam(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
+// Verticais canônicas (ids de config/verticals.json, kind=vertical).
+const ONBOARDING_VERTICAL_OPTIONS = [
+  { id: 'beauty', label: 'Beleza e Estética' },
+  { id: 'fitness', label: 'Academia e Fitness' },
+  { id: 'bakery', label: 'Padaria' },
+  { id: 'food', label: 'Alimentação/Restaurante' },
+  { id: 'services', label: 'Serviços' },
+  { id: 'clinic', label: 'Clínica e Saúde' },
+  { id: 'market', label: 'Varejo/Mercado' },
+];
+
+// Vertical canônica → segmento do plano de templates iniciais
+// (espelha VERTICAL_TO_TEMPLATE_SEGMENT em api/services/onboardingService.js).
+const VERTICAL_TO_TEMPLATE_SEGMENT = {
+  beauty: 'servicos',
+  fitness: 'academia',
+  bakery: 'padaria',
+  food: 'varejo',
+  services: 'servicos',
+  clinic: 'saude',
+  market: 'varejo',
+};
+
 function updateNestedConfigValue(baseConfig, configPath, nextValue) {
   const nextConfig = JSON.parse(JSON.stringify(baseConfig || {}));
   const keys = String(configPath || '').split('.').filter(Boolean);
@@ -44,6 +67,8 @@ export function OnboardingPage() {
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [segment, setSegment] = useState('');
+  const [vertical, setVertical] = useState('');
+  const [verticalSaving, setVerticalSaving] = useState(false);
   const [cannotStartOnboarding, setCannotStartOnboarding] = useState(false);
   const [requiredStep, setRequiredStep] = useState(() => readSearchParam('required') || '');
   const [integrationReadiness, setIntegrationReadiness] = useState(null);
@@ -96,6 +121,26 @@ export function OnboardingPage() {
       }
     } finally {
       setAttendanceSaving(false);
+    }
+  };
+
+  const handleSelectVertical = async (nextVertical) => {
+    setVertical(nextVertical);
+    // A vertical também alimenta o plano de templates iniciais (default por vertical).
+    setSegment(VERTICAL_TO_TEMPLATE_SEGMENT[nextVertical] || '');
+    setVerticalSaving(true);
+    try {
+      await onboardingApi.setTenantVertical(nextVertical || null);
+    } catch (err) {
+      // 403: usuário sem papel admin/owner — segue sem bloquear.
+      if (err?.status === 403) {
+        logger.warn('Sem permissão para salvar a vertical do tenant; seguindo sem persistir', err);
+      } else {
+        logger.error('Erro ao salvar vertical do tenant', err);
+        showToast('Não foi possível salvar o segmento da empresa agora', 'error');
+      }
+    } finally {
+      setVerticalSaving(false);
     }
   };
 
@@ -286,19 +331,29 @@ export function OnboardingPage() {
                 🔍 Auto-detect
               </span>
             )}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                if (step.id === 'create_first_queue' || step.id === 'index_documents') {
-                  handleCreateTemplates();
-                } else {
-                  handleCompleteStep(step.id);
-                }
-              }}
-            >
-              Completar
-            </Button>
+            {step.id === 'connect_channel' ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate('/whatsapp-connections')}
+              >
+                Conectar canal
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  if (step.id === 'create_first_queue' || step.id === 'index_documents') {
+                    handleCreateTemplates();
+                  } else {
+                    handleCompleteStep(step.id);
+                  }
+                }}
+              >
+                Completar
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -397,6 +452,31 @@ export function OnboardingPage() {
               Acompanhar solicitações até a resolução, com responsável, status, prioridade e SLA.
             </p>
           </button>
+        </div>
+      </div>
+
+      {/* Step: segmento/vertical da empresa */}
+      <div className="bg-bg-elevated rounded-xl border border-border-default p-6 mb-6">
+        <h2 className="text-xl font-semibold text-text-primary mb-1">Qual é o segmento da sua empresa?</h2>
+        <p className="text-sm text-text-secondary mb-4">
+          Essa escolha ativa os painéis e templates do seu segmento (ex.: agenda para Beleza, presença para Fitness).
+        </p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
+            value={vertical}
+            onChange={(e) => handleSelectVertical(e.target.value)}
+            disabled={verticalSaving}
+            className="px-3 py-2 text-sm bg-bg-tertiary border border-border-default rounded-md text-text-secondary"
+            aria-label="Selecionar segmento da empresa"
+          >
+            <option value="">Selecione o segmento...</option>
+            {ONBOARDING_VERTICAL_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
+          </select>
+          {verticalSaving && (
+            <span className="text-xs text-text-tertiary">Salvando...</span>
+          )}
         </div>
       </div>
 

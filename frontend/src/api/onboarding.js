@@ -57,3 +57,15 @@ export async function createInitialTemplates(options = undefined) {
     ...(hasBody ? { body: JSON.stringify(options) } : {}),
   });
 }
+
+/**
+ * Persiste a vertical canônica do tenant (config/verticals.json).
+ * IDs válidos: beauty, fitness, bakery, food, services, clinic, market.
+ * Passe '' ou null para limpar.
+ */
+export async function setTenantVertical(vertical) {
+  return fetchJson('/api/tenant/settings/vertical', {
+    method: 'PUT',
+    body: JSON.stringify({ vertical: vertical || null }),
+  });
+}

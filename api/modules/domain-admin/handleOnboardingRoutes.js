@@ -32,7 +32,7 @@ async function handleOnboardingRoutes(ctx) {
       return true;
     }
 
-    const status = getOnboardingStatus(req.tenantId);
+    const status = await getOnboardingStatus(req.tenantId);
     if (!status) {
       sendJson(res, 404, { error: 'tenant_not_found' });
       return true;
@@ -56,7 +56,7 @@ async function handleOnboardingRoutes(ctx) {
     }
 
     const { isOnboardingBlocking } = require('../../services/onboardingService');
-    const result = isOnboardingBlocking(req.tenantId);
+    const result = await isOnboardingBlocking(req.tenantId);
     sendJson(res, 200, result);
     return true;
   }

@@ -14,10 +14,14 @@ import {
   transferInboxConversation,
   addInboxNote,
   createCaseFromConversation,
+  setInboxConversationStatus,
 } from '../api/inbox';
+import { listQuickReplies, useQuickReply } from '../api/quickReplies';
 import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 import { useIncrementalList, useLoadMoreSentinel } from '../hooks/useIncrementalList';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { useWebSocketContext } from '../context/WebSocketContext';
 import { CrudPageBase } from '../modules/crud-base';
 
 export function InboxPage() {
@@ -50,16 +54,31 @@ export function InboxPage() {
   const [noteText, setNoteText] = useState('');
   const [replyText, setReplyText] = useState('');
   const [creatingCase, setCreatingCase] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQueryDebounced, setSearchQueryDebounced] = useState('');
+  const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
+  const [quickReplies, setQuickReplies] = useState([]);
+  const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   // Cache id→nome de atendente e sequência para descartar respostas obsoletas
   const agentNameCacheRef = useRef(new Map());
   const loadTicketsSeqRef = useRef(0);
+  const selectedTicketIdRef = useRef(null);
+  const ticketsRef = useRef([]);
+  const loadTicketsRef = useRef(null);
 
   // Debounce do filtro "Atendente": evita refetch de 500 conversas a cada tecla
   useEffect(() => {
     const timeout = setTimeout(() => setAssignedFilterDebounced(assignedFilter), 400);
     return () => clearTimeout(timeout);
   }, [assignedFilter]);
+
+  // Debounce da busca livre: envia `q` server-side após ~300ms sem teclas
+  useEffect(() => {
+    const timeout = setTimeout(() => setSearchQueryDebounced(searchQuery.trim()), 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const statusOptions = useMemo(() => [
     { value: 'open', label: 'Abertos (waiting + in_progress)' },
@@ -158,6 +177,7 @@ export function InboxPage() {
       const data = await listInboxConversations({
         status: statusFilter === 'open' ? undefined : statusFilter,
         channelType: channelFilter || undefined,
+        q: searchQueryDebounced || undefined,
         limit: 500,
         offset: 0,
       });
@@ -180,7 +200,7 @@ export function InboxPage() {
         setLoading(false);
       }
     }
-  }, [channelFilter, resolveAssignedToDisplay, selectedTicket, showToast, statusFilter]);
+  }, [channelFilter, resolveAssignedToDisplay, searchQueryDebounced, selectedTicket, showToast, statusFilter]);
 
   const loadMessages = useCallback(async (ticketId) => {
     if (!ticketId) {
@@ -207,7 +227,7 @@ export function InboxPage() {
       logger.error('[Inbox] Erro ao carregar mensagens', err);
       // Não adicionar showToast em dependency - usar diretamente
       try {
-        showToast('Erro ao carregar mensagens do ticket', 'error');
+        showToast('Erro ao carregar mensagens da conversa', 'error');
       } catch (toastErr) {
         console.error('Erro ao exibir toast:', toastErr);
       }
@@ -229,7 +249,7 @@ export function InboxPage() {
     if (!authLoading && isAuthenticated) {
       loadTickets();
     }
-  }, [authLoading, channelFilter, isAuthenticated, statusFilter]);
+  }, [authLoading, channelFilter, isAuthenticated, searchQueryDebounced, statusFilter]);
 
   useEffect(() => {
     if (selectedTicket?.id) {
@@ -239,6 +259,124 @@ export function InboxPage() {
       setNotes([]);
     }
   }, [loadMessages, selectedTicket]);
+
+  useEffect(() => {
+    selectedTicketIdRef.current = selectedTicket?.id || null;
+  }, [selectedTicket?.id]);
+
+  useEffect(() => {
+    ticketsRef.current = tickets;
+  }, [tickets]);
+
+  useEffect(() => {
+    loadTicketsRef.current = loadTickets;
+  }, [loadTickets]);
+
+  // Realtime: eventos de conversa no canal do tenant (sem polling).
+  const handleConversationEvent = useCallback((event, data) => {
+    if (!data || !data.conversationId) return;
+    const conversationId = data.conversationId;
+
+    if (event === 'conversation.message.received') {
+      const message = data.message;
+      const isOutbound = message?.direction === 'out';
+      const isOpen = selectedTicketIdRef.current === conversationId;
+
+      if (isOpen && message) {
+        setMessages((prev) => (message.id && prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
+      }
+
+      const known = ticketsRef.current.some((t) => t.id === conversationId);
+      if (known) {
+        setTickets((prev) => {
+          const current = prev.find((t) => t.id === conversationId);
+          if (!current) return prev;
+          const updated = {
+            ...current,
+            lastMessage: message ? {
+              text: message.text ?? message.body?.text ?? null,
+              type: message.type || message.body?.type || current.lastMessage?.type || 'text',
+              direction: message.direction || current.lastMessage?.direction,
+              createdAt: message.createdAt || current.lastMessage?.createdAt,
+            } : current.lastMessage,
+            lastMessageAt: message?.createdAt || current.lastMessageAt,
+            unreadCount: isOpen || isOutbound ? 0 : Number(current.unreadCount || 0) + 1,
+          };
+          return [updated, ...prev.filter((t) => t.id !== conversationId)];
+        });
+      } else {
+        // Conversa fora da lista atual (filtros/busca): recarga silenciosa
+        loadTicketsRef.current?.();
+      }
+      return;
+    }
+
+    if (event === 'conversation.updated') {
+      setTickets((prev) => prev.map((t) => (t.id === conversationId
+        ? { ...t, status: data.status ?? t.status, assignedTo: data.assignedTo ?? t.assignedTo }
+        : t)));
+      setSelectedTicket((prev) => (prev?.id === conversationId
+        ? { ...prev, status: data.status ?? prev.status, assignedTo: data.assignedTo ?? prev.assignedTo }
+        : prev));
+    }
+  }, []);
+
+  useWebSocketContext({
+    enabled: isAuthenticated,
+    onEvent: handleConversationEvent,
+    subscribeEvents: ['conversation.message.received', 'conversation.updated'],
+  });
+
+  // Deep-link: /inbox?conversationId=<id> abre a conversa diretamente.
+  // O useRouter expõe apenas o pathname; o query string é lido de
+  // window.location e reativo ao evento 'router:change' disparado pelo navigate().
+  const [locationSearch, setLocationSearch] = useState(() => window.location.search);
+  useEffect(() => {
+    const updateSearch = () => setLocationSearch(window.location.search);
+    window.addEventListener('popstate', updateSearch);
+    window.addEventListener('router:change', updateSearch);
+    return () => {
+      window.removeEventListener('popstate', updateSearch);
+      window.removeEventListener('router:change', updateSearch);
+    };
+  }, []);
+
+  const deepLinkConversationId = useMemo(() => {
+    const id = new URLSearchParams(locationSearch).get('conversationId');
+    return id ? String(id) : null;
+  }, [locationSearch]);
+
+  useEffect(() => {
+    if (!deepLinkConversationId || authLoading || !isAuthenticated) return undefined;
+    if (selectedTicketIdRef.current === deepLinkConversationId) return undefined;
+    let cancelled = false;
+    // O GET de detalhe também zera o unread da conversa no backend
+    getInboxConversation(deepLinkConversationId)
+      .then((data) => {
+        if (cancelled) return;
+        const conversation = data?.conversation && typeof data.conversation === 'object' ? data.conversation : null;
+        if (!conversation?.id) {
+          showToast('Conversa não encontrada', 'error');
+          return;
+        }
+        setSelectedTicket(conversation);
+        setAssignInput('');
+        setTransferQueue('');
+        setTransferAssigned('');
+        setNoteText('');
+        setReplyText('');
+        setQuickRepliesOpen(false);
+        setTickets((prev) => prev.map((t) => (t.id === conversation.id ? { ...t, unreadCount: 0 } : t)));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        logger.warn('[Inbox] Falha ao abrir conversa via deep-link', err);
+        const notFound = err?.status === 404 || err?.response?.status === 404;
+        showToast(notFound ? 'Conversa não encontrada' : 'Erro ao abrir conversa', 'error');
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, deepLinkConversationId, isAuthenticated]);
 
   if (authLoading) {
     return (
@@ -261,6 +399,7 @@ export function InboxPage() {
     setTransferAssigned('');
     setNoteText('');
     setReplyText('');
+    setQuickRepliesOpen(false);
   };
 
   const getSlaMinutes = useCallback((ticket) => {
@@ -430,6 +569,57 @@ export function InboxPage() {
     }
   };
 
+  const handleStatusChange = async (nextStatus) => {
+    if (!selectedTicket) return;
+    try {
+      const result = await setInboxConversationStatus(selectedTicket.id, nextStatus);
+      const updatedConversation = result?.conversation || { status: nextStatus };
+      setSelectedTicket((prev) => (prev ? { ...prev, ...updatedConversation } : prev));
+      setTickets((prev) => prev.map((t) => (t.id === selectedTicket.id ? { ...t, ...updatedConversation } : t)));
+      showToast(nextStatus === 'resolved' ? 'Conversa resolvida' : 'Conversa reaberta', 'success');
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'Erro ao atualizar status da conversa';
+      showToast(message, 'error');
+    }
+  };
+
+  const loadQuickReplies = useCallback(async () => {
+    setQuickRepliesLoading(true);
+    try {
+      const resp = await listQuickReplies({ activeOnly: true });
+      const list = Array.isArray(resp) ? resp : (resp?.quickReplies || []);
+      setQuickReplies(list.slice(0, 12));
+    } catch (err) {
+      logger.warn('[Inbox] Falha ao carregar respostas rápidas', err);
+      setQuickReplies([]);
+    } finally {
+      setQuickRepliesLoading(false);
+    }
+  }, []);
+
+  const handleToggleQuickReplies = () => {
+    setQuickRepliesOpen((prev) => {
+      const next = !prev;
+      if (next && quickReplies.length === 0) {
+        loadQuickReplies();
+      }
+      return next;
+    });
+  };
+
+  const handleSelectQuickReply = (reply) => {
+    const text = String(reply?.message || reply?.content || '').trim();
+    if (text) {
+      // Insere no composer sem enviar; preserva o que o atendente já digitou
+      setReplyText((prev) => (prev ? `${prev}\n${text}` : text));
+    }
+    setQuickRepliesOpen(false);
+    if (reply?.id) {
+      // Analytics de uso (best-effort)
+      useQuickReply(reply.id).catch(() => {});
+    }
+  };
+
   const formatDate = (value) => {
     if (!value) return '-';
     const d = new Date(value);
@@ -452,7 +642,10 @@ export function InboxPage() {
     const normalized = String(status || '').trim().toLowerCase();
     if (normalized === 'in_progress') return 'Em atendimento';
     if (normalized === 'waiting') return 'Aguardando';
+    if (normalized === 'pending') return 'Pendente';
+    if (normalized === 'resolved') return 'Resolvido';
     if (normalized === 'closed') return 'Fechado';
+    if (normalized === 'open') return 'Aberto';
     if (!normalized) return 'Aberto';
     return normalized;
   };
@@ -464,6 +657,30 @@ export function InboxPage() {
     return normalized;
   };
 
+  const formatChannelLabel = (channelType) => {
+    const normalized = String(channelType || '').trim().toLowerCase();
+    if (normalized === 'whatsapp') return 'WhatsApp';
+    if (normalized === 'messenger') return 'Messenger';
+    if (normalized === 'instagram') return 'Instagram';
+    if (normalized === 'webchat') return 'Webchat';
+    return normalized || 'Canal';
+  };
+
+  const formatRelativeTime = (value) => {
+    if (!value) return '-';
+    const time = new Date(value).getTime();
+    if (!Number.isFinite(time)) return '-';
+    const diffSeconds = Math.max(0, Math.floor((Date.now() - time) / 1000));
+    if (diffSeconds < 60) return 'agora';
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) return `${diffMinutes} min`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays} d`;
+    return formatTime(value);
+  };
+
   const formatBadgeCount = (value) => {
     const n = Number(value || 0);
     if (n > 99) return '99+';
@@ -471,15 +688,9 @@ export function InboxPage() {
   };
 
   const getContactName = (ticket) => {
-    const crmName = String(ticket?.customerName || '').trim();
-    const contextName = String(ticket?.context?.metadata?.contactName || '').trim();
-    const variableName = String(
-      ticket?.context?.variables?.customerName ||
-      ticket?.context?.variables?.name ||
-      ticket?.context?.variables?.nome ||
-      ''
-    ).trim();
-    return crmName || contextName || variableName || 'Cliente';
+    const name = String(ticket?.contactName || '').trim();
+    const phone = String(ticket?.phoneNumber || '').trim();
+    return name || phone || 'Cliente';
   };
 
   const getPhoneNode = (ticket) => {
@@ -487,11 +698,21 @@ export function InboxPage() {
     return <MaskedPhone phone={ticket.phoneNumber} mask={phoneMaskingEnabled} />;
   };
 
+  const getMediaPlaceholder = (type) => {
+    const normalized = String(type || '').trim().toLowerCase();
+    if (normalized === 'image') return '📷 Imagem';
+    if (normalized === 'audio') return '🎧 Áudio';
+    if (normalized === 'video') return '🎬 Vídeo';
+    if (normalized === 'document' || normalized === 'file') return '📎 Documento';
+    return null;
+  };
+
   const getTicketPreview = (ticket) => {
-    const text = String(ticket?.lastUserMessage || '').trim();
-    if (!text) return 'Sem mensagens';
-    if (text.length <= 80) return text;
-    return `${text.slice(0, 79)}…`;
+    const lastMessage = ticket?.lastMessage;
+    const text = String(lastMessage?.text || '').trim();
+    const preview = text || getMediaPlaceholder(lastMessage?.type) || 'Sem mensagens';
+    if (preview.length <= 80) return preview;
+    return `${preview.slice(0, 79)}…`;
   };
 
   const getAssignedLabel = (ticket) => ticket?.assignedToDisplay || ticket?.assignedTo || 'Não atribuído';
@@ -614,11 +835,20 @@ export function InboxPage() {
         <p className="text-sm text-text-secondary">Sem filtros específicos para esta tela.</p>
       </div>
 
-      <div className="support-grid">
+      <div className={`support-grid${isMobile ? ' is-mobile' : ''}${selectedTicket ? ' has-selected' : ''}`}>
         <div className="support-tickets-panel">
+          <div className="inbox-search">
+            <input
+              className="support-form-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar conversa (nome, telefone, mensagem)"
+              aria-label="Buscar conversa"
+            />
+          </div>
           <div className="support-tickets-list" role="list">
             {displayedTickets.length === 0 && (
-              <p className="support-tickets-empty">Nenhum ticket disponível</p>
+              <p className="support-tickets-empty">Nenhuma conversa disponível</p>
             )}
             {visibleTickets.map((ticket) => (
               <div
@@ -636,13 +866,14 @@ export function InboxPage() {
                 <div className="support-ticket-id-row">
                   <span className="support-ticket-id">#{ticket.id}</span>
                   <span className="support-ticket-mode-badge">{formatTicketMode(ticket.mode)}</span>
+                  <span className="support-ticket-mode-badge">{formatChannelLabel(ticket.channelType)}</span>
                 </div>
                 <div className="support-ticket-top-row">
                   <div className="support-ticket-status-group">
                     <span className={`support-ticket-status ${String(ticket.status || '').toLowerCase()}`}>
                       {formatTicketStatus(ticket.status)}
                     </span>
-                    <span className="support-ticket-time">{formatTime(ticket.updatedAt)}</span>
+                    <span className="support-ticket-time">{formatRelativeTime(ticket.lastMessageAt || ticket.updatedAt)}</span>
                   </div>
                   {ticket.unreadCount > 0 ? (
                     <span className="support-ticket-unread-badge">{formatBadgeCount(ticket.unreadCount)}</span>
@@ -673,9 +904,32 @@ export function InboxPage() {
           {selectedTicket ? (
             <div className="support-details-content">
               <div className="support-details-header">
-                <h3 className="support-details-title">Ticket #{selectedTicket.id}</h3>
+                <h3 className="support-details-title">
+                  {isMobile ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedTicket(null)}
+                      aria-label="Voltar para a lista de conversas"
+                    >
+                      ← Voltar
+                    </Button>
+                  ) : null}
+                  Conversa #{selectedTicket.id}
+                </h3>
                 <div style={{ color: 'var(--color-text-tertiary)' }}>
-                  Status: {selectedTicket.status || '-'} · Fila: {selectedTicket.queue || '-'}
+                  Status: {formatTicketStatus(selectedTicket.status)} · Fila: {selectedTicket.queue || '-'}
+                </div>
+                <div className="inbox-status-actions">
+                  {['resolved', 'closed'].includes(String(selectedTicket.status || '').toLowerCase()) ? (
+                    <Button size="sm" onClick={() => handleStatusChange('open')} className="support-button">
+                      Reabrir
+                    </Button>
+                  ) : (
+                    <Button size="sm" onClick={() => handleStatusChange('resolved')} className="support-button">
+                      Resolver
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -728,6 +982,39 @@ export function InboxPage() {
               <div className="support-details-section">
                 <div className="support-form-group">
                   <label className="support-form-label">Responder</label>
+                  <div className="inbox-quick-replies">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleToggleQuickReplies}
+                      aria-label="Respostas rápidas"
+                      aria-expanded={quickRepliesOpen}
+                    >
+                      ⚡ Respostas rápidas
+                    </Button>
+                    {quickRepliesOpen ? (
+                      <div className="inbox-quick-replies-picker" role="menu">
+                        {quickRepliesLoading ? (
+                          <div className="inbox-quick-replies-empty">Carregando...</div>
+                        ) : null}
+                        {!quickRepliesLoading && quickReplies.length === 0 ? (
+                          <div className="inbox-quick-replies-empty">Nenhuma resposta rápida cadastrada</div>
+                        ) : null}
+                        {quickReplies.map((reply) => (
+                          <button
+                            key={reply.id}
+                            type="button"
+                            role="menuitem"
+                            className="inbox-quick-replies-item"
+                            onClick={() => handleSelectQuickReply(reply)}
+                          >
+                            <span className="inbox-quick-replies-item-title">{reply.title || 'Resposta rápida'}</span>
+                            <span className="inbox-quick-replies-item-preview">{reply.message || reply.content || ''}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                   <textarea
                     className="support-form-textarea"
                     value={replyText}
@@ -787,11 +1074,15 @@ export function InboxPage() {
                     </div>
                   ) : null}
                   {visibleMessages.map((msg) => {
-                    // Contrato novo (channel_messages): { direction, body: { text }, createdAt };
+                    // Contrato novo (channel_messages): { direction, body: { text, mediaUrl }, createdAt };
                     // compat legado (ledger do ticket): { sender, text, timestamp }.
                     const senderLabel = msg.sender || (msg.direction === 'out' ? 'agent' : 'customer');
-                    const messageText = msg.text || msg.body?.text || '-';
+                    const messageBody = msg.body || {};
+                    const messageText = msg.text || messageBody.text || '';
                     const messageAt = msg.timestamp || msg.createdAt;
+                    const mediaUrl = messageBody.mediaUrl || msg.mediaUrl || null;
+                    const mediaType = String(messageBody.type || msg.type || '').trim().toLowerCase();
+                    const mediaName = messageBody.filename || messageBody.fileName || msg.filename || 'arquivo';
                     return (
                       <div key={msg.id || messageAt} className="mb-2">
                         <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
@@ -799,7 +1090,20 @@ export function InboxPage() {
                           {' · '}{formatDate(messageAt)}
                         </div>
                         <div style={{ color: msg.sender === 'note' ? 'var(--color-status-warning)' : 'var(--color-text-primary)' }}>
-                          {messageText}
+                          {mediaUrl && mediaType === 'image' ? (
+                            <a href={mediaUrl} target="_blank" rel="noopener noreferrer">
+                              <img src={mediaUrl} alt={mediaName} className="inbox-media-image" />
+                            </a>
+                          ) : null}
+                          {mediaUrl && mediaType === 'audio' ? (
+                            <audio controls src={mediaUrl} className="inbox-media-audio" />
+                          ) : null}
+                          {mediaUrl && mediaType !== 'image' && mediaType !== 'audio' ? (
+                            <a href={mediaUrl} target="_blank" rel="noopener noreferrer" download={mediaName} className="inbox-media-link">
+                              📎 {mediaName}
+                            </a>
+                          ) : null}
+                          {messageText || (!mediaUrl ? '-' : '')}
                         </div>
                       </div>
                     );
@@ -809,7 +1113,7 @@ export function InboxPage() {
             </div>
           ) : (
             <div className="support-details-empty">
-              <p>Selecione um ticket para visualizar detalhes.</p>
+              <p>Selecione uma conversa para visualizar detalhes.</p>
             </div>
           )}
         </div>

@@ -10,7 +10,16 @@ function formatLastActivity(value) {
   }
 }
 
-export function WorkspaceSidebar({ entities = [], entitySummaries = {}, selectedId, loading, query, activeFilter, classification = 'PRODUCTION', onQueryChange, onFilterChange, onSelect, onCreateDemo }) {
+const RISK_BADGES = {
+  attention: { label: 'Atenção', tone: 'warning' },
+  critical: { label: 'Crítico', tone: 'critical' },
+};
+
+function countLabel(count, singular, plural) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+export function WorkspaceSidebar({ entities = [], selectedId, loading, query, activeFilter, classification = 'PRODUCTION', onQueryChange, onFilterChange, onSelect, onCreateDemo }) {
   const filters = getSidebarFilters(classification);
   const labels = getOperationalLabels(classification);
 
@@ -53,7 +62,9 @@ export function WorkspaceSidebar({ entities = [], entitySummaries = {}, selected
         ) : null}
         {entities.map((entity) => (
           (() => {
-            const summary = entitySummaries[entity.id] || {};
+            const summary = entity.summary || {};
+            const riskBadge = RISK_BADGES[summary.riskLevel] || null;
+            const tone = riskBadge?.tone || 'healthy';
             return (
           <button
             key={entity.id}
@@ -63,16 +74,18 @@ export function WorkspaceSidebar({ entities = [], entitySummaries = {}, selected
           >
             <div className="flex items-center justify-between gap-3">
               <strong>{entity.name}</strong>
-              <span className={`workspace-status-dot ${summary.healthTone || 'healthy'}`}></span>
+              <span className={`workspace-status-dot ${tone}`}></span>
             </div>
             <div className="workspace-muted text-sm mt-2">{entity.phone || entity.email || 'sem contato principal'}</div>
             <div className="workspace-entity-meta mt-3">
               <span className="workspace-pill subtle">{entity.type || 'contact'}</span>
-              <span className={`workspace-pill ${summary.healthTone || 'healthy'}`}>{summary.healthLabel || 'Saudável'}</span>
-              {summary.hasQaFailure ? <span className="workspace-pill critical">{labels.failurePill}</span> : null}
-              {summary.riskLevel && summary.riskLevel !== 'Estável' ? <span className="workspace-pill warning">{summary.riskLevel}</span> : null}
+              {riskBadge ? <span className={`workspace-pill ${riskBadge.tone}`}>{riskBadge.label}</span> : null}
+              {summary.riskLevel === 'critical' ? <span className="workspace-pill critical">{labels.failurePill}</span> : null}
+              {summary.openTickets > 0 ? <span className="workspace-pill subtle">{countLabel(summary.openTickets, 'ticket aberto', 'tickets abertos')}</span> : null}
+              {summary.pendingPayments > 0 ? <span className="workspace-pill subtle">{countLabel(summary.pendingPayments, 'pagamento pendente', 'pagamentos pendentes')}</span> : null}
+              {summary.pendingActions > 0 ? <span className="workspace-pill subtle">{countLabel(summary.pendingActions, 'ação pendente', 'ações pendentes')}</span> : null}
             </div>
-            <div className="workspace-muted text-xs mt-3">Última atividade: {formatLastActivity(summary.lastActivityAt || entity.updated_at)}</div>
+            <div className="workspace-muted text-xs mt-3">Última atividade: {formatLastActivity(summary.lastInteractionAt || entity.updated_at)}</div>
           </button>
             );
           })()

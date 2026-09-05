@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T17:37:10.763Z",
+  "generatedAt": "2026-09-05T19:23:25.153Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,

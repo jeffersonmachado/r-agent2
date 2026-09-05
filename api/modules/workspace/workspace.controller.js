@@ -1,5 +1,7 @@
 'use strict';
 
+const { getClassificationForAgent } = require('../agent-os/experience-segregation');
+
 function createWorkspaceController({ service, deps }) {
   function ensure(req, res, action = 'read') {
     const auth = deps.requireAuth(req);
@@ -30,7 +32,7 @@ function createWorkspaceController({ service, deps }) {
       deps.sendJson(res, 200, { ok: true, ...result });
     }),
     insights: (req, res) => run(req, res, 'insight', async (tenantId) => {
-      const result = await service.getInsights(tenantId, req.params.id);
+      const result = await service.getInsights(tenantId, req.params.id, { classification: getClassificationForAgent(req.agent) });
       if (!result) return deps.sendJson(res, 404, { error: 'not_found', message: 'Entidade nao encontrada' });
       deps.sendJson(res, 200, { ok: true, ...result });
     }),
@@ -39,9 +41,9 @@ function createWorkspaceController({ service, deps }) {
       if (!result) return deps.sendJson(res, 404, { error: 'not_found', message: 'Entidade nao encontrada' });
       deps.sendJson(res, 200, { ok: true, ...result });
     }),
-    actions: (req, res) => run(req, res, 'action', async (tenantId) => deps.sendJson(res, 200, { ok: true, ...(await service.getActions(tenantId, req.params.id)) })),
+    actions: (req, res) => run(req, res, 'action', async (tenantId) => deps.sendJson(res, 200, { ok: true, ...(await service.getActions(tenantId, req.params.id, { classification: getClassificationForAgent(req.agent) })) })),
     createAction: (req, res) => run(req, res, 'action', async (tenantId) => deps.sendJson(res, 201, { ok: true, action: await service.createAction(tenantId, await body(req, res)) }), 201),
-    executeSuggestedActions: (req, res) => run(req, res, 'action', async (tenantId) => deps.sendJson(res, 201, { ok: true, ...(await service.executeSuggestedActions(tenantId, req.params.id)) }), 201),
+    executeSuggestedActions: (req, res) => run(req, res, 'action', async (tenantId) => deps.sendJson(res, 201, { ok: true, ...(await service.executeSuggestedActions(tenantId, req.params.id, { classification: getClassificationForAgent(req.agent) })) }), 201),
     listTasks: (req, res) => run(req, res, 'read', async (tenantId) => deps.sendJson(res, 200, { ok: true, ...(await service.listTasks(tenantId, query(req))) })),
     createTask: (req, res) => run(req, res, 'write', async (tenantId) => deps.sendJson(res, 201, { ok: true, task: await service.createTask(tenantId, await body(req, res)) }), 201),
     listTimesheet: (req, res) => run(req, res, 'read', async (tenantId) => deps.sendJson(res, 200, { ok: true, ...(await service.listTimesheetEntries(tenantId, query(req))) })),

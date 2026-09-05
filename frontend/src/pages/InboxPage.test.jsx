@@ -5,12 +5,19 @@ import { render, screen, act, fireEvent, cleanup } from '@testing-library/react'
 const listInboxConversations = vi.fn();
 const getInboxConversation = vi.fn();
 const replyInboxConversation = vi.fn();
+const setInboxConversationStatus = vi.fn();
 const createCaseFromConversation = vi.fn();
 const getAgentNameById = vi.fn();
+const listQuickReplies = vi.fn();
+const useQuickReply = vi.fn();
 
 const authDouble = vi.hoisted(() => ({
   capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
 }));
+
+const wsDouble = vi.hoisted(() => ({ onEvent: null }));
+
+const toastDouble = vi.hoisted(() => ({ showToast: vi.fn() }));
 
 vi.mock('../api/inbox', () => ({
   listInboxConversations: (...args) => listInboxConversations(...args),
@@ -20,6 +27,12 @@ vi.mock('../api/inbox', () => ({
   transferInboxConversation: vi.fn(),
   addInboxNote: vi.fn(),
   createCaseFromConversation: (...args) => createCaseFromConversation(...args),
+  setInboxConversationStatus: (...args) => setInboxConversationStatus(...args),
+}));
+
+vi.mock('../api/quickReplies', () => ({
+  listQuickReplies: (...args) => listQuickReplies(...args),
+  useQuickReply: (...args) => useQuickReply(...args),
 }));
 
 vi.mock('../api/tickets', () => ({
@@ -28,6 +41,17 @@ vi.mock('../api/tickets', () => ({
 
 vi.mock('../api/auth', () => ({
   getAgentNameById: (...args) => getAgentNameById(...args),
+}));
+
+vi.mock('../context/WebSocketContext', () => ({
+  useWebSocketContext: ({ onEvent }) => {
+    wsDouble.onEvent = onEvent;
+    return { connected: true, authenticated: true, send: vi.fn(), reconnect: vi.fn() };
+  },
+}));
+
+vi.mock('../hooks/useIsMobile', () => ({
+  useIsMobile: () => false,
 }));
 
 vi.mock('../context/authContext', async () => {
@@ -50,7 +74,7 @@ vi.mock('../hooks/useRouter', () => ({
 
 vi.mock('../components/Toast', () => ({
   useToast: () => ({
-    showToast: vi.fn(),
+    showToast: toastDouble.showToast,
     ToastContainer: () => null,
   }),
 }));
@@ -78,11 +102,22 @@ vi.mock('../utils/logger', () => ({
 
 import { InboxPage } from './InboxPage';
 
+// Contrato novo da listagem (GET /inbox/conversations)
 const baseConversation = {
   id: 'c1',
-  status: 'waiting',
+  tenantId: 'tenant-1',
   channelType: 'whatsapp',
-  customerName: 'Ana',
+  externalId: 'ext-1',
+  contactId: 'contact-1',
+  status: 'open',
+  currentTicketId: null,
+  assignedTo: null,
+  metadata: {},
+  contactName: 'Ana',
+  phoneNumber: '+5511999990000',
+  lastMessage: { text: 'Oi, tudo bem?', type: 'text', direction: 'in', createdAt: '2026-08-01T10:05:00Z' },
+  unreadCount: 0,
+  lastMessageAt: '2026-08-01T10:05:00Z',
   createdAt: '2026-08-01T10:00:00Z',
   updatedAt: '2026-08-01T10:05:00Z',
 };
@@ -92,10 +127,13 @@ describe('pages/InboxPage', () => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     localStorage.clear();
+    wsDouble.onEvent = null;
     authDouble.capabilities = { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' };
     listInboxConversations.mockResolvedValue({ conversations: [], total: 0 });
     getInboxConversation.mockResolvedValue({ conversation: baseConversation, messages: [] });
     getAgentNameById.mockResolvedValue({ agent: { name: 'Agente X' } });
+    listQuickReplies.mockResolvedValue({ quickReplies: [] });
+    useQuickReply.mockResolvedValue({ ok: true });
   });
 
   afterEach(() => {
@@ -103,6 +141,41 @@ describe('pages/InboxPage', () => {
     vi.useRealTimers();
     vi.clearAllTimers();
     localStorage.clear();
+    window.history.pushState({}, '', '/inbox');
+  });
+
+  it('deep-link: ?conversationId=conv-9 abre a conversa mesmo fora da lista', async () => {
+    window.history.pushState({}, '', '/inbox?conversationId=conv-9');
+    const deepLinked = { ...baseConversation, id: 'conv-9', contactName: 'Carlos', unreadCount: 5 };
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    getInboxConversation.mockResolvedValue({ conversation: deepLinked, messages: [] });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    expect(getInboxConversation).toHaveBeenCalledWith('conv-9');
+    expect(screen.getByText(/Conversa #conv-9/)).toBeInTheDocument();
+    // Painel de detalhes aberto (composer disponível)
+    expect(screen.getByRole('button', { name: 'Enviar resposta' })).toBeInTheDocument();
+  });
+
+  it('deep-link: id desconhecido mostra toast de erro e permanece na lista', async () => {
+    window.history.pushState({}, '', '/inbox?conversationId=conv-404');
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    const notFoundError = new Error('not found');
+    notFoundError.status = 404;
+    getInboxConversation.mockRejectedValue(notFoundError);
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    expect(getInboxConversation).toHaveBeenCalledWith('conv-404');
+    expect(toastDouble.showToast).toHaveBeenCalledWith('Conversa não encontrada', 'error');
+    // Permanece na lista: painel de detalhes vazio e cards visíveis
+    expect(screen.getByText('Selecione uma conversa para visualizar detalhes.')).toBeInTheDocument();
+    expect(screen.getByText('Ana')).toBeInTheDocument();
   });
 
   it('usa o contrato novo de listagem ({ conversations, total }) com status e canal server-side', async () => {
@@ -118,6 +191,285 @@ describe('pages/InboxPage', () => {
     expect(lastCall.assignedTo).toBeUndefined();
     expect(lastCall.queue).toBeUndefined();
     expect(screen.getByText('Ana')).toBeInTheDocument();
+  });
+
+  it('card renderiza contactName, preview da última mensagem e badge de não lidas', async () => {
+    listInboxConversations.mockResolvedValue({
+      conversations: [{ ...baseConversation, unreadCount: 3 }],
+      total: 1,
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    expect(screen.getByText('Ana')).toBeInTheDocument();
+    expect(screen.getByText('+5511999990000')).toBeInTheDocument();
+    expect(screen.getByText('Oi, tudo bem?')).toBeInTheDocument();
+    // Badge de canal no card (além do <option> do filtro de canal)
+    expect(screen.getAllByText('WhatsApp').length).toBeGreaterThan(1);
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('card usa placeholder de mídia quando a última mensagem não tem texto', async () => {
+    listInboxConversations.mockResolvedValue({
+      conversations: [{
+        ...baseConversation,
+        contactName: null,
+        lastMessage: { text: null, type: 'image', direction: 'in', createdAt: '2026-08-01T10:05:00Z' },
+      }],
+      total: 1,
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    // Sem contactName: cai no telefone (nome + linha secundária)
+    expect(screen.getAllByText('+5511999990000').length).toBeGreaterThan(0);
+    expect(screen.getByText('📷 Imagem')).toBeInTheDocument();
+  });
+
+  it('busca livre envia q server-side após debounce de ~300ms', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    const callsAfterMount = listInboxConversations.mock.calls.length;
+    const input = screen.getByPlaceholderText('Buscar conversa (nome, telefone, mensagem)');
+
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'ana' } });
+    });
+
+    // Antes do debounce, sem refetch
+    expect(listInboxConversations.mock.calls.length).toBe(callsAfterMount);
+
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(listInboxConversations.mock.calls.length).toBeGreaterThan(callsAfterMount);
+    const lastCall = listInboxConversations.mock.calls.at(-1)[0];
+    expect(lastCall).toMatchObject({ q: 'ana', offset: 0 });
+  });
+
+  it('botão Resolver chama o endpoint de status e atualiza a UI', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    setInboxConversationStatus.mockResolvedValue({
+      ok: true,
+      conversation: { ...baseConversation, status: 'resolved' },
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Resolver' }));
+    });
+
+    expect(setInboxConversationStatus).toHaveBeenCalledWith('c1', 'resolved');
+    // UI atualizada: status Resolvido e ação passa a ser Reabrir
+    expect(screen.getByRole('button', { name: 'Reabrir' })).toBeInTheDocument();
+    expect(screen.getAllByText('Resolvido').length).toBeGreaterThan(0);
+  });
+
+  it('botão Reabrir aparece em conversa resolvida e chama o endpoint com status open', async () => {
+    const resolvedConversation = { ...baseConversation, status: 'resolved' };
+    listInboxConversations.mockResolvedValue({ conversations: [resolvedConversation], total: 1 });
+    setInboxConversationStatus.mockResolvedValue({
+      ok: true,
+      conversation: { ...baseConversation, status: 'open' },
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reabrir' }));
+    });
+
+    expect(setInboxConversationStatus).toHaveBeenCalledWith('c1', 'open');
+    expect(screen.getByRole('button', { name: 'Resolver' })).toBeInTheDocument();
+  });
+
+  it('renderiza mídias na thread: imagem clicável e áudio com controls', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    getInboxConversation.mockResolvedValue({
+      conversation: baseConversation,
+      messages: [
+        {
+          id: 'm1',
+          direction: 'in',
+          createdAt: '2026-08-01T10:01:00Z',
+          body: { type: 'image', mediaUrl: 'https://cdn.exemplo.com/foto.png', text: '' },
+        },
+        {
+          id: 'm2',
+          direction: 'out',
+          createdAt: '2026-08-01T10:02:00Z',
+          body: { type: 'audio', mediaUrl: 'https://cdn.exemplo.com/audio.ogg' },
+        },
+        {
+          id: 'm3',
+          direction: 'in',
+          createdAt: '2026-08-01T10:03:00Z',
+          body: { type: 'document', mediaUrl: 'https://cdn.exemplo.com/boleto.pdf', filename: 'boleto.pdf' },
+        },
+      ],
+    });
+
+    let container;
+    await act(async () => {
+      ({ container } = render(<InboxPage />));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    const image = container.querySelector('img.inbox-media-image');
+    expect(image).not.toBeNull();
+    expect(image.getAttribute('src')).toBe('https://cdn.exemplo.com/foto.png');
+    expect(image.closest('a').getAttribute('href')).toBe('https://cdn.exemplo.com/foto.png');
+
+    const audio = container.querySelector('audio.inbox-media-audio');
+    expect(audio).not.toBeNull();
+    expect(audio.getAttribute('src')).toBe('https://cdn.exemplo.com/audio.ogg');
+
+    const docLink = container.querySelector('a.inbox-media-link');
+    expect(docLink).not.toBeNull();
+    expect(docLink.textContent).toContain('boleto.pdf');
+  });
+
+  it('respostas rápidas: picker lista opções e insere o texto no composer sem enviar', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    listQuickReplies.mockResolvedValue({
+      quickReplies: [{ id: 'qr1', title: 'Saudação', message: 'Olá! Como posso ajudar?' }],
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Respostas rápidas' }));
+    });
+
+    expect(listQuickReplies).toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Saudação'));
+    });
+
+    const composer = screen.getByPlaceholderText('Escreva a resposta para o cliente');
+    expect(composer.value).toBe('Olá! Como posso ajudar?');
+    // Não envia automaticamente
+    expect(replyInboxConversation).not.toHaveBeenCalled();
+    expect(useQuickReply).toHaveBeenCalledWith('qr1');
+  });
+
+  it('realtime: mensagem na conversa aberta entra na thread (dedup por id) e zera não lidas', async () => {
+    listInboxConversations.mockResolvedValue({
+      conversations: [{ ...baseConversation, unreadCount: 2 }],
+      total: 1,
+    });
+
+    let container;
+    await act(async () => {
+      ({ container } = render(<InboxPage />));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    const payload = {
+      conversationId: 'c1',
+      channelType: 'whatsapp',
+      tenantId: 'tenant-1',
+      message: { id: 'm9', direction: 'in', type: 'text', text: 'mensagem realtime', createdAt: '2026-08-01T10:10:00Z' },
+    };
+
+    await act(async () => {
+      wsDouble.onEvent('conversation.message.received', payload);
+    });
+    // Mesmo id novamente: não duplica na thread
+    await act(async () => {
+      wsDouble.onEvent('conversation.message.received', payload);
+    });
+
+    const thread = container.querySelector('.support-details-scroll');
+    expect(thread.textContent.match(/mensagem realtime/g)).toHaveLength(1);
+    // Badge de não lidas zerado (conversa aberta)
+    expect(screen.queryByText('2')).not.toBeInTheDocument();
+  });
+
+  it('realtime: mensagem em outra conversa sobe para o topo com unread+1', async () => {
+    const other = {
+      ...baseConversation,
+      id: 'c2',
+      contactName: 'Bruno',
+      unreadCount: 0,
+    };
+    listInboxConversations.mockResolvedValue({
+      conversations: [baseConversation, other],
+      total: 2,
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      wsDouble.onEvent('conversation.message.received', {
+        conversationId: 'c2',
+        channelType: 'whatsapp',
+        tenantId: 'tenant-1',
+        message: { id: 'm10', direction: 'in', type: 'text', text: 'alô?', createdAt: '2026-08-01T10:11:00Z' },
+      });
+    });
+
+    expect(screen.getByText('alô?')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    // c2 no topo da lista
+    const list = screen.getByRole('list');
+    expect(list.firstElementChild.textContent).toContain('Bruno');
+  });
+
+  it('realtime: conversation.updated atualiza status da conversa na lista', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      wsDouble.onEvent('conversation.updated', {
+        conversationId: 'c1',
+        tenantId: 'tenant-1',
+        status: 'resolved',
+        assignedTo: null,
+      });
+    });
+
+    expect(screen.getByText('Resolvido')).toBeInTheDocument();
   });
 
   it('caseManagement ligado: mostra Criar chamado, filtro de fila e SLA', async () => {
@@ -203,8 +555,8 @@ describe('pages/InboxPage', () => {
     const uuid = '123e4567-e89b-42d3-a456-426614174000';
     listInboxConversations.mockResolvedValue({
       conversations: [
-        { ...baseConversation, id: 'c1', assignedTo: uuid, customerName: 'Ana' },
-        { ...baseConversation, id: 'c2', assignedTo: 'outro', customerName: 'Bruno' },
+        { ...baseConversation, id: 'c1', assignedTo: uuid, contactName: 'Ana' },
+        { ...baseConversation, id: 'c2', assignedTo: 'outro', contactName: 'Bruno' },
       ],
       total: 2,
     });

@@ -22,14 +22,14 @@ function createWorkspaceService(deps = {}) {
     createEntity: (tenantId, body = {}) => entityService.getOrCreateEntityFromContact({ tenantId, contact: { type: body.type, name: body.name, phone: body.phone, email: body.email, source: body.source || 'workspace', refId: body.refId, raw: body.metadata || {} } }),
     linkEntity: (tenantId, body = {}) => entityService.linkEntity({ tenantId, entityId: body.entityId || body.entity_id, sourceType: body.sourceType || body.source_type, sourceId: body.sourceId || body.source_id, confidence: body.confidence ?? 1 }),
     getTimeline: (tenantId, entityId, query = {}) => timelineService.getEntityTimeline({ tenantId, entityId, limit: query.limit, offset: query.offset, type: query.type }),
-    getInsights: async (tenantId, entityId) => {
+    getInsights: async (tenantId, entityId, { classification } = {}) => {
       const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0 });
       if (!timeline) return null;
       await autoCorrectionService.ensureForEntityFailures({ tenantId, entityId, timeline });
-      return insightService.generateInsights(entityId, { tenantId, timeline });
+      return insightService.generateInsights(entityId, { tenantId, timeline, includeTechnical: classification === 'DEVELOPMENT' });
     },
-    getActions: async (tenantId, entityId) => {
-      const [items, suggestion] = await Promise.all([actionService.listActions({ tenantId, entityId }), actionService.suggestNextBestAction({ tenantId, entityId })]);
+    getActions: async (tenantId, entityId, { classification } = {}) => {
+      const [items, suggestion] = await Promise.all([actionService.listActions({ tenantId, entityId }), actionService.suggestNextBestAction({ tenantId, entityId, classification })]);
       return { items, suggestion };
     },
     getAutoCorrections: async (tenantId, entityId) => {
@@ -39,8 +39,8 @@ function createWorkspaceService(deps = {}) {
       return autoCorrectionService.listRunsForEntity({ tenantId, entityId });
     },
     createAction: (tenantId, body = {}) => actionService.createAction({ tenantId, entityId: body.entityId || body.entity_id, type: body.type, status: body.status, payload: body.payload }),
-    executeSuggestedActions: async (tenantId, entityId) => {
-      const insights = await insightService.generateInsights(entityId, { tenantId });
+    executeSuggestedActions: async (tenantId, entityId, { classification } = {}) => {
+      const insights = await insightService.generateInsights(entityId, { tenantId, includeTechnical: classification === 'DEVELOPMENT' });
       return { items: await actionService.autoCreateTasksFromInsights({ tenantId, entityId, insights: insights?.items || [] }) };
     },
     createTask: (tenantId, body = {}) => operationsService.createTask({ tenantId, payload: body }),

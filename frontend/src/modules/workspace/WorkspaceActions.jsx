@@ -1,8 +1,35 @@
 import React from 'react';
 
-export function WorkspaceActions({ actions, loading, onCreateSuggested }) {
+const RISK_LABELS = { low: 'Risco baixo', medium: 'Risco médio', high: 'Risco alto' };
+const RISK_TONES = { low: 'healthy', medium: 'warning', high: 'critical' };
+
+export function confidencePercent(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return numeric <= 1 ? Math.round(numeric * 100) : Math.round(numeric);
+}
+
+export function SuggestionMeta({ suggestion }) {
+  const confidence = confidencePercent(suggestion?.confidence);
+  const riskLabel = RISK_LABELS[suggestion?.risk];
+  const riskTone = RISK_TONES[suggestion?.risk] || 'subtle';
+  return (
+    <>
+      {riskLabel ? <span className={`workspace-pill ${riskTone}`}>{riskLabel}</span> : null}
+      {confidence !== null ? <span className="workspace-pill subtle">{confidence}% confiança</span> : null}
+    </>
+  );
+}
+
+export function SuggestionExpectedOutcome({ suggestion }) {
+  if (!suggestion?.expectedOutcome) return null;
+  return <p className="workspace-muted text-sm mt-1">Resultado esperado: {suggestion.expectedOutcome}</p>;
+}
+
+export function WorkspaceActions({ actions, loading, onCreateSuggested, onExecuteSuggestion }) {
   const items = actions?.items || [];
   const suggestion = actions?.suggestion;
+  const executeDisabled = suggestion?.action?.kind === 'send_message' && !suggestion?.action?.conversationId;
 
   return (
     <section className="workspace-card workspace-scroll">
@@ -11,12 +38,27 @@ export function WorkspaceActions({ actions, loading, onCreateSuggested }) {
 
       {suggestion ? (
         <div className="workspace-highlight-card mb-4">
-          <span className="workspace-pill">{suggestion.type}</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="workspace-pill">{suggestion.type}</span>
+            <SuggestionMeta suggestion={suggestion} />
+          </div>
           <h3 className="text-lg font-semibold mt-2">{suggestion.label}</h3>
           <p className="workspace-muted text-sm mt-1">{suggestion.reason}</p>
-          <button className="workspace-action-button mt-3" type="button" onClick={() => onCreateSuggested(suggestion)}>
-            Criar ação sugerida
-          </button>
+          <SuggestionExpectedOutcome suggestion={suggestion} />
+          <div className="flex gap-2 mt-3 flex-wrap">
+            <button
+              className="workspace-action-button"
+              type="button"
+              disabled={executeDisabled}
+              title={executeDisabled ? 'Sem conversa vinculada' : undefined}
+              onClick={() => onExecuteSuggestion(suggestion)}
+            >
+              {suggestion.action?.label || 'Executar ação sugerida'}
+            </button>
+            <button className="workspace-secondary-button" type="button" onClick={() => onCreateSuggested(suggestion)}>
+              Criar ação sugerida
+            </button>
+          </div>
         </div>
       ) : null}
 

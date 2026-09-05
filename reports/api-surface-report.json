@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T16:28:32.629Z",
-  "commit": "543f5c5789405c869f4edb3a4e9ae46af305868b",
-  "baseUrl": "http://localhost:3001",
+  "generatedAt": "2026-09-05T19:21:34.575Z",
+  "commit": "33d459d0b2af28596373f1d6736771d47d177144",
+  "baseUrl": "http://localhost:3010",
   "tokens": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 787,
+    "items": 789,
     "byState": {
-      "VALIDATED": 763,
+      "VALIDATED": 765,
       "NOT_APPLICABLE": 21,
       "VISITED": 3
     }
@@ -8588,7 +8588,7 @@
           "notFoundFallback": false
         },
         "p2": {
-          "status": 200,
+          "status": 404,
           "notFoundFallback": false
         },
         "p3": "skipped"
@@ -18536,6 +18536,30 @@
       }
     },
     {
+      "id": "api:POST:/inbox/conversations/:conversationId/status",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:POST:/inbox/conversations/:conversationId/transfer",
       "state": "VALIDATED",
       "assertions": [
@@ -21517,6 +21541,30 @@
       }
     },
     {
+      "id": "api:PUT:/api/tenant/settings/vertical",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "routeRegistered",
+          "passed": true,
+          "detail": "rota respondeu no runtime"
+        },
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo rejeitado com 401"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "status": 401,
+          "notFoundFallback": false
+        },
+        "p2": "skipped",
+        "p3": "skipped"
+      }
+    },
+    {
       "id": "api:PUT:/auth/agents/:id",
       "state": "VALIDATED",
       "assertions": [
@@ -22010,9 +22058,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20260905170821158-c550fb4f",
-  "sourceFingerprint": "d2b073b0d1f4d3aaab450f6e7841d42fbe6a7938a720594a41553a98fefdc2e2",
-  "artifactType": "api-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }

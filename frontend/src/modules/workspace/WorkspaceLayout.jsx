@@ -19,7 +19,6 @@ export function WorkspaceLayout({
   selectedEntity,
   selectedSummary,
   selectedEntityId,
-  entitySummaries,
   loadingEntities,
   query,
   sidebarFilter,
@@ -40,8 +39,11 @@ export function WorkspaceLayout({
   onCreateDemo,
   onLoadMoreTimeline,
   onCreateSuggestedAction,
+  onExecuteSuggestion,
   onCreateTask,
   onCreateFollowUp,
+  onRegisterPayment,
+  onSchedule,
 }) {
   const tabs = getWorkspaceTabs(classification);
   const devSurfaceVisible = isDevSurfaceVisible(classification);
@@ -55,7 +57,6 @@ export function WorkspaceLayout({
       <div className="workspace-shell">
         <WorkspaceSidebar
           entities={entities}
-          entitySummaries={entitySummaries}
           selectedId={selectedEntityId}
           loading={loadingEntities}
           query={query}
@@ -68,7 +69,7 @@ export function WorkspaceLayout({
         />
 
         <main className="workspace-panel workspace-main">
-          <WorkspaceHeader entity={selectedEntity} summary={selectedSummary} onCreateTask={onCreateTask} onCreateFollowUp={onCreateFollowUp} />
+          <WorkspaceHeader entity={selectedEntity} summary={selectedSummary} onCreateTask={onCreateTask} onCreateFollowUp={onCreateFollowUp} onRegisterPayment={onRegisterPayment} onSchedule={onSchedule} />
 
           <nav className="workspace-tabs" aria-label="Workspace tabs">
             {tabs.map((tab) => (
@@ -104,8 +105,8 @@ export function WorkspaceLayout({
 
               <div className="workspace-detail-stack">
                 {showInsights ? <WorkspaceInsights insights={insights} loading={loadingInsights} /> : null}
-                {showActions ? <WorkspaceActions actions={actions} loading={loadingActions} onCreateSuggested={onCreateSuggestedAction} /> : null}
-                {!showInsights && !showActions ? <WorkspaceActions actions={actions} loading={loadingActions} onCreateSuggested={onCreateSuggestedAction} /> : null}
+                {showActions ? <WorkspaceActions actions={actions} loading={loadingActions} onCreateSuggested={onCreateSuggestedAction} onExecuteSuggestion={onExecuteSuggestion} /> : null}
+                {!showInsights && !showActions ? <WorkspaceActions actions={actions} loading={loadingActions} onCreateSuggested={onCreateSuggestedAction} onExecuteSuggestion={onExecuteSuggestion} /> : null}
                 <WorkspaceRightRail
                   summary={selectedSummary}
                   insights={insights}
@@ -115,6 +116,7 @@ export function WorkspaceLayout({
                   loadingActions={loadingActions}
                   loadingIncidents={loadingIncidents}
                   classification={classification}
+                  onExecuteSuggestion={onExecuteSuggestion}
                 />
               </div>
             </div>

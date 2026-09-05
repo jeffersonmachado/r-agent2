@@ -92,6 +92,11 @@ function createInboxController({ service, deps }) {
       await runWithBody(req, res, (body) => service.transferConversation(req, body), 'Erro ao transferir conversa (inbox):');
     },
 
+    async setStatus(req, res) {
+      if (!ensureAuth(req, res) || !ensurePermission(req, res, 'update')) return;
+      await runWithBody(req, res, (body) => service.setConversationStatus(req, body), 'Erro ao atualizar status da conversa (inbox):');
+    },
+
     async notes(req, res) {
       if (!ensureAuth(req, res) || !ensurePermission(req, res, 'update')) return;
       await runWithBody(req, res, (body) => service.addNote(req, body), 'Erro ao adicionar nota (inbox):');

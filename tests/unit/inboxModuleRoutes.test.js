@@ -47,6 +47,7 @@ describe('inbox module', () => {
       { path: '/inbox/conversations/:conversationId/reply', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/assign', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/transfer', methods: ['post'] },
+      { path: '/inbox/conversations/:conversationId/status', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/notes', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/case', methods: ['post'] },
     ]);

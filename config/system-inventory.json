@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-05T17:10:00.092Z",
+  "generatedAt": "2026-09-05T19:11:40.064Z",
   "counts": {
-    "total": 2939,
+    "total": 2941,
     "byKind": {
-      "api": 787,
+      "api": 789,
       "field": 1650,
       "model": 176,
       "page": 141,
@@ -12,7 +12,7 @@
       "table": 176
     },
     "byClassification": {
-      "PRODUCTION": 2713,
+      "PRODUCTION": 2715,
       "DEVELOPMENT": 134,
       "SUPPORT": 92
     },
@@ -13309,6 +13309,30 @@
       "fingerprint": "265c899fd0cc6a5d711c708eba4253305f21f4f234f3c346a19ef8d58dda7ae7"
     },
     {
+      "id": "api:POST:/inbox/conversations/:conversationId/status",
+      "kind": "api",
+      "method": "POST",
+      "path": "/inbox/conversations/:conversationId/status",
+      "module": "domain-operations",
+      "source": "api/modules/inbox/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:update",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "conversations_chat",
+        "inbox",
+        "operations_dashboard"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "50c16f73b6dd0260e1203f3618de8db54e82d22ccffa2558da9a2e88f250b57b"
+    },
+    {
       "id": "api:POST:/inbox/conversations/:conversationId/transfer",
       "kind": "api",
       "method": "POST",
@@ -15674,6 +15698,27 @@
       ],
       "linkedDomains": [],
       "fingerprint": "568d77e786318cdcb16444b4297ae87eeb06ddec6d66bf3e87d135a4b3e650cd"
+    },
+    {
+      "id": "api:PUT:/api/tenant/settings/vertical",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/api/tenant/settings/vertical",
+      "module": "tenant-capabilities",
+      "source": "api/modules/tenant-capabilities/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "tenant_config"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "4d07bf4dc18ff69fa9e56135b914b69088f618ada12626619ef81ed8d0ec9fe0"
     },
     {
       "id": "api:PUT:/auth/agents/:id",

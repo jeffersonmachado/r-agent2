@@ -1,5 +1,6 @@
 import React from 'react';
 import { getOperationalLabels, isDevSurfaceVisible } from './workspaceDevSurface';
+import { SuggestionExpectedOutcome, SuggestionMeta } from './WorkspaceActions';
 
 function Card({ title, children, loading = false }) {
   return (
@@ -10,7 +11,7 @@ function Card({ title, children, loading = false }) {
   );
 }
 
-export function WorkspaceRightRail({ summary, insights, actions, incidents, loadingInsights, loadingActions, loadingIncidents, classification = 'PRODUCTION' }) {
+export function WorkspaceRightRail({ summary, insights, actions, incidents, loadingInsights, loadingActions, loadingIncidents, classification = 'PRODUCTION', onExecuteSuggestion }) {
   const labels = getOperationalLabels(classification);
   const devSurfaceVisible = isDevSurfaceVisible(classification);
   const insightItems = [...(insights?.items || []), ...(insights?.persisted || [])];
@@ -24,6 +25,21 @@ export function WorkspaceRightRail({ summary, insights, actions, incidents, load
           <>
             <strong>{actions.suggestion.label}</strong>
             <p className="workspace-muted text-sm mt-2">{actions.suggestion.reason}</p>
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              <SuggestionMeta suggestion={actions.suggestion} />
+            </div>
+            <SuggestionExpectedOutcome suggestion={actions.suggestion} />
+            {onExecuteSuggestion && actions.suggestion.action?.kind ? (
+              <button
+                className="workspace-action-button mt-3"
+                type="button"
+                disabled={actions.suggestion.action.kind === 'send_message' && !actions.suggestion.action.conversationId}
+                title={actions.suggestion.action.kind === 'send_message' && !actions.suggestion.action.conversationId ? 'Sem conversa vinculada' : undefined}
+                onClick={() => onExecuteSuggestion(actions.suggestion)}
+              >
+                {actions.suggestion.action.label || 'Executar ação sugerida'}
+              </button>
+            ) : null}
           </>
         ) : <p className="workspace-muted text-sm">Nenhuma ação sugerida no momento.</p>}
       </Card>

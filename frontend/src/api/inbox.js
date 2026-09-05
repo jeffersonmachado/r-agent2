@@ -14,6 +14,9 @@ export function listInboxConversations(options = {}) {
   if (options.channelType) {
     params.append('channelType', options.channelType);
   }
+  if (options.q) {
+    params.append('q', options.q);
+  }
   if (options.limit !== undefined) {
     params.append('limit', String(options.limit));
   }
@@ -103,6 +106,27 @@ export function addInboxNote(conversationId, note) {
   return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/notes`, {
     method: 'POST',
     body: JSON.stringify({ note: text }),
+  });
+}
+
+/**
+ * Atualiza o status da conversa (open|pending|resolved|closed).
+ * Resposta: { ok, conversation }.
+ */
+export function setInboxConversationStatus(conversationId, status) {
+  if (!conversationId) {
+    return Promise.reject(new Error('setInboxConversationStatus: conversationId é obrigatório'));
+  }
+  const normalized = status != null ? String(status).trim() : '';
+  if (!normalized) {
+    return Promise.reject(new Error('setInboxConversationStatus: status é obrigatório'));
+  }
+
+  logger.info('Atualizando status da conversa (inbox)', { conversationId, status: normalized });
+
+  return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/status`, {
+    method: 'POST',
+    body: JSON.stringify({ status: normalized }),
   });
 }
 
