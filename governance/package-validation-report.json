@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-05T21:09:13.050Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-converge-provisional.zip",
-  "zipName": "r-agent2-converge-provisional.zip",
-  "zipSha256": "401d81c284047605317afb1e72a1b189f53e560f54f6fb8a5c71c9cc5e3d23cf",
-  "payloadCentric": false,
-  "envelopePath": null,
+  "generatedAt": "2026-09-05T21:16:19.332Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260905-181306.payload.zip",
+  "zipName": "r-agent2-20260905-181306.payload.zip",
+  "zipSha256": "84280fd396edf6e031a7488ca70676ed2ff01bcc34c7343c08d96241ee216307",
+  "payloadCentric": true,
+  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260905-181306.payload.zip",
   "selectionMode": "explicit",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-converge-provisional.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260905-181306.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -20,13 +20,13 @@
     "governance/blocker-engine.js",
     "governance/final-consistency-report.json"
   ],
-  "entryCount": 5939,
+  "entryCount": 5953,
   "missingEntries": [],
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-converge-provisional.zip",
-    "sha256": "401d81c284047605317afb1e72a1b189f53e560f54f6fb8a5c71c9cc5e3d23cf",
+    "boundTo": "r-agent2-20260905-181306.payload.zip",
+    "sha256": "84280fd396edf6e031a7488ca70676ed2ff01bcc34c7343c08d96241ee216307",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
@@ -35,6 +35,6 @@
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260905205026704-3b5f8481",
   "sourceFingerprint": "bd5064445cdf689ef7b3f622130411043eb4ff48186b8cee9aa771c7a847b6d9",
-  "gitCommit": "5f774268cbdb7dc771fc0787e20dc26b22f61735",
-  "gitTree": "46219714edddf32eec4637df15d324590eb2e784"
+  "gitCommit": "fb6ab3c4cd4c6a58d7f3e15b35a493a48bd9ea13",
+  "gitTree": "98d33e98f26a356985d6e2387f4b3599e6930cf3"
 }
