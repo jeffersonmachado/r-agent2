@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-05T19:35:52.450Z",
+  "generatedAt": "2026-09-05T19:39:46.678Z",
   "schemaVersion": "1.0.0",
-  "artifact": "r-agent2-20260905-163320.payload.zip",
+  "artifact": "r-agent2-20260905-163709.payload.zip",
   "verifierExecuted": true,
   "verifierPassed": true,
   "packageInsideDist": true,
-  "packageInsideDistPath": "dist/release/r-agent2-20260905-163320.payload.zip",
+  "packageInsideDistPath": "dist/release/r-agent2-20260905-163709.payload.zip",
   "manifestInsideDist": true,
-  "manifestInsideDistPath": "dist/release/r-agent2-20260905-163320.manifest.json",
+  "manifestInsideDistPath": "dist/release/r-agent2-20260905-163709.manifest.json",
   "staleReferencesFound": 0,
   "staleHashesFound": 0,
   "staleFilesAffected": [],
@@ -43,11 +43,11 @@
   "governanceValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "c6ba5ac2f2859a5e0b3d6d6e1f1826ff",
+    "chainRoot": "e601217d792a6a39b609c64a295832c5",
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    "finalDecision": "AUTONOMOUS_READY_GO"
   },
   "replayValidation": {
     "pass": true,
@@ -82,8 +82,8 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "2283d3ddb2b96fc42b2fe301c70dbc23d01c43a02fd119e62c96b4ea1682b35c",
-    "zipName": "r-agent2-20260905-163320.payload.zip",
+    "sidecarHash": "3c2713c2fba9d31a5c46fcab0a6404768bf630e88486b64b205d65116de91e66",
+    "zipName": "r-agent2-20260905-163709.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
@@ -126,7 +126,7 @@
   },
   "packageSelfValidation": {
     "pass": true,
-    "zipName": "r-agent2-20260905-163320.payload.zip",
+    "zipName": "r-agent2-20260905-163709.payload.zip",
     "alignedFiles": [
       "governance/cross-report-validation.json",
       "governance/package-validation-report.json",
@@ -137,7 +137,7 @@
   "cryptographicValidation": {
     "pass": true,
     "chainValid": true,
-    "chainRoot": "c6ba5ac2f2859a5e0b3d6d6e1f1826ff",
+    "chainRoot": "e601217d792a6a39b609c64a295832c5",
     "signatures": [
       {
         "name": "governance.sig",
@@ -186,12 +186,12 @@
     "overallConsistencyScore": 100,
     "blockerCount": 0,
     "allChecksPass": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    "finalDecision": "AUTONOMOUS_READY_GO"
   },
   "attestationIntegrity": {
     "pass": true,
     "attestationValid": true,
-    "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "finalDecision": "AUTONOMOUS_READY_GO",
     "selfContained": false
   },
   "tamperDetection": {
@@ -213,16 +213,16 @@
     "pass": true,
     "chainIntact": true,
     "sigsValid": true,
-    "sidecarHash": "2283d3ddb2b96fc42b2fe301c70dbc23d01c43a02fd119e62c96b4ea1682b35c",
-    "zipName": "r-agent2-20260905-163320.payload.zip",
+    "sidecarHash": "3c2713c2fba9d31a5c46fcab0a6404768bf630e88486b64b205d65116de91e66",
+    "zipName": "r-agent2-20260905-163709.payload.zip",
     "tamperDetectable": true,
     "note": "Any change to any governance artifact breaks the chainRoot and invalidates all sigs"
   },
-  "summary": "Pacote r-agent2-20260905-163320.payload.zip é completamente self-proving. Score: 100/100.",
+  "summary": "Pacote r-agent2-20260905-163709.payload.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260905193233775-79c723de",
   "sourceFingerprint": "530e7ac791a0aa8bab7fb66521a282f1581c90cd51e78305803ccaa5d76f3558",
-  "gitCommit": "e7c78d5e3b5564a8f21d0f12c5d113ceb9da411b",
-  "gitTree": "245ac72d9f808831408bba68568a5e7f6944549b"
+  "gitCommit": "e4b2c83fd1799d2799b03794e180cd56c4fa134f",
+  "gitTree": "111eb1817bba26a0f755e200b654802582037a9c"
 }
