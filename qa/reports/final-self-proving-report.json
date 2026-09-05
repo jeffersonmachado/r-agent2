@@ -1,32 +1,41 @@
 {
-  "generatedAt": "2026-09-05T19:11:59.067Z",
+  "generatedAt": "2026-09-05T19:35:06.317Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260905-145554.zip",
-  "zipHash": "401d81c284047605317afb1e72a1b189f53e560f54f6fb8a5c71c9cc5e3d23cf",
-  "manifestHash": "a5607cff8750e6c5db848b895412f8d468816c4b3838688c529e52f330a0f7df",
-  "replayHash": "75d347de567915b89ba6469de61906bcff475f90c6c86079321d326bf56f418b",
-  "governanceHash": "26aebaeb3ef91540931a0bb4071b63ffd2362997a44cf62d83250b8b645b6ec8",
-  "readinessHash": "64d92e2944fe5a5541d18686870ed43919798412a39eb0c08fe8cd101ef3b85c",
-  "consistencyHash": "190044d20fbed954b1e505dd41f7ccd86905527c625a85a9aad4cb3bbd20c5ff",
-  "contaminationHash": "e5ce53514b439a5cbc83fa76489fd6629f7ec335ab4505ab4484590e01d60092",
-  "packageIntegrityHash": "b4962e2ce98e9d64e3075e62d60e58374988fa77f143d8ae1bdd9422080a2c15",
+  "zipName": "r-agent2-20260905-163320.zip",
+  "zipHash": "57588d05766648937096d9f9c26f4ba50db56b8df5547b362ba6a7fb1b44727c",
+  "manifestHash": "000a4cdef604c7a2b4df45f40d1bb052de06f41d35b1c852dcd797d40312cb0f",
+  "replayHash": "f40c84e58ed9bdea1fa8576f109b8e894dd22faea9732098cb58a22f201241b9",
+  "governanceHash": "5cf7baf2e3b9f0b45fb8f7ff8007138b2bca77ad4a5ff9cfa590dd2427a7c706",
+  "readinessHash": "48bd812eb184c6d5039aa60c09369c79b122f628124e382d3228899e6afcfb1a",
+  "consistencyHash": "0bb8d160f3605938b5035fbef2f06c8120fee1a04b163fd9988e04eaa165e127",
+  "contaminationHash": "deda311622e227a587b41783415f9c49a7a7882d995b70b946f0d2007e25f700",
+  "packageIntegrityHash": "b96cca878b9419b1a8b10439c64f33222871f35edde22e6625b4a2f146941ff2",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "485033048f2ce1e1637ede9606494ec35ef98e60639703a100a54390f39f7fb2",
-  "recalculatedReadinessHash": "9987274c3ca0757dcf308f5c8d9051d7048f1c0bdac5b79ab4ea265236eb2bd9",
+  "gateHash": "cb2f03774a56e64cbf00c92574892666b2f55c787cb59c10e89899eddf673fad",
+  "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "AUTONOMOUS_READY_GO",
-    "readiness": "AUTONOMOUS_READY_GO",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
+    "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
-  "autonomousReady": true,
-  "mandatoryFailures": [],
-  "ok": true,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260905-145554.zip. Package: ÍNTEGRO. Validadores falhos: 0."
+  "autonomousReady": false,
+  "mandatoryFailures": [
+    {
+      "engine": "finalGovernance",
+      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
+    },
+    {
+      "engine": "readiness",
+      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    }
+  ],
+  "ok": false,
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260905-163320.zip. Package: ÍNTEGRO. Validadores falhos: 2."
 }
