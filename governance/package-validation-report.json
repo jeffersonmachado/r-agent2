@@ -1,24 +1,9 @@
 {
-  "generatedAt": "2026-09-04T19:10:49.202Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260904-160704.payload.zip",
-  "zipName": "r-agent2-20260904-160704.payload.zip",
-  "zipSha256": "ae2bbb6e73d9501dd4b2d3b4bbb86a6e624e13169c883bc07f23c1e3528ef8ff",
-  "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260904-160704.zip",
-  "selectionMode": "audited",
-  "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260904-160704.manifest.json",
-  "manifestAudit": "passed",
-  "auditSatisfied": true,
-  "selfContainmentCheck": {
-    "passed": true,
-    "missing": []
-  },
+  "generatedAt": "2026-09-05T17:23:09.487Z",
+  "ok": false,
+  "zipPath": null,
+  "zipName": null,
   "requiredEntries": [
-    "governance/final-proof-report.json",
-    "governance/evidence-manifest.json",
-    "governance/blocker-engine.js",
-    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -41,21 +26,15 @@
     "governance/final-readiness-report.json",
     "governance/experience-segregation-report.json"
   ],
-  "entryCount": 5939,
   "missingEntries": [],
-  "ok": true,
-  "error": null,
-  "packageBinding": {
-    "boundTo": "r-agent2-20260904-160704.payload.zip",
-    "sha256": "ae2bbb6e73d9501dd4b2d3b4bbb86a6e624e13169c883bc07f23c1e3528ef8ff",
-    "immutable": true,
-    "selfProving": true,
-    "offlineAuditable": true
-  },
+  "error": "artifact_missing:none_found_in_dist",
+  "deferred": true,
+  "phase": "PRE_PACKAGE",
+  "status": "DEFERRED",
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260905170821158-c550fb4f",
   "sourceFingerprint": "d2b073b0d1f4d3aaab450f6e7841d42fbe6a7938a720594a41553a98fefdc2e2",
-  "gitCommit": "48d9f6767d6981a970ca1d938332636d6772041d",
-  "gitTree": "73fee4e9f0f5f49cd444901f875563d873af94af"
+  "gitCommit": "0689caf3fb22f69d826abbff8935cdf0fb6d2ee6",
+  "gitTree": "1abfa1498aaf54109a69a7d109798b36f14696f9"
 }
