@@ -408,13 +408,17 @@ function runVerification(args, options) {
         : null;
       const recordedHash = expEntry ? (expEntry.hash || expEntry.sha256 || expEntry.checksum || null) : null;
       const physicalHash = sha256File(path.join(payloadGovDir, 'experience-segregation-report.json'));
-      if (expEntry && expEntry.packageRequired !== true) {
+      if (!expEntry) {
+        gates.push(fail(expSegGate, 'EXPERIENCE_SEGREGATION_NOT_IN_MANIFEST — evidence-manifest do payload sem entrada experience_segregation (binding de hash obrigatório)'));
+      } else if (expEntry.packageRequired !== true) {
         gates.push(fail(expSegGate, 'EXPERIENCE_SEGREGATION_NOT_PACKAGE_REQUIRED — evidence-manifest não marca a prova como packageRequired'));
-      } else if (recordedHash && recordedHash !== physicalHash) {
+      } else if (!recordedHash) {
+        gates.push(fail(expSegGate, 'EXPERIENCE_SEGREGATION_EVIDENCE_HASH_MISSING — entrada experience_segregation sem hash registrado'));
+      } else if (recordedHash !== physicalHash) {
         gates.push(fail(expSegGate,
           `EXPERIENCE_SEGREGATION_EVIDENCE_HASH_MISMATCH — manifest=${recordedHash.slice(0, 12)} != físico=${physicalHash.slice(0, 12)}`));
       } else {
-        gates.push(pass(expSegGate, { violationCount: 0, hashBound: recordedHash === physicalHash }));
+        gates.push(pass(expSegGate, { violationCount: 0, hashBound: true }));
       }
     }
 

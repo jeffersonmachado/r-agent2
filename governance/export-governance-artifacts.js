@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { connect, close } = require('../api/db/sequelize');
 const getRun = require('../api/db/models/GovernanceRun');
 const getEvaluation = require('../api/db/models/ScorecardEvaluation');
@@ -41,6 +42,38 @@ function artifactBase(run, type) {
     policyVersion: run.policy_version,
     policyFingerprint: run.policy_fingerprint,
   };
+}
+
+// O proof-engine (materialize) grava o evidence-manifest rico com o array
+// `artifacts` (entradas packageRequired, proofStatus, hash físico). Esta
+// projeção DB→JSON roda DEPOIS (fixpoint do scorecard) e não pode destruir
+// esse array — caso contrário o payload do release perde o binding de hash
+// das provas (regressão real: gate payload_experience_segregation ficava sem
+// hashBound dentro do pacote entregue). Preservamos as entradas e refrescamos
+// exists/hash/checksum/timestamp contra o arquivo físico — como o fixpoint
+// roda após o stamp de lineage, os hashes refletem o estado final carimbado.
+function refreshManifestArtifacts(manifestRelativePath, rootDir = process.cwd()) {
+  try {
+    const abs = path.join(rootDir, manifestRelativePath);
+    if (!fs.existsSync(abs)) return null;
+    const existing = JSON.parse(fs.readFileSync(abs, 'utf8'));
+    if (!existing || !Array.isArray(existing.artifacts) || existing.artifacts.length === 0) return null;
+    return existing.artifacts.map((artifact) => {
+      if (!artifact || typeof artifact !== 'object' || !artifact.path) return artifact;
+      const artifactAbs = path.join(rootDir, artifact.path);
+      const exists = fs.existsSync(artifactAbs);
+      const next = { ...artifact, exists };
+      if (exists) {
+        const hash = crypto.createHash('sha256').update(fs.readFileSync(artifactAbs)).digest('hex');
+        next.hash = hash;
+        next.checksum = hash;
+        next.timestamp = new Date().toISOString();
+      }
+      return next;
+    });
+  } catch (_) {
+    return null;
+  }
 }
 
 async function exportGovernanceArtifacts() {
@@ -120,10 +153,12 @@ async function exportGovernanceArtifacts() {
   };
   write('governance/final-consistency-gate-report.json', consistency);
 
+  const preservedArtifacts = refreshManifestArtifacts('governance/evidence-manifest.json');
   const manifest = {
     ...artifactBase(run, 'evidence-manifest'),
     status: 'PASS',
     finalDecision: proofDecision,
+    ...(preservedArtifacts ? { artifacts: preservedArtifacts } : {}),
     fingerprints: {
       sourceFingerprint: chain.sourceFingerprint,
       inventoryFingerprint: chain.inventoryFingerprint,
@@ -147,4 +182,4 @@ if (require.main === module) {
   }).finally(() => close().catch(() => {}));
 }
 
-module.exports = { exportGovernanceArtifacts };
+module.exports = { exportGovernanceArtifacts, refreshManifestArtifacts };

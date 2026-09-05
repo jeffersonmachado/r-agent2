@@ -186,6 +186,11 @@ describe('experience segregation evidence — Casos C–H (evidência packageReq
       tamper: { expSegNotPackageRequired: true },
       reason: 'EXPERIENCE_SEGREGATION_NOT_PACKAGE_REQUIRED',
     },
+    {
+      name: 'Caso C4: evidence-manifest do payload sem entrada experience_segregation',
+      tamper: { expSegManifestEntryMissing: true },
+      reason: 'EXPERIENCE_SEGREGATION_NOT_IN_MANIFEST',
+    },
   ];
 
   for (const testCase of cases) {

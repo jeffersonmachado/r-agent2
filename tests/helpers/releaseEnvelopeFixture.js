@@ -223,7 +223,7 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
       writeJson(path.join(govDir, 'evidence-manifest.json'), {
         ...lin('evidence-manifest'),
         status: 'PASS',
-        artifacts: [
+        artifacts: tamper.expSegManifestEntryMissing ? [] : [
           {
             id: 'experience_segregation',
             path: 'governance/experience-segregation-report.json',
