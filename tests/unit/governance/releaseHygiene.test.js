@@ -231,3 +231,62 @@ describe('consistency phase semantics — Caso I (PRE_PACKAGE nunca é FINAL)', 
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe('validate-release-hygiene (standalone) — dist/ raiz sem artefato estrangeiro', () => {
+  const VALIDATOR = path.join(__dirname, '..', '..', '..', 'scripts', 'governance', 'validate-release-hygiene.js');
+  const { run } = require(VALIDATOR);
+
+  function buildWorkspace() {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rh-ws-'));
+    const contentDir = path.join(root, 'content');
+    fs.mkdirSync(contentDir, { recursive: true });
+    fs.writeFileSync(path.join(contentDir, 'file.txt'), 'ok');
+    fs.mkdirSync(path.join(root, 'dist', 'release'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'governance'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'governance', '.current-run.json'),
+      JSON.stringify({ runId: 'run-hygiene-x', sourceFingerprint: 'fp-hygiene-x' }),
+    );
+    for (const name of ['r-agent2-20260905-000000.zip', 'r-agent2-20260905-000000.payload.zip']) {
+      execFileSync('zip', ['-q', path.join(root, 'dist', 'release', name), 'file.txt'], { cwd: contentDir });
+    }
+    return root;
+  }
+
+  function reportOf(root) {
+    return JSON.parse(fs.readFileSync(path.join(root, 'reports', 'release-hygiene-report.json'), 'utf8'));
+  }
+
+  test('PASS: dist/ raiz limpa (artefatos governados apenas em dist/release/)', () => {
+    const root = buildWorkspace();
+    const code = run({ rootDir: root, reportPath: path.join(root, 'reports', 'release-hygiene-report.json') });
+    expect(code).toBe(0);
+    const report = reportOf(root);
+    expect(report.status).toBe('PASS');
+    expect(report.hygiene.foreignReleaseArtifacts).toBe(0);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  test('FAIL: zip cru nomeado como release solto na raiz de dist/ → FOREIGN_RELEASE_ARTIFACT', () => {
+    const root = buildWorkspace();
+    const contentDir = path.join(root, 'content');
+    // snapshot ad-hoc (`npm run zip`) com timestamp MAIS NOVO que o release governado
+    execFileSync('zip', ['-q', path.join(root, 'dist', 'r-agent2-20260905-174313.zip'), 'file.txt'], { cwd: contentDir });
+    const code = run({ rootDir: root, reportPath: path.join(root, 'reports', 'release-hygiene-report.json') });
+    expect(code).toBe(1);
+    const report = reportOf(root);
+    expect(report.status).toBe('FAIL');
+    expect(report.issues.some((i) => i.rule === 'FOREIGN_RELEASE_ARTIFACT' && i.path === 'dist/r-agent2-20260905-174313.zip')).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  test('FAIL: manifest solto na raiz de dist/ → FOREIGN_RELEASE_ARTIFACT', () => {
+    const root = buildWorkspace();
+    fs.writeFileSync(path.join(root, 'dist', 'r-agent2-20260905-174313.manifest.json'), '{}');
+    const code = run({ rootDir: root, reportPath: path.join(root, 'reports', 'release-hygiene-report.json') });
+    expect(code).toBe(1);
+    const report = reportOf(root);
+    expect(report.issues.some((i) => i.rule === 'FOREIGN_RELEASE_ARTIFACT' && i.path.endsWith('.manifest.json'))).toBe(true);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+});

@@ -16,6 +16,13 @@
  *     arquivos de runtime empacotados;
  *   - STALE_CANDIDATE_MARKER: CANDIDATE-DEFERRED.json dentro de release GO.
  *
+ * Também inspeciona a RAIZ de dist/: o canal governado entrega envelope,
+ * payload e manifest em dist/release/ — qualquer `r-agent2-*.zip` ou
+ * `r-agent2-*.manifest.json` solto na raiz de dist/ é artefato estrangeiro
+ * (ex.: snapshot ad-hoc de `npm run zip`), pode ser confundido com o release
+ * oficial por ferramentas que fazem `ls -t dist/*.zip | head -1` e viola a
+ * regra de dist/ limpo (FOREIGN_RELEASE_ARTIFACT).
+ *
  * Saída: reports/release-hygiene-report.json + resumo no stdout.
  * Sem envelope em dist/release/ (ambiente sem release gerado): PASS/SKIP —
  * o gate bloqueante roda no pipeline oficial (two-pass-release) e no
@@ -27,11 +34,6 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..', '..');
-const DIST_RELEASE = path.join(ROOT, 'dist', 'release');
-const DIST_GOVERNANCE = path.join(ROOT, 'dist', 'governance');
-const DIST_VERIFIER = path.join(ROOT, 'dist', 'verifier');
-const CURRENT_RUN_PATH = path.join(ROOT, 'governance', '.current-run.json');
-const REPORT_PATH = path.join(ROOT, 'reports', 'release-hygiene-report.json');
 
 function readJson(absPath) {
   try { return JSON.parse(fs.readFileSync(absPath, 'utf8')); } catch (_) { return null; }
@@ -42,7 +44,15 @@ function listZipEntries(zipPath) {
   return output.split(/\r?\n/g).map((e) => e.trim()).filter(Boolean);
 }
 
-function run() {
+function run(options = {}) {
+  const rootDir = options.rootDir || ROOT;
+  const DIST_ROOT = path.join(rootDir, 'dist');
+  const DIST_RELEASE = path.join(DIST_ROOT, 'release');
+  const DIST_GOVERNANCE = path.join(DIST_ROOT, 'governance');
+  const DIST_VERIFIER = path.join(DIST_ROOT, 'verifier');
+  const CURRENT_RUN_PATH = path.join(rootDir, 'governance', '.current-run.json');
+  const reportPath = options.reportPath || path.join(rootDir, 'reports', 'release-hygiene-report.json');
+
   const issues = [];
   const details = {
     envelope: null,
@@ -55,14 +65,30 @@ function run() {
   };
 
   if (!fs.existsSync(DIST_RELEASE)) {
-    return finish('SKIP', issues, details, 'dist/release/ ausente — sem release físico para inspecionar');
+    return finish({ rootDir, reportPath }, 'SKIP', issues, details, 'dist/release/ ausente — sem release físico para inspecionar');
+  }
+
+  // ── 0. dist/ raiz: nenhum zip/manifest nomeado como release ──────────────
+  // Envelope, payload e manifest governados vivem em dist/release/. Um
+  // r-agent2-*.zip solto na raiz de dist/ (ex.: snapshot ad-hoc de
+  // `npm run zip`) é artefato estrangeiro: tem nome de release, não passou
+  // pelo pipeline two-pass e pode ser confundido com o release oficial.
+  for (const f of fs.readdirSync(DIST_ROOT)) {
+    if (/^r-agent2-\d{8}-\d{6}(\.payload)?\.zip$/.test(f) || /^r-agent2-\d{8}-\d{6}\.manifest\.json$/.test(f)) {
+      details.foreignReleaseArtifacts += 1;
+      issues.push({
+        rule: 'FOREIGN_RELEASE_ARTIFACT',
+        path: `dist/${f}`,
+        detail: 'artefato fora do canal governado (dist/release/) — remova ou mova para fora de dist/',
+      });
+    }
   }
 
   const zips = fs.readdirSync(DIST_RELEASE).filter((f) => f.endsWith('.zip')).sort().reverse();
   const payloadName = zips.find((f) => f.endsWith('.payload.zip')) || null;
   const envelopeName = zips.find((f) => !f.endsWith('.payload.zip')) || null;
   if (!payloadName || !envelopeName) {
-    return finish('SKIP', issues, details, 'payload/envelope não encontrados em dist/release/');
+    return finish({ rootDir, reportPath }, 'SKIP', issues, details, 'payload/envelope não encontrados em dist/release/');
   }
   details.payload = payloadName;
   details.envelope = envelopeName;
@@ -134,14 +160,14 @@ function run() {
     }
   }
 
-  return finish(issues.length === 0 ? 'PASS' : 'FAIL', issues, details, null);
+  return finish({ rootDir, reportPath }, issues.length === 0 ? 'PASS' : 'FAIL', issues, details, null);
 }
 
-function finish(status, issues, details, note) {
-  const currentRun = readJson(CURRENT_RUN_PATH) || {};
+function finish(ctx, status, issues, details, note) {
+  const currentRun = readJson(path.join(ctx.rootDir, 'governance', '.current-run.json')) || {};
   const report = {
     artifactType: 'release-hygiene-report',
-    artifactVersion: '1.0.0',
+    artifactVersion: '1.1.0',
     generatedAt: new Date().toISOString(),
     runId: currentRun.runId || null,
     sourceFingerprint: currentRun.sourceFingerprint || null,
@@ -152,14 +178,14 @@ function finish(status, issues, details, note) {
     issues,
     hygiene: details,
   };
-  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-  fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
+  fs.mkdirSync(path.dirname(ctx.reportPath), { recursive: true });
+  fs.writeFileSync(ctx.reportPath, `${JSON.stringify(report, null, 2)}\n`);
 
   console.log(`[release-hygiene] status=${report.status} issues=${issues.length} envelope=${details.envelope || 'n/a'}`);
   for (const issue of issues) {
     console.log(`[release-hygiene] ISSUE [${issue.rule}] ${issue.path}${issue.detail ? ` — ${issue.detail}` : ''}`);
   }
-  console.log(`[release-hygiene] relatório: ${path.relative(ROOT, REPORT_PATH)}`);
+  console.log(`[release-hygiene] relatório: ${path.relative(ctx.rootDir, ctx.reportPath)}`);
   return status === 'FAIL' ? 1 : 0;
 }
 
