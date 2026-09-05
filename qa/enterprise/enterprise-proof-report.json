@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T14:05:41.721Z",
+  "generatedAt": "2026-09-05T17:18:43.617Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:13001",
   "authMode": "admin",
@@ -9,27 +9,27 @@
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=admin flowId=flow-voice-tts-asr-smoke-1788012334824 callId=call-voice-tts-asr-1788012334824 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=admin flowId=flow-voice-tts-asr-smoke-1788628717138 callId=call-voice-tts-asr-1788628717138 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
       "name": "l04",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-call-events-runtime-smoke] OK auth=admin flowId=flow-pbx-call-events-runtime-smoke-1788012338374 executionId=fx-1788012339973-77d7799d5fb1 latencyMs=44 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
+      "stdout": "[pbx-call-events-runtime-smoke] OK auth=admin flowId=flow-pbx-call-events-runtime-smoke-1788628720854 executionId=fx-1788628722399-1b63645e2bc1 latencyMs=14 evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
       "stderr": ""
     },
     {
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1788012340652-yfdtpsl conversation=conv-1788012340723-6369370a0133 queue=ux1_smoke_1788012340631 quickReply=qr-1788012340848-4isdo3ezt phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1788628722587-tyv28xz conversation=conv-1788628722620-f9fe09c7f134 queue=ux1_smoke_1788628722582 quickReply=qr-1788628722709-d2wt0tgjd phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
   "humanHandoff": {
     "ok": true,
-    "artifactPath": "/home/jmachado/.local/share/ragent2-runtime/qa/enterprise/human-handoff-full-validation.json",
+    "artifactPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-full-validation.json",
     "signals": {
       "ticketCreated": true,
       "ticketOwnershipObserved": true,
@@ -46,7 +46,7 @@
   },
   "pbxProdLike": {
     "ok": true,
-    "artifactPath": "/home/jmachado/.local/share/ragent2-runtime/qa/enterprise/pbx-voice-flow-prod-like.json",
+    "artifactPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-voice-flow-prod-like.json",
     "signals": {
       "originate": true,
       "ivr": true,
@@ -63,7 +63,7 @@
   },
   "omnichannelUnifiedReplay": {
     "ok": true,
-    "artifactPath": "/home/jmachado/.local/share/ragent2-runtime/qa/enterprise/omnichannel-unified-replay.json",
+    "artifactPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-unified-replay.json",
     "signals": {
       "whatsapp": true,
       "humanHandoff": true,

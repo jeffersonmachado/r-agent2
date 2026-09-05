@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T14:05:41.720Z",
+  "generatedAt": "2026-09-05T17:18:43.616Z",
   "ok": true,
   "warnings": [],
   "evidencePaths": [
@@ -9,13 +9,13 @@
   "sources": {
     "l03": {
       "smoke": "L-03",
-      "generatedAt": "2026-08-29T14:05:38.127Z",
+      "generatedAt": "2026-09-05T17:18:40.514Z",
       "ok": true,
       "authMode": "admin",
       "tenantId": "system",
-      "flowId": "flow-voice-tts-asr-smoke-1788012334824",
-      "callId": "call-voice-tts-asr-1788012334824",
-      "extension": "1124",
+      "flowId": "flow-voice-tts-asr-smoke-1788628717138",
+      "callId": "call-voice-tts-asr-1788628717138",
+      "extension": "1138",
       "selftestExtension": "9191",
       "dialplanSignature": "a1c621b48efb1d8104e3184a",
       "runtime": {
@@ -29,16 +29,16 @@
       },
       "realCall": {
         "attempted": true,
-        "click2callId": "cc_c2c-1788012335272-c77be0c6263f",
+        "click2callId": "cc_c2c-1788628717570-9c3f4973d63e",
         "click2callStatus": "originated",
         "synthetic": false,
         "cdrFound": true,
         "cdr": {
-          "uniqueid": "1788012335.1",
+          "uniqueid": "1788628717.1",
           "disposition": "ANSWERED",
           "src": "9191",
           "dst": "9191",
-          "calldate": "2026-08-29T14:05:36.444Z"
+          "calldate": "2026-09-05T17:18:38.732Z"
         }
       },
       "ttsPrompts": [
@@ -71,12 +71,12 @@
         {
           "nodeId": "prompt-1",
           "phase": "prompt",
-          "recordingUrl": "recordings://call-voice-tts-asr-1788012334824/prompt.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1788628717138/prompt.wav"
         },
         {
           "nodeId": "asr-1",
           "phase": "asr",
-          "recordingUrl": "recordings://call-voice-tts-asr-1788012334824/asr.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1788628717138/asr.wav"
         }
       ],
       "selftestStatus": "WARN",
@@ -84,13 +84,13 @@
     },
     "l04": {
       "smoke": "L-04",
-      "generatedAt": "2026-08-29T14:05:40.276Z",
+      "generatedAt": "2026-09-05T17:18:42.494Z",
       "ok": true,
       "authMode": "admin",
       "tenantId": "system",
       "cdr": {
-        "id": "cdr-l04-1788012338374",
-        "uniqueid": "l04-1788012338374",
+        "id": "cdr-l04-1788628720854",
+        "uniqueid": "l04-1788628720854",
         "source": "synthetic_insert"
       },
       "trigger": {
@@ -103,27 +103,27 @@
           "scanned": 1,
           "emitted": 3,
           "cursor": {
-            "calldate": "2026-08-29T14:06:38.385Z",
-            "cdrId": "cdr-l04-1788012338374"
+            "calldate": "2026-09-05T17:19:40.884Z",
+            "cdrId": "cdr-l04-1788628720854"
           }
         },
         "eventIds": [
-          "evt-1788012339907-d992f1f223b9",
-          "evt-1788012339924-12985c42f7da",
-          "evt-1788012339928-20596f2e7f88"
+          "evt-1788628722332-0209cd40e38e",
+          "evt-1788628722348-13ae67e91753",
+          "evt-1788628722352-b36af6698ee4"
         ],
         "queue": null
       },
       "flow": {
-        "flowId": "flow-pbx-call-events-runtime-smoke-1788012338374",
-        "executionId": "fx-1788012339973-77d7799d5fb1",
+        "flowId": "flow-pbx-call-events-runtime-smoke-1788628720854",
+        "executionId": "fx-1788628722399-1b63645e2bc1",
         "status": "done",
-        "latencyMs": 44,
+        "latencyMs": 14,
         "nodesCount": 3
       },
       "dispatch": {
         "metricsAvailable": true,
-        "doneRecent": 166,
+        "doneRecent": 36,
         "deadRecent": 0,
         "flowTriggerFailuresRecent": 0
       }
@@ -141,8 +141,8 @@
     "recordings": true,
     "replayTimeline": true
   },
-  "runId": "rap-governed-20260904183520272-164607e2",
-  "sourceFingerprint": "785be7c141dd3f5b74a3b7864536edd2dfe57e867e40bee0eb59e453c0d3d222",
+  "runId": "rap-governed-20260905170821158-c550fb4f",
+  "sourceFingerprint": "d2b073b0d1f4d3aaab450f6e7841d42fbe6a7938a720594a41553a98fefdc2e2",
   "artifactType": "pbx-voice-flow-prod-like",
   "artifactVersion": "1.0.0"
 }
