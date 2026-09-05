@@ -1,9 +1,24 @@
 {
-  "generatedAt": "2026-09-05T21:36:57.331Z",
-  "ok": false,
-  "zipPath": null,
-  "zipName": null,
+  "generatedAt": "2026-09-05T21:45:03.332Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-converge-provisional.zip",
+  "zipName": "r-agent2-converge-provisional.zip",
+  "zipSha256": "401d81c284047605317afb1e72a1b189f53e560f54f6fb8a5c71c9cc5e3d23cf",
+  "payloadCentric": false,
+  "envelopePath": null,
+  "selectionMode": "explicit",
+  "candidateFallbackUsed": false,
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-converge-provisional.manifest.json",
+  "manifestAudit": "passed",
+  "auditSatisfied": true,
+  "selfContainmentCheck": {
+    "passed": true,
+    "missing": []
+  },
   "requiredEntries": [
+    "governance/final-proof-report.json",
+    "governance/evidence-manifest.json",
+    "governance/blocker-engine.js",
+    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -26,15 +41,21 @@
     "governance/final-readiness-report.json",
     "governance/experience-segregation-report.json"
   ],
+  "entryCount": 5939,
   "missingEntries": [],
-  "error": "artifact_missing:none_found_in_dist",
-  "deferred": true,
-  "phase": "PRE_PACKAGE",
-  "status": "DEFERRED",
+  "ok": true,
+  "error": null,
+  "packageBinding": {
+    "boundTo": "r-agent2-converge-provisional.zip",
+    "sha256": "401d81c284047605317afb1e72a1b189f53e560f54f6fb8a5c71c9cc5e3d23cf",
+    "immutable": true,
+    "selfProving": true,
+    "offlineAuditable": true
+  },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260905213129494-d75766a3",
   "sourceFingerprint": "7dbe36cbfc5243b10fc6cd4c57a4e82f46cb7f5248feadd8182aae0cfae9d3d3",
-  "gitCommit": "c951fb036f9e45cfdf0781bb9ad28823419843b0",
-  "gitTree": "0d96b4f28cca707ebe88a422ffb0a76a58a23ae7"
+  "gitCommit": "b9cd0225353962652e59e87dfd3349a7b802391d",
+  "gitTree": "66660bf41affcaaaab467ed26d70d9c8330cfdbc"
 }
