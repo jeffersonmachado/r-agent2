@@ -129,6 +129,28 @@ async function handleIntelligenceAnalyticsRoutes(ctx) {
     return true;
   }
 
+  // Gestão por exceção: fila consolidada do que precisa de decisão agora.
+  if (method === 'GET' && pathname === '/api/intelligence/attention') {
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const out = await service.getAttentionQueue({
+        tenantId,
+        period: urlObj.searchParams.get('period') || 'month',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[IntelligenceRoutes] Erro em GET /api/intelligence/attention:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao computar fila de atencao' });
+    }
+    return true;
+  }
+
   if (method === 'POST' && pathname.startsWith('/api/intelligence/recommendations/')) {
     const tail = pathname.slice('/api/intelligence/recommendations/'.length);
     const segments = tail.split('/').filter(Boolean);

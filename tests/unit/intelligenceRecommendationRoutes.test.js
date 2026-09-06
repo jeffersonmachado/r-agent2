@@ -49,6 +49,25 @@ jest.mock('../../api/core/tenant-intelligence/TenantIntelligenceService', () => 
         automation: { applied: 2, manual: 1, auto: 1, batch: 0, automationRate: 0.5, humanInterventionRate: 0.5 },
       },
     })),
+    getAttentionQueue: jest.fn(async () => ({
+      ok: true,
+      attention: {
+        status: 'attention',
+        totalItems: 1,
+        items: [
+          {
+            kind: 'recommendation_exception',
+            severity: 'high',
+            id: 'reco-1',
+            title: 'Redistribuir fila comercial',
+            reason: 'Tempo de resposta subiu.',
+            action: { type: 'apply_recommendation', recommendationId: 'reco-1' },
+            createdAt: '2026-09-06T00:00:00.000Z',
+          },
+        ],
+        generatedAt: '2026-09-06T00:00:00.000Z',
+      },
+    })),
   };
 
   return {
@@ -450,6 +469,118 @@ describe('recommendation stats route (GET recommendations/stats)', () => {
     const deps = createDeps();
     const handled = await handleIntelligenceRoutes(buildGetCtx({
       pathname: '/api/intelligence/recommendations/stats',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 500, expect.objectContaining({ error: 'internal_error' }));
+  });
+});
+
+describe('attention queue route (GET /api/intelligence/attention)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    intelligenceServiceModule.getTenantIntelligenceService.mockImplementation(() => getService());
+    getService().getAttentionQueue.mockResolvedValue({
+      ok: true,
+      attention: {
+        status: 'critical',
+        totalItems: 1,
+        items: [
+          {
+            kind: 'recommendation_exception',
+            severity: 'high',
+            id: 'reco-1',
+            title: 'Redistribuir fila comercial',
+            reason: 'Tempo de resposta subiu.',
+            action: { type: 'apply_recommendation', recommendationId: 'reco-1' },
+            createdAt: '2026-09-06T00:00:00.000Z',
+          },
+        ],
+        generatedAt: '2026-09-06T00:00:00.000Z',
+      },
+    });
+  });
+
+  function buildGetCtx({ pathname, deps, agent = { username: 'admin-user', id: 'agent-1' } }) {
+    return {
+      req: { url: pathname, agent },
+      res: {},
+      method: 'GET',
+      pathname: pathname.split('?')[0],
+      deps,
+    };
+  }
+
+  test('GET attention com analytics:read retorna a fila consolidada', async () => {
+    const deps = createDeps();
+    const handled = await handleIntelligenceRoutes(buildGetCtx({
+      pathname: '/api/intelligence/attention?period=week',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.requirePermission).toHaveBeenCalledWith(expect.anything(), 'analytics', 'read');
+    expect(getService().getAttentionQueue).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      period: 'week',
+    });
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 200, expect.objectContaining({
+      ok: true,
+      attention: expect.objectContaining({
+        status: 'critical',
+        totalItems: 1,
+      }),
+    }));
+  });
+
+  test('GET attention sem period usa default month', async () => {
+    const deps = createDeps();
+    const handled = await handleIntelligenceRoutes(buildGetCtx({
+      pathname: '/api/intelligence/attention',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(getService().getAttentionQueue).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      period: 'month',
+    });
+  });
+
+  test('GET attention sem permissão retorna 403', async () => {
+    const deps = createDeps({ requirePermission: jest.fn(() => ({ allowed: false, error: 'forbidden' })) });
+    const handled = await handleIntelligenceRoutes(buildGetCtx({
+      pathname: '/api/intelligence/attention',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 403, expect.objectContaining({ error: 'forbidden' }));
+    expect(getService().getAttentionQueue).not.toHaveBeenCalled();
+  });
+
+  test('GET attention sem auth retorna 401', async () => {
+    const deps = createDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'token invalido' })) });
+    const res = {};
+    const handled = await handleIntelligenceRoutes({
+      req: { url: '/api/intelligence/attention' },
+      res,
+      method: 'GET',
+      pathname: '/api/intelligence/attention',
+      deps,
+    });
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 401, expect.objectContaining({ error: 'unauthorized' }));
+    expect(getService().getAttentionQueue).not.toHaveBeenCalled();
+  });
+
+  test('erro inesperado do service retorna 500', async () => {
+    getService().getAttentionQueue.mockRejectedValue(new Error('boom'));
+    const deps = createDeps();
+    const handled = await handleIntelligenceRoutes(buildGetCtx({
+      pathname: '/api/intelligence/attention',
       deps,
     }));
 

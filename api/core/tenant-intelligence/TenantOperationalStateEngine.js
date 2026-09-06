@@ -195,6 +195,142 @@ class TenantOperationalStateEngine {
     };
   }
 
+  /**
+   * Gestão por exceção: fila consolidada server-side do que precisa de
+   * decisão humana agora. Quando não há exceções, retorna status 'clear'
+   * ("tudo sob controle") — gestão por exceção também é não interromper.
+   *
+   * Tipos de item:
+   *  - recommendation_exception: recomendações open com priority 'high'
+   *    (exceções humanas do autonomy exception_only) — severity high.
+   *  - outcome_regressed: recomendações completed cujo outcome medido
+   *    regrediu dentro da janela do período — severity high.
+   *  - goal_off_track: metas ativas fora da faixa — severity medium.
+   *  - insight_high: insights open de alto impacto sem recomendação open
+   *    vinculada (dedupe: insight já representado por recomendação
+   *    acionável não entra na fila) — severity medium.
+   */
+  async getAttentionQueue({ tenantId, period = 'month', options = {} } = {}) {
+    if (!tenantId) throw new Error('tenantId is required');
+
+    const maxItems = Math.min(Math.max(Number(options.limit) || 20, 1), 100);
+
+    const [goalsResult, insightsResult, openRecsResult, completedRecsResult] = await Promise.all([
+      this.goalEngine.listGoals({ tenantId, status: 'active', includeComputed: true, limit: 200 }),
+      this.insightEngine.listInsights({ tenantId, status: 'open', limit: 100 }),
+      this.recommendationEngine.listRecommendations({ tenantId, status: 'open', limit: 100 }),
+      this.recommendationEngine.listRecommendations({ tenantId, status: 'completed', limit: 100 }),
+    ]);
+
+    const goals = Array.isArray(goalsResult?.items) ? goalsResult.items : [];
+    const insights = Array.isArray(insightsResult?.items) ? insightsResult.items : [];
+    const openRecommendations = Array.isArray(openRecsResult?.items) ? openRecsResult.items : [];
+    const completedRecommendations = Array.isArray(completedRecsResult?.items) ? completedRecsResult.items : [];
+
+    const items = [];
+
+    for (const rec of openRecommendations) {
+      if (String(rec?.priority || '').toLowerCase() !== 'high') continue;
+      items.push({
+        kind: 'recommendation_exception',
+        severity: 'high',
+        id: rec.id,
+        title: rec.title || 'Recomendação prioritária',
+        reason: rec.description || null,
+        action: { type: 'apply_recommendation', recommendationId: rec.id },
+        createdAt: rec.created_at || null,
+      });
+    }
+
+    const windowStart = Date.now() - this._periodWindowMs(period);
+    for (const rec of completedRecommendations) {
+      const outcome = rec?.metadata?.outcome;
+      if (!outcome || outcome.outcome !== 'regressed') continue;
+      const evaluatedAt = outcome.evaluatedAt ? Date.parse(outcome.evaluatedAt) : null;
+      if (evaluatedAt != null && !Number.isNaN(evaluatedAt) && evaluatedAt < windowStart) continue;
+      items.push({
+        kind: 'outcome_regressed',
+        severity: 'high',
+        id: rec.id,
+        title: rec.title || 'Resultado regrediu',
+        reason: 'Ação aplicada, mas a métrica piorou após a execução.',
+        action: { type: 'view_details', target: '/tenant-intelligence' },
+        createdAt: outcome.evaluatedAt || rec.updated_at || null,
+      });
+    }
+
+    const offTrackGoalIds = new Set();
+    for (const goal of goals) {
+      if (goal?.computed?.computedStatus !== 'off_track') continue;
+      if (goal.id) offTrackGoalIds.add(goal.id);
+      const progress = goal.computed.progressPercent;
+      items.push({
+        kind: 'goal_off_track',
+        severity: 'medium',
+        id: goal.id,
+        title: goal.name || 'Meta fora do esperado',
+        reason: progress != null
+          ? `Progresso em ${Math.round(progress)}% da meta no período.`
+          : 'Meta fora da faixa esperada no período.',
+        action: { type: 'view_details', target: '/tenant-intelligence' },
+        createdAt: goal.updated_at || goal.created_at || null,
+      });
+    }
+
+    const insightIdsWithOpenRecommendation = new Set(
+      openRecommendations.map((rec) => rec?.insight_id).filter(Boolean),
+    );
+    const seenInsightTitles = new Set();
+    for (const insight of insights) {
+      if (String(insight?.impact || '').toLowerCase() !== 'high') continue;
+      if (insightIdsWithOpenRecommendation.has(insight.id)) continue;
+      // Dedupe goal↔insight: insight gerado da mesma meta off_track já está
+      // representado pelo item goal_off_track (uma exceção, uma interrupção).
+      if (insight?.metadata?.goalId && offTrackGoalIds.has(insight.metadata.goalId)) continue;
+      // Dedupe de título: gerações repetidas do mesmo insight não viram
+      // interrupções duplicadas na fila.
+      const titleKey = String(insight?.title || insight?.id || '').trim().toLowerCase();
+      if (seenInsightTitles.has(titleKey)) continue;
+      seenInsightTitles.add(titleKey);
+      items.push({
+        kind: 'insight_high',
+        severity: 'medium',
+        id: insight.id,
+        title: insight.title || 'Insight de alto impacto',
+        reason: insight.description || null,
+        action: { type: 'view_details', target: '/tenant-intelligence' },
+        createdAt: insight.created_at || null,
+      });
+    }
+
+    const severityRank = { high: 0, medium: 1, low: 2 };
+    items.sort((a, b) => {
+      const rankDiff = (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3);
+      if (rankDiff !== 0) return rankDiff;
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+
+    const capped = items.slice(0, maxItems);
+    const hasHigh = capped.some((item) => item.severity === 'high');
+    const status = capped.length === 0 ? 'clear' : (hasHigh ? 'critical' : 'attention');
+
+    return {
+      ok: true,
+      attention: {
+        status,
+        totalItems: capped.length,
+        items: capped,
+        generatedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  _periodWindowMs(period) {
+    const daysByPeriod = { day: 1, week: 7, month: 30, quarter: 90, year: 365 };
+    const days = daysByPeriod[String(period || 'month')] || 30;
+    return days * 24 * 60 * 60 * 1000;
+  }
+
   _countBy(items, getKey) {
     const counts = {};
     for (const item of items || []) {

@@ -118,6 +118,10 @@ class TenantIntelligenceService {
     return this.tenantOperationalStateEngine.getOperationalState(input);
   }
 
+  async getAttentionQueue(input) {
+    return this.tenantOperationalStateEngine.getAttentionQueue(input);
+  }
+
   async getMarketBenchmarks(input) {
     return this.marketKnowledgeService.getBenchmarks(input?.tenantKey || input?.tenantId, input || {});
   }

@@ -23,8 +23,11 @@ import { AnalyticsRoiAndFunnelSection } from './analytics/AnalyticsRoiAndFunnelS
 import { AnalyticsOrdersAndPhysicalSection } from './analytics/AnalyticsOrdersAndPhysicalSection';
 import { AnalyticsDecisionIntelligenceSection } from './analytics/AnalyticsDecisionIntelligenceSection';
 import { AnalyticsDecisionMetricsSection } from './analytics/AnalyticsDecisionMetricsSection';
+import { AnalyticsAttentionSection } from './analytics/AnalyticsAttentionSection';
 import {
   applyTenantRecommendation,
+  dismissTenantRecommendation,
+  getTenantAttention,
   getTenantRecommendationStats,
   listTenantInsights,
   listTenantRecommendations,
@@ -55,7 +58,9 @@ export function AnalyticsPage() {
   const [intelligenceInsights, setIntelligenceInsights] = useState([]);
   const [intelligenceRecommendations, setIntelligenceRecommendations] = useState([]);
   const [intelligenceStats, setIntelligenceStats] = useState(null);
+  const [attention, setAttention] = useState(null);
   const [applyingRecommendationId, setApplyingRecommendationId] = useState(null);
+  const [dismissingRecommendationId, setDismissingRecommendationId] = useState(null);
   const [roiMetrics, setRoiMetrics] = useState(null);
   const [funnelMetrics, setFunnelMetrics] = useState(null);
   const [orderMetrics, setOrderMetrics] = useState(null);
@@ -199,19 +204,22 @@ export function AnalyticsPage() {
   // (ex.: permissao), as metricas descritivas continuam carregando.
   const loadIntelligence = async () => {
     try {
-      const [insightsResult, recommendationsResult, statsResult] = await Promise.all([
+      const [insightsResult, recommendationsResult, statsResult, attentionResult] = await Promise.all([
         listTenantInsights({ status: 'open', limit: 5 }),
         listTenantRecommendations({ status: 'open', limit: 5 }),
         getTenantRecommendationStats({ period: 'month' }),
+        getTenantAttention({ period: 'month' }),
       ]);
       setIntelligenceInsights(insightsResult?.items || []);
       setIntelligenceRecommendations(recommendationsResult?.items || []);
       setIntelligenceStats(statsResult?.stats || null);
+      setAttention(attentionResult?.attention || null);
     } catch (error) {
       logger.warn('[AnalyticsPage] Inteligencia decisoria indisponivel:', error?.message || error);
       setIntelligenceInsights([]);
       setIntelligenceRecommendations([]);
       setIntelligenceStats(null);
+      setAttention(null);
     }
   };
 
@@ -239,6 +247,25 @@ export function AnalyticsPage() {
       }
     } finally {
       setApplyingRecommendationId(null);
+    }
+  };
+
+  const handleDismissAttentionItem = async (item) => {
+    const recommendationId = item?.action?.recommendationId || item?.id;
+    if (!recommendationId) return;
+    setDismissingRecommendationId(recommendationId);
+    try {
+      await dismissTenantRecommendation(recommendationId, 'dispensado_na_fila_de_atencao');
+      showToast('Item dispensado.', 'success');
+      await loadIntelligence();
+    } catch (error) {
+      if (error?.status === 403 || error?.body?.error === 'forbidden') {
+        showToast('Sem permissão para dispensar recomendações.', 'error');
+      } else {
+        showToast('Não foi possível dispensar o item.', 'error');
+      }
+    } finally {
+      setDismissingRecommendationId(null);
     }
   };
 
@@ -673,6 +700,14 @@ export function AnalyticsPage() {
           Painel com KPIs e indicadores em tempo real
         </p>
       </div>
+
+      <AnalyticsAttentionSection
+        attention={attention}
+        applyingId={applyingRecommendationId}
+        dismissingId={dismissingRecommendationId}
+        onApply={handleApplyIntelligenceRecommendation}
+        onDismiss={handleDismissAttentionItem}
+      />
 
       <AnalyticsDecisionIntelligenceSection
         insights={intelligenceInsights}
