@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-06T18:14:07.383Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260906-150952.payload.zip",
-  "zipName": "r-agent2-20260906-150952.payload.zip",
+  "generatedAt": "2026-09-06T18:50:13.463Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-converge-provisional.zip",
+  "zipName": "r-agent2-converge-provisional.zip",
   "zipSha256": "3b2cdf4a7b6728845a74817191576e36ddc8bdff13e0d415e4ebd9bc69be1499",
   "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260906-150952.zip",
-  "selectionMode": "audited",
+  "envelopePath": "/opt/results/ria/r-agent2/dist/r-agent2-converge-provisional.zip",
+  "selectionMode": "explicit",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260906-150952.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-converge-provisional.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -46,7 +46,7 @@
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20260906-150952.payload.zip",
+    "boundTo": "r-agent2-converge-provisional.zip",
     "sha256": "3b2cdf4a7b6728845a74817191576e36ddc8bdff13e0d415e4ebd9bc69be1499",
     "immutable": true,
     "selfProving": true,
@@ -54,8 +54,8 @@
   },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260906180050904-ca1e9854",
-  "sourceFingerprint": "737a738451b0e143eb7bad2f7e6d7c771c59a48c1538cfc06a18523054e68300",
-  "gitCommit": "eae4c0d98fe874509ba27c3e7760e649056168e7",
-  "gitTree": "bfb2c6106e10bb4c09077e119ea4510e21dd5f69"
+  "runId": "rap-governed-20260906184931134-74b7afa1",
+  "sourceFingerprint": "5a819706b5ac584316d9a8f7c0273dbf15b54c1a8c71e96fb565ca41199fcf46",
+  "gitCommit": "6da9cee6c1f1c3cbaa0b3a0ef7b0b9d66ca9a9bd",
+  "gitTree": "c9841c6081a0197d292e1c93d1f1649eb076cd56"
 }
