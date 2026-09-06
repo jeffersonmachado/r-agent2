@@ -1,7 +1,24 @@
 'use strict';
 
-const { TenantRecommendation } = require('../../db/models');
-const { buildId } = require('./helpers');
+const { TenantRecommendation, TenantInsight, TenantMetricSnapshot } = require('../../db/models');
+const { buildId, toNumber } = require('./helpers');
+
+// Direcao esperada do movimento da metrica por tipo de insight de origem.
+const OUTCOME_DIRECTION_BY_INSIGHT = {
+  metric_drop: 'up',
+  goal_off_track: 'up',
+  goal_at_risk: 'up',
+  metric_increase: 'observe',
+  event_concentration: 'down',
+};
+
+function buildStatusError(code, statusCode) {
+  return Object.assign(new Error(code), { code, statusCode });
+}
+
+function rowToJson(row) {
+  return row && row.toJSON ? row.toJSON() : row;
+}
 
 class RecommendationEngine {
   async listRecommendations({ tenantId, status = null, limit = 100 } = {}) {
@@ -83,6 +100,232 @@ class RecommendationEngine {
     });
 
     return row.toJSON ? row.toJSON() : row;
+  }
+
+  async applyRecommendation({ tenantId, recommendationId, actor } = {}) {
+    if (!tenantId) throw new Error('tenantId is required');
+    if (!recommendationId) throw new Error('recommendationId is required');
+
+    const RecommendationModel = TenantRecommendation();
+    const row = await RecommendationModel.findOne({
+      where: { id: String(recommendationId), tenant_key: String(tenantId) },
+    });
+    if (!row) throw buildStatusError('recommendation_not_found', 404);
+
+    const current = rowToJson(row);
+    if (current.status !== 'open') throw buildStatusError('recommendation_not_open', 409);
+
+    const metricKeys = await this._resolveBaselineMetricKeys(current);
+    const capturedAt = new Date().toISOString();
+    const baseline = [];
+    for (const metricKey of metricKeys) {
+      // eslint-disable-next-line no-await-in-loop
+      const snapshot = await this._findLatestSnapshot({ tenantId, metricKey });
+      baseline.push({
+        metricKey,
+        value: toNumber(snapshot?.value, 0),
+        snapshotId: snapshot?.id || null,
+        capturedAt,
+      });
+    }
+
+    const metadata = current.metadata && typeof current.metadata === 'object' ? current.metadata : {};
+    const expectedDirection = OUTCOME_DIRECTION_BY_INSIGHT[metadata.sourceInsightType] || 'observe';
+
+    await row.update({
+      status: 'applied',
+      metadata: {
+        ...metadata,
+        application: {
+          appliedAt: capturedAt,
+          appliedBy: actor || null,
+          baseline,
+          expectedDirection,
+        },
+      },
+    });
+
+    return { ok: true, recommendation: rowToJson(row) };
+  }
+
+  async dismissRecommendation({ tenantId, recommendationId, actor, reason } = {}) {
+    if (!tenantId) throw new Error('tenantId is required');
+    if (!recommendationId) throw new Error('recommendationId is required');
+
+    const RecommendationModel = TenantRecommendation();
+    const row = await RecommendationModel.findOne({
+      where: { id: String(recommendationId), tenant_key: String(tenantId) },
+    });
+    if (!row) throw buildStatusError('recommendation_not_found', 404);
+
+    const current = rowToJson(row);
+    if (current.status !== 'open') throw buildStatusError('recommendation_not_open', 409);
+
+    const metadata = current.metadata && typeof current.metadata === 'object' ? current.metadata : {};
+    await row.update({
+      status: 'dismissed',
+      metadata: {
+        ...metadata,
+        dismissal: {
+          dismissedAt: new Date().toISOString(),
+          dismissedBy: actor || null,
+          reason: reason ? String(reason) : null,
+        },
+      },
+    });
+
+    return { ok: true, recommendation: rowToJson(row) };
+  }
+
+  async evaluateOutcome({ tenantId, recommendationId } = {}) {
+    if (!tenantId) throw new Error('tenantId is required');
+    if (!recommendationId) throw new Error('recommendationId is required');
+
+    const RecommendationModel = TenantRecommendation();
+    const row = await RecommendationModel.findOne({
+      where: { id: String(recommendationId), tenant_key: String(tenantId) },
+    });
+    if (!row) throw buildStatusError('recommendation_not_found', 404);
+
+    const current = rowToJson(row);
+    if (current.status !== 'applied') throw buildStatusError('recommendation_not_applied', 409);
+
+    const metadata = current.metadata && typeof current.metadata === 'object' ? current.metadata : {};
+    const application = metadata.application || null;
+    const baseline = Array.isArray(application?.baseline) ? application.baseline : [];
+    const expectedDirection = application?.expectedDirection || 'observe';
+    const evaluatedAt = new Date().toISOString();
+
+    if (!application || baseline.length === 0) {
+      const outcome = {
+        evaluatedAt,
+        outcome: 'pending',
+        reason: 'no_baseline_metrics',
+        metrics: [],
+      };
+      await row.update({
+        status: 'completed',
+        metadata: { ...metadata, outcome },
+      });
+      return { ok: true, recommendation: rowToJson(row), outcome };
+    }
+
+    const metrics = [];
+    for (const entry of baseline) {
+      // eslint-disable-next-line no-await-in-loop
+      const snapshot = await this._findLatestSnapshot({ tenantId, metricKey: entry.metricKey });
+      const isNew = snapshot && snapshot.id !== entry.snapshotId
+        && this._isSnapshotAfterCapture(snapshot, entry.capturedAt);
+
+      if (!isNew) {
+        metrics.push({
+          metricKey: entry.metricKey,
+          baselineValue: toNumber(entry.value, 0),
+          currentValue: null,
+          delta: null,
+          deltaPct: null,
+          assessment: 'pending',
+          snapshotId: null,
+        });
+        continue;
+      }
+
+      const baselineValue = toNumber(entry.value, 0);
+      const currentValue = toNumber(snapshot.value, 0);
+      const delta = currentValue - baselineValue;
+      const deltaPct = baselineValue !== 0 ? delta / Math.abs(baselineValue) : null;
+      metrics.push({
+        metricKey: entry.metricKey,
+        baselineValue,
+        currentValue,
+        delta,
+        deltaPct,
+        assessment: this._assessDelta({ deltaPct, currentValue, expectedDirection }),
+        snapshotId: snapshot.id,
+      });
+    }
+
+    const outcome = {
+      evaluatedAt,
+      outcome: this._summarizeOutcome(metrics),
+      metrics,
+    };
+    // Outcome pendente (sem snapshot novo) mantém a recomendação aplicada:
+    // novos dados podem chegar e a medição será reavaliada.
+    await row.update({
+      status: outcome.outcome === 'pending' ? 'applied' : 'completed',
+      metadata: { ...metadata, outcome },
+    });
+
+    return { ok: true, recommendation: rowToJson(row), outcome };
+  }
+
+  _assessDelta({ deltaPct, currentValue, expectedDirection }) {
+    if (deltaPct == null) {
+      // Baseline zerada: qualquer valor positivo eh movimento relevante.
+      if (currentValue > 0) {
+        if (expectedDirection === 'up') return 'improved';
+        if (expectedDirection === 'down') return 'regressed';
+        return 'changed';
+      }
+      return expectedDirection === 'observe' ? 'stable' : 'unchanged';
+    }
+
+    if (expectedDirection === 'observe') {
+      return Math.abs(deltaPct) >= 0.05 ? 'changed' : 'stable';
+    }
+    if (expectedDirection === 'down') {
+      if (deltaPct <= -0.05) return 'improved';
+      if (deltaPct >= 0.05) return 'regressed';
+      return 'unchanged';
+    }
+    if (deltaPct >= 0.05) return 'improved';
+    if (deltaPct <= -0.05) return 'regressed';
+    return 'unchanged';
+  }
+
+  _summarizeOutcome(metrics) {
+    const assessments = (metrics || []).map((item) => item.assessment);
+    if (assessments.length === 0 || assessments.every((item) => item === 'pending')) return 'pending';
+    if (assessments.includes('regressed')) return 'regressed';
+    if (assessments.includes('improved')) return 'improved';
+    return 'unchanged';
+  }
+
+  _isSnapshotAfterCapture(snapshot, capturedAt) {
+    const snapTime = snapshot?.created_at || snapshot?.createdAt || snapshot?.period_end || snapshot?.periodEnd || null;
+    if (!snapTime || !capturedAt) return true;
+    const snapMs = new Date(snapTime).getTime();
+    const capturedMs = new Date(capturedAt).getTime();
+    if (!Number.isFinite(snapMs) || !Number.isFinite(capturedMs)) return true;
+    return snapMs > capturedMs;
+  }
+
+  async _resolveBaselineMetricKeys(recommendation) {
+    if (recommendation?.insight_id) {
+      const InsightModel = TenantInsight();
+      const insight = await InsightModel.findOne({
+        where: { id: String(recommendation.insight_id), tenant_key: String(recommendation.tenant_key) },
+      });
+      const insightJson = rowToJson(insight);
+      if (Array.isArray(insightJson?.related_metrics) && insightJson.related_metrics.length > 0) {
+        return insightJson.related_metrics.map((key) => String(key));
+      }
+    }
+    const related = recommendation?.metadata?.relatedMetrics;
+    if (Array.isArray(related) && related.length > 0) {
+      return related.map((key) => String(key));
+    }
+    return [];
+  }
+
+  async _findLatestSnapshot({ tenantId, metricKey } = {}) {
+    const SnapshotModel = TenantMetricSnapshot();
+    const row = await SnapshotModel.findOne({
+      where: { tenant_key: String(tenantId), metric_key: String(metricKey) },
+      order: [['period_end', 'DESC'], ['created_at', 'DESC']],
+    });
+    return rowToJson(row);
   }
 
   _mapInsightToRecommendation(insight, goals) {

@@ -81,6 +81,25 @@ export function listTenantRecommendations({ status = 'open', limit = 100 } = {})
   return fetchJson(`/api/intelligence/recommendations${query ? `?${query}` : ''}`, { method: 'GET' });
 }
 
+export function applyTenantRecommendation(recommendationId) {
+  return fetchJson(`/api/intelligence/recommendations/${encodeURIComponent(String(recommendationId))}/apply`, {
+    method: 'POST',
+  });
+}
+
+export function dismissTenantRecommendation(recommendationId, reason) {
+  return fetchJson(`/api/intelligence/recommendations/${encodeURIComponent(String(recommendationId))}/dismiss`, {
+    method: 'POST',
+    body: JSON.stringify(reason ? { reason } : {}),
+  });
+}
+
+export function evaluateTenantRecommendationOutcome(recommendationId) {
+  return fetchJson(`/api/intelligence/recommendations/${encodeURIComponent(String(recommendationId))}/outcome`, {
+    method: 'POST',
+  });
+}
+
 export function listInsightEvidence(insightId) {
   return fetchJson(`/api/intelligence/insights/${encodeURIComponent(String(insightId))}/evidence`, { method: 'GET' });
 }

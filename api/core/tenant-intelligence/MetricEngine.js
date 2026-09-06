@@ -3,6 +3,7 @@
 const { getSequelize } = require('../../db/sequelize');
 const { TenantMetricSnapshot } = require('../../db/models');
 const { getEventLedgerMetrics } = require('../../services/eventLedgerMetricsService');
+const { getGeneralMetrics } = require('../../services/analyticsService');
 const { buildId, toNumber, resolvePeriodBounds } = require('./helpers');
 
 class MetricEngine {
@@ -76,6 +77,33 @@ class MetricEngine {
       });
     }
 
+    // Metricas operacionais de negocio (best-effort): falha aqui nao
+    // impede a persistencia das metricas do event ledger.
+    const warnings = [];
+    let operational = null;
+    try {
+      operational = await getGeneralMetrics({
+        tenantId: String(tenantId),
+        startDate: bounds.start.toISOString(),
+        endDate: bounds.end.toISOString(),
+      });
+    } catch (_) {
+      warnings.push('operational_metrics_unavailable');
+    }
+
+    if (operational && typeof operational === 'object') {
+      // abandonmentRate/botContainmentRate sao fracoes 0..1: convertidas para %.
+      const toPct = (value) => Number((toNumber(value, 0) * 100).toFixed(2));
+      metricRows.push({ key: 'operations.tickets_total', value: toNumber(operational.totalTickets, 0), source: 'operations' });
+      metricRows.push({ key: 'operations.tickets_open', value: toNumber(operational.openTickets, 0), source: 'operations' });
+      metricRows.push({ key: 'operations.avg_first_response_minutes', value: toNumber(operational.avgFirstResponseTime, 0), source: 'operations' });
+      metricRows.push({ key: 'operations.avg_resolution_minutes', value: toNumber(operational.avgResolutionTime, 0), source: 'operations' });
+      metricRows.push({ key: 'operations.abandonment_rate_pct', value: toPct(operational.abandonmentRate), source: 'operations' });
+      if (Number.isFinite(operational.botContainmentRate)) {
+        metricRows.push({ key: 'operations.bot_containment_rate_pct', value: toPct(operational.botContainmentRate), source: 'operations' });
+      }
+    }
+
     const SnapshotModel = TenantMetricSnapshot();
     const snapshots = [];
 
@@ -93,7 +121,7 @@ class MetricEngine {
           period: bounds.type,
           ...(filters.dimensions && typeof filters.dimensions === 'object' ? filters.dimensions : {}),
         },
-        source: 'event_ledger',
+        source: metric.source || 'event_ledger',
         metadata: {
           windowMinutes,
           ...(metric.metadata || {}),
@@ -105,6 +133,7 @@ class MetricEngine {
     return {
       ok: true,
       snapshots,
+      ...(warnings.length > 0 ? { warnings } : {}),
       period: {
         type: bounds.type,
         start: bounds.start.toISOString(),

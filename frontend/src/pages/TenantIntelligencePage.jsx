@@ -10,8 +10,11 @@ import {
   OPERATIONAL_STATE_LABELS,
 } from '../utils/operationalTrend.mjs';
 import {
+  applyTenantRecommendation,
   collectTenantMetricSnapshots,
   createTenantGoal,
+  dismissTenantRecommendation,
+  evaluateTenantRecommendationOutcome,
   getTenantOperationalState,
   listInsightEvidence,
   listTenantGoals,
@@ -45,6 +48,49 @@ function formatJsonForUi(value) {
 }
 
 const EVIDENCE_PAGE_SIZE = 5;
+
+const RECOMMENDATION_STATUS_LABELS = {
+  open: 'Aberta',
+  applied: 'Aplicada',
+  dismissed: 'Dispensada',
+  completed: 'Concluída',
+};
+
+const RECOMMENDATION_STATUS_STYLES = {
+  open: 'border border-status-info/20 bg-status-info/10 text-status-info',
+  applied: 'border border-status-warning/20 bg-status-warning/10 text-status-warning',
+  dismissed: 'border border-border-default bg-text-secondary/10 text-text-secondary',
+  completed: 'border border-status-success/20 bg-status-success/10 text-status-success',
+};
+
+const RECOMMENDATION_OUTCOME_LABELS = {
+  improved: 'Resultado: melhorou',
+  regressed: 'Resultado: piorou',
+  unchanged: 'Resultado: sem mudança relevante',
+  pending: 'Aguardando novos dados para medir o resultado',
+};
+
+const RECOMMENDATION_OUTCOME_STYLES = {
+  improved: 'text-status-success',
+  regressed: 'text-status-error',
+  unchanged: 'text-text-secondary',
+  pending: 'text-status-warning',
+};
+
+function formatRecommendationDate(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('pt-BR');
+}
+
+function formatDeltaPct(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  // Contrato do backend: deltaPct é fração (ex.: -0.26) — exibir em pontos percentuais.
+  const rounded = Math.round(n * 100);
+  return `${rounded > 0 ? '+' : ''}${rounded}%`;
+}
 
 function downloadTextFile(filename, content, mimeType = 'text/plain;charset=utf-8') {
   const blob = new Blob([content], { type: mimeType });
@@ -120,6 +166,7 @@ export function TenantIntelligencePage() {
   const [insightEvidencePageMap, setInsightEvidencePageMap] = useState({});
   const [expandedInsightId, setExpandedInsightId] = useState(null);
   const [evidenceLoadingId, setEvidenceLoadingId] = useState(null);
+  const [recommendationActionLoadingId, setRecommendationActionLoadingId] = useState(null);
 
   const [goalForm, setGoalForm] = useState({
     name: '',
@@ -327,6 +374,82 @@ export function TenantIntelligencePage() {
     } finally {
       setEvidenceLoadingId(null);
     }
+  }
+
+  function upsertRecommendationInState(updated) {
+    if (!updated || !updated.id) return;
+    const merge = (items) => items.map((item) => (item.id === updated.id ? { ...item, ...updated } : item));
+    setRecommendations((prev) => merge(prev));
+    setSearchResult((prev) => {
+      if (!prev || !Array.isArray(prev.recommendations)) return prev;
+      return { ...prev, recommendations: merge(prev.recommendations) };
+    });
+  }
+
+  function resolveRecommendationActionError(error, fallbackMessage) {
+    const status = error?.status ?? error?.httpStatus;
+    const code = typeof error?.body?.error === 'string' ? error.body.error : error?.code;
+    if (status === 403 || code === 'forbidden') {
+      return { message: 'Sem permissão para aplicar recomendações', refresh: false };
+    }
+    if (status === 404 || code === 'recommendation_not_found') {
+      return { message: 'Recomendação não encontrada. A lista será atualizada.', refresh: true };
+    }
+    if (status === 409 || code === 'recommendation_not_open' || code === 'recommendation_not_applied') {
+      return { message: 'Esta recomendação mudou de estado. A lista será atualizada.', refresh: true };
+    }
+    return { message: fallbackMessage, refresh: false };
+  }
+
+  async function runRecommendationAction(recommendation, action, fallbackMessage, successMessage) {
+    if (!recommendation?.id) return;
+    setRecommendationActionLoadingId(recommendation.id);
+    try {
+      const response = await action();
+      if (response?.recommendation) {
+        upsertRecommendationInState(response.recommendation);
+      }
+      showToast(successMessage, 'success');
+    } catch (error) {
+      logger.error('[TenantIntelligencePage] Erro em ação de recomendação', error);
+      const { message, refresh } = resolveRecommendationActionError(error, fallbackMessage);
+      showToast(message, 'error');
+      if (refresh) {
+        await loadInitialData();
+      }
+    } finally {
+      setRecommendationActionLoadingId(null);
+    }
+  }
+
+  function handleApplyRecommendation(recommendation) {
+    return runRecommendationAction(
+      recommendation,
+      () => applyTenantRecommendation(recommendation.id),
+      'Erro ao aplicar recomendação',
+      'Recomendação aplicada',
+    );
+  }
+
+  async function handleDismissRecommendation(recommendation) {
+    if (!recommendation?.id) return;
+    const reason = window.prompt('Motivo para dispensar a recomendação (opcional)', '');
+    if (reason === null) return;
+    return runRecommendationAction(
+      recommendation,
+      () => dismissTenantRecommendation(recommendation.id, reason),
+      'Erro ao dispensar recomendação',
+      'Recomendação dispensada',
+    );
+  }
+
+  function handleEvaluateRecommendationOutcome(recommendation) {
+    return runRecommendationAction(
+      recommendation,
+      () => evaluateTenantRecommendationOutcome(recommendation.id),
+      'Erro ao avaliar resultado',
+      'Resultado avaliado',
+    );
   }
 
   const activeGoalsCount = searchResult?.goalsImpact
@@ -730,14 +853,99 @@ export function TenantIntelligencePage() {
             <p className="text-sm text-text-secondary">Nenhuma recomendação disponível.</p>
           ) : (
             <ul className="space-y-2 text-sm">
-              {topRecommendations.map((item) => (
-                <li key={item.id || item.title} className="border border-border-default rounded-lg p-3">
-                  <div className="font-medium text-text-primary">{item.title || 'Recomendação'}</div>
-                  <div className="text-text-secondary">
-                    prioridade: {item.priority || '-'} | tipo: {item.action_type || '-'}
-                  </div>
-                </li>
-              ))}
+              {topRecommendations.map((item) => {
+                const outcome = item.metadata?.outcome || null;
+                const outcomeKey = outcome?.outcome || 'pending';
+                const outcomeMetrics = Array.isArray(outcome?.metrics) ? outcome.metrics : [];
+                return (
+                  <li
+                    key={item.id || item.title}
+                    className={`border border-border-default rounded-lg p-3 ${item.status === 'dismissed' ? 'opacity-60' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-medium text-text-primary">{item.title || 'Recomendação'}</div>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${RECOMMENDATION_STATUS_STYLES[item.status] || RECOMMENDATION_STATUS_STYLES.open}`}>
+                        {RECOMMENDATION_STATUS_LABELS[item.status] || RECOMMENDATION_STATUS_LABELS.open}
+                      </span>
+                    </div>
+                    <div className="text-text-secondary">
+                      prioridade: {item.priority || '-'} | tipo: {item.action_type || '-'}
+                    </div>
+                    {item.description ? (
+                      <div className="text-text-secondary" style={{ marginTop: '4px' }}>{item.description}</div>
+                    ) : null}
+
+                    {item.status === 'applied' ? (
+                      <div className="text-text-secondary" style={{ marginTop: '4px' }}>
+                        Aplicada em {formatRecommendationDate(item.metadata?.application?.appliedAt)}
+                      </div>
+                    ) : null}
+
+                    {outcome ? (
+                      <div style={{ marginTop: '8px' }}>
+                        <div className={`font-medium ${RECOMMENDATION_OUTCOME_STYLES[outcomeKey] || RECOMMENDATION_OUTCOME_STYLES.pending}`}>
+                          {RECOMMENDATION_OUTCOME_LABELS[outcomeKey] || RECOMMENDATION_OUTCOME_LABELS.pending}
+                        </div>
+                        {outcomeMetrics.length > 0 ? (
+                          <ul className="text-text-secondary" style={{ marginLeft: '16px', listStyle: 'disc' }}>
+                            {outcomeMetrics.map((metric) => {
+                              const deltaPct = formatDeltaPct(metric.deltaPct);
+                              return (
+                                <li key={metric.metricKey}>
+                                  {metric.metricKey}: {formatNumber(metric.baselineValue)} → {formatNumber(metric.currentValue)}
+                                  {deltaPct ? ` (${deltaPct})` : ''}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : null}
+                        {outcome.reason ? (
+                          <div className="text-text-secondary">{outcome.reason}</div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {item.id && item.status === 'open' ? (
+                      <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          style={{ width: 'auto' }}
+                          disabled={recommendationActionLoadingId === item.id}
+                          onClick={() => handleApplyRecommendation(item)}
+                        >
+                          Aplicar recomendação
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          style={{ width: 'auto' }}
+                          disabled={recommendationActionLoadingId === item.id}
+                          onClick={() => handleDismissRecommendation(item)}
+                        >
+                          Dispensar
+                        </Button>
+                      </div>
+                    ) : null}
+
+                    {item.id && item.status === 'applied' ? (
+                      <div style={{ marginTop: '8px' }}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          style={{ width: 'auto' }}
+                          disabled={recommendationActionLoadingId === item.id}
+                          onClick={() => handleEvaluateRecommendationOutcome(item)}
+                        >
+                          Avaliar resultado
+                        </Button>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-05T19:11:40.064Z",
+  "generatedAt": "2026-09-06T04:54:37.231Z",
   "counts": {
-    "total": 2941,
+    "total": 2942,
     "byKind": {
-      "api": 789,
+      "api": 790,
       "field": 1650,
       "model": 176,
       "page": 141,
@@ -12,7 +12,7 @@
       "table": 176
     },
     "byClassification": {
-      "PRODUCTION": 2715,
+      "PRODUCTION": 2716,
       "DEVELOPMENT": 134,
       "SUPPORT": 92
     },
@@ -9937,6 +9937,24 @@
       ],
       "linkedDomains": [],
       "fingerprint": "4f23a09f20eb5429d739274f214a2411fc1c5fa50bb71105549671b9b52bdef7"
+    },
+    {
+      "id": "api:POST:/api/intelligence/recommendations/:id",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/intelligence/recommendations/:id",
+      "module": "intelligence",
+      "source": "api/modules/intelligence/handleIntelligenceAnalyticsRoutes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "operational_intelligence"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1c6357d0203a80a120f561272e29bb9fc9a7bbb5438bbd3663aa371129d516c7"
     },
     {
       "id": "api:POST:/api/intelligence/search",

@@ -107,6 +107,50 @@ async function handleIntelligenceAnalyticsRoutes(ctx) {
     return true;
   }
 
+  if (method === 'POST' && pathname.startsWith('/api/intelligence/recommendations/')) {
+    const tail = pathname.slice('/api/intelligence/recommendations/'.length);
+    const segments = tail.split('/').filter(Boolean);
+    const recommendationId = segments[0] ? decodeURIComponent(segments[0]) : '';
+    const action = segments.length === 2 ? decodeURIComponent(segments[1]) : null;
+    if (!recommendationId || !['apply', 'dismiss', 'outcome'].includes(action)) {
+      return false;
+    }
+
+    const permResult = requirePermission(req, 'analytics', 'write');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+
+    try {
+      const body = hasJsonContentType(req) ? await parseJsonBody(req) : {};
+      const actor = req.agent?.username || req.agent?.id || null;
+
+      let out;
+      if (action === 'apply') {
+        out = await service.applyRecommendation({ tenantId, recommendationId, actor });
+      } else if (action === 'dismiss') {
+        out = await service.dismissRecommendation({
+          tenantId,
+          recommendationId,
+          actor,
+          reason: body?.reason,
+        });
+      } else {
+        out = await service.evaluateRecommendationOutcome({ tenantId, recommendationId });
+      }
+      sendJson(res, 200, out);
+    } catch (err) {
+      if (err && err.statusCode) {
+        sendJson(res, err.statusCode, { error: err.code || 'recommendation_error' });
+        return true;
+      }
+      logger.error(`[IntelligenceRoutes] Erro em POST /api/intelligence/recommendations/:id/${action}:`, err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao processar recomendacao' });
+    }
+    return true;
+  }
+
   return false;
 }
 

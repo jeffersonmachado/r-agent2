@@ -86,6 +86,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'reports', action: 'export' },
     // Analytics (KPIs/metrics operacionais)
     { resource: 'analytics', action: 'read' },
+    // Analytics (aplicar recomendações / decision intelligence)
+    { resource: 'analytics', action: 'write' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     { resource: 'audit', action: 'export' },
@@ -187,6 +189,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'reports', action: 'export' },
     // Analytics (KPIs/metrics operacionais)
     { resource: 'analytics', action: 'read' },
+    // Analytics (aplicar recomendações / decision intelligence)
+    { resource: 'analytics', action: 'write' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas
@@ -257,6 +261,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'reports', action: 'read' },
     // Analytics (KPIs/metrics operacionais)
     { resource: 'analytics', action: 'read' },
+    // Analytics (aplicar recomendações / decision intelligence)
+    { resource: 'analytics', action: 'write' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas
@@ -323,6 +329,8 @@ const ROLE_PERMISSIONS = {
     { resource: 'reports', action: 'read' },
     // Analytics (KPIs/metrics operacionais)
     { resource: 'analytics', action: 'read' },
+    // Analytics (aplicar recomendações / decision intelligence)
+    { resource: 'analytics', action: 'write' },
     // Auditoria
     { resource: 'audit', action: 'read' },
     // Respostas Rápidas

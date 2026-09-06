@@ -90,6 +90,18 @@ class TenantIntelligenceService {
     return this.recommendationEngine.listRecommendations(input);
   }
 
+  async applyRecommendation(input) {
+    return this.recommendationEngine.applyRecommendation(input);
+  }
+
+  async dismissRecommendation(input) {
+    return this.recommendationEngine.dismissRecommendation(input);
+  }
+
+  async evaluateRecommendationOutcome(input) {
+    return this.recommendationEngine.evaluateOutcome(input);
+  }
+
   async searchStrategic(input) {
     return this.strategicSearchService.search(input);
   }
