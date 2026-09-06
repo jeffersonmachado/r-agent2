@@ -116,6 +116,7 @@ const getVerticalJourneyEvent = require('./VerticalJourneyEvent');
 const getVerticalAttendance = require('./VerticalAttendance');
 const getVerticalSessionBundle = require('./VerticalSessionBundle');
 const getVerticalEngagementSignal = require('./VerticalEngagementSignal');
+const getVerticalMlModel = require('./VerticalMlModel');
 const getBillingTransaction = require('./BillingTransaction');
 const getBillingSubscription = require('./BillingSubscription');
 const getNotificationDelivery = require('./NotificationDelivery');
@@ -293,6 +294,7 @@ const VerticalJourneyEvent = () => getVerticalJourneyEvent();
 const VerticalAttendance = () => getVerticalAttendance();
 const VerticalSessionBundle = () => getVerticalSessionBundle();
 const VerticalEngagementSignal = () => getVerticalEngagementSignal();
+const VerticalMlModel = () => getVerticalMlModel();
 const BillingTransaction = () => getBillingTransaction();
 const BillingSubscription = () => getBillingSubscription();
 const NotificationDelivery = () => getNotificationDelivery();
@@ -928,6 +930,7 @@ module.exports = {
   VerticalAttendance,
   VerticalSessionBundle,
   VerticalEngagementSignal,
+  VerticalMlModel,
   BillingTransaction,
   BillingSubscription,
   NotificationDelivery,
@@ -1104,6 +1107,7 @@ module.exports = {
   getVerticalAttendance,
   getVerticalSessionBundle,
   getVerticalEngagementSignal,
+  getVerticalMlModel,
   getBillingTransaction,
   getBillingSubscription,
   getNotificationDelivery,

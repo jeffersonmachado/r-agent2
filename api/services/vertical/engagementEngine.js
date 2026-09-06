@@ -65,11 +65,16 @@ async function getRecentAttendances({ tenantId, vertical, subjectId, windowDays 
 // ── Score computation ─────────────────────────────────────────────────────
 
 /**
- * REQUIRES AI/ML provider. No heuristic fallback.
- * Throws with clear error message when AI is unavailable.
+ * REQUIRES trained ML model (logistic regression, per tenant). No heuristic
+ * fallback — fail-closed via churnModelService.scoreFitnessChurn, que lança
+ * AI_ML_REQUIRED quando não existe modelo treinado do tenant.
  */
-function computeFitnessChurnScore({ daysSinceLastVisit, frequency30d, billingStatus }) {
-  throw new Error('AI_ML_REQUIRED: computeFitnessChurnScore requires AI/ML provider. Heuristic fallback removed. Provide real ML model integration.');
+async function computeFitnessChurnScore({ tenantId, daysSinceLastVisit, frequency30d, billingStatus }) {
+  // Lazy require: evita ciclo vertical ↔ vertical.
+  // eslint-disable-next-line global-require
+  const { scoreFitnessChurn } = require('./churnModelService');
+  const result = await scoreFitnessChurn({ tenantId, daysSinceLastVisit, frequency30d, billingStatus });
+  return result.score;
 }
 
 /**
@@ -104,15 +109,33 @@ async function computeEngagementSignal({ tenantId, vertical, subjectId, membersh
     return diff <= 30 * 24 * 60 * 60 * 1000;
   }).length;
 
-  const lastAttendance = recent[0] || null;
+  let lastAttendance = recent[0] || null;
+  if (!lastAttendance && dbAvailable()) {
+    // Fora da janela recente: busca a última presença real sem limite de
+    // janela — sem isso, quem mais precisa de recuperação (30+ dias sem
+    // vir) apareceria com o sentinela 999 em vez dos dias reais.
+    const Model = VerticalAttendance();
+    const row = await Model.findOne({
+      where: { tenant_key: tenantId, vertical, subject_id: String(subjectId) },
+      order: [['checked_in_at', 'DESC']],
+    }).catch(() => null);
+    lastAttendance = row ? (row.toJSON ? row.toJSON() : row) : null;
+  }
   const lastAt = lastAttendance ? new Date(lastAttendance.checked_in_at || lastAttendance.created_at) : null;
   const daysSinceLastVisit = lastAt ? Math.floor((Date.now() - lastAt.getTime()) / 86400000) : 999;
 
   let signalType;
   let score;
+  let computedBy = 'ai_ml_required';
 
   if (vertical === 'fitness') {
-    score = computeFitnessChurnScore({ daysSinceLastVisit, frequency30d, billingStatus });
+    // ML real: regressão logística treinada por tenant (churnModelService).
+    // Lança AI_ML_REQUIRED quando não há modelo treinado — fail-closed.
+    // eslint-disable-next-line global-require
+    const { scoreFitnessChurn } = require('./churnModelService');
+    const scored = await scoreFitnessChurn({ tenantId, daysSinceLastVisit, frequency30d, billingStatus });
+    score = scored.score;
+    computedBy = `ml_logreg:v${scored.modelVersion}`;
     if (score >= 0.6) signalType = 'churn_risk';
     else if (frequency30d < DEFAULTS.fitness.low_frequency_threshold) signalType = 'low_frequency';
     else if (daysSinceLastVisit >= DEFAULTS.fitness.inactive_days_threshold) signalType = 'inactive';
@@ -134,7 +157,7 @@ async function computeEngagementSignal({ tenantId, vertical, subjectId, membersh
     last_attendance_at: lastAt,
     days_since_last_visit: daysSinceLastVisit,
     frequency_last_30d: frequency30d,
-    metadata: { billingStatus, noShowCount, totalAppointments, computed_by: 'ai_ml_required' },
+    metadata: { billingStatus, noShowCount, totalAppointments, computed_by: computedBy },
     computed_at: new Date(),
   };
 

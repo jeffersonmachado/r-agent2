@@ -62,6 +62,50 @@ class WorkspaceInsightService {
     }
   }
 
+  /**
+   * Vertical Fitness: sinais de engajamento com score de ML real
+   * (churnModelService, regressão logística por tenant) viram insight
+   * operacional no Customer 360. Fail-soft: qualquer indisponibilidade
+   * resulta em nenhum insight, nunca em erro do Workspace.
+   */
+  async generateFitnessChurnInsights({ tenantId, entityId }) {
+    try {
+      const entity = await this.WorkspaceEntity().findOne({ where: { id: entityId, tenant_id: tenantId } });
+      const phone = entity ? safeString(entity.phone || entity.get?.('phone')) : '';
+      if (!phone) return [];
+      // Lazy require: evita ciclo vertical ↔ workspace.
+      // eslint-disable-next-line global-require
+      const { latestFitnessSignalByPhone } = require('../vertical/fitnessChurnSignalService');
+      const signal = await latestFitnessSignalByPhone({ tenantId, phone });
+      if (!signal) return [];
+
+      const days = signal.daysSinceLastVisit != null ? `${signal.daysSinceLastVisit} dias sem treinar` : 'sem treinos recentes';
+      const freq = signal.frequency30d != null ? `${signal.frequency30d} treino(s) nos ultimos 30 dias` : 'frequencia baixa';
+      if (signal.signalType === 'churn_risk') {
+        const pct = signal.score != null ? ` (score do modelo: ${Math.round(signal.score * 100)}%)` : '';
+        return [this.buildInsight({
+          type: 'churn',
+          description: `Aluno com risco de desistencia detectado pelo modelo${pct}: ${days}, ${freq}.`,
+          confidence: signal.score != null ? Math.max(0.5, Math.min(0.99, signal.score)) : 0.8,
+          source: 'system',
+          severity: 'high',
+          evidence: [signal.signalId].filter(Boolean),
+        })];
+      }
+      return [this.buildInsight({
+        type: 'churn',
+        description: `Frequencia de treinos em queda: ${days}, ${freq}.`,
+        confidence: 0.65,
+        source: 'system',
+        severity: 'medium',
+        evidence: [signal.signalId].filter(Boolean),
+      })];
+    } catch (err) {
+      this.logger.warn('[WorkspaceInsight] Sinal de churn fitness indisponivel', { tenantId, entityId, error: err.message });
+      return [];
+    }
+  }
+
   async persistedInsights({ tenantId, entityId, limit = 50 }) {
     const rows = await this.WorkspaceInsight().findAll({ where: { tenant_id: tenantId, entity_id: entityId }, order: [['created_at', 'DESC']], limit });
     return rows.map(toPlain);
@@ -151,7 +195,8 @@ class WorkspaceInsightService {
 
     const aiInsights = await this.generateAiClassifications({ tenantId, entityId, timeline });
     const noShowInsights = await this.generateNoShowInsights({ tenantId, entityId });
-    const generated = [...noShowInsights, ...insights, ...aiInsights];
+    const churnInsights = await this.generateFitnessChurnInsights({ tenantId, entityId });
+    const generated = [...noShowInsights, ...churnInsights, ...insights, ...aiInsights];
     const persistedGenerated = await this.persistGeneratedInsights({ tenantId, entityId, insights: generated });
     const persistedExisting = await this.persistedInsights({ tenantId, entityId, limit: 100 });
     const persisted = [...persistedExisting, ...persistedGenerated]

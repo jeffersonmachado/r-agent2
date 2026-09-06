@@ -91,5 +91,6 @@ async function recentNoShowsByPhone({ tenantId, phone, lookbackDays = NO_SHOW_LO
 
 module.exports = {
   recentNoShowsByPhone,
+  findSubjectsByPhone,
   NO_SHOW_LOOKBACK_DAYS,
 };
