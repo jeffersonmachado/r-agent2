@@ -1,6 +1,6 @@
 'use strict';
 
-const { WorkspaceInsight } = require('../../db/models');
+const { WorkspaceInsight, WorkspaceEntity } = require('../../db/models');
 const logger = require('../../utils/logger');
 const nlpService = require('../nlpService');
 const WorkspaceTimelineService = require('./WorkspaceTimelineService');
@@ -17,6 +17,7 @@ function isTechnicalInsight(insight) {
 class WorkspaceInsightService {
   constructor(deps = {}) {
     this.WorkspaceInsight = deps.WorkspaceInsight || WorkspaceInsight;
+    this.WorkspaceEntity = deps.WorkspaceEntity || WorkspaceEntity;
     this.timelineService = deps.timelineService || new WorkspaceTimelineService(deps);
     this.nlpService = deps.nlpService || nlpService;
     this.logger = deps.logger || logger;
@@ -24,6 +25,41 @@ class WorkspaceInsightService {
 
   buildInsight({ type, description, confidence = 0.7, source = 'system', evidence = [], severity = 'medium' }) {
     return { type, description, confidence, source, evidence, severity };
+  }
+
+  /**
+   * Vertical Beauty: faltas em agendamentos (no_show_detected) viram insight
+   * operacional no Customer 360. A detecção em si já roda na jornada beauty;
+   * aqui é só a projeção para quem opera o cliente. Fail-soft: qualquer
+   * indisponibilidade resulta em nenhum insight, nunca em erro do Workspace.
+   */
+  async generateNoShowInsights({ tenantId, entityId }) {
+    try {
+      const entity = await this.WorkspaceEntity().findOne({ where: { id: entityId, tenant_id: tenantId } });
+      const phone = entity ? safeString(entity.phone || entity.get?.('phone')) : '';
+      if (!phone) return [];
+      // Lazy require: evita ciclo vertical ↔ workspace.
+      // eslint-disable-next-line global-require
+      const { recentNoShowsByPhone } = require('../vertical/noShowSignalService');
+      const noShows = await recentNoShowsByPhone({ tenantId, phone });
+      if (noShows.length === 0) return [];
+      const latest = noShows[0];
+      const latestDate = new Date(latest.occurredAt).toLocaleDateString('pt-BR');
+      const description = noShows.length === 1
+        ? `Cliente faltou ao agendamento de ${latestDate} e ainda nao reagendou.`
+        : `Cliente tem ${noShows.length} faltas em agendamentos nos ultimos 45 dias (mais recente em ${latestDate}).`;
+      return [this.buildInsight({
+        type: 'no_show',
+        description,
+        confidence: 0.9,
+        source: 'system',
+        severity: 'high',
+        evidence: noShows.map((event) => event.scheduleId).filter(Boolean),
+      })];
+    } catch (err) {
+      this.logger.warn('[WorkspaceInsight] Sinal de no-show indisponivel', { tenantId, entityId, error: err.message });
+      return [];
+    }
   }
 
   async persistedInsights({ tenantId, entityId, limit = 50 }) {
@@ -114,7 +150,8 @@ class WorkspaceInsightService {
     }
 
     const aiInsights = await this.generateAiClassifications({ tenantId, entityId, timeline });
-    const generated = [...insights, ...aiInsights];
+    const noShowInsights = await this.generateNoShowInsights({ tenantId, entityId });
+    const generated = [...noShowInsights, ...insights, ...aiInsights];
     const persistedGenerated = await this.persistGeneratedInsights({ tenantId, entityId, insights: generated });
     const persistedExisting = await this.persistedInsights({ tenantId, entityId, limit: 100 });
     const persisted = [...persistedExisting, ...persistedGenerated]

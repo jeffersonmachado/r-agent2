@@ -88,15 +88,17 @@ class WorkspaceActionService {
       const insightType = safeString(insight.type);
       const source = safeString(insight.source).toLowerCase();
       const critical = insight.severity === 'critical' || source === 'rpa';
-      if (!['risk', 'delay', 'churn'].includes(insightType) && !critical) continue;
+      if (!['risk', 'delay', 'churn', 'no_show'].includes(insightType) && !critical) continue;
       const title = critical
         ? 'Acionar correcao tecnica QA/RPA'
         : insightType === 'delay'
           ? 'Responder cliente com SLA em risco'
           : insightType === 'churn'
             ? 'Fazer follow-up de reativacao'
-            : 'Mitigar risco operacional do cliente';
-      const task = await this.operationsService.createTask({ tenantId, payload: { entityId, title, description: insight.description, type: critical ? 'rpa' : 'ai', priority: critical || insightType === 'risk' ? 'high' : 'normal' } });
+            : insightType === 'no_show'
+              ? 'Recuperar agendamento perdido (no-show)'
+              : 'Mitigar risco operacional do cliente';
+      const task = await this.operationsService.createTask({ tenantId, payload: { entityId, title, description: insight.description, type: critical ? 'rpa' : 'ai', priority: critical || insightType === 'risk' || insightType === 'no_show' ? 'high' : 'normal' } });
       created.push(await this.createAction({ tenantId, entityId, type: 'task', status: 'executed', payload: { title, task, sourceInsight: insight } }));
     }
     return created;
@@ -181,6 +183,14 @@ class WorkspaceActionService {
         expectedOutcome: 'Expandir o relacionamento com uma nova oferta',
         risk: 'low',
         action: { kind: 'send_message', label: 'Enviar proposta de expansao' },
+      },
+      no_show: {
+        type: 'followup',
+        label: 'Recuperar agendamento perdido',
+        reason: 'Cliente faltou a um agendamento recente e ainda nao reagendou.',
+        expectedOutcome: 'Reagendar o atendimento e preservar a receita',
+        risk: 'medium',
+        action: { kind: 'send_message', label: 'Enviar mensagem de reagendamento' },
       },
     };
     const suggestion = map[top.type] || map.opportunity;

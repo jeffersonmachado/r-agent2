@@ -1,6 +1,7 @@
 import React from 'react';
 import { getOperationalLabels, isDevSurfaceVisible } from './workspaceDevSurface';
 import { SuggestionExpectedOutcome, SuggestionMeta } from './WorkspaceActions';
+import { formatInsightType } from './insightTypeLabels';
 
 function Card({ title, children, loading = false }) {
   return (
@@ -87,7 +88,7 @@ export function WorkspaceRightRail({ summary, insights, actions, incidents, load
       </Card>
 
       <Card title="Insights IA" loading={loadingInsights}>
-        {insightItems.slice(0, 3).map((item, index) => <div key={`${item.type}-${index}`} className="workspace-rail-item"><strong>{item.type}</strong><p>{item.description}</p></div>)}
+        {insightItems.slice(0, 3).map((item, index) => <div key={`${item.type}-${index}`} className="workspace-rail-item"><strong>{formatInsightType(item.type)}</strong><p>{item.description}</p></div>)}
         {insightItems.length === 0 ? <p className="workspace-muted text-sm">Sem insights adicionais.</p> : null}
       </Card>
 

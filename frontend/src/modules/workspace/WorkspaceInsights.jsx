@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatInsightType } from './insightTypeLabels';
 
 export function WorkspaceInsights({ insights, loading }) {
   const generated = insights?.items || [];
@@ -14,7 +15,7 @@ export function WorkspaceInsights({ insights, loading }) {
       {items.map((insight, index) => (
         <article key={`${insight.type}-${index}`} className="workspace-mini-card">
           <div className="flex items-center justify-between gap-3">
-            <span className={`workspace-pill ${insight.severity === 'critical' ? 'critical' : insight.type === 'delay' ? 'warning' : 'subtle'}`}>{insight.type}</span>
+            <span className={`workspace-pill ${insight.severity === 'critical' ? 'critical' : insight.type === 'delay' || insight.type === 'no_show' ? 'warning' : 'subtle'}`}>{formatInsightType(insight.type)}</span>
             <span className="workspace-muted text-xs">{Math.round((insight.confidence || 0) * 100)}% · {insight.source}</span>
           </div>
           <p className="mt-2">{insight.description}</p>
