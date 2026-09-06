@@ -12,6 +12,12 @@ const OUTCOME_DIRECTION_BY_INSIGHT = {
   event_concentration: 'down',
 };
 
+// Ações customer-facing: atingem o cliente (mensagem no canal) ou compromisso
+// operacional agendado. NUNCA executam em origem automática (auto-apply do
+// nível autonomous/exception_only) — exigem apply humano explícito (manual ou
+// batch com actor). Ações internas (create_task) seguem o auto-apply normal.
+const CUSTOMER_FACING_ACTION_KINDS = new Set(['send_message', 'schedule']);
+
 function buildStatusError(code, statusCode) {
   return Object.assign(new Error(code), { code, statusCode });
 }
@@ -25,6 +31,8 @@ class RecommendationEngine {
     this._workspaceOperations = deps.workspaceOperations || null;
     this._evidenceEngine = deps.evidenceEngine || null;
     this._capabilitiesService = deps.capabilitiesService || null;
+    this._channelConversationService = deps.channelConversationService || null;
+    this._outboundQueueService = deps.outboundQueueService || null;
   }
 
   // Lazy defaults: evitam custo/ciclos de require e mantêm os testes de
@@ -53,6 +61,22 @@ class RecommendationEngine {
       this._capabilitiesService = require('../../services/tenantCapabilitiesService');
     }
     return this._capabilitiesService;
+  }
+
+  get channelConversationService() {
+    if (!this._channelConversationService) {
+      // eslint-disable-next-line global-require
+      this._channelConversationService = require('../../services/channelConversationService');
+    }
+    return this._channelConversationService;
+  }
+
+  get outboundQueueService() {
+    if (!this._outboundQueueService) {
+      // eslint-disable-next-line global-require
+      this._outboundQueueService = require('../../services/outboundQueueService');
+    }
+    return this._outboundQueueService;
   }
 
   async listRecommendations({ tenantId, status = null, limit = 100 } = {}) {
@@ -245,10 +269,17 @@ class RecommendationEngine {
     let applied = 0;
     let failed = 0;
     let skippedHighPriority = 0;
+    let skippedCustomerFacing = 0;
 
     for (const item of created) {
       if (autonomyLevel === 'exception_only' && item?.priority === 'high') {
         skippedHighPriority += 1;
+        continue;
+      }
+      // Ações customer-facing nunca executam em origem automática — ficam
+      // abertas para apply humano ("Aprovar" no Workspace).
+      if (CUSTOMER_FACING_ACTION_KINDS.has(item?.metadata?.action?.kind)) {
+        skippedCustomerFacing += 1;
         continue;
       }
       try {
@@ -271,6 +302,7 @@ class RecommendationEngine {
       applied,
       failed,
       ...(skippedHighPriority > 0 ? { skippedHighPriority } : {}),
+      ...(skippedCustomerFacing > 0 ? { skippedCustomerFacing } : {}),
     };
   }
 
@@ -372,14 +404,18 @@ class RecommendationEngine {
     const metadata = current.metadata && typeof current.metadata === 'object' ? current.metadata : {};
     const expectedDirection = OUTCOME_DIRECTION_BY_INSIGHT[metadata.sourceInsightType] || 'observe';
 
-    // Action real: aplicar uma recomendação executa a ação mapeada (hoje:
-    // create_task — investigação/revisão vira tarefa operacional no Workspace).
-    // Falha de execução é explícita na resposta e no metadata, sem reverter
-    // a decisão de aplicação.
+    // Action real: aplicar uma recomendação executa a ação mapeada
+    // (create_task, send_message, schedule). Falha de execução é explícita
+    // na resposta e no metadata, sem reverter a decisão de aplicação.
+    // Governança de autonomia: ações customer-facing (send_message, schedule)
+    // nunca executam em origem automática — exigem apply humano/manual.
     let execution = null;
     const action = metadata.action && typeof metadata.action === 'object' ? metadata.action : null;
-    if (action?.kind === 'create_task') {
-      execution = await this._executeCreateTask({ tenantId, recommendation: current, action });
+    if (action?.kind) {
+      if (CUSTOMER_FACING_ACTION_KINDS.has(action.kind) && origin === 'auto') {
+        throw buildStatusError('customer_facing_action_requires_human_apply', 409);
+      }
+      execution = await this._executeAction({ tenantId, recommendation: current, action });
     }
 
     await row.update({
@@ -422,6 +458,116 @@ class RecommendationEngine {
     } catch (err) {
       return {
         kind: 'create_task',
+        status: 'failed',
+        error: String(err?.message || err),
+        attemptedAt,
+      };
+    }
+  }
+
+  async _executeAction({ tenantId, recommendation, action }) {
+    switch (action.kind) {
+      case 'create_task':
+        return this._executeCreateTask({ tenantId, recommendation, action });
+      case 'send_message':
+        return this._executeSendMessage({ tenantId, recommendation, action });
+      case 'schedule':
+        return this._executeSchedule({ tenantId, recommendation, action });
+      default:
+        return {
+          kind: String(action.kind),
+          status: 'skipped',
+          reason: 'unsupported_action_kind',
+          attemptedAt: new Date().toISOString(),
+        };
+    }
+  }
+
+  async _executeSendMessage({ tenantId, recommendation, action }) {
+    const attemptedAt = new Date().toISOString();
+    const base = { kind: 'send_message', label: action.label || null };
+    try {
+      const conversationId = action.conversationId ? String(action.conversationId) : null;
+      if (!conversationId) {
+        return { ...base, status: 'skipped', reason: 'missing_conversation_id', attemptedAt };
+      }
+      const text = action.message || action.text || null;
+      if (!text || !String(text).trim()) {
+        return { ...base, status: 'skipped', reason: 'missing_message_text', attemptedAt };
+      }
+      const conversation = await this.channelConversationService.getConversation({
+        tenantId: String(tenantId),
+        conversationId,
+      });
+      if (!conversation) {
+        return { ...base, status: 'skipped', reason: 'conversation_not_found', attemptedAt };
+      }
+
+      const clientMessageId = `reco-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const message = await this.channelConversationService.createMessage({
+        tenantId: String(tenantId),
+        conversationId: conversation.id,
+        channelType: conversation.channelType,
+        direction: 'out',
+        type: 'text',
+        body: { text: String(text) },
+        externalMessageId: clientMessageId,
+        status: 'pending',
+      });
+      await this.outboundQueueService.enqueueOutbound({
+        tenantId: String(tenantId),
+        channelType: conversation.channelType,
+        conversationId: conversation.id,
+        message: {
+          to: conversation.externalId,
+          type: 'text',
+          body: { text: String(text) },
+          meta: {
+            conversationId: conversation.id,
+            clientMessageId,
+            recommendationId: recommendation.id,
+          },
+        },
+      });
+      return {
+        ...base,
+        status: 'executed',
+        messageId: message?.id || null,
+        conversationId: conversation.id,
+        externalMessageId: clientMessageId,
+        executedAt: attemptedAt,
+      };
+    } catch (err) {
+      return { ...base, status: 'failed', error: String(err?.message || err), attemptedAt };
+    }
+  }
+
+  async _executeSchedule({ tenantId, recommendation, action }) {
+    const attemptedAt = new Date().toISOString();
+    try {
+      const dueDate = action.dueDate || new Date(Date.now() + 86400000).toISOString();
+      const task = await this.workspaceOperations.createTask({
+        tenantId: String(tenantId),
+        payload: {
+          title: `[Recomendação] ${String(recommendation.title || '').slice(0, 180)}`,
+          description: `${recommendation.description || ''}\n\nOrigem: recomendação ${recommendation.id}${recommendation.insight_id ? ` (insight ${recommendation.insight_id})` : ''}`,
+          type: 'followup',
+          priority: recommendation.priority === 'high' ? 'high' : (recommendation.priority === 'low' ? 'low' : 'normal'),
+          dueDate,
+          conversationId: action.conversationId ? String(action.conversationId) : null,
+        },
+      });
+      return {
+        kind: 'schedule',
+        status: 'executed',
+        taskId: task?.id || null,
+        dueDate,
+        label: action.label || null,
+        executedAt: attemptedAt,
+      };
+    } catch (err) {
+      return {
+        kind: 'schedule',
         status: 'failed',
         error: String(err?.message || err),
         attemptedAt,
