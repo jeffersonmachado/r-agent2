@@ -78,7 +78,15 @@ class InsightEngine {
 
       const insightType = computedStatus === 'off_track' ? 'goal_off_track' : 'goal_at_risk';
       const title = `Meta fora do esperado: ${goal.name}`;
-      const description = `A meta ${goal.name} esta ${computedStatus} com valor atual ${goal.current_value} e alvo ${goal.target_value}.`;
+      const probableCauses = this._buildProbableCauses({
+        metricKey: goal.metric_key,
+        snapshotsByMetric,
+      });
+      const projection = this._buildGoalProjection({ goal });
+      const description = this._enrichInsightDescription(
+        `A meta ${goal.name} esta ${computedStatus} com valor atual ${goal.current_value} e alvo ${goal.target_value}.`,
+        { probableCauses, projection },
+      );
 
       candidates.push({
         type: insightType,
@@ -92,6 +100,8 @@ class InsightEngine {
           goalId: goal.id,
           comparisonMode: goal.comparison_mode,
           evaluation: goal.computed,
+          ...(probableCauses.length > 0 ? { probableCauses } : {}),
+          ...(projection ? { projection } : {}),
         },
         evidences: [
           {
@@ -126,11 +136,15 @@ class InsightEngine {
       const trendType = changeRatio > 0 ? 'metric_increase' : 'metric_drop';
       const trendLabel = changeRatio > 0 ? 'aumento' : 'queda';
       const title = `${trendLabel} relevante em ${metricKey}`;
+      const probableCauses = this._buildProbableCauses({ metricKey, snapshotsByMetric });
 
       candidates.push({
         type: trendType,
         title,
-        description: `A metrica ${metricKey} variou ${Math.round(changeRatio * 100)}% no periodo analisado.`,
+        description: this._enrichInsightDescription(
+          `A metrica ${metricKey} variou ${Math.round(changeRatio * 100)}% no periodo analisado.`,
+          { probableCauses },
+        ),
         confidence: Math.min(0.95, 0.55 + absRatio),
         impact: absRatio >= 0.5 ? 'high' : 'medium',
         source: 'metric_engine',
@@ -139,6 +153,7 @@ class InsightEngine {
           changeRatio,
           latestSnapshotId: latest.id,
           previousSnapshotId: previous.id,
+          ...(probableCauses.length > 0 ? { probableCauses } : {}),
         },
         evidences: [
           {
@@ -299,6 +314,86 @@ class InsightEngine {
     }
 
     return grouped;
+  }
+
+  /**
+   * Explanation: correlaciona a metrica do insight com as demais metricas do
+   * mesmo periodo e aponta as que tambem se moveram de forma relevante
+   * (|ratio| >= 15%), ordenadas pela magnitude da variacao. Heuristica
+   * deterministica — nao afirma causalidade, apenas sinaliza co-movimento.
+   */
+  _buildProbableCauses({ metricKey, snapshotsByMetric, limit = 3 } = {}) {
+    if (!snapshotsByMetric || typeof snapshotsByMetric.entries !== 'function') return [];
+
+    const causes = [];
+    for (const [otherKey, list] of snapshotsByMetric.entries()) {
+      if (otherKey === metricKey || !Array.isArray(list) || list.length < 2) continue;
+      const latestValue = toNumber(list[0].value, 0);
+      const previousValue = toNumber(list[1].value, 0);
+      if (previousValue === 0) continue;
+      const ratio = (latestValue - previousValue) / Math.abs(previousValue);
+      if (Math.abs(ratio) < 0.15) continue;
+      causes.push({
+        metricKey: otherKey,
+        changeRatio: Number(ratio.toFixed(4)),
+        direction: ratio > 0 ? 'up' : 'down',
+      });
+    }
+
+    return causes
+      .sort((a, b) => Math.abs(b.changeRatio) - Math.abs(a.changeRatio))
+      .slice(0, limit);
+  }
+
+  /**
+   * Prediction: projecao linear de fechamento da meta a partir do ritmo atual
+   * (valor atual / fracao decorrida da janela da propria meta). So projeta
+   * quando a meta tem janela valida (start_date/end_date), a fracao decorrida
+   * esta entre 5% e 100% e o modo nao eh 'eq' (pontual, sem sentido projetar).
+   */
+  _buildGoalProjection({ goal, now = new Date() } = {}) {
+    if (!goal) return null;
+    const mode = String(goal.comparison_mode || 'gte');
+    if (mode === 'eq') return null;
+
+    const current = goal.current_value == null ? null : toNumber(goal.current_value, NaN);
+    const target = toNumber(goal.target_value, NaN);
+    if (current == null || !Number.isFinite(current) || !Number.isFinite(target)) return null;
+
+    const start = goal.start_date ? new Date(goal.start_date) : null;
+    const end = goal.end_date ? new Date(goal.end_date) : null;
+    if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
+      return null;
+    }
+
+    const totalMs = end.getTime() - start.getTime();
+    const elapsedFraction = (now.getTime() - start.getTime()) / totalMs;
+    if (elapsedFraction < 0.05 || elapsedFraction >= 1) return null;
+
+    const projectedValue = current / elapsedFraction;
+    const willMeet = mode === 'lte' ? projectedValue <= target : projectedValue >= target;
+
+    return {
+      projectedValue: Number(projectedValue.toFixed(2)),
+      targetValue: target,
+      elapsedFraction: Number(elapsedFraction.toFixed(4)),
+      projectedStatus: willMeet ? 'will_meet' : 'will_miss',
+    };
+  }
+
+  _enrichInsightDescription(base, { probableCauses = [], projection = null } = {}) {
+    const parts = [base];
+    if (probableCauses.length > 0) {
+      const formatted = probableCauses
+        .map((cause) => `${cause.metricKey} (${cause.direction === 'up' ? '+' : ''}${Math.round(cause.changeRatio * 100)}%)`)
+        .join(', ');
+      parts.push(`Possiveis causas no mesmo periodo: ${formatted}.`);
+    }
+    if (projection) {
+      const label = projection.projectedStatus === 'will_meet' ? 'atinge a meta' : 'nao atinge a meta';
+      parts.push(`Projecao: no ritmo atual, o periodo fecha em ~${projection.projectedValue} (alvo ${projection.targetValue}) — previsao: ${label}.`);
+    }
+    return parts.join(' ');
   }
 
   async _findExistingInsight({ tenantId, type, title, periodStart, periodEnd } = {}) {

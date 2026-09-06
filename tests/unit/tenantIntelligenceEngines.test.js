@@ -526,3 +526,166 @@ describe('InsightEngine — controle de refresh de metricas', () => {
     expect(out.insights).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// InsightEngine — Explanation (causas provaveis) e Prediction (projecao de meta)
+// ---------------------------------------------------------------------------
+describe('InsightEngine — explanation e prediction', () => {
+  function buildDeps({ goals = [] } = {}) {
+    return {
+      metricEngine: { collectSnapshots: jest.fn(async () => ({ ok: true, snapshots: [] })) },
+      goalEngine: { listGoals: jest.fn(async () => ({ items: goals, total: goals.length })) },
+    };
+  }
+
+  function snap(id, metricKey, value, periodEnd) {
+    return { id, metric_key: metricKey, value, period_end: periodEnd };
+  }
+
+  test('metric_drop inclui causas provaveis ordenadas por magnitude (e exclui variacao < 15%)', async () => {
+    const engine = new InsightEngine(buildDeps());
+    const snapshots = [
+      snap('a-prev', 'operations.tickets_open', 100, '2026-03-01T00:00:00.000Z'),
+      snap('a-latest', 'operations.tickets_open', 60, '2026-03-31T00:00:00.000Z'),
+      snap('b-prev', 'operations.abandonment_rate_pct', 10, '2026-03-01T00:00:00.000Z'),
+      snap('b-latest', 'operations.abandonment_rate_pct', 14, '2026-03-31T00:00:00.000Z'),
+      snap('c-prev', 'operations.tickets_closed', 50, '2026-03-01T00:00:00.000Z'),
+      snap('c-latest', 'operations.tickets_closed', 38, '2026-03-31T00:00:00.000Z'),
+      snap('d-prev', 'operations.avg_response_minutes', 20, '2026-03-01T00:00:00.000Z'),
+      snap('d-latest', 'operations.avg_response_minutes', 21, '2026-03-31T00:00:00.000Z'),
+    ];
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, snapshots });
+
+    const drop = out.insights.find((item) => item.type === 'metric_drop' && item.relatedMetrics[0] === 'operations.tickets_open');
+    expect(drop).toBeTruthy();
+    expect(drop.metadata.probableCauses).toEqual([
+      { metricKey: 'operations.abandonment_rate_pct', changeRatio: 0.4, direction: 'up' },
+      { metricKey: 'operations.tickets_closed', changeRatio: -0.24, direction: 'down' },
+    ]);
+    expect(drop.description).toContain('Possiveis causas no mesmo periodo: operations.abandonment_rate_pct (+40%), operations.tickets_closed (-24%)');
+  });
+
+  test('causas provaveis limitadas a 3 e excluem a propria metrica', async () => {
+    const engine = new InsightEngine(buildDeps());
+    const snapshots = [
+      snap('a-prev', 'm.main', 100, '2026-03-01T00:00:00.000Z'),
+      snap('a-latest', 'm.main', 50, '2026-03-31T00:00:00.000Z'),
+      snap('b-prev', 'm.c1', 10, '2026-03-01T00:00:00.000Z'),
+      snap('b-latest', 'm.c1', 20, '2026-03-31T00:00:00.000Z'),
+      snap('c-prev', 'm.c2', 10, '2026-03-01T00:00:00.000Z'),
+      snap('c-latest', 'm.c2', 18, '2026-03-31T00:00:00.000Z'),
+      snap('d-prev', 'm.c3', 10, '2026-03-01T00:00:00.000Z'),
+      snap('d-latest', 'm.c3', 16, '2026-03-31T00:00:00.000Z'),
+      snap('e-prev', 'm.c4', 10, '2026-03-01T00:00:00.000Z'),
+      snap('e-latest', 'm.c4', 14, '2026-03-31T00:00:00.000Z'),
+    ];
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, snapshots });
+
+    const drop = out.insights.find((item) => item.relatedMetrics[0] === 'm.main');
+    expect(drop.metadata.probableCauses).toHaveLength(3);
+    expect(drop.metadata.probableCauses.map((c) => c.metricKey)).toEqual(['m.c1', 'm.c2', 'm.c3']);
+    expect(drop.metadata.probableCauses.some((c) => c.metricKey === 'm.main')).toBe(false);
+  });
+
+  test('insight sem outras metricas em movimento nao carrega probableCauses', async () => {
+    const engine = new InsightEngine(buildDeps());
+    const snapshots = [
+      snap('a-prev', 'operations.tickets_open', 100, '2026-03-01T00:00:00.000Z'),
+      snap('a-latest', 'operations.tickets_open', 60, '2026-03-31T00:00:00.000Z'),
+    ];
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, snapshots });
+
+    const drop = out.insights.find((item) => item.type === 'metric_drop');
+    expect(drop).toBeTruthy();
+    expect(drop.metadata.probableCauses).toBeUndefined();
+    expect(drop.description).not.toContain('Possiveis causas');
+  });
+
+  test('meta off_track no meio da janela recebe projecao will_miss', async () => {
+    const now = Date.now();
+    const goal = {
+      id: 'goal-1',
+      name: 'Fechar 10 tickets',
+      metric_key: 'tickets_closed',
+      target_value: 10,
+      current_value: 3,
+      comparison_mode: 'gte',
+      priority: 'high',
+      start_date: new Date(now - 15 * 86400000).toISOString(),
+      end_date: new Date(now + 15 * 86400000).toISOString(),
+      computed: { computedStatus: 'off_track', progressPercent: 30, delta: -7 },
+    };
+    const engine = new InsightEngine(buildDeps({ goals: [goal] }));
+    jest.spyOn(engine, '_loadRecentSnapshotsByMetric').mockResolvedValue(new Map());
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, refreshMetrics: false });
+
+    const insight = out.insights.find((item) => item.type === 'goal_off_track');
+    expect(insight).toBeTruthy();
+    expect(insight.metadata.projection.projectedStatus).toBe('will_miss');
+    expect(insight.metadata.projection.projectedValue).toBeCloseTo(6, 1);
+    expect(insight.metadata.projection.targetValue).toBe(10);
+    expect(insight.metadata.projection.elapsedFraction).toBeCloseTo(0.5, 1);
+    expect(insight.description).toContain('Projecao: no ritmo atual');
+    expect(insight.description).toContain('nao atinge a meta');
+  });
+
+  test('projecao will_meet quando o ritmo supera o alvo (modo lte)', async () => {
+    const now = Date.now();
+    const goal = {
+      id: 'goal-2',
+      name: 'Manter abandono <= 20',
+      metric_key: 'abandonment',
+      target_value: 20,
+      current_value: 4,
+      comparison_mode: 'lte',
+      priority: 'medium',
+      start_date: new Date(now - 15 * 86400000).toISOString(),
+      end_date: new Date(now + 15 * 86400000).toISOString(),
+      computed: { computedStatus: 'at_risk', progressPercent: 90, delta: -1 },
+    };
+    const engine = new InsightEngine(buildDeps({ goals: [goal] }));
+    jest.spyOn(engine, '_loadRecentSnapshotsByMetric').mockResolvedValue(new Map());
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, refreshMetrics: false });
+
+    const insight = out.insights.find((item) => item.type === 'goal_at_risk');
+    expect(insight.metadata.projection.projectedStatus).toBe('will_meet');
+    expect(insight.metadata.projection.projectedValue).toBeCloseTo(8, 1);
+  });
+
+  test('sem janela valida ou modo eq nao projeta', async () => {
+    const now = Date.now();
+    const base = {
+      metric_key: 'tickets_closed',
+      target_value: 10,
+      current_value: 3,
+      priority: 'high',
+      computed: { computedStatus: 'off_track', progressPercent: 30, delta: -7 },
+    };
+    const goals = [
+      { ...base, id: 'goal-sem-janela', name: 'Sem janela', comparison_mode: 'gte' },
+      {
+        ...base,
+        id: 'goal-eq',
+        name: 'Modo eq',
+        comparison_mode: 'eq',
+        start_date: new Date(now - 15 * 86400000).toISOString(),
+        end_date: new Date(now + 15 * 86400000).toISOString(),
+      },
+    ];
+    const engine = new InsightEngine(buildDeps({ goals }));
+    jest.spyOn(engine, '_loadRecentSnapshotsByMetric').mockResolvedValue(new Map());
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, refreshMetrics: false });
+
+    expect(out.insights).toHaveLength(2);
+    for (const insight of out.insights) {
+      expect(insight.metadata.projection).toBeUndefined();
+      expect(insight.description).not.toContain('Projecao:');
+    }
+  });
+});

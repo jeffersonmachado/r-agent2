@@ -230,4 +230,51 @@ describe('TenantIntelligencePage — recomendações executáveis', () => {
     await screen.findByText(/não pôde ser executada automaticamente/);
     expect(screen.queryByText('Tarefa criada no Workspace para execução operacional.')).toBeNull();
   });
+
+  it('insight com causas prováveis e projeção exibe ambos no card', async () => {
+    const { listTenantInsights } = await import('../api/intelligence');
+    listTenantInsights.mockResolvedValue({
+      items: [{
+        id: 'ins-1',
+        type: 'goal_off_track',
+        title: 'Meta fora do esperado: Fechar 10 tickets',
+        impact: 'high',
+        confidence: 0.9,
+        metadata: {
+          probableCauses: [
+            { metricKey: 'operations.abandonment_rate_pct', changeRatio: 0.4, direction: 'up' },
+            { metricKey: 'operations.tickets_open', changeRatio: -0.24, direction: 'down' },
+          ],
+          projection: { projectedValue: 6, targetValue: 10, elapsedFraction: 0.5, projectedStatus: 'will_miss' },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Meta fora do esperado: Fechar 10 tickets');
+    expect(screen.getByText(/Possíveis causas: operations\.abandonment_rate_pct \(\+40%\), operations\.tickets_open \(-24%\)/)).toBeTruthy();
+    expect(screen.getByText(/Projeção de fechamento:/)).toBeTruthy();
+    expect(screen.getByText(/não atinge a meta/)).toBeTruthy();
+  });
+
+  it('insight sem explanation/prediction não renderiza blocos extras', async () => {
+    const { listTenantInsights } = await import('../api/intelligence');
+    listTenantInsights.mockResolvedValue({
+      items: [{
+        id: 'ins-2',
+        type: 'metric_drop',
+        title: 'queda relevante em operations.tickets_open',
+        impact: 'medium',
+        confidence: 0.8,
+        metadata: {},
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('queda relevante em operations.tickets_open');
+    expect(screen.queryByText(/Possíveis causas:/)).toBeNull();
+    expect(screen.queryByText(/Projeção de fechamento:/)).toBeNull();
+  });
 });

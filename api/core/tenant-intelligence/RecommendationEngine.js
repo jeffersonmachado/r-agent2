@@ -73,6 +73,10 @@ class RecommendationEngine {
       const mapped = this._mapInsightToRecommendation(insight, goals);
       if (!mapped) continue;
 
+      // Explanation/Prediction fluem para a recomendacao (e para a descricao
+      // da tarefa criada no apply), mantendo o usuario no idioma de resultado.
+      this._enrichMappedRecommendation(mapped, insight);
+
       // eslint-disable-next-line no-await-in-loop
       const existing = await this._findExistingOpenRecommendation({
         tenantId,
@@ -481,6 +485,27 @@ class RecommendationEngine {
       order: [['period_end', 'DESC'], ['created_at', 'DESC']],
     });
     return rowToJson(row);
+  }
+
+  _enrichMappedRecommendation(mapped, insight) {
+    const metadata = insight?.metadata && typeof insight.metadata === 'object' ? insight.metadata : {};
+    const causes = Array.isArray(metadata.probableCauses) ? metadata.probableCauses : [];
+    const projection = metadata.projection && typeof metadata.projection === 'object' ? metadata.projection : null;
+
+    if (causes.length > 0) mapped.metadata.probableCauses = causes;
+    if (projection) mapped.metadata.projection = projection;
+
+    const suffix = [];
+    if (causes.length > 0) {
+      suffix.push(`Possiveis causas: ${causes
+        .map((cause) => `${cause.metricKey} (${cause.direction === 'up' ? '+' : ''}${Math.round(cause.changeRatio * 100)}%)`)
+        .join(', ')}`);
+    }
+    if (projection) {
+      const label = projection.projectedStatus === 'will_meet' ? 'atinge a meta' : 'nao atinge a meta';
+      suffix.push(`Projecao de fechamento: ~${projection.projectedValue} vs alvo ${projection.targetValue} (${label})`);
+    }
+    if (suffix.length > 0) mapped.description = `${mapped.description} ${suffix.join('. ')}.`;
   }
 
   _mapInsightToRecommendation(insight, goals) {

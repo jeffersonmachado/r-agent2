@@ -700,6 +700,19 @@ export function TenantIntelligencePage() {
                   <div className="text-text-secondary">
                     impacto: {item.impact || '-'} | confiança: {formatNumber(item.confidence, 2)}
                   </div>
+                  {Array.isArray(item.metadata?.probableCauses) && item.metadata.probableCauses.length > 0 ? (
+                    <div className="text-text-secondary" style={{ marginTop: '4px' }}>
+                      Possíveis causas: {item.metadata.probableCauses
+                        .map((cause) => `${cause.metricKey} (${cause.direction === 'up' ? '+' : ''}${Math.round(cause.changeRatio * 100)}%)`)
+                        .join(', ')}
+                    </div>
+                  ) : null}
+                  {item.metadata?.projection ? (
+                    <div className="text-text-secondary" style={{ marginTop: '4px' }}>
+                      Projeção de fechamento: ~{formatNumber(item.metadata.projection.projectedValue)} vs alvo {formatNumber(item.metadata.projection.targetValue)}
+                      ({item.metadata.projection.projectedStatus === 'will_meet' ? 'atinge a meta' : 'não atinge a meta'})
+                    </div>
+                  ) : null}
                   {item.id ? (
                     <div style={{ marginTop: '8px' }}>
                       <Button

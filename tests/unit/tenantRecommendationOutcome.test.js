@@ -547,6 +547,50 @@ describe('RecommendationEngine.evaluatePendingOutcomes (hook event-driven)', () 
 });
 
 describe('RecommendationEngine — Action real (create_task)', () => {
+  test('generateRecommendations propaga explanation/prediction do insight para a recomendacao', async () => {
+    const insights = [{
+      id: 'ins-9',
+      tenant_key: 'tenant-a',
+      type: 'goal_off_track',
+      related_metrics: ['tickets_closed'],
+      metadata: {
+        goalId: 'goal-1',
+        probableCauses: [
+          { metricKey: 'operations.abandonment_rate_pct', changeRatio: 0.4, direction: 'up' },
+          { metricKey: 'operations.tickets_open', changeRatio: -0.24, direction: 'down' },
+        ],
+        projection: { projectedValue: 6, targetValue: 10, elapsedFraction: 0.5, projectedStatus: 'will_miss' },
+      },
+    }];
+    const { engine } = loadEngine({ insights });
+
+    const result = await engine.generateRecommendations({ tenantId: 'tenant-a', insights });
+
+    expect(result.created).toBe(1);
+    const reco = result.recommendations[0];
+    expect(reco.metadata.probableCauses).toHaveLength(2);
+    expect(reco.metadata.projection.projectedStatus).toBe('will_miss');
+    expect(reco.description).toContain('Possiveis causas: operations.abandonment_rate_pct (+40%), operations.tickets_open (-24%)');
+    expect(reco.description).toContain('Projecao de fechamento: ~6 vs alvo 10 (nao atinge a meta)');
+  });
+
+  test('insight sem explanation/prediction mantem descricao original', async () => {
+    const insights = [{
+      id: 'ins-10',
+      tenant_key: 'tenant-a',
+      type: 'metric_drop',
+      related_metrics: ['operations.tickets_open'],
+      metadata: {},
+    }];
+    const { engine } = loadEngine({ insights });
+
+    const result = await engine.generateRecommendations({ tenantId: 'tenant-a', insights });
+
+    expect(result.recommendations[0].description).toBe('Foi observada queda relevante de metrica. Recomenda-se analise de causa e acao humana prioritaria.');
+    expect(result.recommendations[0].metadata.probableCauses).toBeUndefined();
+    expect(result.recommendations[0].metadata.projection).toBeUndefined();
+  });
+
   test('generateRecommendations persiste action create_task no metadata', async () => {
     const insights = [{
       id: 'ins-1',
