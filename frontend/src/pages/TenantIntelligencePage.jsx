@@ -857,6 +857,7 @@ export function TenantIntelligencePage() {
                 const outcome = item.metadata?.outcome || null;
                 const outcomeKey = outcome?.outcome || 'pending';
                 const outcomeMetrics = Array.isArray(outcome?.metrics) ? outcome.metrics : [];
+                const executedAction = item.metadata?.application?.executedAction || null;
                 return (
                   <li
                     key={item.id || item.title}
@@ -878,6 +879,17 @@ export function TenantIntelligencePage() {
                     {item.status === 'applied' ? (
                       <div className="text-text-secondary" style={{ marginTop: '4px' }}>
                         Aplicada em {formatRecommendationDate(item.metadata?.application?.appliedAt)}
+                      </div>
+                    ) : null}
+
+                    {executedAction?.kind === 'create_task' ? (
+                      <div
+                        className={executedAction.status === 'executed' ? 'text-status-success' : 'text-status-warning'}
+                        style={{ marginTop: '4px' }}
+                      >
+                        {executedAction.status === 'executed'
+                          ? 'Tarefa criada no Workspace para execução operacional.'
+                          : 'A ação operacional não pôde ser executada automaticamente; crie a tarefa manualmente.'}
                       </div>
                     ) : null}
 

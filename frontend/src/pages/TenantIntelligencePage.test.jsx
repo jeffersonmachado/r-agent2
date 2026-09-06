@@ -180,4 +180,54 @@ describe('TenantIntelligencePage — recomendações executáveis', () => {
     expect(screen.getByText('Aberta')).toBeTruthy();
     expect(screen.getByText('Aplicar recomendação')).toBeTruthy();
   });
+
+  it("recomendação aplicada com executedAction 'executed' exibe 'Tarefa criada no Workspace'", async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-4',
+        status: 'applied',
+        metadata: {
+          application: {
+            appliedAt: '2026-09-01T10:00:00.000Z',
+            appliedBy: 'agent-1',
+            baseline: [],
+            expectedDirection: 'down',
+            executedAction: { kind: 'create_task', status: 'executed', taskId: 'task-1', executedAt: '2026-09-01T10:00:01.000Z' },
+          },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Tarefa criada no Workspace para execução operacional.');
+    expect(screen.queryByText(/não pôde ser executada automaticamente/)).toBeNull();
+  });
+
+  it("recomendação aplicada com executedAction 'failed' exibe aviso de execução manual", async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-5',
+        status: 'applied',
+        metadata: {
+          application: {
+            appliedAt: '2026-09-01T10:00:00.000Z',
+            appliedBy: 'agent-1',
+            baseline: [],
+            expectedDirection: 'down',
+            executedAction: { kind: 'create_task', status: 'failed', error: 'workspace indisponivel', attemptedAt: '2026-09-01T10:00:01.000Z' },
+          },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText(/não pôde ser executada automaticamente/);
+    expect(screen.queryByText('Tarefa criada no Workspace para execução operacional.')).toBeNull();
+  });
 });

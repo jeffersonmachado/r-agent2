@@ -81,6 +81,8 @@ function loadEngine({ recommendations = [], insights = [], snapshots = [] } = {}
   const recommendationModel = buildRecommendationModel(recommendations);
   const insightModel = buildInsightModel(insights);
   const snapshotModel = buildSnapshotModel(snapshots);
+  const workspaceOperations = { createTask: jest.fn(async () => ({ id: 'task-1' })) };
+  const evidenceEngine = { createEvidence: jest.fn(async (payload) => payload) };
   jest.doMock('../../api/db/models', () => ({
     TenantRecommendation: () => recommendationModel,
     TenantInsight: () => insightModel,
@@ -89,10 +91,12 @@ function loadEngine({ recommendations = [], insights = [], snapshots = [] } = {}
   // eslint-disable-next-line global-require
   const { RecommendationEngine } = require('../../api/core/tenant-intelligence/RecommendationEngine');
   return {
-    engine: new RecommendationEngine(),
+    engine: new RecommendationEngine({ workspaceOperations, evidenceEngine }),
     recommendationModel,
     insightModel,
     snapshotModel,
+    workspaceOperations,
+    evidenceEngine,
   };
 }
 
@@ -539,5 +543,205 @@ describe('RecommendationEngine.evaluatePendingOutcomes (hook event-driven)', () 
 
     expect(result).toMatchObject({ total: 1, evaluated: 0, pending: 1 });
     expect(recommendations[0].status).toBe('applied');
+  });
+});
+
+describe('RecommendationEngine — Action real (create_task)', () => {
+  test('generateRecommendations persiste action create_task no metadata', async () => {
+    const insights = [{
+      id: 'ins-1',
+      tenant_key: 'tenant-a',
+      type: 'metric_drop',
+      related_metrics: ['operations.tickets_open'],
+    }];
+    const { engine } = loadEngine({ insights });
+
+    const result = await engine.generateRecommendations({ tenantId: 'tenant-a', insights });
+
+    expect(result.created).toBe(1);
+    expect(result.recommendations[0].metadata.action).toEqual({
+      kind: 'create_task',
+      label: 'Criar tarefa de investigacao',
+    });
+  });
+
+  test('apply com action create_task executa createTask e grava executedAction', async () => {
+    const recommendations = [buildRecommendation({
+      title: 'Acionar investigacao para queda de metrica',
+      priority: 'high',
+      metadata: {
+        sourceInsightType: 'metric_drop',
+        relatedMetrics: ['operations.tickets_open'],
+        action: { kind: 'create_task', label: 'Criar tarefa de investigacao' },
+      },
+    })];
+    const { engine, workspaceOperations } = loadEngine({ recommendations });
+
+    const result = await engine.applyRecommendation({
+      tenantId: 'tenant-a',
+      recommendationId: 'reco-1',
+      actor: 'manager-1',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(workspaceOperations.createTask).toHaveBeenCalledTimes(1);
+    const taskCall = workspaceOperations.createTask.mock.calls[0][0];
+    expect(taskCall.tenantId).toBe('tenant-a');
+    expect(taskCall.payload.title).toBe('[Recomendação] Acionar investigacao para queda de metrica');
+    expect(taskCall.payload.type).toBe('recommendation');
+    expect(taskCall.payload.priority).toBe('high');
+    expect(taskCall.payload.description).toContain('recomendação reco-1');
+
+    expect(result.execution).toMatchObject({
+      kind: 'create_task',
+      status: 'executed',
+      taskId: 'task-1',
+      label: 'Criar tarefa de investigacao',
+    });
+    expect(result.recommendation.metadata.application.executedAction.status).toBe('executed');
+    expect(result.recommendation.metadata.application.executedAction.taskId).toBe('task-1');
+  });
+
+  test('apply sem action no metadata nao executa nada (compatibilidade)', async () => {
+    const recommendations = [buildRecommendation()];
+    const { engine, workspaceOperations } = loadEngine({ recommendations });
+
+    const result = await engine.applyRecommendation({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.ok).toBe(true);
+    expect(result.execution).toBeUndefined();
+    expect(workspaceOperations.createTask).not.toHaveBeenCalled();
+  });
+
+  test('falha na execucao da task nao reverte o apply (execution failed explicito)', async () => {
+    const recommendations = [buildRecommendation({
+      metadata: {
+        sourceInsightType: 'metric_drop',
+        relatedMetrics: [],
+        action: { kind: 'create_task', label: 'Criar tarefa de investigacao' },
+      },
+    })];
+    const { engine, workspaceOperations } = loadEngine({ recommendations });
+    workspaceOperations.createTask.mockRejectedValueOnce(new Error('workspace indisponivel'));
+
+    const result = await engine.applyRecommendation({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.ok).toBe(true);
+    expect(result.recommendation.status).toBe('applied');
+    expect(result.execution).toMatchObject({ kind: 'create_task', status: 'failed' });
+    expect(result.execution.error).toContain('workspace indisponivel');
+    expect(result.recommendation.metadata.application.executedAction.status).toBe('failed');
+  });
+});
+
+describe('RecommendationEngine — Learn (outcome vira evidencia)', () => {
+  const futureIso = () => new Date(Date.now() + 60 * 1000).toISOString();
+
+  async function applyWithInsight({ newValue } = {}) {
+    const metricKey = 'operations.tickets_open';
+    const recommendations = [buildRecommendation({
+      insight_id: 'ins-1',
+      metadata: {
+        sourceInsightType: 'metric_drop',
+        relatedMetrics: [metricKey],
+      },
+    })];
+    const insights = [{ id: 'ins-1', tenant_key: 'tenant-a', related_metrics: [metricKey] }];
+    const snapshots = [buildSnapshot({ id: 'snap-base', metric_key: metricKey, value: 100 })];
+    const ctx = loadEngine({ recommendations, insights, snapshots });
+
+    await ctx.engine.applyRecommendation({ tenantId: 'tenant-a', recommendationId: 'reco-1', actor: 'x' });
+
+    if (newValue != null) {
+      snapshots.push(buildSnapshot({
+        id: 'snap-new',
+        metric_key: metricKey,
+        value: newValue,
+        period_start: '2026-09-01T00:00:00.000Z',
+        period_end: futureIso(),
+        created_at: futureIso(),
+      }));
+    }
+
+    const result = await ctx.engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+    return { result, ...ctx };
+  }
+
+  test('outcome medido (improved) grava evidencia outcome_evaluation no insight', async () => {
+    const { result, evidenceEngine } = await applyWithInsight({ newValue: 130 });
+
+    expect(result.outcome.outcome).toBe('improved');
+    expect(result.evidenceRecorded).toBe(true);
+    expect(evidenceEngine.createEvidence).toHaveBeenCalledTimes(1);
+    const evidence = evidenceEngine.createEvidence.mock.calls[0][0];
+    expect(evidence.tenantId).toBe('tenant-a');
+    expect(evidence.insightId).toBe('ins-1');
+    expect(evidence.evidenceType).toBe('outcome_evaluation');
+    expect(evidence.sourceType).toBe('tenant_recommendation');
+    expect(evidence.sourceId).toBe('reco-1');
+    expect(evidence.excerpt).toContain('improved');
+    expect(evidence.structuredData.outcome).toBe('improved');
+    expect(evidence.structuredData.metrics[0].currentValue).toBe(130);
+  });
+
+  test('outcome pending nao grava evidencia (aguardando dados)', async () => {
+    const { result, evidenceEngine } = await applyWithInsight({ newValue: null });
+
+    expect(result.outcome.outcome).toBe('pending');
+    expect(result.evidenceRecorded).toBe(false);
+    expect(evidenceEngine.createEvidence).not.toHaveBeenCalled();
+  });
+
+  test('sem insight_id nao grava evidencia mesmo com outcome medido', async () => {
+    const metricKey = 'operations.tickets_open';
+    const recommendations = [buildRecommendation({
+      insight_id: null,
+      metadata: { sourceInsightType: 'metric_drop', relatedMetrics: [metricKey] },
+    })];
+    const snapshots = [buildSnapshot({ id: 'snap-base', metric_key: metricKey, value: 100 })];
+    const { engine, evidenceEngine } = loadEngine({ recommendations, snapshots });
+
+    await engine.applyRecommendation({ tenantId: 'tenant-a', recommendationId: 'reco-1', actor: 'x' });
+    snapshots.push(buildSnapshot({
+      id: 'snap-new',
+      metric_key: metricKey,
+      value: 130,
+      period_start: '2026-09-01T00:00:00.000Z',
+      period_end: futureIso(),
+      created_at: futureIso(),
+    }));
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('improved');
+    expect(result.evidenceRecorded).toBe(false);
+    expect(evidenceEngine.createEvidence).not.toHaveBeenCalled();
+  });
+
+  test('falha do EvidenceEngine nao derruba a avaliacao (evidenceRecorded=false)', async () => {
+    const metricKey = 'operations.tickets_open';
+    const recommendations = [buildRecommendation({
+      insight_id: 'ins-1',
+      metadata: { sourceInsightType: 'metric_drop', relatedMetrics: [metricKey] },
+    })];
+    const insights = [{ id: 'ins-1', tenant_key: 'tenant-a', related_metrics: [metricKey] }];
+    const snapshots = [buildSnapshot({ id: 'snap-base', metric_key: metricKey, value: 100 })];
+    const ctx = loadEngine({ recommendations, insights, snapshots });
+    ctx.evidenceEngine.createEvidence.mockRejectedValueOnce(new Error('db offline'));
+
+    await ctx.engine.applyRecommendation({ tenantId: 'tenant-a', recommendationId: 'reco-1', actor: 'x' });
+    snapshots.push(buildSnapshot({
+      id: 'snap-new',
+      metric_key: metricKey,
+      value: 130,
+      period_start: '2026-09-01T00:00:00.000Z',
+      period_end: futureIso(),
+      created_at: futureIso(),
+    }));
+    const result = await ctx.engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.ok).toBe(true);
+    expect(result.outcome.outcome).toBe('improved');
+    expect(result.evidenceRecorded).toBe(false);
   });
 });

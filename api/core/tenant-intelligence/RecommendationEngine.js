@@ -21,6 +21,31 @@ function rowToJson(row) {
 }
 
 class RecommendationEngine {
+  constructor(deps = {}) {
+    this._workspaceOperations = deps.workspaceOperations || null;
+    this._evidenceEngine = deps.evidenceEngine || null;
+  }
+
+  // Lazy defaults: evitam custo/ciclos de require e mantêm os testes de
+  // unidade (models mockados) intactos quando a execução não é exercitada.
+  get workspaceOperations() {
+    if (!this._workspaceOperations) {
+      // eslint-disable-next-line global-require
+      const WorkspaceOperationsService = require('../../services/workspace/WorkspaceOperationsService');
+      this._workspaceOperations = new WorkspaceOperationsService();
+    }
+    return this._workspaceOperations;
+  }
+
+  get evidenceEngine() {
+    if (!this._evidenceEngine) {
+      // eslint-disable-next-line global-require
+      const { EvidenceEngine } = require('./EvidenceEngine');
+      this._evidenceEngine = new EvidenceEngine();
+    }
+    return this._evidenceEngine;
+  }
+
   async listRecommendations({ tenantId, status = null, limit = 100 } = {}) {
     if (!tenantId) throw new Error('tenantId is required');
 
@@ -96,7 +121,10 @@ class RecommendationEngine {
       estimated_impact: payload.estimatedImpact && typeof payload.estimatedImpact === 'object'
         ? payload.estimatedImpact
         : {},
-      metadata: payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {},
+      metadata: {
+        ...(payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {}),
+        ...(payload.action && typeof payload.action === 'object' ? { action: payload.action } : {}),
+      },
     });
 
     return row.toJSON ? row.toJSON() : row;
@@ -132,6 +160,16 @@ class RecommendationEngine {
     const metadata = current.metadata && typeof current.metadata === 'object' ? current.metadata : {};
     const expectedDirection = OUTCOME_DIRECTION_BY_INSIGHT[metadata.sourceInsightType] || 'observe';
 
+    // Action real: aplicar uma recomendação executa a ação mapeada (hoje:
+    // create_task — investigação/revisão vira tarefa operacional no Workspace).
+    // Falha de execução é explícita na resposta e no metadata, sem reverter
+    // a decisão de aplicação.
+    let execution = null;
+    const action = metadata.action && typeof metadata.action === 'object' ? metadata.action : null;
+    if (action?.kind === 'create_task') {
+      execution = await this._executeCreateTask({ tenantId, recommendation: current, action });
+    }
+
     await row.update({
       status: 'applied',
       metadata: {
@@ -141,11 +179,41 @@ class RecommendationEngine {
           appliedBy: actor || null,
           baseline,
           expectedDirection,
+          ...(execution ? { executedAction: execution } : {}),
         },
       },
     });
 
-    return { ok: true, recommendation: rowToJson(row) };
+    return { ok: true, recommendation: rowToJson(row), ...(execution ? { execution } : {}) };
+  }
+
+  async _executeCreateTask({ tenantId, recommendation, action }) {
+    const attemptedAt = new Date().toISOString();
+    try {
+      const task = await this.workspaceOperations.createTask({
+        tenantId: String(tenantId),
+        payload: {
+          title: `[Recomendação] ${String(recommendation.title || '').slice(0, 180)}`,
+          description: `${recommendation.description || ''}\n\nOrigem: recomendação ${recommendation.id}${recommendation.insight_id ? ` (insight ${recommendation.insight_id})` : ''}`,
+          type: 'recommendation',
+          priority: recommendation.priority === 'high' ? 'high' : (recommendation.priority === 'low' ? 'low' : 'normal'),
+        },
+      });
+      return {
+        kind: 'create_task',
+        status: 'executed',
+        taskId: task?.id || null,
+        label: action.label || null,
+        executedAt: attemptedAt,
+      };
+    } catch (err) {
+      return {
+        kind: 'create_task',
+        status: 'failed',
+        error: String(err?.message || err),
+        attemptedAt,
+      };
+    }
   }
 
   async dismissRecommendation({ tenantId, recommendationId, actor, reason } = {}) {
@@ -257,7 +325,37 @@ class RecommendationEngine {
       metadata: { ...metadata, outcome },
     });
 
-    return { ok: true, recommendation: rowToJson(row), outcome };
+    // Learn: outcome medido vira evidencia no EvidenceEngine do insight de
+    // origem, fechando o loop Recommendation -> Action -> Outcome -> Learn.
+    // Falha de evidencia nao derruba a avaliacao; fica explicita na resposta.
+    let evidenceRecorded = false;
+    if (outcome.outcome !== 'pending' && current.insight_id) {
+      evidenceRecorded = await this._recordOutcomeEvidence({
+        tenantId,
+        insightId: current.insight_id,
+        recommendationId,
+        outcome,
+      });
+    }
+
+    return { ok: true, recommendation: rowToJson(row), outcome, evidenceRecorded };
+  }
+
+  async _recordOutcomeEvidence({ tenantId, insightId, recommendationId, outcome }) {
+    try {
+      await this.evidenceEngine.createEvidence({
+        tenantId: String(tenantId),
+        insightId: String(insightId),
+        evidenceType: 'outcome_evaluation',
+        sourceType: 'tenant_recommendation',
+        sourceId: String(recommendationId),
+        excerpt: `Resultado medido da recomendacao: ${outcome.outcome}.`,
+        structuredData: outcome,
+      });
+      return true;
+    } catch (err) {
+      return false;
+    }
   }
 
   /**
@@ -408,6 +506,10 @@ class RecommendationEngine {
           sourceInsightType: type,
           relatedMetrics,
         },
+        // Action real (contrato NBA-style): aplicar a recomendacao executa
+        // a acao mapeada. Todas as recomendacoes derivadas de insights sao
+        // de investigacao/revisao -> viram tarefa operacional no Workspace.
+        action: { kind: 'create_task', label: 'Criar tarefa de investigacao' },
       };
     }
 
@@ -424,6 +526,10 @@ class RecommendationEngine {
           sourceInsightType: type,
           relatedMetrics,
         },
+        // Action real (contrato NBA-style): aplicar a recomendacao executa
+        // a acao mapeada. Todas as recomendacoes derivadas de insights sao
+        // de investigacao/revisao -> viram tarefa operacional no Workspace.
+        action: { kind: 'create_task', label: 'Criar tarefa de investigacao' },
       };
     }
 
@@ -440,6 +546,10 @@ class RecommendationEngine {
           sourceInsightType: type,
           relatedMetrics,
         },
+        // Action real (contrato NBA-style): aplicar a recomendacao executa
+        // a acao mapeada. Todas as recomendacoes derivadas de insights sao
+        // de investigacao/revisao -> viram tarefa operacional no Workspace.
+        action: { kind: 'create_task', label: 'Criar tarefa de investigacao' },
       };
     }
 
@@ -456,6 +566,10 @@ class RecommendationEngine {
           sourceInsightType: type,
           relatedMetrics,
         },
+        // Action real (contrato NBA-style): aplicar a recomendacao executa
+        // a acao mapeada. Todas as recomendacoes derivadas de insights sao
+        // de investigacao/revisao -> viram tarefa operacional no Workspace.
+        action: { kind: 'create_task', label: 'Criar tarefa de investigacao' },
       };
     }
 
@@ -472,6 +586,10 @@ class RecommendationEngine {
           sourceInsightType: type,
           relatedMetrics,
         },
+        // Action real (contrato NBA-style): aplicar a recomendacao executa
+        // a acao mapeada. Todas as recomendacoes derivadas de insights sao
+        // de investigacao/revisao -> viram tarefa operacional no Workspace.
+        action: { kind: 'create_task', label: 'Criar tarefa de investigacao' },
       };
     }
 
@@ -487,6 +605,8 @@ class RecommendationEngine {
         sourceInsightType: type,
         relatedMetrics,
       },
+      // Action real: revisao humana vira tarefa operacional no Workspace.
+      action: { kind: 'create_task', label: 'Criar tarefa de revisao' },
     };
   }
 
