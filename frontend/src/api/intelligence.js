@@ -94,6 +94,13 @@ export function applyAllTenantRecommendations({ limit = 50 } = {}) {
   });
 }
 
+export function getTenantRecommendationStats({ period = 'month' } = {}) {
+  const params = new URLSearchParams();
+  if (period) params.set('period', String(period));
+  const query = params.toString();
+  return fetchJson(`/api/intelligence/recommendations/stats${query ? `?${query}` : ''}`, { method: 'GET' });
+}
+
 export function dismissTenantRecommendation(recommendationId, reason) {
   return fetchJson(`/api/intelligence/recommendations/${encodeURIComponent(String(recommendationId))}/dismiss`, {
     method: 'POST',

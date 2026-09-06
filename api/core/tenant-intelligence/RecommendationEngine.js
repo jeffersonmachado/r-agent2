@@ -72,6 +72,103 @@ class RecommendationEngine {
     return { items, total: items.length };
   }
 
+  /**
+   * Product Metrics da camada de decisão — agregações reais sobre
+   * tenant_recommendations (status, application.origin, outcome).
+   * Responde: a IA é aceita? As ações dão resultado? Quanto é automático?
+   *
+   * @param {string} tenantId
+   * @param {string} period - day|week|month|quarter|all (default month = 30d)
+   */
+  async getRecommendationStats({ tenantId, period = 'month' } = {}) {
+    if (!tenantId) throw new Error('tenantId is required');
+
+    const PERIOD_DAYS = { day: 1, week: 7, month: 30, quarter: 90 };
+    const periodKey = PERIOD_DAYS[period] ? String(period) : (String(period) === 'all' ? 'all' : 'month');
+    const days = PERIOD_DAYS[periodKey] || null;
+    const cutoff = days != null ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null;
+
+    const RecommendationModel = TenantRecommendation();
+    const rows = await RecommendationModel.findAll({
+      where: { tenant_key: String(tenantId) },
+      order: [['created_at', 'DESC']],
+      limit: 5000,
+    });
+
+    const items = (rows || [])
+      .map((row) => (row.toJSON ? row.toJSON() : row))
+      .filter((item) => {
+        if (!cutoff) return true;
+        const createdAt = item.created_at || item.createdAt || null;
+        const ms = createdAt ? new Date(createdAt).getTime() : NaN;
+        // Sem timestamp confiável não entra na janela (fail-closed por período).
+        return Number.isFinite(ms) && ms >= cutoff.getTime();
+      });
+
+    const byStatus = { open: 0, applied: 0, dismissed: 0, completed: 0 };
+    let originManual = 0;
+    let originAuto = 0;
+    let originBatch = 0;
+    let outcomeImproved = 0;
+    let outcomeRegressed = 0;
+    let outcomeUnchanged = 0;
+
+    for (const item of items) {
+      const status = String(item.status || 'open');
+      if (byStatus[status] != null) byStatus[status] += 1;
+
+      const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+      const origin = metadata.application?.origin || null;
+      if (origin === 'auto') originAuto += 1;
+      else if (origin === 'batch') originBatch += 1;
+      else if (origin === 'manual') originManual += 1;
+
+      const outcome = metadata.outcome?.outcome || null;
+      if (outcome === 'improved') outcomeImproved += 1;
+      else if (outcome === 'regressed') outcomeRegressed += 1;
+      else if (outcome === 'unchanged') outcomeUnchanged += 1;
+    }
+
+    const accepted = byStatus.applied + byStatus.completed;
+    const decided = accepted + byStatus.dismissed;
+    const appliedTotal = accepted;
+    const automatedApplied = originAuto + originBatch;
+    const outcomeEvaluated = outcomeImproved + outcomeRegressed + outcomeUnchanged;
+    // Aplicadas sem outcome medido ainda aguardam dados (evaluatePendingOutcomes).
+    const pendingEvaluation = Math.max(0, appliedTotal - outcomeEvaluated);
+
+    return {
+      ok: true,
+      stats: {
+        period: periodKey,
+        total: items.length,
+        byStatus,
+        acceptance: {
+          decided,
+          accepted,
+          dismissed: byStatus.dismissed,
+          rate: decided > 0 ? accepted / decided : null,
+        },
+        outcome: {
+          evaluated: outcomeEvaluated,
+          improved: outcomeImproved,
+          regressed: outcomeRegressed,
+          unchanged: outcomeUnchanged,
+          pendingEvaluation,
+          successRate: outcomeEvaluated > 0 ? outcomeImproved / outcomeEvaluated : null,
+        },
+        automation: {
+          applied: appliedTotal,
+          manual: originManual,
+          auto: originAuto,
+          batch: originBatch,
+          automationRate: appliedTotal > 0 ? automatedApplied / appliedTotal : null,
+          humanInterventionRate: appliedTotal > 0 ? originManual / appliedTotal : null,
+        },
+      },
+    };
+  }
+
   async generateRecommendations({ tenantId, insights = [], goals = [] } = {}) {
     if (!tenantId) throw new Error('tenantId is required');
 

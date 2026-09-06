@@ -98,6 +98,10 @@ class TenantIntelligenceService {
     return this.recommendationEngine.applyAllOpen(input);
   }
 
+  async getRecommendationStats(input) {
+    return this.recommendationEngine.getRecommendationStats(input);
+  }
+
   async dismissRecommendation(input) {
     return this.recommendationEngine.dismissRecommendation(input);
   }

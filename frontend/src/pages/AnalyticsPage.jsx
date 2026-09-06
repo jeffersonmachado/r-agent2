@@ -22,8 +22,10 @@ import { AnalyticsSupportMetricsSection } from './analytics/AnalyticsSupportMetr
 import { AnalyticsRoiAndFunnelSection } from './analytics/AnalyticsRoiAndFunnelSection';
 import { AnalyticsOrdersAndPhysicalSection } from './analytics/AnalyticsOrdersAndPhysicalSection';
 import { AnalyticsDecisionIntelligenceSection } from './analytics/AnalyticsDecisionIntelligenceSection';
+import { AnalyticsDecisionMetricsSection } from './analytics/AnalyticsDecisionMetricsSection';
 import {
   applyTenantRecommendation,
+  getTenantRecommendationStats,
   listTenantInsights,
   listTenantRecommendations,
 } from '../api/intelligence';
@@ -52,6 +54,7 @@ export function AnalyticsPage() {
   const [metrics, setMetrics] = useState(null);
   const [intelligenceInsights, setIntelligenceInsights] = useState([]);
   const [intelligenceRecommendations, setIntelligenceRecommendations] = useState([]);
+  const [intelligenceStats, setIntelligenceStats] = useState(null);
   const [applyingRecommendationId, setApplyingRecommendationId] = useState(null);
   const [roiMetrics, setRoiMetrics] = useState(null);
   const [funnelMetrics, setFunnelMetrics] = useState(null);
@@ -196,16 +199,19 @@ export function AnalyticsPage() {
   // (ex.: permissao), as metricas descritivas continuam carregando.
   const loadIntelligence = async () => {
     try {
-      const [insightsResult, recommendationsResult] = await Promise.all([
+      const [insightsResult, recommendationsResult, statsResult] = await Promise.all([
         listTenantInsights({ status: 'open', limit: 5 }),
         listTenantRecommendations({ status: 'open', limit: 5 }),
+        getTenantRecommendationStats({ period: 'month' }),
       ]);
       setIntelligenceInsights(insightsResult?.items || []);
       setIntelligenceRecommendations(recommendationsResult?.items || []);
+      setIntelligenceStats(statsResult?.stats || null);
     } catch (error) {
       logger.warn('[AnalyticsPage] Inteligencia decisoria indisponivel:', error?.message || error);
       setIntelligenceInsights([]);
       setIntelligenceRecommendations([]);
+      setIntelligenceStats(null);
     }
   };
 
@@ -674,6 +680,8 @@ export function AnalyticsPage() {
         applyingId={applyingRecommendationId}
         onApplyRecommendation={handleApplyIntelligenceRecommendation}
       />
+
+      <AnalyticsDecisionMetricsSection stats={intelligenceStats} />
 
       <AnalyticsRoiAndFunnelSection
         selectedWindowDays={selectedWindowDays}

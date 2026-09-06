@@ -38,6 +38,17 @@ jest.mock('../../api/core/tenant-intelligence/TenantIntelligenceService', () => 
         { recommendationId: 'reco-2', ok: true },
       ],
     })),
+    getRecommendationStats: jest.fn(async () => ({
+      ok: true,
+      stats: {
+        period: 'month',
+        total: 4,
+        byStatus: { open: 1, applied: 1, dismissed: 1, completed: 1 },
+        acceptance: { decided: 3, accepted: 2, dismissed: 1, rate: 2 / 3 },
+        outcome: { evaluated: 1, improved: 1, regressed: 0, unchanged: 0, pendingEvaluation: 1, successRate: 1 },
+        automation: { applied: 2, manual: 1, auto: 1, batch: 0, automationRate: 0.5, humanInterventionRate: 0.5 },
+      },
+    })),
   };
 
   return {
@@ -335,6 +346,110 @@ describe('recommendation batch route (apply-all)', () => {
     const deps = createDeps();
     const handled = await handleIntelligenceRoutes(buildCtx({
       pathname: '/api/intelligence/recommendations/apply-all',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 500, expect.objectContaining({ error: 'internal_error' }));
+  });
+});
+
+describe('recommendation stats route (GET recommendations/stats)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    intelligenceServiceModule.getTenantIntelligenceService.mockImplementation(() => getService());
+    getService().getRecommendationStats.mockResolvedValue({
+      ok: true,
+      stats: {
+        period: 'month',
+        total: 4,
+        byStatus: { open: 1, applied: 1, dismissed: 1, completed: 1 },
+        acceptance: { decided: 3, accepted: 2, dismissed: 1, rate: 2 / 3 },
+        outcome: { evaluated: 1, improved: 1, regressed: 0, unchanged: 0, pendingEvaluation: 1, successRate: 1 },
+        automation: { applied: 2, manual: 1, auto: 1, batch: 0, automationRate: 0.5, humanInterventionRate: 0.5 },
+      },
+    });
+  });
+
+  function buildGetCtx({ pathname, deps, agent = { username: 'admin-user', id: 'agent-1' } }) {
+    return {
+      req: { url: pathname, agent },
+      res: {},
+      method: 'GET',
+      pathname: pathname.split('?')[0],
+      deps,
+    };
+  }
+
+  test('GET stats com analytics:read retorna agregações', async () => {
+    const deps = createDeps();
+    const handled = await handleIntelligenceRoutes(buildGetCtx({
+      pathname: '/api/intelligence/recommendations/stats?period=quarter',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.requirePermission).toHaveBeenCalledWith(expect.anything(), 'analytics', 'read');
+    expect(getService().getRecommendationStats).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      period: 'quarter',
+    });
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 200, expect.objectContaining({
+      ok: true,
+      stats: expect.objectContaining({
+        acceptance: expect.objectContaining({ accepted: 2 }),
+        outcome: expect.objectContaining({ successRate: 1 }),
+        automation: expect.objectContaining({ automationRate: 0.5 }),
+      }),
+    }));
+  });
+
+  test('GET stats sem period usa default month', async () => {
+    const deps = createDeps();
+    const handled = await handleIntelligenceRoutes(buildGetCtx({
+      pathname: '/api/intelligence/recommendations/stats',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(getService().getRecommendationStats).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      period: 'month',
+    });
+  });
+
+  test('GET stats sem analytics:read retorna 403 forbidden', async () => {
+    const deps = createDeps({ requirePermission: jest.fn(() => ({ allowed: false, error: 'sem permissao' })) });
+    const handled = await handleIntelligenceRoutes(buildGetCtx({
+      pathname: '/api/intelligence/recommendations/stats',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 403, expect.objectContaining({ error: 'forbidden' }));
+    expect(getService().getRecommendationStats).not.toHaveBeenCalled();
+  });
+
+  test('GET stats sem auth retorna 401', async () => {
+    const deps = createDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'token invalido' })) });
+    const handled = await handleIntelligenceRoutes({
+      req: { url: '/api/intelligence/recommendations/stats' },
+      res: {},
+      method: 'GET',
+      pathname: '/api/intelligence/recommendations/stats',
+      deps,
+    });
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 401, expect.objectContaining({ error: 'unauthorized' }));
+    expect(getService().getRecommendationStats).not.toHaveBeenCalled();
+  });
+
+  test('erro inesperado do service retorna 500', async () => {
+    getService().getRecommendationStats.mockRejectedValue(new Error('boom'));
+    const deps = createDeps();
+    const handled = await handleIntelligenceRoutes(buildGetCtx({
+      pathname: '/api/intelligence/recommendations/stats',
       deps,
     }));
 

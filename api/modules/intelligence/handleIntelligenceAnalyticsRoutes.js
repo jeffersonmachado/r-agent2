@@ -107,6 +107,28 @@ async function handleIntelligenceAnalyticsRoutes(ctx) {
     return true;
   }
 
+  // Product Metrics da camada de decisão (aceite/outcome/automação).
+  if (method === 'GET' && pathname === '/api/intelligence/recommendations/stats') {
+    const permResult = requirePermission(req, 'analytics', 'read');
+    if (!permResult.allowed) {
+      sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+      return true;
+    }
+
+    try {
+      const urlObj = new URL(req.url || '/', 'http://localhost');
+      const out = await service.getRecommendationStats({
+        tenantId,
+        period: urlObj.searchParams.get('period') || 'month',
+      });
+      sendJson(res, 200, out);
+    } catch (err) {
+      logger.error('[IntelligenceRoutes] Erro em GET /api/intelligence/recommendations/stats:', err);
+      sendJson(res, 500, { error: 'internal_error', message: 'Erro ao computar metricas de recomendacoes' });
+    }
+    return true;
+  }
+
   if (method === 'POST' && pathname.startsWith('/api/intelligence/recommendations/')) {
     const tail = pathname.slice('/api/intelligence/recommendations/'.length);
     const segments = tail.split('/').filter(Boolean);
