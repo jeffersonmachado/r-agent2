@@ -253,7 +253,7 @@ async function listConversations({ tenantId, status = null, channelType = null, 
       assignedTo: r.assigned_to || null,
       metadata,
       contactName: resolveContactName(metadata, entityNameByConversation.get(r.id)),
-      phoneNumber: isWhatsAppLikeChannel(r.channel_type)
+      phoneNumber: isWhatsAppLikeChannel(r.channel_type) || safeToString(r.channel_type).trim().toLowerCase() === 'voice'
         ? (safeToString(r.contact_id || r.external_id).trim() || null)
         : null,
       lastMessage: lastMessageByConversation.get(r.id) || null,

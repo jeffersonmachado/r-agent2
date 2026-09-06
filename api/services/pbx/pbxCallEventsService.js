@@ -83,8 +83,9 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
   const safeBatch = Math.min(Math.max(Number(batchSize) || 200, 1), 2000);
 
   const PbxCdr = models.PbxCdr();
+  const endedCalls = [];
 
-  return sequelize.transaction(async (t) => {
+  const scanResult = await sequelize.transaction(async (t) => {
     const [lockedRows] = await sequelize.query(
       `SELECT id, consumer, last_calldate, last_cdr_id
        FROM pbx_call_event_state
@@ -203,6 +204,18 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
         idempotencyKey: `pbx_call_event:${tenantId}:${cdrId}:ended`,
         payload: { ...basePayload, endedAt: endedAt.toISOString(), related },
       }).then(() => { emitted += 1; }).catch(() => {});
+
+      endedCalls.push({
+        tenantId,
+        cdrId: json.id,
+        uniqueid: json.uniqueid || null,
+        src: json.src || null,
+        dst: json.dst || null,
+        disposition: json.disposition || null,
+        duration: durationSec,
+        billsec,
+        endedAt: endedAt.toISOString(),
+      });
     }
 
     await sequelize.query(
@@ -218,6 +231,23 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
     } catch (_) {}
     return { ok: true, scanned: rows.length, emitted, cursor };
   });
+
+  // Voice + Digital: depois do commit, cada chamada encerrada vira mensagem
+  // de voz no Inbox (best-effort — nunca derruba o scan).
+  let bridged = 0;
+  if (scanResult?.ok && endedCalls.length > 0) {
+    // eslint-disable-next-line global-require
+    const { recordCallToInbox } = require('./voiceInboxBridgeService');
+    for (const call of endedCalls) {
+      if (!call.tenantId || call.tenantId === 'unknown') continue;
+      // eslint-disable-next-line no-await-in-loop
+      const result = await recordCallToInbox({ tenantId: call.tenantId, call })
+        .catch((err) => ({ bridged: false, reason: err?.message || 'bridge_error' }));
+      if (result?.bridged && !result?.skipped) bridged += 1;
+    }
+  }
+
+  return { ...scanResult, inboxBridged: bridged };
 }
 
 module.exports = {

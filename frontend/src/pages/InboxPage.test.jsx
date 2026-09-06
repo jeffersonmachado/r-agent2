@@ -10,6 +10,7 @@ const createCaseFromConversation = vi.fn();
 const getAgentNameById = vi.fn();
 const listQuickReplies = vi.fn();
 const useQuickReply = vi.fn();
+const operatorCallback = vi.fn();
 
 const authDouble = vi.hoisted(() => ({
   capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
@@ -33,6 +34,10 @@ vi.mock('../api/inbox', () => ({
 vi.mock('../api/quickReplies', () => ({
   listQuickReplies: (...args) => listQuickReplies(...args),
   useQuickReply: (...args) => useQuickReply(...args),
+}));
+
+vi.mock('../api/pbx', () => ({
+  operatorCallback: (...args) => operatorCallback(...args),
 }));
 
 vi.mock('../api/tickets', () => ({
@@ -603,5 +608,123 @@ describe('pages/InboxPage', () => {
 
     expect(listInboxConversations.mock.calls.length).toBeGreaterThan(1);
     expect(getAgentNameById.mock.calls.length).toBe(nameCallsAfterFirstLoad);
+  });
+
+  it('conversa de voz aparece na lista com badge Voz e preview da chamada', async () => {
+    const voiceConversation = {
+      ...baseConversation,
+      id: 'cv1',
+      channelType: 'voice',
+      contactName: null,
+      phoneNumber: '5511999887766',
+      lastMessage: { text: 'Chamada perdida de 5511999887766', type: 'call', direction: 'in', createdAt: '2026-08-01T11:00:00Z' },
+      lastMessageAt: '2026-08-01T11:00:00Z',
+      unreadCount: 1,
+    };
+    listInboxConversations.mockResolvedValue({ conversations: [voiceConversation], total: 1 });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    expect(screen.getAllByText('Voz').length).toBeGreaterThan(0);
+    expect(screen.getByText('Chamada perdida de 5511999887766')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+  });
+
+  it('chamada perdida inbound: card de voz com botão Retornar chamada que dispara o callback', async () => {
+    const voiceConversation = {
+      ...baseConversation,
+      id: 'cv2',
+      channelType: 'voice',
+      contactName: null,
+      phoneNumber: '5511999887766',
+    };
+    const callMessage = {
+      id: 'mc1',
+      direction: 'in',
+      type: 'call',
+      createdAt: '2026-08-01T11:00:00Z',
+      body: {
+        type: 'call',
+        text: 'Chamada perdida de 5511999887766',
+        call: {
+          direction: 'in',
+          answered: false,
+          disposition: 'NO ANSWER',
+          durationSec: 25,
+          billsec: 0,
+          phone: '5511999887766',
+          src: '5511999887766',
+        },
+      },
+    };
+    listInboxConversations.mockResolvedValue({ conversations: [voiceConversation], total: 1 });
+    getInboxConversation.mockResolvedValue({ conversation: voiceConversation, messages: [callMessage] });
+    operatorCallback.mockResolvedValue({ ok: true });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByText('5511999887766')[0]);
+    });
+
+    expect(screen.getByText('📵 Chamada perdida')).toBeInTheDocument();
+    expect(screen.getByText(/De 5511999887766/)).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retornar chamada para 5511999887766' }));
+    });
+
+    expect(operatorCallback).toHaveBeenCalledWith(expect.objectContaining({
+      phone: '5511999887766',
+      target: '5511999887766',
+    }));
+    expect(toastDouble.showToast).toHaveBeenCalledWith(expect.stringMatching(/[Rr]etorn/), 'success');
+  });
+
+  it('chamada atendida: card mostra duração e NÃO oferece retorno de chamada', async () => {
+    const voiceConversation = {
+      ...baseConversation,
+      id: 'cv3',
+      channelType: 'voice',
+      contactName: 'Ana',
+    };
+    const callMessage = {
+      id: 'mc2',
+      direction: 'in',
+      type: 'call',
+      createdAt: '2026-08-01T11:05:00Z',
+      body: {
+        type: 'call',
+        text: 'Chamada recebida de 5511999887766 (1 min 5 s)',
+        call: {
+          direction: 'in',
+          answered: true,
+          disposition: 'ANSWERED',
+          durationSec: 90,
+          billsec: 65,
+          phone: '5511999887766',
+          src: '5511999887766',
+        },
+      },
+    };
+    listInboxConversations.mockResolvedValue({ conversations: [voiceConversation], total: 1 });
+    getInboxConversation.mockResolvedValue({ conversation: voiceConversation, messages: [callMessage] });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(screen.getByText('📞 Chamada recebida')).toBeInTheDocument();
+    expect(screen.getByText('Duração: 1 min 5 s')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Retornar chamada/ })).not.toBeInTheDocument();
+    expect(operatorCallback).not.toHaveBeenCalled();
   });
 });

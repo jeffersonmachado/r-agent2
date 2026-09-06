@@ -17,6 +17,7 @@ import {
   setInboxConversationStatus,
 } from '../api/inbox';
 import { listQuickReplies, useQuickReply } from '../api/quickReplies';
+import { operatorCallback } from '../api/pbx';
 import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 import { useIncrementalList, useLoadMoreSentinel } from '../hooks/useIncrementalList';
@@ -663,7 +664,31 @@ export function InboxPage() {
     if (normalized === 'messenger') return 'Messenger';
     if (normalized === 'instagram') return 'Instagram';
     if (normalized === 'webchat') return 'Webchat';
+    if (normalized === 'voice') return 'Voz';
     return normalized || 'Canal';
+  };
+
+  // Voice + Digital: retorno de chamada perdida direto do card de voz.
+  const returningCallRef = useRef(false);
+  const handleReturnCall = async (call) => {
+    if (!call?.phone || returningCallRef.current) return;
+    returningCallRef.current = true;
+    try {
+      await operatorCallback({
+        phone: call.phone,
+        target: call.phone,
+        note: 'Retorno de chamada perdida via Inbox',
+      });
+      showToast(`Retorno agendado para ${call.phone}.`, 'success');
+    } catch (err) {
+      if (err?.status === 403 || err?.body?.error === 'forbidden') {
+        showToast('Sem permissão para agendar retorno de chamada.', 'error');
+      } else {
+        showToast('Não foi possível agendar o retorno de chamada.', 'error');
+      }
+    } finally {
+      returningCallRef.current = false;
+    }
   };
 
   const formatRelativeTime = (value) => {
@@ -704,6 +729,7 @@ export function InboxPage() {
     if (normalized === 'audio') return '🎧 Áudio';
     if (normalized === 'video') return '🎬 Vídeo';
     if (normalized === 'document' || normalized === 'file') return '📎 Documento';
+    if (normalized === 'call') return '📞 Chamada';
     return null;
   };
 
@@ -798,6 +824,7 @@ export function InboxPage() {
               <option value="messenger">Messenger</option>
               <option value="instagram">Instagram</option>
               <option value="webchat">Webchat</option>
+              <option value="voice">Voz</option>
             </select>
           </label>
           {caseManagementEnabled ? (
@@ -1090,7 +1117,36 @@ export function InboxPage() {
                           {' · '}{formatDate(messageAt)}
                         </div>
                         <div style={{ color: msg.sender === 'note' ? 'var(--color-status-warning)' : 'var(--color-text-primary)' }}>
-                          {mediaUrl && mediaType === 'image' ? (
+                          {mediaType === 'call' && messageBody.call ? (
+                            <div
+                              data-testid="inbox-call-card"
+                              className="border border-border-default rounded-lg p-3"
+                              style={{ display: 'inline-block', minWidth: '240px' }}
+                            >
+                              <div className="font-medium text-text-primary">
+                                {messageBody.call.answered
+                                  ? (messageBody.call.direction === 'in' ? '📞 Chamada recebida' : '📞 Chamada realizada')
+                                  : (messageBody.call.direction === 'in' ? '📵 Chamada perdida' : '📞 Chamada não atendida')}
+                              </div>
+                              <div className="text-text-secondary" style={{ marginTop: '2px' }}>
+                                {messageBody.call.answered
+                                  ? `Duração: ${Math.floor((messageBody.call.billsec || messageBody.call.durationSec || 0) / 60)} min ${(messageBody.call.billsec || messageBody.call.durationSec || 0) % 60} s`
+                                  : `De ${messageBody.call.src || messageBody.call.phone || '-'}`}
+                              </div>
+                              {messageBody.call.direction === 'in' && !messageBody.call.answered && messageBody.call.phone ? (
+                                <div style={{ marginTop: '8px' }}>
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => { e.stopPropagation(); handleReturnCall(messageBody.call); }}
+                                    aria-label={`Retornar chamada para ${messageBody.call.phone}`}
+                                  >
+                                    Retornar chamada
+                                  </Button>
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                          {mediaType !== 'call' && mediaUrl && mediaType === 'image' ? (
                             <a href={mediaUrl} target="_blank" rel="noopener noreferrer">
                               <img src={mediaUrl} alt={mediaName} className="inbox-media-image" />
                             </a>
@@ -1098,12 +1154,12 @@ export function InboxPage() {
                           {mediaUrl && mediaType === 'audio' ? (
                             <audio controls src={mediaUrl} className="inbox-media-audio" />
                           ) : null}
-                          {mediaUrl && mediaType !== 'image' && mediaType !== 'audio' ? (
+                          {mediaUrl && mediaType !== 'image' && mediaType !== 'audio' && mediaType !== 'call' ? (
                             <a href={mediaUrl} target="_blank" rel="noopener noreferrer" download={mediaName} className="inbox-media-link">
                               📎 {mediaName}
                             </a>
                           ) : null}
-                          {messageText || (!mediaUrl ? '-' : '')}
+                          {mediaType === 'call' && messageBody.call ? null : (messageText || (!mediaUrl ? '-' : ''))}
                         </div>
                       </div>
                     );
