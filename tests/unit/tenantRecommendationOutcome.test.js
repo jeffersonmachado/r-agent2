@@ -27,6 +27,19 @@ function buildRecommendationModel(store) {
         }),
       };
     }),
+    findAll: jest.fn(async ({ where } = {}) => store
+      .filter((item) => {
+        if (where?.tenant_key && item.tenant_key !== where.tenant_key) return false;
+        if (where?.status && item.status !== where.status) return false;
+        return true;
+      })
+      .map((item) => ({
+        toJSON: () => item,
+        update: jest.fn(async (patch) => {
+          Object.assign(item, patch);
+          return item;
+        }),
+      }))),
   };
 }
 
@@ -417,5 +430,114 @@ describe('RecommendationEngine.evaluateOutcome', () => {
     const { engine } = loadEngine({ recommendations: [buildRecommendation({ status: 'applied' })] });
     await expect(engine.evaluateOutcome({ tenantId: 'tenant-b', recommendationId: 'reco-1' }))
       .rejects.toMatchObject({ code: 'recommendation_not_found', statusCode: 404 });
+  });
+});
+
+describe('RecommendationEngine.evaluatePendingOutcomes (hook event-driven)', () => {
+  const futureIso = () => new Date(Date.now() + 60 * 1000).toISOString();
+
+  function buildAppliedRecommendation(overrides = {}) {
+    return buildRecommendation({
+      status: 'applied',
+      metadata: {
+        sourceInsightType: 'metric_drop',
+        application: {
+          appliedAt: new Date().toISOString(),
+          appliedBy: 'manager-1',
+          baseline: [{ metricKey: 'operations.tickets_open', value: 100, snapshotId: 'snap-base', capturedAt: new Date().toISOString() }],
+          expectedDirection: 'up',
+        },
+      },
+      ...overrides,
+    });
+  }
+
+  test('sem recomendacoes aplicadas: total 0', async () => {
+    const { engine } = loadEngine({ recommendations: [buildRecommendation({ status: 'open' })] });
+    const result = await engine.evaluatePendingOutcomes({ tenantId: 'tenant-a' });
+    expect(result).toMatchObject({ ok: true, total: 0, evaluated: 0, pending: 0, results: [] });
+  });
+
+  test('sem snapshot novo: recomendacao permanece applied (pending)', async () => {
+    const recommendations = [buildAppliedRecommendation()];
+    const snapshots = [buildSnapshot({ id: 'snap-base', value: 100 })];
+    const { engine } = loadEngine({ recommendations, snapshots });
+
+    const result = await engine.evaluatePendingOutcomes({ tenantId: 'tenant-a' });
+
+    expect(result).toMatchObject({ total: 1, evaluated: 0, pending: 1 });
+    expect(result.results[0]).toEqual({ recommendationId: 'reco-1', outcome: 'pending' });
+    expect(recommendations[0].status).toBe('applied');
+  });
+
+  test('com snapshot novo: avalia e completa a recomendacao', async () => {
+    const recommendations = [buildAppliedRecommendation()];
+    const snapshots = [
+      buildSnapshot({ id: 'snap-base', value: 100 }),
+      buildSnapshot({ id: 'snap-new', value: 130, period_end: futureIso(), created_at: futureIso() }),
+    ];
+    const { engine } = loadEngine({ recommendations, snapshots });
+
+    const result = await engine.evaluatePendingOutcomes({ tenantId: 'tenant-a' });
+
+    expect(result).toMatchObject({ total: 1, evaluated: 1, pending: 0 });
+    expect(result.results[0]).toEqual({ recommendationId: 'reco-1', outcome: 'improved' });
+    expect(recommendations[0].status).toBe('completed');
+    expect(recommendations[0].metadata.outcome.outcome).toBe('improved');
+  });
+
+  test('misto: avalia so quem tem snapshot novo', async () => {
+    const recommendations = [
+      buildAppliedRecommendation(),
+      buildAppliedRecommendation({
+        id: 'reco-2',
+        metadata: {
+          sourceInsightType: 'metric_drop',
+          application: {
+            appliedAt: new Date().toISOString(),
+            appliedBy: 'manager-1',
+            baseline: [{ metricKey: 'operations.abandonment_rate_pct', value: 50, snapshotId: 'snap-b2', capturedAt: new Date().toISOString() }],
+            expectedDirection: 'up',
+          },
+        },
+      }),
+    ];
+    const snapshots = [
+      buildSnapshot({ id: 'snap-base', metric_key: 'operations.tickets_open', value: 100 }),
+      buildSnapshot({ id: 'snap-new', metric_key: 'operations.tickets_open', value: 90, period_end: futureIso(), created_at: futureIso() }),
+      buildSnapshot({ id: 'snap-b2', metric_key: 'operations.abandonment_rate_pct', value: 50 }),
+    ];
+    const { engine } = loadEngine({ recommendations, snapshots });
+
+    const result = await engine.evaluatePendingOutcomes({ tenantId: 'tenant-a' });
+
+    expect(result).toMatchObject({ total: 2, evaluated: 1, pending: 1 });
+    expect(recommendations[0].status).toBe('completed');
+    expect(recommendations[1].status).toBe('applied');
+  });
+
+  test('isolamento de tenant: nao avalia recomendacoes de outro tenant', async () => {
+    const recommendations = [buildAppliedRecommendation({ tenant_key: 'tenant-b' })];
+    const { engine } = loadEngine({ recommendations });
+
+    const result = await engine.evaluatePendingOutcomes({ tenantId: 'tenant-a' });
+
+    expect(result.total).toBe(0);
+    expect(recommendations[0].status).toBe('applied');
+  });
+
+  test('baseline vazio: permanece applied sem avaliar', async () => {
+    const recommendations = [buildRecommendation({
+      status: 'applied',
+      metadata: {
+        application: { appliedAt: new Date().toISOString(), appliedBy: 'x', baseline: [], expectedDirection: 'up' },
+      },
+    })];
+    const { engine } = loadEngine({ recommendations });
+
+    const result = await engine.evaluatePendingOutcomes({ tenantId: 'tenant-a' });
+
+    expect(result).toMatchObject({ total: 1, evaluated: 0, pending: 1 });
+    expect(recommendations[0].status).toBe('applied');
   });
 });

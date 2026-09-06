@@ -16,6 +16,13 @@ function loadEngine({ generalMetrics, generalMetricsError = null } = {}) {
         return { toJSON: () => data };
       }),
     }),
+    // Consumido pelo hook de outcome (evaluatePendingOutcomes) via RecommendationEngine
+    TenantRecommendation: () => ({
+      findAll: jest.fn(async () => []),
+    }),
+    TenantInsight: () => ({
+      findOne: jest.fn(async () => null),
+    }),
   }));
 
   jest.doMock('../../api/db/sequelize', () => ({
@@ -69,6 +76,8 @@ describe('MetricEngine.collectSnapshots — metricas operacionais', () => {
 
     expect(result.ok).toBe(true);
     expect(result.warnings).toBeUndefined();
+    // Hook event-driven: coleta avalia recomendacoes aplicadas (nenhuma aqui)
+    expect(result.outcomeEvaluation).toMatchObject({ ok: true, total: 0, evaluated: 0, pending: 0 });
 
     const byKey = Object.fromEntries(createdRows.map((row) => [row.metric_key, row]));
     expect(byKey['operations.tickets_total'].value).toBe(42);
@@ -107,6 +116,7 @@ describe('MetricEngine.collectSnapshots — metricas operacionais', () => {
 
     expect(result.ok).toBe(true);
     expect(result.warnings).toEqual(['operational_metrics_unavailable']);
+    expect(result.outcomeEvaluation).toMatchObject({ ok: true, total: 0 });
     const keys = createdRows.map((row) => row.metric_key);
     expect(keys).toContain('event_ledger.total_events');
     expect(keys.some((key) => key.startsWith('operations.'))).toBe(false);

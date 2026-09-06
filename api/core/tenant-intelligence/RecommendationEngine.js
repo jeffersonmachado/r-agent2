@@ -260,6 +260,63 @@ class RecommendationEngine {
     return { ok: true, recommendation: rowToJson(row), outcome };
   }
 
+  /**
+   * Fechamento event-driven do loop Decision Intelligence: chamado quando
+   * novos snapshots sao coletados, avalia automaticamente as recomendacoes
+   * aplicadas cuja metrica de baseline ganhou snapshot posterior ao apply.
+   * Sem snapshot novo a recomendacao permanece 'applied' (aguardando dados).
+   */
+  async evaluatePendingOutcomes({ tenantId } = {}) {
+    if (!tenantId) throw new Error('tenantId is required');
+
+    const RecommendationModel = TenantRecommendation();
+    const rows = await RecommendationModel.findAll({
+      where: { tenant_key: String(tenantId), status: 'applied' },
+    });
+
+    const results = [];
+    let evaluated = 0;
+    let pending = 0;
+
+    for (const row of rows || []) {
+      const reco = row.toJSON ? row.toJSON() : row;
+      const baseline = Array.isArray(reco.metadata?.application?.baseline)
+        ? reco.metadata.application.baseline
+        : [];
+
+      let hasNewSnapshot = false;
+      for (const entry of baseline) {
+        // eslint-disable-next-line no-await-in-loop
+        const snapshot = await this._findLatestSnapshot({ tenantId, metricKey: entry.metricKey });
+        if (snapshot && snapshot.id !== entry.snapshotId
+          && this._isSnapshotAfterCapture(snapshot, entry.capturedAt)) {
+          hasNewSnapshot = true;
+          break;
+        }
+      }
+
+      if (!hasNewSnapshot) {
+        pending += 1;
+        results.push({ recommendationId: reco.id, outcome: 'pending' });
+        continue;
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      const evaluation = await this.evaluateOutcome({ tenantId, recommendationId: reco.id });
+      const outcomeKind = evaluation.outcome?.outcome || 'pending';
+      if (outcomeKind === 'pending') pending += 1; else evaluated += 1;
+      results.push({ recommendationId: reco.id, outcome: outcomeKind });
+    }
+
+    return {
+      ok: true,
+      total: (rows || []).length,
+      evaluated,
+      pending,
+      results,
+    };
+  }
+
   _assessDelta({ deltaPct, currentValue, expectedDirection }) {
     if (deltaPct == null) {
       // Baseline zerada: qualquer valor positivo eh movimento relevante.

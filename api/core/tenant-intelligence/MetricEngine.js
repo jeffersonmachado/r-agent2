@@ -4,9 +4,14 @@ const { getSequelize } = require('../../db/sequelize');
 const { TenantMetricSnapshot } = require('../../db/models');
 const { getEventLedgerMetrics } = require('../../services/eventLedgerMetricsService');
 const { getGeneralMetrics } = require('../../services/analyticsService');
+const { RecommendationEngine } = require('./RecommendationEngine');
 const { buildId, toNumber, resolvePeriodBounds } = require('./helpers');
 
 class MetricEngine {
+  constructor(deps = {}) {
+    this.recommendationEngine = deps.recommendationEngine || new RecommendationEngine();
+  }
+
   async listSnapshots({ tenantId, metricKey = null, limit = 100, period = null } = {}) {
     if (!tenantId) throw new Error('tenantId is required');
     const SnapshotModel = TenantMetricSnapshot();
@@ -130,9 +135,22 @@ class MetricEngine {
       snapshots.push(row.toJSON ? row.toJSON() : row);
     }
 
+    // Fechamento event-driven do loop Decision Intelligence: snapshot novo
+    // dispara a avaliacao das recomendacoes aplicadas (sem agendador).
+    // Falha aqui nao impede a coleta — reportada como warning explicito.
+    let outcomeEvaluation = null;
+    try {
+      outcomeEvaluation = await this.recommendationEngine.evaluatePendingOutcomes({
+        tenantId: String(tenantId),
+      });
+    } catch (_) {
+      warnings.push('outcome_evaluation_unavailable');
+    }
+
     return {
       ok: true,
       snapshots,
+      outcomeEvaluation,
       ...(warnings.length > 0 ? { warnings } : {}),
       period: {
         type: bounds.type,
