@@ -147,8 +147,8 @@
   ],
   "allViolations": [],
   "summary": "Todos os 11 replays passaram no hardening.",
-  "runId": "rap-governed-20260906170009453-af87e966",
-  "sourceFingerprint": "0009a764ab35132da77cc2fd830a340714b922cbcce6d0cf84e4d07b25b9545a",
+  "runId": "rap-governed-20260906180050904-ca1e9854",
+  "sourceFingerprint": "737a738451b0e143eb7bad2f7e6d7c771c59a48c1538cfc06a18523054e68300",
   "artifactType": "replay-hardening-report",
   "artifactVersion": "1.0.0",
   "reboundAt": "2026-09-06T17:15:57.023Z"
