@@ -11,6 +11,7 @@ const getAgentNameById = vi.fn();
 const listQuickReplies = vi.fn();
 const useQuickReply = vi.fn();
 const operatorCallback = vi.fn();
+const fetchRecordingFile = vi.fn();
 
 const authDouble = vi.hoisted(() => ({
   capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' },
@@ -38,6 +39,7 @@ vi.mock('../api/quickReplies', () => ({
 
 vi.mock('../api/pbx', () => ({
   operatorCallback: (...args) => operatorCallback(...args),
+  fetchRecordingFile: (...args) => fetchRecordingFile(...args),
 }));
 
 vi.mock('../api/tickets', () => ({
@@ -726,5 +728,100 @@ describe('pages/InboxPage', () => {
     expect(screen.getByText('Duração: 1 min 5 s')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Retornar chamada/ })).not.toBeInTheDocument();
     expect(operatorCallback).not.toHaveBeenCalled();
+  });
+
+  it('card de voz exibe transcrição e player de gravação (blob autenticado sob demanda)', async () => {
+    const voiceConversation = {
+      ...baseConversation,
+      id: 'cv4',
+      channelType: 'voice',
+      contactName: 'Ana',
+    };
+    const callMessage = {
+      id: 'mc3',
+      direction: 'in',
+      type: 'call',
+      createdAt: '2026-08-01T11:10:00Z',
+      body: {
+        type: 'call',
+        text: 'Chamada recebida de 5511999887766 (1 min 5 s)',
+        call: {
+          direction: 'in',
+          answered: true,
+          billsec: 65,
+          phone: '5511999887766',
+          src: '5511999887766',
+          recordingId: 'rec-system-1',
+        },
+        transcription: { text: 'Olá, gostaria de confirmar meu horário de amanhã.', language: 'pt' },
+      },
+    };
+    listInboxConversations.mockResolvedValue({ conversations: [voiceConversation], total: 1 });
+    getInboxConversation.mockResolvedValue({ conversation: voiceConversation, messages: [callMessage] });
+    fetchRecordingFile.mockResolvedValue(new Blob(['wav'], { type: 'audio/wav' }));
+    const createObjectURL = vi.fn(() => 'blob:mock-recording');
+    const revokeObjectURL = vi.fn();
+    window.URL.createObjectURL = createObjectURL;
+    window.URL.revokeObjectURL = revokeObjectURL;
+
+    let container;
+    await act(async () => {
+      ({ container } = render(<InboxPage />));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    // Transcrição visível no card
+    expect(screen.getByTestId('call-transcription')).toHaveTextContent('Olá, gostaria de confirmar meu horário de amanhã.');
+    // Player não baixa nada antes do clique
+    expect(fetchRecordingFile).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Ouvir gravação da chamada' }));
+    });
+
+    expect(fetchRecordingFile).toHaveBeenCalledWith('rec-system-1');
+    const audio = container.querySelector('audio[data-testid="call-recording-player"]');
+    expect(audio).not.toBeNull();
+    expect(audio.getAttribute('src')).toBe('blob:mock-recording');
+  });
+
+  it('falha no download da gravação mostra estado de erro sem quebrar o card', async () => {
+    const voiceConversation = {
+      ...baseConversation,
+      id: 'cv5',
+      channelType: 'voice',
+      contactName: 'Ana',
+    };
+    const callMessage = {
+      id: 'mc4',
+      direction: 'in',
+      type: 'call',
+      createdAt: '2026-08-01T11:15:00Z',
+      body: {
+        type: 'call',
+        text: 'Chamada recebida',
+        call: { direction: 'in', answered: true, billsec: 10, phone: '5511999887766', recordingId: 'rec-erro' },
+      },
+    };
+    listInboxConversations.mockResolvedValue({ conversations: [voiceConversation], total: 1 });
+    getInboxConversation.mockResolvedValue({ conversation: voiceConversation, messages: [callMessage] });
+    fetchRecordingFile.mockRejectedValue(new Error('HTTP 403'));
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Ouvir gravação da chamada' }));
+    });
+
+    expect(screen.getByRole('button', { name: 'Ouvir gravação da chamada' })).toHaveTextContent('Gravação indisponível');
   });
 });

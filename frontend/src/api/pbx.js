@@ -1,4 +1,4 @@
-import { fetchJson } from './client';
+import { fetchJson, fetchBlob } from './client';
 
 export function listExtensions() {
   return fetchJson('/api/pbx/extensions', { method: 'GET' });
@@ -203,6 +203,15 @@ export function listRecordings(limit = 200) {
 
 export function scanRecordings() {
   return fetchJson('/api/pbx/recordings/scan', { method: 'POST', body: JSON.stringify({}) });
+}
+
+/**
+ * Baixa o áudio de uma gravação (autenticado) e devolve um Blob
+ * para uso em <audio> via URL.createObjectURL.
+ */
+export async function fetchRecordingFile(id) {
+  const response = await fetchBlob(`/api/pbx/recordings/file?id=${encodeURIComponent(String(id))}`, { method: 'GET' });
+  return response.blob();
 }
 
 export function getRecordingPolicy() {

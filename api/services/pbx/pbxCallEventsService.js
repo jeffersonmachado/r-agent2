@@ -247,7 +247,24 @@ async function scanPbxCdrAndEmitEvents({ consumer = 'pbx_cdr_v0', batchSize = 20
     }
   }
 
-  return { ...scanResult, inboxBridged: bridged };
+  // Gravações: descobre .wav novos e liga recordingId/transcrição às
+  // mensagens de voz já no Inbox (best-effort, por tenant com chamada no lote).
+  // Roda em todo lote com chamadas — não só quando houve bridge novo — porque
+  // o MixMonitor pode finalizar o .wav depois do bridge da chamada anterior.
+  let recordingsLinked = 0;
+  if (scanResult?.ok && endedCalls.length > 0) {
+    // eslint-disable-next-line global-require
+    const { scanAndUpsertRecordings } = require('./pbxRecordingsService');
+    const tenantKeys = [...new Set(endedCalls.map((c) => c.tenantId).filter((t) => t && t !== 'unknown'))];
+    for (const tenantKey of tenantKeys) {
+      // eslint-disable-next-line no-await-in-loop
+      const scan = await scanAndUpsertRecordings({ tenantKey })
+        .catch(() => null);
+      if (scan?.upserted) recordingsLinked += scan.upserted;
+    }
+  }
+
+  return { ...scanResult, inboxBridged: bridged, recordingsUpserted: recordingsLinked };
 }
 
 module.exports = {

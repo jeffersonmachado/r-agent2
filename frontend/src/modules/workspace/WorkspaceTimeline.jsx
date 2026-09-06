@@ -54,7 +54,7 @@ export function WorkspaceTimeline({ timeline, loading, classification = 'PRODUCT
 
       {items.map((event) => (
         <article key={`${event.type}-${event.refId || event.id || event.createdAt}-${event.createdAt}`} className={`workspace-timeline-item ${tones[event.type] || 'default'}`}>
-          <div className={`workspace-timeline-dot ${tones[event.type] || 'default'}`}>{icons[event.type] || '•'}</div>
+          <div className={`workspace-timeline-dot ${tones[event.type] || 'default'}`}>{event.source === 'voice' ? '📞' : (icons[event.type] || '•')}</div>
           <div>
             <div className="flex flex-wrap items-center gap-2 workspace-timeline-topline">
               <span className="workspace-pill subtle">{event.displayType || event.type}</span>

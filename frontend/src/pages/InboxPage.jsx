@@ -17,13 +17,57 @@ import {
   setInboxConversationStatus,
 } from '../api/inbox';
 import { listQuickReplies, useQuickReply } from '../api/quickReplies';
-import { operatorCallback } from '../api/pbx';
+import { operatorCallback, fetchRecordingFile } from '../api/pbx';
 import { getAgentNameById } from '../api/auth';
 import logger from '../utils/logger';
 import { useIncrementalList, useLoadMoreSentinel } from '../hooks/useIncrementalList';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { CrudPageBase } from '../modules/crud-base';
+
+/**
+ * Player da gravação de uma chamada: o áudio exige auth, então o download
+ * (blob) só acontece quando o operador clica em "Ouvir gravação".
+ */
+function CallRecordingPlayer({ recordingId }) {
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => () => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+  }, [audioUrl]);
+
+  const handleLoad = async (event) => {
+    event.stopPropagation();
+    if (loading || audioUrl) return;
+    setLoading(true);
+    setFailed(false);
+    try {
+      const blob = await fetchRecordingFile(recordingId);
+      setAudioUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      logger.warn('[Inbox] Falha ao carregar gravação da chamada', err);
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (audioUrl) {
+    return (
+      // eslint-disable-next-line jsx-a11y/media-has-caption
+      <audio controls src={audioUrl} className="inbox-media-audio" data-testid="call-recording-player" style={{ marginTop: '8px' }} />
+    );
+  }
+  return (
+    <div style={{ marginTop: '8px' }}>
+      <Button size="sm" variant="ghost" onClick={handleLoad} disabled={loading} aria-label="Ouvir gravação da chamada">
+        {loading ? 'Carregando áudio…' : failed ? 'Gravação indisponível — tentar de novo' : '🎧 Ouvir gravação'}
+      </Button>
+    </div>
+  );
+}
 
 export function InboxPage() {
   const { isAuthenticated, loading: authLoading, agent, capabilities } = useAuth();
@@ -1143,6 +1187,25 @@ export function InboxPage() {
                                     Retornar chamada
                                   </Button>
                                 </div>
+                              ) : null}
+                              {messageBody.transcription?.text ? (
+                                <div
+                                  className="text-text-secondary"
+                                  data-testid="call-transcription"
+                                  style={{
+                                    marginTop: '8px',
+                                    padding: '6px 8px',
+                                    borderLeft: '2px solid var(--color-border-default)',
+                                    fontSize: '13px',
+                                    fontStyle: 'italic',
+                                    whiteSpace: 'pre-wrap',
+                                  }}
+                                >
+                                  {messageBody.transcription.text}
+                                </div>
+                              ) : null}
+                              {messageBody.call.recordingId ? (
+                                <CallRecordingPlayer recordingId={messageBody.call.recordingId} />
                               ) : null}
                             </div>
                           ) : null}

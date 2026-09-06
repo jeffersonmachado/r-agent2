@@ -219,6 +219,43 @@ async function recordCallToInbox({ tenantId, call } = {}) {
     updated_at: now,
   });
 
+  // Gravação + transcrição: se o .wav já foi escaneado, anexa recordingId e,
+  // quando a policy permite, a transcrição. Best-effort.
+  if (call.uniqueid) {
+    try {
+      // eslint-disable-next-line global-require
+      const { linkRecordingToCallMessage } = require('./voiceRecordingLinkService');
+      await linkRecordingToCallMessage({ tenantId, uniqueid: call.uniqueid });
+    } catch (recErr) {
+      try {
+        logger.warn('[VoiceInboxBridge] Link de gravação best-effort falhou', {
+          tenantId, uniqueid: call.uniqueid, error: String(recErr?.message || recErr),
+        });
+      } catch (_) {}
+    }
+  }
+
+  // Customer 360: a chamada passa a constar na timeline do Workspace da
+  // entidade (resolvida por telefone), igual às mensagens dos demais canais.
+  // Best-effort: nunca quebra o registro da chamada.
+  try {
+    // Lazy require no mesmo padrão do channelGatewayService (evita ciclo).
+    // eslint-disable-next-line global-require
+    const WorkspaceLinkAutomationService = require('../workspace/WorkspaceLinkAutomationService');
+    const linkAutomation = new WorkspaceLinkAutomationService();
+    await linkAutomation.linkMessageReceived({
+      tenantId,
+      conversation: conversation.toJSON ? conversation.toJSON() : conversation,
+      messageId: row.id,
+    });
+  } catch (linkErr) {
+    try {
+      logger.warn('[VoiceInboxBridge] Workspace link best-effort falhou', {
+        tenantId, conversationId: conversation.id, error: String(linkErr?.message || linkErr),
+      });
+    } catch (_) {}
+  }
+
   // Chamada perdida inbound = precisa de retorno → unread + realtime.
   // Demais chamadas entram no histórico sem gerar interrupção.
   if (direction === 'in' && !answered) {

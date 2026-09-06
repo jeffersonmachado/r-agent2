@@ -64,10 +64,14 @@ function buildLeadModel(store) {
 }
 
 const registerInbound = jest.fn(async () => {});
+const linkMessageReceived = jest.fn(async () => null);
+const linkRecordingToCallMessage = jest.fn(async () => ({ linked: false, reason: 'recording_not_found' }));
 
 function loadService({ conversations = [], messages = [], leads = [] } = {}) {
   jest.resetModules();
   registerInbound.mockClear();
+  linkMessageReceived.mockClear();
+  linkRecordingToCallMessage.mockClear();
   jest.doMock('../../api/db/sequelize', () => ({ getSequelize: () => ({}) }));
   jest.doMock('../../api/db/models', () => ({
     ChannelConversation: () => buildConversationModel(conversations),
@@ -76,6 +80,11 @@ function loadService({ conversations = [], messages = [], leads = [] } = {}) {
   }));
   jest.doMock('../../api/services/channelConversationService', () => ({
     registerInboundMessageActivity: registerInbound,
+  }));
+  jest.doMock('../../api/services/workspace/WorkspaceLinkAutomationService', () =>
+    jest.fn().mockImplementation(() => ({ linkMessageReceived })));
+  jest.doMock('../../api/services/pbx/voiceRecordingLinkService', () => ({
+    linkRecordingToCallMessage,
   }));
   // eslint-disable-next-line global-require
   const service = require('../../api/services/pbx/voiceInboxBridgeService');
@@ -117,6 +126,32 @@ describe('voiceInboxBridgeService.recordCallToInbox', () => {
     expect(messages[0].body.text).toContain('Chamada perdida de 5511999887766');
     expect(messages[0].body.call).toMatchObject({ answered: false, direction: 'in', phone: '5511999887766' });
     expect(registerInbound).toHaveBeenCalledTimes(1);
+  });
+
+  test('ao registrar a chamada, dispara link para a timeline do Workspace e para a gravação (best-effort)', async () => {
+    const { service } = loadService();
+    const out = await service.recordCallToInbox({ tenantId: 'tenant-a', call: missedInbound });
+
+    expect(out.bridged).toBe(true);
+    expect(linkMessageReceived).toHaveBeenCalledTimes(1);
+    expect(linkMessageReceived).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-a',
+      messageId: out.messageId,
+    }));
+    expect(linkRecordingToCallMessage).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      uniqueid: '1700000000.1',
+    });
+  });
+
+  test('falha do link de Workspace/gravação NÃO quebra o registro da chamada', async () => {
+    linkMessageReceived.mockRejectedValueOnce(new Error('workspace down'));
+    linkRecordingToCallMessage.mockRejectedValueOnce(new Error('recording down'));
+    const { service, messages } = loadService();
+    const out = await service.recordCallToInbox({ tenantId: 'tenant-a', call: missedInbound });
+
+    expect(out.bridged).toBe(true);
+    expect(messages).toHaveLength(1);
   });
 
   test('chamada atendida inbound entra no histórico SEM unread', async () => {

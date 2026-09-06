@@ -64,6 +64,22 @@ async function scanAndUpsertRecordings({ tenantKey }) {
       await existing.update({ storage });
       upserted += 1;
     }
+
+    // Voice + Digital: se a chamada já está no Inbox, anexa recordingId e
+    // transcrição (policy-gated). Best-effort, nunca quebra o scan.
+    try {
+      // Lazy require: evita ciclo (voiceRecordingLinkService usa models/policy).
+      // eslint-disable-next-line global-require
+      const { linkRecordingToCallMessage } = require('./voiceRecordingLinkService');
+      await linkRecordingToCallMessage({ tenantId: tenantKey, uniqueid: parsed.uniqueid });
+    } catch (linkErr) {
+      try {
+        // eslint-disable-next-line global-require
+        require('../../utils/logger').warn('[PbxRecordings] Link da gravação com o Inbox falhou (best-effort)', {
+          tenantKey, uniqueid: parsed.uniqueid, error: String(linkErr?.message || linkErr),
+        });
+      } catch (_) {}
+    }
   }
 
   return { ok: true, scanned: wavs.length, upserted };
