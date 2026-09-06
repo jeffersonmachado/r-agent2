@@ -7,6 +7,12 @@ const { metricLabel, eventTypeLabel } = require('./operationalLanguage');
 const { EvidenceEngine } = require('./EvidenceEngine');
 const { GoalEngine } = require('./GoalEngine');
 const { MetricEngine } = require('./MetricEngine');
+const { detectAnomaly, projectToPeriodEnd } = require('./timeSeriesModel');
+
+// Janela de histórico por métrica usada pelo modelo de série temporal
+// (anomalia + projeção). O fallback de threshold usa apenas os 2 mais
+// recentes; o modelo usa até este limite para aprender trend e banda.
+const METRIC_HISTORY_LIMIT = 12;
 
 class InsightEngine {
   constructor({ evidenceEngine, goalEngine, metricEngine } = {}) {
@@ -126,28 +132,51 @@ class InsightEngine {
       const latest = snapshots[0];
       const previous = snapshots[1];
 
+      // Detector primário: anomalia contra trend + banda de variação
+      // aprendidos da série histórica (regressão linear — sem constante
+      // hardcoded). Com histórico insuficiente, fallback no threshold de 20%.
+      const anomaly = detectAnomaly(snapshots);
+
       const latestValue = toNumber(latest.value, 0);
       const previousValue = toNumber(previous.value, 0);
-      if (previousValue === 0) continue;
 
-      const changeRatio = (latestValue - previousValue) / Math.abs(previousValue);
+      let changeRatio;
+      let detection = null;
+      if (anomaly) {
+        if (!anomaly.anomalous) continue;
+        changeRatio = anomaly.changeRatio;
+        detection = anomaly;
+      } else {
+        if (previousValue === 0) continue;
+
+        changeRatio = (latestValue - previousValue) / Math.abs(previousValue);
+        if (Math.abs(changeRatio) < 0.2) continue;
+      }
+
       const absRatio = Math.abs(changeRatio);
-      if (absRatio < 0.2) continue;
-
       const trendType = changeRatio > 0 ? 'metric_increase' : 'metric_drop';
       const trendLabel = changeRatio > 0 ? 'aumento' : 'queda';
       const humanLabel = metricLabel(metricKey);
       const title = `${trendLabel} relevante em ${humanLabel}`;
       const probableCauses = this._buildProbableCauses({ metricKey, snapshotsByMetric });
+      const forecast = projectToPeriodEnd(snapshots, { periodEnd: periodBounds.end });
+
+      const baseDescription = detection
+        ? `O indicador ${humanLabel} saiu do padrao esperado: observado ${detection.observed} contra ~${detection.expected} projetado pelo historico (desvio de ${Math.round(absRatio * 100)}% alem da variacao normal).`
+        : `O indicador ${humanLabel} variou ${Math.round(changeRatio * 100)}% no periodo analisado.`;
+
+      const zScoreAbs = detection && Number.isFinite(detection.zScore) ? Math.abs(detection.zScore) : (detection ? 3.5 : 0);
 
       candidates.push({
         type: trendType,
         title,
         description: this._enrichInsightDescription(
-          `O indicador ${humanLabel} variou ${Math.round(changeRatio * 100)}% no periodo analisado.`,
-          { probableCauses },
+          baseDescription,
+          { probableCauses, forecast },
         ),
-        confidence: Math.min(0.95, 0.55 + absRatio),
+        confidence: detection
+          ? Math.min(0.95, 0.6 + Math.min(0.35, zScoreAbs / 10))
+          : Math.min(0.95, 0.55 + absRatio),
         impact: absRatio >= 0.5 ? 'high' : 'medium',
         source: 'metric_engine',
         relatedMetrics: [metricKey],
@@ -155,6 +184,8 @@ class InsightEngine {
           changeRatio,
           latestSnapshotId: latest.id,
           previousSnapshotId: previous.id,
+          ...(detection ? { anomaly: detection } : { detectionMethod: 'threshold_fallback' }),
+          ...(forecast ? { forecast } : {}),
           ...(probableCauses.length > 0 ? { probableCauses } : {}),
         },
         evidences: [
@@ -278,7 +309,7 @@ class InsightEngine {
       const ordered = list
         .slice()
         .sort((a, b) => this._snapshotSortValue(b) - this._snapshotSortValue(a))
-        .slice(0, 3);
+        .slice(0, METRIC_HISTORY_LIMIT);
       grouped.set(metricKey, ordered);
     }
 
@@ -313,7 +344,7 @@ class InsightEngine {
       const key = String(item.metric_key || 'unknown');
       if (!grouped.has(key)) grouped.set(key, []);
       const list = grouped.get(key);
-      if (list.length < 3) list.push(item);
+      if (list.length < METRIC_HISTORY_LIMIT) list.push(item);
     }
 
     return grouped;
@@ -385,7 +416,7 @@ class InsightEngine {
     };
   }
 
-  _enrichInsightDescription(base, { probableCauses = [], projection = null } = {}) {
+  _enrichInsightDescription(base, { probableCauses = [], projection = null, forecast = null } = {}) {
     const parts = [base];
     if (probableCauses.length > 0) {
       const formatted = probableCauses
@@ -396,6 +427,10 @@ class InsightEngine {
     if (projection) {
       const label = projection.projectedStatus === 'will_meet' ? 'atinge a meta' : 'nao atinge a meta';
       parts.push(`Projecao: no ritmo atual, o periodo fecha em ~${projection.projectedValue} (alvo ${projection.targetValue}) — previsao: ${label}.`);
+    }
+    if (forecast) {
+      const trendLabel = forecast.direction === 'up' ? 'de alta' : forecast.direction === 'down' ? 'de queda' : 'de estabilidade';
+      parts.push(`Projecao para o fechamento do periodo: ~${forecast.projectedValue} (tendencia ${trendLabel}).`);
     }
     return parts.join(' ');
   }
