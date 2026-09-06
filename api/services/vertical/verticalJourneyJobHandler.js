@@ -330,6 +330,51 @@ async function handleFitnessJourneyTick(job) {
 
   await handleFitnessInactivityScan({ tenantId });
   await handleFitnessGraceExpiryScan({ tenantId });
+  await handleFitnessChurnModelRetrain({ tenantId });
+}
+
+/**
+ * Trigger pós-loop: retreina o modelo de churn (ML) depois que a jornada
+ * processou presenças e sinais. NÃO é agendador — dispara como etapa final
+ * do próprio tick fitness, com throttle para não retreinar a cada tick.
+ *
+ * Fail-soft por desenho: tenant sem massa mínima (INSUFFICIENT_TRAINING_DATA)
+ * ou com erro de treino apenas registra log — o loop nunca quebra por causa
+ * do ML. Sem modelo treinado, o scoring segue fail-closed (AI_ML_REQUIRED).
+ */
+const RETRAIN_MIN_INTERVAL_HOURS = Number(process.env.VERTICAL_CHURN_RETRAIN_INTERVAL_HOURS) || 24;
+
+async function handleFitnessChurnModelRetrain({ tenantId: tid, payload } = {}) {
+  const tenantId = safeStr(tid || payload?.tenantId || '');
+  if (!tenantId || !dbAvailable()) return { retrained: false, reason: 'skipped' };
+
+  try {
+    // eslint-disable-next-line global-require
+    const churn = require('./churnModelService');
+    const active = await churn.getActiveModel({ tenantId });
+    if (active?.trained_at) {
+      const ageMs = Date.now() - new Date(active.trained_at).getTime();
+      if (ageMs < RETRAIN_MIN_INTERVAL_HOURS * 3600e3) {
+        return { retrained: false, reason: 'fresh_model', modelVersion: active.version };
+      }
+    }
+
+    const trained = await churn.trainFitnessChurnModel({ tenantId });
+    logger.info('[VerticalJourney] fitness churn model retrained (trigger pós-loop)', {
+      tenantId,
+      version: trained.version,
+      auc: trained.metrics?.auc,
+      samples: trained.metrics?.samples,
+    });
+    return { retrained: true, modelVersion: trained.version };
+  } catch (err) {
+    if (err?.code === 'INSUFFICIENT_TRAINING_DATA') {
+      logger.info('[VerticalJourney] fitness churn retrain skipped (massa insuficiente)', { tenantId });
+    } else {
+      logger.warn('[VerticalJourney] fitness churn retrain failed', { tenantId, error: err?.message });
+    }
+    return { retrained: false, reason: err?.code || 'error' };
+  }
 }
 
 /**
@@ -585,6 +630,8 @@ module.exports = {
   handleFitnessJourneyTick,
   handleFitnessInactivityScan,
   handleFitnessGraceExpiryScan,
+  handleFitnessChurnModelRetrain,
+  RETRAIN_MIN_INTERVAL_HOURS,
   handleVerticalReconciliation,
   withJobTimeout,
 };
