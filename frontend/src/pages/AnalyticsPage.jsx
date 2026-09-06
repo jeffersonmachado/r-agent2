@@ -21,6 +21,12 @@ import { AnalyticsVoiceAndTokensSection } from './analytics/AnalyticsVoiceAndTok
 import { AnalyticsSupportMetricsSection } from './analytics/AnalyticsSupportMetricsSection';
 import { AnalyticsRoiAndFunnelSection } from './analytics/AnalyticsRoiAndFunnelSection';
 import { AnalyticsOrdersAndPhysicalSection } from './analytics/AnalyticsOrdersAndPhysicalSection';
+import { AnalyticsDecisionIntelligenceSection } from './analytics/AnalyticsDecisionIntelligenceSection';
+import {
+  applyTenantRecommendation,
+  listTenantInsights,
+  listTenantRecommendations,
+} from '../api/intelligence';
 
 export function AnalyticsPage() {
   const ORDER_HOUR_METRICS = ['created_count', 'confirmed_count', 'preparing_count', 'ready_count', 'dispatched_count', 'delivered_count', 'cancelled_count'];
@@ -44,6 +50,9 @@ export function AnalyticsPage() {
   }, [isAuthenticated, authLoading, navigate]);
 
   const [metrics, setMetrics] = useState(null);
+  const [intelligenceInsights, setIntelligenceInsights] = useState([]);
+  const [intelligenceRecommendations, setIntelligenceRecommendations] = useState([]);
+  const [applyingRecommendationId, setApplyingRecommendationId] = useState(null);
   const [roiMetrics, setRoiMetrics] = useState(null);
   const [funnelMetrics, setFunnelMetrics] = useState(null);
   const [orderMetrics, setOrderMetrics] = useState(null);
@@ -68,6 +77,7 @@ export function AnalyticsPage() {
   useEffect(() => {
     if (isAuthenticated) {
       loadMetrics();
+      loadIntelligence();
     }
   }, [dateRange, isAuthenticated, selectedWindowDays, selectedLocationId]);
 
@@ -179,6 +189,50 @@ export function AnalyticsPage() {
       showToast('Erro ao carregar métricas', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Decision Intelligence: fail-soft — se a camada de inteligencia falhar
+  // (ex.: permissao), as metricas descritivas continuam carregando.
+  const loadIntelligence = async () => {
+    try {
+      const [insightsResult, recommendationsResult] = await Promise.all([
+        listTenantInsights({ status: 'open', limit: 5 }),
+        listTenantRecommendations({ status: 'open', limit: 5 }),
+      ]);
+      setIntelligenceInsights(insightsResult?.items || []);
+      setIntelligenceRecommendations(recommendationsResult?.items || []);
+    } catch (error) {
+      logger.warn('[AnalyticsPage] Inteligencia decisoria indisponivel:', error?.message || error);
+      setIntelligenceInsights([]);
+      setIntelligenceRecommendations([]);
+    }
+  };
+
+  const handleApplyIntelligenceRecommendation = async (recommendation) => {
+    if (!recommendation?.id) return;
+    setApplyingRecommendationId(recommendation.id);
+    try {
+      const result = await applyTenantRecommendation(recommendation.id);
+      const execution = result?.execution
+        || result?.recommendation?.metadata?.application?.executedAction
+        || null;
+      if (execution?.status === 'executed') {
+        showToast('Recomendação aplicada — tarefa criada no Workspace.', 'success');
+      } else if (execution?.status === 'failed') {
+        showToast('Recomendação aplicada, mas a ação automática falhou. Crie a tarefa manualmente.', 'warning');
+      } else {
+        showToast('Recomendação aplicada.', 'success');
+      }
+      await loadIntelligence();
+    } catch (error) {
+      if (error?.status === 403 || error?.body?.error === 'forbidden') {
+        showToast('Sem permissão para aplicar recomendações.', 'error');
+      } else {
+        showToast('Não foi possível aplicar a recomendação.', 'error');
+      }
+    } finally {
+      setApplyingRecommendationId(null);
     }
   };
 
@@ -613,6 +667,13 @@ export function AnalyticsPage() {
           Painel com KPIs e indicadores em tempo real
         </p>
       </div>
+
+      <AnalyticsDecisionIntelligenceSection
+        insights={intelligenceInsights}
+        recommendations={intelligenceRecommendations}
+        applyingId={applyingRecommendationId}
+        onApplyRecommendation={handleApplyIntelligenceRecommendation}
+      />
 
       <AnalyticsRoiAndFunnelSection
         selectedWindowDays={selectedWindowDays}
