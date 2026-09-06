@@ -11,7 +11,7 @@ function Card({ title, children, loading = false }) {
   );
 }
 
-export function WorkspaceRightRail({ summary, insights, actions, incidents, loadingInsights, loadingActions, loadingIncidents, classification = 'PRODUCTION', onExecuteSuggestion }) {
+export function WorkspaceRightRail({ summary, insights, actions, incidents, loadingInsights, loadingActions, loadingIncidents, classification = 'PRODUCTION', onExecuteSuggestion, onApplyTenantRecommendation }) {
   const labels = getOperationalLabels(classification);
   const devSurfaceVisible = isDevSurfaceVisible(classification);
   const insightItems = [...(insights?.items || []), ...(insights?.persisted || [])];
@@ -43,6 +43,35 @@ export function WorkspaceRightRail({ summary, insights, actions, incidents, load
           </>
         ) : <p className="workspace-muted text-sm">Nenhuma ação sugerida no momento.</p>}
       </Card>
+
+      {actions?.tenantRecommendation ? (
+        <Card title="Recomendação inteligente" loading={loadingActions}>
+          <strong>{actions.tenantRecommendation.title}</strong>
+          <p className="workspace-muted text-sm mt-2">{actions.tenantRecommendation.description}</p>
+          {actions.tenantRecommendation.probableCauses?.length > 0 ? (
+            <p className="workspace-muted text-sm mt-2">
+              Possíveis causas: {actions.tenantRecommendation.probableCauses
+                .map((cause) => `${cause.metricKey} (${cause.direction === 'up' ? '+' : ''}${Math.round(cause.changeRatio * 100)}%)`)
+                .join(', ')}
+            </p>
+          ) : null}
+          {actions.tenantRecommendation.projection ? (
+            <p className="workspace-muted text-sm mt-2">
+              Projeção de fechamento: ~{actions.tenantRecommendation.projection.projectedValue} vs alvo {actions.tenantRecommendation.projection.targetValue}
+              ({actions.tenantRecommendation.projection.projectedStatus === 'will_meet' ? 'atinge a meta' : 'não atinge a meta'})
+            </p>
+          ) : null}
+          {onApplyTenantRecommendation ? (
+            <button
+              className="workspace-action-button mt-3"
+              type="button"
+              onClick={() => onApplyTenantRecommendation(actions.tenantRecommendation)}
+            >
+              Aplicar recomendação
+            </button>
+          ) : null}
+        </Card>
+      ) : null}
 
       <Card title="Health Score">
         <div className={`workspace-health-card ${summary?.healthTone || 'healthy'}`}>

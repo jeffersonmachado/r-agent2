@@ -40,6 +40,7 @@ export function WorkspaceLayout({
   onLoadMoreTimeline,
   onCreateSuggestedAction,
   onExecuteSuggestion,
+  onApplyTenantRecommendation,
   onCreateTask,
   onCreateFollowUp,
   onRegisterPayment,
@@ -117,6 +118,7 @@ export function WorkspaceLayout({
                   loadingIncidents={loadingIncidents}
                   classification={classification}
                   onExecuteSuggestion={onExecuteSuggestion}
+                  onApplyTenantRecommendation={onApplyTenantRecommendation}
                 />
               </div>
             </div>

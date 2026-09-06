@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-09-06T06:40:31.600Z",
+  "generatedAt": "2026-09-06T08:27:23.357Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260906-033840.zip",
-  "zipHash": "4f2082f4f9ada1dbcef04b853eed270ac48490314544da2dafbac505981f635e",
-  "manifestHash": "d1378f98daa32f1bdd0a398673f87b77c07d623515cf8241bc4fe858e2a00753",
+  "zipName": null,
+  "zipHash": null,
+  "manifestHash": "b5f3479ed778cb1e80c6fc27c478ba2cc1ba349e062c440e6b222da56885c4cf",
   "replayHash": "c5081f6a0de699927e4b2d51adeb3b24d909327d5c94c1b1f2e101a2796cda0d",
-  "governanceHash": "4f9a371c76c2a08c196201d67edcb1176c4a0ae816f3ba726674040dfb5c581e",
-  "readinessHash": "a7a342e19f067f9298085a65a0b56971391f0e3bf0c60bb1384e157175419c9a",
+  "governanceHash": "bae9cea96f3e06293582fe6f34ba7e9133f81ebe16e8431d4d0be8775a5d3a35",
+  "readinessHash": "af012759142e1893daf216146bceb2727a8dbd9eb051b81637fd25959a4dbf20",
   "consistencyHash": "bdd3ea22ddbcf4371d53d4a2b03f2d363b9fb991764f25fc4d8551b18c8b9f61",
   "contaminationHash": "f9ec1ee064e224ada2ea4092b9546de4b17a89e2643076fecc3ef213845ee90f",
-  "packageIntegrityHash": "9e5173b869c45a0852a500646fb75bdfc8093919db0476394b8132cd2e7e71db",
+  "packageIntegrityHash": "be91c83ec18c4256466b159a2465073af514a947be73134c9b27dde4d390a51c",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "deb8b2c2cce0197c4c80bf0ab838c9f3e24b24cdd17ed0bea28615ee24f5c4d5",
-  "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
+  "gateHash": "1057e381f05877d1e412553a8f9435684fe90186dc6e7bfb4519de7d9ff77205",
+  "recalculatedReadinessHash": "9987274c3ca0757dcf308f5c8d9051d7048f1c0bdac5b79ab4ea265236eb2bd9",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
@@ -28,5 +28,5 @@
   "autonomousReady": true,
   "mandatoryFailures": [],
   "ok": true,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260906-033840.zip. Package: ÍNTEGRO. Validadores falhos: 0."
+  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 0."
 }

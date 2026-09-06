@@ -15,6 +15,57 @@ class WorkspaceActionService {
     this.insightService = deps.insightService || new WorkspaceInsightService(deps);
     this.operationsService = deps.operationsService || new WorkspaceOperationsService(deps);
     this.logger = deps.logger || logger;
+    this._recommendationEngine = deps.recommendationEngine || null;
+  }
+
+  // Lazy require: evita ciclo de dependencia com o tenant-intelligence e
+  // mantem o Workspace funcional mesmo se a inteligencia falhar.
+  get recommendationEngine() {
+    if (!this._recommendationEngine) {
+      // eslint-disable-next-line global-require
+      const { RecommendationEngine } = require('../../core/tenant-intelligence/RecommendationEngine');
+      this._recommendationEngine = new RecommendationEngine();
+    }
+    return this._recommendationEngine;
+  }
+
+  /**
+   * Unifica RecommendationEngine (tenant-intelligence) com o Workspace: a
+   * recomendacao aberta de maior prioridade vira acao contextual onde o
+   * operador trabalha. Shape allowlisted (sem metadata bruto) e fail-closed:
+   * qualquer falha da inteligencia resulta em null, sem derrubar o Workspace.
+   */
+  async topTenantRecommendation({ tenantId } = {}) {
+    if (!tenantId) return null;
+    try {
+      const result = await this.recommendationEngine.listRecommendations({
+        tenantId,
+        status: 'open',
+        limit: 100,
+      });
+      const items = Array.isArray(result?.items) ? result.items : [];
+      if (items.length === 0) return null;
+
+      const weight = { high: 3, medium: 2, low: 1 };
+      const top = items
+        .slice()
+        .sort((a, b) => (weight[b.priority] || 0) - (weight[a.priority] || 0))[0];
+
+      const metadata = top.metadata && typeof top.metadata === 'object' ? top.metadata : {};
+      return {
+        id: top.id,
+        title: top.title,
+        description: top.description,
+        priority: top.priority,
+        createdAt: top.createdAt || top.created_at || null,
+        probableCauses: Array.isArray(metadata.probableCauses) ? metadata.probableCauses : [],
+        projection: metadata.projection && typeof metadata.projection === 'object' ? metadata.projection : null,
+        action: metadata.action && typeof metadata.action === 'object' ? metadata.action : null,
+      };
+    } catch (err) {
+      this.logger.warn('[WorkspaceAction] Falha ao buscar recomendacao do tenant', { tenantId, error: err.message });
+      return null;
+    }
   }
 
   async listActions({ tenantId, entityId, limit = 50 }) {

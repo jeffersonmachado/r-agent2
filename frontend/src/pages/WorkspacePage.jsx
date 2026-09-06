@@ -13,6 +13,7 @@ import {
   listWorkspaceEntities,
 } from '../api/workspace';
 import { WorkspaceLayout } from '../modules/workspace/WorkspaceLayout';
+import { applyTenantRecommendation } from '../api/intelligence';
 import {
   PaymentActionModal,
   ScheduleActionModal,
@@ -319,6 +320,36 @@ export function WorkspacePage() {
     handleCreateSuggestedAction(suggestion);
   }, [handleCreateSuggestedAction, navigate]);
 
+  // Unificacao recommendation <-> NBA: aplica a recomendacao do tenant
+  // (Decision Intelligence) direto do Workspace. O apply executa a acao real
+  // (ex.: cria tarefa) e o resultado e explicitado no toast.
+  const handleApplyTenantRecommendation = useCallback(async (recommendation) => {
+    if (!recommendation?.id) return;
+    try {
+      const result = await applyTenantRecommendation(recommendation.id);
+      const execution = result?.execution
+        || result?.recommendation?.metadata?.application?.executedAction
+        || null;
+      if (execution?.status === 'executed') {
+        showToast('Recomendação aplicada — tarefa criada no Workspace.', 'success');
+      } else if (execution?.status === 'failed') {
+        showToast('Recomendação aplicada, mas a ação automática falhou. Crie a tarefa manualmente.', 'warning');
+      } else {
+        showToast('Recomendação aplicada.', 'success');
+      }
+      if (selectedEntityId) {
+        const refreshed = await getWorkspaceActions(selectedEntityId);
+        setActions(refreshed);
+      }
+    } catch (error) {
+      if (error?.status === 403 || error?.body?.error === 'forbidden') {
+        showToast('Sem permissão para aplicar recomendações.', 'error');
+      } else {
+        showToast('Não foi possível aplicar a recomendação.', 'error');
+      }
+    }
+  }, [selectedEntityId, showToast]);
+
   return (
     <>
       <WorkspaceLayout
@@ -347,6 +378,7 @@ export function WorkspacePage() {
         onLoadMoreTimeline={handleLoadMoreTimeline}
         onCreateSuggestedAction={handleCreateSuggestedAction}
         onExecuteSuggestion={handleExecuteSuggestion}
+        onApplyTenantRecommendation={handleApplyTenantRecommendation}
         onCreateTask={() => setActionModal({ kind: 'task', taskType: 'task' })}
         onCreateFollowUp={() => setActionModal({ kind: 'task', taskType: 'followup' })}
         onRegisterPayment={() => setActionModal({ kind: 'payment' })}

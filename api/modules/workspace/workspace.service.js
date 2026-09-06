@@ -29,8 +29,12 @@ function createWorkspaceService(deps = {}) {
       return insightService.generateInsights(entityId, { tenantId, timeline, includeTechnical: classification === 'DEVELOPMENT' });
     },
     getActions: async (tenantId, entityId, { classification } = {}) => {
-      const [items, suggestion] = await Promise.all([actionService.listActions({ tenantId, entityId }), actionService.suggestNextBestAction({ tenantId, entityId, classification })]);
-      return { items, suggestion };
+      const [items, suggestion, tenantRecommendation] = await Promise.all([
+        actionService.listActions({ tenantId, entityId }),
+        actionService.suggestNextBestAction({ tenantId, entityId, classification }),
+        actionService.topTenantRecommendation({ tenantId }),
+      ]);
+      return { items, suggestion, tenantRecommendation };
     },
     getAutoCorrections: async (tenantId, entityId) => {
       const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0, internal: true });
