@@ -29,6 +29,15 @@ jest.mock('../../api/core/tenant-intelligence/TenantIntelligenceService', () => 
       recommendation: { id: 'reco-1', status: 'completed' },
       outcome: { outcome: 'improved', metrics: [] },
     })),
+    applyAllOpenRecommendations: jest.fn(async () => ({
+      ok: true,
+      applied: 2,
+      failed: 0,
+      results: [
+        { recommendationId: 'reco-1', ok: true },
+        { recommendationId: 'reco-2', ok: true },
+      ],
+    })),
   };
 
   return {
@@ -241,6 +250,96 @@ describe('recommendation action routes (apply/dismiss/outcome)', () => {
     }));
 
     expect(handled).toBe(false);
+  });
+});
+
+describe('recommendation batch route (apply-all)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    intelligenceServiceModule.getTenantIntelligenceService.mockImplementation(() => getService());
+    getService().applyAllOpenRecommendations.mockResolvedValue({
+      ok: true,
+      applied: 2,
+      failed: 0,
+      results: [
+        { recommendationId: 'reco-1', ok: true },
+        { recommendationId: 'reco-2', ok: true },
+      ],
+    });
+  });
+
+  test('POST apply-all com analytics:write chama o service com tenantId, actor e limit', async () => {
+    const deps = createDeps({
+      parseJsonBody: jest.fn(async () => ({ limit: 25 })),
+    });
+    const handled = await handleIntelligenceRoutes(buildCtx({
+      pathname: '/api/intelligence/recommendations/apply-all',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.requirePermission).toHaveBeenCalledWith(expect.anything(), 'analytics', 'write');
+    expect(getService().applyAllOpenRecommendations).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actor: 'admin-user',
+      limit: 25,
+    });
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 200, expect.objectContaining({
+      ok: true,
+      applied: 2,
+      failed: 0,
+    }));
+  });
+
+  test('apply-all NAO e confundido com recommendationId (nao cai no apply individual)', async () => {
+    const deps = createDeps();
+    const handled = await handleIntelligenceRoutes(buildCtx({
+      pathname: '/api/intelligence/recommendations/apply-all',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(getService().applyAllOpenRecommendations).toHaveBeenCalled();
+    expect(getService().applyRecommendation).not.toHaveBeenCalled();
+  });
+
+  test('POST apply-all sem analytics:write retorna 403 forbidden', async () => {
+    const deps = createDeps({ requirePermission: jest.fn(() => ({ allowed: false, error: 'sem permissao' })) });
+    const handled = await handleIntelligenceRoutes(buildCtx({
+      pathname: '/api/intelligence/recommendations/apply-all',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 403, expect.objectContaining({ error: 'forbidden' }));
+    expect(getService().applyAllOpenRecommendations).not.toHaveBeenCalled();
+  });
+
+  test('POST apply-all sem auth retorna 401', async () => {
+    const deps = createDeps({ requireAuth: jest.fn(() => ({ valid: false, error: 'token invalido' })) });
+    const handled = await handleIntelligenceRoutes({
+      req: { url: '/api/intelligence/recommendations/apply-all' },
+      res: {},
+      method: 'POST',
+      pathname: '/api/intelligence/recommendations/apply-all',
+      deps,
+    });
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 401, expect.objectContaining({ error: 'unauthorized' }));
+    expect(getService().applyAllOpenRecommendations).not.toHaveBeenCalled();
+  });
+
+  test('erro inesperado do service retorna 500', async () => {
+    getService().applyAllOpenRecommendations.mockRejectedValue(new Error('boom'));
+    const deps = createDeps();
+    const handled = await handleIntelligenceRoutes(buildCtx({
+      pathname: '/api/intelligence/recommendations/apply-all',
+      deps,
+    }));
+
+    expect(handled).toBe(true);
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 500, expect.objectContaining({ error: 'internal_error' }));
   });
 });
 

@@ -21,6 +21,7 @@ vi.mock('../components/Toast', () => ({
 }));
 
 vi.mock('../api/intelligence', () => ({
+  applyAllTenantRecommendations: vi.fn(),
   applyTenantRecommendation: vi.fn(),
   dismissTenantRecommendation: vi.fn(),
   evaluateTenantRecommendationOutcome: vi.fn(),
@@ -36,6 +37,12 @@ vi.mock('../api/intelligence', () => ({
   updateTenantGoal: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock('../api/tenantCapabilities', () => ({
+  getTenantCapabilities: vi.fn().mockResolvedValue({
+    capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'suggest' },
+  }),
+}));
+
 const openRecommendation = {
   id: 'rec-1',
   title: 'Reduzir backlog de tickets',
@@ -46,6 +53,15 @@ const openRecommendation = {
   estimated_impact: 'high',
   metadata: {},
 };
+
+// resetMocks:true (vitest.config) zera implementações de factory antes de cada
+// teste — o default de capabilities precisa ser rearmado no nível do arquivo.
+beforeEach(async () => {
+  const { getTenantCapabilities } = await import('../api/tenantCapabilities');
+  getTenantCapabilities.mockResolvedValue({
+    capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'suggest' },
+  });
+});
 
 describe('TenantIntelligencePage — recomendações executáveis', () => {
   beforeEach(() => {
@@ -276,5 +292,136 @@ describe('TenantIntelligencePage — recomendações executáveis', () => {
     await screen.findByText('queda relevante em operations.tickets_open');
     expect(screen.queryByText(/Possíveis causas:/)).toBeNull();
     expect(screen.queryByText(/Projeção de fechamento:/)).toBeNull();
+  });
+});
+
+describe('TenantIntelligencePage — Autonomy UX', () => {
+  beforeEach(async () => {
+    const { getTenantCapabilities } = await import('../api/tenantCapabilities');
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    getTenantCapabilities.mockResolvedValue({
+      capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'suggest' },
+    });
+    listTenantRecommendations.mockResolvedValue({ items: [] });
+  });
+
+  it("botão 'Aprovar todas' NÃO aparece no nível suggest (default)", async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({ items: [openRecommendation] });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Aplicar recomendação');
+    expect(screen.queryByText('Aprovar todas as recomendações abertas')).toBeNull();
+  });
+
+  it("nível approve exibe 'Aprovar todas' e o clique aplica em lote e recarrega as abertas", async () => {
+    const { getTenantCapabilities } = await import('../api/tenantCapabilities');
+    const { listTenantRecommendations, applyAllTenantRecommendations } = await import('../api/intelligence');
+    getTenantCapabilities.mockResolvedValue({
+      capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'approve' },
+    });
+    listTenantRecommendations.mockResolvedValue({ items: [openRecommendation] });
+    applyAllTenantRecommendations.mockResolvedValue({
+      ok: true,
+      applied: 1,
+      failed: 0,
+      results: [{ recommendationId: 'rec-1', ok: true }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    const batchButton = await screen.findByText('Aprovar todas as recomendações abertas');
+    fireEvent.click(batchButton);
+
+    await waitFor(() => {
+      expect(applyAllTenantRecommendations).toHaveBeenCalledWith({ limit: 50 });
+    });
+    await waitFor(() => {
+      expect(testDoubles.toast.showToast).toHaveBeenCalledWith('1 recomendações aplicadas', 'success');
+    });
+    // Recarga das abertas após o lote.
+    await waitFor(() => {
+      expect(listTenantRecommendations.mock.calls.filter(
+        (call) => call[0] && call[0].status === 'open',
+      ).length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it("falha parcial no lote exibe toast de erro com contagem", async () => {
+    const { getTenantCapabilities } = await import('../api/tenantCapabilities');
+    const { listTenantRecommendations, applyAllTenantRecommendations } = await import('../api/intelligence');
+    getTenantCapabilities.mockResolvedValue({
+      capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'approve' },
+    });
+    listTenantRecommendations.mockResolvedValue({ items: [openRecommendation] });
+    applyAllTenantRecommendations.mockResolvedValue({
+      ok: true,
+      applied: 0,
+      failed: 1,
+      results: [{ recommendationId: 'rec-1', ok: false, error: 'boom' }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    const batchButton = await screen.findByText('Aprovar todas as recomendações abertas');
+    fireEvent.click(batchButton);
+
+    await waitFor(() => {
+      expect(testDoubles.toast.showToast).toHaveBeenCalledWith(
+        '0 recomendações aplicadas; 1 não puderam ser aplicadas',
+        'error',
+      );
+    });
+  });
+
+  it("recomendação aplicada com origin 'auto' exibe badge 'Aplicada automaticamente'", async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-auto',
+        status: 'applied',
+        metadata: {
+          application: {
+            appliedAt: '2026-09-06T10:00:00.000Z',
+            appliedBy: 'system',
+            origin: 'auto',
+            baseline: [],
+            expectedDirection: 'down',
+          },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Aplicada automaticamente');
+    expect(screen.getByText('Aplicada')).toBeTruthy();
+  });
+
+  it("recomendação aplicada manualmente NÃO exibe o badge de automática", async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-manual',
+        status: 'applied',
+        metadata: {
+          application: {
+            appliedAt: '2026-09-06T10:00:00.000Z',
+            appliedBy: 'agent-1',
+            origin: 'manual',
+            baseline: [],
+            expectedDirection: 'down',
+          },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Aplicada');
+    expect(screen.queryByText('Aplicada automaticamente')).toBeNull();
   });
 });

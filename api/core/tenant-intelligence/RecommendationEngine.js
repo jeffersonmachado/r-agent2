@@ -24,6 +24,7 @@ class RecommendationEngine {
   constructor(deps = {}) {
     this._workspaceOperations = deps.workspaceOperations || null;
     this._evidenceEngine = deps.evidenceEngine || null;
+    this._capabilitiesService = deps.capabilitiesService || null;
   }
 
   // Lazy defaults: evitam custo/ciclos de require e mantêm os testes de
@@ -44,6 +45,14 @@ class RecommendationEngine {
       this._evidenceEngine = new EvidenceEngine();
     }
     return this._evidenceEngine;
+  }
+
+  get capabilitiesService() {
+    if (!this._capabilitiesService) {
+      // eslint-disable-next-line global-require
+      this._capabilitiesService = require('../../services/tenantCapabilitiesService');
+    }
+    return this._capabilitiesService;
   }
 
   async listRecommendations({ tenantId, status = null, limit = 100 } = {}) {
@@ -97,12 +106,114 @@ class RecommendationEngine {
       created.push(createdItem);
     }
 
+    // Autonomy UX: nível de autonomia do tenant decide se as recomendações
+    // recém-criadas são aplicadas automaticamente (autonomous/exception_only)
+    // ou aguardam decisão humana (suggest/approve). Fail-soft explícito:
+    // indisponibilidade de capabilities fica declarada no resultado.
+    const autoApply = await this._maybeAutoApply({ tenantId, created });
+
     return {
       ok: true,
       created: created.length,
       skipped,
       recommendations: created,
+      autoApply,
     };
+  }
+
+  /**
+   * Auto-apply governado pelo autonomyLevel do tenant:
+   *   suggest/approve → nenhuma aplicação automática;
+   *   autonomous      → aplica todas as recém-criadas (actor 'system');
+   *   exception_only  → aplica todas, exceto priority 'high' (exceções humanas).
+   * Falhas individuais são contadas, sem derrubar a geração.
+   */
+  async _maybeAutoApply({ tenantId, created = [] } = {}) {
+    if (!Array.isArray(created) || created.length === 0) {
+      return { attempted: false, reason: 'no_recommendations_created' };
+    }
+
+    let autonomyLevel = 'suggest';
+    try {
+      const capabilities = await this.capabilitiesService.getTenantCapabilities(tenantId);
+      autonomyLevel = capabilities?.autonomyLevel || 'suggest';
+    } catch (err) {
+      return { attempted: false, reason: 'capabilities_unavailable' };
+    }
+
+    if (autonomyLevel !== 'autonomous' && autonomyLevel !== 'exception_only') {
+      return { attempted: false, reason: 'manual_autonomy', autonomyLevel };
+    }
+
+    let applied = 0;
+    let failed = 0;
+    let skippedHighPriority = 0;
+
+    for (const item of created) {
+      if (autonomyLevel === 'exception_only' && item?.priority === 'high') {
+        skippedHighPriority += 1;
+        continue;
+      }
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await this.applyRecommendation({
+          tenantId,
+          recommendationId: item.id,
+          actor: 'system',
+          origin: 'auto',
+        });
+        if (result?.ok) applied += 1; else failed += 1;
+      } catch (err) {
+        failed += 1;
+      }
+    }
+
+    return {
+      attempted: true,
+      autonomyLevel,
+      applied,
+      failed,
+      ...(skippedHighPriority > 0 ? { skippedHighPriority } : {}),
+    };
+  }
+
+  /**
+   * Aplica em lote as recomendações abertas do tenant ("Aprovar todas" do
+   * nível approve). Falha individual não interrompe o lote; cada item
+   * falho fica explícito em results.
+   */
+  async applyAllOpen({ tenantId, actor, limit = 50 } = {}) {
+    if (!tenantId) throw new Error('tenantId is required');
+
+    const { items } = await this.listRecommendations({ tenantId, status: 'open', limit });
+
+    let applied = 0;
+    let failed = 0;
+    const results = [];
+
+    for (const item of items || []) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await this.applyRecommendation({
+          tenantId,
+          recommendationId: item.id,
+          actor,
+          origin: 'batch',
+        });
+        if (result?.ok) {
+          applied += 1;
+          results.push({ recommendationId: item.id, ok: true });
+        } else {
+          failed += 1;
+          results.push({ recommendationId: item.id, ok: false, error: 'apply_not_ok' });
+        }
+      } catch (err) {
+        failed += 1;
+        results.push({ recommendationId: item.id, ok: false, error: String(err?.code || err?.message || err) });
+      }
+    }
+
+    return { ok: true, applied, failed, results };
   }
 
   async createRecommendation({ tenantId, payload = {} } = {}) {
@@ -134,7 +245,7 @@ class RecommendationEngine {
     return row.toJSON ? row.toJSON() : row;
   }
 
-  async applyRecommendation({ tenantId, recommendationId, actor } = {}) {
+  async applyRecommendation({ tenantId, recommendationId, actor, origin } = {}) {
     if (!tenantId) throw new Error('tenantId is required');
     if (!recommendationId) throw new Error('recommendationId is required');
 
@@ -181,6 +292,7 @@ class RecommendationEngine {
         application: {
           appliedAt: capturedAt,
           appliedBy: actor || null,
+          origin: origin ? String(origin) : 'manual',
           baseline,
           expectedDirection,
           ...(execution ? { executedAction: execution } : {}),

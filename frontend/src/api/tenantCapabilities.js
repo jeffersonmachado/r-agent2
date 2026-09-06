@@ -9,6 +9,7 @@ export const DEFAULT_TENANT_CAPABILITIES = {
   inbox: true,
   caseManagement: true,
   caseCreationPolicy: 'manual',
+  autonomyLevel: 'suggest',
 };
 
 export function getTenantCapabilities() {

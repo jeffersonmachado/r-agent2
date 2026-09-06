@@ -94,6 +94,10 @@ class TenantIntelligenceService {
     return this.recommendationEngine.applyRecommendation(input);
   }
 
+  async applyAllOpenRecommendations(input) {
+    return this.recommendationEngine.applyAllOpen(input);
+  }
+
   async dismissRecommendation(input) {
     return this.recommendationEngine.dismissRecommendation(input);
   }

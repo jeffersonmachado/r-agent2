@@ -214,6 +214,9 @@ class StrategicSearchService {
         usedSnapshots: shouldRefreshMetrics && !!(snapshotsResult?.ok),
         usedPersistedInsights: true,
         mode,
+        // Autonomy UX: resultado do auto-apply governado pelo autonomyLevel
+        // do tenant (null quando a geracao nao rodou nesta chamada).
+        autoApply: generatedRecommendations?.autoApply || null,
       },
     };
   }

@@ -4,6 +4,7 @@ import { upsertTenantSetting } from '../../api/tenantSettings';
 export function ConfigGeneralTab({ editedConfig, renderField, updateValue, phoneMaskingEnabled, loadingPhoneMasking, savingPhoneMasking, setPhoneMaskingEnabled, setSavingPhoneMasking, showToast, upsertTenantSetting, capabilities, canManageCapabilities, savingCapabilities, onUpdateCapabilities }) {
   const caseManagementEnabled = !!(capabilities && capabilities.caseManagement);
   const caseCreationPolicy = (capabilities && capabilities.caseCreationPolicy) || 'manual';
+  const autonomyLevel = (capabilities && capabilities.autonomyLevel) || 'suggest';
   return (
 <div className="space-y-6">
   <div className="bg-bg-secondary rounded-lg p-6 border border-border-default">
@@ -66,6 +67,27 @@ export function ConfigGeneralTab({ editedConfig, renderField, updateValue, phone
             <option value="manual">Manual</option>
             <option value="suggest">Sugerido pela IA</option>
             <option value="automatic">Automático</option>
+          </select>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-text-primary font-medium">Autonomia das recomendações</p>
+            <p className="text-text-secondary text-sm">
+              Define como as recomendações da inteligência operacional são aplicadas:
+              Sugerir = decisão manual; Aprovar em lote = botão "Aprovar todas";
+              Autônomo = aplicação automática; Somente exceções = automático, exceto alta prioridade.
+            </p>
+          </div>
+          <select
+            value={autonomyLevel}
+            onChange={(e) => onUpdateCapabilities({ autonomyLevel: e.target.value })}
+            disabled={savingCapabilities}
+            className="bg-bg-primary border border-border-default rounded-lg px-3 py-2 text-sm text-text-primary focus:ring-2 focus:ring-accent-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="suggest">Sugerir</option>
+            <option value="approve">Aprovar em lote</option>
+            <option value="autonomous">Autônomo</option>
+            <option value="exception_only">Somente exceções</option>
           </select>
         </div>
       </div>

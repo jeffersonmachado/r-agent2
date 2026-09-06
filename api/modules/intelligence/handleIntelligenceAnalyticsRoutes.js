@@ -110,6 +110,32 @@ async function handleIntelligenceAnalyticsRoutes(ctx) {
   if (method === 'POST' && pathname.startsWith('/api/intelligence/recommendations/')) {
     const tail = pathname.slice('/api/intelligence/recommendations/'.length);
     const segments = tail.split('/').filter(Boolean);
+
+    // Batch "Aprovar todas" (autonomyLevel=approve): checado antes do parsing
+    // de :id/apply para que 'apply-all' não vire recommendationId.
+    if (segments.length === 1 && segments[0] === 'apply-all') {
+      const permResult = requirePermission(req, 'analytics', 'write');
+      if (!permResult.allowed) {
+        sendJson(res, 403, { error: 'forbidden', message: permResult.error });
+        return true;
+      }
+
+      try {
+        const body = hasJsonContentType(req) ? await parseJsonBody(req) : {};
+        const actor = req.agent?.username || req.agent?.id || null;
+        const out = await service.applyAllOpenRecommendations({
+          tenantId,
+          actor,
+          limit: body?.limit != null ? Number(body.limit) : 50,
+        });
+        sendJson(res, 200, out);
+      } catch (err) {
+        logger.error('[IntelligenceRoutes] Erro em POST /api/intelligence/recommendations/apply-all:', err);
+        sendJson(res, 500, { error: 'internal_error', message: 'Erro ao aplicar recomendacoes em lote' });
+      }
+      return true;
+    }
+
     const recommendationId = segments[0] ? decodeURIComponent(segments[0]) : '';
     const action = segments.length === 2 ? decodeURIComponent(segments[1]) : null;
     if (!recommendationId || !['apply', 'dismiss', 'outcome'].includes(action)) {

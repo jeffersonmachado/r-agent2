@@ -87,6 +87,13 @@ export function applyTenantRecommendation(recommendationId) {
   });
 }
 
+export function applyAllTenantRecommendations({ limit = 50 } = {}) {
+  return fetchJson('/api/intelligence/recommendations/apply-all', {
+    method: 'POST',
+    body: JSON.stringify({ limit }),
+  });
+}
+
 export function dismissTenantRecommendation(recommendationId, reason) {
   return fetchJson(`/api/intelligence/recommendations/${encodeURIComponent(String(recommendationId))}/dismiss`, {
     method: 'POST',

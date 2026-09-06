@@ -5,11 +5,13 @@
  * tenantSettingsService — padrão canônico de feature flags por tenant.
  *
  * Shape persistido:
- *   { caseManagement: boolean, caseCreationPolicy: 'manual'|'suggest'|'automatic' }
+ *   { caseManagement: boolean, caseCreationPolicy: 'manual'|'suggest'|'automatic',
+ *     autonomyLevel: 'suggest'|'approve'|'autonomous'|'exception_only' }
  *
  * Defaults (quando ausente): caseManagement=true preserva tenants existentes
  * (compatibilidade: inbox atual é 100% ticket-based). inbox é sempre true
- * nesta fase.
+ * nesta fase. autonomyLevel='suggest' preserva o comportamento manual
+ * existente (compatibilidade: nenhuma acao automatica sem opt-in).
  *
  * Sem fallback em memória: falha de DB gera erro explícito
  * (err.code = 'capabilities_db_error').
@@ -24,10 +26,18 @@ const SETTINGS_KEY = 'capabilities';
 
 const CASE_CREATION_POLICIES = ['manual', 'suggest', 'automatic'];
 
+// Níveis de autonomia das recomendações operacionais (tenant-intelligence):
+//   suggest        → recomendação fica aberta; aplicação sempre manual (default, compat)
+//   approve        → manual + aplicação em lote ("Aprovar todas")
+//   autonomous     → aplicação automática na geração
+//   exception_only → aplicação automática, exceto prioridade 'high' (exceções humanas)
+const AUTONOMY_LEVELS = ['suggest', 'approve', 'autonomous', 'exception_only'];
+
 const DEFAULT_CAPABILITIES = Object.freeze({
   inbox: true,
   caseManagement: true,
   caseCreationPolicy: 'manual',
+  autonomyLevel: 'suggest',
 });
 
 function safeToString(value, fallback = '') {
@@ -52,6 +62,9 @@ function normalizeCapabilities(raw) {
     caseCreationPolicy: CASE_CREATION_POLICIES.includes(stored.caseCreationPolicy)
       ? stored.caseCreationPolicy
       : DEFAULT_CAPABILITIES.caseCreationPolicy,
+    autonomyLevel: AUTONOMY_LEVELS.includes(stored.autonomyLevel)
+      ? stored.autonomyLevel
+      : DEFAULT_CAPABILITIES.autonomyLevel,
   };
 }
 
@@ -103,7 +116,7 @@ async function setTenantCapabilities(tenantKey, partial = {}) {
     return { ok: false, error: 'invalid_payload', message: 'payload deve ser um objeto' };
   }
 
-  const allowedKeys = new Set(['inbox', 'caseManagement', 'caseCreationPolicy']);
+  const allowedKeys = new Set(['inbox', 'caseManagement', 'caseCreationPolicy', 'autonomyLevel']);
   const unknownKeys = Object.keys(partial).filter((k) => !allowedKeys.has(k));
   if (unknownKeys.length > 0) {
     return {
@@ -129,6 +142,16 @@ async function setTenantCapabilities(tenantKey, partial = {}) {
       message: `caseCreationPolicy deve ser um de: ${CASE_CREATION_POLICIES.join(', ')}`,
     };
   }
+  if (
+    Object.prototype.hasOwnProperty.call(partial, 'autonomyLevel')
+    && !AUTONOMY_LEVELS.includes(partial.autonomyLevel)
+  ) {
+    return {
+      ok: false,
+      error: 'invalid_payload',
+      message: `autonomyLevel deve ser um de: ${AUTONOMY_LEVELS.join(', ')}`,
+    };
+  }
 
   const current = await getTenantCapabilities(key);
   const next = {
@@ -139,6 +162,9 @@ async function setTenantCapabilities(tenantKey, partial = {}) {
     caseCreationPolicy: Object.prototype.hasOwnProperty.call(partial, 'caseCreationPolicy')
       ? partial.caseCreationPolicy
       : current.caseCreationPolicy,
+    autonomyLevel: Object.prototype.hasOwnProperty.call(partial, 'autonomyLevel')
+      ? partial.autonomyLevel
+      : current.autonomyLevel,
   };
 
   const persisted = await tenantSettingsService.upsertSetting({
@@ -147,6 +173,7 @@ async function setTenantCapabilities(tenantKey, partial = {}) {
     value: {
       caseManagement: next.caseManagement,
       caseCreationPolicy: next.caseCreationPolicy,
+      autonomyLevel: next.autonomyLevel,
     },
   });
   if (!persisted.ok) {
@@ -166,6 +193,7 @@ async function setTenantCapabilities(tenantKey, partial = {}) {
 module.exports = {
   SETTINGS_KEY,
   CASE_CREATION_POLICIES,
+  AUTONOMY_LEVELS,
   DEFAULT_CAPABILITIES,
   getTenantCapabilities,
   setTenantCapabilities,

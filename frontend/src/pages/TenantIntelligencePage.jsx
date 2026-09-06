@@ -10,6 +10,7 @@ import {
   OPERATIONAL_STATE_LABELS,
 } from '../utils/operationalTrend.mjs';
 import {
+  applyAllTenantRecommendations,
   applyTenantRecommendation,
   collectTenantMetricSnapshots,
   createTenantGoal,
@@ -24,6 +25,7 @@ import {
   searchTenantIntelligence,
   updateTenantGoal,
 } from '../api/intelligence';
+import { getTenantCapabilities } from '../api/tenantCapabilities';
 import { CrudPageBase } from '../modules/crud-base';
 
 function formatNumber(value, digits = 0) {
@@ -167,6 +169,8 @@ export function TenantIntelligencePage() {
   const [expandedInsightId, setExpandedInsightId] = useState(null);
   const [evidenceLoadingId, setEvidenceLoadingId] = useState(null);
   const [recommendationActionLoadingId, setRecommendationActionLoadingId] = useState(null);
+  const [autonomyLevel, setAutonomyLevel] = useState('suggest');
+  const [batchApplyLoading, setBatchApplyLoading] = useState(false);
 
   const [goalForm, setGoalForm] = useState({
     name: '',
@@ -186,15 +190,18 @@ export function TenantIntelligencePage() {
   async function loadInitialData() {
     setIsLoading(true);
     try {
-      const [goalsResp, insightsResp, recommendationsResp, operationalResp] = await Promise.all([
+      const [goalsResp, insightsResp, recommendationsResp, operationalResp, capabilitiesResp] = await Promise.all([
         listTenantGoals({ status: 'active', limit: 50 }),
         listTenantInsights({ status: 'open', limit: 20 }),
         listTenantRecommendations({ status: 'open', limit: 20 }),
         getTenantOperationalState({ period, mode: 'read', refreshMetrics: false, includeEvidence: false }),
+        // Capacidades são auxiliares (nível de autonomia); falha não derruba a página.
+        getTenantCapabilities().catch(() => null),
       ]);
       setGoals(Array.isArray(goalsResp?.items) ? goalsResp.items : []);
       setInsights(Array.isArray(insightsResp?.items) ? insightsResp.items : []);
       setRecommendations(Array.isArray(recommendationsResp?.items) ? recommendationsResp.items : []);
+      setAutonomyLevel(capabilitiesResp?.capabilities?.autonomyLevel || 'suggest');
       setOperationalState((prev) => {
         const prevScore = Number(prev?.health?.score);
         const nextScore = Number(operationalResp?.state?.health?.score);
@@ -429,6 +436,38 @@ export function TenantIntelligencePage() {
       'Erro ao aplicar recomendação',
       'Recomendação aplicada',
     );
+  }
+
+  // "Aprovar todas" (autonomia = approve): aplica em lote as recomendações
+  // abertas e recarrega a lista de abertas para refletir o novo estado.
+  async function handleApplyAllRecommendations() {
+    setBatchApplyLoading(true);
+    try {
+      const response = await applyAllTenantRecommendations({ limit: 50 });
+      const applied = Number(response?.applied) || 0;
+      const failed = Number(response?.failed) || 0;
+      showToast(
+        failed > 0
+          ? `${applied} recomendações aplicadas; ${failed} não puderam ser aplicadas`
+          : `${applied} recomendações aplicadas`,
+        failed > 0 ? 'error' : 'success',
+      );
+      const openResp = await listTenantRecommendations({ status: 'open', limit: 20 });
+      const openItems = Array.isArray(openResp?.items) ? openResp.items : [];
+      setRecommendations(openItems);
+      setSearchResult((prev) => (
+        prev && Array.isArray(prev.recommendations) ? { ...prev, recommendations: openItems } : prev
+      ));
+    } catch (error) {
+      logger.error('[TenantIntelligencePage] Erro ao aplicar recomendações em lote', error);
+      const { message, refresh } = resolveRecommendationActionError(error, 'Erro ao aplicar recomendações em lote');
+      showToast(message, 'error');
+      if (refresh) {
+        await loadInitialData();
+      }
+    } finally {
+      setBatchApplyLoading(false);
+    }
   }
 
   async function handleDismissRecommendation(recommendation) {
@@ -861,7 +900,20 @@ export function TenantIntelligencePage() {
         </div>
 
         <div className="bg-bg-elevated rounded-xl border border-border-default p-6 shadow-lg">
-          <h3 className="text-lg font-semibold text-text-primary mb-3">Top Recomendações</h3>
+          <div className="flex items-center justify-between gap-2 mb-3" style={{ flexWrap: 'wrap' }}>
+            <h3 className="text-lg font-semibold text-text-primary">Top Recomendações</h3>
+            {autonomyLevel === 'approve' && topRecommendations.some((item) => item.status === 'open') ? (
+              <Button
+                type="button"
+                size="sm"
+                style={{ width: 'auto' }}
+                disabled={batchApplyLoading}
+                onClick={handleApplyAllRecommendations}
+              >
+                {batchApplyLoading ? 'Aplicando em lote...' : 'Aprovar todas as recomendações abertas'}
+              </Button>
+            ) : null}
+          </div>
           {topRecommendations.length === 0 ? (
             <p className="text-sm text-text-secondary">Nenhuma recomendação disponível.</p>
           ) : (
@@ -892,6 +944,11 @@ export function TenantIntelligencePage() {
                     {item.status === 'applied' ? (
                       <div className="text-text-secondary" style={{ marginTop: '4px' }}>
                         Aplicada em {formatRecommendationDate(item.metadata?.application?.appliedAt)}
+                        {item.metadata?.application?.origin === 'auto' ? (
+                          <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold border border-status-success/20 bg-status-success/10 text-status-success" style={{ marginLeft: '8px' }}>
+                            Aplicada automaticamente
+                          </span>
+                        ) : null}
                       </div>
                     ) : null}
 

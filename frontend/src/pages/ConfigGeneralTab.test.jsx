@@ -46,7 +46,8 @@ describe('ConfigGeneralTab — capacidades de atendimento', () => {
   it('select de política chama onUpdateCapabilities e fica desabilitado com caseManagement off', () => {
     const props = renderTab({ capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' } });
 
-    const select = screen.getByRole('combobox');
+    // Dois selects na seção: [0] criação de chamados, [1] autonomia das recomendações
+    const select = screen.getAllByRole('combobox')[0];
     expect(select.disabled).toBe(false);
     fireEvent.change(select, { target: { value: 'suggest' } });
     expect(props.onUpdateCapabilities).toHaveBeenCalledWith({ caseCreationPolicy: 'suggest' });
@@ -55,6 +56,39 @@ describe('ConfigGeneralTab — capacidades de atendimento', () => {
   it('select desabilitado quando Case Management está inativo', () => {
     renderTab({ capabilities: { inbox: true, caseManagement: false, caseCreationPolicy: 'manual' } });
 
-    expect(screen.getByRole('combobox').disabled).toBe(true);
+    expect(screen.getAllByRole('combobox')[0].disabled).toBe(true);
+  });
+});
+
+describe('ConfigGeneralTab — autonomia das recomendações', () => {
+  it('renderiza o select de autonomia com o nível atual e as 4 opções', () => {
+    renderTab({ capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'approve' } });
+
+    expect(screen.getByText('Autonomia das recomendações')).toBeTruthy();
+    const select = screen.getAllByRole('combobox')[1];
+    expect(select.value).toBe('approve');
+    const values = Array.from(select.options).map((option) => option.value);
+    expect(values).toEqual(['suggest', 'approve', 'autonomous', 'exception_only']);
+  });
+
+  it('mudança chama onUpdateCapabilities com autonomyLevel', () => {
+    const props = renderTab();
+
+    const select = screen.getAllByRole('combobox')[1];
+    expect(select.value).toBe('suggest');
+    fireEvent.change(select, { target: { value: 'autonomous' } });
+    expect(props.onUpdateCapabilities).toHaveBeenCalledWith({ autonomyLevel: 'autonomous' });
+  });
+
+  it('sem autonomyLevel persistido cai no default suggest', () => {
+    renderTab({ capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' } });
+
+    expect(screen.getAllByRole('combobox')[1].value).toBe('suggest');
+  });
+
+  it('esconde o select de autonomia para quem não gerencia capabilities', () => {
+    renderTab({ canManageCapabilities: false });
+
+    expect(screen.queryByText('Autonomia das recomendações')).toBeNull();
   });
 });

@@ -31,7 +31,12 @@ describe('tenantCapabilitiesService', () => {
 
     const caps = await getTenantCapabilities('tenant-1');
 
-    expect(caps).toEqual({ inbox: true, caseManagement: true, caseCreationPolicy: 'manual' });
+    expect(caps).toEqual({
+      inbox: true,
+      caseManagement: true,
+      caseCreationPolicy: 'manual',
+      autonomyLevel: 'suggest',
+    });
     expect(caps).toEqual(DEFAULT_CAPABILITIES);
   });
 
@@ -58,11 +63,16 @@ describe('tenantCapabilitiesService', () => {
     const result = await setTenantCapabilities('tenant-1', { caseManagement: false });
 
     expect(result.ok).toBe(true);
-    expect(result.capabilities).toEqual({ inbox: true, caseManagement: false, caseCreationPolicy: 'manual' });
+    expect(result.capabilities).toEqual({
+      inbox: true,
+      caseManagement: false,
+      caseCreationPolicy: 'manual',
+      autonomyLevel: 'suggest',
+    });
     expect(mockUpsertSetting).toHaveBeenCalledWith({
       tenantId: 'tenant-1',
       key: 'capabilities',
-      value: { caseManagement: false, caseCreationPolicy: 'manual' },
+      value: { caseManagement: false, caseCreationPolicy: 'manual', autonomyLevel: 'suggest' },
     });
 
     // Segundo round-trip: lê o valor persistido e altera apenas a policy.
@@ -72,7 +82,43 @@ describe('tenantCapabilitiesService', () => {
     const second = await setTenantCapabilities('tenant-1', { caseCreationPolicy: 'suggest' });
 
     expect(second.ok).toBe(true);
-    expect(second.capabilities).toEqual({ inbox: true, caseManagement: false, caseCreationPolicy: 'suggest' });
+    expect(second.capabilities).toEqual({
+      inbox: true,
+      caseManagement: false,
+      caseCreationPolicy: 'suggest',
+      autonomyLevel: 'suggest',
+    });
+  });
+
+  test('autonomyLevel válido é persistido e refletido na resposta', async () => {
+    mockGetSetting.mockResolvedValue({ ok: true, value: null });
+    mockUpsertSetting.mockResolvedValue({ ok: true, value: { caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'exception_only' } });
+
+    const result = await setTenantCapabilities('tenant-1', { autonomyLevel: 'exception_only' });
+
+    expect(result.ok).toBe(true);
+    expect(result.capabilities.autonomyLevel).toBe('exception_only');
+    expect(mockUpsertSetting).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      key: 'capabilities',
+      value: { caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'exception_only' },
+    });
+  });
+
+  test('rejeita autonomyLevel inválido', async () => {
+    const result = await setTenantCapabilities('tenant-1', { autonomyLevel: 'full-auto' });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('invalid_payload');
+    expect(mockUpsertSetting).not.toHaveBeenCalled();
+  });
+
+  test('autonomyLevel persistido inválido normaliza para o default na leitura', async () => {
+    mockGetSetting.mockResolvedValue({ ok: true, value: { autonomyLevel: 'yolo' } });
+
+    const caps = await getTenantCapabilities('tenant-1');
+
+    expect(caps.autonomyLevel).toBe('suggest');
   });
 
   test('rejeita chaves desconhecidas', async () => {
