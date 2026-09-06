@@ -33,6 +33,27 @@ const METRIC_LABELS = {
   'event_ledger.top_type_ratio': 'concentração do padrão dominante de eventos',
 };
 
+// Sufixos das chaves vertical.<vertical>.<sufixo> emitidas pelo MetricEngine
+// a partir do verticalMetricsEngine (KPIs de negócio das verticais).
+const VERTICAL_METRIC_LABELS = {
+  attendances_total: 'comparecimentos registrados',
+  no_show_rate_pct: 'taxa de não comparecimento (no-show)',
+  return_rate_pct: 'taxa de retorno de clientes',
+  memberships_active: 'assinaturas ativas',
+  churn_rate_pct: 'taxa de cancelamento de assinaturas',
+  active_subscriptions: 'planos com assinatura ativa',
+};
+
+const VERTICAL_NAME_LABELS = {
+  beauty: 'estética e beleza',
+  fitness: 'academia/fitness',
+  bakery: 'padaria',
+  food: 'alimentação',
+  services: 'serviços',
+  clinic: 'clínica',
+  market: 'mercado',
+};
+
 const EVENT_TYPE_LABELS = {
   ScheduledTriggerFired: 'rotinas automáticas programadas',
   VerticalJourney_Custom: 'etapas da jornada do cliente',
@@ -74,7 +95,17 @@ function humanizeIdentifier(value) {
 function metricLabel(metricKey) {
   const key = String(metricKey || '');
   if (!key) return 'indicador operacional';
-  return METRIC_LABELS[key] || humanizeIdentifier(key) || 'indicador operacional';
+  if (METRIC_LABELS[key]) return METRIC_LABELS[key];
+  // Chaves vertical.<vertical>.<sufixo>: traduz sufixo e nome da vertical
+  // para linguagem de negócio ("queda em taxa de no-show — academia/fitness").
+  if (key.startsWith('vertical.')) {
+    const [, verticalName, ...rest] = key.split('.');
+    const suffix = rest.join('.');
+    const suffixLabel = VERTICAL_METRIC_LABELS[suffix] || humanizeIdentifier(suffix) || 'indicador operacional';
+    const verticalLabel = VERTICAL_NAME_LABELS[verticalName] || humanizeIdentifier(verticalName);
+    return verticalLabel ? `${suffixLabel} — ${verticalLabel}` : suffixLabel;
+  }
+  return humanizeIdentifier(key) || 'indicador operacional';
 }
 
 function eventTypeLabel(eventType) {
@@ -85,6 +116,8 @@ function eventTypeLabel(eventType) {
 
 module.exports = {
   METRIC_LABELS,
+  VERTICAL_METRIC_LABELS,
+  VERTICAL_NAME_LABELS,
   EVENT_TYPE_LABELS,
   metricLabel,
   eventTypeLabel,

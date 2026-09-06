@@ -23,6 +23,13 @@ function loadEngine({ generalMetrics, generalMetricsError = null } = {}) {
     TenantInsight: () => ({
       findOne: jest.fn(async () => null),
     }),
+    // Descoberta de verticais do tenant: sem dados verticais nestes testes
+    AccessMembership: () => ({
+      findAll: jest.fn(async () => []),
+    }),
+    VerticalAttendance: () => ({
+      findAll: jest.fn(async () => []),
+    }),
   }));
 
   jest.doMock('../../api/db/sequelize', () => ({

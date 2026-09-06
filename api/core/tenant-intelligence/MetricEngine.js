@@ -1,9 +1,10 @@
 'use strict';
 
 const { getSequelize } = require('../../db/sequelize');
-const { TenantMetricSnapshot } = require('../../db/models');
+const { TenantMetricSnapshot, AccessMembership, VerticalAttendance } = require('../../db/models');
 const { getEventLedgerMetrics } = require('../../services/eventLedgerMetricsService');
 const { getGeneralMetrics } = require('../../services/analyticsService');
+const { computeVerticalMetrics } = require('../../services/vertical/verticalMetricsEngine');
 const { RecommendationEngine } = require('./RecommendationEngine');
 const { buildId, toNumber, resolvePeriodBounds } = require('./helpers');
 
@@ -96,9 +97,11 @@ class MetricEngine {
       warnings.push('operational_metrics_unavailable');
     }
 
+    // abandonmentRate/botContainmentRate e taxas verticais sao fracoes 0..1:
+    // convertidas para % com 2 casas.
+    const toPct = (value) => Number((toNumber(value, 0) * 100).toFixed(2));
+
     if (operational && typeof operational === 'object') {
-      // abandonmentRate/botContainmentRate sao fracoes 0..1: convertidas para %.
-      const toPct = (value) => Number((toNumber(value, 0) * 100).toFixed(2));
       metricRows.push({ key: 'operations.tickets_total', value: toNumber(operational.totalTickets, 0), source: 'operations' });
       metricRows.push({ key: 'operations.tickets_open', value: toNumber(operational.openTickets, 0), source: 'operations' });
       metricRows.push({ key: 'operations.avg_first_response_minutes', value: toNumber(operational.avgFirstResponseTime, 0), source: 'operations' });
@@ -107,6 +110,46 @@ class MetricEngine {
       if (Number.isFinite(operational.botContainmentRate)) {
         metricRows.push({ key: 'operations.bot_containment_rate_pct', value: toPct(operational.botContainmentRate), source: 'operations' });
       }
+    }
+
+    // KPIs das verticais ativas do tenant (best-effort): persistir no mesmo
+    // snapshot imutavel permite que o loop Decision Intelligence (insight ->
+    // recomendacao -> acao -> outcome) opere sobre indicadores de negocio
+    // (no-show, retorno, churn de assinaturas) e nao apenas sobre tickets.
+    // Falha aqui nao impede a persistencia das demais metricas.
+    try {
+      const verticalWindowDays = Math.max(1, Math.round(windowMinutes / 1440));
+      const verticals = await this._discoverTenantVerticals(String(tenantId));
+      for (const vertical of verticals) {
+        // eslint-disable-next-line no-await-in-loop
+        const verticalMetrics = await computeVerticalMetrics({
+          tenantId: String(tenantId),
+          vertical,
+          windowDays: verticalWindowDays,
+        });
+        if (!verticalMetrics || typeof verticalMetrics !== 'object') continue;
+
+        const prefix = `vertical.${vertical}`;
+        const attendance = verticalMetrics.attendance;
+        if (attendance && typeof attendance === 'object') {
+          metricRows.push({ key: `${prefix}.attendances_total`, value: toNumber(attendance.total, 0), source: 'vertical' });
+          metricRows.push({ key: `${prefix}.no_show_rate_pct`, value: toPct(attendance.noShowRate), source: 'vertical' });
+          metricRows.push({ key: `${prefix}.return_rate_pct`, value: toPct(attendance.returnRate), source: 'vertical' });
+        }
+
+        const membership = verticalMetrics.membership;
+        if (membership && typeof membership === 'object') {
+          metricRows.push({ key: `${prefix}.memberships_active`, value: toNumber(membership.active, 0), source: 'vertical' });
+          metricRows.push({ key: `${prefix}.churn_rate_pct`, value: toPct(membership.churnRate), source: 'vertical' });
+        }
+
+        const revenue = verticalMetrics.revenue;
+        if (revenue && typeof revenue === 'object') {
+          metricRows.push({ key: `${prefix}.active_subscriptions`, value: toNumber(revenue.activeSubscriptions, 0), source: 'vertical' });
+        }
+      }
+    } catch (_) {
+      warnings.push('vertical_metrics_unavailable');
     }
 
     const SnapshotModel = TenantMetricSnapshot();
@@ -158,6 +201,37 @@ class MetricEngine {
         end: bounds.end.toISOString(),
       },
     };
+  }
+
+  /**
+   * Descobre as verticais com dados do tenant (assinaturas ou comparecimentos
+   * registrados). Data-driven: nao depende de configuracao elegida no
+   * onboarding — se a vertical tem dado operacional, ela entra no snapshot.
+   */
+  async _discoverTenantVerticals(tenantId) {
+    const sources = await Promise.all([
+      AccessMembership().findAll({
+        where: { tenant_key: tenantId },
+        attributes: ['vertical'],
+        group: ['vertical'],
+        limit: 20,
+      }).catch(() => []),
+      VerticalAttendance().findAll({
+        where: { tenant_key: tenantId },
+        attributes: ['vertical'],
+        group: ['vertical'],
+        limit: 20,
+      }).catch(() => []),
+    ]);
+
+    const verticals = new Set();
+    for (const rows of sources) {
+      for (const row of rows || []) {
+        const data = row && typeof row.toJSON === 'function' ? row.toJSON() : row;
+        if (data && data.vertical) verticals.add(String(data.vertical));
+      }
+    }
+    return Array.from(verticals);
   }
 
   async getEventTypeConcentration({ tenantId, periodStart, periodEnd } = {}) {
