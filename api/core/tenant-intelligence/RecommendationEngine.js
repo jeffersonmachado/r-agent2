@@ -707,7 +707,7 @@ class RecommendationEngine {
     const suffix = [];
     if (causes.length > 0) {
       suffix.push(`Possiveis causas: ${causes
-        .map((cause) => `${cause.metricKey} (${cause.direction === 'up' ? '+' : ''}${Math.round(cause.changeRatio * 100)}%)`)
+        .map((cause) => `${cause.label || cause.metricKey} (${cause.direction === 'up' ? '+' : ''}${Math.round(cause.changeRatio * 100)}%)`)
         .join(', ')}`);
     }
     if (projection) {

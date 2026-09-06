@@ -3,6 +3,7 @@
 const { Op } = require('sequelize');
 const { TenantInsight, TenantMetricSnapshot } = require('../../db/models');
 const { buildId, toNumber, resolvePeriodBounds } = require('./helpers');
+const { metricLabel, eventTypeLabel } = require('./operationalLanguage');
 const { EvidenceEngine } = require('./EvidenceEngine');
 const { GoalEngine } = require('./GoalEngine');
 const { MetricEngine } = require('./MetricEngine');
@@ -135,14 +136,15 @@ class InsightEngine {
 
       const trendType = changeRatio > 0 ? 'metric_increase' : 'metric_drop';
       const trendLabel = changeRatio > 0 ? 'aumento' : 'queda';
-      const title = `${trendLabel} relevante em ${metricKey}`;
+      const humanLabel = metricLabel(metricKey);
+      const title = `${trendLabel} relevante em ${humanLabel}`;
       const probableCauses = this._buildProbableCauses({ metricKey, snapshotsByMetric });
 
       candidates.push({
         type: trendType,
         title,
         description: this._enrichInsightDescription(
-          `A metrica ${metricKey} variou ${Math.round(changeRatio * 100)}% no periodo analisado.`,
+          `O indicador ${humanLabel} variou ${Math.round(changeRatio * 100)}% no periodo analisado.`,
           { probableCauses },
         ),
         confidence: Math.min(0.95, 0.55 + absRatio),
@@ -179,10 +181,11 @@ class InsightEngine {
       const totalEvents = toNumber(topTypeMetric.metadata?.total, 0);
       if (ratio >= 0.6 && totalEvents >= 20) {
         const topType = topTypeMetric.metadata?.topType || 'unknown';
+        const humanLabel = eventTypeLabel(topType);
         candidates.push({
           type: 'event_concentration',
-          title: `Concentracao de eventos em ${topType}`,
-          description: `Foi detectada concentracao de ${Math.round(ratio * 100)}% dos eventos no padrao ${topType}.`,
+          title: `Concentracao de eventos em ${humanLabel}`,
+          description: `Foi detectada concentracao de ${Math.round(ratio * 100)}% dos eventos em ${humanLabel}.`,
           confidence: 0.8,
           impact: ratio >= 0.75 ? 'high' : 'medium',
           source: 'metric_engine',
@@ -335,6 +338,7 @@ class InsightEngine {
       if (Math.abs(ratio) < 0.15) continue;
       causes.push({
         metricKey: otherKey,
+        label: metricLabel(otherKey),
         changeRatio: Number(ratio.toFixed(4)),
         direction: ratio > 0 ? 'up' : 'down',
       });
@@ -385,7 +389,7 @@ class InsightEngine {
     const parts = [base];
     if (probableCauses.length > 0) {
       const formatted = probableCauses
-        .map((cause) => `${cause.metricKey} (${cause.direction === 'up' ? '+' : ''}${Math.round(cause.changeRatio * 100)}%)`)
+        .map((cause) => `${cause.label || cause.metricKey} (${cause.direction === 'up' ? '+' : ''}${Math.round(cause.changeRatio * 100)}%)`)
         .join(', ');
       parts.push(`Possiveis causas no mesmo periodo: ${formatted}.`);
     }

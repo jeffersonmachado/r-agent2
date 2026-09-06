@@ -13,7 +13,7 @@ const insightWithCauses = {
   confidence: 0.9,
   metadata: {
     probableCauses: [
-      { metricKey: 'operations.abandonment_rate_pct', changeRatio: 0.4, direction: 'up' },
+      { metricKey: 'operations.abandonment_rate_pct', label: 'taxa de abandono', changeRatio: 0.4, direction: 'up' },
     ],
     projection: { projectedValue: 6, targetValue: 10, elapsedFraction: 0.5, projectedStatus: 'will_miss' },
   },
@@ -37,7 +37,8 @@ describe('AnalyticsDecisionIntelligenceSection', () => {
 
     expect(screen.getByText('Inteligência decisória')).toBeInTheDocument();
     expect(screen.getByText('Meta fora do esperado: Fechar 10 tickets')).toBeInTheDocument();
-    expect(screen.getByText(/Possíveis causas: operations\.abandonment_rate_pct \(\+40%\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Possíveis causas: taxa de abandono \(\+40%\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/operations\.abandonment_rate_pct/)).toBeNull();
     expect(screen.getByText(/Projeção de fechamento:/)).toBeInTheDocument();
     expect(screen.getByText(/não atinge a meta/)).toBeInTheDocument();
     expect(screen.getByText('Revisar operacao para meta fora da faixa')).toBeInTheDocument();
@@ -69,6 +70,23 @@ describe('AnalyticsDecisionIntelligenceSection', () => {
   it('não renderiza nada sem insights nem recomendações (fail-soft)', () => {
     const { container } = render(<AnalyticsDecisionIntelligenceSection insights={[]} recommendations={[]} />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('causa sem label cai no metricKey (back-compat)', () => {
+    const legacyInsight = {
+      id: 'ins-legacy',
+      title: 'Insight legado',
+      impact: 'medium',
+      confidence: 0.7,
+      metadata: {
+        probableCauses: [
+          { metricKey: 'operations.tickets_open', changeRatio: -0.2, direction: 'down' },
+        ],
+      },
+    };
+    render(<AnalyticsDecisionIntelligenceSection insights={[legacyInsight]} recommendations={[]} />);
+
+    expect(screen.getByText(/Possíveis causas: operations\.tickets_open \(-20%\)/)).toBeInTheDocument();
   });
 
   it('limita a 3 itens por coluna', () => {

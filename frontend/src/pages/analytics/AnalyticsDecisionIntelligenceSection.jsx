@@ -2,7 +2,7 @@ import React from 'react';
 
 function formatCause(cause) {
   const sign = cause.direction === 'up' ? '+' : '';
-  return `${cause.metricKey} (${sign}${Math.round((cause.changeRatio || 0) * 100)}%)`;
+  return `${cause.label || cause.metricKey} (${sign}${Math.round((cause.changeRatio || 0) * 100)}%)`;
 }
 
 /**

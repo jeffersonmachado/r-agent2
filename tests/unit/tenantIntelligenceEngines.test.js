@@ -560,10 +560,10 @@ describe('InsightEngine — explanation e prediction', () => {
     const drop = out.insights.find((item) => item.type === 'metric_drop' && item.relatedMetrics[0] === 'operations.tickets_open');
     expect(drop).toBeTruthy();
     expect(drop.metadata.probableCauses).toEqual([
-      { metricKey: 'operations.abandonment_rate_pct', changeRatio: 0.4, direction: 'up' },
-      { metricKey: 'operations.tickets_closed', changeRatio: -0.24, direction: 'down' },
+      { metricKey: 'operations.abandonment_rate_pct', label: 'taxa de abandono', changeRatio: 0.4, direction: 'up' },
+      { metricKey: 'operations.tickets_closed', label: 'operations tickets closed', changeRatio: -0.24, direction: 'down' },
     ]);
-    expect(drop.description).toContain('Possiveis causas no mesmo periodo: operations.abandonment_rate_pct (+40%), operations.tickets_closed (-24%)');
+    expect(drop.description).toContain('Possiveis causas no mesmo periodo: taxa de abandono (+40%), operations tickets closed (-24%)');
   });
 
   test('causas provaveis limitadas a 3 e excluem a propria metrica', async () => {
@@ -687,5 +687,97 @@ describe('InsightEngine — explanation e prediction', () => {
       expect(insight.metadata.projection).toBeUndefined();
       expect(insight.description).not.toContain('Projecao:');
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe('InsightEngine — linguagem outcome-first', () => {
+  function buildDeps({ goals = [] } = {}) {
+    return {
+      metricEngine: { collectSnapshots: jest.fn(async () => ({ ok: true, snapshots: [] })) },
+      goalEngine: { listGoals: jest.fn(async () => ({ items: goals, total: goals.length })) },
+    };
+  }
+
+  function snap(id, metricKey, value, periodEnd, metadata) {
+    return { id, metric_key: metricKey, value, period_end: periodEnd, metadata };
+  }
+
+  test('trend insight usa rótulo de negócio no título e na descrição (nunca a chave crua)', async () => {
+    const engine = new InsightEngine(buildDeps());
+    const snapshots = [
+      snap('a-prev', 'operations.tickets_open', 100, '2026-03-01T00:00:00.000Z'),
+      snap('a-latest', 'operations.tickets_open', 50, '2026-03-31T00:00:00.000Z'),
+    ];
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, snapshots });
+
+    const drop = out.insights.find((item) => item.type === 'metric_drop');
+    expect(drop).toBeTruthy();
+    expect(drop.title).toBe('queda relevante em atendimentos em aberto');
+    expect(drop.description).toContain('O indicador atendimentos em aberto variou -50%');
+    expect(drop.title).not.toContain('operations.tickets_open');
+    expect(drop.description).not.toContain('operations.tickets_open');
+    // Campo de máquina mantém a chave bruta para rastreabilidade.
+    expect(drop.relatedMetrics).toEqual(['operations.tickets_open']);
+  });
+
+  test('trend insight com chave desconhecida humaniza em vez de expor o identificador', async () => {
+    const engine = new InsightEngine(buildDeps());
+    const snapshots = [
+      snap('a-prev', 'orders.created_count', 100, '2026-03-01T00:00:00.000Z'),
+      snap('a-latest', 'orders.created_count', 150, '2026-03-31T00:00:00.000Z'),
+    ];
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, snapshots });
+
+    const rise = out.insights.find((item) => item.type === 'metric_increase');
+    expect(rise.title).toBe('aumento relevante em orders created count');
+    expect(rise.title).not.toContain('orders.created_count');
+  });
+
+  test('event_concentration traduz o tipo técnico do evento', async () => {
+    const engine = new InsightEngine(buildDeps());
+    const snapshots = [
+      snap('top-1', 'event_ledger.top_type_ratio', 0.94, '2026-03-31T00:00:00.000Z', {
+        topType: 'ScheduledTriggerFired',
+        topTypeCount: 470,
+        total: 500,
+      }),
+    ];
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, snapshots });
+
+    const concentration = out.insights.find((item) => item.type === 'event_concentration');
+    expect(concentration).toBeTruthy();
+    expect(concentration.title).toBe('Concentracao de eventos em rotinas automáticas programadas');
+    expect(concentration.description).toContain('94% dos eventos em rotinas automáticas programadas');
+    expect(concentration.title).not.toContain('ScheduledTriggerFired');
+    expect(concentration.description).not.toContain('ScheduledTriggerFired');
+    // metadata técnica preservada para diagnóstico.
+    expect(concentration.metadata.topType).toBe('ScheduledTriggerFired');
+  });
+
+  test('causas prováveis carregam label e a descrição não expõe chaves cruas', async () => {
+    const engine = new InsightEngine(buildDeps());
+    const snapshots = [
+      snap('a-prev', 'conversion_rate', 50, '2026-03-01T00:00:00.000Z'),
+      snap('a-latest', 'conversion_rate', 30, '2026-03-31T00:00:00.000Z'),
+      snap('b-prev', 'operations.avg_first_response_minutes', 10, '2026-03-01T00:00:00.000Z'),
+      snap('b-latest', 'operations.avg_first_response_minutes', 15, '2026-03-31T00:00:00.000Z'),
+    ];
+
+    const out = await engine.generateInsights({ tenantId: 'tenant-1', persist: false, snapshots });
+
+    const drop = out.insights.find((item) => item.type === 'metric_drop');
+    expect(drop.title).toBe('queda relevante em taxa de conversão');
+    const causes = drop.metadata.probableCauses;
+    expect(causes).toHaveLength(1);
+    expect(causes[0]).toMatchObject({
+      metricKey: 'operations.avg_first_response_minutes',
+      label: 'tempo médio de primeira resposta',
+    });
+    expect(drop.description).toContain('tempo médio de primeira resposta (+50%)');
+    expect(drop.description).not.toContain('operations.avg_first_response_minutes');
   });
 });
