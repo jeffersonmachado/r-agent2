@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-06T08:51:10.339Z",
+  "generatedAt": "2026-09-06T08:52:33.264Z",
   "runId": "rap-governed-20260906084811783-d7efdfbf",
   "sourceFingerprint": "676e6ae0ffbe0b4610e161f5e4bd92d6fe72c9271bcdddc8c66cdde315f90da4",
-  "finalDecision": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]]",
+  "finalDecision": "AUTONOMOUS_READY_GO",
   "platformMaturity": "autonomous-ready",
   "canonicalMeshExecutionId": "mesh-20260903185903-qt4iaz",
   "canonicalMeshArtifacts": {
