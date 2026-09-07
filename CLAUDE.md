@@ -56,7 +56,7 @@ Constituição canônica obrigatória: `governance/RAP_AGENT_CONSTITUTION.md`. E
 
 ## O que ignorar (legado)
 - Arquivos soltos na raiz: test-*.js, debug-*.js, validate-*.js, direct-*.js
-- Diretórios: frontend_backup/, backups/, remote-dumps/, remote-dumps2/
+- Diretórios: backups/
 - Relatórios .md na raiz: PHASE2_*, EXECUTIVE_*, GO_REPORT_*, REFACTORING_*
 - PNGs na raiz: modal-screenshot.png, rpa-replays-screenshot.png
 - test_output.txt

@@ -34,8 +34,6 @@ permanece válido sem mutar o artefato selado.
 Bloqueios de contaminação incluem:
 - .env / .token.env
 - node_modules
-- remote-dumps / remote-dumps2
-- frontend_backup
 - caches/auth do whatsapp web
 - logs e artefatos de runtime
 - evidências QA/mesh geradas

@@ -60,10 +60,6 @@ dev Documentos/
 # Dependências isoladas E2E / Cypress (não pertencem à imagem de produção)
 frontend-e2e/node_modules/
 
-# Dumps e importações externas (não pertencem à imagem de produção)
-remote-dumps/
-remote-dumps2/
-
 # Evidências/artefatos de runtime (não pertencem à imagem de produção)
 qa/release-evidence/
 qa/smoke/
@@ -92,7 +88,6 @@ rag-service/data/adaptive_learning/
 frontend/.vite/
 
 # Backups ad-hoc
-frontend_backup/
 backups/
 **/backups/
 backup/

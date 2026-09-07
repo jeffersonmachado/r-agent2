@@ -154,7 +154,7 @@ function detectStaleReferences(currentZipName) {
   function walk(dir) {
     if (!fs.existsSync(dir)) return;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (['node_modules', '.git', 'frontend_backup', 'backups', 'dist'].includes(entry.name)) continue;
+      if (['node_modules', '.git', 'backups', 'dist'].includes(entry.name)) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) { walk(full); continue; }
       if (!entry.name.endsWith('.json') && !entry.name.endsWith('.sig')) continue;

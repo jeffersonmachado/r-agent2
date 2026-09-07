@@ -76,8 +76,6 @@ function copyWorkspaceToSandbox() {
     'coverage',
     'dist',
     'artifacts',
-    'remote-dumps',
-    'remote-dumps2',
   ]);
 
   fs.mkdirSync(sandboxRoot, { recursive: true });

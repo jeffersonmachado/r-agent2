@@ -681,7 +681,7 @@ function findFilesWithContent(needle, exts) {
   function walk(dir) {
     if (!fs.existsSync(dir)) return;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (['node_modules', '.git', 'frontend_backup'].includes(entry.name)) continue;
+      if (['node_modules', '.git'].includes(entry.name)) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) { walk(full); continue; }
       if (!exts.some((e) => entry.name.endsWith(e))) continue;

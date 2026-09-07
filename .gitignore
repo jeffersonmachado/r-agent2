@@ -24,7 +24,6 @@ frontend/.env.production
 
 # Backups locais de config (não versionar)
 .config-backup*.json
-frontend_backup/
 
 # Token RPA (não deve ser commitado)
 core/rpa/config/rpa-token.json
@@ -55,10 +54,6 @@ data/executions/
 recordings/
 replays/
 cache/
-
-# Dumps/importações locais (não versionar)
-remote-dumps/
-remote-dumps2/
 
 # Coverage (gerado)
 /coverage/

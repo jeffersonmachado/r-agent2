@@ -30,7 +30,7 @@ O **Cognitive Core** (2026-06-12) é o núcleo obrigatório de inteligência da 
 - **Engine (`engine/`):** núcleo determinístico da engine de fluxos — funções puras, zero I/O direto (compilação, execução de steps, replay, simulador, validador, registry de nós).
 - **RAG (`rag-service/`):** serviço Python separado — FastAPI + Uvicorn (porta 8001; 8000 no compose), sentence-transformers (all-MiniLM-L6-v2, torch CPU), pgvector como vector store, OpenAI opcional. Testes com pytest (`rag-service/pytest.ini`, venv em `rag-service/venv`). Segregação de domínios obrigatória (OPERATIONAL vs SYSTEM): colunas `domain`/`classification`/`sensitivity` em `rag_documents`/`rag_chunks`, filtro no SQL antes da busca vetorial, Domain Router em `api/services/rag/domainRouter.js`, auth serviço-a-serviço via `RAG_INTERNAL_TOKEN` (header `X-RAG-Internal-Token`). Doc canônica: `docs/rag/domain-segregation.md`.
 - **RPA (`core/rpa/`):** gravação/replay/player determinísticos com Playwright, CLI em `core/rpa/cli.js`.
-- **Mobile:** `apps/mobile/` existe mas está vazio (apenas `node_modules`).
+- **Mobile:** a decisão de arquitetura é **PWA** (sem app nativo); o diretório placeholder `apps/mobile/` (que continha apenas um `node_modules` órfão sem `package.json`) foi removido em 2026-09-07. Não o recrie sem uma decisão de arquitetura nova.
 - **Infra:** Docker Compose (produção), systemd (redis + rag-service), Apache como reverse proxy. **Nunca introduzir PM2.**
 - **Versões da stack:** a referência canônica das versões declaradas é `AI_MEMORY/stack-versions.md`; quando a stack mudar, rode `npm run stack:versions:sync` e commit o doc + `reports/stack-versions-report.json`. Valide com `npm run validate:stack-versions`.
 - **Dependência externa de pacote:** `@results/auth` é dependência `file:../../packages/auth`; o Jest inclui `/opt/results/packages` em `roots` (ver `jest.config.cjs`). Em clones fora de `/opt/results/ria/`, garantir que o diretório irmão `packages/` exista. `vendor/auth/` é a cópia versionada desse pacote usada pelo CI (o workflow copia `vendor/auth` → `../../packages/auth` antes do `npm ci`); ao alterar o pacote em `/opt/results/packages/auth`, sincronizar `vendor/auth/`.
@@ -64,7 +64,7 @@ Outros diretórios relevantes:
 
 ### Legado
 
-- Os diretórios legados `frontend_backup/`, `backups/`, `remote-dumps/`, `remote-dumps2/`, `scripts/legacy/` e o script `scripts/legacy-ripabx-inventory.js` foram **removidos do repositório** (2026-08-14). Não os recrie; exclusões que os citam (`.gitignore`, blocklists de release) são inertes e podem ser limpas oportunisticamente.
+- Os diretórios legados `frontend_backup/`, `backups/`, `remote-dumps/`, `remote-dumps2/`, `scripts/legacy/` e o script `scripts/legacy-ripabx-inventory.js` foram **removidos do repositório** (2026-08-14). Não os recrie. As exclusões inertes que os citavam (`.gitignore`, `.npmignore`, `.dockerignore`, blocklists de release, walkers de governança) foram limpas em 2026-09-07; as referências remanescentes a `backups/` são guardas vivas (`scripts/backup-postgres.sh` escreve em `./backups/postgres`).
 - Docs históricos em `dev Documentos/` são históricos, salvo quando um índice canônico os referencia — mas o diretório é lido pela API viva de dev-management e **não** deve ser removido.
 
 ## Comandos de build, teste e release

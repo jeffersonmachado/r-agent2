@@ -27,8 +27,6 @@ RELEASE_PAYLOAD_RSYNC_EXCLUDES=(
   '**/dumps/'
   'dump/'
   '**/dump/'
-  'remote-dumps/'
-  'remote-dumps2/'
   'backups/'
   '**/backups/'
   'backup/'

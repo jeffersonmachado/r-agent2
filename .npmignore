@@ -36,11 +36,6 @@ frontend/.vite/
 frontend/test-results/
 frontend-e2e/test-results/
 
-# Dumps and backups
-remote-dumps/
-remote-dumps2/
-frontend_backup/
-
 # Build outputs and packages
 dist/
 build/

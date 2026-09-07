@@ -2,8 +2,8 @@
 
 Este documento foi gerado por parsing de `menu.php` + UI (`html/app/*.html` + `html/app/*.js`).
 
-- **Fonte do menu**: `remote-dumps/ripabx-web-all-php/html/menu.php`
-- **Fonte da UI**: `remote-dumps2/extracted/ripabx-web-html-app/app`
+- **Fonte do menu**: `remote-dumps/ripabx-web-all-php/html/menu.php` (diretório removido do repositório em 2026-08-14 — documento histórico)
+- **Fonte da UI**: `remote-dumps2/extracted/ripabx-web-html-app/app` (idem)
 
 ## Endpoints/Storages principais do legado
 

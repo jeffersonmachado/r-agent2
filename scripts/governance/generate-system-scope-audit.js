@@ -32,7 +32,7 @@ const PATTERNS = [
 ];
 
 // Arquivos/diretórios a excluir da auditoria
-const EXCLUDE_DIRS = ['node_modules', 'frontend_backup', 'backups', 'remote-dumps'];
+const EXCLUDE_DIRS = ['node_modules', 'backups'];
 const INCLUDE_EXTS = ['.js', '.ts', '.tsx'];
 
 function walk(dir, results = []) {
