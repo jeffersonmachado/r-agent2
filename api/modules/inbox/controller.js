@@ -77,6 +77,17 @@ function createInboxController({ service, deps }) {
       }
     },
 
+    async intelligence(req, res) {
+      if (!ensureAuth(req, res) || !ensurePermission(req, res, 'read')) return;
+      try {
+        const out = await service.getConversationIntelligence(req);
+        await respondServiceResult(res, out);
+      } catch (err) {
+        deps.logger.error('Erro ao obter inteligencia da conversa (inbox):', err);
+        deps.sendJson(res, 500, { error: 'internal_error' });
+      }
+    },
+
     async reply(req, res) {
       if (!ensureAuth(req, res) || !ensurePermission(req, res, 'reply')) return;
       await runWithBody(req, res, (body) => service.reply(req, body), 'Erro ao responder conversa (inbox):');

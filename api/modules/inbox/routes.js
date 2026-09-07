@@ -18,6 +18,7 @@ function createInboxRoutes({ buildDeps }) {
   }
 
   router.get('/inbox/conversations', (req, res) => controllerFor(req, res).list(req, res));
+  router.get('/inbox/conversations/:conversationId/intelligence', (req, res) => controllerFor(req, res).intelligence(req, res));
   router.get('/inbox/conversations/:conversationId', (req, res) => controllerFor(req, res).get(req, res));
   router.post('/inbox/conversations/:conversationId/reply', (req, res) => controllerFor(req, res).reply(req, res));
   router.post('/inbox/conversations/:conversationId/assign', (req, res) => controllerFor(req, res).assign(req, res));

@@ -406,6 +406,7 @@ describe('inbox desacoplado (ChannelConversation-based)', () => {
 
     expect(paths).toEqual([
       { path: '/inbox/conversations', methods: ['get'] },
+      { path: '/inbox/conversations/:conversationId/intelligence', methods: ['get'] },
       { path: '/inbox/conversations/:conversationId', methods: ['get'] },
       { path: '/inbox/conversations/:conversationId/reply', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/assign', methods: ['post'] },
@@ -414,5 +415,156 @@ describe('inbox desacoplado (ChannelConversation-based)', () => {
       { path: '/inbox/conversations/:conversationId/notes', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/case', methods: ['post'] },
     ]);
+  });
+});
+
+describe('inteligência da conversa (NBA + resultados no Inbox)', () => {
+  function makeIntelligenceDeps(overrides = {}) {
+    return makeDeps({
+      workspaceEntityLink: {
+        findOne: jest.fn(async () => ({ entity_id: 'ent-1' })),
+      },
+      linkAutomationService: {
+        linkConversationCreated: jest.fn(async () => ({ entity_id: 'ent-healed' })),
+      },
+      workspaceService: {
+        getActions: jest.fn(async () => ({
+          items: [],
+          suggestion: {
+            type: 'followup',
+            label: 'Retomar contato',
+            reason: 'Cliente sem resposta há 4 dias.',
+            confidence: 0.82,
+            risk: 'low',
+            expectedOutcome: 'Recuperar o relacionamento',
+            action: { kind: 'send_message', label: 'Responder agora', conversationId: 'conv-1' },
+          },
+          tenantRecommendation: null,
+          recentOutcomes: [{ id: 'rec-1', title: 'Enviar lembrete', status: 'applied' }],
+        })),
+      },
+      ...overrides,
+    });
+  }
+
+  test('conversa com entidade vinculada retorna suggestion e recentOutcomes', async () => {
+    const deps = makeIntelligenceDeps();
+    const service = createInboxService(deps);
+
+    const out = await service.getConversationIntelligence(makeReq());
+
+    expect(out.ok).toBe(true);
+    expect(out.status).toBe(200);
+    expect(out.payload.entityId).toBe('ent-1');
+    expect(out.payload.suggestion.label).toBe('Retomar contato');
+    expect(out.payload.recentOutcomes).toHaveLength(1);
+    expect(deps.workspaceService.getActions).toHaveBeenCalledWith('tenant-1', 'ent-1', expect.objectContaining({
+      classification: expect.any(String),
+    }));
+    // Vínculo encontrado: auto-heal não é necessário
+    expect(deps.linkAutomationService.linkConversationCreated).not.toHaveBeenCalled();
+  });
+
+  test('conversa sem vínculo dispara auto-heal e usa a entidade criada', async () => {
+    const deps = makeIntelligenceDeps({
+      workspaceEntityLink: { findOne: jest.fn(async () => null) },
+    });
+    const service = createInboxService(deps);
+
+    const out = await service.getConversationIntelligence(makeReq());
+
+    expect(out.ok).toBe(true);
+    expect(deps.linkAutomationService.linkConversationCreated).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      conversation: { id: 'conv-1', external_id: '5511999999999', contact_id: '5511999999999' },
+    });
+    expect(out.payload.entityId).toBe('ent-healed');
+    expect(deps.workspaceService.getActions).toHaveBeenCalledWith('tenant-1', 'ent-healed', expect.anything());
+  });
+
+  test('sem vínculo e auto-heal nulo retorna payload vazio com 200', async () => {
+    const deps = makeIntelligenceDeps({
+      workspaceEntityLink: { findOne: jest.fn(async () => null) },
+      linkAutomationService: { linkConversationCreated: jest.fn(async () => null) },
+    });
+    const service = createInboxService(deps);
+
+    const out = await service.getConversationIntelligence(makeReq());
+
+    expect(out).toEqual({
+      ok: true,
+      status: 200,
+      payload: { entityId: null, suggestion: null, tenantRecommendation: null, recentOutcomes: [] },
+    });
+    expect(deps.workspaceService.getActions).not.toHaveBeenCalled();
+  });
+
+  test('conversa inexistente retorna 404 conversation_not_found', async () => {
+    const deps = makeIntelligenceDeps();
+    deps.channelConversationService.getConversation.mockResolvedValue(null);
+    const service = createInboxService(deps);
+
+    const out = await service.getConversationIntelligence(makeReq());
+
+    expect(out).toEqual({ ok: false, status: 404, payload: { error: 'conversation_not_found' } });
+  });
+
+  test('sem tenant retorna 403 tenant_required', async () => {
+    const deps = makeIntelligenceDeps();
+    const service = createInboxService(deps);
+
+    const out = await service.getConversationIntelligence(makeReq({ tenantId: null, agent: null }));
+
+    expect(out).toEqual({ ok: false, status: 403, payload: { error: 'tenant_required' } });
+  });
+
+  test('falha na inteligência é fail-closed: 200 com campos vazios e warn', async () => {
+    const deps = makeIntelligenceDeps();
+    deps.workspaceService.getActions.mockRejectedValue(new Error('db down'));
+    const service = createInboxService(deps);
+
+    const out = await service.getConversationIntelligence(makeReq());
+
+    expect(out).toEqual({
+      ok: true,
+      status: 200,
+      payload: { entityId: null, suggestion: null, tenantRecommendation: null, recentOutcomes: [] },
+    });
+    expect(deps.logger.warn).toHaveBeenCalled();
+  });
+
+  test('controller intelligence exige auth + inbox:read e responde payload do service', async () => {
+    const deps = makeIntelligenceDeps({
+      requireAuth: jest.fn(() => ({ valid: true })),
+      requirePermission: jest.fn(() => ({ allowed: true })),
+      sendJson: jest.fn(),
+      badRequest: jest.fn(),
+    });
+    const service = createInboxService(deps);
+    const controller = createInboxController({ service, deps });
+
+    await controller.intelligence(makeReq(), {});
+
+    expect(deps.requirePermission).toHaveBeenCalledWith(expect.anything(), 'inbox', 'read');
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 200, expect.objectContaining({
+      entityId: 'ent-1',
+      suggestion: expect.objectContaining({ label: 'Retomar contato' }),
+    }));
+  });
+
+  test('controller intelligence nega sem permissão inbox:read', async () => {
+    const deps = makeIntelligenceDeps({
+      requireAuth: jest.fn(() => ({ valid: true })),
+      requirePermission: jest.fn(() => ({ allowed: false, error: 'forbidden' })),
+      sendJson: jest.fn(),
+      badRequest: jest.fn(),
+    });
+    const service = createInboxService(deps);
+    const controller = createInboxController({ service, deps });
+
+    await controller.intelligence(makeReq(), {});
+
+    expect(deps.sendJson).toHaveBeenCalledWith({}, 403, expect.objectContaining({ error: 'forbidden' }));
+    expect(deps.workspaceService.getActions).not.toHaveBeenCalled();
   });
 });

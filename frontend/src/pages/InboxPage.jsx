@@ -9,6 +9,7 @@ import { MaskedPhone } from '../components/MaskedPhone';
 import {
   listInboxConversations,
   getInboxConversation,
+  getInboxConversationIntelligence,
   replyInboxConversation,
   assignInboxConversation,
   transferInboxConversation,
@@ -16,6 +17,15 @@ import {
   createCaseFromConversation,
   setInboxConversationStatus,
 } from '../api/inbox';
+import { applyTenantRecommendation } from '../api/intelligence';
+import { createWorkspaceTask } from '../api/workspace';
+import {
+  describeExecutedAction,
+  describeActionSignal,
+  describeOutcomeReason,
+  executedActionToneClass,
+} from '../modules/intelligence/executionFeedback';
+import { SuggestionMeta, SuggestionExpectedOutcome } from '../modules/workspace/WorkspaceActions';
 import { listQuickReplies, useQuickReply } from '../api/quickReplies';
 import { operatorCallback, fetchRecordingFile } from '../api/pbx';
 import { getAgentNameById } from '../api/auth';
@@ -104,6 +114,8 @@ export function InboxPage() {
   const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
   const [quickReplies, setQuickReplies] = useState([]);
   const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
+  const [intelligence, setIntelligence] = useState(null);
+  const [intelligenceBusy, setIntelligenceBusy] = useState(false);
   const isMobile = useIsMobile();
 
   // Cache id→nome de atendente e sequência para descartar respostas obsoletas
@@ -112,6 +124,7 @@ export function InboxPage() {
   const selectedTicketIdRef = useRef(null);
   const ticketsRef = useRef([]);
   const loadTicketsRef = useRef(null);
+  const replyTextareaRef = useRef(null);
 
   // Debounce do filtro "Atendente": evita refetch de 500 conversas a cada tecla
   useEffect(() => {
@@ -307,6 +320,30 @@ export function InboxPage() {
 
   useEffect(() => {
     selectedTicketIdRef.current = selectedTicket?.id || null;
+  }, [selectedTicket?.id]);
+
+  // Inteligência da conversa (NBA + resultados recentes): carregada ao abrir
+  // a conversa, com guarda contra resposta obsoleta ao trocar de conversa.
+  useEffect(() => {
+    const conversationId = selectedTicket?.id;
+    if (!conversationId) {
+      setIntelligence(null);
+      return;
+    }
+    let cancelled = false;
+    getInboxConversationIntelligence(conversationId)
+      .then((result) => {
+        if (!cancelled && selectedTicketIdRef.current === conversationId) {
+          setIntelligence(result || null);
+        }
+      })
+      .catch((err) => {
+        logger.warn('[Inbox] Falha ao carregar inteligência da conversa', err);
+        if (!cancelled && selectedTicketIdRef.current === conversationId) {
+          setIntelligence(null);
+        }
+      });
+    return () => { cancelled = true; };
   }, [selectedTicket?.id]);
 
   useEffect(() => {
@@ -554,6 +591,93 @@ export function InboxPage() {
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || 'Erro ao enviar resposta';
       showToast(message, 'error');
+    }
+  };
+
+  const reloadIntelligence = useCallback(async (conversationId) => {
+    if (!conversationId) return;
+    try {
+      const result = await getInboxConversationIntelligence(conversationId);
+      if (selectedTicketIdRef.current === conversationId) {
+        setIntelligence(result || null);
+      }
+    } catch (err) {
+      logger.warn('[Inbox] Falha ao recarregar inteligência da conversa', err);
+    }
+  }, []);
+
+  // Executa a Next Best Action sem sair da conversa: send_message foca o
+  // composer (a conversa já está aberta); create_task/schedule criam a ação
+  // operacional no Workspace da entidade vinculada.
+  const handleExecuteIntelligenceSuggestion = async () => {
+    const suggestion = intelligence?.suggestion;
+    const action = suggestion?.action;
+    if (!suggestion || !action?.kind || intelligenceBusy) return;
+
+    if (action.kind === 'send_message') {
+      replyTextareaRef.current?.focus();
+      replyTextareaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+
+    if (!intelligence.entityId) {
+      showToast('Ação indisponível — conversa sem cliente vinculado', 'warning');
+      return;
+    }
+
+    setIntelligenceBusy(true);
+    try {
+      if (action.kind === 'schedule') {
+        await createWorkspaceTask({
+          entityId: intelligence.entityId,
+          title: action.label || suggestion.label,
+          description: suggestion.reason || undefined,
+          dueDate: action.dueDate || undefined,
+          type: 'followup',
+        });
+        showToast('Follow-up agendado no Workspace.', 'success');
+      } else {
+        await createWorkspaceTask({
+          entityId: intelligence.entityId,
+          title: action.label || suggestion.label,
+          description: suggestion.reason || undefined,
+          type: 'manual',
+        });
+        showToast('Tarefa criada no Workspace.', 'success');
+      }
+      await reloadIntelligence(selectedTicket?.id);
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'Não foi possível executar a ação';
+      showToast(message, 'error');
+    } finally {
+      setIntelligenceBusy(false);
+    }
+  };
+
+  const handleApplyIntelligenceRecommendation = async () => {
+    const recommendation = intelligence?.tenantRecommendation;
+    if (!recommendation?.id || intelligenceBusy) return;
+    setIntelligenceBusy(true);
+    try {
+      const result = await applyTenantRecommendation(recommendation.id);
+      const execution = result?.execution
+        || result?.recommendation?.metadata?.application?.executedAction
+        || null;
+      const feedback = describeExecutedAction(execution);
+      if (feedback) {
+        showToast(
+          feedback.tone === 'success' ? `Recomendação aplicada — ${feedback.message}` : feedback.message,
+          feedback.tone === 'success' ? 'success' : 'warning',
+        );
+      } else {
+        showToast('Recomendação aplicada.', 'success');
+      }
+      await reloadIntelligence(selectedTicket?.id);
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'Não foi possível aplicar a recomendação';
+      showToast(message, 'error');
+    } finally {
+      setIntelligenceBusy(false);
     }
   };
 
@@ -1004,6 +1128,78 @@ export function InboxPage() {
                 </div>
               </div>
 
+              {intelligence && (intelligence.suggestion || intelligence.tenantRecommendation
+                || (Array.isArray(intelligence.recentOutcomes) && intelligence.recentOutcomes.length > 0)) ? (
+                <div className="support-details-section" data-testid="inbox-intelligence">
+                  <label className="support-form-label">Inteligência da conversa</label>
+                  {intelligence.suggestion ? (
+                    <div className="inbox-intelligence-block">
+                      <strong>{intelligence.suggestion.label}</strong>
+                      <p className="support-muted">{intelligence.suggestion.reason}</p>
+                      <div className="flex items-center gap-2 flex-wrap mt-2">
+                        <SuggestionMeta suggestion={intelligence.suggestion} />
+                      </div>
+                      <SuggestionExpectedOutcome suggestion={intelligence.suggestion} />
+                      {intelligence.suggestion.action?.kind ? (
+                        <Button
+                          size="sm"
+                          className="support-button-full"
+                          disabled={intelligenceBusy}
+                          onClick={handleExecuteIntelligenceSuggestion}
+                        >
+                          {intelligence.suggestion.action.label || 'Executar ação sugerida'}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {intelligence.tenantRecommendation ? (
+                    <div className="inbox-intelligence-block">
+                      <strong>{intelligence.tenantRecommendation.title}</strong>
+                      {intelligence.tenantRecommendation.description ? (
+                        <p className="support-muted">{intelligence.tenantRecommendation.description}</p>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        className="support-button-full"
+                        disabled={intelligenceBusy}
+                        onClick={handleApplyIntelligenceRecommendation}
+                      >
+                        Aplicar recomendação
+                      </Button>
+                    </div>
+                  ) : null}
+                  {Array.isArray(intelligence.recentOutcomes) && intelligence.recentOutcomes.length > 0 ? (
+                    <div className="inbox-intelligence-block">
+                      <strong>Resultados recentes</strong>
+                      {intelligence.recentOutcomes.slice(0, 2).map((item) => {
+                        const execFeedback = describeExecutedAction(item.executedAction);
+                        const signals = Array.isArray(item.outcome?.actionSignals) ? item.outcome.actionSignals : [];
+                        return (
+                          <div key={item.id} className="inbox-intelligence-outcome">
+                            <span>{item.title}</span>
+                            {execFeedback ? (
+                              <p className={executedActionToneClass(execFeedback.tone)}>{execFeedback.message}</p>
+                            ) : null}
+                            {signals.map((signal, signalIndex) => {
+                              const signalFeedback = describeActionSignal(signal);
+                              if (!signalFeedback) return null;
+                              return (
+                                <p key={`${item.id}-signal-${signalIndex}`} className={executedActionToneClass(signalFeedback.tone)}>
+                                  {signalFeedback.message}
+                                </p>
+                              );
+                            })}
+                            {item.outcome?.reason ? (
+                              <p className="support-muted">{describeOutcomeReason(item.outcome.reason)}</p>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="support-details-section">
                 <div className="support-form-group">
                   <label className="support-form-label">Atribuir para</label>
@@ -1087,6 +1283,7 @@ export function InboxPage() {
                     ) : null}
                   </div>
                   <textarea
+                    ref={replyTextareaRef}
                     className="support-form-textarea"
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}

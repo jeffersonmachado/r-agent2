@@ -3848,6 +3848,39 @@ div:has(svg[data-testid="connection"]) {
   color: var(--color-text-tertiary);
 }
 
+.support-muted {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 4px 0 0;
+}
+
+.inbox-intelligence-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-border-default);
+}
+
+.inbox-intelligence-block:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.inbox-intelligence-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--color-border-default);
+  font-size: 12px;
+}
+
+.inbox-intelligence-outcome p {
+  margin: 0;
+  font-size: 12px;
+}
+
 .inbox-media-image {
   display: block;
   max-width: 240px;

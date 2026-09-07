@@ -43,6 +43,7 @@ describe('inbox module', () => {
 
     expect(paths).toEqual([
       { path: '/inbox/conversations', methods: ['get'] },
+      { path: '/inbox/conversations/:conversationId/intelligence', methods: ['get'] },
       { path: '/inbox/conversations/:conversationId', methods: ['get'] },
       { path: '/inbox/conversations/:conversationId/reply', methods: ['post'] },
       { path: '/inbox/conversations/:conversationId/assign', methods: ['post'] },

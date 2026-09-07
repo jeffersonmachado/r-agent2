@@ -14,6 +14,10 @@ const outboundQueueService = require('../../services/outboundQueueService');
 const conversationTicketLinkService = require('../../services/conversationTicketLinkService');
 const caseService = require('../../services/caseService');
 const defaultLogger = require('../../utils/logger');
+const { WorkspaceEntityLink } = require('../../db/models');
+const { createWorkspaceService } = require('../workspace/workspace.service');
+const WorkspaceLinkAutomationService = require('../../services/workspace/WorkspaceLinkAutomationService');
+const { getClassificationForAgent } = require('../agent-os/experience-segregation');
 
 function parseConversationId(req) {
   return decodeURIComponent(String(req.params.conversationId || ''));
@@ -202,6 +206,69 @@ function createInboxService(deps) {
           notes,
         },
       };
+    },
+
+    async getConversationIntelligence(req) {
+      const loaded = await loadConversation(req);
+      if (!loaded.ok) return loaded;
+      const { tenantId, conversationId, conversation } = loaded;
+
+      // Fail-closed: a inteligência nunca derruba o detalhe da conversa.
+      const empty = { entityId: null, suggestion: null, tenantRecommendation: null, recentOutcomes: [] };
+      try {
+        const linkModel = deps.workspaceEntityLink !== undefined
+          ? deps.workspaceEntityLink
+          : (typeof WorkspaceEntityLink === 'function' ? WorkspaceEntityLink() : WorkspaceEntityLink);
+
+        let entityId = null;
+        if (linkModel && typeof linkModel.findOne === 'function') {
+          const link = await linkModel.findOne({
+            where: { tenant_id: tenantId, source_type: 'conversation', source_id: conversationId },
+            attributes: ['entity_id'],
+          });
+          entityId = link && link.entity_id ? String(link.entity_id) : null;
+        }
+
+        // Auto-heal: mesmo padrão da ingestão — conversa sem entidade vinculada
+        // é linkada on-demand para que a inteligência funcione em dados antigos.
+        if (!entityId) {
+          const linkAutomation = deps.linkAutomationService || new WorkspaceLinkAutomationService();
+          const link = await linkAutomation.linkConversationCreated({
+            tenantId,
+            conversation: {
+              id: conversation.id,
+              external_id: conversation.externalId,
+              contact_id: conversation.contactId,
+            },
+          });
+          entityId = link && link.entity_id ? String(link.entity_id) : null;
+        }
+
+        if (!entityId) {
+          return { ok: true, status: 200, payload: empty };
+        }
+
+        const workspace = deps.workspaceService || createWorkspaceService();
+        const classification = getClassificationForAgent(req.agent);
+        const actions = await workspace.getActions(tenantId, entityId, { classification });
+
+        return {
+          ok: true,
+          status: 200,
+          payload: {
+            entityId,
+            suggestion: actions.suggestion || null,
+            tenantRecommendation: actions.tenantRecommendation || null,
+            recentOutcomes: Array.isArray(actions.recentOutcomes) ? actions.recentOutcomes : [],
+          },
+        };
+      } catch (err) {
+        logger.warn('[Inbox] Inteligencia da conversa indisponivel (fail-closed)', {
+          conversationId,
+          error: err && err.message,
+        });
+        return { ok: true, status: 200, payload: empty };
+      }
     },
 
     async reply(req, body) {

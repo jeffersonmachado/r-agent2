@@ -4,9 +4,12 @@ import { render, screen, act, fireEvent, cleanup } from '@testing-library/react'
 
 const listInboxConversations = vi.fn();
 const getInboxConversation = vi.fn();
+const getInboxConversationIntelligence = vi.fn();
 const replyInboxConversation = vi.fn();
 const setInboxConversationStatus = vi.fn();
 const createCaseFromConversation = vi.fn();
+const applyTenantRecommendation = vi.fn();
+const createWorkspaceTask = vi.fn();
 const getAgentNameById = vi.fn();
 const listQuickReplies = vi.fn();
 const useQuickReply = vi.fn();
@@ -24,12 +27,21 @@ const toastDouble = vi.hoisted(() => ({ showToast: vi.fn() }));
 vi.mock('../api/inbox', () => ({
   listInboxConversations: (...args) => listInboxConversations(...args),
   getInboxConversation: (...args) => getInboxConversation(...args),
+  getInboxConversationIntelligence: (...args) => getInboxConversationIntelligence(...args),
   replyInboxConversation: (...args) => replyInboxConversation(...args),
   assignInboxConversation: vi.fn(),
   transferInboxConversation: vi.fn(),
   addInboxNote: vi.fn(),
   createCaseFromConversation: (...args) => createCaseFromConversation(...args),
   setInboxConversationStatus: (...args) => setInboxConversationStatus(...args),
+}));
+
+vi.mock('../api/intelligence', () => ({
+  applyTenantRecommendation: (...args) => applyTenantRecommendation(...args),
+}));
+
+vi.mock('../api/workspace', () => ({
+  createWorkspaceTask: (...args) => createWorkspaceTask(...args),
 }));
 
 vi.mock('../api/quickReplies', () => ({
@@ -138,6 +150,11 @@ describe('pages/InboxPage', () => {
     authDouble.capabilities = { inbox: true, caseManagement: true, caseCreationPolicy: 'manual' };
     listInboxConversations.mockResolvedValue({ conversations: [], total: 0 });
     getInboxConversation.mockResolvedValue({ conversation: baseConversation, messages: [] });
+    getInboxConversationIntelligence.mockResolvedValue({
+      entityId: null, suggestion: null, tenantRecommendation: null, recentOutcomes: [],
+    });
+    createWorkspaceTask.mockResolvedValue({ ok: true, task: { id: 'task-1' } });
+    applyTenantRecommendation.mockResolvedValue({ ok: true, execution: { kind: 'send_message', status: 'executed' } });
     getAgentNameById.mockResolvedValue({ agent: { name: 'Agente X' } });
     listQuickReplies.mockResolvedValue({ quickReplies: [] });
     useQuickReply.mockResolvedValue({ ok: true });
@@ -823,5 +840,173 @@ describe('pages/InboxPage', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Ouvir gravação da chamada' })).toHaveTextContent('Gravação indisponível');
+  });
+
+  it('inteligência da conversa: exibe Next Best Action e foca o composer em send_message', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    getInboxConversationIntelligence.mockResolvedValue({
+      entityId: 'ent-1',
+      suggestion: {
+        type: 'followup',
+        label: 'Retomar contato',
+        reason: 'Cliente sem resposta há 4 dias.',
+        confidence: 0.82,
+        risk: 'low',
+        expectedOutcome: 'Recuperar o relacionamento',
+        action: { kind: 'send_message', label: 'Responder agora', conversationId: 'c1' },
+      },
+      tenantRecommendation: null,
+      recentOutcomes: [],
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(getInboxConversationIntelligence).toHaveBeenCalledWith('c1');
+    expect(screen.getByTestId('inbox-intelligence')).toBeInTheDocument();
+    expect(screen.getByText('Retomar contato')).toBeInTheDocument();
+    expect(screen.getByText('Cliente sem resposta há 4 dias.')).toBeInTheDocument();
+
+    const composer = screen.getByPlaceholderText('Escreva a resposta para o cliente');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Responder agora' }));
+    });
+    // send_message na conversa já aberta: foca o composer, sem chamada extra de API
+    expect(document.activeElement).toBe(composer);
+    expect(createWorkspaceTask).not.toHaveBeenCalled();
+  });
+
+  it('inteligência da conversa: create_task cria tarefa no Workspace da entidade vinculada', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    getInboxConversationIntelligence.mockResolvedValue({
+      entityId: 'ent-7',
+      suggestion: {
+        type: 'task',
+        label: 'Cobrar retorno do orçamento',
+        reason: 'Orçamento enviado sem resposta.',
+        confidence: 0.7,
+        risk: 'medium',
+        action: { kind: 'create_task', label: 'Criar tarefa de cobrança' },
+      },
+      tenantRecommendation: null,
+      recentOutcomes: [],
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Criar tarefa de cobrança' }));
+    });
+
+    expect(createWorkspaceTask).toHaveBeenCalledWith(expect.objectContaining({
+      entityId: 'ent-7',
+      title: 'Criar tarefa de cobrança',
+      type: 'manual',
+    }));
+    expect(toastDouble.showToast).toHaveBeenCalledWith('Tarefa criada no Workspace.', 'success');
+  });
+
+  it('inteligência da conversa: aplica recomendação do tenant direto do Inbox', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    getInboxConversationIntelligence.mockResolvedValue({
+      entityId: 'ent-1',
+      suggestion: null,
+      tenantRecommendation: { id: 'rec-9', title: 'Redistribuir fila comercial', description: 'Conversão caiu 9,8%.' },
+      recentOutcomes: [],
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Aplicar recomendação' }));
+    });
+
+    expect(applyTenantRecommendation).toHaveBeenCalledWith('rec-9');
+    expect(toastDouble.showToast).toHaveBeenCalledWith(
+      expect.stringContaining('Recomendação aplicada'),
+      'success',
+    );
+  });
+
+  it('inteligência da conversa: exibe resultados recentes com sinais de outcome', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    getInboxConversationIntelligence.mockResolvedValue({
+      entityId: 'ent-1',
+      suggestion: null,
+      tenantRecommendation: null,
+      recentOutcomes: [{
+        id: 'rec-1',
+        title: 'Enviar lembrete de retorno',
+        status: 'applied',
+        appliedAt: '2026-08-30T10:00:00Z',
+        executedAction: { kind: 'send_message', status: 'executed' },
+        outcome: {
+          outcome: 'positive',
+          reason: 'action_signal_positive',
+          evaluatedAt: '2026-08-31T10:00:00Z',
+          actionSignals: [{ kind: 'send_message', outcome: 'replied' }],
+        },
+      }],
+    });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(screen.getByText('Resultados recentes')).toBeInTheDocument();
+    expect(screen.getByText('Enviar lembrete de retorno')).toBeInTheDocument();
+    expect(screen.getByText('Cliente respondeu após o envio.')).toBeInTheDocument();
+  });
+
+  it('inteligência da conversa: payload vazio não renderiza o card', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(getInboxConversationIntelligence).toHaveBeenCalledWith('c1');
+    expect(screen.queryByTestId('inbox-intelligence')).not.toBeInTheDocument();
+  });
+
+  it('inteligência da conversa: falha no endpoint não quebra o detalhe da conversa', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    getInboxConversationIntelligence.mockRejectedValue(new Error('HTTP 500'));
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(screen.queryByTestId('inbox-intelligence')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enviar resposta' })).toBeInTheDocument();
   });
 });

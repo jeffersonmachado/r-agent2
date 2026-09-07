@@ -38,6 +38,21 @@ export function getInboxConversation(conversationId) {
   });
 }
 
+/**
+ * Inteligência da conversa (Next Best Action + resultados recentes) resolvida
+ * server-side: a conversa é vinculada à entidade do workspace e o payload já
+ * vem filtrado pela classificação do agente. Fail-closed: sem entidade ou com
+ * falha, retorna campos null/[] com 200.
+ */
+export function getInboxConversationIntelligence(conversationId) {
+  if (!conversationId) {
+    return Promise.reject(new Error('getInboxConversationIntelligence: conversationId é obrigatório'));
+  }
+  return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/intelligence`, {
+    method: 'GET',
+  });
+}
+
 export function replyInboxConversation(conversationId, body) {
   if (!conversationId) {
     return Promise.reject(new Error('replyInboxConversation: conversationId é obrigatório'));
