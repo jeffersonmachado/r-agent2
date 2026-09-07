@@ -260,8 +260,8 @@
     }
   },
   "generatedAt": "2026-09-03T19:29:14.190Z",
-  "runId": "rap-governed-20260907121345830-2a5908ce",
-  "sourceFingerprint": "d03f728c425329426288eec8262e2a35c4726da16dfd6f4f0c7e7bc408ae6bea",
+  "runId": "rap-governed-20260907124313059-aff23bcb",
+  "sourceFingerprint": "ea47e169099df7352f2dcaa74960e452a8a06665a6bfa36378f225e139288ef3",
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0"
 }
