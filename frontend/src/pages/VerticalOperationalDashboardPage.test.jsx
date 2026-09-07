@@ -2,7 +2,7 @@ import React from 'react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VerticalOperationalDashboardPage } from './VerticalOperationalDashboardPage';
-import { getFitnessDashboard, getBeautyDashboard, getClinicDashboard, getFoodDashboard, getServicesDashboard, getMarketDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicRecall } from '../api/verticalOperations';
+import { getFitnessDashboard, getBeautyDashboard, getClinicDashboard, getFoodDashboard, getServicesDashboard, getMarketDashboard, getBakeryDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicRecall } from '../api/verticalOperations';
 
 vi.mock('../api/verticalOperations', () => ({
   getFitnessDashboard: vi.fn(),
@@ -11,6 +11,7 @@ vi.mock('../api/verticalOperations', () => ({
   getFoodDashboard: vi.fn(),
   getServicesDashboard: vi.fn(),
   getMarketDashboard: vi.fn(),
+  getBakeryDashboard: vi.fn(),
   getFitnessIntelligence: vi.fn(),
   getBeautyIntelligence: vi.fn(),
   getClinicRecall: vi.fn(),
@@ -46,6 +47,7 @@ describe('VerticalOperationalDashboardPage', () => {
     getFoodDashboard.mockResolvedValue({ kpis: { ordersInFlight: 4, ordersDeliveredToday: 9, ordersCancelledToday: 1, slaDeliverBreached: 0, reviewsRequested: 7, reorderCampaignsSent: 2, revenue: 1230.5 } });
     getServicesDashboard.mockResolvedValue({ kpis: { quotesPending: 3, quotesApproved: 2, approvalRate: 0.4, avgDecisionDays: 2.5, approvedAmount: 1800, revenue: 2350 } });
     getMarketDashboard.mockResolvedValue({ kpis: { ordersDeliveredToday: 5, ordersInFlight: 2, customersWithPurchases: 18, repeatCustomers: 6, repeatRate: 0.333, restockRemindersSent: 4, loyaltyCampaignsSent: 2, revenue: 4120.75 } });
+    getBakeryDashboard.mockResolvedValue({ kpis: { productsWithForecast: 4, producedQty: 120, soldQty: 108, leftoverQty: 12, stockouts: 1, forecastMape: 0.12 } });
     getFitnessIntelligence.mockResolvedValue(null);
     getBeautyIntelligence.mockResolvedValue(null);
     getClinicRecall.mockResolvedValue({ suggestion: 'send_recall' });
@@ -149,6 +151,26 @@ describe('VerticalOperationalDashboardPage', () => {
     );
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Varejo' })).toBeInTheDocument());
+  });
+
+  it('exibe o card de Padaria com KPIs do loop previsão→produção', async () => {
+    render(
+      <VerticalOperationalDashboardPage
+        workspaceKeys={['padaria']}
+        isSuperAdmin={false}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Padaria' })).toBeInTheDocument());
+    expect(screen.getByText('Produtos com previsão:')).toBeInTheDocument();
+    expect(screen.getByText('Produzido hoje:')).toBeInTheDocument();
+    expect(screen.getByText('Vendido hoje:')).toBeInTheDocument();
+    expect(screen.getByText('Sobra:')).toBeInTheDocument();
+    expect(screen.getByText('Rupturas:')).toBeInTheDocument();
+    expect(screen.getByText('Acurácia da previsão:')).toBeInTheDocument();
+    expect(screen.getByText('120')).toBeInTheDocument();
+    expect(screen.getByText('88%')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Varejo' })).not.toBeInTheDocument();
   });
 
   it('exibe o card de Serviços com KPIs do pipeline de orçamentos', async () => {

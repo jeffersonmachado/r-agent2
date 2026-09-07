@@ -113,6 +113,7 @@ const getMarketPattern = require('./MarketPattern');
 const getMarketPrediction = require('./MarketPrediction');
 const getMarketPlaybook = require('./MarketPlaybook');
 const getVerticalJourneyEvent = require('./VerticalJourneyEvent');
+const getVerticalProductionBatch = require('./VerticalProductionBatch');
 const getVerticalAttendance = require('./VerticalAttendance');
 const getVerticalSessionBundle = require('./VerticalSessionBundle');
 const getVerticalEngagementSignal = require('./VerticalEngagementSignal');
@@ -291,6 +292,7 @@ const MarketPattern = () => getMarketPattern();
 const MarketPrediction = () => getMarketPrediction();
 const MarketPlaybook = () => getMarketPlaybook();
 const VerticalJourneyEvent = () => getVerticalJourneyEvent();
+const VerticalProductionBatch = () => getVerticalProductionBatch();
 const VerticalAttendance = () => getVerticalAttendance();
 const VerticalSessionBundle = () => getVerticalSessionBundle();
 const VerticalEngagementSignal = () => getVerticalEngagementSignal();
@@ -927,6 +929,7 @@ module.exports = {
   MarketPrediction,
   MarketPlaybook,
   VerticalJourneyEvent,
+  VerticalProductionBatch,
   VerticalAttendance,
   VerticalSessionBundle,
   VerticalEngagementSignal,
@@ -1104,6 +1107,7 @@ module.exports = {
   getMarketPrediction,
   getMarketPlaybook,
   getVerticalJourneyEvent,
+  getVerticalProductionBatch,
   getVerticalAttendance,
   getVerticalSessionBundle,
   getVerticalEngagementSignal,

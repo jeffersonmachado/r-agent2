@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall, getFoodDashboard, getServicesDashboard, getMarketDashboard } from '../api/verticalOperations';
+import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall, getFoodDashboard, getServicesDashboard, getMarketDashboard, getBakeryDashboard } from '../api/verticalOperations';
 import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { verticalWorkspaces } from '../navigation/menu';
@@ -19,6 +19,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const [food, setFood] = useState(null);
   const [services, setServices] = useState(null);
   const [market, setMarket] = useState(null);
+  const [bakery, setBakery] = useState(null);
   const [subjectId, setSubjectId] = useState('');
   const [fitnessIntel, setFitnessIntel] = useState(null);
   const [beautyIntel, setBeautyIntel] = useState(null);
@@ -33,16 +34,18 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const showFood = isSuperAdmin || visibleWorkspaceIds.has('food') || resolvedWorkspaces.length === 0;
   const showServices = isSuperAdmin || visibleWorkspaceIds.has('servicos') || resolvedWorkspaces.length === 0;
   const showMarket = isSuperAdmin || visibleWorkspaceIds.has('varejo') || visibleWorkspaceIds.has('ecommerce') || resolvedWorkspaces.length === 0;
+  const showBakery = isSuperAdmin || visibleWorkspaceIds.has('padaria') || resolvedWorkspaces.length === 0;
 
   async function loadData() {
     try {
-      const [f, b, c, fd, sv, mk] = await Promise.all([
+      const [f, b, c, fd, sv, mk, bk] = await Promise.all([
         getFitnessDashboard({ windowDays: 30 }),
         getBeautyDashboard({ windowDays: 30 }),
         getClinicDashboard({ windowDays: 30 }).catch(() => null),
         getFoodDashboard({ windowDays: 30 }).catch(() => null),
         getServicesDashboard({ windowDays: 30 }).catch(() => null),
         getMarketDashboard({ windowDays: 30 }).catch(() => null),
+        getBakeryDashboard().catch(() => null),
       ]);
       setFitness(f || null);
       setBeauty(b || null);
@@ -50,6 +53,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
       setFood(fd || null);
       setServices(sv || null);
       setMarket(mk || null);
+      setBakery(bk || null);
     } catch (_) {
       showToast('Erro ao carregar dashboards verticais', 'error');
     }
@@ -115,7 +119,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
           </div>
         )}
       </div>
-      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic, showFood, showServices, showMarket].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
+      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic, showFood, showServices, showMarket, showBakery].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
         {showFitness && (
           <div className="support-details-panel">
             <h3>Fitness</h3>
@@ -163,6 +167,17 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
             <p><strong>Tempo médio de decisão:</strong> {services?.kpis?.avgDecisionDays != null ? `${services.kpis.avgDecisionDays}d` : '-'}</p>
             <p><strong>Valor aprovado:</strong> {services?.kpis?.approvedAmount ?? '-'}</p>
             <p><strong>Receita:</strong> {services?.kpis?.revenue ?? '-'}</p>
+          </div>
+        )}
+        {showBakery && (
+          <div className="support-details-panel">
+            <h3>Padaria</h3>
+            <p><strong>Produtos com previsão:</strong> {bakery?.kpis?.productsWithForecast ?? '-'}</p>
+            <p><strong>Produzido hoje:</strong> {bakery?.kpis?.producedQty ?? '-'}</p>
+            <p><strong>Vendido hoje:</strong> {bakery?.kpis?.soldQty ?? '-'}</p>
+            <p><strong>Sobra:</strong> {bakery?.kpis?.leftoverQty ?? '-'}</p>
+            <p><strong>Rupturas:</strong> {bakery?.kpis?.stockouts ?? '-'}</p>
+            <p><strong>Acurácia da previsão:</strong> {bakery?.kpis?.forecastMape != null ? `${Math.round((1 - bakery.kpis.forecastMape) * 100)}%` : '-'}</p>
           </div>
         )}
         {showMarket && (

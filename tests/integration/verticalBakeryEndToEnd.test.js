@@ -137,12 +137,15 @@ function makeMarketingApi() {
 describe('Bakery Vertical — End-to-End Journey', () => {
 
   describe('1. Registry de jornadas (qa-waves)', () => {
-    test('as 5 jornadas bakery estão registradas com steps reais', () => {
+    test('as jornadas bakery estão registradas com steps reais', () => {
       const registry = loadJson('config/qa-waves-registry.json');
       const bakery = registry.verticalJourneys && registry.verticalJourneys.bakery;
       expect(bakery).toBeTruthy();
-      expect(Object.keys(bakery).sort()).toEqual([...BAKERY_JOURNEYS].sort());
-      for (const journey of BAKERY_JOURNEYS) {
+      // 5 jornadas conversacionais (com contratos/executores) + loop operacional
+      // de previsão→produção (backend ML, validado em verticalBakeryProductionLoop.test.js)
+      const expected = [...BAKERY_JOURNEYS, 'bakery_previsao_producao'];
+      expect(Object.keys(bakery).sort()).toEqual(expected.sort());
+      for (const journey of expected) {
         expect(Array.isArray(bakery[journey].steps)).toBe(true);
         expect(bakery[journey].steps.length).toBeGreaterThanOrEqual(5);
         expect(typeof bakery[journey].name).toBe('string');

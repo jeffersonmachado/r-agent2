@@ -282,6 +282,19 @@
           "conversao",
           "retencao"
         ]
+      },
+      "bakery_previsao_producao": {
+        "name": "Loop Previsao Producao Padaria",
+        "steps": [
+          "historico_vendas",
+          "treino_modelo",
+          "previsao_demanda",
+          "plano_producao",
+          "fornada",
+          "resultado_real",
+          "sobra_ruptura",
+          "aprendizado_fator"
+        ]
       }
     },
     "market": {
@@ -378,6 +391,10 @@
         {
           "id": "bakery_reativacao_cliente",
           "name": "Reativação de Cliente"
+        },
+        {
+          "id": "bakery_previsao_producao",
+          "name": "Loop Previsão Produção"
         }
       ]
     },

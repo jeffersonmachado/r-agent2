@@ -1193,6 +1193,36 @@ async function handleMarketRestockScan({ tenantId: tid, payload } = {}) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// BAKERY HANDLERS
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Bakery production plan (daily): retreina modelos de demanda com debounce
+ * (24h) e gera o plano do dia seguinte. Produtos sem histórico suficiente
+ * ficam insufficient_data (fail-closed, nunca heurística).
+ */
+async function handleBakeryProductionPlan({ tenantId: tid, payload } = {}) {
+  const tenantId = safeStr(tid || payload?.tenantId || '');
+  if (!tenantId || !dbAvailable()) return;
+  const bakery = require('./bakeryProductionService');
+
+  try {
+    const result = await bakery.retrainDemandModels({ tenantId });
+    const tomorrow = new Date(Date.now() + 86400000);
+    const plan = await bakery.generateProductionPlan({ tenantId, date: tomorrow });
+    logger.info('[VerticalJourney] bakery production plan gerado', {
+      tenantId,
+      trained: result.trained.length,
+      skipped: result.skipped.length,
+      plannedProducts: plan.items.length,
+      withForecast: plan.items.filter((i) => i.status === 'ok').length,
+    });
+  } catch (err) {
+    logger.warn('[VerticalJourney] bakery production plan failed', { tenantId, error: err?.message });
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // DISPATCH ENTRY POINT
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -1266,6 +1296,10 @@ async function handleVerticalJob(job) {
         await withJobTimeout(handleMarketRestockScan({ tenantId, payload: job?.payload }), undefined, kind);
         break;
 
+      case 'vertical_bakery_production_plan':
+        await withJobTimeout(handleBakeryProductionPlan({ tenantId, payload: job?.payload }), undefined, kind);
+        break;
+
       case 'vertical_reconciliation':
         await withJobTimeout(handleVerticalReconciliation({ tenantId }), undefined, kind);
         break;
@@ -1300,6 +1334,7 @@ module.exports = {
   handleServicesJourneyTick,
   handleMarketJourneyTick,
   handleMarketRestockScan,
+  handleBakeryProductionPlan,
   handleVerticalReconciliation,
   withJobTimeout,
 };

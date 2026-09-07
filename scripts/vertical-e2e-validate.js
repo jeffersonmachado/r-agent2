@@ -181,6 +181,16 @@ function withJobTimeout(promise, timeoutMs, label) {
     }
   });
 
+  await runSection('Bakery production loop tests (Jest)', async function () {
+    try {
+      runJestTestFile('tests/integration/verticalBakeryProductionLoop.test.js');
+      check('All Bakery production loop scenarios pass', true);
+    } catch (err) {
+      var summary3 = summarizeJestFailure(err);
+      check('All Bakery production loop scenarios pass', false, summary3 || err.message);
+    }
+  });
+
   // ── 2. Notification adapter (no DB dependency) ────────────────────────────
 
   var notificationAdapter = require('../api/services/notifications/notificationAdapter');

@@ -78,3 +78,7 @@ export function getServicesDashboard(params = {}) {
 export function getMarketDashboard(params = {}) {
   return fetchJson(`/api/market/dashboard${toQuery(params)}`);
 }
+
+export function getBakeryDashboard(params = {}) {
+  return fetchJson(`/api/bakery/dashboard${toQuery(params)}`);
+}

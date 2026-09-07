@@ -183,6 +183,17 @@ async function tick() {
       idempotencyKey: `v_market_restock:${tenantId}:${day}`,
     }).catch(() => {});
 
+    // Bakery production plan: once per day (previsão ML → produção recomendada do dia seguinte)
+    enqueueJob({
+      tenantId,
+      kind: 'vertical_bakery_production_plan',
+      payload: { tenantId },
+      runAt: new Date(),
+      priority: -1,
+      maxAttempts: 2,
+      idempotencyKey: `v_bakery_plan:${tenantId}:${day}`,
+    }).catch(() => {});
+
     // Beauty reactivation scan: once per hour (idempotency key at hour granularity)
     const hour = Math.floor(Date.now() / 3600000);
     enqueueJob({
