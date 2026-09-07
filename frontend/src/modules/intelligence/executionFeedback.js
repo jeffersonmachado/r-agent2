@@ -10,18 +10,23 @@ const SKIPPED_REASON_LABELS = {
   missing_message_text: 'Sem texto de mensagem definido — a ação não foi executada.',
   conversation_not_found: 'Conversa não encontrada — a ação não foi executada.',
   unsupported_action_kind: 'Este tipo de ação ainda não é executável automaticamente.',
+  not_enough_open_conversations: 'Poucas conversas abertas no momento — nada a redistribuir.',
+  no_eligible_agents: 'Nenhum atendente elegível disponível para receber conversas.',
+  already_balanced: 'A fila já está equilibrada entre os atendentes.',
 };
 
 const EXECUTED_LABELS = {
   create_task: 'Tarefa criada no Workspace para execução operacional.',
   send_message: 'Mensagem enviada para a fila do canal — entrega em andamento.',
   schedule: 'Follow-up agendado no Workspace.',
+  rebalance_queue: 'Conversas abertas redistribuídas entre a equipe.',
 };
 
 const FAILED_LABELS = {
   create_task: 'A ação operacional não pôde ser executada automaticamente; crie a tarefa manualmente.',
   send_message: 'A mensagem não pôde ser enviada automaticamente; responda pela Inbox.',
   schedule: 'O follow-up não pôde ser agendado automaticamente; agende manualmente.',
+  rebalance_queue: 'A redistribuição não pôde ser executada; atribua as conversas manualmente pela Inbox.',
 };
 
 function formatDueDate(dueDate) {
@@ -45,6 +50,15 @@ export function describeExecutedAction(executedAction) {
     if (kind === 'schedule') {
       const when = formatDueDate(executedAction.dueDate);
       if (when) message = `Follow-up agendado para ${when}.`;
+    }
+    if (kind === 'rebalance_queue') {
+      const assigned = Number(executedAction.assigned) || 0;
+      const rebalanced = Number(executedAction.rebalanced) || 0;
+      const total = assigned + rebalanced;
+      const agents = Number(executedAction.agents) || 0;
+      if (total > 0 && agents > 0) {
+        message = `${total} ${total === 1 ? 'conversa redistribuída' : 'conversas redistribuídas'} entre ${agents} ${agents === 1 ? 'atendente' : 'atendentes'}.`;
+      }
     }
     return { tone: 'success', message };
   }

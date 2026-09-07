@@ -58,9 +58,14 @@ function buildDeps(overrides = {}) {
         status: 'open',
       })),
       createMessage: jest.fn(async () => ({ id: 'msg-1' })),
+      listConversations: jest.fn(async () => ({ total: 0, items: [] })),
+      updateConversation: jest.fn(async ({ conversationId, patch }) => ({ id: conversationId, ...patch })),
     },
     outboundQueueService: {
       enqueueOutbound: jest.fn(async () => ({ id: 'out-1' })),
+    },
+    authService: {
+      listAgents: jest.fn(async () => []),
     },
     ...overrides,
   };
@@ -273,5 +278,231 @@ describe('RecommendationEngine._maybeAutoApply — guarda customer-facing', () =
     expect(taskRow.toJSON().status).toBe('applied');
     expect(msgRow.update).not.toHaveBeenCalled();
     expect(deps.channelConversationService.createMessage).not.toHaveBeenCalled();
+  });
+
+  test('autonomous: rebalance_queue é ação interna e auto-aplica (sem guarda customer-facing)', async () => {
+    const deps = buildDeps();
+    deps.capabilitiesService.getTenantCapabilities.mockResolvedValue({ autonomyLevel: 'autonomous' });
+    deps.authService.listAgents.mockResolvedValue([
+      { id: 'ag-1', role: 'operator', active: true },
+      { id: 'ag-2', role: 'operator', active: true },
+    ]);
+    deps.channelConversationService.listConversations.mockResolvedValue({
+      total: 3,
+      items: [
+        { id: 'c1', assignedTo: 'ag-1' },
+        { id: 'c2', assignedTo: 'ag-1' },
+        { id: 'c3', assignedTo: 'ag-1' },
+      ],
+    });
+
+    const rebalanceRow = buildRecommendationRow(
+      { kind: 'rebalance_queue', label: 'Redistribuir conversas abertas' },
+      { id: 'reco-reb' },
+    );
+    const { engine } = loadEngine({ rowsById: { 'reco-reb': rebalanceRow }, deps });
+
+    const result = await engine._maybeAutoApply({
+      tenantId: 'tenant-a',
+      created: [{ id: 'reco-reb', priority: 'high', metadata: { action: { kind: 'rebalance_queue' } } }],
+    });
+
+    expect(result.attempted).toBe(true);
+    expect(result.applied).toBe(1);
+    expect(result.skippedCustomerFacing).toBeUndefined();
+    expect(rebalanceRow.toJSON().status).toBe('applied');
+  });
+});
+
+describe('RecommendationEngine.applyRecommendation — rebalance_queue', () => {
+  function rebalanceDeps({ conversations, agents }) {
+    const deps = buildDeps();
+    deps.channelConversationService.listConversations.mockResolvedValue({
+      total: conversations.length,
+      items: conversations,
+    });
+    deps.authService.listAgents.mockResolvedValue(agents);
+    return deps;
+  }
+
+  const twoAgents = [
+    { id: 'ag-1', role: 'operator', active: true },
+    { id: 'ag-2', role: 'operator', active: true },
+  ];
+
+  test('executa: atribui sem dono e move do mais carregado para o menos carregado', async () => {
+    const deps = rebalanceDeps({
+      agents: twoAgents,
+      conversations: [
+        { id: 'c1', assignedTo: 'ag-1' },
+        { id: 'c2', assignedTo: 'ag-1' },
+        { id: 'c3', assignedTo: 'ag-1' },
+        { id: 'c4', assignedTo: null },
+      ],
+    });
+    const row = buildRecommendationRow({ kind: 'rebalance_queue', label: 'Redistribuir conversas abertas' });
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, deps });
+
+    const result = await engine.applyRecommendation({
+      tenantId: 'tenant-a',
+      recommendationId: 'reco-1',
+      actor: 'user-1',
+      origin: 'manual',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.execution.status).toBe('executed');
+    // c4 sem dono → ag-2; depois ag-1 (3) vs ag-2 (1) → move 1 de ag-1 para ag-2
+    expect(result.execution.assigned).toBe(1);
+    expect(result.execution.rebalanced).toBe(1);
+    expect(result.execution.distribution).toEqual({ 'ag-1': 2, 'ag-2': 2 });
+    expect(deps.channelConversationService.updateConversation).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'c4', patch: { assigned_to: 'ag-2' } }),
+    );
+    expect(result.recommendation.metadata.application.executedAction.kind).toBe('rebalance_queue');
+  });
+
+  test('fila já equilibrada: skipped already_balanced, nenhuma conversa movida', async () => {
+    const deps = rebalanceDeps({
+      agents: twoAgents,
+      conversations: [
+        { id: 'c1', assignedTo: 'ag-1' },
+        { id: 'c2', assignedTo: 'ag-2' },
+      ],
+    });
+    const row = buildRecommendationRow({ kind: 'rebalance_queue' });
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, deps });
+
+    const result = await engine.applyRecommendation({
+      tenantId: 'tenant-a',
+      recommendationId: 'reco-1',
+      actor: 'user-1',
+      origin: 'manual',
+    });
+
+    expect(result.execution.status).toBe('skipped');
+    expect(result.execution.reason).toBe('already_balanced');
+    expect(deps.channelConversationService.updateConversation).not.toHaveBeenCalled();
+  });
+
+  test('menos de 2 conversas abertas: skipped not_enough_open_conversations', async () => {
+    const deps = rebalanceDeps({
+      agents: twoAgents,
+      conversations: [{ id: 'c1', assignedTo: null }],
+    });
+    const row = buildRecommendationRow({ kind: 'rebalance_queue' });
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, deps });
+
+    const result = await engine.applyRecommendation({
+      tenantId: 'tenant-a',
+      recommendationId: 'reco-1',
+      actor: 'user-1',
+      origin: 'manual',
+    });
+
+    expect(result.execution.status).toBe('skipped');
+    expect(result.execution.reason).toBe('not_enough_open_conversations');
+  });
+
+  test('sem atendentes elegíveis: skipped no_eligible_agents', async () => {
+    const deps = rebalanceDeps({
+      agents: [{ id: 'ag-9', role: 'auditor', active: true }],
+      conversations: [{ id: 'c1', assignedTo: null }, { id: 'c2', assignedTo: null }],
+    });
+    const row = buildRecommendationRow({ kind: 'rebalance_queue' });
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, deps });
+
+    const result = await engine.applyRecommendation({
+      tenantId: 'tenant-a',
+      recommendationId: 'reco-1',
+      actor: 'user-1',
+      origin: 'manual',
+    });
+
+    expect(result.execution.status).toBe('skipped');
+    expect(result.execution.reason).toBe('no_eligible_agents');
+  });
+
+  test('falha total nos updates: status failed explícito', async () => {
+    const deps = rebalanceDeps({
+      agents: twoAgents,
+      conversations: [{ id: 'c1', assignedTo: null }, { id: 'c2', assignedTo: null }],
+    });
+    deps.channelConversationService.updateConversation.mockRejectedValue(new Error('db down'));
+    const row = buildRecommendationRow({ kind: 'rebalance_queue' });
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, deps });
+
+    const result = await engine.applyRecommendation({
+      tenantId: 'tenant-a',
+      recommendationId: 'reco-1',
+      actor: 'user-1',
+      origin: 'manual',
+    });
+
+    expect(result.execution.status).toBe('failed');
+    expect(result.execution.error).toBe('all_moves_failed');
+  });
+});
+
+describe('RecommendationEngine._mapInsightToRecommendation — causa de primeira resposta', () => {
+  function insightWithCause(direction) {
+    return {
+      id: 'insight-1',
+      type: 'metric_drop',
+      related_metrics: ['sales.conversion_rate'],
+      metadata: {
+        probableCauses: [{
+          metricKey: 'operations.avg_first_response_minutes',
+          label: 'tempo médio de primeira resposta',
+          changeRatio: 0.42,
+          direction,
+        }],
+      },
+    };
+  }
+
+  test('causa = primeira resposta em alta → ação executável rebalance_queue', () => {
+    const { engine } = loadEngine({ deps: buildDeps() });
+
+    const mapped = engine._mapInsightToRecommendation(insightWithCause('up'), []);
+
+    expect(mapped.actionType).toBe('rebalance_queue');
+    expect(mapped.action.kind).toBe('rebalance_queue');
+    expect(mapped.priority).toBe('high');
+    expect(mapped.title).toContain('primeira resposta');
+  });
+
+  test('causa em queda (direction down) NÃO ativa rebalance → mantém investigação', () => {
+    const { engine } = loadEngine({ deps: buildDeps() });
+
+    const mapped = engine._mapInsightToRecommendation(insightWithCause('down'), []);
+
+    expect(mapped.actionType).toBe('investigate_metric_drop');
+    expect(mapped.action.kind).toBe('create_task');
+  });
+
+  test('goal_at_risk com causa de primeira resposta também ganha rebalance', () => {
+    const { engine } = loadEngine({ deps: buildDeps() });
+    const insight = { ...insightWithCause('up'), type: 'goal_at_risk' };
+
+    const mapped = engine._mapInsightToRecommendation(insight, []);
+
+    expect(mapped.actionType).toBe('rebalance_queue');
+    expect(mapped.action.kind).toBe('rebalance_queue');
+  });
+
+  test('metric_drop sem causas prováveis mantém mapeamento de investigação', () => {
+    const { engine } = loadEngine({ deps: buildDeps() });
+    const insight = {
+      id: 'insight-2',
+      type: 'metric_drop',
+      related_metrics: ['sales.conversion_rate'],
+      metadata: {},
+    };
+
+    const mapped = engine._mapInsightToRecommendation(insight, []);
+
+    expect(mapped.actionType).toBe('investigate_metric_drop');
+    expect(mapped.action.kind).toBe('create_task');
   });
 });

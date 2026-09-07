@@ -37,6 +37,31 @@ describe('describeExecutedAction', () => {
     expect(feedback.message).toBe('Follow-up agendado no Workspace.');
   });
 
+  it('rebalance_queue executado → mensagem com contagens reais', () => {
+    const feedback = describeExecutedAction({
+      kind: 'rebalance_queue', status: 'executed', assigned: 1, rebalanced: 2, agents: 3,
+    });
+    expect(feedback.tone).toBe('success');
+    expect(feedback.message).toBe('3 conversas redistribuídas entre 3 atendentes.');
+  });
+
+  it('rebalance_queue executado sem contagens → mensagem padrão', () => {
+    const feedback = describeExecutedAction({ kind: 'rebalance_queue', status: 'executed' });
+    expect(feedback.message).toBe('Conversas abertas redistribuídas entre a equipe.');
+  });
+
+  it('rebalance_queue skipped/failed → linguagem operacional (sem mecanismo interno)', () => {
+    const skipped = describeExecutedAction({ kind: 'rebalance_queue', status: 'skipped', reason: 'already_balanced' });
+    expect(skipped.tone).toBe('muted');
+    expect(skipped.message).toContain('fila já está equilibrada');
+    const noAgents = describeExecutedAction({ kind: 'rebalance_queue', status: 'skipped', reason: 'no_eligible_agents' });
+    expect(noAgents.message).toContain('Nenhum atendente elegível');
+    const failed = describeExecutedAction({ kind: 'rebalance_queue', status: 'failed' });
+    expect(failed.tone).toBe('warning');
+    expect(failed.message).toContain('Inbox');
+    expect(failed.message).not.toMatch(/queue_|RPA|engine/i);
+  });
+
   it('skipped com reason conhecida → tom muted + motivo explícito', () => {
     const feedback = describeExecutedAction({ kind: 'send_message', status: 'skipped', reason: 'missing_conversation_id' });
     expect(feedback.tone).toBe('muted');

@@ -24,6 +24,31 @@ const CUSTOMER_FACING_ACTION_KINDS = new Set(['send_message', 'schedule']);
 // depois dela sem resposta, vira 'no_reply' (outcome unchanged).
 const REPLY_WINDOW_MS = 24 * 3600000;
 
+// Métrica operacional de primeira resposta (fonte: MetricEngine). Quando ela
+// aparece como causa provável em alta (direction 'up') de uma queda de
+// métrica/meta em risco, a recomendação ganha ação operacional executável
+// (redistribuir conversas abertas) em vez de apenas "criar tarefa de
+// investigação" — Métrica → Causa → Recomendação → Ação → Outcome.
+const FIRST_RESPONSE_METRIC = 'operations.avg_first_response_minutes';
+
+function firstResponseCause(insight) {
+  const causes = insight && insight.metadata && Array.isArray(insight.metadata.probableCauses)
+    ? insight.metadata.probableCauses
+    : [];
+  return causes.find((cause) => cause
+    && cause.metricKey === FIRST_RESPONSE_METRIC
+    && cause.direction === 'up') || null;
+}
+
+// Papéis elegíveis para receber conversas redistribuídas (mesma regra do
+// assignmentService.isEligibleAgent, duplicada aqui para não acoplar ao
+// pipeline legado de tickets).
+const ELIGIBLE_ASSIGNEE_ROLES = new Set(['operator', 'manager', 'admin', 'owner']);
+
+// Teto de segurança: um único apply nunca move mais que este número de
+// conversas, mesmo em tenants com fila gigante.
+const REBALANCE_MAX_MOVES = 100;
+
 function buildStatusError(code, statusCode) {
   return Object.assign(new Error(code), { code, statusCode });
 }
@@ -39,6 +64,7 @@ class RecommendationEngine {
     this._capabilitiesService = deps.capabilitiesService || null;
     this._channelConversationService = deps.channelConversationService || null;
     this._outboundQueueService = deps.outboundQueueService || null;
+    this._authService = deps.authService || null;
   }
 
   // Lazy defaults: evitam custo/ciclos de require e mantêm os testes de
@@ -83,6 +109,14 @@ class RecommendationEngine {
       this._outboundQueueService = require('../../services/outboundQueueService');
     }
     return this._outboundQueueService;
+  }
+
+  get authService() {
+    if (!this._authService) {
+      // eslint-disable-next-line global-require
+      this._authService = require('../../services/authService');
+    }
+    return this._authService;
   }
 
   async listRecommendations({ tenantId, status = null, limit = 100 } = {}) {
@@ -479,6 +513,8 @@ class RecommendationEngine {
         return this._executeSendMessage({ tenantId, recommendation, action });
       case 'schedule':
         return this._executeSchedule({ tenantId, recommendation, action });
+      case 'rebalance_queue':
+        return this._executeRebalanceQueue({ tenantId, recommendation, action });
       default:
         return {
           kind: String(action.kind),
@@ -486,6 +522,136 @@ class RecommendationEngine {
           reason: 'unsupported_action_kind',
           attemptedAt: new Date().toISOString(),
         };
+    }
+  }
+
+  /**
+   * Ação operacional "redistribuir conversas abertas": atribui conversas sem
+   * dono e move conversas do atendente mais carregado para o menos carregado
+   * até equilibrar (diferença < 2). Opera sobre ChannelConversation real
+   * (DB), com pool de atendentes elegíveis do tenant. Ação interna (não
+   * customer-facing): pode auto-aplicar no nível autonomous — o tenant
+   * delegou execução operacional. O outcome é medido pelas métricas de
+   * baseline (tempo de primeira resposta) no loop evaluatePendingOutcomes.
+   */
+  async _executeRebalanceQueue({ tenantId, recommendation, action }) {
+    const attemptedAt = new Date().toISOString();
+    const base = { kind: 'rebalance_queue', label: action.label || null };
+    try {
+      const result = await this.channelConversationService.listConversations({
+        tenantId: String(tenantId),
+        status: 'open',
+        limit: 500,
+      });
+      const conversations = Array.isArray(result?.items) ? result.items : [];
+      if (conversations.length < 2) {
+        return { ...base, status: 'skipped', reason: 'not_enough_open_conversations', attemptedAt };
+      }
+
+      const agents = await this.authService.listAgents(String(tenantId));
+      const eligible = (agents || []).filter((agent) => agent
+        && agent.active !== false
+        && (!agent.status || agent.status === 'active')
+        && ELIGIBLE_ASSIGNEE_ROLES.has(agent.role));
+      if (eligible.length === 0) {
+        return { ...base, status: 'skipped', reason: 'no_eligible_agents', attemptedAt };
+      }
+      const eligibleIds = new Set(eligible.map((agent) => String(agent.id)));
+
+      // Carga atual: apenas conversas abertas atribuídas a atendentes
+      // elegíveis entram no balanceamento; sem dono entram na fila de atribuir.
+      const load = new Map(eligible.map((agent) => [String(agent.id), 0]));
+      const byAssignee = new Map();
+      const unassigned = [];
+      for (const conversation of conversations) {
+        const assignee = conversation.assignedTo || conversation.assigned_to || null;
+        if (assignee && eligibleIds.has(String(assignee))) {
+          const key = String(assignee);
+          load.set(key, (load.get(key) || 0) + 1);
+          if (!byAssignee.has(key)) byAssignee.set(key, []);
+          byAssignee.get(key).push(conversation);
+        } else if (!assignee) {
+          unassigned.push(conversation);
+        }
+      }
+
+      const leastLoaded = () => {
+        let best = null;
+        let bestCount = Infinity;
+        for (const [id, count] of load.entries()) {
+          if (count < bestCount) { bestCount = count; best = id; }
+        }
+        return best;
+      };
+
+      const moves = [];
+      // 1) Conversas sem dono → atendente menos carregado.
+      for (const conversation of unassigned) {
+        if (moves.length >= REBALANCE_MAX_MOVES) break;
+        const target = leastLoaded();
+        if (!target) break;
+        moves.push({ conversationId: conversation.id, to: target });
+        load.set(target, load.get(target) + 1);
+      }
+      // 2) Rebalanceamento: do mais carregado para o menos carregado.
+      for (;;) {
+        if (moves.length >= REBALANCE_MAX_MOVES) break;
+        let maxId = null;
+        let maxCount = -1;
+        for (const [id, count] of load.entries()) {
+          if (count > maxCount && (byAssignee.get(id) || []).length > 0) {
+            maxCount = count;
+            maxId = id;
+          }
+        }
+        const minId = leastLoaded();
+        const minCount = minId != null ? load.get(minId) : 0;
+        if (maxId == null || minId == null || maxId === minId || maxCount - minCount < 2) break;
+        const conversation = byAssignee.get(maxId).pop();
+        moves.push({ conversationId: conversation.id, from: maxId, to: minId });
+        load.set(maxId, load.get(maxId) - 1);
+        load.set(minId, load.get(minId) + 1);
+      }
+
+      if (moves.length === 0) {
+        return { ...base, status: 'skipped', reason: 'already_balanced', attemptedAt };
+      }
+
+      let assigned = 0;
+      let rebalanced = 0;
+      let failedMoves = 0;
+      for (const move of moves) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await this.channelConversationService.updateConversation({
+            tenantId: String(tenantId),
+            conversationId: String(move.conversationId),
+            patch: { assigned_to: move.to },
+          });
+          if (move.from) rebalanced += 1; else assigned += 1;
+        } catch (err) {
+          failedMoves += 1;
+        }
+      }
+
+      if (failedMoves === moves.length) {
+        return { ...base, status: 'failed', error: 'all_moves_failed', attemptedAt };
+      }
+
+      return {
+        ...base,
+        status: 'executed',
+        assigned,
+        rebalanced,
+        failedMoves,
+        agents: eligible.length,
+        distribution: Object.fromEntries(load),
+        recommendationId: recommendation.id,
+        attemptedAt,
+        executedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      return { ...base, status: 'failed', error: String(err?.message || err), attemptedAt };
     }
   }
 
@@ -1003,6 +1169,28 @@ class RecommendationEngine {
     if (suffix.length > 0) mapped.description = `${mapped.description} ${suffix.join('. ')}.`;
   }
 
+  /**
+   * Recomendação com ação operacional executável quando a causa provável é
+   * o tempo de primeira resposta em alta: em vez de "criar tarefa de
+   * investigação", o apply redistribui as conversas abertas da fila.
+   */
+  _rebalanceRecommendation({ insight, type, goalId, relatedMetrics, responseCause }) {
+    return {
+      insightId: insight.id,
+      goalId: goalId || null,
+      title: 'Redistribuir atendimentos para destravar a primeira resposta',
+      description: `A queda de desempenho coincide com aumento de ${Math.round((responseCause.changeRatio || 0) * 100)}% no tempo medio de primeira resposta. Redistribuir as conversas abertas entre a equipe tende a destravar o atendimento.`,
+      actionType: 'rebalance_queue',
+      priority: 'high',
+      estimatedImpact: { expected: 'high', horizon: 'short_term' },
+      metadata: {
+        sourceInsightType: type,
+        relatedMetrics,
+      },
+      action: { kind: 'rebalance_queue', label: 'Redistribuir conversas abertas' },
+    };
+  }
+
   _mapInsightToRecommendation(insight, goals) {
     if (!insight || !insight.id) return null;
 
@@ -1012,8 +1200,14 @@ class RecommendationEngine {
     const matchedGoal = goalFromInsight
       ? (goals || []).find((goal) => String(goal.id) === String(goalFromInsight))
       : null;
+    const responseCause = firstResponseCause(insight);
 
     if (type === 'goal_off_track') {
+      if (responseCause) {
+        return this._rebalanceRecommendation({
+          insight, type, goalId: matchedGoal?.id || goalFromInsight, relatedMetrics, responseCause,
+        });
+      }
       return {
         insightId: insight.id,
         goalId: matchedGoal?.id || goalFromInsight || null,
@@ -1054,6 +1248,11 @@ class RecommendationEngine {
     }
 
     if (type === 'metric_drop') {
+      if (responseCause) {
+        return this._rebalanceRecommendation({
+          insight, type, goalId: matchedGoal?.id, relatedMetrics, responseCause,
+        });
+      }
       return {
         insightId: insight.id,
         goalId: matchedGoal?.id || null,
@@ -1094,6 +1293,11 @@ class RecommendationEngine {
     }
 
     if (type === 'goal_at_risk') {
+      if (responseCause) {
+        return this._rebalanceRecommendation({
+          insight, type, goalId: matchedGoal?.id || goalFromInsight, relatedMetrics, responseCause,
+        });
+      }
       return {
         insightId: insight.id,
         goalId: matchedGoal?.id || goalFromInsight || null,
