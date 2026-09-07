@@ -52,12 +52,12 @@
       "id": "package_name_alignment",
       "contradiction": false,
       "severity": "OK",
-      "latestZip": "r-agent2-20260907-094815.zip",
+      "latestZip": "r-agent2-20260907-124231.zip",
       "mismatches": [],
       "message": null
     }
   ],
   "foundContradictions": [],
   "summary": "Nenhuma contradição detectada entre 6 verificações de consistência.",
-  "reboundAt": "2026-09-07T12:50:29.080Z"
+  "reboundAt": "2026-09-07T15:44:23.539Z"
 }
