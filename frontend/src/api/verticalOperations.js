@@ -58,3 +58,11 @@ export function getFitnessIntelligence(subjectId) {
 export function getBeautyIntelligence(subjectId) {
   return fetchJson(`/api/beauty/intelligence/${encodeURIComponent(subjectId)}`);
 }
+
+export function getClinicDashboard(params = {}) {
+  return fetchJson(`/api/clinic/dashboard${toQuery(params)}`);
+}
+
+export function getClinicRecall(subjectId) {
+  return fetchJson(`/api/clinic/subject/${encodeURIComponent(subjectId)}/recall`);
+}

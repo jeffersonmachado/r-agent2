@@ -109,6 +109,31 @@
         ]
       }
     },
+    "clinic": {
+      "clinic_appointment": {
+        "name": "Consulta Completa Clínica",
+        "steps": [
+          "descoberta",
+          "agendamento_consulta",
+          "confirmacao",
+          "lembrete",
+          "comparecimento",
+          "consulta_realizada",
+          "retorno"
+        ]
+      },
+      "clinic_recall": {
+        "name": "Recall e Retorno de Paciente",
+        "steps": [
+          "deteccao_retorno_devido",
+          "envio_recall",
+          "resposta_paciente",
+          "agendamento_retorno",
+          "consulta_realizada",
+          "retencao"
+        ]
+      }
+    },
     "food": {
       "food_order_flow": {
         "name": "Food Order Flow",
@@ -228,6 +253,14 @@
         { "id": "bakery_producao_fornada",   "name": "Produção e Fornada" },
         { "id": "bakery_estoque_perdas",     "name": "Estoque e Perdas" },
         { "id": "bakery_reativacao_cliente", "name": "Reativação de Cliente" }
+      ]
+    },
+    {
+      "id": "clinic",
+      "name": "Clínica",
+      "journeys": [
+        { "id": "clinic_appointment", "name": "Consulta Completa" },
+        { "id": "clinic_recall",      "name": "Recall e Retorno" }
       ]
     },
     {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence } from '../api/verticalOperations';
+import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall } from '../api/verticalOperations';
 import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { verticalWorkspaces } from '../navigation/menu';
@@ -15,24 +15,29 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const { showToast, ToastContainer } = useToast();
   const [fitness, setFitness] = useState(null);
   const [beauty, setBeauty] = useState(null);
+  const [clinic, setClinic] = useState(null);
   const [subjectId, setSubjectId] = useState('');
   const [fitnessIntel, setFitnessIntel] = useState(null);
   const [beautyIntel, setBeautyIntel] = useState(null);
+  const [clinicIntel, setClinicIntel] = useState(null);
   const resolvedWorkspaces = workspaceKeys
     .map((key) => verticalWorkspaces[key])
     .filter(Boolean);
   const visibleWorkspaceIds = new Set(resolvedWorkspaces.map((workspace) => workspace.id));
   const showFitness = isSuperAdmin || visibleWorkspaceIds.has('fitness') || resolvedWorkspaces.length === 0;
   const showBeauty = isSuperAdmin || visibleWorkspaceIds.has('beauty') || resolvedWorkspaces.length === 0;
+  const showClinic = isSuperAdmin || visibleWorkspaceIds.has('saude') || resolvedWorkspaces.length === 0;
 
   async function loadData() {
     try {
-      const [f, b] = await Promise.all([
+      const [f, b, c] = await Promise.all([
         getFitnessDashboard({ windowDays: 30 }),
         getBeautyDashboard({ windowDays: 30 }),
+        getClinicDashboard({ windowDays: 30 }).catch(() => null),
       ]);
       setFitness(f || null);
       setBeauty(b || null);
+      setClinic(c || null);
     } catch (_) {
       showToast('Erro ao carregar dashboards verticais', 'error');
     }
@@ -44,12 +49,14 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
       return;
     }
     try {
-      const [fi, bi] = await Promise.all([
+      const [fi, bi, ci] = await Promise.all([
         getFitnessIntelligence(subjectId).catch(() => null),
         getBeautyIntelligence(subjectId).catch(() => null),
+        getClinicRecall(subjectId).catch(() => null),
       ]);
       setFitnessIntel(fi);
       setBeautyIntel(bi);
+      setClinicIntel(ci);
     } catch (_) {
       showToast('Erro ao carregar inteligência', 'error');
     }
@@ -96,7 +103,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
           </div>
         )}
       </div>
-      <div className="support-grid" style={{ gridTemplateColumns: showFitness && showBeauty ? '1fr 1fr' : '1fr', gap: '1rem' }}>
+      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
         {showFitness && (
           <div className="support-details-panel">
             <h3>Fitness</h3>
@@ -114,15 +121,24 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
             <p><strong>Receita:</strong> {beauty?.kpis?.revenue ?? '-'}</p>
           </div>
         )}
+        {showClinic && (
+          <div className="support-details-panel">
+            <h3>Clínica</h3>
+            <p><strong>Consultas hoje:</strong> {clinic?.kpis?.consultationsToday ?? '-'}</p>
+            <p><strong>Risco de falta:</strong> {clinic?.kpis?.noShowRiskPatients ?? '-'}</p>
+            <p><strong>Recalls enviados:</strong> {clinic?.kpis?.recallsSent ?? '-'}</p>
+            <p><strong>Receita:</strong> {clinic?.kpis?.revenue ?? '-'}</p>
+          </div>
+        )}
       </div>
 
       <div className="support-details-panel" style={{ marginTop: '1rem' }}>
-        <h3>Inteligência Heurística</h3>
+        <h3>Inteligência Vertical</h3>
         <div className="support-controls" style={{ display: 'flex', gap: '0.5rem' }}>
           <input className="support-input" placeholder="subjectId" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} />
           <button className="support-button" onClick={runIntelligence}>Analisar</button>
         </div>
-        <div className="support-grid" style={{ gridTemplateColumns: showFitness && showBeauty ? '1fr 1fr' : '1fr', gap: '1rem', marginTop: '1rem' }}>
+        <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem', marginTop: '1rem' }}>
           {showFitness && (
             <div>
               <h4>Fitness</h4>
@@ -133,6 +149,12 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
             <div>
               <h4>Beauty</h4>
               <pre style={{ whiteSpace: 'pre-wrap' }}>{beautyIntel ? JSON.stringify(beautyIntel, null, 2) : '-'}</pre>
+            </div>
+          )}
+          {showClinic && (
+            <div>
+              <h4>Clínica (recall)</h4>
+              <pre style={{ whiteSpace: 'pre-wrap' }}>{clinicIntel ? JSON.stringify(clinicIntel, null, 2) : '-'}</pre>
             </div>
           )}
         </div>

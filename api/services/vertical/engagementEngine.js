@@ -32,6 +32,11 @@ const DEFAULTS = {
     inactive_days_threshold: 60,
     no_show_history_window: 90,    // days of history for no-show rate calculation
   },
+  clinic: {
+    low_frequency_threshold: 1,    // consultations per 60 days
+    inactive_days_threshold: 150,  // no consultation for N days → recall due
+    no_show_history_window: 90,    // days of history for no-show rate calculation
+  },
 };
 
 function makeId(prefix) {
@@ -142,8 +147,9 @@ async function computeEngagementSignal({ tenantId, vertical, subjectId, membersh
     else signalType = 'healthy';
   } else {
     score = computeBeautyNoShowScore({ noShowCount, totalAppointments, daysSinceLastVisit });
+    const verticalDefaults = DEFAULTS[vertical] || DEFAULTS.beauty;
     if (score >= 0.6) signalType = 'no_show_risk';
-    else if (daysSinceLastVisit >= DEFAULTS.beauty.inactive_days_threshold) signalType = 'inactive';
+    else if (daysSinceLastVisit >= verticalDefaults.inactive_days_threshold) signalType = 'inactive';
     else signalType = 'healthy';
   }
 

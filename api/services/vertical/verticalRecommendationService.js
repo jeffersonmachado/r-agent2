@@ -239,6 +239,110 @@ function fitnessBlockFollowUpSuggestion({ membershipId, billingStatus, blockCoun
   };
 }
 
+// ── Clinic ────────────────────────────────────────────────────────────────
+
+/**
+ * Clinic: compute consultation no-show (falta) risk and suggest action.
+ */
+async function clinicNoShowRisk({ tenantId, subjectId, membershipId, billingStatus = 'active', noShowCount = 0, totalAppointments = 0 }) {
+  const signal = await computeEngagementSignal({
+    tenantId,
+    vertical: 'clinic',
+    subjectId,
+    membershipId,
+    billingStatus,
+    noShowCount,
+    totalAppointments,
+  });
+
+  const score = signal.score;
+  let action = 'none';
+  let reason = 'Histórico de faltas baixo; nenhuma ação necessária.';
+
+  if (score >= 0.7) {
+    action = 'send_confirmation_reminder';
+    reason = `Alto risco de falta (score=${score.toFixed(2)}). Recomenda-se confirmação ativa da consulta e lembrete reforçado.`;
+  } else if (score >= 0.4) {
+    action = 'send_soft_reminder';
+    reason = `Risco moderado de falta (score=${score.toFixed(2)}). Um lembrete leve é recomendado.`;
+  }
+
+  return {
+    subjectId,
+    vertical: 'clinic',
+    signalType: signal.signal_type,
+    score,
+    action,
+    reason,
+    evidence: { noShowCount, totalAppointments, daysSinceLastVisit: signal.days_since_last_visit, computedBy: 'ai_ml_required' },
+  };
+}
+
+/**
+ * Clinic: recall (retorno) suggestion based on factual attendance history.
+ *
+ * This is a deterministic business rule (days since last consultation vs.
+ * recall window), not a risk score — so it does NOT depend on the ML
+ * provider. Risk scoring (no-show) stays fail-closed via clinicNoShowRisk.
+ */
+async function clinicRecallSuggestion({ tenantId, subjectId }) {
+  const recents = await getRecentAttendances({ tenantId, vertical: 'clinic', subjectId, windowDays: 150 });
+  let lastAt = recents[0] ? new Date(recents[0].checked_in_at || recents[0].created_at) : null;
+
+  if (!lastAt) {
+    // Fora da janela: busca a última consulta real sem limite de janela
+    const { getSequelize } = require('../../db/sequelize');
+    if (getSequelize()) {
+      const { VerticalAttendance } = require('../../db/models');
+      const row = await VerticalAttendance().findOne({
+        where: { tenant_key: tenantId, vertical: 'clinic', subject_id: String(subjectId) },
+        order: [['checked_in_at', 'DESC']],
+      }).catch(() => null);
+      const data = row && row.toJSON ? row.toJSON() : row;
+      if (data) lastAt = new Date(data.checked_in_at || data.created_at);
+    }
+  }
+
+  if (!lastAt || !Number.isFinite(lastAt.getTime())) {
+    return {
+      subjectId,
+      vertical: 'clinic',
+      suggestion: 'none',
+      reason: 'Sem histórico de consultas; recall se aplica apenas a pacientes com atendimento anterior.',
+      evidence: { daysSinceLastVisit: null },
+    };
+  }
+
+  const days = Math.floor((Date.now() - lastAt.getTime()) / 86400000);
+  const evidence = { daysSinceLastVisit: days, lastConsultationAt: lastAt.toISOString(), computedBy: 'business_rule' };
+
+  if (days >= 150) {
+    return {
+      subjectId,
+      vertical: 'clinic',
+      suggestion: 'send_recall',
+      reason: `Paciente sem consulta há ${days} dias. Enviar recall para agendamento de retorno.`,
+      evidence,
+    };
+  }
+  if (days >= 90) {
+    return {
+      subjectId,
+      vertical: 'clinic',
+      suggestion: 'pre_recall_outreach',
+      reason: `Última consulta há ${days} dias. Um contato preventivo aproxima o retorno antes do recall formal.`,
+      evidence,
+    };
+  }
+  return {
+    subjectId,
+    vertical: 'clinic',
+    suggestion: 'none',
+    reason: 'Paciente com acompanhamento em dia. Nenhum recall necessário.',
+    evidence,
+  };
+}
+
 module.exports = {
   beautyNoShowRisk,
   beautyReengagementSuggestion,
@@ -247,4 +351,6 @@ module.exports = {
   fitnessChurnRisk,
   fitnessLowFrequencySuggestion,
   fitnessBlockFollowUpSuggestion,
+  clinicNoShowRisk,
+  clinicRecallSuggestion,
 };

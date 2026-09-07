@@ -1,14 +1,16 @@
 import React from 'react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VerticalOperationalDashboardPage } from './VerticalOperationalDashboardPage';
-import { getFitnessDashboard, getBeautyDashboard } from '../api/verticalOperations';
+import { getFitnessDashboard, getBeautyDashboard, getClinicDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicRecall } from '../api/verticalOperations';
 
 vi.mock('../api/verticalOperations', () => ({
-  getFitnessDashboard: vi.fn().mockResolvedValue({ kpis: {} }),
-  getBeautyDashboard: vi.fn().mockResolvedValue({ kpis: {} }),
-  getFitnessIntelligence: vi.fn().mockResolvedValue(null),
-  getBeautyIntelligence: vi.fn().mockResolvedValue(null),
+  getFitnessDashboard: vi.fn(),
+  getBeautyDashboard: vi.fn(),
+  getClinicDashboard: vi.fn(),
+  getFitnessIntelligence: vi.fn(),
+  getBeautyIntelligence: vi.fn(),
+  getClinicRecall: vi.fn(),
 }));
 
 const wsRegistrations = [];
@@ -33,6 +35,16 @@ vi.mock('../components/Toast', () => ({
 }));
 
 describe('VerticalOperationalDashboardPage', () => {
+  // resetMocks: true no vitest.config — rearmar implementações a cada teste
+  beforeEach(() => {
+    getFitnessDashboard.mockResolvedValue({ kpis: {} });
+    getBeautyDashboard.mockResolvedValue({ kpis: {} });
+    getClinicDashboard.mockResolvedValue({ kpis: { consultationsToday: 3, noShowRiskPatients: 1, recallsSent: 2, revenue: 450 } });
+    getFitnessIntelligence.mockResolvedValue(null);
+    getBeautyIntelligence.mockResolvedValue(null);
+    getClinicRecall.mockResolvedValue({ suggestion: 'send_recall' });
+  });
+
   it('renderiza badges das verticais resolvidas para super-admin', () => {
     render(
       <VerticalOperationalDashboardPage
@@ -60,6 +72,23 @@ describe('VerticalOperationalDashboardPage', () => {
     expect(screen.getByText('Vertical efetiva')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Beauty' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Fitness' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Clínica' })).not.toBeInTheDocument();
+  });
+
+  it('exibe o card de Clínica com KPIs para a vertical saude', async () => {
+    render(
+      <VerticalOperationalDashboardPage
+        workspaceKeys={['saude']}
+        isSuperAdmin={false}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Clínica' })).toBeInTheDocument());
+    expect(screen.getByText('Consultas hoje:')).toBeInTheDocument();
+    expect(screen.getByText('Risco de falta:')).toBeInTheDocument();
+    expect(screen.getByText('Recalls enviados:')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Beauty' })).not.toBeInTheDocument();
   });
 
   it('subscreve os 4 eventos verticais e refaz o fetch quando um evento chega', async () => {

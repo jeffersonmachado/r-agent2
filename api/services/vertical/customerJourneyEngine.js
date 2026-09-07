@@ -172,7 +172,7 @@ async function emitJourneyEvent({
     source: `vertical.journey.${vertical}`,
     occurredAt: now,
     correlationId: correlationId || id,
-    subject: { type: vertical === 'beauty' ? 'beauty_customer' : 'fitness_subject', id: subjectId || customerId || 'unknown' },
+    subject: { type: vertical === 'beauty' ? 'beauty_customer' : `${vertical}_subject`, id: subjectId || customerId || 'unknown' },
     actor: { type: 'system', id: triggeredBy || 'journey_engine' },
     idempotencyKey: resolvedKey ? `journey_ledger:${resolvedKey}` : null,
     payload: { eventType, vertical, scheduleId, membershipId, ...payload },

@@ -43,7 +43,7 @@ async function discoverActiveTenants() {
 
   const tenantSets = await Promise.all([
     AccessMembership().findAll({
-      where: { vertical: { [require('sequelize').Op.in]: ['beauty', 'fitness'] } },
+      where: { vertical: { [require('sequelize').Op.in]: ['beauty', 'fitness', 'clinic'] } },
       attributes: ['tenant_key'],
       group: ['tenant_key'],
       limit: 200,
@@ -103,6 +103,29 @@ async function tick() {
       priority: 0,
       maxAttempts: 3,
       idempotencyKey: `v_fitness_tick:${tenantId}:${minute}`,
+    }).catch(() => {});
+
+    // Clinic tick (every minute): reminders + no-show scan
+    enqueueJob({
+      tenantId,
+      kind: 'vertical_clinic_journey_tick',
+      payload: { tenantId },
+      runAt: new Date(),
+      priority: 0,
+      maxAttempts: 3,
+      idempotencyKey: `v_clinic_tick:${tenantId}:${minute}`,
+    }).catch(() => {});
+
+    // Clinic recall scan: once per day (retorno periódico)
+    const day = Math.floor(Date.now() / 86400000);
+    enqueueJob({
+      tenantId,
+      kind: 'vertical_clinic_recall_scan',
+      payload: { tenantId },
+      runAt: new Date(),
+      priority: -1,
+      maxAttempts: 2,
+      idempotencyKey: `v_clinic_recall:${tenantId}:${day}`,
     }).catch(() => {});
 
     // Beauty reactivation scan: once per hour (idempotency key at hour granularity)

@@ -10,6 +10,9 @@
  *   - vertical_beauty_noshow_scan
  *   - vertical_fitness_inactivity_scan
  *   - vertical_fitness_grace_expiry_scan
+ *   - vertical_clinic_journey_tick
+ *   - vertical_clinic_noshow_scan
+ *   - vertical_clinic_recall_scan
  *
  * All operations are:
  *   - Tenant-scoped (tenantId in job.payload)
@@ -565,6 +568,227 @@ async function handleVerticalReconciliation({ tenantId: tid, payload } = {}) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// CLINIC HANDLERS
+// ────────────────────────────────────────────────────────────────────────────
+
+function getClinicService() {
+  return require('./clinicJourneyService');
+}
+
+/**
+ * Main clinic tick: reminder dispatch for confirmed consultations + no-show scan.
+ * payload: { tenantId, windowHours? }
+ */
+async function handleClinicJourneyTick(job) {
+  const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
+  if (!tenantId || !dbAvailable()) return;
+
+  const windowHours = Number(job?.payload?.windowHours) || 26; // scan next 26 h
+  const clinic = getClinicService();
+
+  // ── 1. Reminders: confirmation_sent events with scheduled_at in window ──
+  try {
+    const confirmations = await VerticalJourneyEvent().findAll({
+      where: {
+        tenant_key: tenantId,
+        vertical: 'clinic',
+        event_type: 'confirmation_sent',
+        occurred_at: { [Op.gte]: daysAgo(2) },
+      },
+      limit: 100,
+    }).catch(() => []);
+
+    for (const c of confirmations) {
+      const row = c.toJSON ? c.toJSON() : c;
+      const scheduleId = row.schedule_id;
+      const subjectId = row.subject_id;
+      const customerId = row.customer_id;
+      if (!scheduleId) continue;
+
+      const scheduledAt = row.payload?.scheduled_at || row.metadata?.scheduled_at;
+      if (!scheduledAt) continue;
+      const apptMs = new Date(scheduledAt).getTime();
+      if (!Number.isFinite(apptMs)) continue;
+
+      const now = Date.now();
+      const hoursUntil = (apptMs - now) / 3600000;
+
+      if (hoursUntil > 0 && hoursUntil <= 1.5) {
+        const existing1h = await VerticalJourneyEvent().findOne({
+          where: { tenant_key: tenantId, vertical: 'clinic', event_type: 'reminder_1h', schedule_id: scheduleId },
+        }).catch(() => null);
+        if (!existing1h) {
+          try {
+            await clinic.sendReminderNearTime({
+              tenantId,
+              subjectId,
+              customerId,
+              scheduleId,
+              channel: row.channel || 'whatsapp',
+              metadata: { scheduleId, scheduledAt, channel: row.channel || 'whatsapp' },
+            });
+          } catch (err) {
+            logger.warn('[VerticalJourney] clinic reminder_1h failed', { tenantId, scheduleId, error: err?.message });
+          }
+        }
+      } else if (hoursUntil > 1.5 && hoursUntil <= windowHours) {
+        const existing24h = await VerticalJourneyEvent().findOne({
+          where: { tenant_key: tenantId, vertical: 'clinic', event_type: 'reminder_24h', schedule_id: scheduleId },
+        }).catch(() => null);
+        if (existing24h) continue;
+        try {
+          await clinic.sendReminder24h({
+            tenantId,
+            subjectId,
+            customerId,
+            scheduleId,
+            channel: row.channel || 'whatsapp',
+            metadata: { scheduleId, scheduledAt, channel: row.channel || 'whatsapp' },
+          });
+          logger.info('[VerticalJourney] clinic reminder_24h sent', { tenantId, scheduleId });
+        } catch (err) {
+          logger.warn('[VerticalJourney] clinic reminder_24h failed', { tenantId, scheduleId, error: err?.message });
+        }
+      }
+    }
+  } catch (err) {
+    logger.warn('[VerticalJourney] clinic tick reminders error', { tenantId, error: err?.message });
+  }
+
+  // ── 2. No-show scan ──────────────────────────────────────────────────────
+  await handleClinicNoShowScan({ tenantId });
+}
+
+/**
+ * Scan for clinic no-shows: confirmation_sent whose scheduled time passed ≥2h ago
+ * with no checkin_recorded / service_completed / no_show_detected.
+ */
+async function handleClinicNoShowScan({ tenantId, payload } = {}) {
+  const tid = safeStr(tenantId || payload?.tenantId || '');
+  if (!tid || !dbAvailable()) return;
+  const clinic = getClinicService();
+
+  try {
+    const candidatesSince = hoursAgo(48);
+    const candidatesUntil = hoursAgo(2); // at least 2h past appointment time
+
+    const candidates = await VerticalJourneyEvent().findAll({
+      where: {
+        tenant_key: tid,
+        vertical: 'clinic',
+        event_type: 'confirmation_sent',
+        occurred_at: { [Op.between]: [candidatesSince, candidatesUntil] },
+      },
+      limit: 100,
+    }).catch(() => []);
+
+    for (const c of candidates) {
+      const row = c.toJSON ? c.toJSON() : c;
+      const scheduleId = row.schedule_id;
+      if (!scheduleId) continue;
+
+      const scheduledAt = row.payload?.scheduled_at || row.metadata?.scheduled_at;
+      if (scheduledAt) {
+        const apptMs = new Date(scheduledAt).getTime();
+        if (Number.isFinite(apptMs) && apptMs > Date.now() - 2 * 3600000) continue; // not yet 2h past
+      }
+
+      const resolved = await VerticalJourneyEvent().findOne({
+        where: {
+          tenant_key: tid,
+          vertical: 'clinic',
+          event_type: { [Op.in]: ['checkin_recorded', 'service_completed', 'no_show_detected'] },
+          schedule_id: scheduleId,
+        },
+      }).catch(() => null);
+      if (resolved) continue;
+
+      try {
+        await clinic.detectNoShow({
+          tenantId: tid,
+          subjectId: row.subject_id,
+          customerId: row.customer_id,
+          scheduleId,
+          metadata: { triggeredBy: 'scheduler', source: 'no_show_scan', channel: 'whatsapp' },
+        });
+        logger.info('[VerticalJourney] clinic no_show_detected', { tenantId: tid, scheduleId });
+      } catch (err) {
+        logger.warn('[VerticalJourney] clinic noshow detect failed', { tenantId: tid, scheduleId, error: err?.message });
+      }
+    }
+  } catch (err) {
+    logger.warn('[VerticalJourney] clinic no-show scan failed', { tenantId: tid, error: err?.message });
+  }
+}
+
+/**
+ * Clinic recall scan (daily): patients whose last consultation/attendance is
+ * older than the recall window (150d default) and who have not received a
+ * recall in the last 90 days.
+ */
+async function handleClinicRecallScan({ tenantId: tid, payload } = {}) {
+  const tenantId = safeStr(tid || payload?.tenantId || '');
+  if (!tenantId || !dbAvailable()) return;
+  const clinic = getClinicService();
+
+  try {
+    const recallWindowDays = Number(payload?.recallWindowDays) || 150;
+    const cooldownDays = Number(payload?.cooldownDays) || 90;
+
+    // Patients with attendance older than the recall window
+    const oldAttendances = await VerticalAttendance().findAll({
+      where: {
+        tenant_key: tenantId,
+        vertical: 'clinic',
+        checked_in_at: { [Op.lt]: daysAgo(recallWindowDays) },
+      },
+      attributes: ['subject_id'],
+      group: ['subject_id'],
+      limit: 500,
+    }).catch(() => []);
+
+    // Patients still active (attendance inside the window)
+    const recentAttendances = await VerticalAttendance().findAll({
+      where: { tenant_key: tenantId, vertical: 'clinic', checked_in_at: { [Op.gte]: daysAgo(recallWindowDays) } },
+      attributes: ['subject_id'],
+      limit: 1000,
+    }).catch(() => []);
+    const recentSubjects = new Set(recentAttendances.map((a) => safeStr((a.toJSON ? a.toJSON() : a).subject_id)));
+
+    const candidates = oldAttendances
+      .map((a) => safeStr((a.toJSON ? a.toJSON() : a).subject_id))
+      .filter((sid) => sid && !recentSubjects.has(sid));
+
+    for (const subjectId of candidates.slice(0, 50)) {
+      const recentRecall = await VerticalJourneyEvent().findOne({
+        where: {
+          tenant_key: tenantId,
+          vertical: 'clinic',
+          event_type: 'return_campaign_sent',
+          subject_id: subjectId,
+          occurred_at: { [Op.gte]: daysAgo(cooldownDays) },
+        },
+      }).catch(() => null);
+      if (recentRecall) continue;
+
+      try {
+        await clinic.sendRecall({
+          tenantId,
+          subjectId,
+          channel: 'whatsapp',
+          metadata: { triggeredBy: 'scheduler', recallKey: `${subjectId}:${Math.floor(Date.now() / 86400000)}`, daysWindow: recallWindowDays },
+        });
+        logger.info('[VerticalJourney] clinic recall sent', { tenantId, subjectId });
+      } catch (err) {
+        logger.warn('[VerticalJourney] clinic recall failed', { tenantId, subjectId, error: err?.message });
+      }
+    }
+  } catch (err) {
+    logger.warn('[VerticalJourney] clinic recall scan failed', { tenantId, error: err?.message });
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // DISPATCH ENTRY POINT
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -606,6 +830,18 @@ async function handleVerticalJob(job) {
         await withJobTimeout(handleFitnessGraceExpiryScan({ tenantId }), undefined, kind);
         break;
 
+      case 'vertical_clinic_journey_tick':
+        await withJobTimeout(handleClinicJourneyTick(job), undefined, kind);
+        break;
+
+      case 'vertical_clinic_noshow_scan':
+        await withJobTimeout(handleClinicNoShowScan({ tenantId }), undefined, kind);
+        break;
+
+      case 'vertical_clinic_recall_scan':
+        await withJobTimeout(handleClinicRecallScan({ tenantId, payload: job?.payload }), undefined, kind);
+        break;
+
       case 'vertical_reconciliation':
         await withJobTimeout(handleVerticalReconciliation({ tenantId }), undefined, kind);
         break;
@@ -632,6 +868,9 @@ module.exports = {
   handleFitnessGraceExpiryScan,
   handleFitnessChurnModelRetrain,
   RETRAIN_MIN_INTERVAL_HOURS,
+  handleClinicJourneyTick,
+  handleClinicNoShowScan,
+  handleClinicRecallScan,
   handleVerticalReconciliation,
   withJobTimeout,
 };
