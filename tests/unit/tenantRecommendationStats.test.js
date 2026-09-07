@@ -164,3 +164,79 @@ describe('RecommendationEngine.getRecommendationStats', () => {
     await expect(engine.getRecommendationStats({})).rejects.toThrow('tenantId is required');
   });
 });
+
+describe('RecommendationEngine.getRecommendationStats — eficácia por cadeia causal', () => {
+  function followUp(parentId, variant, outcome = null, extraMetadata = {}) {
+    return reco({
+      action_type: variant,
+      status: outcome ? 'completed' : 'applied',
+      metadata: {
+        followUpOf: parentId,
+        followUpDepth: 1,
+        followUpReason: 'no_agent_response',
+        ...(outcome ? { outcome: { outcome } } : {}),
+        ...extraMetadata,
+      },
+    });
+  }
+
+  test('sem follow-ups → chainEfficacy zerado e chains vazio', async () => {
+    const { engine } = loadEngine({ recommendations: [applied('auto', 'improved')] });
+
+    const { stats } = await engine.getRecommendationStats({ tenantId: 'tenant-a' });
+
+    expect(stats.chainEfficacy).toEqual({ followUps: 0, evaluated: 0, chains: {} });
+  });
+
+  test('follow-up improved agrega na cadeia rebalance_queue->manager_escalation com successRate 1', async () => {
+    const parent = reco({
+      id: 'reco-parent',
+      action_type: 'rebalance_queue',
+      status: 'completed',
+      metadata: { outcome: { outcome: 'unchanged', reason: 'no_agent_response' } },
+    });
+    const child = followUp('reco-parent', 'manager_escalation', 'improved');
+    const { engine } = loadEngine({ recommendations: [parent, child] });
+
+    const { stats } = await engine.getRecommendationStats({ tenantId: 'tenant-a' });
+
+    expect(stats.chainEfficacy.followUps).toBe(1);
+    expect(stats.chainEfficacy.evaluated).toBe(1);
+    const chain = stats.chainEfficacy.chains['rebalance_queue->manager_escalation'];
+    expect(chain).toMatchObject({
+      parentAction: 'rebalance_queue', variant: 'manager_escalation',
+      total: 1, improved: 1, unchanged: 0, regressed: 0, pending: 0, successRate: 1,
+    });
+  });
+
+  test('duas variantes agregam separado; pending não entra no denominador', async () => {
+    const parent = reco({ id: 'reco-parent', action_type: 'rebalance_queue', status: 'completed', metadata: {} });
+    const { engine } = loadEngine({
+      recommendations: [
+        parent,
+        followUp('reco-parent', 'manager_escalation', 'improved'),
+        followUp('reco-parent', 'manager_escalation', 'unchanged'),
+        followUp('reco-parent', 'staffing_review', null),
+      ],
+    });
+
+    const { stats } = await engine.getRecommendationStats({ tenantId: 'tenant-a' });
+
+    expect(stats.chainEfficacy.followUps).toBe(3);
+    expect(stats.chainEfficacy.evaluated).toBe(2);
+    expect(stats.chainEfficacy.chains['rebalance_queue->manager_escalation'])
+      .toMatchObject({ total: 2, improved: 1, unchanged: 1, successRate: 0.5 });
+    expect(stats.chainEfficacy.chains['rebalance_queue->staffing_review'])
+      .toMatchObject({ total: 1, pending: 1, successRate: null });
+  });
+
+  test('pai fora da janela/loja agrega com parentAction unknown (nunca inventa o pai)', async () => {
+    const child = followUp('reco-inexistente', 'staffing_review', 'improved');
+    const { engine } = loadEngine({ recommendations: [child] });
+
+    const { stats } = await engine.getRecommendationStats({ tenantId: 'tenant-a' });
+
+    expect(stats.chainEfficacy.chains['unknown->staffing_review'])
+      .toMatchObject({ parentAction: 'unknown', total: 1, improved: 1, successRate: 1 });
+  });
+});

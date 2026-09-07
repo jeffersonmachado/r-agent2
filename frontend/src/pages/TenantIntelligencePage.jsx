@@ -17,6 +17,7 @@ import {
   dismissTenantRecommendation,
   evaluateTenantRecommendationOutcome,
   getTenantOperationalState,
+  getTenantRecommendationStats,
   listInsightEvidence,
   listTenantGoals,
   listTenantInsights,
@@ -64,6 +65,18 @@ const RECOMMENDATION_STATUS_STYLES = {
   applied: 'border border-status-warning/20 bg-status-warning/10 text-status-warning',
   dismissed: 'border border-border-default bg-text-secondary/10 text-text-secondary',
   completed: 'border border-status-success/20 bg-status-success/10 text-status-success',
+};
+
+// Rótulos em linguagem de resultado para as ações das cadeias causais
+// (ação inicial → remediação de 2º nível). Fallback: identificador cru.
+const CHAIN_ACTION_LABELS = {
+  rebalance_queue: 'Redistribuição de fila',
+  manager_escalation: 'Escalonamento ao gestor',
+  staffing_review: 'Reforço de equipe',
+  send_message: 'Mensagem ao cliente',
+  create_task: 'Tarefa operacional',
+  schedule: 'Agendamento',
+  unknown: 'Ação anterior',
 };
 
 const RECOMMENDATION_OUTCOME_LABELS = {
@@ -164,6 +177,7 @@ export function TenantIntelligencePage() {
   const [goals, setGoals] = useState([]);
   const [insights, setInsights] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [recoStats, setRecoStats] = useState(null);
   const [insightEvidenceMap, setInsightEvidenceMap] = useState({});
   const [insightEvidenceSourceFilterMap, setInsightEvidenceSourceFilterMap] = useState({});
   const [insightEvidencePageMap, setInsightEvidencePageMap] = useState({});
@@ -191,17 +205,20 @@ export function TenantIntelligencePage() {
   async function loadInitialData() {
     setIsLoading(true);
     try {
-      const [goalsResp, insightsResp, recommendationsResp, operationalResp, capabilitiesResp] = await Promise.all([
+      const [goalsResp, insightsResp, recommendationsResp, operationalResp, capabilitiesResp, statsResp] = await Promise.all([
         listTenantGoals({ status: 'active', limit: 50 }),
         listTenantInsights({ status: 'open', limit: 20 }),
         listTenantRecommendations({ status: 'open', limit: 20 }),
         getTenantOperationalState({ period, mode: 'read', refreshMetrics: false, includeEvidence: false }),
         // Capacidades são auxiliares (nível de autonomia); falha não derruba a página.
         getTenantCapabilities().catch(() => null),
+        // Eficácia das remediações (cadeias causais) é auxiliar; falha não derruba a página.
+        getTenantRecommendationStats({ period }).catch(() => null),
       ]);
       setGoals(Array.isArray(goalsResp?.items) ? goalsResp.items : []);
       setInsights(Array.isArray(insightsResp?.items) ? insightsResp.items : []);
       setRecommendations(Array.isArray(recommendationsResp?.items) ? recommendationsResp.items : []);
+      setRecoStats(statsResp?.stats || null);
       setAutonomyLevel(capabilitiesResp?.capabilities?.autonomyLevel || 'suggest');
       setOperationalState((prev) => {
         const prevScore = Number(prev?.health?.score);
@@ -1046,6 +1063,30 @@ export function TenantIntelligencePage() {
               })}
             </ul>
           )}
+          {(() => {
+            const chains = Object.values(recoStats?.chainEfficacy?.chains || {});
+            if (chains.length === 0) return null;
+            return (
+              <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-default, rgba(255,255,255,0.08))', paddingTop: '12px' }}>
+                <div className="text-sm font-medium text-text-primary" style={{ marginBottom: '6px' }}>
+                  Eficácia das remediações
+                </div>
+                <ul className="space-y-1 text-sm text-text-secondary">
+                  {chains.map((chain) => (
+                    <li key={`${chain.parentAction}->${chain.variant}`}>
+                      {CHAIN_ACTION_LABELS[chain.parentAction] || chain.parentAction}
+                      {' → '}
+                      {CHAIN_ACTION_LABELS[chain.variant] || chain.variant}
+                      {': '}
+                      {chain.successRate != null
+                        ? `${toPercent(chain.successRate)} de sucesso (${chain.total} tentativa${chain.total > 1 ? 's' : ''})`
+                        : `${chain.total} em andamento, aguardando resultado`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

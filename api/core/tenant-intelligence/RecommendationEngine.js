@@ -201,6 +201,55 @@ class RecommendationEngine {
     // Aplicadas sem outcome medido ainda aguardam dados (evaluatePendingOutcomes).
     const pendingEvaluation = Math.max(0, appliedTotal - outcomeEvaluated);
 
+    // Eficácia por cadeia causal: ação inicial que não resolveu (ex.:
+    // rebalance_queue com no_agent_response) → follow-up de 2º nível
+    // (manager_escalation / staffing_review) → outcome do follow-up.
+    // Responde: qual remediação funciona neste tenant? Base da priorização
+    // por eficácia histórica. Follow-up cujo pai saiu da janela do período
+    // agrega com parentAction 'unknown' (nunca inventa o pai).
+    const byId = new Map(items.map((item) => [String(item.id), item]));
+    const chains = {};
+    let followUpsTotal = 0;
+    let followUpsEvaluated = 0;
+    for (const item of items) {
+      const metadata = item.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+      if (!metadata.followUpOf) continue;
+      followUpsTotal += 1;
+      const parent = byId.get(String(metadata.followUpOf)) || null;
+      const parentMetadata = parent?.metadata && typeof parent.metadata === 'object' ? parent.metadata : {};
+      const parentAction = parent?.action_type
+        || parentMetadata?.application?.executedAction?.kind
+        || 'unknown';
+      const variant = String(item.action_type || 'unknown');
+      const key = `${parentAction}->${variant}`;
+      if (!chains[key]) {
+        chains[key] = {
+          parentAction: String(parentAction),
+          variant,
+          total: 0,
+          improved: 0,
+          unchanged: 0,
+          regressed: 0,
+          pending: 0,
+          successRate: null,
+        };
+      }
+      const chain = chains[key];
+      chain.total += 1;
+      const chainOutcome = metadata.outcome?.outcome || null;
+      if (chainOutcome === 'improved') chain.improved += 1;
+      else if (chainOutcome === 'regressed') chain.regressed += 1;
+      else if (chainOutcome === 'unchanged') chain.unchanged += 1;
+      else chain.pending += 1;
+      if (chainOutcome === 'improved' || chainOutcome === 'unchanged' || chainOutcome === 'regressed') {
+        followUpsEvaluated += 1;
+      }
+    }
+    for (const chain of Object.values(chains)) {
+      const evaluated = chain.improved + chain.unchanged + chain.regressed;
+      chain.successRate = evaluated > 0 ? chain.improved / evaluated : null;
+    }
+
     return {
       ok: true,
       stats: {
@@ -228,6 +277,11 @@ class RecommendationEngine {
           batch: originBatch,
           automationRate: appliedTotal > 0 ? automatedApplied / appliedTotal : null,
           humanInterventionRate: appliedTotal > 0 ? originManual / appliedTotal : null,
+        },
+        chainEfficacy: {
+          followUps: followUpsTotal,
+          evaluated: followUpsEvaluated,
+          chains,
         },
       },
     };

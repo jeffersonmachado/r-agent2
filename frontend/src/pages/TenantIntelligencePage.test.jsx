@@ -28,6 +28,7 @@ vi.mock('../api/intelligence', () => ({
   collectTenantMetricSnapshots: vi.fn().mockResolvedValue({}),
   createTenantGoal: vi.fn().mockResolvedValue({}),
   getTenantOperationalState: vi.fn().mockResolvedValue({ state: null }),
+  getTenantRecommendationStats: vi.fn().mockResolvedValue({ stats: null }),
   listInsightEvidence: vi.fn().mockResolvedValue({ items: [] }),
   listTenantGoals: vi.fn().mockResolvedValue({ items: [] }),
   listTenantInsights: vi.fn().mockResolvedValue({ items: [] }),
@@ -61,6 +62,9 @@ beforeEach(async () => {
   getTenantCapabilities.mockResolvedValue({
     capabilities: { inbox: true, caseManagement: true, caseCreationPolicy: 'manual', autonomyLevel: 'suggest' },
   });
+  // resetMocks:true também zera este; default vazio evita TypeError no .catch.
+  const { getTenantRecommendationStats } = await import('../api/intelligence');
+  getTenantRecommendationStats.mockResolvedValue({ stats: null });
 });
 
 describe('TenantIntelligencePage — recomendações executáveis', () => {
@@ -529,5 +533,68 @@ describe('TenantIntelligencePage — Autonomy UX', () => {
 
     await screen.findByText('Aplicada');
     expect(screen.queryByText('Aplicada automaticamente')).toBeNull();
+  });
+});
+
+describe('TenantIntelligencePage — eficácia das remediações (cadeias causais)', () => {
+  beforeEach(() => {
+    testDoubles.toast.showToast.mockClear();
+    testDoubles.router.navigate.mockClear();
+  });
+
+  it('renderiza taxa de sucesso por cadeia quando o stats traz chains avaliadas', async () => {
+    const { getTenantRecommendationStats } = await import('../api/intelligence');
+    getTenantRecommendationStats.mockResolvedValue({
+      stats: {
+        chainEfficacy: {
+          followUps: 2,
+          evaluated: 2,
+          chains: {
+            'rebalance_queue->manager_escalation': {
+              parentAction: 'rebalance_queue', variant: 'manager_escalation',
+              total: 2, improved: 1, unchanged: 1, regressed: 0, pending: 0, successRate: 0.5,
+            },
+          },
+        },
+      },
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Eficácia das remediações');
+    expect(screen.getByText(/Redistribuição de fila/)).toBeTruthy();
+    expect(screen.getByText(/Escalonamento ao gestor/)).toBeTruthy();
+    expect(screen.getByText(/50% de sucesso \(2 tentativas\)/)).toBeTruthy();
+  });
+
+  it('cadeia ainda sem outcome exibe "em andamento" (sem inventar taxa)', async () => {
+    const { getTenantRecommendationStats } = await import('../api/intelligence');
+    getTenantRecommendationStats.mockResolvedValue({
+      stats: {
+        chainEfficacy: {
+          followUps: 1,
+          evaluated: 0,
+          chains: {
+            'rebalance_queue->staffing_review': {
+              parentAction: 'rebalance_queue', variant: 'staffing_review',
+              total: 1, improved: 0, unchanged: 0, regressed: 0, pending: 1, successRate: null,
+            },
+          },
+        },
+      },
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Eficácia das remediações');
+    expect(screen.getByText(/Reforço de equipe/)).toBeTruthy();
+    expect(screen.getByText(/1 em andamento, aguardando resultado/)).toBeTruthy();
+  });
+
+  it('sem cadeias no stats → bloco não renderiza', async () => {
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Top Recomendações');
+    expect(screen.queryByText('Eficácia das remediações')).toBeNull();
   });
 });
