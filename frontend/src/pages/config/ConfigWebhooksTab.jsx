@@ -91,7 +91,7 @@ export function ConfigWebhooksTab({ editedConfig, renderField }) {
             >
               Meta Developer Dashboard
             </a>
-            {' '}> App &gt; Configurações &gt; Básico &gt; App Secret.
+            {' >'} App &gt; Configurações &gt; Básico &gt; App Secret.
             Sem estes secrets, webhooks do Instagram e Messenger são rejeitados em produção (fail-closed).
           </p>
         </div>
