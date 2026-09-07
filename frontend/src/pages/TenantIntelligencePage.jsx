@@ -27,6 +27,7 @@ import {
 } from '../api/intelligence';
 import { getTenantCapabilities } from '../api/tenantCapabilities';
 import { CrudPageBase } from '../modules/crud-base';
+import { describeExecutedAction, executedActionToneClass } from '../modules/intelligence/executionFeedback';
 
 function formatNumber(value, digits = 0) {
   const n = Number(value);
@@ -952,16 +953,18 @@ export function TenantIntelligencePage() {
                       </div>
                     ) : null}
 
-                    {executedAction?.kind === 'create_task' ? (
-                      <div
-                        className={executedAction.status === 'executed' ? 'text-status-success' : 'text-status-warning'}
-                        style={{ marginTop: '4px' }}
-                      >
-                        {executedAction.status === 'executed'
-                          ? 'Tarefa criada no Workspace para execução operacional.'
-                          : 'A ação operacional não pôde ser executada automaticamente; crie a tarefa manualmente.'}
-                      </div>
-                    ) : null}
+                    {(() => {
+                      const feedback = describeExecutedAction(executedAction);
+                      if (!feedback) return null;
+                      return (
+                        <div
+                          className={executedActionToneClass(feedback.tone)}
+                          style={{ marginTop: '4px' }}
+                        >
+                          {feedback.message}
+                        </div>
+                      );
+                    })()}
 
                     {outcome ? (
                       <div style={{ marginTop: '8px' }}>

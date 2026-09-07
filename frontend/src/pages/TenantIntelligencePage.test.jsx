@@ -247,6 +247,79 @@ describe('TenantIntelligencePage — recomendações executáveis', () => {
     expect(screen.queryByText('Tarefa criada no Workspace para execução operacional.')).toBeNull();
   });
 
+  it("executedAction send_message 'executed' exibe feedback de mensagem enviada", async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-6',
+        status: 'applied',
+        metadata: {
+          application: {
+            appliedAt: '2026-09-01T10:00:00.000Z',
+            appliedBy: 'agent-1',
+            baseline: [],
+            expectedDirection: 'down',
+            executedAction: { kind: 'send_message', status: 'executed', messageId: 'msg-1', conversationId: 'conv-1', executedAt: '2026-09-01T10:00:01.000Z' },
+          },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText(/Mensagem enviada para a fila do canal/);
+  });
+
+  it("executedAction schedule 'executed' exibe follow-up agendado com data", async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-7',
+        status: 'applied',
+        metadata: {
+          application: {
+            appliedAt: '2026-09-01T10:00:00.000Z',
+            appliedBy: 'agent-1',
+            baseline: [],
+            expectedDirection: 'down',
+            executedAction: { kind: 'schedule', status: 'executed', taskId: 'task-9', dueDate: '2026-09-10T14:00:00.000Z', executedAt: '2026-09-01T10:00:01.000Z' },
+          },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText(/Follow-up agendado para/);
+  });
+
+  it("executedAction 'skipped' exibe motivo explícito (sem fingir sucesso)", async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-8',
+        status: 'applied',
+        metadata: {
+          application: {
+            appliedAt: '2026-09-01T10:00:00.000Z',
+            appliedBy: 'agent-1',
+            baseline: [],
+            expectedDirection: 'down',
+            executedAction: { kind: 'send_message', status: 'skipped', reason: 'missing_conversation_id', attemptedAt: '2026-09-01T10:00:01.000Z' },
+          },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText(/Sem conversa vinculada/);
+    expect(screen.queryByText(/Mensagem enviada/)).toBeNull();
+  });
+
   it('insight com causas prováveis e projeção exibe ambos no card', async () => {
     const { listTenantInsights } = await import('../api/intelligence');
     listTenantInsights.mockResolvedValue({

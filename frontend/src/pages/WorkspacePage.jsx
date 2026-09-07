@@ -14,6 +14,7 @@ import {
 } from '../api/workspace';
 import { WorkspaceLayout } from '../modules/workspace/WorkspaceLayout';
 import { applyTenantRecommendation } from '../api/intelligence';
+import { describeExecutedAction } from '../modules/intelligence/executionFeedback';
 import {
   PaymentActionModal,
   ScheduleActionModal,
@@ -330,10 +331,12 @@ export function WorkspacePage() {
       const execution = result?.execution
         || result?.recommendation?.metadata?.application?.executedAction
         || null;
-      if (execution?.status === 'executed') {
-        showToast('Recomendação aplicada — tarefa criada no Workspace.', 'success');
-      } else if (execution?.status === 'failed') {
-        showToast('Recomendação aplicada, mas a ação automática falhou. Crie a tarefa manualmente.', 'warning');
+      const feedback = describeExecutedAction(execution);
+      if (feedback) {
+        showToast(
+          feedback.tone === 'success' ? `Recomendação aplicada — ${feedback.message}` : feedback.message,
+          feedback.tone === 'success' ? 'success' : 'warning',
+        );
       } else {
         showToast('Recomendação aplicada.', 'success');
       }

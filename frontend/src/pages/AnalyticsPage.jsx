@@ -17,6 +17,7 @@ import { useAuth } from '../context/authContext';
 import { useRouter } from '../hooks/useRouter';
 import logger from '../utils/logger';
 import { CrudPageBase } from '../modules/crud-base';
+import { describeExecutedAction } from '../modules/intelligence/executionFeedback';
 import { AnalyticsVoiceAndTokensSection } from './analytics/AnalyticsVoiceAndTokensSection';
 import { AnalyticsSupportMetricsSection } from './analytics/AnalyticsSupportMetricsSection';
 import { AnalyticsRoiAndFunnelSection } from './analytics/AnalyticsRoiAndFunnelSection';
@@ -231,10 +232,12 @@ export function AnalyticsPage() {
       const execution = result?.execution
         || result?.recommendation?.metadata?.application?.executedAction
         || null;
-      if (execution?.status === 'executed') {
-        showToast('Recomendação aplicada — tarefa criada no Workspace.', 'success');
-      } else if (execution?.status === 'failed') {
-        showToast('Recomendação aplicada, mas a ação automática falhou. Crie a tarefa manualmente.', 'warning');
+      const feedback = describeExecutedAction(execution);
+      if (feedback) {
+        showToast(
+          feedback.tone === 'success' ? `Recomendação aplicada — ${feedback.message}` : feedback.message,
+          feedback.tone === 'success' ? 'success' : 'warning',
+        );
       } else {
         showToast('Recomendação aplicada.', 'success');
       }
