@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeExecutedAction, executedActionToneClass } from './executionFeedback';
+import { describeExecutedAction, executedActionToneClass, describeActionSignal, describeOutcomeReason } from './executionFeedback';
 
 describe('describeExecutedAction', () => {
   it('retorna null para entrada ausente ou inválida', () => {
@@ -68,5 +68,37 @@ describe('executedActionToneClass', () => {
     expect(executedActionToneClass('warning')).toBe('text-status-warning');
     expect(executedActionToneClass('muted')).toBe('text-text-secondary');
     expect(executedActionToneClass('outro')).toBe('text-text-secondary');
+  });
+});
+
+describe('describeActionSignal', () => {
+  it('replied/done → success; no_reply/cancelled → warning; awaiting/open → muted', () => {
+    expect(describeActionSignal({ type: 'customer_reply', outcome: 'replied' })).toEqual({
+      tone: 'success', message: 'Cliente respondeu após o envio.',
+    });
+    expect(describeActionSignal({ type: 'task_completion', outcome: 'done' }).tone).toBe('success');
+    expect(describeActionSignal({ type: 'customer_reply', outcome: 'no_reply' }).tone).toBe('warning');
+    expect(describeActionSignal({ type: 'task_completion', outcome: 'cancelled' }).tone).toBe('warning');
+    expect(describeActionSignal({ type: 'customer_reply', outcome: 'awaiting_reply' }).tone).toBe('muted');
+    expect(describeActionSignal({ type: 'task_completion', outcome: 'open' }).tone).toBe('muted');
+  });
+
+  it('entrada inválida ou outcome desconhecido → null', () => {
+    expect(describeActionSignal(null)).toBeNull();
+    expect(describeActionSignal({})).toBeNull();
+    expect(describeActionSignal({ outcome: 'alien' })).toBeNull();
+  });
+});
+
+describe('describeOutcomeReason', () => {
+  it('mapeia razões conhecidas para PT-BR operacional', () => {
+    expect(describeOutcomeReason('action_signal_positive')).toContain('Efeito positivo');
+    expect(describeOutcomeReason('awaiting_action_signal')).toContain('Aguardando');
+    expect(describeOutcomeReason('no_customer_reply')).toContain('24h');
+  });
+
+  it('razão desconhecida passa through; vazia → null', () => {
+    expect(describeOutcomeReason('custom_reason')).toBe('custom_reason');
+    expect(describeOutcomeReason(null)).toBeNull();
   });
 });

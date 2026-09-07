@@ -27,7 +27,7 @@ import {
 } from '../api/intelligence';
 import { getTenantCapabilities } from '../api/tenantCapabilities';
 import { CrudPageBase } from '../modules/crud-base';
-import { describeExecutedAction, executedActionToneClass } from '../modules/intelligence/executionFeedback';
+import { describeExecutedAction, executedActionToneClass, describeActionSignal, describeOutcomeReason } from '../modules/intelligence/executionFeedback';
 
 function formatNumber(value, digits = 0) {
   const n = Number(value);
@@ -984,8 +984,21 @@ export function TenantIntelligencePage() {
                             })}
                           </ul>
                         ) : null}
+                        {(Array.isArray(outcome.actionSignals) ? outcome.actionSignals : []).map((signal, signalIndex) => {
+                          const signalFeedback = describeActionSignal(signal);
+                          if (!signalFeedback) return null;
+                          return (
+                            <div
+                              key={`signal-${signal.type || signalIndex}`}
+                              className={executedActionToneClass(signalFeedback.tone)}
+                              style={{ marginTop: '4px' }}
+                            >
+                              {signalFeedback.message}
+                            </div>
+                          );
+                        })}
                         {outcome.reason ? (
-                          <div className="text-text-secondary">{outcome.reason}</div>
+                          <div className="text-text-secondary">{describeOutcomeReason(outcome.reason)}</div>
                         ) : null}
                       </div>
                     ) : null}

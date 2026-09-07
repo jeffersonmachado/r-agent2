@@ -1,6 +1,7 @@
 'use strict';
 
-const { TenantRecommendation, TenantInsight, TenantMetricSnapshot } = require('../../db/models');
+const { TenantRecommendation, TenantInsight, TenantMetricSnapshot, ChannelMessage, Task } = require('../../db/models');
+const { Op } = require('sequelize');
 const { buildId, toNumber } = require('./helpers');
 
 // Direcao esperada do movimento da metrica por tipo de insight de origem.
@@ -17,6 +18,11 @@ const OUTCOME_DIRECTION_BY_INSIGHT = {
 // nível autonomous/exception_only) — exigem apply humano explícito (manual ou
 // batch com actor). Ações internas (create_task) seguem o auto-apply normal.
 const CUSTOMER_FACING_ACTION_KINDS = new Set(['send_message', 'schedule']);
+
+// Janela de espera por resposta do cliente após send_message executado:
+// antes dela, o sinal é 'awaiting_reply' (outcome permanece pendente);
+// depois dela sem resposta, vira 'no_reply' (outcome unchanged).
+const REPLY_WINDOW_MS = 24 * 3600000;
 
 function buildStatusError(code, statusCode) {
   return Object.assign(new Error(code), { code, statusCode });
@@ -624,17 +630,35 @@ class RecommendationEngine {
     const evaluatedAt = new Date().toISOString();
 
     if (!application || baseline.length === 0) {
+      // Sem métricas de baseline, o outcome pode vir do sinal comportamental
+      // da ação executada (ex.: cliente respondeu após send_message, tarefa
+      // concluída após create_task/schedule). Sinal "aguardando" mantém a
+      // recomendação aplicada para reavaliação event-driven.
+      const actionSignals = application
+        ? await this._collectActionSignals({ tenantId, application })
+        : [];
+      const derived = this._deriveOutcomeFromSignals(actionSignals);
       const outcome = {
         evaluatedAt,
-        outcome: 'pending',
-        reason: 'no_baseline_metrics',
+        outcome: derived?.outcome || 'pending',
+        reason: derived?.reason || 'no_baseline_metrics',
         metrics: [],
+        ...(actionSignals.length > 0 ? { actionSignals } : {}),
       };
       await row.update({
-        status: 'completed',
+        status: derived?.awaitingSignal ? 'applied' : 'completed',
         metadata: { ...metadata, outcome },
       });
-      return { ok: true, recommendation: rowToJson(row), outcome };
+      let signalEvidence = false;
+      if (outcome.outcome !== 'pending' && current.insight_id) {
+        signalEvidence = await this._recordOutcomeEvidence({
+          tenantId,
+          insightId: current.insight_id,
+          recommendationId,
+          outcome,
+        });
+      }
+      return { ok: true, recommendation: rowToJson(row), outcome, evidenceRecorded: signalEvidence };
     }
 
     const metrics = [];
@@ -672,10 +696,19 @@ class RecommendationEngine {
       });
     }
 
+    const actionSignals = await this._collectActionSignals({ tenantId, application });
+    const summarized = this._summarizeOutcome(metrics);
+    // Métricas dominam quando há snapshot novo. Se ainda estão pendentes e o
+    // sinal comportamental já é positivo (cliente respondeu / tarefa concluída),
+    // o sinal fecha o outcome — a evidência real da ação não espera agregado.
+    const derived = this._deriveOutcomeFromSignals(actionSignals);
+    const signalCloses = summarized === 'pending' && derived?.outcome === 'improved';
     const outcome = {
       evaluatedAt,
-      outcome: this._summarizeOutcome(metrics),
+      outcome: signalCloses ? 'improved' : summarized,
+      ...(signalCloses ? { reason: derived.reason } : {}),
       metrics,
+      ...(actionSignals.length > 0 ? { actionSignals } : {}),
     };
     // Outcome pendente (sem snapshot novo) mantém a recomendação aplicada:
     // novos dados podem chegar e a medição será reavaliada.
@@ -698,6 +731,109 @@ class RecommendationEngine {
     }
 
     return { ok: true, recommendation: rowToJson(row), outcome, evidenceRecorded };
+  }
+
+  /**
+   * Sinais comportamentais da ação executada — outcome medido no efeito real
+   * da ação, não só em métricas agregadas:
+   * - send_message: o cliente respondeu na conversa após o envio?
+   * - create_task/schedule: a tarefa criada foi concluída?
+   * Falha de leitura de sinal é explícita (signal com outcome 'unavailable'),
+   * nunca derruba a avaliação.
+   */
+  async _collectActionSignals({ tenantId, application }) {
+    const executed = application?.executedAction;
+    if (!executed || executed.status !== 'executed') return [];
+
+    const signals = [];
+    if (executed.kind === 'send_message' && executed.conversationId) {
+      // eslint-disable-next-line no-await-in-loop
+      signals.push(await this._signalCustomerReply({ tenantId, executed }));
+    }
+    if ((executed.kind === 'create_task' || executed.kind === 'schedule') && executed.taskId) {
+      // eslint-disable-next-line no-await-in-loop
+      signals.push(await this._signalTaskCompletion({ tenantId, executed }));
+    }
+    return signals.filter(Boolean);
+  }
+
+  async _signalCustomerReply({ tenantId, executed }) {
+    const base = { type: 'customer_reply', conversationId: String(executed.conversationId) };
+    try {
+      const executedAt = new Date(executed.executedAt || 0);
+      if (!Number.isFinite(executedAt.getTime())) {
+        return { ...base, outcome: 'unavailable', reason: 'missing_executed_at' };
+      }
+      const MessageModel = ChannelMessage();
+      const replies = await MessageModel.findAll({
+        where: {
+          tenant_key: String(tenantId),
+          conversation_id: String(executed.conversationId),
+          direction: 'in',
+          created_at: { [Op.gt]: executedAt },
+        },
+        order: [['created_at', 'ASC']],
+        limit: 5,
+        attributes: ['id', 'created_at'],
+      });
+      const list = (replies || []).map((row) => (row.toJSON ? row.toJSON() : row));
+      if (list.length > 0) {
+        return {
+          ...base,
+          outcome: 'replied',
+          replies: list.length,
+          firstReplyAt: list[0].created_at || list[0].createdAt || null,
+        };
+      }
+      const elapsedMs = Date.now() - executedAt.getTime();
+      if (elapsedMs < REPLY_WINDOW_MS) {
+        return { ...base, outcome: 'awaiting_reply', windowHours: REPLY_WINDOW_MS / 3600000 };
+      }
+      return { ...base, outcome: 'no_reply', windowHours: REPLY_WINDOW_MS / 3600000 };
+    } catch (err) {
+      return { ...base, outcome: 'unavailable', reason: String(err?.code || err?.message || err) };
+    }
+  }
+
+  async _signalTaskCompletion({ tenantId, executed }) {
+    const base = { type: 'task_completion', taskId: String(executed.taskId) };
+    try {
+      const TaskModel = Task();
+      const row = await TaskModel.findOne({
+        where: { id: String(executed.taskId), tenant_id: String(tenantId) },
+      });
+      const task = rowToJson(row);
+      if (!task) return { ...base, outcome: 'unavailable', reason: 'task_not_found' };
+      const status = String(task.status || 'open');
+      if (['done', 'completed', 'closed'].includes(status)) {
+        return { ...base, outcome: 'done', status };
+      }
+      if (status === 'cancelled') {
+        return { ...base, outcome: 'cancelled', status };
+      }
+      return { ...base, outcome: 'open', status };
+    } catch (err) {
+      return { ...base, outcome: 'unavailable', reason: String(err?.code || err?.message || err) };
+    }
+  }
+
+  _deriveOutcomeFromSignals(signals) {
+    if (!Array.isArray(signals) || signals.length === 0) return null;
+    const usable = signals.filter((s) => s && s.outcome && s.outcome !== 'unavailable');
+    if (usable.length === 0) return null;
+    if (usable.some((s) => s.outcome === 'replied' || s.outcome === 'done')) {
+      return { outcome: 'improved', reason: 'action_signal_positive' };
+    }
+    if (usable.some((s) => s.outcome === 'awaiting_reply' || s.outcome === 'open')) {
+      return { outcome: 'pending', reason: 'awaiting_action_signal', awaitingSignal: true };
+    }
+    if (usable.some((s) => s.outcome === 'no_reply')) {
+      return { outcome: 'unchanged', reason: 'no_customer_reply' };
+    }
+    if (usable.some((s) => s.outcome === 'cancelled')) {
+      return { outcome: 'unchanged', reason: 'action_cancelled' };
+    }
+    return null;
   }
 
   async _recordOutcomeEvidence({ tenantId, insightId, recommendationId, outcome }) {
@@ -752,7 +888,11 @@ class RecommendationEngine {
         }
       }
 
-      if (!hasNewSnapshot) {
+      // Recomendações sem baseline de métricas mas com ação executada são
+      // avaliadas pelo sinal comportamental (resposta do cliente, tarefa
+      // concluída) — o loop não depende só de snapshot novo.
+      const hasActionSignal = reco.metadata?.application?.executedAction?.status === 'executed';
+      if (!hasNewSnapshot && !hasActionSignal) {
         pending += 1;
         results.push({ recommendationId: reco.id, outcome: 'pending' });
         continue;

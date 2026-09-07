@@ -73,3 +73,51 @@ const TONE_CLASSES = {
 export function executedActionToneClass(tone) {
   return TONE_CLASSES[tone] || TONE_CLASSES.muted;
 }
+
+// Sinais comportamentais medidos na avaliação de outcome (actionSignals).
+// Linguagem de efeito observado, sem expor mecanismo interno.
+
+const SIGNAL_LABELS = {
+  replied: 'Cliente respondeu após o envio.',
+  awaiting_reply: 'Aguardando resposta do cliente.',
+  no_reply: 'Cliente não respondeu na janela de 24h.',
+  done: 'Tarefa criada foi concluída.',
+  open: 'Tarefa criada ainda está aberta.',
+  cancelled: 'Tarefa criada foi cancelada.',
+  unavailable: 'Sinal da ação indisponível no momento.',
+};
+
+const SIGNAL_TONES = {
+  replied: 'success',
+  done: 'success',
+  no_reply: 'warning',
+  cancelled: 'warning',
+  awaiting_reply: 'muted',
+  open: 'muted',
+  unavailable: 'muted',
+};
+
+/**
+ * @param {object|null} signal item de outcome.actionSignals
+ * @returns {{ tone: string, message: string }|null}
+ */
+export function describeActionSignal(signal) {
+  if (!signal || typeof signal !== 'object' || !signal.outcome) return null;
+  const message = SIGNAL_LABELS[signal.outcome];
+  if (!message) return null;
+  return { tone: SIGNAL_TONES[signal.outcome] || 'muted', message };
+}
+
+// Razões de outcome (códigos do RecommendationEngine) em linguagem operacional.
+const OUTCOME_REASON_LABELS = {
+  no_baseline_metrics: 'Sem métricas de baseline para medir o resultado.',
+  action_signal_positive: 'Efeito positivo observado na ação executada.',
+  awaiting_action_signal: 'Aguardando o efeito da ação para medir o resultado.',
+  no_customer_reply: 'Sem resposta do cliente na janela de 24h.',
+  action_cancelled: 'Ação cancelada antes de produzir efeito.',
+};
+
+export function describeOutcomeReason(reason) {
+  if (!reason) return null;
+  return OUTCOME_REASON_LABELS[reason] || reason;
+}

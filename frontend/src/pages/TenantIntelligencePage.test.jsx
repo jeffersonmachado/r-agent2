@@ -320,6 +320,39 @@ describe('TenantIntelligencePage — recomendações executáveis', () => {
     expect(screen.queryByText(/Mensagem enviada/)).toBeNull();
   });
 
+  it('outcome com actionSignals exibe sinal comportamental e razão em PT-BR', async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-10',
+        status: 'completed',
+        metadata: {
+          application: {
+            appliedAt: '2026-09-01T10:00:00.000Z',
+            appliedBy: 'agent-1',
+            baseline: [],
+            expectedDirection: 'observe',
+            executedAction: { kind: 'send_message', status: 'executed', messageId: 'msg-1', conversationId: 'conv-1', executedAt: '2026-09-01T10:00:01.000Z' },
+          },
+          outcome: {
+            evaluatedAt: '2026-09-02T10:00:00.000Z',
+            outcome: 'improved',
+            reason: 'action_signal_positive',
+            metrics: [],
+            actionSignals: [{ type: 'customer_reply', conversationId: 'conv-1', outcome: 'replied', replies: 1, firstReplyAt: '2026-09-01T11:00:00.000Z' }],
+          },
+        },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Cliente respondeu após o envio.');
+    expect(screen.getByText('Efeito positivo observado na ação executada.')).toBeTruthy();
+    expect(screen.queryByText('action_signal_positive')).toBeNull();
+  });
+
   it('insight com causas prováveis e projeção exibe ambos no card', async () => {
     const { listTenantInsights } = await import('../api/intelligence');
     listTenantInsights.mockResolvedValue({
