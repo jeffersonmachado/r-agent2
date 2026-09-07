@@ -598,3 +598,37 @@ describe('TenantIntelligencePage — eficácia das remediações (cadeias causai
     expect(screen.queryByText('Eficácia das remediações')).toBeNull();
   });
 });
+
+describe('TenantIntelligencePage — priorização por eficácia histórica', () => {
+  beforeEach(() => {
+    testDoubles.toast.showToast.mockClear();
+    testDoubles.router.navigate.mockClear();
+  });
+
+  it('recomendação com efficacy exibe taxa de sucesso histórico no card', async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({
+      items: [{
+        ...openRecommendation,
+        id: 'rec-efficacy',
+        title: 'Redistribuir atendimentos',
+        efficacy: { successRate: 0.75, samples: 4 },
+      }],
+    });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Redistribuir atendimentos');
+    expect(screen.getByText(/75% de sucesso histórico \(4 avaliadas\)/)).toBeTruthy();
+  });
+
+  it('recomendação sem efficacy não exibe selo (sem inventar taxa)', async () => {
+    const { listTenantRecommendations } = await import('../api/intelligence');
+    listTenantRecommendations.mockResolvedValue({ items: [openRecommendation] });
+
+    render(<TenantIntelligencePage />);
+
+    await screen.findByText('Reduzir backlog de tickets');
+    expect(screen.queryByText(/sucesso histórico/)).toBeNull();
+  });
+});

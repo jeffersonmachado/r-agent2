@@ -49,6 +49,12 @@ const ELIGIBLE_ASSIGNEE_ROLES = new Set(['operator', 'manager', 'admin', 'owner'
 // conversas, mesmo em tenants com fila gigante.
 const REBALANCE_MAX_MOVES = 100;
 
+// Priorização por eficácia histórica: um tipo de ação só influencia a
+// ordenação das recomendações abertas com pelo menos este número de outcomes
+// avaliados no tenant (nunca priorizar com n=1). Abaixo disso, neutro.
+const MIN_EFFICACY_SAMPLES = 3;
+const PRIORITY_WEIGHT = { high: 3, medium: 2, low: 1 };
+
 function buildStatusError(code, statusCode) {
   return Object.assign(new Error(code), { code, statusCode });
 }
@@ -133,7 +139,68 @@ class RecommendationEngine {
     });
 
     const items = (rows || []).map((row) => (row.toJSON ? row.toJSON() : row));
+
+    // Priorização por eficácia histórica (somente listagem de abertas, a
+    // superfície de ação): mesmo peso de prioridade, o tipo de ação com
+    // melhor taxa de sucesso medida no tenant vem primeiro. Sem amostra
+    // mínima, o tipo é neutro e a ordem cronológica se preserva (sort
+    // estável sobre created_at DESC do banco). Falha na agregação nunca
+    // derruba a listagem — cai na ordem legada.
+    if (String(status) === 'open' && items.length > 1) {
+      try {
+        const efficacy = await this._getActionTypeEfficacy({ tenantId });
+        const rate = (item) => efficacy[String(item.action_type || '')]?.successRate ?? null;
+        items.sort((a, b) => {
+          const dw = (PRIORITY_WEIGHT[String(b.priority)] || 0) - (PRIORITY_WEIGHT[String(a.priority)] || 0);
+          if (dw !== 0) return dw;
+          const ea = rate(a);
+          const eb = rate(b);
+          if (ea != null && eb != null && ea !== eb) return eb - ea;
+          if (ea != null && eb == null) return -1;
+          if (ea == null && eb != null) return 1;
+          return 0;
+        });
+        for (const item of items) {
+          const entry = efficacy[String(item.action_type || '')];
+          if (entry && entry.successRate != null) {
+            item.efficacy = { successRate: entry.successRate, samples: entry.evaluated };
+          }
+        }
+      } catch (err) {
+        // fail-open: ordenação cronológica legada.
+      }
+    }
+
     return { items, total: items.length };
+  }
+
+  /**
+   * Eficácia histórica por tipo de ação no tenant: outcomes avaliados
+   * (improved/unchanged/regressed) agrupados por action_type. successRate
+   * só é exposto com amostra mínima — abaixo disso, null (neutro).
+   */
+  async _getActionTypeEfficacy({ tenantId }) {
+    const RecommendationModel = TenantRecommendation();
+    const rows = await RecommendationModel.findAll({
+      where: { tenant_key: String(tenantId) },
+      limit: 5000,
+    });
+    const byType = {};
+    for (const row of rows || []) {
+      const item = rowToJson(row);
+      const outcome = item.metadata?.outcome?.outcome || null;
+      if (outcome !== 'improved' && outcome !== 'unchanged' && outcome !== 'regressed') continue;
+      const type = String(item.action_type || 'unknown');
+      if (!byType[type]) byType[type] = { evaluated: 0, improved: 0, successRate: null };
+      byType[type].evaluated += 1;
+      if (outcome === 'improved') byType[type].improved += 1;
+    }
+    for (const entry of Object.values(byType)) {
+      entry.successRate = entry.evaluated >= MIN_EFFICACY_SAMPLES
+        ? entry.improved / entry.evaluated
+        : null;
+    }
+    return byType;
   }
 
   /**

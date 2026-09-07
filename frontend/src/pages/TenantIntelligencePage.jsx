@@ -956,6 +956,9 @@ export function TenantIntelligencePage() {
                     </div>
                     <div className="text-text-secondary">
                       prioridade: {item.priority || '-'} | tipo: {item.action_type || '-'}
+                      {item.efficacy && item.efficacy.successRate != null ? (
+                        <span>{` | ${toPercent(item.efficacy.successRate)} de sucesso histórico (${item.efficacy.samples} avaliadas)`}</span>
+                      ) : null}
                     </div>
                     {item.description ? (
                       <div className="text-text-secondary" style={{ marginTop: '4px' }}>{item.description}</div>
