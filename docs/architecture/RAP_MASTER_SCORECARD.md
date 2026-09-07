@@ -2,16 +2,16 @@
 
 > Arquivo gerado por `governance/revalidate-master-scorecard.js`. Não editar manualmente.
 
-- Generated at: 2026-09-07T21:35:51.239Z
-- Run ID: rap-governed-20260907212723752-fb8d5cac
-- Source fingerprint: 5540e8e9ea11eb2390c1d33051cdbb81544e951bd38d9c968429954d28be80b1
-- Scorecard fingerprint: 3def82fd35edc361624374b38acc06394255b628dffe153d07fd3caef328dd03
-- Overall status: **VERIFIED**
+- Generated at: 2026-09-07T21:50:30.097Z
+- Run ID: rap-governed-20260907214836222-eb817f0f
+- Source fingerprint: 5106688623890994042f3dbf9c9cf688d522be1acf913a66927ced98504ec64c
+- Scorecard fingerprint: d1abbecfbc9a74d726a7dd3dbc6e17019dbcfafd7a5f01443d5110082e14d392
+- Overall status: **IN_PROGRESS**
 - Dimensions: 78
-- 10/10: 78
-- Below 10: 0
-- Open gaps: 0
-- Open blockers: 0
+- 10/10: 74
+- Below 10: 4
+- Open gaps: 5
+- Open blockers: 2
 
 ## Dimensões
 
@@ -68,11 +68,11 @@
 | RAP-049 | Readiness Engine | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-050 | Canonical Final Decision | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-051 | Cross-Engine Consistency | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-052 | Package Manifest | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-052 | Package Manifest | 6/10 | IN_PROGRESS | 8/11 | 1 | 1 |
 | RAP-053 | Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-054 | Semantic Certification × Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-055 | Delivered Release Self-Verification | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-056 | Source/Proof/Manifest Equality | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-054 | Semantic Certification × Package Integrity | 6/10 | IN_PROGRESS | 8/11 | 1 | 1 |
+| RAP-055 | Delivered Release Self-Verification | 6/10 | IN_PROGRESS | 8/11 | 2 | 0 |
+| RAP-056 | Source/Proof/Manifest Equality | 6/10 | IN_PROGRESS | 9/11 | 1 | 0 |
 | RAP-057 | Final Consistency Gate | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-058 | Security Fail-Closed | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-059 | Observability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
