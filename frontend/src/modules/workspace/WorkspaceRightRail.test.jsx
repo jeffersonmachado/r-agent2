@@ -68,3 +68,46 @@ describe('WorkspaceRightRail — Recomendação inteligente (tenant-intelligence
     expect(screen.queryByText(/Projeção de fechamento:/)).toBeNull();
   });
 });
+
+describe('WorkspaceRightRail — Resultados recentes (recentOutcomes)', () => {
+  const recentOutcome = {
+    id: 'reco-done',
+    title: 'Retomar contato com cliente parado',
+    status: 'completed',
+    appliedAt: '2026-09-06T10:00:00.000Z',
+    origin: 'manual',
+    executedAction: { kind: 'send_message', status: 'executed', reason: null, dueDate: null },
+    outcome: {
+      outcome: 'improved',
+      reason: 'action_signal_positive',
+      evaluatedAt: '2026-09-06T12:00:00.000Z',
+      actionSignals: [{ type: 'customer_reply', outcome: 'replied', replies: 1 }],
+    },
+  };
+
+  it('renderiza execução, sinal comportamental e razão em PT-BR', () => {
+    render(<WorkspaceRightRail {...baseProps} actions={{ items: [], suggestion: null, tenantRecommendation: null, recentOutcomes: [recentOutcome] }} />);
+
+    expect(screen.getByText('Resultados recentes')).toBeInTheDocument();
+    expect(screen.getByText('Retomar contato com cliente parado')).toBeInTheDocument();
+    expect(screen.getByText(/Mensagem enviada para a fila do canal/)).toBeInTheDocument();
+    expect(screen.getByText('Cliente respondeu após o envio.')).toBeInTheDocument();
+    expect(screen.getByText('Efeito positivo observado na ação executada.')).toBeInTheDocument();
+    // nunca exibe código de reason cru
+    expect(screen.queryByText('action_signal_positive')).toBeNull();
+  });
+
+  it('sem recentOutcomes não renderiza o card', () => {
+    render(<WorkspaceRightRail {...baseProps} actions={{ items: [], suggestion: null, tenantRecommendation: null, recentOutcomes: [] }} />);
+
+    expect(screen.queryByText('Resultados recentes')).toBeNull();
+  });
+
+  it('aplicada sem outcome mostra só o feedback de execução', () => {
+    const pending = { ...recentOutcome, id: 'reco-pending', outcome: null, executedAction: { kind: 'create_task', status: 'executed', reason: null, dueDate: null } };
+    render(<WorkspaceRightRail {...baseProps} actions={{ items: [], suggestion: null, tenantRecommendation: null, recentOutcomes: [pending] }} />);
+
+    expect(screen.getByText('Tarefa criada no Workspace para execução operacional.')).toBeInTheDocument();
+    expect(screen.queryByText('Cliente respondeu após o envio.')).toBeNull();
+  });
+});

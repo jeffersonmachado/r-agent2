@@ -29,12 +29,13 @@ function createWorkspaceService(deps = {}) {
       return insightService.generateInsights(entityId, { tenantId, timeline, includeTechnical: classification === 'DEVELOPMENT' });
     },
     getActions: async (tenantId, entityId, { classification } = {}) => {
-      const [items, suggestion, tenantRecommendation] = await Promise.all([
+      const [items, suggestion, tenantRecommendation, recentOutcomes] = await Promise.all([
         actionService.listActions({ tenantId, entityId }),
         actionService.suggestNextBestAction({ tenantId, entityId, classification }),
         actionService.topTenantRecommendation({ tenantId }),
+        actionService.recentRecommendationOutcomes({ tenantId }),
       ]);
-      return { items, suggestion, tenantRecommendation };
+      return { items, suggestion, tenantRecommendation, recentOutcomes };
     },
     getAutoCorrections: async (tenantId, entityId) => {
       const timeline = await timelineService.getEntityTimeline({ tenantId, entityId, limit: 100, offset: 0, internal: true });

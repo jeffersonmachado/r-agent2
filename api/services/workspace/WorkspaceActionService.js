@@ -68,6 +68,61 @@ class WorkspaceActionService {
     }
   }
 
+  /**
+   * Resultados recentes das recomendações aplicadas — fecha o loop no ponto
+   * onde o operador trabalha: o que foi aplicado, o que executou e qual
+   * resultado medido (outcome + sinais comportamentais). Shape allowlisted,
+   * fail-closed: falha da inteligência resulta em lista vazia.
+   */
+  async recentRecommendationOutcomes({ tenantId, limit = 3 } = {}) {
+    if (!tenantId) return [];
+    try {
+      const applied = await this.recommendationEngine.listRecommendations({ tenantId, status: 'applied', limit: 50 });
+      const completed = await this.recommendationEngine.listRecommendations({ tenantId, status: 'completed', limit: 50 });
+      const items = [
+        ...(Array.isArray(applied?.items) ? applied.items : []),
+        ...(Array.isArray(completed?.items) ? completed.items : []),
+      ];
+
+      return items
+        .filter((item) => item?.metadata?.application?.appliedAt)
+        .sort((a, b) => String(b.metadata.application.appliedAt)
+          .localeCompare(String(a.metadata.application.appliedAt)))
+        .slice(0, Math.min(Math.max(Number(limit) || 3, 1), 10))
+        .map((item) => {
+          const application = item.metadata.application;
+          const executed = application.executedAction && typeof application.executedAction === 'object'
+            ? application.executedAction
+            : null;
+          const outcome = item.metadata?.outcome && typeof item.metadata.outcome === 'object'
+            ? item.metadata.outcome
+            : null;
+          return {
+            id: item.id,
+            title: item.title,
+            status: item.status,
+            appliedAt: application.appliedAt,
+            origin: application.origin || null,
+            executedAction: executed ? {
+              kind: executed.kind || null,
+              status: executed.status || null,
+              reason: executed.reason || null,
+              dueDate: executed.dueDate || null,
+            } : null,
+            outcome: outcome ? {
+              outcome: outcome.outcome || null,
+              reason: outcome.reason || null,
+              evaluatedAt: outcome.evaluatedAt || null,
+              actionSignals: Array.isArray(outcome.actionSignals) ? outcome.actionSignals : [],
+            } : null,
+          };
+        });
+    } catch (err) {
+      this.logger.warn('[WorkspaceAction] Falha ao buscar resultados de recomendacoes', { tenantId, error: err.message });
+      return [];
+    }
+  }
+
   async listActions({ tenantId, entityId, limit = 50 }) {
     const rows = await this.WorkspaceAction().findAll({ where: { tenant_id: tenantId, entity_id: entityId }, order: [['created_at', 'DESC']], limit });
     return rows.map(toPlain);

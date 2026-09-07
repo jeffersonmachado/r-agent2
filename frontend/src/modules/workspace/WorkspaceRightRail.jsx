@@ -2,6 +2,7 @@ import React from 'react';
 import { getOperationalLabels, isDevSurfaceVisible } from './workspaceDevSurface';
 import { SuggestionExpectedOutcome, SuggestionMeta } from './WorkspaceActions';
 import { formatInsightType } from './insightTypeLabels';
+import { describeActionSignal, describeExecutedAction, describeOutcomeReason, executedActionToneClass } from '../intelligence/executionFeedback';
 
 function Card({ title, children, loading = false }) {
   return (
@@ -71,6 +72,35 @@ export function WorkspaceRightRail({ summary, insights, actions, incidents, load
               Aplicar recomendação
             </button>
           ) : null}
+        </Card>
+      ) : null}
+
+      {Array.isArray(actions?.recentOutcomes) && actions.recentOutcomes.length > 0 ? (
+        <Card title="Resultados recentes">
+          {actions.recentOutcomes.slice(0, 3).map((item) => {
+            const execFeedback = describeExecutedAction(item.executedAction);
+            const signals = Array.isArray(item.outcome?.actionSignals) ? item.outcome.actionSignals : [];
+            return (
+              <div key={item.id} className="workspace-rail-item">
+                <strong>{item.title}</strong>
+                {execFeedback ? (
+                  <p className={executedActionToneClass(execFeedback.tone)}>{execFeedback.message}</p>
+                ) : null}
+                {signals.map((signal, signalIndex) => {
+                  const signalFeedback = describeActionSignal(signal);
+                  if (!signalFeedback) return null;
+                  return (
+                    <p key={`${item.id}-signal-${signalIndex}`} className={executedActionToneClass(signalFeedback.tone)}>
+                      {signalFeedback.message}
+                    </p>
+                  );
+                })}
+                {item.outcome?.reason ? (
+                  <p className="workspace-muted text-sm">{describeOutcomeReason(item.outcome.reason)}</p>
+                ) : null}
+              </div>
+            );
+          })}
         </Card>
       ) : null}
 
