@@ -7,6 +7,9 @@
  * medido no efeito real da ação: cliente respondeu após send_message?
  * tarefa criada por create_task/schedule foi concluída? a equipe respondeu
  * nas conversas movidas pelo rebalance_queue?
+ * Inclui o learn de 2º nível: rebalance sem resposta da equipe
+ * (no_agent_response) gera recomendação seguinte causal (escalonamento ao
+ * gestor ou reforço de equipe), com guardas anti-loop.
  * DB e serviços mockados (sem Postgres/Redis).
  */
 
@@ -19,11 +22,33 @@ function makeRow(json) {
   };
 }
 
-function loadEngine({ rowsById = {}, messages = [], tasksById = {}, snapshotsByKey = {}, messagesError = null, deps = {} } = {}) {
+function loadEngine({
+  rowsById = {},
+  messages = [],
+  tasksById = {},
+  snapshotsByKey = {},
+  messagesError = null,
+  openConversationIds = [],
+  conversationsError = null,
+  agents = [],
+  agentsError = null,
+  createError = null,
+  deps = {},
+} = {}) {
   jest.resetModules();
+
+  const createMock = jest.fn(async (data) => {
+    if (createError) throw createError;
+    return makeRow({ ...data });
+  });
+  const conversationsFindAllMock = jest.fn(async () => {
+    if (conversationsError) throw conversationsError;
+    return openConversationIds.map((id) => makeRow({ id }));
+  });
 
   jest.doMock('../../api/db/models', () => ({
     TenantRecommendation: () => ({
+      create: createMock,
       findOne: jest.fn(async ({ where }) => rowsById[where.id] || null),
       findAll: jest.fn(async ({ where }) => Object.values(rowsById).filter((row) => {
         const json = row.toJSON();
@@ -41,6 +66,7 @@ function loadEngine({ rowsById = {}, messages = [], tasksById = {}, snapshotsByK
         return messages;
       }),
     }),
+    ChannelConversation: () => ({ findAll: conversationsFindAllMock }),
     Task: () => ({
       findOne: jest.fn(async ({ where }) => tasksById[where.id] || null),
     }),
@@ -51,8 +77,15 @@ function loadEngine({ rowsById = {}, messages = [], tasksById = {}, snapshotsByK
   return {
     engine: new RecommendationEngine({
       evidenceEngine: { createEvidence: jest.fn(async () => ({})) },
+      authService: {
+        listAgents: jest.fn(async () => {
+          if (agentsError) throw agentsError;
+          return agents;
+        }),
+      },
       ...deps,
     }),
+    mocks: { create: createMock, conversationsFindAll: conversationsFindAllMock },
   };
 }
 
@@ -318,5 +351,154 @@ describe('evaluateOutcome — sinal rebalance_response (rebalance_queue)', () =>
     expect(result.outcome.outcome).toBe('pending');
     expect(result.outcome.actionSignals[0].outcome).toBe('unavailable');
     expect(result.outcome.actionSignals[0].reason).toBe('db_down');
+  });
+});
+
+describe('evaluateOutcome — follow-up de 2º nível (no_agent_response)', () => {
+  const AGENTS_2 = [
+    { id: 'ag-1', role: 'operator', active: true },
+    { id: 'ag-2', role: 'manager', active: true },
+  ];
+
+  function staleRebalanceRow(overrides = {}) {
+    return appliedRow({
+      kind: 'rebalance_queue',
+      status: 'executed',
+      assigned: 1,
+      rebalanced: 1,
+      agents: 2,
+      conversationIds: ['conv-a', 'conv-b'],
+      executedAt: new Date(Date.now() - 48 * 3600000).toISOString(),
+    }, overrides);
+  }
+
+  test('equipe existe → follow-up manager_escalation criado e pai marcado', async () => {
+    const row = staleRebalanceRow();
+    const { engine, mocks } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      agents: AGENTS_2,
+      openConversationIds: ['conv-a'],
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('unchanged');
+    expect(result.outcome.reason).toBe('no_agent_response');
+    expect(result.followUp).toMatchObject({ created: true, variant: 'manager_escalation' });
+    expect(result.followUp.diagnosis).toMatchObject({ eligibleAgents: 2, stillOpen: 1, totalMoved: 2 });
+    expect(mocks.create).toHaveBeenCalledTimes(1);
+    const payload = mocks.create.mock.calls[0][0];
+    expect(payload.action_type).toBe('manager_escalation');
+    expect(payload.priority).toBe('high');
+    expect(payload.metadata.followUpOf).toBe('reco-1');
+    expect(payload.metadata.followUpDepth).toBe(1);
+    expect(payload.metadata.followUpReason).toBe('no_agent_response');
+    expect(payload.metadata.action).toMatchObject({ kind: 'create_task' });
+    expect(payload.description).toContain('gestor');
+    expect(row.toJSON().metadata.followUp).toMatchObject({
+      reason: 'no_agent_response',
+      variant: 'manager_escalation',
+    });
+  });
+
+  test('apenas 1 operador ativo → follow-up staffing_review', async () => {
+    const row = staleRebalanceRow();
+    const { engine, mocks } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      agents: [{ id: 'ag-1', role: 'operator', active: true }],
+      openConversationIds: ['conv-a', 'conv-b'],
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.followUp).toMatchObject({ created: true, variant: 'staffing_review' });
+    const payload = mocks.create.mock.calls[0][0];
+    expect(payload.action_type).toBe('staffing_review');
+    expect(payload.description).toContain('reforço de equipe');
+  });
+
+  test('super_admin não conta como operador elegível no diagnóstico', async () => {
+    const row = staleRebalanceRow();
+    const { engine } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      agents: [{ id: 'root', role: 'super_admin', active: true }],
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.followUp).toMatchObject({ created: true, variant: 'staffing_review' });
+    expect(result.followUp.diagnosis.eligibleAgents).toBe(0);
+  });
+
+  test('idempotente: metadata.followUp já presente → nenhum follow-up novo', async () => {
+    const row = staleRebalanceRow();
+    row.toJSON().metadata.followUp = {
+      createdRecommendationId: 'reco-old', createdAt: '2026-09-06T12:00:00.000Z', reason: 'no_agent_response', variant: 'manager_escalation',
+    };
+    const { engine, mocks } = loadEngine({ rowsById: { 'reco-1': row }, messages: [], agents: AGENTS_2 });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.reason).toBe('no_agent_response');
+    expect(result.followUp).toBeUndefined();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  test('anti-loop: followUpDepth >= 1 nunca gera follow-up de 3º nível', async () => {
+    const row = staleRebalanceRow();
+    row.toJSON().metadata.followUpDepth = 1;
+    const { engine, mocks } = loadEngine({ rowsById: { 'reco-1': row }, messages: [], agents: AGENTS_2 });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.followUp).toBeUndefined();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  test('outcome improved (equipe respondeu) → nenhum follow-up', async () => {
+    const row = staleRebalanceRow();
+    const reply = { toJSON: () => ({ id: 'out-1', conversation_id: 'conv-a', created_at: new Date().toISOString() }) };
+    const { engine, mocks } = loadEngine({ rowsById: { 'reco-1': row }, messages: [reply], agents: AGENTS_2 });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('improved');
+    expect(result.followUp).toBeUndefined();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  test('diagnóstico fail-soft: listAgents fora do ar → follow-up ainda é criado (variant default)', async () => {
+    const row = staleRebalanceRow();
+    const { engine } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      agentsError: Object.assign(new Error('auth down'), { code: 'auth_down' }),
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.followUp).toMatchObject({ created: true, variant: 'manager_escalation' });
+    expect(result.followUp.diagnosis.eligibleAgents).toBeNull();
+    expect(result.followUp.diagnosis.agentsError).toBe('auth_down');
+  });
+
+  test('falha ao criar follow-up não derruba a avaliação', async () => {
+    const row = staleRebalanceRow();
+    const { engine } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      agents: AGENTS_2,
+      createError: Object.assign(new Error('insert failed'), { code: 'insert_failed' }),
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.ok).toBe(true);
+    expect(result.outcome.outcome).toBe('unchanged');
+    expect(result.followUp).toMatchObject({ created: false, error: 'insert_failed' });
+    expect(row.toJSON().metadata.followUp).toBeUndefined();
   });
 });

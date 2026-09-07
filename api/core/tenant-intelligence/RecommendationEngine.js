@@ -1,6 +1,6 @@
 'use strict';
 
-const { TenantRecommendation, TenantInsight, TenantMetricSnapshot, ChannelMessage, Task } = require('../../db/models');
+const { TenantRecommendation, TenantInsight, TenantMetricSnapshot, ChannelMessage, ChannelConversation, Task } = require('../../db/models');
 const { Op } = require('sequelize');
 const { buildId, toNumber } = require('./helpers');
 
@@ -827,7 +827,16 @@ class RecommendationEngine {
           outcome,
         });
       }
-      return { ok: true, recommendation: rowToJson(row), outcome, evidenceRecorded: signalEvidence };
+      // Learn de 2º nível: rebalance sem resposta da equipe gera recomendação
+      // seguinte (escalonamento/reforço), fechando o loop sobre o próprio loop.
+      const followUp = await this._maybeCreateRebalanceFollowUp({ tenantId, row, outcome });
+      return {
+        ok: true,
+        recommendation: rowToJson(row),
+        outcome,
+        evidenceRecorded: signalEvidence,
+        ...(followUp ? { followUp } : {}),
+      };
     }
 
     const metrics = [];
@@ -899,7 +908,14 @@ class RecommendationEngine {
       });
     }
 
-    return { ok: true, recommendation: rowToJson(row), outcome, evidenceRecorded };
+    const followUp = await this._maybeCreateRebalanceFollowUp({ tenantId, row, outcome });
+    return {
+      ok: true,
+      recommendation: rowToJson(row),
+      outcome,
+      evidenceRecorded,
+      ...(followUp ? { followUp } : {}),
+    };
   }
 
   /**
@@ -1074,6 +1090,137 @@ class RecommendationEngine {
     } catch (err) {
       return false;
     }
+  }
+
+  /**
+   * Learn sobre o próprio loop: quando o outcome de um rebalance_queue é
+   * 'unchanged' por 'no_agent_response' (a equipe não respondeu nas conversas
+   * movidas em 24h), a redistribuição sozinha não bastou. O engine re-observa
+   * o contexto (quantos operadores elegíveis existem? quantas conversas movidas
+   * seguem abertas?) e gera UMA recomendação de segundo nível, causal:
+   * - poucos operadores ativos (<=1) → reforço de equipe/escala;
+   * - equipe existe → escalonamento ao gestor para cobrar o atendimento.
+   * Guardas anti-loop: apenas 1 follow-up por recomendação (metadata.followUp)
+   * e follow-ups nunca geram follow-ups (followUpDepth >= 1). Falha na geração
+   * nunca derruba a avaliação — volta explícita no resultado.
+   */
+  async _maybeCreateRebalanceFollowUp({ tenantId, row, outcome }) {
+    try {
+      if (!row || !outcome) return null;
+      if (outcome.outcome !== 'unchanged' || outcome.reason !== 'no_agent_response') return null;
+
+      const current = rowToJson(row);
+      const metadata = current.metadata && typeof current.metadata === 'object' ? current.metadata : {};
+      const executed = metadata.application?.executedAction;
+      if (!executed || executed.kind !== 'rebalance_queue' || executed.status !== 'executed') return null;
+      if (metadata.followUp) return null;
+      if ((metadata.followUpDepth || 0) >= 1) return null;
+
+      const diagnosis = await this._diagnoseRebalanceFailure({ tenantId, executed });
+      const variant = diagnosis.eligibleAgents != null && diagnosis.eligibleAgents <= 1
+        ? 'staffing_review'
+        : 'manager_escalation';
+
+      const moved = diagnosis.totalMoved != null ? `${diagnosis.totalMoved} conversa(s)` : 'as conversas';
+      const stillOpen = diagnosis.stillOpen != null && diagnosis.stillOpen > 0
+        ? ` e ${diagnosis.stillOpen} seguem abertas`
+        : '';
+      const title = variant === 'staffing_review'
+        ? 'Reforçar a equipe de atendimento'
+        : 'Escalar atendimentos sem resposta para o gestor';
+      const description = variant === 'staffing_review'
+        ? `A redistribuição de ${moved} não destravou o atendimento${stillOpen} e há apenas ${diagnosis.eligibleAgents} operador(es) ativo(s) — a fila não tem capacidade de resposta. Avalie reforço de equipe ou revisão de escalas.`
+        : `A redistribuição de ${moved} não destravou o atendimento: nenhuma resposta da equipe em 24h${stillOpen}. Um gestor precisa revisar a fila e cobrar o atendimento.`;
+
+      const createdItem = await this.createRecommendation({
+        tenantId,
+        payload: {
+          insightId: current.insight_id || null,
+          title,
+          description,
+          actionType: variant,
+          priority: 'high',
+          estimatedImpact: { expected: 'high', horizon: 'short_term' },
+          metadata: {
+            relatedMetrics: Array.isArray(metadata.relatedMetrics) ? metadata.relatedMetrics : [],
+            followUpOf: current.id,
+            followUpDepth: (metadata.followUpDepth || 0) + 1,
+            followUpReason: 'no_agent_response',
+            rebalanceDiagnosis: diagnosis,
+          },
+          action: {
+            kind: 'create_task',
+            label: variant === 'staffing_review'
+              ? 'Criar tarefa de reforço de equipe'
+              : 'Criar tarefa de escalonamento',
+          },
+        },
+      });
+
+      // Marca no pai DEPOIS da criação: se a criação falhar, uma próxima
+      // avaliação pode tentar de novo (não perde o follow-up silenciosamente).
+      await row.update({
+        metadata: {
+          ...rowToJson(row).metadata,
+          followUp: {
+            createdRecommendationId: createdItem.id,
+            createdAt: new Date().toISOString(),
+            reason: 'no_agent_response',
+            variant,
+          },
+        },
+      });
+
+      return { created: true, recommendationId: createdItem.id, variant, diagnosis };
+    } catch (err) {
+      return { created: false, error: String(err?.code || err?.message || err) };
+    }
+  }
+
+  /**
+   * Re-observação causal do rebalance que não destravou atendimento.
+   * Fail-soft por fonte: indisponibilidade de agentes ou de conversas fica
+   * explícita no diagnóstico, sem impedir a geração do follow-up.
+   */
+  async _diagnoseRebalanceFailure({ tenantId, executed }) {
+    const conversationIds = Array.isArray(executed.conversationIds)
+      ? executed.conversationIds.slice(0, REBALANCE_MAX_MOVES).map(String)
+      : [];
+    const diagnosis = {
+      totalMoved: conversationIds.length,
+      eligibleAgents: null,
+      stillOpen: null,
+    };
+
+    try {
+      const agents = await this.authService.listAgents(String(tenantId));
+      const eligible = (agents || []).filter((agent) => agent
+        && agent.active !== false
+        && (!agent.status || agent.status === 'active')
+        && ELIGIBLE_ASSIGNEE_ROLES.has(agent.role));
+      diagnosis.eligibleAgents = eligible.length;
+    } catch (err) {
+      diagnosis.agentsError = String(err?.code || err?.message || err);
+    }
+
+    if (conversationIds.length > 0) {
+      try {
+        const ConversationModel = ChannelConversation();
+        const rows = await ConversationModel.findAll({
+          where: {
+            tenant_key: String(tenantId),
+            id: { [Op.in]: conversationIds },
+            status: 'open',
+          },
+          attributes: ['id'],
+        });
+        diagnosis.stillOpen = (rows || []).length;
+      } catch (err) {
+        diagnosis.conversationsError = String(err?.code || err?.message || err);
+      }
+    }
+
+    return diagnosis;
   }
 
   /**
