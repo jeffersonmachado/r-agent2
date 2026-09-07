@@ -1,32 +1,41 @@
 {
-  "generatedAt": "2026-09-07T17:40:47.105Z",
+  "generatedAt": "2026-09-07T17:49:14.319Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": null,
-  "zipHash": null,
-  "manifestHash": "cfb1291c16d42753cb7447c6a43bc0b34e2fa9b9ed778331489b348e2fbd61ea",
-  "replayHash": "fea433bb27e2114b0fe3294651c85c2e8b081eac9ba38ac9cec08d7dcb860224",
-  "governanceHash": "81630ed6ac1d9db3d1e76f0d45d30646b6ad438256f454d02b7fd2e8b426f644",
-  "readinessHash": "e7eaca040bf15afdfc69f6ce4c60781bacc4555a643742d5fd099aa8064c7cd4",
-  "consistencyHash": "2e3fee30b6f6fce7974d42b1d87cfcecb00c30a9746eef4a06865caa02dd6846",
-  "contaminationHash": "97d7a2b926a001e0bd142b3818b083053d6de5723e2dda1fb4e300960aad7da5",
-  "packageIntegrityHash": "3dc487d013b86d40ca417f6ee62fee471bd0b03ee5357bc2397d52e9ba8cfd3a",
+  "zipName": "r-agent2-20260907-144609.zip",
+  "zipHash": "98a912d87068de25380e65a6c19ea1ab93b80081a862495a225869deee3c2a80",
+  "manifestHash": "bac24b5cc34036ba7ce4fd80a94bfa7583bf1ed7a29c557c7425c84c89e16cfb",
+  "replayHash": "e48637adb14ff6aedd0948efea3f081a022bcc5f90cc646ab6d6b32db1950418",
+  "governanceHash": "23ab272b3072bb27a2121fb8104f92e635d3a2c57e0ecfd0f8da49c887f40ddd",
+  "readinessHash": "4cda960f73bd0a6f5523f4592c9bce913a9da949bc940c82204ca3a28908c679",
+  "consistencyHash": "f033b3948eb947f73b2fc1d4640729721aaa3ec23ae23965f4f63d9c710b9979",
+  "contaminationHash": "744619717694178e15738dd64de53fad50e6eecbcdba02df7d5f1b10fd5388cf",
+  "packageIntegrityHash": "2a1ca08d9c3283122d888f539e3e10ba4cd0c8985a2f8ec9e746574801e27016",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "2e151c5dab3750cbd2134b96adaacc3d2bf5603c2fd1d8f6b7bda34b90ec5e0a",
-  "recalculatedReadinessHash": "9987274c3ca0757dcf308f5c8d9051d7048f1c0bdac5b79ab4ea265236eb2bd9",
+  "gateHash": "665f3cd9f6d7d221eea7af39c0d75ea505e153d865bfcfd3e4643a428f93fa02",
+  "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "AUTONOMOUS_READY_GO",
-    "readiness": "AUTONOMOUS_READY_GO",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
+    "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
-  "autonomousReady": true,
-  "mandatoryFailures": [],
-  "ok": true,
-  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 0."
+  "autonomousReady": false,
+  "mandatoryFailures": [
+    {
+      "engine": "finalGovernance",
+      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
+    },
+    {
+      "engine": "readiness",
+      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    }
+  ],
+  "ok": false,
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260907-144609.zip. Package: ÍNTEGRO. Validadores falhos: 2."
 }
