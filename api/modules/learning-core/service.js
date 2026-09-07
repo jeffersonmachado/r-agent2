@@ -81,6 +81,24 @@ function sanitizeEvent(event = {}) {
   };
 }
 
+// Alvos de clique que concluem uma tarefa operacional (botões de ação
+// final). Usado para medir "cliques por tarefa concluída" sem capturar
+// conteúdo — apenas o rótulo estrutural do alvo (aria-label/testid).
+const COMPLETION_TARGET_PATTERN = /(enviar resposta|salvar|confirmar|agendar|concluir|finalizar|registrar|criar)/i;
+const MAX_SUMMARY_ROUTES = 200;
+
+function mergeCountMap(previous, batch) {
+  const merged = { ...(previous || {}) };
+  for (const [route, count] of Object.entries(batch)) {
+    merged[route] = (Number(merged[route]) || 0) + count;
+  }
+  // Cap defensivo: mantém no máximo as rotas mais frequentes.
+  const entries = Object.entries(merged);
+  if (entries.length <= MAX_SUMMARY_ROUTES) return merged;
+  entries.sort((a, b) => b[1] - a[1]);
+  return Object.fromEntries(entries.slice(0, MAX_SUMMARY_ROUTES));
+}
+
 async function updateSessionAggregate({ tenantId, agentId, username, sessionId, events }) {
   const Model = getUserInteractionSessionModel();
   const routes = Array.from(new Set(events.map((e) => e.payload.route).filter(Boolean))).slice(0, 100);
@@ -101,6 +119,21 @@ async function updateSessionAggregate({ tenantId, agentId, username, sessionId, 
     },
   });
 
+  // Cliques por rota e cliques de conclusão de tarefa (Product Metrics:
+  // "cliques por tarefa" e esforço por superfície central).
+  const clicksByRoute = {};
+  const taskCompletionClicksByRoute = {};
+  for (const event of events) {
+    if (event.type !== 'learning.interaction.click') continue;
+    const route = event.payload?.route;
+    if (!route) continue;
+    clicksByRoute[route] = (clicksByRoute[route] || 0) + 1;
+    if (event.payload?.target && COMPLETION_TARGET_PATTERN.test(event.payload.target)) {
+      taskCompletionClicksByRoute[route] = (taskCompletionClicksByRoute[route] || 0) + 1;
+    }
+  }
+
+  const previousSummary = session.summary && typeof session.summary === 'object' ? session.summary : {};
   const mergedRoutes = Array.from(new Set([...(session.routesVisited || []), ...routes])).slice(0, 200);
   await session.update({
     agentId: String(agentId),
@@ -108,6 +141,11 @@ async function updateSessionAggregate({ tenantId, agentId, username, sessionId, 
     lastSeenAt: now,
     eventCount: Number(session.eventCount || 0) + events.length,
     routesVisited: mergedRoutes,
+    summary: {
+      ...previousSummary,
+      clicksByRoute: mergeCountMap(previousSummary.clicksByRoute, clicksByRoute),
+      taskCompletionClicksByRoute: mergeCountMap(previousSummary.taskCompletionClicksByRoute, taskCompletionClicksByRoute),
+    },
   });
 }
 

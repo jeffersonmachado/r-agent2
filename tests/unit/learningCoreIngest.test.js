@@ -162,4 +162,45 @@ describe('learning-core ingestInteractionBatch', () => {
 
     await expect(ingestInteractionBatch(baseArgs())).rejects.toThrow('ledger down');
   });
+
+  test('agrega cliques por rota e cliques de conclusao de tarefa no summary da sessao', async () => {
+    const args = baseArgs();
+    args.events = [
+      { type: 'click', clientEventId: 'c1', route: '/inbox', target: 'button:type=button' },
+      { type: 'click', clientEventId: 'c2', route: '/inbox', target: 'aria:Enviar resposta' },
+      { type: 'click', clientEventId: 'c3', route: '/workspace', target: 'aria:Salvar' },
+      { type: 'navigation', clientEventId: 'c4', route: '/inbox' },
+    ];
+
+    await ingestInteractionBatch(args);
+
+    const updateArg = mockSessionUpdate.mock.calls[0][0];
+    expect(updateArg.summary.clicksByRoute).toEqual({ '/inbox': 2, '/workspace': 1 });
+    expect(updateArg.summary.taskCompletionClicksByRoute).toEqual({ '/inbox': 1, '/workspace': 1 });
+  });
+
+  test('mescla summary anterior ao acumular novo lote', async () => {
+    mockFindOrCreate.mockResolvedValue([
+      {
+        routesVisited: ['/inbox'],
+        eventCount: 5,
+        summary: {
+          clicksByRoute: { '/inbox': 3 },
+          taskCompletionClicksByRoute: { '/inbox': 1 },
+        },
+        update: mockSessionUpdate,
+      },
+      false,
+    ]);
+    const args = baseArgs();
+    args.events = [
+      { type: 'click', clientEventId: 'c9', route: '/inbox', target: 'aria:Enviar resposta' },
+    ];
+
+    await ingestInteractionBatch(args);
+
+    const updateArg = mockSessionUpdate.mock.calls[0][0];
+    expect(updateArg.summary.clicksByRoute['/inbox']).toBe(4);
+    expect(updateArg.summary.taskCompletionClicksByRoute['/inbox']).toBe(2);
+  });
 });

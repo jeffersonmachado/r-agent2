@@ -24,6 +24,7 @@ import { AnalyticsRoiAndFunnelSection } from './analytics/AnalyticsRoiAndFunnelS
 import { AnalyticsOrdersAndPhysicalSection } from './analytics/AnalyticsOrdersAndPhysicalSection';
 import { AnalyticsDecisionIntelligenceSection } from './analytics/AnalyticsDecisionIntelligenceSection';
 import { AnalyticsDecisionMetricsSection } from './analytics/AnalyticsDecisionMetricsSection';
+import { AnalyticsProductMetricsSection } from './analytics/AnalyticsProductMetricsSection';
 import { AnalyticsAttentionSection } from './analytics/AnalyticsAttentionSection';
 import {
   applyTenantRecommendation,
@@ -33,6 +34,7 @@ import {
   listTenantInsights,
   listTenantRecommendations,
 } from '../api/intelligence';
+import { getProductMetricsSummary } from '../api/productMetrics';
 
 export function AnalyticsPage() {
   const ORDER_HOUR_METRICS = ['created_count', 'confirmed_count', 'preparing_count', 'ready_count', 'dispatched_count', 'delivered_count', 'cancelled_count'];
@@ -59,6 +61,7 @@ export function AnalyticsPage() {
   const [intelligenceInsights, setIntelligenceInsights] = useState([]);
   const [intelligenceRecommendations, setIntelligenceRecommendations] = useState([]);
   const [intelligenceStats, setIntelligenceStats] = useState(null);
+  const [productMetrics, setProductMetrics] = useState(null);
   const [attention, setAttention] = useState(null);
   const [applyingRecommendationId, setApplyingRecommendationId] = useState(null);
   const [dismissingRecommendationId, setDismissingRecommendationId] = useState(null);
@@ -205,22 +208,28 @@ export function AnalyticsPage() {
   // (ex.: permissao), as metricas descritivas continuam carregando.
   const loadIntelligence = async () => {
     try {
-      const [insightsResult, recommendationsResult, statsResult, attentionResult] = await Promise.all([
+      const [insightsResult, recommendationsResult, statsResult, attentionResult, productMetricsResult] = await Promise.all([
         listTenantInsights({ status: 'open', limit: 5 }),
         listTenantRecommendations({ status: 'open', limit: 5 }),
         getTenantRecommendationStats({ period: 'month' }),
         getTenantAttention({ period: 'month' }),
+        getProductMetricsSummary({ windowDays: selectedWindowDays }).catch((err) => {
+          logger.warn('[AnalyticsPage] Métricas de produto indisponíveis:', err?.message || err);
+          return null;
+        }),
       ]);
       setIntelligenceInsights(insightsResult?.items || []);
       setIntelligenceRecommendations(recommendationsResult?.items || []);
       setIntelligenceStats(statsResult?.stats || null);
       setAttention(attentionResult?.attention || null);
+      setProductMetrics(productMetricsResult || null);
     } catch (error) {
       logger.warn('[AnalyticsPage] Inteligencia decisoria indisponivel:', error?.message || error);
       setIntelligenceInsights([]);
       setIntelligenceRecommendations([]);
       setIntelligenceStats(null);
       setAttention(null);
+      setProductMetrics(null);
     }
   };
 
@@ -720,6 +729,8 @@ export function AnalyticsPage() {
       />
 
       <AnalyticsDecisionMetricsSection stats={intelligenceStats} />
+
+      <AnalyticsProductMetricsSection productMetrics={productMetrics} />
 
       <AnalyticsRoiAndFunnelSection
         selectedWindowDays={selectedWindowDays}
