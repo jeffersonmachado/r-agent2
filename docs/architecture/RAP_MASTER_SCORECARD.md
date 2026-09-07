@@ -2,15 +2,15 @@
 
 > Arquivo gerado por `governance/revalidate-master-scorecard.js`. Não editar manualmente.
 
-- Generated at: 2026-09-07T09:15:10.551Z
-- Run ID: rap-governed-20260907085517441-3e71e47b
-- Source fingerprint: 1bd620213e018a94f426a575f71b42ad824ae3840a3ce0997f6f749057c7e4ba
-- Scorecard fingerprint: 44d774a217e626e40dd18362190b36e3bddec90d7e1a8cfb65cec0dc6c48545a
-- Overall status: **VERIFIED**
+- Generated at: 2026-09-07T11:06:30.874Z
+- Run ID: rap-governed-20260907110208513-837d6304
+- Source fingerprint: 414b62facce4784fe249176db23b41adfe6dc221fa8abe971a7f09b54646904d
+- Scorecard fingerprint: c6b14c93eb675481cca6c2481d77cc087f452db7dd3d1bf8c993dae816327ce5
+- Overall status: **IN_PROGRESS**
 - Dimensions: 78
-- 10/10: 78
-- Below 10: 0
-- Open gaps: 0
+- 10/10: 76
+- Below 10: 2
+- Open gaps: 3
 - Open blockers: 0
 
 ## Dimensões
@@ -71,8 +71,8 @@
 | RAP-052 | Package Manifest | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-053 | Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-054 | Semantic Certification × Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-055 | Delivered Release Self-Verification | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-056 | Source/Proof/Manifest Equality | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-055 | Delivered Release Self-Verification | 6/10 | IN_PROGRESS | 8/11 | 2 | 0 |
+| RAP-056 | Source/Proof/Manifest Equality | 6/10 | IN_PROGRESS | 9/11 | 1 | 0 |
 | RAP-057 | Final Consistency Gate | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-058 | Security Fail-Closed | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-059 | Observability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
