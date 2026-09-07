@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T19:28:36.931Z",
+  "generatedAt": "2026-09-07T19:52:38.932Z",
   "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260907-162407.payload.zip",
   "zipName": "r-agent2-20260907-162407.payload.zip",
   "zipSha256": "57e2def377585e0fbb39bbcb702e520428be93fe76397798baa7957135d48e19",
@@ -54,8 +54,8 @@
   },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260907191922085-1f0163f9",
-  "sourceFingerprint": "2ffc1d8208bc33187bc31447c38cb0e3a706c5ea2e112905ceecbac5d84a6764",
-  "gitCommit": "1b019fe9106c9e470e95e4014e8c24d94ec05c5c",
-  "gitTree": "6560970b1517e1af230a6ecf34726e45cdcf885f"
+  "runId": "rap-governed-20260907195227024-3702a10b",
+  "sourceFingerprint": "f398dea5ebd63e10562bd519ee20a288b83a64bd8b331a1bbfa2e58f48857e6e",
+  "gitCommit": "c8cdd36dbf8ef569cd6a29f54a3e5759a55d4f6f",
+  "gitTree": "2bf395d5d9e6aea17abc530e135af6cc6bd12ecc"
 }
