@@ -144,6 +144,11 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
     expose:
       - "8000"
+    # Publicação localhost-only na porta canônica de dev (8001): probes de
+    # governança no host (rag-domain-segregation-report) e dev local alcançam
+    # o serviço; a API continua usando a rede interna (rag-service:8000).
+    ports:
+      - "127.0.0.1:8001:8000"
     volumes:
       - r-agent2-rag-data:/var/lib/ragent2/rag
     restart: unless-stopped
