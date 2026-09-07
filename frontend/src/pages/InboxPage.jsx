@@ -34,6 +34,8 @@ import { useIncrementalList, useLoadMoreSentinel } from '../hooks/useIncremental
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { CrudPageBase } from '../modules/crud-base';
+import { enqueueReply, flushOutbox, pendingCount } from '../pwa/inboxOutbox';
+import { InstallPwaPrompt } from '../components/InstallPwaPrompt';
 
 /**
  * Player da gravação de uma chamada: o áudio exige auth, então o download
@@ -108,6 +110,7 @@ export function InboxPage() {
   const [transferAssigned, setTransferAssigned] = useState('');
   const [noteText, setNoteText] = useState('');
   const [replyText, setReplyText] = useState('');
+  const [outboxPending, setOutboxPending] = useState(() => pendingCount());
   const [creatingCase, setCreatingCase] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchQueryDebounced, setSearchQueryDebounced] = useState('');
@@ -589,10 +592,47 @@ export function InboxPage() {
       await loadMessages(selectedTicket.id);
       showToast('Resposta enviada', 'success');
     } catch (err) {
+      // Falha sem resposta HTTP = rede indisponível: a resposta vai para o
+      // outbox e é reenviada automaticamente quando a conexão voltar.
+      const isNetworkFailure = !err?.response;
+      if (isNetworkFailure) {
+        enqueueReply({ conversationId: selectedTicket.id, body: replyText });
+        setReplyText('');
+        setOutboxPending(pendingCount());
+        showToast('Sem conexão — a resposta será enviada automaticamente quando a rede voltar', 'warning');
+        return;
+      }
       const message = err?.response?.data?.message || err?.message || 'Erro ao enviar resposta';
       showToast(message, 'error');
     }
   };
+
+  // Outbox offline: ao recuperar a conexão (ou ao abrir a página já online
+  // com pendências), reenvia as respostas enfileiradas e recarrega a thread.
+  useEffect(() => {
+    let cancelled = false;
+    const flush = async () => {
+      if (pendingCount() === 0 || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+        if (!cancelled) setOutboxPending(pendingCount());
+        return;
+      }
+      const { sent, remaining } = await flushOutbox(replyInboxConversation);
+      if (cancelled) return;
+      setOutboxPending(remaining);
+      if (sent > 0) {
+        showToast(`${sent} resposta(s) pendente(s) enviada(s)`, 'success');
+        if (selectedTicketIdRef.current) {
+          await loadMessages(selectedTicketIdRef.current);
+        }
+      }
+    };
+    window.addEventListener('online', flush);
+    flush();
+    return () => {
+      cancelled = true;
+      window.removeEventListener('online', flush);
+    };
+  }, [loadMessages, showToast]);
 
   const reloadIntelligence = useCallback(async (conversationId) => {
     if (!conversationId) return;
@@ -1282,6 +1322,16 @@ export function InboxPage() {
                       </div>
                     ) : null}
                   </div>
+                  {outboxPending > 0 ? (
+                    <div
+                      className="inbox-outbox-banner"
+                      data-testid="inbox-outbox-banner"
+                      role="status"
+                      style={{ marginBottom: '8px', fontSize: '0.85rem', opacity: 0.9 }}
+                    >
+                      📤 {outboxPending} resposta(s) aguardando conexão para envio automático
+                    </div>
+                  ) : null}
                   <textarea
                     ref={replyTextareaRef}
                     className="support-form-textarea"
@@ -1435,6 +1485,7 @@ export function InboxPage() {
         </div>
       </div>
       <ToastContainer />
+      <InstallPwaPrompt />
     </CrudPageBase>
   );
 }

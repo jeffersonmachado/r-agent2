@@ -110,6 +110,10 @@ vi.mock('../modules/crud-base', () => ({
   CrudPageBase: ({ children }) => <div>{children}</div>,
 }));
 
+vi.mock('../components/InstallPwaPrompt', () => ({
+  InstallPwaPrompt: () => null,
+}));
+
 vi.mock('../utils/logger', () => ({
   default: {
     debug: vi.fn(),
@@ -1008,5 +1012,89 @@ describe('pages/InboxPage', () => {
 
     expect(screen.queryByTestId('inbox-intelligence')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enviar resposta' })).toBeInTheDocument();
+  });
+
+  it('offline: falha de rede na resposta vai para o outbox e o banner aparece', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    replyInboxConversation.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Escreva a resposta para o cliente'), { target: { value: 'Resposta offline' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enviar resposta' }));
+    });
+
+    expect(toastDouble.showToast).toHaveBeenCalledWith(
+      expect.stringMatching(/Sem conexão/),
+      'warning',
+    );
+    // Composer limpo e resposta persistida na fila local
+    expect(screen.getByPlaceholderText('Escreva a resposta para o cliente').value).toBe('');
+    expect(screen.getByTestId('inbox-outbox-banner')).toBeInTheDocument();
+    const queued = JSON.parse(localStorage.getItem('rap_inbox_outbox'));
+    expect(queued).toHaveLength(1);
+    expect(queued[0]).toMatchObject({ conversationId: 'c1', body: 'Resposta offline' });
+  });
+
+  it('offline: resposta com erro HTTP (4xx/5xx) NÃO vai para o outbox', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    replyInboxConversation.mockRejectedValue({ response: { status: 500, data: { message: 'Falha interna' } } });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Escreva a resposta para o cliente'), { target: { value: 'Oi' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enviar resposta' }));
+    });
+
+    expect(toastDouble.showToast).toHaveBeenCalledWith('Falha interna', 'error');
+    expect(localStorage.getItem('rap_inbox_outbox')).toBeNull();
+    expect(screen.queryByTestId('inbox-outbox-banner')).not.toBeInTheDocument();
+  });
+
+  it('reconexão: evento online reenvia o outbox e recarrega a thread', async () => {
+    listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
+    replyInboxConversation.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Escreva a resposta para o cliente'), { target: { value: 'Fico no aguardo' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Enviar resposta' }));
+    });
+
+    expect(screen.getByTestId('inbox-outbox-banner')).toBeInTheDocument();
+
+    // Rede voltou: o próximo envio funciona
+    replyInboxConversation.mockResolvedValue({ message: { id: 'm-flush' } });
+    getInboxConversation.mockClear();
+
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    expect(replyInboxConversation).toHaveBeenCalledWith('c1', 'Fico no aguardo');
+    expect(JSON.parse(localStorage.getItem('rap_inbox_outbox') || '[]')).toHaveLength(0);
+    expect(screen.queryByTestId('inbox-outbox-banner')).not.toBeInTheDocument();
+    expect(toastDouble.showToast).toHaveBeenCalledWith('1 resposta(s) pendente(s) enviada(s)', 'success');
   });
 });

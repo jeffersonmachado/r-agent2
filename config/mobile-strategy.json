@@ -1,0 +1,38 @@
+{
+  "artifactType": "mobile-strategy-decision",
+  "artifactVersion": "1.0.0",
+  "decidedAt": "2026-09-07",
+  "decision": "pwa",
+  "status": "active",
+  "summary": "A experiência mobile do RAP é o frontend web existente endurecido como PWA (offline, push, instalável). Não há app nativo.",
+  "rationale": [
+    "O frontend já é PWA funcional: vite-plugin-pwa com manifest completo (ícones 192/512 + maskable), display standalone e runtime caching (frontend/vite.config.mjs).",
+    "apps/mobile/ nunca teve código-fonte — apenas um node_modules órfão sem package.json (removido no P6.17).",
+    "O produto é B2B operacional (Inbox, Workspace, Agenda): as tarefas-chave mobile (responder conversa, ver cliente, agendar, aprovar recomendação) são plenamente atendidas por PWA.",
+    "App nativo exigiria toolchain nova (RN/Expo), CI de build mobile, assinatura e distribuição em lojas — custo alto sem ganho proporcional para este perfil de uso.",
+    "Push notifications e offline são cobertos por Web Push + Service Worker (P3.11), sem necessidade de runtime nativo."
+  ],
+  "rejected": {
+    "alternative": "react-native",
+    "reasons": [
+      "Duplicaria superfície de produto (dois frontends para manter em paridade).",
+      "Sem time/CI de mobile nem requisito de hardware nativo (câmera, bluetooth, background geolocation).",
+      "Time-to-value muito maior que endurecer o PWA existente."
+    ]
+  },
+  "capabilities": {
+    "installable": { "technology": "beforeinstallprompt + manifest", "status": "implemented" },
+    "offlineShell": { "technology": "service worker (vite-plugin-pwa)", "status": "implemented" },
+    "offlineInbox": { "technology": "runtime caching + IndexedDB outbox", "status": "planned-p3.11" },
+    "push": { "technology": "Web Push (VAPID)", "status": "planned-p3.11" }
+  },
+  "consequences": {
+    "p3.12.reactNativeBootstrap": "not-applicable",
+    "appsMobileDir": "sem código nativo; node_modules órfão removido no P6.17"
+  },
+  "reviewTriggers": [
+    "Requisito de hardware nativo (ex.: impressora térmica via bluetooth, NFC).",
+    "Requisito de distribuição em lojas (App Store / Google Play) por clientes estratégicos.",
+    "Limitação comprovada de Web Push nos canais exigidos pelo mercado-alvo."
+  ]
+}

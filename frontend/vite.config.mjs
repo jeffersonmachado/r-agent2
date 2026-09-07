@@ -246,6 +246,23 @@ const viteConfig = defineConfig(({ mode }) => {
               cacheName: 'rap-assets',
             },
           },
+          {
+            // Leituras do Inbox (GET /api/inbox/*): NetworkFirst permite abrir
+            // a lista de conversas e a thread mesmo sem conexão, usando a
+            // última resposta conhecida. Escritos nunca são cacheados (o
+            // outbox do Inbox cobre o reenvio de respostas offline).
+            urlPattern: /\/api\/inbox\/.+/,
+            handler: 'NetworkFirst',
+            method: 'GET',
+            options: {
+              cacheName: 'rap-inbox-api',
+              networkTimeoutSeconds: 4,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60,
+              },
+            },
+          },
         ],
       },
       manifest: {

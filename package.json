@@ -343,6 +343,7 @@
     "tesseract.js": "^5.1.1",
     "umzug": "^3.2.1",
     "uuid": "^9.0.0",
+    "web-push": "^3.6.7",
     "whatsapp-web.js": "https://github.com/pedroslopez/whatsapp-web.js/archive/942d236a11ad68807308b058303ba5256915979c.tar.gz",
     "ws": "^8.18.3"
   },

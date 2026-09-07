@@ -392,6 +392,37 @@ async function registerInboundMessageActivity({ tenantId, conversationId, channe
       createdAt: message.createdAt || new Date().toISOString(),
     },
   }, { tenantId });
+
+  // Web Push (PWA): notifica dispositivos inscritos do tenant sobre a nova
+  // mensagem. Best-effort e sem bloquear o fluxo de ingestão — sem chaves
+  // VAPID o service apenas registra e pula.
+  try {
+    const pushNotificationService = require('./pushNotificationService');
+    const preview = text ? (text.length > 80 ? `${text.slice(0, 80)}…` : text) : 'Nova mensagem recebida';
+    pushNotificationService.sendToTenant({
+      tenantId,
+      payload: {
+        title: 'Nova mensagem no Inbox',
+        body: preview,
+        data: {
+          url: `inbox?conversationId=${encodeURIComponent(String(conversationId))}`,
+          conversationId: String(conversationId),
+          channelType: safeToString(channelType, 'unknown') || 'unknown',
+        },
+      },
+    }).catch((err) => {
+      logger.warn('[channelConversationService] push de nova mensagem falhou (best-effort)', {
+        tenantId,
+        conversationId,
+        error: safeToString(err && err.message),
+      });
+    });
+  } catch (err) {
+    logger.warn('[channelConversationService] push indisponível (best-effort)', {
+      tenantId,
+      error: safeToString(err && err.message),
+    });
+  }
 }
 
 async function createMessage({ tenantId, conversationId, channelType, direction, type, body = {}, externalMessageId = null, status = null } = {}) {

@@ -52,6 +52,7 @@ const { createDomainAdminExpressRouter } = require('../composition/domain-admin'
 const { createDomainIdentityExpressRouter } = require('../composition/domain-identity');
 const { createDomainFlowExpressRouter } = require('../composition/domain-flow');
 const { createQuickRepliesExpressRouter } = require('../composition/quick-replies');
+const { createPushExpressRouter } = require('../composition/push');
 const { createPlatformAdminExpressRouter } = require('../composition/platform-admin');
 const { createPlatformContentExpressRouter } = require('../composition/platform-content');
 const { createPlatformPublicExpressRouter } = require('../composition/platform-public');
@@ -140,6 +141,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const analyticsRouter = createAnalyticsExpressRouter();
   const bulkCampaignsRouter = createBulkCampaignsExpressRouter();
   const quickRepliesRouter = createQuickRepliesExpressRouter();
+  const pushRouter = createPushExpressRouter();
   const queueTicketRouter = createQueueTicketExpressRouter({ buildExtendedRoutingContext });
   const orderRouter = createOrderRoutes({ buildDeps: buildExtendedRoutingContext });
   const opsRouter = createOpsExpressRouter({ buildExtendedRoutingContext });
@@ -206,6 +208,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     analyticsRouter,
     bulkCampaignsRouter,
     quickRepliesRouter,
+    pushRouter,
     platformAdminRouter,
     platformContentRouter,
     platformPublicRouter,
