@@ -98,5 +98,9 @@
       }
     }
   ],
-  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada."
+  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
+  "runId": "rap-governed-20260907174456261-aa10b1bd",
+  "sourceFingerprint": "165afbf6efc8fc52eaab8df5ab8894e5489cf72cabe9928916be95c7b772c300",
+  "artifactType": "tamper-detection-report",
+  "artifactVersion": "1.0.0"
 }
