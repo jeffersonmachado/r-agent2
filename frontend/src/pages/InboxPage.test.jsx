@@ -809,6 +809,82 @@ describe('pages/InboxPage', () => {
     expect(audio.getAttribute('src')).toBe('blob:mock-recording');
   });
 
+  it('card de voz exibe o insight da transcrição (Voice → intent) quando presente', async () => {
+    const voiceConversation = {
+      ...baseConversation,
+      id: 'cv-insight',
+      channelType: 'voice',
+      contactName: 'Ana',
+    };
+    const callMessage = {
+      id: 'mc-insight',
+      direction: 'in',
+      type: 'call',
+      createdAt: '2026-08-01T11:20:00Z',
+      body: {
+        type: 'call',
+        text: 'Chamada recebida de 5511999887766 (2 min)',
+        call: {
+          direction: 'in',
+          answered: true,
+          billsec: 120,
+          phone: '5511999887766',
+          insight: {
+            intent: 'reagendar',
+            summary: 'Cliente quer remarcar a consulta de sexta-feira.',
+            urgency: 'alta',
+          },
+        },
+        transcription: { text: 'preciso remarcar a consulta', language: 'pt' },
+      },
+    };
+    listInboxConversations.mockResolvedValue({ conversations: [voiceConversation], total: 1 });
+    getInboxConversation.mockResolvedValue({ conversation: voiceConversation, messages: [callMessage] });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(screen.getByTestId('call-insight')).toHaveTextContent('Cliente quer remarcar a consulta de sexta-feira.');
+    expect(screen.getByTestId('call-insight')).toHaveTextContent('(urgente)');
+  });
+
+  it('card de voz sem insight não renderiza o badge', async () => {
+    const voiceConversation = {
+      ...baseConversation,
+      id: 'cv-no-insight',
+      channelType: 'voice',
+      contactName: 'Ana',
+    };
+    const callMessage = {
+      id: 'mc-no-insight',
+      direction: 'in',
+      type: 'call',
+      createdAt: '2026-08-01T11:25:00Z',
+      body: {
+        type: 'call',
+        text: 'Chamada recebida',
+        call: { direction: 'in', answered: true, billsec: 30, phone: '5511999887766' },
+      },
+    };
+    listInboxConversations.mockResolvedValue({ conversations: [voiceConversation], total: 1 });
+    getInboxConversation.mockResolvedValue({ conversation: voiceConversation, messages: [callMessage] });
+
+    await act(async () => {
+      render(<InboxPage />);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('Ana'));
+    });
+
+    expect(screen.queryByTestId('call-insight')).not.toBeInTheDocument();
+  });
+
   it('falha no download da gravação mostra estado de erro sem quebrar o card', async () => {
     const voiceConversation = {
       ...baseConversation,

@@ -116,6 +116,33 @@ async function linkRecordingToCallMessage({ tenantId, uniqueid } = {}) {
 
   await message.update({ body: nextBody, updated_at: new Date() });
 
+  // P5.15 — Voice → Intent → NBA: transcrição nova dispara a análise de
+  // insight (IA do tenant) que grava o insight na mensagem e projeta um
+  // WorkspaceInsight na entidade (a NBA existente passa a responder à
+  // ligação). Fire-and-forget best-effort: nunca bloqueia o link nem o scan.
+  if (transcription && !body.transcription) {
+    // eslint-disable-next-line global-require
+    const { processCallInsight } = require('../voice/callInsightBridgeService');
+    Promise.resolve()
+      .then(() => processCallInsight({ tenantId, message }))
+      .then((out) => {
+        if (out?.processed) {
+          try {
+            // eslint-disable-next-line global-require
+            const { emitEvent } = require('../websocketService');
+            emitEvent('conversation.updated', {
+              tenantId: String(tenantId),
+              conversationId: String(message.conversation_id || ''),
+              transcriptInsight: true,
+            });
+          } catch (err) {
+            logWarn('[VoiceRecordingLink] Emissão WS de insight fail-soft', { tenantId, uniqueid, error: String(err?.message || err) });
+          }
+        }
+      })
+      .catch((err) => logWarn('[VoiceRecordingLink] Insight de chamada fail-soft', { tenantId, uniqueid, error: String(err?.message || err) }));
+  }
+
   return {
     linked: true,
     recordingId: recording.id,

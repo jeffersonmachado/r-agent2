@@ -127,6 +127,7 @@ export function InboxPage() {
   const selectedTicketIdRef = useRef(null);
   const ticketsRef = useRef([]);
   const loadTicketsRef = useRef(null);
+  const loadMessagesRef = useRef(null);
   const replyTextareaRef = useRef(null);
 
   // Debounce do filtro "Atendente": evita refetch de 500 conversas a cada tecla
@@ -357,6 +358,10 @@ export function InboxPage() {
     loadTicketsRef.current = loadTickets;
   }, [loadTickets]);
 
+  useEffect(() => {
+    loadMessagesRef.current = loadMessages;
+  }, [loadMessages]);
+
   // Realtime: eventos de conversa no canal do tenant (sem polling).
   const handleConversationEvent = useCallback((event, data) => {
     if (!data || !data.conversationId) return;
@@ -403,6 +408,11 @@ export function InboxPage() {
       setSelectedTicket((prev) => (prev?.id === conversationId
         ? { ...prev, status: data.status ?? prev.status, assignedTo: data.assignedTo ?? prev.assignedTo }
         : prev));
+      // Insight de transcrição de ligação: recarrega a thread aberta para
+      // exibir o insight na mensagem de chamada (Voice → timeline).
+      if (data.transcriptInsight && selectedTicketIdRef.current === conversationId) {
+        loadMessagesRef.current?.(conversationId);
+      }
     }
   }, []);
 
@@ -1449,6 +1459,16 @@ export function InboxPage() {
                                   }}
                                 >
                                   {messageBody.transcription.text}
+                                </div>
+                              ) : null}
+                              {messageBody.call.insight?.summary ? (
+                                <div
+                                  className="text-text-secondary"
+                                  data-testid="call-insight"
+                                  style={{ marginTop: '6px', fontSize: '13px' }}
+                                >
+                                  💡 {messageBody.call.insight.summary}
+                                  {messageBody.call.insight.urgency === 'alta' ? ' (urgente)' : ''}
                                 </div>
                               ) : null}
                               {messageBody.call.recordingId ? (

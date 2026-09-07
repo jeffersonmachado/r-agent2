@@ -12,6 +12,8 @@ const path = require('path');
 
 const transcribeAudio = jest.fn();
 const getRecordingPolicy = jest.fn();
+const processCallInsight = jest.fn();
+const emitEvent = jest.fn();
 
 function buildMessageModel(store) {
   return {
@@ -43,6 +45,9 @@ function loadService({ messages = [], recordings = [] } = {}) {
   jest.resetModules();
   transcribeAudio.mockClear();
   getRecordingPolicy.mockClear();
+  processCallInsight.mockClear();
+  processCallInsight.mockResolvedValue({ processed: false });
+  emitEvent.mockClear();
   jest.doMock('../../api/db/models', () => ({
     ChannelMessage: () => buildMessageModel(messages),
     PbxRecording: () => buildRecordingModel(recordings),
@@ -53,9 +58,20 @@ function loadService({ messages = [], recordings = [] } = {}) {
   jest.doMock('../../api/services/audioTranscriptionService', () => ({
     transcribeAudio,
   }));
+  jest.doMock('../../api/services/voice/callInsightBridgeService', () => ({
+    processCallInsight,
+  }));
+  jest.doMock('../../api/services/websocketService', () => ({
+    emitEvent,
+  }));
   // eslint-disable-next-line global-require
   const service = require('../../api/services/pbx/voiceRecordingLinkService');
   return { service, messages, recordings };
+}
+
+async function flushMicrotasks() {
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
 }
 
 function makeWav() {
@@ -177,6 +193,64 @@ describe('voiceRecordingLinkService.linkRecordingToCallMessage', () => {
     const { service } = loadService({ messages: [], recordings: [] });
     const out = await service.linkRecordingToCallMessage({ tenantId: 'system', uniqueid: '1700000000.1' });
     expect(out).toEqual({ linked: false, reason: 'message_not_found' });
+  });
+
+  test('P5.15: transcrição nova dispara processCallInsight (Voice → Intent → NBA) e emite conversation.updated', async () => {
+    const wav = makeWav();
+    const messages = [{ ...baseMessage, conversation_id: 'conv-voice-1', body: JSON.parse(JSON.stringify(baseMessage.body)) }];
+    const recordings = [{ id: 'rec-insight', tenantKey: 'system', uniqueid: '1700000000.1', storage: { path: wav } }];
+    getRecordingPolicy.mockResolvedValue({ ok: true, policy: { enabled: true } });
+    transcribeAudio.mockResolvedValue({ text: 'quero remarcar para sexta', language: 'pt', provider: 'whisper' });
+
+    const { service } = loadService({ messages, recordings });
+    // loadService rearma o default ({processed:false}); override depois dele.
+    processCallInsight.mockResolvedValue({ processed: true, insight: { intent: 'reagendar' }, insightPersisted: true });
+    await service.linkRecordingToCallMessage({ tenantId: 'system', uniqueid: '1700000000.1' });
+    await flushMicrotasks();
+
+    expect(processCallInsight).toHaveBeenCalledWith({
+      tenantId: 'system',
+      message: expect.objectContaining({ conversation_id: 'conv-voice-1' }),
+    });
+    expect(emitEvent).toHaveBeenCalledWith('conversation.updated', expect.objectContaining({
+      conversationId: 'conv-voice-1',
+      transcriptInsight: true,
+    }));
+  });
+
+  test('P5.15: transcrição já existente NÃO dispara o insight (idempotente)', async () => {
+    const messages = [{
+      ...baseMessage,
+      body: {
+        ...JSON.parse(JSON.stringify(baseMessage.body)),
+        call: { ...baseMessage.body.call },
+        transcription: { text: 'já transcrito', language: 'pt', provider: 'whisper' },
+      },
+    }];
+    const recordings = [{ id: 'rec-9', tenantKey: 'system', uniqueid: '1700000000.1', storage: { path: makeWav() } }];
+
+    const { service } = loadService({ messages, recordings });
+    await service.linkRecordingToCallMessage({ tenantId: 'system', uniqueid: '1700000000.1' });
+    await flushMicrotasks();
+
+    expect(processCallInsight).not.toHaveBeenCalled();
+    expect(emitEvent).not.toHaveBeenCalled();
+  });
+
+  test('P5.15: falha do insight não derruba o link (fire-and-forget fail-soft)', async () => {
+    const wav = makeWav();
+    const messages = [{ ...baseMessage, body: JSON.parse(JSON.stringify(baseMessage.body)) }];
+    const recordings = [{ id: 'rec-err', tenantKey: 'system', uniqueid: '1700000000.1', storage: { path: wav } }];
+    getRecordingPolicy.mockResolvedValue({ ok: true, policy: { enabled: true } });
+    transcribeAudio.mockResolvedValue({ text: 'texto da chamada', language: 'pt', provider: 'whisper' });
+    processCallInsight.mockRejectedValue(new Error('db down'));
+
+    const { service } = loadService({ messages, recordings });
+    const out = await service.linkRecordingToCallMessage({ tenantId: 'system', uniqueid: '1700000000.1' });
+    await flushMicrotasks();
+
+    expect(out).toMatchObject({ linked: true, transcribed: true });
+    expect(emitEvent).not.toHaveBeenCalled();
   });
 
   test('sem gravação → recording_not_found', async () => {
