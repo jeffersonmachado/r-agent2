@@ -98,16 +98,22 @@ const SIGNAL_LABELS = {
   done: 'Tarefa criada foi concluída.',
   open: 'Tarefa criada ainda está aberta.',
   cancelled: 'Tarefa criada foi cancelada.',
+  handled: 'Equipe respondeu nas conversas redistribuídas.',
+  awaiting_handling: 'Aguardando resposta da equipe nas conversas redistribuídas.',
+  no_handling: 'Sem resposta da equipe na janela de 24h após a redistribuição.',
   unavailable: 'Sinal da ação indisponível no momento.',
 };
 
 const SIGNAL_TONES = {
   replied: 'success',
   done: 'success',
+  handled: 'success',
   no_reply: 'warning',
   cancelled: 'warning',
+  no_handling: 'warning',
   awaiting_reply: 'muted',
   open: 'muted',
+  awaiting_handling: 'muted',
   unavailable: 'muted',
 };
 
@@ -128,6 +134,7 @@ const OUTCOME_REASON_LABELS = {
   action_signal_positive: 'Efeito positivo observado na ação executada.',
   awaiting_action_signal: 'Aguardando o efeito da ação para medir o resultado.',
   no_customer_reply: 'Sem resposta do cliente na janela de 24h.',
+  no_agent_response: 'Sem resposta da equipe na janela de 24h.',
   action_cancelled: 'Ação cancelada antes de produzir efeito.',
 };
 

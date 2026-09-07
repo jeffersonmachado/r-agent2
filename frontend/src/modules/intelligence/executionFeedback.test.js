@@ -113,6 +113,16 @@ describe('describeActionSignal', () => {
     expect(describeActionSignal({})).toBeNull();
     expect(describeActionSignal({ outcome: 'alien' })).toBeNull();
   });
+
+  it('sinais do rebalance: handled → success, no_handling → warning, awaiting_handling → muted', () => {
+    expect(describeActionSignal({ type: 'rebalance_response', outcome: 'handled' })).toEqual({
+      tone: 'success', message: 'Equipe respondeu nas conversas redistribuídas.',
+    });
+    expect(describeActionSignal({ type: 'rebalance_response', outcome: 'no_handling' })).toEqual({
+      tone: 'warning', message: 'Sem resposta da equipe na janela de 24h após a redistribuição.',
+    });
+    expect(describeActionSignal({ type: 'rebalance_response', outcome: 'awaiting_handling' }).tone).toBe('muted');
+  });
 });
 
 describe('describeOutcomeReason', () => {
@@ -120,6 +130,7 @@ describe('describeOutcomeReason', () => {
     expect(describeOutcomeReason('action_signal_positive')).toContain('Efeito positivo');
     expect(describeOutcomeReason('awaiting_action_signal')).toContain('Aguardando');
     expect(describeOutcomeReason('no_customer_reply')).toContain('24h');
+    expect(describeOutcomeReason('no_agent_response')).toBe('Sem resposta da equipe na janela de 24h.');
   });
 
   it('razão desconhecida passa through; vazia → null', () => {

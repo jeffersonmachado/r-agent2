@@ -646,6 +646,9 @@ class RecommendationEngine {
         failedMoves,
         agents: eligible.length,
         distribution: Object.fromEntries(load),
+        // Conversas movidas: base do sinal comportamental de outcome
+        // (a equipe respondeu nelas após a redistribuição?).
+        conversationIds: moves.map((move) => String(move.conversationId)),
         recommendationId: recommendation.id,
         attemptedAt,
         executedAt: new Date().toISOString(),
@@ -920,7 +923,58 @@ class RecommendationEngine {
       // eslint-disable-next-line no-await-in-loop
       signals.push(await this._signalTaskCompletion({ tenantId, executed }));
     }
+    if (executed.kind === 'rebalance_queue' && Array.isArray(executed.conversationIds) && executed.conversationIds.length > 0) {
+      // eslint-disable-next-line no-await-in-loop
+      signals.push(await this._signalRebalanceResponse({ tenantId, executed }));
+    }
     return signals.filter(Boolean);
+  }
+
+  /**
+   * Sinal do rebalance: a equipe respondeu (mensagem outbound) nas conversas
+   * movidas após a redistribuição? Mesma janela de 24h do customer_reply.
+   * Positivo parcial já conta: pelo menos uma conversa movida atendida indica
+   * que a redistribuição destravou atendimento.
+   */
+  async _signalRebalanceResponse({ tenantId, executed }) {
+    const conversationIds = executed.conversationIds.slice(0, REBALANCE_MAX_MOVES).map(String);
+    const base = { type: 'rebalance_response', conversations: conversationIds.length };
+    try {
+      const executedAt = new Date(executed.executedAt || 0);
+      if (!Number.isFinite(executedAt.getTime())) {
+        return { ...base, outcome: 'unavailable', reason: 'missing_executed_at' };
+      }
+      const MessageModel = ChannelMessage();
+      const replies = await MessageModel.findAll({
+        where: {
+          tenant_key: String(tenantId),
+          conversation_id: { [Op.in]: conversationIds },
+          direction: 'out',
+          created_at: { [Op.gt]: executedAt },
+        },
+        order: [['created_at', 'ASC']],
+        limit: 200,
+        attributes: ['id', 'conversation_id', 'created_at'],
+      });
+      const list = (replies || []).map((row) => (row.toJSON ? row.toJSON() : row));
+      const handledIds = new Set(list.map((m) => String(m.conversation_id)));
+      if (handledIds.size > 0) {
+        return {
+          ...base,
+          outcome: 'handled',
+          handledConversations: handledIds.size,
+          totalConversations: conversationIds.length,
+          firstHandledAt: list[0].created_at || list[0].createdAt || null,
+        };
+      }
+      const elapsedMs = Date.now() - executedAt.getTime();
+      if (elapsedMs < REPLY_WINDOW_MS) {
+        return { ...base, outcome: 'awaiting_handling', windowHours: REPLY_WINDOW_MS / 3600000 };
+      }
+      return { ...base, outcome: 'no_handling', windowHours: REPLY_WINDOW_MS / 3600000 };
+    } catch (err) {
+      return { ...base, outcome: 'unavailable', reason: String(err?.code || err?.message || err) };
+    }
   }
 
   async _signalCustomerReply({ tenantId, executed }) {
@@ -987,14 +1041,17 @@ class RecommendationEngine {
     if (!Array.isArray(signals) || signals.length === 0) return null;
     const usable = signals.filter((s) => s && s.outcome && s.outcome !== 'unavailable');
     if (usable.length === 0) return null;
-    if (usable.some((s) => s.outcome === 'replied' || s.outcome === 'done')) {
+    if (usable.some((s) => s.outcome === 'replied' || s.outcome === 'done' || s.outcome === 'handled')) {
       return { outcome: 'improved', reason: 'action_signal_positive' };
     }
-    if (usable.some((s) => s.outcome === 'awaiting_reply' || s.outcome === 'open')) {
+    if (usable.some((s) => s.outcome === 'awaiting_reply' || s.outcome === 'open' || s.outcome === 'awaiting_handling')) {
       return { outcome: 'pending', reason: 'awaiting_action_signal', awaitingSignal: true };
     }
     if (usable.some((s) => s.outcome === 'no_reply')) {
       return { outcome: 'unchanged', reason: 'no_customer_reply' };
+    }
+    if (usable.some((s) => s.outcome === 'no_handling')) {
+      return { outcome: 'unchanged', reason: 'no_agent_response' };
     }
     if (usable.some((s) => s.outcome === 'cancelled')) {
       return { outcome: 'unchanged', reason: 'action_cancelled' };

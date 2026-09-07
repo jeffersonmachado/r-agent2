@@ -5,7 +5,8 @@
  *
  * Além das métricas agregadas (baseline → snapshot), o outcome pode ser
  * medido no efeito real da ação: cliente respondeu após send_message?
- * tarefa criada por create_task/schedule foi concluída?
+ * tarefa criada por create_task/schedule foi concluída? a equipe respondeu
+ * nas conversas movidas pelo rebalance_queue?
  * DB e serviços mockados (sem Postgres/Redis).
  */
 
@@ -233,5 +234,89 @@ describe('evaluatePendingOutcomes — cobertura por sinal de ação', () => {
     expect(result.evaluated).toBe(0);
     expect(result.pending).toBe(1);
     expect(row.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('evaluateOutcome — sinal rebalance_response (rebalance_queue)', () => {
+  function rebalanceRow(executedAt) {
+    return appliedRow({
+      kind: 'rebalance_queue',
+      status: 'executed',
+      assigned: 1,
+      rebalanced: 1,
+      agents: 2,
+      conversationIds: ['conv-a', 'conv-b'],
+      executedAt,
+    });
+  }
+
+  test('equipe respondeu em conversa movida → outcome improved + evidência', async () => {
+    const row = rebalanceRow('2026-09-06T10:00:00.000Z');
+    const reply = { toJSON: () => ({ id: 'out-1', conversation_id: 'conv-b', created_at: '2026-09-06T11:00:00.000Z' }) };
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, messages: [reply] });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('improved');
+    expect(result.outcome.reason).toBe('action_signal_positive');
+    expect(result.outcome.actionSignals[0]).toMatchObject({
+      type: 'rebalance_response',
+      outcome: 'handled',
+      handledConversations: 1,
+      totalConversations: 2,
+    });
+    expect(row.toJSON().status).toBe('completed');
+    expect(result.evidenceRecorded).toBe(true);
+  });
+
+  test('sem resposta da equipe dentro da janela → pending, segue applied', async () => {
+    const row = rebalanceRow(new Date(Date.now() - 3600000).toISOString());
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, messages: [] });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('pending');
+    expect(result.outcome.reason).toBe('awaiting_action_signal');
+    expect(result.outcome.actionSignals[0].outcome).toBe('awaiting_handling');
+    expect(row.toJSON().status).toBe('applied');
+  });
+
+  test('sem resposta da equipe após a janela → unchanged (no_agent_response)', async () => {
+    const row = rebalanceRow(new Date(Date.now() - 48 * 3600000).toISOString());
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, messages: [] });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('unchanged');
+    expect(result.outcome.reason).toBe('no_agent_response');
+    expect(row.toJSON().status).toBe('completed');
+  });
+
+  test('executed sem conversationIds → nenhum sinal de rebalance (comportamento legado)', async () => {
+    const row = appliedRow({
+      kind: 'rebalance_queue', status: 'executed', assigned: 0, rebalanced: 0,
+      executedAt: '2026-09-06T10:00:00.000Z',
+    });
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row } });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('pending');
+    expect(result.outcome.reason).toBe('no_baseline_metrics');
+    expect(result.outcome.actionSignals).toBeUndefined();
+  });
+
+  test('falha de leitura → unavailable explícito, outcome segue regra legada', async () => {
+    const row = rebalanceRow('2026-09-06T10:00:00.000Z');
+    const { engine } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messagesError: Object.assign(new Error('db down'), { code: 'db_down' }),
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('pending');
+    expect(result.outcome.actionSignals[0].outcome).toBe('unavailable');
+    expect(result.outcome.actionSignals[0].reason).toBe('db_down');
   });
 });
