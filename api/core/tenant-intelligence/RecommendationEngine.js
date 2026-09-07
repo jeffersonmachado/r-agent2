@@ -883,7 +883,7 @@ class RecommendationEngine {
       }
       // Learn de 2º nível: rebalance sem resposta da equipe gera recomendação
       // seguinte (escalonamento/reforço), fechando o loop sobre o próprio loop.
-      const followUp = await this._maybeCreateRebalanceFollowUp({ tenantId, row, outcome });
+      const followUp = await this._maybeCreateOutcomeFollowUp({ tenantId, row, outcome });
       return {
         ok: true,
         recommendation: rowToJson(row),
@@ -962,7 +962,7 @@ class RecommendationEngine {
       });
     }
 
-    const followUp = await this._maybeCreateRebalanceFollowUp({ tenantId, row, outcome });
+    const followUp = await this._maybeCreateOutcomeFollowUp({ tenantId, row, outcome });
     return {
       ok: true,
       recommendation: rowToJson(row),
@@ -1144,6 +1144,171 @@ class RecommendationEngine {
     } catch (err) {
       return false;
     }
+  }
+
+  /**
+   * Dispatcher do learn de 2º nível: outcome 'unchanged' ganha uma
+   * recomendação seguinte causal conforme a razão da falha:
+   * - no_agent_response (rebalance_queue) → escalonamento/reforço;
+   * - no_customer_reply (send_message) → outro canal / nova tentativa.
+   * Um único follow-up por recomendação (metadata.followUp compartilhado).
+   */
+  async _maybeCreateOutcomeFollowUp({ tenantId, row, outcome }) {
+    if (!outcome || outcome.outcome !== 'unchanged') return null;
+    if (outcome.reason === 'no_agent_response') {
+      return this._maybeCreateRebalanceFollowUp({ tenantId, row, outcome });
+    }
+    if (outcome.reason === 'no_customer_reply') {
+      return this._maybeCreateNoReplyFollowUp({ tenantId, row, outcome });
+    }
+    return null;
+  }
+
+  /**
+   * Learn de 2º nível para send_message sem resposta do cliente em 24h:
+   * re-observa a conversa (canal usado, histórico de interação do contato,
+   * canal alternativo com atividade real) e gera UMA recomendação causal:
+   * - contato já interagiu por outro canal → tentar por esse canal;
+   * - caso contrário → reagendar nova tentativa (outro horário/ligação).
+   * Mesmas guardas anti-loop do follow-up de rebalance.
+   */
+  async _maybeCreateNoReplyFollowUp({ tenantId, row, outcome }) {
+    try {
+      if (!row || !outcome) return null;
+
+      const current = rowToJson(row);
+      const metadata = current.metadata && typeof current.metadata === 'object' ? current.metadata : {};
+      const executed = metadata.application?.executedAction;
+      if (!executed || executed.kind !== 'send_message' || executed.status !== 'executed') return null;
+      if (metadata.followUp) return null;
+      if ((metadata.followUpDepth || 0) >= 1) return null;
+
+      const diagnosis = await this._diagnoseNoReply({ tenantId, executed });
+      const variant = diagnosis.alternateChannel ? 'channel_switch' : 'retry_schedule';
+
+      const channelLabel = diagnosis.channelType || 'canal usado';
+      const title = variant === 'channel_switch'
+        ? `Tentar contato pelo canal ${diagnosis.alternateChannel}`
+        : 'Reagendar nova tentativa de contato';
+      const description = variant === 'channel_switch'
+        ? `O cliente não respondeu no ${channelLabel} em 24h, mas já interagiu pelo canal ${diagnosis.alternateChannel}. Uma nova tentativa pelo canal onde ele responde tende a destravar o contato.`
+        : `O cliente não respondeu à mensagem em 24h${diagnosis.inboundEver === false ? ' e nunca interagiu neste canal' : ''}. Agende uma nova tentativa em outro horário ou considere uma ligação.`;
+
+      const createdItem = await this.createRecommendation({
+        tenantId,
+        payload: {
+          insightId: current.insight_id || null,
+          title,
+          description,
+          actionType: variant,
+          priority: 'medium',
+          estimatedImpact: { expected: 'medium', horizon: 'short_term' },
+          metadata: {
+            relatedMetrics: Array.isArray(metadata.relatedMetrics) ? metadata.relatedMetrics : [],
+            followUpOf: current.id,
+            followUpDepth: (metadata.followUpDepth || 0) + 1,
+            followUpReason: 'no_customer_reply',
+            noReplyDiagnosis: diagnosis,
+          },
+          action: {
+            kind: 'create_task',
+            label: variant === 'channel_switch'
+              ? 'Criar tarefa de contato por outro canal'
+              : 'Criar tarefa de nova tentativa',
+          },
+        },
+      });
+
+      await row.update({
+        metadata: {
+          ...rowToJson(row).metadata,
+          followUp: {
+            createdRecommendationId: createdItem.id,
+            createdAt: new Date().toISOString(),
+            reason: 'no_customer_reply',
+            variant,
+          },
+        },
+      });
+
+      return { created: true, recommendationId: createdItem.id, variant, diagnosis };
+    } catch (err) {
+      return { created: false, error: String(err?.code || err?.message || err) };
+    }
+  }
+
+  /**
+   * Re-observação causal do send_message sem resposta: canal da conversa,
+   * o contato já escreveu alguma vez nesse canal, e existe outro canal com
+   * atividade real do mesmo contato (external_id). Fail-soft por fonte.
+   */
+  async _diagnoseNoReply({ tenantId, executed }) {
+    const conversationId = String(executed.conversationId);
+    const diagnosis = {
+      conversationId,
+      channelType: null,
+      inboundEver: null,
+      alternateChannel: null,
+      alternateConversationId: null,
+    };
+
+    try {
+      const ConversationModel = ChannelConversation();
+      const MessageModel = ChannelMessage();
+
+      const conversation = rowToJson(await ConversationModel.findOne({
+        where: { tenant_key: String(tenantId), id: conversationId },
+      }));
+      if (!conversation) {
+        diagnosis.conversationError = 'conversation_not_found';
+        return diagnosis;
+      }
+      diagnosis.channelType = conversation.channel_type || conversation.channelType || null;
+      const externalId = conversation.external_id || conversation.externalId || null;
+
+      const inbound = await MessageModel.findOne({
+        where: {
+          tenant_key: String(tenantId),
+          conversation_id: conversationId,
+          direction: 'in',
+        },
+        attributes: ['id'],
+      });
+      diagnosis.inboundEver = Boolean(inbound);
+
+      if (externalId) {
+        const others = await ConversationModel.findAll({
+          where: {
+            tenant_key: String(tenantId),
+            external_id: String(externalId),
+            id: { [Op.ne]: conversationId },
+          },
+          attributes: ['id', 'channel_type'],
+          limit: 20,
+        });
+        for (const other of others || []) {
+          const otherJson = rowToJson(other);
+          // eslint-disable-next-line no-await-in-loop
+          const altInbound = await MessageModel.findOne({
+            where: {
+              tenant_key: String(tenantId),
+              conversation_id: String(otherJson.id),
+              direction: 'in',
+            },
+            attributes: ['id'],
+          });
+          if (altInbound) {
+            diagnosis.alternateChannel = otherJson.channel_type || otherJson.channelType || null;
+            diagnosis.alternateConversationId = String(otherJson.id);
+            break;
+          }
+        }
+      }
+    } catch (err) {
+      diagnosis.error = String(err?.code || err?.message || err);
+    }
+
+    return diagnosis;
   }
 
   /**

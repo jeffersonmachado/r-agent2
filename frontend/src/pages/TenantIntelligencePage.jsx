@@ -74,6 +74,8 @@ const CHAIN_ACTION_LABELS = {
   manager_escalation: 'Escalonamento ao gestor',
   staffing_review: 'Reforço de equipe',
   send_message: 'Mensagem ao cliente',
+  channel_switch: 'Tentativa por outro canal',
+  retry_schedule: 'Nova tentativa de contato',
   create_task: 'Tarefa operacional',
   schedule: 'Agendamento',
   unknown: 'Ação anterior',

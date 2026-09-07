@@ -30,6 +30,9 @@ function loadEngine({
   messagesError = null,
   openConversationIds = [],
   conversationsError = null,
+  conversationsById = {},
+  alternateConversations = [],
+  inboundByConversation = {},
   agents = [],
   agentsError = null,
   createError = null,
@@ -41,8 +44,9 @@ function loadEngine({
     if (createError) throw createError;
     return makeRow({ ...data });
   });
-  const conversationsFindAllMock = jest.fn(async () => {
+  const conversationsFindAllMock = jest.fn(async ({ where } = {}) => {
     if (conversationsError) throw conversationsError;
+    if (where && where.external_id) return alternateConversations;
     return openConversationIds.map((id) => makeRow({ id }));
   });
 
@@ -65,8 +69,12 @@ function loadEngine({
         if (messagesError) throw messagesError;
         return messages;
       }),
+      findOne: jest.fn(async ({ where } = {}) => inboundByConversation[where?.conversation_id] || null),
     }),
-    ChannelConversation: () => ({ findAll: conversationsFindAllMock }),
+    ChannelConversation: () => ({
+      findAll: conversationsFindAllMock,
+      findOne: jest.fn(async ({ where } = {}) => conversationsById[where?.id] || null),
+    }),
     Task: () => ({
       findOne: jest.fn(async ({ where }) => tasksById[where.id] || null),
     }),
@@ -500,5 +508,122 @@ describe('evaluateOutcome — follow-up de 2º nível (no_agent_response)', () =
     expect(result.outcome.outcome).toBe('unchanged');
     expect(result.followUp).toMatchObject({ created: false, error: 'insert_failed' });
     expect(row.toJSON().metadata.followUp).toBeUndefined();
+  });
+});
+
+describe('evaluateOutcome — follow-up de 2º nível (no_customer_reply)', () => {
+  function staleSendRow(overrides = {}) {
+    return appliedRow({
+      kind: 'send_message',
+      status: 'executed',
+      conversationId: 'conv-1',
+      messageId: 'msg-1',
+      executedAt: new Date(Date.now() - 48 * 3600000).toISOString(),
+    }, overrides);
+  }
+
+  const CONV_WHATSAPP = makeRow({ id: 'conv-1', tenant_key: 'tenant-a', channel_type: 'whatsapp', external_id: '+5511999' });
+
+  test('contato com atividade em outro canal → follow-up channel_switch', async () => {
+    const row = staleSendRow();
+    const altConv = makeRow({ id: 'conv-2', tenant_key: 'tenant-a', channel_type: 'instagram', external_id: '+5511999' });
+    const { engine, mocks } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      conversationsById: { 'conv-1': CONV_WHATSAPP },
+      alternateConversations: [altConv],
+      inboundByConversation: { 'conv-2': makeRow({ id: 'in-9' }) },
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('unchanged');
+    expect(result.outcome.reason).toBe('no_customer_reply');
+    expect(result.followUp).toMatchObject({ created: true, variant: 'channel_switch' });
+    expect(result.followUp.diagnosis).toMatchObject({
+      channelType: 'whatsapp', alternateChannel: 'instagram', alternateConversationId: 'conv-2',
+    });
+    const payload = mocks.create.mock.calls[0][0];
+    expect(payload.action_type).toBe('channel_switch');
+    expect(payload.metadata.followUpReason).toBe('no_customer_reply');
+    expect(payload.metadata.followUpOf).toBe('reco-1');
+    expect(payload.title).toContain('instagram');
+    expect(payload.metadata.action).toMatchObject({ kind: 'create_task' });
+    expect(row.toJSON().metadata.followUp).toMatchObject({ reason: 'no_customer_reply', variant: 'channel_switch' });
+  });
+
+  test('cliente nunca interagiu no canal → follow-up retry_schedule com descrição causal', async () => {
+    const row = staleSendRow();
+    const { engine, mocks } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      conversationsById: { 'conv-1': CONV_WHATSAPP },
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.followUp).toMatchObject({ created: true, variant: 'retry_schedule' });
+    expect(result.followUp.diagnosis.inboundEver).toBe(false);
+    const payload = mocks.create.mock.calls[0][0];
+    expect(payload.action_type).toBe('retry_schedule');
+    expect(payload.description).toContain('nunca interagiu neste canal');
+  });
+
+  test('cliente já interagiu no canal mas sem outro canal → retry_schedule genérico', async () => {
+    const row = staleSendRow();
+    const { engine } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      conversationsById: { 'conv-1': CONV_WHATSAPP },
+      inboundByConversation: { 'conv-1': makeRow({ id: 'in-1' }) },
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.followUp).toMatchObject({ created: true, variant: 'retry_schedule' });
+    expect(result.followUp.diagnosis.inboundEver).toBe(true);
+  });
+
+  test('conversa não encontrada → fail-soft: retry_schedule com conversationError', async () => {
+    const row = staleSendRow();
+    const { engine } = loadEngine({ rowsById: { 'reco-1': row }, messages: [] });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.followUp).toMatchObject({ created: true, variant: 'retry_schedule' });
+    expect(result.followUp.diagnosis.conversationError).toBe('conversation_not_found');
+  });
+
+  test('idempotente: metadata.followUp presente → nenhum follow-up novo', async () => {
+    const row = staleSendRow();
+    row.toJSON().metadata.followUp = {
+      createdRecommendationId: 'reco-old', createdAt: '2026-09-06T12:00:00.000Z', reason: 'no_customer_reply', variant: 'retry_schedule',
+    };
+    const { engine, mocks } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [],
+      conversationsById: { 'conv-1': CONV_WHATSAPP },
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.followUp).toBeUndefined();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  test('cliente respondeu (improved) → nenhum follow-up', async () => {
+    const row = staleSendRow();
+    const reply = { toJSON: () => ({ id: 'in-1', created_at: new Date().toISOString() }) };
+    const { engine, mocks } = loadEngine({
+      rowsById: { 'reco-1': row },
+      messages: [reply],
+      conversationsById: { 'conv-1': CONV_WHATSAPP },
+    });
+
+    const result = await engine.evaluateOutcome({ tenantId: 'tenant-a', recommendationId: 'reco-1' });
+
+    expect(result.outcome.outcome).toBe('improved');
+    expect(result.followUp).toBeUndefined();
+    expect(mocks.create).not.toHaveBeenCalled();
   });
 });
