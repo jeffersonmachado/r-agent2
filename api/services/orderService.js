@@ -483,6 +483,30 @@ async function markOrderPaymentStatus({ tenantId, orderId, status, transactionId
         payload: { orderId, transactionId: transactionId || null, amount: amount != null ? amount : null },
       });
     } catch (_) {}
+
+    // Jornada do cliente: pagamento confirmado registrado na timeline (food).
+    try {
+      const order = await getOrderById({ tenantId, orderId });
+      const octx = order?.context && typeof order.context === 'object' ? order.context : {};
+      if (octx.customerId || octx.customerSubjectId) {
+        const { recordPaymentConfirmed } = require('./vertical/foodJourneyService');
+        await recordPaymentConfirmed({
+          tenantId,
+          subjectId: octx.customerSubjectId || null,
+          customerId: octx.customerId || null,
+          orderId,
+          orderNumber: order?.order_number || null,
+          amount: amount != null ? amount : null,
+          channel: order?.source || null,
+          correlationId: octx.correlationId || null,
+          metadata: { vertical: safeTrim(octx.vertical) || undefined },
+        });
+      }
+    } catch (err) {
+      logger.warn('[Orders] falha ao registrar pagamento na jornada do cliente', {
+        tenantId, orderId, error: err?.message,
+      });
+    }
   }
 
   return { idempotent: false, payment: next };

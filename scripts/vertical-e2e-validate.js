@@ -151,6 +151,16 @@ function withJobTimeout(promise, timeoutMs, label) {
     }
   });
 
+  await runSection('Food integration tests (Jest)', async function () {
+    try {
+      runJestTestFile('tests/integration/verticalFoodEndToEnd.test.js');
+      check('All Food E2E scenarios pass', true);
+    } catch (err) {
+      var summary = summarizeJestFailure(err);
+      check('All Food E2E scenarios pass', false, summary || err.message);
+    }
+  });
+
   // ── 2. Notification adapter (no DB dependency) ────────────────────────────
 
   var notificationAdapter = require('../api/services/notifications/notificationAdapter');

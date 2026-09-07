@@ -2,12 +2,13 @@ import React from 'react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VerticalOperationalDashboardPage } from './VerticalOperationalDashboardPage';
-import { getFitnessDashboard, getBeautyDashboard, getClinicDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicRecall } from '../api/verticalOperations';
+import { getFitnessDashboard, getBeautyDashboard, getClinicDashboard, getFoodDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicRecall } from '../api/verticalOperations';
 
 vi.mock('../api/verticalOperations', () => ({
   getFitnessDashboard: vi.fn(),
   getBeautyDashboard: vi.fn(),
   getClinicDashboard: vi.fn(),
+  getFoodDashboard: vi.fn(),
   getFitnessIntelligence: vi.fn(),
   getBeautyIntelligence: vi.fn(),
   getClinicRecall: vi.fn(),
@@ -40,6 +41,7 @@ describe('VerticalOperationalDashboardPage', () => {
     getFitnessDashboard.mockResolvedValue({ kpis: {} });
     getBeautyDashboard.mockResolvedValue({ kpis: {} });
     getClinicDashboard.mockResolvedValue({ kpis: { consultationsToday: 3, noShowRiskPatients: 1, recallsSent: 2, revenue: 450 } });
+    getFoodDashboard.mockResolvedValue({ kpis: { ordersInFlight: 4, ordersDeliveredToday: 9, ordersCancelledToday: 1, slaDeliverBreached: 0, reviewsRequested: 7, reorderCampaignsSent: 2, revenue: 1230.5 } });
     getFitnessIntelligence.mockResolvedValue(null);
     getBeautyIntelligence.mockResolvedValue(null);
     getClinicRecall.mockResolvedValue({ suggestion: 'send_recall' });
@@ -89,6 +91,30 @@ describe('VerticalOperationalDashboardPage', () => {
     expect(screen.getByText('Recalls enviados:')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Beauty' })).not.toBeInTheDocument();
+  });
+
+  it('exibe o card de Alimentação com KPIs de pedidos para a vertical food', async () => {
+    render(
+      <VerticalOperationalDashboardPage
+        workspaceKeys={['food']}
+        isSuperAdmin={false}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Alimentação' })).toBeInTheDocument());
+    expect(screen.getByText('Pedidos em andamento:')).toBeInTheDocument();
+    expect(screen.getByText('Entregues hoje:')).toBeInTheDocument();
+    expect(screen.getByText('Avaliações solicitadas:')).toBeInTheDocument();
+    expect(screen.getByText('Campanhas de recompra:')).toBeInTheDocument();
+    expect(screen.getByText('9')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Beauty' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Fitness' })).not.toBeInTheDocument();
+  });
+
+  it('infere workspace food para tenant com vertical restaurante', async () => {
+    const { inferWorkspaceKeyFromTenantProfile } = await import('../navigation/menu');
+    const key = inferWorkspaceKeyFromTenantProfile({ tenant: { settings: { vertical: 'restaurante' } } });
+    expect(key).toBe('food');
   });
 
   it('subscreve os 4 eventos verticais e refaz o fetch quando um evento chega', async () => {

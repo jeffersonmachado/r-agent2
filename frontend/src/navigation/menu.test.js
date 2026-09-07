@@ -33,7 +33,12 @@ describe('vertical workspace resolution', () => {
   it('mostra todas as verticais para super-admin no dashboard vertical', () => {
     expect(getWorkspaceKeysForPath('/vertical/dashboard', {
       includeAllVerticals: true,
-    })).toEqual(['beauty', 'fitness', 'ecommerce', 'varejo', 'servicos', 'saude', 'educacao', 'financeiro', 'cobranca', 'padaria']);
+    })).toEqual(['beauty', 'fitness', 'food', 'ecommerce', 'varejo', 'servicos', 'saude', 'educacao', 'financeiro', 'cobranca', 'padaria']);
+  });
+
+  it('infere food pelo contexto do tenant', () => {
+    expect(inferWorkspaceKeyFromTenantContext({ ramo_atividade: 'Restaurante e delivery de marmitas' })).toBe('food');
+    expect(inferWorkspaceKeyFromTenantContext({ ramo_atividade: 'Pizzaria com entrega' })).toBe('food');
   });
 
   it('infere padaria pelo contexto do tenant', () => {

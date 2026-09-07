@@ -423,6 +423,15 @@ export const verticalWorkspaces = {
       { id: 'fitness-attendance', label: 'Presença', path: '/fitness/attendance', permission: { resource: 'reports', action: 'read' } },
     ],
   },
+  food: {
+    id: 'food',
+    label: 'Alimentação',
+    color: '#f59e0b',
+    description: 'Pedidos, entrega, pagamento e recompra da vertical Food.',
+    items: [
+      { id: 'vertical-dashboard-food', label: 'Painel Vertical', path: '/vertical/dashboard', permission: { resource: 'reports', action: 'read' } },
+    ],
+  },
   ecommerce: {
     id: 'ecommerce',
     label: 'Comércio Eletrônico',
@@ -533,6 +542,7 @@ const VERTICAL_INFERENCE_RULES = {
   financeiro: ['financeiro', 'financeira', 'banco', 'fintech', 'credito', 'crédito'],
   cobranca: ['cobranca', 'cobrança', 'negociacao', 'negociação', 'recuperacao', 'recuperação'],
   padaria: ['bakery', 'padaria', 'confeitaria', 'panificadora'],
+  food: ['food', 'restaurante', 'restaurantes', 'delivery', 'alimentacao', 'alimentação', 'lanchonete', 'pizzaria', 'hamburgueria', 'marmita', 'ifood'],
 };
 
 const VERTICAL_ALIAS_RULES = {
@@ -546,6 +556,7 @@ const VERTICAL_ALIAS_RULES = {
   financeiro: ['financeiro', 'financeira', 'fintech'],
   cobranca: ['cobranca', 'cobrança'],
   padaria: ['bakery', 'padaria', 'confeitaria', 'panificadora'],
+  food: ['food', 'restaurante', 'restaurantes', 'delivery', 'alimentacao', 'alimentação'],
 };
 
 function normalizeVerticalAlias(value) {

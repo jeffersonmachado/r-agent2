@@ -128,6 +128,28 @@ async function tick() {
       idempotencyKey: `v_clinic_recall:${tenantId}:${day}`,
     }).catch(() => {});
 
+    // Food tick (every minute): post-delivery review scan
+    enqueueJob({
+      tenantId,
+      kind: 'vertical_food_journey_tick',
+      payload: { tenantId },
+      runAt: new Date(),
+      priority: 0,
+      maxAttempts: 3,
+      idempotencyKey: `v_food_tick:${tenantId}:${minute}`,
+    }).catch(() => {});
+
+    // Food reorder scan: once per day (recompra)
+    enqueueJob({
+      tenantId,
+      kind: 'vertical_food_reorder_scan',
+      payload: { tenantId },
+      runAt: new Date(),
+      priority: -1,
+      maxAttempts: 2,
+      idempotencyKey: `v_food_reorder:${tenantId}:${day}`,
+    }).catch(() => {});
+
     // Beauty reactivation scan: once per hour (idempotency key at hour granularity)
     const hour = Math.floor(Date.now() / 3600000);
     enqueueJob({

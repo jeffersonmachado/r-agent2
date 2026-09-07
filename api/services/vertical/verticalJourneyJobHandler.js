@@ -24,7 +24,7 @@
 
 const logger = require('../../utils/logger');
 const { getSequelize } = require('../../db/sequelize');
-const { VerticalJourneyEvent, VerticalAttendance, AccessMembership } = require('../../db/models');
+const { VerticalJourneyEvent, VerticalAttendance, AccessMembership, Order } = require('../../db/models');
 const { Op } = require('sequelize');
 
 // ── lazy imports to avoid circular deps ─────────────────────────────────────
@@ -789,6 +789,154 @@ async function handleClinicRecallScan({ tenantId: tid, payload } = {}) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// FOOD HANDLERS
+// ────────────────────────────────────────────────────────────────────────────
+
+function getFoodService() {
+  return require('./foodJourneyService');
+}
+
+/**
+ * Food tick: post-delivery review scan.
+ * Finds orders delivered in the last 48h whose customer has not received a
+ * review request yet, and sends one (idempotent per order).
+ * payload: { tenantId }
+ */
+async function handleFoodJourneyTick(job) {
+  const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
+  if (!tenantId || !dbAvailable()) return;
+  const food = getFoodService();
+
+  try {
+    const delivered = await Order().findAll({
+      where: {
+        tenant_key: tenantId,
+        status: 'delivered',
+        delivered_at: { [Op.gte]: hoursAgo(48) },
+      },
+      limit: 100,
+    }).catch(() => []);
+
+    for (const o of delivered) {
+      const row = o.toJSON ? o.toJSON() : o;
+      const octx = row.context && typeof row.context === 'object' ? row.context : {};
+      const subjectId = octx.customerSubjectId || null;
+      const customerId = octx.customerId || null;
+      if (!subjectId && !customerId) continue;
+
+      const existing = await VerticalJourneyEvent().findOne({
+        where: {
+          tenant_key: tenantId,
+          vertical: 'food',
+          event_type: 'review_requested',
+          idempotency_key: `food_review:${tenantId}:${row.id}`,
+        },
+      }).catch(() => null);
+      if (existing) continue;
+
+      try {
+        await food.requestReview({
+          tenantId,
+          subjectId,
+          customerId,
+          orderId: row.id,
+          orderNumber: row.order_number || null,
+          channel: row.source && row.source !== 'internal' ? row.source : 'whatsapp',
+          correlationId: octx.correlationId || null,
+          metadata: { triggeredBy: 'scheduler', source: 'post_delivery_review_scan' },
+        });
+        logger.info('[VerticalJourney] food review_requested', { tenantId, orderId: row.id });
+      } catch (err) {
+        logger.warn('[VerticalJourney] food review request failed', { tenantId, orderId: row.id, error: err?.message });
+      }
+    }
+  } catch (err) {
+    logger.warn('[VerticalJourney] food tick review scan failed', { tenantId, error: err?.message });
+  }
+}
+
+/**
+ * Food reorder scan (daily): customers whose last delivered order is older
+ * than the reorder window (21d default) and who have not received a reorder
+ * campaign in the last 14 days.
+ */
+async function handleFoodReorderScan({ tenantId: tid, payload } = {}) {
+  const tenantId = safeStr(tid || payload?.tenantId || '');
+  if (!tenantId || !dbAvailable()) return;
+  const food = getFoodService();
+
+  try {
+    const reorderWindowDays = Number(payload?.reorderWindowDays) || 21;
+    const cooldownDays = Number(payload?.cooldownDays) || 14;
+
+    // Customers with delivered orders — aggregate in memory (capped)
+    const delivered = await Order().findAll({
+      where: { tenant_key: tenantId, status: 'delivered', delivered_at: { [Op.gte]: daysAgo(180) } },
+      attributes: ['id', 'context', 'delivered_at', 'source'],
+      order: [['delivered_at', 'DESC']],
+      limit: 2000,
+    }).catch(() => []);
+
+    // Keep only the most recent delivered order per customer
+    const lastByCustomer = new Map();
+    for (const o of delivered) {
+      const row = o.toJSON ? o.toJSON() : o;
+      const octx = row.context && typeof row.context === 'object' ? row.context : {};
+      const customerId = octx.customerId || octx.customerSubjectId || null;
+      if (!customerId) continue;
+      if (!lastByCustomer.has(customerId)) {
+        lastByCustomer.set(customerId, {
+          customerId,
+          subjectId: octx.customerSubjectId || null,
+          deliveredAt: row.delivered_at ? new Date(row.delivered_at) : null,
+          channel: row.source && row.source !== 'internal' ? row.source : 'whatsapp',
+        });
+      }
+    }
+
+    const now = Date.now();
+    let sent = 0;
+    for (const entry of lastByCustomer.values()) {
+      if (sent >= 50) break;
+      if (!entry.deliveredAt || !Number.isFinite(entry.deliveredAt.getTime())) continue;
+      const daysSince = Math.floor((now - entry.deliveredAt.getTime()) / 86400000);
+      if (daysSince < reorderWindowDays) continue; // still active
+
+      const recentCampaign = await VerticalJourneyEvent().findOne({
+        where: {
+          tenant_key: tenantId,
+          vertical: 'food',
+          event_type: 'return_campaign_sent',
+          customer_id: entry.customerId,
+          occurred_at: { [Op.gte]: daysAgo(cooldownDays) },
+        },
+      }).catch(() => null);
+      if (recentCampaign) continue;
+
+      try {
+        await food.sendReorderCampaign({
+          tenantId,
+          subjectId: entry.subjectId,
+          customerId: entry.customerId,
+          channel: entry.channel,
+          metadata: {
+            triggeredBy: 'scheduler',
+            campaignKey: `${entry.customerId}:${Math.floor(now / 86400000)}`,
+            daysSinceLastOrder: daysSince,
+          },
+        });
+        sent += 1;
+        logger.info('[VerticalJourney] food reorder campaign sent', { tenantId, customerId: entry.customerId, daysSince });
+      } catch (err) {
+        logger.warn('[VerticalJourney] food reorder campaign failed', { tenantId, customerId: entry.customerId, error: err?.message });
+      }
+    }
+  } catch (err) {
+    logger.warn('[VerticalJourney] food reorder scan failed', { tenantId, error: err?.message });
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // DISPATCH ENTRY POINT
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -842,6 +990,14 @@ async function handleVerticalJob(job) {
         await withJobTimeout(handleClinicRecallScan({ tenantId, payload: job?.payload }), undefined, kind);
         break;
 
+      case 'vertical_food_journey_tick':
+        await withJobTimeout(handleFoodJourneyTick(job), undefined, kind);
+        break;
+
+      case 'vertical_food_reorder_scan':
+        await withJobTimeout(handleFoodReorderScan({ tenantId, payload: job?.payload }), undefined, kind);
+        break;
+
       case 'vertical_reconciliation':
         await withJobTimeout(handleVerticalReconciliation({ tenantId }), undefined, kind);
         break;
@@ -871,6 +1027,8 @@ module.exports = {
   handleClinicJourneyTick,
   handleClinicNoShowScan,
   handleClinicRecallScan,
+  handleFoodJourneyTick,
+  handleFoodReorderScan,
   handleVerticalReconciliation,
   withJobTimeout,
 };

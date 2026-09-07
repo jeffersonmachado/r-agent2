@@ -66,3 +66,7 @@ export function getClinicDashboard(params = {}) {
 export function getClinicRecall(subjectId) {
   return fetchJson(`/api/clinic/subject/${encodeURIComponent(subjectId)}/recall`);
 }
+
+export function getFoodDashboard(params = {}) {
+  return fetchJson(`/api/food/dashboard${toQuery(params)}`);
+}

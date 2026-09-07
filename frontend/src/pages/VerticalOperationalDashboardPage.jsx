@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall } from '../api/verticalOperations';
+import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall, getFoodDashboard } from '../api/verticalOperations';
 import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { verticalWorkspaces } from '../navigation/menu';
@@ -16,6 +16,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const [fitness, setFitness] = useState(null);
   const [beauty, setBeauty] = useState(null);
   const [clinic, setClinic] = useState(null);
+  const [food, setFood] = useState(null);
   const [subjectId, setSubjectId] = useState('');
   const [fitnessIntel, setFitnessIntel] = useState(null);
   const [beautyIntel, setBeautyIntel] = useState(null);
@@ -27,17 +28,20 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const showFitness = isSuperAdmin || visibleWorkspaceIds.has('fitness') || resolvedWorkspaces.length === 0;
   const showBeauty = isSuperAdmin || visibleWorkspaceIds.has('beauty') || resolvedWorkspaces.length === 0;
   const showClinic = isSuperAdmin || visibleWorkspaceIds.has('saude') || resolvedWorkspaces.length === 0;
+  const showFood = isSuperAdmin || visibleWorkspaceIds.has('food') || resolvedWorkspaces.length === 0;
 
   async function loadData() {
     try {
-      const [f, b, c] = await Promise.all([
+      const [f, b, c, fd] = await Promise.all([
         getFitnessDashboard({ windowDays: 30 }),
         getBeautyDashboard({ windowDays: 30 }),
         getClinicDashboard({ windowDays: 30 }).catch(() => null),
+        getFoodDashboard({ windowDays: 30 }).catch(() => null),
       ]);
       setFitness(f || null);
       setBeauty(b || null);
       setClinic(c || null);
+      setFood(fd || null);
     } catch (_) {
       showToast('Erro ao carregar dashboards verticais', 'error');
     }
@@ -103,7 +107,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
           </div>
         )}
       </div>
-      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
+      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic, showFood].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
         {showFitness && (
           <div className="support-details-panel">
             <h3>Fitness</h3>
@@ -128,6 +132,18 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
             <p><strong>Risco de falta:</strong> {clinic?.kpis?.noShowRiskPatients ?? '-'}</p>
             <p><strong>Recalls enviados:</strong> {clinic?.kpis?.recallsSent ?? '-'}</p>
             <p><strong>Receita:</strong> {clinic?.kpis?.revenue ?? '-'}</p>
+          </div>
+        )}
+        {showFood && (
+          <div className="support-details-panel">
+            <h3>Alimentação</h3>
+            <p><strong>Pedidos em andamento:</strong> {food?.kpis?.ordersInFlight ?? '-'}</p>
+            <p><strong>Entregues hoje:</strong> {food?.kpis?.ordersDeliveredToday ?? '-'}</p>
+            <p><strong>Cancelados hoje:</strong> {food?.kpis?.ordersCancelledToday ?? '-'}</p>
+            <p><strong>SLA entrega estourado:</strong> {food?.kpis?.slaDeliverBreached ?? '-'}</p>
+            <p><strong>Avaliações solicitadas:</strong> {food?.kpis?.reviewsRequested ?? '-'}</p>
+            <p><strong>Campanhas de recompra:</strong> {food?.kpis?.reorderCampaignsSent ?? '-'}</p>
+            <p><strong>Receita:</strong> {food?.kpis?.revenue ?? '-'}</p>
           </div>
         )}
       </div>
