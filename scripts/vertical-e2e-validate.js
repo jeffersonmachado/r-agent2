@@ -161,6 +161,16 @@ function withJobTimeout(promise, timeoutMs, label) {
     }
   });
 
+  await runSection('Services integration tests (Jest)', async function () {
+    try {
+      runJestTestFile('tests/integration/verticalServicesEndToEnd.test.js');
+      check('All Services E2E scenarios pass', true);
+    } catch (err) {
+      var summary = summarizeJestFailure(err);
+      check('All Services E2E scenarios pass', false, summary || err.message);
+    }
+  });
+
   // ── 2. Notification adapter (no DB dependency) ────────────────────────────
 
   var notificationAdapter = require('../api/services/notifications/notificationAdapter');

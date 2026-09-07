@@ -937,6 +937,104 @@ async function handleFoodReorderScan({ tenantId: tid, payload } = {}) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// SERVICES HANDLERS
+// ────────────────────────────────────────────────────────────────────────────
+
+function getServicesService() {
+  return require('./servicesJourneyService');
+}
+
+/**
+ * Services tick: quote pipeline automation.
+ * 1. Follow-up scan: quote_sent > followUpAfterDays without decision and
+ *    without a recent follow-up → sendQuoteFollowUp.
+ * 2. Expiry scan: quote_sent > validDays without decision → quote_expired.
+ * payload: { tenantId, followUpAfterDays?, defaultValidDays? }
+ */
+async function handleServicesJourneyTick(job) {
+  const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
+  if (!tenantId || !dbAvailable()) return;
+  const services = getServicesService();
+
+  const followUpAfterDays = Number(job?.payload?.followUpAfterDays) || 3;
+  const defaultValidDays = Number(job?.payload?.defaultValidDays) || 15;
+
+  try {
+    const since = daysAgo(90);
+    const [quotes, decisions, recentFollowUps] = await Promise.all([
+      VerticalJourneyEvent().findAll({
+        where: { tenant_key: tenantId, vertical: 'services', event_type: 'quote_sent', occurred_at: { [Op.gte]: since } },
+        limit: 200,
+      }).catch(() => []),
+      VerticalJourneyEvent().findAll({
+        where: { tenant_key: tenantId, vertical: 'services', event_type: { [Op.in]: ['quote_approved', 'quote_declined', 'quote_expired'] }, occurred_at: { [Op.gte]: since } },
+        limit: 500,
+      }).catch(() => []),
+      VerticalJourneyEvent().findAll({
+        where: { tenant_key: tenantId, vertical: 'services', event_type: 'quote_follow_up_sent', occurred_at: { [Op.gte]: daysAgo(followUpAfterDays) } },
+        limit: 500,
+      }).catch(() => []),
+    ]);
+
+    const decidedQuotes = new Set(
+      decisions.map((d) => (d.toJSON ? d.toJSON() : d).payload?.quoteId).filter(Boolean),
+    );
+    const followedUpQuotes = new Set(
+      recentFollowUps.map((d) => (d.toJSON ? d.toJSON() : d).payload?.quoteId).filter(Boolean),
+    );
+
+    for (const raw of quotes) {
+      const row = raw.toJSON ? raw.toJSON() : raw;
+      const quoteId = row.payload?.quoteId;
+      if (!quoteId) continue;
+      if (decidedQuotes.has(quoteId)) continue;
+
+      const sentAt = new Date(row.occurred_at).getTime();
+      if (!Number.isFinite(sentAt)) continue;
+      const daysSinceSent = (Date.now() - sentAt) / 86400000;
+      const validDays = Number(row.payload?.validDays) || defaultValidDays;
+
+      // Expiry first (terminal state)
+      if (daysSinceSent >= validDays) {
+        try {
+          await services.expireQuote({
+            tenantId,
+            subjectId: row.subject_id,
+            customerId: row.customer_id,
+            quoteId,
+            metadata: { source: 'quote_expiry_scan', validDays },
+          });
+          logger.info('[VerticalJourney] services quote_expired', { tenantId, quoteId });
+        } catch (err) {
+          logger.warn('[VerticalJourney] services quote expiry failed', { tenantId, quoteId, error: err?.message });
+        }
+        continue;
+      }
+
+      // Follow-up (max 1 per followUpAfterDays window)
+      if (daysSinceSent >= followUpAfterDays && !followedUpQuotes.has(quoteId)) {
+        try {
+          await services.sendQuoteFollowUp({
+            tenantId,
+            subjectId: row.subject_id,
+            customerId: row.customer_id,
+            quoteId,
+            sequence: 1,
+            channel: row.channel && row.channel !== 'internal' ? row.channel : 'whatsapp',
+            metadata: { source: 'quote_followup_scan', daysSinceSent: Math.floor(daysSinceSent) },
+          });
+          logger.info('[VerticalJourney] services quote_follow_up_sent', { tenantId, quoteId });
+        } catch (err) {
+          logger.warn('[VerticalJourney] services quote follow-up failed', { tenantId, quoteId, error: err?.message });
+        }
+      }
+    }
+  } catch (err) {
+    logger.warn('[VerticalJourney] services tick failed', { tenantId, error: err?.message });
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // DISPATCH ENTRY POINT
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -998,6 +1096,10 @@ async function handleVerticalJob(job) {
         await withJobTimeout(handleFoodReorderScan({ tenantId, payload: job?.payload }), undefined, kind);
         break;
 
+      case 'vertical_services_journey_tick':
+        await withJobTimeout(handleServicesJourneyTick(job), undefined, kind);
+        break;
+
       case 'vertical_reconciliation':
         await withJobTimeout(handleVerticalReconciliation({ tenantId }), undefined, kind);
         break;
@@ -1029,6 +1131,7 @@ module.exports = {
   handleClinicRecallScan,
   handleFoodJourneyTick,
   handleFoodReorderScan,
+  handleServicesJourneyTick,
   handleVerticalReconciliation,
   withJobTimeout,
 };

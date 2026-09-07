@@ -43,6 +43,12 @@ const JOURNEY_EVENT_TYPES = [
   'checkout_recorded',
   'order_placed',
   'order_delivered',
+  'quote_sent',
+  'quote_approved',
+  'quote_declined',
+  'quote_expired',
+  'quote_follow_up_sent',
+  'charge_issued',
 ];
 
 // ── helpers ──────────────────────────────────────────────────────────────────

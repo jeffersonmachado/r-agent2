@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall, getFoodDashboard } from '../api/verticalOperations';
+import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall, getFoodDashboard, getServicesDashboard } from '../api/verticalOperations';
 import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { verticalWorkspaces } from '../navigation/menu';
@@ -17,6 +17,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const [beauty, setBeauty] = useState(null);
   const [clinic, setClinic] = useState(null);
   const [food, setFood] = useState(null);
+  const [services, setServices] = useState(null);
   const [subjectId, setSubjectId] = useState('');
   const [fitnessIntel, setFitnessIntel] = useState(null);
   const [beautyIntel, setBeautyIntel] = useState(null);
@@ -29,19 +30,22 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const showBeauty = isSuperAdmin || visibleWorkspaceIds.has('beauty') || resolvedWorkspaces.length === 0;
   const showClinic = isSuperAdmin || visibleWorkspaceIds.has('saude') || resolvedWorkspaces.length === 0;
   const showFood = isSuperAdmin || visibleWorkspaceIds.has('food') || resolvedWorkspaces.length === 0;
+  const showServices = isSuperAdmin || visibleWorkspaceIds.has('servicos') || resolvedWorkspaces.length === 0;
 
   async function loadData() {
     try {
-      const [f, b, c, fd] = await Promise.all([
+      const [f, b, c, fd, sv] = await Promise.all([
         getFitnessDashboard({ windowDays: 30 }),
         getBeautyDashboard({ windowDays: 30 }),
         getClinicDashboard({ windowDays: 30 }).catch(() => null),
         getFoodDashboard({ windowDays: 30 }).catch(() => null),
+        getServicesDashboard({ windowDays: 30 }).catch(() => null),
       ]);
       setFitness(f || null);
       setBeauty(b || null);
       setClinic(c || null);
       setFood(fd || null);
+      setServices(sv || null);
     } catch (_) {
       showToast('Erro ao carregar dashboards verticais', 'error');
     }
@@ -107,7 +111,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
           </div>
         )}
       </div>
-      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic, showFood].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
+      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic, showFood, showServices].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
         {showFitness && (
           <div className="support-details-panel">
             <h3>Fitness</h3>
@@ -144,6 +148,17 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
             <p><strong>Avaliações solicitadas:</strong> {food?.kpis?.reviewsRequested ?? '-'}</p>
             <p><strong>Campanhas de recompra:</strong> {food?.kpis?.reorderCampaignsSent ?? '-'}</p>
             <p><strong>Receita:</strong> {food?.kpis?.revenue ?? '-'}</p>
+          </div>
+        )}
+        {showServices && (
+          <div className="support-details-panel">
+            <h3>Serviços</h3>
+            <p><strong>Orçamentos pendentes:</strong> {services?.kpis?.quotesPending ?? '-'}</p>
+            <p><strong>Orçamentos aprovados:</strong> {services?.kpis?.quotesApproved ?? '-'}</p>
+            <p><strong>Taxa de aprovação:</strong> {services?.kpis ? `${Math.round((services.kpis.approvalRate || 0) * 100)}%` : '-'}</p>
+            <p><strong>Tempo médio de decisão:</strong> {services?.kpis?.avgDecisionDays != null ? `${services.kpis.avgDecisionDays}d` : '-'}</p>
+            <p><strong>Valor aprovado:</strong> {services?.kpis?.approvedAmount ?? '-'}</p>
+            <p><strong>Receita:</strong> {services?.kpis?.revenue ?? '-'}</p>
           </div>
         )}
       </div>

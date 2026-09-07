@@ -70,3 +70,7 @@ export function getClinicRecall(subjectId) {
 export function getFoodDashboard(params = {}) {
   return fetchJson(`/api/food/dashboard${toQuery(params)}`);
 }
+
+export function getServicesDashboard(params = {}) {
+  return fetchJson(`/api/services/dashboard${toQuery(params)}`);
+}

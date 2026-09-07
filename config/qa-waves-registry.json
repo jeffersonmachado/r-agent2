@@ -134,6 +134,33 @@
         ]
       }
     },
+    "services": {
+      "services_quote_flow": {
+        "name": "Orçamento Completo Serviços",
+        "steps": [
+          "descoberta",
+          "qualificacao",
+          "orcamento_enviado",
+          "aprovacao",
+          "agendamento_execucao",
+          "cobranca",
+          "retencao"
+        ]
+      },
+      "services_customer_journey": {
+        "name": "Jornada Cliente Serviços",
+        "steps": [
+          "descoberta",
+          "orcamento_enviado",
+          "follow_up",
+          "aprovacao",
+          "execucao",
+          "cobranca",
+          "pagamento",
+          "retencao"
+        ]
+      }
+    },
     "food": {
       "food_order_flow": {
         "name": "Food Order Flow",
@@ -261,6 +288,14 @@
       "journeys": [
         { "id": "clinic_appointment", "name": "Consulta Completa" },
         { "id": "clinic_recall",      "name": "Recall e Retorno" }
+      ]
+    },
+    {
+      "id": "services",
+      "name": "Serviços",
+      "journeys": [
+        { "id": "services_quote_flow",       "name": "Orçamento Completo" },
+        { "id": "services_customer_journey", "name": "Jornada Cliente Serviços" }
       ]
     },
     {

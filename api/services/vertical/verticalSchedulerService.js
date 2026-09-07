@@ -150,6 +150,17 @@ async function tick() {
       idempotencyKey: `v_food_reorder:${tenantId}:${day}`,
     }).catch(() => {});
 
+    // Services tick (every minute): quote follow-up + expiry scan
+    enqueueJob({
+      tenantId,
+      kind: 'vertical_services_journey_tick',
+      payload: { tenantId },
+      runAt: new Date(),
+      priority: 0,
+      maxAttempts: 3,
+      idempotencyKey: `v_services_tick:${tenantId}:${minute}`,
+    }).catch(() => {});
+
     // Beauty reactivation scan: once per hour (idempotency key at hour granularity)
     const hour = Math.floor(Date.now() / 3600000);
     enqueueJob({
