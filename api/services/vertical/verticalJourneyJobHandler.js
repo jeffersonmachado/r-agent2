@@ -1035,6 +1035,164 @@ async function handleServicesJourneyTick(job) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+// MARKET HANDLERS
+// ────────────────────────────────────────────────────────────────────────────
+
+function getMarketService() {
+  return require('./marketJourneyService');
+}
+
+/**
+ * Market tick (every minute): post-delivery review scan — pedidos entregues
+ * nas últimas 48h cujo cliente ainda não recebeu pedido de avaliação.
+ */
+async function handleMarketJourneyTick(job) {
+  const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
+  if (!tenantId || !dbAvailable()) return;
+  const market = getMarketService();
+
+  try {
+    const delivered = await Order().findAll({
+      where: {
+        tenant_key: tenantId,
+        status: 'delivered',
+        delivered_at: { [Op.gte]: hoursAgo(48) },
+      },
+      limit: 100,
+    }).catch(() => []);
+
+    for (const o of delivered) {
+      const row = o.toJSON ? o.toJSON() : o;
+      const octx = row.context && typeof row.context === 'object' ? row.context : {};
+      const subjectId = octx.customerSubjectId || null;
+      const customerId = octx.customerId || null;
+      if (!subjectId && !customerId) continue;
+
+      const existing = await VerticalJourneyEvent().findOne({
+        where: {
+          tenant_key: tenantId,
+          vertical: 'market',
+          event_type: 'review_requested',
+          idempotency_key: `market_review:${tenantId}:${row.id}`,
+        },
+      }).catch(() => null);
+      if (existing) continue;
+
+      try {
+        await market.requestReview({
+          tenantId,
+          subjectId,
+          customerId,
+          orderId: row.id,
+          orderNumber: row.order_number || null,
+          channel: row.source && row.source !== 'internal' ? row.source : 'whatsapp',
+          correlationId: octx.correlationId || null,
+          metadata: { triggeredBy: 'scheduler', source: 'post_delivery_review_scan' },
+        });
+        logger.info('[VerticalJourney] market review_requested', { tenantId, orderId: row.id });
+      } catch (err) {
+        logger.warn('[VerticalJourney] market review request failed', { tenantId, orderId: row.id, error: err?.message });
+      }
+    }
+  } catch (err) {
+    logger.warn('[VerticalJourney] market tick review scan failed', { tenantId, error: err?.message });
+  }
+}
+
+/**
+ * Market restock/loyalty scan (daily):
+ * 1. Restock: última compra entregue ≥ restockWindowDays (30d) sem lembrete
+ *    recente (cooldown 14d) → restock_reminder_sent.
+ * 2. Win-back: última compra ≥ winBackWindowDays (60d) sem campanha recente
+ *    → loyalty_campaign_sent.
+ * payload: { tenantId, restockWindowDays?, restockCooldownDays?, winBackWindowDays? }
+ */
+async function handleMarketRestockScan({ tenantId: tid, payload } = {}) {
+  const tenantId = safeStr(tid || payload?.tenantId || '');
+  if (!tenantId || !dbAvailable()) return;
+  const market = getMarketService();
+
+  try {
+    const restockWindowDays = Number(payload?.restockWindowDays) || 30;
+    const restockCooldownDays = Number(payload?.restockCooldownDays) || 14;
+    const winBackWindowDays = Number(payload?.winBackWindowDays) || 60;
+
+    const delivered = await Order().findAll({
+      where: { tenant_key: tenantId, status: 'delivered', delivered_at: { [Op.gte]: daysAgo(365) } },
+      attributes: ['id', 'context', 'delivered_at', 'source'],
+      order: [['delivered_at', 'DESC']],
+      limit: 2000,
+    }).catch(() => []);
+
+    // Compra mais recente por cliente
+    const lastByCustomer = new Map();
+    for (const o of delivered) {
+      const row = o.toJSON ? o.toJSON() : o;
+      const octx = row.context && typeof row.context === 'object' ? row.context : {};
+      const customerId = octx.customerId || octx.customerSubjectId || null;
+      if (!customerId) continue;
+      if (!lastByCustomer.has(customerId)) {
+        lastByCustomer.set(customerId, {
+          customerId,
+          subjectId: octx.customerSubjectId || null,
+          deliveredAt: row.delivered_at ? new Date(row.delivered_at) : null,
+          channel: row.source && row.source !== 'internal' ? row.source : 'whatsapp',
+        });
+      }
+    }
+
+    const now = Date.now();
+    let sent = 0;
+    for (const entry of lastByCustomer.values()) {
+      if (sent >= 50) break;
+      if (!entry.deliveredAt || !Number.isFinite(entry.deliveredAt.getTime())) continue;
+      const daysSince = Math.floor((now - entry.deliveredAt.getTime()) / 86400000);
+      if (daysSince < restockWindowDays) continue; // cliente ativo
+
+      const isWinBack = daysSince >= winBackWindowDays;
+      const eventType = isWinBack ? 'loyalty_campaign_sent' : 'restock_reminder_sent';
+      const recentCampaign = await VerticalJourneyEvent().findOne({
+        where: {
+          tenant_key: tenantId,
+          vertical: 'market',
+          event_type: { [Op.in]: ['restock_reminder_sent', 'loyalty_campaign_sent'] },
+          customer_id: entry.customerId,
+          occurred_at: { [Op.gte]: daysAgo(restockCooldownDays) },
+        },
+      }).catch(() => null);
+      if (recentCampaign) continue;
+
+      const campaignKey = `${entry.customerId}:${Math.floor(now / 86400000)}`;
+      try {
+        if (isWinBack) {
+          await market.sendLoyaltyCampaign({
+            tenantId,
+            subjectId: entry.subjectId,
+            customerId: entry.customerId,
+            channel: entry.channel,
+            metadata: { triggeredBy: 'scheduler', campaignKey, reason: 'win_back', daysSinceLastPurchase: daysSince },
+          });
+        } else {
+          await market.sendRestockReminder({
+            tenantId,
+            subjectId: entry.subjectId,
+            customerId: entry.customerId,
+            channel: entry.channel,
+            metadata: { triggeredBy: 'scheduler', campaignKey, daysSinceLastPurchase: daysSince },
+          });
+        }
+        sent += 1;
+        logger.info(`[VerticalJourney] market ${eventType}`, { tenantId, customerId: entry.customerId, daysSince });
+      } catch (err) {
+        logger.warn(`[VerticalJourney] market ${eventType} failed`, { tenantId, customerId: entry.customerId, error: err?.message });
+      }
+    }
+  } catch (err) {
+    logger.warn('[VerticalJourney] market restock scan failed', { tenantId, error: err?.message });
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // DISPATCH ENTRY POINT
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -1100,6 +1258,14 @@ async function handleVerticalJob(job) {
         await withJobTimeout(handleServicesJourneyTick(job), undefined, kind);
         break;
 
+      case 'vertical_market_journey_tick':
+        await withJobTimeout(handleMarketJourneyTick(job), undefined, kind);
+        break;
+
+      case 'vertical_market_restock_scan':
+        await withJobTimeout(handleMarketRestockScan({ tenantId, payload: job?.payload }), undefined, kind);
+        break;
+
       case 'vertical_reconciliation':
         await withJobTimeout(handleVerticalReconciliation({ tenantId }), undefined, kind);
         break;
@@ -1132,6 +1298,8 @@ module.exports = {
   handleFoodJourneyTick,
   handleFoodReorderScan,
   handleServicesJourneyTick,
+  handleMarketJourneyTick,
+  handleMarketRestockScan,
   handleVerticalReconciliation,
   withJobTimeout,
 };

@@ -49,6 +49,9 @@ const JOURNEY_EVENT_TYPES = [
   'quote_expired',
   'quote_follow_up_sent',
   'charge_issued',
+  'purchase_completed',
+  'restock_reminder_sent',
+  'loyalty_campaign_sent',
 ];
 
 // ── helpers ──────────────────────────────────────────────────────────────────

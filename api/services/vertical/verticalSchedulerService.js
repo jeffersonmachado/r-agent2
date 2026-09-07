@@ -161,6 +161,28 @@ async function tick() {
       idempotencyKey: `v_services_tick:${tenantId}:${minute}`,
     }).catch(() => {});
 
+    // Market tick (every minute): post-delivery review scan
+    enqueueJob({
+      tenantId,
+      kind: 'vertical_market_journey_tick',
+      payload: { tenantId },
+      runAt: new Date(),
+      priority: 0,
+      maxAttempts: 3,
+      idempotencyKey: `v_market_tick:${tenantId}:${minute}`,
+    }).catch(() => {});
+
+    // Market restock/loyalty scan: once per day (reposição + win-back)
+    enqueueJob({
+      tenantId,
+      kind: 'vertical_market_restock_scan',
+      payload: { tenantId },
+      runAt: new Date(),
+      priority: -1,
+      maxAttempts: 2,
+      idempotencyKey: `v_market_restock:${tenantId}:${day}`,
+    }).catch(() => {});
+
     // Beauty reactivation scan: once per hour (idempotency key at hour granularity)
     const hour = Math.floor(Date.now() / 3600000);
     enqueueJob({

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall, getFoodDashboard, getServicesDashboard } from '../api/verticalOperations';
+import { getFitnessDashboard, getBeautyDashboard, getFitnessIntelligence, getBeautyIntelligence, getClinicDashboard, getClinicRecall, getFoodDashboard, getServicesDashboard, getMarketDashboard } from '../api/verticalOperations';
 import { useToast } from '../components/Toast';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { verticalWorkspaces } from '../navigation/menu';
@@ -18,6 +18,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const [clinic, setClinic] = useState(null);
   const [food, setFood] = useState(null);
   const [services, setServices] = useState(null);
+  const [market, setMarket] = useState(null);
   const [subjectId, setSubjectId] = useState('');
   const [fitnessIntel, setFitnessIntel] = useState(null);
   const [beautyIntel, setBeautyIntel] = useState(null);
@@ -31,21 +32,24 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
   const showClinic = isSuperAdmin || visibleWorkspaceIds.has('saude') || resolvedWorkspaces.length === 0;
   const showFood = isSuperAdmin || visibleWorkspaceIds.has('food') || resolvedWorkspaces.length === 0;
   const showServices = isSuperAdmin || visibleWorkspaceIds.has('servicos') || resolvedWorkspaces.length === 0;
+  const showMarket = isSuperAdmin || visibleWorkspaceIds.has('varejo') || visibleWorkspaceIds.has('ecommerce') || resolvedWorkspaces.length === 0;
 
   async function loadData() {
     try {
-      const [f, b, c, fd, sv] = await Promise.all([
+      const [f, b, c, fd, sv, mk] = await Promise.all([
         getFitnessDashboard({ windowDays: 30 }),
         getBeautyDashboard({ windowDays: 30 }),
         getClinicDashboard({ windowDays: 30 }).catch(() => null),
         getFoodDashboard({ windowDays: 30 }).catch(() => null),
         getServicesDashboard({ windowDays: 30 }).catch(() => null),
+        getMarketDashboard({ windowDays: 30 }).catch(() => null),
       ]);
       setFitness(f || null);
       setBeauty(b || null);
       setClinic(c || null);
       setFood(fd || null);
       setServices(sv || null);
+      setMarket(mk || null);
     } catch (_) {
       showToast('Erro ao carregar dashboards verticais', 'error');
     }
@@ -111,7 +115,7 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
           </div>
         )}
       </div>
-      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic, showFood, showServices].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
+      <div className="support-grid" style={{ gridTemplateColumns: [showFitness, showBeauty, showClinic, showFood, showServices, showMarket].filter(Boolean).length > 1 ? 'repeat(auto-fit, minmax(280px, 1fr))' : '1fr', gap: '1rem' }}>
         {showFitness && (
           <div className="support-details-panel">
             <h3>Fitness</h3>
@@ -159,6 +163,18 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
             <p><strong>Tempo médio de decisão:</strong> {services?.kpis?.avgDecisionDays != null ? `${services.kpis.avgDecisionDays}d` : '-'}</p>
             <p><strong>Valor aprovado:</strong> {services?.kpis?.approvedAmount ?? '-'}</p>
             <p><strong>Receita:</strong> {services?.kpis?.revenue ?? '-'}</p>
+          </div>
+        )}
+        {showMarket && (
+          <div className="support-details-panel">
+            <h3>Varejo</h3>
+            <p><strong>Pedidos entregues hoje:</strong> {market?.kpis?.ordersDeliveredToday ?? '-'}</p>
+            <p><strong>Pedidos em andamento:</strong> {market?.kpis?.ordersInFlight ?? '-'}</p>
+            <p><strong>Clientes com compras:</strong> {market?.kpis?.customersWithPurchases ?? '-'}</p>
+            <p><strong>Taxa de recompra:</strong> {market?.kpis ? `${Math.round((market.kpis.repeatRate || 0) * 100)}%` : '-'}</p>
+            <p><strong>Lembretes de reposição:</strong> {market?.kpis?.restockRemindersSent ?? '-'}</p>
+            <p><strong>Campanhas de fidelização:</strong> {market?.kpis?.loyaltyCampaignsSent ?? '-'}</p>
+            <p><strong>Receita:</strong> {market?.kpis?.revenue ?? '-'}</p>
           </div>
         )}
       </div>
