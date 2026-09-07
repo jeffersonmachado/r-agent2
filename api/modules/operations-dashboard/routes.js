@@ -8,6 +8,8 @@ const {
   listNotifications,
   listInsights,
 } = require('../../services/operationsDashboardService');
+const { actOnOperationsInsight } = require('../../services/operations/actOnOperationsInsight');
+const { RecommendationEngine } = require('../../core/tenant-intelligence/RecommendationEngine');
 const { isSuperAdmin } = require('../../services/superAdminService');
 
 function resolveTenantId(req, requestedTenantId) {
@@ -145,6 +147,32 @@ function createOperationsDashboardRoutes({ buildDeps }) {
           limit: q.limit,
         });
         deps.sendJson(res, 200, { ok: true, ...out });
+        return;
+      }
+
+      // Decision Intelligence: insight vertical vira recomendação real
+      // (ação create_task no RecommendationEngine), com dedupe por chave
+      // vertical:type:subjectId. Antes desta rota o insight terminava em
+      // card textual — agora é acionável e mede outcome.
+      if (req.method === 'POST' && pathname === '/api/operations-dashboard/insights/act') {
+        const body = req.body && typeof req.body === 'object' ? req.body : {};
+        try {
+          const out = await actOnOperationsInsight({
+            tenantId,
+            insight: body,
+            recommendationEngine: new RecommendationEngine({}),
+          });
+          deps.sendJson(res, out.deduplicated ? 200 : 201, out);
+        } catch (err) {
+          if (err?.code === 'unsupported_insight_type') {
+            deps.sendJson(res, 422, {
+              error: 'unsupported_insight_type',
+              message: `Tipo de insight sem ação mapeada: ${String(body?.type || '')}`,
+            });
+            return;
+          }
+          throw err;
+        }
         return;
       }
 

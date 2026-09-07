@@ -30,6 +30,13 @@ export function getOperationsInsights(params = {}) {
   return fetchJson(`/api/operations-dashboard/insights${toQuery(params)}`);
 }
 
+export function actOnOperationsInsight(payload = {}) {
+  return fetchJson('/api/operations-dashboard/insights/act', {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  });
+}
+
 export function getOperationsFinance(params = {}) {
   return fetchJson(`/api/operations-dashboard/finance${toQuery(params)}`);
 }

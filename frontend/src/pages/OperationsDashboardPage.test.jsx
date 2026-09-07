@@ -43,6 +43,7 @@ vi.mock('../api/operationsDashboard', () => ({
   getOperationsJobs: vi.fn(),
   getOperationsNotifications: vi.fn(),
   getOperationsInsights: vi.fn(),
+  actOnOperationsInsight: vi.fn(),
 }));
 
 vi.mock('../api/marketing', () => ({
@@ -55,6 +56,7 @@ import {
   getOperationsJobs,
   getOperationsNotifications,
   getOperationsInsights,
+  actOnOperationsInsight,
 } from '../api/operationsDashboard';
 import { getMarketingGoogleAdsAttributionExceptions } from '../api/marketing';
 
@@ -309,5 +311,66 @@ describe('pages/OperationsDashboardPage', () => {
         metadata: { triggeredBy: 'manual_ui' },
       });
     });
+  });
+
+  it('cria ação real a partir do insight (Criar ação → recomendação no Workspace)', async () => {
+    getOperationsInsights.mockResolvedValue({
+      summary: { total: 1, byVertical: { beauty: 1, fitness: 0 } },
+      items: [
+        {
+          vertical: 'beauty',
+          type: 'no_show_risk',
+          score: 0.82,
+          scoreSource: 'engine',
+          reason: 'High no-show risk',
+          action: 'send_confirmation_reminder',
+          subjectId: 'sub-1',
+        },
+      ],
+    });
+    actOnOperationsInsight.mockResolvedValue({ ok: true, deduplicated: false, recommendation: { id: 'reco-1' } });
+
+    render(<OperationsDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Timeline')).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByText('Insights Operacionais'));
+
+    const actButton = await screen.findByText('Criar ação');
+    await userEvent.click(actButton);
+
+    await waitFor(() => {
+      expect(actOnOperationsInsight).toHaveBeenCalledWith(expect.objectContaining({
+        vertical: 'beauty', type: 'no_show_risk', subjectId: 'sub-1', score: 0.82,
+      }));
+    });
+    await screen.findByText('Ação criada ✓');
+    expect(showToastMock).toHaveBeenCalledWith(expect.stringContaining('tarefa operacional'), 'success');
+  });
+
+  it('insight já com ação aberta informa dedupe (sem duplicar)', async () => {
+    getOperationsInsights.mockResolvedValue({
+      summary: { total: 1, byVertical: { beauty: 1, fitness: 0 } },
+      items: [
+        {
+          vertical: 'beauty', type: 'no_show_risk', score: 0.82, scoreSource: 'engine',
+          reason: 'High no-show risk', action: 'send_confirmation_reminder', subjectId: 'sub-1',
+        },
+      ],
+    });
+    actOnOperationsInsight.mockResolvedValue({ ok: true, deduplicated: true, recommendation: { id: 'reco-1' } });
+
+    render(<OperationsDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Timeline')).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByText('Insights Operacionais'));
+
+    await userEvent.click(await screen.findByText('Criar ação'));
+
+    await screen.findByText('Ação criada ✓');
+    expect(showToastMock).toHaveBeenCalledWith(expect.stringContaining('Já existe uma ação aberta'), 'success');
   });
 });

@@ -8,6 +8,7 @@ import {
   getOperationsJobs,
   getOperationsNotifications,
   getOperationsInsights,
+  actOnOperationsInsight,
   getOperationsFinance,
   reconcileBilling,
   getBillingHealth,
@@ -283,6 +284,10 @@ export function OperationsDashboardPage() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsData, setInsightsData] = useState(null);
   const [insightsError, setInsightsError] = useState('');
+  // Insights já transformados em ação (recomendação real) nesta sessão —
+  // chave vertical:type:subjectId, mesmo critério de dedupe do backend.
+  const [actedInsightKeys, setActedInsightKeys] = useState(() => new Set());
+  const [insightActLoadingKey, setInsightActLoadingKey] = useState(null);
 
   const [financeQuery, setFinanceQuery] = useState({ status: 'problematic', provider: '', page: 1, limit: 20 });
   const [financeLoading, setFinanceLoading] = useState(false);
@@ -460,6 +465,38 @@ export function OperationsDashboardPage() {
       showToast('Erro ao carregar insights operacionais', 'error');
     } finally {
       setInsightsLoading(false);
+    }
+  }
+
+  // Decision Intelligence: o insight deixa de ser card passivo — cria uma
+  // recomendação real (tarefa operacional no Workspace) via RecommendationEngine.
+  async function handleActOnInsight(insight) {
+    const key = `${insight.vertical || 'all'}:${insight.type}:${insight.subjectId || '-'}`;
+    if (insightActLoadingKey || actedInsightKeys.has(key)) return;
+    setInsightActLoadingKey(key);
+    try {
+      const result = await actOnOperationsInsight({
+        vertical: insight.vertical,
+        type: insight.type,
+        subjectId: insight.subjectId,
+        customerId: insight.customerId,
+        membershipId: insight.membershipId,
+        score: insight.score,
+        reason: insight.reason,
+        action: insight.action,
+      });
+      setActedInsightKeys((prev) => new Set(prev).add(key));
+      showToast(
+        result?.deduplicated
+          ? 'Já existe uma ação aberta para este insight no Workspace.'
+          : 'Ação criada: tarefa operacional no Workspace.',
+        'success',
+      );
+    } catch (err) {
+      logger.error('[OperationsDashboardPage] act on insight failed', err);
+      showToast('Erro ao criar ação para o insight', 'error');
+    } finally {
+      setInsightActLoadingKey(null);
     }
   }
 
@@ -2003,10 +2040,24 @@ export function OperationsDashboardPage() {
                   </div>
                   <div className="text-sm text-text-primary mb-1">{insight.reason}</div>
                   <div className="text-xs text-text-secondary">acao: {insight.action} | subject: {insight.subjectId || '-'}</div>
-                  <div className="mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <button className="px-2 py-1 rounded text-xs bg-bg-elevated border border-border-default" onClick={() => openTimeline(insight.vertical, insight.subjectId || '', insight.customerId || '', insight.membershipId || '')}>
                       Abrir timeline
                     </button>
+                    {(() => {
+                      const actKey = `${insight.vertical || 'all'}:${insight.type}:${insight.subjectId || '-'}`;
+                      const acted = actedInsightKeys.has(actKey);
+                      const loading = insightActLoadingKey === actKey;
+                      return (
+                        <button
+                          className="px-2 py-1 rounded text-xs bg-accent-light text-text-primary border border-border-default disabled:opacity-60"
+                          disabled={acted || loading || Boolean(insightActLoadingKey)}
+                          onClick={() => handleActOnInsight(insight)}
+                        >
+                          {acted ? 'Ação criada ✓' : (loading ? 'Criando ação...' : 'Criar ação')}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
