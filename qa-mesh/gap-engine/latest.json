@@ -1,8 +1,45 @@
 {
-  "generatedAt": "2026-09-08T13:57:48.963Z",
-  "status": "AUTONOMOUS_READY_GO",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-09-08T20:17:46.292Z",
+  "status": "NO_GO:AUTONOMOUS_READY_GO",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "id": "gap-proof-package-validation",
+      "severity": "critical",
+      "area": "package",
+      "title": "ZIP de release nao contem todos os proofs obrigatorios",
+      "evidence": {
+        "missingEntries": [
+          "governance/experience-api-segregation-report.json",
+          "governance/source-remote-provenance-report.json"
+        ],
+        "missingEntryCodes": [
+          {
+            "entry": "governance/experience-api-segregation-report.json",
+            "code": "EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING"
+          },
+          {
+            "entry": "governance/source-remote-provenance-report.json",
+            "code": "REMOTE_PROVENANCE_EVIDENCE_MISSING"
+          }
+        ]
+      },
+      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
+    },
+    {
+      "id": "gap-proof-stale-fingerprints",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "evidence": {
+        "diverged": [
+          "sourceFingerprint",
+          "chainFingerprint"
+        ]
+      },
+      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    }
+  ],
+  "blocking": 2,
   "nonBlocking": 0
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-08T13:58:00.636Z",
+  "generatedAt": "2026-09-08T20:17:59.678Z",
   "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260908-105354.payload.zip",
   "zipName": "r-agent2-20260908-105354.payload.zip",
   "zipSha256": "414a276f47b99e3bcfe75936f385ff306602d1ce132be27a71da497e0f1ef94b",
@@ -39,11 +39,26 @@
     "governance/proof-signature.json",
     "governance/cleanup-proof.json",
     "governance/final-readiness-report.json",
-    "governance/experience-segregation-report.json"
+    "governance/experience-segregation-report.json",
+    "governance/experience-api-segregation-report.json",
+    "governance/source-remote-provenance-report.json"
   ],
   "entryCount": 6057,
-  "missingEntries": [],
-  "ok": true,
+  "missingEntries": [
+    "governance/experience-api-segregation-report.json",
+    "governance/source-remote-provenance-report.json"
+  ],
+  "missingEntryCodes": [
+    {
+      "entry": "governance/experience-api-segregation-report.json",
+      "code": "EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING"
+    },
+    {
+      "entry": "governance/source-remote-provenance-report.json",
+      "code": "REMOTE_PROVENANCE_EVIDENCE_MISSING"
+    }
+  ],
+  "ok": false,
   "error": null,
   "packageBinding": {
     "boundTo": "r-agent2-20260908-105354.payload.zip",
@@ -56,6 +71,6 @@
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260908130919133-cce17b15",
   "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
-  "gitCommit": "9c44e5e02d504755a6bfbd8af74b4beb2c3c3d3c",
-  "gitTree": "ace8234ff5c7ce9e35e6adf6d8880886563c7750"
+  "gitCommit": "6c244ab52f8a2c55a85c1f24f8ae4740556ce0fb",
+  "gitTree": "6a356adbbf3fac28cf70cc2fd5254ada292c9827"
 }
