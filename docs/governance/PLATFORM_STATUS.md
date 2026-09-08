@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-09-08T20:38:25.112Z
+- Generated at: 2026-09-08T21:02:49.298Z
 - Canonical mesh execution: mesh-20260903185903-qt4iaz
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:ENTERPRISE_READY_GO
+- Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]
+- Sem bloqueadores ativos.

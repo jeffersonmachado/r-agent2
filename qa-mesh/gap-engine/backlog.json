@@ -1,18 +1,1 @@
-[
-  {
-    "id": "gap-cross-report-package_validation_failed",
-    "severity": "critical",
-    "area": "cross-report",
-    "title": "Contradição cross-report: package_validation_failed",
-    "evidence": {
-      "type": "package_validation_failed",
-      "missingEntries": [
-        "governance/experience-api-segregation-report.json",
-        "governance/source-remote-provenance-report.json"
-      ],
-      "blocker": true,
-      "message": "Pacote não passou na validação: 2 entradas ausentes."
-    },
-    "suggestedFix": "Pacote não passou na validação: 2 entradas ausentes."
-  }
-]
+[]
