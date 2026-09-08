@@ -215,7 +215,7 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260908-105354.zip",
+      "zipName": "r-agent2-20260908-182001.zip",
       "computed": "4ddc69e25c90ceb2d6719900…",
       "recorded": "4ddc69e25c90ceb2d6719900…",
       "hashSource": "governance/package-validation-report.json",
@@ -238,5 +238,6 @@
   ],
   "criticalFailed": [],
   "highFailed": [],
-  "summary": "Governança limpa. Decisão: AUTONOMOUS_READY_GO"
+  "summary": "Governança limpa. Decisão: AUTONOMOUS_READY_GO",
+  "reboundAt": "2026-09-08T21:21:37.131Z"
 }
