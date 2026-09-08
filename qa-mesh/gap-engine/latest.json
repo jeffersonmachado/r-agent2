@@ -1,22 +1,8 @@
 {
-  "generatedAt": "2026-09-08T12:47:51.894Z",
-  "status": "NO_GO:AUTONOMOUS_READY_GO",
-  "platformMaturity": "enterprise-partial",
-  "backlog": [
-    {
-      "id": "gap-proof-stale-fingerprints",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
-      "evidence": {
-        "diverged": [
-          "sourceFingerprint",
-          "chainFingerprint"
-        ]
-      },
-      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
-    }
-  ],
-  "blocking": 1,
+  "generatedAt": "2026-09-08T13:05:07.612Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]]",
+  "platformMaturity": "autonomous-ready",
+  "backlog": [],
+  "blocking": 0,
   "nonBlocking": 0
 }

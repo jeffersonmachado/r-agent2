@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-08T12:03:41.069Z",
+  "generatedAt": "2026-09-08T13:05:22.103Z",
   "engine": "final-consistency-gate/v1",
   "artifactType": "final-consistency-report",
   "artifactVersion": "2.0.0",
@@ -7,36 +7,36 @@
   "transitional": false,
   "runId": "rap-governed-20260908115352769-86b78cc5",
   "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
-  "pass": true,
-  "decision": "FINAL_CONSISTENCY_GO",
+  "pass": false,
+  "decision": "FINAL_CONSISTENCY_NO_GO",
   "totalChecks": 13,
-  "failedChecks": 0,
-  "criticalFailures": 0,
+  "failedChecks": 5,
+  "criticalFailures": 5,
   "highFailures": 0,
   "checks": [
     {
       "id": "run_context",
       "gateId": "run_context",
       "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
+      "status": "FAIL",
+      "pass": false,
+      "severity": "CRITICAL",
       "runId": "rap-governed-20260908115352769-86b78cc5",
       "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
-      "reason": null,
+      "reason": "RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20260908115352769-86b78cc5 is invalidated",
       "runContext": {
         "runId": "rap-governed-20260908115352769-86b78cc5",
         "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
         "startedAt": "2026-09-08T11:53:52.947Z",
-        "generatedAt": "2026-09-08T12:03:41.055Z",
-        "status": "RUNNING",
+        "generatedAt": "2026-09-08T13:05:02.013Z",
+        "status": "INVALIDATED",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
         "policyId": "RAP-AGENT-CONSTITUTION",
         "policyVersion": "1.0.3",
         "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
-        "lastGovernedStage": "final-consistency",
-        "lastSourceVerificationAt": "2026-09-08T12:03:41.055Z",
+        "lastGovernedStage": "final-governance",
+        "lastSourceVerificationAt": "2026-09-08T12:03:41.347Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -82,24 +82,38 @@
             "stage": "final-consistency",
             "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
             "verifiedAt": "2026-09-08T12:03:41.055Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
+            "verifiedAt": "2026-09-08T12:03:41.347Z"
           }
-        ]
+        ],
+        "invalidatedAt": "2026-09-08T13:05:02.013Z",
+        "invalidation": {
+          "reason": "RUN_SOURCE_DRIFT",
+          "stage": "final-governance",
+          "expectedSourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
+          "actualSourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+          "detectedAt": "2026-09-08T13:05:02.013Z"
+        }
       }
     },
     {
       "id": "master_scorecard",
       "gateId": "master_scorecard",
       "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
+      "status": "FAIL",
+      "pass": false,
+      "severity": "CRITICAL",
       "runId": "rap-governed-20260908115352769-86b78cc5",
       "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
-      "reason": null,
-      "dimensions": 78,
-      "dimensionsAt10": 78,
-      "below10": 0,
-      "failures": []
+      "reason": "ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source",
+      "lineage": {
+        "valid": false,
+        "code": "ARTIFACT_SOURCE_MISMATCH",
+        "reason": "artifact sourceFingerprint differs from frozen run source"
+      }
     },
     {
       "id": "self_proof",
@@ -148,25 +162,25 @@
       "id": "final_readiness",
       "gateId": "final_readiness",
       "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
+      "status": "FAIL",
+      "pass": false,
+      "severity": "CRITICAL",
       "runId": "rap-governed-20260908115352769-86b78cc5",
       "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
-      "reason": null,
-      "decision": "AUTONOMOUS_READY_GO",
+      "reason": "FINAL_READINESS_NOT_PASS: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]]",
+      "decision": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]]",
       "blockerCount": 0
     },
     {
       "id": "final_governance",
       "gateId": "final_governance",
       "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
+      "status": "FAIL",
+      "pass": false,
+      "severity": "CRITICAL",
       "runId": "rap-governed-20260908115352769-86b78cc5",
       "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
-      "reason": null
+      "reason": "FINAL_GOVERNANCE_NOT_PASS: NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]"
     },
     {
       "check": "replay_consistency",
@@ -191,10 +205,11 @@
     },
     {
       "check": "governance_engine_consistency",
-      "pass": true,
-      "severity": "OK",
-      "govDecision": "AUTONOMOUS_READY_GO",
-      "consistDecision": "CONSISTENCY_GO"
+      "pass": false,
+      "severity": "CRITICAL",
+      "govDecision": "NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]",
+      "consistDecision": "CONSISTENCY_GO",
+      "reason": "Governança obrigatória não está GO: final=NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source] consistency=CONSISTENCY_GO"
     },
     {
       "check": "contamination_consistency",
@@ -220,7 +235,7 @@
         },
         {
           "engine": "final-governance",
-          "decision": "AUTONOMOUS_READY_GO"
+          "decision": "NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]"
         },
         {
           "engine": "governance-consistency",
@@ -238,6 +253,28 @@
       "reason": null
     }
   ],
-  "failures": [],
-  "summary": "Todos os 13 engines concordam. Consistência final validada."
+  "failures": [
+    {
+      "severity": "CRITICAL",
+      "reason": "RUN_INVALIDATED: RUN_INVALIDATED: rap-governed-20260908115352769-86b78cc5 is invalidated"
+    },
+    {
+      "severity": "CRITICAL",
+      "reason": "ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source"
+    },
+    {
+      "severity": "CRITICAL",
+      "reason": "FINAL_READINESS_NOT_PASS: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]]"
+    },
+    {
+      "severity": "CRITICAL",
+      "reason": "FINAL_GOVERNANCE_NOT_PASS: NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]"
+    },
+    {
+      "check": "governance_engine_consistency",
+      "severity": "CRITICAL",
+      "reason": "Governança obrigatória não está GO: final=NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source] consistency=CONSISTENCY_GO"
+    }
+  ],
+  "summary": "5 inconsistência(s) entre engines: 5 crítica(s). BLOQUEADO."
 }

@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-09-08T12:47:51.894Z
+- Generated at: 2026-09-08T13:05:07.612Z
 - Canonical mesh execution: mesh-20260903185903-qt4iaz
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:AUTONOMOUS_READY_GO
+- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]]
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
+- Sem bloqueadores ativos.
