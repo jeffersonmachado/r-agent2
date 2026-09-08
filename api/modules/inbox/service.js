@@ -44,6 +44,26 @@ function buildAuditMeta(req) {
 
 const ALLOWED_CONVERSATION_STATUSES = ['open', 'pending', 'resolved', 'closed'];
 
+// Chave de idempotência do cliente: string estável, charset seguro, até 128 chars.
+const CLIENT_MESSAGE_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
+function normalizeClientMessageId(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return CLIENT_MESSAGE_ID_PATTERN.test(trimmed) ? trimmed : null;
+}
+
+function isUniqueViolation(err) {
+  if (!err || typeof err !== 'object') return false;
+  const message = typeof err.message === 'string' ? err.message : '';
+  const pgCode = err.original && err.original.code ? String(err.original.code) : null;
+  return (
+    err.name === 'SequelizeUniqueConstraintError' ||
+    pgCode === '23505' ||
+    message.includes('duplicate key')
+  );
+}
+
 /**
  * Emissão best-effort do evento realtime de atualização de conversa.
  * Usa deps.emitEvent (websocketService.emitEvent na composição) e nunca
@@ -281,7 +301,24 @@ function createInboxService(deps) {
         return { ok: false, kind: 'bad_request', message: 'body é obrigatório' };
       }
       const type = body && body.type ? String(body.type).trim() : 'text';
-      const clientMessageId = `outq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      // Idempotência: o cliente envia um clientMessageId estável por mensagem
+      // composta; ausente/inválido, gera server-side (compat com chamadores legados).
+      const clientKey = normalizeClientMessageId(body && body.clientMessageId);
+      const clientMessageId = clientKey || `outq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+      // Fast path: retry (rede caiu após o servidor processar, restart do PWA)
+      // com a mesma chave retorna a mensagem já persistida — sem recriar
+      // mensagem, sem enfileirar de novo, sem espelhar no ticket.
+      if (clientKey && typeof channels.findMessageByClientMessageId === 'function') {
+        try {
+          const existing = await channels.findMessageByClientMessageId({ tenantId, clientMessageId });
+          if (existing) {
+            return { ok: true, status: 200, payload: { message: existing, clientMessageId, idempotent: true } };
+          }
+        } catch (_) {
+          // best-effort: falha no lookup não bloqueia o envio
+        }
+      }
 
       let message;
       try {
@@ -293,9 +330,22 @@ function createInboxService(deps) {
           type,
           body: { text },
           externalMessageId: clientMessageId,
+          clientMessageId,
           status: 'pending',
         });
       } catch (err) {
+        // Race-safe: request concorrente persistiu primeiro (unique em
+        // tenant_key + client_message_id). Re-lê e devolve a mensagem existente.
+        if (isUniqueViolation(err) && typeof channels.findMessageByClientMessageId === 'function') {
+          try {
+            const existing = await channels.findMessageByClientMessageId({ tenantId, clientMessageId });
+            if (existing) {
+              return { ok: true, status: 200, payload: { message: existing, clientMessageId, idempotent: true } };
+            }
+          } catch (_) {
+            // cai no erro genérico abaixo
+          }
+        }
         logger.error('[Inbox] Erro ao persistir mensagem outbound', {
           conversationId,
           error: err && err.message,
@@ -342,7 +392,7 @@ function createInboxService(deps) {
         }
       }
 
-      return { ok: true, status: 200, payload: { message } };
+      return { ok: true, status: 200, payload: { message, clientMessageId, idempotent: false } };
     },
 
     async assignConversation(req, body) {

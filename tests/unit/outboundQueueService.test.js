@@ -209,6 +209,53 @@ describe('OutboundQueueService', () => {
     expect(Model.create).toHaveBeenCalledTimes(1);
   });
 
+  test('enqueueOutbound persiste client_message_id e trata unique violation no INSERT como idempotente (race)', async () => {
+    jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({})) }));
+
+    const sequelize = { query: jest.fn(async () => [[]]) };
+    const uniqueErr = new Error('duplicate key value violates unique constraint "outbound_queue_tenant_client_msg_id_uq"');
+    uniqueErr.name = 'SequelizeUniqueConstraintError';
+    uniqueErr.original = { code: '23505' };
+    const Model = {
+      sequelize,
+      // Fast-path SELECT não achou nada (corrida real), o INSERT colidiu no
+      // UNIQUE parcial e o re-SELECT encontra o item vencedor da corrida.
+      findOne: jest.fn(async () => ({ id: 'outq-winner' })),
+      create: jest.fn(async () => { throw uniqueErr; }),
+    };
+
+    jest.doMock('../../api/db/models', () => ({
+      OutboundQueueItem: () => Model,
+      ChannelConversation: () => ({}),
+      ChannelMessage: () => ({}),
+      TicketEvent: () => ({}),
+    }));
+    jest.doMock('../../api/services/whatsappService', () => ({ sendTextMessage: jest.fn() }));
+    jest.doMock('../../api/services/instagramService', () => ({ sendInstagramMessage: jest.fn(), sendInstagramMedia: jest.fn() }));
+    jest.doMock('../../api/services/queueService', () => ({ updateOutboundMessageMeta: jest.fn(), getTicket: jest.fn() }));
+    jest.doMock('../../api/services/websocketService', () => ({ emitEvent: jest.fn() }));
+    jest.doMock('../../api/services/auditService', () => ({ logAction: jest.fn() }));
+    jest.doMock('../../api/utils/config', () => ({ get: jest.fn() }));
+
+    // eslint-disable-next-line global-require
+    const { enqueueOutbound } = require('../../api/services/outboundQueueService');
+
+    const res = await enqueueOutbound({
+      tenantId: 'tenant-1',
+      channelType: 'whatsapp',
+      message: { to: '5511999999999', type: 'text', body: { text: 'oi' }, meta: { clientMessageId: 'cli-race-1' } },
+    });
+
+    expect(res).toMatchObject({ queued: false, idempotent: true, itemId: 'outq-winner' });
+    expect(Model.create).toHaveBeenCalledTimes(1);
+    expect(Model.create).toHaveBeenCalledWith(expect.objectContaining({
+      client_message_id: 'cli-race-1',
+    }));
+    expect(Model.findOne).toHaveBeenCalledWith({
+      where: { tenant_key: 'tenant-1', client_message_id: 'cli-race-1' },
+    });
+  });
+
   test('processDue tolera erro hostil com getter de message quebrado', async () => {
     jest.doMock('../../api/db/sequelize', () => ({ getSequelize: jest.fn(() => ({})) }));
 

@@ -53,7 +53,7 @@ export function getInboxConversationIntelligence(conversationId) {
   });
 }
 
-export function replyInboxConversation(conversationId, body) {
+export function replyInboxConversation(conversationId, body, clientMessageId) {
   if (!conversationId) {
     return Promise.reject(new Error('replyInboxConversation: conversationId é obrigatório'));
   }
@@ -64,9 +64,16 @@ export function replyInboxConversation(conversationId, body) {
 
   logger.info('Respondendo conversa (inbox)', { conversationId });
 
+  // clientMessageId estável (gerado uma vez por mensagem composta) permite ao
+  // servidor deduplicar retries — inclusive o retry automático do outbox.
+  const payload = { body: text };
+  if (clientMessageId) {
+    payload.clientMessageId = String(clientMessageId);
+  }
+
   return fetchJson(`/inbox/conversations/${encodeURIComponent(conversationId)}/reply`, {
     method: 'POST',
-    body: JSON.stringify({ body: text }),
+    body: JSON.stringify(payload),
   });
 }
 

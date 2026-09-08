@@ -34,7 +34,7 @@ import { useIncrementalList, useLoadMoreSentinel } from '../hooks/useIncremental
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useWebSocketContext } from '../context/WebSocketContext';
 import { CrudPageBase } from '../modules/crud-base';
-import { enqueueReply, flushOutbox, pendingCount } from '../pwa/inboxOutbox';
+import { enqueueReply, flushOutbox, pendingCount, failedCount, generateClientMessageId } from '../pwa/inboxOutbox';
 import { InstallPwaPrompt } from '../components/InstallPwaPrompt';
 
 /**
@@ -111,6 +111,7 @@ export function InboxPage() {
   const [noteText, setNoteText] = useState('');
   const [replyText, setReplyText] = useState('');
   const [outboxPending, setOutboxPending] = useState(() => pendingCount());
+  const [outboxFailed, setOutboxFailed] = useState(() => failedCount());
   const [creatingCase, setCreatingCase] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchQueryDebounced, setSearchQueryDebounced] = useState('');
@@ -596,23 +597,29 @@ export function InboxPage() {
       showToast('Digite uma resposta antes de enviar', 'warning');
       return;
     }
+    // Um clientMessageId por mensagem composta: se a rede cair (inclusive após
+    // o servidor processar), o retry — manual ou via outbox — usa a mesma
+    // chave e o servidor deduplica.
+    const clientMessageId = generateClientMessageId();
     try {
-      await replyInboxConversation(selectedTicket.id, replyText);
+      await replyInboxConversation(selectedTicket.id, replyText, clientMessageId);
       setReplyText('');
       await loadMessages(selectedTicket.id);
       showToast('Resposta enviada', 'success');
     } catch (err) {
-      // Falha sem resposta HTTP = rede indisponível: a resposta vai para o
-      // outbox e é reenviada automaticamente quando a conexão voltar.
-      const isNetworkFailure = !err?.response;
+      // Erro sem status HTTP = falha de rede/timeout (fetchJson nunca seta
+      // `.response`; erros HTTP carregam `status`/`httpStatus`). Timeout ou
+      // resposta perdida após o servidor processar também cai aqui — o retry
+      // com o mesmo clientMessageId é deduplificado pelo servidor.
+      const isNetworkFailure = err?.status == null && err?.httpStatus == null;
       if (isNetworkFailure) {
-        enqueueReply({ conversationId: selectedTicket.id, body: replyText });
+        enqueueReply({ conversationId: selectedTicket.id, body: replyText, clientMessageId });
         setReplyText('');
         setOutboxPending(pendingCount());
         showToast('Sem conexão — a resposta será enviada automaticamente quando a rede voltar', 'warning');
         return;
       }
-      const message = err?.response?.data?.message || err?.message || 'Erro ao enviar resposta';
+      const message = err?.body?.error?.message || err?.message || 'Erro ao enviar resposta';
       showToast(message, 'error');
     }
   };
@@ -623,12 +630,16 @@ export function InboxPage() {
     let cancelled = false;
     const flush = async () => {
       if (pendingCount() === 0 || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
-        if (!cancelled) setOutboxPending(pendingCount());
+        if (!cancelled) {
+          setOutboxPending(pendingCount());
+          setOutboxFailed(failedCount());
+        }
         return;
       }
-      const { sent, remaining } = await flushOutbox(replyInboxConversation);
+      const { sent, remaining, failed } = await flushOutbox(replyInboxConversation);
       if (cancelled) return;
       setOutboxPending(remaining);
+      setOutboxFailed(failed);
       if (sent > 0) {
         showToast(`${sent} resposta(s) pendente(s) enviada(s)`, 'success');
         if (selectedTicketIdRef.current) {
@@ -1340,6 +1351,16 @@ export function InboxPage() {
                       style={{ marginBottom: '8px', fontSize: '0.85rem', opacity: 0.9 }}
                     >
                       📤 {outboxPending} resposta(s) aguardando conexão para envio automático
+                    </div>
+                  ) : null}
+                  {outboxFailed > 0 ? (
+                    <div
+                      className="inbox-outbox-banner inbox-outbox-banner-failed"
+                      data-testid="inbox-outbox-failed-banner"
+                      role="alert"
+                      style={{ marginBottom: '8px', fontSize: '0.85rem', opacity: 0.9 }}
+                    >
+                      ⚠️ {outboxFailed} resposta(s) não puderam ser enviadas
                     </div>
                   ) : null}
                   <textarea

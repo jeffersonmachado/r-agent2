@@ -160,11 +160,12 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
   //   duplicar itens na fila quando houver retries HTTP/WS.
   // - Se o caller fornecer externalMessageId (raro no enqueue), também deduplica.
   // -------------------------------------------------------------------
+  let clientMessageId = null;
   try {
     const meta = message && typeof message === 'object' ? (safeGet(message, 'meta', {}) || {}) : {};
     const rawClientMessageId = safeGet(meta, 'clientMessageId', null);
     const rawExternalMessageId = safeGet(message, 'externalMessageId', null);
-    const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
+    clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
     const externalMessageId = rawExternalMessageId ? safeToString(rawExternalMessageId) : null;
 
     if (clientMessageId) {
@@ -202,21 +203,44 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
     // best-effort: não bloquear enfileiramento por falha de dedupe
   }
 
-  const item = await Model.create({
-    id: newId('outq'),
-    tenant_key: tenantId,
-    channel_type: channelType,
-    channel_account_id: channelAccountId,
-    conversation_id: conversationId,
-    message,
-    status: 'pending',
-    attempts: 0,
-    next_attempt_at: now,
-    last_error: null,
-    external_message_id: null,
-    created_at: now,
-    updated_at: now,
-  });
+  let item;
+  try {
+    item = await Model.create({
+      id: newId('outq'),
+      tenant_key: tenantId,
+      channel_type: channelType,
+      channel_account_id: channelAccountId,
+      conversation_id: conversationId,
+      message,
+      status: 'pending',
+      attempts: 0,
+      next_attempt_at: now,
+      last_error: null,
+      external_message_id: null,
+      client_message_id: clientMessageId || null,
+      created_at: now,
+      updated_at: now,
+    });
+  } catch (err) {
+    // Race-safe: enqueue concorrente com o mesmo (tenant, clientMessageId)
+    // venceu a corrida — o UNIQUE parcial do banco rejeitou o INSERT.
+    const pgCode = safeGet(err, 'original.code', null) ? safeToString(safeGet(err, 'original.code', null)) : null;
+    const msg = safeToString(safeGet(err, 'message', ''));
+    const isUnique = err?.name === 'SequelizeUniqueConstraintError' || pgCode === '23505' || msg.includes('duplicate key');
+    if (isUnique && clientMessageId) {
+      try {
+        const existing = await Model.findOne({
+          where: { tenant_key: tenantId, client_message_id: clientMessageId },
+        });
+        if (existing) {
+          return { queued: false, idempotent: true, itemId: safeToString(existing.id) };
+        }
+      } catch (_) {
+        // re-lança o erro original abaixo
+      }
+    }
+    throw err;
+  }
 
   return { queued: true, itemId: item.id };
 }

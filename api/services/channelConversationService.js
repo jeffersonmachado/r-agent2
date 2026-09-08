@@ -425,7 +425,7 @@ async function registerInboundMessageActivity({ tenantId, conversationId, channe
   }
 }
 
-async function createMessage({ tenantId, conversationId, channelType, direction, type, body = {}, externalMessageId = null, status = null } = {}) {
+async function createMessage({ tenantId, conversationId, channelType, direction, type, body = {}, externalMessageId = null, clientMessageId = null, status = null } = {}) {
   if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
   if (!conversationId || typeof conversationId !== 'string') throw new Error('conversationId é obrigatório');
   if (!dbAvailable()) {
@@ -448,6 +448,7 @@ async function createMessage({ tenantId, conversationId, channelType, direction,
     type: safeToString(type, 'text') || 'text',
     body: body && typeof body === 'object' ? body : {},
     external_message_id: externalMessageId ? safeToString(externalMessageId) : null,
+    client_message_id: clientMessageId ? safeToString(clientMessageId) : null,
     status: status || (dir === 'out' ? 'pending' : 'received'),
     created_at: now,
     updated_at: now,
@@ -486,8 +487,39 @@ async function createMessage({ tenantId, conversationId, channelType, direction,
     type: row.type,
     body: enrichBodyMediaUrl(row.body || {}),
     externalMessageId: row.external_message_id || null,
+    clientMessageId: row.client_message_id || null,
     status: row.status,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : now.toISOString(),
+  };
+}
+
+/**
+ * Lookup da chave de idempotência do Inbox: mensagem outbound já persistida
+ * para (tenant, clientMessageId). Usado no fast-path e na recuperação de race
+ * (unique violation) do reply — nunca cria nada.
+ */
+async function findMessageByClientMessageId({ tenantId, clientMessageId } = {}) {
+  if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
+  const key = clientMessageId ? safeToString(clientMessageId) : '';
+  if (!key) return null;
+  if (!dbAvailable()) return null;
+
+  const MessageModel = typeof ChannelMessage === 'function' ? ChannelMessage() : ChannelMessage;
+  const row = await MessageModel.findOne({
+    where: { tenant_key: tenantId, client_message_id: key },
+  });
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    direction: row.direction,
+    type: row.type,
+    body: enrichBodyMediaUrl(row.body || {}),
+    externalMessageId: row.external_message_id || null,
+    clientMessageId: row.client_message_id || null,
+    status: row.status,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
   };
 }
 
@@ -598,6 +630,7 @@ module.exports = {
   getConversation,
   updateConversation,
   createMessage,
+  findMessageByClientMessageId,
   registerInboundMessageActivity,
 };
 

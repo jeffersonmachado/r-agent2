@@ -71,6 +71,10 @@ function getOutboundQueueItemModel() {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      client_message_id: {
+        type: DataTypes.STRING(128),
+        allowNull: true,
+      },
       processing_at: {
         type: DataTypes.DATE,
         allowNull: true,

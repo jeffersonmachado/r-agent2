@@ -557,7 +557,7 @@ describe('pages/InboxPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Enviar resposta' }));
     });
 
-    expect(replyInboxConversation).toHaveBeenCalledWith('c1', 'Olá!');
+    expect(replyInboxConversation).toHaveBeenCalledWith('c1', 'Olá!', expect.any(String));
   });
 
   it('criar chamado chama o endpoint de case e avisa quando a capability está desligada', async () => {
@@ -1121,7 +1121,9 @@ describe('pages/InboxPage', () => {
 
   it('offline: resposta com erro HTTP (4xx/5xx) NÃO vai para o outbox', async () => {
     listInboxConversations.mockResolvedValue({ conversations: [baseConversation], total: 1 });
-    replyInboxConversation.mockRejectedValue({ response: { status: 500, data: { message: 'Falha interna' } } });
+    // Shape real do fetchJson: erro HTTP carrega `status`/`httpStatus` (nunca `.response`).
+    const httpError = Object.assign(new Error('Falha interna'), { status: 500, httpStatus: 500 });
+    replyInboxConversation.mockRejectedValue(httpError);
 
     await act(async () => {
       render(<InboxPage />);
@@ -1168,7 +1170,11 @@ describe('pages/InboxPage', () => {
       window.dispatchEvent(new Event('online'));
     });
 
-    expect(replyInboxConversation).toHaveBeenCalledWith('c1', 'Fico no aguardo');
+    expect(replyInboxConversation).toHaveBeenCalledWith('c1', 'Fico no aguardo', expect.any(String));
+    // O retry do outbox reutiliza o MESMO clientMessageId da tentativa original.
+    const firstCallId = replyInboxConversation.mock.calls[0][2];
+    const flushCallId = replyInboxConversation.mock.calls[replyInboxConversation.mock.calls.length - 1][2];
+    expect(flushCallId).toBe(firstCallId);
     expect(JSON.parse(localStorage.getItem('rap_inbox_outbox') || '[]')).toHaveLength(0);
     expect(screen.queryByTestId('inbox-outbox-banner')).not.toBeInTheDocument();
     expect(toastDouble.showToast).toHaveBeenCalledWith('1 resposta(s) pendente(s) enviada(s)', 'success');
