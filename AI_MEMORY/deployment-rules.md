@@ -21,6 +21,24 @@
 
 No deployment may bypass package validation, runtime governance, release gate and approved artifact manifest.
 
+## Docker image build policy (canônica, 2026-09-08)
+
+- **NUNCA construir imagens Docker no servidor remoto.** O host de produção apenas carrega imagens prontas e sobe o stack.
+- O build é SEMPRE local (workstation/CI): `scripts/docker-deploy.sh --prod --build` constrói localmente (`r-agent2-api-base:test` → `r-agent2-api`, `r-agent2-frontend` com `VITE_BASE_PATH=/r-agent2/`, `r-agent2-rag-service`, `r-agent2-asterisk`, `r-agent2-redis`) e transfere via `docker save | gzip | ssh 'gunzip | docker load'`.
+- O `docker compose up` remoto roda com `--no-build` (fail-closed): se faltar imagem no servidor, o deploy falha em vez de tentar build remoto.
+- Motivação: builds remotos são lentos (re-download de torch/npm sem cache), quebram por falta de contexto (`vendor/`, `pbx/`, excludes rsync) e consomem CPU/memória do host de produção.
+
+## Política de deploy diferencial e build sob demanda (2026-09-08)
+
+- **Deploy diferencial inteligente (padrão):**
+  - O deploy padrão (`npm run deploy:prod` / `./scripts/docker-deploy.sh --prod --build`) consulta a última release implantada em `releases/latest.txt` do servidor remoto e executa um `git diff` contra o código local.
+  - Se nada mudou em relação à release remota, nenhum build é executado e o stack remoto permanece intacto (zero downtime, zero tráfego desnecessário).
+  - Se apenas determinados serviços tiveram arquivos modificados (ex.: `frontend/` ou `api/`), o script reconstrói e transfere **apenas as imagens dos serviços desatualizados** e recria exclusivamente esses containers (`docker compose up -d --no-build <servicos>`), mantendo os demais componentes (como Postgres e Redis) em execução contínua.
+- **Opção de forçar build total (`--force` / `--force-build`):**
+  - Reconstrução completa de todas as imagens só ocorre quando solicitado explicitamente via flag `--force` (`npm run deploy:prod:force` / `npm run deploy:remote:ssh:force`).
+- **Deploy sem build (`--no-build`):**
+  - Reaplica o stack no servidor remoto com as imagens já existentes, sem compilar ou transferir nada (`npm run deploy:prod:nobuild`).
+
 
 ## Lições do primeiro deploy real (2026-08-07, artefato r-agent2-20260807-195511)
 

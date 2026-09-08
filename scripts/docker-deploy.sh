@@ -94,9 +94,24 @@ run_ssh_script() {
     return $exit_code
 }
 
+for arg in "$@"; do
+    if [[ "$arg" == "-h" || "$arg" == "--help" ]]; then
+        echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--force] [--pull] [--frontend-only] [--api-only] [--rag-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
+        echo "  --force        Força a reconstrução de todas as imagens locais (ignora detecção de delta)"
+        echo "  --auto|--diff  Modo diferencial explícito (detecta e constrói apenas serviços com código alterado)"
+        echo "  --frontend-only Reconstrói/recria apenas o container do frontend"
+        echo "  --api-only      Reconstrói/recria apenas o container da API"
+        echo "  --rag-only      Reconstrói/recria apenas o container do RAG"
+        echo "  --no-build     Pula o build local e reaplica os containers no servidor remoto"
+        echo ""
+        echo "Padrão em produção: Deploy diferencial inteligente (detecta e constrói apenas o que mudou)."
+        exit 0
+    fi
+done
+
 # Variáveis padrão (valores padrão definidos aqui)
 DEPLOY_HOST="${DEPLOY_HOST:-10.10.2.30}"
-SSH_PASSWORD="${SSH_PASSWORD:?Erro: SSH_PASSWORD não definida}"
+SSH_PASSWORD="${SSH_PASSWORD:-}"
 USE_SSH_DIRECT="${DEPLOY_USE_SSH_DIRECT:-false}"
 
 # Detecta diretório do projeto automaticamente
@@ -113,11 +128,23 @@ REMOTE_DIR="${DEPLOY_DIR:-$PROJECT_ROOT}"
 # ServerAliveCountMax=20: permite até 20 intervalos sem resposta (20*30 = 10 minutos)
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -o TCPKeepAlive=yes"
 
+# Se USE_SSH_DIRECT não foi definido e SSH_PASSWORD está vazia, testa se autenticação por chave funciona
+if [ "$USE_SSH_DIRECT" != "true" ] && [ -z "$SSH_PASSWORD" ]; then
+    if ssh -o BatchMode=yes -o ConnectTimeout=3 $SSH_OPTS "${REMOTE_USER}@${REMOTE_HOST}" "true" 2>/dev/null; then
+        info "Chave SSH detectada e funcional para ${REMOTE_USER}@${REMOTE_HOST}. Habilitando modo SSH direto."
+        USE_SSH_DIRECT="true"
+    fi
+fi
+
 if [ "$USE_SSH_DIRECT" = "true" ]; then
     info "Modo SSH direto habilitado (sem sshpass)."
     SSH_CMD="ssh $SSH_OPTS"
     RSYNC_SSH_TRANSPORT="ssh $SSH_OPTS"
 else
+    if [ -z "$SSH_PASSWORD" ]; then
+        error "SSH_PASSWORD não definida e autenticação por chave SSH não disponível para ${REMOTE_USER}@${REMOTE_HOST}."
+        exit 1
+    fi
     # Exporta SSHPASS com valor padrão se não estiver definido
     if [ -z "$SSHPASS" ]; then
         export SSHPASS="$SSH_PASSWORD"
@@ -139,9 +166,12 @@ fi
 # Variáveis padrão
 MODE="prod"
 BUILD=true
+FORCE_BUILD=false
+AUTO_DETECT=true
 PULL=false
 COMPOSE_FILE="docker-compose.prod.yml"
-BUILD_SERVICE=""  # vazio = todas as imagens, ou nome do serviço (ex: frontend)
+BUILD_SERVICES=()
+EXPLICIT_SERVICE=false
 
 # Processa argumentos
 while [[ $# -gt 0 ]]; do
@@ -164,20 +194,49 @@ while [[ $# -gt 0 ]]; do
             BUILD=false
             shift
             ;;
+        --force|--force-build)
+            FORCE_BUILD=true
+            BUILD=true
+            AUTO_DETECT=false
+            shift
+            ;;
+        --auto|--diff)
+            AUTO_DETECT=true
+            FORCE_BUILD=false
+            shift
+            ;;
         --pull)
             PULL=true
             shift
             ;;
         --frontend-only)
-            BUILD_SERVICE="frontend"
+            BUILD_SERVICES=("frontend")
+            EXPLICIT_SERVICE=true
+            AUTO_DETECT=false
             shift
             ;;
         --api-only)
-            BUILD_SERVICE="api"
+            BUILD_SERVICES=("api")
+            EXPLICIT_SERVICE=true
+            AUTO_DETECT=false
             shift
             ;;
         --rag-only)
-            BUILD_SERVICE="rag-service"
+            BUILD_SERVICES=("rag-service")
+            EXPLICIT_SERVICE=true
+            AUTO_DETECT=false
+            shift
+            ;;
+        --asterisk-only)
+            BUILD_SERVICES=("asterisk")
+            EXPLICIT_SERVICE=true
+            AUTO_DETECT=false
+            shift
+            ;;
+        --redis-only)
+            BUILD_SERVICES=("redis")
+            EXPLICIT_SERVICE=true
+            AUTO_DETECT=false
             shift
             ;;
         --host)
@@ -201,7 +260,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             error "Argumento desconhecido: $1"
-            echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--pull] [--frontend-only] [--api-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
+            echo "Uso: $0 [--prod|--dev] [--build|--no-build] [--force] [--pull] [--frontend-only] [--api-only] [--rag-only] [--host HOST] [--user USER] [--dir DIR] [--password PASSWORD]"
             exit 1
             ;;
     esac
@@ -219,7 +278,7 @@ echo "  User: $REMOTE_USER"
 echo "  Diretório: $REMOTE_DIR"
 echo "  Modo: $MODE"
 echo "  Build: $BUILD"
-echo "  Serviço de build: ${BUILD_SERVICE:-todos}"
+echo "  Estratégia de build: $([ "$FORCE_BUILD" = true ] && echo "Forçado (--force: full rebuild)" || ([ "$BUILD" = false ] && echo "Sem build (--no-build)" || ([ "$EXPLICIT_SERVICE" = true ] && echo "Explícito: ${BUILD_SERVICES[*]}" || echo "Diferencial Inteligente (apenas o que estiver desatualizado)")))"
 echo "  Pull: $PULL"
 
 # Testa conexão SSH
@@ -612,193 +671,254 @@ if [ "$PULL" = true ]; then
     echo ""
 fi
 
-# Build das imagens no servidor remoto
-if [ "$BUILD" = true ]; then
-    section "Construindo Imagens Docker no Servidor"
-    if [ -n "$BUILD_SERVICE" ]; then
-        info "Construindo APENAS o serviço '$BUILD_SERVICE' no servidor remoto (isso pode levar vários minutos)..."
-    else
-        info "Construindo TODAS as imagens no servidor remoto (isso pode levar vários minutos)..."
+# Build das imagens LOCALMENTE + transferência para o servidor
+#
+# POLÍTICA CANÔNICA (AI_MEMORY/deployment-rules.md):
+# Imagens Docker são SEMPRE construídas na máquina local (workstation/CI) e
+# transferidas ao servidor via `docker save | ssh 'docker load'`.
+# NUNCA executar `docker build` ou `docker compose build` no servidor remoto:
+# o host de produção apenas carrega imagens prontas e sobe o stack.
+
+NO_CHANGES_DETECTED=false
+
+detect_outdated_services() {
+    section "Detecção de Serviços Desatualizados (Delta Deploy)"
+    info "Verificando hash da última release no servidor remoto..."
+
+    local remote_release_line
+    remote_release_line=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cat ${REMOTE_DIR}/releases/latest.txt 2>/dev/null" 2>&1 | grep -vE "(Warning|Permanently)" | tail -n 1 || true)
+
+    local remote_sha=""
+    if [[ "$remote_release_line" =~ sha=([a-f0-9]+) ]]; then
+        remote_sha="${BASH_REMATCH[1]}"
     fi
-    warn "⚠️  ATENÇÃO: O build pode demorar 10-20 minutos. A conexão SSH foi configurada para manter-se ativa durante builds longos."
-    warn "⚠️  Se a conexão cair, você pode executar apenas o build do serviço que falhou usando --frontend-only ou --api-only"
-    
-    if [ "$MODE" = "prod" ]; then
-        info "Modo: Produção (--no-cache)"
-        if [ -n "$BUILD_SERVICE" ]; then
-            # Para frontend e api usamos Dockerfiles dedicados, pois
-            # docker compose build não sabe o contexto/Dockerfile se não houver 'build:' no compose.
-            if [ "$BUILD_SERVICE" = "frontend" ]; then
-                # Importante: o Dockerfile do frontend assume contexto na raiz do projeto,
-                # pois faz COPY de 'engine/' e 'frontend/...'. Por isso o contexto precisa ser '.'
-                # (diretório REMOTE_DIR) e não './frontend'.
-                BUILD_CMD="docker build --build-arg VITE_BASE_PATH=/r-agent2/ -t r-agent2-frontend:latest -f frontend/Dockerfile ."
-            elif [ "$BUILD_SERVICE" = "api" ]; then
-                # Build API Base Image first (required dependency for API)
-                info "Construindo imagem base da API (dependência necessária)..."
-                API_BASE_BUILD_CMD="docker build -t r-agent2-api-base:test -f api/Dockerfile.base ."
-                echo -e "${YELLOW}[COMANDO SSH]${NC} Construindo imagem base da API"
-                echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD\""
-                echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD"
-                echo ""
-                echo -e "${BLUE}[SAÍDA DO COMANDO DOCKER BUILD - BASE]${NC}"
-                echo ""
-                $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD" 2>&1 | tee /tmp/api_base_build.log | grep -vE "(Warning|Permanently)" || true
-                API_BASE_BUILD_EXIT=${PIPESTATUS[0]}
-                echo ""
-                if [ $API_BASE_BUILD_EXIT -ne 0 ]; then
-                    error "❌ Build da imagem base da API FALHOU"
-                    error "Verifique os erros acima"
-                    exit 1
-                fi
-                echo -e "${GREEN}[RESULTADO]${NC} Build da imagem base concluído (exit code: $API_BASE_BUILD_EXIT)"
-                info "✅ Imagem base da API construída com sucesso"
-                echo ""
-                
-                BUILD_CMD="docker build -t r-agent2-api:latest -f api/Dockerfile ."
-            elif [ "$BUILD_SERVICE" = "rag-service" ]; then
-                BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile rag-service/"
-            else
-                BUILD_CMD="$DOCKER_COMPOSE -f $COMPOSE_FILE build --no-cache $BUILD_SERVICE"
-            fi
-        else
-            # Construir TODAS as imagens necessárias
-            # docker compose build só constrói serviços com 'build:', então precisamos construir manualmente
-            # as imagens que só têm 'image:' definido (api e rag-service)
-            info "Construindo imagens que não têm build no compose (API e RAG Service)..."
-            
-            # Build API Base Image first (required dependency for API)
-            info "Construindo imagem base da API..."
-            API_BASE_BUILD_CMD="docker build -t r-agent2-api-base:test -f api/Dockerfile.base ."
-            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD"
-            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $API_BASE_BUILD_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
-            API_BASE_BUILD_EXIT=${PIPESTATUS[0]}
-            if [ $API_BASE_BUILD_EXIT -ne 0 ]; then
-                error "❌ Build da imagem base da API FALHOU"
-                exit 1
-            fi
-            
-            # Build API
-            info "Construindo imagem da API..."
-            API_BUILD_CMD="docker build -t r-agent2-api:latest -f api/Dockerfile ."
-            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $API_BUILD_CMD"
-            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $API_BUILD_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
-            API_BUILD_EXIT=${PIPESTATUS[0]}
-            if [ $API_BUILD_EXIT -ne 0 ]; then
-                error "❌ Build da API FALHOU"
-                exit 1
-            fi
-            
-            # Build RAG Service
-            info "Construindo imagem do RAG Service..."
-            RAG_BUILD_CMD="docker build -t r-agent2-rag-service:latest -f rag-service/Dockerfile rag-service/"
-            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $RAG_BUILD_CMD"
-            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $RAG_BUILD_CMD" 2>&1 | grep -vE "(Warning|Permanently)" || true
-            RAG_BUILD_EXIT=${PIPESTATUS[0]}
-            if [ $RAG_BUILD_EXIT -ne 0 ]; then
-                error "❌ Build do RAG Service FALHOU"
-                exit 1
-            fi
-            
-            # Build serviços que têm build no compose (frontend e redis)
-            info "Construindo serviços com build no compose (Frontend e Redis)..."
-            BUILD_CMD="$DOCKER_COMPOSE -f $COMPOSE_FILE build --no-cache"
-        fi
-        
-        # Executa build apenas se BUILD_CMD estiver definido (não foi construído manualmente)
-        if [ -n "$BUILD_CMD" ]; then
-            # Executa build e mostra saída em tempo real
-            echo -e "${YELLOW}[COMANDO SSH]${NC} Construindo imagens Docker (modo produção)"
-            echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"cd ${REMOTE_DIR} && $BUILD_CMD\""
-            echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $BUILD_CMD"
-            echo ""
-            echo -e "${BLUE}[SAÍDA DO COMANDO DOCKER COMPOSE]${NC}"
-            echo ""
-            # Executa o comando e mostra saída em tempo real, filtrando apenas warnings do SSH
-            # Usa um pipe nomeado ou arquivo temporário para capturar código de saída
-            TEMP_OUTPUT=$(mktemp)
-            # Executa o comando, mostra saída em tempo real e salva em arquivo temporário
-            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $BUILD_CMD" 2>&1 | tee "$TEMP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
-            # Captura o código de saída do SSH (primeiro comando do pipe)
-            BUILD_EXIT_CODE=${PIPESTATUS[0]}
-            rm -f "$TEMP_OUTPUT"
-            echo ""
-            echo -e "${GREEN}[RESULTADO]${NC} Build concluído (exit code: $BUILD_EXIT_CODE)"
-            echo ""
-            
-            # Verifica se build falhou
-            if [ $BUILD_EXIT_CODE -ne 0 ]; then
-                error "❌ Build FALHOU com código de saída $BUILD_EXIT_CODE"
-                if [ $BUILD_EXIT_CODE -eq 255 ]; then
-                    error "Possível timeout de conexão SSH durante o build."
-                    error "Sugestões:"
-                    error "  1. Tente novamente executando apenas o serviço que falhou:"
-                    error "     ./scripts/docker-deploy.sh --prod --build --frontend-only"
-                    error "  2. Verifique se o servidor tem recursos suficientes (memória/CPU)"
-                    error "  3. Verifique a conectividade de rede com o servidor"
-                else
-                    error "Verifique os erros acima e corrija antes de continuar"
-                fi
-                exit 1
-            fi
-        fi
+
+    if [ -z "$remote_sha" ] || [ "$remote_sha" = "sem-git" ]; then
+        warn "⚠️  Nenhuma release anterior com SHA identificada em ${REMOTE_DIR}/releases/latest.txt."
+        info "Primeiro deploy ou histórico ausente. Reconstruindo todas as imagens (ou use flags seletivas)."
+        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis")
+        return 0
+    fi
+
+    info "Último deploy remoto registrado: $remote_release_line"
+    info "SHA base para comparação: $remote_sha"
+
+    if ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
+        warn "⚠️  Commit $remote_sha não encontrado no histórico Git local (histórico divergiu)."
+        warn "Para garantir consistência, todas as imagens serão reconstruídas (ou use --force)."
+        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis")
+        return 0
+    fi
+
+    # Compara a árvore de trabalho atual contra o commit remoto
+    local changed_files
+    changed_files=$(git diff --name-only "$remote_sha" 2>/dev/null || true)
+
+    local untracked_files
+    untracked_files=$(git ls-files --others --exclude-standard 2>/dev/null || true)
+    local all_changed
+    all_changed=$(printf "%s\n%s" "$changed_files" "$untracked_files" | sed '/^$/d' | sort -u)
+
+    if [ -z "$all_changed" ]; then
+        info "✅ Nenhum arquivo alterado em relação à release remota ($remote_sha)."
+        info "A stack remota já está sincronizada com o código local. Nada a reconstruir!"
+        info "Dica: Para forçar reconstrução de todas as imagens, utilize: --force"
+        BUILD_SERVICES=()
+        NO_CHANGES_DETECTED=true
+        return 0
+    fi
+
+    local total_files
+    total_files=$(echo "$all_changed" | wc -l)
+    info "Total de arquivos modificados desde a release $remote_sha: $total_files"
+    echo "$all_changed" | head -15 | sed 's/^/    • /'
+    if [ "$total_files" -gt 15 ]; then
+        echo "    ... e mais $((total_files - 15)) arquivos."
+    fi
+    echo ""
+
+    local detected=()
+    if echo "$all_changed" | grep -qE '^(frontend/|engine/|frontend/Dockerfile)'; then
+        detected+=("frontend")
+    fi
+    if echo "$all_changed" | grep -qE '^(api/|src/|config/|contracts/|engine/|vendor/|api/Dockerfile)'; then
+        detected+=("api")
+    fi
+    if echo "$all_changed" | grep -qE '^rag-service/'; then
+        detected+=("rag-service")
+    fi
+    if echo "$all_changed" | grep -qE '^pbx/'; then
+        detected+=("asterisk")
+    fi
+    if echo "$all_changed" | grep -qE '^redis/'; then
+        detected+=("redis")
+    fi
+    if echo "$all_changed" | grep -qE '^(package\.json|package-lock\.json)'; then
+        [[ ! " ${detected[*]} " =~ " api " ]] && detected+=("api")
+        [[ ! " ${detected[*]} " =~ " frontend " ]] && detected+=("frontend")
+    fi
+
+    if [ ${#detected[@]} -eq 0 ]; then
+        info "Arquivos alterados não afetam containers de serviço (ex.: documentação, testes locais ou governança)."
+        info "Nenhuma imagem Docker precisa ser reconstruída. A stack permanece inalterada."
+        info "Dica: Para forçar reconstrução completa, utilize: --force"
+        BUILD_SERVICES=()
+        NO_CHANGES_DETECTED=true
+        return 0
+    fi
+
+    BUILD_SERVICES=("${detected[@]}")
+    info "Serviços identificados como desatualizados: ${BUILD_SERVICES[*]}"
+}
+
+# Se for produção e build ativado, resolve os serviços desatualizados
+if [ "$MODE" = "prod" ] && [ "$BUILD" = true ]; then
+    if [ "$EXPLICIT_SERVICE" = true ]; then
+        info "Serviço explícito selecionado via comando: ${BUILD_SERVICES[*]}"
+    elif [ "$FORCE_BUILD" = true ]; then
+        section "Forçar Rebuild Ativado (--force)"
+        info "Flag --force informada: reconstruindo todas as imagens do stack..."
+        BUILD_SERVICES=("api" "frontend" "rag-service" "asterisk" "redis")
     else
-        info "Modo: Desenvolvimento"
-        if [ -n "$BUILD_SERVICE" ]; then
-            BUILD_CMD="$DOCKER_COMPOSE -f $COMPOSE_FILE build $BUILD_SERVICE"
-        else
-            BUILD_CMD="$DOCKER_COMPOSE -f $COMPOSE_FILE build"
+        detect_outdated_services
+        if [ "$NO_CHANGES_DETECTED" = true ]; then
+            section "Status da Stack Remota"
+            info "Stack já está sincronizada e atualizada. Nenhuma imagem precisou ser reconstruída."
+            info "Consultando containers em execução no host remoto..."
+            $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && docker ps --filter 'name=r-agent2' --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'" 2>&1 | grep -vE "(Warning|Permanently)" || true
+            echo ""
+            info "Dica: Caso queira forçar a reconstrução completa das imagens mesmo sem alterações, use: --force"
+            exit 0
         fi
-        
-        # Executa build e mostra saída em tempo real
-        echo -e "${YELLOW}[COMANDO SSH]${NC} Construindo imagens Docker (modo desenvolvimento)"
-        echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"cd ${REMOTE_DIR} && $BUILD_CMD\""
-        echo -e "${YELLOW}[COMANDO REMOTO]${NC} cd ${REMOTE_DIR} && $BUILD_CMD"
+    fi
+fi
+
+if [ "$BUILD" = true ]; then
+    section "Construindo Imagens Docker LOCALMENTE"
+    info "Política canônica: build LOCAL + transferência (docker save/load). Build remoto é PROIBIDO."
+
+    if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+        error "❌ Docker local indisponível. O build é LOCAL: instale/inicie o Docker nesta máquina."
+        exit 1
+    fi
+
+    build_local_image() {
+        local image="$1" dockerfile="$2" context="$3"
+        shift 3
+        info "Construindo $image (contexto: $context)..."
+        echo -e "${YELLOW}[COMANDO LOCAL]${NC} docker build $* -t $image -f $dockerfile $context"
+        TEMP_BUILD_OUTPUT=$(mktemp)
+        docker build "$@" -t "$image" -f "$dockerfile" "$context" 2>&1 | tee "$TEMP_BUILD_OUTPUT" | grep -E "(DONE|ERROR|writing image|naming to|exporting)" | tail -15 || true
+        LOCAL_BUILD_EXIT=${PIPESTATUS[0]}
+        if [ $LOCAL_BUILD_EXIT -ne 0 ]; then
+            error "❌ Build local de $image FALHOU (exit code: $LOCAL_BUILD_EXIT)"
+            error "Últimas linhas do build:"
+            tail -40 "$TEMP_BUILD_OUTPUT"
+            rm -f "$TEMP_BUILD_OUTPUT"
+            exit 1
+        fi
+        rm -f "$TEMP_BUILD_OUTPUT"
+        echo -e "${GREEN}[RESULTADO]${NC} Build local de $image concluído (exit code: 0)"
+        info "✅ $image construída localmente"
         echo ""
-        echo -e "${BLUE}[SAÍDA DO COMANDO DOCKER COMPOSE]${NC}"
-        echo ""
-        # Executa o comando e mostra saída em tempo real, filtrando apenas warnings do SSH
-        # Usa um pipe nomeado ou arquivo temporário para capturar código de saída
+    }
+
+    TRANSFER_IMAGES=()
+
+    if [ "$MODE" = "prod" ]; then
+        info "Construindo serviços selecionados: ${BUILD_SERVICES[*]}..."
+        for srv in "${BUILD_SERVICES[@]}"; do
+            case "$srv" in
+                frontend)
+                    build_local_image r-agent2-frontend:latest frontend/Dockerfile . --build-arg VITE_BASE_PATH=/r-agent2/
+                    TRANSFER_IMAGES+=(r-agent2-frontend:latest)
+                    ;;
+                api)
+                    build_local_image r-agent2-api-base:test api/Dockerfile.base .
+                    build_local_image r-agent2-api:latest api/Dockerfile .
+                    TRANSFER_IMAGES+=(r-agent2-api:latest)
+                    ;;
+                rag-service)
+                    build_local_image r-agent2-rag-service:latest rag-service/Dockerfile rag-service/
+                    TRANSFER_IMAGES=(r-agent2-rag-service:latest)
+                    ;;
+                asterisk)
+                    build_local_image r-agent2-asterisk:latest pbx/asterisk/Dockerfile pbx/asterisk/
+                    TRANSFER_IMAGES=(r-agent2-asterisk:latest)
+                    ;;
+                redis)
+                    build_local_image r-agent2-redis:latest redis/Dockerfile redis/
+                    TRANSFER_IMAGES=(r-agent2-redis:latest)
+                    ;;
+                *)
+                    error "❌ Serviço desconhecido para build local: $srv"
+                    exit 1
+                    ;;
+            esac
+        done
+    else
+        info "Modo: Desenvolvimento (build local via compose)"
+        DEV_BUILD_CMD="$DOCKER_COMPOSE -f $COMPOSE_FILE build ${BUILD_SERVICES[*]}"
+        echo -e "${YELLOW}[COMANDO LOCAL]${NC} $DEV_BUILD_CMD"
         TEMP_OUTPUT=$(mktemp)
-        # Executa o comando, mostra saída em tempo real e salva em arquivo temporário
-        $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_DIR} && $BUILD_CMD" 2>&1 | tee "$TEMP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
-        # Captura o código de saída do SSH (primeiro comando do pipe)
+        $DEV_BUILD_CMD 2>&1 | tee "$TEMP_OUTPUT" | tail -20 || true
         BUILD_EXIT_CODE=${PIPESTATUS[0]}
         rm -f "$TEMP_OUTPUT"
-        echo ""
-        echo -e "${GREEN}[RESULTADO]${NC} Build concluído (exit code: $BUILD_EXIT_CODE)"
-        echo ""
-        
-        # Verifica se build falhou
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
-            error "❌ Build FALHOU com código de saída $BUILD_EXIT_CODE"
-            if [ $BUILD_EXIT_CODE -eq 255 ]; then
-                error "Possível timeout de conexão SSH durante o build."
-                error "Sugestões:"
-                error "  1. Tente novamente executando apenas o serviço que falhou:"
-                error "     ./scripts/docker-deploy.sh --dev --build --frontend-only"
-                error "  2. Verifique se o servidor tem recursos suficientes (memória/CPU)"
-                error "  3. Verifique a conectividade de rede com o servidor"
-            else
-                error "Verifique os erros acima e corrija antes de continuar"
-            fi
+            error "❌ Build local (dev) FALHOU com código de saída $BUILD_EXIT_CODE"
+            exit 1
+        fi
+        while IFS= read -r img; do
+            [ -n "$img" ] && TRANSFER_IMAGES+=("$img")
+        done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^r-agent2-' | grep -v ':<none>' || true)
+        if [ ${#TRANSFER_IMAGES[@]} -eq 0 ]; then
+            error "❌ Nenhuma imagem r-agent2-* encontrada após build local (dev)"
             exit 1
         fi
     fi
-    
-    info "✅ Build concluído com sucesso"
+
+    # Transfere as imagens construídas para o servidor remoto
+    if [ ${#TRANSFER_IMAGES[@]} -gt 0 ]; then
+        section "Transferindo Imagens para o Servidor"
+        info "Imagens a transferir: ${TRANSFER_IMAGES[*]}"
+        warn "⚠️  A transferência pode demorar alguns minutos (imagens grandes via SSH)."
+        echo -e "${YELLOW}[COMANDO]${NC} docker save ${TRANSFER_IMAGES[*]} | gzip | $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} 'gunzip | docker load'"
+        echo ""
+        docker save "${TRANSFER_IMAGES[@]}" | gzip | $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "gunzip | docker load" 2>&1 | grep -vE "(Warning|Permanently)" || true
+        TRANSFER_EXIT=${PIPESTATUS[2]}
+        echo ""
+        if [ $TRANSFER_EXIT -ne 0 ]; then
+            error "❌ Transferência de imagens FALHOU (exit code: $TRANSFER_EXIT)"
+            exit 1
+        fi
+        # Fail-closed: confirma que TODAS as imagens chegaram ao servidor
+        REMOTE_IMAGES=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker images --format '{{.Repository}}:{{.Tag}}'" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+        MISSING_TRANSFERRED=""
+        for img in "${TRANSFER_IMAGES[@]}"; do
+            if ! echo "$REMOTE_IMAGES" | grep -q "^${img}$"; then
+                MISSING_TRANSFERRED="$MISSING_TRANSFERRED $img"
+            fi
+        done
+        if [ -n "$MISSING_TRANSFERRED" ]; then
+            error "❌ Imagens NÃO encontradas no servidor após transferência:$MISSING_TRANSFERRED"
+            exit 1
+        fi
+        echo -e "${GREEN}[RESULTADO]${NC} Transferência concluída (exit code: 0)"
+        info "✅ Imagens transferidas e confirmadas no servidor"
+    else
+        info "Nenhuma imagem marcada para transferência."
+    fi
 else
     info "⚠️  Build pulado (use --build para construir)"
 fi
 
 # Para containers existentes / restart
-if [ -n "$BUILD_SERVICE" ]; then
-    # Quando estamos em modo serviço único (ex: --frontend-only),
-    # não derrubamos todo o cluster, apenas recriamos o serviço alto.
-    section "Recriando Serviço $BUILD_SERVICE"
-    info "Recriando apenas o serviço '$BUILD_SERVICE' (os demais permanecem em execução)..."
-    UP_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE up -d $BUILD_SERVICE"
-    echo -e "${YELLOW}[COMANDO SSH]${NC} Recriando serviço $BUILD_SERVICE"
+if [ ${#BUILD_SERVICES[@]} -gt 0 ] && [ ${#BUILD_SERVICES[@]} -lt 5 ]; then
+    # Modo diferencial/seletivo: não derruba o cluster, apenas recria os serviços atualizados
+    section "Recriando Serviços Atualizados (${BUILD_SERVICES[*]})"
+    info "Recriando apenas: ${BUILD_SERVICES[*]} (demais serviços permanecem em execução sem downtime)..."
+    UP_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE up -d --no-build ${BUILD_SERVICES[*]}"
+    echo -e "${YELLOW}[COMANDO SSH]${NC} Recriando serviços ${BUILD_SERVICES[*]}"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$UP_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $UP_CMD"
     echo ""
@@ -811,11 +931,11 @@ if [ -n "$BUILD_SERVICE" ]; then
     UP_EXIT=${PIPESTATUS[0]}
     echo ""
     if [ $UP_EXIT -eq 0 ]; then
-        echo -e "${GREEN}[RESULTADO]${NC} Serviço recriado (exit code: $UP_EXIT)"
-        info "✅ Serviço '$BUILD_SERVICE' recriado"
+        echo -e "${GREEN}[RESULTADO]${NC} Serviços recriados (exit code: $UP_EXIT)"
+        info "✅ Serviços '${BUILD_SERVICES[*]}' recriados"
     else
-        echo -e "${RED}[RESULTADO]${NC} Falha ao recriar serviço (exit code: $UP_EXIT)"
-        error "❌ Erro ao recriar serviço '$BUILD_SERVICE'"
+        echo -e "${RED}[RESULTADO]${NC} Falha ao recriar serviços (exit code: $UP_EXIT)"
+        error "❌ Erro ao recriar serviços '${BUILD_SERVICES[*]}'"
         echo ""
         info "Saída completa do comando:"
         cat "$TEMP_SERVICE_UP_OUTPUT" | grep -vE "(Warning|Permanently)" || true
@@ -935,7 +1055,9 @@ else
     fi
     echo ""
 
-    UP_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE up -d"
+    # --no-build: fail-closed — imagens vêm SEMPRE do build local transferido
+    # via docker save/load; o servidor remoto nunca constrói imagens.
+    UP_CMD="cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE up -d --no-build"
     echo -e "${YELLOW}[COMANDO SSH]${NC} Iniciando serviços"
     echo -e "${YELLOW}[COMANDO SSH]${NC} $SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} \"$UP_CMD\""
     echo -e "${YELLOW}[COMANDO REMOTO]${NC} $UP_CMD"
@@ -983,13 +1105,13 @@ section "Aguardando Serviços Iniciarem"
 info "Aguardando 10 segundos para serviços iniciarem..."
 sleep 10
 
-if [ -n "$BUILD_SERVICE" ]; then
-    # Health check focado no serviço alterado
-    section "Verificando Saúde dos Serviços (modo serviço único)"
-    info "Aguardando alguns segundos para o serviço '$BUILD_SERVICE' estabilizar..."
+if [ ${#BUILD_SERVICES[@]} -gt 0 ] && [ ${#BUILD_SERVICES[@]} -lt 5 ]; then
+    # Health check focado nos serviços alterados
+    section "Verificando Saúde dos Serviços Atualizados"
+    info "Aguardando alguns segundos para os serviços (${BUILD_SERVICES[*]}) estabilizarem..."
     sleep 10
 
-    if [ "$BUILD_SERVICE" = "api" ]; then
+    if [[ " ${BUILD_SERVICES[*]} " =~ " api " ]]; then
         info "Verificando API com retry em /health..."
         HEALTH_CMD="for i in 1 2 3 4 5 6 7 8 9 10 11 12; do if curl -fsS http://localhost:3001/health > /dev/null; then exit 0; fi; sleep 5; done; exit 1"
         echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando saúde da API"
@@ -1012,7 +1134,7 @@ if [ -n "$BUILD_SERVICE" ]; then
         echo ""
     fi
 
-    if [ "$BUILD_SERVICE" = "frontend" ]; then
+    if [[ " ${BUILD_SERVICES[*]} " =~ " frontend " ]]; then
         info "Verificando Frontend..."
         HEALTH_CMD="curl -f http://localhost:8086 &> /dev/null"
         echo -e "${YELLOW}[COMANDO SSH]${NC} Verificando saúde do Frontend"
@@ -1031,14 +1153,14 @@ if [ -n "$BUILD_SERVICE" ]; then
         echo ""
     fi
 
-    section "Deploy Concluído (serviço único)!"
+    section "Deploy Concluído (serviços atualizados: ${BUILD_SERVICES[*]})!"
     info "Serviços principais no servidor $REMOTE_HOST:"
     echo "  - Frontend: http://$REMOTE_HOST:8086"
     echo "  - API: http://$REMOTE_HOST:3001"
     echo "  - RAG Service: http://$REMOTE_HOST:8002"
     echo ""
     info "Para ver logs:"
-    echo "  ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE logs -f $BUILD_SERVICE'"
+    echo "  ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && $DOCKER_COMPOSE -f $COMPOSE_FILE logs -f ${BUILD_SERVICES[*]}'"
 else
     # Health check completo (modo stack inteiro)
     section "Status dos Containers"

@@ -210,6 +210,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      # warm-up do modelo de embeddings pode levar >60s; sem start_period o
+      # compose marca unhealthy durante a subida e aborta o `up` do stack
+      start_period: 120s
     deploy:
       resources:
         limits:
