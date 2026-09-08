@@ -7,12 +7,16 @@
  * Gate bloqueante de segregação SERVER-SIDE de experiência (complementa
  * validate-experience-segregation, que cobre o frontend):
  *
- * A. WORKSPACE ROUTE CLASSIFICATIONS — api/modules/workspace/workspace.routes.js
- *    exporta WORKSPACE_ROUTE_CLASSIFICATIONS (mapa 'METHOD /path' → classificação).
- *    Toda rota classificada DEVELOPMENT precisa de evidência de enforcement em
- *    workspace.controller.js (estático: o fonte do controller contém
- *    `getClassificationForAgent` E `classification_forbidden` — 403 fail-closed).
- *    Metadata ausente ou enforcement ausente → FAIL (productionTechnicalLeaks).
+ * A. WORKSPACE ROUTE CLASSIFICATIONS — o módulo PURO
+ *    api/modules/workspace/workspace.route-classifications.js (zero requires,
+ *    carregável offline sem node_modules) exporta
+ *    WORKSPACE_ROUTE_CLASSIFICATIONS (mapa 'METHOD /path' → classificação).
+ *    workspace.routes.js deve CONSUMIR o módulo canônico (nunca redefinir a
+ *    lista inline). Toda rota classificada DEVELOPMENT precisa de evidência de
+ *    enforcement em workspace.controller.js (estático: o fonte do controller
+ *    contém `getClassificationForAgent` E `classification_forbidden` — 403
+ *    fail-closed). Metadata ausente, fonte canônica não consumida ou
+ *    enforcement ausente → FAIL (productionTechnicalLeaks).
  *
  * B. GUARDS DOS GRUPOS DE ENGENHARIA (drift → FAIL):
  *    - qa-waves / qa-mesh: checkClassification(req, 'DEVELOPMENT') ou
@@ -25,7 +29,10 @@
  *      em rpaRouteUtils.js e uso nos handlers — acesso direto por URL sem o
  *      guard conta em directUrlBypasses.
  *
- * Relatório: reports/experience-api-segregation-report.json
+ * Relatório: reports/experience-api-segregation-report.json (compat) + cópia
+ * canônica em governance/experience-api-segregation-report.json (entra no
+ * PAYLOAD do release: evidence-manifest packageRequired=true → o verifier
+ * offline exige a prova criptograficamente ligada ao pacote).
  * PASS exige productionTechnicalLeaks=0, supportEngineeringLeaks=0,
  * directUrlBypasses=0.
  *
@@ -35,10 +42,12 @@
 
 const fs = require('fs');
 const path = require('path');
+const { withLineage } = require('../../governance/report-lineage');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 
 const WORKSPACE_ROUTES_PATH = 'api/modules/workspace/workspace.routes.js';
+const WORKSPACE_CLASSIFICATIONS_PATH = 'api/modules/workspace/workspace.route-classifications.js';
 const WORKSPACE_CONTROLLER_PATH = 'api/modules/workspace/workspace.controller.js';
 const VALID_CLASSIFICATIONS = new Set(['PRODUCTION', 'SUPPORT', 'DEVELOPMENT']);
 
@@ -79,19 +88,43 @@ function checkExperienceApiSegregation(rootDir) {
   const checks = [];
 
   // ── A. Workspace route classifications + enforcement no controller ────────
-  const routesFull = path.join(root, WORKSPACE_ROUTES_PATH);
+  // A fonte canônica é o módulo PURO workspace.route-classifications.js:
+  // zero requires → carregável offline (sem node_modules), ao contrário de
+  // workspace.routes.js (puxa express/sequelize/models). workspace.routes.js é
+  // lido como TEXTO apenas para provar que consome o módulo canônico e não
+  // redefine a lista inline.
+  const classificationsFull = path.join(root, WORKSPACE_CLASSIFICATIONS_PATH);
   let classifications = null;
-  if (!fs.existsSync(routesFull)) {
-    issues.push({ check: 'workspace_route_classifications', issue: `missing:${WORKSPACE_ROUTES_PATH}` });
+  if (!fs.existsSync(classificationsFull)) {
+    issues.push({ check: 'workspace_route_classifications', issue: `missing:${WORKSPACE_CLASSIFICATIONS_PATH}` });
     counts.productionTechnicalLeaks += 1;
   } else {
     try {
-      delete require.cache[require.resolve(routesFull)];
-      classifications = require(routesFull).WORKSPACE_ROUTE_CLASSIFICATIONS || null;
+      delete require.cache[require.resolve(classificationsFull)];
+      classifications = require(classificationsFull).WORKSPACE_ROUTE_CLASSIFICATIONS || null;
     } catch (err) {
-      issues.push({ check: 'workspace_route_classifications', issue: `workspace_routes_unloadable:${err.message}` });
+      issues.push({ check: 'workspace_route_classifications', issue: `workspace_route_classifications_unloadable:${err.message}` });
       counts.productionTechnicalLeaks += 1;
     }
+  }
+
+  const routesText = readText(root, WORKSPACE_ROUTES_PATH);
+  const routesConsumesCanonical = !routesText.error
+    && routesText.content.includes('workspace.route-classifications');
+  const routesRedefinesInline = !routesText.error
+    && /WORKSPACE_ROUTE_CLASSIFICATIONS\s*=\s*\{/.test(routesText.content);
+  if (routesText.error || !routesConsumesCanonical) {
+    issues.push({
+      check: 'workspace_route_classifications_source',
+      issue: routesText.error || 'workspace.routes.js não consome o módulo canônico workspace.route-classifications',
+    });
+    counts.productionTechnicalLeaks += 1;
+  } else if (routesRedefinesInline) {
+    issues.push({
+      check: 'workspace_route_classifications_source',
+      issue: 'workspace.routes.js redefine WORKSPACE_ROUTE_CLASSIFICATIONS inline — a lista deve viver apenas no módulo canônico workspace.route-classifications.js',
+    });
+    counts.productionTechnicalLeaks += 1;
   }
 
   const controller = readText(root, WORKSPACE_CONTROLLER_PATH);
@@ -101,7 +134,7 @@ function checkExperienceApiSegregation(rootDir) {
   if (classifications === null && !issues.some((i) => i.check === 'workspace_route_classifications')) {
     issues.push({
       check: 'workspace_route_classifications',
-      issue: 'WORKSPACE_ROUTE_CLASSIFICATIONS ausente em workspace.routes.js — rotas workspace sem metadata de classificação',
+      issue: 'WORKSPACE_ROUTE_CLASSIFICATIONS ausente em workspace.route-classifications.js — rotas workspace sem metadata de classificação',
     });
     counts.productionTechnicalLeaks += 1;
   }
@@ -131,6 +164,8 @@ function checkExperienceApiSegregation(rootDir) {
   }
   checks.push({
     id: 'workspace_route_classifications',
+    source: WORKSPACE_CLASSIFICATIONS_PATH,
+    consumedByRoutes: routesConsumesCanonical && !routesRedefinesInline,
     routesClassified: classifications ? Object.keys(classifications).length : 0,
     developmentRoutes,
     controllerEnforcementEvidence: controllerHasResolver && controllerHasForbidden,
@@ -209,20 +244,26 @@ function checkExperienceApiSegregation(rootDir) {
 
 function main() {
   const result = checkExperienceApiSegregation();
-  const report = {
-    artifactType: 'experience-api-segregation-report',
-    artifactVersion: '1.0.0',
-    generatedAt: new Date().toISOString(),
+  // Lineage na origem (ver governance/report-lineage.js): o relatório nasce
+  // com runId/sourceFingerprint do run governado atual — o verifier offline
+  // (gate payload_experience_api_segregation) exige o match com a canônica.
+  const report = withLineage({
     ...result,
-  };
+  }, 'experience-api-segregation-report', { includeGit: true });
   const reportPath = path.join(ROOT_DIR, 'reports', 'experience-api-segregation-report.json');
+  // Cópia canônica para o payload: governance/ entra no ZIP do release e o
+  // evidence-manifest marca esta prova como packageRequired=true.
+  const payloadReportPath = path.join(ROOT_DIR, 'governance', 'experience-api-segregation-report.json');
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+  fs.mkdirSync(path.dirname(payloadReportPath), { recursive: true });
+  fs.writeFileSync(payloadReportPath, `${JSON.stringify(report, null, 2)}\n`);
   console.log(`[experience-api-segregation] status=${result.status} leaks=${JSON.stringify(result.counts)}`);
   for (const issue of result.issues) {
     console.log(`[experience-api-segregation] ISSUE [${issue.check}] ${issue.issue}`);
   }
   console.log('[experience-api-segregation] relatório: reports/experience-api-segregation-report.json');
+  console.log('[experience-api-segregation] cópia payload: governance/experience-api-segregation-report.json');
   process.exit(result.status === 'PASS' ? 0 : 1);
 }
 

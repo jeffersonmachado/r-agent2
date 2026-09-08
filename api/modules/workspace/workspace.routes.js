@@ -3,10 +3,9 @@
 const express = require('express');
 const { createWorkspaceService } = require('./workspace.service');
 const { createWorkspaceController } = require('./workspace.controller');
-
-const WORKSPACE_ROUTE_CLASSIFICATIONS = {
-  'GET /workspace/entities/:id/autocorrections': 'DEVELOPMENT',
-};
+// Fonte única das classificações: módulo puro (zero requires) consumido
+// também offline pelo gate validate-experience-api-segregation.
+const { WORKSPACE_ROUTE_CLASSIFICATIONS } = require('./workspace.route-classifications');
 
 function createWorkspaceRoutes({ buildDeps }) {
   const router = express.Router();

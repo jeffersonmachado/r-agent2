@@ -10,9 +10,11 @@
  * DERIVADAS da decisão canônica do payload, com binding de hash.
  *
  * Este script é autocontido (sem requires do projeto) para rodar offline a
- * partir de dist/verifier/ dentro do envelope entregue.
+ * partir de dist/verifier/ dentro do envelope entregue. NUNCA faz consulta
+ * externa (rede/remote git): a proveniência remota é validada apenas como
+ * evidência assinada/vinculada por hash dentro do payload (gate 18).
  *
- * Gates (qualquer FAIL → exit 1):
+ * Gates (qualquer FAIL → exit 1; 23 gates: 1–20 + 12b + 12c + 12d):
  *   1.  payload/manifest/envelope presentes
  *   2.  payload sha256 == manifest.sha256
  *   3.  governança canônica existe dentro do payload (MISSING_CANONICAL_GOVERNANCE)
@@ -30,7 +32,12 @@
  *   15. envelope package-integrity pass
  *   16. envelope self-proving pass
  *   17. attestation Ed25519 válida + campos == manifest/payload/decisão
- *   18. manifest cleanWorktree=true + gitCommit/gitTree 40-char
+ *   18. manifest cleanWorktree=true + gitCommit/gitTree 40-char + evidência de
+ *       proveniência REMOTA packageRequired (source-remote-provenance-report:
+ *       status PASS, commit/tree == manifest, commitExists/treeMatches=true,
+ *       hash binding no evidence-manifest — REMOTE_PROVENANCE_EVIDENCE_MISSING /
+ *       REMOTE_PROVENANCE_MISMATCH / REMOTE_PROVENANCE_NOT_IN_MANIFEST /
+ *       REMOTE_PROVENANCE_EVIDENCE_HASH_MISMATCH)
  *   19. consistência: decisão DEFERRED exige phase=PRE_PACKAGE/transitional
  *       (SEMANTIC_PHASE_MISMATCH — relatório "final" nunca carrega DEFERRED)
  *   20. release_hygiene: envelope sem verify-result stale (STALE_VERIFIER_RESULT),
@@ -39,6 +46,11 @@
  *   12b. payload_experience_segregation: evidência packageRequired dentro do
  *       payload (EXPERIENCE_SEGREGATION_EVIDENCE_MISSING / NO_GO /
  *       EVIDENCE_HASH_MISMATCH), runId/fingerprint == manifest
+ *   12d. payload_experience_api_segregation: prova SERVER-SIDE packageRequired
+ *       dentro do payload (EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING /
+ *       NO_GO / LEAKS / NOT_IN_MANIFEST / NOT_PACKAGE_REQUIRED /
+ *       EVIDENCE_HASH_MISMATCH), runId/fingerprint == manifest e contadores
+ *       productionTechnicalLeaks/supportEngineeringLeaks/directUrlBypasses = 0
  *   12c. final_status_projection_consistency: projeções derivadas DENTRO do
  *       payload (docs/architecture/RAP_MASTER_SCORECARD.md, docs/governance/
  *       PLATFORM_STATUS.md, ENTERPRISE_READINESS.md, _platform-status-source.json,
@@ -422,6 +434,49 @@ function runVerification(args, options) {
       }
     }
 
+    // ── Gate 12d: evidência de experience-API-segregation DENTRO do payload ──
+    // Prova SERVER-SIDE (complemento do gate 12b, que cobre o frontend):
+    // validate-experience-api-segregation emite o relatório com lineage e a
+    // cópia canônica em governance/experience-api-segregation-report.json,
+    // packageRequired=true no evidence-manifest embutido. PASS exige os três
+    // contadores de vazamento zerados.
+    const expApiSeg = readJson(path.join(payloadGovDir, 'experience-api-segregation-report.json'));
+    const expApiSegGate = makeGate('payload_experience_api_segregation');
+    if (!expApiSeg) {
+      gates.push(fail(expApiSegGate, 'EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING — governance/experience-api-segregation-report.json ausente no payload'));
+    } else if (expApiSeg.status !== 'PASS') {
+      gates.push(fail(expApiSegGate, `EXPERIENCE_API_SEGREGATION_NO_GO — status=${expApiSeg.status || 'null'}`));
+    } else if (Number(expApiSeg.counts?.productionTechnicalLeaks || 0) > 0
+      || Number(expApiSeg.counts?.supportEngineeringLeaks || 0) > 0
+      || Number(expApiSeg.counts?.directUrlBypasses || 0) > 0) {
+      gates.push(fail(expApiSegGate, `EXPERIENCE_API_SEGREGATION_LEAKS — counts=${JSON.stringify(expApiSeg.counts || {})}`));
+    } else if (!expApiSeg.runId || !expApiSeg.sourceFingerprint) {
+      gates.push(fail(expApiSegGate, 'ARTIFACT_RUN_ID_MISSING — experience-api-segregation do payload sem lineage (runId/sourceFingerprint)'));
+    } else if (manifestRunId && expApiSeg.runId !== manifestRunId) {
+      gates.push(fail(expApiSegGate, `CROSS_RUN_ARTIFACT — experience-api-segregation.runId=${expApiSeg.runId} != ${manifestRunId}`));
+    } else if (manifestFp && expApiSeg.sourceFingerprint !== manifestFp) {
+      gates.push(fail(expApiSegGate, 'SOURCE_FINGERPRINT_MISMATCH — experience-api-segregation.sourceFingerprint diverge do manifest'));
+    } else {
+      const apiEvidenceManifest = readJson(path.join(payloadGovDir, 'evidence-manifest.json'));
+      const apiEntry = Array.isArray(apiEvidenceManifest?.artifacts)
+        ? apiEvidenceManifest.artifacts.find((a) => a && a.id === 'experience_api_segregation')
+        : null;
+      const apiRecordedHash = apiEntry ? (apiEntry.hash || apiEntry.sha256 || apiEntry.checksum || null) : null;
+      const apiPhysicalHash = sha256File(path.join(payloadGovDir, 'experience-api-segregation-report.json'));
+      if (!apiEntry) {
+        gates.push(fail(expApiSegGate, 'EXPERIENCE_API_SEGREGATION_NOT_IN_MANIFEST — evidence-manifest do payload sem entrada experience_api_segregation (binding de hash obrigatório)'));
+      } else if (apiEntry.packageRequired !== true) {
+        gates.push(fail(expApiSegGate, 'EXPERIENCE_API_SEGREGATION_NOT_PACKAGE_REQUIRED — evidence-manifest não marca a prova como packageRequired'));
+      } else if (!apiRecordedHash) {
+        gates.push(fail(expApiSegGate, 'EXPERIENCE_API_SEGREGATION_EVIDENCE_HASH_MISSING — entrada experience_api_segregation sem hash registrado'));
+      } else if (apiRecordedHash !== apiPhysicalHash) {
+        gates.push(fail(expApiSegGate,
+          `EXPERIENCE_API_SEGREGATION_EVIDENCE_HASH_MISMATCH — manifest=${apiRecordedHash.slice(0, 12)} != físico=${apiPhysicalHash.slice(0, 12)}`));
+      } else {
+        gates.push(pass(expApiSegGate, { leaks: 0, hashBound: true }));
+      }
+    }
+
     // ── Gate 12c: projeções de status final do payload vs canônica embutida ──
     // BLOCKER 2 (r-agent2-20260905-163709): a canônica do payload estava 78/78
     // AUTONOMOUS_READY_GO mas os docs empacotados diziam 76/78, IN_PROGRESS e
@@ -678,7 +733,40 @@ function runVerification(args, options) {
     } else if (manifest.cleanWorktree !== true) {
       gates.push(fail(provGate, 'DIRTY_WORKTREE — manifest não declara cleanWorktree=true'));
     } else {
-      gates.push(pass(provGate));
+      // Extensão: proveniência REMOTA do source. O verifier é OFFLINE — não
+      // consulta o remote; valida a evidência produzida por
+      // verify-remote-provenance antes do SEAL_GO, vinculada ao pacote pelo
+      // payloadSha256 (coberto pela attestation Ed25519) e com hash registrado
+      // no evidence-manifest embutido (entrada source_remote_provenance).
+      const remoteProv = readJson(path.join(payloadGovDir, 'source-remote-provenance-report.json'));
+      if (!remoteProv) {
+        gates.push(fail(provGate, 'REMOTE_PROVENANCE_EVIDENCE_MISSING — governance/source-remote-provenance-report.json ausente no payload'));
+      } else if (remoteProv.status !== 'PASS') {
+        gates.push(fail(provGate, `REMOTE_PROVENANCE_MISMATCH — status=${remoteProv.status || 'null'} failureCode=${remoteProv.failureCode || 'null'}`));
+      } else if (remoteProv.commit !== commit || remoteProv.tree !== tree) {
+        gates.push(fail(provGate, 'REMOTE_PROVENANCE_MISMATCH — commit/tree da evidência divergem do manifest'));
+      } else if (remoteProv.commitExists !== true || remoteProv.treeMatches !== true) {
+        gates.push(fail(provGate, `REMOTE_PROVENANCE_MISMATCH — commitExists=${remoteProv.commitExists} treeMatches=${remoteProv.treeMatches}`));
+      } else {
+        const rpEvidenceManifest = readJson(path.join(payloadGovDir, 'evidence-manifest.json'));
+        const rpEntry = Array.isArray(rpEvidenceManifest?.artifacts)
+          ? rpEvidenceManifest.artifacts.find((a) => a && a.id === 'source_remote_provenance')
+          : null;
+        const rpRecordedHash = rpEntry ? (rpEntry.hash || rpEntry.sha256 || rpEntry.checksum || null) : null;
+        const rpPhysicalHash = sha256File(path.join(payloadGovDir, 'source-remote-provenance-report.json'));
+        if (!rpEntry) {
+          gates.push(fail(provGate, 'REMOTE_PROVENANCE_NOT_IN_MANIFEST — evidence-manifest do payload sem entrada source_remote_provenance (binding de hash obrigatório)'));
+        } else if (rpEntry.packageRequired !== true) {
+          gates.push(fail(provGate, 'REMOTE_PROVENANCE_NOT_PACKAGE_REQUIRED — evidence-manifest não marca a prova como packageRequired'));
+        } else if (!rpRecordedHash) {
+          gates.push(fail(provGate, 'REMOTE_PROVENANCE_EVIDENCE_HASH_MISSING — entrada source_remote_provenance sem hash registrado'));
+        } else if (rpRecordedHash !== rpPhysicalHash) {
+          gates.push(fail(provGate,
+            `REMOTE_PROVENANCE_EVIDENCE_HASH_MISMATCH — manifest=${rpRecordedHash.slice(0, 12)} != físico=${rpPhysicalHash.slice(0, 12)}`));
+        } else {
+          gates.push(pass(provGate, { remoteProvenance: true, hashBound: true }));
+        }
+      }
     }
 
     // ── Gate 19: fase semântica da consistência ─────────────────────────────

@@ -25,6 +25,13 @@
 #           sha256(dist/ZIP) == manifest.sha256 == chain == attestation,
 #           zero referências stale, assinaturas válidas.
 #
+# Proveniência: antes do PASS 1, o gate REMOTE_PROVENANCE comprova que o
+# commit/tree do release existem no remote (fail-closed; override documentado
+# RAP_SKIP_REMOTE_PROVENANCE=1 apenas para builds de emergência, com warn).
+# A tag imutável de release NÃO é criada aqui (exige verifier offline PASS):
+# após o sucesso, rode scripts/create-release-tag.sh e re-verifique com
+# verify-remote-provenance --require-tag (instruções impressas ao final).
+#
 # Resultado: o pacote é auto-provável — governança DENTRO e FORA do ZIP
 #            referencia o release correto (sem ZIP stale, sem hash stale).
 #
@@ -556,6 +563,25 @@ GIT_BRANCH="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || 
 GIT_REF="$(git -C "$PROJECT_ROOT" symbolic-ref -q HEAD 2>/dev/null || echo "DETACHED")"
 ok "Proveniência: commit=$GIT_COMMIT tree=$GIT_TREE ref=$GIT_REF"
 
+# ── GATE REMOTE_PROVENANCE: a fonte do release deve existir no remote ────────
+# A proveniência local (acima) só declara o que foi empacotado; este gate
+# comprova que o commit é reproduzível a partir do remote (tip de branch ou
+# ancestro do tip) e que a tree confere — fail-closed antes do SEAL_GO. O
+# relatório (dual-write reports/ + governance/) é packageRequired: entra no
+# payload e o verifier offline o valida com hash binding no gate
+# manifest_provenance. Override de emergência explícito (mesma disciplina do
+# RAP_WORKTREE_SNAPSHOT_VALIDATED): RAP_SKIP_REMOTE_PROVENANCE=1 com warn —
+# um release assim NÃO é oficialmente reproduzível.
+step "GATE remote-provenance: verificando commit/tree contra o remote..."
+if [[ "${RAP_SKIP_REMOTE_PROVENANCE:-}" == "1" ]]; then
+  warn "RAP_SKIP_REMOTE_PROVENANCE=1 — verificação de proveniência remota IGNORADA (override de emergência; release não oficialmente reproduzível)"
+else
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-remote-provenance.js" \
+    --commit "$GIT_COMMIT" --tree "$GIT_TREE" \
+    || fail "REMOTE_PROVENANCE — release bloqueada: o commit do release precisa existir no remote (push antes do release)"
+  ok "Proveniência remota verificada (commit presente no remote, tree íntegra)"
+fi
+
 # ── GATE EXPERIENCE-SEGREGATION: evidência fresca em todo release oficial ────
 # O relatório é consumido pelo Master Scorecard (RAP-014/RAP-015), entra no
 # Evidence Manifest e é verificado pelo delivered-release verifier — precisa
@@ -564,6 +590,14 @@ step "GATE experience-segregation: gerando relatório do release..."
 node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-experience-segregation.js" \
   || fail "experience-segregation FAIL — release bloqueada"
 ok "reports/experience-segregation-report.json PASS (evidência do release)"
+
+# GATE EXPERIENCE-API-SEGREGATION: prova server-side (APIs) — mesma disciplina:
+# relatório com lineage na origem + cópia canônica em governance/ (packageRequired
+# no evidence-manifest, verificada offline pelo gate payload_experience_api_segregation).
+step "GATE experience-api-segregation: gerando relatório do release..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-experience-api-segregation.js" \
+  || fail "experience-api-segregation FAIL — release bloqueada"
+ok "reports/experience-api-segregation-report.json PASS (evidência do release)"
 
 # Re-stamp de lineage imediato: o relatório recém-gerado NÃO carrega
 # runId/sourceFingerprint/artifactType/artifactVersion. Sem o stamp, o Master
@@ -978,7 +1012,9 @@ for f in \
   "governance/self-proving-report.json" \
   "governance/final-governance-report.json" \
   "reports/experience-segregation-report.json" \
-  "governance/experience-segregation-report.json"; do
+  "governance/experience-segregation-report.json" \
+  "reports/experience-api-segregation-report.json" \
+  "governance/experience-api-segregation-report.json"; do
   # A cópia canônica governance/ vai POR ÚLTIMO e prevalece sobre a cópia de
   # compatibilidade em reports/ (mesmo basename → dist/governance/).
   [[ -f "$PROJECT_ROOT/$f" ]] && cp "$PROJECT_ROOT/$f" "$DIST_DIR/$(basename $f)" || true
@@ -1030,7 +1066,8 @@ for f in \
   "governance-attestation.json" \
   "governance-chain.json" \
   "replay-integrity-report.json" \
-  "experience-segregation-report.json"; do
+  "experience-segregation-report.json" \
+  "experience-api-segregation-report.json"; do
   [[ -f "$DIST_DIR/$f" ]] && mv "$DIST_DIR/$f" "$GOV_DIR/$f" || true
 done
 ok "Relatórios movidos para dist/governance/"
@@ -1254,6 +1291,15 @@ if bash "$VERIFIER"; then
   printf  "${GREEN}║  Verifier     : %-46s ║${NC}\n" "PASS (offline)"
   printf  "${GREEN}║  Pipeline     : %-46s ║${NC}\n" "two-pass-immutable"
   echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
+
+  # ── Próximo passo: tag imutável de release (FORA do pipeline, por design) ──
+  # A tag exige o verifier offline PASS acima (nunca automatizar push de tag
+  # dentro do two-pass — risco de ciclo). Release final:
+  echo ""
+  echo -e "${CYAN}PRÓXIMO PASSO (release final — tag imutável de proveniência):${NC}"
+  echo "  1. bash scripts/create-release-tag.sh ${RELEASE_NAME} ${GIT_COMMIT}"
+  echo "  2. node scripts/governance/verify-remote-provenance.js --require-tag --tag ${RELEASE_NAME}"
+  echo ""
   exit 0
 else
   echo ""

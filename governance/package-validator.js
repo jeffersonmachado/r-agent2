@@ -11,6 +11,16 @@ const { withLineage } = require('./report-lineage');
 const ROOT = path.join(__dirname, '..');
 const DEFAULT_REPORT_PATH = path.join(ROOT, 'governance', 'package-validation-report.json');
 
+// Códigos de gap específicos por entrada packageRequired ausente — campo
+// aditivo `missingEntryCodes` no relatório (missingEntries permanece igual):
+// consumidores que só leem missingEntries não são afetados, e o motivo NO_GO
+// fica diretamente rastreável (ex.: EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING
+// é o mesmo código emitido pelo gate offline payload_experience_api_segregation).
+const MISSING_ENTRY_CODES = {
+  'governance/experience-api-segregation-report.json': 'EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING',
+  'governance/source-remote-provenance-report.json': 'REMOTE_PROVENANCE_EVIDENCE_MISSING',
+};
+
 // ─── Self-containment: arquivos obrigatórios no filesystem antes de qualquer validação ──
 const SELF_CONTAINMENT_REQUIRED = [
   { path: 'dist',                                       isDir: true,  label: 'dist/' },
@@ -304,6 +314,10 @@ function validatePackage(options = {}) {
     requiredEntries,
     entryCount: zipEntries.length,
     missingEntries,
+    missingEntryCodes: missingEntries.map((entry) => ({
+      entry,
+      code: MISSING_ENTRY_CODES[entry] || 'PROOF_ENTRY_MISSING',
+    })),
     ok,
     error: ok
       ? (artifact.selectionError || null)

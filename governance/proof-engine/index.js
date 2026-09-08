@@ -75,6 +75,19 @@ const REQUIRED_ARTIFACT_SPECS = [
   // o package-validator exige o arquivo no payload e o payloadSha256 (coberto
   // pela attestation Ed25519) vincula a prova de segregação ao release.
   { id: 'experience_segregation',  path: 'governance/experience-segregation-report.json',                     domain: 'governance',    packageRequired: true },
+  // Segregação SERVER-SIDE de experiência (APIs): complemento da prova de
+  // frontend acima — validate-experience-api-segregation gera o relatório com
+  // lineage e a cópia canônica em governance/ (mesmo mecanismo dual-write).
+  // packageRequired=true → package-validator exige no payload e o verifier
+  // offline (gate payload_experience_api_segregation) valida hash binding.
+  { id: 'experience_api_segregation', path: 'governance/experience-api-segregation-report.json',              domain: 'governance',    packageRequired: true },
+  // Proveniência REMOTA do source (gate fail-closed ANTES do SEAL_GO):
+  // verify-remote-provenance comprova que o commit/tree do release existem no
+  // remote (e a tag de release, quando exigida). packageRequired=true → o
+  // package-validator exige a prova no payload e o verifier offline (gate
+  // manifest_provenance) valida hash binding + match com git_commit/git_tree
+  // do manifest — sem consulta externa no verificador.
+  { id: 'source_remote_provenance', path: 'governance/source-remote-provenance-report.json',                 domain: 'governance',    packageRequired: true },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -697,7 +710,10 @@ function buildBlockingGaps(report, intelligenceResult, crossReport) {
       gaps.push({
         id: 'gap-proof-package-validation', severity: 'critical', area: 'package',
         title: 'ZIP de release nao contem todos os proofs obrigatorios',
-        evidence: { missingEntries: report.packageValidation.missingEntries },
+        evidence: {
+          missingEntries: report.packageValidation.missingEntries,
+          missingEntryCodes: report.packageValidation.missingEntryCodes || [],
+        },
         suggestedFix: 'Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico.',
       });
     }

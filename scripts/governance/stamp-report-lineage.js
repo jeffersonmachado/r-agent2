@@ -76,6 +76,12 @@ async function main() {
       // Cópia canônica empacotada no payload (packageRequired=true) — precisa
       // do MESMO runId/sourceFingerprint da cópia em reports/.
       'governance/experience-segregation-report.json',
+      // Prova server-side (APIs): mesma disciplina dual-write + packageRequired.
+      'reports/experience-api-segregation-report.json',
+      'governance/experience-api-segregation-report.json',
+      // Proveniência REMOTA do source: mesma disciplina dual-write + packageRequired.
+      'reports/source-remote-provenance-report.json',
+      'governance/source-remote-provenance-report.json',
       // Consistência PRE_PACKAGE/FINAL: lineage explícito para eliminar a
       // ambiguidade semântica (GAP: relatório "final" com decisão DEFERRED).
       'governance/final-consistency-report.json',

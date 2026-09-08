@@ -106,6 +106,22 @@ function buildScorecard(below10Ids = [], lin = lineage) {
  *   expSegNoLineage      remove runId/sourceFingerprint (ARTIFACT_RUN_ID_MISSING)
  *   expSegHashMismatch   evidence-manifest registra hash errado (Caso H)
  *   expSegNotPackageRequired  evidence-manifest sem packageRequired=true
+ *   omitExperienceApiSegregation  payload sem experience-api-segregation-report
+ *   expApiSegStatus      default 'PASS' ('FAIL' → EXPERIENCE_API_SEGREGATION_NO_GO)
+ *   expApiSegLeaks       overrides dos contadores (ex.: { productionTechnicalLeaks: 1 })
+ *   expApiSegRunId / expApiSegSourceFingerprint  lineage divergente
+ *   expApiSegNoLineage   remove runId/sourceFingerprint (ARTIFACT_RUN_ID_MISSING)
+ *   expApiSegHashMismatch  evidence-manifest registra hash errado
+ *   expApiSegNotPackageRequired  evidence-manifest sem packageRequired=true
+ *   expApiSegManifestEntryMissing  evidence-manifest sem a entrada experience_api_segregation
+ *   omitRemoteProvenance   payload sem source-remote-provenance-report (REMOTE_PROVENANCE_EVIDENCE_MISSING)
+ *   remoteProvStatus       default 'PASS' ('FAIL' → REMOTE_PROVENANCE_MISMATCH)
+ *   remoteProvFailureCode  failureCode quando remoteProvStatus='FAIL'
+ *   remoteProvCommit / remoteProvTree  commit/tree divergentes do manifest
+ *   remoteProvCommitExists / remoteProvTreeMatches  default true
+ *   remoteProvHashMismatch evidence-manifest registra hash errado
+ *   remoteProvNotPackageRequired  evidence-manifest sem packageRequired=true
+ *   remoteProvManifestEntryMissing  evidence-manifest sem a entrada source_remote_provenance
  *   buildEnvelope        constrói o envelope zip físico (release_hygiene)
  *   envelopeExtraFiles   { path: content } extras dentro do envelope zip
  *                        (ex.: 'r-agent2/dist/verifier/verify-result.json' → Caso A/B)
@@ -207,6 +223,7 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
     // Evidência de experience-segregation (packageRequired=true): prova de
     // segregação PRODUCTION/SUPPORT/DEVELOPMENT embutida no payload, com hash
     // registrado no evidence-manifest embutido.
+    const manifestArtifacts = [];
     if (!tamper.omitExperienceSegregation) {
       const expSeg = {
         ...lin('experience-segregation-report'),
@@ -220,21 +237,90 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
       const expSegPath = path.join(govDir, 'experience-segregation-report.json');
       writeJson(expSegPath, expSeg);
       const expSegHash = tamper.expSegHashMismatch ? '0'.repeat(64) : sha256File(expSegPath);
-      writeJson(path.join(govDir, 'evidence-manifest.json'), {
-        ...lin('evidence-manifest'),
-        status: 'PASS',
-        artifacts: tamper.expSegManifestEntryMissing ? [] : [
-          {
-            id: 'experience_segregation',
-            path: 'governance/experience-segregation-report.json',
-            packageRequired: tamper.expSegNotPackageRequired === true ? false : true,
-            exists: true,
-            hash: expSegHash,
-            proofStatus: 'valid',
-          },
-        ],
-      });
+      if (!tamper.expSegManifestEntryMissing) {
+        manifestArtifacts.push({
+          id: 'experience_segregation',
+          path: 'governance/experience-segregation-report.json',
+          packageRequired: tamper.expSegNotPackageRequired === true ? false : true,
+          exists: true,
+          hash: expSegHash,
+          proofStatus: 'valid',
+        });
+      }
     }
+
+    // Evidência de experience-API-segregation (packageRequired=true): prova
+    // SERVER-SIDE (gate payload_experience_api_segregation) — mesmo padrão da
+    // prova de frontend acima, com contadores de vazamento zerados.
+    if (!tamper.omitExperienceApiSegregation) {
+      const expApiSeg = {
+        ...lin('experience-api-segregation-report'),
+        status: tamper.expApiSegStatus || 'PASS',
+        code: tamper.expApiSegStatus === 'FAIL' ? 'EXPERIENCE_API_SEGREGATION_VIOLATION' : 'EXPERIENCE_API_SEGREGATION_OK',
+        counts: {
+          productionTechnicalLeaks: 0,
+          supportEngineeringLeaks: 0,
+          directUrlBypasses: 0,
+          ...(tamper.expApiSegLeaks || {}),
+        },
+      };
+      if (tamper.expApiSegRunId) expApiSeg.runId = tamper.expApiSegRunId;
+      if (tamper.expApiSegSourceFingerprint) expApiSeg.sourceFingerprint = tamper.expApiSegSourceFingerprint;
+      if (tamper.expApiSegNoLineage) { delete expApiSeg.runId; delete expApiSeg.sourceFingerprint; }
+      const expApiSegPath = path.join(govDir, 'experience-api-segregation-report.json');
+      writeJson(expApiSegPath, expApiSeg);
+      const expApiSegHash = tamper.expApiSegHashMismatch ? '0'.repeat(64) : sha256File(expApiSegPath);
+      if (!tamper.expApiSegManifestEntryMissing) {
+        manifestArtifacts.push({
+          id: 'experience_api_segregation',
+          path: 'governance/experience-api-segregation-report.json',
+          packageRequired: tamper.expApiSegNotPackageRequired === true ? false : true,
+          exists: true,
+          hash: expApiSegHash,
+          proofStatus: 'valid',
+        });
+      }
+    }
+
+    // Evidência de proveniência REMOTA do source (packageRequired=true): gate
+    // manifest_provenance do verifier offline — verify-remote-provenance
+    // comprova commit/tree contra o remote antes do SEAL_GO; a prova é
+    // vinculada por hash no evidence-manifest embutido.
+    if (!tamper.omitRemoteProvenance) {
+      const remoteProvStatus = tamper.remoteProvStatus || 'PASS';
+      const remoteProv = {
+        ...lin('source-remote-provenance-report'),
+        remote: 'https://github.com/example/r-agent2.git',
+        remoteName: 'origin',
+        commit: tamper.remoteProvCommit || COMMIT,
+        commitExists: tamper.remoteProvCommitExists !== undefined ? tamper.remoteProvCommitExists : true,
+        tree: tamper.remoteProvTree || TREE,
+        treeMatches: tamper.remoteProvTreeMatches !== undefined ? tamper.remoteProvTreeMatches : true,
+        tag: null,
+        tagMatches: null,
+        status: remoteProvStatus,
+        failureCode: remoteProvStatus === 'FAIL' ? (tamper.remoteProvFailureCode || 'RELEASE_SOURCE_COMMIT_NOT_REMOTE') : null,
+      };
+      const remoteProvPath = path.join(govDir, 'source-remote-provenance-report.json');
+      writeJson(remoteProvPath, remoteProv);
+      const remoteProvHash = tamper.remoteProvHashMismatch ? '0'.repeat(64) : sha256File(remoteProvPath);
+      if (!tamper.remoteProvManifestEntryMissing) {
+        manifestArtifacts.push({
+          id: 'source_remote_provenance',
+          path: 'governance/source-remote-provenance-report.json',
+          packageRequired: tamper.remoteProvNotPackageRequired === true ? false : true,
+          exists: true,
+          hash: remoteProvHash,
+          proofStatus: 'valid',
+        });
+      }
+    }
+
+    writeJson(path.join(govDir, 'evidence-manifest.json'), {
+      ...lin('evidence-manifest'),
+      status: 'PASS',
+      artifacts: manifestArtifacts,
+    });
 
     // Projeções derivadas da canônica embutida (gate final_status_projection_consistency):
     // docs + latest.json devem refletir decisão/score/runId/fingerprint da

@@ -54,7 +54,12 @@ describe('release hygiene — testes positivos (envelope limpo + evidência ínt
     expect(result.exitCode).toBe(0);
     expect(gateStatus(result.output, 'release_hygiene')).toBe('PASS');
     expect(gateStatus(result.output, 'payload_experience_segregation')).toBe('PASS');
+    expect(gateStatus(result.output, 'payload_experience_api_segregation')).toBe('PASS');
     expect(gateStatus(result.output, 'consistency_phase_semantics')).toBe('PASS');
+    // 23 gates mandatory: 1–20 + 12b (experience_segregation) +
+    // 12c (final_status_projection) + 12d (experience_api_segregation).
+    const gateLines = result.output.split('\n').filter((l) => /^\s+[✓✗] /.test(l));
+    expect(gateLines).toHaveLength(23);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
@@ -205,6 +210,143 @@ describe('experience segregation evidence — Casos C–H (evidência packageReq
       fs.rmSync(dir, { recursive: true, force: true });
     });
   }
+});
+
+describe('experience API segregation evidence — gate payload_experience_api_segregation (23º gate)', () => {
+  const cases = [
+    {
+      name: 'evidência ausente no payload',
+      tamper: { omitExperienceApiSegregation: true },
+      reason: 'EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING',
+    },
+    {
+      name: 'status=FAIL',
+      tamper: { expApiSegStatus: 'FAIL' },
+      reason: 'EXPERIENCE_API_SEGREGATION_NO_GO',
+    },
+    {
+      name: 'productionTechnicalLeaks=1 (vazamento técnico em superfície PRODUCTION)',
+      tamper: { expApiSegLeaks: { productionTechnicalLeaks: 1 } },
+      reason: 'EXPERIENCE_API_SEGREGATION_LEAKS',
+    },
+    {
+      name: 'runId divergente do release',
+      tamper: { expApiSegRunId: 'rap-governed-19990101000000000-foreign' },
+      reason: 'CROSS_RUN_ARTIFACT',
+    },
+    {
+      name: 'sourceFingerprint divergente',
+      tamper: { expApiSegSourceFingerprint: 'f'.repeat(64) },
+      reason: 'SOURCE_FINGERPRINT_MISMATCH',
+    },
+    {
+      name: 'hash registrado diverge do físico (adulteração pós-empacotamento)',
+      tamper: { expApiSegHashMismatch: true },
+      reason: 'EXPERIENCE_API_SEGREGATION_EVIDENCE_HASH_MISMATCH',
+    },
+    {
+      name: 'evidence-manifest do payload sem entrada experience_api_segregation',
+      tamper: { expApiSegManifestEntryMissing: true },
+      reason: 'EXPERIENCE_API_SEGREGATION_NOT_IN_MANIFEST',
+    },
+    {
+      name: 'evidence-manifest não marca a prova como packageRequired',
+      tamper: { expApiSegNotPackageRequired: true },
+      reason: 'EXPERIENCE_API_SEGREGATION_NOT_PACKAGE_REQUIRED',
+    },
+    {
+      name: 'evidência sem lineage (runId/sourceFingerprint ausentes)',
+      tamper: { expApiSegNoLineage: true },
+      reason: 'ARTIFACT_RUN_ID_MISSING',
+    },
+  ];
+
+  for (const testCase of cases) {
+    test(`FAIL: ${testCase.name}`, () => {
+      const dir = makeFixtureDir();
+      const fixture = buildReleaseFixture(dir, testCase.tamper);
+      const result = runVerifier(fixture);
+      expect(result.exitCode).toBe(1);
+      expect(result.output).toContain('PAYLOAD_GOVERNANCE_NO_GO');
+      expect(gateStatus(result.output, 'payload_experience_api_segregation')).toBe('FAIL');
+      expect(result.output).toContain(testCase.reason);
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+  }
+});
+
+describe('remote provenance evidence — gate manifest_provenance (extensão offline, 23 gates mantidos)', () => {
+  const cases = [
+    {
+      name: 'evidência ausente no payload',
+      tamper: { omitRemoteProvenance: true },
+      reason: 'REMOTE_PROVENANCE_EVIDENCE_MISSING',
+    },
+    {
+      name: 'status=FAIL (gate remoto reprovou antes do SEAL_GO)',
+      tamper: { remoteProvStatus: 'FAIL' },
+      reason: 'REMOTE_PROVENANCE_MISMATCH',
+    },
+    {
+      name: 'commit da evidência diverge do manifest',
+      tamper: { remoteProvCommit: 'd'.repeat(40) },
+      reason: 'REMOTE_PROVENANCE_MISMATCH',
+    },
+    {
+      name: 'tree da evidência diverge do manifest',
+      tamper: { remoteProvTree: 'e'.repeat(40) },
+      reason: 'REMOTE_PROVENANCE_MISMATCH',
+    },
+    {
+      name: 'commitExists=false (evidência adulterada para PASS sem verificação real)',
+      tamper: { remoteProvCommitExists: false },
+      reason: 'REMOTE_PROVENANCE_MISMATCH',
+    },
+    {
+      name: 'treeMatches=false',
+      tamper: { remoteProvTreeMatches: false },
+      reason: 'REMOTE_PROVENANCE_MISMATCH',
+    },
+    {
+      name: 'hash registrado diverge do físico (adulteração pós-empacotamento)',
+      tamper: { remoteProvHashMismatch: true },
+      reason: 'REMOTE_PROVENANCE_EVIDENCE_HASH_MISMATCH',
+    },
+    {
+      name: 'evidence-manifest do payload sem entrada source_remote_provenance',
+      tamper: { remoteProvManifestEntryMissing: true },
+      reason: 'REMOTE_PROVENANCE_NOT_IN_MANIFEST',
+    },
+    {
+      name: 'evidence-manifest não marca a prova como packageRequired',
+      tamper: { remoteProvNotPackageRequired: true },
+      reason: 'REMOTE_PROVENANCE_NOT_PACKAGE_REQUIRED',
+    },
+  ];
+
+  for (const testCase of cases) {
+    test(`FAIL: ${testCase.name}`, () => {
+      const dir = makeFixtureDir();
+      const fixture = buildReleaseFixture(dir, testCase.tamper);
+      const result = runVerifier(fixture);
+      expect(result.exitCode).toBe(1);
+      expect(result.output).toContain('PAYLOAD_GOVERNANCE_NO_GO');
+      expect(gateStatus(result.output, 'manifest_provenance')).toBe('FAIL');
+      expect(result.output).toContain(testCase.reason);
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+  }
+
+  test('PASS: evidência íntegra (default da fixture) → manifest_provenance PASS e total de gates continua 23', () => {
+    const dir = makeFixtureDir();
+    const fixture = buildReleaseFixture(dir, {});
+    const result = runVerifier(fixture);
+    expect(result.exitCode).toBe(0);
+    expect(gateStatus(result.output, 'manifest_provenance')).toBe('PASS');
+    const gateLines = result.output.split('\n').filter((l) => /^\s+[✓✗] /.test(l));
+    expect(gateLines).toHaveLength(23);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 });
 
 describe('consistency phase semantics — Caso I (PRE_PACKAGE nunca é FINAL)', () => {
