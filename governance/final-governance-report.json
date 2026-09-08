@@ -1,222 +1,33 @@
 {
-  "generatedAt": "2026-09-07T22:01:27.417Z",
-  "engine": "final-governance-engine/v1",
   "artifactType": "final-governance-report",
-  "artifactVersion": "2.0.0",
-  "runId": "rap-governed-20260907215204523-98f93772",
-  "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-  "strictMode": true,
-  "finalDecision": "AUTONOMOUS_READY_GO",
-  "autonomousReady": true,
-  "allChecksPass": true,
-  "criticalBlocked": false,
+  "artifactVersion": "1.0.0",
+  "generatedAt": "2026-09-08T11:54:41.346Z",
+  "runId": "rap-governed-20260908115352769-86b78cc5",
+  "sourceFingerprint": "17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb",
+  "policyId": "RAP-AGENT-CONSTITUTION",
+  "policyVersion": "1.0.3",
+  "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
+  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+  "autonomousReady": false,
+  "allChecksPass": false,
   "checks": [
     {
-      "id": "run_context",
-      "gateId": "run_context",
-      "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
-      "runId": "rap-governed-20260907215204523-98f93772",
-      "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-      "reason": null,
-      "runContext": {
-        "runId": "rap-governed-20260907215204523-98f93772",
-        "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-        "startedAt": "2026-09-07T21:52:04.618Z",
-        "generatedAt": "2026-09-07T22:01:25.763Z",
-        "status": "RUNNING",
-        "artifactType": "run-context",
-        "artifactVersion": "1.0.0",
-        "policyId": "RAP-AGENT-CONSTITUTION",
-        "policyVersion": "1.0.3",
-        "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
-        "lastGovernedStage": "final-governance",
-        "lastSourceVerificationAt": "2026-09-07T22:01:25.763Z",
-        "stageHistory": [
-          {
-            "stage": "final-governance",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T21:54:14.640Z"
-          },
-          {
-            "stage": "final-consistency",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T21:54:33.544Z"
-          },
-          {
-            "stage": "final-governance",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T21:54:33.889Z"
-          },
-          {
-            "stage": "final-governance",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T21:55:18.254Z"
-          },
-          {
-            "stage": "final-governance",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T21:59:37.812Z"
-          },
-          {
-            "stage": "final-consistency",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T21:59:55.820Z"
-          },
-          {
-            "stage": "final-governance",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T21:59:56.168Z"
-          },
-          {
-            "stage": "final-governance",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T22:00:33.536Z"
-          },
-          {
-            "stage": "final-consistency",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T22:01:25.396Z"
-          },
-          {
-            "stage": "final-governance",
-            "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-            "verifiedAt": "2026-09-07T22:01:25.763Z"
-          }
-        ]
-      }
-    },
-    {
       "id": "master_scorecard",
-      "gateId": "master_scorecard",
-      "mandatory": true,
+      "pass": false,
+      "status": "DEFERRED",
+      "reason": "dimensionsBelow10=2 (delivered pending)"
+    },
+    {
+      "id": "source_integrity",
+      "pass": true,
       "status": "PASS",
-      "pass": true,
-      "severity": "OK",
-      "runId": "rap-governed-20260907215204523-98f93772",
-      "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-      "reason": null,
-      "dimensions": 78,
-      "dimensionsAt10": 78,
-      "below10": 0,
-      "failures": []
+      "reason": "source fingerprint matches frozen run"
     },
     {
-      "id": "self_proof",
-      "gateId": "self_proof",
-      "mandatory": true,
+      "id": "agent_policy_compliance",
+      "pass": true,
       "status": "PASS",
-      "pass": true,
-      "severity": "OK",
-      "runId": "rap-governed-20260907215204523-98f93772",
-      "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-      "reason": null,
-      "selfProofStatus": "PASS",
-      "verifierPassed": true,
-      "staleReferencesFound": 0,
-      "staleHashesFound": 0,
-      "failedGates": []
-    },
-    {
-      "id": "tamper_detection",
-      "gateId": "tamper_detection",
-      "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
-      "runId": "rap-governed-20260907215204523-98f93772",
-      "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-      "reason": null,
-      "decision": "GO",
-      "failedChecks": 0
-    },
-    {
-      "id": "final_proof",
-      "gateId": "final_proof",
-      "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
-      "runId": "rap-governed-20260907215204523-98f93772",
-      "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-      "reason": null,
-      "decision": "AUTONOMOUS_READY_GO",
-      "fingerprintStatus": "FRESH",
-      "blockerCount": 0
-    },
-    {
-      "id": "final_readiness",
-      "gateId": "final_readiness",
-      "mandatory": true,
-      "status": "PASS",
-      "pass": true,
-      "severity": "OK",
-      "runId": "rap-governed-20260907215204523-98f93772",
-      "sourceFingerprint": "637a67e5b77eb2964b6a4b13e119f8ade9c18967fdbbff6a304c41552fed0a51",
-      "reason": null,
-      "decision": "AUTONOMOUS_READY_GO",
-      "blockerCount": 0
-    },
-    {
-      "id": "mesh_go_no_go",
-      "pass": true,
-      "severity": "OK",
-      "status": "GO",
-      "reasons": [],
-      "executionId": "mesh-20260903185903-qt4iaz",
-      "passRate": "139/139",
-      "reason": null
-    },
-    {
-      "id": "release_gate",
-      "pass": true,
-      "severity": "OK",
-      "gate": "GO",
-      "reason": null
-    },
-    {
-      "id": "replay_false_positives",
-      "pass": true,
-      "severity": "OK",
-      "violations": [],
-      "reason": null
-    },
-    {
-      "id": "visual_journeys",
-      "pass": true,
-      "severity": "OK",
-      "source": "replay-hardening-report.json",
-      "violations": [],
-      "reason": null
-    },
-    {
-      "id": "package_integrity",
-      "pass": true,
-      "severity": "OK",
-      "zipName": "r-agent2-20260907-185829.payload.zip",
-      "computed": "cfe1297b1a3faa416632d1b4…",
-      "recorded": "cfe1297b1a3faa416632d1b4…",
-      "hashSource": "governance/package-validation-report.json",
-      "reason": null
-    },
-    {
-      "id": "critical_blockers",
-      "pass": true,
-      "severity": "OK",
-      "criticalCount": 0,
-      "blockerCount": 0,
-      "reason": null
-    },
-    {
-      "id": "governance_signature",
-      "pass": true,
-      "severity": "OK",
-      "reason": null
+      "reason": "policy attestation exists for the governed run"
     }
-  ],
-  "criticalFailed": [],
-  "highFailed": [],
-  "summary": "Governança limpa. Decisão: AUTONOMOUS_READY_GO"
+  ]
 }
