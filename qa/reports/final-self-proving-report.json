@@ -1,49 +1,41 @@
 {
-  "generatedAt": "2026-09-08T13:05:04.818Z",
+  "generatedAt": "2026-09-08T13:31:56.319Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260908-100347.zip",
-  "zipHash": "714617b19a821687c23aced24128eb2bde85ea2333f176f3d27437c03e25abd8",
-  "manifestHash": "faadff6c040f8562f374cc62a73b5972bd107293481343d8d4fc47ccf15ae99b",
-  "replayHash": "7bd0da717b8d1fead0dd286f6a035c1a64e840eb1f6de29db85ae1df71081828",
-  "governanceHash": "c07ac1a3866565c33c52d792cf5dde855f4c5add7ee4ae726efe863f3c930683",
-  "readinessHash": "97398078abff53ba3c52cd92d1f109e39840a552765f9e1bf030d880e63ed68d",
-  "consistencyHash": "42903d81055a809ca40459165d4f052d1f618305815ff9b1cd130cba1ca83fc5",
-  "contaminationHash": "611c43cc0db3c4c5b0d21b411a16006e14b33cf4abbc3c3e8dbff62afbaa817c",
-  "packageIntegrityHash": "cee594679fe3f0e3a179bf4bca71ed38e30ca3846aa13e5090c0f7095db264a7",
+  "zipName": "r-agent2-20260908-103006.zip",
+  "zipHash": "99c92cc76260bf06bbd2fd9e52fb260bc3ac24ad6f84a194317b8da2725e4c60",
+  "manifestHash": "3f28d45d6c4940fb483adc21fb85e14df68b78cb047a0ed7232297a956cf4c41",
+  "replayHash": "e1c87fd908aed85ab44780198dd7c0c4f11e718d36295434408ab12e0458b0d9",
+  "governanceHash": "96d9a429b80039ba553b8d5e1a856831125f852e7e9cadda27104b24a091fd3b",
+  "readinessHash": "dbb20871955f5bded3347854281e6a8d7609b77b018e0fc2dfb892467890b5b2",
+  "consistencyHash": "ea2144668941fa7ad070f872c2e200bf9218d49fe436d651cad1e2d47327aa89",
+  "contaminationHash": "b165e32b5c666a1fc2ec5109e48d00c0462f3330f1a31e4df3cbfae221fe374b",
+  "packageIntegrityHash": "72743403fa1d8d93ac9336e630e16bb7bb7652d5112e35a3e0fe952a1ffdbebc",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "e620374089ecf33e51166f95a9161bbc5d7d67b9aae2ebf7232260e63e4bfc6b",
+  "gateHash": "7bd20ced3735b2475ec087c102954de8c5d8479250e0855341fe72e2ffb38664",
   "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
-    "packageIntegrity": "PACKAGE_INTEGRITY_NO_GO",
-    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]",
+    "packageIntegrity": "PACKAGE_INTEGRITY_GO",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
     "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
-  "packageIntegrityOk": false,
+  "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
   "autonomousReady": false,
   "mandatoryFailures": [
     {
-      "engine": "packageIntegrity",
-      "decision": "PACKAGE_INTEGRITY_NO_GO"
-    },
-    {
       "engine": "finalGovernance",
-      "decision": "NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]"
+      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
     },
     {
       "engine": "readiness",
       "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
-    },
-    {
-      "engine": "packageIntegrity.zipBinding",
-      "decision": "ZIP_HASH_NOT_BOUND"
     }
   ],
   "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260908-100347.zip. Package: DIVERGENTE. Validadores falhos: 4."
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260908-103006.zip. Package: ÍNTEGRO. Validadores falhos: 2."
 }
