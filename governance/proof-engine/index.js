@@ -873,15 +873,6 @@ function buildFinalProofReport(context = {}) {
   const intelligenceData    = loadQaMeshIntelligence();
   const intelligenceResult  = evaluateIntelligenceStability(intelligenceData);
 
-  // B. Cross-report consistency
-  const crossReport = runCrossReportValidation({
-    intelligenceData,
-    handoffData:    humanHandoffArtifact.json,
-    pbxData:        pbxArtifact.json,
-    verticalSummaries: context.verticalSummaries || null,
-    packageValidationReport: null, // será calculado abaixo
-  });
-
   // Cobertura de replay — set-based: matched = interseção(required, supported).
   // Extra journeys (beyond required) NUNCA aumentam a cobertura; percent ≤ 100.
   const supportedJourneyIds = Array.isArray(context.prodLikeSummary?.supportedJourneyIds)
@@ -972,6 +963,19 @@ function buildFinalProofReport(context = {}) {
       status: deferred ? 'DEFERRED' : 'FAIL',
     }, 'package-validation-report', { rootDir: ROOT, includeGit: true });
   }
+
+  // B. Cross-report consistency — avaliada DEPOIS do package validation
+  // fresco: passar null aqui fazia o cross-report ler o
+  // governance/package-validation-report.json STALE do run anterior (que
+  // podia reprovar o ZIP de um release antigo contra specs novas e gerar
+  // contradição blocker espúria na fase PRE_PACKAGE).
+  const crossReport = runCrossReportValidation({
+    intelligenceData,
+    handoffData:    humanHandoffArtifact.json,
+    pbxData:        pbxArtifact.json,
+    verticalSummaries: context.verticalSummaries || null,
+    packageValidationReport: packageValidation,
+  });
 
   // Proof coverage
   const proofCoverage = { total: requiredArtifacts.length, valid: requiredArtifacts.filter((a) => a.exists).length };
