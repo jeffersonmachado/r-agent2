@@ -406,6 +406,8 @@ SYNC_PATHS=(
     # Pacotes versionados exigidos pelo build Docker (api/Dockerfile):
     # COPY vendor/auth/ e vendor/whatsapp-qr-bridge/ (dependências file:)
     "vendor"
+    # Contexto de build do serviço asterisk (docker-compose.prod.yml)
+    "pbx"
 )
 
 info "  Diretórios/arquivos que serão sincronizados:"
