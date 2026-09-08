@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-09-08T13:05:07.612Z
+- Generated at: 2026-09-08T13:09:47.855Z
 - Canonical mesh execution: mesh-20260903185903-qt4iaz
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected 17a8583337a5904f0915e2a13605d9835124b7607ad243248e3c595f4581d2bb, got 2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670 | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]]
+- Readiness decision: NO_GO
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
