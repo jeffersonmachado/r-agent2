@@ -1,14 +1,243 @@
 {
-  "artifactType": "final-consistency-gate-report",
-  "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-08T13:35:18.231Z",
-  "runId": "rap-governed-20260908130919133-cce17b15",
-  "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
-  "policyId": "RAP-AGENT-CONSTITUTION",
-  "policyVersion": "1.0.3",
-  "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
+  "generatedAt": "2026-09-08T13:38:37.450Z",
+  "engine": "final-consistency-gate/v1",
+  "artifactType": "final-consistency-report",
+  "artifactVersion": "2.0.0",
   "phase": "FINAL",
   "transitional": false,
+  "runId": "rap-governed-20260908130919133-cce17b15",
+  "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+  "pass": true,
   "decision": "FINAL_CONSISTENCY_GO",
-  "failures": []
+  "totalChecks": 13,
+  "failedChecks": 0,
+  "criticalFailures": 0,
+  "highFailures": 0,
+  "checks": [
+    {
+      "id": "run_context",
+      "gateId": "run_context",
+      "mandatory": true,
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20260908130919133-cce17b15",
+      "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+      "reason": null,
+      "runContext": {
+        "runId": "rap-governed-20260908130919133-cce17b15",
+        "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+        "startedAt": "2026-09-08T13:09:19.273Z",
+        "generatedAt": "2026-09-08T13:38:37.442Z",
+        "status": "RUNNING",
+        "artifactType": "run-context",
+        "artifactVersion": "1.0.0",
+        "policyId": "RAP-AGENT-CONSTITUTION",
+        "policyVersion": "1.0.3",
+        "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
+        "lastGovernedStage": "final-consistency",
+        "lastSourceVerificationAt": "2026-09-08T13:38:37.442Z",
+        "stageHistory": [
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:31:07.827Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:31:28.176Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:31:28.536Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:31:53.616Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:37:03.761Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:37:26.625Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:37:26.855Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:37:53.030Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+            "verifiedAt": "2026-09-08T13:38:37.442Z"
+          }
+        ]
+      }
+    },
+    {
+      "id": "master_scorecard",
+      "gateId": "master_scorecard",
+      "mandatory": true,
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20260908130919133-cce17b15",
+      "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+      "reason": null,
+      "dimensions": 78,
+      "dimensionsAt10": 78,
+      "below10": 0,
+      "failures": []
+    },
+    {
+      "id": "self_proof",
+      "gateId": "self_proof",
+      "mandatory": true,
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20260908130919133-cce17b15",
+      "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+      "reason": null,
+      "selfProofStatus": "PASS",
+      "verifierPassed": true,
+      "staleReferencesFound": 0,
+      "staleHashesFound": 0,
+      "failedGates": []
+    },
+    {
+      "id": "tamper_detection",
+      "gateId": "tamper_detection",
+      "mandatory": true,
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20260908130919133-cce17b15",
+      "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+      "reason": null,
+      "decision": "GO",
+      "failedChecks": 0
+    },
+    {
+      "id": "final_proof",
+      "gateId": "final_proof",
+      "mandatory": true,
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20260908130919133-cce17b15",
+      "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+      "reason": null,
+      "decision": "AUTONOMOUS_READY_GO",
+      "fingerprintStatus": "FRESH",
+      "blockerCount": 0
+    },
+    {
+      "id": "final_readiness",
+      "gateId": "final_readiness",
+      "mandatory": true,
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20260908130919133-cce17b15",
+      "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+      "reason": null,
+      "decision": "AUTONOMOUS_READY_GO",
+      "blockerCount": 0
+    },
+    {
+      "id": "final_governance",
+      "gateId": "final_governance",
+      "mandatory": true,
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
+      "runId": "rap-governed-20260908130919133-cce17b15",
+      "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
+      "reason": null
+    },
+    {
+      "check": "replay_consistency",
+      "pass": true,
+      "severity": "OK",
+      "hardeningDecision": "REPLAY_HARDENING_GO",
+      "consistencyDecision": "REPLAY_CONSISTENCY_GO",
+      "reason": null
+    },
+    {
+      "check": "readiness_consistency",
+      "pass": true,
+      "severity": "OK",
+      "driftDecision": "READINESS_NO_DRIFT",
+      "driftCount": 0,
+      "reason": null
+    },
+    {
+      "check": "package_consistency",
+      "pass": true,
+      "severity": "OK"
+    },
+    {
+      "check": "governance_engine_consistency",
+      "pass": true,
+      "severity": "OK",
+      "govDecision": "AUTONOMOUS_READY_GO",
+      "consistDecision": "CONSISTENCY_GO"
+    },
+    {
+      "check": "contamination_consistency",
+      "pass": true,
+      "severity": "OK",
+      "contaminatedFiles": 0,
+      "totalContaminations": 0,
+      "reason": null
+    },
+    {
+      "check": "cross_engine_alignment",
+      "pass": true,
+      "severity": "OK",
+      "contradictions": [],
+      "allDecisions": [
+        {
+          "engine": "replay-hardening",
+          "decision": "REPLAY_HARDENING_GO"
+        },
+        {
+          "engine": "replay-consistency",
+          "decision": "REPLAY_CONSISTENCY_GO"
+        },
+        {
+          "engine": "final-governance",
+          "decision": "AUTONOMOUS_READY_GO"
+        },
+        {
+          "engine": "governance-consistency",
+          "decision": "CONSISTENCY_GO"
+        },
+        {
+          "engine": "readiness-drift",
+          "decision": "READINESS_NO_DRIFT"
+        },
+        {
+          "engine": "contamination",
+          "decision": "NO_CONTAMINATION"
+        }
+      ],
+      "reason": null
+    }
+  ],
+  "failures": [],
+  "summary": "Todos os 13 engines concordam. Consistência final validada."
 }
