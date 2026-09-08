@@ -403,6 +403,9 @@ SYNC_PATHS=(
     "tests"
     "redis"
     "lib"
+    # Pacotes versionados exigidos pelo build Docker (api/Dockerfile):
+    # COPY vendor/auth/ e vendor/whatsapp-qr-bridge/ (dependências file:)
+    "vendor"
 )
 
 info "  Diretórios/arquivos que serão sincronizados:"
