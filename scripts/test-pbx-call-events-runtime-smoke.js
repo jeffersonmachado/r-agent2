@@ -783,7 +783,12 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((err) => {
+  main().then(() => {
+    // CLI smoke: encerra explicitamente após o sucesso — módulos do runtime
+    // (pollers/intervalos internos) podem manter o event loop vivo e travar
+    // o meshRunner, que aguarda o 'close' do processo filho.
+    process.exit(0);
+  }).catch((err) => {
     // eslint-disable-next-line no-console
     console.error('[pbx-call-events-runtime-smoke] FAIL', err?.message || err);
     process.exit(1);
