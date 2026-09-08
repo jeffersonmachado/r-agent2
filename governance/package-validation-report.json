@@ -1,24 +1,9 @@
 {
-  "generatedAt": "2026-09-08T20:17:59.678Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260908-105354.payload.zip",
-  "zipName": "r-agent2-20260908-105354.payload.zip",
-  "zipSha256": "414a276f47b99e3bcfe75936f385ff306602d1ce132be27a71da497e0f1ef94b",
-  "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260908-105354.zip",
-  "selectionMode": "audited",
-  "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260908-105354.manifest.json",
-  "manifestAudit": "passed",
-  "auditSatisfied": true,
-  "selfContainmentCheck": {
-    "passed": true,
-    "missing": []
-  },
+  "generatedAt": "2026-09-08T20:38:39.108Z",
+  "ok": false,
+  "zipPath": null,
+  "zipName": null,
   "requiredEntries": [
-    "governance/final-proof-report.json",
-    "governance/evidence-manifest.json",
-    "governance/blocker-engine.js",
-    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -43,34 +28,15 @@
     "governance/experience-api-segregation-report.json",
     "governance/source-remote-provenance-report.json"
   ],
-  "entryCount": 6057,
-  "missingEntries": [
-    "governance/experience-api-segregation-report.json",
-    "governance/source-remote-provenance-report.json"
-  ],
-  "missingEntryCodes": [
-    {
-      "entry": "governance/experience-api-segregation-report.json",
-      "code": "EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING"
-    },
-    {
-      "entry": "governance/source-remote-provenance-report.json",
-      "code": "REMOTE_PROVENANCE_EVIDENCE_MISSING"
-    }
-  ],
-  "ok": false,
-  "error": null,
-  "packageBinding": {
-    "boundTo": "r-agent2-20260908-105354.payload.zip",
-    "sha256": "414a276f47b99e3bcfe75936f385ff306602d1ce132be27a71da497e0f1ef94b",
-    "immutable": true,
-    "selfProving": true,
-    "offlineAuditable": true
-  },
+  "missingEntries": [],
+  "error": "artifact_missing:none_found_in_dist",
+  "deferred": true,
+  "phase": "PRE_PACKAGE",
+  "status": "DEFERRED",
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260908130919133-cce17b15",
-  "sourceFingerprint": "2126381eeaf49cbdc5c6922b912f7405792bcbccc5ca9109572835ed35932670",
-  "gitCommit": "6c244ab52f8a2c55a85c1f24f8ae4740556ce0fb",
-  "gitTree": "6a356adbbf3fac28cf70cc2fd5254ada292c9827"
+  "runId": "rap-governed-20260908202112558-057abaeb",
+  "sourceFingerprint": "8a2d68f3d7529aa3e54bc6a52cda6fd28c9345168d8dd825fd8bf7588bb60ce5",
+  "gitCommit": "4db939f3fd13576aaea27cf7d3c1ecf31465fccb",
+  "gitTree": "32321729a9f3ba5d48fe7c8e5de46bf0c94bbc85"
 }

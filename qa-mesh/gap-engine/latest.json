@@ -1,45 +1,25 @@
 {
-  "generatedAt": "2026-09-08T20:17:46.292Z",
-  "status": "NO_GO:AUTONOMOUS_READY_GO",
+  "generatedAt": "2026-09-08T20:38:25.112Z",
+  "status": "NO_GO:ENTERPRISE_READY_GO",
   "platformMaturity": "enterprise-partial",
   "backlog": [
     {
-      "id": "gap-proof-package-validation",
+      "id": "gap-cross-report-package_validation_failed",
       "severity": "critical",
-      "area": "package",
-      "title": "ZIP de release nao contem todos os proofs obrigatorios",
+      "area": "cross-report",
+      "title": "Contradição cross-report: package_validation_failed",
       "evidence": {
+        "type": "package_validation_failed",
         "missingEntries": [
           "governance/experience-api-segregation-report.json",
           "governance/source-remote-provenance-report.json"
         ],
-        "missingEntryCodes": [
-          {
-            "entry": "governance/experience-api-segregation-report.json",
-            "code": "EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING"
-          },
-          {
-            "entry": "governance/source-remote-provenance-report.json",
-            "code": "REMOTE_PROVENANCE_EVIDENCE_MISSING"
-          }
-        ]
+        "blocker": true,
+        "message": "Pacote não passou na validação: 2 entradas ausentes."
       },
-      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
-    },
-    {
-      "id": "gap-proof-stale-fingerprints",
-      "severity": "critical",
-      "area": "proof-governance",
-      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
-      "evidence": {
-        "diverged": [
-          "sourceFingerprint",
-          "chainFingerprint"
-        ]
-      },
-      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+      "suggestedFix": "Pacote não passou na validação: 2 entradas ausentes."
     }
   ],
-  "blocking": 2,
+  "blocking": 1,
   "nonBlocking": 0
 }

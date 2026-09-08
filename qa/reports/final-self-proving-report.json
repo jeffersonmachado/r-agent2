@@ -1,32 +1,37 @@
 {
-  "generatedAt": "2026-09-08T20:07:04.778Z",
+  "generatedAt": "2026-09-08T20:43:01.151Z",
   "engine": "generate-self-proving-report/v1",
   "zipName": null,
   "zipHash": null,
-  "manifestHash": "ce2d09caecb0c6a1105ab691a504cf654b6dd3976a6c8e5464934314dadb2548",
+  "manifestHash": "78f9d27fc2c574be3d89f64f6b11f5bcb1f3d0156b9ba4074d44cb7b1d79adcd",
   "replayHash": "94e2ed78ddeeca3c2250e1b17e09390ed2a19b47e81e8bd6ee42043f60252973",
   "governanceHash": "6b47a99a72b5b53b5e0d768ae10de7642899aae992034f114639362f426c9e67",
-  "readinessHash": "af3b6a364759ab2322c3eb9eca44e17101caea529f270359241cf908daaf68bb",
+  "readinessHash": "5a449f993be7ce43a0bfedb181f9abdafd9161967e0d6af205231fb7f18252f7",
   "consistencyHash": "9c303c88c2d41232ff32d79de19b797c57718d3e002850c219201971a029648d",
   "contaminationHash": "7015b055a5a428ae8cf6b3dc087e348c2b3fdf07222bd603528a7d5c63882fc1",
   "packageIntegrityHash": "328fbd1cd552fde683b2fab35df4f7f8655ba348ec0d96d38b7f500aee190fe6",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
   "gateHash": "94c7377961c30a071cbe2eacb360e49efdf8c2c598755e72051124472f7ed1e9",
-  "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
+  "recalculatedReadinessHash": "8e2a08c58cee71be7d52be264899d754d2cf8a16126f058848e96aaa2f64ddda",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
     "finalGovernance": "AUTONOMOUS_READY_GO",
-    "readiness": "AUTONOMOUS_READY_GO",
+    "readiness": "NO_GO:ENTERPRISE_READY_GO",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
-  "autonomousReady": true,
-  "mandatoryFailures": [],
-  "ok": true,
-  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 0."
+  "autonomousReady": false,
+  "mandatoryFailures": [
+    {
+      "engine": "readiness",
+      "decision": "NO_GO:ENTERPRISE_READY_GO"
+    }
+  ],
+  "ok": false,
+  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 1."
 }
