@@ -70,6 +70,9 @@ services:
       - r-agent2-runtime:/var/lib/ragent2
       - pbx-media:/app/api/data/pbx-media
       - pbx-recordings:/app/api/data/pbx-recordings
+      # Token RPA canônico do workspace (excluído da imagem via .dockerignore):
+      # montado em runtime para que /auth/rpa/login funcione no stack local.
+      - ./core/rpa/config/rpa-token.json:/app/core/rpa/config/rpa-token.json:ro
 
   asterisk:
     build:
