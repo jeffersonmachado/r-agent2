@@ -17,6 +17,18 @@ function run(command, label) {
 }
 
 function main() {
+  // GATE DE PROVENIÊNCIA: snapshot do worktree no INÍCIO do pipeline, antes de
+  // qualquer geração. Os passos abaixo (platform-readiness, gates) regeneram
+  // artefatos de governança rastreados — sem o snapshot antecipado, o gate
+  // DIRTY_WORKTREE do empacotamento (two-pass-release.sh) falharia com as
+  // pendências geradas pelo próprio pipeline. O two-pass honra
+  // RAP_WORKTREE_SNAPSHOT_VALIDATED=1 e não repete o check. NUNCA commit
+  // automático: worktree sujo aqui = NO_GO.
+  run(
+    'node scripts/governance/check-clean-worktree.js --root .',
+    'GATE DIRTY_WORKTREE: snapshot do worktree no início do pipeline',
+  );
+  process.env.RAP_WORKTREE_SNAPSHOT_VALIDATED = '1';
   run('npm run system:validate', 'Validação oficial (backend + frontend + QA)');
   // A validação acima gera resíduos de runtime (ex.: frontend/test-results);
   // o cleanup oficial precisa rodar antes do readiness materializar o cleanup-proof.

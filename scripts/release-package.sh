@@ -86,9 +86,15 @@ fi
 # NUNCA commit automático: worktree sujo = NO_GO DIRTY_WORKTREE.
 if [[ -z "$AUDIT_ONLY_ZIP" ]]; then
   step "GATE DIRTY_WORKTREE: snapshot do worktree no início do pipeline..."
-  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/check-clean-worktree.js" --root "$PROJECT_ROOT" \
-    || fail "DIRTY_WORKTREE — release bloqueada: commite ou descarte as pendências antes do release"
-  ok "Worktree limpo no snapshot inicial"
+  if [[ "${RAP_WORKTREE_SNAPSHOT_VALIDATED:-}" == "1" ]]; then
+    # Snapshot já validado no início do pipeline chamador (ex.: system:release):
+    # passos intermediários regeneram artefatos de governança rastreados.
+    ok "Worktree snapshot já validado no início do pipeline (RAP_WORKTREE_SNAPSHOT_VALIDATED=1)"
+  else
+    node_with_workspace_env "$PROJECT_ROOT/scripts/governance/check-clean-worktree.js" --root "$PROJECT_ROOT" \
+      || fail "DIRTY_WORKTREE — release bloqueada: commite ou descarte as pendências antes do release"
+    ok "Worktree limpo no snapshot inicial"
+  fi
 fi
 
 # Qualquer match abaixo representa BLOQUEIO de release.
