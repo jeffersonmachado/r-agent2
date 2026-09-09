@@ -55,11 +55,13 @@ describe('release hygiene — testes positivos (envelope limpo + evidência ínt
     expect(gateStatus(result.output, 'release_hygiene')).toBe('PASS');
     expect(gateStatus(result.output, 'payload_experience_segregation')).toBe('PASS');
     expect(gateStatus(result.output, 'payload_experience_api_segregation')).toBe('PASS');
+    expect(gateStatus(result.output, 'payload_outbound_reliability')).toBe('PASS');
     expect(gateStatus(result.output, 'consistency_phase_semantics')).toBe('PASS');
-    // 23 gates mandatory: 1–20 + 12b (experience_segregation) +
-    // 12c (final_status_projection) + 12d (experience_api_segregation).
+    // 24 gates mandatory: 1–20 + 12b (experience_segregation) +
+    // 12c (final_status_projection) + 12d (experience_api_segregation) +
+    // 12e (outbound_reliability).
     const gateLines = result.output.split('\n').filter((l) => /^\s+[✓✗] /.test(l));
-    expect(gateLines).toHaveLength(23);
+    expect(gateLines).toHaveLength(24);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
@@ -275,7 +277,7 @@ describe('experience API segregation evidence — gate payload_experience_api_se
   }
 });
 
-describe('remote provenance evidence — gate manifest_provenance (extensão offline, 23 gates mantidos)', () => {
+describe('remote provenance evidence — gate manifest_provenance (extensão offline, 24 gates com outbound_reliability)', () => {
   const cases = [
     {
       name: 'evidência ausente no payload',
@@ -337,14 +339,14 @@ describe('remote provenance evidence — gate manifest_provenance (extensão off
     });
   }
 
-  test('PASS: evidência íntegra (default da fixture) → manifest_provenance PASS e total de gates continua 23', () => {
+  test('PASS: evidência íntegra (default da fixture) → manifest_provenance PASS e total de gates é 24', () => {
     const dir = makeFixtureDir();
     const fixture = buildReleaseFixture(dir, {});
     const result = runVerifier(fixture);
     expect(result.exitCode).toBe(0);
     expect(gateStatus(result.output, 'manifest_provenance')).toBe('PASS');
     const gateLines = result.output.split('\n').filter((l) => /^\s+[✓✗] /.test(l));
-    expect(gateLines).toHaveLength(23);
+    expect(gateLines).toHaveLength(24);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });

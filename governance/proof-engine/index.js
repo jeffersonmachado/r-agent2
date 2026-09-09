@@ -81,6 +81,14 @@ const REQUIRED_ARTIFACT_SPECS = [
   // packageRequired=true → package-validator exige no payload e o verifier
   // offline (gate payload_experience_api_segregation) valida hash binding.
   { id: 'experience_api_segregation', path: 'governance/experience-api-segregation-report.json',              domain: 'governance',    packageRequired: true },
+  // Confiabilidade do pipeline outbound (transactional outbox + delivery
+  // ambiguity): prova gerada por generate-outbound-reliability-evidence a
+  // partir das suítes Jest reais + invariante de banco — nenhum status
+  // hardcoded. packageRequired=true → o package-validator exige o arquivo no
+  // payload e o verifier offline (gate payload_outbound_reliability) valida
+  // hash binding + semântica fail-closed (semântica também enforced aqui via
+  // semanticArtifactViolations → proofStatus=invalid).
+  { id: 'outbound_reliability', path: 'governance/outbound-reliability-report.json',                     domain: 'governance',    packageRequired: true },
   // Proveniência REMOTA do source (gate fail-closed ANTES do SEAL_GO):
   // verify-remote-provenance comprova que o commit/tree do release existem no
   // remote (e a tag de release, quando exigida). packageRequired=true → o
@@ -244,6 +252,19 @@ function semanticArtifactViolations(artifact) {
 
   const invalidSnapshots = findInvalidSnapshots(json);
   if (invalidSnapshots.length > 0) violations.push(`snapshot_invalid(${invalidSnapshots.length})`);
+
+  // Prova de confiabilidade outbound: presença não basta — status PASS e os
+  // invariantes declarados precisam estar íntegros, senão proofStatus=invalid
+  // (fail-closed: o verifier offline rejeita proofStatus != 'valid' e o
+  // package-validator exige a entrada packageRequired no payload).
+  if (artifact.id === 'outbound_reliability') {
+    if (status !== 'PASS') violations.push('outbound_reliability_status_not_pass');
+    if (json.transactionalOutbox !== true) violations.push('transactional_outbox_not_true');
+    if (json.partialStatePossible !== false) violations.push('partial_state_possible');
+    if (json.blindRetryAfterAmbiguousDelivery !== false) violations.push('blind_retry_after_ambiguous_delivery');
+    if (json.providerCapabilityAwareRecovery !== true) violations.push('provider_capability_aware_recovery_not_true');
+    if (Number(json.logicalDuplicateOperations) !== 0) violations.push('logical_duplicate_operations_nonzero');
+  }
 
   return violations;
 }

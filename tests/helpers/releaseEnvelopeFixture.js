@@ -122,6 +122,15 @@ function buildScorecard(below10Ids = [], lin = lineage) {
  *   remoteProvHashMismatch evidence-manifest registra hash errado
  *   remoteProvNotPackageRequired  evidence-manifest sem packageRequired=true
  *   remoteProvManifestEntryMissing  evidence-manifest sem a entrada source_remote_provenance
+ *   omitOutboundReliability  payload sem outbound-reliability-report (OUTBOUND_RELIABILITY_EVIDENCE_MISSING)
+ *   obrStatus            default 'PASS' ('FAIL' → OUTBOUND_RELIABILITY_NO_GO)
+ *   obrFlags             overrides dos invariantes (ex.: { transactionalOutbox: false })
+ *   obrRunId / obrSourceFingerprint  lineage divergente (CROSS_RUN_ARTIFACT / SOURCE_FINGERPRINT_MISMATCH)
+ *   obrNoLineage         remove runId/sourceFingerprint (ARTIFACT_RUN_ID_MISSING)
+ *   obrHashMismatch      evidence-manifest registra hash errado
+ *   obrNotPackageRequired  evidence-manifest sem packageRequired=true
+ *   obrManifestEntryMissing  evidence-manifest sem a entrada outbound_reliability
+ *   obrProofStatusInvalid  evidence-manifest registra proofStatus='invalid'
  *   buildEnvelope        constrói o envelope zip físico (release_hygiene)
  *   envelopeExtraFiles   { path: content } extras dentro do envelope zip
  *                        (ex.: 'r-agent2/dist/verifier/verify-result.json' → Caso A/B)
@@ -312,6 +321,38 @@ function buildReleaseFixture(baseDir, tamper = {}, identity = {}) {
           exists: true,
           hash: remoteProvHash,
           proofStatus: 'valid',
+        });
+      }
+    }
+
+    // Evidência de outbound-reliability (packageRequired=true): prova de
+    // confiabilidade do pipeline outbound (gate payload_outbound_reliability)
+    // — mesmo padrão das provas acima, com invariantes semânticos íntegros.
+    if (!tamper.omitOutboundReliability) {
+      const obr = {
+        ...lin('outbound-reliability-report'),
+        status: tamper.obrStatus || 'PASS',
+        transactionalOutbox: true,
+        partialStatePossible: false,
+        blindRetryAfterAmbiguousDelivery: false,
+        providerCapabilityAwareRecovery: true,
+        logicalDuplicateOperations: 0,
+        ...(tamper.obrFlags || {}),
+      };
+      if (tamper.obrRunId) obr.runId = tamper.obrRunId;
+      if (tamper.obrSourceFingerprint) obr.sourceFingerprint = tamper.obrSourceFingerprint;
+      if (tamper.obrNoLineage) { delete obr.runId; delete obr.sourceFingerprint; }
+      const obrPath = path.join(govDir, 'outbound-reliability-report.json');
+      writeJson(obrPath, obr);
+      const obrHash = tamper.obrHashMismatch ? '0'.repeat(64) : sha256File(obrPath);
+      if (!tamper.obrManifestEntryMissing) {
+        manifestArtifacts.push({
+          id: 'outbound_reliability',
+          path: 'governance/outbound-reliability-report.json',
+          packageRequired: tamper.obrNotPackageRequired === true ? false : true,
+          exists: true,
+          hash: obrHash,
+          proofStatus: tamper.obrProofStatusInvalid === true ? 'invalid' : 'valid',
         });
       }
     }

@@ -14,7 +14,7 @@
  * externa (rede/remote git): a proveniência remota é validada apenas como
  * evidência assinada/vinculada por hash dentro do payload (gate 18).
  *
- * Gates (qualquer FAIL → exit 1; 23 gates: 1–20 + 12b + 12c + 12d):
+ * Gates (qualquer FAIL → exit 1; 24 gates: 1–20 + 12b + 12c + 12d + 12e):
  *   1.  payload/manifest/envelope presentes
  *   2.  payload sha256 == manifest.sha256
  *   3.  governança canônica existe dentro do payload (MISSING_CANONICAL_GOVERNANCE)
@@ -51,6 +51,14 @@
  *       NO_GO / LEAKS / NOT_IN_MANIFEST / NOT_PACKAGE_REQUIRED /
  *       EVIDENCE_HASH_MISMATCH), runId/fingerprint == manifest e contadores
  *       productionTechnicalLeaks/supportEngineeringLeaks/directUrlBypasses = 0
+ *   12e. payload_outbound_reliability: prova de confiabilidade do pipeline
+ *       outbound packageRequired dentro do payload
+ *       (OUTBOUND_RELIABILITY_EVIDENCE_MISSING / NO_GO / SEMANTIC /
+ *       NOT_IN_MANIFEST / NOT_PACKAGE_REQUIRED / PROOF_INVALID /
+ *       EVIDENCE_HASH_MISMATCH), runId/fingerprint == manifest e invariantes
+ *       transactionalOutbox=true, partialStatePossible=false,
+ *       blindRetryAfterAmbiguousDelivery=false,
+ *       providerCapabilityAwareRecovery=true, logicalDuplicateOperations=0
  *   12c. final_status_projection_consistency: projeções derivadas DENTRO do
  *       payload (docs/architecture/RAP_MASTER_SCORECARD.md, docs/governance/
  *       PLATFORM_STATUS.md, ENTERPRISE_READINESS.md, _platform-status-source.json,
@@ -474,6 +482,59 @@ function runVerification(args, options) {
           `EXPERIENCE_API_SEGREGATION_EVIDENCE_HASH_MISMATCH — manifest=${apiRecordedHash.slice(0, 12)} != físico=${apiPhysicalHash.slice(0, 12)}`));
       } else {
         gates.push(pass(expApiSegGate, { leaks: 0, hashBound: true }));
+      }
+    }
+
+    // ── Gate 12e: evidência de outbound-reliability DENTRO do payload ───────
+    // Prova de confiabilidade do pipeline outbound (transactional outbox +
+    // delivery ambiguity): generate-outbound-reliability-evidence executa as
+    // suítes Jest reais + invariante de banco e emite o relatório com lineage;
+    // a cópia canônica em governance/outbound-reliability-report.json é
+    // packageRequired=true no evidence-manifest embutido. FAIL-CLOSED: PASS
+    // exige artefato + status PASS + invariantes semânticos íntegros +
+    // lineage do run + binding de hash (ausência nunca assume PASS).
+    const outboundRel = readJson(path.join(payloadGovDir, 'outbound-reliability-report.json'));
+    const outboundRelGate = makeGate('payload_outbound_reliability');
+    if (!outboundRel) {
+      gates.push(fail(outboundRelGate, 'OUTBOUND_RELIABILITY_EVIDENCE_MISSING — governance/outbound-reliability-report.json ausente no payload'));
+    } else if (outboundRel.status !== 'PASS') {
+      gates.push(fail(outboundRelGate, `OUTBOUND_RELIABILITY_NO_GO — status=${outboundRel.status || 'null'}`));
+    } else if (outboundRel.transactionalOutbox !== true) {
+      gates.push(fail(outboundRelGate, 'OUTBOUND_RELIABILITY_SEMANTIC — transactionalOutbox != true'));
+    } else if (outboundRel.partialStatePossible !== false) {
+      gates.push(fail(outboundRelGate, 'OUTBOUND_RELIABILITY_SEMANTIC — partialStatePossible != false'));
+    } else if (outboundRel.blindRetryAfterAmbiguousDelivery !== false) {
+      gates.push(fail(outboundRelGate, 'OUTBOUND_RELIABILITY_SEMANTIC — blindRetryAfterAmbiguousDelivery != false'));
+    } else if (outboundRel.providerCapabilityAwareRecovery !== true) {
+      gates.push(fail(outboundRelGate, 'OUTBOUND_RELIABILITY_SEMANTIC — providerCapabilityAwareRecovery != true'));
+    } else if (Number(outboundRel.logicalDuplicateOperations) !== 0) {
+      gates.push(fail(outboundRelGate, `OUTBOUND_RELIABILITY_SEMANTIC — logicalDuplicateOperations=${outboundRel.logicalDuplicateOperations}`));
+    } else if (!outboundRel.runId || !outboundRel.sourceFingerprint) {
+      gates.push(fail(outboundRelGate, 'ARTIFACT_RUN_ID_MISSING — outbound-reliability do payload sem lineage (runId/sourceFingerprint)'));
+    } else if (manifestRunId && outboundRel.runId !== manifestRunId) {
+      gates.push(fail(outboundRelGate, `CROSS_RUN_ARTIFACT — outbound-reliability.runId=${outboundRel.runId} != ${manifestRunId}`));
+    } else if (manifestFp && outboundRel.sourceFingerprint !== manifestFp) {
+      gates.push(fail(outboundRelGate, 'SOURCE_FINGERPRINT_MISMATCH — outbound-reliability.sourceFingerprint diverge do manifest'));
+    } else {
+      const obrEvidenceManifest = readJson(path.join(payloadGovDir, 'evidence-manifest.json'));
+      const obrEntry = Array.isArray(obrEvidenceManifest?.artifacts)
+        ? obrEvidenceManifest.artifacts.find((a) => a && a.id === 'outbound_reliability')
+        : null;
+      const obrRecordedHash = obrEntry ? (obrEntry.hash || obrEntry.sha256 || obrEntry.checksum || null) : null;
+      const obrPhysicalHash = sha256File(path.join(payloadGovDir, 'outbound-reliability-report.json'));
+      if (!obrEntry) {
+        gates.push(fail(outboundRelGate, 'OUTBOUND_RELIABILITY_NOT_IN_MANIFEST — evidence-manifest do payload sem entrada outbound_reliability (binding de hash obrigatório)'));
+      } else if (obrEntry.packageRequired !== true) {
+        gates.push(fail(outboundRelGate, 'OUTBOUND_RELIABILITY_NOT_PACKAGE_REQUIRED — evidence-manifest não marca a prova como packageRequired'));
+      } else if (obrEntry.proofStatus !== 'valid') {
+        gates.push(fail(outboundRelGate, `OUTBOUND_RELIABILITY_PROOF_INVALID — evidence-manifest registra proofStatus=${obrEntry.proofStatus || 'null'}`));
+      } else if (!obrRecordedHash) {
+        gates.push(fail(outboundRelGate, 'OUTBOUND_RELIABILITY_EVIDENCE_HASH_MISSING — entrada outbound_reliability sem hash registrado'));
+      } else if (obrRecordedHash !== obrPhysicalHash) {
+        gates.push(fail(outboundRelGate,
+          `OUTBOUND_RELIABILITY_EVIDENCE_HASH_MISMATCH — manifest=${obrRecordedHash.slice(0, 12)} != físico=${obrPhysicalHash.slice(0, 12)}`));
+      } else {
+        gates.push(pass(outboundRelGate, { logicalDuplicateOperations: 0, hashBound: true }));
       }
     }
 

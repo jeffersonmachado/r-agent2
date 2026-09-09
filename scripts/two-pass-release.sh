@@ -599,6 +599,15 @@ node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-experience-ap
   || fail "experience-api-segregation FAIL — release bloqueada"
 ok "reports/experience-api-segregation-report.json PASS (evidência do release)"
 
+# GATE OUTBOUND-RELIABILITY: prova de confiabilidade do pipeline outbound
+# (transactional outbox + delivery ambiguity) — suítes Jest reais + invariante
+# de banco; FAIL bloqueia o release. A prova entra no evidence-manifest como
+# packageRequired e é verificada offline pelo gate payload_outbound_reliability.
+step "GATE outbound-reliability: gerando prova do release..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/generate-outbound-reliability-evidence.js" \
+  || fail "outbound-reliability FAIL — release bloqueada"
+ok "governance/outbound-reliability-report.json PASS (evidência do release)"
+
 # Re-stamp de lineage imediato: o relatório recém-gerado NÃO carrega
 # runId/sourceFingerprint/artifactType/artifactVersion. Sem o stamp, o Master
 # Scorecard (RAP-014/RAP-015, requireLineage) falha com INVALID_ARTIFACT nas

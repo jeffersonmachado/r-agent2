@@ -18,6 +18,7 @@ const DEFAULT_REPORT_PATH = path.join(ROOT, 'governance', 'package-validation-re
 // é o mesmo código emitido pelo gate offline payload_experience_api_segregation).
 const MISSING_ENTRY_CODES = {
   'governance/experience-api-segregation-report.json': 'EXPERIENCE_API_SEGREGATION_EVIDENCE_MISSING',
+  'governance/outbound-reliability-report.json': 'OUTBOUND_RELIABILITY_EVIDENCE_MISSING',
   'governance/source-remote-provenance-report.json': 'REMOTE_PROVENANCE_EVIDENCE_MISSING',
 };
 
