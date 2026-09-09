@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T07:53:55.354Z",
+  "generatedAt": "2026-09-09T08:15:01.439Z",
   "runId": "rap-governed-20260909075234780-fb51ad0a",
   "sourceFingerprint": "3fc5d4e2e28df86c8dedda821ed94f92736e043cd021ce4c4083c07574f5aa43",
   "artifactType": "report-contamination-report",
@@ -7,7 +7,7 @@
   "engine": "report-contamination-cleaner/v3",
   "pass": true,
   "decision": "NO_CONTAMINATION",
-  "currentGovernanceDecision": "NO_GO",
+  "currentGovernanceDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
   "filesScanned": 47,
   "contaminatedFiles": 0,
   "totalContaminations": 0,
