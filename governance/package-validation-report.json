@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T09:22:28.797Z",
+  "generatedAt": "2026-09-09T12:30:55.600Z",
   "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260909-061708.payload.zip",
   "zipName": "r-agent2-20260909-061708.payload.zip",
   "zipSha256": "8ca886762f34ba74fdc8c9750a9e4f1643fe4f03104ffa38df8a283097321de1",
@@ -41,6 +41,7 @@
     "governance/final-readiness-report.json",
     "governance/experience-segregation-report.json",
     "governance/experience-api-segregation-report.json",
+    "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
   "entryCount": 6081,
@@ -57,8 +58,8 @@
   },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260909075234780-fb51ad0a",
-  "sourceFingerprint": "3fc5d4e2e28df86c8dedda821ed94f92736e043cd021ce4c4083c07574f5aa43",
-  "gitCommit": "d514f06d76c9c4497d2548a72e90ae35462417b9",
-  "gitTree": "98962c6c6e319010ff940d68a3eb388fa62d148d"
+  "runId": "rap-governed-20260909123042243-e654cb4a",
+  "sourceFingerprint": "329624b3b1a6e05e01be13b862b6ab02da0450ed0ba29e1fc2a68a25eb8eae75",
+  "gitCommit": "a6b3d2be79455b14f24f6ee88a8c030313c0e15d",
+  "gitTree": "e88da55843dd2678702aa4b87fe5e1658b7f875a"
 }
