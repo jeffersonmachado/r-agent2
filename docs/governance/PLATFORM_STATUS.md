@@ -1,6 +1,6 @@
 # Platform Status
 
-- Generated at: 2026-09-09T08:31:28.433Z
+- Generated at: 2026-09-09T08:50:13.977Z
 - Canonical mesh execution: mesh-20260903185903-qt4iaz
 - Canonical mesh decision: GO
 - Readiness decision: NO_GO:ENTERPRISE_READY_GO
@@ -24,5 +24,4 @@
 
 ## NO_GO reasons
 - ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]
-- Contradição cross-report: package_mismatch [gap-cross-report-package_mismatch]
 - Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]
