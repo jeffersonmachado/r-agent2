@@ -6,11 +6,11 @@
 - Title: ZIP de release nao contem todos os proofs obrigatorios
 - Suggested fix: Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico.
 
-## gap-proof-invalid-artifact-semantics
+## gap-cross-report-package_mismatch
 - Severity: critical
-- Area: proof-governance
-- Title: Proof artifacts presentes mas semanticamente invalidos (presenca != validade)
-- Suggested fix: Corrigir o conteudo dos artifacts (ok/valid/status, assertions, snapshots) e regerar as evidencias.
+- Area: cross-report
+- Title: Contradição cross-report: package_mismatch
+- Suggested fix: Relatório de validação aponta para 'r-agent2-20260909-044512.payload.zip' mas o pacote atual é 'r-agent2-20260909-005443.payload.zip'. Governance vinculada a pacote errado — relatório inválido.
 
 ## gap-cross-report-package_validation_failed
 - Severity: critical

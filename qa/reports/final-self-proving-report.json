@@ -1,27 +1,27 @@
 {
-  "generatedAt": "2026-09-09T08:00:42.854Z",
+  "generatedAt": "2026-09-09T08:21:28.415Z",
   "engine": "generate-self-proving-report/v1",
   "zipName": null,
   "zipHash": null,
-  "manifestHash": "ae8d8d402838f1a53832b6dc6414322a571221d4768ac8c049b0093fa4e0896a",
+  "manifestHash": "ae055bcb7f44c86e6c4f482a7cd440db8a93b579115d003ccb92036b92b3e5c1",
   "replayHash": "5fd51bd9310f6d3be4e19c605c4b40350d1a726475f8354571df82186bfba166",
-  "governanceHash": "35d1bd3d82319621289f27455330c6eed213f75106eb4e594612b5971d2459ea",
-  "readinessHash": "79b29b99c173597359af746e3f8d7b0d0bee604009a691120045fad91c1edb0b",
+  "governanceHash": "158e28747134227196753b6418ea2f2da885b3f5985e8822006b5b1871074956",
+  "readinessHash": "a33fe883c099667fc264580afa32fd9c11e15beb6e12a3da9323000475a1c5fe",
   "consistencyHash": "bf1c3a4293000d9e6acf904ea1211de767319866068b647599b7c9614150712e",
-  "contaminationHash": "63d33574340c15b2fe272a44e52577a61f187aadcf01e911c24d0e210e16f2f7",
+  "contaminationHash": "36577c1c792cbc7d6823710ff729807268322b97f9962fbe9eb972b83b6729ed",
   "packageIntegrityHash": "2ece72cb22994f9ce244b9e95992020a258e52576f5993cd949ffa60cff7d54e",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "65cdbed53504229b6673dc8faaf6ffbe05ad39136f9166b0b83be06451d94b89",
+  "gateHash": "07c82173920c03b1de738c72e9f9f5648d9cac03c90c04be8f778a30ac90c9f9",
   "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "NO_GO",
-    "readiness": "NO_GO",
+    "finalGovernance": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
-    "finalConsistencyGate": "FINAL_CONSISTENCY_NO_GO"
+    "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
   "packageIntegrityOk": true,
   "allEnginesBlockedOrUnknown": false,
@@ -29,17 +29,13 @@
   "mandatoryFailures": [
     {
       "engine": "finalGovernance",
-      "decision": "NO_GO"
+      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
     },
     {
       "engine": "readiness",
-      "decision": "NO_GO"
-    },
-    {
-      "engine": "finalConsistencyGate",
-      "decision": "FINAL_CONSISTENCY_NO_GO"
+      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
     }
   ],
   "ok": false,
-  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 3."
+  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 2."
 }

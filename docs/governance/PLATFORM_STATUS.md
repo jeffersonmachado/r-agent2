@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-09-09T08:12:29.908Z
+- Generated at: 2026-09-09T08:31:28.433Z
 - Canonical mesh execution: mesh-20260903185903-qt4iaz
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
+- Readiness decision: NO_GO:ENTERPRISE_READY_GO
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -24,5 +24,5 @@
 
 ## NO_GO reasons
 - ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]
-- Proof artifacts presentes mas semanticamente invalidos (presenca != validade) [gap-proof-invalid-artifact-semantics]
+- Contradição cross-report: package_mismatch [gap-cross-report-package_mismatch]
 - Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]
