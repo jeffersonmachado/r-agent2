@@ -1,8 +1,52 @@
 {
-  "generatedAt": "2026-09-09T04:00:13.724Z",
-  "status": "AUTONOMOUS_READY_GO",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-09-09T07:53:17.866Z",
+  "status": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "id": "gap-proof-package-validation",
+      "severity": "critical",
+      "area": "package",
+      "title": "ZIP de release nao contem todos os proofs obrigatorios",
+      "evidence": {
+        "missingEntries": [],
+        "missingEntryCodes": []
+      },
+      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
+    },
+    {
+      "id": "gap-proof-invalid-artifact-semantics",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Proof artifacts presentes mas semanticamente invalidos (presenca != validade)",
+      "evidence": {
+        "count": 1,
+        "artifacts": [
+          {
+            "id": "final_readiness",
+            "path": "governance/final-readiness-report.json",
+            "violations": [
+              "status_no_go"
+            ]
+          }
+        ]
+      },
+      "suggestedFix": "Corrigir o conteudo dos artifacts (ok/valid/status, assertions, snapshots) e regerar as evidencias."
+    },
+    {
+      "id": "gap-cross-report-package_validation_failed",
+      "severity": "critical",
+      "area": "cross-report",
+      "title": "Contradição cross-report: package_validation_failed",
+      "evidence": {
+        "type": "package_validation_failed",
+        "missingEntries": [],
+        "blocker": true,
+        "message": "Pacote não passou na validação: 0 entradas ausentes."
+      },
+      "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
+    }
+  ],
+  "blocking": 3,
   "nonBlocking": 0
 }
