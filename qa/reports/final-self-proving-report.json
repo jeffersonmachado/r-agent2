@@ -1,25 +1,25 @@
 {
-  "generatedAt": "2026-09-09T08:41:44.270Z",
+  "generatedAt": "2026-09-09T09:14:32.627Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260909-052125.zip",
-  "zipHash": "82b1ae2deaf77a101db9ca1c82837563583a9337ff1faf3af2c8e7d1ec637314",
-  "manifestHash": "f835b919ab9157f4286d0c4ad9ff8c9b59428b06835d47bd2dea58eaab63d9e8",
-  "replayHash": "5fd51bd9310f6d3be4e19c605c4b40350d1a726475f8354571df82186bfba166",
-  "governanceHash": "158e28747134227196753b6418ea2f2da885b3f5985e8822006b5b1871074956",
-  "readinessHash": "27b4701e65fcf8b71d035962f66da8c36b46f020bce2bece0ef8dfb4c2c0bed4",
-  "consistencyHash": "bf1c3a4293000d9e6acf904ea1211de767319866068b647599b7c9614150712e",
-  "contaminationHash": "36577c1c792cbc7d6823710ff729807268322b97f9962fbe9eb972b83b6729ed",
-  "packageIntegrityHash": "2ece72cb22994f9ce244b9e95992020a258e52576f5993cd949ffa60cff7d54e",
+  "zipName": "r-agent2-20260909-061155.zip",
+  "zipHash": "0bd4f22d5bffe63d01a97febb56b2a3aa4cad6f05507fe46544f1cafeeb9bd68",
+  "manifestHash": "9b270bdf502100076c43adb431db197738f9d3f52431ffc6e008c9b4b58bc487",
+  "replayHash": "486c106d75b45e4e93bb3c1f1819eb35b022b3145825d0453d86ae1efd89d7cf",
+  "governanceHash": "c8600a2c4130559aef0a36e707c314399b31e6bde5e0b0e3c5d0322724feb16a",
+  "readinessHash": "1d8c33f33e3e005fa1112f2dd258ae1c6e8eac0ae6ea0d5ba50551f8a684b78c",
+  "consistencyHash": "b3edb4b351e908ad5cd6420672642420d96db998ef7b91818733283a87877ab6",
+  "contaminationHash": "b36d752e5a011457720f2b88bf97de219bdea69bbd331d080aa379979078ef1e",
+  "packageIntegrityHash": "7b60101b85a4112e6d2e3eab28c92a9095fb30588023759ba1f96590063efc33",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "07c82173920c03b1de738c72e9f9f5648d9cac03c90c04be8f778a30ac90c9f9",
-  "recalculatedReadinessHash": "bb0bc7dacb3b1f79e62ad25567c55121682f9b6fb86f2c2927880e98ab5eb3f5",
+  "gateHash": "c8081901e6a45369bade85ed3503f58fa2951e5f7e17217fff4b9d217d40245d",
+  "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
     "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-    "readiness": "NO_GO:ENTERPRISE_READY_GO",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
+    "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
@@ -29,13 +29,13 @@
   "mandatoryFailures": [
     {
       "engine": "finalGovernance",
-      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+      "decision": "NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
     },
     {
       "engine": "readiness",
-      "decision": "NO_GO:ENTERPRISE_READY_GO"
+      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
     }
   ],
   "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260909-052125.zip. Package: ÍNTEGRO. Validadores falhos: 2."
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260909-061155.zip. Package: ÍNTEGRO. Validadores falhos: 2."
 }
