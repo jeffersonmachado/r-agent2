@@ -132,6 +132,13 @@ function detectStaleReferences(currentZipName) {
     // conteúdo stale não é evidência sobre o pacote atual. Excluí-lo evita o
     // falso positivo estrutural (toda execução de um novo release falharia).
     if (path.resolve(full) === path.resolve(REPORT_PATH)) return;
+    // Release publication receipt: artefato PÓS-publicação cujo propósito é
+    // registrar (releaseId, hashes, tag) de um release JÁ publicado — o
+    // timestamp/hash que ele carrega é o SUJEITO do registro, não uma claim
+    // sobre o pacote em construção. A verificação criptográfica do receipt é
+    // independente (scripts/verify-release-publication.js).
+    const base = path.basename(full);
+    if (base === 'release-publication-receipt.json' || base === 'release-publication-receipt.sig') return;
     let content;
     try { content = fs.readFileSync(full, 'utf8'); } catch (_) { return; }
     let hit = false;
