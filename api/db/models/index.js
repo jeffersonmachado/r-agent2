@@ -33,6 +33,7 @@ const getChannelConversation = require('./ChannelConversation');
 const getChannelMessage = require('./ChannelMessage');
 const getCaseConversation = require('./CaseConversation');
 const getOutboundQueueItem = require('./OutboundQueueItem');
+const getOutboundAttempt = require('./OutboundAttempt');
 const getTicketEvent = require('./TicketEvent');
 const getQueueAssignmentState = require('./QueueAssignmentState');
 const getEventLedger = require('./EventLedger');
@@ -213,6 +214,7 @@ const ChannelConversation = () => getChannelConversation();
 const ChannelMessage = () => getChannelMessage();
 const CaseConversation = () => getCaseConversation();
 const OutboundQueueItem = () => getOutboundQueueItem();
+const OutboundAttempt = () => getOutboundAttempt();
 const TicketEvent = () => getTicketEvent();
 const QueueAssignmentState = () => getQueueAssignmentState();
 const EventLedger = () => getEventLedger();
@@ -851,6 +853,7 @@ module.exports = {
   ChannelMessage,
   CaseConversation,
   OutboundQueueItem,
+  OutboundAttempt,
   TicketEvent,
   QueueAssignmentState,
   EventLedger,
@@ -1030,6 +1033,7 @@ module.exports = {
   getChannelConversation,
   getChannelMessage,
   getOutboundQueueItem,
+  getOutboundAttempt,
   getTicketEvent,
   getQueueAssignmentState,
   getEventLedger,

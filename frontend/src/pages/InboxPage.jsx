@@ -1432,11 +1432,22 @@ export function InboxPage() {
                     const mediaUrl = messageBody.mediaUrl || msg.mediaUrl || null;
                     const mediaType = String(messageBody.type || msg.type || '').trim().toLowerCase();
                     const mediaName = messageBody.filename || messageBody.fileName || msg.filename || 'arquivo';
+                    const outboundStatusLabels = {
+                      pending: 'Enviando',
+                      sent: 'Enviado',
+                      delivered: 'Enviado',
+                      failed: 'Falha no envio',
+                      delivery_unknown: 'Entrega não confirmada — verificar antes de reenviar',
+                    };
+                    const outboundStatusLabel = msg.direction === 'out' && msg.status
+                      ? outboundStatusLabels[String(msg.status).toLowerCase()] || null
+                      : null;
                     return (
                       <div key={msg.id || messageAt} className="mb-2">
                         <div style={{ fontSize: '12px', color: 'var(--color-text-tertiary)' }}>
                           {msg.sender === 'note' ? `Nota • ${msg.authorName || agent?.username || 'system'}` : senderLabel}
                           {' · '}{formatDate(messageAt)}
+                          {outboundStatusLabel ? ` · ${outboundStatusLabel}` : ''}
                         </div>
                         <div style={{ color: msg.sender === 'note' ? 'var(--color-status-warning)' : 'var(--color-text-primary)' }}>
                           {mediaType === 'call' && messageBody.call ? (

@@ -425,7 +425,7 @@ async function registerInboundMessageActivity({ tenantId, conversationId, channe
   }
 }
 
-async function createMessage({ tenantId, conversationId, channelType, direction, type, body = {}, externalMessageId = null, clientMessageId = null, status = null } = {}) {
+async function createMessage({ tenantId, conversationId, channelType, direction, type, body = {}, externalMessageId = null, clientMessageId = null, status = null, transaction = null } = {}) {
   if (!tenantId || typeof tenantId !== 'string') throw new Error('tenantId é obrigatório');
   if (!conversationId || typeof conversationId !== 'string') throw new Error('conversationId é obrigatório');
   if (!dbAvailable()) {
@@ -452,14 +452,14 @@ async function createMessage({ tenantId, conversationId, channelType, direction,
     status: status || (dir === 'out' ? 'pending' : 'received'),
     created_at: now,
     updated_at: now,
-  });
+  }, transaction ? { transaction } : undefined);
 
   // Best-effort: mantém a conversa com last_message_at fresco.
   try {
     const ConversationModel = typeof ChannelConversation === 'function' ? ChannelConversation() : ChannelConversation;
     await ConversationModel.update(
       { last_message_at: now, updated_at: now },
-      { where: { tenant_key: tenantId, id: conversationId } },
+      { where: { tenant_key: tenantId, id: conversationId }, ...(transaction ? { transaction } : {}) },
     );
   } catch (_) {
     // não falhar a persistência da mensagem por causa do touch da conversa
@@ -623,6 +623,21 @@ async function listConversationsByIds({ tenantId, ids } = {}) {
   return rows.map(mapConversationRow).filter(Boolean);
 }
 
+/**
+ * Executa `fn(transaction)` dentro de uma transação do banco transacional dos
+ * canais. Base do transactional outbox do Inbox: ChannelMessage e
+ * OutboundQueueItem são commitados atomicamente ou não são commitados.
+ */
+async function runInTransaction(fn) {
+  const sequelize = getSequelize();
+  if (!sequelize) {
+    const err = new Error('persistence_required: sequelize indisponível para transactional outbox');
+    err.code = 'persistence_required';
+    throw err;
+  }
+  return sequelize.transaction(fn);
+}
+
 module.exports = {
   listConversations,
   listConversationMessages,
@@ -632,5 +647,6 @@ module.exports = {
   createMessage,
   findMessageByClientMessageId,
   registerInboundMessageActivity,
+  runInTransaction,
 };
 

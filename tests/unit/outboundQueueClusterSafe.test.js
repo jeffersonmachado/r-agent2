@@ -52,8 +52,11 @@ describe('OutboundQueueService - cluster-safe (skipLocked)', () => {
     const res = await processDue({ limit: 5 });
 
     expect(res).toMatchObject({ processed: 0, sent: 0, failed: 0 });
-    expect(findAll).toHaveBeenCalledTimes(1);
-    const args = findAll.mock.calls[0][0] || {};
+    // O claim do lote deve ser a query com lock + skipLocked (pode haver uma
+    // query extra de recovery de itens stale em 'sending', sem lock).
+    const claimCalls = findAll.mock.calls.filter(([a]) => a && a.skipLocked);
+    expect(claimCalls).toHaveLength(1);
+    const args = claimCalls[0][0] || {};
     expect(args).toMatchObject({ skipLocked: true, lock: 'UPDATE' });
     expect(args.transaction).toBeTruthy();
   });

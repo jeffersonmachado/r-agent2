@@ -15,8 +15,9 @@ const crypto = require('crypto');
 const os = require('os');
 const logger = require('../utils/logger');
 const { getSequelize } = require('../db/sequelize');
-const { OutboundQueueItem, ChannelConversation, ChannelMessage } = require('../db/models');
+const { OutboundQueueItem, ChannelConversation, ChannelMessage, OutboundAttempt } = require('../db/models');
 const { TicketEvent } = require('../db/models');
+const { getProviderCapabilities } = require('./outboundProviderCapabilities');
 const whatsappService = require('./whatsappService');
 const { sendTextMessage, sendMediaMessage } = whatsappService;
 const { sendInstagramMessage, sendInstagramMedia } = require('./instagramService');
@@ -116,7 +117,295 @@ function getProcessingTimeoutMs() {
   return 2 * 60 * 1000; // 2 min (default)
 }
 
-async function enqueueOutbound({ tenantId, channelType, channelAccountId = null, conversationId = null, message }) {
+// ---------------------------------------------------------------------------
+// Delivery ambiguity: ledger de tentativas + recovery consciente de capability
+// ---------------------------------------------------------------------------
+
+// Handlers de lookup de entrega por canal (nenhum provider real suporta hoje —
+// registro injetável para testes e providers futuros com lookup real).
+const deliveryLookupHandlers = new Map();
+
+function registerDeliveryLookupHandler(channelType, fn) {
+  if (!channelType || typeof fn !== 'function') {
+    deliveryLookupHandlers.delete(channelType);
+    return;
+  }
+  deliveryLookupHandlers.set(channelType, fn);
+}
+
+function deriveIdempotencyKey(row, clientMessageId) {
+  const key = clientMessageId || safeToString(safeGet(row, 'client_message_id', null) || safeGet(row, 'message.meta.clientMessageId', null) || '') || null;
+  if (!key) return null;
+  return `${row.tenant_key}:${key}`;
+}
+
+function getAttemptModel() {
+  try {
+    const Model = typeof OutboundAttempt === 'function' ? OutboundAttempt() : OutboundAttempt;
+    if (Model && typeof Model.create === 'function') return Model;
+  } catch (_) {}
+  return null;
+}
+
+/**
+ * Persiste attempt ANTES de chamar o provider (ordem de escrita segura). Se o
+ * ledger falhar, o provider NÃO é chamado — fail-safe: sem evidência de
+ * tentativa, não há dispatch.
+ */
+async function createDispatchAttempt({ row, clientMessageId, idempotencyKey }) {
+  const AttemptModel = getAttemptModel();
+  if (!AttemptModel) return null;
+  const now = new Date();
+  return AttemptModel.create({
+    id: newId('oatt'),
+    tenant_key: row.tenant_key,
+    queue_item_id: row.id,
+    client_message_id: clientMessageId || null,
+    channel_type: row.channel_type,
+    provider: row.channel_type,
+    status: 'started',
+    result: null,
+    external_message_id: null,
+    idempotency_key: idempotencyKey,
+    error_class: null,
+    started_at: now,
+    completed_at: now,
+    created_at: now,
+    updated_at: now,
+  });
+}
+
+/**
+ * ACK local atômico: attempt 'completed' + queue 'sent' na mesma transação.
+ * Se o processo cair entre o provider aceitar e esta transação, o queue item
+ * permanece 'sending' stale e a attempt 'started' órfã — a recovery trata como
+ * delivery ambíguo (nunca retry cego).
+ */
+async function finalizeAttemptAndQueueSent({ row, attempt, result }) {
+  const now = new Date();
+  const externalMessageId = result && result.externalMessageId ? safeToString(result.externalMessageId) : (row.external_message_id || null);
+  const apply = async (t) => {
+    const opts = t ? { transaction: t } : undefined;
+    if (attempt && typeof attempt.update === 'function') {
+      await attempt.update({
+        status: 'completed',
+        result: 'sent',
+        external_message_id: externalMessageId,
+        completed_at: now,
+        updated_at: now,
+      }, opts);
+    }
+    await row.update({
+      status: 'sent',
+      external_message_id: externalMessageId,
+      last_error: null,
+      processing_at: null,
+      processing_by: null,
+      updated_at: now,
+    }, opts);
+  };
+  const sequelize = row.sequelize || (row.constructor && row.constructor.sequelize) || null;
+  if (sequelize && typeof sequelize.transaction === 'function') {
+    await sequelize.transaction((t) => apply(t));
+  } else {
+    await apply(null);
+  }
+}
+
+async function completeAttemptFailed(attempt, err) {
+  if (!attempt || typeof attempt.update !== 'function') return;
+  try {
+    await attempt.update({
+      status: 'completed',
+      result: 'failed',
+      error_class: computeReasonCode(err) || 'send_failed',
+      completed_at: new Date(),
+      updated_at: new Date(),
+    });
+  } catch (_) {}
+}
+
+/**
+ * Marca attempts 'started' órfãs de um queue item como resultado desconhecido
+ * (janela de crash: provider pode ter aceitado sem ACK local).
+ */
+async function markOrphanAttemptsUnknown(row) {
+  const AttemptModel = getAttemptModel();
+  if (!AttemptModel || typeof AttemptModel.update !== 'function') return;
+  try {
+    await AttemptModel.update(
+      {
+        status: 'completed',
+        result: 'unknown',
+        error_class: 'process_crash_window',
+        completed_at: new Date(),
+        updated_at: new Date(),
+      },
+      { where: { tenant_key: row.tenant_key, queue_item_id: row.id, status: 'started' } },
+    );
+  } catch (_) {}
+}
+
+/**
+ * Recovery de item preso em 'sending' (crash/restart no worker) — decisão por
+ * capability do provider, nunca requeue cego:
+ * - lookup confirma entrega     → 'sent' (sem novo dispatch);
+ * - lookup confirma não-entrega → requeue seguro;
+ * - idempotency key + retry seguro → requeue (mesma chave, mesmo efeito lógico);
+ * - caso contrário → 'delivery_unknown' (fora do claim automático) + exceção
+ *   operacional; reconciliação posterior via callback/webhook ou revisão.
+ */
+async function recoverStaleSendingRow(row, now, { capabilityOverrides = null } = {}) {
+  const caps = getProviderCapabilities(row.channel_type, capabilityOverrides);
+  const clientMessageId = safeToString(row.client_message_id || safeGet(row, 'message.meta.clientMessageId', null) || '') || null;
+
+  if (caps.supportsDeliveryLookup) {
+    const lookup = deliveryLookupHandlers.get(row.channel_type);
+    if (typeof lookup === 'function') {
+      let outcome = null;
+      try {
+        outcome = await lookup(row);
+      } catch (_) {
+        outcome = null;
+      }
+      if (outcome && outcome.delivered === true) {
+        await row.update({
+          status: 'sent',
+          external_message_id: outcome.externalMessageId ? safeToString(outcome.externalMessageId) : row.external_message_id,
+          last_error: null,
+          processing_at: null,
+          processing_by: null,
+          updated_at: now,
+        });
+        await markOrphanAttemptsUnknown(row);
+        await syncConversationMessageStatus(row, clientMessageId, 'sent');
+        return 'recovered_sent_via_lookup';
+      }
+      if (outcome && outcome.delivered === false) {
+        await row.update({
+          status: 'pending',
+          processing_at: null,
+          processing_by: null,
+          next_attempt_at: now,
+          updated_at: now,
+        });
+        await markOrphanAttemptsUnknown(row);
+        return 'requeued_confirmed_not_delivered';
+      }
+      // inconclusivo → cai no fail-safe abaixo
+    }
+  }
+
+  if (caps.supportsIdempotencyKey && caps.safeRetryAfterUnknown) {
+    // Retry técnico com a MESMA provider idempotency key — mesmo efeito lógico.
+    await row.update({
+      status: 'pending',
+      processing_at: null,
+      processing_by: null,
+      next_attempt_at: now,
+      updated_at: now,
+    });
+    await markOrphanAttemptsUnknown(row);
+    return 'requeued_idempotent_safe';
+  }
+
+  await row.update({
+    status: 'delivery_unknown',
+    reason_code: 'delivery_unknown',
+    last_error: 'resultado externo da tentativa não pôde ser determinado com segurança',
+    processing_at: null,
+    processing_by: null,
+    updated_at: now,
+  });
+  await markOrphanAttemptsUnknown(row);
+  await syncConversationMessageStatus(row, clientMessageId, 'delivery_unknown');
+  signalDeliveryUnknownException(row, clientMessageId);
+  logger.warn('[OutboundQueue] Item em delivery_unknown — sem retry automático (provider sem reconciliation segura)', {
+    id: row.id,
+    tenantId: row.tenant_key,
+    channelType: row.channel_type,
+    clientMessageId,
+  });
+  return 'delivery_unknown';
+}
+
+/**
+ * Management by exception: ambiguity vira exceção operacional — a UI mostra
+ * "Entrega não confirmada" e o suporte/gestor decide. Nunca termos técnicos.
+ */
+function signalDeliveryUnknownException(row, clientMessageId) {
+  try {
+    const meta = safeGet(row, 'message.meta', {}) || {};
+    const ticketId = safeGet(meta, 'ticketId', null) ? safeToString(safeGet(meta, 'ticketId', null)) : null;
+    if (ticketId) {
+      const updatedTicket = updateOutboundMessageMeta(ticketId, {
+        clientMessageId,
+        deliveryStatus: 'unknown',
+      });
+      if (updatedTicket) {
+        emitEvent('ticket.updated', {
+          ticketId: updatedTicket.id,
+          ticket: updatedTicket,
+          change: { type: 'message_status', status: 'delivery_unknown' },
+        }, { tenantId: updatedTicket.tenantId, agentId: updatedTicket.assignedTo });
+      }
+    }
+    emitEvent('outbound.delivery_unknown', {
+      queueItemId: row.id,
+      channelType: row.channel_type,
+      clientMessageId,
+    }, { tenantId: row.tenant_key });
+  } catch (_) {}
+}
+
+async function syncConversationMessageStatus(row, clientMessageId, status) {
+  if (!clientMessageId || !dbAvailable()) return;
+  try {
+    const MessageModel = typeof ChannelMessage === 'function' ? ChannelMessage() : ChannelMessage;
+    await MessageModel.update(
+      { status, updated_at: new Date() },
+      { where: { tenant_key: row.tenant_key, client_message_id: clientMessageId } },
+    );
+  } catch (_) {}
+}
+
+/**
+ * Reconciliação a posteriori de um item em 'delivery_unknown' (webhook de
+ * status, lookup manual ou revisão de suporte). Ausência de webhook NUNCA é
+ * tratada como não-entrega — só evidência positiva resolve.
+ */
+async function resolveDeliveryUnknown({ tenantId, queueItemId, outcome, externalMessageId = null } = {}) {
+  if (!dbAvailable()) return { ok: false, reason: 'db_unavailable' };
+  const Model = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
+  const row = await Model.findOne({ where: { tenant_key: tenantId, id: queueItemId } });
+  if (!row) return { ok: false, reason: 'queue_item_not_found' };
+  if (row.status !== 'delivery_unknown') return { ok: false, reason: 'not_ambiguous', status: row.status };
+
+  const now = new Date();
+  if (outcome === 'delivered') {
+    await row.update({
+      status: 'sent',
+      external_message_id: externalMessageId ? safeToString(externalMessageId) : row.external_message_id,
+      last_error: null,
+      updated_at: now,
+    });
+    await syncConversationMessageStatus(row, row.client_message_id, 'sent');
+    return { ok: true, status: 'sent' };
+  }
+  if (outcome === 'not_delivered') {
+    await row.update({
+      status: 'pending',
+      next_attempt_at: now,
+      last_error: null,
+      updated_at: now,
+    });
+    return { ok: true, status: 'pending' };
+  }
+  return { ok: false, reason: 'outcome_inconclusive' };
+}
+
+async function enqueueOutbound({ tenantId, channelType, channelAccountId = null, conversationId = null, message }, options = {}) {
+  const transaction = options && options.transaction ? options.transaction : null;
   if (!tenantId || typeof tenantId !== 'string') {
     throw new Error('tenantId é obrigatório para enfileirar outbound');
   }
@@ -181,6 +470,7 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
             tenantKey: tenantId,
             clientMessageId,
           },
+          ...(transaction ? { transaction } : {}),
         },
       );
       if (Array.isArray(rows) && rows.length > 0 && rows[0] && rows[0].id) {
@@ -194,6 +484,7 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
           tenant_key: tenantId,
           external_message_id: externalMessageId,
         },
+        ...(transaction ? { transaction } : {}),
       });
       if (existing) {
         return { queued: false, idempotent: true, itemId: existing.id };
@@ -205,7 +496,7 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
 
   let item;
   try {
-    item = await Model.create({
+    const createData = {
       id: newId('outq'),
       tenant_key: tenantId,
       channel_type: channelType,
@@ -220,8 +511,18 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
       client_message_id: clientMessageId || null,
       created_at: now,
       updated_at: now,
-    });
+    };
+    item = transaction
+      ? await Model.create(createData, { transaction })
+      : await Model.create(createData);
   } catch (err) {
+    // Dentro de uma transação fornecida pelo caller (transactional outbox), um
+    // erro de INSERT aborta a transação inteira no Postgres — não há como
+    // re-ler dentro dela. Relança imediatamente; o caller faz rollback e o
+    // re-read idempotente fora da transação.
+    if (transaction) {
+      throw err;
+    }
     // Race-safe: enqueue concorrente com o mesmo (tenant, clientMessageId)
     // venceu a corrida — o UNIQUE parcial do banco rejeitou o INSERT.
     const pgCode = safeGet(err, 'original.code', null) ? safeToString(safeGet(err, 'original.code', null)) : null;
@@ -243,6 +544,75 @@ async function enqueueOutbound({ tenantId, channelType, channelAccountId = null,
   }
 
   return { queued: true, itemId: item.id };
+}
+
+/**
+ * Repair idempotente (transactional outbox): garante que existe exatamente um
+ * item lógico na outbound_queue para (tenant, clientMessageId). Usado quando a
+ * ChannelMessage já existe mas o queue item está ausente (estado parcial
+ * legado anterior à transação atômica). Race-safe: o INSERT usa
+ * ON CONFLICT DO NOTHING apoiado no UNIQUE parcial — duas repairs concorrentes
+ * produzem exatamente uma row.
+ */
+async function ensureOutboundQueued({ tenantId, channelType, channelAccountId = null, conversationId = null, message }) {
+  if (!dbAvailable()) return { queued: false, repaired: false, reason: 'db_unavailable' };
+  const meta = message && typeof message === 'object' ? (safeGet(message, 'meta', {}) || {}) : {};
+  const clientMessageId = safeGet(meta, 'clientMessageId', null) ? safeToString(safeGet(meta, 'clientMessageId', null)) : null;
+  if (!clientMessageId) return { queued: false, repaired: false, reason: 'client_message_id_missing' };
+
+  const Model = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
+  const existing = await Model.findOne({
+    where: { tenant_key: tenantId, client_message_id: clientMessageId },
+  });
+  if (existing) {
+    return { queued: false, repaired: false, idempotent: true, itemId: safeToString(existing.id) };
+  }
+
+  const sequelize = Model.sequelize;
+  const now = new Date();
+  const itemId = newId('outq');
+  await sequelize.query(
+    `INSERT INTO outbound_queue
+       (id, tenant_key, channel_type, channel_account_id, conversation_id, message,
+        status, attempts, next_attempt_at, last_error, external_message_id, client_message_id,
+        created_at, updated_at)
+     VALUES
+       (:id, :tenantKey, :channelType, :channelAccountId, :conversationId, :message,
+        'pending', 0, :now, NULL, NULL, :clientMessageId,
+        :now, :now)
+     ON CONFLICT (tenant_key, client_message_id) WHERE client_message_id IS NOT NULL
+     DO NOTHING`,
+    {
+      replacements: {
+        id: itemId,
+        tenantKey: tenantId,
+        channelType,
+        channelAccountId,
+        conversationId,
+        message: JSON.stringify(message || {}),
+        clientMessageId,
+        now,
+      },
+    },
+  );
+
+  const finalRow = await Model.findOne({
+    where: { tenant_key: tenantId, client_message_id: clientMessageId },
+  });
+  if (!finalRow) {
+    // Índice parcial ainda não existia (schema legado) e outra corrida venceu sem
+    // deixar row visível — sinaliza para o caller tratar como erro explícito.
+    const err = new Error('outbound_repair_failed');
+    err.code = 'outbound_repair_failed';
+    throw err;
+  }
+  logger.warn('[OutboundQueue] Repair idempotente: queue item reconstruído para mensagem já persistida', {
+    tenantId,
+    channelType,
+    clientMessageId,
+    itemId: safeToString(finalRow.id),
+  });
+  return { queued: true, repaired: true, itemId: safeToString(finalRow.id) };
 }
 
 async function deliverOutbound({ tenantId, channelType, message }) {
@@ -751,35 +1121,35 @@ async function persistOutboundMessage({ tenantId, channelType, to, type, body, e
   }
 }
 
-async function processDue({ limit = 25 } = {}) {
-  if (!dbAvailable()) return { processed: 0, sent: 0, failed: 0, skipped: 0 };
+async function processDue({ limit = 25, capabilityOverrides = null } = {}) {
+  if (!dbAvailable()) return { processed: 0, sent: 0, failed: 0, skipped: 0, deliveryUnknown: 0 };
 
   const Model = typeof OutboundQueueItem === 'function' ? OutboundQueueItem() : OutboundQueueItem;
   const sequelize = Model.sequelize;
   const Op = sequelize.constructor.Op;
   const now = new Date();
 
-  // 1) Requeue best-effort de itens presos em "sending" (crash/restart).
-  // Não tocamos itens já enviados (external_message_id != null).
+  // 1) Recovery de itens presos em "sending" (crash/restart) — consciente de
+  // capability do provider. NUNCA requeue cego: sem prova de não-entrega e sem
+  // idempotency key, o item vai para 'delivery_unknown' (fora do claim
+  // automático) em vez de voltar para 'pending'.
   const processingTimeoutMs = getProcessingTimeoutMs();
   const staleBefore = new Date(Date.now() - processingTimeoutMs);
+  let deliveryUnknown = 0;
   try {
-    await Model.update(
-      {
-        status: 'pending',
-        processing_at: null,
-        processing_by: null,
-        next_attempt_at: now,
-        updated_at: now,
+    const staleRows = await Model.findAll({
+      where: {
+        status: 'sending',
+        external_message_id: { [Op.is]: null },
+        processing_at: { [Op.lte]: staleBefore },
       },
-      {
-        where: {
-          status: 'sending',
-          external_message_id: { [Op.is]: null },
-          processing_at: { [Op.lte]: staleBefore },
-        },
-      }
-    );
+      limit: 50,
+    });
+    for (const staleRow of staleRows) {
+      // eslint-disable-next-line no-await-in-loop
+      const outcome = await recoverStaleSendingRow(staleRow, now, { capabilityOverrides });
+      if (outcome === 'delivery_unknown') deliveryUnknown += 1;
+    }
   } catch (_) {}
 
   // 2) Claim de lote com lock + skipLocked (cluster-safe).
@@ -816,49 +1186,49 @@ async function processDue({ limit = 25 } = {}) {
   let skipped = 0;
 
   for (const row of claimedRows) {
-    try {
-      const result = await deliverOutbound({
-        tenantId: row.tenant_key,
-        channelType: row.channel_type,
-        message: row.message || {},
-      });
+    const rowClientMessageId = safeToString(row.client_message_id || safeGet(row, 'message.meta.clientMessageId', null) || '') || null;
+    const idempotencyKey = deriveIdempotencyKey(row, rowClientMessageId);
 
-      sent++;
+    // Ordem de escrita segura: attempt 'started' ANTES de chamar o provider.
+    // Se o ledger falhar, o provider não é chamado (fail-safe, sem dispatch).
+    let attempt = null;
+    try {
+      attempt = await createDispatchAttempt({ row, clientMessageId: rowClientMessageId, idempotencyKey });
+    } catch (attemptErr) {
+      failed++;
       await row.update({
-        status: 'sent',
-        external_message_id: result.externalMessageId || row.external_message_id || null,
-        last_error: null,
+        status: 'failed',
+        attempts: (row.attempts || 0) + 1,
+        next_attempt_at: new Date(Date.now() + computeBackoffSeconds((row.attempts || 0) + 1) * 1000),
+        last_error: 'attempt_ledger_unavailable',
+        reason_code: 'attempt_ledger_unavailable',
         processing_at: null,
         processing_by: null,
         updated_at: new Date(),
       });
+      logger.error('[OutboundQueue] Ledger de tentativas indisponível — dispatch não executado (fail-safe)', {
+        id: row.id,
+        tenantId: row.tenant_key,
+        error: safeErrorMessage(attemptErr),
+      });
+      // eslint-disable-next-line no-continue
+      continue;
+    }
 
-      // Best-effort: sincroniza status "sent" no histórico do ticket (UI atual)
-      try {
-        const meta = safeGet(row, 'message.meta', {}) || {};
-        const rawTicketId = safeGet(meta, 'ticketId', null);
-        const rawClientMessageId = safeGet(meta, 'clientMessageId', null);
-        const rawExternalMessageId = safeGet(result, 'externalMessageId', null);
-        const ticketId = rawTicketId ? safeToString(rawTicketId) : null;
-        const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
-        const externalMessageId = rawExternalMessageId ? safeToString(rawExternalMessageId) : null;
-        if (ticketId) {
-          const updatedTicket = updateOutboundMessageMeta(ticketId, {
-            clientMessageId,
-            externalMessageId,
-            deliveryStatus: 'sent',
-          });
-          if (updatedTicket) {
-            emitEvent('ticket.updated', {
-              ticketId: updatedTicket.id,
-              ticket: updatedTicket,
-              change: { type: 'message_status', externalMessageId, status: 'sent' },
-            }, { tenantId: updatedTicket.tenantId, agentId: updatedTicket.assignedTo });
-          }
-        }
-      } catch (_) {}
+    // Janela crítica separada: falha do PROVIDER (dispatch não confirmado) tem
+    // handling de retry normal; falha do ACK LOCAL depois do provider aceitar
+    // NÃO pode marcar 'failed' (isso agendaria retry cego e duplicaria o efeito
+    // externo) — o item permanece 'sending' até a recovery por capability.
+    let result;
+    try {
+      result = await deliverOutbound({
+        tenantId: row.tenant_key,
+        channelType: row.channel_type,
+        message: row.message || {},
+      });
     } catch (err) {
       failed++;
+      await completeAttemptFailed(attempt, err);
       const reasonCode = computeReasonCode(err);
       const rawAttempts = (row.attempts || 0) + 1;
       // Falhas permanentes: tipo não suportado ou excesso de tentativas (abandona sem novo retry)
@@ -931,6 +1301,7 @@ async function processDue({ limit = 25 } = {}) {
         processing_by: null,
         updated_at: new Date(),
       });
+      await syncConversationMessageStatus(row, rowClientMessageId, 'failed');
 
       // Best-effort: marca falha no histórico do ticket quando houver correlação
       try {
@@ -966,10 +1337,59 @@ async function processDue({ limit = 25 } = {}) {
         nextAttemptAt: nextAttemptAt.toISOString(),
         error: safeErrorMessage(err),
       });
+      // eslint-disable-next-line no-continue
+      continue;
     }
+
+    // Provider retornou sucesso. ACK local atômico: attempt 'completed' + queue
+    // 'sent' na mesma transação. Se esta escrita falhar/cair (janela de
+    // ambiguidade), NÃO marcar 'failed' — retry cego duplicaria o efeito
+    // externo. O item permanece 'sending' até a recovery por capability.
+    try {
+      await finalizeAttemptAndQueueSent({ row, attempt, result });
+    } catch (ackErr) {
+      skipped++;
+      logger.error('[OutboundQueue] Provider aceitou, mas o ACK local falhou — item fica sending até recovery por capability (sem retry cego)', {
+        id: row.id,
+        tenantId: row.tenant_key,
+        channelType: row.channel_type,
+        clientMessageId: rowClientMessageId,
+        error: safeErrorMessage(ackErr),
+      });
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    sent++;
+    await syncConversationMessageStatus(row, rowClientMessageId, 'sent');
+
+    // Best-effort: sincroniza status "sent" no histórico do ticket (UI atual)
+    try {
+      const meta = safeGet(row, 'message.meta', {}) || {};
+      const rawTicketId = safeGet(meta, 'ticketId', null);
+      const rawClientMessageId = safeGet(meta, 'clientMessageId', null);
+      const rawExternalMessageId = safeGet(result, 'externalMessageId', null);
+      const ticketId = rawTicketId ? safeToString(rawTicketId) : null;
+      const clientMessageId = rawClientMessageId ? safeToString(rawClientMessageId) : null;
+      const externalMessageId = rawExternalMessageId ? safeToString(rawExternalMessageId) : null;
+      if (ticketId) {
+        const updatedTicket = updateOutboundMessageMeta(ticketId, {
+          clientMessageId,
+          externalMessageId,
+          deliveryStatus: 'sent',
+        });
+        if (updatedTicket) {
+          emitEvent('ticket.updated', {
+            ticketId: updatedTicket.id,
+            ticket: updatedTicket,
+            change: { type: 'message_status', externalMessageId, status: 'sent' },
+          }, { tenantId: updatedTicket.tenantId, agentId: updatedTicket.assignedTo });
+        }
+      }
+    } catch (_) {}
   }
 
-  return { processed: claimedRows.length, sent, failed, skipped };
+  return { processed: claimedRows.length, sent, failed, skipped, deliveryUnknown };
 }
 
 let workerTimer = null;
@@ -1001,11 +1421,16 @@ function stopWorker() {
 
 module.exports = {
   enqueueOutbound,
+  ensureOutboundQueued,
   processDue,
   deliverOutbound,
+  resolveDeliveryUnknown,
+  registerDeliveryLookupHandler,
   startWorker,
   stopWorker,
   // exporta para testes
   _computeBackoffSeconds: computeBackoffSeconds,
+  _deriveIdempotencyKey: deriveIdempotencyKey,
+  _recoverStaleSendingRow: recoverStaleSendingRow,
 };
 

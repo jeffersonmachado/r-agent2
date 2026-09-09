@@ -145,6 +145,8 @@
     "generate:final-status-projections": "node scripts/governance/generate-final-status-projections.js",
     "validate:experience-api-segregation": "node scripts/governance/validate-experience-api-segregation.js",
     "validate:remote-provenance": "node scripts/governance/verify-remote-provenance.js",
+    "release:publication-receipt": "node scripts/governance/create-release-publication-receipt.js",
+    "verify:release-publication": "node scripts/verify-release-publication.js",
     "validate:vertical-registry": "node scripts/governance/validate-vertical-registry.js",
     "validate:coverage-gate": "node scripts/governance/validate-coverage-gate.js",
     "coverage-gate:snapshot": "node scripts/governance/coverage-gate-snapshot.js",
@@ -314,7 +316,8 @@
     "reset:all:yes": "./scripts/reset-all.sh $TENANT_ID --yes",
     "test:workspace-core": "WORKSPACE_TEST_MODE=real node scripts/workspace-core-smoke.js",
     "test:workspace-core:failure": "WORKSPACE_TEST_MODE=failure node scripts/workspace-core-smoke.js",
-    "report:rag-domain-segregation": "node --env-file-if-exists=.env scripts/governance/rag-domain-segregation-report.js"
+    "report:rag-domain-segregation": "node --env-file-if-exists=.env scripts/governance/rag-domain-segregation-report.js",
+    "generate:outbound-reliability": "node --env-file-if-exists=.env scripts/governance/generate-outbound-reliability-evidence.js"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",

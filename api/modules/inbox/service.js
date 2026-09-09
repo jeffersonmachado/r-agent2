@@ -309,10 +309,26 @@ function createInboxService(deps) {
       // Fast path: retry (rede caiu após o servidor processar, restart do PWA)
       // com a mesma chave retorna a mensagem já persistida — sem recriar
       // mensagem, sem enfileirar de novo, sem espelhar no ticket.
+      // Repair idempotente: se a mensagem existe mas o queue item está ausente
+      // (estado parcial legado), reconstrói o queue item antes de retornar —
+      // mensagem registrada nunca fica sem dispatch intent.
       if (clientKey && typeof channels.findMessageByClientMessageId === 'function') {
         try {
           const existing = await channels.findMessageByClientMessageId({ tenantId, clientMessageId });
           if (existing) {
+            if (typeof outbound.ensureOutboundQueued === 'function') {
+              await outbound.ensureOutboundQueued({
+                tenantId,
+                channelType: conversation.channelType,
+                conversationId,
+                message: {
+                  to: conversation.externalId,
+                  type: 'text',
+                  body: { text },
+                  meta: { conversationId, clientMessageId },
+                },
+              });
+            }
             return { ok: true, status: 200, payload: { message: existing, clientMessageId, idempotent: true } };
           }
         } catch (_) {
@@ -320,26 +336,69 @@ function createInboxService(deps) {
         }
       }
 
+      // Transactional outbox: ChannelMessage e OutboundQueueItem vivem no mesmo
+      // banco transacional — a criação é atômica (commit dos dois ou rollback
+      // dos dois). Nunca existe "mensagem persistida sem queue item" por falha
+      // parcial entre os dois INSERTs.
+      const useTransaction = typeof channels.runInTransaction === 'function'
+        && typeof outbound.ensureOutboundQueued === 'function';
       let message;
       try {
-        message = await channels.createMessage({
-          tenantId,
-          conversationId,
-          channelType: conversation.channelType,
-          direction: 'out',
-          type,
-          body: { text },
-          externalMessageId: clientMessageId,
-          clientMessageId,
-          status: 'pending',
-        });
+        const createBoth = async (transaction) => {
+          const created = await channels.createMessage({
+            tenantId,
+            conversationId,
+            channelType: conversation.channelType,
+            direction: 'out',
+            type,
+            body: { text },
+            externalMessageId: clientMessageId,
+            clientMessageId,
+            status: 'pending',
+            ...(transaction ? { transaction } : {}),
+          });
+          const enqueuePayload = {
+            tenantId,
+            channelType: conversation.channelType,
+            conversationId,
+            message: {
+              to: conversation.externalId,
+              type: 'text',
+              body: { text },
+              meta: { conversationId, clientMessageId },
+            },
+          };
+          if (transaction) {
+            await outbound.enqueueOutbound(enqueuePayload, { transaction });
+          } else {
+            await outbound.enqueueOutbound(enqueuePayload);
+          }
+          return created;
+        };
+        message = useTransaction
+          ? await channels.runInTransaction((t) => createBoth(t))
+          : await createBoth(null);
       } catch (err) {
         // Race-safe: request concorrente persistiu primeiro (unique em
-        // tenant_key + client_message_id). Re-lê e devolve a mensagem existente.
+        // tenant_key + client_message_id). Re-lê e devolve a mensagem existente,
+        // reparando o queue item se necessário.
         if (isUniqueViolation(err) && typeof channels.findMessageByClientMessageId === 'function') {
           try {
             const existing = await channels.findMessageByClientMessageId({ tenantId, clientMessageId });
             if (existing) {
+              if (typeof outbound.ensureOutboundQueued === 'function') {
+                await outbound.ensureOutboundQueued({
+                  tenantId,
+                  channelType: conversation.channelType,
+                  conversationId,
+                  message: {
+                    to: conversation.externalId,
+                    type: 'text',
+                    body: { text },
+                    meta: { conversationId, clientMessageId },
+                  },
+                });
+              }
               return { ok: true, status: 200, payload: { message: existing, clientMessageId, idempotent: true } };
             }
           } catch (_) {
@@ -351,27 +410,6 @@ function createInboxService(deps) {
           error: err && err.message,
         });
         return { ok: false, status: 500, payload: { error: 'internal_error', message: 'Erro ao salvar mensagem da conversa' } };
-      }
-
-      // Mesmo dispatcher do POST /tickets/:id/message: outbound queue por canal.
-      try {
-        await outbound.enqueueOutbound({
-          tenantId,
-          channelType: conversation.channelType,
-          conversationId,
-          message: {
-            to: conversation.externalId,
-            type: 'text',
-            body: { text },
-            meta: { conversationId, clientMessageId },
-          },
-        });
-      } catch (err) {
-        logger.warn('[Inbox] Mensagem persistida, mas falha ao enfileirar envio outbound', {
-          conversationId,
-          channelType: conversation.channelType,
-          error: err && err.message,
-        });
       }
 
       // Compat: espelha no ledger do ticket atual (SupportPage legada).

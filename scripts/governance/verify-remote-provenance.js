@@ -17,6 +17,9 @@
  *      exatamente o commit → inexistente: NO_GO RELEASE_TAG_MISSING; target
  *      divergente: NO_GO RELEASE_TAG_CONFLICT. Sem --tag/--require-tag, os
  *      campos de tag ficam null e não reprovam (modo pré-tag).
+ *      O relatório declara o escopo explicitamente: phase/scope =
+ *      PRE_PUBLICATION/COMMIT_TREE sem tag, PUBLICATION/COMMIT_TREE_TAG com
+ *      tag conferida (status PASS/FAIL inalterado).
  *   d. remote inalcançável (ls-remote/fetch falham) → NO_GO REMOTE_UNREACHABLE
  *      (fail-closed: release oficial nunca prossegue sem verificar o remote).
  *
@@ -111,6 +114,12 @@ function verifyRemoteProvenance(options = {}, gitRunner) {
   const remoteName = options.remote || 'origin';
 
   // ── Entradas: flags > manifest > git local ────────────────────────────────
+  // Escopo explícito da verificação (relatório): pré-publicação confere apenas
+  // commit/tree; publicação (pós-tag) confere também a tag imutável. O status
+  // PASS/FAIL não muda — o gate offline manifest_provenance segue exigindo
+  // status PASS, commit/tree e commitExists/treeMatches.
+  const phase = options.tag ? 'PUBLICATION' : 'PRE_PUBLICATION';
+  const scope = options.tag ? 'COMMIT_TREE_TAG' : 'COMMIT_TREE';
   let commit = options.commit || null;
   let tree = options.tree || null;
   if (options.manifestPath) {
@@ -121,7 +130,7 @@ function verifyRemoteProvenance(options = {}, gitRunner) {
     } catch (error) {
       return finish({
         remote: null, remoteName, commit, commitExists: false, tree, treeMatches: false,
-        tag: options.tag || null, tagMatches: null, status: 'FAIL', failureCode: null,
+        tag: options.tag || null, tagMatches: null, phase, scope, status: 'FAIL', failureCode: null,
       }, 'MANIFEST_UNREADABLE', `manifest ilegível: ${error.message}`);
     }
   }
@@ -137,6 +146,8 @@ function verifyRemoteProvenance(options = {}, gitRunner) {
     treeMatches: false,
     tag: options.tag || null,
     tagMatches: null,
+    phase,
+    scope,
     status: 'FAIL',
     failureCode: null,
   };
