@@ -840,15 +840,15 @@ if [ "$BUILD" = true ]; then
                     ;;
                 rag-service)
                     build_local_image r-agent2-rag-service:latest rag-service/Dockerfile rag-service/
-                    TRANSFER_IMAGES=(r-agent2-rag-service:latest)
+                    TRANSFER_IMAGES+=(r-agent2-rag-service:latest)
                     ;;
                 asterisk)
                     build_local_image r-agent2-asterisk:latest pbx/asterisk/Dockerfile pbx/asterisk/
-                    TRANSFER_IMAGES=(r-agent2-asterisk:latest)
+                    TRANSFER_IMAGES+=(r-agent2-asterisk:latest)
                     ;;
                 redis)
                     build_local_image r-agent2-redis:latest redis/Dockerfile redis/
-                    TRANSFER_IMAGES=(r-agent2-redis:latest)
+                    TRANSFER_IMAGES+=(r-agent2-redis:latest)
                     ;;
                 *)
                     error "❌ Serviço desconhecido para build local: $srv"
@@ -892,15 +892,21 @@ if [ "$BUILD" = true ]; then
             exit 1
         fi
         # Fail-closed: confirma que TODAS as imagens chegaram ao servidor
-        REMOTE_IMAGES=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker images --format '{{.Repository}}:{{.Tag}}'" 2>&1 | grep -vE "(Warning|Permanently)" || true)
+        # com o MESMO image ID local (nome sozinho não basta: uma tag antiga
+        # já existente no host faria a checagem por nome passar com imagem stale).
+        REMOTE_IMAGES=$($SSH_CMD ${REMOTE_USER}@${REMOTE_HOST} "docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}'" 2>&1 | grep -vE "(Warning|Permanently)" || true)
         MISSING_TRANSFERRED=""
         for img in "${TRANSFER_IMAGES[@]}"; do
-            if ! echo "$REMOTE_IMAGES" | grep -q "^${img}$"; then
-                MISSING_TRANSFERRED="$MISSING_TRANSFERRED $img"
+            LOCAL_ID=$(docker image inspect --format '{{.Id}}' "$img" 2>/dev/null | sed 's/^sha256://' | cut -c1-12 || true)
+            REMOTE_ID=$(echo "$REMOTE_IMAGES" | grep -E "^${img} " | awk '{print $2}' || true)
+            if [ -z "$REMOTE_ID" ]; then
+                MISSING_TRANSFERRED="$MISSING_TRANSFERRED $img(ausente)"
+            elif [ -n "$LOCAL_ID" ] && [ "$LOCAL_ID" != "$REMOTE_ID" ]; then
+                MISSING_TRANSFERRED="$MISSING_TRANSFERRED $img(id-local=$LOCAL_ID id-remoto=$REMOTE_ID)"
             fi
         done
         if [ -n "$MISSING_TRANSFERRED" ]; then
-            error "❌ Imagens NÃO encontradas no servidor após transferência:$MISSING_TRANSFERRED"
+            error "❌ Imagens NÃO sincronizadas no servidor após transferência:$MISSING_TRANSFERRED"
             exit 1
         fi
         echo -e "${GREEN}[RESULTADO]${NC} Transferência concluída (exit code: 0)"
