@@ -82,6 +82,9 @@ async function main() {
       // Proveniência REMOTA do source: mesma disciplina dual-write + packageRequired.
       'reports/source-remote-provenance-report.json',
       'governance/source-remote-provenance-report.json',
+      // Confiabilidade de outbound (transactional outbox + delivery ambiguity) —
+      // evidência real gerada por generate-outbound-reliability-evidence.js.
+      'governance/outbound-reliability-report.json',
       // Consistência PRE_PACKAGE/FINAL: lineage explícito para eliminar a
       // ambiguidade semântica (GAP: relatório "final" com decisão DEFERRED).
       'governance/final-consistency-report.json',
