@@ -1,0 +1,17 @@
+{
+  "artifactType": "release-publication-receipt",
+  "artifactVersion": "1.0.0",
+  "generatedAt": "2026-09-09T04:01:38.396Z",
+  "releaseId": "r-agent2-20260909-005443",
+  "envelopeSha256": "6c651abb5a6ff1bb99e2ffdf93c4ddb729ab7c68b0a7ad72766623ecc7ed24bb",
+  "payloadSha256": "236a9823650158d12b5042ca97435538732a05ac1c6775a4af3db84900605171",
+  "manifestSha256": "0931374119e8d19351996b9f8ce8db3603835acc34575100de98cc42b93710e3",
+  "gitCommit": "285905f6fd8ee0b44501182f2837d58e84102c62",
+  "gitTree": "8a8120c8cf4fccbd62c41c7a507f7a7aaa528fa6",
+  "releaseTag": "r-agent2-20260909-005443",
+  "tagTarget": "285905f6fd8ee0b44501182f2837d58e84102c62",
+  "tagMatches": true,
+  "remoteCommitExists": true,
+  "remoteTreeMatches": true,
+  "status": "PUBLISHED_VERIFIED"
+}
