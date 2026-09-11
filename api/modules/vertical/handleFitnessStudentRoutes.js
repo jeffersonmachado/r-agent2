@@ -14,6 +14,7 @@ const { getSubjectTimeline } = require('../../services/vertical/customerJourneyE
 const { AccessSubject, VerticalEngagementSignal } = require('../../db/models');
 const { getSequelize } = require('../../db/sequelize');
 const { Op } = require('sequelize');
+const logger = require('../../utils/logger');
 
 function dbAvailable() {
   return !!getSequelize();
@@ -92,23 +93,41 @@ async function handleFitnessStudentRoutes(ctx) {
       });
 
       if (body.startAt || body.endAt || body.dueDate || body.renewalAt || body.planType) {
-        membership = await fitnessMembershipService.updateMembershipDetails({
-          tenantId: tenantId(req),
-          membershipId: body.membershipId,
-          fields: {
-            start_at: body.startAt || undefined,
-            end_at: body.endAt || undefined,
-            due_date: body.dueDate || undefined,
-            renewal_at: body.renewalAt || undefined,
-            plan_type: body.planType || undefined,
-            plan_name: body.planName || undefined,
-            metadata: {
-              monthlyAmount: body.monthlyAmount != null ? Number(body.monthlyAmount) : null,
-              phone: body.phone || null,
-              ...(body.membershipMetadata || {}),
+        try {
+          membership = await fitnessMembershipService.updateMembershipDetails({
+            tenantId: tenantId(req),
+            membershipId: body.membershipId,
+            fields: {
+              start_at: body.startAt || undefined,
+              end_at: body.endAt || undefined,
+              due_date: body.dueDate || undefined,
+              renewal_at: body.renewalAt || undefined,
+              plan_type: body.planType || undefined,
+              plan_name: body.planName || undefined,
+              metadata: {
+                monthlyAmount: body.monthlyAmount != null ? Number(body.monthlyAmount) : null,
+                phone: body.phone || null,
+                ...(body.membershipMetadata || {}),
+              },
             },
-          },
-        }).catch(() => membership);
+          });
+        } catch (err) {
+          // Nunca devolver 201 quando os detalhes da matrícula foram rejeitados:
+          // o chamador precisa saber que o dado NÃO foi persistido.
+          logger.warn('[FitnessStudents] Falha ao atualizar detalhes da matrícula', {
+            membershipId: body.membershipId,
+            code: err && err.code ? err.code : 'unknown',
+          });
+          sendJson(res, 422, {
+            error: err && err.code ? err.code : 'membership_details_failed',
+            message: err && err.message ? err.message : 'Falha ao atualizar detalhes da matrícula',
+            subject,
+            membership,
+            unknownFields: err && err.unknownFields ? err.unknownFields : undefined,
+            field: err && err.field ? err.field : undefined,
+          });
+          return true;
+        }
       }
     }
 

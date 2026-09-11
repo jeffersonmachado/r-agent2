@@ -1,0 +1,439 @@
+{
+  "_description": "Contrato DETERMINÍSTICO de campos persistidos por model. Declara, por model, as colunas que o domínio (services/rotas) escreve ou lê e que portanto DEVEM estar declaradas no model Sequelize. Garantia: 'campo usado pelo domínio ausente no model persistente' é detectado sem depender de banco. Validado por `npm run validate:model-field-contracts` (scripts/governance/validate-model-field-contracts.js), que usa introspecção real dos models (api/services/qa/inventory/modelAttributesIntrospector.js) e confere também a presença das colunas nas migrations. Não declarar aqui um campo que o domínio usa é uma regressão de contrato.",
+  "_schema": {
+    "table": "nome físico da tabela (deve casar com o tableName do model)",
+    "source": "caminho do arquivo do model (evidência)",
+    "persistedFields": {
+      "<coluna_fisica>": {
+        "usedBy": ["arquivos que escrevem/leem o campo (verificados pelo validador)"],
+        "reason": "por que o campo é parte do contrato persistido"
+      }
+    }
+  },
+
+  "IntegrationConnection": {
+    "table": "integration_connections",
+    "source": "api/db/models/IntegrationConnection.js",
+    "persistedFields": {
+      "id": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "PK interna da conexão" },
+      "tenant_key": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "escopo multi-tenant" },
+      "provider": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "provedor da conexão (ex.: evo)" },
+      "opaque_key": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "identidade opaca usada na URL de webhook (nunca o tenant)" },
+      "status": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "estado da conexão (connected/disconnected/error)" },
+      "config": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "configuração NÃO secreta (baseUrl, unidade)" },
+      "external_unit_id": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "unidade externa (uma hoje, N no futuro)" },
+      "credentials_encrypted": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "credencial cifrada em repouso (AES-256-GCM)" },
+      "credential_hint": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "fingerprint não reversível para diagnóstico" },
+      "last_sync_at": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "última sincronização de negócio" },
+      "last_error": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "último erro sanitizado" },
+      "metadata": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "extensões não estruturais" }
+    }
+  },
+
+  "IntegrationObjectLink": {
+    "table": "integration_object_links",
+    "source": "api/db/models/IntegrationObjectLink.js",
+    "persistedFields": {
+      "id": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "PK interna do vínculo" },
+      "tenant_key": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "escopo multi-tenant" },
+      "provider": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "provedor do objeto externo" },
+      "connection_id": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "conexão do objeto externo" },
+      "resource_type": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "tipo do recurso externo (members/memberships/entries/...)" },
+      "external_id": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "id externo do provedor (nunca PK interna)" },
+      "internal_type": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "tipo do recurso interno canônico" },
+      "internal_id": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "id interno canônico do RAP" },
+      "sync_version": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "versão do vínculo (detecta remapeamento)" },
+      "last_seen_at": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "última vez visto no provedor" },
+      "metadata": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "extensões curadas (não é depósito de payload)" }
+    }
+  },
+
+  "IntegrationSyncState": {
+    "table": "integration_sync_states",
+    "source": "api/db/models/IntegrationSyncState.js",
+    "persistedFields": {
+      "id": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "PK interna do estado" },
+      "tenant_key": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "escopo multi-tenant" },
+      "connection_id": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "conexão do cursor" },
+      "resource_type": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "recurso do cursor" },
+      "watermark_at": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "marca d'água incremental" },
+      "overlap_seconds": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "overlap controlado da janela" },
+      "cursor": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "cursor persistido para retomada" },
+      "status": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "estado da sincronização" },
+      "last_success_at": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "deteccão de lacuna na reconciliação" },
+      "last_error": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "último erro sanitizado" },
+      "stats": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "métricas provider-neutral do último ciclo" },
+      "initial_sync_completed_at": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "conclusão do initial sync" }
+    }
+  },
+
+  "IntegrationInboundEvent": {
+    "table": "integration_inbound_events",
+    "source": "api/db/models/IntegrationInboundEvent.js",
+    "persistedFields": {
+      "id": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "PK interna do evento" },
+      "tenant_key": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "escopo multi-tenant resolvido server-side" },
+      "connection_id": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "conexão que originou o evento" },
+      "provider": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "provedor do evento" },
+      "event_type": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "tipo do evento externo" },
+      "external_event_id": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "identidade do evento no provedor" },
+      "resource_type": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "recurso sinalizado (webhook é sinal)" },
+      "external_resource_id": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "objeto externo sinalizado" },
+      "idempotency_key": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "dedup determinístico de reentrega" },
+      "payload": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "payload SANITIZADO" },
+      "processing_state": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "estado de processamento" },
+      "attempts": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "tentativas observadas" },
+      "received_at": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "instante de recebimento" },
+      "processed_at": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "instante de processamento" },
+      "error": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "erro sanitizado" }
+    }
+  },
+
+  "AccessMembership": {
+    "table": "access_memberships",
+    "source": "api/db/models/AccessMembership.js",
+    "allowlists": [
+      {
+        "file": "api/services/vertical/fitnessMembershipService.js",
+        "export": "UPDATABLE_MEMBERSHIP_FIELDS",
+        "reason": "allowlist de campos aceitos por updateMembershipDetails: garante que nenhum campo aceito pela API seja descartado pelo model"
+      }
+    ],
+    "persistedFields": {
+      "id": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "PK interna RAP (nunca o id externo do provedor)"
+      },
+      "tenant_key": {
+        "usedBy": ["api/modules/access-control/accessControlService.js", "api/services/vertical/fitnessMembershipService.js"],
+        "reason": "escopo multi-tenant obrigatório"
+      },
+      "subject_id": {
+        "usedBy": ["api/modules/access-control/accessControlService.js", "api/services/vertical/fitnessMembershipService.js"],
+        "reason": "vínculo com AccessSubject"
+      },
+      "customer_id": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "vínculo convencional com o cliente/lead canônico"
+      },
+      "vertical": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js"],
+        "reason": "segregação de vertical (fitness/beauty)"
+      },
+      "plan_name": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js"],
+        "reason": "plano contratado exibido na operação"
+      },
+      "billing_status": {
+        "usedBy": ["api/services/vertical/billingOrchestrationService.js"],
+        "reason": "máquina de estados de billing"
+      },
+      "status": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js"],
+        "reason": "status operacional da matrícula"
+      },
+      "unit_scope": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js"],
+        "reason": "escopo de unidades permitidas"
+      },
+      "start_at": {
+        "usedBy": ["api/modules/vertical/handleFitnessStudentRoutes.js"],
+        "reason": "início da vigência contratual (gravado no cadastro do aluno)"
+      },
+      "end_at": {
+        "usedBy": ["api/modules/vertical/handleFitnessStudentRoutes.js"],
+        "reason": "fim da vigência contratual (gravado no cadastro do aluno)"
+      },
+      "due_date": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js", "api/services/vertical/billingOrchestrationService.js", "api/modules/vertical/handleFitnessStudentRoutes.js"],
+        "reason": "vencimento corrente do plano (billing)"
+      },
+      "renewal_at": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js", "api/services/vertical/billingOrchestrationService.js", "api/modules/vertical/handleFitnessStudentRoutes.js"],
+        "reason": "data de renovação registrada pelo domínio"
+      },
+      "grace_until": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js", "api/services/vertical/billingOrchestrationService.js"],
+        "reason": "janela de carência lida por computeEffectiveBillingStatus"
+      },
+      "plan_type": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js", "api/modules/vertical/handleFitnessStudentRoutes.js"],
+        "reason": "tipo/categoria do plano"
+      },
+      "metadata": {
+        "usedBy": ["api/services/vertical/fitnessMembershipService.js"],
+        "reason": "extensões não estruturais (nunca segredos)"
+      }
+    }
+  },
+
+  "AccessSubject": {
+    "table": "access_subjects",
+    "source": "api/db/models/AccessSubject.js",
+    "persistedFields": {
+      "id": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "PK interna RAP do sujeito de acesso"
+      },
+      "tenant_key": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "escopo multi-tenant"
+      },
+      "customer_id": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "identidade de cliente convencionada pelo domínio"
+      },
+      "membership_id": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "matrícula corrente do sujeito"
+      },
+      "status": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "status do sujeito"
+      },
+      "vertical_profile": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "perfil vertical (fitness/beauty)"
+      },
+      "metadata": {
+        "usedBy": ["api/modules/access-control/accessControlService.js"],
+        "reason": "extensões não estruturais"
+      }
+    }
+  },
+
+  "VerticalAttendance": {
+    "table": "vertical_attendances",
+    "source": "api/db/models/VerticalAttendance.js",
+    "persistedFields": {
+      "id": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "PK interna RAP da presença"
+      },
+      "tenant_key": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "escopo multi-tenant"
+      },
+      "vertical": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "vertical da presença"
+      },
+      "subject_id": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "sujeito que fez check-in"
+      },
+      "membership_id": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "matrícula usada no check-in"
+      },
+      "access_decision_id": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "decisão de acesso correlacionada (idempotência)"
+      },
+      "unit_id": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "unidade do check-in (uma unidade hoje, N no futuro)"
+      },
+      "device_id": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "dispositivo de acesso"
+      },
+      "checked_in_at": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "instante da entrada (frequência/churn)"
+      },
+      "checked_out_at": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "instante da saída"
+      },
+      "duration_minutes": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "duração da visita"
+      },
+      "status": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "estado da presença (open/closed/absent)"
+      },
+      "metadata": {
+        "usedBy": ["api/services/vertical/fitnessAttendanceService.js"],
+        "reason": "extensões não estruturais"
+      }
+    }
+  },
+
+  "BillingTransaction": {
+    "table": "billing_transactions",
+    "source": "api/db/models/BillingTransaction.js",
+    "persistedFields": {
+      "id": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "PK interna RAP da transação"
+      },
+      "tenant_key": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "escopo multi-tenant"
+      },
+      "vertical": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "vertical da cobrança"
+      },
+      "membership_id": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "matrícula cobrada"
+      },
+      "bundle_id": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "pacote de sessões cobrado"
+      },
+      "subject_id": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "sujeito cobrado"
+      },
+      "customer_id": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "cliente cobrado"
+      },
+      "provider": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "provedor de pagamento/integração de origem"
+      },
+      "type": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "tipo da cobrança"
+      },
+      "amount": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "valor da cobrança"
+      },
+      "currency": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "moeda da cobrança"
+      },
+      "status": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "estado do ciclo de vida da cobrança"
+      },
+      "due_at": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "vencimento"
+      },
+      "paid_at": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "pagamento"
+      },
+      "external_customer_id": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "referência externa do cliente (nunca PK interna)"
+      },
+      "external_transaction_id": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "referência externa da transação"
+      },
+      "external_subscription_id": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "referência externa da assinatura"
+      },
+      "idempotency_key": {
+        "usedBy": ["api/services/billingService.js"],
+        "reason": "idempotência de criação de cobrança"
+      },
+      "metadata": {
+        "usedBy": ["api/services/billingService.js", "api/services/integration/importers/billingImporter.js"],
+        "reason": "extensões não estruturais (sem PAN/biometria); a integração registra a origem e o instante do import"
+      }
+    }
+  },
+
+  "IntegrationConnection": {
+    "table": "integration_connections",
+    "source": "api/db/models/IntegrationConnection.js",
+    "allowlists": [
+      {
+        "file": "api/services/integration/integrationConnectionService.js",
+        "export": "ALLOWED_CONFIG_KEYS",
+        "storageField": "config",
+        "reason": "chaves aceitas DENTRO da coluna JSONB `config`: garante que a coluna de armazenamento exista no model, evitando descarte silencioso de configuração aceita pela API"
+      }
+    ],
+    "persistedFields": {
+      "id": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "PK interna da conexão" },
+      "tenant_key": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "escopo multi-tenant" },
+      "provider": { "usedBy": ["api/services/integration/integrationConnectionService.js", "api/services/integration/integrationSyncService.js"], "reason": "provedor externo" },
+      "label": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "rótulo operacional exibido ao cliente" },
+      "external_unit_id": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "unidade externa (uma hoje, N no futuro)" },
+      "unit_label": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "nome da unidade externa" },
+      "opaque_key": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "identidade pública usada na URL de webhook (nunca o tenant id)" },
+      "status": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "estado da conexão (connected/disconnected/error)" },
+      "config": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "configuração NÃO secreta (baseUrl, pageSize, overlap, laboratório)" },
+      "credentials_encrypted": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "credenciais cifradas em repouso (AES-256-GCM)" },
+      "credential_hint": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "fingerprint não reversível para diagnóstico sem vazar segredo" },
+      "last_sync_at": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "última sincronização de negócio" },
+      "last_error": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "erro sanitizado da última falha" },
+      "metadata": { "usedBy": ["api/services/integration/integrationConnectionService.js"], "reason": "extensões não estruturais" }
+    }
+  },
+
+  "IntegrationObjectLink": {
+    "table": "integration_object_links",
+    "source": "api/db/models/IntegrationObjectLink.js",
+    "persistedFields": {
+      "id": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "PK interna do vínculo" },
+      "tenant_key": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "escopo multi-tenant (mesmo external id em tenants diferentes é outra identidade)" },
+      "provider": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "parte da chave de sincronização" },
+      "connection_id": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "conexão de origem do objeto externo" },
+      "resource_type": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "tipo de recurso externo (members, entries, ...)" },
+      "external_id": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "id do objeto no provedor (nunca PK interna do RAP)" },
+      "internal_type": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "tipo do recurso interno canônico" },
+      "internal_id": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "id do recurso interno canônico" },
+      "sync_version": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "versão do vínculo quando o alvo interno muda" },
+      "last_seen_at": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "última vez que o objeto externo foi observado" },
+      "metadata": { "usedBy": ["api/services/integration/integrationObjectLinkService.js"], "reason": "extensões curadas (entity/subject derivados, conflitos)" }
+    }
+  },
+
+  "IntegrationSyncState": {
+    "table": "integration_sync_states",
+    "source": "api/db/models/IntegrationSyncState.js",
+    "persistedFields": {
+      "id": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "PK interna do estado de sync" },
+      "tenant_key": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "escopo multi-tenant" },
+      "connection_id": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "conexão do cursor" },
+      "provider": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "provedor do cursor" },
+      "resource_type": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "recurso do cursor" },
+      "status": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "idle/running/failed" },
+      "watermark_at": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "watermark incremental (só avança em sucesso)" },
+      "overlap_seconds": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "overlap controlado da janela" },
+      "cursor": { "usedBy": ["api/services/integration/integrationSyncStateService.js", "api/services/integration/integrationSyncService.js"], "reason": "cursor de página para retomada" },
+      "page_offset": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "progresso de paginação" },
+      "initial_sync_completed_at": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "conclusão do initial sync" },
+      "last_run_at": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "início da última execução" },
+      "last_success_at": { "usedBy": ["api/services/integration/integrationSyncStateService.js", "api/services/integration/integrationReconciliationService.js"], "reason": "base do cálculo de lacuna (gap)" },
+      "last_error": { "usedBy": ["api/services/integration/integrationSyncStateService.js"], "reason": "erro sanitizado da última falha" },
+      "stats": { "usedBy": ["api/services/integration/integrationSyncStateService.js", "api/services/integration/integrationSyncService.js"], "reason": "métricas provider-neutral por execução" }
+    }
+  },
+
+  "IntegrationInboundEvent": {
+    "table": "integration_inbound_events",
+    "source": "api/db/models/IntegrationInboundEvent.js",
+    "persistedFields": {
+      "id": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "PK interna do evento" },
+      "tenant_key": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "tenant resolvido server-side pela conexão (nunca do payload)" },
+      "connection_id": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "conexão de origem" },
+      "provider": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "provedor do evento" },
+      "event_type": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "tipo do evento externo" },
+      "external_event_id": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "id do evento no provedor quando disponível" },
+      "resource_type": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "recurso afetado" },
+      "external_resource_id": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "objeto afetado no provedor" },
+      "idempotency_key": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "dedup determinístico do webhook" },
+      "payload": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "payload sanitizado (sem segredo/PAN/biometria)" },
+      "received_at": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "instante de recebimento" },
+      "processed_at": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "instante de processamento" },
+      "processing_state": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "estado do processamento" },
+      "attempts": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "tentativas observadas (reentrega)" },
+      "error": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "erro sanitizado" },
+      "metadata": { "usedBy": ["api/services/integration/integrationInboundEventService.js"], "reason": "extensões curadas" }
+    }
+  }
+}
+

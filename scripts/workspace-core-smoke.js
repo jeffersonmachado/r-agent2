@@ -440,7 +440,11 @@ async function runRealJourney({
   }).then((output) => output.task);
 
   timeline = await recorder.step('validate_timeline_before_evidence', { entityId: entity.id }, async () => {
-    const result = await timelineService.getEntityTimeline({ tenantId, entityId: entity.id, limit: 100, offset: 0 });
+    // Gate de ENGENHARIA: valida o linkage interno (refId de message/ticket/task/
+    // evidence). A projeção PRODUCTION remove refId por design (segregação de
+    // experiência, timelineSanitization.js), então a inspeção interna precisa
+    // declarar DEVELOPMENT — nunca o contrário (não expor internals em PRODUCTION).
+    const result = await timelineService.getEntityTimeline({ tenantId, entityId: entity.id, limit: 100, offset: 0, classification: 'DEVELOPMENT' });
     return { timeline: result };
   }).then((output) => output.timeline);
 
@@ -512,7 +516,9 @@ async function runRealJourney({
   }).then((output) => output.evidence);
 
   timeline = await recorder.step('validate_timeline', { entityId: entity.id }, async () => {
-    const result = await timelineService.getEntityTimeline({ tenantId, entityId: entity.id, limit: 100, offset: 0 });
+    // Mesmo motivo do step anterior: gate de engenharia inspeciona a visão
+    // DEVELOPMENT (com refId), não a projeção PRODUCTION.
+    const result = await timelineService.getEntityTimeline({ tenantId, entityId: entity.id, limit: 100, offset: 0, classification: 'DEVELOPMENT' });
     return { timeline: result };
   }).then((output) => output.timeline);
 

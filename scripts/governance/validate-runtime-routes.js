@@ -7,6 +7,9 @@ const {
   statusFromIssues,
   writeReport,
 } = require('./common');
+const {
+  shouldIgnoreRequestFailure,
+} = require('./lib/route-event-attribution');
 
 const baseUrl = process.env.RUNTIME_BASE_URL || 'http://127.0.0.1:5173';
 const username = process.env.TEST_SUPERADMIN_USERNAME || process.env.TEST_USERNAME || 'systemadmin';
@@ -38,6 +41,16 @@ async function main() {
     const page = await browser.newPage();
     const consoleErrors = [];
     const networkFailures = [];
+
+    // Início de cada requisição, para atribuir eventos por DOCUMENTO e não por
+    // fatia de tempo: a navegação full-page (page.goto) aborta as requisições
+    // em voo do documento anterior e elas chegavam à fatia da rota alvo.
+    const requestStartedAt = new WeakMap();
+    let routeNavigationStartedAt = 0;
+
+    page.on('request', (request) => {
+      requestStartedAt.set(request, Date.now());
+    });
 
     page.on('console', (message) => {
       if (message.type() === 'error') {
@@ -140,6 +153,20 @@ async function main() {
     page.on('requestfailed', (request) => {
       const failure = request.failure() ? request.failure().errorText : 'unknown';
       const url = request.url();
+
+      // Atribuição por documento: ERR_ABORTED de requisição iniciada antes da
+      // navegação da rota alvo pertence ao documento anterior (o browser a
+      // abortou ao descartá-lo). Não é falha da rota alvo.
+      if (
+        shouldIgnoreRequestFailure({
+          failureText: failure,
+          requestStartedAt: requestStartedAt.get(request),
+          routeNavigationStartedAt,
+        })
+      ) {
+        return;
+      }
+
       // /auth/me pode ser abortado em troca de rota sem indicar falha funcional.
       if (url.includes('/auth/me') && /ERR_ABORTED/i.test(failure)) {
         return;
@@ -231,6 +258,7 @@ async function main() {
       for (let attempt = 1; attempt <= 2; attempt += 1) {
         const beforeErrors = consoleErrors.length;
         const beforeFailures = networkFailures.length;
+        routeNavigationStartedAt = Date.now();
         const response = await page.goto(buildUrl(route.requested), { waitUntil: 'domcontentloaded', timeout: 30000 }).catch((error) => {
           issues.push({ code: 'route_navigation_error', route: route.requested, message: error.message });
           return null;

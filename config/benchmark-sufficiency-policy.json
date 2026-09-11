@@ -1,0 +1,95 @@
+{
+  "_description": "Política de governança da SUFICIÊNCIA DA AMOSTRA DE BENCHMARKS do RAP. Os thresholds abaixo NÃO são constantes científicas: são uma política inicial versionada, configurável e com rationale registrado, aplicada pelo engine puro `qa/benchmarks/benchmarkSufficiencyEngine.js` e executada pelo gate `npm run validate:benchmark-sufficiency`. Alterar qualquer valor exige nova versão desta política, com rationale e aprovação registrados — nunca ajuste silencioso para produzir PASS.",
+  "version": "1.0.0",
+
+  "saturationWindow": 2,
+  "maxNoncriticalCapabilityNoveltyRate": 0.05,
+  "maxNewCriticalRequiredCapabilitiesInWindow": 0,
+  "maxNoncriticalJourneyNoveltyRate": 0.05,
+  "maxNewCriticalRequiredJourneysInWindow": 0,
+  "maxNoncriticalBusinessRuleNoveltyRate": 0.05,
+  "maxNewCriticalRequiredBusinessRulesInWindow": 0,
+
+  "maxHoldoutNoncriticalNoveltyRate": 0.05,
+  "maxHoldoutNewCriticalRequiredCapabilities": 0,
+  "maxHoldoutNewCriticalRequiredJourneys": 0,
+  "maxHoldoutNewCriticalRequiredBusinessRules": 0,
+
+  "minimumIndependentDiscoveryBenchmarks": 3,
+  "minimumIndependentValidationBenchmarks": 1,
+  "minimumDistinctIndependenceGroups": 3,
+  "minimumDistinctArchetypes": 2,
+  "maximumSingleArchetypeShare": 0.6,
+  "maximumSingleCountryShare": 0.8,
+  "maximumCloneShare": 0.5,
+
+  "maximumSourceAgeDays": 540,
+  "maximumBenchmarkReviewAgeDays": 365,
+  "minimumAcceptedSourceTier": 5,
+
+  "orderSensitivityPermutations": 3,
+  "orderSensitivityMustBeStable": true,
+
+  "criticalGates": [
+    "marketArchetypeCoverage",
+    "benchmarkDiversity",
+    "benchmarkIndependence",
+    "capabilitySaturation",
+    "journeySaturation",
+    "businessRuleSaturation",
+    "holdoutValidation",
+    "sourceQuality",
+    "freshness",
+    "criticalClassification",
+    "inventoryArithmetic",
+    "orderSensitivity",
+    "analysisEvidence"
+  ],
+
+  "rationale": {
+    "saturationWindow": "Dois benchmarks INDEPENDENTES consecutivos é o menor número capaz de distinguir 'saturação real' de 'acaso de um único produto'. Janela maior reduz falso PASS às custas de exigir mais pesquisa; 2 é o piso inicial do RAP.",
+    "maxNoncriticalCapabilityNoveltyRate": "5% de novidade não crítica por benchmark na janela permite variações de empacotamento comercial sem reabrir a certificação, mas ainda detecta descoberta material. É política, não verdade científica.",
+    "maxNewCriticalRequiredCapabilitiesInWindow": "Zero é absoluto: uma capability REQUIRED+CRITICAL nova significa que o inventário não representava o mercado. Nenhum score médio pode compensar isso.",
+    "maxHoldoutNoncriticalNoveltyRate": "O holdout existe exatamente para medir generalização; novidade não crítica residual é esperada e tolerada até o mesmo piso da janela de saturação.",
+    "minimumIndependentDiscoveryBenchmarks": "Piso operacional de diversidade (proteção), NÃO prova de suficiência: 3 benchmarks em grupos de independência distintos evitam que uma amostra de um único fornecedor passe.",
+    "maximumSourceAgeDays": "Fontes oficiais envelhecem: 540 dias é o limite para aceitar evidência de capability sem revalidação obrigatória.",
+    "minimumAcceptedSourceTier": "Tier 5 = página oficial de funcionalidade. Blog, post de busca e inferência de LLM não são prova de capability (§18).",
+    "orderSensitivityMustBeStable": "A curva de novidade é sensível à ordem de análise; se o resultado de suficiência depende da ordem, não há certificação (§28)."
+  },
+
+  "sourceTiers": {
+    "1": "documentação oficial",
+    "2": "API/Swagger oficial",
+    "3": "help center oficial",
+    "4": "manual oficial",
+    "5": "página oficial de funcionalidade",
+    "6": "release notes oficiais",
+    "7": "fonte secundária de alta confiança",
+    "8": "outras fontes (somente apoio — nunca prova de capability)"
+  },
+
+  "dimensions": [
+    "marketArchetype",
+    "customerSize",
+    "geography",
+    "businessModel",
+    "specialization",
+    "operationalDepth",
+    "digitalMaturity",
+    "integrationMaturity",
+    "physicalOperation",
+    "financialDepth",
+    "customerEngagementDepth"
+  ],
+
+  "criticalityMethodology": {
+    "CRITICAL": "Sem esta capacidade a operação básica do segmento não funciona, ou há risco financeiro/legal/segurança/continuidade operacional.",
+    "REQUIRED": "Esperada pela maioria relevante do mercado; ausência degrada competitividade mas não impede operar.",
+    "OPTIONAL": "Diferencial competitivo ou nicho.",
+    "EXCLUDED": "Fora do escopo declarado da plataforma, com justificativa registrada.",
+    "rules": [
+      "Uma capability só é CRITICAL com critério explícito de operação básica, financeiro, segurança, compliance, jornada principal, retenção, acesso ou continuidade operacional.",
+      "Rebaixar classificação herdada (CRITICAL→REQUIRED/OPTIONAL, REQUIRED→EXCLUDED) sem justificativa versionada é violação de anti-gaming."
+    ]
+  }
+}

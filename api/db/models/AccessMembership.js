@@ -26,6 +26,18 @@ function getAccessMembershipModel() {
       unit_scope: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       start_at: { type: DataTypes.DATE, allowNull: true },
       end_at: { type: DataTypes.DATE, allowNull: true },
+      // Colunas de billing adicionadas por
+      // `api/db/migrations/20260318100000-vertical-beauty-fitness-core.js`.
+      // Declaradas aqui porque `fitnessMembershipService` e
+      // `billingOrchestrationService` as escrevem (updateMembershipDetails,
+      // updateBillingStatus, reactivateMembership, startGracePeriod) e as leem
+      // (computeEffectiveBillingStatus usa grace_until). Sem a declaração, o
+      // Sequelize descarta a escrita silenciosamente. Contrato versionado em
+      // `config/model-field-contracts.json` (gate `validate:model-field-contracts`).
+      due_date: { type: DataTypes.DATE, allowNull: true },
+      renewal_at: { type: DataTypes.DATE, allowNull: true },
+      grace_until: { type: DataTypes.DATE, allowNull: true },
+      plan_type: { type: DataTypes.STRING, allowNull: true },
       metadata: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
     }, {
       tableName: 'access_memberships',

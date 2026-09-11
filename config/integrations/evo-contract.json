@@ -1,0 +1,208 @@
+{
+  "_description": "Contrato de integração read-only com o EVO (sistema de gestão de academia — alunos, planos, matrículas, check-ins, vendas e contas a receber). Este arquivo é a ÚNICA fonte de endpoints, autenticação, paginação e formato de resposta do provider. Nenhum serviço de domínio do RAP conhece esses detalhes: apenas o EvoProviderAdapter.",
+  "_certification": {
+    "status": "UNVERIFIED",
+    "reason": "A documentação oficial da API de integração do EVO (host de integração da EVO/W12) não está acessível a partir deste ambiente de build (DNS não resolve), e nenhuma credencial real foi fornecida. Os caminhos abaixo NÃO foram validados contra o provedor real.",
+    "honestLabel": "CODE READY / CONTRACT TESTED / LOCAL INTEGRATION TESTED / AWAITING EVO LIVE CREDENTIAL CERTIFICATION",
+    "mustNotClaim": "LIVE VERIFIED",
+    "howToCertify": [
+      "1. Obter Secret Key + token da conta EVO e o host oficial de integração.",
+      "2. Confirmar cada caminho/dialeto de paginação contra o Swagger oficial e ajustar ESTE arquivo (nada mais).",
+      "3. Trocar status para CERTIFIED e preencher certifiedAt/certifiedBy/verifiedAgainst.",
+      "4. Rodar npm run validate:evo-contract e o smoke de certificação com UM aluno real, duas vezes (idempotência)."
+    ],
+    "guards": {
+      "unverifiedHostPolicy": "Enquanto status != CERTIFIED, o cliente HTTP recusa chamadas para hosts não-loopback, salvo quando a conexão declara config.allowUnverifiedEndpoints=true explicitamente (uso de laboratório, registrado e auditável em diagnóstico).",
+      "errorCode": "integration_evo_contract_not_certified"
+    }
+  },
+  "_source": "Estrutura derivada do guia de integração do fornecedor para o produto EVO/W12 (recursos e semântica de negócio). Campos físicos devem ser confirmados item a item na certificação.",
+
+  "provider": "evo",
+  "readOnly": true,
+  "defaultBaseUrl": "https://evo-integracao.wanessa.cloud/api/v1",
+  "auth": {
+    "type": "basic",
+    "usernameField": "token",
+    "passwordField": "secretKey",
+    "header": "Authorization",
+    "scheme": "Basic"
+  },
+  "request": {
+    "timeoutMs": 15000,
+    "maxRetries": 3,
+    "baseBackoffMs": 500,
+    "concurrency": 2,
+    "pageSize": 100,
+    "maxPages": 500
+  },
+  "pagination": {
+    "type": "offset",
+    "pageParam": "page",
+    "sizeParam": "size",
+    "startsAt": 1,
+    "itemsField": null,
+    "itemsFieldAlternatives": ["data", "items", "results", "content"],
+    "totalPagesField": null,
+    "totalPagesFieldAlternatives": ["totalPages", "total_pages", "pages"],
+    "hasMoreFieldAlternatives": ["hasMore", "has_more"]
+  },
+  "rateLimit": {
+    "documented": false,
+    "policy": "Nenhum limite oficial foi confirmado. Concorrência conservadora (2) e retry com backoff exponencial em 429/5xx/timeout; nunca retry cego em operação mutável (a integração é read-only)."
+  },
+
+  "resources": {
+    "members": {
+      "path": "/members",
+      "detailPath": "/members/{id}",
+      "incrementalParam": "updatedSince",
+      "supportsIncremental": true,
+      "fields": {
+        "externalId": ["idMember", "id"],
+        "name": ["name", "nome"],
+        "email": ["email"],
+        "phone": ["phone", "telephone", "celular"],
+        "document": ["document", "cpf"],
+        "status": ["status"],
+        "birthDate": ["birthDate", "birthday", "dataNascimento"],
+        "unitId": ["idBranch", "idUnit"],
+        "joinedAt": ["registerDate", "createdAt"]
+      }
+    },
+    "prospects": {
+      "path": "/prospects",
+      "detailPath": "/prospects/{id}",
+      "incrementalParam": "updatedSince",
+      "supportsIncremental": true,
+      "fields": {
+        "externalId": ["idProspect", "id"],
+        "name": ["name", "nome"],
+        "email": ["email"],
+        "phone": ["phone", "telephone", "celular"],
+        "document": ["document", "cpf"],
+        "status": ["status"],
+        "stage": ["stage", "situation"],
+        "unitId": ["idBranch", "idUnit"],
+        "createdAt": ["registerDate", "createdAt"]
+      }
+    },
+    "plans": {
+      "path": "/membership-plans",
+      "detailPath": "/membership-plans/{id}",
+      "supportsIncremental": false,
+      "fields": {
+        "externalId": ["idMembershipPlan", "id"],
+        "name": ["name", "nome"],
+        "type": ["type", "kind", "planType"],
+        "amount": ["amount", "value", "price"],
+        "cycle": ["cycle", "periodicity"],
+        "active": ["active", "isActive", "status"]
+      }
+    },
+    "memberships": {
+      "path": "/memberships",
+      "detailPath": "/memberships/{id}",
+      "incrementalParam": "updatedSince",
+      "supportsIncremental": true,
+      "fields": {
+        "externalId": ["idMembership", "id"],
+        "memberExternalId": ["idMember", "memberId"],
+        "planExternalId": ["idMembershipPlan", "planId"],
+        "planName": ["planName", "membershipPlanName"],
+        "planType": ["planType", "type"],
+        "status": ["status"],
+        "billingStatus": ["billingStatus", "financialStatus"],
+        "startAt": ["startDate", "beginDate", "startAt"],
+        "endAt": ["endDate", "expirationDate", "endAt"],
+        "dueDate": ["dueDate", "nextDueDate", "vencimento"],
+        "renewalAt": ["renewalDate", "renewalAt"],
+        "unitId": ["idBranch", "idUnit"]
+      }
+    },
+    "entries": {
+      "path": "/entries",
+      "detailPath": "/entries/{id}",
+      "incrementalParam": "updatedSince",
+      "supportsIncremental": true,
+      "fields": {
+        "externalId": ["idEntry", "id"],
+        "memberExternalId": ["idMember", "memberId"],
+        "unitId": ["idBranch", "idUnit"],
+        "occurredAt": ["date", "entryDate", "dateEntry", "occurredAt"],
+        "deviceId": ["idDevice", "device"]
+      }
+    },
+    "sales": {
+      "path": "/sales",
+      "detailPath": "/sales/{id}",
+      "incrementalParam": "updatedSince",
+      "supportsIncremental": true,
+      "fields": {
+        "externalId": ["idSale", "id"],
+        "memberExternalId": ["idMember", "memberId"],
+        "status": ["status"],
+        "amount": ["amount", "value", "total"],
+        "currency": ["currency"],
+        "type": ["type"],
+        "occurredAt": ["date", "saleDate", "createdAt"],
+        "dueAt": ["dueDate", "vencimento"],
+        "paidAt": ["payDate", "paidAt", "paymentDate"]
+      }
+    },
+    "receivables": {
+      "path": "/receivables",
+      "detailPath": "/receivables/{id}",
+      "incrementalParam": "updatedSince",
+      "supportsIncremental": true,
+      "fields": {
+        "externalId": ["idReceivable", "id"],
+        "memberExternalId": ["idMember", "memberId"],
+        "saleExternalId": ["idSale", "saleId"],
+        "status": ["status"],
+        "amount": ["amount", "value", "total"],
+        "currency": ["currency"],
+        "type": ["type"],
+        "dueAt": ["dueDate", "vencimento"],
+        "paidAt": ["payDate", "paidAt", "paymentDate"]
+      }
+    }
+  },
+
+  "statusMap": {
+    "member": {
+      "1": "active",
+      "2": "inactive",
+      "3": "suspended"
+    },
+    "membershipBilling": {
+      "active": "active",
+      "inactive": "cancelled",
+      "blocked": "blocked",
+      "delinquent": "delinquent",
+      "grace": "grace_period",
+      "cancelled": "cancelled",
+      "canceled": "cancelled",
+      "suspended": "blocked",
+      "trial": "trial",
+      "visitor": "visitor"
+    },
+    "transaction": {
+      "paid": "paid",
+      "pago": "paid",
+      "open": "pending",
+      "pending": "pending",
+      "aberto": "pending",
+      "overdue": "overdue",
+      "atrasado": "overdue",
+      "canceled": "cancelled",
+      "cancelled": "cancelled",
+      "refunded": "refunded"
+    }
+  },
+
+  "currency": {
+    "default": "BRL",
+    "allowed": ["BRL", "USD", "EUR"]
+  }
+}

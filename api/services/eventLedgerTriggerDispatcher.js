@@ -88,8 +88,16 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
 
   const safeBatch = Math.min(Math.max(Number(batchSize) || 100, 1), 1000);
 
-  // Cursor + lock to avoid concurrent scanners
-  return sequelize.transaction(async (t) => {
+  // FASE 1 — snapshot do cursor + lote em transação CURTA (o FOR UPDATE serializa
+  // scanners concorrentes). Nenhum enqueue acontece aqui de propósito:
+  // `enqueueJob` faz `Model.create()` (autocommit) e adquire OUTRA conexão do
+  // pool. Enfileirar dentro da transação prendia todas as conexões do pool em
+  // "idle in transaction" sob concorrência até esgotá-lo —
+  // `SequelizeConnectionAcquireTimeoutError: Operation timeout` em toda a API
+  // (ExecutionQueue, OutboundWorker, TenantService, WhatsAppQRBridge, Scheduler)
+  // e bloqueio do INSERT de outras varreduras no lock de linha retido. Regressão
+  // coberta por tests/unit/eventLedgerTriggerDispatcherPoolSafety.test.js.
+  const snapshot = await sequelize.transaction(async (t) => {
     const [lockedRows] = await sequelize.query(
       `SELECT id, consumer, last_received_at, last_event_id
        FROM event_dispatch_state
@@ -102,7 +110,7 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
     const lastEventId = locked?.last_event_id ? safeToString(locked.last_event_id) : '';
 
     const EventModel = EventLedger();
-    const events = await EventModel.findAll({
+    const rows = await EventModel.findAll({
       where: {
         [Op.or]: [
           { received_at: { [Op.gt]: lastReceivedAt } },
@@ -115,51 +123,44 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
       transaction: t,
     }).catch(() => []);
 
-    if (!events || events.length === 0) {
-      return { ok: true, enqueued: 0, cursor: { receivedAt: lastReceivedAt.toISOString(), eventId: lastEventId || null } };
+    return { lastReceivedAt, lastEventId, events: Array.isArray(rows) ? rows : [] };
+  });
+
+  if (!snapshot.events.length) {
+    return {
+      ok: true,
+      enqueued: 0,
+      cursor: { receivedAt: snapshot.lastReceivedAt.toISOString(), eventId: snapshot.lastEventId || null },
+    };
+  }
+
+  // FASE 2 — enqueue FORA de qualquer transação. A idempotência por
+  // execution_jobs.idempotency_key (event_dispatch:<eventId>[:<target>]) garante
+  // que scanners concorrentes lendo o mesmo lote não dupliquem dispatch.
+  let maxReceivedAt = snapshot.lastReceivedAt;
+  let maxEventId = snapshot.lastEventId;
+  let enqueued = 0;
+
+  const splitTargets = Array.isArray(dispatchTargets) && dispatchTargets.length
+    ? dispatchTargets
+    : (boolEnv('EVENT_DISPATCH_SPLIT_TARGETS', false) ? ['webhooks', 'flows'] : null);
+
+  for (const ev of snapshot.events) {
+    const json = ev.toJSON ? ev.toJSON() : ev;
+    const tenantId = json.tenant_key;
+    const eventId = json.id;
+    const receivedAt = json.received_at ? new Date(json.received_at) : null;
+    if (receivedAt) {
+      if (receivedAt > maxReceivedAt) {
+        maxReceivedAt = receivedAt;
+        maxEventId = safeToString(eventId || '');
+      } else if (receivedAt.getTime() === maxReceivedAt.getTime() && safeToString(eventId || '') > safeToString(maxEventId || '')) {
+        maxEventId = safeToString(eventId || '');
+      }
     }
 
-    let maxReceivedAt = lastReceivedAt;
-    let maxEventId = lastEventId;
-    let enqueued = 0;
-
-    const splitTargets = Array.isArray(dispatchTargets) && dispatchTargets.length
-      ? dispatchTargets
-      : (boolEnv('EVENT_DISPATCH_SPLIT_TARGETS', false) ? ['webhooks', 'flows'] : null);
-
-    for (const ev of events) {
-      const json = ev.toJSON ? ev.toJSON() : ev;
-      const tenantId = json.tenant_key;
-      const eventId = json.id;
-      const receivedAt = json.received_at ? new Date(json.received_at) : null;
-      if (receivedAt) {
-        if (receivedAt > maxReceivedAt) {
-          maxReceivedAt = receivedAt;
-          maxEventId = safeToString(eventId || '');
-        } else if (receivedAt.getTime() === maxReceivedAt.getTime() && safeToString(eventId || '') > safeToString(maxEventId || '')) {
-          maxEventId = safeToString(eventId || '');
-        }
-      }
-
-      if (splitTargets && splitTargets.length) {
-        for (const target of splitTargets) {
-          // eslint-disable-next-line no-await-in-loop
-          await enqueueJob({
-            tenantId,
-            kind: 'dispatch_event_trigger',
-            payload: {
-              consumer: consumerKey,
-              eventId: safeToString(eventId),
-              dispatchTargets: [safeToString(target)],
-            },
-            runAt: new Date(),
-            priority: 0,
-            maxAttempts: 10,
-            idempotencyKey: `event_dispatch:${safeToString(eventId)}:${safeToString(target)}`,
-          }).then(() => { enqueued += 1; }).catch(() => {});
-        }
-      } else {
-        // Enqueue per-event dispatch job (idempotent via execution_jobs unique index)
+    if (splitTargets && splitTargets.length) {
+      for (const target of splitTargets) {
         // eslint-disable-next-line no-await-in-loop
         await enqueueJob({
           tenantId,
@@ -167,24 +168,43 @@ async function scanAndEnqueue({ consumer = 'webhooks_v1', batchSize = 100, dispa
           payload: {
             consumer: consumerKey,
             eventId: safeToString(eventId),
+            dispatchTargets: [safeToString(target)],
           },
           runAt: new Date(),
           priority: 0,
           maxAttempts: 10,
-          idempotencyKey: `event_dispatch:${safeToString(eventId)}`,
+          idempotencyKey: `event_dispatch:${safeToString(eventId)}:${safeToString(target)}`,
         }).then(() => { enqueued += 1; }).catch(() => {});
       }
+    } else {
+      // Enqueue per-event dispatch job (idempotent via execution_jobs unique index)
+      // eslint-disable-next-line no-await-in-loop
+      await enqueueJob({
+        tenantId,
+        kind: 'dispatch_event_trigger',
+        payload: {
+          consumer: consumerKey,
+          eventId: safeToString(eventId),
+        },
+        runAt: new Date(),
+        priority: 0,
+        maxAttempts: 10,
+        idempotencyKey: `event_dispatch:${safeToString(eventId)}`,
+      }).then(() => { enqueued += 1; }).catch(() => {});
     }
+  }
 
-    await sequelize.query(
-      `UPDATE event_dispatch_state
-       SET last_received_at = :ts, last_event_id = :eid, updated_at = NOW()
-       WHERE consumer = :consumer`,
-      { replacements: { ts: maxReceivedAt, eid: maxEventId || null, consumer: consumerKey }, transaction: t },
-    );
+  // FASE 3 — o cursor só avança DEPOIS do enqueue. Se o processo morrer entre a
+  // fase 2 e a 3, o próximo scan relê o mesmo lote e os idempotency keys
+  // deduplicam (at-least-once, sem perda e sem duplicidade).
+  await sequelize.query(
+    `UPDATE event_dispatch_state
+     SET last_received_at = :ts, last_event_id = :eid, updated_at = NOW()
+     WHERE consumer = :consumer`,
+    { replacements: { ts: maxReceivedAt, eid: maxEventId || null, consumer: consumerKey } },
+  );
 
-    return { ok: true, enqueued, cursor: { receivedAt: maxReceivedAt.toISOString(), eventId: maxEventId || null } };
-  });
+  return { ok: true, enqueued, cursor: { receivedAt: maxReceivedAt.toISOString(), eventId: maxEventId || null } };
 }
 
 async function dispatchOne({ tenantId, consumer = 'webhooks_v1', eventId, dispatchTargets = null }) {

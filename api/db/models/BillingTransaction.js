@@ -42,7 +42,11 @@ function getBillingTransactionModel() {
         { fields: ['tenant_key', 'status', 'due_at'], name: 'bt_tenant_status_due_idx' },
         { fields: ['tenant_key', 'membership_id'], name: 'bt_tenant_membership_idx' },
         { fields: ['tenant_key', 'bundle_id'], name: 'bt_tenant_bundle_idx' },
-        { fields: ['provider', 'external_transaction_id'], name: 'bt_provider_external_txn_uq', unique: true },
+        // A unicidade da referência externa é escopada por TENANT + provider:
+        // o mesmo `external_transaction_id` de provedores/academias diferentes
+        // é legítimo e não pode colidir (ver migration
+        // 20260910000002-scope-billing-external-txn-unique-by-tenant.js).
+        { fields: ['tenant_key', 'provider', 'external_transaction_id'], name: 'bt_tenant_provider_external_txn_uq', unique: true },
         { fields: ['tenant_key', 'idempotency_key'], name: 'bt_tenant_idempotency_uq', unique: true },
       ],
     });

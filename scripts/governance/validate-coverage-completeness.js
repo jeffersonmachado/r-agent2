@@ -509,10 +509,55 @@ function run() {
     }
   }
 
+  // ── Suficiência da amostra de benchmarks (§37/§50) ─────────────────
+  // O percentual por vertical mede o INVENTÁRIO LOCAL. Ele só pode ser
+  // apresentado como cobertura de MERCADO quando a amostra de benchmarks que
+  // define esse universo está provada suficiente (npm run
+  // validate:benchmark-sufficiency). Sem essa prova, `marketCoverage.percentage`
+  // é null e `certifiable` é false — nenhum "100%" de mercado sem universo
+  // validado.
+  const benchmarkSufficiency = (() => {
+    try {
+      const p = path.join(ROOT, 'reports', 'benchmark-sufficiency-report.json');
+      if (!fs.existsSync(p)) return null;
+      return JSON.parse(fs.readFileSync(p, 'utf8'));
+    } catch (_) {
+      return null;
+    }
+  })();
+  const sufficiencyByVertical = new Map();
+  for (const v of (benchmarkSufficiency && benchmarkSufficiency.verticals) || []) {
+    sufficiencyByVertical.set(String(v.vertical), v);
+  }
+  const SUFFICIENT_STATE = 'SAMPLE_SUFFICIENT';
+
+  for (const [domain, analysis] of Object.entries(businessAnalysis)) {
+    const suff = sufficiencyByVertical.get(domain) || null;
+    const certifiable = Boolean(suff && suff.status === SUFFICIENT_STATE);
+    analysis.sampleSufficiency = {
+      status: suff ? suff.status : 'SAMPLE_NOT_RESEARCHED',
+      sampleVersion: suff ? suff.sampleVersion : null,
+      policyVersion: benchmarkSufficiency ? benchmarkSufficiency.policyVersion : null,
+      certifiable,
+      externalBlock: suff ? suff.externalBlock : null,
+    };
+    analysis.localInventoryPercentage = analysis.completenessScore;
+    analysis.marketCoverage = {
+      scope: 'MARKET',
+      percentage: certifiable ? analysis.completenessScore : null,
+      certifiable,
+    };
+    if (!certifiable && analysis.completenessScore >= 100) {
+      console.log(`  ⚠️  ${domain}: ${analysis.completenessScore}% do INVENTÁRIO LOCAL — NÃO é cobertura de mercado (${analysis.sampleSufficiency.status})`);
+    }
+  }
+
   const report = {
     name: 'coverage-completeness',
     status,
     generatedAt: new Date().toISOString(),
+    sampleSufficiencyPolicyVersion: benchmarkSufficiency ? benchmarkSufficiency.policyVersion : null,
+    sampleSufficiencyStatus: benchmarkSufficiency ? benchmarkSufficiency.status : null,
     summary: {
       overallCompleteness: overallPct,
       routeCoverage: { total: frontendRoutes.length, covered: coveredRoutes, pct: routePct },

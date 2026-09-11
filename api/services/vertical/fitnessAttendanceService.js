@@ -67,6 +67,119 @@ async function emitAttendanceJourneyEvent(params) {
 // ── Check-in (entry) ──────────────────────────────────────────────────────
 
 /**
+ * Importa uma entrada HISTÓRICA vinda de um provedor de integração (ex.: EVO).
+ *
+ * Diferenças em relação a `recordCheckIn` (catraca em tempo real):
+ * - `occurredAt` é a data real da entrada no provedor, não `now`;
+ * - NÃO aplica a dedup de "attendance aberta": um aluno pode ter N entradas em
+ *   dias diferentes e o histórico precisa ser fiel;
+ * - idempotência explícita por `idempotencyKey` (ledger) + dedup factual por
+ *   (tenant, subject, checked_in_at), o que torna reimportação de janela
+ *   sobreposta inofensiva;
+ * - não emite broadcast WebSocket por registro (import em lote); a notificação
+ *   é feita pelo serviço de sync ao final do lote.
+ *
+ * Continua sendo a MESMA entidade canônica (`VerticalAttendance`), com o mesmo
+ * ledger (`FitnessCheckIn`) e a mesma projeção de timeline — sem domínio paralelo.
+ *
+ * @returns {Promise<{ attendance: object, created: boolean }>}
+ */
+async function recordExternalCheckIn({
+  tenantId,
+  subjectId,
+  membershipId = null,
+  unitId = null,
+  deviceId = null,
+  occurredAt,
+  idempotencyKey = null,
+  integrationMetadata = {},
+  metadata = {},
+}) {
+  const when = occurredAt instanceof Date ? occurredAt : new Date(occurredAt);
+  if (Number.isNaN(when.getTime())) {
+    throw Object.assign(new Error('invalid_occurred_at'), { code: 'invalid_occurred_at' });
+  }
+
+  const baseMetadata = {
+    ...metadata,
+    source: 'integration',
+    ...integrationMetadata,
+  };
+
+  if (!dbAvailable()) {
+    return {
+      attendance: {
+        id: makeId('va'),
+        tenant_key: tenantId,
+        vertical: VERTICAL,
+        subject_id: subjectId,
+        membership_id: membershipId,
+        unit_id: unitId,
+        device_id: deviceId,
+        checked_in_at: when,
+        status: 'closed',
+        metadata: baseMetadata,
+      },
+      created: true,
+    };
+  }
+
+  const Model = VerticalAttendance();
+
+  // Dedup factual: mesma entrada (subject + instante) nunca é duplicada, mesmo
+  // quando a janela de sync é reprocessada com overlap.
+  const existing = await Model.findOne({
+    where: { tenant_key: tenantId, vertical: VERTICAL, subject_id: String(subjectId), checked_in_at: when },
+  }).catch(() => null);
+  if (existing) {
+    return { attendance: existing.toJSON ? existing.toJSON() : existing, created: false };
+  }
+
+  const id = makeId('va');
+  const row = {
+    id,
+    tenant_key: tenantId,
+    vertical: VERTICAL,
+    subject_id: subjectId,
+    membership_id: membershipId,
+    unit_id: unitId,
+    device_id: deviceId,
+    checked_in_at: when,
+    status: 'closed',
+    metadata: baseMetadata,
+  };
+  const created = await Model.create(row);
+  const attendance = created.toJSON ? created.toJSON() : created;
+
+  await appendEventV1({
+    tenantId,
+    type: 'FitnessCheckIn',
+    source: 'integration.attendance',
+    occurredAt: when,
+    correlationId: idempotencyKey || id,
+    subject: { type: 'fitness_subject', id: subjectId },
+    actor: { type: 'integration', id: String(integrationMetadata.provider || 'integration') },
+    idempotencyKey,
+    payload: { attendanceId: id, subjectId, membershipId, unitId, deviceId, imported: true },
+  }).catch(() => {});
+
+  await emitAttendanceJourneyEvent({
+    tenantId,
+    vertical: VERTICAL,
+    eventType: 'checkin_recorded',
+    subjectId,
+    membershipId,
+    channel: 'internal',
+    triggeredBy: 'integration',
+    correlationId: idempotencyKey || id,
+    idempotencyKey: idempotencyKey || `checkin:${id}`,
+    payload: { attendanceId: id, subjectId, membershipId, unitId, deviceId, imported: true },
+  });
+
+  return { attendance, created: true };
+}
+
+/**
  * Record check-in for a subject. Called when an `allow` AccessDecision is issued
  * for the fitness vertical.
  *
@@ -294,6 +407,7 @@ async function closeStaleOpenAttendances({ tenantId, maxOpenHours = 8 }) {
 
 module.exports = {
   recordCheckIn,
+  recordExternalCheckIn,
   recordCheckOut,
   markAbsent,
   getAttendanceHistory,

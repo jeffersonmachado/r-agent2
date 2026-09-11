@@ -10,6 +10,11 @@ process.env.REPLAY_SIGNING_KEY = process.env.REPLAY_SIGNING_KEY
   || 'jest-only-replay-signing-key-32-bytes-minimum';
 process.env.RAG_INTERNAL_TOKEN = process.env.RAG_INTERNAL_TOKEN
   || 'jest-only-rag-internal-token-32-bytes-minimum';
+// Chave de criptografia em repouso: testes usam uma chave isolada, explícita e
+// sem relação com segredos de runtime (necessária para cifrar credenciais de
+// integração em testes de conexão).
+process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
+  || Buffer.alloc(32, 'jest-only-encryption-key-32bytes').toString('base64');
 
 // Isolamento do runtime root para testes (fora do workspace, em /tmp).
 require('../api/utils/runtimePaths').configureRuntimeRoot('/tmp/r-agent2-test-runtime');

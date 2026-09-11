@@ -81,6 +81,17 @@ const EVENT_TYPES_V1 = new Set([
   // CRM - Operational signals
   'CrmOperationalEvent',
 
+  // Integration Hub (R-Bridge) — importação/sincronização de provedores externos
+  // (ex.: EVO). Provider-neutral: o tipo não codifica o provedor; ele vai no payload.
+  'integration.connection.changed',
+  'integration.sync.started',
+  'integration.sync.completed',
+  'integration.sync.failed',
+  'integration.membership.imported',
+  'integration.transaction.imported',
+  'integration.identity.conflict',
+  'integration.webhook.received',
+
   // Learning routine (RAP Learn)
   'LearningRoutineCompleted',
 

@@ -19,7 +19,7 @@ function shouldRunTenantRateLimit(pathname, method) {
     '/public-tokens/resolve',
     '/physical/station',
   ];
-  const providerWebhookRoutes = ['/webhooks/whatsapp', '/webhooks/messenger', '/webhooks/instagram', '/billing/webhook'];
+  const providerWebhookRoutes = ['/webhooks/whatsapp', '/webhooks/messenger', '/webhooks/instagram', '/billing/webhook', '/webhooks/integrations'];
   const isPublicRoute = publicRoutes.some(route => (
     pathname === route ||
     pathname.startsWith(`${route}/`) ||

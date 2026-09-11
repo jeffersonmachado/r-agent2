@@ -77,6 +77,7 @@ const { createSupportDebugExpressRouter } = require('../composition/support-debu
 const { createEvidenceExpressRouter } = require('../composition/evidence');
 const { createPublicApiExpressRouter } = require('../composition/public-api');
 const { createChannelWebhookExpressRouter } = require('../composition/channel-webhook');
+const { createIntegrationExpressRouter } = require('../composition/integration');
 const { createWhatsAppConnectionExpressRouter } = require('../composition/whatsapp-connection');
 const { createWhatsAppIvrExpressRouter } = require('../composition/whatsapp-ivr');
 const { createWhatsAppQrWebhookExpressRouter } = require('../composition/whatsapp-qr-webhook');
@@ -152,6 +153,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const supportDebugRouter = createSupportDebugExpressRouter({ buildExtendedRoutingContext });
   const publicApiRouter = createPublicApiExpressRouter({ buildExtendedRoutingContext });
   const channelWebhookRouter = createChannelWebhookExpressRouter({ buildExtendedRoutingContext });
+  const integrationRouter = createIntegrationExpressRouter({ buildExtendedRoutingContext });
   const whatsAppConnectionRouter = createWhatsAppConnectionExpressRouter({ buildExtendedRoutingContext });
   const whatsAppIvrRouter = createWhatsAppIvrExpressRouter({ buildExtendedRoutingContext });
   const whatsAppQrWebhookRouter = createWhatsAppQrWebhookExpressRouter({ buildExtendedRoutingContext });
@@ -223,6 +225,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     supportDebugRouter,
     publicApiRouter,
     channelWebhookRouter,
+    integrationRouter,
     whatsAppConnectionRouter,
     whatsAppIvrRouter,
     whatsAppQrWebhookRouter,

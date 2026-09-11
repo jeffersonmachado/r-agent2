@@ -11,6 +11,32 @@ import logger from '../utils/logger';
 import { getAuthHeaders, removeToken } from './auth';
 import { redirectToLogin } from '../utils/index';
 import { getBasePath } from '../utils/index';
+import {
+  createNavigationCancelReason,
+  installNavigationCancellationGuards,
+  isNavigationCancellationReason,
+  isNavigatingAway,
+  registerNavigationAbortHandler,
+} from './navigationCancellation';
+
+// Requisições em voo. Quando o documento é descartado (pagehide/beforeunload)
+// elas são abortadas explicitamente, para que o cancelamento seja determinístico
+// e distinguível de uma API indisponível.
+const inflightAbortControllers = new Set();
+
+installNavigationCancellationGuards();
+
+registerNavigationAbortHandler(() => {
+  const reason = createNavigationCancelReason();
+  for (const controller of Array.from(inflightAbortControllers)) {
+    try {
+      controller.abort(reason);
+    } catch {
+      // Controller já finalizado: nada a fazer.
+    }
+  }
+  inflightAbortControllers.clear();
+});
 
 // Timeout aumentado para requisições longas (QA Waves pode demorar ao buscar muitos dados)
 // Em desenvolvimento com proxy do Vite, o timeout pode ser maior: o dev server
@@ -141,6 +167,8 @@ async function fetchWithTimeout(input, init) {
   })();
   const id = setTimeout(() => controller.abort(timeoutReason), timeoutMs);
 
+  inflightAbortControllers.add(controller);
+
   try {
     const response = await fetch(input, {
       ...init,
@@ -149,6 +177,7 @@ async function fetchWithTimeout(input, init) {
     return response;
   } finally {
     clearTimeout(id);
+    inflightAbortControllers.delete(controller);
   }
 }
 
@@ -633,6 +662,20 @@ export async function fetchJson(path, init) {
     });
     return result;
   } catch (err) {
+    // Cancelamento por navegação: o documento está sendo descartado e o browser
+    // abortou a requisição em voo. Não é indisponibilidade da API — não loga
+    // erro (nem dispara toast pela tela de origem, que já foi destruída).
+    if (isNavigationCancellationReason(err) || isNavigatingAway()) {
+      logger.debug('[HTTP Client] Requisição abandonada por navegação', {
+        method: init?.method || 'GET',
+        url,
+        path,
+      });
+      // Nunca resolve — mesmo padrão do redirecionamento por 401 acima: não há
+      // consumidor vivo para receber o resultado nem o erro.
+      return new Promise(() => {});
+    }
+
     // Some endpoints are optional or environment-dependent. Callers can pass
     // `expectedErrorCodes` / `expectedStatuses` / `suppressErrorLog` to avoid noisy logs.
     const expectedErrorCodes = Array.isArray(init?.expectedErrorCodes) ? init.expectedErrorCodes : [];

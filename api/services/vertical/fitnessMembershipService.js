@@ -110,16 +110,129 @@ async function listFitnessMemberships({ tenantId, billingStatus, status, limit =
 }
 
 /**
+ * Campos de matrícula que o domínio pode persistir via updateMembershipDetails.
+ * Fonte única para a rota, para o serviço e para o contrato versionado em
+ * `config/model-field-contracts.json` (gate `validate:model-field-contracts`).
+ * Todo campo aqui DEVE existir como atributo no model `AccessMembership`.
+ */
+const UPDATABLE_MEMBERSHIP_FIELDS = Object.freeze([
+  'due_date',
+  'renewal_at',
+  'grace_until',
+  'plan_type',
+  'unit_scope',
+  'plan_name',
+  'start_at',
+  'end_at',
+  'metadata',
+]);
+
+/**
+ * Aliases camelCase aceitos na borda HTTP. São traduzidos explicitamente para o
+ * nome canônico — nunca descartados em silêncio.
+ */
+const MEMBERSHIP_FIELD_ALIASES = Object.freeze({
+  dueDate: 'due_date',
+  renewalAt: 'renewal_at',
+  graceUntil: 'grace_until',
+  planType: 'plan_type',
+  unitScope: 'unit_scope',
+  planName: 'plan_name',
+  startAt: 'start_at',
+  endAt: 'end_at',
+});
+
+const DATE_MEMBERSHIP_FIELDS = Object.freeze(['due_date', 'renewal_at', 'grace_until', 'start_at', 'end_at']);
+const STRING_MEMBERSHIP_FIELDS = Object.freeze(['plan_type', 'plan_name']);
+
+function invalidMembershipFields(unknownFields) {
+  return Object.assign(new Error(`invalid_membership_fields:${unknownFields.join(',')}`), {
+    code: 'invalid_membership_fields',
+    unknownFields,
+    allowedFields: [...UPDATABLE_MEMBERSHIP_FIELDS],
+  });
+}
+
+function invalidMembershipFieldValue(field, value) {
+  return Object.assign(new Error(`invalid_field_value:${field}`), {
+    code: 'invalid_field_value',
+    field,
+    value: value === undefined ? null : String(value),
+  });
+}
+
+/**
+ * Normaliza e VALIDA os campos recebidos. Nunca devolve um patch parcialmente
+ * válido: ou todos os campos são aceitos e coerentes, ou a chamada falha.
+ *
+ * @returns {object} patch pronto para `row.update`
+ * @throws {Error} `invalid_membership_fields` | `no_fields_to_update` | `invalid_field_value`
+ */
+function normalizeMembershipFields(fields) {
+  const entries = Object.entries(fields || {});
+  const unknown = [];
+  const normalized = {};
+
+  for (const [rawKey, rawValue] of entries) {
+    if (rawValue === undefined) continue;
+    const key = MEMBERSHIP_FIELD_ALIASES[rawKey] || rawKey;
+    if (!UPDATABLE_MEMBERSHIP_FIELDS.includes(key)) {
+      unknown.push(rawKey);
+      continue;
+    }
+    if (DATE_MEMBERSHIP_FIELDS.includes(key)) {
+      if (rawValue === null) {
+        normalized[key] = null;
+        continue;
+      }
+      const parsed = new Date(rawValue);
+      if (Number.isNaN(parsed.getTime())) throw invalidMembershipFieldValue(key, rawValue);
+      normalized[key] = parsed;
+      continue;
+    }
+    if (STRING_MEMBERSHIP_FIELDS.includes(key)) {
+      if (rawValue === null) {
+        normalized[key] = null;
+        continue;
+      }
+      if (typeof rawValue !== 'string' || rawValue.trim() === '') throw invalidMembershipFieldValue(key, rawValue);
+      normalized[key] = rawValue.trim();
+      continue;
+    }
+    if (key === 'unit_scope') {
+      if (!Array.isArray(rawValue)) throw invalidMembershipFieldValue(key, rawValue);
+      normalized[key] = rawValue;
+      continue;
+    }
+    if (key === 'metadata') {
+      if (rawValue === null || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+        throw invalidMembershipFieldValue(key, rawValue);
+      }
+      normalized[key] = rawValue;
+    }
+  }
+
+  if (unknown.length > 0) throw invalidMembershipFields(unknown);
+  if (Object.keys(normalized).length === 0) {
+    throw Object.assign(new Error('no_fields_to_update'), {
+      code: 'no_fields_to_update',
+      allowedFields: [...UPDATABLE_MEMBERSHIP_FIELDS],
+    });
+  }
+  return normalized;
+}
+
+/**
  * Update membership extended fields (due_date, renewal_at, grace_until, plan_type, unit_scope).
+ *
+ * Contrato: nenhum campo aceito é descartado em silêncio. Campo desconhecido ou
+ * valor inválido gera erro explícito (códigos `invalid_membership_fields`,
+ * `no_fields_to_update`, `invalid_field_value`) — a rota responde 400/422 em vez
+ * de devolver 200 sem persistir.
  */
 async function updateMembershipDetails({ tenantId, membershipId, fields }) {
   if (!dbAvailable()) throw Object.assign(new Error('DB unavailable'), { code: 'db_unavailable' });
-  const allowed = ['due_date', 'renewal_at', 'grace_until', 'plan_type', 'unit_scope', 'plan_name', 'metadata'];
-  const update = {};
-  for (const [k, v] of Object.entries(fields || {})) {
-    if (allowed.includes(k)) update[k] = v;
-  }
-  if (Object.keys(update).length === 0) return null;
+  const update = normalizeMembershipFields(fields);
 
   const Model = AccessMembership();
   const row = await Model.findOne({ where: { tenant_key: tenantId, id: String(membershipId) } });
@@ -356,6 +469,8 @@ module.exports = {
   getMembershipDetail,
   listFitnessMemberships,
   updateMembershipDetails,
+  UPDATABLE_MEMBERSHIP_FIELDS,
+  MEMBERSHIP_FIELD_ALIASES,
   startGracePeriod,
   endGracePeriodWithBlock,
   setDueDate,

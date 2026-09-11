@@ -611,6 +611,13 @@ async function processJob(job) {
     const handled = await handleVerticalJob(job);
     if (handled) return;
   }
+  // Integration Hub (R-Bridge) kinds — usa a MESMA fila canônica
+  // (retry/backoff/DLQ/concorrência por tenant/idempotência já existentes).
+  if (kind.startsWith('integration_')) {
+    const { handleIntegrationJob } = require('./integration/integrationJobHandler');
+    const handled = await handleIntegrationJob(job);
+    if (handled) return;
+  }
   // Unknown kind: mark as done (best-effort)
   logger.warn('[ExecutionQueue] Job kind desconhecido, ignorando', { kind, jobId: job.id });
 }

@@ -1,0 +1,433 @@
+{
+  "_description": "Amostra de benchmarks da vertical FITNESS (metodologia de suficiência de amostra). Este arquivo é um REGISTRO DE PESQUISA versionado, não um catálogo de marketing: cada benchmark declara proveniência (sources), papel (discovery/validation), grupo de independência, dimensões de diversidade e o que efetivamente ACRESCENTOU ao inventário canônico (novelty). Nada aqui pode ser inferido por LLM: só entra o que tem fonte verificável.",
+  "_honesty": "O estado desta amostra é SAMPLE_NOT_RESEARCHED / SAMPLE_CERTIFICATION_BLOCKED_BY_EXTERNAL_RESEARCH: os arquétipos e os atores de mercado foram identificados com fontes oficiais verificadas, mas o INVENTÁRIO DE CAPACIDADES de cada concorrente (o dado que alimenta a curva de novidade) ainda não foi levantado — porque isso exige análise profunda página a página de documentação oficial de cada fornecedor. Nenhum valor de novelty foi estimado, inferido ou preenchido por conveniência.",
+
+  "vertical": "fitness",
+  "sampleVersion": "fitness-sample-v1",
+  "inventoryVersion": "canonical-capabilities-1.0.0",
+  "canonicalInventoryBaseline": 12,
+  "canonicalInventorySource": "config/canonical-capabilities.json (12 capabilities de negócio, 5 técnicas)",
+
+  "researchState": "RESEARCHING",
+
+  "externalBlock": {
+    "code": "SAMPLE_CERTIFICATION_BLOCKED_BY_EXTERNAL_RESEARCH",
+    "reason": "O levantamento de capacidades de cada concorrente exige leitura profunda de documentação/help center oficial por fornecedor. Nesta execução foi possível identificar e VERIFICAR a existência dos fornecedores e das fontes oficiais (HTTP 200), mas não concluir o inventário de capacidades de cada um. Preencher novelty sem essa leitura seria fabricar dados.",
+    "blockedAt": "2026-09-10",
+    "unblocksBy": [
+      "Levantar capabilities por benchmark a partir das fontes oficiais listadas (tier 1-6).",
+      "Normalizar cada capability externa para a capability canônica correspondente ou declarar nova.",
+      "Verificar criticality segundo config/benchmark-sufficiency-policy.json#criticalityMethodology."
+    ]
+  },
+
+  "diversityDimensions": [
+    "marketArchetype",
+    "customerSize",
+    "geography",
+    "businessModel",
+    "operationalDepth",
+    "integrationMaturity",
+    "physicalOperation",
+    "financialDepth",
+    "customerEngagementDepth"
+  ],
+
+  "archetypes": [
+    {
+      "id": "independent-gym",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Academia independente (unidade única)",
+      "description": "Operação de uma unidade, foco em matrícula, caixa, catraca e retenção básica.",
+      "evidence": "Segmento predominante no mercado brasileiro; é exatamente o cenário do cliente EVO desta missão (uma unidade)."
+    },
+    {
+      "id": "gym-network",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Rede de academias (multi-unidade)",
+      "description": "Padronização entre unidades, transferência de aluno, consolidado financeiro, franquia.",
+      "evidence": "Ofertas dedicadas a redes (ex.: SULTS — https://www.sults.com.br/solucoes/gestao/5-melhores-sistemas-redes-academias)."
+    },
+    {
+      "id": "boutique-studio",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Estúdio/boutique (turmas e reservas)",
+      "description": "Agenda de aulas, reserva de posição, lista de presença, planos por aula.",
+      "evidence": "Ofertas de estúdios/boutique e agenda de turmas nos catálogos oficiais dos fornecedores brasileiros."
+    },
+    {
+      "id": "crossfit-box",
+      "importance": "RELEVANT",
+      "status": "ACTIVE",
+      "name": "Box de treino funcional/CrossFit",
+      "description": "WOD, turmas fechadas, acompanhamento de performance.",
+      "evidence": "Presença de fornecedores especializados (ex.: Wodify — https://www.wodify.com/, verificado)."
+    },
+    {
+      "id": "personal-wellness",
+      "importance": "RELEVANT",
+      "status": "ACTIVE",
+      "name": "Personal trainer / bem-estar",
+      "description": "Atendimento individual, pacotes de sessões, agenda do profissional.",
+      "evidence": "Categoria coberta por plataformas de agendamento de bem-estar (ex.: Mindbody — https://www.mindbodyonline.com/, verificado)."
+    },
+    {
+      "id": "access-control-hardware",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Acesso/catraca e controle de entrada",
+      "description": "Integração com catraca, biometria, QR, anti-passback, liberação por billing.",
+      "evidence": "Categoria explícita nos catálogos oficiais (ex.: Tecnofit e Pacto divulgam catraca/controle de acesso)."
+    },
+    {
+      "id": "financial-billing",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Financeiro e cobrança recorrente",
+      "description": "Mensalidade recorrente, inadimplência, negativação, conciliação, nota fiscal.",
+      "evidence": "Categoria central de todos os fornecedores pesquisados; também objeto do registro de benchmark da plataforma (docs/PILARES_E_BENCHMARKS.md)."
+    },
+    {
+      "id": "student-digital-experience",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Experiência digital do aluno (app/portal)",
+      "description": "App do aluno, treino prescrito, evolução, autoatendimento e comunicação.",
+      "evidence": "App do aluno divulgado nos produtos brasileiros (ex.: Tecnofit, Pacto, Next Fit)."
+    },
+    {
+      "id": "integration-first-api",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Plataforma API/integration-first",
+      "description": "API de integração oficial para terceiros (sistemas de academia expondo dados para plataformas de relacionamento).",
+      "evidence": "Existência de API oficial de integração documentada pelo EVO/W12 (mesmo fornecedor usado como provedor nesta missão)."
+    }
+  ],
+
+  "marketScarcityExceptions": [],
+
+  "benchmarks": [
+    {
+      "id": "evo-w12",
+      "name": "EVO (W12 / ABC Evo)",
+      "role": "discovery",
+      "order": 1,
+      "archetype": "integration-first-api",
+      "independenceGroup": "w12",
+      "cloneOf": null,
+      "mandatory": true,
+      "mandatoryReason": "É o sistema de origem do cliente desta missão e o provedor de integração (integration provider). Papel de benchmark é distinto do papel de provider (§31), mas a amostra não pode ignorá-lo.",
+      "analyzedAt": null,
+      "previousInventorySize": 0,
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "sources": [
+        { "tier": 5, "url": "https://w12.com.br/", "retrievedAt": "2026-09-10", "verified": true, "httpStatus": 200, "note": "site oficial do fornecedor (verificado)" },
+        { "tier": 5, "url": "https://w12.com.br/funcionalidades/", "retrievedAt": "2026-09-10", "verified": true, "note": "página oficial de funcionalidades" }
+      ],
+      "freshness": { "researchedAt": "2026-09-10", "nextReviewAt": "2027-03-10", "status": "FRESH" },
+      "dimensions": {
+        "marketArchetype": "integration-first-api",
+        "customerSize": "medium-large",
+        "geography": "BR",
+        "businessModel": "saas-vertical",
+        "operationalDepth": "high",
+        "integrationMaturity": "high",
+        "physicalOperation": "full",
+        "financialDepth": "high",
+        "customerEngagementDepth": "medium"
+      }
+    },
+    {
+      "id": "tecnofit",
+      "name": "Tecnofit",
+      "role": "discovery",
+      "order": 2,
+      "archetype": "access-control-hardware",
+      "independenceGroup": "tecnofit",
+      "cloneOf": null,
+      "analyzedAt": null,
+      "previousInventorySize": null,
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "sources": [
+        { "tier": 5, "url": "https://www.tecnofit.com.br/", "retrievedAt": "2026-09-10", "verified": true, "httpStatus": 200 }
+      ],
+      "freshness": { "researchedAt": "2026-09-10", "nextReviewAt": "2027-03-10", "status": "FRESH" },
+      "dimensions": {
+        "marketArchetype": "access-control-hardware",
+        "customerSize": "small-large",
+        "geography": "BR",
+        "businessModel": "saas-vertical",
+        "operationalDepth": "high",
+        "integrationMaturity": "medium",
+        "physicalOperation": "full",
+        "financialDepth": "high",
+        "customerEngagementDepth": "medium"
+      }
+    },
+    {
+      "id": "pacto",
+      "name": "Pacto",
+      "role": "discovery",
+      "order": 3,
+      "archetype": "independent-gym",
+      "independenceGroup": "pacto",
+      "cloneOf": null,
+      "analyzedAt": null,
+      "previousInventorySize": null,
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "sources": [
+        { "tier": 5, "url": "https://www.sistemapacto.com.br/", "retrievedAt": "2026-09-10", "verified": true, "httpStatus": 200 }
+      ],
+      "freshness": { "researchedAt": "2026-09-10", "nextReviewAt": "2027-03-10", "status": "FRESH" },
+      "dimensions": {
+        "marketArchetype": "independent-gym",
+        "customerSize": "small",
+        "geography": "BR",
+        "businessModel": "saas-vertical",
+        "operationalDepth": "medium",
+        "integrationMaturity": "medium",
+        "physicalOperation": "full",
+        "financialDepth": "medium",
+        "customerEngagementDepth": "medium"
+      }
+    },
+    {
+      "id": "nextfit",
+      "name": "Next Fit",
+      "role": "discovery",
+      "order": 4,
+      "archetype": "independent-gym",
+      "independenceGroup": "nextfit",
+      "cloneOf": null,
+      "analyzedAt": null,
+      "previousInventorySize": null,
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "sources": [
+        { "tier": 5, "url": "https://nextfit.com.br/", "retrievedAt": "2026-09-10", "verified": true, "httpStatus": 200 }
+      ],
+      "freshness": { "researchedAt": "2026-09-10", "nextReviewAt": "2027-03-10", "status": "FRESH" },
+      "dimensions": {
+        "marketArchetype": "independent-gym",
+        "customerSize": "small",
+        "geography": "BR",
+        "businessModel": "saas-vertical",
+        "operationalDepth": "medium",
+        "integrationMaturity": "low",
+        "physicalOperation": "partial",
+        "financialDepth": "medium",
+        "customerEngagementDepth": "low"
+      }
+    },
+    {
+      "id": "sults",
+      "name": "SULTS",
+      "role": "discovery",
+      "order": 5,
+      "archetype": "gym-network",
+      "independenceGroup": "sults",
+      "cloneOf": null,
+      "analyzedAt": null,
+      "previousInventorySize": null,
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "sources": [
+        { "tier": 5, "url": "https://www.sults.com.br/", "retrievedAt": "2026-09-10", "verified": true, "httpStatus": 200 },
+        { "tier": 5, "url": "https://www.sults.com.br/solucoes/gestao/5-melhores-sistemas-redes-academias", "retrievedAt": "2026-09-10", "verified": true, "note": "página oficial voltada a redes" }
+      ],
+      "freshness": { "researchedAt": "2026-09-10", "nextReviewAt": "2027-03-10", "status": "FRESH" },
+      "dimensions": {
+        "marketArchetype": "gym-network",
+        "customerSize": "large",
+        "geography": "BR",
+        "businessModel": "saas-network",
+        "operationalDepth": "high",
+        "integrationMaturity": "medium",
+        "physicalOperation": "full",
+        "financialDepth": "high",
+        "customerEngagementDepth": "high"
+      }
+    },
+    {
+      "id": "mindbody",
+      "name": "Mindbody",
+      "role": "discovery",
+      "order": 6,
+      "archetype": "boutique-studio",
+      "independenceGroup": "mindbody",
+      "cloneOf": null,
+      "analyzedAt": null,
+      "previousInventorySize": null,
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "sources": [
+        { "tier": 5, "url": "https://www.mindbodyonline.com/", "retrievedAt": "2026-09-10", "verified": true, "httpStatus": 200 }
+      ],
+      "freshness": { "researchedAt": "2026-09-10", "nextReviewAt": "2027-03-10", "status": "FRESH" },
+      "dimensions": {
+        "marketArchetype": "boutique-studio",
+        "customerSize": "small-large",
+        "geography": "US",
+        "businessModel": "marketplace-saas",
+        "operationalDepth": "high",
+        "integrationMaturity": "high",
+        "physicalOperation": "full",
+        "financialDepth": "high",
+        "customerEngagementDepth": "high"
+      }
+    },
+    {
+      "id": "glofox",
+      "name": "Glofox",
+      "role": "discovery",
+      "order": 7,
+      "archetype": "personal-wellness",
+      "independenceGroup": "glofox",
+      "cloneOf": null,
+      "analyzedAt": null,
+      "previousInventorySize": null,
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "sources": [
+        { "tier": 5, "url": "https://www.glofox.com/", "retrievedAt": "2026-09-10", "verified": true, "httpStatus": 200 }
+      ],
+      "freshness": { "researchedAt": "2026-09-10", "nextReviewAt": "2027-03-10", "status": "FRESH" },
+      "dimensions": {
+        "marketArchetype": "personal-wellness",
+        "customerSize": "small-medium",
+        "geography": "IE",
+        "businessModel": "saas-vertical",
+        "operationalDepth": "medium",
+        "integrationMaturity": "medium",
+        "physicalOperation": "partial",
+        "financialDepth": "medium",
+        "customerEngagementDepth": "high"
+      }
+    },
+    {
+      "id": "zenplanner",
+      "name": "Zen Planner",
+      "role": "validation",
+      "order": 8,
+      "archetype": "crossfit-box",
+      "independenceGroup": "zenplanner",
+      "cloneOf": null,
+      "analyzedAt": null,
+      "previousInventorySize": null,
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "sources": [
+        { "tier": 5, "url": "https://www.zenplanner.com/", "retrievedAt": "2026-09-10", "verified": true, "httpStatus": 200 }
+      ],
+      "freshness": { "researchedAt": "2026-09-10", "nextReviewAt": "2027-03-10", "status": "FRESH" },
+      "dimensions": {
+        "marketArchetype": "crossfit-box",
+        "customerSize": "small",
+        "geography": "US",
+        "businessModel": "saas-vertical",
+        "operationalDepth": "medium",
+        "integrationMaturity": "low",
+        "physicalOperation": "partial",
+        "financialDepth": "medium",
+        "customerEngagementDepth": "medium"
+      }
+    }
+  ],
+
+  "holdout": {
+    "benchmarkId": "zenplanner",
+    "selectedAsHoldoutAt": "2026-09-10T21:00:00.000Z",
+    "selectionReason": "Arquétipo crossfit-box é o mais distante dos demais da amostra (nenhum outro benchmark cobre box de treino funcional), geografia fora do Brasil e maturidade de integração baixa — maximiza a chance de revelar generalização fraca do inventário. Selecionado ANTES de qualquer análise de suas capacidades.",
+    "selectionEvidence": "Arquétipo declarado em archetypes[crossfit-box] com fonte oficial verificada (https://www.wodify.com/ e https://www.zenplanner.com/ como representantes da categoria). Nenhum conteúdo de capability do Zen Planner foi lido até o momento do pré-registro.",
+    "marketArchetype": "crossfit-box",
+    "inventoryVersion": "canonical-capabilities-1.0.0",
+    "analysedAt": null
+  },
+
+  "criticalityRegistry": {},
+
+  "criticalityOverrides": [],
+
+  "unclassifiedCriticalCapabilities": [],
+  "unclassifiedCriticalJourneys": [],
+  "unclassifiedCriticalRules": []
+}

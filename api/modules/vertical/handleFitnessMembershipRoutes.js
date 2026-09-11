@@ -86,7 +86,39 @@ async function handleFitnessMembershipRoutes(ctx) {
 
     const membershipId = decodeURIComponent(pathname.split('/')[4]);
     const body = await parseJsonBody(req);
-    const updated = await fitnessMembershipService.updateMembershipDetails({ tenantId: tenantId(req), membershipId, fields: body });
+    let updated;
+    try {
+      updated = await fitnessMembershipService.updateMembershipDetails({
+        tenantId: tenantId(req),
+        membershipId,
+        fields: body,
+      });
+    } catch (err) {
+      // Nenhum campo aceito é descartado em silêncio: campo desconhecido,
+      // payload vazio ou valor inválido geram 400/422 explícito.
+      if (err.code === 'invalid_membership_fields') {
+        sendJson(res, 400, {
+          error: err.code,
+          message: 'Campos não suportados em membership details',
+          unknownFields: err.unknownFields,
+          allowedFields: err.allowedFields,
+        });
+        return true;
+      }
+      if (err.code === 'no_fields_to_update') {
+        sendJson(res, 400, {
+          error: err.code,
+          message: 'Nenhum campo informado para atualização',
+          allowedFields: err.allowedFields,
+        });
+        return true;
+      }
+      if (err.code === 'invalid_field_value') {
+        sendJson(res, 422, { error: err.code, message: `Valor inválido para ${err.field}`, field: err.field });
+        return true;
+      }
+      throw err;
+    }
     if (!updated) {
       sendJson(res, 404, { error: 'membership_not_found' });
       return true;

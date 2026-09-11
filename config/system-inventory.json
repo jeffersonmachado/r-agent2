@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-06T04:54:37.231Z",
+  "generatedAt": "2026-09-10T20:05:45.921Z",
   "counts": {
-    "total": 2942,
+    "total": 3087,
     "byKind": {
-      "api": 790,
-      "field": 1650,
-      "model": 176,
+      "api": 813,
+      "field": 1756,
+      "model": 184,
       "page": 141,
       "relation": 9,
-      "table": 176
+      "table": 184
     },
     "byClassification": {
-      "PRODUCTION": 2716,
+      "PRODUCTION": 2861,
       "DEVELOPMENT": 134,
       "SUPPORT": 92
     },
-    "orphaned": 0
+    "orphaned": 2
   },
   "items": [
     {
@@ -1261,6 +1261,62 @@
       "fingerprint": "e90bf5b15717e5d078eb2190b81fbada5d3354c2303229c9a59f4843f840dc47"
     },
     {
+      "id": "api:GET:/api/bakery/dashboard",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/bakery/dashboard",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleBakeryRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "bakery_balcao_retirada",
+        "bakery_encomenda_flow",
+        "bakery_estoque_perdas",
+        "bakery_producao_fornada",
+        "bakery_reativacao_cliente",
+        "operations_dashboard"
+      ],
+      "linkedDomains": [
+        "bakery"
+      ],
+      "fingerprint": "753cd1b3037a8b11ae4924c53d92d7bac86e1fd18eb6185f2ae791380a110944"
+    },
+    {
+      "id": "api:GET:/api/bakery/production/plan",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/bakery/production/plan",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleBakeryRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "bakery_balcao_retirada",
+        "bakery_encomenda_flow",
+        "bakery_estoque_perdas",
+        "bakery_producao_fornada",
+        "bakery_reativacao_cliente",
+        "plan_usage"
+      ],
+      "linkedDomains": [
+        "bakery"
+      ],
+      "fingerprint": "68d9528ca81de92a8cabd92c7bc51394f3aaa490fac96b504506967de0330e59"
+    },
+    {
       "id": "api:GET:/api/beauty/agenda",
       "kind": "api",
       "method": "GET",
@@ -1601,6 +1657,53 @@
         "pbx"
       ],
       "fingerprint": "8b9cd35ec965d88ab9c908cd305ee5d3ad4086edf4525a6108656a11106068cb"
+    },
+    {
+      "id": "api:GET:/api/clinic/dashboard",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/clinic/dashboard",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleClinicRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "clinic_default_journey",
+        "operations_dashboard"
+      ],
+      "linkedDomains": [
+        "clinic"
+      ],
+      "fingerprint": "48a1f11cb289135d1d2d0feb59e58934b4555cb5164abdbaaacd06ce952f97c9"
+    },
+    {
+      "id": "api:GET:/api/clinic/metrics",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/clinic/metrics",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleClinicRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "clinic_default_journey"
+      ],
+      "linkedDomains": [
+        "clinic"
+      ],
+      "fingerprint": "ec6b214ea7dcd6df8c489de509dcf529a8b7d3276a7a17c4ee90adcbb3d2c02e"
     },
     {
       "id": "api:GET:/api/cognitive/capabilities",
@@ -2253,6 +2356,75 @@
       "fingerprint": "353a0e5d044320c392d1808e114b34296c4c5e2d7b32797db952e7f3ee3b9aa4"
     },
     {
+      "id": "api:GET:/api/food/dashboard",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/food/dashboard",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleFoodRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "food_customer_journey",
+        "food_order_flow",
+        "operations_dashboard"
+      ],
+      "linkedDomains": [
+        "food"
+      ],
+      "fingerprint": "823da1b1d2ad71bcf7672226c42014ea7ea767b050448e9301013f4fe4fd00d2"
+    },
+    {
+      "id": "api:GET:/api/food/metrics",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/food/metrics",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleFoodRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "food_customer_journey",
+        "food_order_flow"
+      ],
+      "linkedDomains": [
+        "food"
+      ],
+      "fingerprint": "347016f5d621217b2793e305fa8c9dea923a276b6cc09f3f52e755884dc21f96"
+    },
+    {
+      "id": "api:GET:/api/intelligence/attention",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/intelligence/attention",
+      "module": "intelligence",
+      "source": "api/modules/intelligence/handleIntelligenceAnalyticsRoutes.js",
+      "authRequired": false,
+      "authorization": [
+        "requirePermission:analytics:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "operational_intelligence"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3a86a4fdd337af77003a611a93f17594488b432df23cf4db679b7b387f856ca8"
+    },
+    {
       "id": "api:GET:/api/intelligence/goals",
       "kind": "api",
       "method": "GET",
@@ -2352,6 +2524,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "dac8dbd44cd98b1188d839fbf7eeaf3bbf0587b428187182fcaa8c055cf399a1"
+    },
+    {
+      "id": "api:GET:/api/intelligence/recommendations/stats",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/intelligence/recommendations/stats",
+      "module": "intelligence",
+      "source": "api/modules/intelligence/handleIntelligenceAnalyticsRoutes.js",
+      "authRequired": false,
+      "authorization": [
+        "requirePermission:analytics:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "operational_intelligence"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "afa629bb2477849d32f4279f5e1fe221341a1b329dbf642534497fac77121b3f"
     },
     {
       "id": "api:GET:/api/journey-registry",
@@ -2691,6 +2883,57 @@
         "market"
       ],
       "fingerprint": "9b3a477a494d22ccfcc7ebbed3a1f6dda787eff286609830eb10caf96d271e1d"
+    },
+    {
+      "id": "api:GET:/api/market/dashboard",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/market/dashboard",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleMarketRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing",
+        "operations_dashboard"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "dd2a89c404c46d21e4e27ac8cb0c6817f2613fa0a90d2451929f1808d174d174"
+    },
+    {
+      "id": "api:GET:/api/market/metrics",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/market/metrics",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleMarketRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "93340828a2350c9a91e43b0b913cbfc4211c48a1db54d720f481fe93e0ea9956"
     },
     {
       "id": "api:GET:/api/market/patterns",
@@ -4580,6 +4823,43 @@
       "fingerprint": "7fd2441cc23aab817e640a57d02a17072b54f57bdac880ee83edd4abad89bcae"
     },
     {
+      "id": "api:GET:/api/services/dashboard",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/services/dashboard",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleServicesRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "operations_dashboard"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "00575cca5e819b88129c299caa40611c143a8b65ff0223444c05a7c304ba9882"
+    },
+    {
+      "id": "api:GET:/api/services/metrics",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/services/metrics",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleServicesRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "d7b0ae9c02e0f9196afe9852e14cfb270977588b3131f40bee04299d8b4a8e43"
+    },
+    {
       "id": "api:GET:/api/solutions/packs",
       "kind": "api",
       "method": "GET",
@@ -5899,6 +6179,31 @@
       ],
       "linkedDomains": [],
       "fingerprint": "8b940e253ce874781c80af5facf03098d75f75d624c5b6b3d7d1422c64643588"
+    },
+    {
+      "id": "api:GET:/inbox/conversations/:conversationId/intelligence",
+      "kind": "api",
+      "method": "GET",
+      "path": "/inbox/conversations/:conversationId/intelligence",
+      "module": "domain-operations",
+      "source": "api/modules/inbox/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "ensurePermission:read",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "conversations_chat",
+        "inbox",
+        "operational_intelligence",
+        "operations_dashboard"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6625512bcf30b7cd419bba5d52924e8c6bd57684a796cce838c089708b3c2476"
     },
     {
       "id": "api:GET:/lp/:id",
@@ -9097,6 +9402,88 @@
       "fingerprint": "0867e82e17eabd601d1f88b6a254a202c093880eb9fe402c87cf2eaf7a41105f"
     },
     {
+      "id": "api:POST:/api/bakery/production/outcome",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/bakery/production/outcome",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleBakeryRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "bakery_balcao_retirada",
+        "bakery_encomenda_flow",
+        "bakery_estoque_perdas",
+        "bakery_producao_fornada",
+        "bakery_reativacao_cliente"
+      ],
+      "linkedDomains": [
+        "bakery"
+      ],
+      "fingerprint": "4fe6878cf348313d8eb21cefb445114bc33b3bc81ac17edc87cf17fd10b7379f"
+    },
+    {
+      "id": "api:POST:/api/bakery/production/plan",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/bakery/production/plan",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleBakeryRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "bakery_balcao_retirada",
+        "bakery_encomenda_flow",
+        "bakery_estoque_perdas",
+        "bakery_producao_fornada",
+        "bakery_reativacao_cliente",
+        "plan_usage"
+      ],
+      "linkedDomains": [
+        "bakery"
+      ],
+      "fingerprint": "e02f1647fa4b75e7bc2a0bc9a9b8b3621d99911aa93ecd431c978068b76452a9"
+    },
+    {
+      "id": "api:POST:/api/bakery/production/retrain",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/bakery/production/retrain",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleBakeryRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "bakery_balcao_retirada",
+        "bakery_encomenda_flow",
+        "bakery_estoque_perdas",
+        "bakery_producao_fornada",
+        "bakery_reativacao_cliente"
+      ],
+      "linkedDomains": [
+        "bakery"
+      ],
+      "fingerprint": "117e797d67c88fc35b73269ecc6899089277a69d5ce5960f627c930d30008dc0"
+    },
+    {
       "id": "api:POST:/api/beauty/appointment",
       "kind": "api",
       "method": "POST",
@@ -9491,6 +9878,30 @@
       "fingerprint": "1b8e84234342871f9222460d4757efef5226d05d8ea3ae9ddbdb24143334aebf"
     },
     {
+      "id": "api:POST:/api/clinic/journey/event",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/clinic/journey/event",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleClinicRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "clinic_default_journey",
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [
+        "clinic"
+      ],
+      "fingerprint": "2d6c9be0f64b803a6b28fa5e7e39773f212a4c693cddf577c210156df9eef2da"
+    },
+    {
       "id": "api:POST:/api/cognitive/process",
       "kind": "api",
       "method": "POST",
@@ -9876,6 +10287,31 @@
         "fitness"
       ],
       "fingerprint": "9430b50c300072af0ecfd079295bc4703883980c4215fc0c4c53d64616ff1477"
+    },
+    {
+      "id": "api:POST:/api/food/journey/event",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/food/journey/event",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleFoodRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "food_customer_journey",
+        "food_order_flow",
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [
+        "food"
+      ],
+      "fingerprint": "9b82bf275a2a46176824a49319ed364b5652ec445cce4ed0e871fb012aab4c49"
     },
     {
       "id": "api:POST:/api/intelligence/goals",
@@ -10285,6 +10721,57 @@
       "fingerprint": "a54cc249c69384b172e7d03c8386368becf8f96493cc792e5ed2eae25523b0eb"
     },
     {
+      "id": "api:POST:/api/market/journey/event",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/market/journey/event",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleMarketRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing",
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "5c69ef38962644a22d15ac6f5bbc7e34890df7f6a0f6804608f87e6da6dddd44"
+    },
+    {
+      "id": "api:POST:/api/market/purchase",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/market/purchase",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleMarketRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "f1a4b1a2d8c1ac6191ba9dd0054b777b24566c9bd7004224b343cb8958e4cfb3"
+    },
+    {
       "id": "api:POST:/api/marketing/email-campaigns",
       "kind": "api",
       "method": "POST",
@@ -10599,6 +11086,24 @@
       "technicalWave": "platform",
       "linkedJourneys": [],
       "fingerprint": "2063981d34876b6b5099a4f230b454b0aaab4907b5793b915a5333e079314476"
+    },
+    {
+      "id": "api:POST:/api/operations-dashboard/insights/act",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/operations-dashboard/insights/act",
+      "module": "operations-dashboard",
+      "source": "api/modules/operations-dashboard/routes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "operations_dashboard"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d14500a078b69104f4da31c301cfae0ab21f6a0c6d86e22d1999dae9aa67a4ca"
     },
     {
       "id": "api:POST:/api/ops/execution-jobs/retry",
@@ -11935,6 +12440,43 @@
       ],
       "linkedDomains": [],
       "fingerprint": "f41bf3c822797d442c3136075bf77105039faa10411cd4af0d9d252c9c65a440"
+    },
+    {
+      "id": "api:POST:/api/services/journey/event",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/services/journey/event",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleServicesRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d083558a0a808c1c368790d13639f706dc6483675a3873ee72031607144360d9"
+    },
+    {
+      "id": "api:POST:/api/services/quote",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/services/quote",
+      "module": "vertical",
+      "source": "api/modules/vertical/handleServicesRoutes.js",
+      "authRequired": true,
+      "authorization": [
+        "ensureAuth",
+        "requireAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "546c151cb93b17299fd4b11cfb952520cfd47d378600d9bd886dc6212735e715"
     },
     {
       "id": "api:POST:/api/solutions/packs/install",
@@ -17116,6 +17658,26 @@
       "fingerprint": "9282d374f55da3eaef8fb8c658f9c933a5e141389219822208519ca9c4bf12ac"
     },
     {
+      "id": "field:AccessMembership.due_date",
+      "kind": "field",
+      "model": "AccessMembership",
+      "field": "due_date",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AccessMembership.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "rbac_access_control"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "0fedbc2a2899bee8e47b41b7f351665ec8ba97a96723ef2e75ea94eb971766b4"
+    },
+    {
       "id": "field:AccessMembership.end_at",
       "kind": "field",
       "model": "AccessMembership",
@@ -17134,6 +17696,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "f5e2f9194dd99ec144159b4fed8c97e4ac265da4ddacfddd1faf85e22ce1d9f1"
+    },
+    {
+      "id": "field:AccessMembership.grace_until",
+      "kind": "field",
+      "model": "AccessMembership",
+      "field": "grace_until",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AccessMembership.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "rbac_access_control"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ec8a3c2d3b5f2e9612a7266bcfbf01ca0e46c7e7dd76017799e628d9480ae31a"
     },
     {
       "id": "field:AccessMembership.id",
@@ -17194,6 +17776,46 @@
       ],
       "linkedDomains": [],
       "fingerprint": "beb5f00a3485dfb5e88dcf665d2736b5274bd7ca357a8046c3f974cbc33d1403"
+    },
+    {
+      "id": "field:AccessMembership.plan_type",
+      "kind": "field",
+      "model": "AccessMembership",
+      "field": "plan_type",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AccessMembership.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "rbac_access_control"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2f7e01a5932e6000514b36a22cc7bf80b9ef23d049cca94e3ab3483affa96f24"
+    },
+    {
+      "id": "field:AccessMembership.renewal_at",
+      "kind": "field",
+      "model": "AccessMembership",
+      "field": "renewal_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AccessMembership.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "rbac_access_control"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "0dbb1ebf422eef439109c0c5e5170d15cbb971ced65f34eb3bf09cc4b86bbe4c"
     },
     {
       "id": "field:AccessMembership.start_at",
@@ -21348,6 +21970,26 @@
       "fingerprint": "8f04c5ee270c9717e3b9ec7bd7a37701e734131897bf00c00a4ea3c3f7780dff"
     },
     {
+      "id": "field:ChannelMessage.client_message_id",
+      "kind": "field",
+      "model": "ChannelMessage",
+      "field": "client_message_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/ChannelMessage.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "channel_accounts"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "16a4339bf010b43251cc8c63abfc1f43ae0884de5668e945dc8e992bc3c5ed4f"
+    },
+    {
       "id": "field:ChannelMessage.conversation_id",
       "kind": "field",
       "model": "ChannelMessage",
@@ -24995,6 +25637,1046 @@
       ],
       "linkedDomains": [],
       "fingerprint": "9afa840c59df7a43910c308e45d274c82845c51fedcce3380f5bf84be1fcd1e2"
+    },
+    {
+      "id": "field:IntegrationConnection.config",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "config",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "68233bdd54eaabbcb5c832a05b93368dfc97dacdc019ed5e69e94c804d1d05f8"
+    },
+    {
+      "id": "field:IntegrationConnection.credential_hint",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "credential_hint",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f9f9badf1343629fb3885059ff7872bf55698a6060d06084ae07cf00696ce7ad"
+    },
+    {
+      "id": "field:IntegrationConnection.credentials_encrypted",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "credentials_encrypted",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f0ea0ce90cb1a601a58edf2b18ba8165b2e4f4316428c410bf3920b7e6ab52c7"
+    },
+    {
+      "id": "field:IntegrationConnection.external_unit_id",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "external_unit_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d73bb1f85a4ea69772d0980a6729ec334fbe11b91c7c3737bb7bca6e7a599a2f"
+    },
+    {
+      "id": "field:IntegrationConnection.id",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "01d59167825cafbdbb5525b01f50ea0e5a695ba08a2228f1eb4841ccc24ce520"
+    },
+    {
+      "id": "field:IntegrationConnection.label",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "label",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f95c667607377ef57c5885bc4f7cbef44bd7951bb92a31cd6cbad7c7d7fff929"
+    },
+    {
+      "id": "field:IntegrationConnection.last_error",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "last_error",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "9e0e9d06026a7b95767b3f4380d9edb5b7e8125eff100c12b32338d3d205ba0e"
+    },
+    {
+      "id": "field:IntegrationConnection.last_sync_at",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "last_sync_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bc8f6e8ebe7d96391bd76569b930cdb90073880224e0a54114f2f4822db83d6c"
+    },
+    {
+      "id": "field:IntegrationConnection.metadata",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "7b838fc720ee44b97b0a90ba4881ea9de8cde1dab739fc9b348ec4cebaed623f"
+    },
+    {
+      "id": "field:IntegrationConnection.opaque_key",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "opaque_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8a7871d48f601ad5d539f09f59ab7fa1f16abf5a2cbc60d0f122021a7921a8a6"
+    },
+    {
+      "id": "field:IntegrationConnection.provider",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "provider",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "768b9600fdbede47d7f83c2ff121491a8f76a61e6aa3e615282f8c722a75e968"
+    },
+    {
+      "id": "field:IntegrationConnection.status",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'disconnected'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "13ff382bef0a3c2643eb2690b10d11e8bfd1a434509d2c1b6e87235c64852ed6"
+    },
+    {
+      "id": "field:IntegrationConnection.tenant_key",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6b47de9cc64cae8f1604abecfb3db6e2ade4c8251a52f4c4d169ec35cc5c2f23"
+    },
+    {
+      "id": "field:IntegrationConnection.unit_label",
+      "kind": "field",
+      "model": "IntegrationConnection",
+      "field": "unit_label",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "50fb53dcf297078b1494421ce2ef7dd27a73253d4cf77f2e5223f340638ef612"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.attempts",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "attempts",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e082415d4f5ef9ffc4758fb0a28887684927c7788e4061bfa235343081780632"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.connection_id",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "connection_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "9c345a1d063aff0457dc59ae5f205f2d21ddc25a6accd27ee7bd20ae597326c2"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.error",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "error",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a217a7204754c5a8638b5fbd44fbdcf5c604cbeb4fedf61f6b0f67c5e5f653fe"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.event_type",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "event_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ceeda461e7cff0ff0e4ddd3d5c6e03e175ca4fd69f5ee0d3a7eadde7f8ed1859"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.external_event_id",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "external_event_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6335d976434fd9ccdbcc7520f99f263224dde594cec36cb372996106c6a30d18"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.external_resource_id",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "external_resource_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "21d55779dee43ae89c3c03b48b5fb8adbc4def454ef256b49f89c6f996eda17c"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.id",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "df355e1f6000fa817c76607a625b3b36c8ce9fe5d58421d3a4273b8b578d685c"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.idempotency_key",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "idempotency_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f14485560ad0122738ebfb8aacb2f0abee2f96f0928b6fa7a0f03e1c30d1f750"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.metadata",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "33b4daff65e4a994a290fb6502fc74db5fa1babafa237a256580b1a8b4f82173"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.payload",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "payload",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "abb703b4eb0007dcab336eb240b7a24e2d64dc597bc0074c9550c4b2ffc9bf75"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.processed_at",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "processed_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "4764d009c8c7ebce4b408535448bebf2aed79cb81b68c84bf41268e9e6ad0278"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.processing_state",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "processing_state",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'received'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2a19b99a146bbce8691b890942f18c8004418e687f0a643dd8228f0700d10d87"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.provider",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "provider",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "5425ba98d2a3b453ad203c04e3802ebacca3a912aa39abce658db5eef4aee228"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.received_at",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "received_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "8e6aee62a9dc18987f7d8016ed937e630019d349aab8f41988effd74894e46b3"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.resource_type",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "resource_type",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "81af14a4173a57ce5ce29081013afae5484315b3688e3bba8adf2a474b5b918a"
+    },
+    {
+      "id": "field:IntegrationInboundEvent.tenant_key",
+      "kind": "field",
+      "model": "IntegrationInboundEvent",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "395c71f46ceac5d58f4b6a664b183ae62028b19e327ce1fc184b84544b20305f"
+    },
+    {
+      "id": "field:IntegrationObjectLink.connection_id",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "connection_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a1903cfd439369120f2e1555138337aaa7e8c753156aad199f17afc1b3cb1b3b"
+    },
+    {
+      "id": "field:IntegrationObjectLink.external_id",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "external_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "40382750ae66d58d2100d284e85c136e465e0bdde653341ba7039e47b2ce1c97"
+    },
+    {
+      "id": "field:IntegrationObjectLink.id",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "af47735ad242edddd3ad62617d400596890529b14d4e343a9725954902629fe1"
+    },
+    {
+      "id": "field:IntegrationObjectLink.internal_id",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "internal_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "65693d09f9cf098280feeaca04c8e60fb7a9031174b4975cd954058b034e5791"
+    },
+    {
+      "id": "field:IntegrationObjectLink.internal_type",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "internal_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e7f3ebe2798714dd42cb0c51a551a1c1f39d34c19ab322c1436e43ee521e8d42"
+    },
+    {
+      "id": "field:IntegrationObjectLink.last_seen_at",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "last_seen_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4962295a9e26c44c530d6bcc36406fa8ed4d020ab04561dde19d7e51589fdbb3"
+    },
+    {
+      "id": "field:IntegrationObjectLink.metadata",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "21bcaabc2a3bcfc4f27c67469dd624ced90f91f63950d2a54e2758f8507fc673"
+    },
+    {
+      "id": "field:IntegrationObjectLink.provider",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "provider",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "7fe7544bdbaf64aaa7535dbb65651ad7161eafa5b6f293abef4d2b1fcd83974e"
+    },
+    {
+      "id": "field:IntegrationObjectLink.resource_type",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "resource_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6fa777dbd677d3418f0df69620cceb25da7c13a73988caa4c8c6b5c17ca0eb9d"
+    },
+    {
+      "id": "field:IntegrationObjectLink.sync_version",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "sync_version",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "1",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0fbf4d750fa36c451753f2748881ef8312f392589669ccab330aac7f367765d1"
+    },
+    {
+      "id": "field:IntegrationObjectLink.tenant_key",
+      "kind": "field",
+      "model": "IntegrationObjectLink",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0edb694a34267bb4af605a81d346cf5cc77b85b98c04c3dccb83543024635887"
+    },
+    {
+      "id": "field:IntegrationSyncState.connection_id",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "connection_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8aa225a8fda58726b492416b7ad9968725e72ddd21bb12e4db35cf3d0cbcdb02"
+    },
+    {
+      "id": "field:IntegrationSyncState.cursor",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "cursor",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5fa04be676ed8554f8c2f753b329933902775214b085e5add907722a4ebd3111"
+    },
+    {
+      "id": "field:IntegrationSyncState.id",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "9814d331cf4b9ef73d56db1266f0a835d84d84457565e0e7b01af6931cc42a8b"
+    },
+    {
+      "id": "field:IntegrationSyncState.initial_sync_completed_at",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "initial_sync_completed_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d755f85b0ac234c56c4cdd5e855c51bc9cd2e1257bf1105aaafae38668888c12"
+    },
+    {
+      "id": "field:IntegrationSyncState.last_error",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "last_error",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b6242a32cb91d25666937716cf84f990617e9208eb61db481fbe58f62f399684"
+    },
+    {
+      "id": "field:IntegrationSyncState.last_run_at",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "last_run_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8603023a4f8dfbd3fb707323bd4f37cbc67d5d62f97387f458f0f5eec1abd79a"
+    },
+    {
+      "id": "field:IntegrationSyncState.last_success_at",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "last_success_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "66fc559ded0d81c253b463984c38d149f9bf9cc6573991a9c9bc7b3c04d0d109"
+    },
+    {
+      "id": "field:IntegrationSyncState.overlap_seconds",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "overlap_seconds",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "3600",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1659225df151dd7db95da511a3ee5128e46e8ad2c5e8915eefd602fd9f7fc501"
+    },
+    {
+      "id": "field:IntegrationSyncState.page_offset",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "page_offset",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "279dd6201cbdcd003158b9df98475e18cdd736647a9ea0c5005145c2d7463e52"
+    },
+    {
+      "id": "field:IntegrationSyncState.provider",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "provider",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "be3488fe81cae3b80b268499c8bf4f890eabaf5c12435b57e497ff724c790bfe"
+    },
+    {
+      "id": "field:IntegrationSyncState.resource_type",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "resource_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5474e1a87b9be81f5a08ddb5ef59487488c0a1f2416503d333c3d2189157d60e"
+    },
+    {
+      "id": "field:IntegrationSyncState.stats",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "stats",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "fa34c91c2decb5222dd3bbd3dfde7b564753c7b5990c00f635e26ec076bdcd59"
+    },
+    {
+      "id": "field:IntegrationSyncState.status",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'idle'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "198493bbb08d3993df3e56ac1340a90d4cd4f6e944db000b6942080c25d6244d"
+    },
+    {
+      "id": "field:IntegrationSyncState.tenant_key",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "43bbdda90aa1eec5b2c4711b58f11f1ce43c597a1b317e773ceebfdd35af172f"
+    },
+    {
+      "id": "field:IntegrationSyncState.watermark_at",
+      "kind": "field",
+      "model": "IntegrationSyncState",
+      "field": "watermark_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "794f73307390c7b7dbcbf7bf957b41156a8cc5e92c5557c01d17d02d53321fc9"
     },
     {
       "id": "field:JourneyRegistry.createdAt",
@@ -33308,6 +34990,240 @@
       "fingerprint": "9288edc09498bc76fe27977507032af7aeedd928a463f7fc09765d0cf4d25416"
     },
     {
+      "id": "field:OutboundAttempt.channel_type",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "channel_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "692e6762008bd6a05f34513080bd97a267b333efd6f2a0a4fbe8bf31180ab2d5"
+    },
+    {
+      "id": "field:OutboundAttempt.client_message_id",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "client_message_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6b502a8635f75da3680647a86695ca19b0000242ff69927a8f92ff4ae27957d9"
+    },
+    {
+      "id": "field:OutboundAttempt.completed_at",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "completed_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "60c00bd2927988f41f2b6da149f9379274b2b33b7717c39e992910138c391f2a"
+    },
+    {
+      "id": "field:OutboundAttempt.error_class",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "error_class",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5067d838e585bbf5a319f9f57477e61df7680072dbd32358daee298082640ed9"
+    },
+    {
+      "id": "field:OutboundAttempt.external_message_id",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "external_message_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d5ead69dd11c46bc9e505c434963b6f85cf10bf5119f16648865b11bfa282479"
+    },
+    {
+      "id": "field:OutboundAttempt.id",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6bf9567eb5ea4c22b983b989a823bc7a77ca2fb5bbed09c70d7dcf09d6817249"
+    },
+    {
+      "id": "field:OutboundAttempt.idempotency_key",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "idempotency_key",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "58d67d9bd9e1655966c37d42e81ca188a0fba5063e2a7ce3b7d3030f9ba3d4c1"
+    },
+    {
+      "id": "field:OutboundAttempt.provider",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "provider",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "df5727ba7547b028751ab2c4bcad3f9db1fec22fa95c323b9a3a86cd51bf0caa"
+    },
+    {
+      "id": "field:OutboundAttempt.queue_item_id",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "queue_item_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5f86a2d88f8ac77e5589845a4d29bc9798eac015360752fa26e77265be079bd2"
+    },
+    {
+      "id": "field:OutboundAttempt.result",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "result",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "fc5b371e6e9c5e003c6b44019f809ac9f19190be1ea50278bb274d082dcfd5b9"
+    },
+    {
+      "id": "field:OutboundAttempt.started_at",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "started_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "657e1199a37803616d7866a7807b5e99260da777cbc936234c252da47b850d8a"
+    },
+    {
+      "id": "field:OutboundAttempt.status",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'started'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1f40757ef6fb724abc219e32db3949e321e63daace5115b0c236c444fb774b14"
+    },
+    {
+      "id": "field:OutboundAttempt.tenant_key",
+      "kind": "field",
+      "model": "OutboundAttempt",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4445ce36b8d52ea61e312ecc4db4725d5a2ce6e1c0ef8c74b28fe8a54ed290c2"
+    },
+    {
       "id": "field:OutboundQueueItem.attempts",
       "kind": "field",
       "model": "OutboundQueueItem",
@@ -33366,6 +35282,26 @@
       ],
       "linkedDomains": [],
       "fingerprint": "4d5a4ed0cb4341447d96302c2c6262749e1f091fb07c9d8327dd0df9b87595c7"
+    },
+    {
+      "id": "field:OutboundQueueItem.client_message_id",
+      "kind": "field",
+      "model": "OutboundQueueItem",
+      "field": "client_message_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundQueueItem.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "physical_queue_kiosk_station_panel_fila"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7c22d98065f51d8af68691b3a7a2bada3ffe9d65b485f549bad1cded9fac01f0"
     },
     {
       "id": "field:OutboundQueueItem.conversation_id",
@@ -39282,6 +41218,132 @@
       ],
       "linkedDomains": [],
       "fingerprint": "27eae6b860c267315b4166a57b5b421961327eafc898d46cbb0736f20d84a9fb"
+    },
+    {
+      "id": "field:PushSubscription.device_name",
+      "kind": "field",
+      "model": "PushSubscription",
+      "field": "device_name",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c05d6a78cc23f86bbf1aa0131f3c0c1a6a2e2eb743dbdc13313a97f0ec6737fb"
+    },
+    {
+      "id": "field:PushSubscription.endpoint",
+      "kind": "field",
+      "model": "PushSubscription",
+      "field": "endpoint",
+      "type": "TEXT",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e35979d2b0f7ac28bbb7df0ea810858f9dce026c82c58ff60dd4065419545790"
+    },
+    {
+      "id": "field:PushSubscription.id",
+      "kind": "field",
+      "model": "PushSubscription",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "3d67d209da13548ef60fd652b41302c6e9268544737f2566a478ce9a981dd0b3"
+    },
+    {
+      "id": "field:PushSubscription.keys",
+      "kind": "field",
+      "model": "PushSubscription",
+      "field": "keys",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "223ca26da1aab1fe54d4d2256aff21778b9232b8aa12ddf3d4f271894f7487ea"
+    },
+    {
+      "id": "field:PushSubscription.tenant_key",
+      "kind": "field",
+      "model": "PushSubscription",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "10df218782113c48b7053e29dd88f3a5faa18c703672ca889c42a138d27ff838"
+    },
+    {
+      "id": "field:PushSubscription.user_agent",
+      "kind": "field",
+      "model": "PushSubscription",
+      "field": "user_agent",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "63cf16e39f2e113453b47ccd17f5461431fae0a0a11964358753246e28d6b977"
+    },
+    {
+      "id": "field:PushSubscription.user_id",
+      "kind": "field",
+      "model": "PushSubscription",
+      "field": "user_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "3fc5fd0d97baad05328d2548bd50a9a2e8f69c59754470abdba226b773c056ad"
     },
     {
       "id": "field:Queue.active",
@@ -47232,6 +49294,438 @@
       "fingerprint": "995c5c88bdade6c905dfa6f969c3208472aea8df007adb9f581d2bf9a59cd6b4"
     },
     {
+      "id": "field:VerticalMlModel.algorithm",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "algorithm",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'logistic_regression'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d07c5100dc6dcf3a8858cdad7b8e5489ef0decf2aafd26c750625f75359b212b"
+    },
+    {
+      "id": "field:VerticalMlModel.id",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ddae1c0ab61a4ad7d944923e8e51f3af7e5db4946022e64b309b8449680750e1"
+    },
+    {
+      "id": "field:VerticalMlModel.metrics",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "metrics",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "46842d14839e552d7d721c9804ea0ec08a14437d43b896448e081de0b60c30e5"
+    },
+    {
+      "id": "field:VerticalMlModel.model_type",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "model_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "3d889381ab154e6b6efb8e854d8e6a870283b321a637ab957584e6ee7157ad98"
+    },
+    {
+      "id": "field:VerticalMlModel.status",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'active'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "9b8ac9f79ed9f8191a0946dca6eb4c2aa811357493be8e30140f0c5c1fda5bce"
+    },
+    {
+      "id": "field:VerticalMlModel.tenant_key",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b94fb59b47e6d52e8d1002d9d184271b1e48c1b9c2f5dd5cd757b6abb500c90d"
+    },
+    {
+      "id": "field:VerticalMlModel.trained_at",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "trained_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": "DataTypes.NOW",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "49d22367c031ac67cca7a19f6e1cbb1d2d4e87c3ace8fb8800f98dcb39d68014"
+    },
+    {
+      "id": "field:VerticalMlModel.version",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "version",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "1",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "9e6325fbd184527c4b3e52683c6c805487fcec1b763a14611232ad4ba273c561"
+    },
+    {
+      "id": "field:VerticalMlModel.weights",
+      "kind": "field",
+      "model": "VerticalMlModel",
+      "field": "weights",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d415c4e876c8f903fd97055e551de61b687e5658e0a2f79d6355cd8b63e298e7"
+    },
+    {
+      "id": "field:VerticalProductionBatch.batch_date",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "batch_date",
+      "type": "DATEONLY",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "788e11ad091587ab5a7ba29a63013669068d8e45ec8d6e6515e2ed58c2a81369"
+    },
+    {
+      "id": "field:VerticalProductionBatch.computed_by",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "computed_by",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'ml_ridge_regression'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "104c65399afd37adb0ae44688795dfe10d6e1909bef0b297d451bbf4dae844ac"
+    },
+    {
+      "id": "field:VerticalProductionBatch.forecast_qty",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "forecast_qty",
+      "type": "DECIMAL",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "98a12b23e6d8d94977722289edba69dd7785f8c1b133d46ed8b89010fa989a36"
+    },
+    {
+      "id": "field:VerticalProductionBatch.id",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1e6bd965a483c11d84263d4cdea9e447a62d3662e9051a16226119960beea931"
+    },
+    {
+      "id": "field:VerticalProductionBatch.leftover_qty",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "leftover_qty",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b0ece37a58bce3247fd1fecbfeec86742ee9361a2aa5edf90c0960fd7a06eab3"
+    },
+    {
+      "id": "field:VerticalProductionBatch.model_version",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "model_version",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a437fdc53d9df2524a61bea3196e3c2668ae8c3ddfa1bfd42be215c19f8e6835"
+    },
+    {
+      "id": "field:VerticalProductionBatch.payload",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "payload",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1c9b34df51242f5b6dd9689b208bbfb1b6dfd05af52a21286025da80a3402f01"
+    },
+    {
+      "id": "field:VerticalProductionBatch.planned_qty",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "planned_qty",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0052cb6be59eb17155afc37f5e0a3a4254d5d0c45ff6e6bed7d941400b3d49fd"
+    },
+    {
+      "id": "field:VerticalProductionBatch.produced_qty",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "produced_qty",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a60c98145d9f458b1493816b540bbf4c0c070c145d895de1b69fc27799d15b74"
+    },
+    {
+      "id": "field:VerticalProductionBatch.product_key",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "product_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a1498cd96ef629ab89e5c702f434dc6b6f7b6d50e0126f8c14e65a6cbc45c4f7"
+    },
+    {
+      "id": "field:VerticalProductionBatch.recommended_qty",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "recommended_qty",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "14823c3ad5300a8a8e8bacbadc36c1eb744694a56c892a5bd2e6bab069a314de"
+    },
+    {
+      "id": "field:VerticalProductionBatch.sold_qty",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "sold_qty",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "246aab403e67f62a93e56ac12021af6f3ca1f1f7b8bb805cc38c070621d364cb"
+    },
+    {
+      "id": "field:VerticalProductionBatch.stockout",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "stockout",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a16dfa35602ebb7b8286e6dd4ce43ef8333939e2caef4b1c16c654ca78826a05"
+    },
+    {
+      "id": "field:VerticalProductionBatch.tenant_key",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4922c48bf20f66dad97ff62971d4dc40f9820f64ddf8ee06611231250d43d7d6"
+    },
+    {
+      "id": "field:VerticalProductionBatch.vertical",
+      "kind": "field",
+      "model": "VerticalProductionBatch",
+      "field": "vertical",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'bakery'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "2cd8139adcd4b35faf4e8871d2f2f518a998e03850b356f9faf83fdf6fe77259"
+    },
+    {
       "id": "field:VerticalSessionBundle.billing_status",
       "kind": "field",
       "model": "VerticalSessionBundle",
@@ -48803,7 +51297,7 @@
       "kind": "model",
       "model": "AccessMembership",
       "tableName": "access_memberships",
-      "fieldCount": 12,
+      "fieldCount": 16,
       "hasTenantId": true,
       "classification": "PRODUCTION",
       "source": "api/db/models/AccessMembership.js",
@@ -48813,7 +51307,7 @@
         "rbac_access_control"
       ],
       "linkedDomains": [],
-      "fingerprint": "ef925cd176ab4aaa724070e44340a80ea957fa1416b18c175a60f7826229725e"
+      "fingerprint": "2f00c649bad14f9d8eb63b5ed5787f4e9257878491838812c85ebe636be922ea"
     },
     {
       "id": "model:AccessPolicy",
@@ -49225,7 +51719,7 @@
       "kind": "model",
       "model": "ChannelMessage",
       "tableName": "channel_messages",
-      "fieldCount": 9,
+      "fieldCount": 10,
       "hasTenantId": true,
       "classification": "PRODUCTION",
       "source": "api/db/models/ChannelMessage.js",
@@ -49236,7 +51730,7 @@
         "failed_messages"
       ],
       "linkedDomains": [],
-      "fingerprint": "e860387919ad85d71e6270bbd2b4ded9963c56ce41b31cee6fac18c8adcd6d31"
+      "fingerprint": "b1a43aa5d3304784618986e9b9785538ab0f1511535eaa251ac0ab0de06b5996"
     },
     {
       "id": "model:CloseReason",
@@ -49548,6 +52042,70 @@
       ],
       "linkedDomains": [],
       "fingerprint": "30980a8c4373b5c50d35f79caf4dda1d09d8145095a9c9d8f9537e96d7239771"
+    },
+    {
+      "id": "model:IntegrationConnection",
+      "kind": "model",
+      "model": "IntegrationConnection",
+      "tableName": "integration_connections",
+      "fieldCount": 14,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e00b837b69251b2054d61189b6511260e7a3652b1e1e528b024a4d80e550c347"
+    },
+    {
+      "id": "model:IntegrationInboundEvent",
+      "kind": "model",
+      "model": "IntegrationInboundEvent",
+      "tableName": "integration_inbound_events",
+      "fieldCount": 16,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a4406fc7f02d546e9f89777f59229a28c1ea79a710e87bd2b72e58b1276f5dd0"
+    },
+    {
+      "id": "model:IntegrationObjectLink",
+      "kind": "model",
+      "model": "IntegrationObjectLink",
+      "tableName": "integration_object_links",
+      "fieldCount": 11,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b140537a82696b87d69afcc0ed4ad37c2780df5dd9df4a6b64ea2ec5a7e69137"
+    },
+    {
+      "id": "model:IntegrationSyncState",
+      "kind": "model",
+      "model": "IntegrationSyncState",
+      "tableName": "integration_sync_states",
+      "fieldCount": 15,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "454c986143b537a9e989ea90c9d2574371b1315f6bd24e3e6a6cc2f0f92f7e67"
     },
     {
       "id": "model:JourneyRegistry",
@@ -50190,11 +52748,26 @@
       "fingerprint": "0099b30422da7bba7323d58c29bc68677d4724dd0787bd8c76b3c5c8b9d083d8"
     },
     {
+      "id": "model:OutboundAttempt",
+      "kind": "model",
+      "model": "OutboundAttempt",
+      "tableName": "outbound_attempts",
+      "fieldCount": 13,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1bd42febd1097d990c94bc8ae40fe2480e231a9943384931a0bd63de9f04bdf2"
+    },
+    {
       "id": "model:OutboundQueueItem",
       "kind": "model",
       "model": "OutboundQueueItem",
       "tableName": "outbound_queue",
-      "fieldCount": 14,
+      "fieldCount": 15,
       "hasTenantId": true,
       "classification": "PRODUCTION",
       "source": "api/db/models/OutboundQueueItem.js",
@@ -50204,7 +52777,7 @@
         "physical_queue_kiosk_station_panel_fila"
       ],
       "linkedDomains": [],
-      "fingerprint": "56ed954684d8f86b63c7b0b04b58606bc1690194b7b2c47b9562d58bfff24708"
+      "fingerprint": "b88b7b18a5898de04aca7bbf68b15a9b0dc5514f670ee6e4c91f4249cd8959a5"
     },
     {
       "id": "model:PaymentEvent",
@@ -50856,6 +53429,21 @@
       ],
       "linkedDomains": [],
       "fingerprint": "e00cbc3c1ce924cd87cabc3c96d84a465dbb563c4d1dc167c8728cf8f0b24d07"
+    },
+    {
+      "id": "model:PushSubscription",
+      "kind": "model",
+      "model": "PushSubscription",
+      "tableName": "push_subscriptions",
+      "fieldCount": 7,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "70c5437ddaacef81aafa9a8d44670ce24353dd57063fecf0d1025a33aadaef89"
     },
     {
       "id": "model:Queue",
@@ -51565,6 +54153,36 @@
       ],
       "linkedDomains": [],
       "fingerprint": "6a2cebd50b45dfc1bd5866d0fd972e0f0ce446a59fba84948fc3409023bb5b6f"
+    },
+    {
+      "id": "model:VerticalMlModel",
+      "kind": "model",
+      "model": "VerticalMlModel",
+      "tableName": "vertical_ml_models",
+      "fieldCount": 9,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "de93494288572ab47ecf710ef75cb1c1b4a92f4be260f6c346f1e616dcf3767d"
+    },
+    {
+      "id": "model:VerticalProductionBatch",
+      "kind": "model",
+      "model": "VerticalProductionBatch",
+      "tableName": "vertical_production_batches",
+      "fieldCount": 15,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "773128c639346829e14608f334d3e27d74dc51cb959b9a3848902fa4dc9fcd9d"
     },
     {
       "id": "model:VerticalSessionBundle",
@@ -55735,10 +58353,11 @@
         },
         {
           "fields": [
+            "tenant_key",
             "provider",
             "external_transaction_id"
           ],
-          "name": "bt_provider_external_txn_uq",
+          "name": "bt_tenant_provider_external_txn_uq",
           "unique": true
         },
         {
@@ -55758,7 +58377,7 @@
         "billing"
       ],
       "linkedDomains": [],
-      "fingerprint": "9c488b9ce56d0d9477388478a3c95c5865563704a3e95f8c495f726f11caa69b"
+      "fingerprint": "5c5b936705f15e6e685ba5d7a14a7b44c3b03622eb13b5b05e3bc2e8aa2c58b6"
     },
     {
       "id": "table:case_conversations",
@@ -56021,6 +58640,14 @@
           ],
           "name": "channel_messages_tenant_channel_type_external_msg_id_uq",
           "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "client_message_id"
+          ],
+          "name": "channel_messages_tenant_client_msg_id_uq",
+          "unique": true
         }
       ],
       "classification": "PRODUCTION",
@@ -56032,7 +58659,7 @@
         "failed_messages"
       ],
       "linkedDomains": [],
-      "fingerprint": "98a8f849288849382a9d7458db73a23f87ca1f07cbbd34bed12808739e4c554a"
+      "fingerprint": "56edae6f78f3088eff882dd4f560fbc281dd6eae74bbdbbec8d52c14cac937df"
     },
     {
       "id": "table:close_reasons",
@@ -56790,6 +59417,152 @@
       ],
       "linkedDomains": [],
       "fingerprint": "b41b3cae8bf2071e77cb87cf2954de1bbed8302fc3403d4a7a5e34c587aa72df"
+    },
+    {
+      "id": "table:integration_connections",
+      "kind": "table",
+      "table": "integration_connections",
+      "model": "IntegrationConnection",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "provider"
+          ],
+          "name": "integration_connections_tenant_provider_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "opaque_key"
+          ],
+          "name": "integration_connections_opaque_key_uq",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "0642c0e514c2a04baff27b0504ff17a0a36d4e45da5511722ac241fa77dd1652"
+    },
+    {
+      "id": "table:integration_inbound_events",
+      "kind": "table",
+      "table": "integration_inbound_events",
+      "model": "IntegrationInboundEvent",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "provider",
+            "idempotency_key"
+          ],
+          "name": "integration_inbound_events_idempotency_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "processing_state"
+          ],
+          "name": "integration_inbound_events_state_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "connection_id",
+            "received_at"
+          ],
+          "name": "integration_inbound_events_connection_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationInboundEvent.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "voice_event_ledger"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "6d9afd23ecc8fdebce43323df3b87b79375b8553e537952bac9444da425a0e81"
+    },
+    {
+      "id": "table:integration_object_links",
+      "kind": "table",
+      "table": "integration_object_links",
+      "model": "IntegrationObjectLink",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "provider",
+            "connection_id",
+            "resource_type",
+            "external_id"
+          ],
+          "name": "integration_object_links_external_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "internal_type",
+            "internal_id"
+          ],
+          "name": "integration_object_links_internal_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationObjectLink.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "caea990c96771f71c0e83336f65743f643a2f1fabd982135528792e4b427487d"
+    },
+    {
+      "id": "table:integration_sync_states",
+      "kind": "table",
+      "table": "integration_sync_states",
+      "model": "IntegrationSyncState",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "connection_id",
+            "resource_type"
+          ],
+          "name": "integration_sync_states_scope_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "status"
+          ],
+          "name": "integration_sync_states_tenant_status_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/IntegrationSyncState.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "70462d40b9648f25718b328052a21e6b337ae048785523044e55903c200d743a"
     },
     {
       "id": "table:journey_registry",
@@ -58103,6 +60876,38 @@
       "fingerprint": "3509d8e5700de210bafb34b83e700f9b8a5c4ced0d08963877c47d599ab271cc"
     },
     {
+      "id": "table:outbound_attempts",
+      "kind": "table",
+      "table": "outbound_attempts",
+      "model": "OutboundAttempt",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "queue_item_id"
+          ],
+          "name": "outbound_attempts_tenant_queue_item_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "client_message_id"
+          ],
+          "name": "outbound_attempts_tenant_client_msg_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/OutboundAttempt.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d0d1e7871855092a2446de386498041d8d1297c67798af5971b81461659f0429"
+    },
+    {
       "id": "table:outbound_queue",
       "kind": "table",
       "table": "outbound_queue",
@@ -59080,6 +61885,38 @@
       ],
       "linkedDomains": [],
       "fingerprint": "0e4701dfbd8533789e45473324c023b2bd965f0fd13ac143236207eb3c9478cb"
+    },
+    {
+      "id": "table:push_subscriptions",
+      "kind": "table",
+      "table": "push_subscriptions",
+      "model": "PushSubscription",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "user_id"
+          ],
+          "name": "psub_tenant_user_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "endpoint"
+          ],
+          "name": "psub_tenant_endpoint_idx",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/PushSubscription.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ecd7bb11184b6b3cd598c21caecfb760196ba89e06679503672133418aad80ee"
     },
     {
       "id": "table:queue_assignment_states",
@@ -60723,6 +63560,75 @@
       ],
       "linkedDomains": [],
       "fingerprint": "ff05b195818ff37aecea354e62e4f368b1e4a9d5113dd36d2656356e2af8ac75"
+    },
+    {
+      "id": "table:vertical_ml_models",
+      "kind": "table",
+      "table": "vertical_ml_models",
+      "model": "VerticalMlModel",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "model_type",
+            "status"
+          ],
+          "name": "vmm_tenant_type_status_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "model_type",
+            "version"
+          ],
+          "name": "vmm_tenant_type_version_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalMlModel.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "42e6af2048705578d1175cd442b582ea1206521d77843215b53f72cd192c55c3"
+    },
+    {
+      "id": "table:vertical_production_batches",
+      "kind": "table",
+      "table": "vertical_production_batches",
+      "model": "VerticalProductionBatch",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "vertical",
+            "batch_date"
+          ],
+          "name": "vpb_tenant_vertical_date_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "vertical",
+            "product_key",
+            "batch_date"
+          ],
+          "name": "vpb_unique_batch_idx",
+          "unique": true
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/VerticalProductionBatch.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e19ac04d0cd9f2a4a9d7e1fefd6ff96a671f685ec89b8088ce470292ab3b6540"
     },
     {
       "id": "table:vertical_session_bundles",

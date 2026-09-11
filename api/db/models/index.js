@@ -182,6 +182,10 @@ const getAgentPolicyVersion = require('./AgentPolicyVersion');
 const getAgentPolicyAssignment = require('./AgentPolicyAssignment');
 const getAgentPolicyAttestation = require('./AgentPolicyAttestation');
 const getAiProvider = require('./AiProvider');
+const getIntegrationConnection = require('./IntegrationConnection');
+const getIntegrationObjectLink = require('./IntegrationObjectLink');
+const getIntegrationSyncState = require('./IntegrationSyncState');
+const getIntegrationInboundEvent = require('./IntegrationInboundEvent');
 
 // Lazy getters para models
 const Tenant = () => getTenant();
@@ -363,6 +367,10 @@ const AgentPolicyVersion = () => getAgentPolicyVersion();
 const AgentPolicyAssignment = () => getAgentPolicyAssignment();
 const AgentPolicyAttestation = () => getAgentPolicyAttestation();
 const AiProvider = () => getAiProvider();
+const IntegrationConnection = () => getIntegrationConnection();
+const IntegrationObjectLink = () => getIntegrationObjectLink();
+const IntegrationSyncState = () => getIntegrationSyncState();
+const IntegrationInboundEvent = () => getIntegrationInboundEvent();
 
 // Define relacionamentos
 function defineRelationships() {
@@ -1002,6 +1010,10 @@ module.exports = {
   AgentPolicyAssignment,
   AgentPolicyAttestation,
   AiProvider,
+  IntegrationConnection,
+  IntegrationObjectLink,
+  IntegrationSyncState,
+  IntegrationInboundEvent,
   defineRelationships,
   // Exporta também as funções getter para uso direto
   getTenant,
@@ -1182,4 +1194,8 @@ module.exports = {
   getAgentPolicyAssignment,
   getAgentPolicyAttestation,
   getAiProvider,
+  getIntegrationConnection,
+  getIntegrationObjectLink,
+  getIntegrationSyncState,
+  getIntegrationInboundEvent,
 };

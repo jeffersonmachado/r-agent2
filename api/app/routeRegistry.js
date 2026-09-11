@@ -46,6 +46,7 @@ function createRouteRegistry(routers) {
     { router: routers.supportDebugRouter },
     { router: routers.publicApiRouter },
     { router: routers.channelWebhookRouter },
+    { router: routers.integrationRouter },
     { router: routers.whatsAppConnectionRouter },
     { router: routers.whatsAppIvrRouter },
     { router: routers.whatsAppQrWebhookRouter },
