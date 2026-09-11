@@ -104,13 +104,22 @@ describe('§5 policy sem enforcement = 0', () => {
 
   it('todo campo normativo da policy tem consumidor no engine', () => {
     const normative = Object.keys(POLICY).filter((k) => !META.includes(k));
-    const unenforced = normative.filter((key) => !ENGINE_SOURCE.includes(`policy.${key}`));
+    // O engine consome campos diretamente (`policy.x`) ou pela registry de
+    // dimensões, que referencia o nome do campo como literal — as duas formas
+    // provam consumo; nenhuma delas presente prova ausência de consumidor.
+    const consumed = (key) => ENGINE_SOURCE.includes(`policy.${key}`)
+      || ENGINE_SOURCE.includes(`'${key}'`)
+      || ENGINE_SOURCE.includes(`"${key}"`);
+    const unenforced = normative.filter((key) => !consumed(key));
     expect(unenforced).toEqual([]);
   });
 
   it('controla o próprio teste: um campo fictício seria detectado', () => {
     const normative = Object.keys({ ...POLICY, campoInexistente: 1 }).filter((k) => !META.includes(k));
-    const unenforced = normative.filter((key) => !ENGINE_SOURCE.includes(`policy.${key}`));
+    const consumed = (key) => ENGINE_SOURCE.includes(`policy.${key}`)
+      || ENGINE_SOURCE.includes(`'${key}'`)
+      || ENGINE_SOURCE.includes(`"${key}"`);
+    const unenforced = normative.filter((key) => !consumed(key));
     expect(unenforced).toEqual(['campoInexistente']);
   });
 });

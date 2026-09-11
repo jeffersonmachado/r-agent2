@@ -165,6 +165,11 @@ describe('Anti-gaming: amostra de logos não pode certificar (§43)', () => {
       vertical: 'test',
       sampleVersion: 'test-v1',
       inventoryVersion: 'inv-1',
+      // §9/§10 Cada dimensão tem baseline próprio: sem ele a taxa de novidade
+      // da dimensão é NOT_MEASURABLE e a amostra não pode ser certificada.
+      canonicalInventoryBaseline: 0,
+      canonicalJourneyInventoryBaseline: 10,
+      canonicalBusinessRuleInventoryBaseline: 10,
       archetypes: [
         { id: 'a1', importance: 'REQUIRED', status: 'ACTIVE' },
         { id: 'a2', importance: 'REQUIRED', status: 'ACTIVE' },
@@ -195,7 +200,11 @@ describe('Anti-gaming: amostra de logos não pode certificar (§43)', () => {
       id, archetype, independenceGroup: group, order, role,
       analyzedAt: '2026-09-01T00:00:00.000Z',
       inventoryVersion: 'inv-1',
-      previousInventorySize: order === 1 ? 0 : 1,
+      // §8 O inventário acumulado é o próprio baseline (1): a amostra é
+      // saturada, então nenhum benchmark acrescenta item.
+      previousInventorySize: 1,
+      previousJourneyInventorySize: order === 1 ? 10 : 10,
+      previousBusinessRuleInventorySize: order === 1 ? 10 : 10,
       sources: [{ tier: 1, url: 'https://oficial', retrievedAt: '2026-09-01', verified: true }],
       freshness: { researchedAt: '2026-09-01', status: 'FRESH' },
       dimensions: { marketArchetype: archetype, geography },
@@ -207,7 +216,7 @@ describe('Anti-gaming: amostra de logos não pode certificar (§43)', () => {
       },
     });
     const benchmarks = [
-      mk('b1', 'a1', 'g1', 1, 'discovery', 'BR', { newCapabilities: ['cap-1'] }),
+      mk('b1', 'a1', 'g1', 1, 'discovery', 'BR'),
       mk('b2', 'a2', 'g2', 2, 'discovery', 'US'),
       mk('b3', 'a1', 'g3', 3, 'discovery', 'BR'),
       mk('b4', 'a2', 'g4', 4, 'discovery', 'US'),

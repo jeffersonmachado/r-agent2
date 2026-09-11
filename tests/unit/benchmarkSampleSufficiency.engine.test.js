@@ -62,7 +62,13 @@ function sample(overrides = {}) {
     vertical: 'test',
     sampleVersion: 'test-v1',
     inventoryVersion: 'inv-1',
+    // §8 O baseline canônico é NÃO-ZERO e entra na aritmética: os
+    // `previousInventorySize` da fixture precisam ser coerentes com ele.
     canonicalInventoryBaseline: 100,
+    // §9/§10 jornadas e regras têm baseline PRÓPRIO: sem ele a taxa de novidade
+    // da dimensão é NOT_MEASURABLE (não existe PASS por omissão).
+    canonicalJourneyInventoryBaseline: 10,
+    canonicalBusinessRuleInventoryBaseline: 10,
     archetypes: [
       { id: 'a1', importance: 'REQUIRED', status: 'ACTIVE' },
       { id: 'a2', importance: 'REQUIRED', status: 'ACTIVE' },
@@ -94,7 +100,7 @@ function saturatedSample() {
   const caps = (n, offset = 0) => Array.from({ length: n }, (_, i) => `cap-${offset + i}`);
   return sample({
     benchmarks: [
-      benchmark({ id: 'b1', order: 1, archetype: 'a1', independenceGroup: 'g1', previousInventorySize: 0, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty({ newCapabilities: caps(100) }) }),
+      benchmark({ id: 'b1', order: 1, archetype: 'a1', independenceGroup: 'g1', previousInventorySize: 100, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty() }),
       benchmark({ id: 'b2', order: 2, archetype: 'a2', independenceGroup: 'g2', previousInventorySize: 100, dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
       benchmark({ id: 'b3', order: 3, archetype: 'a1', independenceGroup: 'g3', previousInventorySize: 100, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty() }),
       benchmark({ id: 'b4', order: 4, archetype: 'a2', independenceGroup: 'g4', previousInventorySize: 100, dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
@@ -176,7 +182,11 @@ describe('curvas de descoberta (§7, §8)', () => {
   it('a curva respeita a ORDEM registrada e acumula o inventário', () => {
     const curve = buildDiscoveryCurve({ sample: saturatedSample() });
     expect(curve.points.map((p) => p.benchmarkId)).toEqual(['b1', 'b2', 'b3', 'b4', 'b5']);
-    expect(curve.points[0].previousInventorySize).toBe(0);
+    // §8 O inventário começa no BASELINE canônico (100), não em 0. Nenhum
+    // benchmark acrescenta item: a amostra é saturada e o inventário fecha em
+    // 100 — antes desta correção o baseline era ignorado e a curva começava
+    // do zero, reportando inventário 0 com violação aritmética.
+    expect(curve.points[0].previousInventorySize).toBe(100);
     expect(curve.points[1].previousInventorySize).toBe(100);
     expect(curve.inventorySize).toBe(100);
     expect(curve.arithmeticViolations).toEqual([]);

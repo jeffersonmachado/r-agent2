@@ -7,6 +7,7 @@
   "inventoryVersion": "canonical-capabilities-1.0.0",
   "canonicalInventoryBaseline": 12,
   "canonicalInventorySource": "config/canonical-capabilities.json (12 capabilities de negócio, 5 técnicas)",
+  "_inventoryBaselines": "§8/§9/§10: o baseline de capabilities (12) vem do inventário canônico do RAP e é o ponto de partida da curva de descoberta — o primeiro benchmark declara `previousInventorySize: 12` (não 0). Os baselines de JORNADAS e REGRAS DE NEGÓCIO não são deriváveis de `canonical-capabilities.json` (ele conta capabilities) e por isso ficam AUSENTES de propósito: o engine os reporta como UNKNOWN/NOT_MEASURABLE em vez de assumir 0 silenciosamente, e a taxa de novidade dessas dimensões não é certificável até que exista inventário canônico confiável de jornadas e de regras de negócio.",
 
   "researchState": "RESEARCHING",
 
@@ -122,7 +123,7 @@
       "mandatory": true,
       "mandatoryReason": "É o sistema de origem do cliente desta missão e o provedor de integração (integration provider). Papel de benchmark é distinto do papel de provider (§31), mas a amostra não pode ignorá-lo.",
       "analyzedAt": null,
-      "previousInventorySize": 0,
+      "previousInventorySize": 12,
       "novelty": {
         "newCapabilities": [],
         "newRequiredCapabilities": [],

@@ -260,59 +260,169 @@ function evaluateDiversity({ sample, policy }) {
   });
 }
 
-// ── §7 Curva de descoberta ────────────────────────────────────────────────
+// ── §8–§13 Curvas de inventário por dimensão ──────────────────────────────
+
+const BASELINE_STATES = Object.freeze({ DECLARED: 'DECLARED', UNKNOWN: 'UNKNOWN' });
+const PREVIOUS_SIZE_STATES = Object.freeze({ DECLARED: 'DECLARED', FROM_CURVE: 'FROM_CURVE' });
+const RATE_STATES = Object.freeze({
+  MEASURED: 'MEASURED',
+  NOT_MEASURABLE_ZERO_DENOMINATOR: 'NOT_MEASURABLE_ZERO_DENOMINATOR',
+  BASELINE_UNKNOWN: 'BASELINE_UNKNOWN',
+});
 
 /**
- * Constrói a curva registrada. `previousInventorySize` é conferido contra a
- * soma acumulada das contribuições anteriores — impede "remover capability do
- * denominador" e recálculo silencioso do histórico.
+ * §8/§9/§10 Cada dimensão tem baseline PRÓPRIO e denominador PRÓPRIO. Medir a
+ * novidade de jornadas sobre o inventário de capabilities (ou vice-versa)
+ * mascara novidade real por diluição.
  */
-function buildDiscoveryCurve({ sample }) {
-  const ordered = discoveryBenchmarks(sample);
+const INVENTORY_DIMENSIONS = Object.freeze({
+  capabilities: Object.freeze({
+    gate: 'capability',
+    baselineField: 'canonicalInventoryBaseline',
+    previousField: 'previousInventorySize',
+    newField: NOVELTY_KEYS.capabilities,
+    requiredField: NOVELTY_KEYS.requiredCapabilities,
+    criticalField: NOVELTY_KEYS.criticalCapabilities,
+    ratePolicyField: 'maxNoncriticalCapabilityNoveltyRate',
+    absolutePolicyField: 'maxNewCriticalRequiredCapabilitiesInWindow',
+  }),
+  journeys: Object.freeze({
+    gate: 'journey',
+    baselineField: 'canonicalJourneyInventoryBaseline',
+    previousField: 'previousJourneyInventorySize',
+    newField: NOVELTY_KEYS.journeys,
+    requiredField: NOVELTY_KEYS.requiredJourneys,
+    criticalField: NOVELTY_KEYS.criticalJourneys,
+    ratePolicyField: 'maxNoncriticalJourneyNoveltyRate',
+    absolutePolicyField: 'maxNewCriticalRequiredJourneysInWindow',
+  }),
+  businessRules: Object.freeze({
+    gate: 'businessRule',
+    baselineField: 'canonicalBusinessRuleInventoryBaseline',
+    previousField: 'previousBusinessRuleInventorySize',
+    newField: NOVELTY_KEYS.businessRules,
+    requiredField: NOVELTY_KEYS.requiredBusinessRules,
+    criticalField: NOVELTY_KEYS.criticalBusinessRules,
+    ratePolicyField: 'maxNoncriticalBusinessRuleNoveltyRate',
+    absolutePolicyField: 'maxNewCriticalRequiredBusinessRulesInWindow',
+  }),
+});
+const INVENTORY_DIMENSION_NAMES = Object.freeze(Object.keys(INVENTORY_DIMENSIONS));
+
+/**
+ * §11 Lê um número DECLARADO distinguindo ausência de zero. `null`, `undefined`
+ * e `''` são UNKNOWN — jamais 0. (`Number(null)` é 0: era exatamente aí que
+ * nasciam as taxas artificiais.)
+ */
+function declaredNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * §12 Curva de inventário de UMA dimensão, começando no baseline canônico
+ * declarado (não em 0). Um `previousInventorySize` declarado é conferido contra
+ * a soma acumulada — impede "remover item do denominador" e recálculo
+ * silencioso do histórico. When the baseline is UNKNOWN the arithmetic is
+ * declared unverifiable instead of being compared against an invented 0.
+ */
+function buildInventoryCurve({ sample, dimension = 'capabilities', benchmarks = null, baselineOverride = undefined }) {
+  const spec = INVENTORY_DIMENSIONS[dimension];
+  if (!spec) throw new TypeError(`unknown_inventory_dimension:${dimension}`);
+
+  const ordered = benchmarks ? list(benchmarks) : discoveryBenchmarks(sample);
+  // §13 O estágio de validação parte do inventário AO FIM do discovery; o
+  // discovery parte do baseline canônico. `baselineOverride` permite encadear
+  // os estágios sem recalcular o histórico.
+  const baseline = baselineOverride === undefined ? declaredNumber(sample[spec.baselineField]) : baselineOverride;
+  const baselineState = baseline === null ? BASELINE_STATES.UNKNOWN : BASELINE_STATES.DECLARED;
   const points = [];
-  let cumulative = 0;
   const arithmeticViolations = [];
+  let cumulative = baseline;
 
   for (const benchmark of ordered) {
     const novelty = benchmark.novelty || emptyNovelty();
-    const previousInventorySize = Number(benchmark.previousInventorySize);
-    const expected = cumulative;
+    const newItems = list(novelty[spec.newField]);
+    const newRequiredItems = list(novelty[spec.requiredField]);
+    const newCriticalItems = list(novelty[spec.criticalField]);
+    const declared = declaredNumber(benchmark[spec.previousField]);
+    // Sem baseline declarado não existe "esperado": a aritmética é inverificável.
+    const expected = baselineState === BASELINE_STATES.DECLARED ? cumulative : null;
 
-    if (Number.isFinite(previousInventorySize) && previousInventorySize !== expected) {
-      arithmeticViolations.push({
-        benchmarkId: benchmark.id,
-        declared: previousInventorySize,
-        expectedFromCurve: expected,
-      });
+    if (declared !== null && expected !== null && declared !== expected) {
+      arithmeticViolations.push({ benchmarkId: benchmark.id, declared, expectedFromCurve: expected });
     }
 
-    const newCapabilities = list(novelty[NOVELTY_KEYS.capabilities]);
-    const noveltyRate = expected > 0 ? round6(newCapabilities.length / expected) : null;
-    const newCriticalCapabilities = list(novelty[NOVELTY_KEYS.criticalCapabilities]);
-    const newRequiredCapabilities = list(novelty[NOVELTY_KEYS.requiredCapabilities]);
+    const previousInventorySize = declared !== null ? declared : expected;
+    let noveltyRate;
+    let rateState;
+    if (previousInventorySize === null) {
+      noveltyRate = null;
+      rateState = RATE_STATES.BASELINE_UNKNOWN;
+    } else if (previousInventorySize > 0) {
+      noveltyRate = round6(newItems.length / previousInventorySize);
+      rateState = RATE_STATES.MEASURED;
+    } else {
+      noveltyRate = null;
+      rateState = RATE_STATES.NOT_MEASURABLE_ZERO_DENOMINATOR;
+    }
 
+    const cumulativeInventorySize = (cumulative === null ? 0 : cumulative) + newItems.length;
     points.push({
       benchmarkId: benchmark.id,
       order: Number(benchmark.order),
       independenceGroup: String(benchmark.independenceGroup || benchmark.id),
       archetype: benchmark.archetype || null,
-      previousInventorySize: Number.isFinite(previousInventorySize) ? previousInventorySize : expected,
-      newCapabilities: newCapabilities.length,
-      newRequiredCapabilities: newRequiredCapabilities.length,
-      newCriticalCapabilities: newCriticalCapabilities.length,
+      previousInventorySize,
+      previousInventorySizeState: declared !== null ? PREVIOUS_SIZE_STATES.DECLARED : PREVIOUS_SIZE_STATES.FROM_CURVE,
+      declaredPreviousInventorySize: declared,
+      newItems: newItems.length,
+      newRequiredItems: newRequiredItems.length,
+      newCriticalItems: newCriticalItems.length,
+      noveltyRate,
+      rateState,
+      cumulativeInventorySize,
+    });
+    cumulative = cumulativeInventorySize;
+  }
+
+  return {
+    dimension,
+    gate: spec.gate,
+    baseline,
+    baselineState,
+    baselineField: spec.baselineField,
+    previousField: spec.previousField,
+    points,
+    inventorySize: baselineState === BASELINE_STATES.DECLARED ? cumulative : null,
+    arithmeticViolations,
+  };
+}
+
+/**
+ * View de compatibilidade: curva de capabilities com os nomes de campo usados
+ * pelos relatórios existentes, mais os campos genéricos por dimensão.
+ */
+function buildDiscoveryCurve({ sample }) {
+  const curve = buildInventoryCurve({ sample, dimension: 'capabilities' });
+  const ordered = discoveryBenchmarks(sample);
+  const points = curve.points.map((point, index) => {
+    const novelty = (ordered[index] && ordered[index].novelty) || emptyNovelty();
+    return {
+      ...point,
+      newCapabilities: point.newItems,
+      newRequiredCapabilities: point.newRequiredItems,
+      newCriticalCapabilities: point.newCriticalItems,
       newJourneys: list(novelty[NOVELTY_KEYS.journeys]).length,
       newRequiredJourneys: list(novelty[NOVELTY_KEYS.requiredJourneys]).length,
       newCriticalJourneys: list(novelty[NOVELTY_KEYS.criticalJourneys]).length,
       newBusinessRules: list(novelty[NOVELTY_KEYS.businessRules]).length,
       newRequiredBusinessRules: list(novelty[NOVELTY_KEYS.requiredBusinessRules]).length,
       newCriticalBusinessRules: list(novelty[NOVELTY_KEYS.criticalBusinessRules]).length,
-      noveltyRate,
-    });
-
-    cumulative = expected + newCapabilities.length;
-  }
-
-  return { points, inventorySize: cumulative, arithmeticViolations };
+    };
+  });
+  return { ...curve, points };
 }
 
 // ── §9/§10/§11 Saturação ──────────────────────────────────────────────────
@@ -331,48 +441,94 @@ function saturationWindowPoints(curve, policy) {
 }
 
 function evaluateSaturation({ sample, policy }) {
-  const curve = buildDiscoveryCurve({ sample });
-  const window = saturationWindowPoints(curve, policy);
-  const insufficientWindow = window.length < Math.max(1, Number(policy.saturationWindow) || 1);
+  const windowSize = Math.max(1, Number(policy.saturationWindow) || 1);
+  const curves = Object.fromEntries(
+    INVENTORY_DIMENSION_NAMES.map((dimension) => [dimension, buildInventoryCurve({ sample, dimension })]),
+  );
 
-  const checks = {
-    capabilities: window.every((p) => (
-      p.newCriticalCapabilities <= Number(policy.maxNewCriticalRequiredCapabilitiesInWindow)
-      && p.newRequiredCapabilities <= Number(policy.maxNewCriticalRequiredCapabilitiesInWindow)
-      && (p.noveltyRate === null || p.noveltyRate <= Number(policy.maxNoncriticalCapabilityNoveltyRate))
-    )),
-    journeys: window.every((p) => (
-      p.newCriticalJourneys <= Number(policy.maxNewCriticalRequiredJourneysInWindow)
-      && p.newRequiredJourneys <= Number(policy.maxNewCriticalRequiredJourneysInWindow)
-      && (p.previousInventorySize === 0 || p.newJourneys / Math.max(p.previousInventorySize, 1) <= Number(policy.maxNoncriticalJourneyNoveltyRate))
-    )),
-    businessRules: window.every((p) => (
-      p.newCriticalBusinessRules <= Number(policy.maxNewCriticalRequiredBusinessRulesInWindow)
-      && p.newRequiredBusinessRules <= Number(policy.maxNewCriticalRequiredBusinessRulesInWindow)
-      && (p.previousInventorySize === 0 || p.newBusinessRules / Math.max(p.previousInventorySize, 1) <= Number(policy.maxNoncriticalBusinessRuleNoveltyRate))
-    )),
+  /**
+   * §9/§10/§11 Gate de UMA dimensão. A taxa de novidade só é comparável em
+   * pontos MENSURÁVEIS: denominador zero ou baseline desconhecido produzem
+   * `NOT_MEASURABLE` — nunca PASS silencioso, nunca 0/1 artificial.
+   */
+  const dimensionGate = (dimension) => {
+    const spec = INVENTORY_DIMENSIONS[dimension];
+    const curve = curves[dimension];
+    const window = saturationWindowPoints(curve, policy);
+    const insufficientWindow = window.length < windowSize;
+    const maxAbsolute = Number(policy[spec.absolutePolicyField]);
+    const maxRate = Number(policy[spec.ratePolicyField]);
+    const violations = [];
+
+    if (insufficientWindow) {
+      violations.push({ reason: `${spec.gate}_saturation_window_insufficient`, windowSize: window.length, required: windowSize });
+    }
+    for (const point of window) {
+      if (point.newCriticalItems > maxAbsolute) {
+        violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_new_critical_items_exceeded`, value: point.newCriticalItems, threshold: maxAbsolute });
+      }
+      if (point.newRequiredItems > maxAbsolute) {
+        violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_new_required_items_exceeded`, value: point.newRequiredItems, threshold: maxAbsolute });
+      }
+    }
+
+    const measurable = window.filter((point) => point.rateState === RATE_STATES.MEASURED);
+    const unmeasurable = window.filter((point) => point.rateState !== RATE_STATES.MEASURED);
+    const rateState = window.length === 0
+      ? 'NO_WINDOW'
+      : (measurable.length === 0
+        ? unmeasurable[0].rateState
+        : (unmeasurable.length > 0 ? 'PARTIALLY_UNMEASURABLE' : RATE_STATES.MEASURED));
+
+    for (const point of measurable) {
+      if (point.noveltyRate > maxRate) {
+        violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_novelty_rate_exceeded`, rate: point.noveltyRate, threshold: maxRate });
+      }
+    }
+
+    const measuredRateFailed = violations.some((v) => String(v.reason).endsWith('_novelty_rate_exceeded'));
+    const absoluteFailed = violations.some((v) => !String(v.reason).endsWith('_novelty_rate_exceeded'));
+    const notMeasurable = window.length > 0 && measurable.length === 0;
+    if (notMeasurable) {
+      violations.push({
+        reason: `${spec.gate}_novelty_rate_baseline_unknown`,
+        rateState,
+        baselineField: curve.baselineField,
+        benchmarks: unmeasurable.map((point) => point.benchmarkId),
+      });
+    }
+
+    let gateStatus = 'PASS';
+    if (measuredRateFailed || absoluteFailed) gateStatus = 'FAIL';
+    else if (notMeasurable) gateStatus = 'NOT_MEASURABLE';
+
+    return {
+      status: gateStatus,
+      dimension,
+      window: window.map((point) => point.benchmarkId),
+      windowPoints: window,
+      windowSize: window.length,
+      insufficientWindow,
+      rateState,
+      baselineState: curve.baselineState,
+      baseline: curve.baseline,
+      thresholds: { maxNoncriticalNoveltyRate: maxRate, maxNewCriticalRequired: maxAbsolute },
+      violations,
+    };
   };
 
-  const describe = (key) => status(!insufficientWindow && checks[key], {
-    window: window.map((p) => p.benchmarkId),
-    windowSize: window.length,
-    insufficientWindow,
-    thresholds: {
-      maxNoncriticalNoveltyRate: key === 'capabilities'
-        ? policy.maxNoncriticalCapabilityNoveltyRate
-        : (key === 'journeys' ? policy.maxNoncriticalJourneyNoveltyRate : policy.maxNoncriticalBusinessRuleNoveltyRate),
-      maxNewCriticalRequired: key === 'capabilities'
-        ? policy.maxNewCriticalRequiredCapabilitiesInWindow
-        : (key === 'journeys' ? policy.maxNewCriticalRequiredJourneysInWindow : policy.maxNewCriticalRequiredBusinessRulesInWindow),
-    },
-  });
+  const capability = dimensionGate('capabilities');
+  const journey = dimensionGate('journeys');
+  const businessRule = dimensionGate('businessRules');
 
   return {
-    curve,
-    window,
-    capability: describe('capabilities'),
-    journey: describe('journeys'),
-    businessRule: describe('businessRules'),
+    curves,
+    curve: curves.capabilities,
+    // Contrato histórico: `window` são os PONTOS da janela de capabilities.
+    window: capability.windowPoints,
+    capability,
+    journey,
+    businessRule,
   };
 }
 
@@ -427,8 +583,27 @@ function evaluateHoldout({ sample, policy }) {
   const newCriticalJourneys = list(novelty[NOVELTY_KEYS.criticalJourneys]);
   const newCriticalBusinessRules = list(novelty[NOVELTY_KEYS.criticalBusinessRules]);
   const newCapabilities = list(novelty[NOVELTY_KEYS.capabilities]);
-  const priorInventorySize = Number(benchmark.previousInventorySize) || 0;
-  const noncriticalRate = priorInventorySize > 0 ? round6(newCapabilities.length / priorInventorySize) : (newCapabilities.length > 0 ? 1 : 0);
+
+  // §13 Curvas próprias do estágio de validação: o holdout parte do inventário
+  // consolidado ao fim do discovery (baseline canônico + contribuições), uma
+  // curva por dimensão.
+  const holdoutCurves = Object.fromEntries(
+    INVENTORY_DIMENSION_NAMES.map((dimension) => [
+      dimension,
+      buildInventoryCurve({
+        sample,
+        dimension,
+        benchmarks: validation,
+        baselineOverride: buildInventoryCurve({ sample, dimension }).inventorySize,
+      }),
+    ]),
+  );
+  const holdoutPoint = holdoutCurves.capabilities.points.find((point) => point.benchmarkId === benchmark.id) || null;
+  // §11 Sem denominador confiável NÃO existe taxa: o código anterior fazia
+  // `Number(previousInventorySize) || 0` (null → 0) e, com novidade presente,
+  // devolvia 1 — um "100% de novidade" fabricado.
+  const noncriticalRate = holdoutPoint ? holdoutPoint.noveltyRate : null;
+  const rateState = holdoutPoint ? holdoutPoint.rateState : RATE_STATES.BASELINE_UNKNOWN;
 
   if (newCriticalRequiredCapabilities.length > Number(policy.maxHoldoutNewCriticalRequiredCapabilities)) {
     violations.push({ reason: 'holdout_new_critical_required_capabilities', items: newCriticalRequiredCapabilities });
@@ -439,11 +614,11 @@ function evaluateHoldout({ sample, policy }) {
   if (newCriticalBusinessRules.length > Number(policy.maxHoldoutNewCriticalRequiredBusinessRules)) {
     violations.push({ reason: 'holdout_new_critical_business_rules', items: newCriticalBusinessRules });
   }
-  if (noncriticalRate > Number(policy.maxHoldoutNoncriticalNoveltyRate)) {
+  if (rateState === RATE_STATES.MEASURED && noncriticalRate > Number(policy.maxHoldoutNoncriticalNoveltyRate)) {
     violations.push({ reason: 'holdout_noncritical_novelty_rate_exceeded', rate: noncriticalRate, threshold: policy.maxHoldoutNoncriticalNoveltyRate });
   }
 
-  return status(violations.length === 0, {
+  const detail = {
     holdoutId: benchmark.id,
     marketArchetype: holdoutRecord.marketArchetype,
     preRegisteredAt: holdoutRecord.selectedAsHoldoutAt,
@@ -459,8 +634,21 @@ function evaluateHoldout({ sample, policy }) {
     newRequiredBusinessRules: list(novelty[NOVELTY_KEYS.requiredBusinessRules]).length,
     newCriticalBusinessRules: newCriticalBusinessRules.length,
     noncriticalNoveltyRate: noncriticalRate,
+    rateState,
+    holdoutCurves,
     violations,
-  });
+  };
+
+  if (violations.length > 0) return { ...status(false, detail), holdoutCurves };
+  if (rateState !== RATE_STATES.MEASURED) {
+    // Declarado, não silenciado: taxa de novidade do holdout não é mensurável.
+    return {
+      ...detail,
+      status: 'NOT_MEASURABLE',
+      rateReason: `holdout_novelty_rate_${String(rateState).toLowerCase()}`,
+    };
+  }
+  return { ...status(true, detail), holdoutCurves };
 }
 
 // ── §17 Leave-one-out ─────────────────────────────────────────────────────
@@ -755,10 +943,34 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
   const criticalClassification = evaluateCriticalClassification({ sample });
   const analysisEvidence = evaluateAnalysisEvidence({ sample });
 
-  const inventoryArithmetic = status(saturation.curve.arithmeticViolations.length === 0, {
-    violations: saturation.curve.arithmeticViolations,
-    inventorySize: saturation.curve.inventorySize,
-  });
+  const inventoryArithmetic = (() => {
+    const violations = INVENTORY_DIMENSION_NAMES.flatMap((dimension) => (
+      saturation.curves[dimension].arithmeticViolations.map((violation) => ({ ...violation, dimension }))
+    ));
+    const unknownBaselines = INVENTORY_DIMENSION_NAMES.filter(
+      (dimension) => saturation.curves[dimension].baselineState === BASELINE_STATES.UNKNOWN,
+    );
+    const detail = {
+      violations,
+      inventoryCurves: Object.fromEntries(INVENTORY_DIMENSION_NAMES.map((dimension) => [
+        dimension,
+        {
+          baseline: saturation.curves[dimension].baseline,
+          baselineState: saturation.curves[dimension].baselineState,
+          baselineField: saturation.curves[dimension].baselineField,
+          inventorySize: saturation.curves[dimension].inventorySize,
+        },
+      ])),
+      unknownBaselines,
+    };
+    // §10 Baseline ausente é UNKNOWN declarado: não existe PASS silencioso para
+    // "o inventário fecha aritmeticamente" quando nem o ponto de partida é conhecido.
+    if (violations.length > 0) return status(false, detail);
+    if (unknownBaselines.length > 0) {
+      return { ...detail, status: 'NOT_MEASURABLE', reason: 'inventory_baseline_unknown', unknownBaselines };
+    }
+    return status(true, detail);
+  })();
 
   const discovery = discoveryBenchmarks(sample);
   // Floor de governança usa observações REALMENTE independentes (clones
@@ -802,6 +1014,13 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
   const criticalGates = listCriticalGates();
   const criticalBlocking = blocking.filter((b) => criticalGates.includes(b.gate));
 
+  // §10/§11/§13 Dimensões cujo índice de novidade não é mensurável (baseline
+  // desconhecido ou denominador zero). Não bloqueiam por "falha" — bloqueiam por
+  // AUSÊNCIA DE MEDIÇÃO: sem medição não existe suficiência comprovada.
+  const unmeasuredDimensions = INVENTORY_DIMENSION_NAMES.filter(
+    (dimension) => saturation[INVENTORY_DIMENSIONS[dimension].gate].status === 'NOT_MEASURABLE',
+  );
+
   // Universidade: nenhuma contagem prova suficiência; o estado é derivado dos gates.
   let state;
   if (list(sample.benchmarks).length === 0) state = SAMPLE_STATES.NOT_RESEARCHED;
@@ -822,6 +1041,9 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
     gates,
     blocking,
     criticalBlocking,
+    unmeasuredDimensions,
+    inventoryCurves: saturation.curves,
+    holdoutCurves: holdout.holdoutCurves || null,
     discoverySet: discovery.map((b) => b.id),
     validationSet: validationBenchmarks(sample).map((b) => b.id),
     discoveryCurve: saturation.curve.points,
@@ -839,6 +1061,13 @@ module.exports = {
   INFORMATION_ONLY_GATES,
   GATE_NAMES,
   listCriticalGates,
+  INVENTORY_DIMENSIONS,
+  INVENTORY_DIMENSION_NAMES,
+  BASELINE_STATES,
+  PREVIOUS_SIZE_STATES,
+  RATE_STATES,
+  declaredNumber,
+  buildInventoryCurve,
   emptyNovelty,
   discoveryBenchmarks,
   validationBenchmarks,

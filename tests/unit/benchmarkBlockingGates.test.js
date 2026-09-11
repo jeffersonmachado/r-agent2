@@ -41,6 +41,8 @@ function benchmark(overrides = {}) {
     independenceGroup: 'g',
     analyzedAt: '2026-09-01T00:00:00.000Z',
     inventoryVersion: 'inv-1',
+    // §8 O inventário acumulado é o próprio baseline (100): nenhum benchmark
+    // desta fixture acrescenta item.
     previousInventorySize: 100,
     novelty: novelty(),
     sources: [{ tier: 1, url: 'https://oficial', retrievedAt: '2026-09-01', verified: true }],
@@ -55,7 +57,13 @@ function sample(overrides = {}) {
     vertical: 'test',
     sampleVersion: 'test-v1',
     inventoryVersion: 'inv-1',
+    // §8 O baseline canônico é NÃO-ZERO e entra na aritmética; como nenhum
+    // benchmark acrescenta item (amostra saturada), o inventário permanece 100.
     canonicalInventoryBaseline: 100,
+    // §9/§10 jornadas e regras têm baseline PRÓPRIO: sem ele a taxa de novidade
+    // da dimensão é NOT_MEASURABLE (não existe PASS por omissão).
+    canonicalJourneyInventoryBaseline: 10,
+    canonicalBusinessRuleInventoryBaseline: 10,
     archetypes: [
       { id: 'a1', importance: 'REQUIRED', status: 'ACTIVE' },
       { id: 'a2', importance: 'REQUIRED', status: 'ACTIVE' },
@@ -90,10 +98,10 @@ function caps(n, offset = 0) {
 function twoIndependentDiscoverySample() {
   return sample({
     benchmarks: [
-      benchmark({ id: 'b1', order: 1, archetype: 'a1', independenceGroup: 'g1', previousInventorySize: 0, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty({ newCapabilities: caps(100) }) }),
-      benchmark({ id: 'b2', order: 2, archetype: 'a2', independenceGroup: 'g2', dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
-      benchmark({ id: 'b3', order: 3, archetype: 'a1', independenceGroup: 'g2', dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty() }),
-      benchmark({ id: 'h1', role: 'validation', order: 4, archetype: 'a2', independenceGroup: 'gh', dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
+      benchmark({ id: 'b1', order: 1, archetype: 'a1', independenceGroup: 'g1', previousInventorySize: 100, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty() }),
+      benchmark({ id: 'b2', order: 2, archetype: 'a2', independenceGroup: 'g2', previousInventorySize: 100, dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
+      benchmark({ id: 'b3', order: 3, archetype: 'a1', independenceGroup: 'g2', previousInventorySize: 100, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty() }),
+      benchmark({ id: 'h1', role: 'validation', order: 4, archetype: 'a2', independenceGroup: 'gh', previousInventorySize: 100, dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
     ],
   });
 }
