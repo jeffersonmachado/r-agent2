@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T10:31:18.927Z",
+  "generatedAt": "2026-09-11T10:33:56.289Z",
   "runId": "rap-governed-20260911103017948-77d6e1a0",
   "sourceFingerprint": "ddc1a8d06058ed01443ce81d108a07eeff5dee18da315adee1139656fb4c2f51",
   "artifactType": "report-contamination-report",
@@ -9,9 +9,9 @@
   "decision": "GOVERNANCE_CONTAMINATION_NO_GO",
   "currentGovernanceDecision": "NO_GO",
   "filesScanned": 47,
-  "contaminatedFiles": 2,
-  "totalContaminations": 2,
-  "criticalCount": 2,
+  "contaminatedFiles": 1,
+  "totalContaminations": 1,
+  "criticalCount": 1,
   "highCount": 0,
   "currentRunId": "rap-governed-20260911103017948-77d6e1a0",
   "goTermsMonitored": [
@@ -35,24 +35,8 @@
           "expected": "rap-governed-20260911103017948-77d6e1a0"
         }
       ]
-    },
-    {
-      "file": "dev/platform-readiness/latest.json",
-      "issueCount": 1,
-      "issues": [
-        {
-          "path": "runId",
-          "value": "rap-governed-20260911045707865-dc143e3e",
-          "term": "FOREIGN_RUN_ARTIFACT",
-          "isDecisionField": true,
-          "type": "FOREIGN_RUN_ARTIFACT",
-          "severity": "CRITICAL",
-          "file": "dev/platform-readiness/latest.json",
-          "expected": "rap-governed-20260911103017948-77d6e1a0"
-        }
-      ]
     }
   ],
   "crossIssues": [],
-  "summary": "2 contaminação(ões) em 2 arquivo(s): 2 crítica(s), 0 alta(s)"
+  "summary": "1 contaminação(ões) em 1 arquivo(s): 1 crítica(s), 0 alta(s)"
 }
