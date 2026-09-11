@@ -1,6 +1,6 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:AUTONOMOUS_READY_GO
+- Decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
 - Canonical mesh execution: mesh-20260911003113-iji3vq
 - Enterprise readiness: autonomous-ready
 - Production readiness: NO_GO:AUTONOMOUS_READY_GO
@@ -8,4 +8,4 @@
 - Blocking domains: none
 
 ## Hard blockers
-- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)
+- gap-proof-invalid-artifact-semantics: Proof artifacts presentes mas semanticamente invalidos (presenca != validade) (critical)
