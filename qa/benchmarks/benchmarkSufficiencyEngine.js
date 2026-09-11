@@ -111,7 +111,31 @@ function evaluateArchetypeCoverage({ sample }) {
 
 // ── §29 Independência corporativa ─────────────────────────────────────────
 
-/** Benchmarks do mesmo independence_group NÃO são observações independentes. */
+/**
+ * Grupo corporativo EFETIVO de um benchmark. Um clone/white-label herda o
+ * grupo do alvo declarado: receber um `independenceGroup` próprio não o torna
+ * uma observação independente (§6/§27).
+ */
+function buildEffectiveGroupResolver(benchmarks) {
+  const groupById = new Map(benchmarks.map((b) => [b.id, String(b.independenceGroup || b.id)]));
+  return (b) => {
+    const parent = b.cloneOf || b.baseProduct;
+    if (parent && groupById.has(String(parent))) return groupById.get(String(parent));
+    return String(b.cloneOf || b.baseProduct || b.independenceGroup || b.id);
+  };
+}
+
+/** Grupos corporativos distintos de uma coleção, já colapsando clones. */
+function effectiveGroupsOf(benchmarks) {
+  const resolve = buildEffectiveGroupResolver(benchmarks);
+  return new Set(benchmarks.map((b) => resolve(b)));
+}
+
+/**
+ * Benchmarks do mesmo independence_group NÃO são observações independentes.
+ * `independentDiscoveryBenchmarks` colapsa clones — é a contagem usada pelo
+ * floor de governança, para que white-label não infle o piso.
+ */
 function evaluateIndependence({ sample }) {
   const benchmarks = list(sample.benchmarks);
   const groups = new Map();
@@ -122,13 +146,13 @@ function evaluateIndependence({ sample }) {
   }
   const duplicated = [...groups.entries()].filter(([, ids]) => ids.length > 1).map(([group, ids]) => ({ group, ids }));
   const discovery = discoveryBenchmarks(sample);
-  const independentDiscovery = new Set(discovery.map((b) => String(b.independenceGroup || b.id))).size;
-  const discoveryGroups = new Set(discovery.map((b) => String(b.independenceGroup || b.id))).size;
+  const declaredDiscoveryGroups = new Set(discovery.map((b) => String(b.independenceGroup || b.id))).size;
+  const independentDiscovery = effectiveGroupsOf(discovery).size;
 
   return status(true, {
     independenceGroups: [...groups.keys()],
     groups: [...groups.entries()].map(([group, ids]) => ({ group, ids })),
-    discoveryGroups,
+    discoveryGroups: declaredDiscoveryGroups,
     independentDiscoveryBenchmarks: independentDiscovery,
     duplicatedGroups: duplicated,
   });
@@ -142,14 +166,7 @@ function detectCorrelatedCloneBenchmarks({ sample }) {
   const benchmarks = list(sample.benchmarks);
   const clones = [];
   const seen = new Map();
-  // Um clone herda o GRUPO do alvo declarado: white-label não conta como
-  // observação independente só porque recebeu um independenceGroup próprio.
-  const groupById = new Map(benchmarks.map((b) => [b.id, String(b.independenceGroup || b.id)]));
-  const effectiveGroup = (b) => {
-    const parent = b.cloneOf || b.baseProduct;
-    if (parent && groupById.has(String(parent))) return groupById.get(String(parent));
-    return String(b.cloneOf || b.baseProduct || b.independenceGroup || b.id);
-  };
+  const effectiveGroup = buildEffectiveGroupResolver(benchmarks);
 
   for (const b of benchmarks) {
     const key = String(b.cloneOf || b.baseProduct || b.id);
@@ -165,6 +182,9 @@ function detectCorrelatedCloneBenchmarks({ sample }) {
   return {
     cloneDeclarations: clones,
     independentShare,
+    // §6 Número de observações REALMENTE independentes: white-label, produto
+    // irmão e fornecedor convergido não contam duas vezes.
+    independentSources: discoverySources.size,
     correlatedProducts: [...seen.entries()].map(([k, ids]) => ({ product: k, ids })),
   };
 }
@@ -210,6 +230,22 @@ function evaluateDiversity({ sample, policy }) {
   const archetypeCount = new Set(benchmarks.map((b) => b.archetype).filter(Boolean)).size;
   if (archetypeCount < Number(policy.minimumDistinctArchetypes)) {
     concentrationBreakdown.push({ reason: 'distinct_archetypes_below_minimum', distinct: archetypeCount });
+  }
+
+  // §6 `minimumDistinctIndependenceGroups` era campo normativo sem consumidor.
+  // Escopo: grupos corporativos distintos da AMOSTRA INTEIRA (discovery +
+  // validação), já colapsando clones/white-labels. É deliberadamente uma
+  // métrica diferente do floor `minimumIndependentDiscoveryBenchmarks`, que
+  // mede observações independentes apenas em discovery.
+  const minimumIndependentGroups = Number(policy.minimumDistinctIndependenceGroups);
+  const sampleGroups = effectiveGroupsOf(benchmarks);
+  if (Number.isFinite(minimumIndependentGroups) && sampleGroups.size < minimumIndependentGroups) {
+    concentrationBreakdown.push({
+      reason: 'independent_groups_below_minimum',
+      distinct: sampleGroups.size,
+      required: minimumIndependentGroups,
+      declared: new Set(benchmarks.map((b) => String(b.independenceGroup || b.id))).size,
+    });
   }
 
   const joinedArchetypeCoverage = evaluateArchetypeCoverage({ sample });
@@ -550,7 +586,11 @@ function evaluateFreshness({ sample, policy, now = new Date() }) {
     const ageMs = nowMs - researchedAt;
     const stale = ageMs > maxSourceAgeMs;
     const reviewOverdue = Number.isFinite(reviewAt) && reviewAt < nowMs;
-    const effective = declaredStatus === 'STALE' ? 'STALE' : (stale || reviewOverdue ? 'STALE' : 'FRESH');
+    // §7 `maximumBenchmarkReviewAgeDays` era calculado e nunca usado: a policy
+    // declarava review máximo de 365d mas o único limite efetivo era o de
+    // source (540d) — a regra MAIS RESTRITA não tinha efeito.
+    const reviewTooOld = ageMs > maxReviewAgeMs;
+    const effective = declaredStatus === 'STALE' ? 'STALE' : (stale || reviewOverdue || reviewTooOld ? 'STALE' : 'FRESH');
     items.push({
       benchmarkId: benchmark.id,
       researchedAt: benchmark.freshness.researchedAt,
@@ -560,10 +600,14 @@ function evaluateFreshness({ sample, policy, now = new Date() }) {
       status: effective,
     });
     if (effective === 'STALE') {
+      let reason = 'source_older_than_policy';
+      if (reviewOverdue && !stale && !reviewTooOld) reason = 'review_overdue';
+      else if (reviewTooOld && !stale) reason = 'review_age_exceeded_policy';
       violations.push({
         benchmarkId: benchmark.id,
-        reason: reviewOverdue && !stale ? 'review_overdue' : 'source_older_than_policy',
+        reason,
         ageDays: Math.round(ageMs / 86400000),
+        maximumBenchmarkReviewAgeDays: Number(policy.maximumBenchmarkReviewAgeDays),
       });
     }
   }
@@ -717,8 +761,10 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
   });
 
   const discovery = discoveryBenchmarks(sample);
-  const independentDiscoveryBenchmarks = new Set(discovery.map((b) => String(b.independenceGroup || b.id))).size;
-  const independentValidationBenchmarks = new Set(validationBenchmarks(sample).map((b) => String(b.independenceGroup || b.id))).size;
+  // Floor de governança usa observações REALMENTE independentes (clones
+  // colapsados): um white-label declarado como `cloneOf` não pode elevar o piso.
+  const independentDiscoveryBenchmarks = effectiveGroupsOf(discovery).size;
+  const independentValidationBenchmarks = effectiveGroupsOf(validationBenchmarks(sample)).size;
 
   const floor = [];
   if (independentDiscoveryBenchmarks < Number(policy.minimumIndependentDiscoveryBenchmarks)) {
