@@ -2,16 +2,16 @@
 
 > Arquivo gerado por `governance/revalidate-master-scorecard.js`. Não editar manualmente.
 
-- Generated at: 2026-09-11T09:28:36.518Z
-- Run ID: rap-governed-20260911045707865-dc143e3e
-- Source fingerprint: 18c02550d56020a213a9b475ffb0eaaf7415f13a6de69b39311aa2fb11e1efac
-- Scorecard fingerprint: e5454a0bdd9a1ac4b97a4a8bf7c82df1f7fc2bfdbc1937f5e5e1303cad307222
-- Overall status: **VERIFIED**
+- Generated at: 2026-09-11T10:40:08.460Z
+- Run ID: rap-governed-20260911103017948-77d6e1a0
+- Source fingerprint: ddc1a8d06058ed01443ce81d108a07eeff5dee18da315adee1139656fb4c2f51
+- Scorecard fingerprint: ceb5145a6ab4fb711f3ce40ebb96d6dc9656d1e12888fb795568172b4cd4e0c8
+- Overall status: **IN_PROGRESS**
 - Dimensions: 78
-- 10/10: 78
-- Below 10: 0
-- Open gaps: 0
-- Open blockers: 0
+- 10/10: 71
+- Below 10: 7
+- Open gaps: 10
+- Open blockers: 7
 
 ## Dimensões
 
@@ -67,20 +67,20 @@
 | RAP-048 | Final Governance | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-049 | Readiness Engine | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-050 | Canonical Final Decision | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-051 | Cross-Engine Consistency | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-052 | Package Manifest | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-051 | Cross-Engine Consistency | 6/10 | IN_PROGRESS | 7/11 | 2 | 2 |
+| RAP-052 | Package Manifest | 6/10 | IN_PROGRESS | 8/11 | 1 | 1 |
 | RAP-053 | Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-054 | Semantic Certification × Package Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-055 | Delivered Release Self-Verification | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-056 | Source/Proof/Manifest Equality | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-057 | Final Consistency Gate | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-054 | Semantic Certification × Package Integrity | 6/10 | IN_PROGRESS | 8/11 | 1 | 1 |
+| RAP-055 | Delivered Release Self-Verification | 6/10 | IN_PROGRESS | 8/11 | 2 | 0 |
+| RAP-056 | Source/Proof/Manifest Equality | 6/10 | IN_PROGRESS | 9/11 | 1 | 0 |
+| RAP-057 | Final Consistency Gate | 6/10 | IN_PROGRESS | 7/11 | 2 | 2 |
 | RAP-058 | Security Fail-Closed | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-059 | Observability | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-060 | Regression Safety | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-061 | API Contract Consistency | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-062 | Database / Migration Integrity | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-063 | Rate Limiting & Abuse Protection | 10/10 | VERIFIED | 11/11 | 0 | 0 |
-| RAP-064 | Secrets / Credentials / Webhook Security | 10/10 | VERIFIED | 11/11 | 0 | 0 |
+| RAP-064 | Secrets / Credentials / Webhook Security | 7/10 | IN_PROGRESS | 8/11 | 1 | 1 |
 | RAP-065 | Idempotency / Duplicate Execution Safety | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-066 | Transactions / Concurrency Safety | 10/10 | VERIFIED | 11/11 | 0 | 0 |
 | RAP-067 | Retry / Circuit Breaker / External Resilience | 10/10 | VERIFIED | 11/11 | 0 | 0 |

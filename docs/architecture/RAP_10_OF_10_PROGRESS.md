@@ -3,14 +3,14 @@
 > Arquivo gerado por `governance/revalidate-master-scorecard.js`. Não editar manualmente.
 
 - Total dimensions: 78
-- 10/10: 78
-- Below 10: 0
-- Open gaps: 0
-- Open blockers: 0
-- Mandatory requirement failures: 0
+- 10/10: 71
+- Below 10: 7
+- Open gaps: 10
+- Open blockers: 7
+- Mandatory requirement failures: 22
 - Stale requirements/artifacts: 0
 - Invalid requirements/artifacts: 0
-- Insufficient evidence: 0
+- Insufficient evidence: 3
 
 ## Ordem de dependência
 
@@ -25,4 +25,11 @@
 
 | ID | Dimensão | Score | Status | Primeiro gap factual |
 |---|---|---:|---|---|
+| RAP-051 | Cross-Engine Consistency | 6/10 | IN_PROGRESS | GAP-RAP-051-004: MANDATORY_GATE_NO_GO |
+| RAP-052 | Package Manifest | 6/10 | IN_PROGRESS | GAP-RAP-052-004: ARTIFACT_DID_NOT_PASS |
+| RAP-054 | Semantic Certification × Package Integrity | 6/10 | IN_PROGRESS | GAP-RAP-054-004: ARTIFACT_DID_NOT_PASS |
+| RAP-055 | Delivered Release Self-Verification | 6/10 | IN_PROGRESS | GAP-RAP-055-004: ARTIFACT_MISSING |
+| RAP-056 | Source/Proof/Manifest Equality | 6/10 | IN_PROGRESS | GAP-RAP-056-004: ARTIFACT_MISSING |
+| RAP-057 | Final Consistency Gate | 6/10 | IN_PROGRESS | GAP-RAP-057-004: MANDATORY_GATE_NO_GO |
+| RAP-064 | Secrets / Credentials / Webhook Security | 7/10 | IN_PROGRESS | GAP-RAP-064-005: MANDATORY_GATE_NO_GO |
 
