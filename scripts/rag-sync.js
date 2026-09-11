@@ -35,6 +35,14 @@ const SOURCE_DIRS = [
   'contracts',
 ];
 
+// Artefatos operacionais gerados fora dos diretórios canônicos. A projeção
+// operacional de jornadas é conhecimento de NEGÓCIO (sanitizado, sem internals
+// de QA) e precisa ser consultável pelo copiloto — por isso entra
+// explicitamente, e não por varredura de diretório.
+const EXTRA_OPERATIONAL_SOURCES = [
+  'reports/business-journey-projections.json',
+];
+
 const EXTENSIONS = new Set(['.md', '.json', '.html']);
 
 // Diretórios transitórios a excluir (evidência de runtime, não fonte canônica)
@@ -151,6 +159,7 @@ const OPERATIONAL_PROD_PREFIXES = [
   'docs/manual/',
   'docs/cliente/',
   'docs/roteiros/jornada-',
+  ...EXTRA_OPERATIONAL_SOURCES,
 ];
 
 const OPERATIONAL_SUPPORT_PREFIXES = [
@@ -288,14 +297,18 @@ async function main() {
   console.log(`   Root: ${ROOT}`);
 
   const manifest = loadManifest();
-  const files = SOURCE_DIRS.flatMap((d) => walkFiles(path.join(ROOT, d)));
+  const files = [
+    ...SOURCE_DIRS.flatMap((d) => walkFiles(path.join(ROOT, d))),
+    ...EXTRA_OPERATIONAL_SOURCES.map((rel) => path.join(ROOT, rel)).filter((p) => fs.existsSync(p)),
+  ];
+  const uniqueFiles = [...new Set(files)];
 
-  console.log(`   ${files.length} arquivos-fonte detectados`);
+  console.log(`   ${uniqueFiles.length} arquivos-fonte detectados`);
 
   const toIndex = [];
   const unchanged = [];
 
-  for (const filePath of files) {
+  for (const filePath of uniqueFiles) {
     const content = fs.readFileSync(filePath, 'utf-8');
     const hash = sha256(content);
     const rel = path.relative(ROOT, filePath);

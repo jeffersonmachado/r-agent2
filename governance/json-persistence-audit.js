@@ -131,6 +131,19 @@ const BASENAME_CLASSIFIED = {
 // Caminhos de runtime que NÃO devem conter escritas JSON não classificadas.
 const SCAN_ROOTS = ['api', 'core', 'engine', 'lib', 'src', 'qa-mesh', 'qa', 'governance', 'scripts', 'tools', 'pipeline', 'frontend/src'];
 
+/**
+ * O `path.join` em `index` é argumento de uma chamada de LEITURA?
+ *
+ * `path.join` serve leitura E escrita; sem esta distinção, um leitor como
+ * `readJsonIfExists(path.join(rootDir, 'config', 'integrations', 'evo-contract.json'))`
+ * era registrado como alvo de escrita JSON e derrubava RAP-078 sem existir
+ * escrita alguma. Nenhum writer é precedido por leitor, então excluir este
+ * contexto não pode esconder escrita real.
+ */
+function isReaderCallContext(source, index) {
+  return /(readFileSync|readJson[A-Za-z]*|require)\s*\(\s*$/.test(String(source).slice(0, index));
+}
+
 // Alvos estáticos de escrita JSON. Extrai:
 //  1. literais diretos: writeFileSync('....json')
 //  2. path.join(..., '....json') — resolve __dirname relativo ao arquivo,
@@ -165,8 +178,19 @@ function scanWriteTargets() {
         }
 
         // 2. path.join(...) cujo último segmento literal é um .json
+        //
+        // FALSO POSITIVO CORRIGIDO: `path.join(...)` é usado tanto para ESCRITA
+        // quanto para LEITURA. O scanner classificava leituras como alvos de
+        // escrita — `readJsonIfExists(path.join(rootDir, 'config', ...,
+        // 'evo-contract.json'))` virava UNKNOWN_JSON_WRITE_TARGET e derrubava
+        // RAP-078 sem existir escrita alguma. Aqui a chamada é inspecionada: se
+        // o `path.join` é argumento de um leitor (`readFileSync`, `readJson*`,
+        // `require`), não é alvo de escrita e é ignorado. Escritas continuam
+        // detectadas (nenhum writer é precedido por leitor).
+        // deslocamento do `path.join` na fonte não é trivial (multiline).
         const joinRe = /path\.join\(\s*([^)]*)\)/g;
         while ((m = joinRe.exec(src)) !== null) {
+          if (isReaderCallContext(src, m.index)) continue;
           const args = m[1].split(',').map((a) => a.trim().replace(/^['"`]|['"`]$/g, ''));
           const last = args[args.length - 1];
           if (!last || !last.endsWith('.json') || last.includes('${')) continue;
@@ -285,4 +309,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { buildAudit, classifyTarget, CLASSIFIED, scanWriteTargets };
+module.exports = { buildAudit, classifyTarget, isReaderCallContext, CLASSIFIED, scanWriteTargets };

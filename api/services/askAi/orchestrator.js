@@ -1,0 +1,435 @@
+'use strict';
+
+/**
+ * Orquestrador do "Perguntar à IA" — copiloto operacional do RAP.
+ *
+ * ARQUITETURA ANTES (gap confirmado na auditoria de 2026-09-11):
+ *   Pergunta → RAG estático → LLM → resposta
+ *
+ * ARQUITETURA ALVO:
+ *   Pergunta
+ *     ↓
+ *   Conversation Context (persistido, janela limitada)
+ *     + Screen Context (validado; nunca autoridade)
+ *     + Entity Context (posse REVALIDADA no backend a cada turno)
+ *     + Operational Data Tools (registro explícito, read-only, com RBAC)
+ *     + Operational Knowledge (RAG OPERATIONAL: global ∪ tenant)
+ *     ↓
+ *   Answer Orchestrator (determinístico)
+ *     ↓
+ *   Resposta fundamentada + fontes + provenance + confidence
+ *
+ * Princípios não negociáveis:
+ *  - O LLM nunca gera SQL nem escolhe consulta: tools são registradas.
+ *  - Nenhuma tool é executada sem capabilidade do ator real.
+ *  - Toda entrada não confiável (documento, campo de domínio) é neutralizada
+ *    contra injeção e tem PII minimizada antes de compor a resposta.
+ *  - Se não há fonte confirmando um estado, o copiloto NÃO afirma o estado.
+ */
+
+const { classifyIntent, needsKnowledge, needsOperationalData } = require('./intentRouter');
+const { buildRegistry, executeTool } = require('./toolRegistry');
+const { authorizeTools } = require('./toolAuthorization');
+const { sanitizeUntrustedContent, detectInjection } = require('./injectionGuard');
+const conversationStore = require('./conversationStore');
+const logger = require('../../utils/logger');
+const { getClassificationForAgent } = require('../../modules/agent-os/experience-segregation');
+
+const DEFAULT_MAX_TOOL_CALLS = 4;
+const DEFAULT_MAX_RAG_QUERIES = 1;
+
+const ENTITY_TYPES_WITH_OWNERSHIP_CHECK = Object.freeze(['FITNESS_STUDENT', 'CUSTOMER']);
+
+const BILLING_MARKERS = /\b(?:inadimpl|financeir|quanto\s+(?:\w+\s+){0,3}?deve|fatura|boleto|cobran[çc]a|pagamento|mensalidade|pix|cart[ãa]o)\b/i;
+const CHURN_MARKERS = /\b(?:churn|risco|evas[ãa]o|cancelamento|vai\s+(?:sair|embora))\b/i;
+
+function intConfig(envName, fallback) {
+  const raw = Number.parseInt(String(process.env[envName] || ''), 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : fallback;
+}
+
+function getToolBudget() {
+  return intConfig('ASK_AI_MAX_TOOL_CALLS', DEFAULT_MAX_TOOL_CALLS);
+}
+
+function getRagBudget() {
+  return intConfig('ASK_AI_MAX_RAG_QUERIES', DEFAULT_MAX_RAG_QUERIES);
+}
+
+// ---------------------------------------------------------------------------
+// Seleção de tools (determinística, por intenção + entidade + marcadores)
+// ---------------------------------------------------------------------------
+
+/**
+ * @returns {{required: Array<Object>, optionalDenied: boolean}}
+ */
+function selectTools({ intent, question, entity, registry }) {
+  if (!entity || !needsOperationalData(intent)) {
+    return { required: [] };
+  }
+
+  const required = [];
+  const push = (tool) => {
+    if (tool && !required.some((item) => item.id === tool.id)) required.push(tool);
+  };
+
+  push(registry.get('getFitnessStudentSummary'));
+  push(registry.get('getAttendanceSummary'));
+
+  if (BILLING_MARKERS.test(question)) push(registry.get('getBillingSummary'));
+  if (CHURN_MARKERS.test(question)) push(registry.get('getChurnSignals'));
+
+  return { required };
+}
+
+/**
+ * Filtra as tools necessárias para as entidades suportadas.
+ * Tools exigidas porém sem capabilidade do ator são reportadas — nunca
+ * silenciosamente omitidas (senão o copiloto pareceria ignorar o pedido).
+ */
+function splitByAuthorization({ required, actor, deniedIds }) {
+  const runnable = [];
+  const denied = [];
+  for (const tool of required) {
+    if (deniedIds.has(tool.id)) {
+      denied.push(tool);
+    } else {
+      runnable.push(tool);
+    }
+  }
+  return { runnable, denied };
+}
+
+// ---------------------------------------------------------------------------
+// Validação de posse da entidade (contexto do cliente não é autoridade)
+// ---------------------------------------------------------------------------
+
+/**
+ * Revalida, no backend, que a entidade do contexto pertence ao tenant e é
+ * acessível pelo ator. Um `entityId` de outro tenant é indistinguível de um
+ * inexistente: nenhum dado é consultado e nenhuma existência é revelada.
+ *
+ * @returns {Promise<{validated: boolean, entity: Object|null, reason: string|null}>}
+ */
+async function validateEntityContext({ context, tenantId }) {
+  if (!context?.entityType || !context?.entityId) {
+    return { validated: true, entity: null, reason: 'no_entity_context' };
+  }
+
+  const entity = { type: context.entityType, id: context.entityId };
+
+  if (!ENTITY_TYPES_WITH_OWNERSHIP_CHECK.includes(entity.type)) {
+    // Sem mecanismo de verificação de posse para este tipo: o contexto NÃO é
+    // usado como autoridade (fail-closed) em vez de ser aceito por confiança.
+    return { validated: false, entity: null, reason: 'entity_ownership_not_verifiable' };
+  }
+
+  try {
+    const membershipService = require('../vertical/fitnessMembershipService');
+    const detail = await membershipService.getMembershipDetail({
+      tenantId,
+      membershipId: entity.id,
+    });
+    if (!detail) {
+      return { validated: false, entity: null, reason: 'entity_not_accessible' };
+    }
+    return { validated: true, entity, reason: null };
+  } catch (error) {
+    logger.warn('[ask-ai] Falha ao validar posse da entidade do contexto', {
+      tenantId,
+      entityType: entity.type,
+      error: error.message,
+    });
+    return { validated: false, entity: null, reason: 'entity_validation_failed' };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Composição da resposta
+// ---------------------------------------------------------------------------
+
+function formatFactValue(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'boolean') return value ? 'sim' : 'não';
+  if (typeof value === 'number') return String(value);
+  const text = String(value);
+  return text.length > 200 ? `${text.slice(0, 200)}…` : text;
+}
+
+function buildOperationalSection(toolResults) {
+  const lines = [];
+  const facts = [];
+  for (const result of toolResults) {
+    if (result.failed || !result.found) continue;
+    for (const fact of result.facts || []) {
+      const formatted = formatFactValue(fact.value);
+      if (formatted === null) continue;
+      const sanitized = sanitizeUntrustedContent(formatted);
+      facts.push({ key: fact.key, label: fact.label, value: sanitized.text });
+      lines.push(`- ${fact.label}: ${sanitized.text}`);
+    }
+  }
+  return { facts, block: lines.join('\n') };
+}
+
+function buildAnswer({
+  intent,
+  entityLabel,
+  operationalBlock,
+  knowledgeAnswer,
+  deniedTools,
+  failedTools,
+  accessDenied,
+}) {
+  const parts = [];
+
+  if (accessDenied) {
+    parts.push('Não consegui confirmar o acesso a esta entidade com as suas permissões. Nenhum dado operacional foi consultado.');
+  } else if (operationalBlock) {
+    const header = entityLabel ? `**${entityLabel} — dados atuais**` : '**Dados atuais**';
+    parts.push(`${header}\n${operationalBlock}`);
+  }
+
+  if (failedTools.length > 0 && !accessDenied) {
+    parts.push(`_Com os dados disponíveis:_ não consegui confirmar ${failedTools.map((t) => t.label.toLowerCase()).join(', ')} com as fontes disponíveis.`);
+  }
+
+  if (knowledgeAnswer) {
+    const sanitized = sanitizeUntrustedContent(knowledgeAnswer);
+    parts.push(sanitized.text);
+  }
+
+  if (deniedTools.length > 0) {
+    parts.push(`Você não possui acesso a: ${deniedTools.map((t) => t.label).join(', ')}.`);
+  }
+
+  if (parts.length === 0) {
+    parts.push('Não consegui encontrar informação para responder com segurança. Tente reformular a pergunta.');
+  }
+
+  return parts.join('\n\n');
+}
+
+function computeConfidence({ accessDenied, facts, knowledgeAnswer, failedTools }) {
+  if (accessDenied) return 'insufficient_evidence';
+  const hasFacts = facts.length > 0;
+  const hasKnowledge = Boolean(knowledgeAnswer);
+  if ((hasFacts || hasKnowledge) && failedTools.length === 0) return 'fully_grounded';
+  if (hasFacts || hasKnowledge) return 'partially_grounded';
+  return 'insufficient_evidence';
+}
+
+function buildSources({ toolResults, knowledgeSources }) {
+  const sources = [];
+  for (const result of toolResults) {
+    if (result.failed || !result.found) continue;
+    sources.push({ type: 'OPERATIONAL_DATA', toolId: result.toolId, label: result.toolId });
+  }
+  for (const source of knowledgeSources || []) {
+    sources.push({
+      type: 'KNOWLEDGE_DOCUMENT',
+      documentId: source.documentId || source.document_id || null,
+      title: source.title || null,
+      score: source.score ?? null,
+    });
+  }
+  return sources;
+}
+
+// ---------------------------------------------------------------------------
+// Orquestração
+// ---------------------------------------------------------------------------
+
+/**
+ * Executa um turno do copiloto.
+ *
+ * @param {Object} input
+ * @param {Object} input.payload - Payload já validado por contextContract
+ * @param {string} input.tenantId
+ * @param {Object} input.actor - `req.agent`
+ * @param {Object} input.deps - `{ ragService, logger? }`
+ * @param {Function} [input.openConversation] - injeção p/ teste
+ * @returns {Promise<Object>}
+ */
+async function runAskAiTurn({ payload, tenantId, actor, deps }) {
+  const ragService = deps?.ragService;
+  const openConversation = deps?.openConversation || conversationStore.openConversation;
+  const appendTurn = deps?.appendTurn || conversationStore.appendTurn;
+
+  const classification = getClassificationForAgent(actor);
+  const registry = buildRegistry();
+
+  const conversation = await openConversation({
+    conversationId: payload.conversationId,
+    tenantId,
+    actor,
+    context: payload.context,
+  });
+
+  const intentResult = classifyIntent({
+    question: payload.question,
+    context: payload.context,
+    classification,
+  });
+
+  // Pedido sobre internals técnicos por ator PRODUCTION: negado ANTES de
+  // qualquer recuperação (nunca toca o domínio SYSTEM).
+  if (intentResult.blocked) {
+    const answer = 'Não posso responder sobre conteúdo técnico interno da plataforma. Posso ajudar com a operação, roteiros e informações do seu negócio.';
+    const stored = await appendTurn({
+      conversation,
+      question: payload.question,
+      answer,
+      intent: intentResult.intent,
+      context: payload.context,
+    });
+    return {
+      conversationId: conversation.id,
+      answer,
+      sources: [],
+      facts: [],
+      intent: intentResult.intent,
+      confidence: 'insufficient_evidence',
+      provenance: { liveData: [], knowledge: [], inference: 'none', recommendation: 'none' },
+      historyWindow: stored.window.length,
+      blocked: true,
+    };
+  }
+
+  // ── Contexto de entidade: revalidado server-side a cada turno ──────────
+  const entityValidation = await validateEntityContext({
+    context: payload.context,
+    tenantId,
+  });
+
+  const entity = entityValidation.validated ? entityValidation.entity : null;
+  const accessDenied = Boolean(payload.context?.entityId) && !entityValidation.validated;
+
+  // ── Data tools: registro explícito + autorização por capabilidade ───────
+  const { required } = selectTools({
+    intent: intentResult.intent,
+    question: payload.question,
+    entity,
+    registry,
+  });
+
+  const authorization = authorizeTools({ actor, tools: registry.all() });
+  const deniedIds = new Set(authorization.denied.map((entry) => entry.toolId));
+  const { runnable, denied } = splitByAuthorization({ required, actor, deniedIds });
+
+  const toolResults = [];
+  if (!accessDenied && entity) {
+    const budget = getToolBudget();
+    for (const tool of runnable.slice(0, budget)) {
+      // eslint-disable-next-line no-await-in-loop
+      const result = await executeTool(tool.id, { tenantId, actor, entity });
+      toolResults.push({ ...result, label: tool.label });
+      if (result.failed) {
+        logger.warn('[ask-ai] Tool operacional falhou', {
+          tenantId,
+          toolId: tool.id,
+          error: result.error,
+        });
+      }
+    }
+  }
+
+  const operational = buildOperationalSection(toolResults);
+  const failedTools = toolResults.filter((result) => result.failed).map((result) => ({ label: result.label }));
+
+  // ── Conhecimento: RAG OPERATIONAL (global ∪ tenant). Nunca SYSTEM. ──────
+  let knowledgeAnswer = null;
+  let knowledgeSources = [];
+  if (!accessDenied && needsKnowledge(intentResult.intent) && getRagBudget() > 0 && ragService) {
+    try {
+      const ragResult = await ragService.queryRag(
+        payload.question,
+        tenantId,
+        { actor, source: 'ask-ai' },
+        { topK: 6, minScore: 0.45, maxTokens: 1000 },
+      );
+      if (ragResult?.success && typeof ragResult.response === 'string' && ragResult.response.trim()) {
+        knowledgeAnswer = ragResult.response;
+        knowledgeSources = Array.isArray(ragResult.sources) ? ragResult.sources : [];
+      }
+    } catch (error) {
+      logger.warn('[ask-ai] Recuperação de conhecimento indisponível', {
+        tenantId,
+        error: error.message,
+      });
+    }
+  }
+
+  const entityLabel = entity ? 'Aluno' : null;
+  const answer = buildAnswer({
+    intent: intentResult.intent,
+    entityLabel,
+    operationalBlock: operational.block,
+    knowledgeAnswer,
+    deniedTools: denied,
+    failedTools,
+    accessDenied,
+  });
+
+  const confidence = computeConfidence({
+    accessDenied,
+    facts: operational.facts,
+    knowledgeAnswer,
+    failedTools,
+  });
+
+  const sources = buildSources({ toolResults, knowledgeSources });
+
+  const stored = await appendTurn({
+    conversation,
+    question: payload.question,
+    answer,
+    sources,
+    facts: operational.facts,
+    intent: intentResult.intent,
+    context: payload.context,
+  });
+
+  const docInjection = knowledgeSources.some(
+    (source) => detectInjection(source?.excerpt || source?.content || '').detected,
+  );
+
+  return {
+    conversationId: conversation.id,
+    answer,
+    sources,
+    facts: operational.facts,
+    intent: intentResult.intent,
+    confidence,
+    provenance: {
+      liveData: toolResults.filter((r) => !r.failed && r.found).map((r) => r.toolId),
+      knowledge: knowledgeSources.map((s) => s.title || s.documentId || null).filter(Boolean),
+      inference: 'none',
+      recommendation: knowledgeAnswer ? 'knowledge-document' : 'none',
+    },
+    policy: {
+      classification,
+      accessDenied,
+      deniedTools: denied.map((tool) => tool.id),
+      injectionDetected: docInjection,
+      entityValidated: entityValidation.validated,
+    },
+    historyWindow: stored.window.length,
+    blocked: false,
+  };
+}
+
+module.exports = {
+  DEFAULT_MAX_TOOL_CALLS,
+  DEFAULT_MAX_RAG_QUERIES,
+  BILLING_MARKERS,
+  CHURN_MARKERS,
+  ENTITY_TYPES_WITH_OWNERSHIP_CHECK,
+  selectTools,
+  validateEntityContext,
+  buildOperationalSection,
+  buildAnswer,
+  computeConfidence,
+  buildSources,
+  runAskAiTurn,
+};

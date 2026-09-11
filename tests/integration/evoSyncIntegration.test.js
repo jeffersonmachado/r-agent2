@@ -27,7 +27,7 @@ const {
   BillingTransaction, WorkspaceEntityLink, IntegrationConnection,
   IntegrationObjectLink, IntegrationSyncState,
 } = require('../../api/db/models');
-const { createFakeEvoServer } = require('../helpers/fakeEvoServer');
+const { createFakeEvoServer, labConfig } = require('../helpers/fakeEvoServer');
 const { resetRegistry, registerProvider } = require('../../api/services/integration/integrationRegistry');
 const evoProvider = require('../../api/services/integration/providers/evo/evoProviderAdapter');
 const connectionService = require('../../api/services/integration/integrationConnectionService');
@@ -124,7 +124,7 @@ describe('EVO → RAP: sincronização real contra Postgres', () => {
       label: 'Academia Teste',
       externalUnitId: '1',
       unitLabel: 'Unidade Única',
-      config: { baseUrl: server.baseUrl, pageSize: 2 },
+      config: labConfig(server.baseUrl, { pageSize: 2 }),
       credentials: server.credentials,
       status: 'connected',
     });
@@ -257,7 +257,7 @@ describe('EVO → RAP: sincronização real contra Postgres', () => {
       provider: 'evo',
       label: 'Outra academia',
       externalUnitId: '1',
-      config: { baseUrl: server.baseUrl, pageSize: 2 },
+      config: labConfig(server.baseUrl, { pageSize: 2 }),
       credentials: server.credentials,
       status: 'connected',
     });

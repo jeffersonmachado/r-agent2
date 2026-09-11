@@ -170,3 +170,63 @@ def resolve_query_scope(scope: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "classifications": classifications,
         "sensitivities": list(SENSITIVITY_CLEARANCE[highest_clearance]),
     }
+
+
+# ---------------------------------------------------------------------------
+# Escopo de TENANT da recuperação (GLOBAL_OPERATIONAL ∪ CURRENT_TENANT_OPERATIONAL)
+# ---------------------------------------------------------------------------
+#
+# O conhecimento operacional GLOBAL do RAP (roteiros canônicos, manuais de
+# produto, documentação de uso) é indexado sob uma chave de tenant canônica
+# (`system`). Antes desta correção a busca filtrava `tenant_key = <tenant atual>`
+# de forma estrita, então nenhum tenant real enxergava o conhecimento global —
+# e o inverso (um tenant enxergar conhecimento de outro) jamais pode acontecer.
+#
+# Regra (não ampliável por payload): as chaves de tenant são DERIVADAS aqui, a
+# partir do tenant do request e do domínio. `scope.tenant_keys` enviado pelo
+# chamador é IGNORADO — nenhum payload amplia escopo de tenant.
+#
+#   OPERATIONAL → [tenant atual] ∪ [GLOBAL_OPERATIONAL]
+#   SYSTEM      → [tenant atual]   (conhecimento de sistema nunca é global)
+
+GLOBAL_OPERATIONAL_TENANT_ENV = "RAG_GLOBAL_OPERATIONAL_TENANT"
+DEFAULT_GLOBAL_OPERATIONAL_TENANT = "system"
+MAX_TENANT_KEY_LENGTH = 128
+
+
+def get_global_operational_tenant() -> str:
+    """Chave de tenant do conhecimento operacional global (default: `system`)."""
+    import os
+
+    raw = os.getenv(GLOBAL_OPERATIONAL_TENANT_ENV) or DEFAULT_GLOBAL_OPERATIONAL_TENANT
+    value = str(raw).strip()
+    return value[:MAX_TENANT_KEY_LENGTH] or DEFAULT_GLOBAL_OPERATIONAL_TENANT
+
+
+def is_global_operational_tenant(tenant_key: str) -> bool:
+    """true se a chave é a chave canônica de conhecimento operacional global."""
+    return str(tenant_key or "").strip() == get_global_operational_tenant()
+
+
+def resolve_scope_tenant_keys(scope: Optional[Dict[str, Any]], tenant_id: str) -> List[str]:
+    """
+    Deriva as chaves de tenant elegíveis para a busca vetorial.
+
+    A chave do tenant do request é sempre a primeira (e obrigatória). A chave
+    de conhecimento operacional global é adicionada SOMENTE no domínio
+    OPERATIONAL. Nunca há wildcard e nunca há mais de duas chaves.
+    """
+    resolved = resolve_query_scope(scope)
+    primary = str(tenant_id or "").strip()[:MAX_TENANT_KEY_LENGTH]
+    if not primary:
+        return []
+
+    keys = [primary]
+    global_key = get_global_operational_tenant()
+    if (
+        resolved.get("domain") == "OPERATIONAL"
+        and global_key
+        and global_key not in keys
+    ):
+        keys.append(global_key)
+    return keys

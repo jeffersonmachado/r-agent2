@@ -18,6 +18,8 @@ const getEvaluation = require('../api/db/models/ScorecardEvaluation');
 const getGate = require('../api/db/models/GovernanceGateResult');
 const getDecision = require('../api/db/models/GovernanceFinalDecision');
 const { computeFingerprintChain } = require('./proof-engine/fingerprint-chain');
+const { buildCertificationStates } = require('./certification-states');
+const { REQUIRED_VERTICALS } = require('./shared/required-journeys');
 
 function write(relativePath, payload) {
   const target = path.join(process.cwd(), relativePath);
@@ -102,6 +104,31 @@ async function exportGovernanceArtifacts() {
     ? 'AUTONOMOUS_READY_GO'
     : (semanticGatesPass ? 'PASS_WITH_DEFERRED_PACKAGE_GATE' : 'NO_GO');
 
+  // §39/§55 CORE readiness é derivado dos GATES do núcleo, não do total de
+  // dimensões. Dimensão adiada (RAP-052/054/055/056 — pacote/DELIVERED) não é
+  // falha do núcleo: tratá-la como tal faz "pacote não construído" rebaixar
+  // "plataforma pronta" — exatamente a consolidação de estados que a separação
+  // existe para impedir.
+  const corePlatformReady = run.status !== 'INVALIDATED' && semanticGatesPass;
+
+  // Fonte da cobertura de IMPLEMENTAÇÃO por vertical: a projeção do produtor
+  // externo (regerada no passo 4 do converge, antes deste fixpoint). Ausente,
+  // os números são OMITIDOS (null) — nunca 0, que seria uma afirmação falsa.
+  const readinessProjection = (() => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(process.cwd(), 'dev', 'platform-readiness', 'latest.json'), 'utf8'));
+    } catch (_) {
+      return null;
+    }
+  })();
+  const verticalImplementationSource = {
+    verticals: Array.isArray(readinessProjection && readinessProjection.verticals) ? readinessProjection.verticals : [],
+    percent: readinessProjection && readinessProjection.verticalCoverage
+      ? readinessProjection.verticalCoverage.percent
+      : null,
+    source: readinessProjection ? 'dev/platform-readiness/latest.json' : null,
+  };
+
   const proof = {
     ...artifactBase(run, 'final-proof-report'),
     finalDecision: proofDecision,
@@ -130,6 +157,31 @@ async function exportGovernanceArtifacts() {
     finalDecision: proofDecision,
     status: proofDecision,
     blockingGaps: [],
+    // §55 Estados de certificação SEPARADOS, produzidos pelo MESMO módulo que o
+    // relatório completo usa — do contrário esta projeção apagaria a separação.
+    //
+    // A cobertura de implementação por vertical vem da projeção do produtor
+    // externo (`dev/platform-readiness/latest.json`, regerada pelo passo 4 do
+    // converge ANTES deste fixpoint). Sem essa leitura o bloco sairia 0/7 —
+    // "zero de sete" é uma afirmação FALSA, não um vazio.
+    certificationStates: buildCertificationStates({
+      rootDir: process.cwd(),
+      requiredVerticals: REQUIRED_VERTICALS,
+      verticals: verticalImplementationSource.verticals,
+      verticalCoveragePercent: verticalImplementationSource.percent,
+      readinessScore: evaluation ? evaluation.readiness_score : null,
+      coreReady: corePlatformReady,
+    }),
+    verticalImplementationCoverage: {
+      semanticLabel: 'VERTICAL_IMPLEMENTATION_COVERAGE',
+      semanticNote: 'Cobertura de implementação das verticais exigidas. NÃO é certificação de mercado.',
+      numerator: verticalImplementationSource.source
+        ? verticalImplementationSource.verticals.filter((item) => item && item.implemented).length
+        : null,
+      denominator: verticalImplementationSource.source ? REQUIRED_VERTICALS.length : null,
+      percent: verticalImplementationSource.percent,
+      source: verticalImplementationSource.source,
+    },
   };
   write('governance/final-readiness-report.json', readiness);
 

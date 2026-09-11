@@ -48,9 +48,14 @@ function benchmark(overrides = {}) {
     independenceGroup: 'g',
     analyzedAt: '2026-09-01T00:00:00.000Z',
     inventoryVersion: 'inv-1',
+    // §5 do hardening: análise declarada exige EVIDÊNCIA de análise — o
+    // benchmark precisa declarar o que foi pesquisado, não só quando.
+    researchVersion: 'research-1',
+    findingsInventory: [],
+    marketArchetypeMapping: { archetype: 'a1', rationale: 'mapeamento declarado', evidence: 'https://oficial/features' },
     previousInventorySize: 100,
     novelty: novelty(),
-    sources: [{ tier: 1, url: 'https://oficial', retrievedAt: '2026-09-01', verified: true }],
+    sources: [{ tier: 1, url: 'https://oficial/features', retrievedAt: '2026-09-01', verified: true, httpStatus: 200 }],
     freshness: { researchedAt: '2026-09-01', nextReviewAt: '2027-03-01', status: 'FRESH' },
     dimensions: { marketArchetype: 'a1', geography: 'BR' },
     ...overrides,
@@ -596,7 +601,14 @@ describe('versão da amostra e revalidação (§20, §21, §39)', () => {
 
   it('falha de holdout produz SAMPLE_HOLDOUT_FAILED', () => {
     const s = saturatedSample();
-    s.benchmarks.find((b) => b.id === 'h1').novelty = novelty({ newCriticalJourneys: ['j-nova'] });
+    // A descoberta que reprova o holdout precisa vir com a cadeia completa
+    // (§6/§7): sem evidence ela seria um problema de integridade do inventário
+    // (SAMPLE_INVALID_FINDINGS) e mascararia a falha de holdout.
+    const sourceRef = 'https://oficial/features';
+    s.evidence = [{ id: 'ev-j-nova', sourceRef, kind: 'journey', excerpt: 'help center oficial descreve a jornada' }];
+    s.benchmarks.find((b) => b.id === 'h1').novelty = novelty({
+      newCriticalJourneys: [{ id: 'j-nova', sourceRef, evidenceRef: 'ev-j-nova' }],
+    });
     expect(evaluateSampleSufficiency({ sample: s, policy: POLICY, now: NOW }).status).toBe(SAMPLE_STATES.HOLDOUT_FAILED);
   });
 
@@ -629,7 +641,11 @@ describe('versão da amostra e revalidação (§20, §21, §39)', () => {
 describe('gap crítico prevalece sobre qualquer média (§25, §40)', () => {
   it('um único achado crítico derruba a certificação ainda que todos os outros gates passem', () => {
     const s = saturatedSample();
-    s.benchmarks.find((b) => b.id === 'h1').novelty = novelty({ newCriticalCapabilities: [{ id: 'cap-unica', required: true }] });
+    const sourceRef = 'https://oficial/features';
+    s.evidence = [{ id: 'ev-cap-unica', sourceRef, kind: 'capability', excerpt: 'API oficial expõe a capacidade' }];
+    s.benchmarks.find((b) => b.id === 'h1').novelty = novelty({
+      newCriticalCapabilities: [{ id: 'cap-unica', required: true, sourceRef, evidenceRef: 'ev-cap-unica' }],
+    });
     const result = evaluateSampleSufficiency({ sample: s, policy: POLICY, now: NOW });
     expect(result.gates.capabilitySaturation.status).toBe('PASS');
     expect(result.gates.marketArchetypeCoverage.status).toBe('PASS');

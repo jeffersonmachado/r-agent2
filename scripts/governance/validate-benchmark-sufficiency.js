@@ -31,7 +31,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const {
-  evaluateSampleSufficiency, SAMPLE_STATES,
+  evaluateSampleSufficiency, SAMPLE_STATES, HOLDOUT_STATES,
 } = require('../../qa/benchmarks/benchmarkSufficiencyEngine');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
@@ -50,6 +50,7 @@ const VIOLATION_CODES = Object.freeze({
   HOLDOUT_LEAKAGE: 'holdout_leakage',
   CRITICAL_GATE_FAILED_WITH_SUFFICIENT_CLAIM: 'critical_gate_failed_with_sufficient_claim',
   VERTICAL_NOT_REGISTERED: 'benchmark_sample_vertical_not_registered',
+  FINDING_WITHOUT_EVIDENCE: 'benchmark_finding_without_evidence',
 });
 
 function gitCommit() {
@@ -154,6 +155,8 @@ function run({ policy, samples, registeredVerticals, coverage }) {
     }
 
     // Holdout: pré-registro obrigatório; leakage é fraude metodológica.
+    // Holdout NÃO ANALISADO é reportado como estado próprio (§3 do hardening):
+    // não é fraude, é pesquisa incompleta — e nunca pode contar como análise.
     if (evaluation.gates.holdoutValidation.status === 'FAIL') {
       const reasons = (evaluation.gates.holdoutValidation.violations || []).map((v) => v.reason);
       if (reasons.includes('holdout_not_preregistered')) {
@@ -162,6 +165,16 @@ function run({ policy, samples, registeredVerticals, coverage }) {
       if (reasons.some((r) => String(r).startsWith('holdout_leakage'))) {
         violations.push({ code: VIOLATION_CODES.HOLDOUT_LEAKAGE, vertical: sample.vertical });
       }
+    }
+
+    // Findings sem evidence alteram inventário/denominador: reportado como
+    // estado explícito, nunca dissolvido em "não saturado".
+    if (evaluation.gates.findingEvidence.invalidFindings.length > 0) {
+      violations.push({
+        code: VIOLATION_CODES.FINDING_WITHOUT_EVIDENCE,
+        vertical: sample.vertical,
+        invalidFindings: evaluation.gates.findingEvidence.invalidFindingIds,
+      });
     }
 
     verticals.push({
@@ -186,6 +199,14 @@ function run({ policy, samples, registeredVerticals, coverage }) {
         window: evaluation.gates.capabilitySaturation.window || [],
       },
       holdout: evaluation.gates.holdoutValidation,
+      holdoutState: evaluation.gates.holdoutValidation.holdoutState || HOLDOUT_STATES.NOT_REGISTERED,
+      findingEvidence: {
+        status: evaluation.gates.findingEvidence.status,
+        totals: evaluation.gates.findingEvidence.totals,
+        invalidFindingIds: evaluation.gates.findingEvidence.invalidFindingIds,
+        derivedFindings: evaluation.gates.findingEvidence.derivedFindings,
+      },
+      coverageStatement: evaluation.coverageStatement,
       sourceQuality: evaluation.gates.sourceQuality.status,
       freshness: evaluation.gates.freshness.status,
       orderSensitivity: evaluation.gates.orderSensitivity.orderSensitivity,
@@ -248,6 +269,7 @@ function main() {
     policyVersion: policy ? policy.version : null,
     policyPath: path.relative(ROOT_DIR, POLICY_PATH),
     stateTaxonomy: Object.values(SAMPLE_STATES),
+    holdoutStateTaxonomy: Object.values(HOLDOUT_STATES),
     verticalsAnalysed: result.verticals.length,
     sufficientVerticals: result.verticals.filter((v) => v.status === SAMPLE_STATES.SUFFICIENT).map((v) => v.vertical),
     violations: all,

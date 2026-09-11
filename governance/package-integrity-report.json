@@ -55,7 +55,7 @@
   "summary": "Pacote r-agent2-20260911-092125.payload.zip íntegro. Todos os hashes correspondem.",
   "artifactType": "package-integrity-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260911121444824-09728d66",
-  "sourceFingerprint": "fdfdd9f42c81cd9ecb5321a428a2d8f414a4c73543e3f2b22b04fce6e6c66a8d",
+  "runId": "rap-governed-20260911164051881-0dda0554",
+  "sourceFingerprint": "b463bd4ff18b319dec9f39e154691170c6f56b8103f1579dd94eec38902a80c5",
   "gitTree": "27b2c281f196bb99b66557abae41bbc6c423ac92"
 }

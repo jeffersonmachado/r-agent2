@@ -34,6 +34,12 @@ module.exports = {
   sanitizeScope: knowledgeRouter.sanitizeScope,
   mapCapabilityToPurpose: knowledgeRouter.mapCapabilityToPurpose,
 
+  // Escopo de tenant (GLOBAL_OPERATIONAL ∪ TENANT_OPERATIONAL)
+  resolveRetrievalTenantKeys: knowledgeRouter.resolveRetrievalTenantKeys,
+  getGlobalOperationalTenant: knowledgeRouter.getGlobalOperationalTenant,
+  GLOBAL_OPERATIONAL_TENANT_ENV: knowledgeRouter.GLOBAL_OPERATIONAL_TENANT_ENV,
+  DEFAULT_GLOBAL_OPERATIONAL_TENANT: knowledgeRouter.DEFAULT_GLOBAL_OPERATIONAL_TENANT,
+
   // Constants
   DOMAINS: knowledgeRouter.DOMAINS,
   KNOWLEDGE_TYPES: knowledgeRouter.KNOWLEDGE_TYPES,

@@ -378,3 +378,66 @@ def index_document(request: IndexRequest):
             chunksCreated=0,
             error=str(e)
         )
+
+
+class DeindexRequest(BaseModel):
+    """Request de remoção de documento do índice."""
+    documentId: str
+    tenantId: str
+
+
+class DeindexResponse(BaseModel):
+    """Resposta de remoção de documento do índice."""
+    success: bool
+    documentId: str
+    chunksRemoved: int
+    error: Optional[str] = None
+
+
+@router.post("/deindex", response_model=DeindexResponse)
+def deindex_document(request: DeindexRequest):
+    """
+    Remove um documento do índice vetorial do tenant.
+
+    Usado quando a fonte canônica do documento é removida (ex.: manual
+    operacional excluído) — o índice é derivado e não pode sobreviver à fonte.
+    Escopo sempre por tenant: um chamador nunca remove documento de outro
+    tenant, mesmo informando um documentId de outro escopo.
+    """
+    document_id = str(request.documentId or "").strip()
+    tenant_id = normalize_tenant_id(request.tenantId)
+
+    if not document_id:
+        raise HTTPException(status_code=400, detail="documentId é obrigatório")
+    if not tenant_id or tenant_id == "default":
+        raise HTTPException(status_code=400, detail="tenantId é obrigatório")
+
+    try:
+        store = get_vector_store(tenant_id)
+        chunks_removed = store.remove_document(document_id)
+        logger.info(
+            "[DEINDEX] Documento removido do índice",
+            extra={
+                'document_id': document_id,
+                'tenant_id': tenant_id,
+                'chunks_removed': chunks_removed,
+            }
+        )
+        return DeindexResponse(
+            success=True,
+            documentId=document_id,
+            chunksRemoved=chunks_removed,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "[DEINDEX] Falha ao remover documento do índice",
+            extra={'document_id': document_id, 'tenant_id': tenant_id, 'error': str(e)}
+        )
+        return DeindexResponse(
+            success=False,
+            documentId=document_id,
+            chunksRemoved=0,
+            error=str(e),
+        )

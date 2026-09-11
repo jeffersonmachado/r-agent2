@@ -41,6 +41,10 @@ function benchmark(overrides = {}) {
     independenceGroup: 'g',
     analyzedAt: '2026-09-01T00:00:00.000Z',
     inventoryVersion: 'inv-1',
+    // §5 do hardening: análise declarada exige EVIDÊNCIA de análise.
+    researchVersion: 'research-1',
+    findingsInventory: [],
+    marketArchetypeMapping: { archetype: 'a1', rationale: 'mapeamento declarado', evidence: 'https://oficial/docs' },
     // §8 O inventário acumulado é o próprio baseline (100): nenhum benchmark
     // desta fixture acrescenta item.
     previousInventorySize: 100,

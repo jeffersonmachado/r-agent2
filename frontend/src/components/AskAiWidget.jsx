@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
+import { buildAskAiContext, describeAskAiContext } from '../askAi/contextProvider';
 
 /**
  * AskAiWidget — botão flutuante "Perguntar à IA" presente em todas as telas.
  *
- * Abre um painel de conversa que envia a pergunta do usuário para o endpoint
- * governado `POST /api/ask-ai` (RAG tenant-scoped + domain router) e exibe a
- * resposta com as fontes utilizadas.
+ * Conversa MULTI-TURNO: o backend devolve `conversationId`, que é reenviado a
+ * cada pergunta — é assim que "e a frequência dele?" entende o turno anterior.
+ * O widget envia também o contexto SEGURO da tela (rota, módulo, tipo de
+ * página e, quando a página declarar, a entidade em uso). Nenhum DOM, HTML ou
+ * campo sensível é transmitido.
  */
 
 const WELCOME_MESSAGE = {
@@ -23,8 +26,25 @@ export function AskAiWidget() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [conversationId, setConversationId] = useState(null);
+  const [route, setRoute] = useState(() => (
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  ));
   const listRef = useRef(null);
   const inputRef = useRef(null);
+
+  // O contexto acompanha a navegação: mudar de tela atualiza o contexto
+  // enviado nas próximas perguntas (a conversa continua a mesma).
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const onChange = () => setRoute(window.location.pathname);
+    window.addEventListener('popstate', onChange);
+    window.addEventListener('hashchange', onChange);
+    return () => {
+      window.removeEventListener('popstate', onChange);
+      window.removeEventListener('hashchange', onChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -59,10 +79,17 @@ export function AskAiWidget() {
     setSending(true);
 
     try {
+      const context = buildAskAiContext(route);
       const data = await fetchJson('/api/ask-ai', {
         method: 'POST',
-        body: JSON.stringify({ question: trimmed }),
+        body: JSON.stringify({
+          question: trimmed,
+          ...(conversationId ? { conversationId } : {}),
+          ...(Object.keys(context).length > 0 ? { context } : {}),
+        }),
       });
+
+      if (data?.conversationId) setConversationId(data.conversationId);
 
       setMessages((prev) => [
         ...prev,
@@ -70,7 +97,6 @@ export function AskAiWidget() {
           role: 'assistant',
           content: data?.answer || data?.message || 'Não consegui encontrar uma resposta.',
           sources: Array.isArray(data?.sources) ? data.sources : [],
-          fromCache: !!data?.fromCache,
         },
       ]);
     } catch (err) {
@@ -86,6 +112,14 @@ export function AskAiWidget() {
     } finally {
       setSending(false);
     }
+  };
+
+  const startNewConversation = () => {
+    // Limpa apenas o contexto conversacional — nenhum dado é alterado.
+    setConversationId(null);
+    setMessages([WELCOME_MESSAGE]);
+    setInput('');
+    setError(null);
   };
 
   const handleSubmit = (event) => {
@@ -106,17 +140,31 @@ export function AskAiWidget() {
               <span className="text-lg" aria-hidden="true">🤖</span>
               <div>
                 <h2 className="text-sm font-semibold text-text-primary">Perguntar à IA</h2>
-                <p className="text-xs text-text-tertiary">Respostas baseadas no conhecimento do seu tenant</p>
+                <p className="text-xs text-text-tertiary" data-testid="ask-ai-context-indicator">
+                  {describeAskAiContext(buildAskAiContext(route))
+                    || 'Respostas baseadas no conhecimento do seu tenant'}
+                </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-text-secondary hover:text-text-primary text-lg leading-none px-1"
-              aria-label="Fechar painel"
-            >
-              ×
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={startNewConversation}
+                className="text-text-secondary hover:text-text-primary text-xs px-2 py-1 rounded border border-border-default"
+                title="Iniciar uma nova conversa"
+                data-testid="ask-ai-new-conversation"
+              >
+                Nova conversa
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-text-secondary hover:text-text-primary text-lg leading-none px-1"
+                aria-label="Fechar painel"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[260px] max-h-[420px]">

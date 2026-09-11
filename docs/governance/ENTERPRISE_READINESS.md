@@ -1,11 +1,11 @@
 # Enterprise Readiness
 
-- Decision: AUTONOMOUS_READY_GO
+- Decision: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Canonical mesh execution: mesh-20260911003113-iji3vq
 - Enterprise readiness: autonomous-ready
-- Production readiness: AUTONOMOUS_READY_GO
-- Blocking gaps: 0
+- Production readiness: PASS_WITH_DEFERRED_PACKAGE_GATE
+- Blocking gaps: 1
 - Blocking domains: none
 
 ## Hard blockers
-- Nenhum
+- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)

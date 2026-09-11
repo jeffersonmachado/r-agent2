@@ -28,51 +28,33 @@ const { anonymize } = require('../../../src/core/learning/anonymizer');
 const { indexDocument } = require('../../services/ragService');
 const getLearningMissionModel = require('../../db/models/LearningMission');
 const logger = require('../../utils/logger');
+const {
+  REPLAY_ID_PATTERN,
+  readTenantScopedReplay,
+  listTenantScopedReplays,
+} = require('./replayStorage');
 
-const REPLAY_ID_PATTERN = /^[\w.-]{1,120}$/;
-
-function replayDir() {
-  return resolveRuntimePath('rpa', 'replay');
+function replayDir(tenantId = null) {
+  const { tenantSegment, replayBaseDir } = require('./replayStorage');
+  const base = replayBaseDir();
+  const segment = tenantId ? tenantSegment(tenantId) : null;
+  return segment ? path.join(base, segment) : base;
 }
 
-function loadReplay(replayId) {
-  if (!REPLAY_ID_PATTERN.test(String(replayId || ''))) {
-    const error = new Error('replayId invalido');
-    error.code = 'BAD_REQUEST';
-    throw error;
-  }
-  const filePath = path.join(replayDir(), path.basename(`${replayId}.json`));
-  if (!filePath.startsWith(replayDir()) || !fs.existsSync(filePath)) {
-    const error = new Error(`Replay nao encontrado: ${replayId}`);
-    error.code = 'NOT_FOUND';
-    throw error;
-  }
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+/**
+ * Carrega um replay exigindo prova de posse pelo tenant (fail-closed).
+ * Delega ao storage tenant-scoped: replay sem `tenantId` ou de outro tenant
+ * nunca é entregue.
+ */
+function loadReplay(replayId, tenantId) {
+  return readTenantScopedReplay(replayId, tenantId);
 }
 
-function listReplays() {
-  const dir = replayDir();
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter((name) => name.endsWith('.json'))
-    .map((name) => {
-      try {
-        const replay = JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
-        return {
-          id: replay.id || name.replace(/\.json$/, ''),
-          context: replay.context || null,
-          startTime: replay.startTime || null,
-          actions: Array.isArray(replay.actions) ? replay.actions.length : 0,
-          screens: Array.isArray(replay.screens) ? replay.screens.length : 0,
-          errors: Array.isArray(replay.errors) ? replay.errors.length : 0,
-        };
-      } catch (error) {
-        logger.warn('[learning-core] Replay ilegivel ignorado na listagem', { file: name, error: error.message });
-        return null;
-      }
-    })
-    .filter(Boolean)
-    .sort((a, b) => String(b.startTime).localeCompare(String(a.startTime)));
+/**
+ * Lista replays do tenant. Sem tenantId o resultado é vazio (fail-closed).
+ */
+function listReplays({ tenantId } = {}) {
+  return listTenantScopedReplays(tenantId);
 }
 
 const ACTION_LABELS = {
@@ -233,7 +215,7 @@ function buildTrainingDocument({ replay, stats }) {
  * @returns {Promise<{trainingId, ragDocumentId, missionId, steps, redactions, summary}>}
  */
 async function generateTrainingFromReplay({ tenantId, replayId, journeyKey }) {
-  const replay = normalizeReplay(loadReplay(replayId));
+  const replay = normalizeReplay(loadReplay(replayId, tenantId));
 
   const { value: safeReplay, stats } = anonymize(replay);
   const document = buildTrainingDocument({ replay: safeReplay, stats });
@@ -243,11 +225,20 @@ async function generateTrainingFromReplay({ tenantId, replayId, journeyKey }) {
     id: trainingId,
     title: `Treinamento da jornada ${replayId}`,
     content: document,
+    // Classificação explícita e obrigatória (RAG Ingestion Governance):
+    // treinamento operacional sanitizado do próprio tenant.
+    domain: 'OPERATIONAL',
+    classification: 'PRODUCTION',
+    sensitivity: 'INTERNAL',
     metadata: {
       source: 'learning-core',
+      category: 'operational-training',
+      contentType: 'training',
       sourceId: trainingId,
+      sourceType: 'replay-derivation',
       journeyKey: journeyKey || null,
       replayId,
+      version: 1,
       redactions: stats.redactions,
     },
   }, tenantId);

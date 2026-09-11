@@ -4,12 +4,28 @@
  * Rota "Perguntar à IA" (assistente global, disponível em todas as telas).
  *
  * POST /api/ask-ai
- * Body: { question: string, context?: object }
- * Resposta: { success, answer, sources, confidence, tenantId, fromCache? }
+ * Body: {
+ *   question: string,
+ *   conversationId?: string,
+ *   context?: { route?, module?, pageType?, actionContext?, entityType?, entityId?, workspaceEntityId? }
+ * }
+ * Resposta: {
+ *   success, answer, sources, facts, intent, confidence, conversationId,
+ *   provenance, context: { entityValidated }, tenantId
+ * }
  *
- * Reutiliza o RAG governado: tenant-scoped, domínio resolvido pela identidade
- * do ator (nunca pelo texto da pergunta), com cache e aprendizado adaptativo.
+ * O copiloto é multi-turno (conversa persistida por tenant+usuário), consulta
+ * dados operacionais vivos via ferramentas registradas (read-only, com RBAC) e
+ * combina com conhecimento operacional (RAG OPERATIONAL: global ∪ tenant).
+ * Conteúdo técnico interno (domínio SYSTEM) nunca é acessível a um ator
+ * PRODUCTION.
+ *
+ * Preservado integralmente: autenticação, permissão `rag:query`, tenant
+ * isolation, rate limit e auditoria obrigatória fail-closed.
  */
+
+const { normalizeAskAiPayload } = require('../../services/askAi/contextContract');
+const { runAskAiTurn } = require('../../services/askAi/orchestrator');
 
 module.exports = { handleAskAiRoute };
 
@@ -27,6 +43,9 @@ async function handleAskAiRoute({ req, res, method, pathname, deps }) {
     ragService,
     logger,
   } = deps;
+
+  // Injeção do orquestrador para testes de boundary; produção usa o real.
+  const runTurn = deps.runAskAiTurn || runAskAiTurn;
 
   // Forma positiva deliberada: além de legível, permite ao scanner canônico de
   // inventário registrar esta superfície HTTP.
@@ -67,19 +86,12 @@ async function handleAskAiRoute({ req, res, method, pathname, deps }) {
     }
 
     const body = await parseJsonBody(req);
-    if (!body || typeof body.question !== 'string') {
-      badRequest(res, 'Campo "question" é obrigatório e deve ser uma string não vazia');
+    const payloadResult = normalizeAskAiPayload(body);
+    if (!payloadResult.ok) {
+      badRequest(res, payloadResult.message);
       return true;
     }
-    const question = body.question.trim();
-    if (!question) {
-      badRequest(res, 'Campo "question" é obrigatório e deve ser uma string não vazia');
-      return true;
-    }
-    if (question.length > 2000) {
-      badRequest(res, 'Pergunta muito longa (máximo 2000 caracteres)');
-      return true;
-    }
+    const payload = payloadResult.value;
 
     if (typeof logActionRequired !== 'function') {
       const auditError = new Error('audit_persistence_required');
@@ -97,34 +109,47 @@ async function handleAskAiRoute({ req, res, method, pathname, deps }) {
       userAgent: req.headers['user-agent'] || 'unknown',
     });
 
-    const result = await ragService.queryRag(question, tenantId, { actor: req.agent }, {
-      topK: 6,
-      minScore: 0.45,
-      maxTokens: 1000,
+    const turn = await runTurn({
+      payload,
+      tenantId,
+      actor: req.agent,
+      deps: { ragService },
     });
 
     // Normaliza para um contrato estável consumido pelo widget.
     sendJson(res, 200, {
-      success: result?.success === true,
-      answer: result?.response || result?.answer || 'Não consegui encontrar uma resposta.',
-      sources: Array.isArray(result?.sources) ? result.sources : [],
-      confidence: Number.isFinite(result?.confidence) ? result.confidence : null,
-      fromCache: !!result?.fromCache,
+      success: true,
+      conversationId: turn.conversationId,
+      answer: turn.answer,
+      sources: turn.sources,
+      facts: turn.facts,
+      intent: turn.intent,
+      confidence: turn.confidence,
+      provenance: turn.provenance,
+      context: { entityValidated: turn.policy.entityValidated },
       tenantId,
-      error: result?.error || null,
     });
   } catch (error) {
     if (error instanceof SyntaxError) {
       badRequest(res, 'JSON inválido no corpo da requisição');
       return true;
     }
+    if (error?.code === 'NOT_FOUND') {
+      sendJson(res, 404, {
+        success: false,
+        error: 'conversation_not_found',
+        answer: null,
+        message: 'Conversa não encontrada. Inicie uma nova conversa.',
+      });
+      return true;
+    }
     if (error?.code === 'PERSISTENCE_REQUIRED') {
-      logger.error('Auditoria durável indisponível para pergunta à IA', { error: error.message });
+      logger.error('Persistência obrigatória indisponível para a pergunta à IA', { error: error.message });
       sendJson(res, 503, {
         success: false,
         error: 'persistence_required',
         answer: null,
-        message: 'Auditoria durável indisponível; a pergunta não pode ser concluída agora.',
+        message: 'Estado conversacional/auditoria indisponível; a pergunta não pode ser concluída agora.',
       });
       return true;
     }

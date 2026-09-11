@@ -8,6 +8,7 @@ const { buildQaWavesEnterpriseGovernance } = require('./lib/qa-waves-enterprise-
 const { runtimeAwarePath, resolveWorkspacePath } = require('./lib/runtime-paths');
 const { main: materializeProofArtifacts } = require('../../governance/materialize-proof-artifacts');
 const { buildFinalProofReport } = require('../../governance/proof-engine');
+const { buildCertificationStates } = require('../../governance/certification-states');
 const { calculateSetCoverage } = require('../../qa/coverage/setCoverage');
 const {
   PROD_LIKE_JOURNEY_VERTICAL,
@@ -1351,6 +1352,16 @@ function buildReport() {
   context.enterpriseProofs = enterpriseProofs;
   const gapBacklog = buildGapBacklog(context);
   const readiness = buildReadinessScores(context);
+  // §39/§55: estados de certificação calculados SEPARADAMENTE do score do core.
+  const certificationStates = buildCertificationStates({
+    rootDir: ROOT,
+    requiredVerticals: REQUIRED_VERTICALS,
+    verticals: verticalSummaries,
+    verticalCoveragePercent,
+    readinessScore: readiness.readinessScore,
+    coreReady: (meshSummary.decision || (qaWavesGovernance && qaWavesGovernance.governanceStatus) || '') === 'GO'
+      && readiness.readinessScore >= 95,
+  });
   const preliminaryBlockingGaps = gapBacklog.filter((item) => item.severity === 'critical' || item.severity === 'high');
   const proofReport = buildFinalProofReport({
     blockingGapCount: preliminaryBlockingGaps.length,
@@ -1464,9 +1475,19 @@ function buildReport() {
     },
     verticalCoverage: {
       percent: verticalCoveragePercent,
+      // §37 Nome semântico correto: é cobertura de IMPLEMENTAÇÃO das verticais,
+      // não cobertura das necessidades de mercado. O campo `percent` é mantido
+      // para compatibilidade; o rótulo correto vive aqui.
+      semanticLabel: 'VERTICAL_IMPLEMENTATION_COVERAGE',
+      semanticNote: 'Cobertura de implementação das verticais exigidas. NÃO é certificação de mercado.',
+      numerator: verticalSummaries.filter((item) => item.implemented).length,
+      denominator: REQUIRED_VERTICALS.length,
+      unit: 'verticals',
       requiredVerticals: REQUIRED_VERTICALS,
       coveredVerticals: verticalSummaries.filter((item) => item.implemented).map((item) => item.vertical),
     },
+    // §39/§55 Cinco estados INDEPENDENTES — nunca consolidados num único "100%".
+    certificationStates,
     qaWaves: {
       status: qaWavesGovernance?.governanceStatus || qaWavesGovernance?.status || 'UNKNOWN',
       operationalConfidence: qaWavesGovernance?.operationalConfidence || 0,
@@ -1578,6 +1599,10 @@ function persistReport(report) {
     finalDecision: report.finalDecision,
     canonicalMeshExecutionId: report.canonicalMeshExecutionId,
     totalCoverage: report.readiness.readinessScore,
+    // §55 Os cinco estados de certificação viajam SEPARADOS no artefato
+    // canônico. Nenhum consumidor pode apresentar "100%" sem dizer 100% de quê.
+    certificationStates: report.certificationStates,
+    verticalImplementationCoverage: report.verticalCoverage,
     verticalCoverage: report.verticals.map((vertical) => ({
       vertical: vertical.vertical,
       classification: vertical.classification,

@@ -327,7 +327,60 @@ function sanitizeScope(scope) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Escopo de TENANT do conhecimento operacional
+// ---------------------------------------------------------------------------
+//
+// O conhecimento OPERACIONAL GLOBAL do RAP (roteiros canônicos, manuais de
+// produto, documentação de uso) é indexado sob a chave de tenant canônica
+// (`system`, via scripts/rag-sync.js). Sem uma união explícita, um tenant real
+// nunca enxerga esse conhecimento, porque a busca vetorial é estrita por
+// tenant.
+//
+// Declaração explícita (nunca wildcard, nunca ampliável por payload):
+//
+//   OPERATIONAL → ['<tenant atual>', GLOBAL_OPERATIONAL_TENANT]
+//   SYSTEM      → ['<tenant atual>']
+//
+// O domínio SYSTEM permanece segregado: nenhum conhecimento global de sistema
+// é compartilhado entre tenants.
+
+const GLOBAL_OPERATIONAL_TENANT_ENV = 'RAG_GLOBAL_OPERATIONAL_TENANT';
+const DEFAULT_GLOBAL_OPERATIONAL_TENANT = 'system';
+
+function getGlobalOperationalTenant(override = null) {
+  const raw = override ?? process.env[GLOBAL_OPERATIONAL_TENANT_ENV] ?? DEFAULT_GLOBAL_OPERATIONAL_TENANT;
+  const value = String(raw ?? '').trim();
+  return value || DEFAULT_GLOBAL_OPERATIONAL_TENANT;
+}
+
+/**
+ * Deriva as chaves de tenant elegíveis para a recuperação.
+ *
+ * @param {Object} input
+ * @param {Object|null} input.scope - Escopo resolvido ({domain, classifications})
+ * @param {string} input.tenantId - Tenant do request (autoridade)
+ * @param {string} [input.globalTenant] - Chave do conhecimento global (override de teste)
+ * @returns {string[]}
+ */
+function resolveRetrievalTenantKeys({ scope = null, tenantId = null, globalTenant = null } = {}) {
+  const primary = String(tenantId ?? '').trim();
+  if (!primary) return [];
+
+  const domain = String(scope?.domain || 'OPERATIONAL').trim().toUpperCase();
+  const keys = [primary];
+  if (domain !== 'OPERATIONAL') return keys;
+
+  const global = getGlobalOperationalTenant(globalTenant);
+  if (global && !keys.includes(global)) keys.push(global);
+  return keys;
+}
+
 module.exports = {
+  GLOBAL_OPERATIONAL_TENANT_ENV,
+  DEFAULT_GLOBAL_OPERATIONAL_TENANT,
+  getGlobalOperationalTenant,
+  resolveRetrievalTenantKeys,
   DOMAINS,
   DOMAIN_CLASSIFICATIONS,
   KNOWLEDGE_TYPES,

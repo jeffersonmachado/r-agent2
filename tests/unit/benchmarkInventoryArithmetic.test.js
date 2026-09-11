@@ -47,6 +47,10 @@ function benchmark(overrides = {}) {
     independenceGroup: 'g',
     analyzedAt: '2026-09-01T00:00:00.000Z',
     inventoryVersion: 'inv-1',
+    // §5 do hardening: análise declarada exige EVIDÊNCIA de análise.
+    researchVersion: 'research-1',
+    findingsInventory: [],
+    marketArchetypeMapping: { archetype: 'a1', rationale: 'mapeamento declarado', evidence: 'https://oficial/docs' },
     novelty: novelty(),
     sources: [{ tier: 1, url: 'https://oficial', retrievedAt: '2026-09-01', verified: true }],
     freshness: { researchedAt: '2026-09-01', nextReviewAt: '2027-03-01', status: 'FRESH' },

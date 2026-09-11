@@ -26,27 +26,12 @@ const DELIVERED_PHASE_DIMENSIONS = new Set(['RAP-055', 'RAP-056']);
 // fixpoint espúrio all-NO_GO (reports NO_GO → dims falham → gate FAIL →
 // reports NO_GO). A verificação real acontece no pass 2, contra os relatórios
 // já projetados (DEFERRED é aceito pelo registry; NO_GO real derruba de novo).
-const CIRCULAR_PROJECTION_REPORTS = new Set([
-  'governance/final-proof-report.json',
-  'governance/final-readiness-report.json',
-  'governance/final-governance-report.json',
-  'governance/final-consistency-gate-report.json',
-]);
-
-function isCircularRequirement(requirement) {
-  return requirement.code === 'MANDATORY_GATE_NO_GO'
-    && (requirement.validator || []).some((validatorPath) => CIRCULAR_PROJECTION_REPORTS.has(validatorPath));
-}
-
-function isCircularOnlyDimension(dimension) {
-  const failures = (dimension.requirements || []).filter((requirement) => (
-    requirement.mandatory !== false
-    && requirement.status !== 'PASS'
-    && !['NO_KNOWN_GAP', 'NO_OPEN_BLOCKER'].includes(requirement.category)
-  ));
-  if (failures.length === 0) return true; // só falhas derivadas (gap/blocker dos circulares)
-  return failures.every(isCircularRequirement);
-}
+//
+// A classificação vive em `./circular-projection` (pura e testável): o guard
+// embutido aqui checava `requirement.code` / `requirement.validator`, mas o
+// requisito persistido carrega o caminho em `evidence[].path` — então o guard
+// nunca casava e 41 blockers circulares derrubavam o run.
+const { isCircularRequirement, isCircularOnlyDimension } = require('./circular-projection');
 
 function toPersistable(scorecard) {
   return scorecard.dimensions.map((dimension) => ({

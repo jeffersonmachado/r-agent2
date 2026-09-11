@@ -58,7 +58,46 @@ const VIOLATION_CODES = Object.freeze({
   RESOURCE_NOT_SUPPORTED: 'evo_contract_resource_not_supported',
   AUTH_DIALECT_CONFLATED_WITH_FINANCE_API: 'evo_auth_dialect_conflated_with_finance_api',
   RATE_LIMIT_CLAIMED_WITHOUT_DOC: 'evo_rate_limit_claimed_as_documented_without_doc',
+  // ── hardening final: dialetos e entidades por recurso ──
+  GLOBAL_PAGINATION_DIALECT: 'evo_global_pagination_dialect_still_declared',
+  RESOURCE_PAGINATION_MISSING: 'evo_resource_pagination_missing',
+  RESOURCE_MAX_TAKE_MISSING: 'evo_resource_max_take_missing',
+  RESOURCE_INCREMENTAL_MISSING: 'evo_resource_incremental_strategy_missing',
+  GLOBAL_UPDATED_SINCE: 'evo_global_updated_since_dialect',
+  ENTITY_AMBIGUOUS: 'evo_entity_roles_ambiguous',
+  HOST_CLAIMED_OFFICIAL_WITHOUT_SOURCE: 'evo_host_claimed_official_without_official_source',
+  SSRF_POLICY_MISSING: 'evo_ssrf_policy_missing',
+  SSRF_POLICY_NOT_ENFORCED: 'evo_ssrf_policy_not_enforced_in_client',
+  CONTRACT_STATE_TAXONOMY_MISSING: 'evo_contract_state_taxonomy_missing',
+  WEBHOOK_SCHEME_CLAIMED_PROVIDER_DOCUMENTED: 'evo_webhook_scheme_claimed_as_provider_documented',
 });
+
+/** Papéis de entidade que NÃO podem ser confundidos (Membership ≠ MemberMembership). */
+const ENTITY_ROLE_RULES = Object.freeze([
+  {
+    resource: 'plans',
+    forbiddenRapTarget: /AccessMembership/,
+    forbiddenEvoEntity: /^MemberMembership$/,
+    expectedEvoEntity: 'Membership',
+    why: 'EVO Membership é o CATÁLOGO de planos; tratá-lo como contrato do aluno cria matrícula fantasma.',
+  },
+  {
+    resource: 'memberships',
+    expectedEvoEntity: 'MemberMembership',
+    expectedRapTarget: 'AccessMembership',
+    why: 'EVO MemberMembership é o CONTRATO do aluno e é o único que pode virar AccessMembership.',
+  },
+]);
+
+/** Parâmetros de paginação que NÃO podem existir como dialeto global. */
+const LEGACY_PAGINATION_PARAMS = Object.freeze(['pageParam', 'sizeParam']);
+
+/** Campos de eixo de paginação exigidos por recurso. */
+const REQUIRED_PAGINATION_FIELDS = Object.freeze(['model', 'maxTake']);
+
+const REQUIRED_CONTRACT_STATES = Object.freeze([
+  'OFFICIAL_DOCS_VERIFIED', 'LOCAL_CONTRACT_TESTED', 'AWAITING_LIVE_CERTIFICATION', 'LIVE_CERTIFIED',
+]);
 
 function gitCommit() {
   try {
@@ -205,6 +244,111 @@ function validateContract(contract, context = {}) {
   const rateLimit = contract.rateLimit || {};
   if (rateLimit.documented === true && !isNonEmptyString(rateLimit.source)) {
     push(VIOLATION_CODES.RATE_LIMIT_CLAIMED_WITHOUT_DOC);
+  }
+
+  // ── Hardening final: dialetos e entidades POR RECURSO ────────────────────
+
+  // Um dialeto global de paginação (page/size) aplicado a uma API com limites
+  // resource-specific produz lote truncado silencioso. O dialeto tem de ser
+  // declarado por recurso.
+  const globalPagination = contract.pagination || {};
+  const legacyParams = LEGACY_PAGINATION_PARAMS.filter((key) => isNonEmptyString(globalPagination[key]));
+  if (legacyParams.length > 0) {
+    push(VIOLATION_CODES.GLOBAL_PAGINATION_DIALECT, { declared: legacyParams });
+  }
+  const paginationModels = contract._paginationModels || {};
+  for (const [resource, config] of Object.entries(resources)) {
+    const declared = config.pagination;
+    if (!declared || typeof declared !== 'object') {
+      push(VIOLATION_CODES.RESOURCE_PAGINATION_MISSING, { resource });
+      continue;
+    }
+    const missingPagination = REQUIRED_PAGINATION_FIELDS.filter((field) => !isNonEmptyString(String(declared[field] || '')));
+    if (missingPagination.length > 0) {
+      push(VIOLATION_CODES.RESOURCE_PAGINATION_MISSING, { resource, missing: missingPagination });
+    }
+    if (!Number.isFinite(Number(declared.maxTake)) || Number(declared.maxTake) <= 0) {
+      push(VIOLATION_CODES.RESOURCE_MAX_TAKE_MISSING, { resource, maxTake: declared.maxTake ?? null });
+    }
+    if (!paginationModels[declared.model]) {
+      push(VIOLATION_CODES.RESOURCE_PAGINATION_MISSING, { resource, reason: 'model_not_declared', model: declared.model || null });
+    }
+  }
+
+  // `updatedSince` global: um filtro inventado, aplicado a recursos que
+  // documentam filtros por data diferentes.
+  const strategies = contract._incrementalStrategies || {};
+  for (const [resource, config] of Object.entries(resources)) {
+    const incremental = config.incremental;
+    if (!incremental || !isNonEmptyString(incremental.strategy)) {
+      push(VIOLATION_CODES.RESOURCE_INCREMENTAL_MISSING, { resource });
+      continue;
+    }
+    if (!strategies[incremental.strategy]) {
+      push(VIOLATION_CODES.RESOURCE_INCREMENTAL_MISSING, { resource, reason: 'strategy_not_declared', strategy: incremental.strategy });
+    }
+    if (String(config.incrementalParam || '') === 'updatedSince') {
+      push(VIOLATION_CODES.GLOBAL_UPDATED_SINCE, { resource, incrementalParam: config.incrementalParam });
+    }
+  }
+
+  // Membership (catálogo) vs MemberMembership (contrato do aluno): mapear os
+  // dois no mesmo alvo RAP duplica ou fabrica matrícula.
+  for (const rule of ENTITY_ROLE_RULES) {
+    const config = resources[rule.resource];
+    if (!config) continue;
+    const evoEntity = String(config.evoEntity || '');
+    const rapTarget = String(config.rapTarget || '');
+    if (rule.expectedEvoEntity && evoEntity !== rule.expectedEvoEntity) {
+      push(VIOLATION_CODES.ENTITY_AMBIGUOUS, { resource: rule.resource, expectedEvoEntity: rule.expectedEvoEntity, actual: evoEntity, why: rule.why });
+    }
+    if (rule.forbiddenEvoEntity && rule.forbiddenEvoEntity.test(evoEntity)) {
+      push(VIOLATION_CODES.ENTITY_AMBIGUOUS, { resource: rule.resource, actual: evoEntity, why: rule.why });
+    }
+    if (rule.expectedRapTarget && rapTarget !== rule.expectedRapTarget) {
+      push(VIOLATION_CODES.ENTITY_AMBIGUOUS, { resource: rule.resource, expectedRapTarget: rule.expectedRapTarget, actual: rapTarget, why: rule.why });
+    }
+    if (rule.forbiddenRapTarget && rule.forbiddenRapTarget.test(rapTarget) && !/NUNCA|never/i.test(rapTarget)) {
+      push(VIOLATION_CODES.ENTITY_AMBIGUOUS, { resource: rule.resource, rapTarget, why: rule.why });
+    }
+  }
+
+  // Host "oficial" só pode ser declarado com fonte oficial que o autorize.
+  const hostPolicy = contract._hostPolicy || {};
+  if (isNonEmptyString(hostPolicy.officialHost)) {
+    const authorized = Array.isArray(hostPolicy.allowlist)
+      && hostPolicy.allowlist.some((entry) => entry && entry.host === hostPolicy.officialHost && isNonEmptyString(entry.source));
+    if (!authorized) {
+      push(VIOLATION_CODES.HOST_CLAIMED_OFFICIAL_WITHOUT_SOURCE, { officialHost: hostPolicy.officialHost });
+    }
+  }
+
+  // SSRF: `baseUrl` é configurável por tenant. Sem política declarada e
+  // ENFORÇADA, o campo vira uma arma contra a rede interna e o metadata.
+  const ssrf = contract._ssrfPolicy || {};
+  if (ssrf.enabled !== true || !Array.isArray(ssrf.blockedRanges) || ssrf.blockedRanges.length === 0) {
+    push(VIOLATION_CODES.SSRF_POLICY_MISSING, { enabled: ssrf.enabled ?? null });
+  } else if (clientSource && !clientSource.includes(ssrf.errorCode || 'NO_ERROR_CODE')) {
+    push(VIOLATION_CODES.SSRF_POLICY_NOT_ENFORCED, { errorCode: ssrf.errorCode || null });
+  }
+
+  // Estados de contrato separados: sem taxonomia, "testei local" vira "certifiquei".
+  const contractStates = contract._contractStates || {};
+  const declaredStates = Array.isArray(contractStates.states) ? contractStates.states : [];
+  const missingStates = REQUIRED_CONTRACT_STATES.filter((state) => !declaredStates.includes(state));
+  const currentStates = contractStates.current;
+  if (missingStates.length > 0 || !currentStates || typeof currentStates !== 'object') {
+    push(VIOLATION_CODES.CONTRACT_STATE_TAXONOMY_MISSING, { missingStates });
+  }
+
+  // Webhook: o esquema de assinatura não pode ser apresentado como documentado
+  // pelo provedor quando a documentação oficial não o descreve.
+  const webhook = contract.webhook || {};
+  if (webhook.verificationStatus !== 'CERTIFIED' && webhook.providerDocumented === true) {
+    push(VIOLATION_CODES.WEBHOOK_SCHEME_CLAIMED_PROVIDER_DOCUMENTED, {
+      verificationStatus: webhook.verificationStatus || null,
+      providerDocumented: webhook.providerDocumented,
+    });
   }
 
   return { violations, status, resourceKeys };

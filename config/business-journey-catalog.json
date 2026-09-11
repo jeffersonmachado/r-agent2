@@ -1,0 +1,222 @@
+{
+  "version": 1,
+  "scope": "OPERATIONAL",
+  "description": "Catálogo operacional de jornadas de negócio. Mapeia a jornada canônica para os ESTÁGIOS de negócio que o copiloto e os manuais podem descrever. Nenhum identificador técnico (wave, cenário, seed, replay, passo de RPA, rota interna) pertence a este arquivo.",
+  "journeys": {
+    "fitness_new_customer": {
+      "title": "Captação e matrícula de novo aluno",
+      "stages": [
+        { "title": "Interesse", "description": "Contato inicial do interessado por WhatsApp, telefone ou balcão." },
+        { "title": "Avaliação", "description": "Agendamento e realização da avaliação física ou aula experimental." },
+        { "title": "Proposta", "description": "Apresentação do plano adequado ao objetivo do interessado." },
+        { "title": "Matrícula", "description": "Cadastro do aluno e escolha do plano contratado." },
+        { "title": "Pagamento", "description": "Registro do primeiro pagamento e liberação do acesso." },
+        { "title": "Primeiro acesso", "description": "Primeira visita do aluno com liberação na catraca." }
+      ]
+    },
+    "fitness_active_customer": {
+      "title": "Relacionamento com aluno ativo",
+      "stages": [
+        { "title": "Acompanhamento", "description": "Monitoramento da frequência e da satisfação do aluno." },
+        { "title": "Engajamento", "description": "Convites para aulas, avaliações e campanhas internas." },
+        { "title": "Renovação", "description": "Renovação do plano ao fim do ciclo contratado." }
+      ]
+    },
+    "fitness_customer_checkin": {
+      "title": "Check-in na academia",
+      "stages": [
+        { "title": "Identificação", "description": "Identificação do aluno na recepção." },
+        { "title": "Validação", "description": "Verificação de matrícula ativa e situação financeira." },
+        { "title": "Liberação", "description": "Liberação do acesso e registro da presença." }
+      ]
+    },
+    "checkin": {
+      "title": "Registro de presença",
+      "stages": [
+        { "title": "Identificação", "description": "Identificação do aluno." },
+        { "title": "Validação", "description": "Verificação da situação da matrícula." },
+        { "title": "Registro", "description": "Registro da presença do aluno." }
+      ]
+    },
+    "checkout": {
+      "title": "Registro de saída",
+      "stages": [
+        { "title": "Identificação", "description": "Identificação do aluno." },
+        { "title": "Saída", "description": "Registro do encerramento da visita." }
+      ]
+    },
+    "agendamento": {
+      "title": "Agendamento de aula ou avaliação",
+      "stages": [
+        { "title": "Solicitação", "description": "Pedido de agendamento feito pelo aluno ou pela recepção." },
+        { "title": "Confirmação", "description": "Confirmação de data, horário e profissional." },
+        { "title": "Lembrete", "description": "Aviso ao aluno antes do horário agendado." },
+        { "title": "Comparecimento", "description": "Registro de comparecimento ou falta." }
+      ]
+    },
+    "cancelamento": {
+      "title": "Cancelamento de matrícula",
+      "stages": [
+        { "title": "Solicitação", "description": "Registro do pedido de cancelamento." },
+        { "title": "Retenção", "description": "Tentativa de retenção com oferta adequada ao motivo." },
+        { "title": "Encerramento", "description": "Efetivação do cancelamento e bloqueio do acesso." }
+      ]
+    },
+    "renovacao": {
+      "title": "Renovação de matrícula",
+      "stages": [
+        { "title": "Aviso", "description": "Aviso antecipado do vencimento do plano." },
+        { "title": "Proposta", "description": "Apresentação das opções de renovação." },
+        { "title": "Confirmação", "description": "Confirmação do novo ciclo contratado." },
+        { "title": "Pagamento", "description": "Registro do pagamento da renovação." }
+      ]
+    },
+    "onboarding": {
+      "title": "Onboarding de aluno",
+      "stages": [
+        { "title": "Boas-vindas", "description": "Contato de boas-vindas ao novo aluno." },
+        { "title": "Orientação", "description": "Explicação sobre rotina, horários e regras." },
+        { "title": "Primeira semana", "description": "Acompanhamento da primeira semana de uso." }
+      ]
+    },
+    "beauty_new_customer": {
+      "title": "Novo cliente no salão",
+      "stages": [
+        { "title": "Interesse", "description": "Contato inicial do cliente." },
+        { "title": "Agendamento", "description": "Escolha do serviço, profissional e horário." },
+        { "title": "Atendimento", "description": "Realização do serviço contratado." },
+        { "title": "Retorno", "description": "Agendamento do próximo atendimento." }
+      ]
+    },
+    "beauty_booking": {
+      "title": "Agendamento de serviço de beleza",
+      "stages": [
+        { "title": "Solicitação", "description": "Pedido de agendamento do cliente." },
+        { "title": "Confirmação", "description": "Confirmação do serviço e do profissional." },
+        { "title": "Atendimento", "description": "Realização do serviço." }
+      ]
+    },
+    "clinic_default_journey": {
+      "title": "Jornada do paciente na clínica",
+      "stages": [
+        { "title": "Contato", "description": "Contato inicial do paciente." },
+        { "title": "Agendamento", "description": "Agendamento da consulta ou procedimento." },
+        { "title": "Atendimento", "description": "Realização do atendimento clínico." },
+        { "title": "Acompanhamento", "description": "Acompanhamento pós-atendimento e retorno." }
+      ]
+    },
+    "food_order_flow": {
+      "title": "Pedido no delivery",
+      "stages": [
+        { "title": "Pedido", "description": "Registro do pedido do cliente." },
+        { "title": "Produção", "description": "Preparo do pedido na cozinha." },
+        { "title": "Entrega", "description": "Expedição e entrega ao cliente." }
+      ]
+    },
+    "food_customer_journey": {
+      "title": "Jornada do cliente de alimentação",
+      "stages": [
+        { "title": "Descoberta", "description": "Primeiro contato com a marca." },
+        { "title": "Pedido", "description": "Realização do pedido." },
+        { "title": "Experiência", "description": "Consumo e avaliação da experiência." },
+        { "title": "Recompra", "description": "Novo pedido e fidelização." }
+      ]
+    },
+    "bakery_balcao_retirada": {
+      "title": "Retirada no balcão",
+      "stages": [
+        { "title": "Encomenda", "description": "Registro do pedido para retirada." },
+        { "title": "Produção", "description": "Produção do item encomendado." },
+        { "title": "Retirada", "description": "Entrega do pedido ao cliente no balcão." }
+      ]
+    },
+    "bakery_encomenda_flow": {
+      "title": "Encomenda na padaria",
+      "stages": [
+        { "title": "Pedido", "description": "Registro da encomenda." },
+        { "title": "Programação", "description": "Programação da produção para a data combinada." },
+        { "title": "Entrega", "description": "Entrega da encomenda ao cliente." }
+      ]
+    },
+    "bakery_producao_fornada": {
+      "title": "Produção de fornada",
+      "stages": [
+        { "title": "Planejamento", "description": "Definição da quantidade a produzir." },
+        { "title": "Produção", "description": "Execução da fornada." },
+        { "title": "Exposição", "description": "Disponibilização dos itens para venda." }
+      ]
+    },
+    "bakery_estoque_perdas": {
+      "title": "Controle de estoque e perdas",
+      "stages": [
+        { "title": "Contagem", "description": "Contagem de itens em estoque." },
+        { "title": "Análise", "description": "Identificação de perdas e desvios." },
+        { "title": "Correção", "description": "Ajuste de produção e compras." }
+      ]
+    },
+    "bakery_reativacao_cliente": {
+      "title": "Reativação de cliente",
+      "stages": [
+        { "title": "Identificação", "description": "Identificação de clientes sem compra recente." },
+        { "title": "Contato", "description": "Contato com oferta de retorno." },
+        { "title": "Retorno", "description": "Registro da nova compra do cliente." }
+      ]
+    },
+    "market_default_journey": {
+      "title": "Jornada do cliente no mercado",
+      "stages": [
+        { "title": "Compra", "description": "Realização da compra." },
+        { "title": "Reposição", "description": "Reposição de itens de maior giro." },
+        { "title": "Fidelização", "description": "Ações de fidelização e ofertas recorrentes." }
+      ]
+    },
+    "services_default_journey": {
+      "title": "Jornada de prestação de serviço",
+      "stages": [
+        { "title": "Solicitação", "description": "Registro da solicitação do cliente." },
+        { "title": "Execução", "description": "Execução do serviço contratado." },
+        { "title": "Conclusão", "description": "Encerramento e confirmação com o cliente." }
+      ]
+    },
+    "leads": {
+      "title": "Gestão de leads",
+      "stages": [
+        { "title": "Captura", "description": "Registro do lead em um canal de entrada." },
+        { "title": "Qualificação", "description": "Avaliação do interesse e do potencial." },
+        { "title": "Conversão", "description": "Encaminhamento do lead para o próximo passo comercial." }
+      ]
+    },
+    "billing": {
+      "title": "Cobrança e recebimento",
+      "stages": [
+        { "title": "Emissão", "description": "Emissão da cobrança do cliente." },
+        { "title": "Acompanhamento", "description": "Acompanhamento do vencimento e do pagamento." },
+        { "title": "Regularização", "description": "Tratamento de valores em atraso." }
+      ]
+    },
+    "support_ticket_flow": {
+      "title": "Atendimento por chamado",
+      "stages": [
+        { "title": "Abertura", "description": "Registro do chamado do cliente." },
+        { "title": "Atendimento", "description": "Tratamento do chamado pela equipe responsável." },
+        { "title": "Conclusão", "description": "Conclusão e confirmação com o cliente." }
+      ]
+    },
+    "booking_flow": {
+      "title": "Reserva de horário",
+      "stages": [
+        { "title": "Solicitação", "description": "Pedido de reserva do cliente." },
+        { "title": "Confirmação", "description": "Confirmação do horário reservado." },
+        { "title": "Realização", "description": "Realização do compromisso reservado." }
+      ]
+    },
+    "campaigns": {
+      "title": "Campanha de comunicação",
+      "stages": [
+        { "title": "Planejamento", "description": "Definição do público e da oferta." },
+        { "title": "Execução", "description": "Envio das mensagens ao público definido." },
+        { "title": "Resultado", "description": "Acompanhamento das respostas e conversões." }
+      ]
+    }
+  }
+}

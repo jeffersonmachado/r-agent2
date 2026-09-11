@@ -200,12 +200,17 @@ describe('Anti-gaming: amostra de logos não pode certificar (§43)', () => {
       id, archetype, independenceGroup: group, order, role,
       analyzedAt: '2026-09-01T00:00:00.000Z',
       inventoryVersion: 'inv-1',
+      // §5 do hardening: análise declarada exige EVIDÊNCIA de análise —
+      // versão de pesquisa, inventário de findings e mapeamento de arquétipo.
+      researchVersion: 'research-1',
+      findingsInventory: [],
+      marketArchetypeMapping: { archetype, rationale: 'mapeamento declarado na pesquisa', evidence: 'https://oficial/docs' },
       // §8 O inventário acumulado é o próprio baseline (1): a amostra é
       // saturada, então nenhum benchmark acrescenta item.
       previousInventorySize: 1,
       previousJourneyInventorySize: order === 1 ? 10 : 10,
       previousBusinessRuleInventorySize: order === 1 ? 10 : 10,
-      sources: [{ tier: 1, url: 'https://oficial', retrievedAt: '2026-09-01', verified: true }],
+      sources: [{ tier: 1, url: 'https://oficial/docs', retrievedAt: '2026-09-01', verified: true }],
       freshness: { researchedAt: '2026-09-01', status: 'FRESH' },
       dimensions: { marketArchetype: archetype, geography },
       novelty: {

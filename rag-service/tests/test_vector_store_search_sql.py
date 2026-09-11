@@ -91,7 +91,7 @@ def test_search_sem_identidade_aplica_acl_fail_closed_e_sensitivity(monkeypatch)
     assert "permissions->'roles'" in sql
     assert "permissions->'agents'" in sql
     assert params == (
-        params[0], 'tenant-a', 'OPERATIONAL', ['PRODUCTION'],
+        params[0], ['tenant-a', 'system'], 'OPERATIONAL', ['PRODUCTION'],
         ['PUBLIC', 'INTERNAL'], [], '', params[0], 5,
     )
 
@@ -110,7 +110,7 @@ def test_search_filtro_roles_no_sql(monkeypatch):
     # Params: qv, tenant, domain, classifications, sensitivities, roles,
     # agentId, qv, fetch_k
     assert params[5] == ['admin', 'agent']
-    assert params[1] == 'tenant-a'
+    assert params[1] == ['tenant-a', 'system']
     # Com filtro no SQL não há descarte em Python: fetch_k = k
     assert params[-1] == 5
 

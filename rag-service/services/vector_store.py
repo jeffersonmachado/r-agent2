@@ -12,7 +12,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 
 from models.document import Chunk, ChunkMetadata, DocumentPermissions
-from services.domain_policy import resolve_query_scope
+from services.domain_policy import resolve_query_scope, resolve_scope_tenant_keys
 from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -243,6 +243,13 @@ class VectorStore:
         # aplica o mais restritivo (OPERATIONAL/PRODUCTION).
         resolved_scope = resolve_query_scope(scope)
 
+        # Conhecimento operacional GLOBAL ∪ TENANT_OPERATIONAL: as chaves são
+        # DERIVADAS do tenant do request + domínio (payload nunca amplia). No
+        # domínio SYSTEM a lista contém apenas o tenant atual.
+        tenant_keys = resolve_scope_tenant_keys(scope, self.tenant_id)
+        if not tenant_keys:
+            return []
+
         k = max(1, min(int(top_k or 5), 50))
         qv = _pgvector_literal(query_embedding)
 
@@ -258,7 +265,7 @@ class VectorStore:
         agent_id = str(filters.get("agentId")).strip() if filters.get("agentId") else ""
 
         where_clauses = [
-            "c.tenant_key = %s",
+            "c.tenant_key = ANY(%s)",
             "c.domain = %s",
             "c.classification = ANY(%s)",
             "c.sensitivity = ANY(%s)",
@@ -272,7 +279,7 @@ class VectorStore:
         ]
         params: List[Any] = [
             qv,
-            self.tenant_id,
+            tenant_keys,
             resolved_scope["domain"],
             resolved_scope["classifications"],
             resolved_scope["sensitivities"],
@@ -352,6 +359,14 @@ class VectorStore:
         return results[:k]
 
     def remove_document(self, document_id: str) -> int:
+        """
+        Remove um documento do índice: apaga os chunks e desativa o documento.
+
+        Desativar `rag_documents.status` (além de apagar os chunks) garante que
+        o documento não volte a ser elegível caso um chunk órfão sobreviva —
+        a busca vetorial exige `d.status = 'active'` E o chunk existir.
+        Escopo sempre por tenant: nunca remove nada de outro tenant.
+        """
         if not document_id:
             return 0
         with _get_conn() as conn:
@@ -360,7 +375,13 @@ class VectorStore:
                     "DELETE FROM rag_chunks WHERE tenant_key = %s AND document_id = %s",
                     (self.tenant_id, str(document_id))
                 )
-                return cur.rowcount or 0
+                removed = cur.rowcount or 0
+                cur.execute(
+                    "UPDATE rag_documents SET status = 'inactive'"
+                    " WHERE tenant_key = %s AND id = %s",
+                    (self.tenant_id, str(document_id)),
+                )
+                return removed
 
     def get_stats(self) -> Dict[str, Any]:
         with _get_conn() as conn:

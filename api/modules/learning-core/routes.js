@@ -15,6 +15,7 @@ const mentorService = require('./mentorService');
 const adaptiveService = require('./adaptiveService');
 const analyticsService = require('./analyticsService');
 const journeyFaqService = require('./journeyFaqService');
+const { authorizeReplaySurface } = require('./replayAccessPolicy');
 
 const ADMIN_ROLES = new Set(['owner', 'admin', 'super_admin']);
 
@@ -175,17 +176,26 @@ async function handleLearningCoreRoutes(ctx) {
   if (method === 'GET' && pathname === '/api/learning/replays') {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
-    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
 
-    sendJson({ replays: journeyTrainerService.listReplays() });
+    // Replay é evidência técnica: exige classificação SUPPORT+ (papel de
+    // tenant não autoriza por si só).
+    const access = authorizeReplaySurface(req);
+    if (!access.allowed) { sendJson(access.body, access.status); return true; }
+
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
+
+    sendJson({ replays: journeyTrainerService.listReplays({ tenantId }) });
     return true;
   }
 
   if (method === 'POST' && pathname === '/api/learning/training/from-replay') {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
-    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+
+    const access = authorizeReplaySurface(req);
+    if (!access.allowed) { sendJson(access.body, access.status); return true; }
 
     const body = await parseJsonBody(req);
     const tenantId = resolveTenantId(req);
@@ -415,8 +425,10 @@ async function handleLearningCoreRoutes(ctx) {
   if (method === 'POST' && pathname === '/api/learning/manuals/from-replay') {
     const authCheck = requireAuth(req);
     if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
-    if (!ADMIN_ROLES.has(req.agent?.role)) { sendJson({ error: 'forbidden' }, 403); return true; }
     if (!hasJsonContentType(req)) { badRequest('Content-Type must be application/json'); return true; }
+
+    const access = authorizeReplaySurface(req);
+    if (!access.allowed) { sendJson(access.body, access.status); return true; }
 
     const body = await parseJsonBody(req);
     const tenantId = resolveTenantId(req);
@@ -433,6 +445,33 @@ async function handleLearningCoreRoutes(ctx) {
     } catch (error) {
       if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
       if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      throw error;
+    }
+    return true;
+  }
+
+  const manualDeleteMatch = method === 'DELETE'
+    ? pathname.match(/^\/api\/learning\/manuals\/([^/]+)$/)
+    : null;
+  if (manualDeleteMatch) {
+    const authCheck = requireAuth(req);
+    if (!authCheck.valid) { sendJson({ error: 'unauthorized' }, 401); return true; }
+
+    const access = authorizeReplaySurface(req);
+    if (!access.allowed) { sendJson(access.body, access.status); return true; }
+
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
+    try {
+      const result = await manualService.deleteManual({
+        tenantId,
+        manualId: decodeURIComponent(manualDeleteMatch[1]),
+      });
+      sendJson(result);
+    } catch (error) {
+      if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
+      if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
+      if (error.code === 'DEINDEX_FAILED') { sendJson({ error: 'deindex_failed', message: error.message }, 503); return true; }
       throw error;
     }
     return true;

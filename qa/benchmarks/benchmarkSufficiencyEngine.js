@@ -23,12 +23,60 @@ const SAMPLE_STATES = Object.freeze({
   RESEARCHING: 'SAMPLE_RESEARCHING',
   NOT_SATURATED: 'SAMPLE_NOT_SATURATED',
   HOLDOUT_FAILED: 'SAMPLE_HOLDOUT_FAILED',
+  HOLDOUT_NOT_ANALYZED: 'SAMPLE_HOLDOUT_NOT_ANALYZED',
+  INVALID_FINDINGS: 'SAMPLE_INVALID_FINDINGS',
   REVALIDATION_REQUIRED: 'SAMPLE_REVALIDATION_REQUIRED',
   SUFFICIENT: 'SAMPLE_SUFFICIENT',
 });
 
 /** Estado externo (não é falha do RAP, é bloqueio de pesquisa). */
 const EXTERNAL_BLOCK_STATE = 'SAMPLE_CERTIFICATION_BLOCKED_BY_EXTERNAL_RESEARCH';
+
+/**
+ * Máquina de estados do holdout (adversarial, §4 do hardening final).
+ *
+ * Regras invariantes:
+ *   NOT_REGISTERED != PRE_REGISTERED
+ *   PRE_REGISTERED != ANALYZED
+ *   ANALYZED       != PASS
+ *   PASS somente após ANÁLISE REAL + EVIDÊNCIA DE ANÁLISE VÁLIDA + ausência de
+ *   violação de política.
+ *
+ * O bug corrigido: sem `analyzedAt` a novidade declarada é vazia, a taxa cai a
+ * 0, o 0 fica abaixo do threshold e o gate devolvia PASS por AUSÊNCIA DE
+ * TRABALHO. Um holdout não analisado não é um holdout aprovado.
+ */
+const HOLDOUT_STATES = Object.freeze({
+  NOT_REGISTERED: 'HOLDOUT_NOT_REGISTERED',
+  PRE_REGISTERED: 'HOLDOUT_PRE_REGISTERED',
+  NOT_ANALYZED: 'HOLDOUT_NOT_ANALYZED',
+  ANALYSIS_EVIDENCE_INCOMPLETE: 'HOLDOUT_ANALYSIS_EVIDENCE_INCOMPLETE',
+  NOT_MEASURABLE: 'HOLDOUT_NOT_MEASURABLE',
+  FAIL: 'HOLDOUT_FAIL',
+  PASS: 'HOLDOUT_PASS',
+});
+
+/**
+ * Campos que PROVAM que a análise de um benchmark aconteceu de verdade.
+ * `analyzedAt` sozinho é uma data digitada; sem versão de pesquisa, inventário
+ * de findings, mapeamento de arquétipo e grupo de independência não há como
+ * auditar o que foi (ou não) analisado.
+ */
+const HOLDOUT_ANALYSIS_EVIDENCE_FIELDS = Object.freeze([
+  'researchVersion',
+  'findingsInventory',
+  'marketArchetypeMapping',
+]);
+
+/** Motivo auditável por lacuna de evidência de análise do holdout. */
+const HOLDOUT_ANALYSIS_GAP_REASONS = Object.freeze({
+  analyzedAt: 'holdout_not_analyzed',
+  sourceEvidence: 'holdout_without_source_evidence',
+  researchVersion: 'holdout_without_research_version',
+  findingsInventory: 'holdout_without_findings_inventory',
+  marketArchetypeMapping: 'holdout_without_market_archetype_mapping',
+  independenceGroup: 'holdout_without_independence_group',
+});
 
 const NOVELTY_KEYS = Object.freeze({
   capabilities: 'newCapabilities',
@@ -54,6 +102,29 @@ function status(passed, detail = {}, extra = {}) {
 
 function list(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+/**
+ * Fonte GENÉRICA é a que não aponta para nada específico: homepage/raiz do
+ * host, ou declaração explícita `specificity: 'GENERIC'`. Uma homepage oficial
+ * prova que o fornecedor existe — não prova 50 capabilities.
+ */
+function isGenericSource(source) {
+  if (!source || typeof source !== 'object') return true;
+  if (String(source.specificity || '').toUpperCase() === 'GENERIC') return true;
+  if (!isNonEmptyString(source.url)) return true;
+  try {
+    const parsed = new URL(source.url);
+    const pathname = parsed.pathname.replace(/\/+$/, '');
+    const hasQuery = parsed.search.length > 1;
+    return pathname === '' && !hasQuery;
+  } catch (_) {
+    return false;
+  }
 }
 
 function round6(value) {
@@ -535,32 +606,66 @@ function evaluateSaturation({ sample, policy }) {
 // ── §14/§15/§16 Holdout ───────────────────────────────────────────────────
 
 /**
+ * Evidência de análise do holdout (§5): o que PROVA que a pesquisa aconteceu.
+ * Retorna a lista de campos obrigatórios ausentes — nunca booleano solto, para
+ * que a violação seja auditável campo a campo.
+ */
+function holdoutAnalysisEvidenceGaps(benchmark) {
+  const missing = [];
+  if (!benchmark || typeof benchmark !== 'object') return ['benchmark'];
+  if (!isNonEmptyString(benchmark.analyzedAt) || !Number.isFinite(Date.parse(benchmark.analyzedAt))) {
+    missing.push('analyzedAt');
+  }
+  if (list(benchmark.sources).length === 0) missing.push('sourceEvidence');
+  if (!isNonEmptyString(benchmark.researchVersion)) missing.push('researchVersion');
+  if (!Array.isArray(benchmark.findingsInventory)) missing.push('findingsInventory');
+  if (!benchmark.marketArchetypeMapping && !isNonEmptyString(benchmark.archetype)) missing.push('marketArchetypeMapping');
+  if (!isNonEmptyString(benchmark.independenceGroup) && !isNonEmptyString(benchmark.cloneOf) && !isNonEmptyString(benchmark.baseProduct)) {
+    missing.push('independenceGroup');
+  }
+  return missing;
+}
+
+/**
  * Valida o holdout pré-registrado. Falhas absolutas:
  * - novelty crítico REQUIRED em capability/jornada/regra de negócio;
  * - ausência de pré-registro;
+ * - NÃO ANÁLISE (um holdout não pesquisado jamais é PASS, §3);
+ * - evidência de análise incompleta (§5);
  * - leakage (holdout analisado antes de ser reservado, ou usado como discovery).
+ *
+ * Todo retorno carrega `holdoutState` da taxonomia HOLDOUT_STATES: o consumidor
+ * nunca precisa inferir o estado a partir de `status`.
  */
 function evaluateHoldout({ sample, policy }) {
   const holdoutRecord = sample.holdout || null;
   const validation = validationBenchmarks(sample);
   const violations = [];
+  const preregistrationFields = ['benchmarkId', 'selectedAsHoldoutAt', 'selectionReason', 'selectionEvidence', 'marketArchetype', 'inventoryVersion'];
+
+  const fail = (state, detail, extra = {}) => ({
+    status: 'FAIL',
+    holdoutState: state,
+    ...detail,
+    ...extra,
+  });
 
   if (!holdoutRecord) {
-    return status(false, {
+    return fail(HOLDOUT_STATES.NOT_REGISTERED, {
       holdoutId: null,
       violations: [{ reason: 'holdout_not_preregistered' }],
-      requiredPreregistrationFields: ['benchmarkId', 'selectedAsHoldoutAt', 'selectionReason', 'selectionEvidence', 'marketArchetype', 'inventoryVersion'],
+      requiredPreregistrationFields: preregistrationFields,
     });
   }
 
-  for (const field of ['benchmarkId', 'selectedAsHoldoutAt', 'selectionReason', 'selectionEvidence', 'marketArchetype', 'inventoryVersion']) {
+  for (const field of preregistrationFields) {
     if (!holdoutRecord[field]) violations.push({ reason: 'holdout_preregistration_incomplete', field });
   }
 
   const benchmark = validation.find((b) => b.id === holdoutRecord.benchmarkId) || null;
   if (!benchmark) {
     violations.push({ reason: 'holdout_benchmark_not_found', benchmarkId: holdoutRecord.benchmarkId });
-    return status(false, { holdoutId: holdoutRecord.benchmarkId, violations });
+    return fail(HOLDOUT_STATES.NOT_REGISTERED, { holdoutId: holdoutRecord.benchmarkId, violations });
   }
 
   // Anti-leakage temporal: o holdout não pode ter sido analisado antes de ser reservado.
@@ -580,6 +685,59 @@ function evaluateHoldout({ sample, policy }) {
   if (analyzedAtValue && holdoutRecord.selectedAsHoldoutAt
     && Date.parse(holdoutRecord.selectedAsHoldoutAt) === Date.parse(analyzedAtValue)) {
     violations.push({ reason: 'holdout_preregistration_same_instant_as_analysis' });
+  }
+
+  // §3/§4/§5 O holdout está PRE_REGISTERED. Sem análise real, o estado é
+  // NOT_ANALYZED e o gate NÃO pode ser PASS — independentemente de a novidade
+  // declarada (vazia) resultar em taxa 0 dentro do threshold. É exatamente esse
+  // falso verde que este bloco elimina.
+  const analysisGaps = holdoutAnalysisEvidenceGaps(benchmark);
+  const preRegisteredDetail = {
+    holdoutId: benchmark.id,
+    marketArchetype: holdoutRecord.marketArchetype,
+    preRegisteredAt: holdoutRecord.selectedAsHoldoutAt,
+    analyzedAt: isNonEmptyString(benchmark.analyzedAt) ? benchmark.analyzedAt : null,
+    inventoryVersion: holdoutRecord.inventoryVersion,
+    missingAnalysisEvidence: analysisGaps,
+    violations,
+  };
+
+  if (!isNonEmptyString(benchmark.analyzedAt)) {
+    return {
+      status: HOLDOUT_STATES.NOT_ANALYZED,
+      holdoutState: HOLDOUT_STATES.NOT_ANALYZED,
+      ...preRegisteredDetail,
+      rateState: RATE_STATES.BASELINE_UNKNOWN,
+      noncriticalNoveltyRate: null,
+      violations: [...violations, { reason: 'holdout_not_analyzed', benchmarkId: benchmark.id }],
+    };
+  }
+
+  if (!Number.isFinite(Date.parse(benchmark.analyzedAt))) {
+    return {
+      status: 'FAIL',
+      holdoutState: HOLDOUT_STATES.NOT_ANALYZED,
+      ...preRegisteredDetail,
+      violations: [
+        ...violations,
+        { reason: 'holdout_analyzed_at_invalid', value: benchmark.analyzedAt },
+      ],
+    };
+  }
+
+  // Análise declarada, mas sem evidência auditável de análise: NÃO é PASS e não
+  // é FAIL de política — é NÃO MENSURÁVEL (falta o insumo, não o resultado).
+  if (analysisGaps.length > 0) {
+    return {
+      status: 'NOT_MEASURABLE',
+      holdoutState: HOLDOUT_STATES.ANALYSIS_EVIDENCE_INCOMPLETE,
+      ...preRegisteredDetail,
+      violations: [
+        ...violations,
+        { reason: 'holdout_analysis_evidence_incomplete', missing: analysisGaps },
+        ...analysisGaps.map((gap) => ({ reason: HOLDOUT_ANALYSIS_GAP_REASONS[gap] || 'holdout_analysis_evidence_field_missing', field: gap })),
+      ],
+    };
   }
 
   const novelty = benchmark.novelty || emptyNovelty();
@@ -644,16 +802,17 @@ function evaluateHoldout({ sample, policy }) {
     violations,
   };
 
-  if (violations.length > 0) return { ...status(false, detail), holdoutCurves };
+  if (violations.length > 0) return { ...status(false, detail), holdoutState: HOLDOUT_STATES.FAIL, holdoutCurves };
   if (rateState !== RATE_STATES.MEASURED) {
     // Declarado, não silenciado: taxa de novidade do holdout não é mensurável.
     return {
       ...detail,
       status: 'NOT_MEASURABLE',
+      holdoutState: HOLDOUT_STATES.NOT_MEASURABLE,
       rateReason: `holdout_novelty_rate_${String(rateState).toLowerCase()}`,
     };
   }
-  return { ...status(true, detail), holdoutCurves };
+  return { ...status(true, detail), holdoutState: HOLDOUT_STATES.PASS, holdoutCurves };
 }
 
 // ── §17 Leave-one-out ─────────────────────────────────────────────────────
@@ -877,6 +1036,187 @@ function evaluateEvidenceTraceability({ sample }) {
   });
 }
 
+// ── §6/§7/§8/§9/§11 Evidence obrigatória para TODA descoberta ─────────────
+//
+// GAP: a cadeia Benchmark → Finding → Canonical Item → SourceRef → EvidenceRef
+// era exigida apenas de itens CRÍTICOS. Uma capability NÃO crítica sem evidence
+// também altera o inventário — portanto altera denominador, tamanho do
+// inventário, novelty rate e saturação. O caminho não crítico era uma porta
+// aberta para manipular o resultado final sem precisar mentir sobre nada
+// crítico. Aqui a exigência passa a valer para toda descoberta.
+
+/** Dimensão canônica de cada bucket de novelty. */
+const FINDING_KIND_BY_NOVELTY_KEY = Object.freeze({
+  newCapabilities: 'capability',
+  newRequiredCapabilities: 'capability',
+  newCriticalCapabilities: 'capability',
+  newJourneys: 'journey',
+  newRequiredJourneys: 'journey',
+  newCriticalJourneys: 'journey',
+  newBusinessRules: 'rule',
+  newRequiredBusinessRules: 'rule',
+  newCriticalBusinessRules: 'rule',
+});
+
+/** Criticalidade implícita do bucket, quando o item não declara a sua. */
+const FINDING_CRITICALITY_BY_NOVELTY_KEY = Object.freeze({
+  newCapabilities: 'UNCLASSIFIED',
+  newRequiredCapabilities: 'REQUIRED',
+  newCriticalCapabilities: 'CRITICAL',
+  newJourneys: 'UNCLASSIFIED',
+  newRequiredJourneys: 'REQUIRED',
+  newCriticalJourneys: 'CRITICAL',
+  newBusinessRules: 'UNCLASSIFIED',
+  newRequiredBusinessRules: 'REQUIRED',
+  newCriticalBusinessRules: 'CRITICAL',
+});
+
+const RAP_DERIVED_ORIGINS = Object.freeze(['RAP_DERIVED', 'RAP-DERIVED', 'DERIVED']);
+
+function isRapDerived(item) {
+  if (!item || typeof item !== 'object') return false;
+  return RAP_DERIVED_ORIGINS.includes(String(item.origin || item.derivation || '').toUpperCase());
+}
+
+/**
+ * Rastreabilidade OBRIGATÓRIA de toda descoberta externa + registro explícito
+ * de derivações do próprio RAP (§8): o RAP pode inferir uma jornada/regra que
+ * nenhum concorrente descreve literalmente, mas então precisa declarar de onde
+ * derivou, com rationale, responsável e versão do inventário — jamais fingir
+ * que o fornecedor publicou aquilo.
+ */
+function evaluateFindingEvidence({ sample, policy = {}, derivations = null }) {
+  const violations = [];
+  const evidence = list(sample.evidence);
+  const evidenceIds = new Set(evidence.map((entry) => String(entry.id)));
+  const declaredCapabilityIds = new Set();
+  for (const benchmark of list(sample.benchmarks)) {
+    const novelty = benchmark.novelty || emptyNovelty();
+    for (const item of list(novelty[NOVELTY_KEYS.capabilities])) {
+      declaredCapabilityIds.add(String(item !== null && typeof item === 'object' && item.id ? item.id : item));
+    }
+  }
+
+  const derivedRecords = list(derivations === null ? sample.rapDerivations : derivations);
+  const derivedFindings = [];
+  const invalidDerivations = [];
+  for (const record of derivedRecords) {
+    const id = record && record.id ? String(record.id) : null;
+    const row = { id, kind: record && record.kind ? String(record.kind) : null, origin: 'RAP_DERIVED' };
+    const gaps = [];
+    if (!id) gaps.push('id');
+    if (!Array.isArray(record && record.derivedFrom) || list(record && record.derivedFrom).length === 0) gaps.push('derivedFrom');
+    if (!isNonEmptyString(record && record.rationale)) gaps.push('rationale');
+    if (!isNonEmptyString(record && record.classifiedBy)) gaps.push('classifiedBy');
+    if (!isNonEmptyString(record && record.inventoryVersion)) gaps.push('inventoryVersion');
+    if (gaps.length > 0) {
+      violations.push({ ...row, reason: 'rap_derived_without_derivation_provenance', missing: gaps });
+      invalidDerivations.push(id);
+      continue;
+    }
+    const unresolved = list(record.derivedFrom).filter((ref) => (
+      !evidenceIds.has(String(ref)) && !declaredCapabilityIds.has(String(ref))
+    ));
+    if (unresolved.length > 0) {
+      violations.push({ ...row, reason: 'rap_derived_source_unresolved', unresolved });
+      invalidDerivations.push(id);
+      continue;
+    }
+    derivedFindings.push({ ...row, derivedFrom: list(record.derivedFrom).map(String), rationale: record.rationale, classifiedBy: record.classifiedBy });
+  }
+
+  const validFindings = [];
+  const invalidFindings = [];
+  let total = 0;
+
+  for (const benchmark of list(sample.benchmarks)) {
+    const novelty = benchmark.novelty || emptyNovelty();
+    const sources = list(benchmark.sources);
+    const sourceByRef = new Map();
+    for (const [index, source] of sources.entries()) {
+      if (source && source.id) sourceByRef.set(String(source.id), source);
+      if (source && source.url) sourceByRef.set(String(source.url), source);
+      sourceByRef.set(`#${index}`, source);
+    }
+
+    for (const key of ALL_NOVELTY_KEYS) {
+      const kind = FINDING_KIND_BY_NOVELTY_KEY[key];
+      for (const item of list(novelty[key])) {
+        total += 1;
+        const structured = item !== null && typeof item === 'object';
+        const id = structured && item.id ? String(item.id) : String(item);
+        const criticality = String(
+          (structured && (item.criticality || item.importance)) || FINDING_CRITICALITY_BY_NOVELTY_KEY[key],
+        ).toUpperCase();
+        const row = { benchmarkId: benchmark.id, kind, id, criticality, noveltyKey: key };
+
+        if (isRapDerived(item)) {
+          const record = derivedFindings.find((entry) => entry.id === id);
+          if (!record) {
+            const violation = { ...row, reason: 'rap_derived_without_derivation_provenance', origin: 'RAP_DERIVED' };
+            violations.push(violation);
+            invalidFindings.push({ ...row, origin: 'RAP_DERIVED' });
+            continue;
+          }
+          validFindings.push({ ...row, origin: 'RAP_DERIVED' });
+          continue;
+        }
+
+        const sourceRef = structured && item.sourceRef ? String(item.sourceRef) : null;
+        const evidenceRef = structured && item.evidenceRef ? String(item.evidenceRef) : null;
+        const source = sourceRef ? sourceByRef.get(sourceRef) || null : null;
+        const localViolations = [];
+
+        if (!sourceRef) localViolations.push({ ...row, reason: 'finding_without_source_ref' });
+        else if (!source) localViolations.push({ ...row, reason: 'finding_source_ref_unresolved', sourceRef });
+
+        if (!evidenceRef) localViolations.push({ ...row, reason: 'finding_without_evidence_ref' });
+        else if (!evidenceIds.has(evidenceRef)) localViolations.push({ ...row, reason: 'finding_evidence_ref_unresolved', evidenceRef });
+
+        if (source) {
+          if (isGenericSource(source)) {
+            localViolations.push({ ...row, reason: 'finding_supported_only_by_generic_source', url: source.url || null });
+          } else {
+            const verificationState = classifySourceVerification(source, policy);
+            const requiresOfficial = ['CRITICAL', 'REQUIRED'].includes(criticality);
+            const acceptable = requiresOfficial
+              ? verificationState === SOURCE_VERIFICATION_STATES.VERIFIED_OFFICIAL
+              : verificationState === SOURCE_VERIFICATION_STATES.VERIFIED_OFFICIAL
+                || verificationState === SOURCE_VERIFICATION_STATES.VERIFIED_SECONDARY;
+            if (!acceptable) {
+              localViolations.push({
+                ...row,
+                reason: requiresOfficial ? 'required_finding_source_not_official' : 'finding_source_not_verified',
+                verificationState,
+                sourceTier: declaredNumber(source.tier),
+              });
+            }
+          }
+        }
+
+        if (localViolations.length > 0) {
+          violations.push(...localViolations);
+          invalidFindings.push({ ...row, reasons: localViolations.map((v) => v.reason) });
+        } else {
+          validFindings.push({ ...row, origin: 'EXTERNAL', sourceRef, evidenceRef });
+        }
+      }
+    }
+  }
+
+  return status(invalidFindings.length === 0 && invalidDerivations.length === 0, {
+    violations,
+    validFindings,
+    invalidFindings,
+    derivedFindings,
+    invalidDerivations,
+    totals: {
+      findings: total, valid: validFindings.length, invalid: invalidFindings.length, derived: derivedFindings.length,
+    },
+    invalidFindingIds: invalidFindings.map((finding) => `${finding.benchmarkId}:${finding.kind}:${finding.id}`),
+  });
+}
+
 function evaluateFreshness({ sample, policy, now = new Date() }) {
   const nowMs = now instanceof Date ? now.getTime() : Date.parse(now);
   const maxSourceAgeMs = Number(policy.maximumSourceAgeDays) * 86400000;
@@ -1035,6 +1375,7 @@ const GATE_NAMES = Object.freeze([
   'holdoutValidation',
   'sourceQuality',
   'evidenceTraceability',
+  'findingEvidence',
   'freshness',
   'criticalClassification',
   'inventoryArithmetic',
@@ -1053,8 +1394,50 @@ function listCriticalGates() {
   return GATE_NAMES.filter((gate) => !INFORMATION_ONLY_GATES.includes(gate));
 }
 
-// ── §40 Gate principal ────────────────────────────────────────────────────
+/**
+ * §46 Todo percentual precisa vir acompanhado de numerador, denominador,
+ * escopo, versão do inventário e estado da amostra. "Fitness Coverage: 100%" é
+ * uma afirmação sem sujeito: 100% DE QUÊ, medido contra O QUÊ, com QUAL estado
+ * de amostra? Este objeto torna a afirmação completa — ou a impede.
+ */
+function buildCoverageStatement({
+  sample, state, certifiable, findingEvidence, archetypeCoverage, saturation, holdout,
+} = {}) {
+  const inventorySize = saturation && saturation.curve ? saturation.curve.inventorySize : null;
+  const baseline = Number(sample && sample.canonicalInventoryBaseline);
+  return {
+    scope: `vertical:${sample && sample.vertical ? sample.vertical : 'unknown'}`,
+    inventoryVersion: (sample && sample.inventoryVersion) || null,
+    sampleVersion: (sample && sample.sampleVersion) || null,
+    sampleStatus: state || null,
+    certified: certifiable === true,
+    dimensions: {
+      requiredCapabilities: {
+        label: 'Required Capability Implementation',
+        numerator: inventorySize,
+        denominator: Number.isFinite(baseline) ? baseline : null,
+        unit: 'capabilities',
+      },
+      marketArchetypes: {
+        label: 'Market Archetype Coverage',
+        numerator: archetypeCoverage ? archetypeCoverage.representedArchetypes : null,
+        denominator: archetypeCoverage ? archetypeCoverage.relevantArchetypes : null,
+        unit: 'archetypes',
+      },
+      findings: {
+        label: 'Evidence-backed Findings',
+        numerator: findingEvidence ? findingEvidence.totals.valid : null,
+        denominator: findingEvidence ? findingEvidence.totals.findings : null,
+        unit: 'findings',
+      },
+    },
+    holdoutState: (holdout && holdout.holdoutState) || null,
+    // Nunca colapsar cobertura de implementação com certificação de mercado.
+    marketCertification: certifiable === true ? 'MARKET_SAMPLE_CERTIFIED' : 'MARKET_SAMPLE_NOT_CERTIFIED',
+  };
+}
 
+// ── §40 Gate principal ────────────────────────────────────────────────────
 function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
   const archetypeCoverage = evaluateArchetypeCoverage({ sample });
   const independence = evaluateIndependence({ sample });
@@ -1065,6 +1448,7 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
   const orderSensitivity = evaluateOrderSensitivity({ sample, policy });
   const sourceQuality = evaluateSourceQuality({ sample, policy });
   const evidenceTraceability = evaluateEvidenceTraceability({ sample });
+  const findingEvidence = evaluateFindingEvidence({ sample, policy });
   const freshness = evaluateFreshness({ sample, policy, now });
   const criticalClassification = evaluateCriticalClassification({ sample });
   const analysisEvidence = evaluateAnalysisEvidence({ sample });
@@ -1126,6 +1510,7 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
     holdoutValidation: holdout,
     sourceQuality,
     evidenceTraceability,
+    findingEvidence,
     freshness,
     criticalClassification,
     inventoryArithmetic,
@@ -1153,10 +1538,25 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
   if (list(sample.benchmarks).length === 0) state = SAMPLE_STATES.NOT_RESEARCHED;
   else if (analysisEvidence.analysedBenchmarks === 0) state = SAMPLE_STATES.NOT_RESEARCHED;
   else if (String(sample.researchState || '').toUpperCase() === 'RESEARCHING') state = SAMPLE_STATES.RESEARCHING;
+  // Descobrir sem evidência não é "descoberta não computada": é inventário
+  // inválido. O estado é explícito para que o relatório não possa apresentar
+  // findings sem prova como findings válidos.
+  else if (findingEvidence.invalidFindings.length > 0 || findingEvidence.invalidDerivations.length > 0) state = SAMPLE_STATES.INVALID_FINDINGS;
+  else if (holdout.holdoutState === HOLDOUT_STATES.NOT_ANALYZED) state = SAMPLE_STATES.HOLDOUT_NOT_ANALYZED;
   else if (holdout.status === 'FAIL' && holdout.violations.some((v) => String(v.reason).startsWith('holdout_new_critical') || v.reason === 'holdout_noncritical_novelty_rate_exceeded')) state = SAMPLE_STATES.HOLDOUT_FAILED;
   else if (String(sample.revalidationRequired || '').length > 0) state = SAMPLE_STATES.REVALIDATION_REQUIRED;
   else if (criticalBlocking.length === 0) state = SAMPLE_STATES.SUFFICIENT;
   else state = SAMPLE_STATES.NOT_SATURATED;
+
+  const coverageStatement = buildCoverageStatement({
+    sample,
+    state,
+    certifiable: state === SAMPLE_STATES.SUFFICIENT,
+    findingEvidence,
+    archetypeCoverage,
+    saturation,
+    holdout,
+  });
 
   return {
     vertical: sample.vertical,
@@ -1165,12 +1565,14 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
     policyVersion: policy.version,
     status: state,
     certifiable: state === SAMPLE_STATES.SUFFICIENT,
+    coverageStatement,
     gates,
     blocking,
     criticalBlocking,
     unmeasuredDimensions,
     inventoryCurves: saturation.curves,
     holdoutCurves: holdout.holdoutCurves || null,
+    holdoutState: holdout.holdoutState || null,
     discoverySet: discovery.map((b) => b.id),
     validationSet: validationBenchmarks(sample).map((b) => b.id),
     discoveryCurve: saturation.curve.points,
@@ -1182,6 +1584,8 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
 
 module.exports = {
   SAMPLE_STATES,
+  HOLDOUT_STATES,
+  HOLDOUT_ANALYSIS_EVIDENCE_FIELDS,
   EXTERNAL_BLOCK_STATE,
   NOVELTY_KEYS,
   ALL_NOVELTY_KEYS,
@@ -1212,8 +1616,11 @@ module.exports = {
   SOURCE_VERIFICATION_STATES,
   SOURCE_VERIFICATION_ORDER,
   evaluateEvidenceTraceability,
+  evaluateFindingEvidence,
+  isGenericSource,
   evaluateFreshness,
   evaluateCriticalClassification,
   evaluateAnalysisEvidence,
   evaluateSampleSufficiency,
+  buildCoverageStatement,
 };

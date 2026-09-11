@@ -20,6 +20,32 @@
   "_officialDocsConsultation": {
     "consultedAt": "2026-09-11",
     "method": "HTTP GET direto às URLs oficiais (sem inferência de LLM).",
+    "reverification": {
+      "at": "2026-09-11",
+      "results": [
+        {
+          "check": "https://docs.evo.com.br/api (página oficial da Referência da API)",
+          "httpStatus": 200,
+          "finding": "Confirma o resultado anterior: cobre exclusivamente EVO Meios de Pagamentos (Cobrança, Checkout, Assinatura, Plano, Cliente, Contato do Cliente, Endereço do Cliente, Tipo de Cliente, Identity/Token). Autenticação declarada: OAuth2/client credentials via POST /api/v1/Identity/Token."
+        },
+        {
+          "check": "https://www.evo.com.br/",
+          "httpStatus": 200,
+          "finding": "Site institucional do produto de MEIOS DE PAGAMENTO. Não publica contrato de integração de gestão de academia (alunos, matrículas, frequência)."
+        },
+        {
+          "check": "https://ajuda.evo.com.br/",
+          "httpStatus": null,
+          "finding": "Help center não acessível por fetch direto (conteúdo não extraível) — NÃO foi tratado como fonte verificada."
+        },
+        {
+          "check": "resolução DNS de evo-integracao.wanessa.cloud",
+          "httpStatus": null,
+          "finding": "NAO RESOLVE neste ambiente. Impossível capturar Swagger/OpenAPI do host candidato."
+        }
+      ],
+      "conclusion": "NENHUM path, parâmetro de paginação, filtro incremental ou esquema de autenticação desta integração pôde ser verificado contra fonte oficial. Os dialetos declarados abaixo (take/skip por recurso, academyDns+secretKey, filtros por data) permanecem marcados `verification: UNVERIFIED` item a item e NÃO podem ser promovidos por inferência."
+    },
     "sources": [
       {
         "url": "https://docs.evo.com.br/",
@@ -52,43 +78,165 @@
   },
 
   "webhook": {
+    "model": "RAP_DEFINED_CUSTOM_HEADER",
     "signatureHeader": "x-evo-signature",
+    "signatureHeaderConfigurable": true,
     "algorithm": "hmac-sha256",
     "verificationStatus": "UNVERIFIED",
-    "_note": "Este cabeçalho é o CONTRATO DO LADO RAP até prova em contrário: ele é verificado de forma fail-closed (sem segredo configurado o webhook é rejeitado) e normalizado como SINAL, nunca como verdade material. Nenhuma documentação oficial confirmando 'x-evo-signature' foi encontrada na consulta de 2026-09-11 — ao certificar contra o provedor real, confirmar o cabeçalho/algoritmo reais e ajustar aqui."
+    "providerDocumented": false,
+    "providerCapabilityRequired": "custom_header_on_webhook_creation",
+    "_note": "CORREÇÃO DE CONTRATO: o cabeçalho `x-evo-signature` com HMAC-SHA256 NÃO é um fato verificado do provedor — nenhuma documentação oficial que o descreva foi localizada (ver `_officialDocsConsultation`). O que existe é uma POSSIBILIDADE observada de configurar cabeçalhos customizados na criação do webhook. O modelo correto, portanto, é: o RAP gera um segredo aleatório forte, guarda cifrado e o ENVIA como cabeçalho customizado na criação do webhook; a verificação do callback é comparação em tempo constante desse segredo. Tratar um HMAC inventado como contrato do provedor seria inventar assinatura (§29/§51).",
+    "secretGeneration": {
+      "bytes": 32,
+      "encoding": "base64url",
+      "storage": "encrypted_at_rest",
+      "rotationSupported": true
+    },
+    "comparison": "constant_time",
+    "failClosed": true,
+    "failureReasons": ["webhook_secret_not_configured", "signature_header_missing", "signature_mismatch"],
+    "replayProtection": {
+      "strategy": "connection_scoped_digest_with_window",
+      "_rationale": "O provedor não fornece event id forte confirmado. A deduplicação usa apenas dados seguros e documentados: conexão (não escolhida pelo payload) + tipo de evento + identificadores do provedor + digest estável do payload normalizado + janela temporal. Nunca se deduplica por campo inventado.",
+      "windowSeconds": 900,
+      "digestAlgorithm": "sha256",
+      "payloadFieldsExcludedFromDigest": ["receivedAt", "attempt", "signature"],
+      "tradeoff": "Sem event id forte, dois eventos materialmente idênticos dentro da janela são tratados como um. É preferível reprocessar a reter duplicata? Não: o webhook é apenas SINAL — o estado canônico vem sempre de refetch na API, então uma deduplicação agressiva custa no máximo uma atualização atrasada, nunca estado divergente."
+    }
   },
 
   "_source": "Estrutura derivada do guia de integração do fornecedor para o produto EVO/W12 (recursos e semântica de negócio). Campos físicos devem ser confirmados item a item na certificação.",
 
   "provider": "evo",
   "readOnly": true,
+
+  "_contractStates": {
+    "_description": "Taxonomia EXPLÍCITA do estado do contrato. Impede que 'testei contra um fake local' seja apresentado como 'certifiquei contra o provedor real' — são estados independentes e não substituíveis.",
+    "states": [
+      "OFFICIAL_DOCS_VERIFIED",
+      "LOCAL_CONTRACT_TESTED",
+      "AWAITING_LIVE_CERTIFICATION",
+      "LIVE_CERTIFIED"
+    ],
+    "current": {
+      "OFFICIAL_DOCS_VERIFIED": false,
+      "LOCAL_CONTRACT_TESTED": true,
+      "AWAITING_LIVE_CERTIFICATION": true,
+      "LIVE_CERTIFIED": false
+    },
+    "_mustNotBeCollapsed": "O relatório de readiness precisa publicar cada estado separadamente. `LOCAL_CONTRACT_TESTED = true` NUNCA autoriza exibir 'EVO certified'."
+  },
+
+  "_hostPolicy": {
+    "_description": "O host de integração do EVO NÃO foi confirmado por documentação oficial (ver `_officialDocsConsultation`). Enquanto isso, nenhum host é tratado como OFICIAL: o candidato abaixo é apenas um candidato herdado do guia do fornecedor e continua sujeito ao guard fail-closed do cliente HTTP.",
+    "officialHost": null,
+    "candidateHost": "evo-integracao.wanessa.cloud",
+    "candidateHostVerification": "UNVERIFIED",
+    "candidateHostResolution": "DNS_UNRESOLVED_IN_BUILD_ENVIRONMENT",
+    "rules": [
+      "Nenhuma fonte que não seja documentação oficial do EVO pode promover um host a OFICIAL.",
+      "Trocar de host exige atualizar ESTE arquivo (nada mais) e registrar a fonte oficial que autoriza.",
+      "Host não certificado só é aceito em loopback (teste) ou com `config.allowUnverifiedEndpoints = true` explícito e auditável."
+    ],
+    "allowlist": [],
+    "_allowlistNote": "Vazia de propósito: uma allowlist com o host não verificado daria aparência de autorização oficial."
+  },
+
+  "_ssrfPolicy": {
+    "_description": "`IntegrationConnection.config.baseUrl` é configurável por tenant. Sem política, o campo vira um SSRF: o servidor faria requisições autenticadas para `169.254.169.254` (metadata), `10.0.0.0/8`, `localhost` etc. A política é aplicada ANTES de qualquer chamada e é independente do estado de certificação.",
+    "enabled": true,
+    "blockedHostnames": ["localhost", "metadata.google.internal"],
+    "blockedRanges": [
+      "0.0.0.0/8",
+      "10.0.0.0/8",
+      "100.64.0.0/10",
+      "127.0.0.0/8",
+      "169.254.0.0/16",
+      "172.16.0.0/12",
+      "192.0.0.0/24",
+      "192.168.0.0/16",
+      "198.18.0.0/15",
+      "224.0.0.0/4",
+      "240.0.0.0/4",
+      "::1/128",
+      "fc00::/7",
+      "fe80::/10"
+    ],
+    "allowedProtocols": ["https:", "http:"],
+    "httpRequiresExplicitOptIn": true,
+    "loopbackException": "loopback_requires_explicit_lab_opt_in",
+    "errorCode": "integration_endpoint_blocked_ssrf"
+  },
+
   "defaultBaseUrl": "https://evo-integracao.wanessa.cloud/api/v1",
+  "defaultBaseUrlOfficial": false,
+
   "auth": {
     "type": "basic",
-    "usernameField": "token",
-    "passwordField": "secretKey",
+    "scheme": "Basic",
     "header": "Authorization",
-    "scheme": "Basic"
+    "usernameField": "academyDns",
+    "passwordField": "secretKey",
+    "usernameSemantic": "DNS da academia (identificador da unidade no EVO) — NÃO é token de API",
+    "passwordSemantic": "Secret Key do provedor",
+    "verification": "UNVERIFIED",
+    "_verificationNote": "A documentação pública consultada (docs.evo.com.br) NÃO cobre a API de integração de ERP/academia: ela documenta a API Financeiro, que usa client credentials. O dialeto `academyDns` + `secretKey` segue o guia do fornecedor e permanece NÃO confirmado oficialmente.",
+    "_rejectedAlternative": {
+      "usernameField": "token",
+      "why": "Tratar o usuário do Basic como 'token' induz a confusão com token de API/OAuth e faz o operador colar uma credencial errada. Se a certificação confirmar outro dialeto, corrigir AQUI — o adapter lê o contrato."
+    },
+    "_forbidden": {
+      "identityTokenPath": "O fluxo client-credentials da API Financeiro NÃO pode ser transportado para esta integração."
+    }
   },
+
   "request": {
     "timeoutMs": 15000,
     "maxRetries": 3,
     "baseBackoffMs": 500,
     "concurrency": 2,
-    "pageSize": 100,
-    "maxPages": 500
+    "maxPages": 500,
+    "_pageSizeNote": "NÃO existe `pageSize` global. Cada recurso declara o seu `pagination.model` e `pagination.maxTake`; usar uma constante global de tamanho de página em uma API com limites resource-specific produz lotes truncados silenciosos."
   },
+
+  "_paginationModels": {
+    "_description": "Dialetos de paginação por recurso. Uma abstração global `page`/`size` era aplicada a todos os recursos mesmo quando a API documenta `take`/`skip` — o resultado é requisição com parâmetro inexistente, que o provedor ignora, devolvendo sempre a primeira página (loop até o limite de páginas).",
+    "takeSkip": {
+      "type": "takeSkip",
+      "takeParam": "take",
+      "skipParam": "skip",
+      "startsAt": 0,
+      "itemsField": null,
+      "itemsFieldAlternatives": ["data", "items", "results", "content", "value"],
+      "totalCountFieldAlternatives": ["count", "totalCount", "total_count", "total"],
+      "hasMoreFieldAlternatives": ["hasMore", "has_more"],
+      "progressBy": "skip"
+    }
+  },
+
   "pagination": {
-    "type": "offset",
-    "pageParam": "page",
-    "sizeParam": "size",
-    "startsAt": 1,
+    "_deprecated": "Chave mantida apenas como espelho do modelo padrão para compatibilidade de leitura; a fonte efetiva é `resources.<r>.pagination`. Nenhum caminho de execução deve ler `contract.pagination` diretamente.",
+    "type": "takeSkip",
+    "takeParam": "take",
+    "skipParam": "skip",
+    "startsAt": 0,
     "itemsField": null,
-    "itemsFieldAlternatives": ["data", "items", "results", "content"],
+    "itemsFieldAlternatives": ["data", "items", "results", "content", "value"],
     "totalPagesField": null,
     "totalPagesFieldAlternatives": ["totalPages", "total_pages", "pages"],
     "hasMoreFieldAlternatives": ["hasMore", "has_more"]
   },
+
+  "_incrementalStrategies": {
+    "_description": "Cada recurso usa o filtro REAL documentado. Um `updatedSince` global aplicado a todos os recursos é uma invenção de dialeto: recursos financeiros filtram por data de recebimento/cancelamento, entradas por data de registro. Enquanto a certificação não ocorrer, cada estratégia é declarada e explicitamente NÃO verificada.",
+    "REGISTER_DATE_RANGE": { "params": ["registerDateStart", "registerDateEnd"], "watermark": "registerDate", "halfOpen": false },
+    "UPDATE_DATE_RANGE": { "params": ["updateDateStart", "updateDateEnd"], "watermark": "updateDate", "halfOpen": false },
+    "UPDATE_DATE": { "params": ["updateDate"], "watermark": "updateDate", "halfOpen": false },
+    "RECEIVING_DATE_RANGE": { "params": ["receivingDateStart", "receivingDateEnd"], "watermark": "receivingDate", "halfOpen": false },
+    "CANCELLATION_DATE_RANGE": { "params": ["cancellationDateStart", "cancellationDateEnd"], "watermark": "cancellationDate", "halfOpen": false },
+    "FULL_SCAN": { "params": [], "watermark": null, "halfOpen": false }
+  },
+
   "rateLimit": {
     "documented": false,
     "policy": "Nenhum limite oficial foi confirmado. Concorrência conservadora (2) e retry com backoff exponencial em 429/5xx/timeout; nunca retry cego em operação mutável (a integração é read-only)."
@@ -96,10 +244,16 @@
 
   "resources": {
     "members": {
+      "evoEntity": "Member",
+      "evoEntitySemantic": "Aluno/pessoa da academia",
+      "rapTarget": "MarketingLead → WorkspaceEntity → WorkspaceEntityLink → AccessSubject",
+      "verification": "UNVERIFIED",
       "path": "/members",
       "detailPath": "/members/{id}",
-      "incrementalParam": "updatedSince",
+      "pagination": { "model": "takeSkip", "maxTake": 100, "defaultTake": 50 },
+      "incremental": { "strategy": "UPDATE_DATE_RANGE", "verification": "UNVERIFIED", "supportsIncremental": true },
       "supportsIncremental": true,
+      "incrementalParam": "updateDateStart",
       "fields": {
         "externalId": ["idMember", "id"],
         "name": ["name", "nome"],
@@ -113,10 +267,16 @@
       }
     },
     "prospects": {
+      "evoEntity": "Prospect",
+      "evoEntitySemantic": "Lead ainda não convertido em aluno",
+      "rapTarget": "MarketingLead → WorkspaceEntity (mesma pessoa após conversão)",
+      "verification": "UNVERIFIED",
       "path": "/prospects",
       "detailPath": "/prospects/{id}",
-      "incrementalParam": "updatedSince",
+      "pagination": { "model": "takeSkip", "maxTake": 100, "defaultTake": 50 },
+      "incremental": { "strategy": "REGISTER_DATE_RANGE", "verification": "UNVERIFIED", "supportsIncremental": true },
       "supportsIncremental": true,
+      "incrementalParam": "registerDateStart",
       "fields": {
         "externalId": ["idProspect", "id"],
         "name": ["name", "nome"],
@@ -130,9 +290,16 @@
       }
     },
     "plans": {
+      "evoEntity": "Membership",
+      "evoEntitySemantic": "CATÁLOGO/TIPO de plano ofertado (produto comercial). NÃO é o contrato de um aluno.",
+      "rapTarget": "Projection/reference de catálogo (provider-neutral). NUNCA vira AccessMembership.",
+      "verification": "UNVERIFIED",
       "path": "/membership-plans",
       "detailPath": "/membership-plans/{id}",
-      "supportsIncremental": false,
+      "pagination": { "model": "takeSkip", "maxTake": 100, "defaultTake": 50 },
+      "incremental": { "strategy": "UPDATE_DATE_RANGE", "verification": "UNVERIFIED", "supportsIncremental": true },
+      "supportsIncremental": true,
+      "incrementalParam": "updateDateStart",
       "fields": {
         "externalId": ["idMembershipPlan", "id"],
         "name": ["name", "nome"],
@@ -143,10 +310,17 @@
       }
     },
     "memberships": {
+      "evoEntity": "MemberMembership",
+      "evoEntitySemantic": "CONTRATO/matrícula efetivamente pertencente ao aluno (instância), com plano referenciado por id.",
+      "rapTarget": "AccessMembership",
+      "mustNotBeConfusedWith": "plans (EVO Membership = catálogo)",
+      "verification": "UNVERIFIED",
       "path": "/memberships",
       "detailPath": "/memberships/{id}",
-      "incrementalParam": "updatedSince",
+      "pagination": { "model": "takeSkip", "maxTake": 100, "defaultTake": 50 },
+      "incremental": { "strategy": "UPDATE_DATE_RANGE", "verification": "UNVERIFIED", "supportsIncremental": true },
       "supportsIncremental": true,
+      "incrementalParam": "updateDateStart",
       "fields": {
         "externalId": ["idMembership", "id"],
         "memberExternalId": ["idMember", "memberId"],
@@ -163,10 +337,16 @@
       }
     },
     "entries": {
+      "evoEntity": "Entry",
+      "evoEntitySemantic": "Check-in/acesso registrado (frequência)",
+      "rapTarget": "VerticalAttendance",
+      "verification": "UNVERIFIED",
       "path": "/entries",
       "detailPath": "/entries/{id}",
-      "incrementalParam": "updatedSince",
+      "pagination": { "model": "takeSkip", "maxTake": 100, "defaultTake": 50 },
+      "incremental": { "strategy": "REGISTER_DATE_RANGE", "verification": "UNVERIFIED", "supportsIncremental": true },
       "supportsIncremental": true,
+      "incrementalParam": "registerDateStart",
       "fields": {
         "externalId": ["idEntry", "id"],
         "memberExternalId": ["idMember", "memberId"],
@@ -176,10 +356,17 @@
       }
     },
     "sales": {
+      "evoEntity": "Sale",
+      "evoEntitySemantic": "Venda realizada. Pode originar VÁRIOS recebíveis.",
+      "rapTarget": "BillingTransaction",
+      "mustNotBeConfusedWith": "receivables (uma venda pode gerar múltiplos recebíveis)",
+      "verification": "UNVERIFIED",
       "path": "/sales",
       "detailPath": "/sales/{id}",
-      "incrementalParam": "updatedSince",
+      "pagination": { "model": "takeSkip", "maxTake": 100, "defaultTake": 50 },
+      "incremental": { "strategy": "REGISTER_DATE_RANGE", "verification": "UNVERIFIED", "supportsIncremental": true },
       "supportsIncremental": true,
+      "incrementalParam": "registerDateStart",
       "fields": {
         "externalId": ["idSale", "id"],
         "memberExternalId": ["idMember", "memberId"],
@@ -193,10 +380,17 @@
       }
     },
     "receivables": {
+      "evoEntity": "Receivable",
+      "evoEntitySemantic": "Título a receber; pode ser derivado de uma venda.",
+      "rapTarget": "BillingTransaction (reconciliation periódica obrigatória)",
+      "mustNotBeConfusedWith": "sales (uma venda pode originar múltiplos recebíveis)",
+      "verification": "UNVERIFIED",
       "path": "/receivables",
       "detailPath": "/receivables/{id}",
-      "incrementalParam": "updatedSince",
+      "pagination": { "model": "takeSkip", "maxTake": 100, "defaultTake": 50 },
+      "incremental": { "strategy": "RECEIVING_DATE_RANGE", "verification": "UNVERIFIED", "supportsIncremental": true },
       "supportsIncremental": true,
+      "incrementalParam": "receivingDateStart",
       "fields": {
         "externalId": ["idReceivable", "id"],
         "memberExternalId": ["idMember", "memberId"],

@@ -11,7 +11,7 @@
 
 const http = require('http');
 
-const { createFakeEvoServer } = require('../helpers/fakeEvoServer');
+const { createFakeEvoServer, labConfig } = require('../helpers/fakeEvoServer');
 const evo = require('../../api/services/integration/providers/evo/evoProviderAdapter');
 const { createEvoClient } = require('../../api/services/integration/providers/evo/evoApiClient');
 const { checkProviderContract } = require('../../api/services/integration/providerContract');
@@ -19,7 +19,9 @@ const { INTEGRATION_ERROR_CODES } = require('../../api/services/integration/inte
 
 const FAST_CONTRACT = {
   ...evo.loadContract(),
-  request: { ...evo.loadContract().request, timeoutMs: 400, maxRetries: 2, baseBackoffMs: 5, pageSize: 2 },
+  request: {
+    ...evo.loadContract().request, timeoutMs: 400, maxRetries: 2, baseBackoffMs: 5,
+  },
 };
 
 function memberRecord(id, extra = {}) {
@@ -68,7 +70,7 @@ describe('EVO provider — autenticação', () => {
 
   it('aceita credenciais corretas', async () => {
     const result = await evo.validateConnection({
-      connection: { config: { baseUrl: server.baseUrl } },
+      connection: { config: labConfig(server.baseUrl) },
       credentials: server.credentials,
       contract: FAST_CONTRACT,
     });
@@ -78,8 +80,8 @@ describe('EVO provider — autenticação', () => {
 
   it('rejeita credenciais inválidas com código de auth', async () => {
     const result = await evo.validateConnection({
-      connection: { config: { baseUrl: server.baseUrl } },
-      credentials: { token: 'errado', secretKey: 'errado' },
+      connection: { config: labConfig(server.baseUrl) },
+      credentials: { academyDns: 'errado', secretKey: 'errado' },
       contract: FAST_CONTRACT,
     });
     expect(result.ok).toBe(false);
@@ -89,7 +91,7 @@ describe('EVO provider — autenticação', () => {
 
   it('exige credenciais completas', async () => {
     const result = await evo.validateConnection({
-      connection: { config: { baseUrl: server.baseUrl } },
+      connection: { config: labConfig(server.baseUrl) },
       credentials: { token: 'só-token' },
       contract: FAST_CONTRACT,
     });
@@ -109,7 +111,7 @@ describe('EVO provider — paginação', () => {
   });
   afterAll(async () => { await server.close(); });
 
-  const ctx = () => ({ connection: { config: { baseUrl: server.baseUrl } }, credentials: server.credentials, contract: FAST_CONTRACT });
+  const ctx = () => ({ connection: { config: labConfig(server.baseUrl) }, credentials: server.credentials, contract: FAST_CONTRACT });
 
   it('0 registros', async () => {
     const page = await evo.fetchPage({ ...ctx(), resource: 'prospects', limit: 2 });
@@ -173,11 +175,13 @@ describe('EVO provider — paginação', () => {
     const baseUrl = `http://127.0.0.1:${repeated.address().port}/api/v1`;
     const client = createEvoClient({
       contract: FAST_CONTRACT,
-      connection: { baseUrl },
+      connection: { config: labConfig(baseUrl) },
       credentials: server.credentials,
     });
     try {
-      await expect(client.fetchAllPages('/members'))
+      // `take` explícito por chamada: não existe mais tamanho de página global.
+      // O servidor devolve sempre o MESMO lote de 2 itens para um `take=2`.
+      await expect(client.fetchAllPages('/members', { take: 2 }))
         .rejects.toMatchObject({ code: INTEGRATION_ERROR_CODES.PROVIDER_BAD_RESPONSE });
     } finally {
       await new Promise((resolve) => repeated.close(resolve));
@@ -193,7 +197,7 @@ describe('EVO provider — resiliência', () => {
   });
   afterAll(async () => { await server.close(); });
 
-  const ctx = () => ({ connection: { config: { baseUrl: server.baseUrl } }, credentials: server.credentials, contract: FAST_CONTRACT });
+  const ctx = () => ({ connection: { config: labConfig(server.baseUrl) }, credentials: server.credentials, contract: FAST_CONTRACT });
 
   it('429 é reprocessado e a página é entregue', async () => {
     server.addFailure({ path: '/members', times: 1, status: 429 });
@@ -226,7 +230,7 @@ describe('EVO provider — resiliência', () => {
   it('erro não vaza credencial na mensagem', async () => {
     try {
       await evo.fetchPage({
-        connection: { config: { baseUrl: server.baseUrl } },
+        connection: { config: labConfig(server.baseUrl) },
         credentials: { token: 'token-secreto-123', secretKey: 'secret-secreto-456' },
         resource: 'members',
       });
@@ -251,7 +255,7 @@ describe('EVO provider — schema drift', () => {
 
   it('registro sem campo obrigatório é rejeitado sem derrubar o lote', async () => {
     const page = await evo.fetchPage({
-      connection: { config: { baseUrl: server.baseUrl } },
+      connection: { config: labConfig(server.baseUrl) },
       credentials: server.credentials,
       resource: 'members',
       limit: 10,
@@ -295,7 +299,7 @@ describe('EVO provider — mapeamento (DTO normalizado)', () => {
   afterAll(async () => { await server.close(); });
 
   const fetch = (resource) => evo.fetchPage({
-    connection: { config: { baseUrl: server.baseUrl } },
+    connection: { config: labConfig(server.baseUrl) },
     credentials: server.credentials,
     resource,
     limit: 10,
@@ -342,7 +346,7 @@ describe('EVO provider — mapeamento (DTO normalizado)', () => {
 
   it('fetchOne devolve o registro normalizado', async () => {
     const item = await evo.fetchOne({
-      connection: { config: { baseUrl: server.baseUrl } },
+      connection: { config: labConfig(server.baseUrl) },
       credentials: server.credentials,
       resource: 'members',
       externalId: '10',
@@ -353,7 +357,7 @@ describe('EVO provider — mapeamento (DTO normalizado)', () => {
 
   it('fetchOne devolve null para 404 tratado', async () => {
     await expect(evo.fetchOne({
-      connection: { config: { baseUrl: server.baseUrl } },
+      connection: { config: labConfig(server.baseUrl) },
       credentials: server.credentials,
       resource: 'members',
       externalId: 'nao-existe',
@@ -365,10 +369,24 @@ describe('EVO provider — mapeamento (DTO normalizado)', () => {
 describe('EVO provider — webhook', () => {
   const connection = { config: { webhookSecret: 'segredo-webhook' }, external_unit_id: '1' };
 
-  it('valida assinatura HMAC correta', () => {
+  it('valida cabeçalho customizado com o segredo do RAP (modelo padrão do contrato)', () => {
+    expect(evo.verifyWebhookSignature({
+      connection,
+      headers: { 'x-evo-signature': 'segredo-webhook' },
+      rawBody: '{"a":1}',
+    })).toEqual({ ok: true, mode: 'SHARED_SECRET_HEADER' });
+  });
+
+  it('HMAC só é aceito quando o operador declara o modo explicitamente', () => {
     const rawBody = JSON.stringify({ event: 'entry.created', idEntry: 554423 });
     const signature = require('crypto').createHmac('sha256', 'segredo-webhook').update(rawBody).digest('hex');
-    expect(evo.verifyWebhookSignature({ connection, headers: { 'x-evo-signature': signature }, rawBody })).toEqual({ ok: true });
+
+    // Sem declaração explícita, HMAC NÃO é presumido como contrato do provedor.
+    expect(evo.verifyWebhookSignature({ connection, headers: { 'x-evo-signature': signature }, rawBody }).ok).toBe(false);
+
+    const declared = { config: { webhookSecret: 'segredo-webhook', webhookAuthMode: 'HMAC_SHA256' }, external_unit_id: '1' };
+    expect(evo.verifyWebhookSignature({ connection: declared, headers: { 'x-evo-signature': signature }, rawBody }))
+      .toEqual({ ok: true, mode: 'HMAC_SHA256' });
   });
 
   it('rejeita assinatura incorreta', () => {
@@ -425,7 +443,7 @@ describe('EVO provider — guarda de contrato não certificado', () => {
     await server.listen();
     try {
       const page = await evo.fetchPage({
-        connection: { config: { baseUrl: server.baseUrl } },
+        connection: { config: labConfig(server.baseUrl) },
         credentials: server.credentials,
         resource: 'members',
         limit: 10,

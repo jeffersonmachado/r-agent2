@@ -13,6 +13,16 @@ function buildHarness(overrides = {}) {
     headers: { 'user-agent': 'jest' },
     socket: { remoteAddress: '127.0.0.1' },
   };
+  const runAskAiTurn = jest.fn(async () => ({
+    conversationId: 'conv_abc123456789',
+    answer: 'Use o fluxo de redefinição autorizado.',
+    sources: [],
+    facts: [],
+    intent: 'KNOWLEDGE',
+    confidence: 'fully_grounded',
+    provenance: { liveData: [], knowledge: [], inference: 'none', recommendation: 'none' },
+    policy: { entityValidated: true },
+  }));
   const deps = {
     requireAuth: jest.fn(() => ({ valid: true })),
     requirePermission: jest.fn(() => ({ allowed: true })),
@@ -32,9 +42,10 @@ function buildHarness(overrides = {}) {
       })),
     },
     logger: { error: jest.fn() },
+    runAskAiTurn,
     ...overrides,
   };
-  return { req, res, deps, responses };
+  return { req, res, deps, responses, runAskAiTurn };
 }
 
 async function invoke(harness) {
@@ -48,7 +59,7 @@ async function invoke(harness) {
 }
 
 describe('POST /api/ask-ai — boundary de segurança', () => {
-  test('nega chamada anônima antes de consultar o RAG', async () => {
+  test('nega chamada anônima antes de orquestrar', async () => {
     const harness = buildHarness({
       requireAuth: jest.fn(() => ({ valid: false, error: 'token ausente' })),
     });
@@ -56,7 +67,7 @@ describe('POST /api/ask-ai — boundary de segurança', () => {
     await invoke(harness);
 
     expect(harness.responses[0].status).toBe(401);
-    expect(harness.deps.ragService.queryRag).not.toHaveBeenCalled();
+    expect(harness.runAskAiTurn).not.toHaveBeenCalled();
   });
 
   test('exige permissão rag:query', async () => {
@@ -68,7 +79,7 @@ describe('POST /api/ask-ai — boundary de segurança', () => {
 
     expect(harness.deps.requirePermission).toHaveBeenCalledWith(harness.req, 'rag', 'query');
     expect(harness.responses[0].status).toBe(403);
-    expect(harness.deps.ragService.queryRag).not.toHaveBeenCalled();
+    expect(harness.runAskAiTurn).not.toHaveBeenCalled();
   });
 
   test('aplica rate limit antes de processar a pergunta', async () => {
@@ -88,18 +99,34 @@ describe('POST /api/ask-ai — boundary de segurança', () => {
 
     await invoke(harness);
 
-    expect(harness.deps.ragService.queryRag).toHaveBeenCalledWith(
-      'Como redefino minha senha?',
-      'tenant-a',
-      { actor: harness.req.agent },
-      expect.objectContaining({ topK: 6 })
-    );
+    expect(harness.runAskAiTurn).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-a',
+      actor: harness.req.agent,
+      payload: expect.objectContaining({ question: 'Como redefino minha senha?' }),
+    }));
     expect(harness.deps.logActionRequired).toHaveBeenCalledWith(expect.objectContaining({
       tenantId: 'tenant-a',
       agentId: 'agent-a',
       action: 'rag_query',
     }));
-    expect(harness.responses[0]).toMatchObject({ status: 200, body: { success: true } });
+    expect(harness.responses[0]).toMatchObject({
+      status: 200,
+      body: { success: true, conversationId: 'conv_abc123456789', intent: 'KNOWLEDGE' },
+    });
+  });
+
+  test('rejeita contexto de tela com campo desconhecido antes de orquestrar', async () => {
+    const harness = buildHarness({
+      parseJsonBody: jest.fn(async () => ({
+        question: 'oi',
+        context: { role: 'super_admin' },
+      })),
+    });
+
+    await invoke(harness);
+
+    expect(harness.responses[0].status).toBe(400);
+    expect(harness.runAskAiTurn).not.toHaveBeenCalled();
   });
 
   test('falha fechada quando a auditoria durável está indisponível', async () => {
@@ -117,19 +144,48 @@ describe('POST /api/ask-ai — boundary de segurança', () => {
       status: 503,
       body: { success: false, error: 'persistence_required', answer: null },
     });
-    expect(harness.deps.ragService.queryRag).not.toHaveBeenCalled();
+    expect(harness.runAskAiTurn).not.toHaveBeenCalled();
   });
 
-  test('resposta ausente do RAG nunca é normalizada como sucesso', async () => {
+  test('persistência conversacional indisponível responde 503 explícito', async () => {
+    const persistenceError = Object.assign(new Error('ask_ai_conversation_persistence_required'), {
+      code: 'PERSISTENCE_REQUIRED',
+    });
     const harness = buildHarness({
-      ragService: { queryRag: jest.fn(async () => null) },
+      runAskAiTurn: jest.fn(async () => { throw persistenceError; }),
     });
 
     await invoke(harness);
 
     expect(harness.responses[0]).toMatchObject({
-      status: 200,
-      body: { success: false, confidence: null },
+      status: 503,
+      body: { success: false, error: 'persistence_required' },
     });
+  });
+
+  test('conversa inexistente responde 404 sem vazar existência', async () => {
+    const notFound = Object.assign(new Error('Conversa não encontrada'), { code: 'NOT_FOUND' });
+    const harness = buildHarness({
+      runAskAiTurn: jest.fn(async () => { throw notFound; }),
+    });
+
+    await invoke(harness);
+
+    expect(harness.responses[0]).toMatchObject({
+      status: 404,
+      body: { success: false, error: 'conversation_not_found' },
+    });
+  });
+
+  test('erro inesperado não vaza stack trace nem mensagem interna', async () => {
+    const harness = buildHarness({
+      runAskAiTurn: jest.fn(async () => { throw new Error('boom interno'); }),
+    });
+
+    await invoke(harness);
+
+    expect(harness.responses[0].status).toBe(500);
+    expect(JSON.stringify(harness.responses[0].body)).not.toContain('boom interno');
+    expect(harness.responses[0].body).not.toHaveProperty('stack');
   });
 });

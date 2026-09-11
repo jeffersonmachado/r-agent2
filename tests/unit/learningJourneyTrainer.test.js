@@ -28,6 +28,7 @@ let runtimeRoot;
 
 const REPLAY_WITH_PII = {
   id: 'jornada-teste-1',
+  tenantId: 'system',
   context: 'rpa',
   startTime: '2026-07-23T10:00:00.000Z',
   endTime: '2026-07-23T10:00:30.000Z',
@@ -46,6 +47,7 @@ const REPLAY_WITH_PII = {
 // (inclui screenshots base64 que devem ser descartados antes da anonimização).
 const REPLAY_WAVE_UITRACE = {
   id: 'wave-replay-1',
+  tenantId: 'system',
   replayId: 'wave-replay-1',
   startTime: '2026-07-24T03:29:54.037Z',
   endTime: '2026-07-24T03:32:01.215Z',
@@ -99,9 +101,13 @@ describe('learning-core journeyTrainerService', () => {
   });
 
   test('lista replays disponiveis no runtime', () => {
-    const replays = listReplays();
+    const replays = listReplays({ tenantId: 'system' });
     expect(replays).toHaveLength(2);
     expect(replays.find((r) => r.id === 'jornada-teste-1')).toMatchObject({ actions: 4, screens: 2 });
+  });
+
+  test('sem tenantId a listagem é fail-closed (vazia)', () => {
+    expect(listReplays()).toEqual([]);
   });
 
   test('rejeita replayId com path traversal', async () => {

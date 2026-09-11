@@ -276,7 +276,7 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
   // Knowledge Router: resolve o escopo de recuperação ANTES da busca vetorial.
   // P1: filters.scope NÃO pode ser bypass — apenas ResolvedKnowledgeScope interno.
   // O domínio nunca vem do texto da pergunta nem de payload externo.
-  const { isResolvedScope, resolveKnowledgeContext } = require('../../src/core/knowledge-plane');
+  const { isResolvedScope, resolveKnowledgeContext, resolveRetrievalTenantKeys } = require('../../src/core/knowledge-plane');
 
   let scopeResolution;
   if (filters.scope && isResolvedScope(filters.scope)) {
@@ -336,7 +336,18 @@ async function queryRag(query, tenantId, context = {}, filters = {}) {
     };
   }
 
-  const retrievalScope = scopeResolution.scope;
+  const retrievalScope = {
+    domain: scopeResolution.scope.domain,
+    classifications: [...scopeResolution.scope.classifications],
+    // Escopo explícito de tenant: conhecimento OPERACIONAL GLOBAL ∪ do tenant
+    // atual. Nunca inclui outro tenant; nunca se aplica ao domínio SYSTEM.
+    // O serviço RAG deriva as mesmas chaves de forma independente — este campo
+    // é declaração auditável, não autoridade.
+    tenantKeys: resolveRetrievalTenantKeys({
+      scope: scopeResolution.scope,
+      tenantId,
+    }),
+  };
 
   try {
     // Carrega tenant_context para injetar contexto cognitivo
@@ -877,6 +888,58 @@ async function indexDocument(document, tenantId) {
     });
     throw error;
   }
+}
+
+/**
+ * Remove um documento do índice RAG do tenant (chunks + status inactive).
+ *
+ * O índice é DERIVADO: quando a fonte canônica é removida (ex.: manual
+ * operacional excluído), o índice correspondente não pode sobreviver.
+ * Escopo sempre por tenant — o serviço RAG nunca remove documento de outro
+ * tenant, mesmo que um documentId alheio seja informado.
+ *
+ * @param {string} documentId
+ * @param {string} tenantId
+ * @returns {Promise<{success: boolean, documentId: string, chunksRemoved: number}>}
+ */
+async function deindexDocument(documentId, tenantId) {
+  const normalizedId = safeTrim(documentId);
+  if (!normalizedId) {
+    throw new Error('documentId é obrigatório');
+  }
+  tenantId = normalizeTenantId(tenantId);
+  if (!tenantId) {
+    throw new Error('tenantId é obrigatório');
+  }
+
+  const serviceUrl = getRagServiceUrl(tenantId);
+  const timeout = getRagTimeout(tenantId);
+
+  const response = await fetchRagWithBreaker(
+    `${serviceUrl}/rag/deindex`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getRagInternalHeaders(),
+      },
+      body: JSON.stringify({ documentId: normalizedId, tenantId }),
+    },
+    timeout
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`RAG service error: ${response.status} ${errorText || response.statusText}`);
+  }
+
+  const result = await response.json();
+  return {
+    success: result?.success === true,
+    documentId: result?.documentId || normalizedId,
+    chunksRemoved: Number.isFinite(result?.chunksRemoved) ? result.chunksRemoved : 0,
+    error: result?.error || null,
+  };
 }
 
 /**
@@ -1422,6 +1485,7 @@ async function listVectorDocuments(tenantId, options = {}) {
 module.exports = {
   queryRag,
   indexDocument,
+  deindexDocument,
   isRagAvailable,
   getRagServiceUrl,
   getRagTimeout,

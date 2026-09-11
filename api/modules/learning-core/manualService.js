@@ -25,10 +25,21 @@ const crypto = require('crypto');
 const { resolveRuntimePath } = require('../../utils/runtimePaths');
 const { normalizeReplay } = require('./journeyTrainerService');
 const { anonymize } = require('../../../src/core/learning/anonymizer');
+const { readTenantScopedReplay } = require('./replayStorage');
+const { indexDocument } = require('../../services/ragService');
 const logger = require('../../utils/logger');
 
-const REPLAY_ID_PATTERN = /^[\w.-]{1,120}$/;
 const MANUAL_ID_PATTERN = /^[\w.-]{1,120}$/;
+
+// Manual operacional é conhecimento do tenant (OPERATIONAL/PRODUCTION):
+// já é sanitizado (anonymizer) e é consumido por usuários operacionais.
+const MANUAL_DOMAIN = 'OPERATIONAL';
+const MANUAL_CLASSIFICATION = 'PRODUCTION';
+const MANUAL_SENSITIVITY = 'INTERNAL';
+
+function ragDocumentIdForManual(manualId) {
+  return `manual:${manualId}`;
+}
 const IMG_NAME_PATTERN = /^[\w.-]{1,120}\.png$/;
 
 const ACTION_LABELS = {
@@ -44,19 +55,13 @@ function manualsDir() {
   return resolveRuntimePath('learning', 'manuals');
 }
 
-function loadReplay(replayId) {
-  if (!REPLAY_ID_PATTERN.test(String(replayId || ''))) {
-    const error = new Error('replayId invalido');
-    error.code = 'BAD_REQUEST';
-    throw error;
-  }
-  const filePath = path.join(resolveRuntimePath('rpa', 'replay'), path.basename(`${replayId}.json`));
-  if (!fs.existsSync(filePath)) {
-    const error = new Error(`Replay nao encontrado: ${replayId}`);
-    error.code = 'NOT_FOUND';
-    throw error;
-  }
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+/**
+ * Carrega o replay exigindo prova de posse pelo tenant (fail-closed).
+ * Delega ao storage tenant-scoped: replay sem `tenantId` ou de outro tenant
+ * nunca é entregue, mesmo que o id seja conhecido.
+ */
+function loadReplay(replayId, tenantId) {
+  return readTenantScopedReplay(replayId, tenantId);
 }
 
 function slugify(text, fallback) {
@@ -153,7 +158,7 @@ function readMetadata(manualDir) {
 }
 
 async function generateManualFromReplay({ tenantId, replayId, title, journeyKey, createdBy }) {
-  const rawReplay = loadReplay(replayId);
+  const rawReplay = loadReplay(replayId, tenantId);
   // Anonimiza o replay bruto (o normalizeReplay descarta as screenshots do
   // uiTrace, e o manual precisa delas). O campo `name` do uiTrace é chave
   // sensível para o anonymizer (nomes de pessoas), então ele é remapeado
@@ -183,6 +188,11 @@ async function generateManualFromReplay({ tenantId, replayId, title, journeyKey,
   const resolvedTitle = String(title || '').trim()
     || `Manual — jornada ${resolvedJourneyKey || replayId}`;
 
+  const ragDocumentId = ragDocumentIdForManual(manualId);
+  const manualMarkdown = renderManualMarkdown({
+    title: resolvedTitle, replayId, journeyKey: resolvedJourneyKey, steps, stats,
+  });
+
   const metadata = {
     id: manualId,
     title: resolvedTitle,
@@ -195,19 +205,95 @@ async function generateManualFromReplay({ tenantId, replayId, title, journeyKey,
     stepCount: steps.length,
     imageCount: steps.filter((step) => step.image).length,
     redactions: stats?.redactions || 0,
+    ragDocumentId,
+    contentType: 'manual',
+    version: 1,
   };
 
-  fs.writeFileSync(
-    path.join(manualDir, 'manual.md'),
-    renderManualMarkdown({ title: resolvedTitle, replayId, journeyKey: resolvedJourneyKey, steps, stats })
-  );
+  fs.writeFileSync(path.join(manualDir, 'manual.md'), manualMarkdown);
+  fs.writeFileSync(path.join(manualDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
+
+  // Indexação obrigatória: um manual pronto precisa ficar consultável pelo
+  // Ask AI/Tutor. O RAG é derivado — falha aqui é explícita (sem fallback
+  // silencioso), mas o manual permanece no disco para reindexação.
+  const indexResult = await indexDocument({
+    id: ragDocumentId,
+    title: resolvedTitle,
+    content: manualMarkdown,
+    domain: MANUAL_DOMAIN,
+    classification: MANUAL_CLASSIFICATION,
+    sensitivity: MANUAL_SENSITIVITY,
+    metadata: {
+      source: 'learning-core-manual',
+      category: 'operational-manual',
+      contentType: 'manual',
+      sourceId: ragDocumentId,
+      sourceType: 'replay-derivation',
+      manualId,
+      replayId,
+      journeyKey: resolvedJourneyKey,
+      version: 1,
+    },
+  }, tenantId);
+
+  metadata.ragChunksCreated = indexResult?.chunksCreated || 0;
+  metadata.ragIndexedAt = new Date().toISOString();
   fs.writeFileSync(path.join(manualDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
 
   logger.info('[learning-core] Manual gerado a partir de replay', {
     manualId, replayId, tenantId, steps: metadata.stepCount, images: metadata.imageCount,
+    ragChunksCreated: metadata.ragChunksCreated,
   });
 
   return metadata;
+}
+
+/**
+ * Remove um manual e o documento correspondente no RAG.
+ *
+ * Escopo por tenant: um chamador nunca remove manual de outro tenant — o id
+ * é resolvido dentro do escopo e a ausência de posse devolve NOT_FOUND (não
+ * vaza existência).
+ */
+async function deleteManual({ tenantId, manualId }) {
+  if (!MANUAL_ID_PATTERN.test(String(manualId || ''))) {
+    const error = new Error('manualId invalido');
+    error.code = 'BAD_REQUEST';
+    throw error;
+  }
+  const scopedTenant = String(tenantId);
+  const manualDir = path.join(manualsDir(), manualId);
+  const metadata = readMetadata(manualDir);
+  if (!metadata || metadata.tenantId !== scopedTenant) {
+    const error = new Error(`Manual nao encontrado: ${manualId}`);
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  let deindexed = false;
+  try {
+    const { deindexDocument } = require('../../services/ragService');
+    await deindexDocument(metadata.ragDocumentId || ragDocumentIdForManual(manualId), scopedTenant);
+    deindexed = true;
+  } catch (error) {
+    // Índice é derivado: se a remoção falhar, o arquivo NÃO é apagado —
+    // apagar a fonte deixaria conteúdo órfão e não removível pelo id.
+    logger.error('[learning-core] Falha ao remover manual do RAG', {
+      manualId, tenantId: scopedTenant, error: error.message,
+    });
+    const failure = new Error(`Nao foi possivel remover o manual do indice: ${error.message}`);
+    failure.code = 'DEINDEX_FAILED';
+    throw failure;
+  }
+
+  fs.rmSync(manualDir, { recursive: true, force: true });
+  logger.info('[learning-core] Manual removido', { manualId, tenantId: scopedTenant, deindexed });
+  return {
+    success: true,
+    manualId,
+    ragDocumentId: metadata.ragDocumentId || ragDocumentIdForManual(manualId),
+    deindexed,
+  };
 }
 
 function listManuals({ tenantId }) {
@@ -420,6 +506,7 @@ async function ensureManualPdf({ tenantId, manualId }) {
 
 module.exports = {
   generateManualFromReplay,
+  deleteManual,
   listManuals,
   resolveManualFile,
   buildManualHtml,

@@ -162,6 +162,7 @@ const getLearningJourneyFaq = require('./LearningJourneyFaq');
 const getUserCertification = require('./UserCertification');
 const getLearningMentorPlan = require('./LearningMentorPlan');
 const getAiGovernanceRecord = require('./AiGovernanceRecord');
+const getAskAiConversation = require('./AskAiConversation');
 const getVerticalTemplate = require('./VerticalTemplate');
 const getRuntimeArtifact = require('./RuntimeArtifact');
 const getCoverageEvidence = require('./CoverageEvidence');
@@ -347,6 +348,7 @@ const LearningJourneyFaq = () => getLearningJourneyFaq();
 const UserCertification = () => getUserCertification();
 const LearningMentorPlan = () => getLearningMentorPlan();
 const AiGovernanceRecord = () => getAiGovernanceRecord();
+const AskAiConversation = () => getAskAiConversation();
 const VerticalTemplate = () => getVerticalTemplate();
 const RuntimeArtifact = () => getRuntimeArtifact();
 const CoverageEvidence = () => getCoverageEvidence();
@@ -990,6 +992,7 @@ module.exports = {
   UserCertification,
   LearningMentorPlan,
   AiGovernanceRecord,
+  AskAiConversation,
   VerticalTemplate,
   RuntimeArtifact,
   CoverageEvidence,
@@ -1174,6 +1177,7 @@ module.exports = {
   getUserCertification,
   getLearningMentorPlan,
   getAiGovernanceRecord,
+  getAskAiConversation,
   getVerticalTemplate,
   getRuntimeArtifact,
   getCoverageEvidence,

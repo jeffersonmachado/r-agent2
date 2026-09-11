@@ -23,6 +23,7 @@ const { resetRegistry, registerProvider } = require('../../api/services/integrat
 const evoProvider = require('../../api/services/integration/providers/evo/evoProviderAdapter');
 const { handleIntegrationWebhookRoutes } = require('../../api/modules/integration/handleIntegrationWebhookRoutes');
 const inboundService = require('../../api/services/integration/integrationInboundEventService');
+const { createFakeEvoServer, labConfig } = require('../helpers/fakeEvoServer');
 
 const TENANT = `itest-evo-webhook-${crypto.randomBytes(4).toString('hex')}`;
 const OTHER_TENANT = `itest-evo-other-${crypto.randomBytes(4).toString('hex')}`;
@@ -37,7 +38,19 @@ jest.mock('../../api/services/executionQueueService', () => ({
   }),
 }));
 
-function sign(rawBody) {
+/**
+ * Modelo de autenticação do webhook CORRIGIDO (§29).
+ *
+ * O RAP gera um segredo forte e o envia como cabeçalho CUSTOMIZADO na criação
+ * do webhook; o callback é autenticado comparando esse valor em tempo constante.
+ * HMAC-SHA256 NÃO é presumido — ele só existe quando o operador declara
+ * explicitamente `config.webhookAuthMode = 'HMAC_SHA256'`.
+ */
+function sign(_rawBody) {
+  return WEBHOOK_SECRET;
+}
+
+function signHmac(rawBody) {
   return crypto.createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest('hex');
 }
 
@@ -71,7 +84,7 @@ describe('Webhook da integração — segurança e adversarial', () => {
     await connect(5, 500);
     resetRegistry();
     registerProvider(evoProvider);
-    const { createFakeEvoServer } = require('../helpers/fakeEvoServer');
+    const { createFakeEvoServer, labConfig } = require('../helpers/fakeEvoServer');
     server = createFakeEvoServer({ datasets: { members: [], prospects: [], plans: [], memberships: [], entries: [], sales: [], receivables: [] } });
     await server.listen();
     await cleanup();
@@ -80,10 +93,10 @@ describe('Webhook da integração — segurança e adversarial', () => {
       provider: 'evo',
       label: 'Academia Webhook',
       externalUnitId: '1',
-      config: { baseUrl: server.baseUrl },
+      config: labConfig(server.baseUrl),
       // `secretKey` = credencial de API do provider; `webhookSecret` = segredo de
       // assinatura do webhook. Ambos vivem no MESMO blob cifrado.
-      credentials: { token: server.credentials.token, secretKey: server.credentials.secretKey, webhookSecret: WEBHOOK_SECRET },
+      credentials: { academyDns: server.credentials.academyDns, secretKey: server.credentials.secretKey, webhookSecret: WEBHOOK_SECRET },
       status: 'connected',
     });
   });
@@ -160,8 +173,8 @@ describe('Webhook da integração — segurança e adversarial', () => {
       tenantId: OTHER_TENANT,
       provider: 'evo',
       label: 'Sem segredo',
-      config: { baseUrl: server.baseUrl },
-      credentials: { token: server.credentials.token, secretKey: server.credentials.secretKey },
+      config: labConfig(server.baseUrl),
+      credentials: { academyDns: server.credentials.academyDns, secretKey: server.credentials.secretKey },
       status: 'connected',
     });
     const rawBody = JSON.stringify({ event: 'entry.created', idEvent: 'evt-no-secret' });

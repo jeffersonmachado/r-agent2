@@ -13,11 +13,20 @@ jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
 }));
 
+const mockIndexDocument = jest.fn(async (doc) => ({ id: doc.id, chunksCreated: 3 }));
+const mockDeindexDocument = jest.fn(async () => ({ success: true, chunksRemoved: 3 }));
+
+jest.mock('../../api/services/ragService', () => ({
+  indexDocument: (...args) => mockIndexDocument(...args),
+  deindexDocument: (...args) => mockDeindexDocument(...args),
+}));
+
 let runtimeRoot;
 
 const REPLAY_WAVE = {
   id: 'wave-manual-1',
   replayId: 'wave-manual-1',
+  tenantId: 'system',
   journeyId: 'support_ticket_flow',
   startTime: '2026-07-24T03:29:54.037Z',
   endTime: '2026-07-24T03:32:01.215Z',
@@ -47,6 +56,11 @@ beforeAll(() => {
   const replayDir = path.join(runtimeRoot, 'rpa', 'replay');
   fs.mkdirSync(replayDir, { recursive: true });
   fs.writeFileSync(path.join(replayDir, 'wave-manual-1.json'), JSON.stringify(REPLAY_WAVE));
+  // Replay pertencente a outro tenant: usado para provar isolamento de listagem.
+  fs.writeFileSync(
+    path.join(replayDir, 'wave-manual-2.json'),
+    JSON.stringify({ ...REPLAY_WAVE, id: 'wave-manual-2', replayId: 'wave-manual-2', tenantId: 'outro-tenant' }),
+  );
 });
 
 afterAll(() => {
@@ -100,7 +114,7 @@ describe('learning-core manualService', () => {
   });
 
   test('lista manuais apenas do tenant', async () => {
-    await generateManualFromReplay({ tenantId: 'outro-tenant', replayId: 'wave-manual-1' });
+    await generateManualFromReplay({ tenantId: 'outro-tenant', replayId: 'wave-manual-2' });
 
     const manuals = listManuals({ tenantId: 'system' });
     expect(manuals.length).toBeGreaterThanOrEqual(2);
@@ -128,7 +142,7 @@ describe('learning-core manualService', () => {
 
   test('rejeita replay sem uiTrace', async () => {
     const replayDir = path.join(runtimeRoot, 'rpa', 'replay');
-    fs.writeFileSync(path.join(replayDir, 'sem-uitrace.json'), JSON.stringify({ id: 'sem-uitrace', actions: [] }));
+    fs.writeFileSync(path.join(replayDir, 'sem-uitrace.json'), JSON.stringify({ id: 'sem-uitrace', tenantId: 'system', actions: [] }));
 
     await expect(generateManualFromReplay({ tenantId: 'system', replayId: 'sem-uitrace' }))
       .rejects.toThrow('nao possui rastro de UI');

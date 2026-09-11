@@ -163,3 +163,85 @@ describe('§21 a consulta oficial está registrada com o resultado real', () => 
     expect(adapter).toContain('signature_header_missing');
   });
 });
+
+// ── Hardening final: o gate é NÃO VACUOSO também para os novos dialetos ────
+
+describe('hardening final: o gate rejeita dialeto global, entidade ambígua e SSRF ausente', () => {
+  it('dialeto global page/size é rejeitado', () => {
+    const result = validate((c) => {
+      c.pagination.pageParam = 'page';
+      c.pagination.sizeParam = 'size';
+    });
+    const violation = result.violations.find((v) => v.code === VIOLATION_CODES.GLOBAL_PAGINATION_DIALECT);
+    expect(violation).toBeDefined();
+    expect(violation.declared).toEqual(expect.arrayContaining(['pageParam', 'sizeParam']));
+  });
+
+  it('recurso sem paginação própria é rejeitado', () => {
+    const result = validate((c) => { delete c.resources.entries.pagination; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.RESOURCE_PAGINATION_MISSING);
+  });
+
+  it('recurso sem maxTake é rejeitado (limite é do recurso, nunca global)', () => {
+    const result = validate((c) => { delete c.resources.sales.pagination.maxTake; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.RESOURCE_MAX_TAKE_MISSING);
+  });
+
+  it('`updatedSince` como filtro de recurso é rejeitado', () => {
+    const result = validate((c) => { c.resources.members.incrementalParam = 'updatedSince'; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.GLOBAL_UPDATED_SINCE);
+  });
+
+  it('recurso sem estratégia incremental declarada é rejeitado', () => {
+    const result = validate((c) => { delete c.resources.prospects.incremental; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.RESOURCE_INCREMENTAL_MISSING);
+  });
+
+  it('catálogo (Membership) apontando para AccessMembership é rejeitado', () => {
+    const result = validate((c) => { c.resources.plans.rapTarget = 'AccessMembership'; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.ENTITY_AMBIGUOUS);
+  });
+
+  it('MemberMembership fora do alvo AccessMembership é rejeitado', () => {
+    const result = validate((c) => { c.resources.memberships.rapTarget = 'catalog_only'; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.ENTITY_AMBIGUOUS);
+  });
+
+  it('os dois recursos não podem declarar a mesma entidade EVO', () => {
+    const result = validate((c) => { c.resources.plans.evoEntity = 'MemberMembership'; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.ENTITY_AMBIGUOUS);
+  });
+
+  it('host declarado OFICIAL sem fonte oficial que o autorize é rejeitado', () => {
+    const result = validate((c) => { c._hostPolicy.officialHost = 'evo-integracao.wanessa.cloud'; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.HOST_CLAIMED_OFFICIAL_WITHOUT_SOURCE);
+  });
+
+  it('host OFICIAL com fonte oficial declarada na allowlist é aceito', () => {
+    const result = validate((c) => {
+      c._hostPolicy.officialHost = 'api.evo.com.br';
+      c._hostPolicy.allowlist = [{ host: 'api.evo.com.br', source: 'https://docs.evo.com.br/integracao' }];
+    });
+    expect(codes(result.violations)).not.toContain(VIOLATION_CODES.HOST_CLAIMED_OFFICIAL_WITHOUT_SOURCE);
+  });
+
+  it('política de SSRF ausente é rejeitada', () => {
+    const result = validate((c) => { delete c._ssrfPolicy; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.SSRF_POLICY_MISSING);
+  });
+
+  it('política de SSRF declarada mas NÃO enforçada no cliente é rejeitada', () => {
+    const result = validateContract(CONTRACT, { clientSource: '// cliente sem guard', supportedResources: SUPPORTED });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.SSRF_POLICY_NOT_ENFORCED);
+  });
+
+  it('taxonomia de estados de contrato ausente é rejeitada', () => {
+    const result = validate((c) => { delete c._contractStates; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.CONTRACT_STATE_TAXONOMY_MISSING);
+  });
+
+  it('webhook apresentado como documentado pelo provedor sem certificação é rejeitado', () => {
+    const result = validate((c) => { c.webhook.providerDocumented = true; });
+    expect(codes(result.violations)).toContain(VIOLATION_CODES.WEBHOOK_SCHEME_CLAIMED_PROVIDER_DOCUMENTED);
+  });
+});
