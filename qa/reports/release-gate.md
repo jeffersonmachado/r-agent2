@@ -1,6 +1,6 @@
 # Release Gate — Decisão
 
-**Data:** 2026-09-03T19:29:21.240Z
+**Data:** 2026-09-11T01:09:13.524Z
 **Decisão:** ✅ GO — RELEASE APROVADO
 **Score de Estabilidade:** 100
 

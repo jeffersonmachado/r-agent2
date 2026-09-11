@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T19:29:21.244Z",
+  "generatedAt": "2026-09-11T01:09:13.528Z",
   "learnMode": "patch-controlled",
   "autoPromoteEnabled": false,
   "dryRun": true,
@@ -22,7 +22,7 @@
   "promotionResults": [],
   "patchExecutions": [],
   "learnValidation": {
-    "generatedAt": "2026-09-03T19:29:21.242Z",
+    "generatedAt": "2026-09-11T01:09:13.528Z",
     "sandboxPath": null,
     "skipped": true,
     "reason": "no_fix_plans_generated",

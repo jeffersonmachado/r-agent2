@@ -1,6 +1,6 @@
 # Auto-Correção Controlada — RAP
 
-**Gerado em:** 2026-09-03T19:29:21.244Z
+**Gerado em:** 2026-09-11T01:09:13.528Z
 **Modo:** patch-controlled
 **Dry-run:** SIM (nenhuma alteração aplicada)
 

@@ -1,7 +1,7 @@
 {
   "snapshot": {
-    "executionId": "mesh-20260903185903-qt4iaz",
-    "generatedAt": "2026-09-03T19:29:21.084Z",
+    "executionId": "mesh-20260911003113-iji3vq",
+    "generatedAt": "2026-09-11T01:09:13.328Z",
     "global": {
       "stabilityScore": 100,
       "releaseReadiness": 100,
@@ -16,7 +16,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 109841,
+        "avgRuntimeMs": 225149,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -26,7 +26,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 217256,
+        "avgRuntimeMs": 559019,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -36,7 +36,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 144122,
+        "avgRuntimeMs": 316225,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -46,7 +46,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 199167,
+        "avgRuntimeMs": 503325,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -56,7 +56,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 113510,
+        "avgRuntimeMs": 208186,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -66,7 +66,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 180689,
+        "avgRuntimeMs": 437622,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -76,7 +76,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 168500,
+        "avgRuntimeMs": 397156,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -86,7 +86,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 144122,
+        "avgRuntimeMs": 316225,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -96,7 +96,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 137709,
+        "avgRuntimeMs": 125468,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -106,7 +106,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 7363,
+        "avgRuntimeMs": 7266,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -116,7 +116,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 26277,
+        "avgRuntimeMs": 25245,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -126,7 +126,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 897,
+        "avgRuntimeMs": 729,
         "replayConsistency": 100,
         "criticality": "medium"
       }
@@ -137,7 +137,7 @@
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 148965,
+        "avgLatencyMs": 318842,
         "replayConsistency": 100,
         "confidenceScore": 80
       },
@@ -146,7 +146,7 @@
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 180935,
+        "avgLatencyMs": 308249,
         "replayConsistency": 100,
         "confidenceScore": 80
       },
@@ -155,7 +155,7 @@
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 74022,
+        "avgLatencyMs": 158689,
         "replayConsistency": 100,
         "confidenceScore": 80
       },
@@ -164,7 +164,7 @@
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 175115,
+        "avgLatencyMs": 425774,
         "replayConsistency": 100,
         "confidenceScore": 80
       }
@@ -177,7 +177,7 @@
         "passed": 12,
         "score": 100,
         "passRate": 100,
-        "lastCriticalReplay": "2026-09-03T19:05:15.277Z",
+        "lastCriticalReplay": "2026-09-11T00:43:38.730Z",
         "readiness": "ready"
       },
       {
@@ -187,7 +187,7 @@
         "passed": 15,
         "score": 100,
         "passRate": 100,
-        "lastCriticalReplay": "2026-09-03T19:08:35.194Z",
+        "lastCriticalReplay": "2026-09-11T00:48:32.358Z",
         "readiness": "ready"
       },
       {
@@ -197,7 +197,7 @@
         "passed": 4,
         "score": 100,
         "passRate": 100,
-        "lastCriticalReplay": "2026-09-03T19:05:03.705Z",
+        "lastCriticalReplay": "2026-09-11T00:43:26.156Z",
         "readiness": "ready"
       },
       {
