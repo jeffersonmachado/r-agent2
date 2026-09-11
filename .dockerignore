@@ -54,8 +54,18 @@ test-results/
 # Documentação
 *.md
 !README.md
-docs/
-dev Documentos/
+# A rota viva /api/qa-waves/docs/:type serve docs/roteiros e docs/diagrams/qa-waves
+# em runtime (api/modules/qa-waves/routes.js). Sem esse subconjunto a rota responde
+# 404 na imagem e a pagina /dev/qa-waves emite erros de console. O resto de docs/
+# (31M) permanece fora da imagem.
+docs/*
+!docs/roteiros/
+!docs/diagrams/
+# Conteúdo lido em runtime pela API viva de dev-management
+# (api/modules/dev-management/handleDevManagementRoutes.js). O diretório dev/
+# (168M de artefatos de desenvolvimento) continua fora da imagem.
+dev/
+!dev Documentos/
 
 # Dependências isoladas E2E / Cypress (não pertencem à imagem de produção)
 frontend-e2e/node_modules/

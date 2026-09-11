@@ -55,6 +55,15 @@ COPY qa/ ./qa/
 COPY qa-mesh/ ./qa-mesh/
 COPY lib/ ./lib/
 COPY scripts/ ./scripts/
+# Conteúdo consumido por APIs vivas em runtime. O .dockerignore repassa apenas
+# docs/roteiros e docs/diagrams (rota /api/qa-waves/docs/:type) e
+# 'dev Documentos' (API de dev-management); o restante de docs/ fica fora.
+COPY docs/ ./docs/
+# 'dev Documentos' tem espaço no nome: o BuildKit não aceita espaço em COPY
+# (nem origem nem destino), então o conteúdo entra por um diretório temporário
+# e é renomeado no estágio runtime. O .dockerignore exclui dev/ (168M), de modo
+# que dev* casa apenas com 'dev Documentos'.
+COPY dev*/ ./_devcontent/
 
 FROM ${API_BASE_IMAGE} AS runtime
 
@@ -96,6 +105,13 @@ COPY --from=builder /build/r-agent2/qa ./qa
 COPY --from=builder /build/r-agent2/qa-mesh ./qa-mesh
 COPY --from=builder /build/r-agent2/lib ./lib
 COPY --from=builder /build/r-agent2/scripts ./scripts
+# Conteúdo servido/lido por APIs vivas: rota /api/qa-waves/docs/:type
+# (docs/roteiros, docs/diagrams/qa-waves) e API de dev-management
+# ('dev Documentos'). Sem isso essas rotas respondem 404 em produção.
+COPY --from=builder /build/r-agent2/docs ./docs
+# Ver comentário no estágio builder sobre o espaço em 'dev Documentos'.
+COPY --from=builder /build/r-agent2/_devcontent ./_devcontent
+RUN mv ./_devcontent "./dev Documentos"
 
 # Compatibilidade: a API ainda lê seeds/flows versionados em tests/rpa/**.
 COPY tests/rpa ./tests/rpa
