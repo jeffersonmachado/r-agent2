@@ -2,20 +2,62 @@
   "_description": "Contrato de integração read-only com o EVO (sistema de gestão de academia — alunos, planos, matrículas, check-ins, vendas e contas a receber). Este arquivo é a ÚNICA fonte de endpoints, autenticação, paginação e formato de resposta do provider. Nenhum serviço de domínio do RAP conhece esses detalhes: apenas o EvoProviderAdapter.",
   "_certification": {
     "status": "UNVERIFIED",
-    "reason": "A documentação oficial da API de integração do EVO (host de integração da EVO/W12) não está acessível a partir deste ambiente de build (DNS não resolve), e nenhuma credencial real foi fornecida. Os caminhos abaixo NÃO foram validados contra o provedor real.",
+    "reason": "Consulta à documentação OFICIAL realizada em 2026-09-11 (ver `_officialDocsConsultation`): o portal oficial docs.evo.com.br documenta apenas a API Financeiro/Checkout/Recorrência (financeiro-evo.azurewebsites.net/docs/API_v1/swagger.json, 21 paths de cobrança). A API de INTEGRAÇÃO de ERP que este contrato descreve (/members, /entries, /sales, /receivables, ...) NÃO está documentada publicamente nesse portal, e o host evo-integracao.wanessa.cloud não resolve DNS neste ambiente. Logo, os caminhos/dialetos abaixo seguem NÃO validados contra o provedor real.",
     "honestLabel": "CODE READY / CONTRACT TESTED / LOCAL INTEGRATION TESTED / AWAITING EVO LIVE CREDENTIAL CERTIFICATION",
     "mustNotClaim": "LIVE VERIFIED",
     "howToCertify": [
-      "1. Obter Secret Key + token da conta EVO e o host oficial de integração.",
-      "2. Confirmar cada caminho/dialeto de paginação contra o Swagger oficial e ajustar ESTE arquivo (nada mais).",
+      "1. Obter da conta EVO: Secret Key, DNS da academia (usuário do Basic) e o host oficial de integração.",
+      "2. Confirmar cada caminho/dialeto de paginação/limite de take contra o Swagger oficial da API de INTEGRAÇÃO (não confundir com a API Financeiro) e ajustar ESTE arquivo (nada mais).",
       "3. Trocar status para CERTIFIED e preencher certifiedAt/certifiedBy/verifiedAgainst.",
-      "4. Rodar npm run validate:evo-contract e o smoke de certificação com UM aluno real, duas vezes (idempotência)."
+      "4. Rodar `npm run validate:evo-contract` (gate que exige as evidências acima) e o smoke de certificação com UM aluno real, duas vezes (idempotência)."
     ],
     "guards": {
       "unverifiedHostPolicy": "Enquanto status != CERTIFIED, o cliente HTTP recusa chamadas para hosts não-loopback, salvo quando a conexão declara config.allowUnverifiedEndpoints=true explicitamente (uso de laboratório, registrado e auditável em diagnóstico).",
       "errorCode": "integration_evo_contract_not_certified"
     }
   },
+
+  "_officialDocsConsultation": {
+    "consultedAt": "2026-09-11",
+    "method": "HTTP GET direto às URLs oficiais (sem inferência de LLM).",
+    "sources": [
+      {
+        "url": "https://docs.evo.com.br/",
+        "httpStatus": 200,
+        "covers": "Portal oficial de documentação EVO (seções: /api, /portal, /checkouts, /recorrencia, /ajuda).",
+        "doesNotCover": "Nenhuma referência a integração de ERP/academia, 'members', 'entries' ou API de frequência."
+      },
+      {
+        "url": "https://docs.evo.com.br/api",
+        "httpStatus": 200,
+        "covers": "Página oficial da API (viewer Redoc) que aponta para o spec OpenAPI 3.0.1 'Referência da API | v1'.",
+        "doesNotCover": "A API de integração de ERP. O spec publicado documenta assinatura/cobrança/checkout."
+      },
+      {
+        "url": "https://financeiro-evo.azurewebsites.net/docs/API_v1/swagger.json",
+        "httpStatus": 200,
+        "covers": "Spec oficial da API FINANCEIRO (21 paths, nomes em português): /api/v1/Assinatura, /api/v1/Cobranca, /api/v1/Checkout, /api/v1/Cliente, /api/v1/ContatoCliente, /api/v1/EnderecoCliente, /api/v1/Plano, /api/v1/TipoCliente, /api/v1/Identity/Token.",
+        "doesNotCover": "members/entries/sales/receivables e paginação take/skip da API de integração."
+      },
+      {
+        "url": "https://evo-integracao.wanessa.cloud/api/v1",
+        "httpStatus": null,
+        "covers": "Host alvo deste contrato.",
+        "doesNotCover": "Não resolve DNS neste ambiente (falha de resolução): impossível validar caminhos ou capturar o Swagger em tempo de build."
+      }
+    ],
+    "authModelFinding": "O spec oficial disponível autentica por fluxo de CLIENT CREDENTIALS (POST /api/v1/Identity/Token com Evo.Corporativo.BuildingBlocks.Identity.ClientCredentials) e NÃO declara securitySchemes global. Isso NÃO pode ser transportado para este contrato: a API Financeiro e a API de INTEGRAÇÃO são produtos distintos, e há indício (não confirmação) de que a integração usa HTTP Basic com o DNS da academia como usuário e a Secret Key como senha. Enquanto não houver confirmação oficial, o dialeto Basic declarado abaixo permanece UNVERIFIED.",
+    "conclusion": "A consulta oficial foi executada e o resultado é NEGATIVO para os recursos deste contrato: a documentação pública não cobre a API de integração. Nenhum path/parâmetro foi (ou pode ser) corrigido a partir dela. Status permanece UNVERIFIED e o veredito máximo é CODE_GO / LIVE_EVO_PENDING.",
+    "verifiedAgainst": []
+  },
+
+  "webhook": {
+    "signatureHeader": "x-evo-signature",
+    "algorithm": "hmac-sha256",
+    "verificationStatus": "UNVERIFIED",
+    "_note": "Este cabeçalho é o CONTRATO DO LADO RAP até prova em contrário: ele é verificado de forma fail-closed (sem segredo configurado o webhook é rejeitado) e normalizado como SINAL, nunca como verdade material. Nenhuma documentação oficial confirmando 'x-evo-signature' foi encontrada na consulta de 2026-09-11 — ao certificar contra o provedor real, confirmar o cabeçalho/algoritmo reais e ajustar aqui."
+  },
+
   "_source": "Estrutura derivada do guia de integração do fornecedor para o produto EVO/W12 (recursos e semântica de negócio). Campos físicos devem ser confirmados item a item na certificação.",
 
   "provider": "evo",
