@@ -27,6 +27,8 @@ No deployment may bypass package validation, runtime governance, release gate an
 - O build é SEMPRE local (workstation/CI): `scripts/docker-deploy.sh --prod --build` constrói localmente (`r-agent2-api-base:test` → `r-agent2-api`, `r-agent2-frontend` com `VITE_BASE_PATH=/r-agent2/`, `r-agent2-rag-service`, `r-agent2-asterisk`, `r-agent2-redis`) e transfere via `docker save | gzip | ssh 'gunzip | docker load'`.
 - O `docker compose up` remoto roda com `--no-build` (fail-closed): se faltar imagem no servidor, o deploy falha em vez de tentar build remoto.
 - Motivação: builds remotos são lentos (re-download de torch/npm sem cache), quebram por falta de contexto (`vendor/`, `pbx/`, excludes rsync) e consomem CPU/memória do host de produção.
+- **Doc operacional canônica da política:** `docs/deployment/local-build-policy.md` (esta seção é a origem; a doc detalha o fluxo e as proibições).
+- **Enforcement executável:** `npm run validate:local-build-policy` (bloqueante, incluído em `validate:governance-enforcement`). Verifica `scripts/docker-deploy.sh`, `tools/system/deploy.js`, `package.json`, `DEPLOYMENT_CHECKLIST.md` e esta seção — a doc sozinha não impede regressão.
 
 ## Política de deploy diferencial e build sob demanda (2026-09-08)
 

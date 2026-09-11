@@ -4,6 +4,15 @@
 
 ### Build de Imagens Docker
 
+> **Política bloqueante: o build é SEMPRE local.** Estes comandos rodam na
+> workstation/CI (ou no orquestrador `tools/system/deploy.js`, que builda
+> localmente a partir do artefato extraído). **NUNCA** os execute no host de
+> produção: lá as imagens apenas são carregadas (`docker save | ssh 'docker load'`)
+> e o stack sobe com `--no-build`.
+>
+> Canônico: [`docs/deployment/local-build-policy.md`](../deployment/local-build-policy.md)
+> · Enforcement: `npm run validate:local-build-policy`
+
 ```bash
 # Build de todas as imagens
 npm run deploy:build
@@ -17,7 +26,7 @@ npm run deploy:build:rag
 ### Gerenciamento Local de Containers
 
 ```bash
-# Iniciar containers
+# Iniciar containers (--no-build: usa as imagens já transferidas)
 npm run deploy:up
 
 # Parar containers

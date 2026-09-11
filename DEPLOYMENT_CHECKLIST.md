@@ -5,6 +5,24 @@
 
 ---
 
+> ## ⚠️ Política de build — SEMPRE LOCAL (bloqueante)
+>
+> **O servidor de produção nunca constrói imagens.** O build é feito na
+> workstation/CI e as imagens são transferidas prontas para o servidor via
+> `docker save | gzip | ssh root@<host> 'gunzip | docker load'`.
+>
+> No servidor, o stack sobe sempre com `--no-build` (fail-closed): se a imagem
+> estiver ausente, o deploy falha em vez de tentar construir lá.
+>
+> **NUNCA rodar** `docker build`, `docker compose build`, `docker compose up`
+> (sem `--no-build`) nem `npm run deploy:build*` no host de produção.
+>
+> - Documento canônico: [`docs/deployment/local-build-policy.md`](docs/deployment/local-build-policy.md)
+> - Política de origem: `AI_MEMORY/deployment-rules.md` (seção *Docker image build policy*)
+> - Enforcement bloqueante: `npm run validate:local-build-policy`
+
+---
+
 ## 1. Code Fixes — Validação Completa
 
 ### Componente: Frontend E2E Specs
@@ -132,14 +150,21 @@ curl -X POST http://localhost:13001/api/auth/login -H "Content-Type: application
 ```
 
 ### Phase 2: Frontend Deployment
+
+> Lembrete: o build é **local**. Se o frontend roda em container, construa a imagem
+> na workstation/CI e transfira (`docker save | ssh 'docker load'`); no servidor use
+> `docker compose -f docker-compose.prod.yml up -d --no-build`. Ver
+> [`docs/deployment/local-build-policy.md`](docs/deployment/local-build-policy.md).
+
 ```bash
 # 1. Deploy updated E2E specs to test environment
 # (frontend-e2e/* changes are already in source)
 
-# 2. Rebuild frontend if needed
+# 2. Rebuild frontend if needed (LOCAL, na workstation — nunca no servidor)
 cd /opt/results/ria/r-agent2/frontend && npm run build
 
 # 3. Restart frontend service
+#    (imagem já transferida: `docker compose up -d --no-build` no servidor)
 docker-compose restart frontend
 ```
 

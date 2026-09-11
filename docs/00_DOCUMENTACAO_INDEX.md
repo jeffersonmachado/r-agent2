@@ -53,6 +53,7 @@ Este índice organiza a documentação do projeto em camadas (visão → arquite
 
 Este repositório já contém documentação detalhada por área. Alguns pontos de entrada úteis:
 
+- **Deploy — política de build local (bloqueante)**: `deployment/local-build-policy.md`
 - **Marketing / Google Ads (configuração, conversões offline, upload e operação)**: `MARKETING_GOOGLE_ADS_OPERACAO.md`
 - **Marketing / Google Ads (roadmap de gestão completa e supervisão por IA)**: `MARKETING_GOOGLE_ADS_GESTAO_COMPLETA_IA.md`
 - **Atendimento (análise e gaps BLIP-like)**: `BLIP_GAP_ANALYSIS.md`
