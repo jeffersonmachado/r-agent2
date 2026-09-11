@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-11T16:54:19.694Z",
+  "generatedAt": "2026-09-11T17:00:21.931Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260911-093255.zip",
-  "zipHash": "e6037132350ffd41979ccf6fcc5526c7327b8be1531c6ce01649f301343c1a99",
-  "manifestHash": "c8b4f6d8f1055ae61f9ba71a5a1e616987f9f3e5054b02873663b8167f1326a5",
-  "replayHash": "b9121e159bd9e8b9b4abd6e3281b55d3a30492f19dbadbf2d1dc13cba60636ef",
-  "governanceHash": "9c3b7abb76f1215fb5c78edd6874e84d809785f90d9b18fefeebcc02c55fbb77",
-  "readinessHash": "8d6e8dd144dab50eb370e52579ca9ae78d81be1be10ddb34ffc42f1240f05858",
-  "consistencyHash": "34da4fd60b0345b223c127c50525486c4604958b6e2343949ab80bed9c7a2193",
-  "contaminationHash": "213a11542c2d67f5be4f14c81cd69ca877d2381759f85825b181359786c28cdf",
-  "packageIntegrityHash": "c244f3a944fd676a8955e0a1174f0750f0ab22da1e72538cf6a951d6ab89bc7a",
+  "zipName": "r-agent2-20260911-135830.zip",
+  "zipHash": "c67bb487f3ae182e5b40bdef7b7931d26e9e229510970553d848caa39397bba3",
+  "manifestHash": "ffea1476867aedf5e2e6b31ded7356ea401f274f56cc710e0288d5ba4d8e5985",
+  "replayHash": "e388ac795d45e339394ed1438e50fbf593ff1c2ae6de05496d3e3183279830d9",
+  "governanceHash": "c5206f1eee5aa3db1c3fc281c9108e9451128a96c2721012390c464b2f04037b",
+  "readinessHash": "39c3a839aa6fa7bb7299ac73e3f736272295f1158b33e3bc28dcdc393ceec8a9",
+  "consistencyHash": "3696380962899518498c8f62f28154a20969ba27563c07a5e244622f6d0dd2c7",
+  "contaminationHash": "1fc433582e4998896db1a08e24c4f40a74947b9131dae5f79d1e952ea09b9dde",
+  "packageIntegrityHash": "259ba8f3e0b55f74eb4a88a8a8759567dfc3edeac8d898059aa1c414a6e0b1e2",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
   "gateHash": "28f4012ffdd547c655efc3923903c433c75dfacd758f75a33a81b4f6cc869f07",
   "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
@@ -17,25 +17,33 @@
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",
     "contamination": "NO_CONTAMINATION",
-    "packageIntegrity": "PACKAGE_INTEGRITY_GO",
-    "finalGovernance": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+    "packageIntegrity": "PACKAGE_INTEGRITY_NO_GO",
+    "finalGovernance": "NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected b463bd4ff18b319dec9f39e154691170c6f56b8103f1579dd94eec38902a80c5, got ccd4a83f1616ca3ec143c03a38b1122e8421affec9084e263c572ec64663a59d | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | STALE_ARTIFACT: artifact predates the certification run | STALE_ARTIFACT: artifact predates the certification run | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]",
     "readiness": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "readinessDrift": "READINESS_NO_DRIFT",
     "finalConsistencyGate": "FINAL_CONSISTENCY_GO"
   },
-  "packageIntegrityOk": true,
+  "packageIntegrityOk": false,
   "allEnginesBlockedOrUnknown": false,
   "autonomousReady": false,
   "mandatoryFailures": [
     {
+      "engine": "packageIntegrity",
+      "decision": "PACKAGE_INTEGRITY_NO_GO"
+    },
+    {
       "engine": "finalGovernance",
-      "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+      "decision": "NO_GO:GOVERNANCE_BLOCKED [RUN_SOURCE_DRIFT: RUN_SOURCE_DRIFT: final-governance: expected b463bd4ff18b319dec9f39e154691170c6f56b8103f1579dd94eec38902a80c5, got ccd4a83f1616ca3ec143c03a38b1122e8421affec9084e263c572ec64663a59d | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | STALE_ARTIFACT: artifact predates the certification run | STALE_ARTIFACT: artifact predates the certification run | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source | ARTIFACT_SOURCE_MISMATCH: artifact sourceFingerprint differs from frozen run source]"
     },
     {
       "engine": "readiness",
       "decision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+    },
+    {
+      "engine": "packageIntegrity.zipBinding",
+      "decision": "ZIP_HASH_NOT_BOUND"
     }
   ],
   "ok": false,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260911-093255.zip. Package: ÍNTEGRO. Validadores falhos: 2."
+  "summary": "Self-proving report gerado. ZIP: r-agent2-20260911-135830.zip. Package: DIVERGENTE. Validadores falhos: 4."
 }
