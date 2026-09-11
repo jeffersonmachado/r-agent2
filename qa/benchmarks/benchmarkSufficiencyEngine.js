@@ -649,6 +649,53 @@ function evaluateCriticalClassification({ sample }) {
   });
 }
 
+// ── §4 Fonte explícita de gates bloqueantes ───────────────────────────────
+//
+// BUG REPRODUZIDO (§2): a decisão final filtrava os gates por
+// `policy.criticalGates`, e essa lista OMITIA `governanceFloor`. Um gate
+// bloqueante fora da lista deixava de bloquear: o engine devolvia
+// SAMPLE_SUFFICIENT com `governanceFloor = FAIL`.
+//
+// Correção estrutural: a semântica de bloqueio passa a ser DERIVADA da
+// registry de gates do engine — bloqueante por padrão —, e apenas os gates
+// declarados em INFORMATION_ONLY_GATES são informativos. Não é configurável
+// por policy de propósito: uma policy capaz de remover um gate bloqueante da
+// decisão reintroduz exatamente o bug acima (fail-open).
+
+/**
+ * Gates cujo resultado é informativo e não bloqueia certificação.
+ * Qualquer gate fora desta lista é bloqueante.
+ */
+const INFORMATION_ONLY_GATES = Object.freeze(['benchmarkIndependence']);
+
+/** Ordem canônica dos gates avaliados por evaluateSampleSufficiency. */
+const GATE_NAMES = Object.freeze([
+  'marketArchetypeCoverage',
+  'benchmarkDiversity',
+  'benchmarkIndependence',
+  'capabilitySaturation',
+  'journeySaturation',
+  'businessRuleSaturation',
+  'holdoutValidation',
+  'sourceQuality',
+  'freshness',
+  'criticalClassification',
+  'inventoryArithmetic',
+  'orderSensitivity',
+  'governanceFloor',
+  'analysisEvidence',
+]);
+
+/**
+ * Gates que bloqueiam certificação: todo gate da registry que não seja
+ * explicitamente information-only.
+ *
+ * @returns {string[]}
+ */
+function listCriticalGates() {
+  return GATE_NAMES.filter((gate) => !INFORMATION_ONLY_GATES.includes(gate));
+}
+
 // ── §40 Gate principal ────────────────────────────────────────────────────
 
 function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
@@ -706,7 +753,7 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
     .filter(([, gate]) => gate.status !== 'PASS')
     .map(([name, gate]) => ({ gate: name, ...(gate.violations ? { violations: gate.violations } : {}), ...(gate.reason ? { reason: gate.reason } : {}) }));
 
-  const criticalGates = list(policy.criticalGates);
+  const criticalGates = listCriticalGates();
   const criticalBlocking = blocking.filter((b) => criticalGates.includes(b.gate));
 
   // Universidade: nenhuma contagem prova suficiência; o estado é derivado dos gates.
@@ -743,6 +790,9 @@ module.exports = {
   EXTERNAL_BLOCK_STATE,
   NOVELTY_KEYS,
   ALL_NOVELTY_KEYS,
+  INFORMATION_ONLY_GATES,
+  GATE_NAMES,
+  listCriticalGates,
   emptyNovelty,
   discoveryBenchmarks,
   validationBenchmarks,

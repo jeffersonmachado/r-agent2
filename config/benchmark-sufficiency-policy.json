@@ -30,21 +30,10 @@
   "orderSensitivityPermutations": 3,
   "orderSensitivityMustBeStable": true,
 
-  "criticalGates": [
-    "marketArchetypeCoverage",
-    "benchmarkDiversity",
-    "benchmarkIndependence",
-    "capabilitySaturation",
-    "journeySaturation",
-    "businessRuleSaturation",
-    "holdoutValidation",
-    "sourceQuality",
-    "freshness",
-    "criticalClassification",
-    "inventoryArithmetic",
-    "orderSensitivity",
-    "analysisEvidence"
-  ],
+  "blockingGates": {
+    "_note": "A semântica de bloqueio NÃO é configurável. Ela é derivada da registry de gates do engine (qa/benchmarks/benchmarkSufficiencyEngine.js: GATE_NAMES menos INFORMATION_ONLY_GATES) — todo gate é bloqueante por padrão. O campo `criticalGates` existia aqui como lista editável e foi a causa do bug em que `governanceFloor = FAIL` convivia com `SAMPLE_SUFFICIENT`: um gate bloqueante omitido da lista deixava de bloquear. Manter esta chave apenas como documentação; o engine a ignora de propósito (fail-safe por omissão).",
+    "informationOnlyGates": ["benchmarkIndependence"]
+  },
 
   "rationale": {
     "saturationWindow": "Dois benchmarks INDEPENDENTES consecutivos é o menor número capaz de distinguir 'saturação real' de 'acaso de um único produto'. Janela maior reduz falso PASS às custas de exigir mais pesquisa; 2 é o piso inicial do RAP.",
