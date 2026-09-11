@@ -320,6 +320,15 @@ describe('holdout: pré-registro, leakage, sucesso e falha (§6, §14, §15, §1
     expect(result.newCriticalCapabilities).toBe(0);
   });
 
+  it('LEAKAGE: reserva e análise no MESMO instante FALHA (§19)', () => {
+    const s = saturatedSample();
+    s.holdout.selectedAsHoldoutAt = '2026-09-01T00:00:00.000Z';
+    s.benchmarks.find((b) => b.id === 'h1').analyzedAt = '2026-09-01T00:00:00.000Z';
+    const result = evaluateHoldout({ sample: s, policy: POLICY });
+    expect(result.status).toBe('FAIL');
+    expect(result.violations.map((v) => v.reason)).toContain('holdout_preregistration_same_instant_as_analysis');
+  });
+
   it('FALHA ABSOLUTA: capability crítica REQUIRED nova no holdout', () => {
     const s = saturatedSample();
     s.benchmarks.find((b) => b.id === 'h1').novelty = novelty({ newCriticalCapabilities: [{ id: 'cap-x', required: true }] });

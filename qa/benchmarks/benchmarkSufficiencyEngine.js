@@ -565,15 +565,20 @@ function evaluateHoldout({ sample, policy }) {
 
   // Anti-leakage temporal: o holdout não pode ter sido analisado antes de ser reservado.
   const selectedAt = Date.parse(holdoutRecord.selectedAsHoldoutAt);
-  const analyzedAt = benchmark.analyzedAt ? Date.parse(benchmark.analyzedAt) : null;
+  // Fonte de verdade da análise é o BENCHMARK (é ele que é analisado). O campo
+  // homônimo no registro de holdout só serve de fallback: ler apenas o registro
+  // deixava a regra de "mesmo instante" inalcançável na prática.
+  const analyzedAtValue = benchmark.analyzedAt || holdoutRecord.analyzedAt || null;
+  const analyzedAt = analyzedAtValue ? Date.parse(analyzedAtValue) : null;
   if (Number.isFinite(selectedAt) && Number.isFinite(analyzedAt) && analyzedAt < selectedAt) {
     violations.push({
       reason: 'holdout_leakage_analyzed_before_preregistration',
       selectedAsHoldoutAt: holdoutRecord.selectedAsHoldoutAt,
-      analyzedAt: benchmark.analyzedAt,
+      analyzedAt: analyzedAtValue,
     });
   }
-  if (holdoutRecord.selectedAsHoldoutAt && holdoutRecord.selectedAsHoldoutAt === holdoutRecord.analyzedAt) {
+  if (analyzedAtValue && holdoutRecord.selectedAsHoldoutAt
+    && Date.parse(holdoutRecord.selectedAsHoldoutAt) === Date.parse(analyzedAtValue)) {
     violations.push({ reason: 'holdout_preregistration_same_instant_as_analysis' });
   }
 
