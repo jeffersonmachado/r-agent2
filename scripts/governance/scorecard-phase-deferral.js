@@ -78,7 +78,25 @@ function substantiveFailures(dimension) {
 }
 
 /**
+ * Classifica UM requisito reprovado como tolerável em PRE_PACKAGE.
+ *
+ * `isCircularRequirement` (opcional) identifica falha auto-referente: o
+ * requisito lê um relatório PROJETADO pelo próprio scorecard. Uma dimensão pode
+ * acumular as duas naturezas de tolerância (ex.: RAP-054 falha no pacote
+ * DEFERRED *e* no final-proof-report NO_GO, que é auto-referente) — por isso a
+ * decisão é tomada por REQUISITO, não por dimensão.
+ */
+function classifySubstantiveFailure(requirement, options = {}) {
+  if (isDeferredPackageRequirement(requirement)) return 'PRE_PACKAGE_DEFERRED';
+  if (typeof options.isCircularRequirement === 'function' && options.isCircularRequirement(requirement)) {
+    return 'CIRCULAR_PROJECTION';
+  }
+  return null;
+}
+
+/**
  * Dimensão cuja única falha substantiva é a deferral do pacote em PRE_PACKAGE.
+ * (Mantida para uso direto; o classificador abaixo aceita tolerâncias compostas.)
  */
 function isPrePackageDeferredDimension(dimension) {
   const failures = substantiveFailures(dimension);
@@ -89,7 +107,8 @@ function isPrePackageDeferredDimension(dimension) {
 /**
  * Classifica as dimensões abaixo de 10 e decide o status do gate de scorecard
  * em PRE_PACKAGE. `PASS` exige 10/10 real; qualquer abaixo de 10 que não seja
- * de fase DELIVERED, circular ou deferida por fase torna o gate FAIL.
+ * integralmente tolerável (fase DELIVERED, circular ou pacote deferido) torna o
+ * gate FAIL.
  */
 function classifyBelow10Dimensions(dimensions, options = {}) {
   const deliveredPhaseDimensions = options.deliveredPhaseDimensions || new Set();
@@ -99,7 +118,12 @@ function classifyBelow10Dimensions(dimensions, options = {}) {
   const classified = below10.map((dimension) => {
     if (deliveredPhaseDimensions.has(dimension.id)) return { id: dimension.id, kind: 'DELIVERED_PHASE' };
     if (isCircularOnly(dimension)) return { id: dimension.id, kind: 'CIRCULAR_PROJECTION' };
-    if (isPrePackageDeferredDimension(dimension)) return { id: dimension.id, kind: 'PRE_PACKAGE_DEFERRED' };
+
+    const failures = substantiveFailures(dimension);
+    const tolerances = failures.map((requirement) => classifySubstantiveFailure(requirement, options));
+    if (failures.length > 0 && tolerances.every(Boolean)) {
+      return { id: dimension.id, kind: [...new Set(tolerances)].join('+') };
+    }
     return { id: dimension.id, kind: 'REAL_FAILURE' };
   });
 
@@ -123,5 +147,6 @@ module.exports = {
   isDeferredPackageRequirement,
   substantiveFailures,
   isPrePackageDeferredDimension,
+  classifySubstantiveFailure,
   classifyBelow10Dimensions,
 };

@@ -132,6 +132,64 @@ describe('status do gate de scorecard em PRE_PACKAGE', () => {
     expect(result.status).toBe('FAIL');
     expect(result.realFailures.map((entry) => entry.id)).toEqual(['RAP-061']);
   });
+
+  it('falha MISTA (pacote deferido + relatório circular) também é deferida, não real', () => {
+    // Caso real RAP-054: falha no pacote DEFERRED *e* no final-proof-report
+    // NO_GO (auto-referente). A decisão é por REQUISITO.
+    const mixed = dimension({
+      id: 'RAP-054',
+      requirements: [
+        { id: 'implemented', category: 'IMPLEMENTED', mandatory: true, status: 'PASS' },
+        requirement(),
+        {
+          id: 'governed',
+          category: 'GOVERNED',
+          mandatory: true,
+          status: 'NO_GO',
+          code: 'MANDATORY_GATE_NO_GO',
+          validator: ['governance/final-proof-report.json'],
+          reason: 'Artifact reporta NO_GO: governance/final-proof-report.json',
+          evidence: [{ code: 'MANDATORY_GATE_NO_GO', path: 'governance/final-proof-report.json', reason: 'Artifact reporta NO_GO' }],
+        },
+      ],
+    });
+    const result = classifyBelow10Dimensions([mixed], {
+      isCircularOnly: () => false,
+      isCircularRequirement: (r) => r.code === 'MANDATORY_GATE_NO_GO'
+        && (r.validator || []).includes('governance/final-proof-report.json'),
+    });
+    expect(result.status).toBe('DEFERRED');
+    expect(result.realFailures).toEqual([]);
+    expect(result.classified[0].kind).toContain('PRE_PACKAGE_DEFERRED');
+    expect(result.classified[0].kind).toContain('CIRCULAR_PROJECTION');
+  });
+
+  it('falha mista com um requisito REAL continua sendo falha real', () => {
+    const mixedWithReal = dimension({
+      id: 'RAP-099',
+      requirements: [
+        requirement(),
+        {
+          id: 'runtime-validated-2',
+          category: 'RUNTIME_VALIDATED',
+          mandatory: true,
+          status: 'FAIL',
+          code: 'ARTIFACT_MISSING',
+          validator: ['reports/page-surface-report.json'],
+          reason: 'Artifact ausente: reports/page-surface-report.json',
+          evidence: [{ code: 'ARTIFACT_MISSING', path: 'reports/page-surface-report.json', reason: 'Artifact ausente' }],
+        },
+      ],
+    });
+    const result = classifyBelow10Dimensions([mixedWithReal], {
+      isCircularOnly: () => false,
+      // Predicado realista: só relatórios projetados são auto-referentes.
+      isCircularRequirement: (r) => r.code === 'MANDATORY_GATE_NO_GO'
+        && (r.validator || []).some((p) => p.startsWith('governance/final-')),
+    });
+    expect(result.status).toBe('FAIL');
+    expect(result.realFailures.map((entry) => entry.id)).toEqual(['RAP-099']);
+  });
 });
 
 describe('o gate de selagem NÃO herda a tolerância de fase', () => {

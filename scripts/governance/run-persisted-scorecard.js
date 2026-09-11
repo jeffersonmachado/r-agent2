@@ -33,6 +33,11 @@ const CIRCULAR_PROJECTION_REPORTS = new Set([
   'governance/final-consistency-gate-report.json',
 ]);
 
+function isCircularRequirement(requirement) {
+  return requirement.code === 'MANDATORY_GATE_NO_GO'
+    && (requirement.validator || []).some((validatorPath) => CIRCULAR_PROJECTION_REPORTS.has(validatorPath));
+}
+
 function isCircularOnlyDimension(dimension) {
   const failures = (dimension.requirements || []).filter((requirement) => (
     requirement.mandatory !== false
@@ -40,10 +45,7 @@ function isCircularOnlyDimension(dimension) {
     && !['NO_KNOWN_GAP', 'NO_OPEN_BLOCKER'].includes(requirement.category)
   ));
   if (failures.length === 0) return true; // só falhas derivadas (gap/blocker dos circulares)
-  return failures.every((requirement) => (
-    requirement.code === 'MANDATORY_GATE_NO_GO'
-    && (requirement.validator || []).some((validatorPath) => CIRCULAR_PROJECTION_REPORTS.has(validatorPath))
-  ));
+  return failures.every(isCircularRequirement);
 }
 
 function toPersistable(scorecard) {
@@ -137,6 +139,7 @@ async function main() {
   const below10Assessment = classifyBelow10Dimensions(scorecard.dimensions, {
     deliveredPhaseDimensions: DELIVERED_PHASE_DIMENSIONS,
     isCircularOnly: isCircularOnlyDimension,
+    isCircularRequirement,
   });
   const masterScorecardStatus = below10Assessment.status;
   const pendingKinds = [...new Set(below10Assessment.deferred.map((entry) => entry.kind))];

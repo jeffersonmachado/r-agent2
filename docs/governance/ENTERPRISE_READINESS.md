@@ -1,9 +1,9 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:AUTONOMOUS_READY_GO
+- Decision: NO_GO
 - Canonical mesh execution: mesh-20260911003113-iji3vq
 - Enterprise readiness: autonomous-ready
-- Production readiness: NO_GO:AUTONOMOUS_READY_GO
+- Production readiness: NO_GO
 - Blocking gaps: 1
 - Blocking domains: none
 

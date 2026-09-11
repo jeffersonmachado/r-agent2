@@ -1,26 +1,42 @@
 {
-  "generatedAt": "2026-09-11T09:27:11.285Z",
-  "runId": "rap-governed-20260911113009846-f459c482",
-  "sourceFingerprint": "bc3ba7799d1010c8782098c9e5f92bf7ba3e5b06aa75db9ecd1d7c9826fe611f",
+  "generatedAt": "2026-09-11T12:12:52.173Z",
+  "runId": "rap-governed-20260911121213633-80fd908f",
+  "sourceFingerprint": "b6e2bfad9f12eb6bfe55a9abdb23e96de54127dba97a5b5d335a02bf9957166a",
   "artifactType": "report-contamination-report",
   "artifactVersion": "1.0.0",
   "engine": "report-contamination-cleaner/v3",
-  "pass": true,
-  "decision": "NO_CONTAMINATION",
-  "currentGovernanceDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-  "filesScanned": 48,
-  "contaminatedFiles": 0,
-  "totalContaminations": 0,
-  "criticalCount": 0,
+  "pass": false,
+  "decision": "GOVERNANCE_CONTAMINATION_NO_GO",
+  "currentGovernanceDecision": "NO_GO",
+  "filesScanned": 47,
+  "contaminatedFiles": 1,
+  "totalContaminations": 1,
+  "criticalCount": 1,
   "highCount": 0,
-  "currentRunId": "rap-governed-20260911045707865-dc143e3e",
+  "currentRunId": "rap-governed-20260911121213633-80fd908f",
   "goTermsMonitored": [
     "AUTONOMOUS_READY_GO",
     "SELF_PROVING_GO",
     "ENTERPRISE_READY_GO"
   ],
-  "contaminations": [],
+  "contaminations": [
+    {
+      "file": "dev/platform-readiness/latest.json",
+      "issueCount": 1,
+      "issues": [
+        {
+          "path": "runId",
+          "value": "rap-governed-20260911113009846-f459c482",
+          "term": "FOREIGN_RUN_ARTIFACT",
+          "isDecisionField": true,
+          "type": "FOREIGN_RUN_ARTIFACT",
+          "severity": "CRITICAL",
+          "file": "dev/platform-readiness/latest.json",
+          "expected": "rap-governed-20260911121213633-80fd908f"
+        }
+      ]
+    }
+  ],
   "crossIssues": [],
-  "summary": "Nenhuma contaminação detectada em 48 arquivos.",
-  "reboundAt": "2026-09-11T09:27:39.228Z"
+  "summary": "1 contaminação(ões) em 1 arquivo(s): 1 crítica(s), 0 alta(s)"
 }
