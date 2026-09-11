@@ -12,35 +12,9 @@ const getDecision = require('../api/db/models/GovernanceFinalDecision');
 const getManifest = require('../api/db/models/ReleaseManifestRecord');
 const { fingerprintObject } = require('../qa/coverage/fingerprints');
 
-/**
- * Status de run que NÃO podem fundamentar um snapshot de certificação.
- * Um run que falhou (ou foi invalidado) não produziu estado canônico: escolhê-lo
- * como base exporta um snapshot sem scorecard/decisão e faz todos os gates
- * reportarem artefatos de run estrangeiro (FOREIGN_RUN_ARTIFACT).
- */
-const NON_CERTIFIABLE_RUN_STATUSES = Object.freeze(['FAILED', 'INVALIDATED']);
-
-/**
- * Escolhe o run que fundamenta o snapshot: o mais recente (a lista já vem
- * ordenada desc) cujo status seja certifícável. Se todos forem não-certifícáveis,
- * devolve o mais recente — nunca inventa um run inexistente.
- *
- * @param {Array<{status?: string}>} runs runs ordenados do mais recente ao mais antigo
- * @returns {object|null}
- */
-function pickCertificationRun(runs = []) {
-  const list = Array.isArray(runs) ? runs : [];
-  if (list.length === 0) return null;
-  const certifiable = list.find(
-    (run) => run && !NON_CERTIFIABLE_RUN_STATUSES.includes(String(run.status || '').toUpperCase()),
-  );
-  return certifiable || list[0];
-}
-
 async function exportCertificationSnapshot({ outputPath = path.join(process.cwd(), 'governance', 'certification-snapshot.json') } = {}) {
   await connect();
-  const candidateRuns = await getRun().findAll({ order: [['created_at', 'DESC']], limit: 50 });
-  const run = pickCertificationRun(candidateRuns);
+  const run = await getRun().findOne({ order: [['created_at', 'DESC']] });
   if (!run) throw new Error('governance_run_missing');
   const evaluation = await getEvaluation().findOne({ where: { run_id: run.run_id }, order: [['created_at', 'DESC']] });
   const gates = await getGate().findAll({ where: { run_id: run.run_id }, order: [['gate_key', 'ASC']] });
@@ -85,4 +59,4 @@ async function exportCertificationSnapshot({ outputPath = path.join(process.cwd(
 
 if (require.main === module) exportCertificationSnapshot().then((snapshot) => console.log(JSON.stringify({ runId: snapshot.runId, decision: snapshot.finalDecision?.decision || 'NO_GO', snapshotFingerprint: snapshot.snapshotFingerprint }))).catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => close().catch(() => {}));
 
-module.exports = { exportCertificationSnapshot, pickCertificationRun, NON_CERTIFIABLE_RUN_STATUSES };
+module.exports = { exportCertificationSnapshot };
