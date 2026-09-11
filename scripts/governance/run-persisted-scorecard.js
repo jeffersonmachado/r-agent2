@@ -14,6 +14,7 @@ const { runContaminationCleaner } = require('../../governance/report-contaminati
 const { exportCertificationSnapshot } = require('../../governance/export-certification-snapshot');
 const getAttestation = require('../../api/db/models/AgentPolicyAttestation');
 const getGap = require('../../api/db/models/GovernanceGap');
+const { classifyBelow10Dimensions } = require('./scorecard-phase-deferral');
 
 // Dimensões cuja verificação só existe na fase DELIVERED (artefato entregue).
 const DELIVERED_PHASE_DIMENSIONS = new Set(['RAP-055', 'RAP-056']);
@@ -127,18 +128,19 @@ async function main() {
   // no artefato entregue (fase DELIVERED). Em PRE_PACKAGE, se as ÚNICAS abaixo
   // de 10 forem essas, o gate master_scorecard fica DEFERRED (não FAIL): os
   // gates semânticos passaram, a verificação entregue ainda não é aplicável.
-  const below10Dimensions = scorecard.dimensions.filter((d) => d.score < 10);
-  const deliveredOnlyBelow10 = below10Dimensions.length > 0
-    && below10Dimensions.every((d) => DELIVERED_PHASE_DIMENSIONS.has(d.id));
-  // Dimensões cujas únicas falhas são auto-referentes (leem os relatórios
-  // projetados) não bloqueiam a projeção — são revalidadas no próximo ciclo
-  // contra o relatório projetado.
-  const circularOnlyBelow10 = below10Dimensions.length > 0
-    && below10Dimensions.every((d) => DELIVERED_PHASE_DIMENSIONS.has(d.id) || isCircularOnlyDimension(d));
-  const masterScorecardStatus = scorecard.summary.dimensionsBelow10 === 0
-    ? 'PASS'
-    : ((deliveredOnlyBelow10 || circularOnlyBelow10) ? 'DEFERRED' : 'FAIL');
-  await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'master_scorecard', status: masterScorecardStatus, phase: 'PRE_PACKAGE', reason: `dimensionsBelow10=${scorecard.summary.dimensionsBelow10}${deliveredOnlyBelow10 ? ' (delivered pending)' : (circularOnlyBelow10 ? ' (delivered/circular pending)' : '')}`, validator: 'master-scorecard-engine' });
+  //
+  // Mesma lógica para as dimensões cujo artefato canônico é o PACOTE
+  // (RAP-052/054): em PRE_PACKAGE o pacote ainda não existe, e o artefato
+  // canônico reporta DEFERRED — "não avaliável", não "reprovado". O gate de
+  // SELAGEM não herda esta tolerância: no selo o pacote existe e precisa
+  // PASSAR de verdade (scripts/governance/seal-time-gate.js).
+  const below10Assessment = classifyBelow10Dimensions(scorecard.dimensions, {
+    deliveredPhaseDimensions: DELIVERED_PHASE_DIMENSIONS,
+    isCircularOnly: isCircularOnlyDimension,
+  });
+  const masterScorecardStatus = below10Assessment.status;
+  const pendingKinds = [...new Set(below10Assessment.deferred.map((entry) => entry.kind))];
+  await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'master_scorecard', status: masterScorecardStatus, phase: 'PRE_PACKAGE', reason: `dimensionsBelow10=${scorecard.summary.dimensionsBelow10}${masterScorecardStatus === 'DEFERRED' ? ` (pending: ${pendingKinds.join('+')})` : ''}${below10Assessment.realFailures.length > 0 ? ` (real failures: ${below10Assessment.realFailures.map((entry) => entry.id).join(',')})` : ''}`, validator: 'master-scorecard-engine' });
   await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'source_integrity', status: 'PASS', reason: 'source fingerprint matches frozen run', validator: 'fingerprint-chain' });
   const attestation = await getAttestation().findOne({ where: { run_id: run.run_id, policy_fingerprint: run.policy_fingerprint, status: 'ATTESTED' } });
   await recordGate({ runId: run.run_id, sourceFingerprint, gateKey: 'agent_policy_compliance', status: attestation ? 'PASS' : 'FAIL', reason: attestation ? 'policy attestation exists for the governed run' : 'agent policy attestation missing', validator: 'verify-agent-policy-compliance' });
