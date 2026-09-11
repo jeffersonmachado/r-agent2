@@ -1,6 +1,6 @@
 # Production Readiness
 
-- Status: NO_GO:AUTONOMOUS_READY_GO
+- Status: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Prod-like validated flows: WhatsApp, Chat, PBX, Ticket, Human handoff, Scheduling, Payment, Checkin, CRM updates, Notifications
 
 ## Validation matrix

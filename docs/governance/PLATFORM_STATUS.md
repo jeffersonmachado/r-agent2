@@ -1,6 +1,6 @@
 # Platform Status
 
-- Generated at: 2026-09-11T16:42:22.107Z
+- Generated at: 2026-09-11T16:57:33.280Z
 - Canonical mesh execution: mesh-20260911003113-iji3vq
 - Canonical mesh decision: GO
 - Readiness decision: PASS_WITH_DEFERRED_PACKAGE_GATE
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
+- Sem bloqueadores ativos.
