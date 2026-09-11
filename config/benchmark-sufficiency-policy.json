@@ -26,6 +26,8 @@
   "maximumSourceAgeDays": 540,
   "maximumBenchmarkReviewAgeDays": 365,
   "minimumAcceptedSourceTier": 5,
+  "officialSourceTierMax": 6,
+  "secondarySourceTierMax": 7,
 
   "orderSensitivityPermutations": 3,
   "orderSensitivityMustBeStable": true,
@@ -43,6 +45,8 @@
     "minimumIndependentDiscoveryBenchmarks": "Piso operacional de diversidade (proteção), NÃO prova de suficiência: 3 benchmarks em grupos de independência distintos evitam que uma amostra de um único fornecedor passe.",
     "maximumSourceAgeDays": "Fontes oficiais envelhecem: 540 dias é o limite para aceitar evidência de capability sem revalidação obrigatória.",
     "minimumAcceptedSourceTier": "Tier 5 = página oficial de funcionalidade. Blog, post de busca e inferência de LLM não são prova de capability (§18).",
+    "officialSourceTierMax": "Tiers 1-6 são material OFICIAL do fornecedor (documentação, API/Swagger, help center, manual, página de funcionalidade, release notes). É o único material que prova capacidade (§15).",
+    "secondarySourceTierMax": "Tier 7 = fonte secundária de alta confiança: serve como apoio e corroboração, nunca como prova isolada de achado crítico. Tier 8 não é prova.",
     "orderSensitivityMustBeStable": "A curva de novidade é sensível à ordem de análise; se o resultado de suficiência depende da ordem, não há certificação (§28)."
   },
 

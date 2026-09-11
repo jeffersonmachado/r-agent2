@@ -415,7 +415,11 @@ describe('qualidade e frescor das fontes (§18, §19)', () => {
 
   it('fonte abaixo do tier mínimo FALHA', () => {
     const s = sample({ benchmarks: [benchmark({ id: 'b1', sources: [{ tier: 8, url: 'https://blog', retrievedAt: '2026-09-01' }] })] });
-    expect(evaluateSourceQuality({ sample: s, policy: POLICY }).violations[0].reason).toBe('source_tier_below_minimum');
+    const reasons = evaluateSourceQuality({ sample: s, policy: POLICY }).violations.map((v) => v.reason);
+    // Tier 8 é "somente apoio": além de ficar abaixo do tier aceito, não é
+    // fonte OFICIAL verificada (§15) — as duas violações são exigidas.
+    expect(reasons).toContain('source_tier_below_minimum');
+    expect(reasons).toContain('benchmark_without_verified_official_source');
   });
 
   it('capability crítica apoiada apenas em fonte de baixa confiança FALHA', () => {

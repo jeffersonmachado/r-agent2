@@ -719,14 +719,74 @@ function evaluateOrderSensitivity({ sample, policy }) {
 
 // ── §18/§19 Fontes e frescor ──────────────────────────────────────────────
 
+/**
+ * §15 Estado DERIVADO de verificação da fonte. Não é um booleano solto: a
+ * combinação tier + confirmação + URL determina se a fonte é prova oficial,
+ * apoio secundário, pendência de verificação ou não prova. Os limites entre
+ * oficial e secundário vêm da POLICY (thresholds não são constante de código).
+ */
+const SOURCE_VERIFICATION_STATES = Object.freeze({
+  VERIFIED_OFFICIAL: 'VERIFIED_OFFICIAL',
+  VERIFIED_SECONDARY: 'VERIFIED_SECONDARY',
+  NEEDS_VERIFICATION: 'NEEDS_VERIFICATION',
+  UNVERIFIED: 'UNVERIFIED',
+});
+
+/** Ordem de força (menor = mais forte) para reduzir o estado do benchmark. */
+const SOURCE_VERIFICATION_ORDER = Object.freeze([
+  SOURCE_VERIFICATION_STATES.VERIFIED_OFFICIAL,
+  SOURCE_VERIFICATION_STATES.VERIFIED_SECONDARY,
+  SOURCE_VERIFICATION_STATES.NEEDS_VERIFICATION,
+  SOURCE_VERIFICATION_STATES.UNVERIFIED,
+]);
+
+function classifySourceVerification(source, policy = {}) {
+  const officialMax = declaredNumber(policy.officialSourceTierMax);
+  const secondaryMax = declaredNumber(policy.secondarySourceTierMax);
+  const tier = declaredNumber(source && source.tier);
+  const hasUrl = Boolean(source && typeof source.url === 'string' && source.url.trim().length > 0);
+  const httpStatus = declaredNumber(source && source.httpStatus);
+
+  if (!hasUrl) return SOURCE_VERIFICATION_STATES.UNVERIFIED;
+  // Existe URL mas a obtenção não foi confirmada (ou veio 4xx/5xx): pendência.
+  if (source.verified !== true) return SOURCE_VERIFICATION_STATES.NEEDS_VERIFICATION;
+  if (httpStatus !== null && httpStatus >= 400) return SOURCE_VERIFICATION_STATES.NEEDS_VERIFICATION;
+  if (tier !== null && officialMax !== null && tier <= officialMax) return SOURCE_VERIFICATION_STATES.VERIFIED_OFFICIAL;
+  if (tier !== null && secondaryMax !== null && tier <= secondaryMax) return SOURCE_VERIFICATION_STATES.VERIFIED_SECONDARY;
+  return SOURCE_VERIFICATION_STATES.UNVERIFIED;
+}
+
 function evaluateSourceQuality({ sample, policy }) {
   const violations = [];
   const minTier = Number(policy.minimumAcceptedSourceTier) || 5;
+  const benchmarks = [];
+
   for (const benchmark of list(sample.benchmarks)) {
     const sources = list(benchmark.sources);
+    const verification = sources.map((source) => ({
+      id: source.id || source.url || null,
+      tier: declaredNumber(source.tier),
+      state: classifySourceVerification(source, policy),
+    }));
+    const hasOfficial = verification.some((entry) => entry.state === SOURCE_VERIFICATION_STATES.VERIFIED_OFFICIAL);
+    const bestState = verification.reduce(
+      (best, entry) => (SOURCE_VERIFICATION_ORDER.indexOf(entry.state) < SOURCE_VERIFICATION_ORDER.indexOf(best) ? entry.state : best),
+      SOURCE_VERIFICATION_STATES.UNVERIFIED,
+    );
+    benchmarks.push({ benchmarkId: benchmark.id, verificationState: bestState, sources: verification });
+
     if (sources.length === 0) {
       violations.push({ benchmarkId: benchmark.id, reason: 'benchmark_without_source' });
       continue;
+    }
+    // §15/§16 A fonte precisa ser OFICIAL e VERIFICADA: tier aceitável sem
+    // confirmação de existência/conteúdo não prova capacidade.
+    if (!hasOfficial) {
+      violations.push({
+        benchmarkId: benchmark.id,
+        reason: 'benchmark_without_verified_official_source',
+        verificationState: bestState,
+      });
     }
     const bestTier = Math.min(...sources.map((s) => Number(s.tier) || 99));
     if (bestTier > minTier) {
@@ -749,8 +809,67 @@ function evaluateSourceQuality({ sample, policy }) {
     if (criticalItems.length > 0 && sources.every((s) => s.verified !== true)) {
       violations.push({ benchmarkId: benchmark.id, reason: 'critical_finding_without_verified_source', items: criticalItems });
     }
+    if (criticalItems.length > 0 && !hasOfficial) {
+      violations.push({
+        benchmarkId: benchmark.id,
+        reason: 'critical_finding_source_not_verified_official',
+        verificationState: bestState,
+        items: criticalItems,
+      });
+    }
   }
-  return status(violations.length === 0, { violations, minimumAcceptedSourceTier: minTier });
+  return status(violations.length === 0, { violations, benchmarks, minimumAcceptedSourceTier: minTier });
+}
+
+/**
+ * §14 Rastreabilidade: descoberta CRÍTICA não é aceita como afirmação solta. A
+ * cadeia precisa existir e RESOLVER: Benchmark → item → SourceRef (fonte
+ * declarada) → EvidenceRef (evidência declarada). Itens não críticos não
+ * exigem a cadeia porque já são limitados por threshold de saturação; exigir
+ * cadeia completa de todo item criaria pressão para inflar evidência.
+ */
+function evaluateEvidenceTraceability({ sample }) {
+  const violations = [];
+  const evidence = list(sample.evidence);
+  const evidenceIds = new Set(evidence.map((entry) => String(entry.id)));
+  const criticalItems = [];
+
+  for (const benchmark of list(sample.benchmarks)) {
+    const novelty = benchmark.novelty || emptyNovelty();
+    const sourceRefs = new Set();
+    for (const [index, source] of list(benchmark.sources).entries()) {
+      if (source.id) sourceRefs.add(String(source.id));
+      if (source.url) sourceRefs.add(String(source.url));
+      sourceRefs.add(`#${index}`);
+    }
+
+    const entries = [
+      ...list(novelty[NOVELTY_KEYS.criticalCapabilities]).map((item) => ({ kind: 'capability', item })),
+      ...list(novelty[NOVELTY_KEYS.criticalJourneys]).map((item) => ({ kind: 'journey', item })),
+      ...list(novelty[NOVELTY_KEYS.criticalBusinessRules]).map((item) => ({ kind: 'rule', item })),
+    ];
+
+    for (const { kind, item } of entries) {
+      const structured = item !== null && typeof item === 'object';
+      const id = structured && item.id ? String(item.id) : String(item);
+      const sourceRef = structured && item.sourceRef ? String(item.sourceRef) : null;
+      const evidenceRef = structured && item.evidenceRef ? String(item.evidenceRef) : null;
+      const row = { benchmarkId: benchmark.id, kind, id, sourceRef, evidenceRef };
+      criticalItems.push(row);
+
+      if (!sourceRef) violations.push({ ...row, reason: 'critical_item_without_source_ref' });
+      else if (!sourceRefs.has(sourceRef)) violations.push({ ...row, reason: 'critical_item_source_ref_unresolved' });
+
+      if (!evidenceRef) violations.push({ ...row, reason: 'critical_item_without_evidence_ref' });
+      else if (!evidenceIds.has(evidenceRef)) violations.push({ ...row, reason: 'critical_item_evidence_ref_unresolved' });
+    }
+  }
+
+  return status(violations.length === 0, {
+    criticalItems,
+    declaredEvidence: [...evidenceIds],
+    violations,
+  });
 }
 
 function evaluateFreshness({ sample, policy, now = new Date() }) {
@@ -910,6 +1029,7 @@ const GATE_NAMES = Object.freeze([
   'businessRuleSaturation',
   'holdoutValidation',
   'sourceQuality',
+  'evidenceTraceability',
   'freshness',
   'criticalClassification',
   'inventoryArithmetic',
@@ -939,6 +1059,7 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
   const leaveOneOut = evaluateLeaveOneOut({ sample });
   const orderSensitivity = evaluateOrderSensitivity({ sample, policy });
   const sourceQuality = evaluateSourceQuality({ sample, policy });
+  const evidenceTraceability = evaluateEvidenceTraceability({ sample });
   const freshness = evaluateFreshness({ sample, policy, now });
   const criticalClassification = evaluateCriticalClassification({ sample });
   const analysisEvidence = evaluateAnalysisEvidence({ sample });
@@ -999,6 +1120,7 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
     businessRuleSaturation: saturation.businessRule,
     holdoutValidation: holdout,
     sourceQuality,
+    evidenceTraceability,
     freshness,
     criticalClassification,
     inventoryArithmetic,
@@ -1081,6 +1203,10 @@ module.exports = {
   evaluateLeaveOneOut,
   evaluateOrderSensitivity,
   evaluateSourceQuality,
+  classifySourceVerification,
+  SOURCE_VERIFICATION_STATES,
+  SOURCE_VERIFICATION_ORDER,
+  evaluateEvidenceTraceability,
   evaluateFreshness,
   evaluateCriticalClassification,
   evaluateAnalysisEvidence,
