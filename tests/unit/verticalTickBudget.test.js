@@ -14,7 +14,7 @@
  * orçamento já estourou.
  */
 
-function loadHandler({ memberships = [], computeEngagementSignal = null } = {}) {
+function loadHandler({ memberships = [], computeEngagementSignal = null, freshSignals = [] } = {}) {
   jest.resetModules();
 
   jest.doMock('../../api/db/sequelize', () => ({ getSequelize: () => ({}) }));
@@ -22,6 +22,9 @@ function loadHandler({ memberships = [], computeEngagementSignal = null } = {}) 
     VerticalJourneyEvent: () => ({ findOne: jest.fn(async () => null) }),
     VerticalAttendance: () => ({ findAll: jest.fn(async () => []) }),
     AccessMembership: () => ({ findAll: jest.fn(async () => memberships) }),
+    VerticalEngagementSignal: () => ({
+      findAll: jest.fn(async () => freshSignals.map((sid) => ({ subject_id: sid }))),
+    }),
   }));
   jest.doMock('../../api/services/vertical/churnModelService', () => ({
     getActiveModel: jest.fn(async () => null),
@@ -109,6 +112,33 @@ describe('handleFitnessInactivityScan — truncamento por orçamento', () => {
 
     await handler.handleFitnessInactivityScan({ tenantId: 'tenant-a' });
     expect(computeEngagementSignal).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('handleFitnessInactivityScan — varredura incremental por TTL', () => {
+  test('assunto com sinal fresco NÃO é recalculado (convergência da carga)', async () => {
+    const computeEngagementSignal = jest.fn(async () => ({ signal_type: 'healthy' }));
+    const memberships = buildMemberships(5);
+    // 3 dos 5 assuntos já têm sinal dentro do TTL.
+    const { handler } = loadHandler({
+      memberships,
+      computeEngagementSignal,
+      freshSignals: ['s-0', 's-1', 's-2'],
+    });
+
+    await handler.handleFitnessInactivityScan({ tenantId: 'tenant-a' });
+
+    expect(computeEngagementSignal).toHaveBeenCalledTimes(2);
+    const chamados = computeEngagementSignal.mock.calls.map((c) => c[0].subjectId);
+    expect(chamados).toEqual(['s-3', 's-4']);
+  });
+
+  test('sem sinais prévios processa todos os assuntos', async () => {
+    const computeEngagementSignal = jest.fn(async () => ({ signal_type: 'healthy' }));
+    const { handler } = loadHandler({ memberships: buildMemberships(4), computeEngagementSignal });
+
+    await handler.handleFitnessInactivityScan({ tenantId: 'tenant-a' });
+    expect(computeEngagementSignal).toHaveBeenCalledTimes(4);
   });
 });
 

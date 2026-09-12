@@ -24,7 +24,13 @@
 
 const logger = require('../../utils/logger');
 const { getSequelize } = require('../../db/sequelize');
-const { VerticalJourneyEvent, VerticalAttendance, AccessMembership, Order } = require('../../db/models');
+const {
+  VerticalJourneyEvent,
+  VerticalAttendance,
+  AccessMembership,
+  VerticalEngagementSignal,
+  Order,
+} = require('../../db/models');
 const { Op } = require('sequelize');
 
 // ── lazy imports to avoid circular deps ─────────────────────────────────────
@@ -453,7 +459,31 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}, budg
       limit: 500,
     }).catch(() => []);
 
+    // Varredura INCREMENTAL: sinal recém-calculado não é recalculado.
+    // Sem isso o tick reprocessava todos os assuntos a cada minuto (cada sinal
+    // custa scoring ML + insert + evento) e a carga por tenant crescia sem
+    // limite — os ticks nunca terminavam e a fila acumulava (incidente
+    // 2026-09-11). Com TTL o trabalho converge: cada assunto é atualizado uma
+    // vez por janela, e o resto do tick fica barato.
+    const ttlMinutes = Number(process.env.VERTICAL_ENGAGEMENT_SIGNAL_TTL_MINUTES) > 0
+      ? Number(process.env.VERTICAL_ENGAGEMENT_SIGNAL_TTL_MINUTES)
+      : 60;
+    let freshSubjects = new Set();
+    try {
+      const fresh = await VerticalEngagementSignal().findAll({
+        where: {
+          tenant_key: tenantId,
+          vertical: 'fitness',
+          computed_at: { [Op.gte]: new Date(Date.now() - ttlMinutes * 60000) },
+        },
+        attributes: ['subject_id'],
+        limit: 2000,
+      });
+      freshSubjects = new Set((fresh || []).map((s) => safeStr((s.toJSON ? s.toJSON() : s).subject_id)).filter(Boolean));
+    } catch (_) { /* fail-soft: sem TTL disponível, segue varredura normal */ }
+
     let processed = 0;
+    let skipped = 0;
     let truncated = false;
 
     for (const m of memberships) {
@@ -464,12 +494,16 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}, budg
         truncated = true;
         break;
       }
-      processed += 1;
       const row = m.toJSON ? m.toJSON() : m;
       const subjectId = safeStr(row.subject_id);
       const membershipId = safeStr(row.id);
       const billingStatus = safeStr(row.billing_status || 'active');
       if (!subjectId) continue;
+      if (freshSubjects.has(subjectId)) {
+        skipped += 1;
+        continue;
+      }
+      processed += 1;
 
       let signal;
       try {
@@ -539,6 +573,14 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}, budg
         processed,
         total: memberships.length,
         elapsedMs: tickBudget.elapsedMs(),
+      });
+    }
+    if (skipped > 0) {
+      logger.debug('[VerticalJourney] fitness inactivity scan pulou sinais frescos (TTL)', {
+        tenantId,
+        skipped,
+        ttlMinutes,
+        total: memberships.length,
       });
     }
   } catch (err) {

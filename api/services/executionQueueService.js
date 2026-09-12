@@ -651,6 +651,13 @@ function startExecutionQueueWorker({ intervalMs = 800, batchSize = null, budgetM
     Number.isFinite(Number(budgetMs)) && Number(budgetMs) > 0
       ? Math.floor(Number(budgetMs))
       : intEnv('EXECUTION_QUEUE_TICK_BUDGET_MS', 5_000);
+  // Concorrência LIMITADA dentro do lote: jobs de vertical chegam a levar
+  // ~20s cada (orçamento do tick). Processar o lote em série deixava a vazão
+  // presa em ~1 job/20s, abaixo da taxa de enfileiramento dos ciclos
+  // recorrentes. O limite por tenant continua sendo aplicado pelo próprio
+  // claim (`maxProcessingPerTenant`), então a paralelização não fura a
+  // política de concorrência da fila.
+  const concurrency = Math.max(1, Math.min(intEnv('EXECUTION_QUEUE_CONCURRENCY', 4), claimBatch));
 
   const runOne = async (job) => {
     try {
@@ -659,6 +666,22 @@ function startExecutionQueueWorker({ intervalMs = 800, batchSize = null, budgetM
     } catch (err) {
       await finishJob({ jobId: job.id, status: 'failed', errorMessage: safeToString(safeGet(err, 'message', '')) || safeToString(err) });
     }
+  };
+
+  // Executa `items` com no máximo `limit` execuções simultâneas, preservando a
+  // ordem de conclusão apenas para contabilização.
+  const runWithConcurrency = async (items, limit) => {
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      for (;;) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= items.length) return;
+        // eslint-disable-next-line no-await-in-loop
+        await runOne(items[index]);
+      }
+    });
+    await Promise.all(workers);
   };
 
   const tick = async () => {
@@ -685,17 +708,15 @@ function startExecutionQueueWorker({ intervalMs = 800, batchSize = null, budgetM
         if (!_running) break;
         const jobs = await claimNextJobs({ batchSize: claimBatch });
         if (!jobs.length) break;
-        for (const job of jobs) {
-          if (!_running) break;
-          await runOne(job);
-          drained += 1;
-        }
+        // eslint-disable-next-line no-await-in-loop
+        await runWithConcurrency(jobs, concurrency);
+        drained += jobs.length;
         // Lote incompleto significa fila drenada: não há motivo para novo claim.
         if (jobs.length < claimBatch) break;
         if (Date.now() - startedAt >= tickBudgetMs) break;
       }
       if (drained > 0) {
-        logger.debug('[ExecutionQueue] tick drenou jobs', { drained, claimBatch });
+        logger.debug('[ExecutionQueue] tick drenou jobs', { drained, claimBatch, concurrency });
       }
     } catch (err) {
       logger.warn('[ExecutionQueue] tick failed (ignored)', { error: safeToString(safeGet(err, 'message', '')) || safeToString(err) });
@@ -706,7 +727,7 @@ function startExecutionQueueWorker({ intervalMs = 800, batchSize = null, budgetM
 
   _timer = setInterval(() => { tick(); }, Math.max(200, Number(intervalMs) || 800));
   _timer.unref(); // allow process to exit cleanly (Jest, graceful shutdown)
-  logger.info('[ExecutionQueue] worker iniciado', { intervalMs, claimBatch, tickBudgetMs });
+  logger.info('[ExecutionQueue] worker iniciado', { intervalMs, claimBatch, tickBudgetMs, concurrency });
 }
 
 function stopExecutionQueueWorker() {
