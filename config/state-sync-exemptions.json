@@ -1,0 +1,151 @@
+{
+  "artifactType": "state-sync-exemptions",
+  "artifactVersion": "1.0.0",
+  "schema": "cada entrada isenta UM arquivo de frontend até N ocorrências de setInterval. O excedente é FALHA. Isentar por arquivo+contagem (e não por linha) evita que a isenção apodreça quando o código se move.",
+  "rule": "Estado realtime via WebSocket; PROIBIDO setInterval para sincronizar estado (AGENTS.md / CLAUDE.md). Verificado por checkNoSetIntervalStateSync em scripts/governance/validate-layer-conventions.js.",
+  "classifications": {
+    "infrastructure": "Timer do próprio transporte WebSocket (keepalive, watchdog de reconexão, verificação de token). Não sincroniza estado de domínio.",
+    "local_ui": "Timer local sem estado de servidor (countdown, relógio de playback, buffer de log/eventos, animação de progresso, utilitário de teste).",
+    "periodic_refresh_no_ws_event": "Atualização periódica de estado de servidor porque o backend NÃO emite evento WebSocket para o domínio. Desvio DECLARADO: exige que o catálogo de eventos emitidos (api/services, api/ws) não tenha evento equivalente. Se um evento passar a existir para o domínio, migrar a página e remover esta isenção."
+  },
+  "entries": [
+    {
+      "file": "frontend/src/context/WebSocketContext.jsx",
+      "allowedIntervals": 4,
+      "classification": "infrastructure",
+      "reason": "ping de keepalive, watchdog de reconexão e duas verificações de mudança de token do próprio provedor de WebSocket."
+    },
+    {
+      "file": "frontend/src/hooks/useWebSocket.js",
+      "allowedIntervals": 1,
+      "classification": "infrastructure",
+      "reason": "ping de keepalive do hook de WebSocket."
+    },
+    {
+      "file": "frontend/src/utils/websocketMetrics.js",
+      "allowedIntervals": 1,
+      "classification": "infrastructure",
+      "reason": "flush periódico de métricas do transporte WebSocket."
+    },
+    {
+      "file": "frontend/src/core/interactionTracker.js",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "flush do buffer local de interação do usuário; nenhum estado de servidor."
+    },
+    {
+      "file": "frontend/src/test/utils.js",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "helper de teste (aguarda condição); não é código de runtime."
+    },
+    {
+      "file": "frontend/src/pages/generate-system/useGenerateSystemRateLimit.js",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "contagem regressiva até liberar nova tentativa; valor puramente local (rate limit é aplicado no servidor)."
+    },
+    {
+      "file": "frontend/src/ConversationDebugger.jsx",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "debugger de conversa: reavalia o buffer local já em memória."
+    },
+    {
+      "file": "frontend/src/components/FallbackEventsViewer.jsx",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "renderiza o buffer local de eventos já recebidos; não faz requisição."
+    },
+    {
+      "file": "frontend/src/components/LogViewer.jsx",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "renderiza o buffer local de logs; não faz requisição."
+    },
+    {
+      "file": "frontend/src/components/qa-waves/ReplayDetailsModal.jsx",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "relógio de progresso da reprodução de replay (avança a posição local)."
+    },
+    {
+      "file": "frontend/src/components/replay/ReplayPlayer.jsx",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "relógio de playback do replay (avança a posição local)."
+    },
+    {
+      "file": "frontend/src/pages/WebScrapingPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "local_ui",
+      "reason": "anima a barra de progresso local enquanto a requisição de scraping está em voo."
+    },
+    {
+      "file": "frontend/src/hooks/useDevDashboard.js",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "o backend não emite evento de status de serviços/dev-dashboard; o catálogo de eventos emitidos não tem equivalente."
+    },
+    {
+      "file": "frontend/src/hooks/useSupportPageController.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "consolida contadores de atendimento que não têm evento próprio; os eventos ticket.* cobrem o detalhe, não os agregados desta lista."
+    },
+    {
+      "file": "frontend/src/pages/ChatHumanoDashboardPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "lista de mensagens falhas de entrega não tem evento de atualização; outbound.delivery_unknown existe para a fila, não para este consolidado."
+    },
+    {
+      "file": "frontend/src/pages/PanelPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "painel de display (TV) sem evento correspondente no catálogo emitido."
+    },
+    {
+      "file": "frontend/src/pages/PbxOperatorPanelPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "estado de ramais do operador PBX não é emitido por WebSocket; o backend expõe apenas push de snapshot por rota própria do painel."
+    },
+    {
+      "file": "frontend/src/pages/RpaReplaysPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "consolidado de gravações/execuções RPA. MIGRAR: rpa.recording.updated e rpa.execution.updated já existem no catálogo; a página ainda usa timer para a lista completa."
+    },
+    {
+      "file": "frontend/src/pages/StorefrontOrderStatusPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "acompanhamento público de pedido do storefront; o catálogo não emite evento de pedido. Poll de curta duração é intencional para não deixar o cliente sem atualização."
+    },
+    {
+      "file": "frontend/src/pages/SystemStatusPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "status de serviços/infra não tem evento emitido; a tela precisa refletir indisponibilidade mesmo quando o WebSocket está degradado."
+    },
+    {
+      "file": "frontend/src/pages/TicketMaintenancePage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "fila de manutenção em lote. MIGRAR: ticket.updated já existe; a página ainda usa timer para reprocessar a listagem."
+    },
+    {
+      "file": "frontend/src/pages/crm/CrmDashboardPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "métricas agregadas de CRM não são emitidas por evento (os eventos cobrem entidades, não os KPIs)."
+    },
+    {
+      "file": "frontend/src/pages/qa/StabilityPage.jsx",
+      "allowedIntervals": 1,
+      "classification": "periodic_refresh_no_ws_event",
+      "reason": "consolidado de estabilidade/QA; pipeline.status existe para execuções individuais, não para o agregado desta página."
+    }
+  ]
+}

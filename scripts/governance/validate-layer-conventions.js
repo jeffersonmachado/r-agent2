@@ -11,6 +11,7 @@ const {
   statusFromIssues,
   writeReport,
 } = require('./common');
+const { evaluateStateSyncRule } = require('./state-sync-rule');
 
 const issues = [];
 
@@ -167,27 +168,22 @@ function checkApiNoConsoleLog() {
   });
 }
 
-// ── 5. No setInterval for state sync (use WebSocket) ────────────────
+// ── 5. Nenhum setInterval para sincronizar estado (use WebSocket) ───
+//
+// A REGRA vive em `scripts/governance/state-sync-rule.js`, consumida TAMBÉM pelo
+// gate bloqueante `validate-state-sync.js` — uma única fonte da verdade, sem
+// lógica duplicada. Aqui ela apenas reporta; lá ela bloqueia.
+//
+// Histórico do defeito (2026-09-12): o check varria `api/` também (worker de
+// backend em timer é o padrão correto — 19 falsos positivos de escopo) e marcava
+// TODA ocorrência como `error`, enquanto o status do validador mapeava `error`
+// para WARN e o exit só considerava FAIL: 45 violações conviviam com
+// `overallGovernance = 100`.
 function checkNoSetIntervalStateSync() {
-  const dirs = ['api/', 'frontend/src/'];
+  const result = evaluateStateSyncRule(ROOT);
 
-  for (const dir of dirs) {
-    if (!dirExists(dir)) continue;
-
-    const exts = dir === 'frontend/src/' ? ['js', 'jsx'] : ['js'];
-    for (const ext of exts) {
-      scanFiles(dir, ext, (file, line, text) => {
-        if (file.includes('__tests__') || file.includes('.test.')) return;
-
-        const trimmed = text.trim();
-        if (trimmed.startsWith('//') || trimmed.startsWith('*')) return;
-
-        if (/\bsetInterval\s*\(/.test(trimmed)) {
-          // Not a false positive: flag all setInterval
-          addIssue('error', 'state-sync', file, line, `setInterval detectado: "${trimmed.substring(0, 80)}"`, 'Use WebSocket para sincronização de estado. setInterval é proibido para state sync.');
-        }
-      });
-    }
+  for (const issue of [...result.violations, ...result.stale]) {
+    addIssue(issue.severity, 'state-sync', issue.file, issue.line, issue.message, issue.suggestion);
   }
 }
 
