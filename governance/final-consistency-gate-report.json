@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T10:06:05.916Z",
+  "generatedAt": "2026-09-12T10:09:36.098Z",
   "engine": "final-consistency-gate/v1",
   "artifactType": "final-consistency-report",
   "artifactVersion": "2.0.0",
@@ -7,11 +7,11 @@
   "transitional": false,
   "runId": "rap-governed-20260912092907386-12f62a95",
   "sourceFingerprint": "2c231f3876d06fab383fd6d05dbbb235389096e65bb6827223c3376117df629d",
-  "pass": false,
-  "decision": "FINAL_CONSISTENCY_NO_GO",
+  "pass": true,
+  "decision": "FINAL_CONSISTENCY_GO",
   "totalChecks": 13,
-  "failedChecks": 1,
-  "criticalFailures": 1,
+  "failedChecks": 0,
+  "criticalFailures": 0,
   "highFailures": 0,
   "checks": [
     {
@@ -28,7 +28,7 @@
         "runId": "rap-governed-20260912092907386-12f62a95",
         "sourceFingerprint": "2c231f3876d06fab383fd6d05dbbb235389096e65bb6827223c3376117df629d",
         "startedAt": "2026-09-12T09:29:08.289Z",
-        "generatedAt": "2026-09-12T10:06:05.637Z",
+        "generatedAt": "2026-09-12T10:09:36.000Z",
         "status": "RUNNING",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
@@ -36,7 +36,7 @@
         "policyVersion": "1.0.3",
         "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
         "lastGovernedStage": "final-consistency",
-        "lastSourceVerificationAt": "2026-09-12T10:06:05.637Z",
+        "lastSourceVerificationAt": "2026-09-12T10:09:36.000Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -92,6 +92,11 @@
             "stage": "final-consistency",
             "sourceFingerprint": "2c231f3876d06fab383fd6d05dbbb235389096e65bb6827223c3376117df629d",
             "verifiedAt": "2026-09-12T10:06:05.637Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "2c231f3876d06fab383fd6d05dbbb235389096e65bb6827223c3376117df629d",
+            "verifiedAt": "2026-09-12T10:09:36.000Z"
           }
         ]
       }
@@ -131,23 +136,14 @@
       "id": "tamper_detection",
       "gateId": "tamper_detection",
       "mandatory": true,
-      "status": "FAIL",
-      "pass": false,
-      "severity": "CRITICAL",
+      "status": "PASS",
+      "pass": true,
+      "severity": "OK",
       "runId": "rap-governed-20260912092907386-12f62a95",
       "sourceFingerprint": "2c231f3876d06fab383fd6d05dbbb235389096e65bb6827223c3376117df629d",
-      "reason": "INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion",
-      "lineage": {
-        "valid": false,
-        "code": "INVALID_ARTIFACT",
-        "reason": "missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion",
-        "missing": [
-          "runId",
-          "sourceFingerprint",
-          "artifactType",
-          "artifactVersion"
-        ]
-      }
+      "reason": null,
+      "decision": "GO",
+      "failedChecks": 0
     },
     {
       "id": "final_proof",
@@ -257,11 +253,6 @@
       "reason": null
     }
   ],
-  "failures": [
-    {
-      "severity": "CRITICAL",
-      "reason": "INVALID_ARTIFACT: missing lineage fields: runId, sourceFingerprint, artifactType, artifactVersion"
-    }
-  ],
-  "summary": "1 inconsistência(s) entre engines: 1 crítica(s). BLOQUEADO."
+  "failures": [],
+  "summary": "Todos os 13 engines concordam. Consistência final validada."
 }
