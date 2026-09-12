@@ -288,7 +288,13 @@ function run() {
   console.log(`  Infos:     ${infos}`);
   console.log(`  Total:     ${issues.length}\n`);
 
-  const status = criticals > 0 ? 'FAIL' : errors > 0 ? 'WARN' : 'PASS';
+  // Defeito corrigido (2026-09-12): `errors > 0` mapeava para 'WARN' e o exit
+  // code só considerava 'FAIL'. Como nenhum check emite 'critical' em operação
+  // normal, este validador era ESTRUTURALMENTE incapaz de falhar: 338 violações
+  // (51 delas `setInterval`, regra documentada como PROIBIDA) conviviam com
+  // `status = PASS / overallGovernance = 100`. Violação de severidade `error`
+  // precisa falhar; do contrário o relatório informa e não protege nada.
+  const status = (criticals > 0 || errors > 0) ? 'FAIL' : warnings > 0 ? 'WARN' : 'PASS';
 
   // Group by layer
   const byLayer = {};
@@ -308,7 +314,11 @@ function run() {
     byLayer: Object.fromEntries(
       Object.entries(byLayer).map(([k, v]) => [k, v.length])
     ),
-    issues: issues.slice(0, 200),
+    // Sem truncamento: antes era `issues.slice(0, 200)` enquanto o console
+    // apontava para este relatório pedindo as violações restantes (138 delas
+    // não existiam no arquivo). Um artefato de prova não pode subnotificar a
+    // si mesmo.
+    issues,
   };
 
   const outPath = writeReport('layer-conventions-report.json', report);

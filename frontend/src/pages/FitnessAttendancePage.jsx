@@ -44,9 +44,15 @@ export function FitnessAttendancePage() {
 
   useEffect(() => {
     loadData();
-    // Poll de 120s: fallback caso o evento WS não chegue
-    const timer = setInterval(loadData, 120000);
-    return () => clearInterval(timer);
+    // Realtime por PUSH: o backend emite `vertical.attendance.updated` e a página
+    // recarrega via WebSocket (useWebSocketContext acima). Não há polling: a regra
+    // do projeto proíbe `setInterval` para sincronizar estado. Ao voltar para a
+    // aba, revalidamos uma vez por evento — o botão "Atualizar" continua disponível.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, []);
 
   return (
@@ -70,6 +76,24 @@ export function FitnessAttendancePage() {
             </tr>
           </thead>
           <tbody>
+            {loading && items.length === 0 ? (
+              <tr>
+                <td colSpan={4}>
+                  <p className="support-tickets-empty">Carregando presenças...</p>
+                </td>
+              </tr>
+            ) : null}
+            {!loading && items.length === 0 ? (
+              // Sem estado vazio a tabela ficava só com o cabeçalho e o usuário
+              // não distinguia "nenhuma presença aberta" de "falha ao carregar".
+              <tr>
+                <td colSpan={4}>
+                  <p className="support-tickets-empty" data-testid="fitness-attendance-empty">
+                    Nenhuma presença aberta no momento
+                  </p>
+                </td>
+              </tr>
+            ) : null}
             {items.map((item) => (
               <tr key={item.id}>
                 <td>{item.id}</td>
