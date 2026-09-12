@@ -425,9 +425,34 @@ function createMcpClientHub({
 
     // Retry: policy da tool manda. Side effect sem idempotência garantida NUNCA
     // é reexecutado às cegas (operação ambígua) — 1 tentativa.
-    const policyAttempts = Number(toolPolicy?.retryPolicy?.attempts) || null;
-    const attempts = Math.max(1, policyAttempts || connection.retryPolicy.attempts || 1);
-    const timeout = Number(toolPolicy?.timeoutMs) || connection.timeoutMs;
+    //
+    // Ambiguidade: se a tentativa falha por timeout/falha de transporte, a
+    // operação PODE ter sido aplicada no provedor remoto sem resposta. Repetir
+    // um efeito não idempotente duplicaria a consequência (cobrança, envio,
+    // cancelamento). A política efetiva vem do parâmetro da chamada e, na
+    // ausência dele, da política declarada por tool na conexão.
+    const effectivePolicy = toolPolicy || connection.toolPolicies?.[toolName] || null;
+    const declaresSideEffects = effectivePolicy?.sideEffects === true;
+    const declaresIdempotency = effectivePolicy?.idempotent === true
+      || effectivePolicy?.idempotencyGuaranteed === true;
+    const ambiguousSideEffect = declaresSideEffects && !declaresIdempotency;
+
+    const policyAttempts = Number(effectivePolicy?.retryPolicy?.attempts) || null;
+    const requestedAttempts = Math.max(1, policyAttempts || connection.retryPolicy.attempts || 1);
+    const attempts = ambiguousSideEffect ? 1 : requestedAttempts;
+    const timeout = Number(effectivePolicy?.timeoutMs) || connection.timeoutMs;
+
+    if (ambiguousSideEffect && requestedAttempts > 1) {
+      // Não é silêncio: a supressão do retry é auditada com o motivo.
+      emitAudit({
+        connection,
+        toolName,
+        principalId,
+        outcome: 'retry_withheld',
+        reason: 'ambiguous_side_effect_without_idempotency',
+        requestedAttempts,
+      });
+    }
 
     let lastError = null;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -462,7 +487,7 @@ function createMcpClientHub({
     throw new Error(`mcp_call_failed: ${name}/${toolName}: ${lastError?.message || 'unknown'}`);
   }
 
-  function emitAudit({ connection, toolName, principalId, outcome, latencyMs = null, reason = null }) {
+  function emitAudit({ connection, toolName, principalId, outcome, latencyMs = null, reason = null, requestedAttempts = null }) {
     if (typeof audit !== 'function') return;
     try {
       audit({
@@ -475,6 +500,7 @@ function createMcpClientHub({
         outcome,
         latencyMs,
         reason,
+        requestedAttempts,
         at: new Date(clock()).toISOString(),
       });
     } catch (error) {
