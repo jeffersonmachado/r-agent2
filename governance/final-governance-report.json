@@ -1,8 +1,8 @@
 {
   "artifactType": "final-governance-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-12T11:25:42.685Z",
-  "runId": "rap-governed-20260912131902897-e5a8bed5",
+  "generatedAt": "2026-09-12T14:59:16.258Z",
+  "runId": "rap-governed-20260912145739502-1a5333c8",
   "sourceFingerprint": "7df9f36a74f6c6fcdad7998636c605de655c290089b51d10064c8ede1fcc2909",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.3",
@@ -21,7 +21,7 @@
       "id": "master_scorecard",
       "pass": false,
       "status": "DEFERRED",
-      "reason": "dimensionsBelow10=2 (pending: DELIVERED_PHASE)"
+      "reason": "dimensionsBelow10=4 (pending: PRE_PACKAGE_DEFERRED+DELIVERED_PHASE)"
     },
     {
       "id": "source_integrity",

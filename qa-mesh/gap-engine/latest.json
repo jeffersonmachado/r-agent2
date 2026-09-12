@@ -1,19 +1,8 @@
 {
-  "generatedAt": "2026-09-12T11:45:33.663Z",
-  "status": "NO_GO:ENTERPRISE_READY_GO",
+  "generatedAt": "2026-09-12T14:58:08.799Z",
+  "status": "NO_GO:AUTONOMOUS_READY_GO",
   "platformMaturity": "enterprise-partial",
   "backlog": [
-    {
-      "id": "gap-proof-package-validation",
-      "severity": "critical",
-      "area": "package",
-      "title": "ZIP de release nao contem todos os proofs obrigatorios",
-      "evidence": {
-        "missingEntries": [],
-        "missingEntryCodes": []
-      },
-      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
-    },
     {
       "id": "gap-proof-stale-fingerprints",
       "severity": "critical",
@@ -26,21 +15,8 @@
         ]
       },
       "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
-    },
-    {
-      "id": "gap-cross-report-package_validation_failed",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: package_validation_failed",
-      "evidence": {
-        "type": "package_validation_failed",
-        "missingEntries": [],
-        "blocker": true,
-        "message": "Pacote não passou na validação: 0 entradas ausentes."
-      },
-      "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
     }
   ],
-  "blocking": 3,
+  "blocking": 1,
   "nonBlocking": 0
 }
