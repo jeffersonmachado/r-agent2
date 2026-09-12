@@ -1,8 +1,211 @@
 {
-  "generatedAt": "2026-09-12T17:03:45.743Z",
-  "status": "AUTONOMOUS_READY_GO",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
-  "nonBlocking": 0
+  "generatedAt": "2026-09-12T18:04:27.571Z",
+  "status": "NO_GO:ENTERPRISE_READY_GO",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "blockingClassification": "backlog",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-production-whatsapp",
+      "severity": "medium",
+      "area": "production-validation",
+      "title": "Fluxo WhatsApp sem prova prod-like suficiente",
+      "evidence": {
+        "id": "whatsapp",
+        "label": "WhatsApp",
+        "status": "validated",
+        "evidence": [
+          "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+        ],
+        "scenarioCount": 117,
+        "blocker": true
+      },
+      "suggestedFix": "Criar jornada com replay cronologico, assertions de backend e validacao de governanca para este fluxo."
+    },
+    {
+      "blockingClassification": "release-blocker",
+      "suggestions": {
+        "journeys": [
+          "pbx_voice_flow_prod_like"
+        ],
+        "assertions": [
+          "cdr_generated",
+          "recording_persisted",
+          "hangup_cause_recorded"
+        ],
+        "replayEnrichments": [
+          "call_timeline",
+          "asr_transcript",
+          "tts_prompts",
+          "ivr_decisions",
+          "queue_transitions"
+        ]
+      },
+      "id": "gap-enterprise-pbx-prod-like",
+      "severity": "critical",
+      "area": "pbx",
+      "title": "PBX prod-like real ainda nao foi validado com replay de voz completo",
+      "evidence": {
+        "id": "pbx",
+        "label": "PBX",
+        "status": "validated",
+        "evidence": [
+          "qa/smoke-evidence.json"
+        ],
+        "scenarioCount": 398,
+        "blocker": false
+      },
+      "suggestedFix": "Executar pbx_voice_flow_prod_like com originate, queue, IVR, TTS, ASR, DTMF, transfer, CDR e recording."
+    },
+    {
+      "blockingClassification": "release-blocker",
+      "suggestions": {
+        "journeys": [
+          "omnichannel_unified_replay"
+        ],
+        "assertions": [
+          "crm_update_recorded",
+          "ticket_linked_to_call",
+          "notification_delivery_recorded"
+        ],
+        "replayEnrichments": [
+          "channel_switches",
+          "cross_channel_identity",
+          "timeline_merge"
+        ]
+      },
+      "id": "gap-enterprise-omnichannel-unified-replay",
+      "severity": "critical",
+      "area": "omnichannel",
+      "title": "Replay unificado omnichannel ainda nao possui prova operacional cross-channel",
+      "evidence": {
+        "missingProofs": [
+          "pbx_prod_like",
+          "omnichannel_unified_replay"
+        ],
+        "productionValidation": [
+          {
+            "id": "whatsapp",
+            "label": "WhatsApp",
+            "status": "validated",
+            "evidence": [
+              "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+            ],
+            "scenarioCount": 117,
+            "blocker": true
+          },
+          {
+            "id": "chat",
+            "label": "Chat",
+            "status": "production-like",
+            "evidence": [
+              "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+            ],
+            "scenarioCount": 35,
+            "blocker": false
+          },
+          {
+            "id": "pbx",
+            "label": "PBX",
+            "status": "validated",
+            "evidence": [
+              "qa/smoke-evidence.json"
+            ],
+            "scenarioCount": 398,
+            "blocker": false
+          },
+          {
+            "id": "ticket",
+            "label": "Ticket",
+            "status": "production-like",
+            "evidence": [
+              "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+            ],
+            "scenarioCount": 20,
+            "blocker": false
+          },
+          {
+            "id": "human_handoff",
+            "label": "Human handoff",
+            "status": "production-like",
+            "evidence": [
+              "qa/enterprise/human-handoff-full-validation.json"
+            ],
+            "scenarioCount": 86,
+            "blocker": false
+          },
+          {
+            "id": "scheduling",
+            "label": "Scheduling",
+            "status": "production-like",
+            "evidence": [
+              "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+            ],
+            "scenarioCount": 95,
+            "blocker": false
+          },
+          {
+            "id": "payment",
+            "label": "Payment",
+            "status": "production-like",
+            "evidence": [
+              "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+            ],
+            "scenarioCount": 93,
+            "blocker": false
+          },
+          {
+            "id": "checkin",
+            "label": "Checkin",
+            "status": "production-like",
+            "evidence": [
+              "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+            ],
+            "scenarioCount": 26,
+            "blocker": false
+          },
+          {
+            "id": "crm_updates",
+            "label": "CRM updates",
+            "status": "production-like",
+            "evidence": [
+              "qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
+            ],
+            "scenarioCount": 70,
+            "blocker": false
+          },
+          {
+            "id": "notifications",
+            "label": "Notifications",
+            "status": "validated",
+            "evidence": [
+              "qa/enterprise/omnichannel-unified-replay.json"
+            ],
+            "scenarioCount": 38,
+            "blocker": false
+          }
+        ]
+      },
+      "suggestedFix": "Gerar um replay unico cobrindo WhatsApp, chat, PBX, tickets, CRM e automacoes em uma mesma jornada do cliente."
+    },
+    {
+      "id": "gap-proof-stale-fingerprints",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "evidence": {
+        "diverged": [
+          "sourceFingerprint",
+          "chainFingerprint"
+        ]
+      },
+      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    }
+  ],
+  "blocking": 3,
+  "nonBlocking": 1
 }

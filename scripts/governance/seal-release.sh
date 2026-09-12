@@ -179,6 +179,26 @@ phase_prepare() {
       grep -oE 'below10=\[[^]]*\]' "$log" | tail -1 | sed 's/^/    /' || true
       ;;
     *)
+      # RECONCILIAÇÃO antes de falhar. O converge cria o run governado logo no
+      # início e só regenera a projeção de readiness no passo 4/8. Se ele morre
+      # no meio (ex.: SEAL_NO_GO no passo 8), `.current-run.json` fica apontando
+      # para o run novo enquanto `dev/platform-readiness/latest.json` continua com
+      # o run anterior — e o invariante testado por
+      # `tests/unit/governance/convergenceFixpoint.test.js` ("o runId da projeção
+      # é o do run corrente") quebra, deixando o repositório inconsistente.
+      # O produtor canônico da projeção é este (o converge o usa antes do
+      # fixpoint); o exit é tolerado porque espelha a decisão, não a execução.
+      warn "converge não convergiu ($verdict) — reconciliando a projeção de readiness"
+      timeout 600 node --env-file-if-exists=.env tools/system/platform-readiness.js \
+        > "$LOG_DIR/readiness-reconcile.log" 2>&1 || true
+      local cur proj
+      cur="$(node -e "try{console.log(require('./governance/.current-run.json').runId)}catch(e){console.log('?')}" 2>/dev/null)"
+      proj="$(node -e "try{console.log(require('./dev/platform-readiness/latest.json').runId)}catch(e){console.log('?')}" 2>/dev/null)"
+      if [ "$cur" = "$proj" ]; then
+        ok "projeção reconciliada com o run corrente ($cur)"
+      else
+        warn "projeção ainda divergente: run=$cur projecao=$proj"
+      fi
       fail "seal-time-gate não convergiu ($verdict)" "$log" prepare
       ;;
   esac
