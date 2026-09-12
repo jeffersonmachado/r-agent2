@@ -1,0 +1,5720 @@
+[
+  {
+    "id": "business-b1",
+    "domain": "beauty",
+    "type": "business",
+    "source": "qa",
+    "flow": "Beauty campanha de unhas até pagamento",
+    "steps": [
+      "Campanha e sandbox billing habilitados"
+    ],
+    "assertions": [
+      "Campanha criada",
+      "Lead captado",
+      "Cliente convertido",
+      "Agendamento válido",
+      "Preço promocional aplicado",
+      "Pagamento confirmado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_new_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=journeys",
+      "--code=B1"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "B1",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-b2",
+    "domain": "beauty",
+    "type": "business",
+    "source": "qa",
+    "flow": "Beauty reagendamento",
+    "steps": [
+      "Agendamento existente"
+    ],
+    "assertions": [
+      "Agendamento localizado",
+      "Horário alterado",
+      "Consistência mantida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=journeys",
+      "--code=B2"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "B2",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-bakery-flow-balcao-retirada",
+    "domain": "bakery",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Padaria pedido no balcão até retirada pelo cliente",
+    "steps": [
+      "Tenant autenticado",
+      "Case Management ativo"
+    ],
+    "assertions": [
+      "Pedido de balcão registrado",
+      "Produção assumida pelo atendente",
+      "Cliente chamado para retirada",
+      "Retirada confirmada no encerramento"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "bakery",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "bakery_balcao_retirada",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BAKERY-FLOW-BALCAO-RETIRADA"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BAKERY-FLOW-BALCAO-RETIRADA",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-bakery-flow-campanha-combo",
+    "domain": "bakery",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Padaria campanha rápida de combo em janela ociosa",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Campanha de combo criada",
+      "Campanha disparada",
+      "Campanha visível na listagem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "bakery",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "bakery_reativacao_cliente",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BAKERY-FLOW-CAMPANHA-COMBO"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BAKERY-FLOW-CAMPANHA-COMBO",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-bakery-flow-cliente-recorrente",
+    "domain": "bakery",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Padaria lead recorrente qualificado e reativado",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Lead de cliente recorrente registrado",
+      "Lead qualificado",
+      "Cliente reativado convertido"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "bakery",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "bakery_reativacao_cliente",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BAKERY-FLOW-CLIENTE-RECORRENTE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BAKERY-FLOW-CLIENTE-RECORRENTE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-bakery-flow-encomenda",
+    "domain": "bakery",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Padaria encomenda aberta até entrega",
+    "steps": [
+      "Tenant autenticado",
+      "Case Management ativo"
+    ],
+    "assertions": [
+      "Encomenda registrada",
+      "Produção assumida pelo atendente",
+      "Entrega confirmada no encerramento"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "bakery",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "bakery_encomenda_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BAKERY-FLOW-ENCOMENDA"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BAKERY-FLOW-ENCOMENDA",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-bakery-flow-estoque-perdas",
+    "domain": "bakery",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Padaria perda de estoque registrada e vinculada ao pedido",
+    "steps": [
+      "Módulo de pedidos ativo",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Perda registrada como incidente do pedido",
+      "Ticket de perda aberto",
+      "Registro visível no backend"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "bakery",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "bakery_estoque_perdas",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BAKERY-FLOW-ESTOQUE-PERDAS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BAKERY-FLOW-ESTOQUE-PERDAS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-bakery-flow-pedido-status",
+    "domain": "bakery",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Padaria pedido avança produção até entrega",
+    "steps": [
+      "Módulo de pedidos ativo",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pedido localizado",
+      "Status avançado no ciclo produção/entrega",
+      "Atualização refletida no backend"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "bakery",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "bakery_encomenda_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BAKERY-FLOW-PEDIDO-STATUS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BAKERY-FLOW-PEDIDO-STATUS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-bakery-flow-producao-fornada",
+    "domain": "bakery",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Padaria fornada avança produção até disponibilidade",
+    "steps": [
+      "Módulo de pedidos ativo",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Fornada localizada no ciclo de produção",
+      "Status avançado até disponibilidade (ready)",
+      "Atualização refletida no backend"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "bakery",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "bakery_producao_fornada",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BAKERY-FLOW-PRODUCAO-FORNADA"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BAKERY-FLOW-PRODUCAO-FORNADA",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-flow-appointment",
+    "domain": "beauty",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Beauty agendamento simples",
+    "steps": [
+      "Cliente beauty existente"
+    ],
+    "assertions": [
+      "Agendamento criado",
+      "Confirmacao emitida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BEAUTY-FLOW-APPOINTMENT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-FLOW-APPOINTMENT",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-flow-campaign",
+    "domain": "beauty",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Beauty criação de campanha",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Campanha criada",
+      "Campanha publicada/simulada"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BEAUTY-FLOW-CAMPAIGN"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-FLOW-CAMPAIGN",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-flow-lead",
+    "domain": "beauty",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Beauty lead para cliente",
+    "steps": [
+      "Campanha existente"
+    ],
+    "assertions": [
+      "Lead criado",
+      "Lead qualificado",
+      "Lead convertido"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_new_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BEAUTY-FLOW-LEAD"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-FLOW-LEAD",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-flow-payment",
+    "domain": "beauty",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Beauty pagamento isolado",
+    "steps": [
+      "Bundle/cobrança criada"
+    ],
+    "assertions": [
+      "Cobrança criada",
+      "Pagamento confirmado",
+      "Bundle ativo"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=BEAUTY-FLOW-PAYMENT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-FLOW-PAYMENT",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-scr-01",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Campaigns screen smoke",
+    "steps": [
+      "Campanha baseline seeded"
+    ],
+    "assertions": [
+      "Tela /beauty/campaigns carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-01",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-scr-02",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Leads screen smoke",
+    "steps": [
+      "Lead baseline seeded"
+    ],
+    "assertions": [
+      "Tela /beauty/leads carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-02"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-02",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-scr-03",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Customers screen smoke",
+    "steps": [
+      "Cliente beauty seeded"
+    ],
+    "assertions": [
+      "Tela /beauty/customers carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-03"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-03",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-scr-04",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Schedule screen smoke",
+    "steps": [
+      "Agendamento baseline disponível"
+    ],
+    "assertions": [
+      "Tela /beauty/schedule carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-04"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-04",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-scr-05",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Services screen smoke",
+    "steps": [
+      "Serviços beauty publicados"
+    ],
+    "assertions": [
+      "Tela /beauty/services carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-05"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-05",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-beauty-scr-06",
+    "domain": "beauty",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Beauty Payments screen smoke",
+    "steps": [
+      "Cobrança beauty criada"
+    ],
+    "assertions": [
+      "Tela /beauty/payments carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "beauty",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "beauty_booking",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=BEAUTY-SCR-06"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "BEAUTY-SCR-06",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-clinic-flow-ticket",
+    "domain": "clinic",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Clinic abertura e resolução de ticket de manutenção",
+    "steps": [
+      "Operação autenticada",
+      "Módulo de manutenção ativo"
+    ],
+    "assertions": [
+      "Ticket de manutenção criado",
+      "Atribuição ao atendente registrada",
+      "Status resolvido confirmado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "clinic",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "clinic_default_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CLINIC-FLOW-TICKET"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CLINIC-FLOW-TICKET",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-clinic-scr-01",
+    "domain": "clinic",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Clinic maintenance screen smoke",
+    "steps": [
+      "Operação autenticada com acesso à manutenção"
+    ],
+    "assertions": [
+      "Tela /maintenance carregada e validada (título/estado)",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "clinic",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "clinic_default_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=CLINIC-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CLINIC-SCR-01",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-academy",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core academy: perfil, interações, competências, certificações e tutor",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Perfil de aprendizado carregado",
+      "Interação de navegação aceita",
+      "Competências recomputadas",
+      "Certificações avaliadas",
+      "Tutor responde com conteúdo"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "academy_learning",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-ACADEMY"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-ACADEMY",
+    "requiresIsolatedExecution": true
+  },
+  {
+    "id": "business-core-biz-agenda",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agenda: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /agenda renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "agenda",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AGENDA"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AGENDA",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-agent-factory",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agent factory: agente criado, configurado, validado, aprovado e publish com contrato de governança",
+    "steps": [
+      "Tenant autenticado",
+      "QA Waves disponíveis"
+    ],
+    "assertions": [
+      "Agente criado via factory com workflow created",
+      "Agente configurado com workflow configured",
+      "Validate retorna contrato estruturado (qaWave.status GO/NO_GO, evidence, replay quando presente)",
+      "Approve retorna aprovado ou governance_gates_failed estruturado",
+      "Publish retorna publicado ou publish_blocked com status, waveResult, evidence e replay",
+      "Agente removido no cleanup"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "agent_factory",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AGENT-FACTORY"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AGENT-FACTORY",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-agent-marketplace",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agent marketplace: catálogo consultado e agente instalado a partir do catálogo",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Catálogo do marketplace listado com total",
+      "Agente do catálogo consultado por slug",
+      "Agente instalado a partir do catálogo",
+      "Agente instalado removido no cleanup"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "agent_marketplace",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AGENT-MARKETPLACE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AGENT-MARKETPLACE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-agent-orchestrator",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agent orchestrator: capabilities e intents listados, execução orquestrada com trilha de governança",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Capabilities listadas com agrupamento por categoria",
+      "Intents disponíveis listados",
+      "Execução orquestrada retorna steps e status agregado",
+      "Evento execute registrado na trilha de governança",
+      "Registros de governança da execução removidos no cleanup"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "agent_orchestrator",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AGENT-ORCHESTRATOR"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AGENT-ORCHESTRATOR",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-agent-registry",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agent registry: agente corporativo criado, consultado, atualizado e removido",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Agente criado no registry",
+      "Agente presente na listagem com filtro de busca",
+      "Agente consultado por id e atualizado",
+      "Agente removido e consulta posterior retorna 404"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "agent_registry",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AGENT-REGISTRY"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AGENT-REGISTRY",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-agents",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agents: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /agents renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "agents",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AGENTS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AGENTS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-ai-governance",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core ai governance: evento audit registrado, trilha, decision log e relatório de compliance",
+    "steps": [
+      "Tenant autenticado",
+      "Banco gravável"
+    ],
+    "assertions": [
+      "Evento audit registrado com eventType válido do ENUM",
+      "Evento presente na audit-trail filtrada",
+      "Decision log responde com lista",
+      "Compliance report responde com summary de eventos",
+      "Evento removido no cleanup via DB (não há rota DELETE)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "ai_governance",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AI-GOVERNANCE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AI-GOVERNANCE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-ai-tools",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core ai tools: generate, rewrite e suggest respondem com contrato estruturado",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "chatbot/generate responde sucesso ou falha agregada estruturada (nunca 500)",
+      "rewrite-message e rewrite-multiple respondem com fallback estruturado",
+      "suggest-response responde com listas de sugestões e quick replies",
+      "Página /ai-tools renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "ai_tools",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AI-TOOLS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AI-TOOLS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-analytics",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core analytics: funil, agentes, departamentos, métricas, filas, ROI e trends respondem",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Todos os endpoints de analytics respondem 200",
+      "Estruturas de resposta válidas"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "analytics",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-ANALYTICS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-ANALYTICS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-audio-transcribe",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core audio transcribe: validação 400 sem áudio e erro estruturado sem provider",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Transcribe sem audioUrl/audioData retorna 400 bad_request",
+      "Transcribe com áudio inválido retorna 502 transcription_failed estruturado ou sucesso (nunca 500)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "audio_transcribe",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AUDIO-TRANSCRIBE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AUDIO-TRANSCRIBE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-automations",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core automações: automação criada e publicada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Automação criada em draft",
+      "Automação publicada",
+      "Status published refletido na listagem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "automations",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-AUTOMATIONS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-AUTOMATIONS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-backup-restore",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core backup: export lido e import com payload vazio é no-op estruturado",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Backup export responde com flows e settings",
+      "Import com payload vazio responde ok sem importar nada (nunca overwrite real)",
+      "Página /backup renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "backup_restore",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-BACKUP-RESTORE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-BACKUP-RESTORE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-billing",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core billing: cobrança avulsa criada, confirmada e listada nas transações",
+    "steps": [
+      "Tenant autenticado",
+      "Billing sandbox habilitado"
+    ],
+    "assertions": [
+      "Cobrança criada com idempotencyKey",
+      "Pagamento confirmado via webhook do provider sandbox",
+      "Transação confirmada presente na listagem de billing"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "billing",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-BILLING"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-BILLING",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-bulk-messaging",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core bulk messaging: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /bulk-messaging renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "bulk_messaging",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-BULK-MESSAGING"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-BULK-MESSAGING",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-campaigns",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core campanhas: campanha de e-mail publicada e campanha em massa criada e removida",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Campanha de e-mail criada e publicada/simulada",
+      "Campanha em massa criada com destinatários válidos",
+      "Campanha em massa presente na listagem",
+      "Campanha em massa removida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "campaigns",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-CAMPAIGNS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-CAMPAIGNS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-cases",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core cases: chamado criado a partir da inbox consolidando múltiplas conversas",
+    "steps": [
+      "Tenant autenticado",
+      "Duas conversas elegíveis na caixa de entrada"
+    ],
+    "assertions": [
+      "Chamado criado a partir da conversa da inbox",
+      "Segunda conversa vinculada ao chamado",
+      "Chamado consolida as duas conversas",
+      "Chamado presente na listagem de chamados"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "cases",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-CASES"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-CASES",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-channel-accounts",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core channel accounts: conta criada, listada, testada, atualizada e removida",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Conta de canal criada e listada",
+      "Teste da conta responde com contrato estruturado (success ou missing_config)",
+      "Conta atualizada e removida no cleanup",
+      "Página /channel-accounts renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "channel_accounts",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-CHANNEL-ACCOUNTS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-CHANNEL-ACCOUNTS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-cognitive",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core cognitive: intents e tools listados, processamento cognitivo responde",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Intents cognitivos listados",
+      "Tools cognitivas listadas",
+      "Processamento de mensagem responde com estrutura válida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "cognitive_assistant",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-COGNITIVE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-COGNITIVE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-conversations-chat",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core conversations: listagem responde e detalhe consultado quando há sessão",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Listagem de conversas responde com contrato (vazia ou não)",
+      "Detalhe da primeira conversa responde com replay quando há sessões",
+      "Página /chat-humano renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "conversations_chat",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-CONVERSATIONS-CHAT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-CONVERSATIONS-CHAT",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-deliveries",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core entregas: pedido delivery gera entrega, despachada e refletida",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pedido delivery cria entrega associada",
+      "Entrega despachada (dispatched)",
+      "Status e timestamp refletidos na consulta da entrega"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "deliveries",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-DELIVERIES"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-DELIVERIES",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-demo",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core demo: estado do demo carregado e run responde com semântica correta",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Estado do demo carregado com vertical e jornada",
+      "Run local retorna 422 PIPELINE_ONLY_SCENARIO com diagnóstico real (nunca 500 genérico)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "demo",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-DEMO"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-DEMO",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-departments",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core departamentos: departamento criado e listado",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Departamento criado",
+      "Departamento presente na listagem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "departments",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-DEPARTMENTS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-DEPARTMENTS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-developer",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core developer: chave de API criada, listada e uso consultado",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Chave de developer criada",
+      "Chave presente na listagem (sem exposição de segredo)",
+      "Endpoint de uso responde com estrutura válida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "developer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-DEVELOPER"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-DEVELOPER",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-export",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core exportação: tickets CSV, métricas CSV, conversas JSON e relatório completo",
+    "steps": [
+      "Tenant autenticado",
+      "Permissão reports:export"
+    ],
+    "assertions": [
+      "CSV de tickets exportado",
+      "CSV de métricas exportado com totais",
+      "JSON de conversas exportado",
+      "Relatório completo com summary de métricas"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "export",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-EXPORT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-EXPORT",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-failed-messages",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core failed messages: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /failed-messages renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "failed_messages",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-FAILED-MESSAGES"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-FAILED-MESSAGES",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-faq",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core faq: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /faq renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "faq",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-FAQ"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-FAQ",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-flows-editor",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core flows: CRUD de fluxo, validate, preview, simulate com replay, generate dry-run, plano RPA e editor",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Fluxo criado, listado, consultado, atualizado e ambiente definido",
+      "Validate e preview aprovam fluxo válido",
+      "Simulação gera sessão consultável em /replay/:id",
+      "Generate dry-run responde sem persistir; generate responde com contrato estruturado",
+      "Plano RPA test-only aceito e seed removido do disco",
+      "ai/rpa/generate responde com contrato estruturado (sucesso ou falha agregada)",
+      "Fluxo removido no cleanup",
+      "Página /editor renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "flows_editor_rpa_replay",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-FLOWS-EDITOR"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-FLOWS-EDITOR",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-inbox",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core inbox: conversa atribuída, anotada e refletida na listagem",
+    "steps": [
+      "Tenant autenticado",
+      "Conversa elegível na caixa de entrada"
+    ],
+    "assertions": [
+      "Conversa listada na inbox",
+      "Conversa atribuída ao agente",
+      "Nota interna registrada na conversa",
+      "Atribuição refletida na listagem da inbox"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "inbox",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-INBOX"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-INBOX",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-instagram-messenger",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core instagram/messenger: send sem canal configurado retorna erro estruturado (nunca 500)",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "instagram/send responde 503 channel_not_configured ou 502 send_failed estruturado",
+      "messenger/send responde 503 channel_not_configured ou 502 send_failed estruturado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "instagram_messenger",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-INSTAGRAM-MESSENGER"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-INSTAGRAM-MESSENGER",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-intelligence",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core inteligência operacional: meta criada, insights e estado operacional consultados",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Meta operacional criada com metric_key e target_value",
+      "Meta presente na listagem de goals",
+      "Insights e operational-state respondem com estrutura válida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "operational_intelligence",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-INTELLIGENCE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-INTELLIGENCE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-journey-registry",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core journey registry: jornada criada, consultada, atualizada e seed idempotente",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Jornada criada no registry",
+      "Jornada presente na listagem filtrada por domínio",
+      "Jornada consultada por id e atualizada",
+      "Seed responde com contrato journeys/count sem duplicar",
+      "Jornada removida no cleanup via DB (não há rota DELETE)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "journey_registry",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-JOURNEY-REGISTRY"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-JOURNEY-REGISTRY",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-kitchen-dispatch",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core kitchen/dispatch: páginas renderizam autenticadas",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /kitchen renderiza autenticada sem console errors",
+      "Página /dispatch renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "kitchen_dispatch",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-KITCHEN-DISPATCH"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-KITCHEN-DISPATCH",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-knowledge-base",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core knowledge base: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /knowledge-base renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "knowledge_base",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-KNOWLEDGE-BASE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-KNOWLEDGE-BASE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-knowledge-graph",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core knowledge graph: nós e aresta criados, grafo e relacionados consultados",
+    "steps": [
+      "Tenant autenticado",
+      "Banco gravável"
+    ],
+    "assertions": [
+      "Nós Journey e Agent criados com tipo válido do ENUM",
+      "Aresta criada entre os nós",
+      "Grafo consultado com filtro de tipos contém os nós",
+      "Relacionados do nó incluem o nó conectado",
+      "Nós e arestas removidos no cleanup via DB (não há rota DELETE)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "knowledge_graph",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-KNOWLEDGE-GRAPH"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-KNOWLEDGE-GRAPH",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-login",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core login: autenticação real via UI com credenciais QA e redirect pós-login",
+    "steps": [
+      "Credenciais QA systemadmin seedadas"
+    ],
+    "assertions": [
+      "Página /login renderiza o formulário deslogada",
+      "Login UI com systemadmin/*** redireciona e grava auth_token",
+      "Logout executado quando o controle existe"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "login",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-LOGIN"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-LOGIN",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-maintenance",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core maintenance: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /maintenance renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "maintenance",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-MAINTENANCE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-MAINTENANCE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-marketing",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core marketing: formulário criado e regra de scoring ativa",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Formulário de marketing criado com slug",
+      "Formulário presente na listagem",
+      "Regra de scoring criada com eventType e delta",
+      "Regra de scoring presente na listagem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "marketing",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-MARKETING"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-MARKETING",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-mfa",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core mfa: página abre autenticada (ou redireciona com comportamento documentado)",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /mfa abre autenticada ou redireciona com comportamento real documentado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "mfa",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-MFA"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-MFA",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-ops-dashboard",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core operations dashboard: summary, insights, jobs, notifications e timeline respondem",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Todos os endpoints do operations dashboard respondem 200 com ok=true"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "operations_dashboard",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-OPS-DASHBOARD"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-OPS-DASHBOARD",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-orders",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core pedidos: pedido criado via storefront, confirmado, cobrado e pago",
+    "steps": [
+      "Tenant autenticado",
+      "Billing sandbox habilitado"
+    ],
+    "assertions": [
+      "Pedido criado via storefront com total calculado",
+      "Pedido visível na listagem operacional de pedidos",
+      "Status do pedido avança para confirmed",
+      "Cobrança do pedido criada e confirmada"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "orders",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-ORDERS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-ORDERS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-physical-queue",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core fila física: senha emitida no kiosk, painel consultado e próximo chamado na estação",
+    "steps": [
+      "Tenant autenticado",
+      "Tokens públicos kiosk/panel/station"
+    ],
+    "assertions": [
+      "Senha física criada via token público de kiosk",
+      "Estado do painel reflete a senha emitida",
+      "Estação chama a próxima senha"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "physical_queue_kiosk_station_panel_fila",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-PHYSICAL-QUEUE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-PHYSICAL-QUEUE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-plan-usage",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core plan usage: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /plan-usage renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "plan_usage",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-PLAN-USAGE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-PLAN-USAGE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-process-runtime",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core process runtime: processo durável iniciado, inspecionado e simulado",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Processo iniciado com definição inline e concluído",
+      "Instância visível na listagem com histórico",
+      "Simulação de definição responde"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "process_runtime",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-PROCESS-RUNTIME"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-PROCESS-RUNTIME",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-product-docs",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core product docs: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /product-docs renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "product_docs",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-PRODUCT-DOCS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-PRODUCT-DOCS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-projects",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core projetos: projeto criado com item, item concluído e dashboard consistente",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Projeto criado com nome",
+      "Item criado no projeto",
+      "Item concluído",
+      "Projeto e item visíveis nas consultas"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "projects",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-PROJECTS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-PROJECTS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-public-tokens",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core tokens públicos: token criado, resolvido, rotacionado e revogado",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Token público criado e listado",
+      "Token resolve para o tenant correto",
+      "Rotação invalida o token anterior",
+      "Revogação bloqueia resolução"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "public_tokens",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-PUBLIC-TOKENS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-PUBLIC-TOKENS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-queues",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core filas: fila criada, consultada e removida",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Fila criada",
+      "Fila presente na listagem com contadores",
+      "Tickets da fila consultados",
+      "Fila removida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "queues",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-QUEUES"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-QUEUES",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-quick-replies",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core respostas rápidas: criada, listada e removida",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Resposta rápida criada com título e mensagem",
+      "Resposta rápida presente na listagem",
+      "Resposta rápida removida e ausente da listagem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "quick_replies",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-QUICK-REPLIES"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-QUICK-REPLIES",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-rag-documents",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core rag documents: health, domains, documento criado/consultado/atualizado, upload dry-run, query, stats e cleanup",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Health e domains respondem com contrato",
+      "Documento criado sem autoIndex, consultado e atualizado",
+      "Upload multipart em dryRun não persiste",
+      "Query responde ou falha com erro estruturado de rag-service indisponível",
+      "Stats e deduplication stats respondem",
+      "Regras de geração de perguntas servidas nos dois caminhos estáticos",
+      "Documento removido no cleanup",
+      "Página /rag-documents renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "rag_documents",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-RAG-DOCUMENTS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-RAG-DOCUMENTS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-rag-segregation",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core rag segregation: domínio declarado pelo cliente é ignorado, escopo aplicado por domínio e metadata de escopo presente",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Documento criado com domain SYSTEM forjado no payload é indexado como OPERATIONAL (cliente nunca declara domínio)",
+      "Query no escopo OPERATIONAL encontra o documento e reporta metadata.domain=OPERATIONAL",
+      "Query no escopo SYSTEM (super_admin) NÃO encontra o documento operacional",
+      "metadata.classificationsApplied presente nas respostas (evidência de escopo aplicado)",
+      "Documento removido no cleanup"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "rag_documents",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-RAG-SEGREGATION"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-RAG-SEGREGATION",
+    "requiresIsolatedExecution": true
+  },
+  {
+    "id": "business-core-biz-rap-learn",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core rap learn: falha registrada, listada e detectada como regressão na janela",
+    "steps": [
+      "Tenant autenticado",
+      "Banco gravável"
+    ],
+    "assertions": [
+      "Falha registrada com status detected",
+      "Registro presente na listagem de records",
+      "Registro detectado na consulta de regressões da janela",
+      "Registro removido no cleanup via DB (não há rota DELETE)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "rap_learn",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-RAP-LEARN"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-RAP-LEARN",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-rbac",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core RBAC: role criada, atribuída e restaurada sem efeito residual",
+    "steps": [
+      "Tenant autenticado",
+      "Agente supervisor seed presente"
+    ],
+    "assertions": [
+      "Roles e permissões listadas",
+      "Role QA criada",
+      "Atribuição de role aplicada e original restaurada"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "rbac_access_control",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-RBAC"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-RBAC",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-saas-storefront",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core saas/storefront: páginas públicas renderizam anônimas e autenticadas",
+    "steps": [],
+    "assertions": [
+      "Páginas /saas, /saas/pricing, /saas/products, /saas/signup e /storefront renderizam anônimas",
+      "Mesmas páginas renderizam autenticadas sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "saas_storefront",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-SAAS-STOREFRONT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-SAAS-STOREFRONT",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-segmentation",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core segmentation: tags, categories, tickets e stats respondem com contrato",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Tags, categories e tickets de segmentação respondem com listas",
+      "Stats de segmentação respondem",
+      "Página /segmentation renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "segmentation",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-SEGMENTATION"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-SEGMENTATION",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-sla",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core SLA: política criada, listada e breaches consultadas",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Política de SLA criada",
+      "Política presente na listagem",
+      "Endpoint de breaches responde com estrutura válida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "sla",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-SLA"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-SLA",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-solutions",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core solutions: pack listado e instalado no tenant",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Packs de solução listados",
+      "Pack geral instalado com sucesso"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "solutions",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-SOLUTIONS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-SOLUTIONS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-sso-scim",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core sso/scim: página renderiza autenticada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /sso-scim renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "sso_scim",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-SSO-SCIM"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-SSO-SCIM",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-supervisor",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core supervisor: status de agentes, métricas e filas respondem",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Status de agentes respondido",
+      "Métricas de supervisor respondidas",
+      "Status de filas respondido"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "supervisor",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-SUPERVISOR"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-SUPERVISOR",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-tasks",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core tarefas: tarefa criada, listada e concluída",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Tarefa criada com título e vencimento",
+      "Tarefa presente na listagem",
+      "Tarefa concluída com status done"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "tasks",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-TASKS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-TASKS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-templates",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core templates: template e flow-template criados e listados",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Template criado com fluxo válido",
+      "Flow-template criado com fluxo válido",
+      "Ambos presentes nas listagens"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "templates",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-TEMPLATES"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-TEMPLATES",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-tenant-config",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core tenant config: config lida, escrita inócua restaurada, validadores com credenciais inválidas, tenant-settings e guarda do restart",
+    "steps": [
+      "Tenant autenticado",
+      "api/data/config.json legível no disco"
+    ],
+    "assertions": [
+      "GET /config autenticado retorna visão completa sanitizada",
+      "PUT /config com chave inócua responde success e original é restaurado no finally",
+      "validate-provider-token com token inválido retorna valid:false",
+      "validate-redis com URL inválida retorna valid:false",
+      "tenant-settings phone-masking lido e reescrito com o mesmo valor",
+      "POST /server/restart anônimo retorna 401 (guarda provada sem derrubar o servidor)",
+      "Página /config renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "tenant_config",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-TENANT-CONFIG"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-TENANT-CONFIG",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-tenants",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core tenants: guarda RBAC da página, ai-config do tenant atual e teste de credencial com contrato estruturado",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Página /tenants nega acesso ao papel sem tenant:read (guarda RBAC por URL direta)",
+      "GET /tenants/current/ai-config responde config ou 404 estruturado",
+      "POST /tenants/current/ai-credentials/test responde valid:false/true estruturado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "tenants",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-TENANTS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-TENANTS",
+    "requiresIsolatedExecution": true
+  },
+  {
+    "id": "business-core-biz-tickets-tags",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core tickets: tag adicionada/removida e categoria atualizada em ticket próprio de QA",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Ticket de QA criado com telefone único",
+      "Tag adicionada e presente no ticket",
+      "Categoria atualizada e refletida no ticket",
+      "Tag removida e ticket fechado no cleanup"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "tickets_tags",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-TICKETS-TAGS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-TICKETS-TAGS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-voice-events",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core voice events: evento de voz registrado no ledger, métricas respondem e guarda de tenant provada",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Evento ringing registrado com ok=true",
+      "Evento visível no event-ledger filtrado por correlationId",
+      "voice/metrics sem X-Tenant-Id retorna 403 tenant_required",
+      "voice/metrics com tenant responde com totais"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "voice_event_ledger",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-VOICE-EVENTS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-VOICE-EVENTS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-web-scraping",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core web scraping: validação de URL inválida e scrape controlado sem indexação",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Scrape com URL inválida retorna erro estruturado 400",
+      "Scrape de URL controlada (localhost/health) com autoIndex=false responde ou falha estruturado",
+      "Scrape-batch com dryRun responde com contrato (nunca URL externa)",
+      "Página /web-scraping renderiza autenticada sem console errors"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "normal",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "web_scraping",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-WEB-SCRAPING"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-WEB-SCRAPING",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-webhooks",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core webhooks: webhook criado, listado e removido",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Webhook criado com URL e eventos válidos",
+      "Webhook presente na listagem",
+      "Webhook removido e ausente da listagem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "webhooks",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-WEBHOOKS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-WEBHOOKS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-biz-whatsapp-connections",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core WhatsApp: conexão criada, status consultado e removida",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Conexão WhatsApp criada (disconnected)",
+      "Conexão presente na listagem",
+      "Status da conexão consultado",
+      "Conexão removida e ausente da listagem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "whatsapp_connections",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-BIZ-WHATSAPP-CONNECTIONS"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-BIZ-WHATSAPP-CONNECTIONS",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-cap-crm-updates",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core capability crm_updates: conta, contato, oportunidade movida de estágio e atualização na timeline",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Conta e contato CRM criados",
+      "Oportunidade criada e movida de estágio (crm_updates)",
+      "Atualização registrada como atividade",
+      "Timeline do contato reflete a atualização"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "capability_crm_updates",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-CAP-CRM-UPDATES"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-CAP-CRM-UPDATES",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-cap-lead-capture",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core capability lead_capture: lead capturado com origem, persistido e visível na listagem",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Lead capturado com origem registrada",
+      "Lead persistido com estágio inicial (lead_capture)",
+      "Lead visível na listagem de leads"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "capability_lead_capture",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-CAP-LEAD-CAPTURE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-CAP-LEAD-CAPTURE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-cap-scheduling",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core capability scheduling: catálogo, agenda do recurso, bloco de calendário e ciclo do agendamento",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Catálogo de purposes disponível (scheduling)",
+      "Agendamento criado e visível no calendário do recurso",
+      "Bloco de calendário criado, refletido e removido",
+      "Agendamento confirmado e concluído"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "capability_scheduling",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-CAP-SCHEDULING"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-CAP-SCHEDULING",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-booking",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agendamento criado, confirmado e concluído",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Agendamento criado",
+      "Confirmação registrada",
+      "Agendamento concluído"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "booking_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-BOOKING"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-BOOKING",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-booking-reschedule",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agendamento remarcado, confirmado e concluído",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Agendamento criado com confirmação pendente",
+      "Remarcação persiste novo horário",
+      "Agendamento confirmado após remarcação",
+      "Agendamento concluído no horário remarcado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "booking_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-BOOKING-RESCHEDULE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-BOOKING-RESCHEDULE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-booking-terminal-states",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core agendamento: no-show, recusa, ação inválida e agendamento inexistente",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "No-show registrado como estado terminal",
+      "Recusa cancela agendamento e marca confirmationStatus declined",
+      "Ação inválida rejeitada com 404 action_not_found",
+      "Agendamento inexistente rejeitado com 404 schedule_not_found"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "booking_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-BOOKING-TERMINAL-STATES"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-BOOKING-TERMINAL-STATES",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-payment-charge",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core cobrança avulsa criada e pagamento confirmado",
+    "steps": [
+      "Tenant autenticado",
+      "Billing sandbox habilitado"
+    ],
+    "assertions": [
+      "Cobrança criada",
+      "Pagamento confirmado via webhook",
+      "Transação persistida como confirmed"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "payment_charge_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-PAYMENT-CHARGE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-PAYMENT-CHARGE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-payment-idempotent",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core cobrança com idempotencyKey não duplica transação",
+    "steps": [
+      "Tenant autenticado",
+      "Billing sandbox habilitado"
+    ],
+    "assertions": [
+      "Cobrança criada com idempotencyKey",
+      "Retry com a mesma chave retorna a mesma transação",
+      "Listagem contém exatamente uma transação para a chave",
+      "Pagamento confirmado na transação única"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "payment_charge_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-PAYMENT-IDEMPOTENT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-PAYMENT-IDEMPOTENT",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-payment-invalid",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core cobrança com valor inválido é rejeitada sem persistir transação",
+    "steps": [
+      "Tenant autenticado",
+      "Billing sandbox habilitado"
+    ],
+    "assertions": [
+      "Cobrança com amount inválido rejeitada com 422 validation_error",
+      "Nenhuma transação persistida para a chave inválida"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "payment_charge_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-PAYMENT-INVALID"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-PAYMENT-INVALID",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-support-ticket",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core abertura, resposta e encerramento de ticket de suporte",
+    "steps": [
+      "Tenant autenticado",
+      "Fila de suporte disponível"
+    ],
+    "assertions": [
+      "Ticket criado",
+      "Atendente assumiu o ticket",
+      "Resposta do agente registrada",
+      "Ticket encerrado com status closed"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "support_ticket_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-SUPPORT-TICKET"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-SUPPORT-TICKET",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-support-ticket-lifecycle",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core ticket: takeover, pausa, retomada e encerramento com estados persistidos",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Takeover coloca ticket em modo humano com takeoverAt",
+      "Pausa registra motivo de pausa",
+      "Retomada mantém modo humano",
+      "Encerramento persiste status closed"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "support_ticket_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-SUPPORT-TICKET-LIFECYCLE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-SUPPORT-TICKET-LIFECYCLE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-core-flow-support-ticket-notfound",
+    "domain": "core",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Core operações em ticket inexistente rejeitadas com 404 sem efeito colateral",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Takeover em ticket inexistente rejeitado",
+      "Mensagem em ticket inexistente rejeitada",
+      "Close em ticket inexistente rejeitado com 404 ticket_not_found"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "core",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "support_ticket_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=CORE-FLOW-SUPPORT-TICKET-NOTFOUND"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "CORE-FLOW-SUPPORT-TICKET-NOTFOUND",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-f1",
+    "domain": "fitness",
+    "type": "business",
+    "source": "qa",
+    "flow": "Fitness novo aluno até pagamento e ativação",
+    "steps": [
+      "Sandbox billing habilitado"
+    ],
+    "assertions": [
+      "Aluno criado",
+      "Plano aplicado",
+      "Cobrança criada",
+      "Pagamento reconhecido",
+      "Status ativo",
+      "Reflexo em check-in/financeiro"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "fitness_active_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=journeys",
+      "--code=F1"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "F1",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-f2",
+    "domain": "fitness",
+    "type": "business",
+    "source": "qa",
+    "flow": "Fitness renovação/rematrícula",
+    "steps": [
+      "Aluno existente seeded"
+    ],
+    "assertions": [
+      "Nova cobrança criada",
+      "Pagamento confirmado",
+      "Sem duplicação indevida",
+      "Status mantido"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "fitness_active_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=journeys",
+      "--code=F2"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "F2",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-fit-flow-charge",
+    "domain": "fitness",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Fitness geração de cobrança e pagamento isolado",
+    "steps": [
+      "Membership existente"
+    ],
+    "assertions": [
+      "Cobrança criada",
+      "Pagamento confirmado",
+      "Status ativo"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "fitness_active_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FIT-FLOW-CHARGE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-FLOW-CHARGE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-fit-flow-checkin",
+    "domain": "fitness",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Fitness check-in e controle de acesso",
+    "steps": [
+      "Membership ativa"
+    ],
+    "assertions": [
+      "Check-in permitido",
+      "Atendimento aberto",
+      "Check-out encerra registro"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "fitness_new_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FIT-FLOW-CHECKIN"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-FLOW-CHECKIN",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-fit-flow-lead-funnel",
+    "domain": "fitness",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Fitness funil de lead: captado, qualificado e convertido em cliente",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Lead captado com origem registrada",
+      "Lead qualificado (stage qualified)",
+      "Lead convertido em cliente (stage customer)",
+      "Funil persistido com atributos preservados"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "leads",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FIT-FLOW-LEAD-FUNNEL"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-FLOW-LEAD-FUNNEL",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-fit-flow-student",
+    "domain": "fitness",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Fitness cadastro de aluno e salvamento",
+    "steps": [
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Aluno criado",
+      "Membership associado",
+      "Busca localiza aluno"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "fitness_new_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FIT-FLOW-STUDENT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-FLOW-STUDENT",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-fit-scr-01",
+    "domain": "fitness",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Fitness Students screen smoke",
+    "steps": [
+      "Tenant autenticado",
+      "Aluno baseline seeded"
+    ],
+    "assertions": [
+      "Tela /fitness/students carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "fitness_new_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=FIT-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-SCR-01",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-fit-scr-02",
+    "domain": "fitness",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Fitness Memberships screen smoke",
+    "steps": [
+      "Membership baseline seeded"
+    ],
+    "assertions": [
+      "Tela /fitness/memberships carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "fitness_new_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=FIT-SCR-02"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-SCR-02",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-fit-scr-03",
+    "domain": "fitness",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Fitness Attendance screen smoke",
+    "steps": [
+      "Attendance route ativa"
+    ],
+    "assertions": [
+      "Tela /fitness/attendance carregada e validada (título/estado)",
+      "Interações de tela executadas sem erro",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "fitness",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "fitness_new_customer",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=FIT-SCR-03"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FIT-SCR-03",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-food-flow-order",
+    "domain": "food",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Food pedido via WhatsApp até confirmação",
+    "steps": [
+      "Módulo de pedidos ativo",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pedido recebido via webhook",
+      "Status atualizado para em_preparo",
+      "Notificação enviada ao cliente"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "food",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "food_customer_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FOOD-FLOW-ORDER"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FOOD-FLOW-ORDER",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-food-flow-order-lifecycle",
+    "domain": "food",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Food pedido via storefront público com cliente identificado, ciclo completo notificado, transição inválida rejeitada e incidente idempotente",
+    "steps": [
+      "Módulo de pedidos ativo",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pedido criado via POST /storefront/orders com entrega associada e total calculado pelos itens",
+      "Cliente identificado (customerId) e registrado na jornada (order_placed/order_delivered)",
+      "Transições de status geram notificações ao cliente com idempotência",
+      "Retry público com mesma idempotencyKey não duplica pedido",
+      "Ciclo completo confirmed→preparing→ready→dispatched→delivered persistido",
+      "Transição inválida rejeitada com 400",
+      "Incidente registrado e retry idempotente"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "food",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "food_customer_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FOOD-FLOW-ORDER-LIFECYCLE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FOOD-FLOW-ORDER-LIFECYCLE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-food-flow-order-payment",
+    "domain": "food",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Food pedido pago ponta a ponta: cobrança vinculada, idempotência e confirmação via webhook",
+    "steps": [
+      "Módulo de pedidos ativo",
+      "Sandbox billing habilitado",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pedido com itens precificados tem total calculado automaticamente",
+      "POST /orders/:id/charge cria cobrança com metadata.orderId e payment pending",
+      "Retry de cobrança é idempotente (mesma transação)",
+      "Pedido sem total rejeita cobrança com 422",
+      "Webhook sandbox CONFIRMED marca payment paid com paidAt"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "food",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "food_customer_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=FOOD-FLOW-ORDER-PAYMENT"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FOOD-FLOW-ORDER-PAYMENT",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-food-scr-01",
+    "domain": "food",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Food Orders screen smoke",
+    "steps": [
+      "Módulo de pedidos disponível"
+    ],
+    "assertions": [
+      "Tela /orders carregada e validada (título/estado)",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "food",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "food_order_flow",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=FOOD-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "FOOD-SCR-01",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-market-flow-node",
+    "domain": "market",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Market publicação de nó no marketplace",
+    "steps": [
+      "Marketplace carregável no tenant",
+      "Nó disponível para publicação"
+    ],
+    "assertions": [
+      "Nó submetido ao marketplace",
+      "Marketplace reflete publicação",
+      "Metadados do nó validados"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "market",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "market_default_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=MARKET-FLOW-NODE"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "MARKET-FLOW-NODE",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-market-flow-order-customer",
+    "domain": "market",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Market pedido com vertical própria e cliente identificado na jornada market",
+    "steps": [
+      "Módulo de pedidos ativo",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pedido market via storefront registra context.vertical=market",
+      "Cliente identificado (customerId) e jornada market recebe order_placed",
+      "CustomerId determinístico: segundo pedido do mesmo telefone reutiliza o cliente"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "market",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "market_default_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=MARKET-FLOW-ORDER-CUSTOMER"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "MARKET-FLOW-ORDER-CUSTOMER",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-market-scr-01",
+    "domain": "market",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Market node marketplace screen smoke",
+    "steps": [
+      "Marketplace carregável no tenant"
+    ],
+    "assertions": [
+      "Tela /node-marketplace carregada e validada (título/estado)",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "market",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "market_default_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=MARKET-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "MARKET-SCR-01",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-serv-flow-solution",
+    "domain": "services",
+    "type": "regression",
+    "source": "qa",
+    "flow": "Services ativação de pacote de soluções",
+    "steps": [
+      "Catálogo de soluções publicado",
+      "Tenant autenticado"
+    ],
+    "assertions": [
+      "Pacote selecionado",
+      "Ativação registrada no backend",
+      "Status de cobertura atualizado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "services",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "services_default_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=flows",
+      "--code=SERV-FLOW-SOLUTION"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "SERV-FLOW-SOLUTION",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "business-serv-scr-01",
+    "domain": "services",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "Services solutions screen smoke",
+    "steps": [
+      "Catálogo de soluções publicado"
+    ],
+    "assertions": [
+      "Tela /solutions carregada e validada (título/estado)",
+      "Evidências de tela capturadas (screenshot/log)"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "medium",
+    "adapter": "api",
+    "impactScopes": [
+      "services",
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": true,
+    "journeyId": "services_default_journey",
+    "command": "node",
+    "commandArgs": [
+      "core/rpa/cli.js",
+      "business",
+      "--mode=screens",
+      "--code=SERV-SCR-01"
+    ],
+    "env": {
+      "PIPELINE_BYPASS": "1"
+    },
+    "scenarioCode": "SERV-SCR-01",
+    "requiresIsolatedExecution": false
+  },
+  {
+    "id": "fitness-matricula-agendamento-ui",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Agendamento de Aula Experimental via UI",
+    "steps": [
+      {
+        "id": "step_precond_calendar_writable_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Calendar Writable",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-agendamento-ui",
+    "criticality": "blocking",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "agendamento"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "precond-agendamento-calendar_writable",
+    "semanticSteps": [
+      {
+        "id": "step_precond_calendar_writable_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Calendar Writable",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "wave": "wave-precond-agendamento",
+    "journeyId": "agendamento",
+    "scenarioStatus": "approved",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-cancelamento",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Cancelamento de Matrícula",
+    "steps": [
+      {
+        "id": "step_precond_billing_validation_active_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Billing Validation Active",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-cancelamento",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "cancelamento"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "precond-cancelamento-billing_validation_active",
+    "semanticSteps": [
+      {
+        "id": "step_precond_billing_validation_active_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Billing Validation Active",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "wave": "wave-precond-cancelamento",
+    "journeyId": "cancelamento",
+    "scenarioStatus": "approved",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-checkin",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Check-in Diário na Academia",
+    "steps": [
+      {
+        "id": "step_precond_access_decision_active_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Access Decision Active",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-checkin",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "checkin"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "precond-checkin-access_decision_active",
+    "semanticSteps": [
+      {
+        "id": "step_precond_access_decision_active_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Access Decision Active",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "wave": "wave-precond-checkin",
+    "journeyId": "checkin",
+    "scenarioStatus": "approved",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-checkout",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Checkout e Pagamento",
+    "steps": [
+      {
+        "id": "step_precond_payment_gateway_available_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Payment Gateway Available",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-checkout",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "checkout"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "precond-checkout-payment_gateway_available",
+    "semanticSteps": [
+      {
+        "id": "step_precond_payment_gateway_available_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Payment Gateway Available",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "wave": "wave-precond-checkout",
+    "journeyId": "checkout",
+    "scenarioStatus": "approved",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-leads",
+    "domain": "omnichannel",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Captação de Lead via WhatsApp",
+    "steps": [
+      {
+        "id": "step_001",
+        "order": 1,
+        "type": "send_message",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Cliente envia mensagem WhatsApp",
+        "description": "Lead envia mensagem inicial consultando planos da academia",
+        "adapter": "whatsapp",
+        "channel": "whatsapp",
+        "input": {
+          "variants": [
+            "Oi, quero saber sobre planos",
+            "Olá, quais são os planos disponíveis?",
+            "Bom dia, tenho interesse em me matricular"
+          ]
+        },
+        "expected": {
+          "delivered": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_002",
+        "order": 2,
+        "type": "trigger_channel_event",
+        "category": "SYSTEM_EVENT",
+        "actor": "system",
+        "name": "Sistema recebe inbound WhatsApp",
+        "description": "Plataforma registra inbound e cria ou atualiza conversa",
+        "adapter": "whatsapp",
+        "channel": "whatsapp",
+        "expected": {
+          "eventType": "inbound_received",
+          "conversationCreated": true
+        },
+        "timeoutMs": 10000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_003",
+        "order": 3,
+        "type": "validate_intent",
+        "category": "AI_DECISION",
+        "actor": "ai",
+        "name": "IA classifica intenção do cliente",
+        "description": "Serviço de IA analisa a mensagem e classifica a intenção como lead de fitness",
+        "adapter": "aiIntentService",
+        "channel": "whatsapp",
+        "expected": {
+          "intent": "fitness_lead",
+          "confidenceMin": 0.6
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_004",
+        "order": 4,
+        "type": "validate_flow_transition",
+        "category": "AI_DECISION",
+        "actor": "ai",
+        "name": "Sistema decide roteamento: bot ou humano",
+        "description": "Engine de fluxo decide se responde via bot automático ou encaminha para agente humano",
+        "adapter": "flowEngine",
+        "channel": "whatsapp",
+        "expected": {
+          "routingDecision": [
+            "bot",
+            "human"
+          ],
+          "nextNode": "bot_response"
+        },
+        "timeoutMs": 10000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_005",
+        "order": 5,
+        "type": "validate_response",
+        "category": "BOT_ACTION",
+        "actor": "bot",
+        "name": "Bot gera e envia resposta ao cliente",
+        "description": "Bot automático gera resposta contextualizada sobre planos e envia ao cliente",
+        "adapter": "ragService",
+        "channel": "whatsapp",
+        "expected": {
+          "semantic": "planos academia",
+          "responseDelivered": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_006",
+        "order": 6,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "Validar criação do lead no backend",
+        "description": "Confirmar que o lead foi registrado corretamente no CRM/backend",
+        "adapter": "api",
+        "channel": "whatsapp",
+        "expected": {
+          "backendEntity": "lead",
+          "leadCreated": true,
+          "fields": [
+            "name",
+            "phone",
+            "channel",
+            "intent"
+          ]
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_007",
+        "order": 7,
+        "type": "validate_sla",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "Validar SLA de resposta ao lead",
+        "description": "Garantir que o tempo total de resposta ao cliente não excede o SLA definido",
+        "adapter": "meshValidator",
+        "channel": "whatsapp",
+        "expected": {
+          "withinSla": true
+        },
+        "data": {
+          "maxMs": 15000
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-leads",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "omnichannel",
+      "leads"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "fitness-matricula-leads",
+    "semanticSteps": [
+      {
+        "id": "step_001",
+        "order": 1,
+        "type": "send_message",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Cliente envia mensagem WhatsApp",
+        "description": "Lead envia mensagem inicial consultando planos da academia",
+        "adapter": "whatsapp",
+        "channel": "whatsapp",
+        "input": {
+          "variants": [
+            "Oi, quero saber sobre planos",
+            "Olá, quais são os planos disponíveis?",
+            "Bom dia, tenho interesse em me matricular"
+          ]
+        },
+        "expected": {
+          "delivered": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_002",
+        "order": 2,
+        "type": "trigger_channel_event",
+        "category": "SYSTEM_EVENT",
+        "actor": "system",
+        "name": "Sistema recebe inbound WhatsApp",
+        "description": "Plataforma registra inbound e cria ou atualiza conversa",
+        "adapter": "whatsapp",
+        "channel": "whatsapp",
+        "expected": {
+          "eventType": "inbound_received",
+          "conversationCreated": true
+        },
+        "timeoutMs": 10000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_003",
+        "order": 3,
+        "type": "validate_intent",
+        "category": "AI_DECISION",
+        "actor": "ai",
+        "name": "IA classifica intenção do cliente",
+        "description": "Serviço de IA analisa a mensagem e classifica a intenção como lead de fitness",
+        "adapter": "aiIntentService",
+        "channel": "whatsapp",
+        "expected": {
+          "intent": "fitness_lead",
+          "confidenceMin": 0.6
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_004",
+        "order": 4,
+        "type": "validate_flow_transition",
+        "category": "AI_DECISION",
+        "actor": "ai",
+        "name": "Sistema decide roteamento: bot ou humano",
+        "description": "Engine de fluxo decide se responde via bot automático ou encaminha para agente humano",
+        "adapter": "flowEngine",
+        "channel": "whatsapp",
+        "expected": {
+          "routingDecision": [
+            "bot",
+            "human"
+          ],
+          "nextNode": "bot_response"
+        },
+        "timeoutMs": 10000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_005",
+        "order": 5,
+        "type": "validate_response",
+        "category": "BOT_ACTION",
+        "actor": "bot",
+        "name": "Bot gera e envia resposta ao cliente",
+        "description": "Bot automático gera resposta contextualizada sobre planos e envia ao cliente",
+        "adapter": "ragService",
+        "channel": "whatsapp",
+        "expected": {
+          "semantic": "planos academia",
+          "responseDelivered": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_006",
+        "order": 6,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "Validar criação do lead no backend",
+        "description": "Confirmar que o lead foi registrado corretamente no CRM/backend",
+        "adapter": "api",
+        "channel": "whatsapp",
+        "expected": {
+          "backendEntity": "lead",
+          "leadCreated": true,
+          "fields": [
+            "name",
+            "phone",
+            "channel",
+            "intent"
+          ]
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_007",
+        "order": 7,
+        "type": "validate_sla",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "Validar SLA de resposta ao lead",
+        "description": "Garantir que o tempo total de resposta ao cliente não excede o SLA definido",
+        "adapter": "meshValidator",
+        "channel": "whatsapp",
+        "expected": {
+          "withinSla": true
+        },
+        "data": {
+          "maxMs": 15000
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      }
+    ],
+    "wave": "wave-fitness-matricula",
+    "journeyId": "leads",
+    "scenarioStatus": "approved",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-onboarding",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Onboarding do Novo Aluno",
+    "steps": [
+      {
+        "id": "step_precond_onboarding_flow_active_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Onboarding Flow Active",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-onboarding",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "onboarding"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "precond-onboarding-onboarding_flow_active",
+    "semanticSteps": [
+      {
+        "id": "step_precond_onboarding_flow_active_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Onboarding Flow Active",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "wave": "wave-precond-onboarding",
+    "journeyId": "onboarding",
+    "scenarioStatus": "approved",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "fitness-matricula-renovacao",
+    "domain": "fitness",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Fitness Matrícula — Renovação de Matrícula",
+    "steps": [
+      {
+        "id": "step_precond_payment_gateway_available_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Payment Gateway Available",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "fitness-matricula-renovacao",
+    "criticality": "standard",
+    "adapter": "rpa",
+    "impactScopes": [
+      "fitness",
+      "renovacao"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "precond-renovacao-payment_gateway_available",
+    "semanticSteps": [
+      {
+        "id": "step_precond_payment_gateway_available_1",
+        "order": 1,
+        "type": "validate_backend",
+        "category": "VALIDATION",
+        "adapter": "api",
+        "description": "Verificar precondição: Payment Gateway Available",
+        "expected": {
+          "preconditionMet": true,
+          "serviceAvailable": true
+        },
+        "timeoutMs": 10000
+      }
+    ],
+    "wave": "wave-precond-renovacao",
+    "journeyId": "renovacao",
+    "scenarioStatus": "approved",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "qa-bpmn-editor-smoke",
+    "domain": "bpmn",
+    "type": "technical",
+    "source": "qa",
+    "flow": "bpmn_editor_smoke",
+    "steps": [],
+    "assertions": [
+      "import/export BPMN preservado"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "wrappers"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:bpmn:smoke"
+    ],
+    "env": {
+      "FRONTEND_URL": "http://localhost:5173"
+    },
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l06-bpmn-editor-evidence.json",
+      "/opt/results/ria/r-agent2/qa/bpmn-smoke-artifacts/diagram.bpmn"
+    ]
+  },
+  {
+    "id": "qa-chatpro-omnichannel-smoke",
+    "domain": "omnichannel",
+    "type": "smoke",
+    "source": "qa",
+    "flow": "chatpro_omnichannel",
+    "steps": [],
+    "assertions": [
+      "tickets e fila omnichannel respondem"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "telemetry",
+      "ci"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:inbox:smoke"
+    ],
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l05-chatpro-omnichannel-evidence.json"
+    ]
+  },
+  {
+    "id": "qa-core-auth-login",
+    "domain": "core",
+    "type": "smoke",
+    "source": "hybrid",
+    "flow": "core_auth_login",
+    "steps": [],
+    "assertions": [
+      "login funcional"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "node",
+    "commandArgs": [
+      "tests/rpa/login.test.js"
+    ]
+  },
+  {
+    "id": "qa-core-config-tenant-intelligence",
+    "domain": "core",
+    "type": "technical",
+    "source": "qa",
+    "flow": "core_config_tenant_intelligence",
+    "steps": [],
+    "assertions": [
+      "configuração crítica respondendo"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:tenant-intelligence:smoke"
+    ]
+  },
+  {
+    "id": "qa-core-tenants-create",
+    "domain": "core",
+    "type": "regression",
+    "source": "hybrid",
+    "flow": "core_tenants_create",
+    "steps": [],
+    "assertions": [
+      "tenant criado via fluxo oficial"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "exec",
+      "--",
+      "jest",
+      "--runTestsByPath",
+      "tests/rpa/createTenantByAI.test.js",
+      "--runInBand",
+      "--testPathIgnorePatterns",
+      "[]"
+    ]
+  },
+  {
+    "id": "qa-pbx-call-events-runtime-smoke",
+    "domain": "pbx",
+    "type": "technical",
+    "source": "qa",
+    "flow": "pbx_call_events_runtime",
+    "steps": [],
+    "assertions": [
+      "eventos de chamada entregues"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "pbx",
+    "impactScopes": [
+      "telemetry",
+      "executors"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:pbx:call-events-runtime:smoke"
+    ],
+    "env": {
+      "PBX_CALL_EVENTS_RUNTIME_INSERT_MODE": "direct",
+      "PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK": "1"
+    },
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l04-pbx-call-events-runtime-evidence.json"
+    ]
+  },
+  {
+    "id": "qa-pbx-voice-tts-asr-smoke",
+    "domain": "pbx",
+    "type": "technical",
+    "source": "qa",
+    "flow": "pbx_voice_tts_asr",
+    "steps": [],
+    "assertions": [
+      "pipeline TTS/ASR operacional"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "pbx",
+    "impactScopes": [
+      "ci",
+      "executors"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:pbx:voice:tts-asr:smoke"
+    ],
+    "env": {
+      "L03_ALLOW_SYNTHETIC_ORIGINATE": "true"
+    },
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l03-pbx-voice-tts-asr-evidence.json"
+    ]
+  },
+  {
+    "id": "qa-physical-queue-smoke",
+    "domain": "core",
+    "type": "smoke",
+    "source": "qa",
+    "flow": "physical_queue_smoke",
+    "steps": [],
+    "assertions": [
+      "fila física responde"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "high",
+    "adapter": "api",
+    "impactScopes": [
+      "ci",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:physical:smoke"
+    ],
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l01-physical-queue-evidence.json"
+    ]
+  },
+  {
+    "id": "qa-ura-publish-rollback-smoke",
+    "domain": "pbx",
+    "type": "smoke",
+    "source": "qa",
+    "flow": "ura_publish_rollback",
+    "steps": [],
+    "assertions": [
+      "publicação e rollback da URA"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "pbx",
+    "impactScopes": [
+      "ci",
+      "executors"
+    ],
+    "requiresOfficialPipeline": false,
+    "command": "npm",
+    "commandArgs": [
+      "run",
+      "test:ura:publish-rollback:smoke"
+    ],
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/l02-ura-publish-rollback-evidence.json"
+    ]
+  },
+  {
+    "id": "rpa-example-test",
+    "domain": "core",
+    "type": "regression",
+    "source": "rpa",
+    "flow": "Exemplo de Teste RPA",
+    "steps": [
+      "navigate",
+      "assert"
+    ],
+    "assertions": [
+      "execução RPA concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "example-test",
+    "criticality": "medium",
+    "adapter": "rpa",
+    "impactScopes": [
+      "core",
+      "executors",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false
+  },
+  {
+    "id": "rpa-whatsapp-connections-rpa",
+    "domain": "omnichannel",
+    "type": "regression",
+    "source": "rpa",
+    "flow": "WhatsAppConnectionsPage RPA",
+    "steps": [
+      "navigate",
+      "wait",
+      "assert",
+      "assert",
+      "wait"
+    ],
+    "assertions": [
+      "execução RPA concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "whatsapp-connections-rpa",
+    "criticality": "medium",
+    "adapter": "rpa",
+    "impactScopes": [
+      "omnichannel",
+      "executors",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false
+  },
+  {
+    "id": "support-inbox-nota-ui",
+    "domain": "omnichannel",
+    "type": "e2e",
+    "source": "seed",
+    "flow": "Support — Nota Interna em Ticket da Caixa de Entrada via UI",
+    "steps": [
+      {
+        "id": "step_001",
+        "order": 1,
+        "type": "trigger_channel_event",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Usuário abre menu Atendimento → Caixa de Entrada",
+        "description": "Usuário autenticado navega pelo rail Atendimento até a Caixa de Entrada",
+        "adapter": "chat",
+        "channel": "chat",
+        "expected": {
+          "page": "/inbox"
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_002",
+        "order": 2,
+        "type": "provide_data",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Usuário seleciona um ticket da lista",
+        "description": "Clica no primeiro card de ticket da inbox e abre o painel de detalhes",
+        "adapter": "chat",
+        "channel": "chat",
+        "expected": {
+          "page": "/inbox"
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_003",
+        "order": 3,
+        "type": "provide_data",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Usuário escreve a nota interna",
+        "description": "Preenche o textarea de nota interna no painel do ticket",
+        "adapter": "chat",
+        "channel": "chat",
+        "expected": {
+          "page": "/inbox"
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_004",
+        "order": 4,
+        "type": "validate_backend",
+        "category": "SYSTEM_EVENT",
+        "actor": "system",
+        "name": "Sistema persiste a nota interna",
+        "description": "Backend persiste a nota via POST /api/support/tickets/:id/notes",
+        "adapter": "api",
+        "channel": "api",
+        "expected": {
+          "backendEntity": "ticket",
+          "created": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_005",
+        "order": 5,
+        "type": "validate_response",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "UI confirma Nota adicionada",
+        "description": "Toast de sucesso 'Nota adicionada' é exibido ao usuário",
+        "adapter": "semanticValidator",
+        "channel": "chat",
+        "expected": {
+          "toast": "Nota adicionada"
+        },
+        "timeoutMs": 20000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      }
+    ],
+    "assertions": [
+      "execução RPA seed concluída sem erro crítico"
+    ],
+    "rpaRecordingId": "support-inbox-nota-ui",
+    "criticality": "blocking",
+    "adapter": "rpa",
+    "impactScopes": [
+      "omnichannel",
+      "support_ticket_flow"
+    ],
+    "requiresOfficialPipeline": false,
+    "scenarioId": "support-inbox-nota-ui",
+    "semanticSteps": [
+      {
+        "id": "step_001",
+        "order": 1,
+        "type": "trigger_channel_event",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Usuário abre menu Atendimento → Caixa de Entrada",
+        "description": "Usuário autenticado navega pelo rail Atendimento até a Caixa de Entrada",
+        "adapter": "chat",
+        "channel": "chat",
+        "expected": {
+          "page": "/inbox"
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_002",
+        "order": 2,
+        "type": "provide_data",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Usuário seleciona um ticket da lista",
+        "description": "Clica no primeiro card de ticket da inbox e abre o painel de detalhes",
+        "adapter": "chat",
+        "channel": "chat",
+        "expected": {
+          "page": "/inbox"
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_003",
+        "order": 3,
+        "type": "provide_data",
+        "category": "CLIENT_ACTION",
+        "actor": "customer",
+        "name": "Usuário escreve a nota interna",
+        "description": "Preenche o textarea de nota interna no painel do ticket",
+        "adapter": "chat",
+        "channel": "chat",
+        "expected": {
+          "page": "/inbox"
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_004",
+        "order": 4,
+        "type": "validate_backend",
+        "category": "SYSTEM_EVENT",
+        "actor": "system",
+        "name": "Sistema persiste a nota interna",
+        "description": "Backend persiste a nota via POST /api/support/tickets/:id/notes",
+        "adapter": "api",
+        "channel": "api",
+        "expected": {
+          "backendEntity": "ticket",
+          "created": true
+        },
+        "timeoutMs": 15000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      },
+      {
+        "id": "step_005",
+        "order": 5,
+        "type": "validate_response",
+        "category": "VALIDATION",
+        "actor": "system",
+        "name": "UI confirma Nota adicionada",
+        "description": "Toast de sucesso 'Nota adicionada' é exibido ao usuário",
+        "adapter": "semanticValidator",
+        "channel": "chat",
+        "expected": {
+          "toast": "Nota adicionada"
+        },
+        "timeoutMs": 20000,
+        "enabled": true,
+        "evidence": null,
+        "startedAt": null,
+        "finishedAt": null,
+        "durationMs": null
+      }
+    ],
+    "wave": "wave-support-inbox-nota",
+    "journeyId": "support_ticket_flow",
+    "scenarioStatus": "approved",
+    "executionMode": "semantic"
+  },
+  {
+    "id": "workspace-core",
+    "domain": "workspace",
+    "type": "workspace",
+    "source": "qa",
+    "flow": "Workspace Core Journey",
+    "steps": [
+      "create_workspace_entity",
+      "simulate_inbound_message",
+      "create_ticket",
+      "create_task",
+      "generate_insight",
+      "generate_action",
+      "validate_timeline",
+      "generate_evidence",
+      "create_autocorrection_run"
+    ],
+    "assertions": [
+      "entity criada",
+      "links criados",
+      "timeline correta",
+      "evidence gerada",
+      "replay gerado",
+      "insight critico criado",
+      "action criada",
+      "autocorrection pendente de revisao humana"
+    ],
+    "rpaRecordingId": null,
+    "criticality": "blocking",
+    "adapter": "api-rpa",
+    "impactScopes": [
+      "workspace",
+      "qa",
+      "rpa",
+      "autocorrection",
+      "telemetry"
+    ],
+    "requiresOfficialPipeline": false,
+    "name": "Workspace Core Journey",
+    "category": "business",
+    "replay": true,
+    "evidence": true,
+    "modes": [
+      "real",
+      "failure"
+    ],
+    "script": "scripts/workspace-core-smoke.js",
+    "command": "node",
+    "commandArgs": [
+      "scripts/workspace-core-smoke.js"
+    ],
+    "description": "Validação real do Workspace com suporte a failure injection e autocorrection.",
+    "expectedArtifacts": [
+      "/opt/results/ria/r-agent2/qa/workspace-core/evidence"
+    ]
+  }
+]
