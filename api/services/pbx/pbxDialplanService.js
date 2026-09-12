@@ -337,32 +337,57 @@ async function applyTenantDialplan({ tenantKey }) {
   return { ...result, signature };
 }
 
+// PERFORMANCE (2026-09-12): o apply fazia UM INSERT por linha. O tenant `system`
+// gera 8323 linhas de dialplan, e isso significava 8323 round-trips ao Postgres:
+// medido em 38,5s. O smoke de PBX (`test:pbx:voice:tts-asr:smoke`) usa timeout de
+// 60s no POST /api/pbx/dialplan/apply e estourava; sem o dialplan aplicado a
+// evidência enterprise saía `ok=false` (sinais `cdr` e `hangupCauses` ausentes),
+// o que travava RAP-068 e, por consequência, a selagem do release.
+// Agora os inserts vão em lotes de DIALPLAN_INSERT_CHUNK dentro de uma transação
+// (o DELETE + todos os lotes são atômicos): ~17 statements no lugar de 8323.
+const DIALPLAN_INSERT_CHUNK = 500;
+
 async function applyTenantDialplanRows({ tenantKey, rows = [] }) {
   const sq = getSequelize();
   if (!sq) throw new Error('Sequelize não inicializado');
   await ensureExtensionsTable();
 
   const safeRows = Array.isArray(rows) ? rows : [];
-  // Remove dialplan antigo do tenant (apenas contextos no namespace do tenant)
-  await sq.query(
-    `DELETE FROM extensions WHERE context = :ctx OR context LIKE :prefix`,
-    { replacements: { ctx: tenantKey, prefix: `${tenantKey}__%` } }
-  );
 
-  // Insere
-  for (const r of safeRows) {
+  return sq.transaction(async (transaction) => {
+    // Remove dialplan antigo do tenant (apenas contextos no namespace do tenant)
     await sq.query(
-      `INSERT INTO extensions (context, exten, priority, app, appdata, created_at, updated_at)
-       VALUES (:context, :exten, :priority, :app, :appdata, NOW(), NOW())
-       ON CONFLICT (context, exten, priority) DO UPDATE SET
-         app = EXCLUDED.app,
-         appdata = EXCLUDED.appdata,
-         updated_at = NOW()`,
-      { replacements: r }
+      `DELETE FROM extensions WHERE context = :ctx OR context LIKE :prefix`,
+      { replacements: { ctx: tenantKey, prefix: `${tenantKey}__%` }, transaction }
     );
-  }
 
-  return { count: safeRows.length };
+    for (let offset = 0; offset < safeRows.length; offset += DIALPLAN_INSERT_CHUNK) {
+      const chunk = safeRows.slice(offset, offset + DIALPLAN_INSERT_CHUNK);
+      const values = [];
+      const replacements = {};
+
+      chunk.forEach((row, index) => {
+        values.push(`(:ctx${index}, :exten${index}, :prio${index}, :app${index}, :data${index}, NOW(), NOW())`);
+        replacements[`ctx${index}`] = row.context;
+        replacements[`exten${index}`] = row.exten;
+        replacements[`prio${index}`] = row.priority;
+        replacements[`app${index}`] = row.app;
+        replacements[`data${index}`] = row.appdata;
+      });
+
+      await sq.query(
+        `INSERT INTO extensions (context, exten, priority, app, appdata, created_at, updated_at)
+         VALUES ${values.join(', ')}
+         ON CONFLICT (context, exten, priority) DO UPDATE SET
+           app = EXCLUDED.app,
+           appdata = EXCLUDED.appdata,
+           updated_at = NOW()`,
+        { replacements, transaction }
+      );
+    }
+
+    return { count: safeRows.length };
+  });
 }
 
 module.exports = {
