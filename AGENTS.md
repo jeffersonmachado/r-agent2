@@ -118,6 +118,18 @@ Documentação não é suficiente. Use os validadores bloqueantes em `scripts/go
 
 - Caminho oficial de release: `npm run system:validate` → `npm run zip:release` → `npm run system:release`.
 - Caminho AI-native: `npm run validate:governance-enforcement` seguido de `npm run zip:release` quando packaging está em escopo.
+- **Ciclo completo de selagem + publicação: `npm run release:seal`** (`scripts/governance/seal-release.sh`).
+  Use-o em vez de encadear os passos à mão. Ele orquestra as 5 fases
+  (`prepare` → `candidate` → `final` → `publish` → `consolidate`), é retomável
+  (`--from <fase>`), tem plano (`npm run release:seal:plan`) e encarna as armadilhas
+  que já custaram ciclos inteiros: convergir antes de tudo quando `dist/` está vazio
+  (o scorecard é re-derivador e **amplifica** 16 → 34 se rodado nesse estado), tratar
+  o exit 1 do candidato como sucesso esperado, passar `--manifest` ao
+  `verify-remote-provenance` (sem a flag ele usa `rev-parse HEAD` e produz
+  `RELEASE_TAG_CONFLICT` enganoso), ler o commit do release do **manifest**
+  (`git_commit`) e nunca do banner/HEAD, e rodar a varredura agregada **antes** da
+  verificação final seguida dos reparos de lineage/projeção (a varredura clobbera
+  `experience-segregation-report.json` e invalida a projeção de jornada).
 - `npm run zip:release` (`scripts/release-package.sh`) gera ZIP auditado + manifesto SHA-256 em `dist/`; **bloqueia** se detectar `.env`, `.token.env`, dumps ou backups; mantém apenas os 3 ZIPs mais recentes.
 - `npm run runtime:clean` limpa estado transitório antes do pacote (`runtime:clean:check` falha se restar resíduo). `qa-mesh/meshHistory/` **não** é resíduo: é evidência governada exigida por `validate:qa-governance` (execução canônica), com retenção própria do mesh — o cleaner a preserva desde 2026-08-15.
 - Deploy apenas a partir de artefato aprovado: `npm run system:deploy`; gate pré-deploy `npm run deploy:gate:official` (dry-run por padrão). Deploy real exige `SYSTEM_DEPLOY_EXECUTE=1` e manifesto com `audit: passed` + `goNoGo: GO`.

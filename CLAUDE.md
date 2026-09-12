@@ -21,6 +21,7 @@ Constituição canônica obrigatória: `governance/RAP_AGENT_CONSTITUTION.md`. E
 - Testes:     npm run test:unit        ← rodar após toda alteração de domínio
 - Testes E2E: npm run test:flow
 - Pipeline:   npm run system:bootstrap → system:validate → system:release → system:deploy
+- Selagem:    npm run release:seal     ← ciclo completo (prepare→candidate→final→publish→consolidate); plano com release:seal:plan
 - Deploy dry: npm run deploy:gate:official (dry-run por padrão)
 
 ## Governanca obrigatoria
