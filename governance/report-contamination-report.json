@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T09:31:20.213Z",
+  "generatedAt": "2026-09-12T09:42:23.001Z",
   "runId": "rap-governed-20260912092907386-12f62a95",
   "sourceFingerprint": "2c231f3876d06fab383fd6d05dbbb235389096e65bb6827223c3376117df629d",
   "artifactType": "report-contamination-report",
@@ -7,8 +7,8 @@
   "engine": "report-contamination-cleaner/v3",
   "pass": true,
   "decision": "NO_CONTAMINATION",
-  "currentGovernanceDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-  "filesScanned": 47,
+  "currentGovernanceDecision": "AUTONOMOUS_READY_GO",
+  "filesScanned": 48,
   "contaminatedFiles": 0,
   "totalContaminations": 0,
   "criticalCount": 0,
@@ -21,5 +21,5 @@
   ],
   "contaminations": [],
   "crossIssues": [],
-  "summary": "Nenhuma contaminação detectada em 47 arquivos."
+  "summary": "Nenhuma contaminação detectada em 48 arquivos."
 }
