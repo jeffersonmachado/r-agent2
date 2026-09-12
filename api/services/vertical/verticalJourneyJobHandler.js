@@ -84,6 +84,34 @@ function withJobTimeout(promise, timeoutMs, label) {
   });
 }
 
+/**
+ * Orçamento de tempo de um tick vertical.
+ *
+ * Incidente operacional (2026-09-11): cada `vertical_*_journey_tick` percorria
+ * centenas de assuntos com várias escritas/eventos cada (fitness: até 500
+ * memberships × scoring ML + insert + appendEvent) e estourava o timeout de
+ * 30s. O job ia para retry, o handler abandonado continuava rodando e o tick
+ * nunca avançava: a fila acumulou ~280k pendências, o Postgres saturou e o
+ * login da API passou a estourar timeout.
+ *
+ * Com o orçamento o tick SEMPRE conclui dentro do timeout e progride um lote
+ * por execução (o scheduler reenfileira a cada minuto), sem retry nem trabalho
+ * abandonado. O valor default fica abaixo de `VERTICAL_JOB_TIMEOUT_MS` para
+ * sobrar folga para o fechamento do tick.
+ */
+const TICK_BUDGET_MS = Number(process.env.VERTICAL_TICK_BUDGET_MS) || Math.floor(JOB_TIMEOUT_MS * 0.7);
+
+function createTickBudget(budgetMs = null) {
+  const ms = Number(budgetMs) > 0 ? Number(budgetMs) : TICK_BUDGET_MS;
+  const startedAt = Date.now();
+  return {
+    ms,
+    startedAt,
+    elapsedMs: () => Date.now() - startedAt,
+    expired: () => Date.now() - startedAt >= ms,
+  };
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // BEAUTY HANDLERS
 // ────────────────────────────────────────────────────────────────────────────
@@ -92,10 +120,11 @@ function withJobTimeout(promise, timeoutMs, label) {
  * Main beauty tick: scan for scheduled journeys that need automation.
  * payload: { tenantId, windowHours? }
  */
-async function handleBeautyJourneyTick(job) {
+async function handleBeautyJourneyTick(job, budget = null) {
   const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
   if (!tenantId || !dbAvailable()) return;
 
+  const tickBudget = budget || createTickBudget();
   const windowHours = Number(job?.payload?.windowHours) || 26; // scan next 26 h
   const beauty = getBeautyService();
 
@@ -175,15 +204,18 @@ async function handleBeautyJourneyTick(job) {
   }
 
   // ── 2. No-show scan: appointments that passed with no service_completed ─
-  await handleBeautyNoShowScan({ tenantId });
+  if (!tickBudget.expired()) {
+    await handleBeautyNoShowScan({ tenantId }, tickBudget);
+  }
 }
 
 /**
  * Scan for beauty no-shows: confirmation_sent > 2h ago, no service_completed.
  */
-async function handleBeautyNoShowScan({ tenantId, payload } = {}) {
+async function handleBeautyNoShowScan({ tenantId, payload } = {}, budget = null) {
   const tid = safeStr(tenantId || payload?.tenantId || '');
   if (!tid || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const beauty = getBeautyService();
 
   try {
@@ -201,6 +233,7 @@ async function handleBeautyNoShowScan({ tenantId, payload } = {}) {
     }).catch(() => []);
 
     for (const c of candidates) {
+      if (tickBudget.expired()) break;
       const row = c.toJSON ? c.toJSON() : c;
       const scheduleId = row.schedule_id;
       if (!scheduleId) continue;
@@ -245,9 +278,10 @@ async function handleBeautyNoShowScan({ tenantId, payload } = {}) {
 /**
  * Beauty reactivation scan: subjects inactive for ≥60 days without recent reactivation.
  */
-async function handleBeautyReactivationScan({ tenantId: tid, payload } = {}) {
+async function handleBeautyReactivationScan({ tenantId: tid, payload } = {}, budget = null) {
   const tenantId = safeStr(tid || payload?.tenantId || '');
   if (!tenantId || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const beauty = getBeautyService();
 
   try {
@@ -279,6 +313,7 @@ async function handleBeautyReactivationScan({ tenantId: tid, payload } = {}) {
       .filter((sid) => sid && !recentSubjects.has(sid));
 
     for (const subjectId of candidateSubjects.slice(0, 50)) {
+      if (tickBudget.expired()) break;
       // Check if reactivation was sent in last 30 days
       const recentReactivation = await VerticalJourneyEvent().findOne({
         where: {
@@ -316,9 +351,11 @@ async function handleBeautyReactivationScan({ tenantId: tid, payload } = {}) {
  * Main fitness tick: scan for inactivity, low frequency, and engagement signals.
  * payload: { tenantId }
  */
-async function handleFitnessJourneyTick(job) {
+async function handleFitnessJourneyTick(job, budget = null) {
   const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
   if (!tenantId || !dbAvailable()) return;
+
+  const tickBudget = budget || createTickBudget();
 
   // Close stale open attendances first (>8h without check-out = absent)
   try {
@@ -331,9 +368,21 @@ async function handleFitnessJourneyTick(job) {
     logger.warn('[VerticalJourney] fitness stale attendance close failed', { tenantId, error: err?.message });
   }
 
-  await handleFitnessInactivityScan({ tenantId });
-  await handleFitnessGraceExpiryScan({ tenantId });
-  await handleFitnessChurnModelRetrain({ tenantId });
+  // Cada etapa checa o orçamento: o tick precisa terminar (e não ser
+  // abandonado pelo timeout) para o scheduler seguir avançando.
+  await handleFitnessInactivityScan({ tenantId }, tickBudget);
+  if (!tickBudget.expired()) {
+    await handleFitnessGraceExpiryScan({ tenantId }, tickBudget);
+  }
+  // Retreino ML é a etapa mais cara: só roda com orçamento sobrando.
+  if (!tickBudget.expired()) {
+    await handleFitnessChurnModelRetrain({ tenantId });
+  } else {
+    logger.info('[VerticalJourney] fitness tick truncado por orçamento (retreino adiado)', {
+      tenantId,
+      elapsedMs: tickBudget.elapsedMs(),
+    });
+  }
 }
 
 /**
@@ -383,10 +432,11 @@ async function handleFitnessChurnModelRetrain({ tenantId: tid, payload } = {}) {
 /**
  * Scan for fitness subjects with low frequency / inactivity and dispatch alerts.
  */
-async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}) {
+async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}, budget = null) {
   const tenantId = safeStr(tid || payload?.tenantId || '');
   if (!tenantId || !dbAvailable()) return;
 
+  const tickBudget = budget || createTickBudget();
   const fitness = getFitnessService();
   const { computeEngagementSignal } = getEngagementEngine();
 
@@ -403,7 +453,18 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}) {
       limit: 500,
     }).catch(() => []);
 
+    let processed = 0;
+    let truncated = false;
+
     for (const m of memberships) {
+      // Liveness: o primeiro item sempre é processado. Sem isso, uma carga
+      // inicial lenta (requires/cold start) consumiria todo o orçamento e o
+      // scan não avançaria nunca.
+      if (processed > 0 && tickBudget.expired()) {
+        truncated = true;
+        break;
+      }
+      processed += 1;
       const row = m.toJSON ? m.toJSON() : m;
       const subjectId = safeStr(row.subject_id);
       const membershipId = safeStr(row.id);
@@ -470,6 +531,16 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}) {
         logger.info('[VerticalJourney] fitness frequency_alert sent', { tenantId, subjectId });
       }
     }
+
+    if (truncated) {
+      // Observabilidade: o restante volta no próximo tick (1 min).
+      logger.info('[VerticalJourney] fitness inactivity scan truncado por orçamento', {
+        tenantId,
+        processed,
+        total: memberships.length,
+        elapsedMs: tickBudget.elapsedMs(),
+      });
+    }
   } catch (err) {
     logger.warn('[VerticalJourney] fitness inactivity scan failed', { tenantId, error: err?.message });
   }
@@ -478,10 +549,11 @@ async function handleFitnessInactivityScan({ tenantId: tid, payload } = {}) {
 /**
  * Scan fitness memberships in grace period whose grace_until has passed → block.
  */
-async function handleFitnessGraceExpiryScan({ tenantId: tid, payload } = {}) {
+async function handleFitnessGraceExpiryScan({ tenantId: tid, payload } = {}, budget = null) {
   const tenantId = safeStr(tid || payload?.tenantId || '');
   if (!tenantId || !dbAvailable()) return { scanned: 0, blocked: 0 };
 
+  const tickBudget = budget || createTickBudget();
   const fitness = getFitnessService();
   let scanned = 0;
   let blocked = 0;
@@ -501,6 +573,7 @@ async function handleFitnessGraceExpiryScan({ tenantId: tid, payload } = {}) {
     scanned = expired.length;
 
     for (const m of expired) {
+      if (tickBudget.expired()) break;
       const row = m.toJSON ? m.toJSON() : m;
       try {
         await fitness.endGracePeriodWithBlock({ tenantId, membershipId: row.id });
@@ -579,10 +652,11 @@ function getClinicService() {
  * Main clinic tick: reminder dispatch for confirmed consultations + no-show scan.
  * payload: { tenantId, windowHours? }
  */
-async function handleClinicJourneyTick(job) {
+async function handleClinicJourneyTick(job, budget = null) {
   const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
   if (!tenantId || !dbAvailable()) return;
 
+  const tickBudget = budget || createTickBudget();
   const windowHours = Number(job?.payload?.windowHours) || 26; // scan next 26 h
   const clinic = getClinicService();
 
@@ -599,6 +673,7 @@ async function handleClinicJourneyTick(job) {
     }).catch(() => []);
 
     for (const c of confirmations) {
+      if (tickBudget.expired()) break;
       const row = c.toJSON ? c.toJSON() : c;
       const scheduleId = row.schedule_id;
       const subjectId = row.subject_id;
@@ -656,16 +731,19 @@ async function handleClinicJourneyTick(job) {
   }
 
   // ── 2. No-show scan ──────────────────────────────────────────────────────
-  await handleClinicNoShowScan({ tenantId });
+  if (!tickBudget.expired()) {
+    await handleClinicNoShowScan({ tenantId }, tickBudget);
+  }
 }
 
 /**
  * Scan for clinic no-shows: confirmation_sent whose scheduled time passed ≥2h ago
  * with no checkin_recorded / service_completed / no_show_detected.
  */
-async function handleClinicNoShowScan({ tenantId, payload } = {}) {
+async function handleClinicNoShowScan({ tenantId, payload } = {}, budget = null) {
   const tid = safeStr(tenantId || payload?.tenantId || '');
   if (!tid || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const clinic = getClinicService();
 
   try {
@@ -683,6 +761,7 @@ async function handleClinicNoShowScan({ tenantId, payload } = {}) {
     }).catch(() => []);
 
     for (const c of candidates) {
+      if (tickBudget.expired()) break;
       const row = c.toJSON ? c.toJSON() : c;
       const scheduleId = row.schedule_id;
       if (!scheduleId) continue;
@@ -726,9 +805,10 @@ async function handleClinicNoShowScan({ tenantId, payload } = {}) {
  * older than the recall window (150d default) and who have not received a
  * recall in the last 90 days.
  */
-async function handleClinicRecallScan({ tenantId: tid, payload } = {}) {
+async function handleClinicRecallScan({ tenantId: tid, payload } = {}, budget = null) {
   const tenantId = safeStr(tid || payload?.tenantId || '');
   if (!tenantId || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const clinic = getClinicService();
 
   try {
@@ -760,6 +840,7 @@ async function handleClinicRecallScan({ tenantId: tid, payload } = {}) {
       .filter((sid) => sid && !recentSubjects.has(sid));
 
     for (const subjectId of candidates.slice(0, 50)) {
+      if (tickBudget.expired()) break;
       const recentRecall = await VerticalJourneyEvent().findOne({
         where: {
           tenant_key: tenantId,
@@ -802,9 +883,10 @@ function getFoodService() {
  * review request yet, and sends one (idempotent per order).
  * payload: { tenantId }
  */
-async function handleFoodJourneyTick(job) {
+async function handleFoodJourneyTick(job, budget = null) {
   const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
   if (!tenantId || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const food = getFoodService();
 
   try {
@@ -818,6 +900,7 @@ async function handleFoodJourneyTick(job) {
     }).catch(() => []);
 
     for (const o of delivered) {
+      if (tickBudget.expired()) break;
       const row = o.toJSON ? o.toJSON() : o;
       const octx = row.context && typeof row.context === 'object' ? row.context : {};
       const subjectId = octx.customerSubjectId || null;
@@ -860,9 +943,10 @@ async function handleFoodJourneyTick(job) {
  * than the reorder window (21d default) and who have not received a reorder
  * campaign in the last 14 days.
  */
-async function handleFoodReorderScan({ tenantId: tid, payload } = {}) {
+async function handleFoodReorderScan({ tenantId: tid, payload } = {}, budget = null) {
   const tenantId = safeStr(tid || payload?.tenantId || '');
   if (!tenantId || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const food = getFoodService();
 
   try {
@@ -898,6 +982,7 @@ async function handleFoodReorderScan({ tenantId: tid, payload } = {}) {
     let sent = 0;
     for (const entry of lastByCustomer.values()) {
       if (sent >= 50) break;
+      if (tickBudget.expired()) break;
       if (!entry.deliveredAt || !Number.isFinite(entry.deliveredAt.getTime())) continue;
       const daysSince = Math.floor((now - entry.deliveredAt.getTime()) / 86400000);
       if (daysSince < reorderWindowDays) continue; // still active
@@ -951,9 +1036,10 @@ function getServicesService() {
  * 2. Expiry scan: quote_sent > validDays without decision → quote_expired.
  * payload: { tenantId, followUpAfterDays?, defaultValidDays? }
  */
-async function handleServicesJourneyTick(job) {
+async function handleServicesJourneyTick(job, budget = null) {
   const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
   if (!tenantId || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const services = getServicesService();
 
   const followUpAfterDays = Number(job?.payload?.followUpAfterDays) || 3;
@@ -984,6 +1070,7 @@ async function handleServicesJourneyTick(job) {
     );
 
     for (const raw of quotes) {
+      if (tickBudget.expired()) break;
       const row = raw.toJSON ? raw.toJSON() : raw;
       const quoteId = row.payload?.quoteId;
       if (!quoteId) continue;
@@ -1046,9 +1133,10 @@ function getMarketService() {
  * Market tick (every minute): post-delivery review scan — pedidos entregues
  * nas últimas 48h cujo cliente ainda não recebeu pedido de avaliação.
  */
-async function handleMarketJourneyTick(job) {
+async function handleMarketJourneyTick(job, budget = null) {
   const tenantId = safeStr(job?.payload?.tenantId || job?.tenant_key || '');
   if (!tenantId || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const market = getMarketService();
 
   try {
@@ -1062,6 +1150,7 @@ async function handleMarketJourneyTick(job) {
     }).catch(() => []);
 
     for (const o of delivered) {
+      if (tickBudget.expired()) break;
       const row = o.toJSON ? o.toJSON() : o;
       const octx = row.context && typeof row.context === 'object' ? row.context : {};
       const subjectId = octx.customerSubjectId || null;
@@ -1107,9 +1196,10 @@ async function handleMarketJourneyTick(job) {
  *    → loyalty_campaign_sent.
  * payload: { tenantId, restockWindowDays?, restockCooldownDays?, winBackWindowDays? }
  */
-async function handleMarketRestockScan({ tenantId: tid, payload } = {}) {
+async function handleMarketRestockScan({ tenantId: tid, payload } = {}, budget = null) {
   const tenantId = safeStr(tid || payload?.tenantId || '');
   if (!tenantId || !dbAvailable()) return;
+  const tickBudget = budget || createTickBudget();
   const market = getMarketService();
 
   try {
@@ -1145,6 +1235,7 @@ async function handleMarketRestockScan({ tenantId: tid, payload } = {}) {
     let sent = 0;
     for (const entry of lastByCustomer.values()) {
       if (sent >= 50) break;
+      if (tickBudget.expired()) break;
       if (!entry.deliveredAt || !Number.isFinite(entry.deliveredAt.getTime())) continue;
       const daysSince = Math.floor((now - entry.deliveredAt.getTime()) / 86400000);
       if (daysSince < restockWindowDays) continue; // cliente ativo
@@ -1236,12 +1327,16 @@ async function handleVerticalJob(job) {
   const jobId = safeStr(job?.id || '');
   const startMs = Date.now();
 
+  // Orçamento único por execução: garante que o tick conclua dentro do
+  // timeout do job (sem retry nem trabalho abandonado rodando em paralelo).
+  const tickBudget = createTickBudget();
+
   logger.info('[VerticalJourney] job start', { tenantId, kind, jobId });
 
   try {
     switch (kind) {
       case 'vertical_beauty_journey_tick':
-        await withJobTimeout(handleBeautyJourneyTick(job), undefined, kind);
+        await withJobTimeout(handleBeautyJourneyTick(job, tickBudget), undefined, kind);
         break;
 
       case 'vertical_beauty_noshow_scan':
@@ -1253,7 +1348,7 @@ async function handleVerticalJob(job) {
         break;
 
       case 'vertical_fitness_journey_tick':
-        await withJobTimeout(handleFitnessJourneyTick(job), undefined, kind);
+        await withJobTimeout(handleFitnessJourneyTick(job, tickBudget), undefined, kind);
         break;
 
       case 'vertical_fitness_inactivity_scan':
@@ -1265,7 +1360,7 @@ async function handleVerticalJob(job) {
         break;
 
       case 'vertical_clinic_journey_tick':
-        await withJobTimeout(handleClinicJourneyTick(job), undefined, kind);
+        await withJobTimeout(handleClinicJourneyTick(job, tickBudget), undefined, kind);
         break;
 
       case 'vertical_clinic_noshow_scan':
@@ -1273,27 +1368,27 @@ async function handleVerticalJob(job) {
         break;
 
       case 'vertical_clinic_recall_scan':
-        await withJobTimeout(handleClinicRecallScan({ tenantId, payload: job?.payload }), undefined, kind);
+        await withJobTimeout(handleClinicRecallScan({ tenantId, payload: job?.payload }, tickBudget), undefined, kind);
         break;
 
       case 'vertical_food_journey_tick':
-        await withJobTimeout(handleFoodJourneyTick(job), undefined, kind);
+        await withJobTimeout(handleFoodJourneyTick(job, tickBudget), undefined, kind);
         break;
 
       case 'vertical_food_reorder_scan':
-        await withJobTimeout(handleFoodReorderScan({ tenantId, payload: job?.payload }), undefined, kind);
+        await withJobTimeout(handleFoodReorderScan({ tenantId, payload: job?.payload }, tickBudget), undefined, kind);
         break;
 
       case 'vertical_services_journey_tick':
-        await withJobTimeout(handleServicesJourneyTick(job), undefined, kind);
+        await withJobTimeout(handleServicesJourneyTick(job, tickBudget), undefined, kind);
         break;
 
       case 'vertical_market_journey_tick':
-        await withJobTimeout(handleMarketJourneyTick(job), undefined, kind);
+        await withJobTimeout(handleMarketJourneyTick(job, tickBudget), undefined, kind);
         break;
 
       case 'vertical_market_restock_scan':
-        await withJobTimeout(handleMarketRestockScan({ tenantId, payload: job?.payload }), undefined, kind);
+        await withJobTimeout(handleMarketRestockScan({ tenantId, payload: job?.payload }, tickBudget), undefined, kind);
         break;
 
       case 'vertical_bakery_production_plan':
@@ -1337,4 +1432,6 @@ module.exports = {
   handleBakeryProductionPlan,
   handleVerticalReconciliation,
   withJobTimeout,
+  createTickBudget,
+  TICK_BUDGET_MS,
 };

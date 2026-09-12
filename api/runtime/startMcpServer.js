@@ -29,16 +29,75 @@ const { getClassificationForAgent } = require('../modules/agent-os/experience-se
 const { resolveActorToolPermissions } = require('../utils/actorToolPermissions');
 
 /**
+ * Habilita a autenticação machine-to-machine do boundary MCP.
+ *
+ * Default: habilitada em produção; desabilitada em dev/test para que a
+ * resolução de credencial só aconteça quando houver store disponível.
+ * `MCP_SERVICE_PRINCIPAL_AUTH=1|0` força o estado, e a injeção de
+ * `deps.resolveServicePrincipalToken` (testes/embedding) também habilita.
+ */
+function isServicePrincipalAuthEnabled(deps = {}) {
+  if (typeof deps.resolveServicePrincipalToken === 'function') return true;
+  const raw = String(process.env.MCP_SERVICE_PRINCIPAL_AUTH || '').trim().toLowerCase();
+  if (raw === '1' || raw === 'true') return true;
+  if (raw === '0' || raw === 'false') return false;
+  return process.env.NODE_ENV === 'production';
+}
+
+/**
  * Middleware Express de autenticação do boundary MCP.
  * requireAuth popula req.agent/req.session/req.tenantId (fail closed).
+ *
+ * Aceita dois tipos de principal:
+ *  1. sessão HUMANA (`requireAuth`);
+ *  2. SERVICE PRINCIPAL (credencial de integração, M31/M32) — resolvido
+ *     apenas quando habilitado, e sempre com escopo de capability + teto de
+ *     classificação próprios.
+ *
+ * Falha de autenticação devolve SEMPRE `mcp_authentication_required` — não há
+ * oráculo distinguindo "sessão inválida" de "credencial de integração
+ * inválida". O motivo real vai para auditoria.
  */
-function mcpRequireAuth(req, res, next) {
-  const authResult = requireAuth(req);
-  if (!authResult.valid) {
-    res.status(401).json({ error: 'mcp_authentication_required' });
-    return;
-  }
-  next();
+function createMcpAuthMiddleware(deps = {}) {
+  const serviceAuthEnabled = isServicePrincipalAuthEnabled(deps);
+
+  return function mcpRequireAuth(req, res, next) {
+    const authResult = requireAuth(req);
+    if (authResult.valid) {
+      next();
+      return;
+    }
+
+    const authorization = req.headers?.authorization;
+    if (!serviceAuthEnabled || !authorization) {
+      res.status(401).json({ error: 'mcp_authentication_required' });
+      return;
+    }
+
+    const { resolveServicePrincipal } = require('./mcpServicePrincipalAuth');
+    Promise.resolve(resolveServicePrincipal({
+      authorizationHeader: authorization,
+      resolveToken: deps.resolveServicePrincipalToken,
+      correlationId: req.headers?.['x-correlation-id'] || null,
+    }))
+      .then((result) => {
+        if (!result.ok) {
+          logger.warn('[McpRuntime] Credencial de integração recusada', {
+            error: result.error,
+            detail: result.detail || null,
+          });
+          res.status(401).json({ error: 'mcp_authentication_required' });
+          return;
+        }
+        req.mcpServicePrincipal = result.principal;
+        req.mcpAuthContext = result.authContext;
+        next();
+      })
+      .catch((error) => {
+        logger.warn('[McpRuntime] Falha ao resolver credencial de integração', { error: error.message });
+        if (!res.headersSent) res.status(401).json({ error: 'mcp_authentication_required' });
+      });
+  };
 }
 
 /**
@@ -49,6 +108,10 @@ function mcpRequireAuth(req, res, next) {
  * @returns {Object} authContext para o MCP Server Adapter
  */
 function buildMcpAuthContext(req) {
+  // Service principal (M2M): identidade de integração com escopos e teto de
+  // classificação próprios — nunca permissões de um humano.
+  if (req.mcpAuthContext) return req.mcpAuthContext;
+
   const agent = req.agent || null;
   if (!agent) {
     const err = new Error('mcp_authentication_required');
@@ -129,8 +192,10 @@ function mountMcpRoutes(app, deps = {}) {
     return adapterCache;
   }
 
-  // Endpoint MCP — autenticação obrigatória, principal derivado da sessão.
-  app.post('/mcp', mcpRequireAuth, async (req, res) => {
+  // Endpoint MCP — autenticação obrigatória. O principal é derivado da sessão
+  // humana OU de uma credencial de integração (service principal, M2M); nunca
+  // de payload.
+  app.post('/mcp', createMcpAuthMiddleware(deps), async (req, res) => {
     try {
       const authContext = buildMcpAuthContext(req);
 
@@ -211,4 +276,11 @@ async function stopMcpServer() {
   logger.info('[McpRuntime] MCP Server stopped');
 }
 
-module.exports = { mountMcpRoutes, startMcpServer, stopMcpServer, buildMcpAuthContext };
+module.exports = {
+  mountMcpRoutes,
+  startMcpServer,
+  stopMcpServer,
+  buildMcpAuthContext,
+  createMcpAuthMiddleware,
+  isServicePrincipalAuthEnabled,
+};

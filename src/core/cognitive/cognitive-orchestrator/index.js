@@ -573,4 +573,15 @@ function getCognitiveOrchestrator() {
   return singleton;
 }
 
-module.exports = { createCognitiveOrchestrator, getCognitiveOrchestrator };
+/**
+ * Indica se o orchestrator singleton JÁ foi criado, sem criá-lo.
+ *
+ * Consumidores que querem o Tool Registry COMPARTILHADO (fonte única de tools,
+ * incluindo proxies de MCP externo) sem pagar o custo de instanciar o.
+ * pipeline cognitivo inteiro usam este peek antes de `getCognitiveOrchestrator`.
+ */
+function hasCognitiveOrchestrator() {
+  return singleton !== null;
+}
+
+module.exports = { createCognitiveOrchestrator, getCognitiveOrchestrator, hasCognitiveOrchestrator };

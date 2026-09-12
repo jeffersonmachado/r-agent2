@@ -31,7 +31,16 @@ const { classifyIntent, needsKnowledge, needsOperationalData } = require('./inte
 const { buildRegistry, executeTool } = require('./toolRegistry');
 const { authorizeTools } = require('./toolAuthorization');
 const { sanitizeUntrustedContent, detectInjection } = require('./injectionGuard');
+const {
+  resolveEffectiveContext,
+  inheritIntent,
+  lastIntent,
+  buildRetrievalQuery,
+  describeConversationUse,
+} = require('./conversationContext');
+const { buildGroundedSynthesis } = require('./synthesis');
 const conversationStore = require('./conversationStore');
+const { buildPromptHistory } = conversationStore;
 const logger = require('../../utils/logger');
 const { getClassificationForAgent } = require('../../modules/agent-os/experience-segregation');
 
@@ -40,7 +49,11 @@ const DEFAULT_MAX_RAG_QUERIES = 1;
 
 const ENTITY_TYPES_WITH_OWNERSHIP_CHECK = Object.freeze(['FITNESS_STUDENT', 'CUSTOMER']);
 
-const BILLING_MARKERS = /\b(?:inadimpl|financeir|quanto\s+(?:\w+\s+){0,3}?deve|fatura|boleto|cobran[çc]a|pagamento|mensalidade|pix|cart[ãa]o)\b/i;
+// Marcadores de dado financeiro. O radical é flexível (`financeir\w*`) porque
+// a forma natural do operador é o ADJETIVO ("situação financeira"), não o
+// substantivo ("financeiro") — exigir fim de palavra depois de `financeir`
+// deixava a pergunta canônica do copiloto sem consulta de cobrança.
+const BILLING_MARKERS = /\b(?:inadimpl\w*|financeir\w*|quanto\s+(?:\w+\s+){0,3}?deve|fatura\w*|boleto|boletos|cobran[çc]a\w*|pagamento\w*|mensalidade\w*|pix|cart[ãa]o)\b/i;
 const CHURN_MARKERS = /\b(?:churn|risco|evas[ãa]o|cancelamento|vai\s+(?:sair|embora))\b/i;
 
 function intConfig(envName, fallback) {
@@ -181,33 +194,27 @@ function buildAnswer({
   failedTools,
   accessDenied,
 }) {
-  const parts = [];
+  // Compatibilidade: a composição real vive em `synthesis.js` (A8). Um
+  // `operationalBlock` textual é convertido de volta para fatos rotulados.
+  const facts = String(operationalBlock || '')
+    .split('\n')
+    .map((line) => line.replace(/^-\s*/, ''))
+    .filter(Boolean)
+    .map((line) => {
+      const separator = line.indexOf(': ');
+      if (separator === -1) return { key: line, label: line, value: '' };
+      return { key: line.slice(0, separator), label: line.slice(0, separator), value: line.slice(separator + 2) };
+    });
 
-  if (accessDenied) {
-    parts.push('Não consegui confirmar o acesso a esta entidade com as suas permissões. Nenhum dado operacional foi consultado.');
-  } else if (operationalBlock) {
-    const header = entityLabel ? `**${entityLabel} — dados atuais**` : '**Dados atuais**';
-    parts.push(`${header}\n${operationalBlock}`);
-  }
-
-  if (failedTools.length > 0 && !accessDenied) {
-    parts.push(`_Com os dados disponíveis:_ não consegui confirmar ${failedTools.map((t) => t.label.toLowerCase()).join(', ')} com as fontes disponíveis.`);
-  }
-
-  if (knowledgeAnswer) {
-    const sanitized = sanitizeUntrustedContent(knowledgeAnswer);
-    parts.push(sanitized.text);
-  }
-
-  if (deniedTools.length > 0) {
-    parts.push(`Você não possui acesso a: ${deniedTools.map((t) => t.label).join(', ')}.`);
-  }
-
-  if (parts.length === 0) {
-    parts.push('Não consegui encontrar informação para responder com segurança. Tente reformular a pergunta.');
-  }
-
-  return parts.join('\n\n');
+  return buildGroundedSynthesis({
+    intent,
+    entityLabel,
+    facts,
+    knowledgeAnswer,
+    deniedTools,
+    failedTools,
+    accessDenied,
+  }).answer;
 }
 
 function computeConfidence({ accessDenied, facts, knowledgeAnswer, failedTools }) {
@@ -266,9 +273,19 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     context: payload.context,
   });
 
+  // ── Histórico PERSISTIDO participa do turno ─────────────────────────────
+  // O histórico enviado pelo cliente continua sendo ignorado: a janela vem da
+  // conversa persistida (tenant + usuário) e o contexto de entidade vem do
+  // turno anterior já validado server-side — e será revalidado de novo abaixo.
+  const history = buildPromptHistory(conversation);
+  const { context: effectiveContext, source: contextSource } = resolveEffectiveContext({
+    payloadContext: payload.context,
+    persistedContext: conversation.context,
+  });
+
   const intentResult = classifyIntent({
     question: payload.question,
-    context: payload.context,
+    context: effectiveContext,
     classification,
   });
 
@@ -281,7 +298,7 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
       question: payload.question,
       answer,
       intent: intentResult.intent,
-      context: payload.context,
+      context: effectiveContext,
     });
     return {
       conversationId: conversation.id,
@@ -296,18 +313,29 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     };
   }
 
+  // Um acompanhamento curto herda a família de intenção do turno anterior —
+  // "E a frequência dele?" não é uma pergunta apenas documental quando o
+  // turno anterior era dado vivo + método.
+  const inherited = inheritIntent({
+    question: payload.question,
+    intent: intentResult.intent,
+    previousIntent: lastIntent(history),
+    hasEntity: Boolean(effectiveContext?.entityId),
+  });
+  const intent = inherited.intent;
+
   // ── Contexto de entidade: revalidado server-side a cada turno ──────────
   const entityValidation = await validateEntityContext({
-    context: payload.context,
+    context: effectiveContext,
     tenantId,
   });
 
   const entity = entityValidation.validated ? entityValidation.entity : null;
-  const accessDenied = Boolean(payload.context?.entityId) && !entityValidation.validated;
+  const accessDenied = Boolean(effectiveContext?.entityId) && !entityValidation.validated;
 
   // ── Data tools: registro explícito + autorização por capabilidade ───────
   const { required } = selectTools({
-    intent: intentResult.intent,
+    intent,
     question: payload.question,
     entity,
     registry,
@@ -340,10 +368,13 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
   // ── Conhecimento: RAG OPERATIONAL (global ∪ tenant). Nunca SYSTEM. ──────
   let knowledgeAnswer = null;
   let knowledgeSources = [];
-  if (!accessDenied && needsKnowledge(intentResult.intent) && getRagBudget() > 0 && ragService) {
+  if (!accessDenied && needsKnowledge(intent) && getRagBudget() > 0 && ragService) {
     try {
+      // Recuperação contextualizada: um acompanhamento curto não é buscado no
+      // corpus sem sujeito — o assunto do turno anterior entra na consulta.
+      const retrievalQuery = buildRetrievalQuery({ question: payload.question, history });
       const ragResult = await ragService.queryRag(
-        payload.question,
+        retrievalQuery,
         tenantId,
         { actor, source: 'ask-ai' },
         { topK: 6, minScore: 0.45, maxTokens: 1000 },
@@ -361,15 +392,16 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
   }
 
   const entityLabel = entity ? 'Aluno' : null;
-  const answer = buildAnswer({
-    intent: intentResult.intent,
+  const synthesis = buildGroundedSynthesis({
+    intent,
     entityLabel,
-    operationalBlock: operational.block,
+    facts: operational.facts,
     knowledgeAnswer,
     deniedTools: denied,
     failedTools,
     accessDenied,
   });
+  const answer = synthesis.answer;
 
   const confidence = computeConfidence({
     accessDenied,
@@ -386,8 +418,10 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     answer,
     sources,
     facts: operational.facts,
-    intent: intentResult.intent,
-    context: payload.context,
+    intent,
+    // Persiste o contexto EFETIVO (payload validado ou o herdado da conversa)
+    // para dar continuidade ao turno seguinte — sempre revalidado lá.
+    context: effectiveContext,
   });
 
   const docInjection = knowledgeSources.some(
@@ -399,13 +433,16 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     answer,
     sources,
     facts: operational.facts,
-    intent: intentResult.intent,
+    intent,
     confidence,
     provenance: {
       liveData: toolResults.filter((r) => !r.failed && r.found).map((r) => r.toolId),
       knowledge: knowledgeSources.map((s) => s.title || s.documentId || null).filter(Boolean),
-      inference: 'none',
-      recommendation: knowledgeAnswer ? 'knowledge-document' : 'none',
+      inference: synthesis.provenance.inference ? 'derived-from-facts' : 'none',
+      recommendation: synthesis.provenance.recommendation,
+      // A9: cada item carrega o TIPO de afirmação (FACT/KNOWLEDGE/INFERENCE/
+      // RECOMMENDATION) — nunca detalhe técnico desnecessário ao usuário.
+      items: synthesis.provenance.items,
     },
     policy: {
       classification,
@@ -413,6 +450,14 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
       deniedTools: denied.map((tool) => tool.id),
       injectionDetected: docInjection,
       entityValidated: entityValidation.validated,
+      // Continuidade conversacional auditável (nunca valores de negócio).
+      conversation: describeConversationUse({
+        history,
+        effectiveContextSource: contextSource,
+        inheritedIntent: inherited.inherited,
+        hasSummary: Boolean(history.summary),
+        context: effectiveContext,
+      }),
     },
     historyWindow: stored.window.length,
     blocked: false,

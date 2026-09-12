@@ -138,7 +138,10 @@ describe('ask-ai orchestrator — dados vivos + conhecimento', () => {
     expect(turn.answer).toContain('Status da matrícula: ACTIVE');
     expect(turn.answer).toContain('jornada de recuperação');
     expect(turn.confidence).toBe('fully_grounded');
-    expect(turn.provenance.liveData).toEqual(expect.arrayContaining(['getFitnessStudentSummary', 'getAttendanceSummary']));
+    expect(turn.provenance.liveData).toEqual(expect.arrayContaining([
+      'askai.fitness.membershipSummary',
+      'askai.fitness.attendanceSummary',
+    ]));
     expect(turn.sources.some((s) => s.type === 'KNOWLEDGE_DOCUMENT')).toBe(true);
     expect(turn.conversationId).toBeTruthy();
     expect(turn.policy.accessDenied).toBe(false);
@@ -156,7 +159,7 @@ describe('ask-ai orchestrator — dados vivos + conhecimento', () => {
 
     expect(mockGetMembershipBillingHistory).not.toHaveBeenCalled();
     expect(turn.answer).toContain('Você não possui acesso a');
-    expect(turn.policy.deniedTools).toContain('getBillingSummary');
+    expect(turn.policy.deniedTools).toContain('askai.billing.membershipHistory');
     expect(turn.answer).not.toMatch(/R\$\s?\d/);
   });
 

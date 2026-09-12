@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
-import { buildAskAiContext, describeAskAiContext } from '../askAi/contextProvider';
+import { buildAskAiContext, describeAskAiContext, subscribeToRouteChanges } from '../askAi/contextProvider';
 
 /**
  * AskAiWidget — botão flutuante "Perguntar à IA" presente em todas as telas.
@@ -35,16 +35,12 @@ export function AskAiWidget() {
 
   // O contexto acompanha a navegação: mudar de tela atualiza o contexto
   // enviado nas próximas perguntas (a conversa continua a mesma).
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const onChange = () => setRoute(window.location.pathname);
-    window.addEventListener('popstate', onChange);
-    window.addEventListener('hashchange', onChange);
-    return () => {
-      window.removeEventListener('popstate', onChange);
-      window.removeEventListener('hashchange', onChange);
-    };
-  }, []);
+  // `router:change` é o evento do router da aplicação para navegação
+  // client-side — sem ele, um clique no menu deixava o contexto na tela
+  // anterior (só popstate/hashchange eram ouvidos).
+  useEffect(() => subscribeToRouteChanges((nextRoute) => {
+    setRoute(nextRoute || window.location.pathname);
+  }), []);
 
   useEffect(() => {
     if (open) {

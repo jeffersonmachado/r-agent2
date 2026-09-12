@@ -204,13 +204,76 @@ SDK oficial `@modelcontextprotocol/sdk` (v1.30, CJS).
   `tenantId` no input é rejeitado (`mcp_tenant_override_forbidden`);
   fail closed sem principal completo.
 - **Client Hub** (`client-hub.js`): conexões externas **registradas**
-  (`tenant, name, endpoint, authRef, enabled, classification,
-  allowedCapabilities, allowedTools, timeout, retry`). Sem conexão:
-  `no_configured_mcp_connection`. `authRef` é referência (env var) — segredos
-  nunca em logs.
+  (`tenant, name, endpoint, authType, authRef|credentialRef, enabled,
+  classification, allowedCapabilities, allowedTools, toolCapabilityMap,
+  toolPolicies, endpointPolicy, timeout, retry`). Sem conexão:
+  `no_configured_mcp_connection`. `authRef`/`credentialRef` são referências —
+  segredos em claro (`token`, `apiKey`, ...) são recusados na configuração.
 - **External Tool Adapter** (`external-tool-adapter.js`): tools externas
-  viram proxies governados `mcp.<connection>.<tool>` **dentro** do Tool
-  Registry — o agente nunca chama MCP externo diretamente.
+  viram proxies governados `mcp.t<tenantToken>.<connection>.<tool>` **dentro**
+  do Tool Registry — o agente nunca chama MCP externo diretamente.
+
+### 2.8.1 MCP Control Plane
+
+Implementado em 2026-09-11. O Control Plane é a camada que transforma "conexão
+MCP configurada" em "capability interoperável, governada e observável". Ele é
+aplicado em cadeia, sempre antes da rede:
+
+```text
+endpoint-policy (SSRF · TLS · DNS rebinding · redirect)
+   → credencial por REFERÊNCIA (Bearer/API key/OAuth2/mTLS/no_auth opt-in)
+   → descoberta de tools + fingerprint de schema
+   → tool-lifecycle (discovered → validated → enabled ⇄ disabled
+                     ↘ degraded / schema_changed / unavailable)
+   → tool-policy POR TOOL (risco, side effect, confirmação, idempotência,
+                           timeout, retry, redaction)
+   → circuit breaker + health + timeout
+   → redaction de output + auditoria/métricas
+```
+
+- **`endpoint-policy.js`** — módulo PURO. `evaluateEndpoint` recusa protocolo
+  não-https em PRODUCTION, credenciais na URL, hostname proibido
+  (`localhost`, `*.internal`, `*.local`) e IP literal em faixa restrita.
+  `169.254.0.0/16` (metadata de cloud) é bloqueado **sempre** — nem com
+  `allowPrivateNetwork`. `evaluateResolvedAddresses` revalida o IP resolvido a
+  cada conexão (DNS rebinding) e `resolveTlsOptions` nunca devolve
+  `rejectUnauthorized: false` em PRODUCTION.
+- **`tool-lifecycle.js`** — `computeSchemaFingerprint` (SHA-256 de input+output
+  com serialização determinística): uma mudança de schema remoto entra como
+  `schema_changed` e a tool fica **não executável** até `validateTool` explícito.
+  `getToolAvailability` deriva disponibilidade de lifecycle + fingerprint +
+  saúde + circuit breaker — "existia no startup" nunca é disponibilidade.
+- **`tool-policy.js`** — política por tool com precedência declarada >
+  heurística por nome (tokenização camelCase/snake/dot; o PRIMEIRO token é o
+  verbo). `payments.refund` → `high` + `confirmation_required` + retry 1;
+  `calendar.listEvents` → `low` + `autonomous`. Sinal remoto
+  (`destructiveHint`/`readOnlyHint`) é DADO: pode elevar risco, **nunca
+  reduzir** o que foi declarado. `sanitizeRemoteDescription` marca a descrição
+  remota como `trusted: false` e remove trechos instrucionais;
+  `redactToolOutput` remove credenciais e PAN antes de devolver ao agente.
+- **`capability-resolution.js`** — resolução provider-neutral: quem consome
+  pede **capability** (`crm.read`, `research.search`), nunca provider. Seleção
+  determinística (nativo primeiro; fallback externo só sem side effect;
+  todos com side effect ⇒ `side_effect_provider_fallback_not_safe`).
+- **`observability.js`** — 9 métricas (`mcp_connections`,
+  `mcp_connection_failures`, `mcp_tool_discoveries`, `mcp_tool_calls`,
+  `mcp_tool_failures`, `mcp_tool_denials`, `mcp_schema_changes`,
+  `mcp_circuit_open`, `mcp_latency`) + audit sink. Nunca carrega segredo.
+- **`service-principal.js` + `api/runtime/mcpServicePrincipalAuth.js`** —
+  identidade machine-to-machine (M31/M32): opt-in explícito (`meta.mcp.enabled`),
+  escopos de capability, teto de classificação (default = menor privilégio),
+  expiração, revogação e identidade de auditoria. O teto nunca é elevado pelo
+  chamador e `*` é proibido. Habilitado por `MCP_SERVICE_PRINCIPAL_AUTH` ou
+  injeção do resolver; falha de auth devolve **um único** código
+  (`mcp_authentication_required`) — sem oráculo distinguindo sessão humana de
+  credencial de integração.
+- **Process Runtime** — o bridge `createToolBridgeServiceExecutor` faz o nó
+  durável executar pelo Tool Registry com `idempotencyKey` determinística
+  (`executionId:nodeId`), de modo que retry não duplica operação ambígua.
+
+Enforcement: `npm run validate:mcp-control-plane` (20 invariantes executáveis,
+incluso em `validate:governance-enforcement`) → `reports/mcp-control-plane-report.json`.
+
 
 ### 2.9 Event Fabric
 

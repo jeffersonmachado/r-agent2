@@ -194,6 +194,11 @@ async function appendTurn({
 /**
  * Janela pronta para o prompt: sumário + turnos recentes.
  * Nunca inclui o histórico enviado pelo cliente.
+ *
+ * A projeção preserva `intent` do turno assistente: é o que permite a
+ * CONTINUIDADE multi-turno (herdar a família de intenção de um acompanhamento
+ * curto) sem reinterpretar a pergunta isolada. `sources`/`facts` não entram —
+ * o prompt precisa do texto, não da proveniência.
  */
 function buildPromptHistory(conversation) {
   const messages = Array.isArray(conversation?.messages) ? conversation.messages : [];
@@ -202,6 +207,7 @@ function buildPromptHistory(conversation) {
     messages: messages.map((message) => ({
       role: message.role,
       content: String(message.content || ''),
+      intent: message.intent || null,
     })),
   };
 }

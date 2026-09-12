@@ -9,9 +9,14 @@
  * IDENTIDADE REAL do usuário — nunca como superusuário invisível.
  *
  * Regras:
- *  - Cada tool declara `{resource, action}` do RBAC; a decisão vem de
+ *  - Cada tool declara `{resource, action}` do RBAC (`rbac`; contrato legado
+ *    `capability` como objeto ainda é aceito) e a decisão vem de
  *    `hasPermission(agent, resource, action)` — a mesma função usada pelas
  *    rotas HTTP do produto.
+ *  - `resolveCanonicalPermissions` TRADUZ o RBAC de produto para as permissões
+ *    canônicas do Canonical Tool Registry. Esta é a `AskAiToolPolicy`: o
+ *    copiloto não inventa permissão própria — ele projeta o RBAC real na
+ *    linguagem de capabilities do registry.
  *  - Negação é silenciosa quanto ao conteúdo: a tool não é executada e nenhum
  *    valor derivado é exposto. A resposta informa apenas que o usuário não
  *    possui acesso àquela informação.
@@ -20,6 +25,18 @@
  */
 
 const { hasPermission, canAccessTicket } = require('../rbacService');
+
+/**
+ * Resolve o RBAC declarado de uma tool, aceitando o contrato legado
+ * (`capability` como objeto `{resource, action}`).
+ */
+function resolveToolRbac(tool) {
+  const rbac = tool?.rbac;
+  if (rbac && rbac.resource && rbac.action) return rbac;
+  const legacy = tool?.capability;
+  if (legacy && typeof legacy === 'object' && legacy.resource && legacy.action) return legacy;
+  return null;
+}
 
 /**
  * Filtra as tools permitidas para o ator.
@@ -34,8 +51,8 @@ function authorizeTools({ actor, tools }) {
   const denied = [];
 
   for (const tool of tools || []) {
-    const capability = tool?.capability;
-    if (!capability?.resource || !capability?.action) {
+    const rbac = resolveToolRbac(tool);
+    if (!rbac) {
       denied.push({ toolId: tool?.id || 'unknown', reason: 'tool_without_capability' });
       continue;
     }
@@ -43,7 +60,7 @@ function authorizeTools({ actor, tools }) {
       denied.push({ toolId: tool.id, reason: 'no_actor' });
       continue;
     }
-    if (!hasPermission(actor, capability.resource, capability.action)) {
+    if (!hasPermission(actor, rbac.resource, rbac.action)) {
       denied.push({ toolId: tool.id, reason: 'capability_denied' });
       continue;
     }
@@ -51,6 +68,23 @@ function authorizeTools({ actor, tools }) {
   }
 
   return { allowed, denied };
+}
+
+/**
+ * Traduz o RBAC de produto para as permissões CANÔNICAS do Canonical Tool
+ * Registry (`crm.read`, `reports.read`, ...). Sem isso, a execução no registry
+ * negaria toda tool — o que transformaria a convergência em regressão.
+ */
+function resolveCanonicalPermissions(actor, tools) {
+  const granted = new Set();
+  if (!actor?.role) return [];
+  for (const tool of tools || []) {
+    const rbac = resolveToolRbac(tool);
+    if (!rbac) continue;
+    if (!hasPermission(actor, rbac.resource, rbac.action)) continue;
+    for (const permission of tool.permissions || []) granted.add(permission);
+  }
+  return [...granted];
 }
 
 /**
@@ -68,4 +102,6 @@ function canAccessEntity(actor, entity) {
 module.exports = {
   authorizeTools,
   canAccessEntity,
+  resolveToolRbac,
+  resolveCanonicalPermissions,
 };

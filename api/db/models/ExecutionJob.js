@@ -41,6 +41,24 @@ function getExecutionJobModel() {
       indexes: [
         { fields: ['tenant_key', 'status', 'next_attempt_at'], name: 'execution_jobs_tenant_status_next_attempt_idx' },
         { fields: ['tenant_key', 'kind', 'idempotency_key'], name: 'execution_jobs_tenant_kind_idempotency_uq', unique: true },
+        // Índice do claim do worker: a query reivindica o próximo job pendente
+        // SEM filtro por tenant, então o índice composto acima (tenant_key à
+        // frente) não era utilizável e o plano caía em varredura completa de
+        // `execution_jobs` (milissegundos → segundos por claim). Parcial em
+        // `status = 'pending'` mantém o índice pequeno mesmo com histórico
+        // grande de jobs finalizados.
+        {
+          fields: [{ name: 'priority', order: 'DESC' }, { name: 'next_attempt_at', order: 'ASC' }],
+          where: { status: 'pending' },
+          name: 'execution_jobs_claim_idx',
+        },
+        // Contagem de concorrência por tenant avaliada no claim (subquery
+        // correlacionada por tenant_key/processing_at com status='processing').
+        {
+          fields: ['tenant_key', 'processing_at'],
+          where: { status: 'processing' },
+          name: 'execution_jobs_processing_tenant_idx',
+        },
       ],
     });
   }

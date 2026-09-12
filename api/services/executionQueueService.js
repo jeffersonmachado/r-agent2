@@ -162,9 +162,13 @@ async function enqueueJob({
   return row ? (row.toJSON ? row.toJSON() : row) : null;
 }
 
-async function claimNextJob({ kinds = null, maxProcessingPerTenant = null, staleProcessingSec = null } = {}) {
+// Teto duro do lote: protege contra configuração absurda (env) e mantém o
+// trabalho do tick previsível (o orçamento de tempo continua sendo o limite real).
+const MAX_CLAIM_BATCH = 200;
+
+async function claimNextJobs({ kinds = null, maxProcessingPerTenant = null, staleProcessingSec = null, batchSize = null } = {}) {
   const sequelize = getSequelize();
-  if (!sequelize) return null;
+  if (!sequelize) return [];
 
   const processingBy = getProcessingBy();
   const kindsFilter = Array.isArray(kinds) && kinds.length ? kinds.map((k) => safeToString(k)) : null;
@@ -177,9 +181,13 @@ async function claimNextJob({ kinds = null, maxProcessingPerTenant = null, stale
     Number.isFinite(Number(staleProcessingSec)) && Number(staleProcessingSec) > 0
       ? Math.floor(Number(staleProcessingSec))
       : intEnv('EXECUTION_QUEUE_STALE_PROCESSING_SECONDS', 15 * 60);
+  const batch =
+    Number.isFinite(Number(batchSize)) && Number(batchSize) > 0
+      ? Math.min(Math.floor(Number(batchSize)), MAX_CLAIM_BATCH)
+      : 1;
 
   // Use SKIP LOCKED to allow multiple workers.
-  const replacements = { processingBy, maxProc, staleSec };
+  const replacements = { processingBy, maxProc, staleSec, batch };
   let kindsSql = '';
   if (kindsFilter) {
     kindsSql = `AND kind = ANY(:kinds)`;
@@ -202,7 +210,7 @@ async function claimNextJob({ kinds = null, maxProcessingPerTenant = null, stale
          ) < :maxProc
        ORDER BY priority DESC, next_attempt_at ASC
        FOR UPDATE SKIP LOCKED
-       LIMIT 1
+       LIMIT :batch
      )
      UPDATE execution_jobs j
      SET status = 'processing',
@@ -215,8 +223,12 @@ async function claimNextJob({ kinds = null, maxProcessingPerTenant = null, stale
     { replacements },
   );
 
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  return rows[0];
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function claimNextJob(opts = {}) {
+  const rows = await claimNextJobs({ ...opts, batchSize: 1 });
+  return rows.length ? rows[0] : null;
 }
 
 async function releaseStaleProcessingJobs({ staleProcessingSec = null } = {}) {
@@ -456,6 +468,7 @@ async function getExecutionQueueMetricsByKind({ tenantId = null, kinds = null } 
 // Worker management
 let _timer = null;
 let _running = false;
+let _ticking = false;
 let _lastStaleReleaseAt = 0;
 
 async function processJob(job) {
@@ -622,15 +635,38 @@ async function processJob(job) {
   logger.warn('[ExecutionQueue] Job kind desconhecido, ignorando', { kind, jobId: job.id });
 }
 
-function startExecutionQueueWorker({ intervalMs = 800 } = {}) {
+function startExecutionQueueWorker({ intervalMs = 800, batchSize = null, budgetMs = null } = {}) {
   if (_running) return;
   if (!dbAvailable()) {
     logger.warn('[ExecutionQueue] DB indisponível, worker não iniciado');
     return;
   }
   _running = true;
+
+  const claimBatch =
+    Number.isFinite(Number(batchSize)) && Number(batchSize) > 0
+      ? Math.min(Math.floor(Number(batchSize)), MAX_CLAIM_BATCH)
+      : Math.min(intEnv('EXECUTION_QUEUE_CLAIM_BATCH', 25), MAX_CLAIM_BATCH);
+  const tickBudgetMs =
+    Number.isFinite(Number(budgetMs)) && Number(budgetMs) > 0
+      ? Math.floor(Number(budgetMs))
+      : intEnv('EXECUTION_QUEUE_TICK_BUDGET_MS', 5_000);
+
+  const runOne = async (job) => {
+    try {
+      await processJob(job);
+      await finishJob({ jobId: job.id, status: 'done' });
+    } catch (err) {
+      await finishJob({ jobId: job.id, status: 'failed', errorMessage: safeToString(safeGet(err, 'message', '')) || safeToString(err) });
+    }
+  };
+
   const tick = async () => {
     if (!_running) return;
+    // Um drainer por processo: evita ticks sobrepostos (cada tick drena vários
+    // lotes, então sobreposição só multiplicaria pressão no DB sem ganho).
+    if (_ticking) return;
+    _ticking = true;
     try {
       // Best-effort: libera jobs "travados" em processing (a cada ~30s)
       const now = Date.now();
@@ -639,21 +675,38 @@ function startExecutionQueueWorker({ intervalMs = 800 } = {}) {
         await releaseStaleProcessingJobs().catch(() => {});
       }
 
-      const job = await claimNextJob();
-      if (!job) return;
-      try {
-        await processJob(job);
-        await finishJob({ jobId: job.id, status: 'done' });
-      } catch (err) {
-        await finishJob({ jobId: job.id, status: 'failed', errorMessage: safeToString(safeGet(err, 'message', '')) || safeToString(err) });
+      // Drena em lotes enquanto houver trabalho e a janela do tick permitir.
+      // Antes o worker reivindicava 1 job por tick (800ms): a vazão ficava presa
+      // em ~1,25 job/s, abaixo da taxa de enfileiramento dos ciclos recorrentes,
+      // e a fila crescia sem limite (backlog de ~277k jobs saturava o Postgres).
+      const startedAt = Date.now();
+      let drained = 0;
+      for (;;) {
+        if (!_running) break;
+        const jobs = await claimNextJobs({ batchSize: claimBatch });
+        if (!jobs.length) break;
+        for (const job of jobs) {
+          if (!_running) break;
+          await runOne(job);
+          drained += 1;
+        }
+        // Lote incompleto significa fila drenada: não há motivo para novo claim.
+        if (jobs.length < claimBatch) break;
+        if (Date.now() - startedAt >= tickBudgetMs) break;
+      }
+      if (drained > 0) {
+        logger.debug('[ExecutionQueue] tick drenou jobs', { drained, claimBatch });
       }
     } catch (err) {
       logger.warn('[ExecutionQueue] tick failed (ignored)', { error: safeToString(safeGet(err, 'message', '')) || safeToString(err) });
+    } finally {
+      _ticking = false;
     }
   };
+
   _timer = setInterval(() => { tick(); }, Math.max(200, Number(intervalMs) || 800));
   _timer.unref(); // allow process to exit cleanly (Jest, graceful shutdown)
-  logger.info('[ExecutionQueue] worker iniciado', { intervalMs });
+  logger.info('[ExecutionQueue] worker iniciado', { intervalMs, claimBatch, tickBudgetMs });
 }
 
 function stopExecutionQueueWorker() {
@@ -665,6 +718,7 @@ function stopExecutionQueueWorker() {
 module.exports = {
   enqueueJob,
   claimNextJob,
+  claimNextJobs,
   finishJob,
   releaseStaleProcessingJobs,
   listDeadJobs,

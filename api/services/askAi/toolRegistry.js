@@ -1,104 +1,42 @@
 'use strict';
 
 /**
- * Registro de ferramentas operacionais read-only do "Perguntar à IA".
+ * Ask AI Tool Adapter — adapter de DOMÍNIO + projeção do Canonical Tool Registry.
  *
- * GAP CONFIRMADO (auditoria 2026-09-11): o copiloto só sabia consultar o RAG
- * documental. Perguntas sobre estado vivo ("por que este aluno está em risco?",
- * "qual foi a última visita?") não tinham como ser respondidas por dados — e
- * o único caminho existente era o texto indexado, que nunca contém estado.
+ * ANTES (gap confirmado na auditoria de 2026-09-11): este arquivo ERA um
+ * registro de tools independente — definia ids, capabilities, labels e
+ * políticas próprias, sem qualquer relação com o Canonical Tool Registry usado
+ * pelo Cognitive Core, pelo MCP Server e pelo Process Runtime. O copiloto
+ * vivia num universo de tools paralelo, onde uma tool externa (MCP) jamais
+ * seria considerada e onde a mesma capability podia ter duas políticas.
  *
- * Regras estruturais (não negociáveis):
- *  - O LLM NUNCA gera SQL e nunca escolhe a consulta: as tools são registradas
- *    explicitamente aqui e mapeiam 1:1 para serviços de domínio existentes.
- *  - Todas as tools são READ-ONLY. Não existe tool de mutação neste registro.
- *  - Toda tool recebe `{ tenantId, actor }` do request e repassa ao serviço;
- *    nenhuma tool aceita tenant vindo do contexto do cliente.
- *  - Cada tool declara a capability que o ator precisa ter. Sem capability,
- *    a tool não é executada (não se vaza nem a existência do dado).
+ * AGORA:
+ *   - a DEFINIÇÃO canônica (id, capability, permissão, política, schema) vive
+ *     em `askAiToolCatalog.js` e é REGISTRADA no Canonical Tool Registry pelo
+ *     `canonicalToolBridge`;
+ *   - este arquivo mantém apenas o que é genuinamente local: como consultar os
+ *     serviços de domínio (as "runners"), e a PROJEÇÃO que a orquestração
+ *     consome;
+ *   - a execução passa pelo Canonical Tool Registry — tenant, visibilidade,
+ *     permissão, schema e política são aplicados LÁ.
+ *
+ * O copiloto pede CAPABILITY (`crm.read`), nunca provider. O bridge resolve se
+ * quem atende é a tool nativa ou uma tool externa via MCP governado.
  */
 
-const TOOL_KINDS = Object.freeze({
-  MEMBERSHIP: 'membership',
-  ATTENDANCE: 'attendance',
-  BILLING: 'billing',
-  CHURN: 'churn',
-  WORKSPACE_TIMELINE: 'workspace_timeline',
-});
-
-// Entidade suportada por cada tool (vocabulário fechado do contrato de contexto).
-const ENTITY = Object.freeze({
-  FITNESS_STUDENT: 'FITNESS_STUDENT',
-  CUSTOMER: 'CUSTOMER',
-  CASE: 'CASE',
-  CONVERSATION: 'CONVERSATION',
-  CAMPAIGN: 'CAMPAIGN',
-  TICKET: 'TICKET',
-  ORDER: 'ORDER',
-  BOOKING: 'BOOKING',
-});
-
-const DEFINITIONS = Object.freeze([
-  Object.freeze({
-    id: 'getFitnessStudentSummary',
-    kind: TOOL_KINDS.MEMBERSHIP,
-    label: 'Situação da matrícula',
-    capability: Object.freeze({ resource: 'crm', action: 'read' }),
-    entityTypes: Object.freeze([ENTITY.FITNESS_STUDENT, ENTITY.CUSTOMER]),
-    description: 'Matrícula, status financeiro efetivo e situação de acesso do aluno.',
-    run: runGetFitnessStudentSummary,
-  }),
-  Object.freeze({
-    id: 'getAttendanceSummary',
-    kind: TOOL_KINDS.ATTENDANCE,
-    label: 'Frequência',
-    capability: Object.freeze({ resource: 'crm', action: 'read' }),
-    entityTypes: Object.freeze([ENTITY.FITNESS_STUDENT, ENTITY.CUSTOMER]),
-    description: 'Última visita, frequência em 7 e 30 dias.',
-    run: runGetAttendanceSummary,
-  }),
-  Object.freeze({
-    id: 'getBillingSummary',
-    kind: TOOL_KINDS.BILLING,
-    label: 'Histórico financeiro',
-    // Dado financeiro exige o teto de visibilidade financeira do RBAC
-    // (`reports:read`). Um operador que só tem `crm:read` vê o aluno mas não
-    // o financeiro — exatamente o cenário de field-level restriction.
-    capability: Object.freeze({ resource: 'reports', action: 'read' }),
-    entityTypes: Object.freeze([ENTITY.FITNESS_STUDENT, ENTITY.CUSTOMER, ENTITY.ORDER]),
-    description: 'Eventos de cobrança da matrícula.',
-    run: runGetBillingSummary,
-  }),
-  Object.freeze({
-    id: 'getChurnSignals',
-    kind: TOOL_KINDS.CHURN,
-    label: 'Sinais de risco',
-    capability: Object.freeze({ resource: 'crm', action: 'read' }),
-    entityTypes: Object.freeze([ENTITY.FITNESS_STUDENT, ENTITY.CUSTOMER]),
-    description: 'Sinais de risco de churn modelados para o aluno.',
-    run: runGetChurnSignals,
-  }),
-]);
-
-function buildRegistry() {
-  const byId = new Map();
-  const byKind = new Map();
-  for (const definition of DEFINITIONS) {
-    byId.set(definition.id, definition);
-    const list = byKind.get(definition.kind) || [];
-    list.push(definition);
-    byKind.set(definition.kind, list);
-  }
-  return {
-    all: () => [...DEFINITIONS],
-    get: (id) => byId.get(id) || null,
-    byKind: (kind) => byKind.get(kind) || [],
-    byEntityType: (entityType) => DEFINITIONS.filter((t) => t.entityTypes.includes(entityType)),
-  };
-}
+const {
+  TOOL_KINDS,
+  ENTITY,
+  ASK_AI_TOOLS,
+  findAskAiTool,
+} = require('./askAiToolCatalog');
+const bridge = require('./canonicalToolBridge');
+const { createToolRegistry } = require('../../../src/core/cognitive/tool-registry');
+const { resolveCanonicalPermissions } = require('./toolAuthorization');
+const { getClassificationForAgent } = require('../../modules/agent-os/experience-segregation');
 
 // ---------------------------------------------------------------------------
-// Implementações (adapter fino sobre serviços de domínio; zero SQL próprio)
+// Runners (adapter fino sobre serviços de domínio; zero SQL próprio)
 // ---------------------------------------------------------------------------
 
 function serviceLoader() {
@@ -113,7 +51,7 @@ function summarizeCounts(items) {
   return Array.isArray(items) ? items.length : 0;
 }
 
-async function runGetFitnessStudentSummary({ tenantId, entity }) {
+async function runFitnessStudentSummary({ tenantId, entity }) {
   const { membership } = serviceLoader();
   const detail = await membership.getMembershipDetail({
     tenantId,
@@ -122,7 +60,7 @@ async function runGetFitnessStudentSummary({ tenantId, entity }) {
 
   if (!detail) {
     return {
-      toolId: 'getFitnessStudentSummary',
+      toolId: 'askai.fitness.membershipSummary',
       found: false,
       facts: [],
       summary: 'Nenhuma matrícula encontrada para o aluno informado neste tenant.',
@@ -137,14 +75,14 @@ async function runGetFitnessStudentSummary({ tenantId, entity }) {
   ].filter((fact) => fact.value !== null && fact.value !== undefined);
 
   return {
-    toolId: 'getFitnessStudentSummary',
+    toolId: 'askai.fitness.membershipSummary',
     found: true,
     facts,
     summary: `Matrícula ${detail.status || 'sem status declarado'} com acesso ${detail.accessAllowed ? 'liberado' : 'bloqueado'}.`,
   };
 }
 
-async function runGetAttendanceSummary({ tenantId, entity }) {
+async function runFitnessAttendanceSummary({ tenantId, entity }) {
   const { attendance } = serviceLoader();
   const history = await attendance.getAttendanceHistory({
     tenantId,
@@ -168,7 +106,7 @@ async function runGetAttendanceSummary({ tenantId, entity }) {
   ].filter((fact) => fact.value !== null && fact.value !== undefined);
 
   return {
-    toolId: 'getAttendanceSummary',
+    toolId: 'askai.fitness.attendanceSummary',
     found: true,
     facts,
     summary: items.length === 0
@@ -177,7 +115,7 @@ async function runGetAttendanceSummary({ tenantId, entity }) {
   };
 }
 
-async function runGetBillingSummary({ tenantId, entity }) {
+async function runFitnessBillingSummary({ tenantId, entity }) {
   const { membership } = serviceLoader();
   const history = await membership.getMembershipBillingHistory({
     tenantId,
@@ -195,7 +133,7 @@ async function runGetBillingSummary({ tenantId, entity }) {
   ].filter((fact) => fact.value !== null && fact.value !== undefined);
 
   return {
-    toolId: 'getBillingSummary',
+    toolId: 'askai.billing.membershipHistory',
     found: true,
     facts,
     summary: items.length === 0
@@ -204,7 +142,7 @@ async function runGetBillingSummary({ tenantId, entity }) {
   };
 }
 
-async function runGetChurnSignals({ tenantId, entity }) {
+async function runFitnessChurnSignal({ tenantId, entity }) {
   const { churn } = serviceLoader();
   const signals = await churn.latestFitnessSignalByPhone({
     tenantId,
@@ -213,7 +151,7 @@ async function runGetChurnSignals({ tenantId, entity }) {
 
   if (!signals) {
     return {
-      toolId: 'getChurnSignals',
+      toolId: 'askai.churn.latestSignal',
       found: false,
       facts: [],
       summary: 'Nenhum sinal de risco registrado para o aluno.',
@@ -226,44 +164,168 @@ async function runGetChurnSignals({ tenantId, entity }) {
   ].filter((fact) => fact.value !== null && fact.value !== undefined);
 
   return {
-    toolId: 'getChurnSignals',
+    toolId: 'askai.churn.latestSignal',
     found: true,
     facts,
     summary: `Sinal de risco: ${facts.find((f) => f.key === 'signalType')?.value ?? 'não classificado'}.`,
   };
 }
 
+const RUNNERS = Object.freeze({
+  fitnessStudentSummary: runFitnessStudentSummary,
+  fitnessAttendanceSummary: runFitnessAttendanceSummary,
+  fitnessBillingSummary: runFitnessBillingSummary,
+  fitnessChurnSignal: runFitnessChurnSignal,
+});
+
+// ---------------------------------------------------------------------------
+// Registry resolution (fonte única compartilhada quando disponível)
+// ---------------------------------------------------------------------------
+
+let fallbackRegistry = null;
+
 /**
- * Executa uma tool registrada. NUNCA aceita SQL nem identificador de serviço
- * arbitrário: apenas ids do registro.
+ * Resolve o Canonical Tool Registry usado pelo copiloto.
+ *
+ * Preferência: registry injetado → registry COMPARTILHADO do Cognitive Core
+ * (que já contém as tools de MCP externo) → registry canônico local do Ask AI.
+ * O peek (`hasCognitiveOrchestrator`) evita instanciar o pipeline cognitivo
+ * inteiro só para ler tools.
+ */
+function resolveToolRegistry(injected) {
+  if (injected) return injected;
+  try {
+    const {
+      getCognitiveOrchestrator,
+      hasCognitiveOrchestrator,
+    } = require('../../../src/core/cognitive/cognitive-orchestrator');
+    if (hasCognitiveOrchestrator()) {
+      const orchestrator = getCognitiveOrchestrator();
+      if (orchestrator?.toolRegistry) return orchestrator.toolRegistry;
+    }
+  } catch (_) {
+    // Orchestrator indisponível: cai no registry canônico local.
+  }
+  if (!fallbackRegistry) fallbackRegistry = createToolRegistry({});
+  return fallbackRegistry;
+}
+
+/** Garante que as capabilities do copiloto existem no registry (idempotente). */
+function ensureCapabilitiesRegistered(toolRegistry) {
+  return bridge.ensureAskAiCapabilityTools(toolRegistry, RUNNERS);
+}
+
+// ---------------------------------------------------------------------------
+// Projeção consumida pela orquestração
+// ---------------------------------------------------------------------------
+
+function buildProjectionEntry(tool) {
+  return Object.freeze({
+    id: tool.id,
+    canonicalId: tool.id,
+    aliases: [...tool.aliases],
+    kind: tool.kind,
+    label: tool.label,
+    description: tool.description,
+    // Capability canônica: é isto que a orquestração pede.
+    capability: tool.capability,
+    // RBAC de produto usado por `authorizeTools`.
+    rbac: { ...tool.rbac },
+    permissions: [...tool.permissions],
+    entityTypes: [...tool.entityTypes],
+    entityIdField: tool.entityIdField,
+    riskLevel: tool.riskLevel,
+    sideEffects: tool.sideEffects,
+  });
+}
+
+/**
+ * Projeção das tools do copiloto (derivada do catálogo canônico — nunca uma
+ * segunda definição).
+ *
+ * @param {object} [injectedRegistry]
+ */
+function buildRegistry(injectedRegistry) {
+  const projection = ASK_AI_TOOLS.map(buildProjectionEntry);
+  const byId = new Map();
+  for (const entry of projection) {
+    byId.set(entry.id, entry);
+    for (const alias of entry.aliases) byId.set(alias, entry);
+  }
+
+  return {
+    all: () => [...projection],
+    get: (id) => byId.get(String(id || '')) || null,
+    byKind: (kind) => projection.filter((tool) => tool.kind === kind),
+    byEntityType: (entityType) => projection.filter((tool) => tool.entityTypes.includes(entityType)),
+    byCapability: (capability) => projection.filter((tool) => tool.capability === String(capability)),
+    toolRegistry: resolveToolRegistry(injectedRegistry),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Execução (sempre pelo Canonical Tool Registry)
+// ---------------------------------------------------------------------------
+
+/**
+ * Executa uma capability do copiloto.
+ *
+ * O id aceito pode ser o canônico (`askai.*`) ou o alias legado. A execução é
+ * delegada ao Canonical Tool Registry, que reaplica tenant, visibilidade,
+ * permissão, schema e política.
  *
  * @returns {Promise<Object>} resultado normalizado; erro de tool é capturado e
- *   devolvido como `{ failed: true }` (a resposta usa apenas os fatos restantes).
+ *   devolvido como `{ failed: true }` (a resposta usa os fatos restantes).
  */
-async function executeTool(toolId, { tenantId, actor, entity }) {
-  const registry = buildRegistry();
-  const tool = registry.get(toolId);
-  if (!tool) {
+async function executeTool(toolId, { tenantId, actor, entity, toolRegistry } = {}) {
+  const catalogEntry = findAskAiTool(toolId);
+  if (!catalogEntry) {
     return { toolId, failed: true, error: 'unknown_tool', facts: [], summary: null };
   }
   if (!tenantId) {
-    return { toolId, failed: true, error: 'tenant_required', facts: [], summary: null };
+    return { toolId: catalogEntry.id, failed: true, error: 'tenant_required', facts: [], summary: null };
   }
   if (!entity?.type || !entity?.id) {
-    return { toolId, failed: true, error: 'entity_context_required', facts: [], summary: null };
+    return { toolId: catalogEntry.id, failed: true, error: 'entity_context_required', facts: [], summary: null };
   }
-  if (!tool.entityTypes.includes(entity.type)) {
-    return { toolId, failed: true, error: 'entity_type_not_supported', facts: [], summary: null };
+  if (!catalogEntry.entityTypes.includes(entity.type)) {
+    return { toolId: catalogEntry.id, failed: true, error: 'entity_type_not_supported', facts: [], summary: null };
   }
 
+  const registry = resolveToolRegistry(toolRegistry);
+  ensureCapabilitiesRegistered(registry);
+
+  const classification = getClassificationForAgent(actor);
+  const permissions = resolveCanonicalPermissions(actor, ASK_AI_TOOLS.map(buildProjectionEntry));
+
   try {
-    const result = await tool.run({ tenantId, actor, entity });
-    return { toolId, failed: false, ...result };
+    const result = await bridge.executeCapability({
+      registry,
+      capability: catalogEntry.capability,
+      entityType: entity.type,
+      tenantId,
+      actor: {
+        userId: actor?.id || actor?.userId || null,
+        username: actor?.username || null,
+        classification,
+        permissions,
+      },
+      entity,
+      idempotencyKey: [tenantId, catalogEntry.id, entity.type, entity.id].join(':'),
+    });
+
+    return {
+      toolId: result.toolId,
+      provider: result.provider,
+      providerReason: result.reason,
+      failed: false,
+      ...result.output,
+    };
   } catch (error) {
     return {
-      toolId,
+      toolId: catalogEntry.id,
       failed: true,
-      error: error?.code || error?.name || 'tool_execution_failed',
+      error: error?.code || error?.message || error?.name || 'tool_execution_failed',
       facts: [],
       summary: null,
     };
@@ -273,7 +335,10 @@ async function executeTool(toolId, { tenantId, actor, entity }) {
 module.exports = {
   TOOL_KINDS,
   ENTITY,
-  DEFINITIONS,
+  DEFINITIONS: ASK_AI_TOOLS,
+  RUNNERS,
   buildRegistry,
   executeTool,
+  resolveToolRegistry,
+  ensureCapabilitiesRegistered,
 };

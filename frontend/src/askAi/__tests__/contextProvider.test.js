@@ -13,10 +13,13 @@ describe('askAi contextProvider', () => {
   });
 
   test('deriva rota, módulo e tipo de página da URL', () => {
+    // `/fitness/students` é uma TELA do menu canônico (lista de alunos): a
+    // página é a própria tela, não um detalhe. A heurística antiga ("2
+    // segmentos = detail") classificava a lista como detalhe.
     expect(deriveScreenContext('/fitness/students')).toEqual({
       route: '/fitness/students',
       module: 'fitness',
-      pageType: 'detail',
+      pageType: 'index',
     });
     expect(deriveScreenContext('/campaigns')).toEqual({
       route: '/campaigns',
@@ -25,6 +28,8 @@ describe('askAi contextProvider', () => {
     });
     expect(deriveScreenContext('/')).toEqual({ route: '/', module: 'root', pageType: 'index' });
     expect(deriveScreenContext('/a/b/c').pageType).toBe('nested');
+    // Um nível além da tela canônica = detalhe daquela tela.
+    expect(deriveScreenContext('/fitness/students/42').pageType).toBe('detail');
   });
 
   test('não aceita tipo de entidade fora do vocabulário', () => {
@@ -43,7 +48,7 @@ describe('askAi contextProvider', () => {
     expect(buildAskAiContext('/fitness/students/42')).toEqual({
       route: '/fitness/students/42',
       module: 'fitness',
-      pageType: 'nested',
+      pageType: 'detail',
       entityType: 'FITNESS_STUDENT',
       entityId: '42',
     });

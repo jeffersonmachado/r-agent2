@@ -19,6 +19,10 @@
  *  9. manual_rag_indexing          — manual é indexado e removido do RAG
  * 10. knowledge_classification     — ingestão declara domain/classification
  * 11. journey_projection_sanitized — projeção operacional sem internals de QA
+ * 12. conversation_context_participates — histórico persistido participa do turno
+ * 13. followup_subject_continuity    — acompanhamento mantém sujeito/intenção
+ * 14. screen_context_bound_to_screens — módulo/pageType derivados das telas reais e navegação SPA
+ * 15. grounded_synthesis            — fato e conhecimento rotulados; inferência explícita e tipada
  */
 
 const fs = require('fs');
@@ -79,19 +83,45 @@ check('entity_context_revalidated', 'posse da entidade é revalidada no backend 
 });
 
 // 4. Autorização de tools ----------------------------------------------------
-check('tool_authorization', 'toda tool declara capacidade RBAC e não existe tool de mutação', () => {
+check('tool_authorization', 'toda tool declara capability canônica + RBAC, é read-only e existe no Canonical Tool Registry', () => {
   const registry = require(path.join(ROOT, 'api', 'services', 'askAi', 'toolRegistry'));
   const tools = registry.buildRegistry().all();
   assert(tools.length > 0, 'registro de tools vazio');
+
   for (const tool of tools) {
-    assert(tool.capability?.resource && tool.capability?.action, `tool ${tool.id} sem capacidade`);
+    // Capability CANÔNICA (string do Canonical Tool Registry): é o que a
+    // orquestração pede — o copiloto não escolhe provider.
+    assert(typeof tool.capability === 'string' && tool.capability.trim().length > 0, `tool ${tool.id} sem capability canônica`);
+    // Permissão canônica exigida pelo registry.
+    assert(Array.isArray(tool.permissions) && tool.permissions.length > 0, `tool ${tool.id} sem permissões canônicas`);
+    // RBAC de produto (contrato canônico `rbac`; objeto legado ainda aceito).
+    assert(tool.rbac?.resource && tool.rbac?.action, `tool ${tool.id} sem capacidade RBAC`);
     assert(Array.isArray(tool.entityTypes) && tool.entityTypes.length > 0, `tool ${tool.id} sem entidades`);
+    assert(tool.sideEffects === false, `tool ${tool.id} declara side effect (copiloto é read-only)`);
     assert(!/create|update|delete|send|cancel|charge/i.test(tool.id), `tool ${tool.id} parece mutação`);
   }
+
   const authz = require(path.join(ROOT, 'api', 'services', 'askAi', 'toolAuthorization'));
   const denied = authz.authorizeTools({ actor: { role: 'operator' }, tools });
   assert(denied.denied.some((entry) => entry.reason === 'capability_denied'), 'RBAC não nega tool sem capacidade');
-  return `${tools.length} tools read-only com capacidade declarada`;
+
+  // A6 — convergência: a definição da tool existe UMA vez, no Canonical Tool
+  // Registry. Um catálogo local paralelo é regressão de arquitetura.
+  const { createToolRegistry } = require(path.join(ROOT, 'src', 'core', 'cognitive', 'tool-registry'));
+  const canonical = createToolRegistry({});
+  registry.ensureCapabilitiesRegistered(canonical);
+  for (const tool of tools) {
+    const canonicalTool = canonical.get(tool.id);
+    assert(canonicalTool, `tool ${tool.id} não existe no Canonical Tool Registry`);
+    assert(canonicalTool.capability === tool.capability, `capability divergente em ${tool.id}`);
+    assert(
+      JSON.stringify([...canonicalTool.permissions]) === JSON.stringify([...tool.permissions]),
+      `permissões divergentes em ${tool.id}`,
+    );
+    assert(canonicalTool.sideEffects !== true, `tool canônica ${tool.id} tem side effect`);
+  }
+
+  return `${tools.length} tools read-only com capability canônica, RBAC e definição única no Canonical Tool Registry`;
 });
 
 // 5. Defesa de injeção -------------------------------------------------------
@@ -229,6 +259,160 @@ check('journey_projection_sanitized', 'projeção operacional de jornada não co
     'projeção operacional não é ingerida no conhecimento global',
   );
   return `${artifact.journeys.length} projeções OPERATIONAL limpas e ingeridas`;
+});
+
+// 12. O histórico persistido PARTICIPA do turno ---------------------------
+check('conversation_context_participates', 'histórico persistido participa do turno (sujeito, intenção e recuperação)', () => {
+  const storeSource = read(path.join('api', 'services', 'askAi', 'conversationStore.js'));
+  // A projeção precisa preservar `intent` — sem isso não há continuidade.
+  assert(
+    /function buildPromptHistory/.test(storeSource) && /intent:\s*message\.intent/.test(storeSource),
+    'buildPromptHistory não preserva a intenção do turno assistente',
+  );
+
+  const orchestratorSource = read(path.join('api', 'services', 'askAi', 'orchestrator.js'));
+  assert(/buildPromptHistory\(conversation\)/.test(orchestratorSource), 'orchestrator não usa o histórico persistido');
+  assert(/resolveEffectiveContext\(/.test(orchestratorSource), 'sujeito da conversa não é resolvido');
+  assert(/inheritIntent\(/.test(orchestratorSource), 'intenção não é herdada no acompanhamento');
+  assert(/buildRetrievalQuery\(/.test(orchestratorSource), 'recuperação não é contextualizada pelo assunto anterior');
+  assert(/context:\s*effectiveContext/.test(orchestratorSource), 'contexto efetivo não é persistido para o próximo turno');
+  // O contexto herdado continua sendo REVALIDADO (não é autoridade).
+  assert(
+    /validateEntityContext\(\{\s*context:\s*effectiveContext/.test(orchestratorSource),
+    'contexto herdado não é revalidado no backend',
+  );
+  return 'histórico persistido participa do turno e o sujeito herdado é revalidado';
+});
+
+// 13. Continuidade do acompanhamento (comportamental, sem banco) ----------
+check('followup_subject_continuity', 'acompanhamento mantém sujeito e amplia para dado + método', () => {
+  const ctx = require(path.join(ROOT, 'api', 'services', 'askAi', 'conversationContext'));
+
+  assert(ctx.isShortFollowUp('E a frequência dele?') === true, 'acompanhamento curto não reconhecido');
+  assert(ctx.isShortFollowUp('Como configuro uma campanha?') === false, 'assunto novo tratado como acompanhamento');
+  assert(ctx.isShortFollowUp('Qual a situação financeira deste aluno?') === false, 'abertura de assunto tratada como acompanhamento');
+
+  const payloadWins = ctx.resolveEffectiveContext({
+    payloadContext: { entityType: 'FITNESS_STUDENT', entityId: 'a' },
+    persistedContext: { entityType: 'FITNESS_STUDENT', entityId: 'b' },
+  });
+  assert(payloadWins.source === 'payload', 'contexto do payload não tem precedência');
+
+  const fromConversation = ctx.resolveEffectiveContext({
+    payloadContext: {},
+    persistedContext: { entityType: 'FITNESS_STUDENT', entityId: 'b' },
+  });
+  assert(fromConversation.source === 'conversation', 'sujeito da conversa não é resolvido');
+
+  const causal = ctx.inheritIntent({
+    question: 'Então por que está em risco?',
+    intent: 'OPERATIONAL_DATA',
+    previousIntent: 'OPERATIONAL_DATA',
+    hasEntity: true,
+  });
+  assert(causal.intent === 'MIXED' && causal.inherited === true, 'acompanhamento causal não amplia para dado + método');
+
+  const noEntity = ctx.inheritIntent({
+    question: 'E a frequência dele?',
+    intent: 'KNOWLEDGE',
+    previousIntent: 'OPERATIONAL_DATA',
+    hasEntity: false,
+  });
+  assert(noEntity.inherited === false, 'dado vivo herdado sem sujeito conhecido');
+
+  const internal = ctx.inheritIntent({
+    question: 'E o replay?',
+    intent: 'KNOWLEDGE',
+    previousIntent: 'SYSTEM_INTERNAL',
+    hasEntity: true,
+  });
+  assert(internal.inherited === false, 'assunto interno promovido por herança');
+
+  const history = { messages: [{ role: 'user', content: 'Qual a situação financeira deste aluno?' }] };
+  const query = ctx.buildRetrievalQuery({ question: 'E a frequência dele?', history });
+  assert(query.includes('situação') && query.includes('frequência'), 'recuperação não foi contextualizada');
+  assert(
+    ctx.buildRetrievalQuery({ question: 'Como configuro uma campanha?', history }) === 'Como configuro uma campanha?',
+    'assunto novo foi contextualizado indevidamente',
+  );
+  return 'acompanhamento preserva sujeito, amplia causal para MIXED e não vaza assunto interno';
+});
+
+// 14. Contexto de tela ligado às telas REAIS ------------------------------
+check('screen_context_bound_to_screens', 'módulo/pageType vêm da navegação canônica e o widget reage à navegação SPA', () => {
+  const registrySource = read(path.join('frontend', 'src', 'askAi', 'screenRegistry.js'));
+  // O vocabulário de telas é DERIVADO do menu — não é lista paralela.
+  assert(/from '\.\.\/navigation\/menu'/.test(registrySource), 'registro de telas não deriva do menu canônico');
+  assert(/navigationMenu/.test(registrySource), 'registro de telas não usa a navegação canônica');
+
+  const providerSource = read(path.join('frontend', 'src', 'askAi', 'contextProvider.js'));
+  assert(/from '\.\/screenRegistry'/.test(providerSource), 'contextProvider não usa o registro de telas');
+  assert(/router:change/.test(providerSource), 'contextProvider não ouve router:change (navegação SPA)');
+  assert(/subscribeToRouteChanges/.test(providerSource), 'não há assinatura de mudança de rota');
+  assert(/workspaceEntityId/.test(providerSource), 'workspaceEntityId não é propagado');
+  assert(/SAFE_ID_PATTERN/.test(providerSource), 'ids do contexto não são validados no cliente');
+
+  const widgetSource = read(path.join('frontend', 'src', 'components', 'AskAiWidget.jsx'));
+  assert(/subscribeToRouteChanges/.test(widgetSource), 'widget não reage à navegação SPA');
+
+  // O backend continua aceitando o vocabulário e revalidando a posse.
+  const contract = require(path.join(ROOT, 'api', 'services', 'askAi', 'contextContract'));
+  const accepted = contract.normalizeContext({
+    route: '/fitness/students/42', module: 'fitness', pageType: 'detail',
+    entityType: 'FITNESS_STUDENT', entityId: 'student-42', workspaceEntityId: 'we-1',
+  });
+  assert(accepted.ok === true, `contexto de tela válido recusado: ${accepted.error || ''}`);
+  assert(accepted.value.workspaceEntityId === 'we-1', 'workspaceEntityId não é aceito pelo contrato');
+  return 'vocabulário derivado do menu + router:change + workspaceEntityId aceito e revalidado';
+});
+
+// 15. Síntese fundamentada + proveniência tipada (A8/A9) -------------------
+check('grounded_synthesis', 'fato e conhecimento têm rótulos distintos, inferência é explícita e nada sem fonte é afirmado', () => {
+  const synthesis = require(path.join(ROOT, 'api', 'services', 'askAi', 'synthesis'));
+  const facts = [
+    { key: 'membershipStatus', label: 'Status da matrícula', value: 'ACTIVE' },
+    { key: 'frequency30d', label: 'Frequência (30 dias)', value: '1' },
+    { key: 'daysSinceLastVisit', label: 'Dias desde a última visita', value: '17' },
+    { key: 'signalType', label: 'Tipo de sinal', value: 'FREQUENCY_DROP' },
+  ];
+
+  const result = synthesis.buildGroundedSynthesis({
+    intent: 'MIXED',
+    entityLabel: 'Aluno',
+    facts,
+    knowledgeAnswer: 'Aplicar a jornada de recuperação.',
+  });
+
+  // Rótulos distintos: fato e conhecimento não viram texto colado.
+  assert(/\*\*Aluno — situação\*\*/.test(result.answer), 'bloco de situação ausente');
+  assert(/Inferência \(a partir dos dados acima\):/.test(result.answer), 'inferência não é explícita');
+  assert(/\*\*Método aplicável \(documentação operacional\)\*\*/.test(result.answer), 'conhecimento não é rotulado');
+  assert(
+    result.answer.indexOf('**Método aplicável') < result.answer.indexOf('jornada de recuperação'),
+    'conhecimento aparece antes do rótulo que o identifica',
+  );
+
+  // Nada é afirmado sem fonte: fato ausente não vira frase.
+  const empty = synthesis.buildGroundedSynthesis({ intent: 'KNOWLEDGE' });
+  assert(/Não consegui encontrar informação/.test(empty.answer), 'resposta sem fonte não é conservadora');
+  assert(synthesis.buildInference({ facts: [{ key: 'signalType', label: 'x', value: 'FREQUENCY_DROP' }] }) === null,
+    'inferência emitida com um único indício');
+
+  // Ausência NÃO é zero: sem a medida, nenhuma conclusão de frequência.
+  assert(synthesis.numericFact([], 'frequency30d') === null, 'fato ausente tratado como número');
+
+  // Proveniência tipada.
+  const types = result.provenance.items.map((item) => item.type);
+  for (const expected of ['FACT', 'INFERENCE', 'KNOWLEDGE', 'RECOMMENDATION']) {
+    assert(types.includes(expected), `proveniência sem tipo ${expected}`);
+  }
+
+  // Acesso negado não revela dado nem infere.
+  const denied = synthesis.buildGroundedSynthesis({ intent: 'MIXED', entityLabel: 'Aluno', facts, accessDenied: true });
+  assert(!/ACTIVE/.test(denied.answer), 'dado vazou em acesso negado');
+  assert(denied.provenance.items.length === 0, 'proveniência emitida em acesso negado');
+
+  return 'situação/inferência/método rotulados; proveniência FACT·INFERENCE·KNOWLEDGE·RECOMMENDATION';
 });
 
 // ── Relatório ───────────────────────────────────────────────────────────────
