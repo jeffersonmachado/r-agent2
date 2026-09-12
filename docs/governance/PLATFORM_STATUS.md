@@ -1,10 +1,10 @@
 # Platform Status
 
-- Generated at: 2026-09-12T18:04:27.571Z
+- Generated at: 2026-09-12T19:08:01.925Z
 - Canonical mesh execution: mesh-20260911003113-iji3vq
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:ENTERPRISE_READY_GO
-- Readiness score: 95.5
+- Readiness decision: NO_GO:ENTERPRISE_PARTIAL_GO
+- Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
 - Vertical coverage: 100%
@@ -23,6 +23,7 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- PBX prod-like real ainda nao foi validado com replay de voz completo [gap-enterprise-pbx-prod-like]
-- Replay unificado omnichannel ainda nao possui prova operacional cross-channel [gap-enterprise-omnichannel-unified-replay]
 - Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
+- Human handoff nao possui prova fisica enterprise completa [gap-proof-human-handoff]
+- Replay omnichannel unificado nao possui prova fisica completa [gap-proof-omnichannel-replay]
+- Operational Digital Twin nao possui prova fisica completa [gap-proof-digital-twin]

@@ -1,13 +1,14 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:ENTERPRISE_READY_GO
+- Decision: NO_GO:ENTERPRISE_PARTIAL_GO
 - Canonical mesh execution: mesh-20260911003113-iji3vq
-- Enterprise readiness: enterprise-ready
-- Production readiness: NO_GO:ENTERPRISE_READY_GO
-- Blocking gaps: 3
+- Enterprise readiness: enterprise-partial
+- Production readiness: NO_GO:ENTERPRISE_PARTIAL_GO
+- Blocking gaps: 4
 - Blocking domains: none
 
 ## Hard blockers
-- gap-enterprise-pbx-prod-like: PBX prod-like real ainda nao foi validado com replay de voz completo (critical)
-- gap-enterprise-omnichannel-unified-replay: Replay unificado omnichannel ainda nao possui prova operacional cross-channel (critical)
 - gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)
+- gap-proof-human-handoff: Human handoff nao possui prova fisica enterprise completa (high)
+- gap-proof-omnichannel-replay: Replay omnichannel unificado nao possui prova fisica completa (high)
+- gap-proof-digital-twin: Operational Digital Twin nao possui prova fisica completa (high)
