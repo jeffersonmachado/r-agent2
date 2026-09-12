@@ -91,6 +91,10 @@ services:
       PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
       PBX_RECORDING_ENABLED: ${PBX_RECORDING_ENABLED:-false}
       PBX_MIXMONITOR_DIR: ${PBX_MIXMONITOR_DIR:-/var/spool/asterisk/monitor/pbx}
+      # Include de contextos realtime por tenant, gerado por api/services/pbx/pbxDialplanService.js.
+      # Caminho fixo (e nao interpolado) de proposito: precisa casar exatamente com o volume
+      # compartilhado com o servico `asterisk`, que le o mesmo arquivo em /etc/asterisk/conf.
+      PBX_ASTERISK_TENANTS_CONF: /etc/asterisk/conf/tenants.conf
     ports:
       # Porta exposta no host (externa) -> porta interna do container (3000)
       - "${API_PUBLIC_PORT:-3001}:3000"
@@ -100,6 +104,8 @@ services:
       - r-agent2-runtime:/var/lib/ragent2
       - r-agent2-pbx-media-data:/app/api/data/pbx-media
       - r-agent2-pbx-recordings-data:/app/api/data/pbx-recordings
+      # Include de contextos realtime por tenant: a API escreve, o asterisk le.
+      - r-agent2-pbx-asterisk-conf:/etc/asterisk/conf
     depends_on:
       postgres:
         condition: service_healthy
@@ -290,6 +296,9 @@ services:
         condition: service_healthy
     volumes:
       - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      # Shadow somente de /etc/asterisk/conf: o include de contextos realtime e gerado em
+      # runtime pela API e precisa ser visivel aqui (volume compartilhado).
+      - r-agent2-pbx-asterisk-conf:/etc/asterisk/conf
       - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
       - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
       - r-agent2-pbx-media-data:/var/lib/asterisk/sounds/pbx
@@ -345,6 +354,7 @@ volumes:
   r-agent2-runtime:
   r-agent2-pbx-media-data:
   r-agent2-pbx-recordings-data:
+  r-agent2-pbx-asterisk-conf:
   r-agent2-rag-data:
 
 networks:

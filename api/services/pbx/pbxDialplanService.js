@@ -2,6 +2,8 @@ const { getSequelize } = require('../../db/sequelize');
 const models = require('../../db/models');
 const { makePjsipId, makeTrunkPjsipId } = require('./pbxId');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 function makeQueueRtName(tenantKey, queueName) {
   return `${tenantKey}__${queueName}`;
@@ -328,13 +330,131 @@ async function buildTenantDialplanRows({ tenantKey }) {
 }
 
 /**
+ * Contextos realtime por tenant.
+ *
+ * DEFEITO (2026-09-12): `pbx/asterisk/etc/asterisk/extensions.conf` declarava apenas
+ * `[system]`. O dialplan realtime só é resolvido se o contexto existir de forma explícita
+ * no arquivo (`switch => Realtime/<contexto>@extensions`) — o Asterisk NÃO enumera
+ * contextos a partir da tabela `extensions`. Consequência: as linhas de dialplan de todo
+ * tenant que não fosse `system` eram gravadas no banco e nunca executadas.
+ *
+ * Sintoma observado: originar `Local/<ramal>@<tenant>` não resolvia o contexto, a chamada
+ * morria antes do `Answer`, e — como `cdr.conf` tem `Log unanswered calls: No` — nenhum CDR
+ * era gerado. O sinal `cdr` da evidência enterprise enterprise ficava `false` e o RAP-068
+ * reprovava, sem que o defeito real (isolamento multi-tenant do dialplan) aparecesse.
+ *
+ * Correção: `extensions.conf` passou a fazer `#tryinclude conf/tenants.conf`, e este arquivo
+ * é gerado aqui a partir dos contextos presentes na tabela `extensions`. O `dialplan reload`
+ * é disparado via AMI somente quando o conteúdo muda.
+ *
+ * Opt-in por `PBX_ASTERISK_TENANTS_CONF` (caminho absoluto do include): quando a variável não
+ * está definida, a geração é ignorada e o comportamento anterior é preservado — necessário
+ * porque o caminho gravável difere entre host dev (mount do repo) e containers (volume
+ * compartilhado entre api e asterisk).
+ */
+const TENANTS_CONF_HEADER = [
+  '; GERADO AUTOMATICAMENTE por api/services/pbx/pbxDialplanService.js — NÃO EDITE À MÃO.',
+  '; Um contexto por tenant presente na tabela `extensions`.',
+  ';',
+  '; O Asterisk exige a declaração explícita de cada contexto para usar o switch Realtime;',
+  '; sem estas linhas o dialplan dos tenants existe no banco mas nunca é executado.',
+];
+
+function resolveTenantsConfPath() {
+  const explicit = String(process.env.PBX_ASTERISK_TENANTS_CONF || '').trim();
+  return explicit || null;
+}
+
+function staticallyDeclaredContexts() {
+  return String(process.env.PBX_ASTERISK_STATIC_CONTEXTS || 'system')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+async function listRealtimeDialplanContexts() {
+  const sq = getSequelize();
+  if (!sq) return [];
+  const rows = await sq.query('SELECT DISTINCT context FROM extensions ORDER BY context');
+  const items = Array.isArray(rows) && Array.isArray(rows[0]) ? rows[0] : rows;
+  return (Array.isArray(items) ? items : [])
+    .map((row) => String(row?.context || '').trim())
+    .filter(Boolean);
+}
+
+function buildTenantContextsConf(contexts = [], { staticallyDeclared = staticallyDeclaredContexts() } = {}) {
+  const lines = [...TENANTS_CONF_HEADER, ''];
+  const declared = [];
+  for (const raw of contexts) {
+    const context = String(raw || '').trim();
+    // Whitelist de caracteres: o valor vem do banco e é escrito em arquivo de configuração
+    // lido pelo Asterisk. Sem isto, um contexto malformado permitiria injetar diretivas.
+    if (!context || !/^[A-Za-z0-9_.-]+$/.test(context)) continue;
+    if (staticallyDeclared.includes(context)) continue;
+    lines.push(`[${context}]`, `switch => Realtime/${context}@extensions`, '');
+    declared.push(context);
+  }
+  return { content: `${lines.join('\n')}\n`, declared };
+}
+
+/**
+ * Regenera o include de contextos realtime e recarrega o dialplan se houver mudança.
+ * Best-effort: falha de escrita/reload é reportada, nunca lançada — o dialplan em si já
+ * foi persistido, e derrubar o apply por causa da propagação de config esconderia o
+ * estado real do banco.
+ */
+async function syncRealtimeTenantContexts({ reload = true } = {}) {
+  const confPath = resolveTenantsConfPath();
+  if (!confPath) {
+    return { ok: false, skipped: true, reason: 'PBX_ASTERISK_TENANTS_CONF_undefined' };
+  }
+
+  try {
+    const contexts = await listRealtimeDialplanContexts();
+    const { content, declared } = buildTenantContextsConf(contexts);
+
+    let previous = null;
+    try {
+      previous = fs.readFileSync(confPath, 'utf8');
+    } catch (err) {
+      if (err?.code !== 'ENOENT') throw err;
+    }
+
+    if (previous === content) {
+      return { ok: true, changed: false, contexts: declared, path: confPath };
+    }
+
+    fs.mkdirSync(path.dirname(confPath), { recursive: true });
+    const tmpPath = `${confPath}.tmp`;
+    fs.writeFileSync(tmpPath, content, 'utf8');
+    fs.renameSync(tmpPath, confPath);
+
+    let reloaded = false;
+    if (reload) {
+      try {
+        const ami = require('../asterisk/amiClient');
+        await ami.command('dialplan reload');
+        reloaded = true;
+      } catch (err) {
+        return { ok: false, changed: true, reloaded: false, contexts: declared, path: confPath, error: String(err?.message || err) };
+      }
+    }
+
+    return { ok: true, changed: true, reloaded, contexts: declared, path: confPath };
+  } catch (err) {
+    return { ok: false, changed: false, path: confPath, error: String(err?.message || err) };
+  }
+}
+
+/**
  * Materializa dialplan realtime no Postgres.
  */
 async function applyTenantDialplan({ tenantKey }) {
   const rows = await buildTenantDialplanRows({ tenantKey });
   const result = await applyTenantDialplanRows({ tenantKey, rows });
   const signature = computeDialplanSignature(rows);
-  return { ...result, signature };
+  const realtimeContexts = await syncRealtimeTenantContexts();
+  return { ...result, signature, realtimeContexts };
 }
 
 // PERFORMANCE (2026-09-12): o apply fazia UM INSERT por linha. O tenant `system`
@@ -396,4 +516,6 @@ module.exports = {
   applyTenantDialplanRows,
   parseAsteriskDialplanText,
   computeDialplanSignature,
+  syncRealtimeTenantContexts,
+  buildTenantContextsConf,
 };

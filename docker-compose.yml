@@ -54,6 +54,9 @@ services:
       PBX_RECORDINGS_DIR: ${PBX_RECORDINGS_DIR:-/app/api/data/pbx-recordings}
       PBX_RECORDING_ENABLED: ${PBX_RECORDING_ENABLED:-false}
       PBX_MIXMONITOR_DIR: ${PBX_MIXMONITOR_DIR:-/var/spool/asterisk/monitor/pbx}
+      # Include de contextos realtime por tenant, gerado por api/services/pbx/pbxDialplanService.js.
+      # Vazio por padrão: a geração é opt-in e nada muda sem que um deployment a defina.
+      PBX_ASTERISK_TENANTS_CONF: ${PBX_ASTERISK_TENANTS_CONF:-}
     ports:
       - "${API_HOST_PORT:-3001}:${API_PORT:-3001}"
     depends_on:
@@ -83,13 +86,36 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      # DSN ODBC dirigido por ambiente (opt-in). Sem estes valores o container usa o
+      # /etc/odbc.ini montado do repositório, exatamente como antes — prod e test não mudam.
+      # Quando definidos, o DSN é renderizado do template e as credenciais deixam de ser
+      # fixas no repositório (ver pbx/asterisk/etc/odbc.ini.template e res_odbc.conf).
+      PBX_ODBC_HOST: ${PBX_ODBC_HOST:-}
+      PBX_ODBC_PORT: ${PBX_ODBC_PORT:-}
+      PBX_ODBC_DB: ${PBX_ODBC_DB:-}
+      PBX_ODBC_USER: ${PBX_ODBC_USER:-}
+      PBX_ODBC_PASSWORD: ${PBX_ODBC_PASSWORD:-}
     volumes:
       - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
       - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
+      - ./pbx/asterisk/etc/odbc.ini.template:/etc/asterisk-odbc.template:ro
       - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
       - pbx-media:/var/lib/asterisk/sounds/pbx
       - pbx-recordings:/var/spool/asterisk/monitor/pbx
-    command: sh -c "asterisk -f -vvvvv -d"
+    command:
+      - sh
+      - -c
+      - |
+        PBX_ODBC_PORT="${PBX_ODBC_PORT:-5432}"
+        if [ -n "$PBX_ODBC_HOST" ] && [ -n "$PBX_ODBC_DB" ] && [ -n "$PBX_ODBC_USER" ] && [ -n "$PBX_ODBC_PASSWORD" ]; then
+          envsubst < /etc/asterisk-odbc.template > /tmp/odbc.ini
+          export ODBCINI=/tmp/odbc.ini
+          echo "asterisk[odbc]: DSN renderizado do template (host=$PBX_ODBC_HOST port=$PBX_ODBC_PORT db=$PBX_ODBC_DB user=$PBX_ODBC_USER)"
+        else
+          echo "asterisk[odbc]: PBX_ODBC_* ausente/parcial; usando /etc/odbc.ini montado (default canonico)"
+        fi
+        exec asterisk -f -vvvvv -d
     ports:
       - "${AMI_PORT:-5038}:5038"
       - "${SIP_UDP_PORT:-5060}:5060/udp"

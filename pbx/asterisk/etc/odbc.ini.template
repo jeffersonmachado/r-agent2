@@ -1,0 +1,29 @@
+; Template do DSN ODBC do Asterisk (Realtime + CDR) — renderizado via envsubst no start do container.
+;
+; Por que existe:
+;   O unixODBC não expande variáveis de ambiente em `odbc.ini`. Manter os valores fixos no
+;   arquivo obrigava a ter um `odbc.ini` por ambiente (dev/prod/test) e embutia credenciais
+;   em texto claro no repositório. Este template é renderizado para /tmp/odbc.ini no start
+;   do container (ver `command` do serviço `asterisk` no docker-compose.yml) e apontado por
+;   `ODBCINI`, somente quando as variáveis PBX_ODBC_* estão definidas.
+;
+; Contrato:
+;   - Se PBX_ODBC_HOST/PORT/DB/USER/PASSWORD NÃO estiverem definidas, o container continua
+;     usando o `/etc/odbc.ini` montado do repositório (default canônico, comportamento
+;     idêntico ao anterior). Nada muda em prod/test sem opt-in explícito.
+;   - Se estiverem definidas, o DSN passa a apontar para esses valores e as credenciais
+;     deixam de vir do `res_odbc.conf` (que não as declara mais) — ver observação lá.
+;
+; Requer também `res_odbc.conf` SEM `username`/`password`: com SQLConnect recebendo user/pass
+; nulos, o unixODBC usa `Username`/`Password` deste arquivo. Caso contrário, as credenciais
+; do res_odbc.conf sobrescreveriam estas e a autenticação falharia silenciosamente.
+[asterisk_pg]
+Description=PBX Realtime (Postgres)
+Driver=PostgreSQL
+Servername=${PBX_ODBC_HOST}
+Port=${PBX_ODBC_PORT}
+Database=${PBX_ODBC_DB}
+Username=${PBX_ODBC_USER}
+Password=${PBX_ODBC_PASSWORD}
+ReadOnly=No
+Trace=No

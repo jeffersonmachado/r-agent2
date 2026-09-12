@@ -67,6 +67,13 @@ async function handlePbxDialplanRoutes(ctx) {
       const pbxDialplan = require('../../../services/pbx/pbxDialplanService');
       const rows = await pbxDialplan.buildTenantDialplanRows({ tenantKey });
       const result = await pbxDialplan.applyTenantDialplanRows({ tenantKey, rows });
+      // Contextos realtime por tenant: sem isto o dialplan é persistido no banco mas o
+      // Asterisk nunca o executa, porque o switch Realtime exige a declaração explícita do
+      // contexto (ver syncRealtimeTenantContexts em pbxDialplanService).
+      const realtimeContexts = await pbxDialplan.syncRealtimeTenantContexts();
+      if (realtimeContexts && realtimeContexts.ok === false && !realtimeContexts.skipped) {
+        logger.error('[PBX] Falha ao propagar contextos realtime do dialplan', realtimeContexts);
+      }
       const signature = pbxDialplan.computeDialplanSignature(rows);
       try {
         const pbxVersions = require('../../../services/pbx/pbxConfigVersionsService');
@@ -95,7 +102,7 @@ async function handlePbxDialplanRoutes(ctx) {
         });
       } catch (_) {}
 
-      sendJson(res, 200, { ok: true, tenantKey, count: result.count, signature });
+      sendJson(res, 200, { ok: true, tenantKey, count: result.count, signature, realtimeContexts });
     } catch (err) {
       try {
         const pbxVersions = require('../../../services/pbx/pbxConfigVersionsService');
