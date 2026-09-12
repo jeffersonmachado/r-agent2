@@ -91,9 +91,13 @@ export function VerticalOperationalDashboardPage({ workspaceKeys = [], isSuperAd
 
   useEffect(() => {
     loadData();
-    // Poll de 120s: fallback caso os eventos WS não cheguem
-    const timer = setInterval(loadData, 120000);
-    return () => clearInterval(timer);
+    // Realtime por PUSH: VERTICAL_WS_EVENTS via WebSocket (acima). Sem polling —
+    // a regra do projeto proibe setInterval para sincronizar estado.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, []);
 
   return (

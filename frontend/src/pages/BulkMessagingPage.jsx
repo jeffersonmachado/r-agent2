@@ -37,9 +37,13 @@ export function BulkMessagingPage() {
   useEffect(() => {
     if (isAuthenticated) {
       loadCampaigns();
-      // Poll de 120s: fallback caso o evento WS `campaign.updated` não chegue
-      const interval = setInterval(loadCampaigns, 120000);
-      return () => clearInterval(interval);
+      // Realtime por PUSH: evento WS `campaign.updated` (acima). Sem polling — a
+      // regra do projeto proibe setInterval para sincronizar estado.
+      const onVisibilityChange = () => {
+        if (document.visibilityState === 'visible') loadCampaigns();
+      };
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      return () => document.removeEventListener('visibilitychange', onVisibilityChange);
     }
   }, [isAuthenticated]);
 

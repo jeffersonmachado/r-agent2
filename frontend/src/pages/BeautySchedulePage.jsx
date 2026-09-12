@@ -75,9 +75,13 @@ export function BeautySchedulePage() {
   });
 
   useEffect(() => {
-    // Poll de 120s: fallback caso o evento WS não chegue
-    const timer = setInterval(loadAgenda, 120000);
-    return () => clearInterval(timer);
+    // Realtime por PUSH: `vertical.schedule.updated` via WebSocket (acima). Sem
+    // polling — a regra do projeto proibe setInterval para sincronizar estado.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadAgenda();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [date, professionalId]);
 
   return (

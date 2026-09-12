@@ -61,9 +61,14 @@ export function BeautyBundlesPage() {
 
   useEffect(() => {
     loadData();
-    // Poll de 120s: fallback caso o evento WS não chegue
-    const timer = setInterval(loadData, 120000);
-    return () => clearInterval(timer);
+    // Realtime por PUSH: `vertical.bundles.updated` via WebSocket (acima). Sem
+    // polling — a regra do projeto proibe setInterval para sincronizar estado.
+    // Ao voltar para a aba, revalidamos uma vez por evento.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [status]);
 
   return (

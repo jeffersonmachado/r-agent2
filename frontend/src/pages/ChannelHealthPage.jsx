@@ -89,11 +89,16 @@ export function ChannelHealthPage() {
     subscribeEvents: ['channel.health.alert'],
   });
 
-  // Poll reduzido para 120s: atua como fallback caso o evento WS não chegue.
+  // Realtime por PUSH: `channel.health.alert` via WebSocket (acima). Sem polling —
+  // a regra do projeto proibe setInterval para sincronizar estado. Com o
+  // auto-refresh ligado, revalidamos por evento de visibilidade em vez de timer.
   useEffect(() => {
-    if (!autoRefresh) return;
-    const id = setInterval(() => fetchHealth(), 120000);
-    return () => clearInterval(id);
+    if (!autoRefresh) return undefined;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchHealth();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [autoRefresh, fetchHealth]);
 
   if (authLoading) {
