@@ -59,6 +59,11 @@ function frontendRoutesPlugin() {
                           // /cases é página SPA (Chamados); /cases e /cases/* são API quando Accept JSON
                           (url === '/cases' && isApiRequest) ||
                           url.startsWith('/cases/') ||
+                          // /rbac é página SPA (Controle de Acesso); /rbac/roles,
+                          // /rbac/permissions e /rbac/agents/* são SEMPRE API. Sem esta
+                          // entrada o middleware reescrevia a URL para /index.html antes
+                          // do proxy e a página recebia HTML com status 200.
+                          url.startsWith('/rbac/') ||
                           (url.startsWith('/supervisor/') && url !== '/supervisor') ||
                           (url.startsWith('/qa-mesh/') && url !== '/qa-mesh') ||
                           // /qa e /qa/stability são páginas SPA; endpoints /qa/* (stability,
@@ -386,6 +391,16 @@ const viteConfig = defineConfig(({ mode }) => {
           // Para /inbox/conversations e outros métodos, faz proxy para API
           return undefined;
         },
+      },
+      // /rbac é página SPA (Controle de Acesso) e NÃO tem rota de API na raiz;
+      // as subrotas (/rbac/roles, /rbac/permissions, /rbac/agents/...) são API.
+      // Sem esta regra elas caíam no fallback SPA do Vite e o cliente recebia
+      // index.html com status 200 — a página abria com "Erro ao carregar dados
+      // de permissões" e nenhum papel/permissão era listado.
+      '^/rbac/': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
       },
       // /cases é página SPA (Chamados) em navegação (text/html) e API quando
       // Accept JSON; subrotas (/cases/:id, /cases/:id/conversations) são sempre API.

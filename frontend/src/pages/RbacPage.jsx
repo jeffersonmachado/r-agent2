@@ -212,10 +212,9 @@ function TabUsuarios({ agents, roles, loading, onAssign }) {
             onChange={(e) => setSearch(e.target.value)}
           />
           <select
-            className="support-form-select"
+            className="support-form-select min-w-[160px]"
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            className="min-w-[160px]"
           >
             <option value="">Todos os roles</option>
             {roleOptions.map(r => (
