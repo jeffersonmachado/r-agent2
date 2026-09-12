@@ -77,9 +77,20 @@ check('context_contract_enforced', 'payload do copiloto é validado por contrato
 check('entity_context_revalidated', 'posse da entidade é revalidada no backend antes de qualquer tool', () => {
   const source = read('api/services/askAi/orchestrator.js');
   assert(source.includes('validateEntityContext'), 'sem validação de entidade');
-  assert(source.includes('getMembershipDetail'), 'validação não consulta o domínio');
+  assert(source.includes('resolveEntityOwnership'), 'validação não delega a prova de posse');
   assert(source.includes('accessDenied'), 'não há negação explícita');
-  return 'entidade revalidada por tenant; negação sem vazamento';
+
+  // A prova de posse POR TIPO vive em `entityResolvers` (fonte única) e precisa
+  // consultar o domínio de verdade — antes o verificador usava o identificador
+  // errado (subjectId como membershipId) e negava todo dado vivo.
+  const resolvers = read('api/services/askAi/entityResolvers.js');
+  assert(resolvers.includes('getMembershipAccessStatus'), 'sem prova de posse do aluno (subject_id)');
+  assert(resolvers.includes("require('../channelConversationService')"), 'sem prova de posse da conversa');
+  assert(resolvers.includes("require('../orderService')"), 'sem prova de posse do pedido');
+  assert(resolvers.includes("require('../scheduleService')"), 'sem prova de posse do agendamento');
+  assert(resolvers.includes('VERIFIABLE_ENTITY_TYPES'), 'sem lista explícita de tipos verificáveis');
+  assert(resolvers.includes('NOT_VERIFIABLE'), 'tipo sem mecanismo precisa estar declarado');
+  return 'entidade revalidada por tipo (tenant-scoped); tipos sem mecanismo falham fechado';
 });
 
 // 4. Autorização de tools ----------------------------------------------------

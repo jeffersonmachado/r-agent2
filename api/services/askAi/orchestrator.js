@@ -39,6 +39,8 @@ const {
   describeConversationUse,
 } = require('./conversationContext');
 const { buildGroundedSynthesis } = require('./synthesis');
+const { resolveEntityOwnership, VERIFIABLE_ENTITY_TYPES } = require('./entityResolvers');
+const { findAskAiTool } = require('./askAiToolCatalog');
 const conversationStore = require('./conversationStore');
 const { buildPromptHistory } = conversationStore;
 const logger = require('../../utils/logger');
@@ -47,7 +49,8 @@ const { getClassificationForAgent } = require('../../modules/agent-os/experience
 const DEFAULT_MAX_TOOL_CALLS = 4;
 const DEFAULT_MAX_RAG_QUERIES = 1;
 
-const ENTITY_TYPES_WITH_OWNERSHIP_CHECK = Object.freeze(['FITNESS_STUDENT', 'CUSTOMER']);
+// Mantido como alias do contrato de resolvers (fonte única em entityResolvers).
+const ENTITY_TYPES_WITH_OWNERSHIP_CHECK = VERIFIABLE_ENTITY_TYPES;
 
 // Marcadores de dado financeiro. O radical é flexível (`financeir\w*`) porque
 // a forma natural do operador é o ADJETIVO ("situação financeira"), não o
@@ -122,6 +125,11 @@ function splitByAuthorization({ required, actor, deniedIds }) {
  * acessível pelo ator. Um `entityId` de outro tenant é indistinguível de um
  * inexistente: nenhum dado é consultado e nenhuma existência é revelada.
  *
+ * A prova de posse por tipo vive em `askAi/entityResolvers.js` — antes desta
+ * extração o verificador consultava a membership usando o `subjectId` da tela
+ * (identificador errado) e `CUSTOMER` reusava o mesmo lookup, então o contexto
+ * de entidade nunca era reconhecido e o copiloto negava todo dado vivo.
+ *
  * @returns {Promise<{validated: boolean, entity: Object|null, reason: string|null}>}
  */
 async function validateEntityContext({ context, tenantId }) {
@@ -130,31 +138,16 @@ async function validateEntityContext({ context, tenantId }) {
   }
 
   const entity = { type: context.entityType, id: context.entityId };
+  const ownership = await resolveEntityOwnership({
+    entityType: entity.type,
+    entityId: entity.id,
+    tenantId,
+  });
 
-  if (!ENTITY_TYPES_WITH_OWNERSHIP_CHECK.includes(entity.type)) {
-    // Sem mecanismo de verificação de posse para este tipo: o contexto NÃO é
-    // usado como autoridade (fail-closed) em vez de ser aceito por confiança.
-    return { validated: false, entity: null, reason: 'entity_ownership_not_verifiable' };
+  if (!ownership.owned) {
+    return { validated: false, entity: null, reason: ownership.reason };
   }
-
-  try {
-    const membershipService = require('../vertical/fitnessMembershipService');
-    const detail = await membershipService.getMembershipDetail({
-      tenantId,
-      membershipId: entity.id,
-    });
-    if (!detail) {
-      return { validated: false, entity: null, reason: 'entity_not_accessible' };
-    }
-    return { validated: true, entity, reason: null };
-  } catch (error) {
-    logger.warn('[ask-ai] Falha ao validar posse da entidade do contexto', {
-      tenantId,
-      entityType: entity.type,
-      error: error.message,
-    });
-    return { validated: false, entity: null, reason: 'entity_validation_failed' };
-  }
+  return { validated: true, entity, reason: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -230,7 +223,15 @@ function buildSources({ toolResults, knowledgeSources }) {
   const sources = [];
   for (const result of toolResults) {
     if (result.failed || !result.found) continue;
-    sources.push({ type: 'OPERATIONAL_DATA', toolId: result.toolId, label: result.toolId });
+    // Rótulo HUMANO do catálogo canônico: o usuário final lia o id técnico
+    // (`askai.billing.membershipHistory`) — e o widget, sem campo amigável,
+    // imprimia o objeto inteiro em JSON cru na resposta.
+    const catalogTool = findAskAiTool(result.toolId);
+    sources.push({
+      type: 'OPERATIONAL_DATA',
+      toolId: result.toolId,
+      label: catalogTool?.label || result.toolId,
+    });
   }
   for (const source of knowledgeSources || []) {
     sources.push({

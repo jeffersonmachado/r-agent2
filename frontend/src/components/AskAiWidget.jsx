@@ -186,7 +186,7 @@ export function AskAiWidget() {
                           <li key={sourceIndex} className="truncate">
                             {typeof source === 'string'
                               ? source
-                              : (source.title || source.id || source.chunkId || JSON.stringify(source).slice(0, 120))}
+                              : (source.title || source.label || source.id || source.chunkId || source.documentId || 'Fonte consultada')}
                           </li>
                         ))}
                       </ul>

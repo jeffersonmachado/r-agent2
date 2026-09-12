@@ -47,15 +47,53 @@ function serviceLoader() {
   };
 }
 
+/**
+ * Resolve a MATRÍCULA a partir do `subject_id` que a tela publica.
+ *
+ * Gap corrigido (2026-09-12, achado exercitando o browser como usuário): o
+ * contexto de entidade entrega o `subjectId`, mas membership/billing/churn
+ * consultavam `membershipId`/`phone` com esse mesmo valor — três de quatro
+ * runners usavam a chave errada. Efeito observável: a pergunta "qual a situação
+ * financeira deste aluno?" respondia "Eventos de cobrança: 0" enquanto a própria
+ * tela do aluno mostrava transições reais de cobrança — resposta INCOERENTE.
+ *
+ * Só a frequência (`attendanceSummary`) usava `subjectId` e por isso batia.
+ *
+ * @returns {Promise<{membership: Object|null, membershipId: string|null, phone: string|null}>}
+ */
+async function resolveFitnessMembership({ tenantId, subjectId }) {
+  const { membership } = serviceLoader();
+  const status = await membership.getMembershipAccessStatus({ tenantId, subjectId });
+  const row = status?.membership || null;
+  if (!row) return { membership: null, membershipId: null, phone: null };
+  const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+  return {
+    membership: row,
+    membershipId: row.id ? String(row.id) : null,
+    phone: metadata.phone ? String(metadata.phone) : null,
+  };
+}
+
 function summarizeCounts(items) {
   return Array.isArray(items) ? items.length : 0;
 }
 
 async function runFitnessStudentSummary({ tenantId, entity }) {
   const { membership } = serviceLoader();
+  // `entity.id` é o subjectId da tela: resolve a matrícula antes de consultar.
+  const resolved = await resolveFitnessMembership({ tenantId, subjectId: entity.id });
+  if (!resolved.membershipId) {
+    return {
+      toolId: 'askai.fitness.membershipSummary',
+      found: false,
+      facts: [],
+      summary: 'Nenhuma matrícula encontrada para o aluno informado neste tenant.',
+    };
+  }
+
   const detail = await membership.getMembershipDetail({
     tenantId,
-    membershipId: entity.id,
+    membershipId: resolved.membershipId,
   });
 
   if (!detail) {
@@ -117,9 +155,20 @@ async function runFitnessAttendanceSummary({ tenantId, entity }) {
 
 async function runFitnessBillingSummary({ tenantId, entity }) {
   const { membership } = serviceLoader();
+  // `entity.id` é o subjectId: a cobrança é da MATRÍCULA, não do assunto.
+  const resolved = await resolveFitnessMembership({ tenantId, subjectId: entity.id });
+  if (!resolved.membershipId) {
+    return {
+      toolId: 'askai.billing.membershipHistory',
+      found: false,
+      facts: [],
+      summary: 'Nenhuma matrícula encontrada para o aluno informado neste tenant.',
+    };
+  }
+
   const history = await membership.getMembershipBillingHistory({
     tenantId,
-    membershipId: entity.id,
+    membershipId: resolved.membershipId,
     limit: 20,
   });
 
@@ -144,9 +193,21 @@ async function runFitnessBillingSummary({ tenantId, entity }) {
 
 async function runFitnessChurnSignal({ tenantId, entity }) {
   const { churn } = serviceLoader();
+  // O sinal é indexado por TELEFONE: resolve o telefone real da matrícula do
+  // subject (antes enviava o subjectId como se fosse telefone).
+  const resolved = await resolveFitnessMembership({ tenantId, subjectId: entity.id });
+  const phone = resolved.phone;
+  if (!phone) {
+    return {
+      toolId: 'askai.churn.latestSignal',
+      found: false,
+      facts: [],
+      summary: 'Nenhum telefone associado à matrícula deste aluno para consultar sinais.',
+    };
+  }
   const signals = await churn.latestFitnessSignalByPhone({
     tenantId,
-    phone: entity.id,
+    phone,
   });
 
   if (!signals) {

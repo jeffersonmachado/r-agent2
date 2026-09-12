@@ -9,12 +9,16 @@
 
 const mockGetMembershipDetail = jest.fn();
 const mockGetMembershipBillingHistory = jest.fn();
+const mockGetMembershipAccessStatus = jest.fn();
 const mockGetAttendanceHistory = jest.fn();
 const mockLatestFitnessSignal = jest.fn();
 
+// A prova de posse da entidade do contexto passa por `getMembershipAccessStatus`
+// (busca por `subject_id`, tenant-scoped) — ver `askAi/entityResolvers.js`.
 jest.mock('../../api/services/vertical/fitnessMembershipService', () => ({
   getMembershipDetail: (...args) => mockGetMembershipDetail(...args),
   getMembershipBillingHistory: (...args) => mockGetMembershipBillingHistory(...args),
+  getMembershipAccessStatus: (...args) => mockGetMembershipAccessStatus(...args),
 }));
 
 jest.mock('../../api/services/vertical/fitnessAttendanceService', () => ({
@@ -89,6 +93,18 @@ function fixtureMembership() {
     accessAllowed: true,
     due_date: '2026-10-05',
   });
+  // Posse da entidade: tenant-scoped, como no resolver real — a matrícula do
+  // `student-42` existe em `academia-a` e NÃO em outro tenant.
+  mockGetMembershipAccessStatus.mockImplementation(async ({ tenantId }) => (
+    tenantId === 'academia-a'
+      ? {
+        allowed: true,
+        effectiveBillingStatus: 'CURRENT',
+        reasonCode: 'allowed',
+        membership: { id: 'student-42', subject_id: 'student-42' },
+      }
+      : { allowed: false, reasonCode: 'membership_not_found', membership: null }
+  ));
   mockGetAttendanceHistory.mockResolvedValue({
     items: [{ checked_in_at: '2026-08-25T10:00:00.000Z' }],
     total: 1,
@@ -192,8 +208,8 @@ describe('ask-ai orchestrator — dados vivos + conhecimento', () => {
   test('entidade de outro tenant é negada sem consultar nada', async () => {
     const store = buildConversationHarness();
     const ragService = buildRag();
-    // Tenant B não possui a matrícula: o serviço devolve null.
-    mockGetMembershipDetail.mockResolvedValue(null);
+    // Tenant B não possui a matrícula do subject: o resolver devolve
+    // `membership: null` → entidade não acessível (indistinguível de inexistente).
 
     const turn = await runAskAiTurn({
       payload: { question: 'Por que este aluno está em risco?', conversationId: null, context: STUDENT_ENTITY },

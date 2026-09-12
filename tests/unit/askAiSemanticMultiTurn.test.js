@@ -17,12 +17,16 @@
 
 const mockGetMembershipDetail = jest.fn();
 const mockGetMembershipBillingHistory = jest.fn();
+const mockGetMembershipAccessStatus = jest.fn();
 const mockGetAttendanceHistory = jest.fn();
 const mockLatestFitnessSignal = jest.fn();
 
+// A resolução do subjectId → matrícula passa por `getMembershipAccessStatus`
+// (tenant-scoped); as tools de matrícula/cobrança usam o id da MATRÍCULA.
 jest.mock('../../api/services/vertical/fitnessMembershipService', () => ({
   getMembershipDetail: (...args) => mockGetMembershipDetail(...args),
   getMembershipBillingHistory: (...args) => mockGetMembershipBillingHistory(...args),
+  getMembershipAccessStatus: (...args) => mockGetMembershipAccessStatus(...args),
 }));
 
 jest.mock('../../api/services/vertical/fitnessAttendanceService', () => ({
@@ -96,6 +100,23 @@ function fixture() {
     id: 'student-42', status: 'ACTIVE', effectiveBillingStatus: 'CURRENT',
     accessAllowed: true, due_date: '2026-10-05',
   });
+  // Posse + resolução da matrícula: tenant-scoped, como no serviço real.
+  mockGetMembershipAccessStatus.mockImplementation(async ({ tenantId }) => (
+    tenantId === 'academia-a'
+      ? {
+        allowed: true,
+        effectiveBillingStatus: 'CURRENT',
+        reasonCode: 'allowed',
+        membership: {
+          id: 'MEM-42',
+          subject_id: 'student-42',
+          vertical: 'fitness',
+          billing_status: 'active',
+          metadata: { phone: '+5511999990000' },
+        },
+      }
+      : { allowed: false, reasonCode: 'membership_not_found', membership: null }
+  ));
   mockGetAttendanceHistory.mockResolvedValue({
     items: [{ checked_in_at: '2026-08-25T10:00:00.000Z' }], total: 1, frequency7d: 0, frequency30d: 1,
   });
@@ -229,7 +250,10 @@ describe('Ask AI — Q1/Q2/Q3 com sujeito mantido pela conversa', () => {
     });
     expect(q3.conversationId).toBe(q1.conversationId);
     expect(q3.policy.conversation.entityFromConversation).toBe(true);
-    expect(mockLatestFitnessSignal).toHaveBeenCalledWith(expect.objectContaining({ phone: 'student-42' }));
+    // O sinal de churn é indexado por TELEFONE — resolvido a partir da
+    // matrícula do subject. (Antes o `subjectId` era enviado como telefone:
+    // a expectativa antiga cristalizava esse defeito.)
+    expect(mockLatestFitnessSignal).toHaveBeenCalledWith(expect.objectContaining({ phone: '+5511999990000' }));
     expect(q3.provenance.liveData).toContain('askai.churn.latestSignal');
     expect(q3.answer).toContain('jornada de recuperação');
     expect(q3.confidence).toBe('fully_grounded');
@@ -286,8 +310,14 @@ describe('Ask AI — Q1/Q2/Q3 com sujeito mantido pela conversa', () => {
       tenantId: 'academia-a', actor: ACTOR_ADMIN, deps,
     });
 
-    // O aluno deixa de ser acessível (outro tenant / removido).
+    // O aluno deixa de ser acessível (outro tenant / removido): a prova de
+    // posse passa a não encontrar a matrícula do subject.
     mockGetMembershipDetail.mockResolvedValue(null);
+    mockGetMembershipAccessStatus.mockResolvedValue({
+      allowed: false,
+      reasonCode: 'membership_not_found',
+      membership: null,
+    });
     mockGetAttendanceHistory.mockClear();
     mockGetMembershipBillingHistory.mockClear();
 

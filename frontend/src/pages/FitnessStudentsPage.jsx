@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { searchFitnessStudents, getFitnessStudentDetail, registerFitnessCheckIn, registerFitnessCheckOut, createFitnessStudent } from '../api/verticalPilot';
 import { useToast } from '../components/Toast';
+import { useAskAiEntityContext } from '../askAi/useAskAiEntityContext';
+import { ENTITY_TYPES } from '../askAi/contextProvider';
 
 function badgeClass(tone) {
   if (tone === 'success') return 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30';
@@ -23,6 +25,13 @@ export function FitnessStudentsPage() {
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
+
+  // A ficha aberta é a entidade sobre a qual o copiloto deve responder
+  // ("qual a situação financeira deste aluno?" → dados vivos reais).
+  useAskAiEntityContext({
+    entityType: ENTITY_TYPES.FITNESS_STUDENT,
+    entityId: selected,
+  });
 
   // Formulário de cadastro de novo aluno (fecha o gap: antes não havia UI
   // para criar aluno — a criação só existia via API).
