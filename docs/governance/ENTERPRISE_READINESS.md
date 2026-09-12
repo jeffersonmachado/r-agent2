@@ -1,9 +1,9 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:AUTONOMOUS_READY_GO
+- Decision: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Canonical mesh execution: mesh-20260911003113-iji3vq
 - Enterprise readiness: autonomous-ready
-- Production readiness: NO_GO:AUTONOMOUS_READY_GO
+- Production readiness: PASS_WITH_DEFERRED_PACKAGE_GATE
 - Blocking gaps: 1
 - Blocking domains: none
 

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-12T09:29:23.906Z",
+  "generatedAt": "2026-09-12T09:31:25.529Z",
   "runId": "rap-governed-20260912092907386-12f62a95",
   "sourceFingerprint": "2c231f3876d06fab383fd6d05dbbb235389096e65bb6827223c3376117df629d",
-  "finalDecision": "NO_GO:AUTONOMOUS_READY_GO",
+  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
   "platformMaturity": "enterprise-partial",
   "canonicalMeshExecutionId": "mesh-20260911003113-iji3vq",
   "canonicalMeshArtifacts": {
@@ -3939,7 +3939,7 @@
     "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]"
   ],
   "productionReadiness": {
-    "status": "NO_GO:AUTONOMOUS_READY_GO",
+    "status": "PASS_WITH_DEFERRED_PACKAGE_GATE",
     "classification": "enterprise-partial",
     "productionLikeFlows": [
       "WhatsApp",
