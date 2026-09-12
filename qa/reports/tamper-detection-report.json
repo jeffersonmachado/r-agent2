@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-12T09:45:51.458Z",
-  "artifact": "r-agent2-20260912-064301.zip",
+  "generatedAt": "2026-09-12T15:04:06.549Z",
+  "artifact": "r-agent2-20260912-115942.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260912-064301.zip",
-        "computedHash": "620cec10459e2d161f27fc138991abeb0429fe5edf1932c9207662ee6d5c9ee0",
-        "recordedHash": "620cec10459e2d161f27fc138991abeb0429fe5edf1932c9207662ee6d5c9ee0",
+        "zipName": "r-agent2-20260912-115942.zip",
+        "computedHash": "8f750e17b771d65b0d1294cdc8f65a6a5c3991b3675b378d71f58136b7ecfee9",
+        "recordedHash": "8f750e17b771d65b0d1294cdc8f65a6a5c3991b3675b378d71f58136b7ecfee9",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260912-064301.manifest.json"
+        "subject": "r-agent2-20260912-115942.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260912-064301.zip"
+        "subject": "r-agent2-20260912-115942.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "09264a66c7f830c18e6edafa…"
+        "storedChainRoot": "104a4e5c5f0948d176a3ef45…"
       }
     },
     {
@@ -99,9 +99,9 @@
     }
   ],
   "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
-  "runId": "rap-governed-20260912092907386-12f62a95",
-  "sourceFingerprint": "2c231f3876d06fab383fd6d05dbbb235389096e65bb6827223c3376117df629d",
+  "runId": "rap-governed-20260912145739502-1a5333c8",
+  "sourceFingerprint": "7df9f36a74f6c6fcdad7998636c605de655c290089b51d10064c8ede1fcc2909",
   "artifactType": "tamper-detection-report",
   "artifactVersion": "1.0.0",
-  "reboundAt": "2026-09-12T09:47:46.592Z"
+  "reboundAt": "2026-09-12T15:05:55.646Z"
 }
