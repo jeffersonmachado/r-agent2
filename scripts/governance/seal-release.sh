@@ -142,6 +142,21 @@ preflight() {
 phase_prepare() {
   step prepare "run governado + converge (regenera os artefatos FOREIGN)"
 
+  # DEFEITO DE ORDEM corrigido em 2026-09-12, descoberto USANDO este script: o
+  # scorecard exige `governance/delivered-release-verification-report.json`, mas
+  # esse artefato é produzido por `verify:delivered-release`, que a fase
+  # `candidate` só roda DEPOIS do packaging — ordem impossível num run novo. Sem
+  # este refresh o converge falha com ARTIFACT_MISSING e below10 salta para ~29,
+  # por cascata de NO_GO em final-proof/final-readiness/final-consistency.
+  # O exit é ignorado DE PROPÓSITO: o veredito do verify é sobre a release
+  # ENTREGUE (a anterior), não sobre este ciclo em andamento.
+  timeout 900 npm run verify:delivered-release > "$LOG_DIR/verify-pre-prepare.log" 2>&1 || true
+  if [ -f governance/delivered-release-verification-report.json ]; then
+    ok "delivered-release-verification-report.json presente para o scorecard"
+  else
+    warn "delivered-release-verification-report.json ausente após o refresh"
+  fi
+
   local log="$LOG_DIR/converge.log"
   timeout 2700 bash scripts/governance/converge-governance.sh > "$log" 2>&1
   local rc=$?
