@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T03:01:44.445Z",
+  "generatedAt": "2026-09-12T03:10:21.386Z",
   "engine": "final-consistency-gate/v1",
   "artifactType": "final-consistency-report",
   "artifactVersion": "2.0.0",
@@ -28,7 +28,7 @@
         "runId": "rap-governed-20260912010523644-aaa64fe0",
         "sourceFingerprint": "c361332cde427f8907d5533c8e6c045b2b0208a0d85c3c99a956b4f47a3896ab",
         "startedAt": "2026-09-12T01:05:23.834Z",
-        "generatedAt": "2026-09-12T03:01:44.372Z",
+        "generatedAt": "2026-09-12T03:10:21.310Z",
         "status": "RUNNING",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
@@ -36,7 +36,7 @@
         "policyVersion": "1.0.3",
         "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
         "lastGovernedStage": "final-consistency",
-        "lastSourceVerificationAt": "2026-09-12T03:01:44.372Z",
+        "lastSourceVerificationAt": "2026-09-12T03:10:21.310Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -107,6 +107,11 @@
             "stage": "final-consistency",
             "sourceFingerprint": "c361332cde427f8907d5533c8e6c045b2b0208a0d85c3c99a956b4f47a3896ab",
             "verifiedAt": "2026-09-12T03:01:44.372Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "c361332cde427f8907d5533c8e6c045b2b0208a0d85c3c99a956b4f47a3896ab",
+            "verifiedAt": "2026-09-12T03:10:21.310Z"
           }
         ]
       }
