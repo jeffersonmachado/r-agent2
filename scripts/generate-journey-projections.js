@@ -151,7 +151,23 @@ function main() {
   const serialized = serializeProjections(artifact);
 
   if (checkOnly) {
-    const current = fs.existsSync(OUTPUT_PATH) ? fs.readFileSync(OUTPUT_PATH, 'utf8') : null;
+    const exists = fs.existsSync(OUTPUT_PATH);
+    const current = exists ? fs.readFileSync(OUTPUT_PATH, 'utf8') : null;
+    // Ausência NÃO é obsolescência. O artefato é DERIVADO e não versionado
+    // (`reports/*` é ignorado no .gitignore; só `tenant-isolation-report.json` é
+    // exceção), então num checkout limpo ele simplesmente não existe. Reprovar
+    // aqui transformava este gate numa pré-condição manual oculta ("rode npm run
+    // journey:projections") que derrubava o `validate:governance-enforcement`
+    // sem que houvesse nada obsoleto — o mesmo defeito já corrigido no
+    // `ensureProjectionsFresh()` do Ask AI. Geramos deterministicamente.
+    if (!exists) {
+      fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
+      fs.writeFileSync(OUTPUT_PATH, serialized);
+      console.log('✅ Projeções operacionais ausentes — geradas a partir das entradas atuais.');
+      return;
+    }
+    // Presente porém divergente = obsolescência REAL (as entradas mudaram e o
+    // artefato não foi regenerado). Isso continua sendo falha.
     if (current !== serialized) {
       console.error('❌ Projeções operacionais desatualizadas. Rode: npm run journey:projections');
       process.exit(1);
