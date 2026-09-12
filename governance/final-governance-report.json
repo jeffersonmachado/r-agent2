@@ -1,13 +1,13 @@
 {
   "artifactType": "final-governance-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-12T11:33:58.581Z",
-  "runId": "rap-governed-20260912112406518-6a51393a",
-  "sourceFingerprint": "b4c82da7eb4c4817395d965b388593972ca236a447a1e4e3b55ad9234dc1580f",
+  "generatedAt": "2026-09-12T11:47:01.720Z",
+  "runId": "rap-governed-20260912114523317-eb443e44",
+  "sourceFingerprint": "ef1e511752155057c60ff2d72575f186e7b270c6e0b760216d517428f9fd87ea",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.3",
   "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
-  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+  "finalDecision": "NO_GO",
   "autonomousReady": false,
   "allChecksPass": false,
   "checks": [
@@ -20,8 +20,8 @@
     {
       "id": "master_scorecard",
       "pass": false,
-      "status": "DEFERRED",
-      "reason": "dimensionsBelow10=2 (pending: DELIVERED_PHASE)"
+      "status": "FAIL",
+      "reason": "dimensionsBelow10=29 (real failures: RAP-052,RAP-054)"
     },
     {
       "id": "source_integrity",
