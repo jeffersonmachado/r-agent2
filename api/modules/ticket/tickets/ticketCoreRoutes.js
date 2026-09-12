@@ -8,6 +8,7 @@ const {
 } = require('./ticketRouteUtils');
 const { parseMultipartFormData } = require('../../../utils/multipartParser');
 const { storeTicketMedia, getTicketMediaById } = require('../../../services/ticketMediaService');
+const logger = require('../../../utils/logger');
 
 function normalizeManualPhone(phoneNumber) {
   const raw = phoneNumber ? String(phoneNumber).trim() : '';
@@ -281,7 +282,16 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
           return ta - tb;
         });
       }
-    } catch {
+    } catch (err) {
+      // Nao engolir em silencio: uma timeline nula e' indistinguivel de "ticket sem
+      // mensagens" para quem consome a API, e derruba a prova enterprise de human
+      // handoff (qa/enterprise/human-handoff-full-validation.json -> evidence.timelineCount),
+      // que por sua vez bloqueia a selagem do release. O erro fica registrado.
+      logger.error('[Tickets] Falha ao montar timeline de mensagens do ticket', {
+        ticketId: id,
+        conversationId: ticket.conversationId || null,
+        error: err && err.message ? err.message : String(err),
+      });
       timeline = null;
     }
 
@@ -302,7 +312,13 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
           createdAt: r.created_at ? new Date(r.created_at).toISOString() : (r.createdAt?.toISOString?.() || null),
         }));
       }
-    } catch {
+    } catch (err) {
+      // Mesmo motivo do bloco da timeline: falha silenciosa aqui esconde a causa raiz
+      // das provas fisicas de jornada (eventCount) na evidencia enterprise.
+      logger.error('[Tickets] Falha ao carregar eventos do ticket', {
+        ticketId: id,
+        error: err && err.message ? err.message : String(err),
+      });
       events = null;
     }
 

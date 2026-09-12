@@ -1,23 +1,23 @@
 {
-  "generatedAt": "2026-09-12T19:01:06.950Z",
+  "generatedAt": "2026-09-12T19:15:12.764Z",
   "ok": true,
   "tenantId": "system",
-  "ticketId": "default-1789239666015-azof63j",
-  "phoneNumber": "5511939665760",
-  "transferQueue": "enterprise_support_1789239665760",
+  "ticketId": "default-1789240511286-ni1kksn",
+  "phoneNumber": "5511940510977",
+  "transferQueue": "enterprise_support_1789240510977",
   "warnings": [
     "channel_account_seed_failed:400"
   ],
   "ticket": {
-    "id": "default-1789239666015-azof63j",
-    "queue": "enterprise_support_1789239665760",
+    "id": "default-1789240511286-ni1kksn",
+    "queue": "enterprise_support_1789240510977",
     "status": "closed",
     "assignedTo": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3",
-    "firstResponseAt": "2026-09-12T19:01:06.220Z",
-    "resolvedAt": "2026-09-12T19:01:06.337Z",
+    "firstResponseAt": "2026-09-12T19:15:11.545Z",
+    "resolvedAt": "2026-09-12T19:15:11.624Z",
     "waitingTimeSeconds": 0,
     "handlingTimeSeconds": 0,
-    "conversationId": "conv-1789239665881-1fa5ed85c54e"
+    "conversationId": "conv-1789240511181-0092a1939c3e"
   },
   "signals": {
     "ticketCreated": true,
@@ -39,25 +39,25 @@
   },
   "replay": [
     {
-      "timestamp": "2026-09-12T19:01:05.000Z",
+      "timestamp": "2026-09-12T19:15:11.000Z",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Cliente inicia conversa enterprise 1789239665760",
+      "text": "Cliente inicia conversa enterprise 1789240510977",
       "status": null,
       "source": "ticket",
       "order": -10000
     },
     {
-      "timestamp": "2026-09-12T19:01:06.000Z",
+      "timestamp": "2026-09-12T19:15:11.000Z",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Cliente confirmou retorno enterprise 1789239665760",
+      "text": "Cliente confirmou retorno enterprise 1789240510977",
       "status": null,
       "source": "ticket",
       "order": -9996
     },
     {
-      "timestamp": "2026-09-12T19:01:06.162Z",
+      "timestamp": "2026-09-12T19:15:11.465Z",
       "kind": "audit_log",
       "actor": "systemadmin",
       "text": "ticket_takeover",
@@ -67,7 +67,7 @@
       "order": 20003
     },
     {
-      "timestamp": "2026-09-12T19:01:06.171Z",
+      "timestamp": "2026-09-12T19:15:11.480Z",
       "kind": "ticket_message",
       "actor": "customer",
       "text": "Ticket atribuido para cc1fbca6-d8cb-4ac8-a858-2d221244a8b3.",
@@ -76,7 +76,7 @@
       "order": -9999
     },
     {
-      "timestamp": "2026-09-12T19:01:06.173Z",
+      "timestamp": "2026-09-12T19:15:11.487Z",
       "kind": "audit_log",
       "actor": "systemadmin",
       "text": "ticket_assign",
@@ -86,25 +86,25 @@
       "order": 20002
     },
     {
-      "timestamp": "2026-09-12T19:01:06.210Z",
+      "timestamp": "2026-09-12T19:15:11.527Z",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Transferencia realizada. Fila: enterprise_support_1789239665760 · Sem atendente",
+      "text": "Transferencia realizada. Fila: enterprise_support_1789240510977 · Sem atendente",
       "status": null,
       "source": "ticket",
       "order": -9998
     },
     {
-      "timestamp": "2026-09-12T19:01:06.220Z",
+      "timestamp": "2026-09-12T19:15:11.545Z",
       "kind": "ticket_message",
       "actor": "agent",
-      "text": "Humano assumiu o atendimento enterprise 1789239665760",
+      "text": "Humano assumiu o atendimento enterprise 1789240510977",
       "status": "pending",
       "source": "ticket",
       "order": -9997
     },
     {
-      "timestamp": "2026-09-12T19:01:06.226Z",
+      "timestamp": "2026-09-12T19:15:11.547Z",
       "kind": "audit_log",
       "actor": "systemadmin",
       "text": "ticket_message",
@@ -116,7 +116,7 @@
       "order": 20001
     },
     {
-      "timestamp": "2026-09-12T19:01:06.337Z",
+      "timestamp": "2026-09-12T19:15:11.624Z",
       "kind": "ticket_message",
       "actor": "customer",
       "text": "Ticket encerrado.",
@@ -125,7 +125,7 @@
       "order": -9995
     },
     {
-      "timestamp": "2026-09-12T19:01:06.344Z",
+      "timestamp": "2026-09-12T19:15:11.629Z",
       "kind": "audit_log",
       "actor": "systemadmin",
       "text": "ticket_close",
