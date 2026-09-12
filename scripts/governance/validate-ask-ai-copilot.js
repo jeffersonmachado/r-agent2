@@ -239,10 +239,30 @@ check('knowledge_classification', 'ingestão exige domain/classification explíc
 // 11. Projeção operacional de jornada ---------------------------------------
 check('journey_projection_sanitized', 'projeção operacional de jornada não contém internals de QA', () => {
   const artifactPath = path.join(ROOT, 'reports', 'business-journey-projections.json');
-  assert(fs.existsSync(artifactPath), 'artefato de projeções ausente (rode npm run journey:projections)');
+
+  // §P1/§P2 (política B) — a projeção é artefato DETERMINÍSTICO gerado antes da
+  // validação. `reports/*` é ignorado pelo git, então em checkout limpo o arquivo
+  // não existe: o gate o produz pelo gerador canônico em vez de exigir comando
+  // manual oculto. O motivo da geração é reportado (nunca silencioso) e falha de
+  // geração é falha do gate.
+  let freshnessNote = 'fresco';
+  try {
+    const { ensureProjectionsFresh } = require(path.join(ROOT, 'scripts', 'generate-journey-projections'));
+    const freshness = ensureProjectionsFresh();
+    if (freshness.generated) freshnessNote = `gerado (${freshness.reason})`;
+  } catch (error) {
+    assert(false, `falha ao garantir projeções determinísticas: ${error.message}`);
+  }
+
+  assert(fs.existsSync(artifactPath), 'artefato de projeções ausente após geração determinística');
   const artifact = JSON.parse(fs.readFileSync(artifactPath, 'utf8'));
   assert(artifact.scope === 'OPERATIONAL', 'projeção não declarada OPERATIONAL');
   assert(Array.isArray(artifact.journeys) && artifact.journeys.length > 0, 'projeção vazia');
+  // §P4: frescor provado por fingerprint das ENTRADAS, não por data de arquivo.
+  assert(
+    typeof artifact.inputFingerprint === 'string' && artifact.inputFingerprint.length === 64,
+    'projeção sem inputFingerprint — frescor não é provável',
+  );
 
   const projection = require(path.join(ROOT, 'src', 'core', 'operational', 'journey-projection'));
   projection.assertOperationalClean(artifact);
@@ -269,7 +289,7 @@ check('journey_projection_sanitized', 'projeção operacional de jornada não co
     sync.includes('reports/business-journey-projections.json'),
     'projeção operacional não é ingerida no conhecimento global',
   );
-  return `${artifact.journeys.length} projeções OPERATIONAL limpas e ingeridas`;
+  return `${artifact.journeys.length} projeções OPERATIONAL limpas e ingeridas (${freshnessNote})`;
 });
 
 // 12. O histórico persistido PARTICIPA do turno ---------------------------

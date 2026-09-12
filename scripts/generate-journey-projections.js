@@ -18,6 +18,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const {
   deriveProjectionFromQaCoverage,
@@ -70,6 +71,9 @@ function buildProjections() {
     generatedBy: 'scripts/generate-journey-projections.js',
     scope: PROJECTION_SCOPE,
     version: PROJECTION_VERSION,
+    // §P4: frescor por FINGERPRINT das entradas. Projeção antiga não pode
+    // permanecer "fresca" depois que a matéria-prima ou o catálogo mudarem.
+    inputFingerprint: computeInputFingerprint(),
     summary: {
       journeys: projections.length,
       skipped: skipped.length,
@@ -83,11 +87,68 @@ function buildProjections() {
   return { artifact, skipped };
 }
 
+/**
+ * §P4 — hash determinístico das ENTRADAS (cobertura por jornada + catálogo).
+ * Muda quando a matéria-prima muda, permitindo provar frescor sem depender de
+ * data de arquivo.
+ */
+function computeInputFingerprint() {
+  const hash = crypto.createHash('sha256');
+  if (fs.existsSync(COVERAGE_DIR)) {
+    for (const name of fs.readdirSync(COVERAGE_DIR).sort()) {
+      if (!name.endsWith('.json')) continue;
+      hash.update(`coverage:${name}:`);
+      hash.update(fs.readFileSync(path.join(COVERAGE_DIR, name), 'utf8'));
+    }
+  }
+  hash.update('catalog:');
+  hash.update(fs.readFileSync(CATALOG_PATH, 'utf8'));
+  return hash.digest('hex');
+}
+
+function serializeProjections(artifact) {
+  return `${JSON.stringify(artifact, null, 2)}\n`;
+}
+
+function writeProjections() {
+  const { artifact, skipped } = buildProjections();
+  fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
+  fs.writeFileSync(OUTPUT_PATH, serializeProjections(artifact));
+  return { artifact, skipped };
+}
+
+/**
+ * §P1/§P2 (política B) — garante o artefato ANTES da validação, de forma
+ * determinística, sem exigir comando manual oculto. `reports/*` é ignorado pelo
+ * git, então em checkout limpo o artefato não existe: o gate precisa produzi-lo,
+ * não instruir o operador a produzi-lo.
+ *
+ * @returns {{ generated: boolean, reason: string, artifact: object|null }}
+ */
+function ensureProjectionsFresh() {
+  const expectedFingerprint = computeInputFingerprint();
+  if (!fs.existsSync(OUTPUT_PATH)) {
+    const { artifact } = writeProjections();
+    return { generated: true, reason: 'artifact_absent', artifact };
+  }
+  let current = null;
+  try {
+    current = JSON.parse(fs.readFileSync(OUTPUT_PATH, 'utf8'));
+  } catch (_) {
+    current = null;
+  }
+  if (!current || current.inputFingerprint !== expectedFingerprint) {
+    const { artifact } = writeProjections();
+    return { generated: true, reason: current ? 'input_fingerprint_changed' : 'artifact_unreadable', artifact };
+  }
+  return { generated: false, reason: 'fresh', artifact: current };
+}
+
 function main() {
   const checkOnly = process.argv.includes('--check');
   const { artifact, skipped } = buildProjections();
 
-  const serialized = `${JSON.stringify(artifact, null, 2)}\n`;
+  const serialized = serializeProjections(artifact);
 
   if (checkOnly) {
     const current = fs.existsSync(OUTPUT_PATH) ? fs.readFileSync(OUTPUT_PATH, 'utf8') : null;
@@ -108,4 +169,17 @@ function main() {
   console.log(`   saída: ${path.relative(ROOT, OUTPUT_PATH)}`);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  buildProjections,
+  writeProjections,
+  ensureProjectionsFresh,
+  computeInputFingerprint,
+  serializeProjections,
+  OUTPUT_PATH,
+  COVERAGE_DIR,
+  CATALOG_PATH,
+};
