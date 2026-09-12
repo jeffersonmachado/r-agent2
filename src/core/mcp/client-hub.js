@@ -29,7 +29,9 @@ const { createMcpQuota } = require('./quota');
 const CONNECTION_REQUIRED_FIELDS = ['tenant', 'name', 'endpoint'];
 
 /** Modos de autenticação suportados (M7). `no_auth` exige opt-in explícito. */
-const AUTH_MODES = Object.freeze(['bearer', 'api_key', 'oauth2', 'service_principal', 'mtls', 'no_auth']);
+const { buildAuthHeaders, AUTH_CAPABILITIES } = require('./auth-capabilities');
+
+const AUTH_MODES = Object.freeze(Object.keys(AUTH_CAPABILITIES));
 
 function validateConnection(connection) {
   for (const field of CONNECTION_REQUIRED_FIELDS) {
@@ -205,9 +207,13 @@ function createMcpClientHub({
       );
     }
 
-    if (connection.authType === 'api_key') return { 'X-API-Key': secret };
-    if (connection.authType === 'mtls') return { 'X-Client-Cert-Ref': secret };
-    return { Authorization: `Bearer ${secret}` };
+    // §M13–M16: verdade de autenticação vem da fonte única. O modo `mtls` é
+    // UNSUPPORTED e é recusado aqui em vez de fingir autenticação com header de
+    // referência de certificado (que não é handshake TLS).
+    return buildAuthHeaders(connection.authType, secret, {
+      classification: connection.classification,
+      allowNoAuth: connection.allowNoAuth === true,
+    });
   }
 
   function defaultTransportFactory(connection, authHeaders) {

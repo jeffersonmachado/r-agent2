@@ -31,7 +31,7 @@ const config = require('../utils/config');
  *   timeoutMs, retryPolicy: { attempts },
  * }]
  */
-function loadMcpConnections() {
+function loadMcpConnectionsFromConfig() {
   try {
     const raw = config.get('mcp.connections');
     if (!raw) return [];
@@ -45,6 +45,81 @@ function loadMcpConnections() {
     logger.warn('[McpClientComposition] Failed to load MCP connections', { error: error.message });
     return [];
   }
+}
+
+/** Mantido para compatibilidade de assinatura (§M6). */
+function loadMcpConnections() {
+  return loadMcpConnectionsFromConfig();
+}
+
+/**
+ * §M6/§M7 — o BANCO é a autoridade das conexões externas.
+ *
+ * Ordem:
+ *   1. importa a config legada como BOOTSTRAP determinístico e idempotente
+ *      (chave `(tenant_key, name)` impede duplicação entre startups);
+ *   2. carrega do banco apenas as conexões HABILITADAS.
+ *
+ * Assim o control plane deixa de ser estado em memória: habilitar/desabilitar,
+ * ciclo de vida e fingerprint de schema persistem entre reinícios. Se o banco
+ * não estiver disponível, a config legada continua servindo (degradação
+ * explícita), sem jamais inventar conexão.
+ */
+async function loadConnectionsFromPersistence({ tenants = [], actor = 'runtime-startup' } = {}) {
+  let service;
+  try {
+    service = require('../services/mcp/mcpConnectionService');
+  } catch (error) {
+    return { connections: [], source: 'persistence-unavailable', error: error.message, imported: null };
+  }
+
+  const legacy = loadMcpConnectionsFromConfig();
+  const legacyByTenant = new Map();
+  for (const connection of legacy) {
+    const tenant = String(connection.tenant || '').trim();
+    if (!tenant) continue;
+    if (!legacyByTenant.has(tenant)) legacyByTenant.set(tenant, []);
+    legacyByTenant.get(tenant).push(connection);
+  }
+
+  const tenantIds = new Set([...tenants.map(String), ...legacyByTenant.keys()]);
+  const imported = [];
+  for (const tenantId of tenantIds) {
+    try {
+      imported.push({ tenantId, result: await service.importFromConfigBootstrap({ tenantId, connections: legacyByTenant.get(tenantId) || [], actor }) });
+    } catch (error) {
+      imported.push({ tenantId, error: error.message });
+    }
+  }
+
+  const connections = [];
+  for (const tenantId of tenantIds) {
+    try {
+      const rows = await service.listEnabledConnections({ tenantId });
+      for (const row of rows) {
+        connections.push({
+          tenant: row.tenant_key,
+          name: row.name,
+          endpoint: row.endpoint,
+          transport: row.transport,
+          enabled: row.enabled,
+          classification: row.classification_ceiling,
+          authType: row.auth_type,
+          credentialRef: row.credential_ref,
+          connectionId: row.id,
+          schemaFingerprint: row.schema_fingerprint,
+        });
+      }
+    } catch (error) {
+      logger.warn('[McpClientComposition] Falha ao carregar conexões persistidas', { tenantId, error: error.message });
+    }
+  }
+
+  if (connections.length > 0) return { connections, source: 'control-plane', imported };
+  // Banco vazio/sem conexões habilitadas: a config legada ainda serve, mas o
+  // caminho usado é EXPLÍCITO no resultado.
+  if (legacy.length > 0) return { connections: legacy, source: 'config-bootstrap-fallback', imported };
+  return { connections: [], source: 'none', imported };
 }
 
 /** Lookup DNS com TODOS os endereços (valida rebinding, não só o 1º). */
@@ -85,10 +160,16 @@ async function startMcpClientComposition(deps = {}) {
       return null;
     }
 
-    const connections = loadMcpConnections();
+    const loaded = deps.connections
+      ? { connections: deps.connections, source: 'injected', imported: null }
+      : await loadConnectionsFromPersistence({
+        tenants: deps.tenants || [],
+        actor: 'runtime-startup',
+      });
+    const connections = loaded.connections;
 
     if (connections.length === 0) {
-      logger.info('[McpClientComposition] Nenhuma conexão MCP configurada — pulando');
+      logger.info('[McpClientComposition] Nenhuma conexão MCP configurada — pulando', { source: loaded.source });
       return null;
     }
 
@@ -107,6 +188,7 @@ async function startMcpClientComposition(deps = {}) {
 
     logger.info('[McpClientComposition] MCP Client Hub criado', {
       connections: connections.length,
+      source: loaded.source,
       tenants: [...new Set(connections.map((c) => c.tenant))],
     });
 
@@ -128,7 +210,7 @@ async function startMcpClientComposition(deps = {}) {
       skipped: result.skipped.length,
     });
 
-    return { hub, metrics, registeredTools: result.registered, skipped: result.skipped };
+    return { hub, metrics, registeredTools: result.registered, skipped: result.skipped, source: loaded.source };
   } catch (error) {
     // Configuração MCP inválida NÃO derruba o runtime: é reportada e o RAP
     // segue sem aquelas capabilities (estado explícito, nunca fake success).
@@ -139,4 +221,10 @@ async function startMcpClientComposition(deps = {}) {
   }
 }
 
-module.exports = { startMcpClientComposition, loadMcpConnections, defaultDnsLookup };
+module.exports = {
+  startMcpClientComposition,
+  loadMcpConnections,
+  loadMcpConnectionsFromConfig,
+  loadConnectionsFromPersistence,
+  defaultDnsLookup,
+};

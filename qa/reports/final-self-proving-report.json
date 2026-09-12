@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-12T08:50:36.382Z",
+  "generatedAt": "2026-09-12T09:15:40.156Z",
   "engine": "generate-self-proving-report/v1",
   "zipName": null,
   "zipHash": null,
@@ -12,7 +12,7 @@
   "packageIntegrityHash": "7a2c76949c9cba7f2328bd6220bbde631d2bf6d754a15aceb833bfbf8235d7da",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
   "gateHash": "2647236b0d2ee729ec32e98f89170fbac41ef50a0c7b43df3f58e6b4b9104f4b",
-  "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
+  "recalculatedReadinessHash": "9987274c3ca0757dcf308f5c8d9051d7048f1c0bdac5b79ab4ea265236eb2bd9",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
     "replayConsistency": "REPLAY_CONSISTENCY_GO",

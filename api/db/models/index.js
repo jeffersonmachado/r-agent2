@@ -38,6 +38,8 @@ const getTicketEvent = require('./TicketEvent');
 const getQueueAssignmentState = require('./QueueAssignmentState');
 const getEventLedger = require('./EventLedger');
 const getExecutionJob = require('./ExecutionJob');
+// §M1/§M3: control plane persistente das conexões MCP externas.
+const getMcpConnection = require('./McpConnection');
 const getSchedule = require('./Schedule');
 const getPublicAccessToken = require('./PublicAccessToken');
 const getFlowExecution = require('./FlowExecution');
@@ -224,6 +226,7 @@ const TicketEvent = () => getTicketEvent();
 const QueueAssignmentState = () => getQueueAssignmentState();
 const EventLedger = () => getEventLedger();
 const ExecutionJob = () => getExecutionJob();
+const McpConnection = () => getMcpConnection();
 const Schedule = () => getSchedule();
 const PublicAccessToken = () => getPublicAccessToken();
 const FlowExecution = () => getFlowExecution();
@@ -868,6 +871,7 @@ module.exports = {
   QueueAssignmentState,
   EventLedger,
   ExecutionJob,
+  McpConnection,
   Schedule,
   PublicAccessToken,
   FlowExecution,
@@ -1053,6 +1057,7 @@ module.exports = {
   getQueueAssignmentState,
   getEventLedger,
   getExecutionJob,
+  getMcpConnection,
   getSchedule,
   getPublicAccessToken,
   getFlowExecution,
