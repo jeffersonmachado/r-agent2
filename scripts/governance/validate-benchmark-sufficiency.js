@@ -184,6 +184,10 @@ function run({ policy, samples, registeredVerticals, coverage }) {
       file,
       status: evaluation.status,
       certifiable: evaluation.certifiable,
+      // §B6 — critério explícito da matriz: suficiência da amostra é o
+      // `certifiable` do engine, exposto com nome próprio para que nenhum
+      // consumidor precise inferir.
+      sampleSufficient: evaluation.certifiable === true,
       declaredClaim: sample.sampleSufficiencyClaim || null,
       externalBlock: evaluation.externalBlock || null,
       coverageDeclaredPercent: Number.isFinite(declaredCoverage) ? declaredCoverage : null,
@@ -230,6 +234,7 @@ function run({ policy, samples, registeredVerticals, coverage }) {
       sampleFilePresent: false,
       status: 'SAMPLE_NOT_RESEARCHED',
       certifiable: false,
+      sampleSufficient: false,
       declaredClaim: null,
       externalBlock: null,
       coverageDeclaredPercent: Number.isFinite(coverage.get(verticalId)) ? coverage.get(verticalId) : null,
@@ -261,6 +266,17 @@ function main() {
   }
 
   const all = [...violations, ...result.violations];
+  // §B1/§B5 — agregado honesto dos TRÊS eixos. `status: PASS` significa
+  // "nenhuma alegação indevida foi detectada" — NÃO significa "amostra
+  // saturada". O agregado abaixo é a autoridade para a matriz de status e
+  // nunca pode ser PASS quando nenhuma janela é mensurável.
+  const AXES = ['capability', 'journey', 'businessRule'];
+  const saturationAxes = Object.fromEntries(AXES.map((axis) => [axis, {
+    PASS: result.verticals.filter((v) => v.saturation && v.saturation[axis] === 'PASS').length,
+    FAIL: result.verticals.filter((v) => v.saturation && v.saturation[axis] === 'FAIL').length,
+    NOT_MEASURABLE: result.verticals.filter((v) => v.saturation && v.saturation[axis] === 'NOT_MEASURABLE').length,
+  }]));
+  const measurableAxes = AXES.filter((axis) => saturationAxes[axis].PASS > 0);
   const report = {
     reportType: 'benchmark-sufficiency',
     generatedAt: new Date().toISOString(),
@@ -272,6 +288,13 @@ function main() {
     holdoutStateTaxonomy: Object.values(HOLDOUT_STATES),
     verticalsAnalysed: result.verticals.length,
     sufficientVerticals: result.verticals.filter((v) => v.status === SAMPLE_STATES.SUFFICIENT).map((v) => v.vertical),
+    sampleSufficientVerticals: result.verticals.filter((v) => v.sampleSufficient === true).map((v) => v.vertical),
+    saturationAxes,
+    // Nenhuma dimensão com janela mensurável ⇒ NOT_MEASURABLE (nunca PASS).
+    saturationStatus: result.verticals.length === 0
+      ? 'NOT_MEASURABLE'
+      : (measurableAxes.length === 0 ? 'NOT_MEASURABLE' : 'MEASURED'),
+    measurableAxes,
     violations: all,
     verticals: result.verticals,
   };
@@ -285,6 +308,12 @@ function main() {
     process.stdout.write(
       `[benchmark-sufficiency] status=${report.status} policy=v${report.policyVersion} `
       + `verticais=${report.verticalsAnalysed} suficientes=${report.sufficientVerticals.length} violações=${all.length}\n`,
+    );
+    process.stdout.write(
+      `[benchmark-sufficiency] saturacao=${report.saturationStatus} `
+      + `cap(PASS=${saturationAxes.capability.PASS}/FAIL=${saturationAxes.capability.FAIL}/NM=${saturationAxes.capability.NOT_MEASURABLE}) `
+      + `journey(PASS=${saturationAxes.journey.PASS}/FAIL=${saturationAxes.journey.FAIL}/NM=${saturationAxes.journey.NOT_MEASURABLE}) `
+      + `bizRule(PASS=${saturationAxes.businessRule.PASS}/FAIL=${saturationAxes.businessRule.FAIL}/NM=${saturationAxes.businessRule.NOT_MEASURABLE})\n`,
     );
     for (const v of report.verticals) {
       process.stdout.write(`  - ${v.vertical} (${v.sampleVersion}): ${v.status}${v.externalBlock ? ` [${v.externalBlock.code}]` : ''}\n`);

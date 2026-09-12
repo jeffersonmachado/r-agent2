@@ -26,6 +26,11 @@ const { resolveRuntimePath } = require('../../utils/runtimePaths');
 const { normalizeReplay } = require('./journeyTrainerService');
 const { anonymize } = require('../../../src/core/learning/anonymizer');
 const { readTenantScopedReplay } = require('./replayStorage');
+// §A1–A6: fronteira PROVENIÊNCIA INTERNA × CONTEÚDO PRODUCTION. O manual do
+// operador não pode expor replay, seletor, alvo técnico nem falha técnica.
+const {
+  sanitizeProductionText, assertProductionClean, detectProductionLeaks,
+} = require('../../services/learning/manualSanitizer');
 const { indexDocument } = require('../../services/ragService');
 const logger = require('../../utils/logger');
 
@@ -124,8 +129,8 @@ function renderManualMarkdown({ title, replayId, journeyKey, steps, stats }) {
   const lines = [
     `# ${title}`,
     '',
-    `> Fonte: replay real \`${replayId}\` · Jornada: \`${journeyKey || 'n/a'}\` · Gerado pela plataforma (Learning Core) em ${new Date().toISOString()}.`,
-    `> Valores de campos anonimizados (${stats?.redactions || 0} campos mascarados).`,
+    '> Manual operacional gerado pela plataforma (Learning Core) a partir da '
+      + 'execução observada desta jornada no ambiente do cliente.',
     '',
     '## Passo a passo',
     '',
@@ -134,11 +139,12 @@ function renderManualMarkdown({ title, replayId, journeyKey, steps, stats }) {
   for (const step of steps) {
     lines.push(`### Passo ${step.order} — ${step.name}`);
     lines.push('');
-    lines.push(`- Ação: **${step.label}**${step.selector ? ` (alvo \`${step.selector}\`)` : ''}`);
+    // §A3: linguagem OPERACIONAL. O alvo técnico (seletor) não é instrução de
+    // operador — é proveniência interna, preservada no artefato de proveniência.
+    lines.push(`- Ação: **${step.label}**`);
     if (step.value !== null && step.value !== undefined && step.value !== '') {
       lines.push(`- Valor: \`${step.value}\``);
     }
-    lines.push(`- Resultado: ${step.success ? 'sucesso ✅' : 'falha ❌'}`);
     if (step.image) {
       lines.push('');
       lines.push(`![Passo ${step.order} — ${step.name}](${step.image})`);
@@ -146,7 +152,38 @@ function renderManualMarkdown({ title, replayId, journeyKey, steps, stats }) {
     lines.push('');
   }
 
-  return `${lines.join('\n')}\n`;
+  const rendered = `${lines.join('\n')}\n`;
+  // §A6 backstop FAIL-CLOSED: nenhum manual PRODUCTION sai com detalhe interno,
+  // mesmo que geradores futuros alterem o template.
+  const { text } = sanitizeProductionText(rendered);
+  assertProductionClean(text, 'manual PRODUCTION');
+  return text;
+}
+
+/**
+ * Proveniência INTERNA do manual — preserva auditabilidade (§A2/§A5) sem
+ * contaminar o conteúdo PRODUCTION. Classificação: SUPPORT/DEVELOPMENT.
+ */
+function renderManualProvenance({ manualId, replayId, journeyKey, steps, stats }) {
+  return {
+    artifactType: 'manual-provenance',
+    artifactVersion: '1.0.0',
+    classification: 'DEVELOPMENT',
+    domain: 'SYSTEM',
+    manualId: manualId || null,
+    replayId: replayId || null,
+    journeyKey: journeyKey || null,
+    redactions: (stats && stats.redactions) || 0,
+    generatedAt: new Date().toISOString(),
+    technicalSteps: (steps || []).map((step) => ({
+      order: step.order,
+      name: step.name,
+      action: step.action || null,
+      selector: step.selector || null,
+      image: step.image || null,
+      executedSuccessfully: step.success !== false,
+    })),
+  };
 }
 
 function readMetadata(manualDir) {
@@ -228,9 +265,10 @@ async function generateManualFromReplay({ tenantId, replayId, title, journeyKey,
       category: 'operational-manual',
       contentType: 'manual',
       sourceId: ragDocumentId,
-      sourceType: 'replay-derivation',
+      // §A5: a metadata indexada no RAG PRODUCTION não revela replay. A
+      // rastreabilidade técnica (replayId, selector, uiTrace) fica no
+      // `metadata.json` interno do manual, que não é indexado.
       manualId,
-      replayId,
       journeyKey: resolvedJourneyKey,
       version: 1,
     },
@@ -511,4 +549,9 @@ module.exports = {
   resolveManualFile,
   buildManualHtml,
   ensureManualPdf,
+  MANUAL_CLASSIFICATION,
+  // Superfície de teste: permite provar que o template não vaza detalhe interno
+  // sem precisar de replay real em disco (§A6).
+  __renderManualMarkdownForTest: renderManualMarkdown,
+  renderManualProvenance,
 };

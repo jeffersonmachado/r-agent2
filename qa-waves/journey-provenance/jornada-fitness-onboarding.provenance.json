@@ -1,0 +1,333 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.351Z",
+  "vertical": "fitness",
+  "journeyId": "onboarding",
+  "replaySupport": true,
+  "requiredCapabilities": [
+    "customer_identification",
+    "crm_updates",
+    "notifications",
+    "onboarding"
+  ],
+  "contractConfidence": 0.93,
+  "scenarios": [
+    {
+      "scenarioId": "fitness-matricula-onboarding",
+      "scenario": "Onboarding do Novo Aluno",
+      "status": "deprecated",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "fitness_full_onboarding_whatsapp_primeiro_acesso_e2e",
+      "scenario": "[Manual] Onboarding de novo aluno via WhatsApp — primeiro acesso completo",
+      "status": "approved",
+      "channels": [
+        "whatsapp",
+        "chat",
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "accessControlService",
+        "aiIntentService",
+        "api",
+        "flowEngine",
+        "meshValidator",
+        "ragService",
+        "schedulingService",
+        "semanticValidator",
+        "whatsapp"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true,
+        "fallbackAllowed": false
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 3,
+          "type": "validate_intent",
+          "name": null,
+          "adapter": "aiIntentService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 4,
+          "type": "provide_data",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 5,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 6,
+          "type": "validate_context",
+          "name": null,
+          "adapter": "ragService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 7,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 8,
+          "type": "provide_data",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 9,
+          "type": "check_availability",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 10,
+          "type": "select_slot",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 11,
+          "type": "create_booking",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 12,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 13,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 14,
+          "type": "validate_access_release",
+          "name": null,
+          "adapter": "accessControlService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 15,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 16,
+          "type": "validate_sla",
+          "name": null,
+          "adapter": "meshValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 17,
+          "type": "validate_flow_transition",
+          "name": null,
+          "adapter": "flowEngine",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 18,
+          "type": "validate_fallback",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-e2e-onboarding",
+      "scenario": "E2E: onboarding",
+      "status": "approved",
+      "channels": [
+        "whatsapp"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-onboarding",
+      "scenario": "Validação: Onboarding",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-onboarding-customer_identification_active",
+      "scenario": "Precondição: Customer Identification Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-onboarding-onboarding_flow_active",
+      "scenario": "Precondição: Onboarding Flow Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ]
+}

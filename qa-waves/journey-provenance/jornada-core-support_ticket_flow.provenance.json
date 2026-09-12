@@ -1,0 +1,131 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.337Z",
+  "vertical": "core",
+  "journeyId": "support_ticket_flow",
+  "replaySupport": false,
+  "requiredCapabilities": [
+    "support_ticket_flow",
+    "support_ticket_reply"
+  ],
+  "contractConfidence": 0.81,
+  "scenarios": [
+    {
+      "scenarioId": "business-core-flow-support-ticket",
+      "scenario": "Core abertura, resposta e encerramento de ticket de suporte",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-core-flow-support-ticket-lifecycle",
+      "scenario": "Core ticket: takeover, pausa, retomada e encerramento com estados persistidos",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-core-flow-support-ticket-notfound",
+      "scenario": "Core operações em ticket inexistente rejeitadas com 404 sem efeito colateral",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "support-inbox-nota-ui",
+      "scenario": "Support — Nota Interna em Ticket da Caixa de Entrada via UI",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": "Usuário abre menu Atendimento → Caixa de Entrada",
+          "adapter": "chat",
+          "channel": "chat",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "provide_data",
+          "name": "Usuário seleciona um ticket da lista",
+          "adapter": "chat",
+          "channel": "chat",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 3,
+          "type": "provide_data",
+          "name": "Usuário escreve a nota interna",
+          "adapter": "chat",
+          "channel": "chat",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 4,
+          "type": "validate_backend",
+          "name": "Sistema persiste a nota interna",
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 5,
+          "type": "validate_response",
+          "name": "UI confirma Nota adicionada",
+          "adapter": "semanticValidator",
+          "channel": "chat",
+          "timeoutMs": 20000
+        }
+      ]
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ],
+  "surface": "DEVELOPMENT"
+}

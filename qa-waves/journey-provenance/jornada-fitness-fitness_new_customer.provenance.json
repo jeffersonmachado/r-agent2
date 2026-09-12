@@ -1,0 +1,174 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.348Z",
+  "vertical": "fitness",
+  "journeyId": "fitness_new_customer",
+  "replaySupport": true,
+  "requiredCapabilities": [
+    "customer_identification",
+    "membership_validation",
+    "access_decision",
+    "attendance_record",
+    "crm_update"
+  ],
+  "contractConfidence": 0.97,
+  "scenarios": [
+    {
+      "scenarioId": "business-e2e-fitness_new_customer",
+      "scenario": "E2E: fitness_new_customer",
+      "status": "approved",
+      "channels": [
+        "whatsapp"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-fitness_new_customer-customer_identification_active",
+      "scenario": "Precondição: Customer Identification Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-fitness_new_customer-membership_validation_active",
+      "scenario": "Precondição: Membership Validation Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-fit-flow-checkin",
+      "scenario": "Fitness check-in e controle de acesso",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-fit-flow-student",
+      "scenario": "Fitness cadastro de aluno e salvamento",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-fit-scr-01",
+      "scenario": "Fitness Students screen smoke",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-fit-scr-02",
+      "scenario": "Fitness Memberships screen smoke",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-fit-scr-03",
+      "scenario": "Fitness Attendance screen smoke",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ]
+}

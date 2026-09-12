@@ -1,0 +1,55 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.335Z",
+  "vertical": "core",
+  "journeyId": "quick_replies",
+  "replaySupport": false,
+  "requiredCapabilities": [
+    "quick_replies"
+  ],
+  "contractConfidence": 0.59,
+  "scenarios": [
+    {
+      "scenarioId": "business-core-biz-quick-replies",
+      "scenario": "Core respostas rápidas: criada, listada e removida",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ],
+  "surface": "DEVELOPMENT"
+}

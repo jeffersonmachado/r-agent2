@@ -1,0 +1,75 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.322Z",
+  "vertical": "core",
+  "journeyId": "booking_flow",
+  "replaySupport": false,
+  "requiredCapabilities": [
+    "support_ticket_flow"
+  ],
+  "contractConfidence": 0.71,
+  "scenarios": [
+    {
+      "scenarioId": "business-core-flow-booking",
+      "scenario": "Core agendamento criado, confirmado e concluído",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-core-flow-booking-reschedule",
+      "scenario": "Core agendamento remarcado, confirmado e concluído",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-core-flow-booking-terminal-states",
+      "scenario": "Core agendamento: no-show, recusa, ação inválida e agendamento inexistente",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ],
+  "surface": "DEVELOPMENT"
+}

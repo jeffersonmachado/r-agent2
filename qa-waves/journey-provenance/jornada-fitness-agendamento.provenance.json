@@ -1,0 +1,554 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.342Z",
+  "vertical": "fitness",
+  "journeyId": "agendamento",
+  "replaySupport": true,
+  "requiredCapabilities": [
+    "customer_identification",
+    "scheduling",
+    "notifications",
+    "crm_update"
+  ],
+  "contractConfidence": 0.93,
+  "scenarios": [
+    {
+      "scenarioId": "fitness-matricula-agendamento",
+      "scenario": "Agendamento de Aula Experimental",
+      "status": "deprecated",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "fitness_full_agendamento_whatsapp_e2e_pagamento_confirmacao",
+      "scenario": "E2E no WhatsApp: agendar aula (pilates) com escolha de unidade, checagem de elegibilidade, pagamento e confirmação com política de cancelamento",
+      "status": "approved",
+      "channels": [
+        "whatsapp",
+        "chat",
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "aiIntentService",
+        "api",
+        "eventMesh",
+        "flowEngine",
+        "meshValidator",
+        "paymentService",
+        "ragService",
+        "schedulingService",
+        "semanticValidator",
+        "whatsapp"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true,
+        "fallbackAllowed": false
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 3,
+          "type": "validate_intent",
+          "name": null,
+          "adapter": "aiIntentService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 4,
+          "type": "provide_data",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 5,
+          "type": "validate_context",
+          "name": null,
+          "adapter": "ragService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 6,
+          "type": "check_availability",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 7,
+          "type": "select_slot",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 8,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 9,
+          "type": "create_payment",
+          "name": null,
+          "adapter": "paymentService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 10,
+          "type": "wait_for_event",
+          "name": null,
+          "adapter": "eventMesh",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 11,
+          "type": "trigger_channel_event",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 12,
+          "type": "create_booking",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 13,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 14,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 15,
+          "type": "validate_sla",
+          "name": null,
+          "adapter": "meshValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 16,
+          "type": "validate_flow_transition",
+          "name": null,
+          "adapter": "flowEngine",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "fitness_full_agendamento_avaliacao_e_pagamento_whatsapp",
+      "scenario": "WhatsApp: agendar avaliação física com personal, validar disponibilidade, pagamento antecipado e confirmação com política de cancelamento",
+      "status": "approved",
+      "channels": [
+        "whatsapp",
+        "chat",
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "aiIntentService",
+        "api",
+        "eventMesh",
+        "flowEngine",
+        "meshValidator",
+        "paymentService",
+        "ragService",
+        "schedulingService",
+        "semanticValidator",
+        "whatsapp"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true,
+        "fallbackAllowed": false
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 3,
+          "type": "validate_intent",
+          "name": null,
+          "adapter": "aiIntentService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 4,
+          "type": "provide_data",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 5,
+          "type": "check_availability",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 6,
+          "type": "select_slot",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 7,
+          "type": "provide_data",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 8,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 9,
+          "type": "create_payment",
+          "name": null,
+          "adapter": "paymentService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 10,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 11,
+          "type": "validate_sla",
+          "name": null,
+          "adapter": "meshValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 12,
+          "type": "wait_for_event",
+          "name": null,
+          "adapter": "eventMesh",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 13,
+          "type": "trigger_channel_event",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 14,
+          "type": "create_booking",
+          "name": null,
+          "adapter": "schedulingService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 15,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 16,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 17,
+          "type": "validate_context",
+          "name": null,
+          "adapter": "ragService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 18,
+          "type": "validate_flow_transition",
+          "name": null,
+          "adapter": "flowEngine",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "fitness-matricula-agendamento-ui",
+      "scenario": "Agendamento de Aula Experimental via UI",
+      "status": "approved",
+      "channels": [
+        "chat",
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "chat",
+        "schedulingService",
+        "semanticValidator"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": "Usuário abre menu Construtor → Tarefas",
+          "adapter": "chat",
+          "channel": "chat",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "provide_data",
+          "name": "Usuário preenche e cria a tarefa",
+          "adapter": "chat",
+          "channel": "chat",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 3,
+          "type": "provide_data",
+          "name": "Usuário preenche o formulário de agendamento",
+          "adapter": "schedulingService",
+          "channel": "chat",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 4,
+          "type": "create_booking",
+          "name": "Sistema cria o agendamento",
+          "adapter": "schedulingService",
+          "channel": "api",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 5,
+          "type": "validate_response",
+          "name": "UI confirma Agendamento criado",
+          "adapter": "semanticValidator",
+          "channel": "chat",
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-e2e-agendamento",
+      "scenario": "E2E: agendamento",
+      "status": "approved",
+      "channels": [
+        "whatsapp"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-agendamento-customer_identification_active",
+      "scenario": "Precondição: Customer Identification Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-agendamento-schedule_service_available",
+      "scenario": "Precondição: Schedule Service Available",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-agendamento-calendar_writable",
+      "scenario": "Precondição: Calendar Writable",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ]
+}

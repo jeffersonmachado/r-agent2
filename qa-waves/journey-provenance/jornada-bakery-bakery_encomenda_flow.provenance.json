@@ -1,0 +1,297 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.306Z",
+  "vertical": "bakery",
+  "journeyId": "bakery_encomenda_flow",
+  "replaySupport": true,
+  "requiredCapabilities": [
+    "customer_identification",
+    "order_management",
+    "payment",
+    "production_tracking",
+    "notifications",
+    "retention"
+  ],
+  "contractConfidence": 1,
+  "scenarios": [
+    {
+      "scenarioId": "cap-order_management",
+      "scenario": "Validação: Order Management",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-production_tracking",
+      "scenario": "Validação: Production Tracking",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-retention",
+      "scenario": "Validação: Retention",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-e2e-bakery_encomenda_flow",
+      "scenario": "Encomenda Completa de Padaria",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp",
+        "webchat"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "send_message",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        },
+        {
+          "order": 2,
+          "type": "validate_intent",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        },
+        {
+          "order": 3,
+          "type": "send_message",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        },
+        {
+          "order": 4,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        },
+        {
+          "order": 5,
+          "type": "wait_for_event",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        },
+        {
+          "order": 6,
+          "type": "send_message",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        },
+        {
+          "order": 7,
+          "type": "validate_flow_transition",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-bakery_encomenda_flow-order_service_available",
+      "scenario": "Precondição: Order Service Available",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-bakery_encomenda_flow-payment_gateway_available",
+      "scenario": "Precondição: Payment Gateway Available",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-bakery_encomenda_flow-storefront_channel_active",
+      "scenario": "Precondição: Storefront Channel Active",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-bakery-flow-encomenda",
+      "scenario": "Padaria encomenda aberta até entrega",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-bakery-flow-pedido-status",
+      "scenario": "Padaria pedido avança produção até entrega",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ]
+}

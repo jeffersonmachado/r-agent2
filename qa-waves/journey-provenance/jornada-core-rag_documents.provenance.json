@@ -1,0 +1,65 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.336Z",
+  "vertical": "core",
+  "journeyId": "rag_documents",
+  "replaySupport": false,
+  "requiredCapabilities": [
+    "rag_documents"
+  ],
+  "contractConfidence": 0.65,
+  "scenarios": [
+    {
+      "scenarioId": "business-core-biz-rag-documents",
+      "scenario": "Core rag documents: health, domains, documento criado/consultado/atualizado, upload dry-run, query, stats e cleanup",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-core-biz-rag-segregation",
+      "scenario": "Core rag segregation: domínio declarado pelo cliente é ignorado, escopo aplicado por domínio e metadata de escopo presente",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ],
+  "surface": "DEVELOPMENT"
+}

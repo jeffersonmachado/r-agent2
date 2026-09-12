@@ -243,8 +243,8 @@ describe('curvas de descoberta (§7, §8)', () => {
   it('regra de negócio crítica nova reprova a saturação de regras mesmo com capabilities saturadas', () => {
     const s = sample({
       benchmarks: [
-        benchmark({ id: 'b1', order: 1, previousInventorySize: 0, novelty: novelty({ newCapabilities: ['c1'] }) }),
-        benchmark({ id: 'b2', order: 2, independenceGroup: 'g2', archetype: 'a2', previousInventorySize: 1, novelty: novelty({ newCriticalBusinessRules: ['freeze_interrupts_billing'] }) }),
+        benchmark({ id: 'b1', order: 1, previousInventorySize: 100, novelty: novelty({ newCapabilities: ['c1'] }) }),
+        benchmark({ id: 'b2', order: 2, independenceGroup: 'g2', archetype: 'a2', previousInventorySize: 101, novelty: novelty({ newCriticalBusinessRules: ['freeze_interrupts_billing'] }) }),
       ],
     });
     const saturation = evaluateSaturation({ sample: s, policy: POLICY });
@@ -259,15 +259,27 @@ describe('janela de saturação (§9, §10, §11)', () => {
   it('usa apenas observações independentes na janela', () => {
     const s = sample({
       benchmarks: [
-        benchmark({ id: 'b1', order: 1, independenceGroup: 'g1', archetype: 'a1', previousInventorySize: 0, novelty: novelty({ newCapabilities: ['c1'] }) }),
-        benchmark({ id: 'b2', order: 2, independenceGroup: 'g1', archetype: 'a1', previousInventorySize: 1, novelty: novelty({ newCapabilities: ['c2', 'c3', 'c4', 'c5', 'c6', 'c7'] }) }),
-        benchmark({ id: 'b3', order: 3, independenceGroup: 'g2', archetype: 'a2', previousInventorySize: 1, novelty: novelty() }),
+        benchmark({ id: 'b1', order: 1, independenceGroup: 'g1', archetype: 'a1', previousInventorySize: 100, novelty: novelty({ newCapabilities: ['c1'] }) }),
+        benchmark({ id: 'b2', order: 2, independenceGroup: 'g1', archetype: 'a1', previousInventorySize: 101, novelty: novelty({ newCapabilities: ['c2', 'c3', 'c4', 'c5', 'c6', 'c7'] }) }),
+        benchmark({ id: 'b3', order: 3, independenceGroup: 'g2', archetype: 'a2', previousInventorySize: 107, novelty: novelty() }),
       ],
     });
     const saturation = evaluateSaturation({ sample: s, policy: POLICY });
     // b2 é do MESMO grupo de b1: não entra como observação independente.
     expect(saturation.window.map((p) => p.benchmarkId)).toEqual(['b1', 'b3']);
     expect(saturation.capability.status).toBe('PASS');
+  });
+
+  it('B4 — janela com ponto de denominador zero NÃO passa (não se completa com trabalho inexistente)', () => {
+    const s = sample({
+      benchmarks: [
+        benchmark({ id: 'b1', order: 1, independenceGroup: 'g1', archetype: 'a1', previousInventorySize: 0, novelty: novelty({ newCapabilities: ['c1'] }) }),
+        benchmark({ id: 'b2', order: 2, independenceGroup: 'g2', archetype: 'a2', previousInventorySize: 100, novelty: novelty() }),
+      ],
+    });
+    const saturation = evaluateSaturation({ sample: s, policy: POLICY });
+    expect(saturation.capability.insufficientWindow).toBe(false);
+    expect(saturation.capability.status).toBe('NOT_MEASURABLE');
   });
 
   it('janela incompleta não pode produzir saturação', () => {
@@ -407,10 +419,10 @@ describe('sensibilidade de ordem (§28)', () => {
     // então a saturação não pode depender da ordem.
     const saturated = sample({
       benchmarks: [
-        benchmark({ id: 'b1', order: 1, archetype: 'a1', independenceGroup: 'g1', previousInventorySize: 0, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty({ newCapabilities: ['c1'] }) }),
-        benchmark({ id: 'b2', order: 2, archetype: 'a2', independenceGroup: 'g2', previousInventorySize: 1, dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
-        benchmark({ id: 'b3', order: 3, archetype: 'a1', independenceGroup: 'g3', previousInventorySize: 1, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty() }),
-        benchmark({ id: 'h1', role: 'validation', order: 4, archetype: 'a2', independenceGroup: 'gh', previousInventorySize: 1, dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
+        benchmark({ id: 'b1', order: 1, archetype: 'a1', independenceGroup: 'g1', previousInventorySize: 100, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty({ newCapabilities: ['c1'] }) }),
+        benchmark({ id: 'b2', order: 2, archetype: 'a2', independenceGroup: 'g2', previousInventorySize: 101, dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
+        benchmark({ id: 'b3', order: 3, archetype: 'a1', independenceGroup: 'g3', previousInventorySize: 101, dimensions: { marketArchetype: 'a1', geography: 'BR' }, novelty: novelty() }),
+        benchmark({ id: 'h1', role: 'validation', order: 4, archetype: 'a2', independenceGroup: 'gh', previousInventorySize: 101, dimensions: { marketArchetype: 'a2', geography: 'US' }, novelty: novelty() }),
       ],
     });
     expect(evaluateOrderSensitivity({ sample: saturated, policy: POLICY }).orderSensitivity).toBe('LOW');

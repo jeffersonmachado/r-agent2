@@ -1,0 +1,186 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.308Z",
+  "vertical": "bakery",
+  "journeyId": "bakery_estoque_perdas",
+  "replaySupport": true,
+  "requiredCapabilities": [
+    "inventory_monitoring",
+    "stock_alerts",
+    "loss_tracking",
+    "crm_updates"
+  ],
+  "contractConfidence": 0.93,
+  "scenarios": [
+    {
+      "scenarioId": "business-e2e-bakery_estoque_perdas",
+      "scenario": "E2E: bakery_estoque_perdas",
+      "status": "draft_ai",
+      "channels": [
+        "whatsapp"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-inventory_monitoring",
+      "scenario": "Validação: Inventory Monitoring",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-stock_alerts",
+      "scenario": "Validação: Stock Alerts",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-loss_tracking",
+      "scenario": "Validação: Loss Tracking",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-bakery_estoque_perdas-inventory_service_available",
+      "scenario": "Precondição: Inventory Service Available",
+      "status": "draft_ai",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-bakery-flow-estoque-perdas",
+      "scenario": "Padaria perda de estoque registrada e vinculada ao pedido",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ]
+}

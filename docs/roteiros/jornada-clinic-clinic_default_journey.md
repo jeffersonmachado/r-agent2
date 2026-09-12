@@ -1,99 +1,42 @@
 # Clínica & Saúde — Clinic Default Journey
 
-> Gerado: 2026-07-24T03:54:00.586Z | Vertical: clinic | Jornada: clinic_default_journey
+> Roteiro operacional. Descreve como atender esta jornada no dia a dia.
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **clinic_default_journey** com cobertura de 4 capabilities obrigatórias e confiança de contrato de 81%.
+Executar o atendimento completo da jornada **Clinic Default Journey** na vertical Clínica & Saúde, concluindo cada etapa abaixo antes de seguir para a próxima.
 
-**Capabilities requeridas:**
-- `customer_identification`
-- `scheduling`
-- `crm_updates`
-- `notifications`
+**Recursos necessários para esta jornada:**
+- customer_identification
+- scheduling
+- crm_updates
+- notifications
 
-## 2. Pré-condições
+## 2. Antes de começar
 
 | Condição | Obrigatória |
 |---|---|
-| API em execução (porta 3001) | Sim |
-| Redis acessível | Sim |
-| PostgreSQL acessível | Sim |
-| Tenant configurado para vertical Clínica & Saúde | Sim |
-| Credenciais de QA (`systemadmin` / tenant `system`) | Sim |
-| RPA/Playwright disponível para replay | Sim |
+| Acesso ao sistema com seu usuário de operação | Sim |
+| Unidade/tenant configurado para Clínica & Saúde | Sim |
+| Canal de atendimento do cliente ativo | Sim |
 
-## 3. Cenários
+## 3. Passo a passo do atendimento
 
-Total: **3** cenários (1 aprovados, 2 drafts)
+1. **Receber a solicitação do cliente** — Ticket de manutenção criado
+2. **Verificar os dados do cadastro** — Ticket resolvido com SLA
+3. **Verificar os dados do cadastro**
+4. **Verificar os dados do cadastro**
+5. **Verificar os dados do cadastro**
 
-### ✅ Clinic abertura e resolução de ticket de manutenção
+## 4. Resultado esperado
 
-- **ID**: `clinic-ticket-manutencao`
-- **Status**: approved
-- **Canais**: ticket
-- **Pré-condições**: Operação autenticada; Módulo de manutenção ativo
-- **Integrações**: api
+- O cliente recebe a confirmação do atendimento.
+- O registro correspondente fica atualizado no sistema.
+- Não há pendência aberta para o cliente ao final do atendimento.
 
-**Passos:**
+## 5. Quando não for possível concluir
 
-| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
-|---|---|---|---|---|
-| 1 | Evento de Canal | Ticket de manutenção criado | api | chat | 15000ms |
-| 2 | Validação de Backend | Ticket resolvido com SLA | api | chat | 30000ms |
+- Verifique se você tem a permissão necessária para a operação.
+- Confira se o cadastro do cliente está em situação regular para esta jornada.
+- Se a dificuldade persistir, encaminhe o caso ao suporte informando o identificador do atendimento.
 
-**Validações**: replay=true, backend=true
-
-### ✅ Clinic abertura e resolução de ticket de manutenção
-
-- **ID**: `business-clinic-flow-ticket`
-- **Status**: approved
-- **Canais**: não definidos
-- **Pré-condições**: nenhuma
-- **Integrações**: não definidas
-
-⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
-
-### ✅ Clinic maintenance screen smoke
-
-- **ID**: `business-clinic-scr-01`
-- **Status**: approved
-- **Canais**: não definidos
-- **Pré-condições**: nenhuma
-- **Integrações**: não definidas
-
-⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
-
-## 4. Evidência Esperada
-
-Após execução de todos os cenários aprovados via QA Mesh:
-
-| Artefato | Formato | Local |
-|---|---|---|
-| Resultado da execução | JSON | `qa-mesh/meshHistory/` |
-| Relatório GO/NO_GO | JSON | `qa-mesh/go-no-go-report.json` |
-| Replay (se aplicável) | JSON + trace | `qa/` (governado) |
-| Evidência de smoke | JSON | `qa/smoke/prod-like/` |
-| Diagrama da jornada | Mermaid | `docs/diagrams/qa-waves/journey-*.md` |
-
-## 5. Validações de Governança
-
-Gates aplicáveis após execução:
-
-```bash
-npm run validate:qa-governance        # QA Mesh GO/NO_GO
-npm run validate:qa-waves-registry     # Integridade do registry
-npm run validate:replay-governance     # Integridade de replay
-npm run validate:self-proving          # Prova final
-```
-
-## 6. Troubleshooting
-
-| Sintoma | Causa provável | Ação |
-|---|---|---|
-| Cenário falha na validação de schema | Passos não conformes com `waveScenarioSchema.js` | Regerar via bot ou corrigir manualmente |
-| Execução retorna 500 | API ou dependência indisponível | Verificar `docker-compose.prod.yml` serviços |
-| Mesh runner falha | Adapter não configurado para o canal | Verificar configuração de canais no tenant |
-| Replay não gera evidência | RPA não configurado ou browser ausente | Rodar `npx playwright install` |
-| GO/NO_GO retorna NO_GO | Bloqueadores ativos no enterprise governance | Rodar `npm run validate:qa-governance` e inspecionar `reports/` |
-| Cenário sem passos (draft) | Não passou pelo bot de geração | Usar `POST /api/qa-waves/intelligence/generate-scenario` |

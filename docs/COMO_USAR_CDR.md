@@ -510,35 +510,9 @@ function validateResponse(response, context = null) {
 
 ---
 
-## 7. Integração com QA
+## 7. Verificação das respostas de IA
 
-Para integrar validação CDR no QA:
-
-```javascript
-// Em qa/qaRunner.js ou similar
-const { validateResponse } = require('../engine/utils/capabilityValidator');
-
-function validateAiResponse(response) {
-  const result = validateResponse(response, 'ai_response');
-  
-  if (!result.valid) {
-    return {
-      status: 'ERROR',
-      reason: 'CDR_VIOLATION',
-      errors: result.errors
-    };
-  }
-  
-  if (result.warnings.length > 0) {
-    return {
-      status: 'WARN',
-      warnings: result.warnings
-    };
-  }
-  
-  return { status: 'PASS' };
-}
-```
+Toda resposta gerada pela IA é validada automaticamente antes de chegar ao cliente: respostas fora do padrão esperado são sinalizadas e tratadas conforme o procedimento de atendimento.
 
 ---
 

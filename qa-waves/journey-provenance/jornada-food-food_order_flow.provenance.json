@@ -1,0 +1,195 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.356Z",
+  "vertical": "food",
+  "journeyId": "food_order_flow",
+  "replaySupport": true,
+  "requiredCapabilities": [
+    "customer_identification",
+    "payment",
+    "notifications"
+  ],
+  "contractConfidence": 0.9,
+  "scenarios": [
+    {
+      "scenarioId": "food-pedido-whatsapp",
+      "scenario": "Food pedido via WhatsApp até confirmação",
+      "status": "approved",
+      "channels": [
+        "whatsapp"
+      ],
+      "preconditions": [
+        "Módulo de pedidos ativo",
+        "Tenant autenticado"
+      ],
+      "integrations": [
+        "api",
+        "whatsapp"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": "Pedido recebido via WhatsApp webhook",
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "validate_backend",
+          "name": "Status do pedido atualizado",
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-e2e-food_order_flow",
+      "scenario": "E2E: food_order_flow",
+      "status": "approved",
+      "channels": [
+        "whatsapp"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-food_order_flow-order_service_available",
+      "scenario": "Precondição: Order Service Available",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-food_order_flow-storefront_channel_active",
+      "scenario": "Precondição: Storefront Channel Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-food_order_flow-payment_gateway_available",
+      "scenario": "Precondição: Payment Gateway Available",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-food-scr-01",
+      "scenario": "Food Orders screen smoke",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ]
+}

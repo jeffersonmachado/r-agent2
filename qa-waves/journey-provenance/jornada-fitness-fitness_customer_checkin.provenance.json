@@ -1,0 +1,430 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.347Z",
+  "vertical": "fitness",
+  "journeyId": "fitness_customer_checkin",
+  "replaySupport": true,
+  "requiredCapabilities": [
+    "customer_identification",
+    "membership_validation",
+    "access_decision",
+    "turnstile_release",
+    "attendance_record",
+    "crm_update"
+  ],
+  "contractConfidence": 1,
+  "scenarios": [
+    {
+      "scenarioId": "business-e2e-fitness_customer_checkin",
+      "scenario": "Check-in Completo de Aluno Fitness",
+      "status": "approved",
+      "channels": [
+        "whatsapp"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true,
+        "requireScreenshots": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 20000
+        },
+        {
+          "order": 2,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 20000
+        },
+        {
+          "order": 3,
+          "type": "validate_access_release",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 20000
+        },
+        {
+          "order": 4,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-customer_identification",
+      "scenario": "Validação: Customer Identification",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-membership_validation",
+      "scenario": "Validação: Membership Validation",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-access_decision",
+      "scenario": "Validação: Access Decision",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-turnstile_release",
+      "scenario": "Validação: Turnstile Release",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-attendance_record",
+      "scenario": "Validação: Attendance Record",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "cap-crm_update",
+      "scenario": "Validação: Crm Update",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-fitness_customer_checkin-crm_contact_exists",
+      "scenario": "Precondição: Crm Contact Exists",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-fitness_customer_checkin-membership_exists",
+      "scenario": "Precondição: Membership Exists",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-fitness_customer_checkin-credential_exists",
+      "scenario": "Precondição: Credential Exists",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-fitness_customer_checkin-device_available",
+      "scenario": "Precondição: Device Available",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-fitness_customer_checkin-attendance_database_accessible",
+      "scenario": "Precondição: Attendance Database Accessible",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "api",
+          "timeoutMs": 10000
+        }
+      ]
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ]
+}

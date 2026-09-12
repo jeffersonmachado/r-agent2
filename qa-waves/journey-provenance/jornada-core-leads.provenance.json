@@ -1,0 +1,119 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.329Z",
+  "vertical": "core",
+  "journeyId": "leads",
+  "replaySupport": false,
+  "requiredCapabilities": [
+    "lead_capture",
+    "customer_identification",
+    "crm_updates",
+    "notifications"
+  ],
+  "contractConfidence": 0.93,
+  "scenarios": [
+    {
+      "scenarioId": "fitness-matricula-leads",
+      "scenario": "Fitness Matrícula — Captação de Lead via WhatsApp",
+      "status": "approved",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "send_message",
+          "name": "Cliente envia mensagem WhatsApp",
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "trigger_channel_event",
+          "name": "Sistema recebe inbound WhatsApp",
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 10000
+        },
+        {
+          "order": 3,
+          "type": "validate_intent",
+          "name": "IA classifica intenção do cliente",
+          "adapter": "aiIntentService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 4,
+          "type": "validate_flow_transition",
+          "name": "Sistema decide roteamento: bot ou humano",
+          "adapter": "flowEngine",
+          "channel": "whatsapp",
+          "timeoutMs": 10000
+        },
+        {
+          "order": 5,
+          "type": "validate_response",
+          "name": "Bot gera e envia resposta ao cliente",
+          "adapter": "ragService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 6,
+          "type": "validate_backend",
+          "name": "Validar criação do lead no backend",
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 7,
+          "type": "validate_sla",
+          "name": "Validar SLA de resposta ao lead",
+          "adapter": "meshValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        }
+      ]
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ],
+  "surface": "DEVELOPMENT"
+}

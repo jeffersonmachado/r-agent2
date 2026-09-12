@@ -1,0 +1,466 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.343Z",
+  "vertical": "fitness",
+  "journeyId": "cancelamento",
+  "replaySupport": true,
+  "requiredCapabilities": [
+    "customer_identification",
+    "membership_validation",
+    "billing_validation",
+    "crm_update",
+    "notifications"
+  ],
+  "contractConfidence": 0.97,
+  "scenarios": [
+    {
+      "scenarioId": "fitness-matricula-cancelamento",
+      "scenario": "Cancelamento de Matrícula",
+      "status": "deprecated",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "fitness_full_cancelamento_assinatura_whatsapp_retentativa",
+      "scenario": "Cancelamento E2E via WhatsApp com retenção, confirmação de identidade, efetivação imediata e liberação de acesso (alto risco)",
+      "status": "approved",
+      "channels": [
+        "whatsapp",
+        "chat",
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "accessControlService",
+        "aiIntentService",
+        "api",
+        "flowEngine",
+        "meshValidator",
+        "ragService",
+        "semanticValidator",
+        "whatsapp"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true,
+        "fallbackAllowed": false
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 3,
+          "type": "validate_intent",
+          "name": null,
+          "adapter": "aiIntentService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 4,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 5,
+          "type": "provide_data",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 6,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 7,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 8,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 9,
+          "type": "validate_flow_transition",
+          "name": null,
+          "adapter": "flowEngine",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 10,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 11,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 12,
+          "type": "validate_access_release",
+          "name": null,
+          "adapter": "accessControlService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 13,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 14,
+          "type": "validate_sla",
+          "name": null,
+          "adapter": "meshValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 15,
+          "type": "validate_context",
+          "name": null,
+          "adapter": "ragService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "fitness_full_cancelamento_plano_whatsapp_e2e_reembolso_acesso",
+      "scenario": "WhatsApp: cancelamento E2E de plano anual com cobrança recente, confirmação de identidade, cálculo de reembolso e bloqueio de acesso",
+      "status": "approved",
+      "channels": [
+        "whatsapp",
+        "chat",
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "accessControlService",
+        "aiIntentService",
+        "api",
+        "eventMesh",
+        "flowEngine",
+        "meshValidator",
+        "ragService",
+        "semanticValidator",
+        "whatsapp"
+      ],
+      "validations": {
+        "slaMs": 15000,
+        "requireBackendValidation": true,
+        "requireReplay": true,
+        "fallbackAllowed": false
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "trigger_channel_event",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 2,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 3,
+          "type": "validate_intent",
+          "name": null,
+          "adapter": "aiIntentService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 4,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 5,
+          "type": "provide_data",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 6,
+          "type": "wait_for_event",
+          "name": null,
+          "adapter": "eventMesh",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 7,
+          "type": "validate_context",
+          "name": null,
+          "adapter": "ragService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 8,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 9,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 10,
+          "type": "validate_flow_transition",
+          "name": null,
+          "adapter": "flowEngine",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 11,
+          "type": "send_message",
+          "name": null,
+          "adapter": "whatsapp",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 12,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 13,
+          "type": "validate_access_release",
+          "name": null,
+          "adapter": "accessControlService",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 14,
+          "type": "validate_response",
+          "name": null,
+          "adapter": "semanticValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 15,
+          "type": "validate_sla",
+          "name": null,
+          "adapter": "meshValidator",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        },
+        {
+          "order": 16,
+          "type": "validate_fallback",
+          "name": null,
+          "adapter": "api",
+          "channel": "whatsapp",
+          "timeoutMs": 15000
+        }
+      ]
+    },
+    {
+      "scenarioId": "business-e2e-cancelamento",
+      "scenario": "E2E: cancelamento",
+      "status": "approved",
+      "channels": [
+        "whatsapp"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true,
+        "requireReplay": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 20000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-cancelamento-customer_identification_active",
+      "scenario": "Precondição: Customer Identification Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-cancelamento-membership_validation_active",
+      "scenario": "Precondição: Membership Validation Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    },
+    {
+      "scenarioId": "precond-cancelamento-billing_validation_active",
+      "scenario": "Precondição: Billing Validation Active",
+      "status": "approved",
+      "channels": [
+        "api"
+      ],
+      "preconditions": [],
+      "integrations": [
+        "api"
+      ],
+      "validations": {
+        "requireBackendValidation": true
+      },
+      "steps": [
+        {
+          "order": 1,
+          "type": "validate_backend",
+          "name": null,
+          "adapter": "api",
+          "channel": null,
+          "timeoutMs": 10000
+        }
+      ]
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ]
+}

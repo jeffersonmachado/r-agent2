@@ -339,7 +339,32 @@ const RATE_STATES = Object.freeze({
   MEASURED: 'MEASURED',
   NOT_MEASURABLE_ZERO_DENOMINATOR: 'NOT_MEASURABLE_ZERO_DENOMINATOR',
   BASELINE_UNKNOWN: 'BASELINE_UNKNOWN',
+  /**
+   * O benchmark NÃO foi pesquisado: existe apenas fonte/declaração, sem
+   * análise. Um ponto não analisado nunca é `MEASURED` — `0` de novidade só
+   * pode significar "pesquisei e nada era novo", jamais "não pesquisei".
+   */
+  NOT_ANALYZED: 'NOT_ANALYZED',
 });
+
+/**
+ * `benchmarkAnalysisEvidenceGaps` — o que PROVA que a análise de um benchmark de
+ * descoberta aconteceu. Mesma disciplina do holdout (§5): `analyzedAt` sozinho é
+ * uma data digitada; sem `researchVersion` e `findingsInventory` não há como
+ * auditar o que foi lido. Retorna os campos AUSENTES (auditável campo a campo),
+ * nunca booleano solto.
+ */
+function benchmarkAnalysisEvidenceGaps(benchmark) {
+  const missing = [];
+  if (!benchmark || typeof benchmark !== 'object') return ['benchmark'];
+  if (!isNonEmptyString(benchmark.analyzedAt) || !Number.isFinite(Date.parse(benchmark.analyzedAt))) {
+    missing.push('analyzedAt');
+  }
+  if (!isNonEmptyString(benchmark.researchVersion)) missing.push('researchVersion');
+  if (!Array.isArray(benchmark.findingsInventory)) missing.push('findingsInventory');
+  if (list(benchmark.sources).length === 0) missing.push('sourceEvidence');
+  return missing;
+}
 
 /**
  * §8/§9/§10 Cada dimensão tem baseline PRÓPRIO e denominador PRÓPRIO. Medir a
@@ -426,9 +451,16 @@ function buildInventoryCurve({ sample, dimension = 'capabilities', benchmarks = 
     }
 
     const previousInventorySize = declared !== null ? declared : expected;
+    // §B1..B3: mensurabilidade exige PESQUISA, não apenas denominador. Sem
+    // evidência de análise o ponto é NOT_ANALYZED (novidade nula) — assim a
+    // janela de saturação não pode ser completada com trabalho inexistente.
+    const analysisGaps = benchmarkAnalysisEvidenceGaps(benchmark);
     let noveltyRate;
     let rateState;
-    if (previousInventorySize === null) {
+    if (analysisGaps.length > 0) {
+      noveltyRate = null;
+      rateState = RATE_STATES.NOT_ANALYZED;
+    } else if (previousInventorySize === null) {
       noveltyRate = null;
       rateState = RATE_STATES.BASELINE_UNKNOWN;
     } else if (previousInventorySize > 0) {
@@ -453,6 +485,7 @@ function buildInventoryCurve({ sample, dimension = 'capabilities', benchmarks = 
       newCriticalItems: newCriticalItems.length,
       noveltyRate,
       rateState,
+      analysisGaps,
       cumulativeInventorySize,
     });
     cumulative = cumulativeInventorySize;
@@ -559,13 +592,22 @@ function evaluateSaturation({ sample, policy }) {
 
     const measuredRateFailed = violations.some((v) => String(v.reason).endsWith('_novelty_rate_exceeded'));
     const absoluteFailed = violations.some((v) => !String(v.reason).endsWith('_novelty_rate_exceeded'));
-    const notMeasurable = window.length > 0 && measurable.length === 0;
+    // §B4: a janela de saturação só é mensurável se TODOS os pontos reais o
+    // forem. Completar a janela com benchmark não pesquisado (ou parcialmente
+    // pesquisado) é PASS por ausência de trabalho — proibido.
+    const notMeasurable = window.length > 0 && measurable.length < window.length;
     if (notMeasurable) {
+      const unanalyzed = unmeasurable.filter((point) => point.rateState === RATE_STATES.NOT_ANALYZED);
       violations.push({
-        reason: `${spec.gate}_novelty_rate_baseline_unknown`,
+        reason: unanalyzed.length > 0
+          ? `${spec.gate}_saturation_window_not_researched`
+          : `${spec.gate}_novelty_rate_baseline_unknown`,
         rateState,
         baselineField: curve.baselineField,
         benchmarks: unmeasurable.map((point) => point.benchmarkId),
+        ...(unanalyzed.length > 0
+          ? { unanalyzedBenchmarks: unanalyzed.map((point) => ({ benchmarkId: point.benchmarkId, missingEvidence: point.analysisGaps })) }
+          : {}),
       });
     }
 

@@ -10,7 +10,7 @@ O **RAP** (Results Autonomous Platform) é a plataforma de operações autônoma
 - **Gestão de conhecimento (RAG)**: respostas baseadas no conhecimento do próprio negócio, por tenant.
 - **Verticais de negócio**: módulos prontos para **Fitness**, **Beauty**, **Food** e **Market**, com cadastro de clientes, agendamento, cobrança e pagamento.
 - **Filas físicas e digitais**: gestão de senhas, SLA e atendimento presencial.
-- **Qualidade e governança**: QA Waves, replay de processos e gate de release com prova contínua.
+- **Qualidade e governança**: liberações validadas com prova contínua e acompanhamento de estabilidade.
 
 ## Como a plataforma funciona
 

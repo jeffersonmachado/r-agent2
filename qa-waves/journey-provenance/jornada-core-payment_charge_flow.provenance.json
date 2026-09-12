@@ -1,0 +1,75 @@
+{
+  "artifactType": "journey-provenance",
+  "artifactVersion": "1.0.0",
+  "classification": "DEVELOPMENT",
+  "domain": "SYSTEM",
+  "generatedAt": "2026-09-12T08:39:25.332Z",
+  "vertical": "core",
+  "journeyId": "payment_charge_flow",
+  "replaySupport": false,
+  "requiredCapabilities": [
+    "billing_validation"
+  ],
+  "contractConfidence": 0.71,
+  "scenarios": [
+    {
+      "scenarioId": "business-core-flow-payment-charge",
+      "scenario": "Core cobrança avulsa criada e pagamento confirmado",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-core-flow-payment-idempotent",
+      "scenario": "Core cobrança com idempotencyKey não duplica transação",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    },
+    {
+      "scenarioId": "business-core-flow-payment-invalid",
+      "scenario": "Core cobrança com valor inválido é rejeitada sem persistir transação",
+      "status": "active",
+      "channels": [],
+      "preconditions": [],
+      "integrations": [],
+      "validations": null,
+      "steps": []
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "artifact": "execution-result",
+      "format": "json",
+      "location": "qa-mesh/meshHistory/"
+    },
+    {
+      "artifact": "go-no-go",
+      "format": "json",
+      "location": "qa-mesh/go-no-go-report.json"
+    },
+    {
+      "artifact": "replay",
+      "format": "json+trace",
+      "location": "qa/ (governado)"
+    },
+    {
+      "artifact": "smoke-evidence",
+      "format": "json",
+      "location": "qa/smoke/prod-like/"
+    }
+  ],
+  "governanceGates": [
+    "npm run validate:qa-governance",
+    "npm run validate:qa-waves-registry",
+    "npm run validate:replay-governance",
+    "npm run validate:self-proving"
+  ],
+  "surface": "DEVELOPMENT"
+}

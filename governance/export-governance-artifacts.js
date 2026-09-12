@@ -129,9 +129,39 @@ async function exportGovernanceArtifacts() {
     source: readinessProjection ? 'dev/platform-readiness/latest.json' : null,
   };
 
+  // §G1–G3 AUTORIDADE ÚNICA do CORE readiness score.
+  //
+  // Antes desta correção o score vinha de `evaluation.readiness_score` (run
+  // persistido) enquanto o produtor canônico publicava
+  // `readiness.readinessScore` em `dev/platform-readiness/latest.json` — dois
+  // números para o mesmo fato, capazes de divergir (100 × 0) sem que nenhum
+  // gate apontasse a contradição.
+  //
+  // Agora: a projeção do produtor canônico é a autoridade. O valor do run
+  // persistido é conferido CONTRA ela; divergir não se resolve escolhendo o
+  // mais favorável — a publicação fica inconclusiva e o desvio é registrado.
+  const canonicalCoreScore = (() => {
+    const raw = readinessProjection && readinessProjection.readiness
+      ? readinessProjection.readiness.readinessScore
+      : null;
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : null;
+  })();
+  const persistedCoreScore = evaluation && evaluation.readiness_score !== null && evaluation.readiness_score !== undefined
+    ? Number(evaluation.readiness_score)
+    : null;
+  const coreScoreDivergence = canonicalCoreScore !== null
+    && persistedCoreScore !== null
+    && canonicalCoreScore !== persistedCoreScore;
+  const coreReadinessScore = coreScoreDivergence ? null : (canonicalCoreScore ?? persistedCoreScore);
+  const coreScoreSource = coreScoreDivergence
+    ? 'DIVERGENT'
+    : (canonicalCoreScore !== null
+      ? 'dev/platform-readiness/latest.json#readiness.readinessScore'
+      : (persistedCoreScore !== null ? 'governance_runs.evaluation.readiness_score' : 'UNAVAILABLE'));
+
   const proof = {
-    ...artifactBase(run, 'final-proof-report'),
-    finalDecision: proofDecision,
+    ...artifactBase(run, 'final-proof-report'),    finalDecision: proofDecision,
     autonomousReady,
     blockerCount: evaluation ? evaluation.open_blockers : 0,
     missingArtifacts: [],
@@ -169,9 +199,13 @@ async function exportGovernanceArtifacts() {
       requiredVerticals: REQUIRED_VERTICALS,
       verticals: verticalImplementationSource.verticals,
       verticalCoveragePercent: verticalImplementationSource.percent,
-      readinessScore: evaluation ? evaluation.readiness_score : null,
-      coreReady: corePlatformReady,
+      // §G2: score da AUTORIDADE ÚNICA (projeção do produtor canônico),
+      // conciliado com o run persistido; divergência ⇒ inconclusivo, nunca o
+      // valor mais favorável.
+      readinessScore: coreReadinessScore,
+      coreReady: corePlatformReady && !coreScoreDivergence,
     }),
+    coreReadinessScoreSource: coreScoreSource,
     verticalImplementationCoverage: {
       semanticLabel: 'VERTICAL_IMPLEMENTATION_COVERAGE',
       semanticNote: 'Cobertura de implementação das verticais exigidas. NÃO é certificação de mercado.',

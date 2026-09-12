@@ -22,6 +22,13 @@ const path = require('path');
 const crypto = require('crypto');
 const http = require('http');
 
+// §A9: taxonomia de superfície vem do módulo compartilhado — o gate de
+// sanitização de manuais usa EXATAMENTE a mesma regra.
+const {
+  resolveDomainClassification: resolveSurfaceClassification,
+  isProductionSurface,
+} = require('../api/services/rag/knowledgeSurfaceClassification');
+
 const RAG_BASE = process.env.RAG_BASE_URL || 'http://10.10.2.30:8002';
 const RAG_TOKEN = process.env.RAG_INTERNAL_TOKEN || '';
 const ROOT = process.env.RAG_REPO_ROOT || path.resolve(__dirname, '..');
@@ -123,82 +130,24 @@ function postJSON(urlPath, body) {
 
 // ─── Mapeamento de domínio (OPERATIONAL × SYSTEM) ──────────────────────────
 //
-// Princípio (fail-closed): o que não for explicitamente operacional cai em
-// SYSTEM/DEVELOPMENT. O domínio é decidido pelo caminho canônico, nunca pelo
-// conteúdo, coerente com domain_policy.py.
-//
-//   OPERATIONAL/PRODUCTION → produto/cliente (visível a qualquer usuário)
-//   OPERATIONAL/SUPPORT    → operação de atendimento/suporte
-//   SYSTEM/SUPPORT         → runbooks/diagnóstico (auditor)
-//   SYSTEM/DEVELOPMENT     → arquitetura/QA/engenharia (super_admin)
+// A taxonomia canônica vive em
+// `api/services/rag/knowledgeSurfaceClassification.js` e é compartilhada com o
+// gate `validate:manual-sanitization`. Aqui apenas injetamos as fontes
+// operacionais extras declaradas neste script (git-versioned) para que a
+// classificação do rag-sync continue exatamente a mesma de antes da extração.
 
-const SYSTEM_DEV_DIRS = [
-  'AI_MEMORY/',
-  'config/',
-  'contracts/',
-  'docs/governance/',
-  'docs/architecture/',
-  'docs/qa/',
-  'docs/cognitive-core/',
-  'docs/rag/',
-  'docs/rpa-reliability-handbook/',
-  'docs/release/',
-  'docs/diagrams/',
-  'docs/history/',
-  'docs/platform/',
-  'docs/capabilities/',
-  'docs/contracts/',
-];
+const SHARED = require('../api/services/rag/knowledgeSurfaceClassification');
 
-const SYSTEM_SUPPORT_DIRS = [
-  'docs/runbooks/',
-  'docs/operations/',
-];
-
-const OPERATIONAL_PROD_PREFIXES = [
-  'docs/manual/',
-  'docs/cliente/',
-  'docs/roteiros/jornada-',
-  ...EXTRA_OPERATIONAL_SOURCES,
-];
-
-const OPERATIONAL_SUPPORT_PREFIXES = [
-  'docs/roteiros/manual-',
-  'docs/roteiros/treinamento-',
-  'docs/roteiros/README',
-];
-
-// Arquivos soltos na raiz de docs/ que descrevem produto/uso (não técnico).
-const OPERATIONAL_PROD_FILE_PATTERNS = [
-  /^docs\/COMO_USAR/,
-  /^docs\/COMO_ACESSAR_FUNCIONALIDADES/,
-  /^docs\/GUIA_ACESSO_ATENDIMENTO/,
-  /^docs\/GUIA_MANUTENCAO_FILAS/,
-  /^docs\/FILAS_FISICAS/,
-  /^docs\/FLUXO_APOS_LOGIN/,
-  /^docs\/DOUTRINA_OPERACIONAL/,
-  /^docs\/DOCUMENTACAO_OPERACIONAL_INDICE/,
-  /^docs\/CASOS_DE_USO/,
-  /^docs\/00_DOCUMENTACAO_INDEX/,
-];
+const EXTRA_OPERATIONAL_SOURCES_LOCAL = new Set(EXTRA_OPERATIONAL_SOURCES);
 
 function resolveDomainClassification(rel) {
-  if (SYSTEM_DEV_DIRS.some((p) => rel.startsWith(p))) {
-    return { domain: 'SYSTEM', classification: 'DEVELOPMENT' };
-  }
-  if (SYSTEM_SUPPORT_DIRS.some((p) => rel.startsWith(p))) {
-    return { domain: 'SYSTEM', classification: 'SUPPORT' };
-  }
-  if (OPERATIONAL_PROD_PREFIXES.some((p) => rel.startsWith(p))) {
+  // A taxonomia compartilhada já cobre os prefixos PRODUCTION canônicos,
+  // SUPPORT e SYSTEM. Adicionamos apenas as fontes operacionais extras
+  // declaradas neste script, sem alterar nenhuma decisão existente.
+  if (EXTRA_OPERATIONAL_SOURCES_LOCAL.has(rel)) {
     return { domain: 'OPERATIONAL', classification: 'PRODUCTION' };
   }
-  if (OPERATIONAL_SUPPORT_PREFIXES.some((p) => rel.startsWith(p))) {
-    return { domain: 'OPERATIONAL', classification: 'SUPPORT' };
-  }
-  if (OPERATIONAL_PROD_FILE_PATTERNS.some((p) => p.test(rel))) {
-    return { domain: 'OPERATIONAL', classification: 'PRODUCTION' };
-  }
-  return { domain: 'SYSTEM', classification: 'DEVELOPMENT' };
+  return resolveSurfaceClassification(rel);
 }
 
 // Remove marcação HTML para indexar manuais de produto como texto.

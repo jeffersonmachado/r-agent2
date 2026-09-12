@@ -100,10 +100,20 @@ describe('learning-core — manual indexado no RAG', () => {
     expect(document.classification).toBe('PRODUCTION');
     expect(document.sensitivity).toBe('INTERNAL');
     expect(document.metadata.contentType).toBe('manual');
-    expect(document.metadata.sourceType).toBe('replay-derivation');
     expect(document.metadata.journeyKey).toBe('fitness_active_customer');
-    // Conteúdo indexado é o próprio manual markdown, sem PII do replay.
+    // §A5 — a metadata indexada no RAG PRODUCTION NÃO revela replay. A
+    // rastreabilidade técnica (replayId, selector) vive no `metadata.json`
+    // interno do manual, que não é indexado.
+    expect(document.metadata.replayId).toBeUndefined();
+    expect(document.metadata.sourceType).toBeUndefined();
+    // Conteúdo indexado é o próprio manual markdown, sem PII e sem detalhe
+    // técnico interno (replay/seletor).
     expect(document.content).toContain('Registrar contato');
+    expect(document.content).not.toMatch(/\breplay/i);
+    expect(document.content).not.toContain('#save-contact');
+    // A proveniência interna continua auditável no arquivo local.
+    expect(metadata.replayId).toBe('replay-manual-rag');
+    expect(metadata.steps.some((step) => step.selector)).toBe(true);
     expect(metadata.ragDocumentId).toBe(`manual:${metadata.id}`);
   });
 

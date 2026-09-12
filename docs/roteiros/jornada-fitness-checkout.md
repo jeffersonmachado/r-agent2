@@ -1,164 +1,88 @@
 # Fitness — Checkout
 
-> Gerado: 2026-07-24T03:54:00.596Z | Vertical: fitness | Jornada: checkout
+> Roteiro operacional. Descreve como atender esta jornada no dia a dia.
 
 ## 1. Objetivo
 
-Validar o fluxo operacional completo da jornada **checkout** com cobertura de 5 capabilities obrigatórias e confiança de contrato de 91%.
+Executar o atendimento completo da jornada **Checkout** na vertical Fitness, concluindo cada etapa abaixo antes de seguir para a próxima.
 
-**Capabilities requeridas:**
-- `customer_identification`
-- `billing_validation`
-- `payment`
-- `crm_update`
-- `notifications`
+**Recursos necessários para esta jornada:**
+- customer_identification
+- billing_validation
+- payment
+- crm_update
+- notifications
 
-## 2. Pré-condições
+## 2. Antes de começar
 
 | Condição | Obrigatória |
 |---|---|
-| API em execução (porta 3001) | Sim |
-| Redis acessível | Sim |
-| PostgreSQL acessível | Sim |
-| Tenant configurado para vertical Fitness | Sim |
-| Credenciais de QA (`systemadmin` / tenant `system`) | Sim |
-| RPA/Playwright disponível para replay | Sim |
+| Acesso ao sistema com seu usuário de operação | Sim |
+| Unidade/tenant configurado para Fitness | Sim |
+| Canal de atendimento do cliente ativo | Sim |
 
-## 3. Cenários
+## 3. Passo a passo do atendimento
 
-Total: **4** cenários (0 aprovados, 4 drafts)
+1. **Receber a solicitação do cliente**
+2. **Responder ao cliente**
+3. **Confirmar a intenção do cliente**
+4. **Executar a etapa**
+5. **Executar a etapa**
+6. **Executar a etapa**
+7. **Responder ao cliente**
+8. **Executar a etapa**
+9. **Executar a etapa**
+10. **Aguardar a resposta do cliente**
+11. **Receber a solicitação do cliente**
+12. **Verificar os dados do cadastro**
+13. **Executar a etapa**
+14. **Executar a etapa**
+15. **Executar a etapa**
+16. **Executar a etapa**
+17. **Receber a solicitação do cliente**
+18. **Responder ao cliente**
+19. **Confirmar a intenção do cliente**
+20. **Executar a etapa**
+21. **Executar a etapa**
+22. **Executar a etapa**
+23. **Executar a etapa**
+24. **Executar a etapa**
+25. **Aguardar a resposta do cliente**
+26. **Verificar os dados do cadastro**
+27. **Executar a etapa**
+28. **Executar a etapa**
+29. **Executar a etapa**
+30. **Executar a etapa**
+31. **Receber a solicitação do cliente**
+32. **Responder ao cliente**
+33. **Confirmar a intenção do cliente**
+34. **Executar a etapa**
+35. **Executar a etapa**
+36. **Executar a etapa**
+37. **Responder ao cliente**
+38. **Confirmar a intenção do cliente**
+39. **Executar a etapa**
+40. **Executar a etapa**
+41. **Aguardar a resposta do cliente**
+42. **Verificar os dados do cadastro**
+43. **Executar a etapa**
+44. **Executar a etapa**
+45. **Executar a etapa**
+46. **Executar a etapa**
+47. **Verificar os dados do cadastro**
+48. **Verificar os dados do cadastro**
+49. **Verificar os dados do cadastro**
+50. **Verificar os dados do cadastro**
 
-### ⬜ Checkout e Pagamento de Matrícula
+## 4. Resultado esperado
 
-- **ID**: `fitness-matricula-checkout`
-- **Status**: deprecated
-- **Canais**: não definidos
-- **Pré-condições**: nenhuma
-- **Integrações**: não definidas
+- O cliente recebe a confirmação do atendimento.
+- O registro correspondente fica atualizado no sistema.
+- Não há pendência aberta para o cliente ao final do atendimento.
 
-⚠️ **Cenário sem passos definidos** — requer geração via bot (`POST /api/qa-waves/intelligence/generate-scenario`).
+## 5. Quando não for possível concluir
 
-### ⬜ WhatsApp: checkout completo de plano mensal com PIX e confirmação de matrícula (E2E) para academia
+- Verifique se você tem a permissão necessária para a operação.
+- Confira se o cadastro do cliente está em situação regular para esta jornada.
+- Se a dificuldade persistir, encaminhe o caso ao suporte informando o identificador do atendimento.
 
-- **ID**: `fitness_full_whatsapp_checkout_pix_confirmacao_e2e`
-- **Status**: active
-- **Canais**: whatsapp, chat, api
-- **Pré-condições**: nenhuma
-- **Integrações**: accessControlService, aiIntentService, api, eventMesh, flowEngine, meshValidator, paymentService, ragService, schedulingService, semanticValidator, whatsapp
-
-**Passos:**
-
-| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
-|---|---|---|---|---|
-| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
-| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
-| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
-| 4 | provide_data | - | whatsapp | whatsapp | 15000ms |
-| 5 | check_availability | - | schedulingService | whatsapp | 15000ms |
-| 6 | validate_response | - | semanticValidator | whatsapp | 15000ms |
-| 7 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
-| 8 | create_payment | - | paymentService | whatsapp | 15000ms |
-| 9 | validate_context | - | ragService | whatsapp | 15000ms |
-| 10 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
-| 11 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
-| 12 | Validação de Backend | - | api | whatsapp | 15000ms |
-| 13 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
-| 14 | validate_response | - | semanticValidator | whatsapp | 15000ms |
-| 15 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
-| 16 | validate_sla | - | meshValidator | whatsapp | 15000ms |
-
-**Validações**: replay=true, backend=true
-
-### ⬜ Checkout end-to-end no WhatsApp: compra de plano mensal + matrícula, pagamento via Pix, aprovação e liberação imediata de acesso
-
-- **ID**: `fitness_full_whatsapp_checkout_pix_aprovacao_pospagamento`
-- **Status**: active
-- **Canais**: whatsapp, chat, api
-- **Pré-condições**: nenhuma
-- **Integrações**: accessControlService, aiIntentService, api, eventMesh, flowEngine, meshValidator, paymentService, ragService, semanticValidator, whatsapp
-
-**Passos:**
-
-| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
-|---|---|---|---|---|
-| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
-| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
-| 3 | Validação de Intenção (IA) | - | aiIntentService | whatsapp | 15000ms |
-| 4 | validate_response | - | semanticValidator | whatsapp | 15000ms |
-| 5 | provide_data | - | whatsapp | whatsapp | 15000ms |
-| 6 | validate_context | - | ragService | whatsapp | 15000ms |
-| 7 | create_payment | - | paymentService | whatsapp | 15000ms |
-| 8 | validate_response | - | semanticValidator | whatsapp | 15000ms |
-| 9 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
-| 10 | Validação de Backend | - | api | whatsapp | 15000ms |
-| 11 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
-| 12 | validate_response | - | semanticValidator | whatsapp | 15000ms |
-| 13 | validate_flow_transition | - | flowEngine | whatsapp | 15000ms |
-| 14 | validate_sla | - | meshValidator | whatsapp | 15000ms |
-
-**Validações**: replay=true, backend=true
-
-### ⬜ WhatsApp checkout completo: compra de plano mensal com cupom, PIX, aprovação e liberação imediata de acesso no app
-
-- **ID**: `fitness_full_whatsapp_checkout_pix_aprovacao_e2e`
-- **Status**: active
-- **Canais**: whatsapp, chat, api
-- **Pré-condições**: nenhuma
-- **Integrações**: accessControlService, api, eventMesh, meshValidator, paymentService, whatsapp
-
-**Passos:**
-
-| Ordem | Tipo | Nome | Adapter | Canal | Timeout |
-|---|---|---|---|---|
-| 1 | Evento de Canal | - | whatsapp | whatsapp | 15000ms |
-| 2 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
-| 3 | Validação de Intenção (IA) | - | whatsapp | whatsapp | 15000ms |
-| 4 | validate_response | - | whatsapp | whatsapp | 15000ms |
-| 5 | provide_data | - | whatsapp | whatsapp | 15000ms |
-| 6 | validate_response | - | whatsapp | whatsapp | 15000ms |
-| 7 | Envio de Mensagem | - | whatsapp | whatsapp | 15000ms |
-| 8 | Validação de Intenção (IA) | - | whatsapp | whatsapp | 15000ms |
-| 9 | create_payment | - | paymentService | whatsapp | 15000ms |
-| 10 | validate_response | - | whatsapp | whatsapp | 15000ms |
-| 11 | Aguardar Evento | - | eventMesh | whatsapp | 15000ms |
-| 12 | Validação de Backend | - | api | whatsapp | 15000ms |
-| 13 | validate_access_release | - | accessControlService | whatsapp | 15000ms |
-| 14 | validate_response | - | whatsapp | whatsapp | 15000ms |
-| 15 | validate_context | - | whatsapp | whatsapp | 15000ms |
-| 16 | validate_sla | - | meshValidator | whatsapp | 15000ms |
-
-**Validações**: replay=true, backend=true
-
-## 4. Evidência Esperada
-
-Após execução de todos os cenários aprovados via QA Mesh:
-
-| Artefato | Formato | Local |
-|---|---|---|
-| Resultado da execução | JSON | `qa-mesh/meshHistory/` |
-| Relatório GO/NO_GO | JSON | `qa-mesh/go-no-go-report.json` |
-| Replay (se aplicável) | JSON + trace | `qa/` (governado) |
-| Evidência de smoke | JSON | `qa/smoke/prod-like/` |
-| Diagrama da jornada | Mermaid | `docs/diagrams/qa-waves/journey-*.md` |
-
-## 5. Validações de Governança
-
-Gates aplicáveis após execução:
-
-```bash
-npm run validate:qa-governance        # QA Mesh GO/NO_GO
-npm run validate:qa-waves-registry     # Integridade do registry
-npm run validate:replay-governance     # Integridade de replay
-npm run validate:self-proving          # Prova final
-```
-
-## 6. Troubleshooting
-
-| Sintoma | Causa provável | Ação |
-|---|---|---|
-| Cenário falha na validação de schema | Passos não conformes com `waveScenarioSchema.js` | Regerar via bot ou corrigir manualmente |
-| Execução retorna 500 | API ou dependência indisponível | Verificar `docker-compose.prod.yml` serviços |
-| Mesh runner falha | Adapter não configurado para o canal | Verificar configuração de canais no tenant |
-| Replay não gera evidência | RPA não configurado ou browser ausente | Rodar `npx playwright install` |
-| GO/NO_GO retorna NO_GO | Bloqueadores ativos no enterprise governance | Rodar `npm run validate:qa-governance` e inspecionar `reports/` |
-| Cenário sem passos (draft) | Não passou pelo bot de geração | Usar `POST /api/qa-waves/intelligence/generate-scenario` |
