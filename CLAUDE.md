@@ -33,7 +33,7 @@ Constituição canônica obrigatória: `governance/RAP_AGENT_CONSTITUTION.md`. E
 ## Enforcement executavel
 - Antes de concluir mudancas com impacto operacional, rode os validadores em `scripts/governance/`.
 - Gate agregado: `npm run validate:governance-enforcement`.
-- Gates individuais: `validate:ai-memory`, `validate:runtime`, `validate:browser-evidence`, `validate:qa-governance`, `validate:replay-governance`, `validate:release-governance`, `validate:dist`, `validate:agent-adherence`, `validate:self-proving`, `validate:governance-summary`.
+- Gates individuais: `validate:ai-memory`, `validate:release-dag`, `validate:release-artifact-identity`, `validate:route-mounts`, `validate:runtime`, `validate:browser-evidence`, `validate:qa-governance`, `validate:replay-governance`, `validate:release-governance`, `validate:dist`, `validate:agent-adherence`, `validate:self-proving`, `validate:governance-summary`.
 - Relatorios oficiais ficam em `reports/*.json`; `reports/governance-score.json` e a unica fonte para `overallGovernance`.
 - Falhas nesses scripts sao bloqueantes. Nao converter falha em narrativa de sucesso.
 
