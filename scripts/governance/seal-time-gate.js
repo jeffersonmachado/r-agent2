@@ -38,9 +38,13 @@ const path = require('path');
 
 const { classifyBelow10Dimensions } = require('./scorecard-phase-deferral');
 const { isCircularOnlyDimension, isCircularRequirement } = require('./circular-projection');
+const { deliveredPhaseDimensions } = require('../../governance/release-phase-policy');
 
 const ROOT = path.join(__dirname, '..', '..');
-const DELIVERED_PHASE_DIMS = new Set(['RAP-055', 'RAP-056']);
+// §TAREFA 49 — as dimensões de fase DELIVERED vêm da POLÍTICA (declaração única).
+// Antes esta lista era um literal aqui, repetido em mais três consumidores:
+// quatro cópias da mesma política podiam divergir em silêncio.
+const DELIVERED_PHASE_DIMS = deliveredPhaseDimensions();
 const GO_DECISIONS = new Set(['GO', 'AUTONOMOUS_READY_GO', 'AUTONOMOUS_READY']);
 // Único estado não-GO selável: a fase DEFERRED canônica dos engines (proof,
 // readiness e governance projetam exatamente esta decisão quando os únicos

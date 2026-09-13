@@ -50,7 +50,9 @@ const GAP_SEVERITY = Object.freeze({
 
 // Dimensões cuja verificação só existe na fase DELIVERED (artefato entregue).
 // Em PRE_PACKAGE, seus gaps são DEFERRED (não-blocking) — não é FAIL, nem GO.
-const DELIVERED_PHASE_DIMENSIONS = new Set(['RAP-055', 'RAP-056']);
+const { deliveredPhaseDimensions } = require('./release-phase-policy');
+// §TAREFA 49 — dimensões de fase DELIVERED: derivação da declaração única.
+const DELIVERED_PHASE_DIMENSIONS = deliveredPhaseDimensions();
 
 function readJsonSafe(absPath) {
   if (!fs.existsSync(absPath)) return null;
@@ -628,6 +630,7 @@ module.exports = {
   ARTIFACT_VERSION,
   ENGINE_VERSION,
   ALLOWED_REQUIREMENT_STATUSES,
+  DELIVERED_PHASE_DIMENSIONS,
   evaluateEvidence,
   evaluateRequirement,
   evaluateMasterScorecard,

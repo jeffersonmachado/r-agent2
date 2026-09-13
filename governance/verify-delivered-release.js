@@ -66,7 +66,9 @@ function makeGate(id, mandatory = true) {
 // Em PRE_PACKAGE, se as ÚNICAS abaixo de 10 forem estas, o gate master_scorecard
 // fica DEFERRED (não FAIL): o artefato está íntegro, o scorecard ainda não
 // refletiu o delivered-report que este próprio verifier produz.
-const DELIVERED_PHASE_DIMENSIONS = new Set(['RAP-055', 'RAP-056']);
+const { deliveredPhaseDimensions } = require('./release-phase-policy');
+// §TAREFA 49 — dimensões de fase DELIVERED: derivação da declaração única.
+const DELIVERED_PHASE_DIMENSIONS = deliveredPhaseDimensions();
 
 function pass(gate, detail = {}) {
   return { ...gate, ...detail, status: 'PASS' };

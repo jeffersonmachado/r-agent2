@@ -17,7 +17,9 @@ const getGap = require('../../api/db/models/GovernanceGap');
 const { classifyBelow10Dimensions } = require('./scorecard-phase-deferral');
 
 // Dimensões cuja verificação só existe na fase DELIVERED (artefato entregue).
-const DELIVERED_PHASE_DIMENSIONS = new Set(['RAP-055', 'RAP-056']);
+const { deliveredPhaseDimensions } = require('../../governance/release-phase-policy');
+// §TAREFA 49 — dimensões de fase DELIVERED: derivação da declaração única.
+const DELIVERED_PHASE_DIMENSIONS = deliveredPhaseDimensions();
 
 // Relatórios PROJETADOS pelo exportGovernanceArtifacts (proof/readiness/
 // governance/consistency derivam do próprio estado do scorecard). Um requisito
