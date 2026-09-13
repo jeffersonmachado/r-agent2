@@ -9,6 +9,10 @@ const { runtimeAwarePath, resolveWorkspacePath } = require('../../tools/system/l
 
 const ROOT = path.join(__dirname, '..', '..');
 
+// Tenant operacional da prova, aplicado como X-Tenant-Id em toda requisicao autenticada.
+// Definido apos o login (ver main); fica nulo apenas durante o proprio login.
+let proofTenantId = String(process.env.TEST_TENANT_ID || '').trim() || null;
+
 function apiBaseUrl() {
   return String(process.env.TEST_BASE_URL || process.env.TEST_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
 }
@@ -59,6 +63,13 @@ function runtimeFirstArtifactPaths(relativePath, explicitEnvVar = null) {
 async function reqJson(url, { method = 'GET', token = null, body = null } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
+  // Selecao explicita de tenant. O middleware (api/middleware/auth.js) resolve
+  // req.tenantId do header X-Tenant-Id quando o agente autenticado e' super-admin e, na
+  // AUSENCIA do header, define req.tenantId = null DE PROPOSITO (evita operar no tenant do
+  // usuario silenciosamente). Sem o header, trechos tenant-scoped da API sao pulados: a
+  // timeline e os eventos do ticket (ticketCoreRoutes) so sao montados sob `if (req.tenantId)`,
+  // o que zerava evidence.timelineCount e reprovava a prova fisica de human handoff.
+  if (proofTenantId) headers['X-Tenant-Id'] = proofTenantId;
   const timeoutMs = Math.max(3000, Number(process.env.ENTERPRISE_PROOF_HTTP_TIMEOUT_MS || 20000));
   const retries = Math.max(1, Number(process.env.ENTERPRISE_PROOF_HTTP_RETRIES || 2));
   let lastErr = null;
@@ -664,6 +675,9 @@ function buildUnifiedReplay(humanHandoff, pbxProof, l05, prodLikeSmoke) {
 async function main() {
   const baseUrl = apiBaseUrl();
   const auth = await login(baseUrl);
+  if (auth && auth.tenantId) {
+    proofTenantId = String(auth.tenantId).trim() || proofTenantId;
+  }
 
   const humanHandoff = await runHumanHandoffProof(baseUrl, auth);
 

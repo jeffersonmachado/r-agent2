@@ -322,6 +322,19 @@ async function handleTicketCoreRoutes({ req, res, method, pathname, deps }) {
       events = null;
     }
 
+    // Observabilidade da composicao da resposta: a prova enterprise de human handoff
+    // (qa/enterprise/human-handoff-full-validation.json) depende de evidence.timelineCount > 0.
+    // Sem este registro, uma timeline vazia e' indistinguivel de "ticket sem mensagens" e a
+    // causa raiz fica invisivel.
+    logger.debug('[Tickets] Mensagens do ticket montadas', {
+      ticketId: id,
+      tenantId: req.tenantId || null,
+      conversationId: ticket.conversationId || null,
+      messageCount: Array.isArray(messages) ? messages.length : null,
+      timelineCount: Array.isArray(timeline) ? timeline.length : null,
+      eventCount: Array.isArray(events) ? events.length : null,
+    });
+
     deps.sendJson(res, 200, { ticketId: id, messages, timeline, events });
     return true;
   }

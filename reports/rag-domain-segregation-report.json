@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-11T23:25:15.423Z",
+  "generatedAt": "2026-09-13T02:59:59.383Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -9,15 +9,17 @@
     "indexedSecrets": 0,
     "operationalAccessToSystemDomain": 0,
     "dbChecksFailed": 0,
-    "runtimeChecksFailed": 0,
-    "internalTokenMissing": 0
+    "runtimeChecksFailed": 1,
+    "internalTokenMissing": 1
   },
   "probes": {
     "serviceReachable": true,
-    "crossDomainLeakage": 0,
-    "crossTenantLeakage": 0,
-    "operationalAccessToSystemDomain": 0,
-    "details": []
+    "crossDomainLeakage": "skipped",
+    "crossTenantLeakage": "skipped",
+    "operationalAccessToSystemDomain": "skipped",
+    "details": [
+      "RAG_INTERNAL_TOKEN ausente: não é possível executar probes autenticados"
+    ]
   },
   "distribution": [
     {
@@ -38,13 +40,11 @@
     {
       "domain": "SYSTEM",
       "classification": "SUPPORT",
-      "count": 2275
+      "count": 2291
     }
   ],
-  "details": [],
-  "status": "PASS",
-  "runId": "rap-governed-20260912190751544-129cef1e",
-  "sourceFingerprint": "1d0e2b817dc4a847e78a43641a5918f9aadf9b862239909ad05c05bb72c6fe9b",
-  "artifactType": "rag-domain-segregation-report",
-  "artifactVersion": "1.0.0"
+  "details": [
+    "RAG_INTERNAL_TOKEN ausente: não é possível executar probes autenticados"
+  ],
+  "status": "FAIL"
 }

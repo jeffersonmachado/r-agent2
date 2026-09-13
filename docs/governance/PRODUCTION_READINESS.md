@@ -1,6 +1,6 @@
 # Production Readiness
 
-- Status: NO_GO:ENTERPRISE_PARTIAL_GO
+- Status: NO_GO:AUTONOMOUS_READY_GO
 - Prod-like validated flows: WhatsApp, Chat, PBX, Ticket, Human handoff, Scheduling, Payment, Checkin, CRM updates, Notifications
 
 ## Validation matrix
