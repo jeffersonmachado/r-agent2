@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-12T19:08:01.573Z",
-  "runId": "rap-governed-20260912190751544-129cef1e",
-  "sourceFingerprint": "1d0e2b817dc4a847e78a43641a5918f9aadf9b862239909ad05c05bb72c6fe9b",
+  "generatedAt": "2026-09-13T03:23:24.478Z",
+  "runId": "rap-governed-20260913030242689-9fc8c702",
+  "sourceFingerprint": "fd95c8800a632ff8fd88ae47f4a9024e4f5646a0b460b0e7bfd6f4121b3c8235",
   "artifactType": "qa-waves-enterprise-governance",
   "artifactVersion": "1.0.0",
   "status": "GO",
@@ -13,75 +13,75 @@
     "artifacts": [
       {
         "journeyId": "support_ticket_flow",
-        "replayHash": "06a5b3dae27a50638d61fafbb2f48ebdfcc373fe313a606369886b4be87400f3",
-        "replayChecksum": "sha256:06a5b3dae27a50638d61fafbb2f48ebdfcc373fe313a606369886b4be87400f3",
+        "replayHash": "5f08a3971eaa18d027ded127f091161187817a1f4256b2292b2d33d2832eabdc",
+        "replayChecksum": "sha256:5f08a3971eaa18d027ded127f091161187817a1f4256b2292b2d33d2832eabdc",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-support_ticket_flow-1789090135137"
+        "smokeExecutionId": "prod-like-replay-support_ticket_flow-1789269596074"
       },
       {
         "journeyId": "fitness_customer_checkin",
-        "replayHash": "fb07a4881c8c7fa8bfaa0ad2b26e1f089c417ede303ae2af65c296d58b523200",
-        "replayChecksum": "sha256:fb07a4881c8c7fa8bfaa0ad2b26e1f089c417ede303ae2af65c296d58b523200",
+        "replayHash": "d06133b7539bd3be5576385ab4520fdd6fbb1eabbf3b707eee1eaee59d56cedb",
+        "replayChecksum": "sha256:d06133b7539bd3be5576385ab4520fdd6fbb1eabbf3b707eee1eaee59d56cedb",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1789090138329"
+        "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1789269607550"
       },
       {
         "journeyId": "booking_flow",
-        "replayHash": "5e15987cc8ed0efbd6773fad86960b756410734a6c7dbcb27c7f1a8d31452827",
-        "replayChecksum": "sha256:5e15987cc8ed0efbd6773fad86960b756410734a6c7dbcb27c7f1a8d31452827",
+        "replayHash": "7f74498b3453c305e2f1481c96cb02fabea47afb79f198f6ab0f814e0de405da",
+        "replayChecksum": "sha256:7f74498b3453c305e2f1481c96cb02fabea47afb79f198f6ab0f814e0de405da",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-booking_flow-1789090141622"
+        "smokeExecutionId": "prod-like-replay-booking_flow-1789269627121"
       },
       {
         "journeyId": "payment_charge_flow",
-        "replayHash": "df0bdff903b3e1e000e10c72cd4c8ae4a2a576c1dd2f3cdefb2c91f9eb23e07a",
-        "replayChecksum": "sha256:df0bdff903b3e1e000e10c72cd4c8ae4a2a576c1dd2f3cdefb2c91f9eb23e07a",
+        "replayHash": "80452568c771236c97afd4b848315770060662e7b11f215b2fccd66545a9afd4",
+        "replayChecksum": "sha256:80452568c771236c97afd4b848315770060662e7b11f215b2fccd66545a9afd4",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-payment_charge_flow-1789090144966"
+        "smokeExecutionId": "prod-like-replay-payment_charge_flow-1789269674777"
       },
       {
         "journeyId": "food_order_status_flow",
-        "replayHash": "b914551f4d6dc1fe8288e5d847a7794ba806eff081728b82264697ad937e7ebd",
-        "replayChecksum": "sha256:b914551f4d6dc1fe8288e5d847a7794ba806eff081728b82264697ad937e7ebd",
+        "replayHash": "06ecbcaf5cc8c04ab502d4374f4ebedfc523d271582c99c337725ece63d226cd",
+        "replayChecksum": "sha256:06ecbcaf5cc8c04ab502d4374f4ebedfc523d271582c99c337725ece63d226cd",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-food_order_status_flow-1789090147047"
+        "smokeExecutionId": "prod-like-replay-food_order_status_flow-1789269684840"
       },
       {
         "journeyId": "bakery_encomenda_flow",
-        "replayHash": "52aa2658abd3db46fd0aae69280b4e645b76e7a84f7aaf5adbe658037e971a16",
-        "replayChecksum": "sha256:52aa2658abd3db46fd0aae69280b4e645b76e7a84f7aaf5adbe658037e971a16",
+        "replayHash": "a4f4ab012fb0fb8450410512c8adbeaaf525fe590dd0617c94c9e340c0e927ec",
+        "replayChecksum": "sha256:a4f4ab012fb0fb8450410512c8adbeaaf525fe590dd0617c94c9e340c0e927ec",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-bakery_encomenda_flow-1789090149317"
+        "smokeExecutionId": "prod-like-replay-bakery_encomenda_flow-1789269689069"
       },
       {
         "journeyId": "market_node_publish_flow",
-        "replayHash": "74f5e5131581240315fd10d409c791be8234db9cd4eecde97f1bf91d1b52c264",
-        "replayChecksum": "sha256:74f5e5131581240315fd10d409c791be8234db9cd4eecde97f1bf91d1b52c264",
+        "replayHash": "d6a0ef9888d3796f98b1a1ff997edfbf7a141cc2cdfb5996b4880b3720a09056",
+        "replayChecksum": "sha256:d6a0ef9888d3796f98b1a1ff997edfbf7a141cc2cdfb5996b4880b3720a09056",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1789090151151"
+        "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1789269695780"
       },
       {
         "journeyId": "clinic_calendar_block_flow",
-        "replayHash": "abef5fd284660344eb945da1315b7e94f5a257b629e82698d1fdb1b0ee2d629a",
-        "replayChecksum": "sha256:abef5fd284660344eb945da1315b7e94f5a257b629e82698d1fdb1b0ee2d629a",
+        "replayHash": "9ae0c5640046f1aa8a817f65685a1aa6b3c3de2acd30e7f64dc1c78baf256fab",
+        "replayChecksum": "sha256:9ae0c5640046f1aa8a817f65685a1aa6b3c3de2acd30e7f64dc1c78baf256fab",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1789090153439"
+        "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1789269711647"
       },
       {
         "journeyId": "agendamento",
-        "replayHash": "502789e7a01a5a00715636ff97596af27aee71fbb960a2bd269eb3737ae71e82",
-        "replayChecksum": "sha256:502789e7a01a5a00715636ff97596af27aee71fbb960a2bd269eb3737ae71e82",
+        "replayHash": "6e0d334c069e1afe5e2a5a15245cfe53d46c814cbcdeb12a662f989e1fd43727",
+        "replayChecksum": "sha256:6e0d334c069e1afe5e2a5a15245cfe53d46c814cbcdeb12a662f989e1fd43727",
         "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
         "tenantId": "system",
-        "smokeExecutionId": "prod-like-replay-agendamento-1789090157662"
+        "smokeExecutionId": "prod-like-replay-agendamento-1789269732703"
       }
     ],
     "blockers": []
@@ -100,75 +100,75 @@
   "replayArtifacts": [
     {
       "journeyId": "support_ticket_flow",
-      "replayHash": "06a5b3dae27a50638d61fafbb2f48ebdfcc373fe313a606369886b4be87400f3",
-      "replayChecksum": "sha256:06a5b3dae27a50638d61fafbb2f48ebdfcc373fe313a606369886b4be87400f3",
+      "replayHash": "5f08a3971eaa18d027ded127f091161187817a1f4256b2292b2d33d2832eabdc",
+      "replayChecksum": "sha256:5f08a3971eaa18d027ded127f091161187817a1f4256b2292b2d33d2832eabdc",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-support_ticket_flow-1789090135137"
+      "smokeExecutionId": "prod-like-replay-support_ticket_flow-1789269596074"
     },
     {
       "journeyId": "fitness_customer_checkin",
-      "replayHash": "fb07a4881c8c7fa8bfaa0ad2b26e1f089c417ede303ae2af65c296d58b523200",
-      "replayChecksum": "sha256:fb07a4881c8c7fa8bfaa0ad2b26e1f089c417ede303ae2af65c296d58b523200",
+      "replayHash": "d06133b7539bd3be5576385ab4520fdd6fbb1eabbf3b707eee1eaee59d56cedb",
+      "replayChecksum": "sha256:d06133b7539bd3be5576385ab4520fdd6fbb1eabbf3b707eee1eaee59d56cedb",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1789090138329"
+      "smokeExecutionId": "prod-like-replay-fitness_customer_checkin-1789269607550"
     },
     {
       "journeyId": "booking_flow",
-      "replayHash": "5e15987cc8ed0efbd6773fad86960b756410734a6c7dbcb27c7f1a8d31452827",
-      "replayChecksum": "sha256:5e15987cc8ed0efbd6773fad86960b756410734a6c7dbcb27c7f1a8d31452827",
+      "replayHash": "7f74498b3453c305e2f1481c96cb02fabea47afb79f198f6ab0f814e0de405da",
+      "replayChecksum": "sha256:7f74498b3453c305e2f1481c96cb02fabea47afb79f198f6ab0f814e0de405da",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-booking_flow-1789090141622"
+      "smokeExecutionId": "prod-like-replay-booking_flow-1789269627121"
     },
     {
       "journeyId": "payment_charge_flow",
-      "replayHash": "df0bdff903b3e1e000e10c72cd4c8ae4a2a576c1dd2f3cdefb2c91f9eb23e07a",
-      "replayChecksum": "sha256:df0bdff903b3e1e000e10c72cd4c8ae4a2a576c1dd2f3cdefb2c91f9eb23e07a",
+      "replayHash": "80452568c771236c97afd4b848315770060662e7b11f215b2fccd66545a9afd4",
+      "replayChecksum": "sha256:80452568c771236c97afd4b848315770060662e7b11f215b2fccd66545a9afd4",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-payment_charge_flow-1789090144966"
+      "smokeExecutionId": "prod-like-replay-payment_charge_flow-1789269674777"
     },
     {
       "journeyId": "food_order_status_flow",
-      "replayHash": "b914551f4d6dc1fe8288e5d847a7794ba806eff081728b82264697ad937e7ebd",
-      "replayChecksum": "sha256:b914551f4d6dc1fe8288e5d847a7794ba806eff081728b82264697ad937e7ebd",
+      "replayHash": "06ecbcaf5cc8c04ab502d4374f4ebedfc523d271582c99c337725ece63d226cd",
+      "replayChecksum": "sha256:06ecbcaf5cc8c04ab502d4374f4ebedfc523d271582c99c337725ece63d226cd",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-food_order_status_flow-1789090147047"
+      "smokeExecutionId": "prod-like-replay-food_order_status_flow-1789269684840"
     },
     {
       "journeyId": "bakery_encomenda_flow",
-      "replayHash": "52aa2658abd3db46fd0aae69280b4e645b76e7a84f7aaf5adbe658037e971a16",
-      "replayChecksum": "sha256:52aa2658abd3db46fd0aae69280b4e645b76e7a84f7aaf5adbe658037e971a16",
+      "replayHash": "a4f4ab012fb0fb8450410512c8adbeaaf525fe590dd0617c94c9e340c0e927ec",
+      "replayChecksum": "sha256:a4f4ab012fb0fb8450410512c8adbeaaf525fe590dd0617c94c9e340c0e927ec",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-bakery_encomenda_flow-1789090149317"
+      "smokeExecutionId": "prod-like-replay-bakery_encomenda_flow-1789269689069"
     },
     {
       "journeyId": "market_node_publish_flow",
-      "replayHash": "74f5e5131581240315fd10d409c791be8234db9cd4eecde97f1bf91d1b52c264",
-      "replayChecksum": "sha256:74f5e5131581240315fd10d409c791be8234db9cd4eecde97f1bf91d1b52c264",
+      "replayHash": "d6a0ef9888d3796f98b1a1ff997edfbf7a141cc2cdfb5996b4880b3720a09056",
+      "replayChecksum": "sha256:d6a0ef9888d3796f98b1a1ff997edfbf7a141cc2cdfb5996b4880b3720a09056",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1789090151151"
+      "smokeExecutionId": "prod-like-replay-market_node_publish_flow-1789269695780"
     },
     {
       "journeyId": "clinic_calendar_block_flow",
-      "replayHash": "abef5fd284660344eb945da1315b7e94f5a257b629e82698d1fdb1b0ee2d629a",
-      "replayChecksum": "sha256:abef5fd284660344eb945da1315b7e94f5a257b629e82698d1fdb1b0ee2d629a",
+      "replayHash": "9ae0c5640046f1aa8a817f65685a1aa6b3c3de2acd30e7f64dc1c78baf256fab",
+      "replayChecksum": "sha256:9ae0c5640046f1aa8a817f65685a1aa6b3c3de2acd30e7f64dc1c78baf256fab",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1789090153439"
+      "smokeExecutionId": "prod-like-replay-clinic_calendar_block_flow-1789269711647"
     },
     {
       "journeyId": "agendamento",
-      "replayHash": "502789e7a01a5a00715636ff97596af27aee71fbb960a2bd269eb3737ae71e82",
-      "replayChecksum": "sha256:502789e7a01a5a00715636ff97596af27aee71fbb960a2bd269eb3737ae71e82",
+      "replayHash": "6e0d334c069e1afe5e2a5a15245cfe53d46c814cbcdeb12a662f989e1fd43727",
+      "replayChecksum": "sha256:6e0d334c069e1afe5e2a5a15245cfe53d46c814cbcdeb12a662f989e1fd43727",
       "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
       "tenantId": "system",
-      "smokeExecutionId": "prod-like-replay-agendamento-1789090157662"
+      "smokeExecutionId": "prod-like-replay-agendamento-1789269732703"
     }
   ],
   "governanceSignature": {
@@ -235,7 +235,7 @@
     "algorithm": "hmac-sha256"
   },
   "lastSmokeExecution": {
-    "generatedAt": "2026-09-11T01:29:18.154Z",
+    "generatedAt": "2026-09-13T03:22:15.929Z",
     "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
     "tenantId": "system"
   },
@@ -244,13 +244,13 @@
     "healthy": true,
     "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/qa-waves-scheduled-operational-smoke.json",
     "mode": "nightly_full_replay",
-    "generatedAt": "2026-09-11T01:29:23.338Z",
-    "ageHours": 41.64,
+    "generatedAt": "2026-09-13T03:22:25.564Z",
+    "ageHours": 0.01,
     "maxAgeHours": 48,
     "evidenceValid": true,
     "evidenceBound": true,
-    "evidenceSha256": "d4b8d4b4c9306336cf37ab4dff96eb22d50036c9c4d56410095add19d8426311",
-    "sourceGeneratedAt": "2026-09-11T01:29:18.154Z",
+    "evidenceSha256": "fa1265a92af0860a2347677c2ae6c56910f258a4b0f3f9e55f870e031a5df948",
+    "sourceGeneratedAt": "2026-09-13T03:22:15.929Z",
     "evidenceArtifactPath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json",
     "requiredJourneys": [
       "support_ticket_flow",
@@ -282,13 +282,13 @@
     "blockers": []
   },
   "enterpriseGovernanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
-  "reportHash": "421dd41e57ecaac2e182084ef76ec916a7f6b2a5eb89819857bb37d7cd270d31",
+  "reportHash": "e39082f4872449add5809c3468fbece1da02312fc964f27fe16778e9cfaaa6fb",
   "auditTrail": {
     "path": "/opt/results/ria/r-agent2/qa/qa-waves-governance-audit.jsonl",
-    "latestEntryHash": "55388a01bb8ecba51c131339761b745b4219bc2abedb2d6a583e835ed1bcaae9",
+    "latestEntryHash": "f4e05a8759d993264eb01461d99f7201d60a7313322d6b5149535eaab24e8556",
     "immutable": true,
     "valid": true,
-    "entries": 281,
+    "entries": 282,
     "reasons": []
   }
 }
