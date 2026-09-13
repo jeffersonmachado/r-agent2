@@ -50,7 +50,7 @@ const { execSync } = require('child_process');
 const { chromium } = require('playwright');
 
 const { evaluatePageSurface, probePolicy, classifyPageConsoleError } = require('../../qa/coverage/pageSurfaceWave');
-const { loginWithTenantSelection } = require('../../tests/helpers/playwrightAuth');
+const { countTransportSignals, isTransportOnlyFailure, shouldRetryProbe } = require('./lib/wave-transport-retry');const { loginWithTenantSelection } = require('../../tests/helpers/playwrightAuth');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const INVENTORY_PATH = path.join(ROOT_DIR, 'config', 'system-inventory.json');
@@ -348,11 +348,51 @@ async function main() {
       }
     }
 
+    /**
+     * Falha de TRANSPORTE ≠ falha da aplicação.
+     *
+     * Evidência real (2026-09-13): a wave reprovava páginas diferentes a cada
+     * execução com `net::ERR_NETWORK_CHANGED` em TODOS os samples (incluindo
+     * `Failed to fetch dynamically imported module: …/DemoPage.jsx`). O host
+     * desta estação tem interfaces de bridge Docker subindo/caindo
+     * (`br-* NO-CARRIER`), o que dispara NetworkChangeNotifier no Chromium e
+     * ABORTA requisições em voo. Verificação independente no browser real
+     * (login systemadmin → tenant system → /fitness/students) renderizou a
+     * página completa sem erro de console, no mesmo intervalo.
+     *
+     * Um reset de transporte aborta o probe antes de qualquer veredito sobre a
+     * página — então o probe é REPETIDO (limitado) e o número de tentativas vai
+     * no relatório (`transportRetries`). Nunca mascara falha de aplicação: só
+     * reroda quando o sinal observado é exclusivamente de transporte.
+     */
+    const TRANSPORT_RETRY_ATTEMPTS = 2;
+
+    function probeTransportSignals(probe) {
+      return countTransportSignals(probe);
+    }
+
+    async function probeWithTransportRetry(newContext, pagePath) {
+      let last = null;
+      let attempts = 0;
+      for (let attempt = 1; attempt <= TRANSPORT_RETRY_ATTEMPTS; attempt += 1) {
+        attempts = attempt;
+        last = await probeInContext(newContext, pagePath);
+        if (!last) return last;
+        if (!shouldRetryProbe(last, attempt, TRANSPORT_RETRY_ATTEMPTS)) break;
+        await new Promise((resolve) => { setTimeout(resolve, 1500); });
+      }
+      if (last && typeof last === 'object') {
+        last.transportRetries = Math.max(0, attempts - 1);
+        last.transportSignals = probeTransportSignals(last);
+      }
+      return last;
+    }
+
     // P2 com self-healing: se a sessão caiu (loginSurface), renova o token RPA
     // e tenta uma segunda vez.
     async function probeP2(pagePath) {
       if (!newProdContext) return null;
-      const first = await probeInContext(newProdContext, pagePath);
+      const first = await probeWithTransportRetry(newProdContext, pagePath);
       if (!first || first.error || !first.loginSurface) return first;
       const refreshed = await loginProductionRole(await loginAdminApiToken());
       if (!refreshed) return first;
@@ -366,12 +406,12 @@ async function main() {
     async function probeP3(pagePath) {
       if (!adminStorageState) return null;
       const newAdminContext = () => browser.newContext({ storageState: adminStorageState });
-      const first = await probeInContext(newAdminContext, pagePath);
+      const first = await probeWithTransportRetry(newAdminContext, pagePath);
       if (!first || first.error || !first.loginSurface) return first;
       const refreshed = await loginAdminUi().catch(() => null);
       if (!refreshed) return first;
       adminStorageState = refreshed;
-      return probeInContext(newAdminContext, pagePath);
+      return probeWithTransportRetry(newAdminContext, pagePath);
     }
 
     const probesByItemId = new Map();
@@ -384,12 +424,8 @@ async function main() {
 
       // P1: contexto anônimo novo por probe.
       if (policy.p1) {
-        const anonContext = await browser.newContext();
-        try {
-          probes.p1 = await probePage(anonContext, item.path);
-        } finally {
-          await anonContext.close().catch(() => {});
-        }
+        const anonContext = async () => browser.newContext();
+        probes.p1 = await probeWithTransportRetry(anonContext, item.path);
       }
       if (policy.p2 && newProdContext) {
         probes.p2 = await probeP2(item.path);

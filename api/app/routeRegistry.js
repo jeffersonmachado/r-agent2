@@ -40,6 +40,16 @@ function createRouteRegistry(routers) {
     { router: routers.cognitiveRouter },
     { router: routers.learningCoreRouter },
     { router: routers.analyticsRouter },
+    // Product Metrics (P4.13). O router JÁ era instanciado em registerRoutes,
+    // mas ficava fora desta lista — e router fora da lista NÃO é montado.
+    // Efeito real (2026-09-13, Page Surface Wave em /analytics):
+    // GET /api/product-metrics/summary → 404 e a seção de métricas do produto
+    // não carregava. Regressão coberta por tests/unit/routeRegistryMount.test.js.
+    { router: routers.productMetricsRouter },
+    // Web Push (public-key/subscribe/unsubscribe). Mesmo defeito de montagem:
+    // instanciado em registerRoutes, ausente desta lista ⇒ /api/push/* 404 e o
+    // frontend (frontend/src/api/webPush.js) sem conseguir assinar push.
+    { router: routers.pushRouter },
     { router: routers.bulkCampaignsRouter },
     { router: routers.quickRepliesRouter },
     { router: routers.platformAdminRouter },

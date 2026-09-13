@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-05T19:24:34.889Z",
+  "generatedAt": "2026-09-13T11:27:22.143Z",
   "status": "PASS",
   "artifactType": "db-integrity-report",
   "artifactVersion": "1.0.0",
-  "commit": "33d459d0b2af28596373f1d6736771d47d177144",
+  "commit": "403e4e1186cd08f1aacb58247a3d3c5025093f04",
   "dbAvailable": true,
   "totals": {
-    "models": 176,
-    "validated": 176,
+    "models": 184,
+    "validated": 184,
     "visited": 0,
     "failed": 0,
     "warnings": 32
@@ -324,7 +324,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "12 colunas do model presentes"
+          "detail": "16 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -1084,7 +1084,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260326090000-create-billing-core.js"
+          "detail": "migrations: api/db/migrations/20260326090000-create-billing-core.js, api/db/migrations/20260910000002-scope-billing-external-txn-unique-by-tenant.js"
         },
         {
           "name": "tenantScope",
@@ -1604,7 +1604,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260119000003-create-channel-messages.js, api/db/migrations/20260119000012-hardening-unique-external-message-id.js, api/db/migrations/20260323201000-sanitize-legacy-support-media-json.js"
+          "detail": "migrations: api/db/migrations/20260119000003-create-channel-messages.js, api/db/migrations/20260119000012-hardening-unique-external-message-id.js, api/db/migrations/20260323201000-sanitize-legacy-support-media-json.js, api/db/migrations/20260908120000-add-client-message-id-idempotency.js"
         },
         {
           "name": "tenantScope",
@@ -1624,7 +1624,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "9 colunas do model presentes"
+          "detail": "10 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -2072,7 +2072,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260204021000-create-exec-jobs-and-schedules.js"
+          "detail": "migrations: api/db/migrations/20260204021000-create-exec-jobs-and-schedules.js, api/db/migrations/20260911000000-execution-jobs-claim-indexes.js"
         },
         {
           "name": "tenantScope",
@@ -2613,6 +2613,214 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "8 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:IntegrationConnection",
+      "table": "integration_connections",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/IntegrationConnection.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=integration_connections"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260910000001-create-integration-hub.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'integration_connections' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "14 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:IntegrationInboundEvent",
+      "table": "integration_inbound_events",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/IntegrationInboundEvent.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=integration_inbound_events"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260910000001-create-integration-hub.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'integration_inbound_events' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "16 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:IntegrationObjectLink",
+      "table": "integration_object_links",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/IntegrationObjectLink.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=integration_object_links"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260910000001-create-integration-hub.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'integration_object_links' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "11 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:IntegrationSyncState",
+      "table": "integration_sync_states",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/IntegrationSyncState.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=integration_sync_states"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260910000001-create-integration-hub.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'integration_sync_states' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "15 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -4546,6 +4754,58 @@
       ]
     },
     {
+      "id": "model:OutboundAttempt",
+      "table": "outbound_attempts",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/OutboundAttempt.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=outbound_attempts"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260909000000-outbound-attempt-ledger.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'outbound_attempts' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "13 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
       "id": "model:OutboundQueueItem",
       "table": "outbound_queue",
       "state": "VALIDATED",
@@ -4568,7 +4828,7 @@
         {
           "name": "migrationFound",
           "passed": true,
-          "detail": "migrations: api/db/migrations/20260119000004-create-outbound-queue.js, api/db/migrations/20260119000012-hardening-unique-external-message-id.js, api/db/migrations/20260119000013-hardening-outbound-queue-processing-fields.js, api/db/migrations/20260120000005-add-outbound-queue-reason-code.js, api/db/migrations/20260323201000-sanitize-legacy-support-media-json.js"
+          "detail": "migrations: api/db/migrations/20260119000004-create-outbound-queue.js, api/db/migrations/20260119000012-hardening-unique-external-message-id.js, api/db/migrations/20260119000013-hardening-outbound-queue-processing-fields.js, api/db/migrations/20260120000005-add-outbound-queue-reason-code.js, api/db/migrations/20260323201000-sanitize-legacy-support-media-json.js, api/db/migrations/20260908120000-add-client-message-id-idempotency.js"
         },
         {
           "name": "tenantScope",
@@ -4588,7 +4848,7 @@
         {
           "name": "modelColumnsExistInDb",
           "passed": true,
-          "detail": "14 colunas do model presentes"
+          "detail": "15 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -6571,6 +6831,58 @@
           "name": "modelColumnsExistInDb",
           "passed": true,
           "detail": "11 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:PushSubscription",
+      "table": "push_subscriptions",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/PushSubscription.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=push_subscriptions"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260907130000-create-push-subscriptions.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'push_subscriptions' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "7 colunas do model presentes"
         },
         {
           "name": "primaryKeyExistsInDb",
@@ -8817,6 +9129,110 @@
       ]
     },
     {
+      "id": "model:VerticalMlModel",
+      "table": "vertical_ml_models",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/VerticalMlModel.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=vertical_ml_models"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260906120000-create-vertical-ml-models.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'vertical_ml_models' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "9 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
+      "id": "model:VerticalProductionBatch",
+      "table": "vertical_production_batches",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "modelFileParses",
+          "passed": true,
+          "detail": "parse ok (api/db/models/VerticalProductionBatch.js)"
+        },
+        {
+          "name": "tableNameDefined",
+          "passed": true,
+          "detail": "tableName=vertical_production_batches"
+        },
+        {
+          "name": "primaryKeyDefined",
+          "passed": true,
+          "detail": "PK explícita: id"
+        },
+        {
+          "name": "migrationFound",
+          "passed": true,
+          "detail": "migrations: api/db/migrations/20260907120000-create-vertical-production-batches.js"
+        },
+        {
+          "name": "tenantScope",
+          "passed": true,
+          "detail": "tenant scope presente"
+        },
+        {
+          "name": "timestampsDefined",
+          "passed": true,
+          "detail": "timestamps via default do Sequelize"
+        },
+        {
+          "name": "tableExistsInDb",
+          "passed": true,
+          "detail": "tabela 'vertical_production_batches' existe"
+        },
+        {
+          "name": "modelColumnsExistInDb",
+          "passed": true,
+          "detail": "15 colunas do model presentes"
+        },
+        {
+          "name": "primaryKeyExistsInDb",
+          "passed": true,
+          "detail": "PK no banco: id"
+        }
+      ]
+    },
+    {
       "id": "model:VerticalSessionBundle",
       "table": "vertical_session_bundles",
       "state": "VALIDATED",
@@ -9567,7 +9983,5 @@
         }
       ]
     }
-  ],
-  "runId": "rap-governed-20260913111234064-175793a2",
-  "sourceFingerprint": "e9f18ffa248834702ef44d939186fe70f284e64cb93ebfa81e39cf82db9bbebb"
+  ]
 }

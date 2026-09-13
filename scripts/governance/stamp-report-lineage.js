@@ -105,6 +105,14 @@ async function main() {
       'qa/enterprise/pbx-voice-flow-prod-like.json',
       'governance/package-validation-report.json',
       'governance/package-integrity-report.json',
+      // DAG do release e identidade do artefato entregue: derivados do run
+      // corrente. Sem o stamp eles ficam com runId ESTRANGEIRO após um run novo
+      // — e o contamination cleaner (corretamente) reprova o run por
+      // FOREIGN_RUN_ARTIFACT num arquivo committed.
+      'governance/release-dag-report.json',
+      'reports/release-dag-report.json',
+      'governance/release-artifact-identity-report.json',
+      'reports/release-artifact-identity-report.json',
       // NÃO stampar delivered-release-verification-report.json: ele é produzido
       // EXCLUSIVAMENTE por verify-delivered-release.js em fase DELIVERED, com a
       // decisão real. Stampar aqui re-injetaria lineage sobre conteúdo stale e
