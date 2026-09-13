@@ -322,7 +322,7 @@ release_envelope_validate_zip() {
   # payload (JS) + chave pública Ed25519 da attestation. verify-result.json
   # NÃO é permitido: é o recibo que o verifier escreve quando EXECUTADO contra
   # o pacote — empacotá-lo seria evidência stale (STALE_VERIFIER_RESULT).
-  bad="$(release_payload_timeout "$RELEASE_PAYLOAD_SCAN_TIMEOUT_SECONDS" grep -Ev '^((r-agent2/)?$|(r-agent2/)?dist/$|(r-agent2/)?dist/(release|governance|signatures|verifier)/$|(r-agent2/)?dist/(release/[^/]+\.(payload\.zip|manifest\.json|zip)|governance/[^/]+\.json|signatures/[^/]+\.sig|verifier/[^/]+\.sh|verifier/verify-payload-governance\.js|verifier/release-attestation-public-key\.json))$' "$list_file" || true)"
+  bad="$(release_payload_timeout "$RELEASE_PAYLOAD_SCAN_TIMEOUT_SECONDS" grep -Ev '^((r-agent2/)?$|(r-agent2/)?dist/$|(r-agent2/)?dist/(release|governance|signatures|verifier)/$|(r-agent2/)?dist/release/identity/$|(r-agent2/)?dist/(release/[^/]+\.(payload\.zip|manifest\.json|zip)|release/identity/[^/]+\.json|governance/[^/]+\.json|signatures/[^/]+\.sig|verifier/[^/]+\.sh|verifier/verify-payload-governance\.js|verifier/release-attestation-public-key\.json))$' "$list_file" || true)"
   if [[ -n "$bad" ]]; then
     echo "Envelope validation failed: unexpected entries:" >&2
     printf '%s\n' "$bad" | head -50 >&2

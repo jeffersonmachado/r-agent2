@@ -40,19 +40,19 @@ const RESEARCH_CAPABILITIES = Object.freeze([
   Object.freeze({
     capability: 'research.fetch',
     id: 'rap.research.fetch',
-    description: 'Obtém o conteúdo de uma URL de pesquisa sob política de endpoint.',
+    description: 'Obtém o conteúdo de uma URL de pesquisa sob política de endpoint. Contrato de saída: { httpStatus, content, contentType, retrievedAt, contentHash } — o HASH é do conteúdo efetivamente devolvido e é ele que liga a evidência ao que foi analisado.',
     runner: 'fetch',
   }),
   Object.freeze({
     capability: 'research.inspectDocumentation',
     id: 'rap.research.inspectDocumentation',
-    description: 'Extrai estrutura de documentação oficial (seções, recursos, capacidades).',
+    description: 'Extrai estrutura de documentação oficial (seções, recursos, capacidades, jornadas e regras) DO CONTEÚDO recebido. Cada item precisa de locator na fonte.',
     runner: 'inspectDocumentation',
   }),
   Object.freeze({
     capability: 'research.inspectApiDocs',
     id: 'rap.research.inspectApiDocs',
-    description: 'Extrai contrato de API oficial (endpoints, operações, schemas).',
+    description: 'Extrai contrato de API oficial (endpoints, operações, schemas e capacidades observáveis) DO CONTEÚDO recebido.',
     runner: 'inspectApiDocs',
   }),
   Object.freeze({
@@ -115,6 +115,12 @@ function ensureResearchCapabilities(registry, runners = {}) {
           evidenceRef: { type: 'string' },
           benchmarkId: { type: 'string' },
           sourceTier: { type: 'integer' },
+          // §TAREFAS 06-08 — a inspeção opera sobre o CONTEÚDO obtido, e o hash
+          // viaja com ele para que a evidência fique ligada ao documento
+          // analisado (nunca a uma versão posterior da mesma URL).
+          content: { type: 'string' },
+          contentHash: { type: 'string' },
+          contentType: { type: 'string' },
         },
         additionalProperties: false,
       },

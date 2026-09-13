@@ -146,6 +146,24 @@ function createBenchmarkResearchMemoryStore() {
     return clone(row);
   }
 
+  async function updateSubjectResearchState({ tenantId, runId, benchmarkId, patch = {} }) {
+    const tenant = required(tenantId, 'tenantId');
+    const subjectId = deterministicId('brs', [tenant, required(runId, 'runId'), required(benchmarkId, 'benchmarkId')]);
+    const row = state.subjects.get(subjectId);
+    if (!row) {
+      const error = new Error(`benchmark_research_store_invalid: benchmark fora do discovery set: ${benchmarkId}`);
+      error.code = 'benchmark_research_store_invalid';
+      throw error;
+    }
+    const metadata = { ...(row.metadata || {}) };
+    if (patch.axes) metadata.researchAxes = { ...(metadata.researchAxes || {}), ...patch.axes };
+    if (patch.inspections) metadata.inspections = { ...(metadata.inspections || {}), ...patch.inspections };
+    if (patch.extraction) metadata.extraction = { ...(metadata.extraction || {}), ...patch.extraction };
+    if (patch.metadata) Object.assign(metadata, patch.metadata);
+    row.metadata = metadata;
+    return clone(row);
+  }
+
   async function listSources({ tenantId, runId, benchmarkId = null }) {
     return [...state.sources.values()]
       .filter((row) => row.tenant_key === tenantId && row.run_id === runId
@@ -220,6 +238,7 @@ function createBenchmarkResearchMemoryStore() {
     updateRunState,
     listSubjects,
     getSubject,
+    updateSubjectResearchState,
     markSubjectAnalyzed,
     upsertSource,
     listSources,

@@ -24,6 +24,7 @@ const crypto = require('crypto');
 const { connect, close } = require('../../../api/db/sequelize');
 const { createBenchmarkResearchStore } = require('../../../api/services/benchmark/benchmarkResearchStore');
 const { createBenchmarkResearchService } = require('../../../api/services/benchmark/benchmarkResearchService');
+const { completeAnalysisEvidence } = require('../../helpers/benchmarkAnalysisEvidence');
 
 const VERTICAL = 'fitness';
 const RESEARCH_VERSION = 'fitness-research-persistence-v1';
@@ -37,6 +38,9 @@ const OFFICIAL_SOURCE = {
   tier: 5,
   specificity: 'SPECIFIC',
   verified: true,
+  // §TAREFA 06/11 — o hash do conteúdo efetivamente obtido acompanha a fonte;
+  // sem ele a evidência não está ligada ao documento analisado.
+  contentHash: 'sha256:persist-fixture-content-v1',
   httpStatus: 200,
 };
 
@@ -108,6 +112,17 @@ describe('B4/B5 — a pesquisa de benchmarks sobrevive ao restart do processo', 
       source: OFFICIAL_SOURCE,
       evidenceRef: 'ev-persist-1',
       classification: 'REQUIRED',
+      // §TAREFA 12/11 — o achado aponta para o fragmento da fonte e a evidência
+      // fica ligada ao conteúdo analisado.
+      locator: 'section:Matrículas#gestao',
+    });
+    // O critério forte exige o estado de PESQUISA persistido (eixos + inspeções)
+    // — e é justamente esse estado que precisa sobreviver ao restart.
+    await completeAnalysisEvidence(first, {
+      tenantId: TENANT,
+      vertical: VERTICAL,
+      benchmarkId: 'evo',
+      withFinding: false,
     });
     await first.markAnalyzed({
       tenantId: TENANT,
@@ -312,6 +327,14 @@ describe('B4/B5 — a pesquisa de benchmarks sobrevive ao restart do processo', 
     const after = await restarted.summarize({ tenantId: TENANT, vertical: VERTICAL });
     expect(after.saturationReached).toBe(true);
 
+    // A partir daqui o holdout PODE ser analisado — desde que a evidência de
+    // pesquisa esteja completa (eixos + inspeções + evidência ligada).
+    await completeAnalysisEvidence(restarted, {
+      tenantId: TENANT,
+      vertical: VERTICAL,
+      benchmarkId: 'zenplanner',
+      externalName: 'WOD tracking',
+    });
     const analyzed = await restarted.markAnalyzed({
       tenantId: TENANT,
       vertical: VERTICAL,

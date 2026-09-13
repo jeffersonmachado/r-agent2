@@ -1,0 +1,139 @@
+{
+  "_description": "Vocabulário de NORMALIZAÇÃO da pesquisa competitiva. Mapeia nomes observados em produtos externos para ids canônicos internos. É dado versionado, não heurística: um nome que não casa com nenhum termo declarado NÃO recebe canônico inventado — ele é novidade candidata e vai para revisão humana.",
+  "_honesty": "Este arquivo NÃO cria capacidade nenhuma. Ele só declara equivalência semântica entre termos. A ausência de um termo aqui é a resposta correta para 'ainda não sei se isso é equivalente'.",
+  "_mergePolicy": "Longest-match-wins. O termo declarado mais longo que casa decide o canônico; empate entre regras diferentes é OVER_MERGE_REFUSED (nunca fundir por aproximação). Termos com semântica distinta (freeze/cancel/scheduled cancel/suspend access/inactive/expired) são regras separadas com `exclusiveTokens` próprios — fundi-los silenciosamente inflaria a saturação e apagaria diferenças de produto.",
+  "version": "2026-09-13.1",
+  "vertical": "fitness",
+  "rules": [
+    {
+      "canonicalId": "fitness.membership.freeze",
+      "kind": "capability",
+      "exclusiveTokens": ["freeze", "congelamento", "trancamento", "suspensao temporaria"],
+      "terms": [
+        "freeze",
+        "freeze membership",
+        "membership freeze",
+        "congelamento",
+        "congelamento de matricula",
+        "congelamento de contrato",
+        "trancamento",
+        "trancamento de matricula",
+        "suspensao temporaria de matricula"
+      ]
+    },
+    {
+      "canonicalId": "fitness.membership.cancel",
+      "kind": "capability",
+      "exclusiveTokens": ["cancel", "cancelamento"],
+      "terms": [
+        "cancel",
+        "cancel membership",
+        "membership cancel",
+        "cancelamento",
+        "cancelamento de matricula",
+        "cancelamento de contrato"
+      ]
+    },
+    {
+      "canonicalId": "fitness.membership.cancel_scheduled",
+      "kind": "capability",
+      "exclusiveTokens": ["scheduled cancel", "cancelamento agendado", "cancelamento programado"],
+      "terms": [
+        "scheduled cancel",
+        "cancel at period end",
+        "cancelamento agendado",
+        "cancelamento programado",
+        "cancelamento no fim do periodo"
+      ]
+    },
+    {
+      "canonicalId": "fitness.membership.suspend_access",
+      "kind": "capability",
+      "exclusiveTokens": ["suspend access", "suspensao de acesso", "bloqueio de acesso"],
+      "terms": [
+        "suspend access",
+        "access suspension",
+        "suspensao de acesso",
+        "bloqueio de acesso",
+        "bloqueio de catraca"
+      ]
+    },
+    {
+      "canonicalId": "fitness.membership.inactive",
+      "kind": "capability",
+      "exclusiveTokens": ["inactive", "inativo", "inativacao"],
+      "terms": ["inactive", "inactive member", "inativo", "inativacao", "membro inativo"]
+    },
+    {
+      "canonicalId": "fitness.membership.expired",
+      "kind": "capability",
+      "exclusiveTokens": ["expired", "expirado", "expiracao", "vencido"],
+      "terms": ["expired", "expired membership", "expirado", "expiracao", "matricula vencida"]
+    },
+    {
+      "canonicalId": "fitness.membership.reactivate",
+      "kind": "capability",
+      "exclusiveTokens": ["reactivate", "reativacao", "reativar"],
+      "terms": ["reactivate", "reactivate membership", "reativacao de matricula", "reativar matricula"]
+    },
+    {
+      "canonicalId": "fitness.access.turnstile",
+      "kind": "capability",
+      "exclusiveTokens": ["turnstile", "catraca", "access control"],
+      "terms": ["turnstile", "catraca", "access control", "controle de acesso", "liberacao de catraca", "entradas"]
+    },
+    {
+      "canonicalId": "fitness.billing.receivable",
+      "kind": "capability",
+      "exclusiveTokens": ["receivable", "contas a receber", "receivables"],
+      "terms": ["accounts receivable", "receivable", "contas a receber", "contas a receber em aberto"]
+    },
+    {
+      "canonicalId": "fitness.member.management",
+      "kind": "capability",
+      "exclusiveTokens": ["member management", "gestao de membros", "gestao de alunos", "cadastro de alunos"],
+      "terms": ["member management", "member registry", "gestao de membros", "gestao de alunos", "cadastro de alunos", "cadastro de membros"]
+    },
+    {
+      "canonicalId": "fitness.journey.lead_to_membership",
+      "kind": "journey",
+      "exclusiveTokens": ["lead", "trial", "matricula"],
+      "terms": [
+        "lead to membership",
+        "lead to trial to membership",
+        "lead trial matricula pagamento acesso",
+        "jornada de captacao",
+        "captacao ate matricula"
+      ]
+    },
+    {
+      "canonicalId": "fitness.rule.freeze_pauses_billing",
+      "kind": "businessRule",
+      "exclusiveTokens": ["pauses billing", "pausa a cobranca"],
+      "terms": [
+        "freeze pauses billing",
+        "congelamento pausa a cobranca",
+        "congelamento suspende a cobranca",
+        "congelamento pausa a cobranca"
+      ]
+    },
+    {
+      "canonicalId": "fitness.rule.freeze_extends_contract",
+      "kind": "businessRule",
+      "exclusiveTokens": ["extends contract", "prorroga o contrato"],
+      "terms": ["freeze extends contract", "congelamento prorroga o contrato", "congelamento estende o contrato"]
+    },
+    {
+      "canonicalId": "fitness.rule.access_blocked_when_delinquent",
+      "kind": "businessRule",
+      "exclusiveTokens": ["delinquent", "inadimplente", "acesso bloqueado"],
+      "terms": ["access blocked when delinquent", "acesso bloqueado quando inadimplente", "inadimplencia bloqueia o acesso"]
+    },
+    {
+      "canonicalId": "fitness.rule.cancel_notice_period",
+      "kind": "businessRule",
+      "exclusiveTokens": ["notice period", "aviso previo"],
+      "terms": ["cancel notice period", "aviso previo de cancelamento", "prazo de aviso previo para cancelamento"]
+    }
+  ]
+}

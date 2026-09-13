@@ -26,112 +26,34 @@
  * `InMemoryTransport`); em produção o transporte é o de rede real.
  */
 
-const dns = require('dns');
-
 const logger = require('../../utils/logger');
 const connectionService = require('./mcpConnectionService');
 const { createMcpClientHub } = require('../../../src/core/mcp/client-hub');
-const { resolveCapability } = require('../../../src/core/mcp/external-tool-adapter');
-const { ENDPOINT_DENIAL_CODES } = require('../../../src/core/mcp/endpoint-policy');
-
-/** Códigos honestos de falha (nunca "sucesso" com aviso). */
-const DISCOVERY_CODES = Object.freeze({
-  ENDPOINT_NOT_CONFIGURED: 'MCP_ENDPOINT_NOT_CONFIGURED',
-  ENDPOINT_BLOCKED: 'MCP_ENDPOINT_BLOCKED',
-  AUTH_FORBIDDEN: 'MCP_AUTH_FORBIDDEN',
-  AUTH_UNAVAILABLE: 'MCP_AUTH_UNAVAILABLE',
-  CONNECTION_NOT_FOUND: 'MCP_CONNECTION_NOT_FOUND',
-  CONNECTION_DISABLED: 'MCP_CONNECTION_DISABLED',
-  CONNECTION_TENANT_MISMATCH: 'MCP_CONNECTION_TENANT_MISMATCH',
-  TOOL_INVENTORY_INVALID: 'MCP_TOOL_INVENTORY_INVALID',
-  DISCOVERY_FAILED: 'MCP_DISCOVERY_FAILED',
-  REVALIDATION_NOT_REQUIRED: 'MCP_REVALIDATION_NOT_REQUIRED',
-});
-
-const DENIAL_CODE_SET = new Set(Object.values(ENDPOINT_DENIAL_CODES));
-
-/** Lookup DNS com TODOS os endereços (valida rebinding, não só o 1º). */
-async function defaultDnsLookup(hostname) {
-  const result = await dns.promises.lookup(hostname, { all: true });
-  return result.map((entry) => entry.address);
-}
+const core = require('./mcpDiscoveryCore');
 
 /**
- * Resolução de credencial por REFERÊNCIA. O valor nunca é logado nem devolvido.
- * `deps.credentialResolver` (store oficial) tem precedência; sem ele a referência
- * é resolvida como nome de variável de ambiente. Não resolver é FALHA explícita —
- * nunca conexão anônima silenciosa.
+ * A descoberta REAL vive em `mcpDiscoveryCore` — rotina ÚNICA compartilhada com o
+ * startup (TAREFA 69). Este módulo é o adaptador do caminho administrativo/HTTP:
+ * resolve a conexão PERSISTIDA, monta o hub dedicado e expõe as operações de
+ * diagnóstico (`probe`), revalidação explícita e leitura de saúde.
+ *
+ * As funções puras são RE-EXPORTADAS do núcleo, mantendo a MESMA referência de
+ * função: não existe segunda implementação de validação/preflight para divergir
+ * da que o startup usa.
  */
-function defaultCredentialResolver(ref) {
-  return process.env[String(ref)] || null;
-}
-
-/** Erro de domínio do discovery (o chamador HTTP usa `code`). */
-function discoveryError(code, message, extra = {}) {
-  const error = new Error(`${code}: ${message}`);
-  error.code = code;
-  Object.assign(error, extra);
-  return error;
-}
-
-function endpointIsConfigured(endpoint) {
-  const raw = String(endpoint || '').trim();
-  if (!raw) return false;
-  try {
-    const url = new URL(raw);
-    return url.protocol === 'https:' || url.protocol === 'http:';
-  } catch (_) {
-    return false;
-  }
-}
-
-/**
- * Pré-checagens determinísticas ANTES de abrir qualquer conexão.
- * @returns {{ok: true} | {ok: false, code: string, message: string}}
- */
-function preflight(config) {
-  if (!endpointIsConfigured(config.endpoint)) {
-    return {
-      ok: false,
-      code: DISCOVERY_CODES.ENDPOINT_NOT_CONFIGURED,
-      message: 'conexão sem endpoint HTTP(S) real configurado — descoberta exige servidor MCP externo',
-    };
-  }
-  try {
-    connectionService.assertEndpointAllowed(config.endpoint, {
-      classification: config.classification,
-      policy: config.endpointPolicy,
-    });
-  } catch (error) {
-    return { ok: false, code: DISCOVERY_CODES.ENDPOINT_BLOCKED, message: error.message };
-  }
-  try {
-    connectionService.assertAuthAllowed(config.authType, config.classification);
-  } catch (error) {
-    return { ok: false, code: DISCOVERY_CODES.AUTH_FORBIDDEN, message: error.message };
-  }
-  if (config.authType !== 'no_auth' && !config.credentialRef) {
-    return {
-      ok: false,
-      code: DISCOVERY_CODES.AUTH_UNAVAILABLE,
-      message: `conexão '${config.name}' sem credentialRef (authType=${config.authType})`,
-    };
-  }
-  return { ok: true };
-}
-
-/** Traduz erro de runtime (hub/SDK) em código de falha auditável. */
-function mapDiscoveryError(error) {
-  const message = String(error?.message || 'unknown');
-  if (error?.code && DENIAL_CODE_SET.has(error.code)) return DISCOVERY_CODES.ENDPOINT_BLOCKED;
-  if (/^no_configured_mcp_connection/.test(message)) return DISCOVERY_CODES.CONNECTION_NOT_FOUND;
-  if (/^mcp_connection_disabled/.test(message)) return DISCOVERY_CODES.CONNECTION_DISABLED;
-  if (/^mcp_connection_tenant_mismatch/.test(message)) return DISCOVERY_CODES.CONNECTION_TENANT_MISMATCH;
-  if (/^(mcp_endpoint_rejected|mcp_endpoint_unresolvable)/.test(message)) return DISCOVERY_CODES.ENDPOINT_BLOCKED;
-  if (/^mcp_auth_unavailable/.test(message)) return DISCOVERY_CODES.AUTH_UNAVAILABLE;
-  if (/^mcp_auth_forbidden/.test(message)) return DISCOVERY_CODES.AUTH_FORBIDDEN;
-  return DISCOVERY_CODES.DISCOVERY_FAILED;
-}
+const {
+  DISCOVERY_CODES,
+  defaultDnsLookup,
+  defaultCredentialResolver,
+  discoveryError,
+  endpointIsConfigured,
+  preflight,
+  mapDiscoveryError,
+  validateToolInventory,
+  negotiateCapabilities,
+  resolveToolCapabilities,
+  runDiscoveryCycle,
+} = core;
 
 /**
  * Monta um hub dedicado a UMA conexão persistida. Não há registry global: o hub
@@ -153,73 +75,10 @@ function createHubForConnection({ config, deps = {} }) {
 }
 
 /**
- * Valida o inventário REAL devolvido por `tools/list`.
- * Protocolo violado (nome vazio, duplicado, não-string, tamanho absurdo) é
- * recusado: persistir um inventário inválido faria o runtime registrar tools
- * impossíveis de endereçar.
+ * Validação de inventário, negociação de capabilities e resolução de capability
+ * canônica NÃO são reimplementadas aqui: são as funções do núcleo único
+ * (`mcpDiscoveryCore`), re-exportadas no fim deste módulo para compatibilidade.
  */
-function validateToolInventory(rawTools) {
-  const tools = Array.isArray(rawTools) ? rawTools : [];
-  const seen = new Set();
-  for (const tool of tools) {
-    const name = String(tool?.name || '').trim();
-    if (!name) {
-      return { valid: false, message: 'tool remota sem nome no inventário', toolCount: tools.length };
-    }
-    if (name.length > 128 || /[\u0000-\u001f]/.test(name)) {
-      return { valid: false, message: `nome de tool inválido: '${name.slice(0, 40)}'`, toolCount: tools.length };
-    }
-    if (seen.has(name)) {
-      return { valid: false, message: `tool duplicada no inventário: '${name}'`, toolCount: tools.length };
-    }
-    seen.add(name);
-    const input = tool?.inputSchema;
-    if (input !== undefined && input !== null && (typeof input !== 'object' || Array.isArray(input))) {
-      return { valid: false, message: `inputSchema inválido em '${name}'`, toolCount: tools.length };
-    }
-  }
-  return { valid: true, message: null, toolCount: tools.length };
-}
-
-/**
- * Negociação de capabilities: compara o que a conexão DECLARA com o que o
- * servidor remoto REALMENTE oferece. Divergência não é erro fatal (um servidor
- * pode expor subconjunto), mas precisa ser reportada — nunca silenciada.
- */
-function negotiateCapabilities({ declared = [], toolCapabilityMap = {}, tools = [] }) {
-  const observed = [...new Set(
-    tools
-      .map((tool) => tool.capability || toolCapabilityMap[String(tool?.name || '')] || null)
-      .filter(Boolean),
-  )].sort();
-  const declaredSorted = [...declared].sort();
-  return {
-    declared: declaredSorted,
-    observed,
-    unmappedTools: tools.filter((tool) => !(tool.capability || toolCapabilityMap[String(tool?.name || '')]))
-      .map((tool) => String(tool.name)),
-    missingCapabilities: declaredSorted.filter((capability) => !observed.includes(capability)),
-    unexpectedCapabilities: observed.filter((capability) => !declaredSorted.includes(capability)),
-  };
-}
-
-/**
- * Anexa a capability CANÔNICA de cada tool remota usando o mapeamento persistido
- * (§M8). Capability não mapeada fica `null` — e a tool é reportada em
- * `unmappedTools`, nunca registrada com semântica inventada.
- */
-function resolveToolCapabilities({ tools = [], config }) {
-  return tools.map((tool) => ({
-    ...tool,
-    capability: resolveCapability(
-      {
-        toolCapabilityMap: config.toolCapabilityMap,
-        allowedCapabilities: config.allowedCapabilities,
-      },
-      { name: tool.name },
-    ),
-  }));
-}
 
 /** Erro de pré-checagem/descoberta persistido como falha de saúde (§M11). */
 async function recordFailure({ tenantId, id, code, message }) {
@@ -252,57 +111,27 @@ async function discoverConnectionTools({ tenantId, id, deps = {}, mode = 'discov
   const row = await connectionService.getConnection({ tenantId, id });
   const config = connectionService.toConnectionConfig(row);
 
+  // Fail-closed ANTES de construir o hub: endpoint ausente ou proibido pela
+  // política não chega a abrir transporte nenhum. A verificação é a MESMA do
+  // núcleo (`preflight`), feita aqui para que o resultado seja o código de
+  // descoberta (`MCP_ENDPOINT_NOT_CONFIGURED`) e não um erro de construção.
   const gate = preflight(config);
   if (!gate.ok) return recordFailure({ tenantId, id, code: gate.code, message: gate.message });
 
+  // §TAREFA 69 — ROTINA ÚNICA. Antes este caminho REIMPLEMENTAVA a cadeia
+  // (preflight → discoverTools → validate → resolve → negociate → persist), o
+  // que criava duas implementações capazes de divergir do startup em silêncio
+  // (foi assim que o startup passou a atualizar só memória enquanto o admin
+  // persistia). Agora ambos chamam `runDiscoveryCycle`.
   const hub = createHubForConnection({ config, deps });
-  let discovery;
-  try {
-    const result = await hub.discoverTools(config.name, { tenantId });
-    discovery = result.discovery;
-  } catch (error) {
-    const code = mapDiscoveryError(error);
-    return recordFailure({ tenantId, id, code, message: error.message });
-  }
-
-  const validation = validateToolInventory(discovery.tools);
-  if (!validation.valid) {
-    return recordFailure({
-      tenantId,
-      id,
-      code: DISCOVERY_CODES.TOOL_INVENTORY_INVALID,
-      message: validation.message,
-    });
-  }
-
-  const tools = resolveToolCapabilities({ tools: discovery.tools, config });
-  const negotiation = negotiateCapabilities({
-    declared: config.allowedCapabilities,
-    toolCapabilityMap: config.toolCapabilityMap,
-    tools,
-  });
-
-  const persisted = mode === 'revalidate'
-    ? await connectionService.recordRevalidation({ tenantId, id, tools })
-    : await connectionService.recordDiscovery({ tenantId, id, tools });
-
-  return {
-    ok: true,
-    code: null,
+  return runDiscoveryCycle({
+    connection: config,
+    connectionId: id,
+    hub,
+    store: connectionService,
     mode,
-    connection: persisted,
-    tools,
-    toolCount: tools.length,
-    // `schemaFingerprint` é o contrato em VIGOR (aceito). Quando a descoberta
-    // encontrou um contrato diferente, ele aparece em `observedSchemaFingerprint`
-    // e a promoção exige `revalidate` — nunca acontece sozinha (§M12).
-    schemaFingerprint: persisted.schema_fingerprint || persisted.schemaFingerprint || null,
-    observedSchemaFingerprint: persisted.observedSchemaFingerprint || null,
-    schemaChanged: persisted.schemaChanged === true,
-    revalidationRequired: persisted.revalidationRequired === true,
-    negotiation,
-    inventorySource: 'remote_tools_list',
-  };
+    logger,
+  });
 }
 
 /**

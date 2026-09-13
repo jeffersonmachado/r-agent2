@@ -202,7 +202,39 @@ async function startMcpClientComposition(deps = {}) {
       skipped: result.skipped.length,
     });
 
-    return { hub, metrics, registeredTools: result.registered, skipped: result.skipped, source: loaded.source };
+    // ── TAREFA 70/73 — STARTUP PERSISTE (mesma rotina do admin) ──────────
+    //
+    // GAP CONFIRMADO: o startup criava o hub, registrava tools no Canonical
+    // Tool Registry e NÃO gravava nada — discovery, health, schemaFingerprint e
+    // timestamps ficavam só em memória e desapareciam no restart. O caminho
+    // administrativo (`/discover`) persistia, o startup não: duas semânticas
+    // para a mesma operação, exatamente o que a TAREFA 69 proíbe.
+    //
+    // Agora ambos executam `runDiscoveryCycle` — a rotina ÚNICA — com o store
+    // de conexões como persistência. Conexão sem relação persistida não pode
+    // ser gravada e é reportada como tal (nunca "persistida" por engano).
+    const discoveryResults = await persistStartupDiscovery({ connections, hub });
+    const schemaChangedCount = discoveryResults.filter((entry) => entry.schemaChanged === true).length;
+    metrics.recordDiscovery({
+      toolsDiscovered: result.registered.length,
+      schemaChanged: schemaChangedCount,
+      ok: discoveryResults.every((entry) => entry.ok !== false),
+    });
+    logger.info('[McpClientComposition] Descoberta do startup persistida', {
+      connections: discoveryResults.length,
+      persisted: discoveryResults.filter((entry) => entry.persisted === true).length,
+      schemaChanged: schemaChangedCount,
+      failed: discoveryResults.filter((entry) => entry.ok === false).length,
+    });
+
+    return {
+      hub,
+      metrics,
+      registeredTools: result.registered,
+      skipped: result.skipped,
+      source: loaded.source,
+      discovery: discoveryResults,
+    };
   } catch (error) {
     // Configuração MCP inválida NÃO derruba o runtime: é reportada e o RAP
     // segue sem aquelas capabilities (estado explícito, nunca fake success).
@@ -213,8 +245,84 @@ async function startMcpClientComposition(deps = {}) {
   }
 }
 
+/**
+ * TAREFA 70/73 — o startup usa a MESMA rotina persistente do admin.
+ *
+ * Para cada conexão PERSISTIDA (com `connectionId`) executa `runDiscoveryCycle`
+ * e grava discovery + health + schemaFingerprint. Conexão sem relação
+ * persistida é reportada explicitamente (`connection_not_persisted`) — nunca
+ * gravada como se fosse.
+ *
+ * Uma falha de conexão NÃO derruba o runtime: o resultado é explícito e a
+ * conexão fica com health degradado no banco.
+ */
+async function persistStartupDiscovery({ connections = [], hub } = {}) {
+  if (!hub || connections.length === 0) return [];
+  let core;
+  let store;
+  try {
+    core = require('../services/mcp/mcpDiscoveryCore');
+    store = require('../services/mcp/mcpConnectionService');
+  } catch (error) {
+    logger.warn('[McpClientComposition] Persistência de descoberta indisponível', { error: error.message });
+    return connections.map((connection) => ({
+      name: connection.name || null,
+      ok: false,
+      persisted: false,
+      code: 'MCP_DISCOVERY_STORE_UNAVAILABLE',
+      message: error.message,
+    }));
+  }
+
+  const results = [];
+  for (const connection of connections) {
+    const connectionId = connection.connectionId || null;
+    if (!connectionId) {
+      results.push({
+        name: connection.name || null,
+        ok: false,
+        persisted: false,
+        code: core.DISCOVERY_CODES.CONNECTION_NOT_PERSISTED,
+        message: 'conexão sem relação persistida: a descoberta não pode ser gravada',
+      });
+      continue;
+    }
+    try {
+      const outcome = await core.runDiscoveryCycle({
+        connection,
+        connectionId,
+        hub,
+        store,
+        mode: 'discover',
+        logger,
+      });
+      results.push({
+        name: connection.name || null,
+        connectionId,
+        ok: outcome.ok === true,
+        persisted: outcome.persisted === true,
+        code: outcome.code || null,
+        toolCount: outcome.toolCount || 0,
+        schemaChanged: outcome.schemaChanged === true,
+        revalidationRequired: outcome.revalidationRequired === true,
+      });
+    } catch (error) {
+      results.push({
+        name: connection.name || null,
+        connectionId,
+        ok: false,
+        persisted: false,
+        code: error.code || 'MCP_DISCOVERY_UNEXPECTED_FAILURE',
+        message: error.message,
+      });
+    }
+  }
+  return results;
+}
+
 module.exports = {
   startMcpClientComposition,
+  persistStartupDiscovery,
   loadMcpConnections,
   loadMcpConnectionsFromConfig,
   loadConnectionsFromPersistence,

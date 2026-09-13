@@ -34,15 +34,41 @@ const {
   buildResearchProvenance,
 } = require('./researchCapabilities');
 
+const { extractInspectionFindings } = require('./benchmarkFindingExtraction');
+const { RESEARCH_AXES, SEMANTIC_CODES, FINDING_ORIGINS } = require('./benchmarkResearchSemantics');
+
+const crypto = require('crypto');
+
 const RESEARCH_RUN_STATES = Object.freeze({
   BLOCKED_NO_EXTERNAL_ACCESS: 'RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS',
   NO_CANDIDATES: 'RESEARCH_NO_CANDIDATES',
   EVIDENCE_CAPTURED: 'RESEARCH_EVIDENCE_CAPTURED',
   FETCH_FAILED: 'RESEARCH_FETCH_FAILED',
+  INSPECTION_FAILED: 'RESEARCH_INSPECTION_FAILED',
+  EVIDENCE_HASH_MISMATCH: 'RESEARCH_EVIDENCE_HASH_MISMATCH',
 });
 
-/** Capacities exigidas em sequência para registrar um achado com evidência. */
-const REQUIRED_CAPABILITIES = Object.freeze(['research.search', 'research.fetch', 'research.captureEvidence']);
+/**
+ * Capacidades exigidas em sequência para registrar um achado com evidência.
+ *
+ * §TAREFA 07/08 — `inspectDocumentation` e `inspectApiDocs` são OBRIGATÓRIAS na
+ * cadeia: antes elas existiam no catálogo e nunca eram chamadas, então a
+ * "pesquisa" era uma URL guardada como prova de 30 funcionalidades. Inspeção é
+ * o passo que transforma documento em estrutura.
+ */
+const REQUIRED_CAPABILITIES = Object.freeze([
+  'research.search',
+  'research.fetch',
+  'research.inspectDocumentation',
+  'research.captureEvidence',
+]);
+
+/** Exigida sempre que o benchmark declara superfície de API. */
+const API_CAPABILITY = 'research.inspectApiDocs';
+
+function sha256Hex(value) {
+  return crypto.createHash('sha256').update(String(value ?? ''), 'utf8').digest('hex');
+}
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -116,7 +142,244 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
   }
 
   /**
+   * CADEIA COMPLETA de inspeção de UMA fonte declarada (§TAREFAS 05-12):
+   *
+   *   search → fetch (com contentHash) → inspectDocumentation/inspectApiDocs
+   *   → extração estruturada → achados com evidência LIGADA ao hash analisado
+   *
+   * O runner NÃO grava nada aqui: ele devolve a estrutura extraída para o
+   * supervisor decidir e registrar. Isso mantém a política no serviço.
+   *
+   * @returns {Promise<{status, source, inspections, findings, rejected, reason, provenance}>}
+   */
+  async function inspectSource({
+    vertical,
+    benchmark,
+    benchmarkId,
+    query,
+    source,
+    apiApplicable = true,
+    pickCandidate = null,
+  } = {}) {
+    ensureCapabilities();
+
+    const missing = REQUIRED_CAPABILITIES.filter((capability) => !availableCapabilities().includes(capability));
+    if (apiApplicable && !availableCapabilities().includes(API_CAPABILITY)) missing.push(API_CAPABILITY);
+    if (missing.length > 0) {
+      return {
+        status: RESEARCH_RUN_STATES.BLOCKED_NO_EXTERNAL_ACCESS,
+        reason: `research_capability_unavailable: ${missing.join(', ')}`,
+        missing,
+        inspections: { documentation: false, api: false, apiApplicable },
+        findings: [],
+        rejected: [],
+        provenance: null,
+      };
+    }
+
+    const search = await callCapability('research.search', { query });
+    const candidates = Array.isArray(search.output?.candidates) ? search.output.candidates : [];
+    const chosen = typeof pickCandidate === 'function' ? pickCandidate(candidates) : candidates[0];
+    if (!chosen || !isNonEmptyString(chosen.url)) {
+      return {
+        status: RESEARCH_RUN_STATES.NO_CANDIDATES,
+        reason: 'research_no_candidate_source',
+        inspections: { documentation: false, api: false, apiApplicable },
+        findings: [],
+        rejected: [],
+        provenance: null,
+      };
+    }
+
+    const fetched = await callCapability('research.fetch', { url: chosen.url });
+    const httpStatus = Number(fetched.output?.httpStatus);
+    const content = typeof fetched.output?.content === 'string' ? fetched.output.content : '';
+    if (!Number.isFinite(httpStatus) || httpStatus >= 400 || content === '') {
+      return {
+        status: RESEARCH_RUN_STATES.FETCH_FAILED,
+        reason: `research_fetch_not_confirmed: status=${Number.isFinite(httpStatus) ? httpStatus : 'unknown'}`,
+        inspections: { documentation: false, api: false, apiApplicable },
+        findings: [],
+        rejected: [],
+        provenance: buildResearchProvenance({
+          capability: 'research.fetch',
+          toolId: fetched.toolId,
+          provider: fetched.provider,
+          source: { url: chosen.url, tier: source?.tier ?? null },
+          at: clock(),
+        }),
+      };
+    }
+
+    // §TAREFA 06 — o hash é do conteúdo EFETIVAMENTE analisado. Se o provider
+    // não devolve hash, ele é CALCULADO do conteúdo recebido (nunca assumido).
+    const analyzedContentHash = isNonEmptyString(fetched.output?.contentHash)
+      ? String(fetched.output.contentHash)
+      : `sha256:${sha256Hex(content)}`;
+    const contentType = isNonEmptyString(fetched.output?.contentType)
+      ? String(fetched.output.contentType)
+      : (isNonEmptyString(chosen.contentType) ? String(chosen.contentType) : null);
+
+    const captured = await callCapability('research.captureEvidence', {
+      url: chosen.url,
+      documentRef: chosen.url,
+      benchmarkId,
+      contentHash: analyzedContentHash,
+    });
+    const evidenceRef = captured.output?.evidenceRef || captured.output?.contentHash || null;
+    if (!isNonEmptyString(evidenceRef)) {
+      return {
+        status: RESEARCH_RUN_STATES.FETCH_FAILED,
+        reason: 'research_evidence_not_captured',
+        inspections: { documentation: false, api: false, apiApplicable },
+        findings: [],
+        rejected: [],
+        provenance: null,
+      };
+    }
+
+    // §TAREFA 11 — binding: a evidência precisa ser do MESMO conteúdo analisado.
+    const evidenceContentHash = isNonEmptyString(captured.output?.contentHash)
+      ? String(captured.output.contentHash)
+      : analyzedContentHash;
+    if (evidenceContentHash !== analyzedContentHash) {
+      return {
+        status: RESEARCH_RUN_STATES.EVIDENCE_HASH_MISMATCH,
+        reason: `${SEMANTIC_CODES.EVIDENCE_HASH_MISMATCH}: analyzed=${analyzedContentHash} evidence=${evidenceContentHash}`,
+        inspections: { documentation: false, api: false, apiApplicable },
+        findings: [],
+        rejected: [],
+        evidenceRef,
+        analyzedContentHash,
+        evidenceContentHash,
+        provenance: null,
+      };
+    }
+
+    const inspections = { documentation: false, api: false, apiApplicable };
+    const findings = [];
+    const rejected = [];
+    const perAxis = {};
+
+    // Falha de inspeção é um FATO DE PESQUISA (a fonte foi obtida, mas não foi
+    // possível extrair estrutura dela) — nunca um crash e nunca "zero achados
+    // silencioso". Um eixo que não foi inspecionado não pode ser declarado
+    // pesquisado.
+    let documentationInspection;
+    try {
+      documentationInspection = await callCapability('research.inspectDocumentation', {
+        url: chosen.url,
+        content,
+        contentHash: analyzedContentHash,
+        contentType,
+        query,
+      });
+    } catch (error) {
+      return {
+        status: RESEARCH_RUN_STATES.INSPECTION_FAILED,
+        reason: `research_inspection_failed: inspectDocumentation (${error.message})`,
+        inspections,
+        findings: [],
+        rejected: [],
+        evidenceRef,
+        analyzedContentHash,
+        provenance: null,
+      };
+    }
+    inspections.documentation = true;
+    const documentationExtraction = extractInspectionFindings({
+      inspection: documentationInspection.output || {},
+      inspectionKind: 'documentation',
+      vertical,
+      benchmarkId,
+      benchmark,
+      contentHash: analyzedContentHash,
+      sourceUrl: chosen.url,
+      sourceTier: source?.tier ?? null,
+    });
+    findings.push(...documentationExtraction.findings.map((finding) => ({ ...finding, inspectionKind: 'documentation' })));
+    rejected.push(...documentationExtraction.rejected.map((entry) => ({ ...entry, inspectionKind: 'documentation' })));
+    perAxis.documentation = documentationExtraction.perAxis;
+
+    if (apiApplicable) {
+      let apiInspection;
+      try {
+        apiInspection = await callCapability('research.inspectApiDocs', {
+          url: chosen.url,
+          content,
+          contentHash: analyzedContentHash,
+          contentType,
+          query,
+        });
+      } catch (error) {
+        // A inspeção de documentação JÁ aconteceu: o eixo ainda não pode ser
+        // declarado completo sem a parte de API. O motivo é nominal.
+        return {
+          status: RESEARCH_RUN_STATES.INSPECTION_FAILED,
+          reason: `research_inspection_failed: inspectApiDocs (${error.message})`,
+          inspections,
+          findings,
+          rejected,
+          perAxis,
+          evidenceRef,
+          analyzedContentHash,
+          provenance: null,
+        };
+      }
+      inspections.api = true;
+      const apiExtraction = extractInspectionFindings({
+        inspection: apiInspection.output || {},
+        inspectionKind: 'api',
+        vertical,
+        benchmarkId,
+        benchmark,
+        contentHash: analyzedContentHash,
+        sourceUrl: chosen.url,
+        sourceTier: source?.tier ?? null,
+      });
+      findings.push(...apiExtraction.findings.map((finding) => ({ ...finding, inspectionKind: 'api' })));
+      rejected.push(...apiExtraction.rejected.map((entry) => ({ ...entry, inspectionKind: 'api' })));
+      perAxis.api = apiExtraction.perAxis;
+    }
+
+    return {
+      status: RESEARCH_RUN_STATES.EVIDENCE_CAPTURED,
+      reason: null,
+      source: {
+        url: chosen.url,
+        tier: source?.tier ?? null,
+        specificity: chosen.specificity || 'SPECIFIC',
+        // A VERIFICAÇÃO vem do status HTTP real — nunca de uma afirmação do agente.
+        verified: true,
+        httpStatus,
+        contentType,
+        contentHash: analyzedContentHash,
+      },
+      inspections,
+      evidenceRef,
+      analyzedContentHash,
+      findings,
+      rejected,
+      perAxis,
+      axesAttempted: Object.keys(perAxis),
+      provenance: buildResearchProvenance({
+        capability: 'research.captureEvidence',
+        toolId: captured.toolId,
+        provider: captured.provider,
+        source: { url: chosen.url, tier: source?.tier ?? null },
+        evidenceRef,
+        at: clock(),
+      }),
+    };
+  }
+
+  /**
    * Descobre uma fonte, obtém o conteúdo, captura evidência e REGISTRA o achado.
+   *
+   * ATENÇÃO (missão corretiva): este método registra UM achado cujo nome vem do
+   * chamador. Ele NÃO pode ser usado com o nome do concorrente — o serviço
+   * recusa por código (`BENCHMARK_SUBJECT_IS_NOT_A_FINDING`). O caminho de
+   * produção é `inspectSource()`, que extrai o nome do CONTEÚDO.
    *
    * @returns {Promise<{status, finding?, evidence?, provenance, reason?}>}
    */
@@ -131,6 +394,9 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
     archetype = null,
     sourceTier = null,
     pickCandidate = null,
+    locator = null,
+    contentHash = null,
+    benchmark = null,
   } = {}) {
     if (!isNonEmptyString(vertical) || !isNonEmptyString(benchmarkId) || !isNonEmptyString(query)) {
       throw new Error('research_runner_input_invalid');
@@ -199,6 +465,11 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
       // uma afirmação do agente.
       verified: true,
       httpStatus,
+      // §TAREFA 11 — o hash acompanha a fonte: sem ele a evidência não está
+      // ligada ao conteúdo analisado.
+      contentHash: contentHash || (isNonEmptyString(fetched.output?.contentHash)
+        ? String(fetched.output.contentHash)
+        : `sha256:${sha256Hex(content)}`),
     };
 
     const finding = await service.recordFinding({
@@ -212,6 +483,9 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
       evidenceRef,
       classification,
       archetype,
+      locator,
+      analyzedContentHash: source.contentHash,
+      benchmark,
     });
 
     return {
@@ -236,13 +510,15 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
 
   return {
     researchAndRecord,
+    inspectSource,
     markAnalyzed,
     availableCapabilities,
     ensureCapabilities,
     states: RESEARCH_RUN_STATES,
     requiredCapabilities: REQUIRED_CAPABILITIES,
+    apiCapability: API_CAPABILITY,
     capabilities: RESEARCH_CAPABILITIES,
   };
 }
 
-module.exports = { RESEARCH_RUN_STATES, REQUIRED_CAPABILITIES, createBenchmarkResearchRunner };
+module.exports = { RESEARCH_RUN_STATES, REQUIRED_CAPABILITIES, API_CAPABILITY, createBenchmarkResearchRunner };

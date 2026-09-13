@@ -678,6 +678,14 @@ async function recordHealth({ tenantId, id, ok, error = null, degradedAfter = 3 
   const failures = ok ? 0 : (Number(current.consecutive_failures) || 0) + 1;
   let status;
   if (current.enabled === false) status = LIFECYCLE_STATES.DISABLED;
+  // §M12 × TAREFA 71 — SAÚDE NÃO SOBRESCREVE ESTADO PENDENTE DE AÇÃO.
+  // `SCHEMA_CHANGED` não é um sintoma de saúde: é uma mudança de contrato
+  // OBSERVADA que exige revalidação explícita do operador. Um health check bem
+  // sucedido (o servidor respondeu) provava justamente que o servidor está no
+  // ar — e apagava a pendência, fazendo o contrato novo parecer aceito. Os
+  // sinais de saúde (lastSuccessAt, consecutiveFailures=0) continuam sendo
+  // gravados; só o STATUS permanece pendente até a revalidação.
+  else if (ok && current.status === LIFECYCLE_STATES.SCHEMA_CHANGED) status = LIFECYCLE_STATES.SCHEMA_CHANGED;
   else if (ok) status = LIFECYCLE_STATES.HEALTHY;
   else if (failures >= degradedAfter) status = LIFECYCLE_STATES.UNAVAILABLE;
   else status = LIFECYCLE_STATES.DEGRADED;

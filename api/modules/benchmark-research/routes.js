@@ -26,7 +26,11 @@ const path = require('path');
 const { checkClassification } = require('../../middleware/requireClassification');
 const { tenantFromRequest } = require('../../../lib/rpaSecurity');
 const { createBenchmarkResearchStore } = require('../../services/benchmark/benchmarkResearchStore');
-const { createBenchmarkResearchSupervisor } = require('../../services/benchmark/benchmarkResearchSupervisor');
+const {
+  createBenchmarkResearchSupervisor,
+  buildResearchPrincipal,
+} = require('../../services/benchmark/benchmarkResearchSupervisor');
+const { canonicalResearchTenant, SEMANTIC_CODES } = require('../../services/benchmark/benchmarkResearchSemantics');
 const { applySamplePatch, SAMPLES_DIR } = require('../../services/benchmark/benchmarkSampleRegistry');
 const { evaluateSampleSufficiency } = require('../../../qa/benchmarks/benchmarkSufficiencyEngine');
 const policy = require('../../../config/benchmark-sufficiency-policy.json');
@@ -85,9 +89,31 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
       return null;
     }
     if (!enforceDevelopment(deps, req, res)) return null;
-    const tenantId = requireTenant(deps, req, res, auth);
-    if (!tenantId) return null;
-    return { auth, tenantId };
+    const authenticatedTenant = requireTenant(deps, req, res, auth);
+    if (!authenticatedTenant) return null;
+
+    // §TAREFA 30/31/32/84 — COMPETITIVE BENCHMARK RESEARCH É SYSTEM/INTERNAL.
+    //
+    // O tenant é resolvido SERVER-SIDE para 'system'. Antes, o tenant
+    // autenticado era usado direto: um engineer logado no tenant de um cliente
+    // criava o run NAQUELE tenant, misturando pesquisa de mercado interna com
+    // dado operacional (e colocando o resultado ao alcance do RAG do cliente).
+    //
+    // A recusa é fail-closed: tenant que não é um alias interno conhecido NÃO
+    // é silenciosamente convertido — a operação é negada.
+    const researchTenant = canonicalResearchTenant(authenticatedTenant);
+    if (!researchTenant) {
+      deps.sendJson(res, 403, {
+        error: SEMANTIC_CODES.SYSTEM_TENANT_REQUIRED,
+        message: 'Pesquisa competitiva de benchmark é superfície SYSTEM/INTERNAL; '
+          + 'não é executável em tenant operacional',
+        authenticatedTenant,
+        requiredTenant: 'system',
+      });
+      return null;
+    }
+
+    return { auth, tenantId: researchTenant, authenticatedTenant };
   }
 
   /**
@@ -106,8 +132,13 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
         store,
         registry,
         providers: injected.providers || {},
-        tenantId: injected.tenantId || 'system',
-        actor: injected.actor || { classification: 'DEVELOPMENT', permissions: ['benchmark.research.execute'] },
+        // O tenant do run é SEMPRE SYSTEM (já resolvido em `authenticate`).
+        tenantId: injected.tenantId || context.tenantId || 'system',
+        // §TAREFA 27/28 — principal interno com delegação EXPLÍCITA a
+        // `research.*` (sem wildcard). O default antigo só tinha
+        // `benchmark.research.execute`, então os provedores de pesquisa nunca
+        // eram alcançáveis pelo caminho de produção.
+        actor: injected.actor || buildResearchPrincipal(),
         logger: deps.logger,
       }),
       store,

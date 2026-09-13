@@ -65,10 +65,20 @@ function buildProviders() {
         { url: 'https://w12.com.br/funcionalidades/', title: `${query} — oficial`, specificity: 'SPECIFIC' },
       ],
     }),
-    fetch: async () => ({ httpStatus: 200, content: '<html>matrículas, catraca, app do aluno</html>' }),
-    inspectDocumentation: async () => ({ sections: ['Matrículas'] }),
-    inspectApiDocs: async () => ({ operations: ['GET /members'] }),
-    captureEvidence: async () => ({ evidenceRef: 'ev-supervisor-1', contentHash: 'sha256:abc' }),
+    // §TAREFA 06 — o fetch devolve o CONTEÚDO; o hash do conteúdo analisado é
+    // derivado dele (ou devolvido pelo provider). Nenhum hash é inventado.
+    fetch: async () => ({ httpStatus: 200, contentType: 'text/html', content: '<html>matrículas, catraca, app do aluno</html>' }),
+    // §TAREFA 09 — a inspeção devolve ESTRUTURA extraída com locator na fonte.
+    inspectDocumentation: async () => ({
+      sections: ['Matrículas'],
+      capabilities: [{ name: 'Gestão de matrículas', locator: 'section:Matrículas', fragmentHash: 'sha256:frag-matriculas' }],
+      journeys: [],
+      rules: [],
+    }),
+    inspectApiDocs: async () => ({ operations: ['GET /members'], capabilities: [], journeys: [], rules: [] }),
+    // §TAREFA 11 — a evidência é do MESMO conteúdo analisado: o provider
+    // devolve o hash que recebeu (é assim que a cadeia fecha).
+    captureEvidence: async ({ url, contentHash }) => ({ evidenceRef: 'ev-supervisor-1', contentHash }),
   };
 }
 

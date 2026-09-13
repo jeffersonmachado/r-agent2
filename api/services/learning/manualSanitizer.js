@@ -135,6 +135,35 @@ const PRODUCTION_FORBIDDEN_RULES = Object.freeze([
     description: 'Referência a trace bruto de execução.',
     pattern: /\braw trace\b/i,
   },
+  {
+    id: 'trace_identifier',
+    description: 'Identificador de trace técnico de execução (traceId/spanId).',
+    // Operador de PRODUCTION não lê trace distribuído: isso é proveniência
+    // interna (fica no `provenance.json` SUPPORT/DEVELOPMENT).
+    pattern: /\b(?:traceId|trace_id|spanId|span_id|traceparent)\b/,
+  },
+  {
+    id: 'xpath_expression',
+    description: 'Expressão XPath de alvo técnico (eixo, predicado @atributo, contains(text()) ou caminho //elemento).',
+    // §A6 anti-falso-positivo: exige ASSINATURA de XPath — caminho `//elem`
+    // (com predicado ou continuação), predicado com valor (`[@id="x"]`),
+    // função de nó (`contains(text(`/`contains(@`), eixo explícito
+    // (`::child`) — ou o caminho absoluto canônico `/html|/body`.
+    // NÃO casa caminho relativo de documentação (`./engine/`), pseudo-elemento
+    // CSS (`::before`), moldura markdown (`[Importante]`) nem menção (`[@user]`).
+    pattern: new RegExp([
+      // Caminho `//elemento` com predicado ou continuação de caminho.
+      '(?:\\/\\/|\\.\\/\\/)[A-Za-z*][\\w-]*(?:\\[[^\\]]*\\]|\\/)',
+      // Predicado com valor: [@id="x"].
+      '\\[@[\\w-]+\\s*[=!]\\s*[\'"]',
+      // Função de nó: contains(text( / contains(@atributo.
+      'contains\\(\\s*(?:text\\(|@[\\w-]+)',
+      // Eixo explícito: ::child, ::self, ::descendant...
+      '::(?:child|self|descendant|parent|ancestor|following|preceding|attribute|text|node)\\b',
+      // Caminho absoluto canônico: /html/... ou /body...
+      '(?:^|[\\s`"\'(])\\/(?:html|body)(?![A-Za-z])',
+    ].join('|')),
+  },
 ]);
 
 /** Clona o pattern com flag `g` para varredura completa sem mutar a regra congelada. */
@@ -188,7 +217,8 @@ function sanitizeProductionText(text) {
   out = out.replace(/\s*\((?:alvo|seletor|selector)\s*[:=]?\s*[^)]*\)/gi, '');
 
   // 2. Crase técnica de seletor: `` `#x` `` / `` `.x` ``.
-  out = out.replace(new RegExp(PRODUCTION_FORBIDDEN_RULES[2].pattern.source, 'g'), '');
+  const cssSelectorRule = PRODUCTION_FORBIDDEN_RULES.find((rule) => rule.id === 'css_selector_token');
+  out = out.replace(new RegExp(cssSelectorRule.pattern.source, 'g'), '');
 
   // 3. Linha de citação de rastreabilidade interna (bloco `>` do gerador de manual).
   out = out

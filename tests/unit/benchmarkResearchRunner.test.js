@@ -20,6 +20,7 @@ const {
   createBenchmarkResearchRunner,
 } = require('../../api/services/benchmark/benchmarkResearchRunner');
 const { createBenchmarkResearchMemoryStore } = require('../helpers/benchmarkResearchMemoryStore');
+const { completeAnalysisEvidence } = require('../helpers/benchmarkAnalysisEvidence');
 
 /** Tenant do run de pesquisa (pesquisa é superfície SYSTEM). */
 const TENANT = 'system';
@@ -231,6 +232,17 @@ describe('Research runner — habilitação de análise', () => {
     await runner.researchAndRecord({
       vertical: 'fitness', benchmarkId: 'evo', query: 'EVO matrícula',
       externalName: 'Gestão de matrículas', kind: FINDING_KINDS.CAPABILITY, sourceTier: 5,
+      // §TAREFA 12 — a evidência precisa apontar para o FRAGMENTO da fonte.
+      locator: 'section:Matrículas#gestao',
+    });
+
+    // §TAREFA 20 — o critério deixou de ser "1 achado + arquétipo": ele exige o
+    // estado de pesquisa (três eixos + inspeções + evidência ligada ao conteúdo),
+    // que aqui é montado pelas MESMAS APIs públicas do serviço.
+    await completeAnalysisEvidence(service, {
+      tenantId: TENANT,
+      vertical: 'fitness',
+      benchmarkId: 'evo',
     });
 
     const analyzed = await runner.markAnalyzed({

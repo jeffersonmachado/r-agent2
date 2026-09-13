@@ -21,6 +21,7 @@ const {
   createBenchmarkResearchService,
 } = require('../../api/services/benchmark/benchmarkResearchService');
 const { createBenchmarkResearchMemoryStore } = require('../helpers/benchmarkResearchMemoryStore');
+const { completeAnalysisEvidence } = require('../helpers/benchmarkAnalysisEvidence');
 const {
   RESEARCH_CAPABILITIES,
   RESEARCH_CAPABILITY_IDS,
@@ -127,7 +128,7 @@ describe('Benchmark research — evidência é obrigatória para marcar análise
     expect(summary.requiresRevalidation).toBe(true);
   });
 
-  test('analyzedAt exige achado verificado + mapeamento de arquétipo', async () => {
+  test('analyzedAt exige evidência COMPLETA: achado verificado + 3 eixos + inspeções + evidência ligada', async () => {
     const service = buildService();
     await openRun(service);
 
@@ -151,12 +152,27 @@ describe('Benchmark research — evidência é obrigatória para marcar análise
       marketArchetypeMapping: { archetype: 'independent-gym' },
     })).rejects.toThrow(new RegExp(RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE));
 
-    // Achado verificado + arquétipo → aceito.
-    await service.recordFinding({
+    // Achado verificado SEM os eixos/inspeções declarados ainda é RECUSADO:
+    // "achei uma página" deixou de ser prova de análise (TAREFA 20/25).
+    const verifiedOnly = await service.recordFinding({
       tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a', kind: FINDING_KINDS.CAPABILITY,
       externalName: 'Gestão de matrículas', canonicalId: 'membership.manage',
       source: OFFICIAL_SOURCE, evidenceRef: 'ev-2',
+    });
+    expect(verifiedOnly.verified).toBe(true);
+    await expect(service.markAnalyzed({
+      tenantId: TENANT,
+      vertical: 'fitness', benchmarkId: 'bench-a',
+      marketArchetypeMapping: { archetype: 'independent-gym' },
+    })).rejects.toThrow(/benchmark_axis_capability_not_researched/);
+
+    // Evidência COMPLETA (três eixos + documentação + API + hash/locator) → aceito.
+    await completeAnalysisEvidence(service, {
+      tenantId: TENANT,
+      vertical: 'fitness',
+      benchmarkId: 'bench-a',
+      canonicalId: 'membership.manage',
     });
     const analyzed = await service.markAnalyzed({
       tenantId: TENANT,
@@ -167,7 +183,7 @@ describe('Benchmark research — evidência é obrigatória para marcar análise
     // Inventário é um ARRAY DE REFERÊNCIAS verificadas — o formato que o engine
     // exige para aceitar a análise como evidência (§B7).
     expect(Array.isArray(analyzed.findingsInventory)).toBe(true);
-    expect(analyzed.findingsInventory).toHaveLength(1);
+    expect(analyzed.findingsInventory.length).toBeGreaterThanOrEqual(1);
     expect(analyzed.unverifiedFindings).toBe(1);
   });
 
@@ -222,6 +238,8 @@ describe('Benchmark research — ordem de discovery e holdout', () => {
       externalName: 'WOD tracking', source: OFFICIAL_SOURCE, evidenceRef: 'ev-h',
     });
 
+    // A proteção do holdout dispara ANTES do critério de evidência: abrir o
+    // holdout cedo é uma violação de ORDEM, não uma questão de completude.
     await expect(service.markAnalyzed({
       tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'zenplanner',
@@ -229,6 +247,12 @@ describe('Benchmark research — ordem de discovery e holdout', () => {
     })).rejects.toThrow(new RegExp(RESEARCH_BLOCKERS.HOLDOUT_ORDER_VIOLATION));
 
     await service.markApparentSaturation({ tenantId: TENANT, vertical: 'fitness' });
+    await completeAnalysisEvidence(service, {
+      tenantId: TENANT,
+      vertical: 'fitness',
+      benchmarkId: 'zenplanner',
+      externalName: 'WOD tracking',
+    });
     const analyzed = await service.markAnalyzed({
       tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'zenplanner',
@@ -256,10 +280,11 @@ describe('Benchmark research — ordem de discovery e holdout', () => {
   test('sample patch expõe apenas campos de pesquisa', async () => {
     const service = buildService();
     await openRun(service);
-    await service.recordFinding({
+    await completeAnalysisEvidence(service, {
       tenantId: TENANT,
-      vertical: 'fitness', benchmarkId: 'bench-a', kind: FINDING_KINDS.CAPABILITY,
-      externalName: 'x', source: OFFICIAL_SOURCE, evidenceRef: 'ev-1',
+      vertical: 'fitness',
+      benchmarkId: 'bench-a',
+      externalName: 'Gestão de matrículas',
     });
     await service.markAnalyzed({
       tenantId: TENANT,
@@ -279,7 +304,7 @@ describe('Benchmark research — ordem de discovery e holdout', () => {
     // engine realmente aceita. O patch antigo trazia um OBJETO de contadores e
     // por isso era um patch que o engine rejeitaria silenciosamente.
     expect(Array.isArray(analyzed.findingsInventory)).toBe(true);
-    expect(analyzed.findingsInventory).toHaveLength(1);
+    expect(analyzed.findingsInventory.length).toBeGreaterThanOrEqual(1);
     expect(analyzed.inventoryVersion).toBe('canonical-capabilities-1.0.0');
     expect(analyzed.sources.length).toBeGreaterThan(0);
 

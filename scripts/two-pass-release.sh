@@ -86,6 +86,24 @@ ok()    { echo -e "${GREEN}  ✓ $*${NC}"; }
 warn()  { echo -e "${YELLOW}  ⚠ $*${NC}"; }
 fail()  { echo -e "${RED}  ✗ BLOQUEADO: $*${NC}" >&2; exit 1; }
 
+# ── AUTHORITY DE FASE (TAREFA 47/48) ────────────────────────────────────────
+# A fase do release NÃO é comentário nem tolerância ad hoc: é transição
+# validada por `governance/release-state-machine.js`. Antes desta ligação o
+# pipeline usava critérios próprios (`SEAL_PENDING`,
+# `PASS_WITH_DEFERRED_PACKAGE_GATE`, `DELIVERED_PHASE_DIMS` hardcoded) —
+# autoridades PARALELAS que podiam divergir da máquina de estados em silêncio.
+#
+# `phase` falha o release quando a transição é ilegal (pulo de fase), quando um
+# gate permanece PENDING vencido ou quando há ciclo no DAG.
+phase() {
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/release-phase.js" "$@" >/dev/null 2>&1 \
+    && ok "release-phase $*" \
+    || {
+      node_with_workspace_env "$PROJECT_ROOT/scripts/governance/release-phase.js" "$@" 2>&1 | tail -6
+      fail "release-phase $* — transição de fase inválida (autoridade de fase)"
+    }
+}
+
 write_release_manifest() {
   local zip_path="$1"
   local manifest_path="$2"
@@ -582,6 +600,15 @@ else
   ok "Proveniência remota verificada (commit presente no remote, tree íntegra)"
 fi
 
+# ── AUTHORITY DE FASE: SOURCE_VALIDATED → PRE_PACKAGE ───────────────────────
+# A partir daqui a fonte está validada (proveniência local + remota) e o run
+# entra na fase de preparação do pacote. Tudo que depende de um artefato
+# POSTERIOR é `PENDING_PHASE` (nunca PASS, nunca FAIL) até sua fase chegar.
+phase start --release "$RELEASE_NAME"
+# `start` já fixa a fase inicial em SOURCE_VALIDATED (a fonte local e remota
+# foram verificadas acima); o próximo passo é a preparação do pacote.
+phase advance --to PRE_PACKAGE
+
 # ── GATE EXPERIENCE-SEGREGATION: evidência fresca em todo release oficial ────
 # O relatório é consumido pelo Master Scorecard (RAP-014/RAP-015), entra no
 # Evidence Manifest e é verificado pelo delivered-release verifier — precisa
@@ -784,6 +811,16 @@ node_with_workspace_env "$PROJECT_ROOT/scripts/governance/write-release-identity
 ok "Candidato materializado: dist/candidate/${RELEASE_NAME}.candidate.zip"
 ok "H_candidate    : $H_CANDIDATE"
 
+# ── AUTHORITY DE FASE: CANDIDATE_BUILT → CANDIDATE_VALIDATED ────────────────
+# O candidato existe como artefato de primeira classe; a identidade dele é
+# conferida contra os BYTES reais antes de a fase avançar. Um candidato que não
+# passa aqui não pode virar "selado": é a separação CANDIDATE ≠ DELIVERED.
+phase advance --to CANDIDATE_BUILT
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-release-artifact-identity.js" \
+  --kind candidate --phase CANDIDATE_BUILT \
+  || fail "identidade do CANDIDATO inválida — release bloqueado antes da selagem"
+phase advance --to CANDIDATE_VALIDATED
+
 # ══════════════════════════════════════════════════════════════════════════════
 pass "PASS 2 — VINCULAÇÃO DE GOVERNANÇA AO PROVISIONAL (H_provisional)"
 # ══════════════════════════════════════════════════════════════════════════════
@@ -930,6 +967,16 @@ echo "$SEAL_OUTPUT"
 [[ "$SEAL_RC" -eq 0 ]] || fail "CANONICAL_NO_GO — release abortada: governança real não convergiu antes de selar o payload"
 SEAL_DECISION="$(grep -oE 'SEAL_GO|SEAL_PENDING' <<< "$SEAL_OUTPUT" | tail -1)"
 [[ -n "$SEAL_DECISION" ]] || fail "seal-time-gate não emitiu decisão parseável"
+
+# ── AUTHORITY DE FASE: SEALED ───────────────────────────────────────────────
+# A selagem é uma TRANSIÇÃO, não um rótulo: o gate de selo declarou a decisão
+# real (SEAL_GO/SEAL_PENDING) e a fase só avança no GO. Um gate que tente
+# exigir artefato de fase POSTERIOR (DELIVERED) permanece PENDING_PHASE.
+if [[ "$SEAL_DECISION" == "SEAL_GO" ]]; then
+  phase advance --to SEALED
+else
+  ok "fase SEALED não alcançada (decisão=${SEAL_DECISION}) — gates posteriores seguem PENDING_PHASE"
+fi
 ok "Seal decision: $SEAL_DECISION"
 
 # ── GATE FINAL_STATUS_PROJECTION: projeções frescas ANTES de selar o payload ─
@@ -1227,6 +1274,15 @@ node_with_workspace_env "$PROJECT_ROOT/scripts/governance/write-release-identity
   || fail "não foi possível materializar a identidade do payload entregue"
 ok "identidade do entregue vinculada ao candidato ($H_CANDIDATE→$PAYLOAD_SHA)"
 
+# ── AUTHORITY DE FASE: DELIVERED ────────────────────────────────
+# O payload entregue existe e a identidade dele foi gravada em sidecar EXTERNO
+# (sem paradoxo de auto-hash). A fase avança porque o ARTEFATO existe de fato —
+# nunca por declaração.
+phase advance --to DELIVERED
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-release-artifact-identity.js" \
+  --kind delivered --phase DELIVERED \
+  || fail "identidade do payload ENTREGUE inválida — lineage candidato→payload não confere"
+
 step "Criando envelope final com payload + governança externa..."
 ENVELOPE_PATH="$RELEASE_DIR/$ENVELOPE_ZIP_NAME"
 # HYGIENE GATE (STALE_VERIFIER_RESULT): verify-result.json é o recibo que o
@@ -1242,6 +1298,30 @@ mkdir -p "$TMP_ENVELOPE/r-agent2/dist/release" \
          "$TMP_ENVELOPE/r-agent2/dist/verifier"
 cp "$PAYLOAD_PATH" "$TMP_ENVELOPE/r-agent2/dist/release/$PAYLOAD_ZIP_NAME"
 cp "$MANIFEST_PATH" "$TMP_ENVELOPE/r-agent2/dist/release/$CURRENT_MF"
+# ── R6/TAREFA 56/57/58 — LINEAGE OFFLINE NO ENVELOPE ────────────────────────
+# O destinatário precisa conseguir provar, SEM rede e SEM o workspace de origem:
+#
+#   sourceFingerprint → candidateHash → finalPayloadHash
+#
+# Para isso os ARTEFATOS DE IDENTIDADE viajam no ENVELOPE (ao lado do payload,
+# nunca dentro dele): manifesto e validação do candidato + identidade do payload
+# entregue (com `parentCandidateHash`). São arquivos DETACHED exatamente para não
+# criar o paradoxo de auto-hash — nenhum deles precisa conter o hash dos próprios
+# bytes que o envelope produz.
+IDENTITY_DIR="$TMP_ENVELOPE/r-agent2/dist/release/identity"
+mkdir -p "$IDENTITY_DIR"
+for identity_file in \
+  "$CANDIDATE_DIR/${RELEASE_NAME}.candidate.manifest.json" \
+  "$CANDIDATE_DIR/${RELEASE_NAME}.candidate-validation.json" \
+  "$RELEASE_DIR/${RELEASE_NAME}.delivered.identity.json" \
+  "$CANDIDATE_DIR/${RELEASE_NAME}.candidate.identity.json"; do
+  if [[ -f "$identity_file" ]]; then
+    cp "$identity_file" "$IDENTITY_DIR/"
+    ok "lineage offline: $(basename "$identity_file") incluído no envelope"
+  else
+    warn "lineage offline: $(basename "$identity_file") ausente — não incluído"
+  fi
+done
 cp "$GOV_DIR"/*.json "$TMP_ENVELOPE/r-agent2/dist/governance/"
 cp "$SIG_DIR"/*.sig "$TMP_ENVELOPE/r-agent2/dist/signatures/"
 cp "$VER_DIR"/* "$TMP_ENVELOPE/r-agent2/dist/verifier/"
@@ -1384,6 +1464,15 @@ if bash "$VERIFIER"; then
     for(const p of paths){if(fs.existsSync(p)){process.stdout.write(JSON.parse(fs.readFileSync(p,'utf8')).selfProofStatus||'UNKNOWN');process.exit(0);}}
     process.stdout.write('UNKNOWN');
   " 2>/dev/null || echo 'UNKNOWN')"
+
+  # ── AUTHORITY DE FASE: FINAL_GOVERNANCE ────────────────────
+  # O verificador offline PASSOU: o pacote está verificado de ponta a ponta.
+  # A fase final de governança é alcançada agora — e o relatório de fase (com
+  # o status REAL de cada gate e sua `requiredPhase`) fica em `reports/`.
+  # PUBLISHED_VERIFIED só é alcançada DEPOIS da tag + recibo de publicação,
+  # fora do pipeline.
+  phase advance --to FINAL_GOVERNANCE
+  phase report
 
   echo ""
   echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"

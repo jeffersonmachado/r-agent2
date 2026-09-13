@@ -256,6 +256,31 @@ function createBenchmarkResearchStore({ models } = {}) {
     });
   }
 
+  /**
+   * Persiste o ESTADO DE PESQUISA do benchmark: estado por EIXO (capability,
+   * journey, businessRule), inspeções executadas e resumo da extração.
+   *
+   * Fica no `metadata` da linha do SUBJECT (não em memória) por dois motivos:
+   *   1. `analyzedAt` só pode ser concedido com os três eixos pesquisados — o
+   *      estado que justifica a concessão precisa sobreviver ao restart;
+   *   2. auditabilidade: "o eixo de jornada foi pesquisado?" é uma pergunta que
+   *      o auditor faz depois, não durante a execução.
+   */
+  async function updateSubjectResearchState({ tenantId, runId, benchmarkId, patch = {} }) {
+    const row = await getSubject({ tenantId, runId, benchmarkId });
+    if (!row) throw storeError(ERROR_CODES.INVALID, `benchmark fora do discovery set: ${benchmarkId}`);
+    // Objeto NOVO: o Sequelize compara a referência do JSONB para decidir se
+    // emite o UPDATE. Mutar `row.metadata` in-place faz o campo ser considerado
+    // INALTERADO e a gravação silenciosamente não acontece.
+    const metadata = { ...jsonObject(row.metadata, {}) };
+    if (patch.axes) metadata.researchAxes = { ...jsonObject(metadata.researchAxes, {}), ...patch.axes };
+    if (patch.inspections) metadata.inspections = { ...jsonObject(metadata.inspections, {}), ...patch.inspections };
+    if (patch.extraction) metadata.extraction = { ...jsonObject(metadata.extraction, {}), ...patch.extraction };
+    if (patch.metadata) Object.assign(metadata, jsonObject(patch.metadata, {}));
+    await row.update({ metadata });
+    return row;
+  }
+
   async function listSources({ tenantId, runId, benchmarkId = null }) {
     const { source } = resolveModels();
     const where = { tenant_key: requireNonEmpty(tenantId, 'tenantId'), run_id: requireNonEmpty(runId, 'runId') };
@@ -375,6 +400,7 @@ function createBenchmarkResearchStore({ models } = {}) {
     updateRunState,
     listSubjects,
     getSubject,
+    updateSubjectResearchState,
     markSubjectAnalyzed,
     upsertSource,
     listSources,

@@ -48,6 +48,19 @@ const {
   classifySourceVerification,
 } = require('../../../qa/benchmarks/benchmarkSufficiencyEngine');
 
+const {
+  RESEARCH_AXES,
+  AXIS_STATES,
+  FINDING_ORIGINS,
+  SEMANTIC_CODES,
+  axisForKind,
+  isSubjectNameFinding,
+  normalizeFindingName,
+  resolveFindingOrigin,
+  buildAxisCompleteness,
+  evaluateAnalyzedCriterion,
+} = require('./benchmarkResearchSemantics');
+
 /**
  * Política de suficiência versionada — define quais tiers contam como prova.
  * Lida do arquivo canônico (mesmo insumo do gate `validate:benchmark-sufficiency`).
@@ -216,6 +229,12 @@ function createBenchmarkResearchService({ store, now } = {}) {
     evidenceRef = null,
     classification = null,
     archetype = null,
+    origin = null,
+    locator = null,
+    normalizedId = null,
+    analyzedContentHash = null,
+    benchmark = null,
+    metadata = {},
   }) {
     const tenant = requireTenant(tenantId);
     const run = await loadRun(tenant, vertical);
@@ -227,7 +246,25 @@ function createBenchmarkResearchService({ store, now } = {}) {
     const normalizedKind = normalizeKind(kind);
     if (!normalizedKind) throw blocker(RESEARCH_BLOCKERS.INVALID_KIND, String(kind));
 
+    // §TAREFA 02/03/78 — o fornecedor é o SUJEITO da pesquisa, não um achado.
+    // Um achado chamado "EVO" entraria na curva de novidade como se fosse
+    // capacidade que a plataforma não tem. A recusa é por CÓDIGO, para o
+    // chamador poder reportar nominalmente o que foi rejeitado.
+    if (isSubjectNameFinding({ candidate: externalName, benchmark: benchmark || { id } })) {
+      throw blocker(SEMANTIC_CODES.SUBJECT_AS_CAPABILITY, `${externalName} (${id})`);
+    }
+
     const sourceVerification = classifyResearchSource(source);
+    const contentHash = isNonEmptyString(source?.contentHash) ? String(source.contentHash) : null;
+
+    // §TAREFA 11/12/82 — binding criptográfico: a evidência só vale se o hash
+    // do conteúdo ANALISADO for o mesmo do conteúdo CAPTURADO. Um fetch da
+    // versão A com evidência da versão B é uma prova de outro documento.
+    if (analyzedContentHash && contentHash && String(analyzedContentHash) !== String(contentHash)) {
+      throw blocker(SEMANTIC_CODES.EVIDENCE_HASH_MISMATCH, `${id}: analyzed=${analyzedContentHash} evidence=${contentHash}`);
+    }
+    const boundContentHash = analyzedContentHash || contentHash;
+
     const verified = sourceVerification.verified && isNonEmptyString(evidenceRef);
 
     const sourceRow = isNonEmptyString(source?.url)
@@ -255,9 +292,13 @@ function createBenchmarkResearchService({ store, now } = {}) {
         benchmarkId: id,
         sourceId: sourceRow ? sourceRow.id : null,
         evidenceRef: String(evidenceRef),
-        contentHash: source?.contentHash || null,
+        contentHash: boundContentHash,
         httpStatus: source?.httpStatus ?? null,
         capturedAt: clock(),
+        metadata: {
+          locator: locator || null,
+          normalizedId: normalizedId || null,
+        },
       })
       : null;
 
@@ -275,6 +316,15 @@ function createBenchmarkResearchService({ store, now } = {}) {
       sourceId: sourceRow ? sourceRow.id : null,
       evidenceId: evidenceRow ? evidenceRow.id : null,
       recordedAt: clock(),
+      metadata: {
+        ...metadata,
+        // §TAREFA 18 — proveniência: EXTERNAL_OBSERVED exige locator na fonte.
+        origin: resolveFindingOrigin({ locator, origin }),
+        locator: locator || null,
+        normalizedId: normalizedId || null,
+        contentHash: boundContentHash,
+        axis: axisForKind(normalizedKind),
+      },
     });
 
     if (run.state !== RESEARCH_STATES.IN_PROGRESS && run.state !== RESEARCH_STATES.COMPLETE) {
@@ -295,6 +345,46 @@ function createBenchmarkResearchService({ store, now } = {}) {
     throw blocker(RESEARCH_BLOCKERS.HOLDOUT_ORDER_VIOLATION, String(benchmarkId));
   }
 
+  /**
+   * Persiste o estado de pesquisa de UM eixo (`CAPABILITY_AXIS`, `JOURNEY_AXIS`,
+   * `BUSINESS_RULE_AXIS`). É este estado — não a existência de um achado — que
+   * decide se o eixo conta como pesquisado (TAREFA 19/21/22).
+   */
+  async function setAxisState({ tenantId, vertical, benchmarkId, axis, state, reason = null }) {
+    const tenant = requireTenant(tenantId);
+    const run = await loadRun(tenant, vertical);
+    const id = String(benchmarkId || '');
+    if (!Object.values(RESEARCH_AXES).includes(String(axis))) {
+      throw blocker(RESEARCH_BLOCKERS.INVALID_KIND, String(axis));
+    }
+    if (!Object.values(AXIS_STATES).includes(String(state))) {
+      throw blocker(RESEARCH_BLOCKERS.INVALID_KIND, String(state));
+    }
+    const row = await store.updateSubjectResearchState({
+      tenantId: tenant,
+      runId: run.id,
+      benchmarkId: id,
+      patch: { axes: { [axis]: String(state) }, metadata: { axisReason: reason } },
+    });
+    return toBenchmarkSummary(row, []);
+  }
+
+  /**
+   * Registra quais inspeções foram EXECUTADAS (prova, não intenção) e, quando
+   * informado, metadados do sujeito (nome/aliases do benchmark, erros abertos).
+   * Ambos ficam PERSISTIDOS — o critério de análise é auditado depois.
+   */
+  async function recordInspections({ tenantId, vertical, benchmarkId, inspections = {}, metadata = null }) {
+    const tenant = requireTenant(tenantId);
+    const run = await loadRun(tenant, vertical);
+    return store.updateSubjectResearchState({
+      tenantId: tenant,
+      runId: run.id,
+      benchmarkId: String(benchmarkId || ''),
+      patch: { inspections, ...(metadata ? { metadata } : {}) },
+    });
+  }
+
   /** Marca que a saturação APARENTE foi atingida (habilita abrir o holdout). */
   async function markApparentSaturation({ tenantId, vertical }) {
     const tenant = requireTenant(tenantId);
@@ -304,16 +394,16 @@ function createBenchmarkResearchService({ store, now } = {}) {
   }
 
   /**
-   * Marca um benchmark como ANALISADO. Só é permitido com evidência completa:
-   *   - pelo menos 1 achado VERIFICADO;
-   *   - mapeamento de arquétipo;
-   *   - a ordem de discovery registrada;
-   *   - o holdout apenas depois da saturação declarada.
+   * Marca um benchmark como ANALISADO.
    *
-   * Sem isso o benchmark permanece sem `analyzedAt` — e o engine, corretamente,
-   * o trata como NOT_MEASURABLE em vez de "zero novidade".
+   * §TAREFA 20/25/80 — o critério ANTIGO ("1 achado verificado + mapeamento de
+   * arquétipo") transformava "achei uma página" em ANALYZED, e ANALYZED é a
+   * evidência que o engine usa para dizer que o mercado foi coberto. O critério
+   * agora exige: discovery de fonte, inspeção de DOCUMENTAÇÃO, inspeção de API
+   * (quando aplicável), os TRÊS eixos pesquisados, evidência com hash binding e
+   * nenhum erro crítico em aberto — tudo lido do estado PERSISTIDO.
    */
-  async function markAnalyzed({ tenantId, vertical, benchmarkId, marketArchetypeMapping = null, analyzedAt = null }) {
+  async function markAnalyzed({ tenantId, vertical, benchmarkId, marketArchetypeMapping = null, analyzedAt = null, inspections = null }) {
     const tenant = requireTenant(tenantId);
     const run = await loadRun(tenant, vertical);
     const id = String(benchmarkId || '');
@@ -321,12 +411,34 @@ function createBenchmarkResearchService({ store, now } = {}) {
     if (!subject) throw blocker(RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK, id);
     assertHoldoutNotAnalyzedEarly(run, id);
 
-    const findings = await store.listFindings({ tenantId: tenant, runId: run.id, benchmarkId: id });
+    const [findings, evidence, sources] = await Promise.all([
+      store.listFindings({ tenantId: tenant, runId: run.id, benchmarkId: id }),
+      store.listEvidence({ tenantId: tenant, runId: run.id, benchmarkId: id }),
+      store.listSources({ tenantId: tenant, runId: run.id, benchmarkId: id }),
+    ]);
     const verifiedFindings = findings.filter((finding) => finding.verified === true);
 
-    const missing = [];
-    if (verifiedFindings.length === 0) missing.push('verifiedFindings');
+    const subjectMetadata = subject.metadata && typeof subject.metadata === 'object' ? subject.metadata : {};
+    const persistedAxes = subjectMetadata.researchAxes || {};
+    const persistedInspections = { ...(subjectMetadata.inspections || {}), ...(inspections || {}) };
+
+    const criterion = evaluateAnalyzedCriterion({
+      benchmark: { id, ...(subjectMetadata.benchmark || {}) },
+      inspections: persistedInspections,
+      axes: persistedAxes,
+      findings,
+      evidence: evidence.map((row) => ({
+        verified: true,
+        contentHash: row.content_hash,
+        locator: (row.metadata && row.metadata.locator) || null,
+      })),
+      errors: Array.isArray(subjectMetadata.errors) ? subjectMetadata.errors : [],
+      sourceDiscovery: sources.length > 0,
+    });
+
+    const missing = [...criterion.missing];
     if (!marketArchetypeMapping || !isNonEmptyString(marketArchetypeMapping.archetype)) missing.push('marketArchetypeMapping');
+
     if (missing.length > 0) {
       throw blocker(RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE, `${id} (${missing.join(',')})`);
     }
@@ -342,6 +454,19 @@ function createBenchmarkResearchService({ store, now } = {}) {
       marketArchetypeMapping: {
         archetype: String(marketArchetypeMapping.archetype),
         rationale: marketArchetypeMapping.rationale || null,
+      },
+    });
+
+    // A completude registrada faz parte do critério: fica GRAVADA, não apenas
+    // calculada (TAREFA 20 — 'research completeness recorded').
+    await store.updateSubjectResearchState({
+      tenantId: tenant,
+      runId: run.id,
+      benchmarkId: id,
+      patch: {
+        extraction: {
+          analyzedCriterion: { satisfied: true, missing: [], detail: criterion.detail },
+        },
       },
     });
 
@@ -451,17 +576,39 @@ function createBenchmarkResearchService({ store, now } = {}) {
    * Um achado com `canonicalId` JÁ mapeado no inventário canônico não é
    * novidade: é confirmação. Só capacidade/jornada/regra NÃO mapeada conta.
    */
-  function buildNovelty(findings, sourcesById) {
+  function buildNovelty(findings, sourcesById, benchmark = null) {
     const novelty = emptyNovelty();
+    const seen = new Map();
     for (const finding of findings) {
       if (finding.verified !== true) continue;
+      // §TAREFA 20 do engine: achado já mapeado no inventário canônico é
+      // CONFIRMAÇÃO, não novidade.
       if (isNonEmptyString(finding.canonical_id)) continue;
       const fields = NOVELTY_FIELDS[finding.kind];
       if (!fields) continue;
+
+      const metadata = finding.metadata && typeof finding.metadata === 'object' ? finding.metadata : {};
+      // §TAREFA 18 — inferência interna (RAP_DERIVED) NÃO é observação do
+      // concorrente: atribuí-la ao fornecedor seria inventar evidência externa.
+      if (metadata.origin === FINDING_ORIGINS.RAP_DERIVED) continue;
+      // §TAREFA 02/03 — o fornecedor é o sujeito, nunca uma capacidade nova.
+      if (isSubjectNameFinding({ candidate: finding.external_name, benchmark: benchmark || {} })) continue;
+
       const sourceRow = finding.source_id ? sourcesById.get(finding.source_id) : null;
+      // §TAREFA 23 — a identidade do item é o id canônico/normalizado. O nome do
+      // concorrente nunca entra como identidade da novidade.
+      const normalizedId = metadata.normalizedId
+        || normalizeFindingName({ externalName: finding.external_name, kind: finding.kind }).canonicalId
+        || null;
+      const dedupeKey = `${fields.new}:${normalizedId || String(finding.external_name || finding.id).toLowerCase()}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.set(dedupeKey, true);
+
       const item = {
         id: finding.id,
         name: finding.external_name || null,
+        normalizedId,
+        origin: metadata.origin || null,
         // sourceRef/evidenceRef são IDs: precisam resolver contra as fontes do
         // benchmark e contra `sample.evidence` (gate evidenceTraceability).
         sourceRef: sourceRow ? sourceRow.id : null,
@@ -517,6 +664,9 @@ function createBenchmarkResearchService({ store, now } = {}) {
         const ownVerified = own.filter((finding) => finding.verified === true);
         const ownSources = sources.filter((row) => row.benchmark_id === subject.benchmark_id);
         const analyzedAt = toIso(subject.analyzed_at);
+        const subjectMetadata = subject.metadata && typeof subject.metadata === 'object' ? subject.metadata : {};
+        const subjectBenchmark = subjectMetadata.benchmark || { id: subject.benchmark_id };
+        const axisCompleteness = buildAxisCompleteness({ axes: subjectMetadata.researchAxes || {} });
         return {
           id: subject.benchmark_id,
           analyzedAt,
@@ -524,6 +674,9 @@ function createBenchmarkResearchService({ store, now } = {}) {
           inventoryVersion: analyzedAt ? (inventoryVersion || null) : null,
           findingsInventory: analyzedAt ? ownVerified.map((finding) => finding.id) : null,
           marketArchetypeMapping: subject.market_archetype_mapping || null,
+          // Completude por eixo: "pesquisado sem achados" é resultado legítimo;
+          // "não pesquisado" não pode ser lido como zero novidade (TAREFA 21).
+          axisCompleteness: axisCompleteness.axes,
           sources: ownSources.map((row) => ({
             id: row.id,
             url: row.url,
@@ -533,7 +686,7 @@ function createBenchmarkResearchService({ store, now } = {}) {
             httpStatus: row.http_status,
             retrievedAt: (toIso(row.verified_at || row.created_at) || '').slice(0, 10) || null,
           })),
-          novelty: buildNovelty(own, sourcesById),
+          novelty: buildNovelty(own, sourcesById, subjectBenchmark),
         };
       }),
     };
@@ -542,6 +695,8 @@ function createBenchmarkResearchService({ store, now } = {}) {
   return {
     openDiscoverySet,
     recordFinding,
+    setAxisState,
+    recordInspections,
     markAnalyzed,
     markApparentSaturation,
     summarize,

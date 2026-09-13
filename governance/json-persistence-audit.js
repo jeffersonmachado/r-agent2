@@ -126,6 +126,11 @@ const BASENAME_CLASSIFIED = {
   'progress.json': 'DB_CANONICAL_JSON_EXPORT',
   // Receipt de publicação pós-tag: escrito em governance/ via outDir dinâmico.
   'release-publication-receipt.json': 'DB_CANONICAL_JSON_EXPORT',
+  // Estado de fase do release (`governance/release-phase-runner.js`): escrito em
+  // `reports/` via `path.join` resolvido em variável, logo o scanner só enxerga
+  // o basename. É DERIVADO e regenerável pelo próprio comando de fase — mesma
+  // natureza dos demais relatórios de `reports/`, nunca autoridade de estado.
+  'release-phase-state.json': 'DB_CANONICAL_JSON_EXPORT',
 };
 
 // Caminhos de runtime que NÃO devem conter escritas JSON não classificadas.

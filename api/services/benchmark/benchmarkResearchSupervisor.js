@@ -32,10 +32,52 @@
 
 const { createBenchmarkResearchRunner, RESEARCH_RUN_STATES } = require('./benchmarkResearchRunner');
 const {
+  RESEARCH_AXES,
+  RESEARCH_AXIS_LIST,
+  AXIS_STATES,
+  FINDING_ORIGINS,
+  SEMANTIC_CODES,
+  assertSystemTenant,
+  axisForKind,
+  kindForAxis,
+  buildAxisCompleteness,
+  evaluateAnalyzedCriterion,
+} = require('./benchmarkResearchSemantics');
+const { RESEARCH_CAPABILITY_IDS } = require('./researchCapabilities');
+const {
   createBenchmarkResearchService,
   RESEARCH_STATES,
   RESEARCH_BLOCKERS,
 } = require('./benchmarkResearchService');
+
+/**
+ * §TAREFA 27/28/83 — PERMISSIONS EXPLÍCITAS do research principal.
+ *
+ * Antes: `permissions: ['benchmark.research.execute']`. O supervisor podia
+ * declarar a capability mas não tinha delegação para `research.*`, então os
+ * provedores nunca eram alcançáveis pelo principal default — e um wildcard
+ * (`research.*` ou `mcp.*`) teria resolvido o sintoma concedendo MAIS do que o
+ * necessário. A lista abaixo é nominal: exatamente o que a pesquisa competitiva
+ * usa, nada além.
+ */
+const RESEARCH_PRINCIPAL_PERMISSIONS = Object.freeze([
+  'benchmark.research.execute',
+  ...RESEARCH_CAPABILITY_IDS,
+]);
+
+/**
+ * Principal INTERNO do serviço de pesquisa (TAREFA 28).
+ * `classification = DEVELOPMENT` (superfície de engenharia), sem wildcard,
+ * sem permissão de domínio de cliente e com tenant SYSTEM resolvido server-side.
+ */
+function buildResearchPrincipal({ permissions = RESEARCH_PRINCIPAL_PERMISSIONS } = {}) {
+  return {
+    classification: 'DEVELOPMENT',
+    tenant: 'system',
+    domain: 'SYSTEM',
+    permissions: [...permissions],
+  };
+}
 
 /** A capability canônica pela qual o runtime alcança a pesquisa de benchmarks. */
 const BENCHMARK_RESEARCH_CAPABILITY = Object.freeze({
@@ -62,6 +104,25 @@ const RESEARCH_RUN_OUTCOMES = Object.freeze({
   NOTHING_ANALYZED: 'RESEARCH_NOTHING_ANALYZED',
   PARTIAL: 'RESEARCH_PARTIAL',
   ANALYZED: 'RESEARCH_ANALYZED',
+});
+
+/**
+ * Severidade de um resultado de fonte que NÃO virou prova.
+ *
+ * Distinção que importa para o critério de análise (TAREFA 20 — "nenhum erro
+ * crítico em aberto"):
+ *   - `NO_CANDIDATES` é INFORMATIVO. Uma fonte DECLARADA pelo sample que a
+ *     busca não indexou não invalida as outras fontes do mesmo benchmark; o
+ *     fato fica registrado no attempt e no relatório.
+ *   - `FETCH_FAILED`, `INSPECTION_FAILED` e `EVIDENCE_HASH_MISMATCH` são
+ *     CRÍTICOS: havia conteúdo e ele não pôde virar prova. Analisar o benchmark
+ *     assim seria declarar cobertura sem ter lido nada.
+ */
+const OUTCOME_SEVERITY = Object.freeze({
+  [RESEARCH_RUN_STATES.NO_CANDIDATES]: 'INFO',
+  [RESEARCH_RUN_STATES.FETCH_FAILED]: 'ERROR',
+  [RESEARCH_RUN_STATES.INSPECTION_FAILED]: 'ERROR',
+  [RESEARCH_RUN_STATES.EVIDENCE_HASH_MISMATCH]: 'ERROR',
 });
 
 function isNonEmptyString(value) {
@@ -162,6 +223,14 @@ function buildResearchPlanFromSample(sample) {
       name: benchmark.name || benchmark.id,
       archetype: benchmark.archetype || null,
       role: benchmark.role || null,
+      // O SUJEITO da pesquisa (nome + aliases) precisa viajar com o plano para
+      // que a extração possa recusar o fornecedor como se fosse achado.
+      benchmark: {
+        id: benchmark.id,
+        name: benchmark.name || benchmark.id,
+        aliases: Array.isArray(benchmark.aliases) ? [...benchmark.aliases] : [],
+      },
+      apiApplicable: benchmark.apiApplicable !== false,
       declaredSources: declaredUrls,
       query: `${benchmark.name || benchmark.id} funcionalidades documentação oficial`,
     });
@@ -193,11 +262,10 @@ function createBenchmarkResearchSupervisor({
 
   const log = logger || { info() {}, warn() {}, error() {}, debug() {} };
   const clock = typeof now === 'function' ? now : () => new Date().toISOString();
-  const researchTenant = isNonEmptyString(tenantId) ? String(tenantId) : 'system';
-  const principal = actor || {
-    classification: 'DEVELOPMENT',
-    permissions: [BENCHMARK_RESEARCH_CAPABILITY.capability],
-  };
+  // §TAREFA 30/31/84 — pesquisa competitiva é SYSTEM/INTERNAL. Um tenant
+  // operacional aqui seria dado de cliente alimentando pesquisa de mercado.
+  const researchTenant = assertSystemTenant(isNonEmptyString(tenantId) ? tenantId : 'system');
+  const principal = actor || buildResearchPrincipal();
 
   const service = createBenchmarkResearchService({ store, now: clock });
   const runner = createBenchmarkResearchRunner({
@@ -297,45 +365,183 @@ function createBenchmarkResearchSupervisor({
 
     for (const entry of planned) {
       const attempts = [];
+      const errors = [];
+      const subject = entry.benchmark || { id: entry.benchmarkId, name: entry.name, aliases: [] };
+      const apiApplicable = entry.apiApplicable !== false;
+
+      // Estado INICIAL por eixo: `NOT_RESEARCHED`. Um eixo só sai deste estado
+      // quando a inspeção de uma fonte efetivamente executou (TAREFA 19/21).
+      const axes = {
+        [RESEARCH_AXES.CAPABILITY]: AXIS_STATES.NOT_RESEARCHED,
+        [RESEARCH_AXES.JOURNEY]: AXIS_STATES.NOT_RESEARCHED,
+        [RESEARCH_AXES.BUSINESS_RULE]: AXIS_STATES.NOT_RESEARCHED,
+      };
+      const findingsByAxis = {
+        [RESEARCH_AXES.CAPABILITY]: 0,
+        [RESEARCH_AXES.JOURNEY]: 0,
+        [RESEARCH_AXES.BUSINESS_RULE]: 0,
+      };
+      const inspections = { documentation: false, api: false, apiApplicable };
+      let blocked = false;
+
       for (const declared of entry.declaredSources) {
         // O subagente só age por CAPABILITY governada. Sem provider, o retorno
         // é bloqueio explícito — nunca um achado inventado.
-        const outcome = await runner.researchAndRecord({
+        const outcome = await runner.inspectSource({
           vertical,
+          benchmark: subject,
           benchmarkId: entry.benchmarkId,
           query: entry.query,
-          kind: 'capability',
-          externalName: entry.name,
-          sourceTier: declared.tier,
+          source: { url: declared.url, tier: declared.tier },
+          apiApplicable,
           // A fonte precisa ser EXATAMENTE a declarada. Aceitar "a primeira que
           // veio" atribuiria a um fornecedor a fonte de outro — o tipo de troca
           // silenciosa que transforma evidência em ficção.
           pickCandidate: (candidates) => (Array.isArray(candidates) ? candidates : [])
             .find((candidate) => normalizeSourceUrl(candidate?.url) === normalizeSourceUrl(declared.url)) || null,
         });
-        attempts.push({ url: declared.url, status: outcome.status, reason: outcome.reason || null });
-        if (outcome.status === RESEARCH_RUN_STATES.BLOCKED_NO_EXTERNAL_ACCESS) break;
+
+        attempts.push({
+          url: declared.url,
+          status: outcome.status,
+          reason: outcome.reason || null,
+          findings: Array.isArray(outcome.findings) ? outcome.findings.length : 0,
+        });
+
+        if (outcome.status === RESEARCH_RUN_STATES.BLOCKED_NO_EXTERNAL_ACCESS) {
+          blocked = true;
+          break;
+        }
+
+        if (outcome.status !== RESEARCH_RUN_STATES.EVIDENCE_CAPTURED) {
+          // Fonte inspecionável que falhou: o eixo NÃO pode ser declarado
+          // pesquisado, e o motivo entra na lista nominal de erros com a
+          // severidade correta (informativo ≠ crítico).
+          errors.push({
+            severity: OUTCOME_SEVERITY[outcome.status] || 'ERROR',
+            code: outcome.status,
+            reason: outcome.reason || null,
+            resolved: false,
+            at: clock(),
+          });
+          continue;
+        }
+
+        inspections.documentation = inspections.documentation || outcome.inspections.documentation === true;
+        inspections.api = inspections.api || outcome.inspections.api === true;
+
+        for (const extracted of outcome.findings) {
+          try {
+            await service.recordFinding({
+              tenantId: researchTenant,
+              vertical,
+              benchmarkId: entry.benchmarkId,
+              kind: extracted.kind,
+              externalName: extracted.externalName,
+              canonicalId: extracted.canonicalId,
+              source: { ...outcome.source },
+              evidenceRef: outcome.evidenceRef,
+              classification: extracted.classification,
+              archetype: entry.archetype || null,
+              origin: extracted.origin,
+              locator: extracted.locator,
+              normalizedId: extracted.normalizedId,
+              analyzedContentHash: outcome.analyzedContentHash,
+              benchmark: subject,
+              metadata: {
+                description: extracted.description,
+                fragmentHash: extracted.fragmentHash,
+                inspectionKind: extracted.inspectionKind,
+                confidence: extracted.confidence,
+              },
+            });
+            const axis = axisForKind(extracted.kind);
+            if (axis) findingsByAxis[axis] += 1;
+          } catch (error) {
+            errors.push({
+              severity: 'ERROR',
+              code: error.code || 'research_finding_not_recorded',
+              reason: error.message,
+              resolved: false,
+              at: clock(),
+            });
+          }
+        }
       }
 
-      results.push({ benchmarkId: entry.benchmarkId, attempts });
-
-      // `markAnalyzed` só é tentado quando existe evidência VERIFICADA.
-      // Recusa é reportada nominalmente — nunca silenciada.
-      if (attempts.some((attempt) => attempt.status === RESEARCH_RUN_STATES.EVIDENCE_CAPTURED)) {
-        try {
-          await service.markAnalyzed({
-            tenantId: researchTenant,
-            vertical,
-            benchmarkId: entry.benchmarkId,
-            marketArchetypeMapping: {
-              archetype: entry.archetype || 'unmapped',
-              rationale: 'mapeamento declarado no sample do benchmark',
-            },
-          });
-          analyzed.push(entry.benchmarkId);
-        } catch (error) {
-          results[results.length - 1].analysisRefused = error.code || error.message;
+      // Transição de estado por eixo, derivada dos FATOS desta passagem.
+      for (const axis of RESEARCH_AXIS_LIST) {
+        if (blocked) {
+          axes[axis] = AXIS_STATES.BLOCKED;
+          continue;
         }
+        const postgres = findingsByAxis[axis];
+        if (inspections.documentation && (inspections.api || !apiApplicable)) {
+          axes[axis] = postgres > 0 ? AXIS_STATES.RESEARCHED_WITH_FINDINGS : AXIS_STATES.RESEARCHED_NO_FINDINGS;
+        } else if (attempts.length > 0) {
+          axes[axis] = AXIS_STATES.FAILED;
+        }
+        await service.setAxisState({
+          tenantId: researchTenant,
+          vertical,
+          benchmarkId: entry.benchmarkId,
+          axis,
+          state: axes[axis],
+          reason: axes[axis] === AXIS_STATES.FAILED ? 'inspection_not_executed' : null,
+        });
+      }
+
+      await service.recordInspections({
+        tenantId: researchTenant,
+        vertical,
+        benchmarkId: entry.benchmarkId,
+        inspections: { ...inspections, executedAt: clock() },
+        // O SUJEITO e a lista de erros ficam PERSISTIDOS: o critério de análise
+        // e a recusa precisam ser reconstruíveis depois do restart.
+        metadata: { benchmark: subject, errors },
+      });
+
+      const result = {
+        benchmarkId: entry.benchmarkId,
+        attempts,
+        axes,
+        findingsByAxis,
+        axisCompleteness: buildAxisCompleteness({ axes }),
+        errors,
+      };
+      results.push(result);
+
+      // §TAREFA 20/25/80 — `markAnalyzed` só é TENTADO quando o critério forte
+      // é satisfeito. A recusa é reportada nominalmente, nunca silenciada.
+      const criterion = evaluateAnalyzedCriterion({
+        benchmark: subject,
+        inspections,
+        axes,
+        findings: Object.values(findingsByAxis).some((count) => count > 0) ? [{ verified: true }] : [],
+        evidence: inspections.documentation ? [{ verified: true, contentHash: 'bound', locator: 'bound' }] : [],
+        errors,
+        sourceDiscovery: attempts.some((attempt) => attempt.status === RESEARCH_RUN_STATES.EVIDENCE_CAPTURED),
+      });
+      if (!criterion.satisfied) {
+        result.analysisRefused = criterion.missing;
+        continue;
+      }
+
+      try {
+        await service.markAnalyzed({
+          tenantId: researchTenant,
+          vertical,
+          benchmarkId: entry.benchmarkId,
+          marketArchetypeMapping: {
+            archetype: entry.archetype || 'unmapped',
+            rationale: 'mapeamento declarado no sample do benchmark',
+          },
+        });
+        analyzed.push(entry.benchmarkId);
+      } catch (error) {
+        result.analysisRefused = error.code === RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE
+          ? `${error.code}: ${error.message}`
+          : (error.code || error.message);
       }
     }
 
@@ -394,6 +600,9 @@ function createBenchmarkResearchSupervisor({
 module.exports = {
   BENCHMARK_RESEARCH_CAPABILITY,
   RESEARCH_RUN_OUTCOMES,
+  RESEARCH_PRINCIPAL_PERMISSIONS,
+  OUTCOME_SEVERITY,
+  buildResearchPrincipal,
   buildResearchPlanFromSample,
   ensureBenchmarkResearchCapability,
   createBenchmarkResearchSupervisor,
