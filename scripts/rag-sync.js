@@ -28,6 +28,9 @@ const {
   resolveDomainClassification: resolveSurfaceClassification,
   isProductionSurface,
 } = require('../api/services/rag/knowledgeSurfaceClassification');
+// §L6: o mesmo detector que o gate usa. Superfície PRODUCTION não entra no
+// índice OPERACIONAL sem passar por ele.
+const { detectProductionLeaks } = require('../api/services/learning/manualSanitizer');
 
 const RAG_BASE = process.env.RAG_BASE_URL || 'http://10.10.2.30:8002';
 const RAG_TOKEN = process.env.RAG_INTERNAL_TOKEN || '';
@@ -182,6 +185,29 @@ function looksSensitive(rel, content) {
   return SECRET_CONTENT_PATTERNS.some((pattern) => pattern.test(content));
 }
 
+/**
+ * §L6 — O índice OPERACIONAL só recebe representação PRODUCTION.
+ *
+ * A classificação é decidida pelo CAMINHO (taxonomia canônica). Se um documento
+ * classificado PRODUCTION carregar detalhe interno (replay, seletor, cenário de
+ * QA, caminho/endpoint/comando de QA-RPA, ferramenta de automação), ele NÃO é
+ * projetado para o índice: é bloqueado e a sincronização falha no final. Deixar
+ * passar seria contaminar exatamente a superfície que o operador e o copiloto
+ * leem.
+ *
+ * @returns {Array} vazamentos encontrados (vazio = pode indexar)
+ */
+function productionLeaksForIngestion(rel, documentContent) {
+  const { classification } = resolveDomainClassification(rel);
+  if (classification !== 'PRODUCTION') return [];
+  return detectProductionLeaks(documentContent).map((leak) => ({
+    rel,
+    ruleId: leak.ruleId,
+    match: leak.match,
+    description: leak.description,
+  }));
+}
+
 // Mapeia um arquivo-fonte para um documento RAG.
 function buildDocumentFromFile(filePath, content) {
   const rel = path.relative(ROOT, filePath);
@@ -256,6 +282,9 @@ async function main() {
 
   const toIndex = [];
   const unchanged = [];
+  // §L6: documentos PRODUCTION bloqueados por detalhe interno (não entram no
+  // índice OPERACIONAL e derrubam o comando no final).
+  const blocked = [];
 
   for (const filePath of uniqueFiles) {
     const content = fs.readFileSync(filePath, 'utf-8');
@@ -273,10 +302,24 @@ async function main() {
       continue;
     }
 
-    toIndex.push({ rel, hash, doc: buildDocumentFromFile(filePath, content) });
+    const doc = buildDocumentFromFile(filePath, content);
+    const ingestionLeaks = productionLeaksForIngestion(rel, doc.document.content);
+    if (ingestionLeaks.length > 0) {
+      blocked.push(...ingestionLeaks);
+      console.log(
+        `   ⛔ ${rel}: BLOQUEADO (superfície PRODUCTION com detalhe interno): `
+        + ingestionLeaks.map((leak) => `${leak.ruleId}("${leak.match}")`).join(', '),
+      );
+      continue;
+    }
+
+    toIndex.push({ rel, hash, doc });
   }
 
-  console.log(`   ${toIndex.length} para indexar, ${unchanged.length} inalterados\n`);
+  console.log(`   ${toIndex.length} para indexar, ${unchanged.length} inalterados`);
+  if (blocked.length > 0) {
+    console.log(`   ${blocked.length} bloqueado(s) por conteúdo interno em superfície PRODUCTION\n`);
+  }
 
   if (dryRun) {
     for (const item of toIndex) {
@@ -284,6 +327,9 @@ async function main() {
       console.log(`   ${prev ? '🔄' : '➕'} ${item.rel} (${item.hash.slice(0, 12)})`);
     }
     console.log(`\nDRY RUN — nada foi alterado.`);
+    // Fail-closed também no dry-run: o operador precisa ver que algo está
+    // bloqueado antes de rodar a sincronização real.
+    if (blocked.length > 0) process.exitCode = 1;
     return;
   }
 
@@ -320,10 +366,28 @@ async function main() {
     console.log('❌ Falhas:');
     failures.forEach((f) => console.log(`   - ${f.rel}: ${f.status} ${f.error}`));
   }
+  if (blocked.length) {
+    console.log('⛔ Bloqueados por conteúdo interno em superfície PRODUCTION:');
+    blocked.forEach((b) => console.log(`   - ${b.rel}: ${b.ruleId}("${b.match}")`));
+    // Fail-closed: nada de sair 0 com conteúdo PRODUCTION contaminado.
+    process.exitCode = 1;
+  }
   console.log(`${'='.repeat(60)}`);
 }
 
-main().catch((err) => {
-  console.error('FATAL:', err.message);
-  process.exit(1);
-});
+module.exports = {
+  buildDocumentFromFile,
+  productionLeaksForIngestion,
+  resolveDomainClassification,
+  isProductionSurface,
+  sha256,
+  EXTRA_OPERATIONAL_SOURCES,
+  SOURCE_DIRS,
+};
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('FATAL:', err.message);
+    process.exit(1);
+  });
+}

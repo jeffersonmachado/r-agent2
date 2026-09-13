@@ -20,6 +20,7 @@ const {
   classifyResearchSource,
   createBenchmarkResearchService,
 } = require('../../api/services/benchmark/benchmarkResearchService');
+const { createBenchmarkResearchMemoryStore } = require('../helpers/benchmarkResearchMemoryStore');
 const {
   RESEARCH_CAPABILITIES,
   RESEARCH_CAPABILITY_IDS,
@@ -51,13 +52,27 @@ const SECONDARY_SOURCE = {
 const GENERIC_SOURCE = { url: 'https://example-vendor.com/', tier: 5, verified: true, httpStatus: 200 };
 const UNFETCHED_SOURCE = { url: 'https://docs.example-vendor.com/features/billing', tier: 1 };
 
+/**
+ * TENANT fixo dos testes. A persistência é tenant-scoped por contrato: um teste
+ * que omitisse o tenant não estaria exercitando o isolamento real.
+ *
+ * O store é EM MEMÓRIA porque esta suíte testa POLÍTICA (ordem de discovery,
+ * holdout, evidência obrigatória) — a persistência real é provada contra o
+ * Postgres em `tests/unit/benchmarks/benchmarkResearchPersistence.test.js`.
+ */
+const TENANT = 'system';
+
 function buildService() {
   let tick = 0;
-  return createBenchmarkResearchService({ now: () => `2026-09-11T00:00:0${tick++}.000Z` });
+  return createBenchmarkResearchService({
+    store: createBenchmarkResearchMemoryStore(),
+    now: () => `2026-09-11T00:00:0${tick++}.000Z`,
+  });
 }
 
-function openRun(service) {
-  service.openDiscoverySet({
+async function openRun(service) {
+  return service.openDiscoverySet({
+    tenantId: TENANT,
     vertical: 'fitness',
     researchVersion: 'fitness-research-v1',
     benchmarkIds: ['bench-a', 'bench-b', 'zenplanner'],
@@ -91,11 +106,12 @@ describe('Benchmark research — evidência é obrigatória para marcar análise
     expect(classifyResearchSource(null).verified).toBe(false);
   });
 
-  test('achado sem fonte verificável é registrado mas NÃO conta como prova', () => {
+  test('achado sem fonte verificável é registrado mas NÃO conta como prova', async () => {
     const service = buildService();
-    openRun(service);
+    await openRun(service);
 
-    const finding = service.recordFinding({
+    const finding = await service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness',
       benchmarkId: 'bench-a',
       kind: FINDING_KINDS.CAPABILITY,
@@ -105,142 +121,174 @@ describe('Benchmark research — evidência é obrigatória para marcar análise
     });
 
     expect(finding.verified).toBe(false);
-    const summary = service.summarize('fitness');
+    const summary = await service.summarize({ tenantId: TENANT, vertical: 'fitness' });
     expect(summary.totalFindings).toBe(1);
     expect(summary.unverifiedFindings).toBe(1);
     expect(summary.requiresRevalidation).toBe(true);
   });
 
-  test('analyzedAt exige achado verificado + mapeamento de arquétipo', () => {
+  test('analyzedAt exige achado verificado + mapeamento de arquétipo', async () => {
     const service = buildService();
-    openRun(service);
+    await openRun(service);
 
     // Sem nenhum achado → recusa.
-    expect(() => service.markAnalyzed({
+    await expect(service.markAnalyzed({
+      tenantId: TENANT,
       vertical: 'fitness',
       benchmarkId: 'bench-a',
       marketArchetypeMapping: { archetype: 'independent-gym' },
-    })).toThrow(new RegExp(RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE));
+    })).rejects.toThrow(new RegExp(RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE));
 
     // Achado NÃO verificado continua não contando.
-    service.recordFinding({
+    await service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a', kind: FINDING_KINDS.CAPABILITY,
       externalName: 'x', source: GENERIC_SOURCE, evidenceRef: 'ev-1',
     });
-    expect(() => service.markAnalyzed({
+    await expect(service.markAnalyzed({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a',
       marketArchetypeMapping: { archetype: 'independent-gym' },
-    })).toThrow(new RegExp(RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE));
+    })).rejects.toThrow(new RegExp(RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE));
 
     // Achado verificado + arquétipo → aceito.
-    service.recordFinding({
+    await service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a', kind: FINDING_KINDS.CAPABILITY,
       externalName: 'Gestão de matrículas', canonicalId: 'membership.manage',
       source: OFFICIAL_SOURCE, evidenceRef: 'ev-2',
     });
-    const analyzed = service.markAnalyzed({
+    const analyzed = await service.markAnalyzed({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a',
       marketArchetypeMapping: { archetype: 'independent-gym', rationale: 'foco em matrícula e caixa' },
     });
     expect(analyzed.analyzedAt).toBeTruthy();
-    expect(analyzed.findingsInventory).toEqual({ total: 2, verified: 1, unverified: 1 });
+    // Inventário é um ARRAY DE REFERÊNCIAS verificadas — o formato que o engine
+    // exige para aceitar a análise como evidência (§B7).
+    expect(Array.isArray(analyzed.findingsInventory)).toBe(true);
+    expect(analyzed.findingsInventory).toHaveLength(1);
+    expect(analyzed.unverifiedFindings).toBe(1);
   });
 
-  test('achado em benchmark fora do discovery set é recusado', () => {
+  test('achado em benchmark fora do discovery set é recusado', async () => {
     const service = buildService();
-    openRun(service);
-    expect(() => service.recordFinding({
+    await openRun(service);
+    await expect(service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'nao-registrado', kind: FINDING_KINDS.CAPABILITY,
       externalName: 'x', source: OFFICIAL_SOURCE, evidenceRef: 'ev-1',
-    })).toThrow(new RegExp(RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK));
+    })).rejects.toThrow(new RegExp(RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK));
   });
 
-  test('tipo de achado inválido é recusado', () => {
+  test('tipo de achado inválido é recusado', async () => {
     const service = buildService();
-    openRun(service);
-    expect(() => service.recordFinding({
+    await openRun(service);
+    await expect(service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a', kind: 'whatever',
       externalName: 'x', source: OFFICIAL_SOURCE, evidenceRef: 'ev-1',
-    })).toThrow(new RegExp(RESEARCH_BLOCKERS.INVALID_KIND));
+    })).rejects.toThrow(new RegExp(RESEARCH_BLOCKERS.INVALID_KIND));
   });
 });
 
 describe('Benchmark research — ordem de discovery e holdout', () => {
-  test('registrar achado antes do discovery set é recusado (§5)', () => {
+  test('registrar achado antes do discovery set é recusado (§5)', async () => {
     const service = buildService();
-    expect(() => service.recordFinding({
+    await expect(service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a', kind: FINDING_KINDS.CAPABILITY,
       externalName: 'x', source: OFFICIAL_SOURCE, evidenceRef: 'ev-1',
-    })).toThrow(new RegExp(RESEARCH_BLOCKERS.NO_DISCOVERY_SET));
+    })).rejects.toThrow(new RegExp(RESEARCH_BLOCKERS.NO_DISCOVERY_SET));
   });
 
-  test('discovery set exige versão de pesquisa e não aceita duplicatas', () => {
+  test('discovery set exige versão de pesquisa e não aceita duplicatas', async () => {
     const service = buildService();
-    expect(() => service.openDiscoverySet({ vertical: 'fitness', benchmarkIds: ['a'] }))
-      .toThrow('research_version_required');
-    expect(() => service.openDiscoverySet({ vertical: 'fitness', researchVersion: 'v1', benchmarkIds: [] }))
-      .toThrow('research_discovery_set_empty');
-    expect(() => service.openDiscoverySet({ vertical: 'fitness', researchVersion: 'v1', benchmarkIds: ['a', 'a'] }))
-      .toThrow('research_discovery_set_duplicate');
+    await expect(service.openDiscoverySet({ tenantId: TENANT, vertical: 'fitness', benchmarkIds: ['a'] }))
+      .rejects.toThrow('research_version_required');
+    await expect(service.openDiscoverySet({ tenantId: TENANT, vertical: 'fitness', researchVersion: 'v1', benchmarkIds: [] }))
+      .rejects.toThrow('research_discovery_set_empty');
+    await expect(service.openDiscoverySet({ tenantId: TENANT, vertical: 'fitness', researchVersion: 'v1', benchmarkIds: ['a', 'a'] }))
+      .rejects.toThrow('research_discovery_set_duplicate');
   });
 
-  test('holdout NÃO pode ser analisado antes da saturação aparente (§13)', () => {
+  test('holdout NÃO pode ser analisado antes da saturação aparente (§13)', async () => {
     const service = buildService();
-    openRun(service);
+    await openRun(service);
 
-    service.recordFinding({
+    await service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'zenplanner', kind: FINDING_KINDS.CAPABILITY,
       externalName: 'WOD tracking', source: OFFICIAL_SOURCE, evidenceRef: 'ev-h',
     });
 
-    expect(() => service.markAnalyzed({
+    await expect(service.markAnalyzed({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'zenplanner',
       marketArchetypeMapping: { archetype: 'crossfit-box' },
-    })).toThrow(new RegExp(RESEARCH_BLOCKERS.HOLDOUT_ORDER_VIOLATION));
+    })).rejects.toThrow(new RegExp(RESEARCH_BLOCKERS.HOLDOUT_ORDER_VIOLATION));
 
-    service.markApparentSaturation('fitness');
-    const analyzed = service.markAnalyzed({
+    await service.markApparentSaturation({ tenantId: TENANT, vertical: 'fitness' });
+    const analyzed = await service.markAnalyzed({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'zenplanner',
       marketArchetypeMapping: { archetype: 'crossfit-box' },
     });
     expect(analyzed.analyzedAt).toBeTruthy();
   });
 
-  test('estado inicial é NOT_STARTED e passa a IN_PROGRESS com achado', () => {
+  test('estado inicial é NOT_STARTED e passa a IN_PROGRESS com achado', async () => {
     const service = buildService();
-    expect(service.summarize('fitness').state).toBe(RESEARCH_STATES.NOT_STARTED);
-    openRun(service);
-    expect(service.summarize('fitness').state).toBe(RESEARCH_STATES.DISCOVERY_OPEN);
-    service.recordFinding({
+    expect((await service.summarize({ tenantId: TENANT, vertical: 'fitness' })).state)
+      .toBe(RESEARCH_STATES.NOT_STARTED);
+    await openRun(service);
+    expect((await service.summarize({ tenantId: TENANT, vertical: 'fitness' })).state)
+      .toBe(RESEARCH_STATES.DISCOVERY_OPEN);
+    await service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a', kind: FINDING_KINDS.CAPABILITY,
       externalName: 'x', source: OFFICIAL_SOURCE, evidenceRef: 'ev-1',
     });
-    expect(service.summarize('fitness').state).toBe(RESEARCH_STATES.IN_PROGRESS);
+    expect((await service.summarize({ tenantId: TENANT, vertical: 'fitness' })).state)
+      .toBe(RESEARCH_STATES.IN_PROGRESS);
   });
 
-  test('sample patch expõe apenas campos de pesquisa', () => {
+  test('sample patch expõe apenas campos de pesquisa', async () => {
     const service = buildService();
-    openRun(service);
-    service.recordFinding({
+    await openRun(service);
+    await service.recordFinding({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a', kind: FINDING_KINDS.CAPABILITY,
       externalName: 'x', source: OFFICIAL_SOURCE, evidenceRef: 'ev-1',
     });
-    service.markAnalyzed({
+    await service.markAnalyzed({
+      tenantId: TENANT,
       vertical: 'fitness', benchmarkId: 'bench-a',
       marketArchetypeMapping: { archetype: 'independent-gym' },
     });
 
-    const patch = service.toSamplePatch('fitness');
+    const patch = await service.buildSamplePatch({
+      tenantId: TENANT,
+      vertical: 'fitness',
+      inventoryVersion: 'canonical-capabilities-1.0.0',
+    });
     expect(patch.researchVersion).toBe('fitness-research-v1');
     const analyzed = patch.benchmarks.find((b) => b.id === 'bench-a');
     expect(analyzed.analyzedAt).toBeTruthy();
-    expect(analyzed.findingsInventory.verified).toBe(1);
+    // §B7: array de referências + inventário versionado — o formato que o
+    // engine realmente aceita. O patch antigo trazia um OBJETO de contadores e
+    // por isso era um patch que o engine rejeitaria silenciosamente.
+    expect(Array.isArray(analyzed.findingsInventory)).toBe(true);
+    expect(analyzed.findingsInventory).toHaveLength(1);
+    expect(analyzed.inventoryVersion).toBe('canonical-capabilities-1.0.0');
+    expect(analyzed.sources.length).toBeGreaterThan(0);
 
     // Benchmarks não analisados continuam SEM analyzedAt — o engine os trata
     // como não mensuráveis em vez de "zero novidade".
     const pending = patch.benchmarks.find((b) => b.id === 'bench-b');
     expect(pending.analyzedAt).toBeNull();
     expect(pending.researchVersion).toBeNull();
+    expect(pending.findingsInventory).toBeNull();
   });
 });
 

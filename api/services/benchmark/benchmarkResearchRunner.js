@@ -201,7 +201,8 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
       httpStatus,
     };
 
-    const finding = service.recordFinding({
+    const finding = await service.recordFinding({
+      tenantId,
       vertical,
       benchmarkId,
       kind,
@@ -228,9 +229,9 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
     };
   }
 
-  /** Marca o benchmark como analisado (exige evidência já registrada). */
+  /** Marca o benchmark como analisado (exige evidência já REGISTRADA no store). */
   function markAnalyzed({ vertical, benchmarkId, marketArchetypeMapping }) {
-    return service.markAnalyzed({ vertical, benchmarkId, marketArchetypeMapping });
+    return service.markAnalyzed({ tenantId, vertical, benchmarkId, marketArchetypeMapping });
   }
 
   return {

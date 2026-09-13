@@ -126,7 +126,9 @@ async function handleAskAiRoute({ req, res, method, pathname, deps }) {
       intent: turn.intent,
       confidence: turn.confidence,
       provenance: turn.provenance,
-      context: { entityValidated: turn.policy.entityValidated },
+      // Leitura defensiva: um turno válido sem `policy` degrada o contexto
+      // para "não validado" em vez de derrubar a resposta em 500.
+      context: { entityValidated: turn.policy?.entityValidated === true },
       tenantId,
     });
   } catch (error) {

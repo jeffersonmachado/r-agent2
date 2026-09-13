@@ -41,6 +41,22 @@ function getMcpConnectionModel() {
       schema_fingerprint: { type: DataTypes.STRING(128), allowNull: true },
       consecutive_failures: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
       last_error: { type: DataTypes.TEXT, allowNull: true },
+      // Config OPERACIONAL (§M6): sem estas colunas, reiniciar o runtime
+      // devolvia a conexão sem escopo, sem mapeamento de capability e sem a
+      // política declarada por tool — e a execução caía na heurística.
+      allowed_capabilities: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      allowed_tools: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      // §M8 — mapeamento tool remota → capability CANÔNICA, versionado.
+      tool_capability_map: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
+      mapping_version: { type: DataTypes.STRING(32), allowNull: true },
+      tool_policies: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
+      endpoint_policy: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
+      quota: { type: DataTypes.JSONB, allowNull: true },
+      timeout_ms: { type: DataTypes.INTEGER, allowNull: true },
+      retry_policy: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
+      // Último inventário REAL descoberto por `tools/list` (§M9/§M12).
+      discovered_tools: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      schema_revalidated_at: { type: DataTypes.DATE, allowNull: true },
       source: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'control-plane' },
       metadata: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
     }, {
@@ -51,6 +67,7 @@ function getMcpConnectionModel() {
         { fields: ['tenant_key', 'name'], name: 'mcp_connections_tenant_name_uq', unique: true },
         { fields: ['tenant_key', 'enabled'], name: 'mcp_connections_tenant_enabled_idx' },
         { fields: ['status'], name: 'mcp_connections_status_idx' },
+        { fields: ['tenant_key', 'status'], name: 'mcp_connections_tenant_status_idx' },
       ],
     });
   }

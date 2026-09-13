@@ -120,7 +120,7 @@ function ManualCard({ manual }) {
               <strong>Passo {step.order} — {step.name}</strong>
               <span className="academy-muted">
                 {' '}{step.label}
-                {step.success === false ? ' (passo não concluído)' : ''}
+                {step.completed === false ? ' (passo não concluído)' : ''}
               </span>
               {step.image && (
                 <ManualStepImage

@@ -19,6 +19,14 @@ const {
   RESEARCH_RUN_STATES,
   createBenchmarkResearchRunner,
 } = require('../../api/services/benchmark/benchmarkResearchRunner');
+const { createBenchmarkResearchMemoryStore } = require('../helpers/benchmarkResearchMemoryStore');
+
+/** Tenant do run de pesquisa (pesquisa é superfície SYSTEM). */
+const TENANT = 'system';
+
+function fitnessSummary(service) {
+  return service.summarize({ tenantId: TENANT, vertical: 'fitness' });
+}
 
 const silent = { info() {}, warn() {}, error() {}, debug() {} };
 
@@ -33,10 +41,14 @@ function buildRunners({ candidates = [], fetchResult = null, evidenceRef = 'ev-1
   };
 }
 
-function buildHarness({ runners, archetype = 'independent-gym' } = {}) {
+async function buildHarness({ runners, archetype = 'independent-gym' } = {}) {
   const registry = createToolRegistry({ logger: silent });
-  const service = createBenchmarkResearchService({ now: () => '2026-09-11T00:00:00.000Z' });
-  service.openDiscoverySet({
+  const service = createBenchmarkResearchService({
+    store: createBenchmarkResearchMemoryStore(),
+    now: () => '2026-09-11T00:00:00.000Z',
+  });
+  await service.openDiscoverySet({
+    tenantId: TENANT,
     vertical: 'fitness',
     researchVersion: 'fitness-research-v1',
     benchmarkIds: ['evo', 'zenplanner'],
@@ -45,7 +57,7 @@ function buildHarness({ runners, archetype = 'independent-gym' } = {}) {
   const runner = createBenchmarkResearchRunner({
     registry,
     runners,
-    tenantId: 'system',
+    tenantId: TENANT,
     actor: { classification: 'DEVELOPMENT', permissions: RESEARCH_CAPABILITY_IDS },
     service,
     now: () => '2026-09-11T00:00:00.000Z',
@@ -55,7 +67,7 @@ function buildHarness({ runners, archetype = 'independent-gym' } = {}) {
 
 describe('Research runner — sem acesso externo é BLOQUEIO, não resultado', () => {
   test('sem runners de capability o run é declarado bloqueado (nada é registrado)', async () => {
-    const { runner, service } = buildHarness({ runners: undefined });
+    const { runner, service } = await buildHarness({ runners: undefined });
 
     const result = await runner.researchAndRecord({
       vertical: 'fitness', benchmarkId: 'evo', query: 'EVO academia funcionalidades',
@@ -67,14 +79,14 @@ describe('Research runner — sem acesso externo é BLOQUEIO, não resultado', (
     expect(result.provenance).toBeNull();
 
     // O estado do sample NÃO muda por ausência de trabalho.
-    const summary = service.summarize('fitness');
+    const summary = await fitnessSummary(service);
     expect(summary.state).toBe('RESEARCH_DISCOVERY_OPEN');
     expect(summary.totalFindings).toBe(0);
     expect(summary.analysedBenchmarks).toBe(0);
   });
 
   test('capability de pesquisa indisponível é reportada nominalmente', async () => {
-    const { runner } = buildHarness({ runners: {} });
+    const { runner } = await buildHarness({ runners: {} });
     const available = runner.availableCapabilities();
     expect(available).toEqual([]);
   });
@@ -82,7 +94,7 @@ describe('Research runner — sem acesso externo é BLOQUEIO, não resultado', (
 
 describe('Research runner — evidência só entra com obtenção confirmada', () => {
   test('fluxo completo registra achado VERIFICADO com proveniência', async () => {
-    const { runner, service } = buildHarness({
+    const { runner, service } = await buildHarness({
       runners: buildRunners({
         candidates: [{ url: 'https://docs.evo.com.br/features/matriculas', title: 'Matrículas', specificity: 'SPECIFIC' }],
       }),
@@ -110,13 +122,13 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
     }));
     expect(JSON.stringify(result.provenance)).not.toMatch(/token|password|secret/i);
 
-    const summary = service.summarize('fitness');
+    const summary = await fitnessSummary(service);
     expect(summary.totalFindings).toBe(1);
     expect(summary.unverifiedFindings).toBe(0);
   });
 
   test('HTTP 4xx/5xx NÃO vira prova: nenhum achado é registrado', async () => {
-    const { runner, service } = buildHarness({
+    const { runner, service } = await buildHarness({
       runners: buildRunners({
         candidates: [{ url: 'https://docs.evo.com.br/x', title: 'x' }],
         fetchResult: { httpStatus: 404, content: 'not found' },
@@ -130,11 +142,11 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
 
     expect(result.status).toBe(RESEARCH_RUN_STATES.FETCH_FAILED);
     expect(result.reason).toMatch(/research_fetch_not_confirmed: status=404/);
-    expect(service.summarize('fitness').totalFindings).toBe(0);
+    expect((await fitnessSummary(service)).totalFindings).toBe(0);
   });
 
   test('status HTTP ausente também não é prova', async () => {
-    const { runner, service } = buildHarness({
+    const { runner, service } = await buildHarness({
       runners: buildRunners({
         candidates: [{ url: 'https://docs.evo.com.br/x', title: 'x' }],
         fetchResult: { content: 'conteúdo sem status' },
@@ -146,17 +158,17 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
       externalName: 'x', kind: FINDING_KINDS.CAPABILITY, sourceTier: 5,
     });
     expect(result.status).toBe(RESEARCH_RUN_STATES.FETCH_FAILED);
-    expect(service.summarize('fitness').totalFindings).toBe(0);
+    expect((await fitnessSummary(service)).totalFindings).toBe(0);
   });
 
   test('sem candidato de fonte não há achado (nunca inventado)', async () => {
-    const { runner, service } = buildHarness({ runners: buildRunners({ candidates: [] }) });
+    const { runner, service } = await buildHarness({ runners: buildRunners({ candidates: [] }) });
     const result = await runner.researchAndRecord({
       vertical: 'fitness', benchmarkId: 'evo', query: 'EVO',
       externalName: 'x', kind: FINDING_KINDS.CAPABILITY,
     });
     expect(result.status).toBe(RESEARCH_RUN_STATES.NO_CANDIDATES);
-    expect(service.summarize('fitness').totalFindings).toBe(0);
+    expect((await fitnessSummary(service)).totalFindings).toBe(0);
   });
 
   test('evidência não capturada impede o registro do achado', async () => {
@@ -164,7 +176,7 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
       candidates: [{ url: 'https://docs.evo.com.br/x', title: 'x' }],
     });
     runners.captureEvidence = async () => ({});
-    const { runner, service } = buildHarness({ runners });
+    const { runner, service } = await buildHarness({ runners });
 
     const result = await runner.researchAndRecord({
       vertical: 'fitness', benchmarkId: 'evo', query: 'EVO',
@@ -172,11 +184,11 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
     });
     expect(result.status).toBe(RESEARCH_RUN_STATES.FETCH_FAILED);
     expect(result.reason).toBe('research_evidence_not_captured');
-    expect(service.summarize('fitness').totalFindings).toBe(0);
+    expect((await fitnessSummary(service)).totalFindings).toBe(0);
   });
 
   test('fontes genéricas continuam não contando como prova (delegado ao serviço)', async () => {
-    const { runner, service } = buildHarness({
+    const { runner, service } = await buildHarness({
       runners: buildRunners({
         candidates: [{ url: 'https://evo.com.br/', title: 'Home' }],
       }),
@@ -190,14 +202,14 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
     // O achado é registrado, porém MARCADO como não verificado: homepage não
     // prova capability.
     expect(result.finding.verified).toBe(false);
-    const summary = service.summarize('fitness');
+    const summary = await fitnessSummary(service);
     expect(summary.totalFindings).toBe(1);
     expect(summary.unverifiedFindings).toBe(1);
     expect(summary.requiresRevalidation).toBe(true);
   });
 
   test('input incompleto falha explicitamente', async () => {
-    const { runner } = buildHarness({ runners: buildRunners() });
+    const { runner } = await buildHarness({ runners: buildRunners() });
     await expect(runner.researchAndRecord({ vertical: 'fitness' }))
       .rejects.toThrow('research_runner_input_invalid');
   });
@@ -205,29 +217,33 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
 
 describe('Research runner — habilitação de análise', () => {
   test('análise só é aceita após evidência verificada', async () => {
-    const { runner, service } = buildHarness({
+    const { runner, service } = await buildHarness({
       runners: buildRunners({
         candidates: [{ url: 'https://docs.evo.com.br/features/matriculas', title: 'Matrículas' }],
       }),
     });
 
-    expect(() => runner.markAnalyzed({
+    await expect(runner.markAnalyzed({
       vertical: 'fitness', benchmarkId: 'evo',
       marketArchetypeMapping: { archetype: 'independent-gym' },
-    })).toThrow(/research_analysis_evidence_incomplete/);
+    })).rejects.toThrow(/research_analysis_evidence_incomplete/);
 
     await runner.researchAndRecord({
       vertical: 'fitness', benchmarkId: 'evo', query: 'EVO matrícula',
       externalName: 'Gestão de matrículas', kind: FINDING_KINDS.CAPABILITY, sourceTier: 5,
     });
 
-    const analyzed = runner.markAnalyzed({
+    const analyzed = await runner.markAnalyzed({
       vertical: 'fitness', benchmarkId: 'evo',
       marketArchetypeMapping: { archetype: 'independent-gym', rationale: 'foco em matrícula e caixa' },
     });
     expect(analyzed.analyzedAt).toBe('2026-09-11T00:00:00.000Z');
 
-    const patch = service.toSamplePatch('fitness');
+    const patch = await service.buildSamplePatch({
+      tenantId: TENANT,
+      vertical: 'fitness',
+      inventoryVersion: 'canonical-capabilities-1.0.0',
+    });
     expect(patch.benchmarks.find((b) => b.id === 'evo').analyzedAt).toBeTruthy();
     // O holdout segue SEM análise — protegido até a saturação aparente.
     expect(patch.benchmarks.find((b) => b.id === 'zenplanner').analyzedAt).toBeNull();

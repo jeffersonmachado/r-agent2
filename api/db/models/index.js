@@ -40,6 +40,12 @@ const getEventLedger = require('./EventLedger');
 const getExecutionJob = require('./ExecutionJob');
 // §M1/§M3: control plane persistente das conexões MCP externas.
 const getMcpConnection = require('./McpConnection');
+// §B4: agregado persistente da pesquisa competitiva de benchmarks.
+const getBenchmarkResearchRun = require('./BenchmarkResearchRun');
+const getBenchmarkResearchSubject = require('./BenchmarkResearchSubject');
+const getBenchmarkResearchSource = require('./BenchmarkResearchSource');
+const getBenchmarkResearchEvidence = require('./BenchmarkResearchEvidence');
+const getBenchmarkResearchFinding = require('./BenchmarkResearchFinding');
 const getSchedule = require('./Schedule');
 const getPublicAccessToken = require('./PublicAccessToken');
 const getFlowExecution = require('./FlowExecution');
@@ -227,6 +233,12 @@ const QueueAssignmentState = () => getQueueAssignmentState();
 const EventLedger = () => getEventLedger();
 const ExecutionJob = () => getExecutionJob();
 const McpConnection = () => getMcpConnection();
+// §B4: autoridade persistente da pesquisa de benchmarks (nunca Map em memória).
+const BenchmarkResearchRun = () => getBenchmarkResearchRun();
+const BenchmarkResearchSubject = () => getBenchmarkResearchSubject();
+const BenchmarkResearchSource = () => getBenchmarkResearchSource();
+const BenchmarkResearchEvidence = () => getBenchmarkResearchEvidence();
+const BenchmarkResearchFinding = () => getBenchmarkResearchFinding();
 const Schedule = () => getSchedule();
 const PublicAccessToken = () => getPublicAccessToken();
 const FlowExecution = () => getFlowExecution();
@@ -872,6 +884,11 @@ module.exports = {
   EventLedger,
   ExecutionJob,
   McpConnection,
+  BenchmarkResearchRun,
+  BenchmarkResearchSubject,
+  BenchmarkResearchSource,
+  BenchmarkResearchEvidence,
+  BenchmarkResearchFinding,
   Schedule,
   PublicAccessToken,
   FlowExecution,
@@ -1058,6 +1075,11 @@ module.exports = {
   getEventLedger,
   getExecutionJob,
   getMcpConnection,
+  getBenchmarkResearchRun,
+  getBenchmarkResearchSubject,
+  getBenchmarkResearchSource,
+  getBenchmarkResearchEvidence,
+  getBenchmarkResearchFinding,
   getSchedule,
   getPublicAccessToken,
   getFlowExecution,

@@ -1,0 +1,393 @@
+'use strict';
+
+/**
+ * benchmarkResearchStore — AUTORIDADE PERSISTENTE da pesquisa de benchmarks.
+ *
+ * Substitui `runs = new Map()` (§B4 da missão de 2026-09-13). O mapa em memória
+ * tinha três consequências inaceitáveis para pesquisa competitiva:
+ *   1. um run iniciado desaparecia no restart do processo (§B5);
+ *   2. nenhum achado era auditável depois da execução — nem a fonte, nem a
+ *      evidência (§B6);
+ *   3. `toSamplePatch()` não tinha consumidor real porque não havia estado
+ *      durável para patch nenhum (§B7).
+ *
+ * Contrato (implementado por este módulo em produção e pelo store em memória
+ * dos testes — `tests/helpers/benchmarkResearchMemoryStore.js`):
+ *
+ *   openRun / getRun / updateRunState
+ *   listSubjects / getSubject / markSubjectAnalyzed
+ *   upsertSource / listSources
+ *   appendEvidence / listEvidence        (append-only)
+ *   insertFinding / listFindings
+ *
+ * Regras aplicadas AQUI (e não só na camada de política):
+ *   - `tenant_key` obrigatório em toda operação: nenhuma leitura cruza tenant;
+ *   - IDs determinísticos ⇒ retry/replay são idempotentes (registrar o mesmo
+ *     achado duas vezes não infla a curva de novidade);
+ *   - evidência é append-only: não existe update nem delete neste módulo.
+ *
+ * Sem `sequelize` inicializado a operação FALHA com `persistence_required` —
+ * nunca cai para memória.
+ */
+
+const crypto = require('crypto');
+
+const ERROR_CODES = Object.freeze({
+  PERSISTENCE_REQUIRED: 'persistence_required',
+  INVALID: 'benchmark_research_store_invalid',
+});
+
+function storeError(code, message, extra = {}) {
+  const error = new Error(`${code}: ${message}`);
+  error.code = code;
+  Object.assign(error, extra);
+  return error;
+}
+
+function requireNonEmpty(value, field) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    throw storeError(ERROR_CODES.INVALID, `${field} é obrigatório`);
+  }
+  return normalized;
+}
+
+function deterministicId(prefix, parts) {
+  const digest = crypto.createHash('sha256').update(parts.map((p) => String(p ?? '')).join('\u0000')).digest('hex');
+  return `${prefix}-${digest.slice(0, 48)}`;
+}
+
+function toIso(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
+function jsonObject(value, fallback = {}) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : fallback;
+}
+
+/**
+ * Carrega os models do agregado. Falha explícita (nunca fallback em memória)
+ * quando o Sequelize não foi inicializado.
+ */
+function defaultModels() {
+  const { getSequelize } = require('../../db/sequelize');
+  if (!getSequelize()) {
+    throw storeError(ERROR_CODES.PERSISTENCE_REQUIRED, 'Sequelize não inicializado: connect() é obrigatório');
+  }
+  return {
+    run: require('../../db/models/BenchmarkResearchRun')(),
+    subject: require('../../db/models/BenchmarkResearchSubject')(),
+    source: require('../../db/models/BenchmarkResearchSource')(),
+    evidence: require('../../db/models/BenchmarkResearchEvidence')(),
+    finding: require('../../db/models/BenchmarkResearchFinding')(),
+  };
+}
+
+/**
+ * @param {object} [options]
+ * @param {object} [options.models] models injetados (testes de integração)
+ */
+function createBenchmarkResearchStore({ models } = {}) {
+  function resolveModels() {
+    const resolved = models || defaultModels();
+    for (const key of ['run', 'subject', 'source', 'evidence', 'finding']) {
+      if (!resolved[key]) {
+        throw storeError(ERROR_CODES.PERSISTENCE_REQUIRED, `model ausente: ${key}`);
+      }
+    }
+    return resolved;
+  }
+
+  /** Run mais recente de `(tenant, vertical)` (opcionalmente de uma versão). */
+  async function getRun({ tenantId, vertical, researchVersion = null }) {
+    const { run } = resolveModels();
+    const where = { tenant_key: requireNonEmpty(tenantId, 'tenantId'), vertical: requireNonEmpty(vertical, 'vertical') };
+    if (researchVersion) where.research_version = String(researchVersion);
+    return run.findOne({ where, order: [['registered_at', 'DESC']] });
+  }
+
+  /**
+   * Registra o DISCOVERY SET. Idempotente por `(tenant, vertical, version)`:
+   * reabrir o mesmo run não recria história nem reordena o discovery set.
+   */
+  async function openRun({
+    tenantId,
+    vertical,
+    researchVersion,
+    benchmarkIds = [],
+    holdoutBenchmarkId = null,
+    registeredAt,
+    metadata = {},
+  }) {
+    const { run, subject } = resolveModels();
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const verticalId = requireNonEmpty(vertical, 'vertical');
+    const version = requireNonEmpty(researchVersion, 'researchVersion');
+    const ids = (Array.isArray(benchmarkIds) ? benchmarkIds : []).map((id) => String(id ?? '').trim()).filter(Boolean);
+    if (ids.length === 0) throw storeError(ERROR_CODES.INVALID, 'discovery set vazio');
+    if (new Set(ids).size !== ids.length) throw storeError(ERROR_CODES.INVALID, 'discovery set com duplicatas');
+
+    const id = deterministicId('brr', [tenant, verticalId, version]);
+    const existing = await run.findByPk(id);
+    if (existing) {
+      // Idempotência explícita: o run já existe com o MESMO discovery set.
+      return existing;
+    }
+
+    const at = registeredAt ? new Date(registeredAt) : new Date();
+    const created = await run.create({
+      id,
+      tenant_key: tenant,
+      vertical: verticalId,
+      research_version: version,
+      state: 'RESEARCH_DISCOVERY_OPEN',
+      holdout_benchmark_id: holdoutBenchmarkId ? String(holdoutBenchmarkId) : null,
+      saturation_reached: false,
+      registered_at: at,
+      discovery_set: ids,
+      metadata: jsonObject(metadata),
+    });
+
+    // A ORDEM do discovery set é prova: a curva de novidade é sensível a ela.
+    for (const [index, benchmarkId] of ids.entries()) {
+      const subjectId = deterministicId('brs', [tenant, id, benchmarkId]);
+      const existingSubject = await subject.findByPk(subjectId);
+      if (existingSubject) continue;
+      await subject.create({
+        id: subjectId,
+        tenant_key: tenant,
+        run_id: id,
+        benchmark_id: benchmarkId,
+        discovery_order: index + 1,
+      });
+    }
+
+    return created;
+  }
+
+  async function updateRunState({ tenantId, runId, state = null, saturationReached = null }) {
+    const { run } = resolveModels();
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const row = await run.findOne({ where: { id: requireNonEmpty(runId, 'runId'), tenant_key: tenant } });
+    if (!row) throw storeError(ERROR_CODES.INVALID, `run inexistente: ${runId}`);
+    const patch = {};
+    if (state) patch.state = String(state);
+    if (saturationReached !== null) patch.saturation_reached = saturationReached === true;
+    if (Object.keys(patch).length > 0) await row.update(patch);
+    return row;
+  }
+
+  async function listSubjects({ tenantId, runId }) {
+    const { subject } = resolveModels();
+    return subject.findAll({
+      where: { tenant_key: requireNonEmpty(tenantId, 'tenantId'), run_id: requireNonEmpty(runId, 'runId') },
+      order: [['discovery_order', 'ASC']],
+    });
+  }
+
+  async function getSubject({ tenantId, runId, benchmarkId }) {
+    const { subject } = resolveModels();
+    return subject.findOne({
+      where: {
+        tenant_key: requireNonEmpty(tenantId, 'tenantId'),
+        run_id: requireNonEmpty(runId, 'runId'),
+        benchmark_id: requireNonEmpty(benchmarkId, 'benchmarkId'),
+      },
+    });
+  }
+
+  /** Marca um benchmark como ANALISADO (exige evidência já validada na política). */
+  async function markSubjectAnalyzed({
+    tenantId,
+    runId,
+    benchmarkId,
+    analyzedAt,
+    researchVersion,
+    findingsInventory,
+    marketArchetypeMapping,
+  }) {
+    const { subject } = resolveModels();
+    const row = await getSubject({ tenantId, runId, benchmarkId });
+    if (!row) throw storeError(ERROR_CODES.INVALID, `benchmark fora do discovery set: ${benchmarkId}`);
+    await row.update({
+      analyzed_at: analyzedAt ? new Date(analyzedAt) : new Date(),
+      research_version: requireNonEmpty(researchVersion, 'researchVersion'),
+      findings_inventory: Array.isArray(findingsInventory) ? findingsInventory : [],
+      market_archetype_mapping: jsonObject(marketArchetypeMapping, null),
+    });
+    return row;
+  }
+
+  /**
+   * Fonte é idempotente por `(tenant, run, benchmark, url)`. Re-verificar a
+   * mesma URL ATUALIZA o estado de verificação (o status HTTP pode mudar), mas
+   * nunca cria uma segunda fonte.
+   */
+  async function upsertSource({ tenantId, runId, benchmarkId, source }) {
+    const { source: sourceModel } = resolveModels();
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const run = requireNonEmpty(runId, 'runId');
+    const benchmark = requireNonEmpty(benchmarkId, 'benchmarkId');
+    const url = requireNonEmpty(source?.url, 'source.url');
+
+    const id = deterministicId('brsrc', [tenant, run, benchmark, url]);
+    const existing = await sourceModel.findByPk(id);
+    const payload = {
+      tier: Number.isFinite(Number(source?.tier)) ? Number(source.tier) : null,
+      specificity: source?.specificity ? String(source.specificity) : null,
+      http_status: Number.isFinite(Number(source?.httpStatus)) ? Number(source.httpStatus) : null,
+      verified: source?.verified === true,
+      verification_state: String(source?.verificationState || 'UNVERIFIED'),
+      verified_at: source?.verified === true ? new Date() : null,
+    };
+    if (existing) {
+      await existing.update(payload);
+      return existing;
+    }
+    return sourceModel.create({
+      id,
+      tenant_key: tenant,
+      run_id: run,
+      benchmark_id: benchmark,
+      url,
+      ...payload,
+    });
+  }
+
+  async function listSources({ tenantId, runId, benchmarkId = null }) {
+    const { source } = resolveModels();
+    const where = { tenant_key: requireNonEmpty(tenantId, 'tenantId'), run_id: requireNonEmpty(runId, 'runId') };
+    if (benchmarkId) where.benchmark_id = String(benchmarkId);
+    return source.findAll({ where, order: [['created_at', 'ASC']] });
+  }
+
+  /**
+   * APPEND-ONLY. O id determinístico torna a captura repetida idempotente:
+   * a mesma evidência não vira duas provas.
+   */
+  async function appendEvidence({
+    tenantId,
+    runId,
+    benchmarkId,
+    sourceId = null,
+    evidenceRef,
+    contentHash = null,
+    httpStatus = null,
+    capturedAt = null,
+    metadata = {},
+  }) {
+    const { evidence } = resolveModels();
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const run = requireNonEmpty(runId, 'runId');
+    const benchmark = requireNonEmpty(benchmarkId, 'benchmarkId');
+    const ref = requireNonEmpty(evidenceRef, 'evidenceRef');
+
+    const id = deterministicId('bre', [tenant, run, benchmark, ref]);
+    const existing = await evidence.findByPk(id);
+    if (existing) return existing;
+
+    return evidence.create({
+      id,
+      tenant_key: tenant,
+      run_id: run,
+      benchmark_id: benchmark,
+      source_id: sourceId ? String(sourceId) : null,
+      evidence_ref: ref,
+      content_hash: contentHash ? String(contentHash) : null,
+      http_status: Number.isFinite(Number(httpStatus)) ? Number(httpStatus) : null,
+      captured_at: capturedAt ? new Date(capturedAt) : new Date(),
+      metadata: jsonObject(metadata),
+    });
+  }
+
+  async function listEvidence({ tenantId, runId, benchmarkId = null }) {
+    const { evidence } = resolveModels();
+    const where = { tenant_key: requireNonEmpty(tenantId, 'tenantId'), run_id: requireNonEmpty(runId, 'runId') };
+    if (benchmarkId) where.benchmark_id = String(benchmarkId);
+    return evidence.findAll({ where, order: [['captured_at', 'ASC']] });
+  }
+
+  /**
+   * Insere um achado. Idempotente por conteúdo do achado: um retry do runner
+   * devolve a MESMA linha em vez de contar novidade duas vezes.
+   */
+  async function insertFinding({
+    tenantId,
+    runId,
+    benchmarkId,
+    kind,
+    externalName = null,
+    canonicalId = null,
+    classification = null,
+    archetype = null,
+    verified = false,
+    verificationState = 'UNVERIFIED',
+    sourceId = null,
+    evidenceId = null,
+    recordedAt = null,
+    metadata = {},
+  }) {
+    const { finding } = resolveModels();
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const run = requireNonEmpty(runId, 'runId');
+    const benchmark = requireNonEmpty(benchmarkId, 'benchmarkId');
+    const findingKind = requireNonEmpty(kind, 'kind');
+    const name = externalName ? String(externalName) : null;
+
+    const id = deterministicId('brf', [
+      tenant, run, benchmark, findingKind, name, canonicalId || '', evidenceId || '',
+    ]);
+    const existing = await finding.findByPk(id);
+    if (existing) return existing;
+
+    return finding.create({
+      id,
+      tenant_key: tenant,
+      run_id: run,
+      benchmark_id: benchmark,
+      kind: findingKind,
+      external_name: name,
+      canonical_id: canonicalId ? String(canonicalId) : null,
+      classification: classification ? String(classification) : null,
+      archetype: archetype ? String(archetype) : null,
+      verified: verified === true,
+      verification_state: String(verificationState),
+      source_id: sourceId ? String(sourceId) : null,
+      evidence_id: evidenceId ? String(evidenceId) : null,
+      recorded_at: recordedAt ? new Date(recordedAt) : new Date(),
+      metadata: jsonObject(metadata),
+    });
+  }
+
+  async function listFindings({ tenantId, runId, benchmarkId = null }) {
+    const { finding } = resolveModels();
+    const where = { tenant_key: requireNonEmpty(tenantId, 'tenantId'), run_id: requireNonEmpty(runId, 'runId') };
+    if (benchmarkId) where.benchmark_id = String(benchmarkId);
+    return finding.findAll({ where, order: [['recorded_at', 'ASC']] });
+  }
+
+  return {
+    errorCodes: ERROR_CODES,
+    getRun,
+    openRun,
+    updateRunState,
+    listSubjects,
+    getSubject,
+    markSubjectAnalyzed,
+    upsertSource,
+    listSources,
+    appendEvidence,
+    listEvidence,
+    insertFinding,
+    listFindings,
+  };
+}
+
+module.exports = {
+  ERROR_CODES,
+  deterministicId,
+  toIso,
+  createBenchmarkResearchStore,
+};

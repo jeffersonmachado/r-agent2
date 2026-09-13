@@ -224,6 +224,29 @@ describe('Ask AI ↔ Canonical Tool Registry — execução governada', () => {
     expect(called).toBe(false);
   });
 
+  test('tool fora do catálogo não é executável (nenhum registry paralelo)', async () => {
+    const registry = createToolRegistry({ logger: silent });
+    ensureAskAiCapabilityTools(registry, buildRunners());
+
+    // Um id que NÃO existe no catálogo canônico não pode ser resolvido por
+    // tabela local alguma: a execução passa sempre pelo catálogo.
+    const result = await executeTool('askai.parallel.shadow', {
+      tenantId: 'academia-a',
+      actor: ACTOR_ADMIN,
+      entity: { type: 'FITNESS_STUDENT', id: 'student-42' },
+      toolRegistry: registry,
+    });
+
+    expect(result.failed).toBe(true);
+    expect(result.error).toBe('unknown_tool');
+    expect(result.facts).toEqual([]);
+  });
+
+  test('DEFINITIONS é a MESMA referência do catálogo canônico (não uma cópia)', () => {
+    const { DEFINITIONS } = require('../../api/services/askAi/toolRegistry');
+    expect(DEFINITIONS).toBe(ASK_AI_TOOLS);
+  });
+
   test('ator sem o RBAC do dado financeiro não recebe a permissão canônica', () => {
     const operator = { id: 'u-2', username: 'op', role: 'operator', tenantId: 'academia-a' };
     const projection = buildRegistry().all();

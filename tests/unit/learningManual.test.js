@@ -74,7 +74,12 @@ const {
   resolveManualFile,
   buildManualHtml,
   ensureManualPdf,
+  manualPdfFileName,
 } = require('../../api/modules/learning-core/manualService');
+
+// §L1/L5: o HTML do PDF só aceita o DTO de produção — o modelo interno do
+// repositório (replayId/selector) é rejeitado pelo assert fail-closed.
+const { toProductionManualMetadata } = require('../../api/services/learning/manualProjection');
 
 describe('learning-core manualService', () => {
   test('gera manual ilustrado a partir de replay com uiTrace', async () => {
@@ -168,7 +173,7 @@ describe('learning-core manualService', () => {
     });
     const manualDir = path.join(runtimeRoot, 'learning', 'manuals', metadata.id);
 
-    const html = buildManualHtml(metadata, manualDir);
+    const html = buildManualHtml(toProductionManualMetadata(metadata), manualDir);
     expect(html).toContain('<html lang="pt-BR">');
     expect(html).toContain('Manual &lt;HTML&gt;');
     expect(html).not.toContain('Manual <HTML>');
@@ -176,12 +181,19 @@ describe('learning-core manualService', () => {
     expect(html).toContain('data:image/png;base64,');
     expect(html).toContain('@page');
     expect(html).not.toContain('5511999999999');
+    // O HTML é superfície PRODUCTION: nem replay, nem seletor técnico.
+    expect(html).not.toContain(metadata.replayId);
+    expect(html).not.toMatch(/replay/i);
+    expect(html).not.toContain('textarea.support-form-textarea');
+    expect(html).not.toContain('alvo');
+    // Passar o modelo INTERNO falha fechado (não há caminho "quase certo").
+    expect(() => buildManualHtml(metadata, manualDir)).toThrow(/production_manual_leak/);
   });
 
   test('ensureManualPdf reutiliza PDF em cache sem lançar browser', async () => {
     const metadata = await generateManualFromReplay({ tenantId: 'system', replayId: 'wave-manual-1' });
     const manualDir = path.join(runtimeRoot, 'learning', 'manuals', metadata.id);
-    const pdfPath = path.join(manualDir, 'manual.pdf');
+    const pdfPath = path.join(manualDir, manualPdfFileName());
     fs.writeFileSync(pdfPath, '%PDF-1.4 fake-cache');
 
     const result = await ensureManualPdf({ tenantId: 'system', manualId: metadata.id });

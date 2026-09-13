@@ -86,6 +86,8 @@ const { createWhatsAppQrWebhookExpressRouter } = require('../composition/whatsap
 const { createFrontendFallbackExpressRouter } = require('../composition/frontend-fallback');
 const { createAgentOsExpressRouter } = require('../composition/agent-os');
 const { createLearningCoreExpressRouter } = require('../composition/learning-core');
+// §B1/§B2: chamador de produção do benchmarkResearchSupervisor (DEVELOPMENT).
+const { createBenchmarkResearchExpressRouter } = require('../composition/benchmark-research');
 const { createCognitiveExpressRouter } = require('../composition/cognitive');
 const { createRouteRegistry } = require('./routeRegistry');
 const { mountMcpRoutes } = require('../runtime/startMcpServer');
@@ -132,6 +134,8 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const qaRouter = createQaExpressRouter();
   const qaWavesRouter = createQaWavesExpressRouter();
   const qaMeshRouter = createQaMeshExpressRouter();
+  // Pesquisa de benchmarks: superfície de engenharia (DEVELOPMENT).
+  const benchmarkResearchRouter = createBenchmarkResearchExpressRouter({ buildCoreRoutingContext });
   const mcpRouter = createMcpExpressRouter();
   const demoRouter = createDemoExpressRouter();
   const operationalStatusRouter = createOperationalStatusRoutes();
@@ -202,6 +206,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     qaRouter,
     qaWavesRouter,
     qaMeshRouter,
+    benchmarkResearchRouter,
     mcpRouter,
     demoRouter,
     operationalStatusRouter,

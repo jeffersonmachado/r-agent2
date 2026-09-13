@@ -274,18 +274,18 @@ describe('AcademyPage', () => {
     URL.createObjectURL = vi.fn(() => 'blob:mock');
     URL.revokeObjectURL = vi.fn();
 
+    // Fixture = resposta REAL da API: ProductionManualDTO (sem replayId,
+    // sem selector, sem flag técnico de execução).
     const manual = {
       id: 'manual-1',
       title: 'Manual — jornada core.support_ticket_flow',
-      tenantId: 'system',
-      replayId: 'wave-1',
       journeyKey: 'core.support_ticket_flow',
       createdAt: '2026-07-24T12:00:00.000Z',
       stepCount: 2,
       imageCount: 1,
       steps: [
-        { order: 1, action: 'click', label: 'Clicar', name: 'Abrir Caixa de Entrada', success: true, image: 'img/01.png' },
-        { order: 2, action: 'fill', label: 'Preencher campo', name: 'Escrever nota', success: true, image: null },
+        { order: 1, label: 'Clicar', name: 'Abrir Caixa de Entrada', completed: true, image: 'img/01.png' },
+        { order: 2, label: 'Preencher campo', name: 'Escrever nota', completed: true, image: null },
       ],
     };
     mockGetManuals.mockResolvedValue({ manuals: [manual] });

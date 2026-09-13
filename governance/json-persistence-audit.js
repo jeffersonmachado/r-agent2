@@ -228,6 +228,11 @@ function classifyByPattern(norm, writer) {
   if (/^dev\//.test(norm)) return 'TEMPORARY_CACHE';
   // Bug memory / knowledge de bugs (migrar p/ RAG SYSTEM ou DB)
   if (/bug-memory\.json$/.test(norm)) return 'DB_CANONICAL_JSON_EXPORT';
+  // Proveniência interna de manuais (§L7): o artefato técnico (replayId,
+  // selector, trace) é PRESERVADO para DEVELOPMENT/SYSTEM, mas é sempre uma
+  // PROJEÇÃO derivada do modelo interno — nunca autoridade de estado. Mesma
+  // natureza de `metadata.json`, porém explicitamente uma view exportada.
+  if (/(^|\/)provenance\.json$/.test(norm)) return 'DB_CANONICAL_JSON_EXPORT';
   // Checkpoints de execução (migrados p/ DB via dbStateStore)
   if (/^qa\/checkpoints\//.test(norm)) return 'DB_CANONICAL_JSON_EXPORT';
   // Evidências pesadas de QA (artefatos)

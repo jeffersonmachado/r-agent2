@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * MCP Control Plane — rotas de administração (§M8/§M9).
+ * MCP Control Plane — rotas de administração (§M8–§M13).
  *
  * Este módulo é a superfície de GESTÃO das conexões MCP externas. Ele existe
  * porque persistência sem API não é control plane: até 2026-09-12 as conexões
@@ -9,13 +9,19 @@
  * desabilitar, testar, redescobrir ou revalidar schema sem reiniciar o processo
  * com uma config nova.
  *
- * Classificação: **DEVELOPMENT** (§M9). Configuração técnica de MCP é ferramenta
- * de engenharia — o mesmo racional de QA Waves/QA Mesh. A superfície não expõe
- * sequer diagnóstico cru a usuário PRODUCTION: `schemaFingerprint`, endpoint
- * bruto e estado de discovery ficam confinados aqui.
+ * Classificação (§M13): ESCRITA e diagnóstico técnico exigem **DEVELOPMENT** —
+ * configurar MCP externo é ferramenta de engenharia (mesmo racional de QA
+ * Waves/QA Mesh) e a resposta expõe endpoint, fingerprint e inventário. As
+ * leituras de saúde/ecossistema são somente-leitura e exigem **SUPPORT**: quem
+ * opera precisa saber se o ecossistema externo está vivo, mas PRODUCTION nunca
+ * vê internals.
  *
- * Segredo NUNCA passa por esta API: aceita-se apenas `credentialRef` (§M4). O
- * serviço recusa payload com segredo em claro e o erro é explícito.
+ * `POST :id/discover` NÃO aceita inventário do cliente (§M9): o inventário vem
+ * SEMPRE de `tools/list` do servidor remoto. Um corpo com `tools` é RECUSADO (não
+ * ignorado) para que nenhum cliente antigo acredite que o inventário enviado foi
+ * aceito.
+ *
+ * Segredo NUNCA passa por esta API: aceita-se apenas `credentialRef` (§M4).
  */
 
 const express = require('express');
@@ -30,17 +36,32 @@ const SERVICE_ERROR_STATUS = Object.freeze({
   persistence_required: 503,
 });
 
+/** Códigos de descoberta/teste → status HTTP (falha NUNCA vira 200). */
+const DISCOVERY_ERROR_STATUS = Object.freeze({
+  MCP_ENDPOINT_NOT_CONFIGURED: 422,
+  MCP_ENDPOINT_BLOCKED: 422,
+  MCP_AUTH_FORBIDDEN: 422,
+  MCP_AUTH_UNAVAILABLE: 422,
+  MCP_CONNECTION_NOT_FOUND: 404,
+  MCP_CONNECTION_TENANT_MISMATCH: 404,
+  MCP_CONNECTION_DISABLED: 409,
+  MCP_REVALIDATION_NOT_REQUIRED: 409,
+  MCP_TOOL_INVENTORY_INVALID: 502,
+  MCP_DISCOVERY_FAILED: 502,
+});
+
 function statusForError(error) {
   if (error && SERVICE_ERROR_STATUS[error.code]) return SERVICE_ERROR_STATUS[error.code];
+  if (error && DISCOVERY_ERROR_STATUS[error.code]) return DISCOVERY_ERROR_STATUS[error.code];
   return 500;
 }
 
 function createMcpRoutes({ buildDeps }) {
   const router = express.Router();
 
-  /** §M9 — toda a superfície de administração MCP exige DEVELOPMENT. */
-  function enforceDevelopment(deps, req, res) {
-    const check = checkClassification(req, 'DEVELOPMENT');
+  /** §M13 — toda a superfície de ESCRITA/diagnóstico exige classificação mínima. */
+  function enforceClassification(deps, req, res, min) {
+    const check = checkClassification(req, min);
     if (!check.allowed) {
       deps.sendJson(res, 403, {
         error: 'classification_forbidden',
@@ -71,11 +92,58 @@ function createMcpRoutes({ buildDeps }) {
   }
 
   // Proteção de identidade/tenant: nenhuma rota aceita tenant do payload.
-  function guard(deps, req, res) {
+  function guard(deps, req, res, min = 'DEVELOPMENT') {
     const auth = deps.requireAuth(req, res);
     if (!auth) return null;
-    if (!enforceDevelopment(deps, req, res)) return null;
+    if (!enforceClassification(deps, req, res, min)) return null;
     return auth;
+  }
+
+  /** Seam de teste: em produção é `{}` e o transporte é o de rede real. */
+  function discoveryDeps(deps) {
+    return deps.discoveryDeps || {};
+  }
+
+  /** Resultado de descoberta/teste: `ok:false` vira status HTTP de falha. */
+  function sendDiscoveryResult(deps, res, result, successStatus = 200) {
+    if (result.ok) return deps.sendJson(res, successStatus, result);
+    return deps.sendJson(res, DISCOVERY_ERROR_STATUS[result.code] || 502, {
+      error: result.code,
+      message: result.message,
+      connection: result.connection || null,
+    });
+  }
+
+  /**
+   * Corpo JSON da requisição — SEMPRE aguardado.
+   *
+   * Defeito real corrigido aqui: `deps.parseJsonBody` é ASSÍNCRONO (devolve
+   * Promise — ver `api/express/httpHelpers.js`, e todos os outros módulos usam
+   * `await deps.parseJsonBody(req)`). Tratá-lo como objeto síncrono tinha duas
+   * consequências silenciosas:
+   *
+   *   - `body.tools` era SEMPRE `undefined`, então o guard de §M9 (recusar
+   *     inventário declarado pelo cliente) era CÓDIGO MORTO no caminho HTTP;
+   *   - `create`/`update` recebiam uma Promise como `input`, e a validação
+   *     falhava por "name obrigatório" — a rota de criação não criava nada.
+   *
+   * Nada disso aparecia porque o teste da API mockava o serviço. É a diferença
+   * entre testar a rota e testar a si mesmo.
+   */
+  async function readJsonBody(deps, req) {
+    if (!deps.hasJsonContentType(req)) return {};
+    const parsed = await deps.parseJsonBody(req);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  }
+
+  /** §M9 — recusa inventário declarado pelo cliente (nunca "aceito e ignorado"). */
+  function rejectClientToolInventory(deps, res, body) {
+    if (!body || body.tools === undefined) return false;
+    deps.sendJson(res, 400, {
+      error: 'MCP_CLIENT_TOOL_INVENTORY_FORBIDDEN',
+      message: 'o inventário de tools vem de `tools/list` do servidor remoto e nunca do cliente',
+    });
+    return true;
   }
 
   // ── Auth capabilities REAIS (§M13/§M14) ─────────────────────────────────
@@ -108,6 +176,21 @@ function createMcpRoutes({ buildDeps }) {
     }
   });
 
+  // ── ECOSYSTEM (SUPPORT: somente leitura do estado PERSISTIDO) ───────────
+  router.get('/mcp/ecosystem', async (req, res) => {
+    const deps = buildDeps();
+    const auth = guard(deps, req, res, 'SUPPORT');
+    if (!auth) return;
+    const tenantId = resolveTenant(deps, req, res, auth);
+    if (!tenantId) return;
+    try {
+      const { getExternalEcosystemStatus } = require('../../services/mcp/mcpEcosystemStatus');
+      deps.sendJson(res, 200, await getExternalEcosystemStatus({ tenantId }));
+    } catch (error) {
+      fail(deps, res, error);
+    }
+  });
+
   // ── READ ────────────────────────────────────────────────────────────────
   router.get('/mcp/connections/:id', async (req, res) => {
     const deps = buildDeps();
@@ -118,6 +201,21 @@ function createMcpRoutes({ buildDeps }) {
     try {
       const { getConnection } = require('../../services/mcp/mcpConnectionService');
       deps.sendJson(res, 200, { connection: await getConnection({ tenantId, id: req.params.id }) });
+    } catch (error) {
+      fail(deps, res, error);
+    }
+  });
+
+  // ── HEALTH (SUPPORT: saúde PERSISTIDA, sem ida à rede) ─────────────────
+  router.get('/mcp/connections/:id/health', async (req, res) => {
+    const deps = buildDeps();
+    const auth = guard(deps, req, res, 'SUPPORT');
+    if (!auth) return;
+    const tenantId = resolveTenant(deps, req, res, auth);
+    if (!tenantId) return;
+    try {
+      const { getConnectionHealth } = require('../../services/mcp/mcpDiscoveryService');
+      deps.sendJson(res, 200, { health: await getConnectionHealth({ tenantId, id: req.params.id }) });
     } catch (error) {
       fail(deps, res, error);
     }
@@ -135,7 +233,7 @@ function createMcpRoutes({ buildDeps }) {
       const { createConnection } = require('../../services/mcp/mcpConnectionService');
       const created = await createConnection({
         tenantId,
-        input: deps.parseJsonBody(req),
+        input: await readJsonBody(deps, req),
         actor: auth.username || auth.userId || null,
       });
       deps.sendJson(res, 201, { connection: created });
@@ -157,7 +255,7 @@ function createMcpRoutes({ buildDeps }) {
       const updated = await updateConnection({
         tenantId,
         id: req.params.id,
-        patch: deps.parseJsonBody(req),
+        patch: await readJsonBody(deps, req),
         actor: auth.username || auth.userId || null,
       });
       deps.sendJson(res, 200, { connection: updated });
@@ -183,92 +281,78 @@ function createMcpRoutes({ buildDeps }) {
     }
   });
 
-  // ── TEST CONNECTION (marca VALIDATING e registra saúde) ─────────────────
+  // ── TEST CONNECTION (§M10: endpoint + TLS/SSRF + auth + MCP + negociação) ─────────────────
   router.post('/mcp/connections/:id/test', async (req, res) => {
     const deps = buildDeps();
     const auth = guard(deps, req, res);
     if (!auth) return;
     const tenantId = resolveTenant(deps, req, res, auth);
     if (!tenantId) return;
+    // §M9 — o teste também NÃO aceita inventário declarado pelo cliente: o que
+    // vale é o `tools/list` do servidor remoto. Recusar (em vez de ignorar)
+    // impede que um cliente conclua que o inventário enviado foi considerado.
+    if (rejectClientToolInventory(deps, res, await readJsonBody(deps, req))) return;
     try {
-      const { markValidating, recordHealth } = require('../../services/mcp/mcpConnectionService');
-      await markValidating({ tenantId, id: req.params.id });
-      // Sem servidor MCP real configurado a validação NÃO pode ser declarada
-      // bem-sucedida: o resultado é explícito e honesto.
-      const connection = await recordHealth({
+      const { probeConnection } = require('../../services/mcp/mcpDiscoveryService');
+      const result = await probeConnection({
         tenantId,
         id: req.params.id,
-        ok: false,
-        error: 'mcp_external_server_not_configured: nenhuma conexão de teste disponível',
-        degradedAfter: 1,
+        deps: discoveryDeps(deps),
+        // O teste é DIAGNÓSTICO: uma conexão desabilitada pode ser testada antes
+        // de ser habilitada. Este caminho NÃO registra tool nenhuma.
+        allowDisabledProbe: true,
       });
-      deps.sendJson(res, 502, {
-        connection,
-        error: 'mcp_external_server_not_configured',
-        message: 'Teste de conexão exige servidor MCP externo real; nenhum está configurado.',
-      });
+      sendDiscoveryResult(deps, res, result);
     } catch (error) {
       fail(deps, res, error);
     }
   });
 
-  // ── DISCOVER TOOLS (fingerprint + SCHEMA_CHANGED) ───────────────────────
+  // ── DISCOVER TOOLS (§M9: inventário REAL via `tools/list`) ───────────────
   router.post('/mcp/connections/:id/discover', async (req, res) => {
     const deps = buildDeps();
     const auth = guard(deps, req, res);
     if (!auth) return;
     const tenantId = resolveTenant(deps, req, res, auth);
     if (!tenantId) return;
+    const body = await readJsonBody(deps, req);
+    if (rejectClientToolInventory(deps, res, body)) return;
     try {
-      const { recordDiscovery } = require('../../services/mcp/mcpConnectionService');
-      const body = deps.hasJsonContentType(req) ? deps.parseJsonBody(req) : {};
-      const tools = Array.isArray(body.tools) ? body.tools : [];
-      const result = await recordDiscovery({ tenantId, id: req.params.id, tools });
-      deps.sendJson(res, 200, { connection: result, schemaChanged: result.schemaChanged, toolCount: result.toolCount });
+      const { discoverConnectionTools } = require('../../services/mcp/mcpDiscoveryService');
+      const result = await discoverConnectionTools({ tenantId, id: req.params.id, deps: discoveryDeps(deps) });
+      sendDiscoveryResult(deps, res, result);
     } catch (error) {
       fail(deps, res, error);
     }
   });
 
-  // ── REVALIDATE SCHEMA (SCHEMA_CHANGED exige ação explícita) ─────────────
-  router.post('/mcp/connections/:id/revalidate-schema', async (req, res) => {
+  // ── REVALIDATE (§M12: schema novo exige aceite EXPLÍCITO) ────────────────
+  const revalidateHandler = async (req, res) => {
     const deps = buildDeps();
     const auth = guard(deps, req, res);
     if (!auth) return;
     const tenantId = resolveTenant(deps, req, res, auth);
     if (!tenantId) return;
+    const body = await readJsonBody(deps, req);
+    if (rejectClientToolInventory(deps, res, body)) return;
     try {
-      const { getConnection, recordDiscovery, LIFECYCLE_STATES } = require('../../services/mcp/mcpConnectionService');
-      const current = await getConnection({ tenantId, id: req.params.id });
-      if (current.status !== LIFECYCLE_STATES.SCHEMA_CHANGED) {
-        return deps.sendJson(res, 409, {
-          error: 'revalidation_not_required',
-          status: current.status,
-          message: 'Revalidação só é exigida quando o schema remoto mudou.',
-        });
-      }
-      const body = deps.hasJsonContentType(req) ? deps.parseJsonBody(req) : {};
-      const tools = Array.isArray(body.tools) ? body.tools : [];
-      // A revalidação ACEITA o novo schema de forma explícita (fingerprint novo).
-      const result = await recordDiscovery({
-        tenantId,
-        id: req.params.id,
-        tools,
-        schemaFingerprint: body.schemaFingerprint || undefined,
-      });
-      const connection = await recordDiscovery({
-        tenantId,
-        id: req.params.id,
-        tools,
-        schemaFingerprint: result.schema_fingerprint || result.schemaFingerprint,
-      });
-      deps.sendJson(res, 200, { connection, revalidated: true });
+      const { revalidateConnection } = require('../../services/mcp/mcpDiscoveryService');
+      const result = await revalidateConnection({ tenantId, id: req.params.id, deps: discoveryDeps(deps) });
+      sendDiscoveryResult(deps, res, result);
     } catch (error) {
       fail(deps, res, error);
     }
-  });
+  };
+  router.post('/mcp/connections/:id/revalidate', revalidateHandler);
+  // Alias legado (mesma semântica) — não quebra clientes já emitidos.
+  router.post('/mcp/connections/:id/revalidate-schema', revalidateHandler);
 
   return router;
 }
 
-module.exports = { createMcpRoutes, SERVICE_ERROR_STATUS, statusForError };
+module.exports = {
+  createMcpRoutes,
+  SERVICE_ERROR_STATUS,
+  DISCOVERY_ERROR_STATUS,
+  statusForError,
+};

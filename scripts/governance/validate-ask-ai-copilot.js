@@ -23,6 +23,7 @@
  * 13. followup_subject_continuity    — acompanhamento mantém sujeito/intenção
  * 14. screen_context_bound_to_screens — módulo/pageType derivados das telas reais e navegação SPA
  * 15. grounded_synthesis            — fato e conhecimento rotulados; inferência explícita e tipada
+ * 16. canonical_tool_single_source  — projeção derivada do catálogo canônico; registry paralelo reprova
  */
 
 const fs = require('fs');
@@ -132,7 +133,12 @@ check('tool_authorization', 'toda tool declara capability canônica + RBAC, é r
     assert(canonicalTool.sideEffects !== true, `tool canônica ${tool.id} tem side effect`);
   }
 
-  return `${tools.length} tools read-only com capability canônica, RBAC e definição única no Canonical Tool Registry`;
+  // Cobertura DECLARADA (evidência durável da superfície real do copiloto):
+  // quais capabilities e tipos de entidade existem hoje.
+  const capabilities = [...new Set(tools.map((tool) => tool.capability))].sort();
+  const entityTypes = [...new Set(tools.flatMap((tool) => [...tool.entityTypes]))].sort();
+  return `${tools.length} tools read-only, definição única no Canonical Tool Registry `
+    + `| capabilities: ${capabilities.join(', ')} | entidades: ${entityTypes.join(', ')}`;
 });
 
 // 5. Defesa de injeção -------------------------------------------------------
@@ -208,11 +214,35 @@ check('replay_tenant_isolation', 'listagem/leitura de replay é escopada por ten
 // 9. Indexação de manual -----------------------------------------------------
 check('manual_rag_indexing', 'manual gerado é indexado no RAG e removido do índice na exclusão', () => {
   const manual = read('api/modules/learning-core/manualService.js');
-  assert(manual.includes('indexDocument({'), 'manual não é indexado');
-  assert(manual.includes("domain: MANUAL_DOMAIN"), 'manual indexado sem domínio explícito');
-  assert(manual.includes("classification: MANUAL_CLASSIFICATION"), 'manual indexado sem classificação explícita');
+  const projection = read('api/services/learning/manualProjection.js');
+  // A indexação NÃO monta o payload inline: passa pela projeção explícita de
+  // produção (allowlist + assert fail-closed), única fonte de
+  // domínio/classificação/sensibilidade do documento indexado.
+  assert(manual.includes('toProductionRagDocument('), 'manual não é indexado via projeção de produção');
+  assert(manual.includes('MANUAL_DOMAIN') && manual.includes('MANUAL_CLASSIFICATION'),
+    'manual indexado sem domínio/classificação explícitos');
+  assert(manual.includes('MANUAL_SENSITIVITY'), 'manual indexado sem sensibilidade explícita');
+  assert(projection.includes('assertProductionManualDto('), 'projeção do RAG não valida o DTO de produção');
+  assert(projection.includes('assertProductionClean('), 'projeção do RAG não revalida o conteúdo');
   assert(manual.includes('deleteManual'), 'sem remoção de manual');
   assert(manual.includes('deindexDocument'), 'exclusão não remove do índice');
+
+  // Prova EXECUTÁVEL (não apenas textual): a projeção canônica produz um
+  // documento OPERATIONAL/PRODUCTION a partir do DTO do manual.
+  // eslint-disable-next-line global-require
+  const projectionModule = require(path.join(ROOT, 'api', 'services', 'learning', 'manualProjection'));
+  const projected = projectionModule.toProductionRagDocument({
+    productionManual: projectionModule.toProductionManualMetadata({
+      id: 'manual-check', title: 'Manual de verificação', steps: [],
+    }),
+    content: '# Manual de verificação\n\nAcesse Matrícula e confirme o pagamento.',
+    tenantId: 'system',
+  });
+  assert(projected.document.domain === 'OPERATIONAL', 'projeção do manual não é OPERATIONAL');
+  assert(projected.document.classification === 'PRODUCTION', 'projeção do manual não é PRODUCTION');
+  assert(projected.document.id === 'manual:manual-check', 'id do documento indexado não deriva do manual');
+  assert(!JSON.stringify(projected.document).includes('replay'),
+    'documento indexado carrega referência de replay');
 
   const service = read('api/services/ragService.js');
   assert(service.includes('async function deindexDocument'), 'ragService sem deindexDocument');
@@ -220,7 +250,7 @@ check('manual_rag_indexing', 'manual gerado é indexado no RAG e removido do ín
 
   const python = read('rag-service/api/routes/index.py');
   assert(python.includes('@router.post("/deindex"'), 'serviço RAG sem rota de remoção');
-  return 'manual indexado (OPERATIONAL/PRODUCTION) e removido com a fonte';
+  return 'manual indexado (OPERATIONAL/PRODUCTION) via projeção e removido com a fonte';
 });
 
 // 10. Classificação na ingestão ---------------------------------------------
@@ -446,9 +476,70 @@ check('grounded_synthesis', 'fato e conhecimento têm rótulos distintos, infer�
   return 'situação/inferência/método rotulados; proveniência FACT·INFERENCE·KNOWLEDGE·RECOMMENDATION';
 });
 
+// 16. Definição única das tools (sem registry paralelo) --------------------
+check('canonical_tool_single_source', 'a projeção do copiloto deriva do catálogo canônico; registry paralelo/local reprova', () => {
+  const catalog = require(path.join(ROOT, 'api', 'services', 'askAi', 'askAiToolCatalog'));
+  const projectionModule = require(path.join(ROOT, 'api', 'services', 'askAi', 'toolRegistry'));
+
+  // 1. A definição exportada é a MESMA referência do catálogo — não uma cópia
+  //    (uma segunda tabela, mesmo idêntica, seria um registry paralelo).
+  assert(
+    projectionModule.DEFINITIONS === catalog.ASK_AI_TOOLS,
+    'toolRegistry declara uma tabela própria de tools (registry paralelo)',
+  );
+  assert(Object.isFrozen(catalog.ASK_AI_TOOLS), 'catálogo não é imutável');
+
+  // 2. Paridade EXATA de ids: nenhuma tool fantasma, nenhuma ausente.
+  const projection = projectionModule.buildRegistry().all();
+  const catalogIds = catalog.ASK_AI_TOOLS.map((tool) => tool.id);
+  const projectionIds = projection.map((tool) => tool.id);
+  assert(
+    projectionIds.length === catalogIds.length,
+    `projeção com ${projectionIds.length} tools; catálogo com ${catalogIds.length}`,
+  );
+  assert(new Set(projectionIds).size === projectionIds.length, 'projeção com ids duplicados');
+  for (const id of catalogIds) {
+    assert(projectionIds.includes(id), `tool ${id} do catálogo ausente na projeção`);
+  }
+  for (const id of projectionIds) {
+    assert(catalogIds.includes(id), `tool ${id} existe só na projeção (definição paralela)`);
+  }
+
+  // 3. A projeção é COMPUTADA do catálogo, campo a campo.
+  for (const entry of projection) {
+    const source = catalog.findAskAiTool(entry.id);
+    assert(source && source.id === entry.id, `projeção de ${entry.id} não deriva do catálogo`);
+    assert(entry.capability === source.capability, `capability divergente em ${entry.id}`);
+    assert(
+      JSON.stringify(entry.permissions) === JSON.stringify([...source.permissions]),
+      `permissões divergentes em ${entry.id}`,
+    );
+    assert(
+      JSON.stringify(entry.rbac) === JSON.stringify({ ...source.rbac }),
+      `RBAC divergente em ${entry.id}`,
+    );
+    assert(
+      JSON.stringify(entry.entityTypes) === JSON.stringify([...source.entityTypes]),
+      `entidades divergentes em ${entry.id}`,
+    );
+    assert(entry.sideEffects === source.sideEffects, `side effect divergente em ${entry.id}`);
+    // A projeção não carrega implementação local: quem executa é o registry.
+    assert(typeof entry.execute !== 'function', `projeção de ${entry.id} carrega implementação local`);
+  }
+
+  // 4. Nenhum OUTRO módulo do copiloto pode declarar uma tool (id `askai.*`
+  //    ou capability literal). Reintroduzir um universo paralelo aqui reprova.
+  const { findParallelToolDeclarations } = require(path.join(ROOT, 'scripts', 'governance', 'ask-ai-tool-source-guard'));
+  const offenders = findParallelToolDeclarations(path.join(ROOT, 'api', 'services', 'askAi'));
+  assert(offenders.length === 0, `definição paralela de tool em: ${offenders.join(', ')}`);
+
+  return `${projection.length} tools projetadas de uma única definição (catálogo canônico)`;
+});
+
 // ── Relatório ───────────────────────────────────────────────────────────────
 
 const failed = checks.filter((entry) => entry.status === 'FAIL');
+
 const report = {
   generatedAt: new Date().toISOString(),
   gate: 'ask-ai-copilot',

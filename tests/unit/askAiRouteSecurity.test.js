@@ -188,4 +188,36 @@ describe('POST /api/ask-ai — boundary de segurança', () => {
     expect(JSON.stringify(harness.responses[0].body)).not.toContain('boom interno');
     expect(harness.responses[0].body).not.toHaveProperty('stack');
   });
+
+  test('turno bloqueado (sem `policy`) responde 200 com a recusa, nunca 500', async () => {
+    // Regressão: o orquestrador devolvia o turno bloqueado SEM `policy` e a
+    // rota lia `turn.policy.entityValidated` — a recusa determinística de
+    // internals técnicos por PRODUCTION virava HTTP 500.
+    const harness = buildHarness({
+      runAskAiTurn: jest.fn(async () => ({
+        conversationId: 'conv_blocked0001',
+        answer: 'Não posso responder sobre conteúdo técnico interno da plataforma.',
+        sources: [],
+        facts: [],
+        intent: 'SYSTEM_INTERNAL',
+        confidence: 'insufficient_evidence',
+        provenance: { liveData: [], knowledge: [], inference: 'none', recommendation: 'none' },
+        historyWindow: 2,
+        blocked: true,
+      })),
+    });
+
+    await invoke(harness);
+
+    expect(harness.responses).toHaveLength(1);
+    expect(harness.responses[0]).toMatchObject({
+      status: 200,
+      body: {
+        success: true,
+        intent: 'SYSTEM_INTERNAL',
+        context: { entityValidated: false },
+      },
+    });
+    expect(harness.responses[0].body.answer).toContain('Não posso responder');
+  });
 });

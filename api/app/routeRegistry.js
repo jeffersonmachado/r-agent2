@@ -19,6 +19,13 @@ function createRouteRegistry(routers) {
     { router: routers.qaRouter },
     { router: routers.qaWavesRouter },
     { router: routers.qaMeshRouter },
+    // §B1/§B2: pesquisa competitiva de benchmarks (DEVELOPMENT). Montado aqui
+    // porque router fora desta lista simplesmente NÃO é montado.
+    { router: routers.benchmarkResearchRouter },
+    // MCP Control Plane (§M13): administração das conexões MCP externas.
+    // Estava passado em `registerRoutes` mas AUSENTE desta lista — as rotas
+    // existiam e nunca eram montadas (superfície morta).
+    { router: routers.mcpRouter },
     { router: routers.demoRouter },
     { path: '/qa', router: routers.operationalStatusRouter },
     { router: routers.rpaTestsRouter },

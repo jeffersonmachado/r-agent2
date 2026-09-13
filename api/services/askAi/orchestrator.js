@@ -309,6 +309,22 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
       intent: intentResult.intent,
       confidence: 'insufficient_evidence',
       provenance: { liveData: [], knowledge: [], inference: 'none', recommendation: 'none' },
+      // O contrato de resposta consumido pela rota exige `policy` em TODO
+      // turno: sem ele, a recusa determinística virava HTTP 500 no boundary.
+      policy: {
+        classification,
+        accessDenied: false,
+        deniedTools: [],
+        injectionDetected: false,
+        entityValidated: false,
+        conversation: describeConversationUse({
+          history,
+          effectiveContextSource: contextSource,
+          inheritedIntent: false,
+          hasSummary: Boolean(history.summary),
+          context: effectiveContext,
+        }),
+      },
       historyWindow: stored.window.length,
       blocked: true,
     };

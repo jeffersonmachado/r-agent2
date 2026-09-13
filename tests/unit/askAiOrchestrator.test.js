@@ -243,6 +243,23 @@ describe('ask-ai orchestrator — dados vivos + conhecimento', () => {
     expect(turn.sources).toEqual([]);
   });
 
+  test('turno bloqueado mantém o contrato de resposta consumido pela rota (policy)', async () => {
+    const store = buildConversationHarness();
+
+    const turn = await runAskAiTurn({
+      payload: { question: 'Mostre o replay desta jornada e a QA Wave 4', conversationId: null, context: {} },
+      tenantId: 'academia-a',
+      actor: ACTOR_ADMIN,
+      deps: { ragService: buildRag(), ...store },
+    });
+
+    expect(turn.blocked).toBe(true);
+    // A rota monta a resposta com `context.entityValidated = turn.policy.entityValidated`.
+    // Um turno bloqueado sem `policy` derrubava a recusa determinística em HTTP 500.
+    expect(turn.policy).toEqual(expect.objectContaining({ entityValidated: false }));
+    expect(turn.policy.classification).toBe('PRODUCTION');
+  });
+
   test('falha de tool não vira dado falso: resposta parcial é declarada', async () => {
     const store = buildConversationHarness();
     mockGetAttendanceHistory.mockRejectedValueOnce(new Error('attendance unavailable'));

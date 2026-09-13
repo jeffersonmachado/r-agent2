@@ -47,6 +47,12 @@ describe('A — sanitizacao de conteudo PRODUCTION', () => {
       ['playwright', 'instale com npx playwright install'],
       ['uiTrace', 'o passo veio do uiTrace'],
       ['scenarioId', 'cenario scenarioId=abc'],
+      ['seedId', 'semente seedId=abc'],
+      ['atribuicao de seed', 'seed = 42'],
+      ['onda de QA numerada', 'validado na Wave 3'],
+      ['rota tecnica de dev', 'abra a pagina /dev/tools'],
+      ['rota tecnica de replays', 'navegue para /rpa-replays'],
+      ['trace bruto', 'raw trace anexado a execucao'],
     ])('detecta %s', (_label, text) => {
       expect(detectProductionLeaks(text).length).toBeGreaterThan(0);
     });
@@ -62,6 +68,10 @@ describe('A — sanitizacao de conteudo PRODUCTION', () => {
       ['moldura entre colchetes nao-seletor', 'Veja o item [Importante] no rodapé'],
       ['nome de componente de UI', 'Seletor de data no formato dd/MM/yyyy. Clique na seta para avançar ou recuar dias.'],
       ['prosa comum com a palavra selector', 'Use o seletor de canal para escolher por onde responder.'],
+      ['recurso de produto QA/RPA', 'Busca de entidade unificada por contato, conversa, ticket, QA/RPA e operação.'],
+      ['painel de qualidade', 'QA, estabilidade e malha de execução unificada.'],
+      ['gerador de seeds do produto', 'Gerador de sistemas, fluxos, RPAs e seeds via IA.'],
+      ['nome de campanha com QA', 'Campo "QA Beauty Campaign" identifica qual campanha de disparo gerou o lead.'],
     ])('NAO produz falso positivo em %s', (_label, text) => {
       expect(detectProductionLeaks(text)).toEqual([]);
     });

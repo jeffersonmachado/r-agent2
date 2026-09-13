@@ -30,6 +30,10 @@
  *  19. process_runtime_bridge      — nó durável executa por Tool Registry com idempotência
  *  20. quota_enforced_locally      — quota por tenant/conexão/tool bloqueia antes da rede
  *  21. provider_fallback_policy    — fallback de provider é determinístico e nunca inseguro por omissão
+ *  22. discovery_requires_remote_server — descoberta/teste exige servidor real; sem ele, código explícito
+ *  23. schema_change_not_auto_promoted  — schema novo fica pendente até revalidação explícita
+ *  24. persistence_is_runtime_authority — banco é a autoridade do startup (sem lista de tenants)
+ *  25. json_body_is_awaited        — rotas aguardam o corpo JSON (guard §M9 e create/update reais)
  */
 
 const fs = require('fs');
@@ -484,6 +488,184 @@ check('provider_fallback_policy', 'fallback de provider é determinístico e nun
 
   assert(selectProvider([]).semanticSafety === 'no_candidate', 'ausência de candidato não é declarada');
   return 'precedência nativa, fallback seguro declarado e inseguro bloqueado sem opt-in';
+});
+
+// 22. Descoberta exige servidor remoto ------------------------------------
+//
+// Defeito real: a API de administração aceitava que o CLIENTE declarasse o
+// inventário (`POST discover` com `body.tools`) e respondia ao teste de conexão
+// com um 502 fixo. Aqui a regra é executada no módulo REAL de pré-checagem: sem
+// endpoint, sem credencial resolvível ou com endpoint proibido o resultado é um
+// CÓDIGO explícito — nunca `ok:true`.
+check('discovery_requires_remote_server', 'descoberta/teste sem servidor remoto real falha com código explícito, nunca sucesso', () => {
+  const discovery = require(path.join(ROOT, 'api', 'services', 'mcp', 'mcpDiscoveryService'));
+  const codes = discovery.DISCOVERY_CODES;
+  assert(codes.ENDPOINT_NOT_CONFIGURED === 'MCP_ENDPOINT_NOT_CONFIGURED', 'código de endpoint ausente renomeado');
+
+  const noEndpoint = discovery.preflight({
+    name: 'erp', endpoint: '', authType: 'bearer', credentialRef: 'REF',
+  });
+  assert(noEndpoint.ok === false && noEndpoint.code === codes.ENDPOINT_NOT_CONFIGURED,
+    'conexão sem endpoint não foi recusada explicitamente');
+
+  const nonHttp = discovery.preflight({
+    name: 'erp', endpoint: 'stdio://local', authType: 'bearer', credentialRef: 'REF',
+  });
+  assert(nonHttp.ok === false && nonHttp.code === codes.ENDPOINT_NOT_CONFIGURED,
+    'endpoint não-HTTP tratado como servidor real');
+
+  const loopback = discovery.preflight({
+    name: 'erp', endpoint: 'https://127.0.0.1:9/rpc', authType: 'bearer', credentialRef: 'REF', classification: 'PRODUCTION',
+  });
+  assert(loopback.ok === false && loopback.code === codes.ENDPOINT_BLOCKED,
+    'endpoint loopback passou pela pré-checagem');
+
+  const noCredential = discovery.preflight({
+    name: 'erp', endpoint: 'https://erp.example.com/rpc', authType: 'bearer', credentialRef: null,
+  });
+  assert(noCredential.ok === false && noCredential.code === codes.AUTH_UNAVAILABLE,
+    'conexão sem credencial resolvível passou pela pré-checagem');
+
+  // O inventário REMOTO é validado: protocolo violado é recusado.
+  const dupes = discovery.validateToolInventory([{ name: 'a' }, { name: 'a' }]);
+  assert(dupes.valid === false, 'inventário com tool duplicada foi aceito');
+  const noName = discovery.validateToolInventory([{ description: 'sem nome' }]);
+  assert(noName.valid === false, 'inventário com tool sem nome foi aceito');
+
+  return 'endpoint/credencial/SSRF pré-checados; inventário remoto validado; nenhum caminho devolve sucesso falso';
+});
+
+// 23. Mudança de schema NUNCA é auto-promovida ---------------------------
+//
+// Defeito real: `recordDiscovery` gravava o fingerprint OBSERVADO. A segunda
+// descoberta do mesmo inventário novo comparava "igual com igual" e devolvia a
+// conexão para HEALTHY — o contrato novo era promovido SOZINHO, sem
+// revalidação. A regra agora vive numa função PURA (`evaluateSchemaAcceptance`)
+// executada aqui.
+check('schema_change_not_auto_promoted', 'schema novo fica pendente até revalidação explícita (nunca promove sozinho)', () => {
+  const connectionService = require(path.join(ROOT, 'api', 'services', 'mcp', 'mcpConnectionService'));
+  const evaluate = connectionService.evaluateSchemaAcceptance;
+  assert(typeof evaluate === 'function', 'regra de aceitação de schema não é executável/exportada');
+  const { LIFECYCLE_STATES } = connectionService;
+
+  // Primeira descoberta: estabelece o contrato em vigor.
+  const first = evaluate({ acceptedFingerprint: null, observedFingerprint: 'F1' });
+  assert(first.acceptedFingerprint === 'F1' && first.schemaChanged === false && first.status === LIFECYCLE_STATES.HEALTHY,
+    'primeira descoberta não estabeleceu o contrato');
+
+  // Contrato diferente: fica PENDENTE, e o aceito continua o antigo.
+  const changed = evaluate({ acceptedFingerprint: 'F1', observedFingerprint: 'F2' });
+  assert(changed.schemaChanged === true, 'mudança de schema não foi detectada');
+  assert(changed.status === LIFECYCLE_STATES.SCHEMA_CHANGED, 'status não foi para SCHEMA_CHANGED');
+  assert(changed.acceptedFingerprint === 'F1', 'contrato novo foi promovido sem revalidação');
+  assert(changed.pendingFingerprint === 'F2', 'fingerprint pendente não é auditável');
+
+  // Repetir a MESMA descoberta do contrato novo NÃO promove (o defeito).
+  const repeated = evaluate({ acceptedFingerprint: changed.acceptedFingerprint, observedFingerprint: 'F2' });
+  assert(repeated.schemaChanged === true, 'segunda descoberta promoveu o schema sozinha');
+  assert(repeated.status === LIFECYCLE_STATES.SCHEMA_CHANGED, 'segunda descoberta devolveu a conexão para HEALTHY');
+  assert(repeated.acceptedFingerprint === 'F1', 'segunda descoberta sobrescreveu o contrato aceito');
+
+  // Voltar ao contrato em vigor limpa a pendência (é o mesmo contrato).
+  const reverted = evaluate({ acceptedFingerprint: 'F1', observedFingerprint: 'F1' });
+  assert(reverted.schemaChanged === false && reverted.pendingFingerprint === null, 'retorno ao contrato aceito não foi reconhecido');
+
+  // Só a revalidação explícita promove (operação separada, com timestamp).
+  const promoted = evaluate({ acceptedFingerprint: 'F2', observedFingerprint: 'F2' });
+  assert(promoted.schemaChanged === false && promoted.acceptedFingerprint === 'F2', 'contrato revalidado não é aceito');
+  assert(/recordRevalidation/.test(
+    fs.readFileSync(path.join(ROOT, 'api', 'services', 'mcp', 'mcpConnectionService.js'), 'utf8'),
+  ), 'operação explícita de revalidação ausente');
+  return 'aceito x observado separados; pendência auditável; promoção só por revalidate';
+});
+
+// 24. Persistência é a autoridade do runtime ------------------------------
+//
+// Defeito real: `loadConnectionsFromPersistence` recebia a lista de tenants por
+// parâmetro (`deps.tenants`) e carregava conexão por conexão. Um tenant
+// habilitado no banco depois do boot — ou ausente da lista — nunca era
+// carregado, e o runtime perdia capabilities em silêncio. A autoridade passou a
+// ser `listAllEnabledConnections()`.
+check('persistence_is_runtime_authority', 'runtime carrega TODAS as conexões habilitadas do banco (sem lista de tenants como insumo)', () => {
+  const connectionService = require(path.join(ROOT, 'api', 'services', 'mcp', 'mcpConnectionService'));
+  const runtimeSource = fs.readFileSync(path.join(ROOT, 'api', 'runtime', 'startMcpClient.js'), 'utf8');
+  const serviceSource = fs.readFileSync(path.join(ROOT, 'api', 'services', 'mcp', 'mcpConnectionService.js'), 'utf8');
+
+  // Comentários são removidos antes das checagens textuais: o invariante vale
+  // para CÓDIGO. (O comentário deste arquivo cita `deps.tenants` justamente para
+  // documentar que ele não é mais insumo.)
+  const stripComments = (source) => source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .map((line) => line.replace(/\/\/.*$/, ''))
+    .join('\n');
+  const runtimeCode = stripComments(runtimeSource);
+
+  assert(typeof connectionService.listAllEnabledConnections === 'function',
+    'listAllEnabledConnections ausente — o banco não é autoridade');
+  assert(/listAllEnabledConnections\(\)/.test(runtimeCode),
+    'runtime não consome a listagem global de conexões habilitadas');
+  assert(!/deps\.tenants/.test(runtimeCode),
+    'runtime voltou a depender de `deps.tenants` como insumo');
+  assert(/function listAllEnabledConnections\(\)/.test(stripComments(serviceSource)),
+    'listagem global não é tenant-agnóstica');
+
+  // A projeção para o hub NÃO pode descartar a config operacional (§M6).
+  const projection = connectionService.toConnectionConfig({
+    tenant_key: 't', name: 'erp', endpoint: 'https://erp.example.com/rpc', enabled: true,
+    tool_policies: { 'crm.read': { sideEffects: false } },
+    tool_capability_map: { 'crm.read': 'crm.read' },
+    allowed_tools: ['crm.read'],
+    mapping_version: '2',
+    discovered_tools: [{ name: 'crm.read' }],
+  });
+  for (const field of ['toolPolicies', 'toolCapabilityMap', 'allowedTools', 'allowedCapabilities', 'endpointPolicy', 'retryPolicy']) {
+    assert(projection[field] !== undefined, `projeção do runtime descarta '${field}'`);
+  }
+  assert(projection.toolPolicies['crm.read'] !== undefined, 'política declarada por tool não chega ao hub');
+  assert(projection.mappingVersion === '2', 'versão do mapeamento não chega ao hub');
+
+  const record = connectionService.toConnectionRecord({
+    tenant_key: 't', name: 'erp', tool_policies: { 'crm.read': { sideEffects: false } },
+    tool_capability_map: { 'crm.read': 'crm.read' }, allowed_tools: ['crm.read'],
+  });
+  assert(record.toolPolicies['crm.read'] !== undefined, 'listConnections descarta toolPolicies (regressão conhecida)');
+  return 'banco é a única autoridade; projeção preserva config operacional e versionamento';
+});
+
+// 25. Corpo JSON das rotas é aguardado -----------------------------------
+//
+// Defeito real: `deps.parseJsonBody` é ASSÍNCRONO (todos os outros módulos usam
+// `await deps.parseJsonBody(req)`), mas as rotas MCP o tratavam como objeto
+// síncrono. Consequência: `body.tools` era sempre `undefined` (o guard de §M9
+// era código morto no HTTP) e `create`/`update` recebiam uma Promise como
+// `input` — a rota de criação não criava nada.
+check('json_body_is_awaited', 'rotas MCP aguardam o corpo JSON (guard de inventário do cliente e create/update reais)', () => {
+  const routesSource = fs.readFileSync(path.join(ROOT, 'api', 'modules', 'mcp', 'routes.js'), 'utf8');
+  const actual = require(path.join(ROOT, 'api', 'express', 'httpHelpers'));
+
+  // O contrato real é assíncrono — se isso mudar, este invariante precisa mudar.
+  const returned = actual.parseJsonBody({ body: { probe: true } });
+  assert(returned && typeof returned.then === 'function',
+    'parseJsonBody deixou de ser assíncrono; revise o consumo nas rotas MCP');
+
+  // Nenhum consumo pode ser síncrono: toda linha que chama `deps.parseJsonBody`
+  // precisa estar sob `await` (o helper `readJsonBody` faz exatamente isso).
+  const offenders = routesSource
+    .split('\n')
+    .filter((line) => /deps\.parseJsonBody\(req\)/.test(line))
+    .filter((line) => !/await\s+deps\.parseJsonBody\(req\)/.test(line));
+  assert(offenders.length === 0,
+    `consumo síncrono de parseJsonBody nas rotas MCP: ${offenders.map((l) => l.trim()).join(' | ')}`);
+  assert(/readJsonBody\(deps, req\)/.test(routesSource), 'helper assíncrono de corpo ausente nas rotas MCP');
+
+  // O guard de §M9 precisa existir e recusar (nunca "aceito e ignorado").
+  assert(/MCP_CLIENT_TOOL_INVENTORY_FORBIDDEN/.test(routesSource),
+    'guard de inventário declarado pelo cliente ausente');
+  assert(/rejectClientToolInventory\(deps, res, await readJsonBody\(deps, req\)\)/.test(routesSource)
+    || /await readJsonBody\(deps, req\);?\s*$/m.test(routesSource),
+  'guard de inventário não recebe o corpo resolvido');
+  return 'corpo JSON aguardado; inventário do cliente recusado no boundary';
 });
 
 async function main() {

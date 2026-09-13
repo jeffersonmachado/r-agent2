@@ -53,19 +53,23 @@ function loadMcpConnections() {
 }
 
 /**
- * §M6/§M7 — o BANCO é a autoridade das conexões externas.
+ * §M3/§M4/§M6/§M7 — o BANCO é a autoridade das conexões externas.
  *
  * Ordem:
  *   1. importa a config legada como BOOTSTRAP determinístico e idempotente
  *      (chave `(tenant_key, name)` impede duplicação entre startups);
- *   2. carrega do banco apenas as conexões HABILITADAS.
+ *   2. carrega do banco TODAS as conexões HABILITADAS, de TODOS os tenants.
  *
- * Assim o control plane deixa de ser estado em memória: habilitar/desabilitar,
- * ciclo de vida e fingerprint de schema persistem entre reinícios. Se o banco
- * não estiver disponível, a config legada continua servindo (degradação
- * explícita), sem jamais inventar conexão.
+ * A lista de tenants NÃO é insumo: ela vinha por `deps.tenants` e transformava a
+ * descoberta numa função do que alguém lembrou de passar. Um tenant habilitado no
+ * banco depois do boot (ou simplesmente ausente da lista) nunca era carregado — e
+ * o runtime silenciosamente perdia aquelas capabilities. O que está habilitado no
+ * banco é o que o runtime carrega.
+ *
+ * Se o banco não estiver disponível, a config legada continua servindo (degradação
+ * EXPLÍCITA, reportada em `source`), sem jamais inventar conexão.
  */
-async function loadConnectionsFromPersistence({ tenants = [], actor = 'runtime-startup' } = {}) {
+async function loadConnectionsFromPersistence({ actor = 'runtime-startup' } = {}) {
   let service;
   try {
     service = require('../services/mcp/mcpConnectionService');
@@ -82,44 +86,35 @@ async function loadConnectionsFromPersistence({ tenants = [], actor = 'runtime-s
     legacyByTenant.get(tenant).push(connection);
   }
 
-  const tenantIds = new Set([...tenants.map(String), ...legacyByTenant.keys()]);
   const imported = [];
-  for (const tenantId of tenantIds) {
+  for (const [tenantId, connections] of legacyByTenant.entries()) {
     try {
-      imported.push({ tenantId, result: await service.importFromConfigBootstrap({ tenantId, connections: legacyByTenant.get(tenantId) || [], actor }) });
+      imported.push({ tenantId, result: await service.importFromConfigBootstrap({ tenantId, connections, actor }) });
     } catch (error) {
       imported.push({ tenantId, error: error.message });
     }
   }
 
-  const connections = [];
-  for (const tenantId of tenantIds) {
-    try {
-      const rows = await service.listEnabledConnections({ tenantId });
-      for (const row of rows) {
-        connections.push({
-          tenant: row.tenant_key,
-          name: row.name,
-          endpoint: row.endpoint,
-          transport: row.transport,
-          enabled: row.enabled,
-          classification: row.classification_ceiling,
-          authType: row.auth_type,
-          credentialRef: row.credential_ref,
-          connectionId: row.id,
-          schemaFingerprint: row.schema_fingerprint,
-        });
-      }
-    } catch (error) {
-      logger.warn('[McpClientComposition] Falha ao carregar conexões persistidas', { tenantId, error: error.message });
-    }
+  let rows = [];
+  let persistenceError = null;
+  try {
+    rows = await service.listAllEnabledConnections();
+  } catch (error) {
+    persistenceError = error.message;
+    logger.warn('[McpClientComposition] Falha ao carregar conexões persistidas', { error: error.message });
   }
 
-  if (connections.length > 0) return { connections, source: 'control-plane', imported };
+  const connections = rows
+    .map((row) => service.toConnectionConfig(row))
+    .filter((connection) => connection.tenant && connection.name && connection.endpoint);
+
+  if (connections.length > 0) {
+    return { connections, source: 'control-plane', imported, persistenceError };
+  }
   // Banco vazio/sem conexões habilitadas: a config legada ainda serve, mas o
   // caminho usado é EXPLÍCITO no resultado.
-  if (legacy.length > 0) return { connections: legacy, source: 'config-bootstrap-fallback', imported };
-  return { connections: [], source: 'none', imported };
+  if (legacy.length > 0) return { connections: legacy, source: 'config-bootstrap-fallback', imported, persistenceError };
+  return { connections: [], source: 'none', imported, persistenceError };
 }
 
 /** Lookup DNS com TODOS os endereços (valida rebinding, não só o 1º). */
@@ -162,10 +157,7 @@ async function startMcpClientComposition(deps = {}) {
 
     const loaded = deps.connections
       ? { connections: deps.connections, source: 'injected', imported: null }
-      : await loadConnectionsFromPersistence({
-        tenants: deps.tenants || [],
-        actor: 'runtime-startup',
-      });
+      : await loadConnectionsFromPersistence({ actor: 'runtime-startup' });
     const connections = loaded.connections;
 
     if (connections.length === 0) {

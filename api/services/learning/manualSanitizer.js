@@ -20,9 +20,14 @@
  *
  * Este módulo é PURO (zero I/O) para poder ser usado em gerador, API, RAG e gate.
  *
- * Anti-falso-positivo (§A6): as regras NÃO são regex ingênuas sobre palavras
+ * Anti-falso-positivo (§A6/L2): as regras NÃO são regex ingênuas sobre palavras
  * soltas. Elas exigem contexto técnico inequívoco — ver `PRODUCTION_FORBIDDEN_RULES`.
- * Em especial, `# Título` de markdown não é seletor, e `#1` não é id.
+ * Em especial:
+ *   - `# Título` de markdown não é seletor, e `#1` não é id;
+ *   - `Seletor de data` é nome OPERACIONAL de componente de UI;
+ *   - `QA`, `RPA` e `seeds` são NOMES DE RECURSO do produto ("Painel de QA/RPA",
+ *     "Gerador de sistemas, fluxos, RPAs e seeds"); só viram vazamento em
+ *     construção técnica (`seedId`, `qa-waves`, `Wave 3`).
  */
 
 /** Marcador aplicado a trechos removidos, para não deixar frase órfã. */
@@ -103,6 +108,32 @@ const PRODUCTION_FORBIDDEN_RULES = Object.freeze([
     id: 'internal_classification_term',
     description: 'Vocabulário de classificação de experiência (SUPPORT/DEVELOPMENT).',
     pattern: /\bclassificationCeiling\b|\brequireClassification\b|classificação\s+(?:SUPPORT|DEVELOPMENT)\b/i,
+  },
+  {
+    id: 'seed_reference',
+    description: 'Identificador/atribuição de seed de QA (seedId, seed = ...).',
+    // §A6: a PALAVRA "seeds" é nome de recurso de PRODUTO (`/generate-system`
+    // gera "sistemas, fluxos, RPAs e seeds"). Só é vazamento em construção
+    // técnica — id ou atribuição.
+    pattern: /\bseed(?:Id|ID|_id)\b|\bseeds?\s*[:=]/,
+  },
+  {
+    id: 'qa_wave_number',
+    description: 'Numeração de onda de QA (ex.: Wave 3).',
+    pattern: /\bwave\s*\d/i,
+  },
+  {
+    id: 'technical_route',
+    description: 'Rota técnica de engenharia (dev/developer, qa-waves, qa-mesh, rpa-replays, tests).',
+    // Rotas de engenharia não são instrução de operador. Casado no TEXTO
+    // projetado (o `rag-sync` converte HTML em texto, então o caminho aparece
+    // separado do markup) e em rotas citadas em prosa/crase.
+    pattern: /(?:^|[\s`"'(])\/(?:dev(?:eloper)?|rpa-replays|qa-waves|qa-mesh|tests?)\b/i,
+  },
+  {
+    id: 'raw_trace_reference',
+    description: 'Referência a trace bruto de execução.',
+    pattern: /\braw trace\b/i,
   },
 ]);
 

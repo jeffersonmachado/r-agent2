@@ -12,7 +12,10 @@
 const crypto = require('crypto');
 
 // ─── Dublê de banco em memória, com a MESMA superfície usada pelo serviço ────
-// (o serviço fala com `getMcpConnectionModel()`; aqui só substituímos o model)
+// O contrato REAL do model é: `require('.../McpConnection')` devolve a FACTORY
+// diretamente (convenção dos models do projeto). O mock espelha isso — antes ele
+// expunha `{ getMcpConnectionModel }`, formato que o módulo NÃO usa, e por isso
+// escondia um import quebrado no serviço.
 // Nomes prefixados com `mock` porque o factory do jest.mock não pode referenciar
 // variáveis fora de escopo sem esse prefixo.
 const mockStore = new Map();
@@ -58,9 +61,7 @@ function mockCreateFakeModel() {
   };
 }
 
-jest.mock('../../../api/db/models/McpConnection', () => ({
-  getMcpConnectionModel: () => mockCreateFakeModel(),
-}));
+jest.mock('../../../api/db/models/McpConnection', () => mockCreateFakeModel);
 
 const service = require('../../../api/services/mcp/mcpConnectionService');
 

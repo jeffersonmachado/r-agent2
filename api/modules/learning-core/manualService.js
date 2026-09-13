@@ -29,8 +29,19 @@ const { readTenantScopedReplay } = require('./replayStorage');
 // §A1–A6: fronteira PROVENIÊNCIA INTERNA × CONTEÚDO PRODUCTION. O manual do
 // operador não pode expor replay, seletor, alvo técnico nem falha técnica.
 const {
-  sanitizeProductionText, assertProductionClean, detectProductionLeaks,
+  assertProductionClean,
 } = require('../../services/learning/manualSanitizer');
+// §L1–L3/L6/L7: fronteira FORMAL entre o modelo interno e o DTO de produção.
+// Nada é servido a partir do objeto interno: conteúdo, PDF e RAG passam por
+// `toProductionManualMetadata` (allowlist estrita + assert fail-closed).
+const {
+  INTERNAL_MANUAL_SHAPE,
+  COMPLETED_LABEL,
+  toProductionManualMetadata,
+  assertProductionManualDto,
+  toInternalManualProvenance,
+  toProductionRagDocument,
+} = require('../../services/learning/manualProjection');
 const { indexDocument } = require('../../services/ragService');
 const logger = require('../../utils/logger');
 
@@ -107,9 +118,12 @@ function buildManualSteps(replay, manualDir) {
       action,
       label: ACTION_LABELS[action] || 'Ação',
       name,
+      // Campos TÉCNICOS: existem apenas no modelo INTERNO (`metadata.json` e
+      // `provenance.json`). A projeção de produção os descarta por allowlist.
       selector: entry.selector || null,
       value: entry.input !== undefined ? entry.input : entry.value,
       success: entry.success !== false && entry.status !== 'failed',
+      completed: entry.success !== false && entry.status !== 'failed',
       image: null,
     };
 
@@ -125,7 +139,12 @@ function buildManualSteps(replay, manualDir) {
   return steps;
 }
 
-function renderManualMarkdown({ title, replayId, journeyKey, steps, stats }) {
+/**
+ * Renderiza o MARKDOWN do manual a partir de passos JÁ PROJETADOS
+ * (`ProductionManualStep`). O `replayId` não é aceito: a assinatura reflete a
+ * fronteira — o que não é parâmetro não pode vazar para o template.
+ */
+function renderManualMarkdown({ title, journeyKey, steps }) {
   const lines = [
     `# ${title}`,
     '',
@@ -142,6 +161,11 @@ function renderManualMarkdown({ title, replayId, journeyKey, steps, stats }) {
     // §A3: linguagem OPERACIONAL. O alvo técnico (seletor) não é instrução de
     // operador — é proveniência interna, preservada no artefato de proveniência.
     lines.push(`- Ação: **${step.label}**`);
+    // Situação OPERACIONAL. O flag técnico de execução do replay não existe no
+    // passo de produção; a frase ainda é útil ao operador.
+    if (step.completed === false) {
+      lines.push(`- Situação: ${COMPLETED_LABEL}`);
+    }
     if (step.value !== null && step.value !== undefined && step.value !== '') {
       lines.push(`- Valor: \`${step.value}\``);
     }
@@ -153,37 +177,22 @@ function renderManualMarkdown({ title, replayId, journeyKey, steps, stats }) {
   }
 
   const rendered = `${lines.join('\n')}\n`;
-  // §A6 backstop FAIL-CLOSED: nenhum manual PRODUCTION sai com detalhe interno,
-  // mesmo que geradores futuros alterem o template.
-  const { text } = sanitizeProductionText(rendered);
-  assertProductionClean(text, 'manual PRODUCTION');
-  return text;
+  // §A6/L2 backstop FAIL-CLOSED: nenhum manual PRODUCTION sai com detalhe
+  // interno, mesmo que geradores futuros alterem o template. Não há
+  // "mascaramento": o mascaramento silencioso esconderia o defeito; aqui a
+  // geração falha com erro tipado.
+  assertProductionClean(rendered, 'manual PRODUCTION');
+  return rendered;
 }
 
 /**
- * Proveniência INTERNA do manual — preserva auditabilidade (§A2/§A5) sem
- * contaminar o conteúdo PRODUCTION. Classificação: SUPPORT/DEVELOPMENT.
+ * Proveniência INTERNA do manual — preserva auditabilidade (§A2/§A5/L7) sem
+ * contaminar o conteúdo PRODUCTION. Classificação: DEVELOPMENT / SYSTEM.
+ * A implementação canônica vive em `manualProjection` (fonte única) e é
+ * reexposta aqui para compatibilidade dos chamadores existentes.
  */
-function renderManualProvenance({ manualId, replayId, journeyKey, steps, stats }) {
-  return {
-    artifactType: 'manual-provenance',
-    artifactVersion: '1.0.0',
-    classification: 'DEVELOPMENT',
-    domain: 'SYSTEM',
-    manualId: manualId || null,
-    replayId: replayId || null,
-    journeyKey: journeyKey || null,
-    redactions: (stats && stats.redactions) || 0,
-    generatedAt: new Date().toISOString(),
-    technicalSteps: (steps || []).map((step) => ({
-      order: step.order,
-      name: step.name,
-      action: step.action || null,
-      selector: step.selector || null,
-      image: step.image || null,
-      executedSuccessfully: step.success !== false,
-    })),
-  };
+function renderManualProvenance(internalMetadata) {
+  return toInternalManualProvenance(internalMetadata);
 }
 
 function readMetadata(manualDir) {
@@ -222,15 +231,16 @@ async function generateManualFromReplay({ tenantId, replayId, title, journeyKey,
   }
 
   const resolvedJourneyKey = journeyKey || replay.journeyId || replay.journeyKey || null;
+  // §L3: o fallback do título NUNCA usa o replayId — ele é proveniência interna
+  // (e o `manualSanitizer` rejeitaria o identificador na superfície PRODUCTION).
   const resolvedTitle = String(title || '').trim()
-    || `Manual — jornada ${resolvedJourneyKey || replayId}`;
+    || `Manual — jornada ${resolvedJourneyKey || 'operacional'}`;
 
   const ragDocumentId = ragDocumentIdForManual(manualId);
-  const manualMarkdown = renderManualMarkdown({
-    title: resolvedTitle, replayId, journeyKey: resolvedJourneyKey, steps, stats,
-  });
 
-  const metadata = {
+  // ── Modelo INTERNO (nunca servido, nunca indexado) ───────────────────────
+  const internalMetadata = {
+    shape: INTERNAL_MANUAL_SHAPE,
     id: manualId,
     title: resolvedTitle,
     tenantId: String(tenantId),
@@ -247,43 +257,52 @@ async function generateManualFromReplay({ tenantId, replayId, title, journeyKey,
     version: 1,
   };
 
+  // ── Modelo PRODUCTION (único insumo de markdown, PDF, API e RAG) ─────────
+  const productionManual = toProductionManualMetadata(internalMetadata);
+  // FAIL-CLOSED antes de produzir qualquer saída: se a projeção carregar
+  // detalhe interno, nada é escrito e nada é indexado.
+  assertProductionManualDto(productionManual, 'manual gerado');
+
+  const manualMarkdown = renderManualMarkdown({
+    title: productionManual.title,
+    journeyKey: productionManual.journeyKey,
+    steps: productionManual.steps,
+  });
+
   fs.writeFileSync(path.join(manualDir, 'manual.md'), manualMarkdown);
-  fs.writeFileSync(path.join(manualDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
+  fs.writeFileSync(path.join(manualDir, 'metadata.json'), JSON.stringify(internalMetadata, null, 2));
+  // §L7: a prova técnica não é destruída — vai para artefato INTERNO
+  // (DEVELOPMENT/SYSTEM), fora de qualquer rota e fora do índice.
+  fs.writeFileSync(
+    path.join(manualDir, 'provenance.json'),
+    JSON.stringify(toInternalManualProvenance(internalMetadata), null, 2),
+  );
 
   // Indexação obrigatória: um manual pronto precisa ficar consultável pelo
   // Ask AI/Tutor. O RAG é derivado — falha aqui é explícita (sem fallback
   // silencioso), mas o manual permanece no disco para reindexação.
-  const indexResult = await indexDocument({
-    id: ragDocumentId,
-    title: resolvedTitle,
+  // §L6: o payload do RAG é PROJETADO do DTO de produção (conteúdo revalidado).
+  const ragProjection = toProductionRagDocument({
+    productionManual,
     content: manualMarkdown,
+    tenantId,
     domain: MANUAL_DOMAIN,
     classification: MANUAL_CLASSIFICATION,
     sensitivity: MANUAL_SENSITIVITY,
-    metadata: {
-      source: 'learning-core-manual',
-      category: 'operational-manual',
-      contentType: 'manual',
-      sourceId: ragDocumentId,
-      // §A5: a metadata indexada no RAG PRODUCTION não revela replay. A
-      // rastreabilidade técnica (replayId, selector, uiTrace) fica no
-      // `metadata.json` interno do manual, que não é indexado.
-      manualId,
-      journeyKey: resolvedJourneyKey,
-      version: 1,
-    },
-  }, tenantId);
+  });
+  const indexResult = await indexDocument(ragProjection.document, ragProjection.tenantId);
 
-  metadata.ragChunksCreated = indexResult?.chunksCreated || 0;
-  metadata.ragIndexedAt = new Date().toISOString();
-  fs.writeFileSync(path.join(manualDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
+  internalMetadata.ragChunksCreated = indexResult?.chunksCreated || 0;
+  internalMetadata.ragIndexedAt = new Date().toISOString();
+  fs.writeFileSync(path.join(manualDir, 'metadata.json'), JSON.stringify(internalMetadata, null, 2));
 
   logger.info('[learning-core] Manual gerado a partir de replay', {
-    manualId, replayId, tenantId, steps: metadata.stepCount, images: metadata.imageCount,
-    ragChunksCreated: metadata.ragChunksCreated,
+    manualId, replayId, tenantId, steps: internalMetadata.stepCount, images: internalMetadata.imageCount,
+    ragChunksCreated: internalMetadata.ragChunksCreated,
   });
 
-  return metadata;
+  // Contrato interno preservado (o boundary HTTP projeta via DTO).
+  return internalMetadata;
 }
 
 /**
@@ -385,6 +404,14 @@ function resolveManualFile({ tenantId, manualId, kind, name }) {
     error.code = 'NOT_FOUND';
     throw error;
   }
+
+  if (kind === 'md') {
+    // §L4: superfície PRODUCTION servida ao operador. O arquivo é revalidado no
+    // momento da entrega — um `manual.md` legado (gerado antes da sanitização)
+    // ou corrompido por outra rota falha FECHADO em vez de vazar.
+    assertProductionClean(fs.readFileSync(filePath, 'utf8'), 'manual.md servido');
+  }
+
   return { filePath, contentType, metadata };
 }
 
@@ -429,9 +456,16 @@ function escapeHtml(value) {
 /**
  * Monta o HTML imprimível do manual (A4), com as telas embutidas em base64.
  * Função pura de renderização — testável sem browser.
+ *
+ * §L5: recebe EXCLUSIVAMENTE um `ProductionManualDTO`. O assert abaixo é
+ * fail-closed: se um objeto interno (com `replayId`/`selector`) for passado por
+ * engano, o HTML não é produzido. Antes desta correção o PDF era montado do
+ * `metadata.json` interno e imprimia `Fonte: replay real <id>`,
+ * `alvo <code>#selector</code>` e `falhou no replay`.
  */
-function buildManualHtml(metadata, manualDir) {
-  const stepsHtml = (metadata.steps || []).map((step) => {
+function buildManualHtml(productionManual, manualDir) {
+  const manual = assertProductionManualDto(productionManual, 'HTML/PDF do manual');
+  const stepsHtml = (manual.steps || []).map((step) => {
     let imageHtml = '';
     if (step.image) {
       const imagePath = path.join(manualDir, step.image);
@@ -440,10 +474,13 @@ function buildManualHtml(metadata, manualDir) {
         imageHtml = `<img src="data:image/png;base64,${base64}" alt="${escapeHtml(step.name)}" />`;
       }
     }
+    const completedNote = step.completed === false
+      ? ` · <span class="pending">${COMPLETED_LABEL}</span>`
+      : '';
     return `
       <section class="step">
         <h2>Passo ${step.order} — ${escapeHtml(step.name)}</h2>
-        <p class="meta">Ação: <strong>${escapeHtml(step.label)}</strong>${step.selector ? ` · alvo <code>${escapeHtml(step.selector)}</code>` : ''}${step.success === false ? ' · <span class="fail">falhou no replay</span>' : ''}</p>
+        <p class="meta">Ação: <strong>${escapeHtml(step.label)}</strong>${completedNote}</p>
         ${step.value ? `<p class="meta">Valor: <code>${escapeHtml(step.value)}</code></p>` : ''}
         ${imageHtml}
       </section>`;
@@ -453,7 +490,7 @@ function buildManualHtml(metadata, manualDir) {
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<title>${escapeHtml(metadata.title)}</title>
+<title>${escapeHtml(manual.title)}</title>
 <style>
   @page { size: A4; margin: 18mm 16mm; }
   body { font-family: 'DejaVu Sans', Arial, sans-serif; color: #1a1a2e; font-size: 11pt; line-height: 1.45; }
@@ -462,22 +499,36 @@ function buildManualHtml(metadata, manualDir) {
   .step { page-break-inside: avoid; margin-bottom: 7mm; }
   .step h2 { font-size: 13pt; margin: 0 0 2mm; color: #223; }
   .meta { margin: 1mm 0; font-size: 10pt; color: #333; }
-  .fail { color: #c0392b; font-weight: bold; }
+  .pending { color: #8a6d1f; font-weight: bold; }
   code { background: #f0f0f4; padding: 1px 4px; border-radius: 3px; font-size: 9pt; }
   img { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; margin-top: 2mm; }
 </style>
 </head>
 <body>
-  <h1>${escapeHtml(metadata.title)}</h1>
+  <h1>${escapeHtml(manual.title)}</h1>
   <p class="source">
-    Fonte: replay real <code>${escapeHtml(metadata.replayId)}</code>
-    ${metadata.journeyKey ? ` · Jornada: <code>${escapeHtml(metadata.journeyKey)}</code>` : ''}
-    · Gerado pela plataforma (Learning Core) em ${escapeHtml(metadata.createdAt)}.<br/>
-    ${metadata.stepCount} passo(s) · ${metadata.imageCount} tela(s) · valores anonimizados (${metadata.redactions || 0} campos mascarados).
+    Manual operacional gerado pela plataforma (Learning Core) a partir da execução
+    observada desta jornada no ambiente do cliente.
+    ${manual.journeyKey ? ` · Jornada: <code>${escapeHtml(manual.journeyKey)}</code>` : ''}
+    · Gerado em ${escapeHtml(manual.createdAt)}.<br/>
+    ${manual.stepCount} passo(s) · ${manual.imageCount} tela(s) · valores de campos
+    sensíveis mascarados (${manual.redactions || 0}).
   </p>
   ${stepsHtml}
 </body>
 </html>`;
+}
+
+/**
+ * Versão do template de PDF. O nome do arquivo de cache carrega a versão: um
+ * PDF gerado pelo template ANTIGO (que imprimia replayId/seletor) nunca é
+ * reutilizado por engano — em vez de tentar "limpar" um PDF em cache, o
+ * caminho muda e o artefato antigo deixa de ser servível.
+ */
+const PDF_TEMPLATE_VERSION = 'v2';
+
+function manualPdfFileName(version = PDF_TEMPLATE_VERSION) {
+  return `manual.${version}.pdf`;
 }
 
 /**
@@ -498,7 +549,13 @@ async function ensureManualPdf({ tenantId, manualId }) {
     throw error;
   }
 
-  const pdfPath = path.join(manualDir, 'manual.pdf');
+  // §L5: o PDF é montado do DTO de produção, nunca do modelo interno.
+  const productionManual = assertProductionManualDto(
+    toProductionManualMetadata(metadata),
+    'PDF do manual',
+  );
+
+  const pdfPath = path.join(manualDir, manualPdfFileName());
   if (fs.existsSync(pdfPath)) return { filePath: pdfPath, metadata };
 
   const chromium = getChromium();
@@ -528,7 +585,11 @@ async function ensureManualPdf({ tenantId, manualId }) {
   try {
     const page = await browser.newPage();
     page.setDefaultTimeout(PDF_TIMEOUT_MS);
-    await page.setContent(buildManualHtml(metadata, manualDir), { waitUntil: 'load' });
+    const html = buildManualHtml(productionManual, manualDir);
+    // Backstop: o HTML que o Chromium imprime é revalidado antes de virar PDF.
+    // Assim nem uma falha de template produz um PDF com detalhe interno.
+    assertProductionClean(html, 'HTML do PDF do manual');
+    await page.setContent(html, { waitUntil: 'load' });
     await page.pdf({
       path: pdfPath,
       format: 'A4',
@@ -550,6 +611,10 @@ module.exports = {
   buildManualHtml,
   ensureManualPdf,
   MANUAL_CLASSIFICATION,
+  MANUAL_DOMAIN,
+  MANUAL_SENSITIVITY,
+  PDF_TEMPLATE_VERSION,
+  manualPdfFileName,
   // Superfície de teste: permite provar que o template não vaza detalhe interno
   // sem precisar de replay real em disco (§A6).
   __renderManualMarkdownForTest: renderManualMarkdown,

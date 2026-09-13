@@ -36,8 +36,14 @@ jest.mock('../../../api/middleware/requireClassification', () => ({
 const classificationModule = require('../../../api/middleware/requireClassification');
 
 const mockCreateError = { value: null };
+const mockConnectionRow = { value: null };
+// A superfície mockada espelha o contrato REAL do serviço — inclusive
+// `toConnectionConfig`/`assertEndpointAllowed`, que o mcpDiscoveryService usa.
+// Antes o mock omitia `toConnectionConfig`: o teste passava por engano e o
+// defeito real (TypeError → 500) só aparecia fora do teste.
 jest.mock('../../../api/services/mcp/mcpConnectionService', () => ({
   listConnections: jest.fn(),
+  listAllEnabledConnections: jest.fn(),
   getConnection: jest.fn(),
   createConnection: jest.fn(),
   updateConnection: jest.fn(),
@@ -45,16 +51,31 @@ jest.mock('../../../api/services/mcp/mcpConnectionService', () => ({
   markValidating: jest.fn(),
   recordHealth: jest.fn(),
   recordDiscovery: jest.fn(),
+  recordRevalidation: jest.fn(),
+  toConnectionConfig: jest.fn(),
   authCapabilitiesReport: jest.fn(),
   LIFECYCLE_STATES: { CONFIGURED: 'CONFIGURED', SCHEMA_CHANGED: 'SCHEMA_CHANGED', DISABLED: 'DISABLED' },
 }));
 
 const service = require('../../../api/services/mcp/mcpConnectionService');
 
+/**
+ * Projeção REAL (linha → config do hub), tomada do módulo verdadeiro: é o
+ * contrato que o `mcpDiscoveryService` consome. Como `getConnection` está
+ * mockado, a projeção precisa vir do código real para que o teste não invente
+ * um formato que não existe.
+ */
+const realToConnectionConfig = jest.requireActual('../../../api/services/mcp/mcpConnectionService')
+  .toConnectionConfig;
+
 /** Implementações instaladas a cada teste (resetMocks limpa entre eles). */
 function installServiceImplementations() {
+  mockConnectionRow.value = { id: 'mcpc-1', status: 'CONFIGURED', enabled: true };
+  // `toConnectionConfig` REAL sobre a linha real devolvida por `getConnection`:
+  // sem endpoint ⇒ o caminho honesto é MCP_ENDPOINT_NOT_CONFIGURED.
+  service.toConnectionConfig.mockImplementation(realToConnectionConfig);
   service.listConnections.mockImplementation(async () => []);
-  service.getConnection.mockImplementation(async () => ({ id: 'mcpc-1', status: 'CONFIGURED', enabled: true }));
+  service.getConnection.mockImplementation(async () => mockConnectionRow.value);
   service.createConnection.mockImplementation(async () => {
     if (mockCreateError.value) throw mockCreateError.value;
     return { id: 'mcpc-new', name: 'p', credential_ref: 'REF' };
@@ -66,6 +87,7 @@ function installServiceImplementations() {
   service.markValidating.mockImplementation(async () => ({ id: 'mcpc-1', status: 'VALIDATING' }));
   service.recordHealth.mockImplementation(async () => ({ id: 'mcpc-1', status: 'UNAVAILABLE' }));
   service.recordDiscovery.mockImplementation(async () => ({ id: 'mcpc-1', schemaChanged: false, toolCount: 2 }));
+  service.recordRevalidation.mockImplementation(async () => ({ id: 'mcpc-1', revalidated: true }));
   service.authCapabilitiesReport.mockImplementation(() => [
     { mode: 'bearer', state: 'IMPLEMENTED', transport: 'Bearer', limitation: null },
     { mode: 'mtls', state: 'UNSUPPORTED', transport: null, limitation: 'nao implementado' },
@@ -200,11 +222,40 @@ describe('M8/M9 — API de administracao do MCP Control Plane', () => {
     expect(byMode.bearer).toBe('IMPLEMENTED');
   });
 
-  it('teste de conexao sem servidor MCP real NAO devolve sucesso', async () => {
+  it('M10 — teste sem endpoint real devolve 422 EXPLICITO (nunca 200/fake success)', async () => {
     const res = await withServer(buildApp(), (s) => request(s, 'POST', '/mcp/connections/mcpc-1/test', {}));
-    expect(res.status).toBe(502);
-    expect(res.body.error).toBe('mcp_external_server_not_configured');
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('MCP_ENDPOINT_NOT_CONFIGURED');
+    // A falha também é REGISTRADA como saúde negativa: diagnóstico não é silêncio.
     expect(service.recordHealth).toHaveBeenCalledWith(expect.objectContaining({ ok: false }));
+  });
+
+  it('M10 — teste com endpoint proibido (loopback) e recusado pela politica, nao vira sucesso', async () => {
+    mockConnectionRow.value = {
+      id: 'mcpc-1', status: 'CONFIGURED', enabled: true, name: 'p', tenant_key: 't',
+      endpoint: 'https://127.0.0.1:9/mcp', transport: 'http', auth_type: 'bearer',
+      credential_ref: 'REF', classification_ceiling: 'PRODUCTION',
+    };
+    const res = await withServer(buildApp(), (s) => request(s, 'POST', '/mcp/connections/mcpc-1/test', {}));
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('MCP_ENDPOINT_BLOCKED');
+  });
+
+  it('M9 — discover RECUSA inventario declarado pelo cliente (nunca aceito e ignorado)', async () => {
+    const res = await withServer(buildApp(), (s) => request(s, 'POST', '/mcp/connections/mcpc-1/discover', {
+      tools: [{ name: 'tool.inventada' }],
+    }));
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('MCP_CLIENT_TOOL_INVENTORY_FORBIDDEN');
+    expect(service.recordDiscovery).not.toHaveBeenCalled();
+  });
+
+  it('M12 — revalidate tambem recusa inventario do cliente', async () => {
+    const res = await withServer(buildApp(), (s) => request(s, 'POST', '/mcp/connections/mcpc-1/revalidate', {
+      tools: [{ name: 'tool.inventada' }],
+    }));
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('MCP_CLIENT_TOOL_INVENTORY_FORBIDDEN');
   });
 
   it('tenant vem do contexto autenticado, nunca do payload', async () => {

@@ -10,6 +10,22 @@
  * REGISTRE a pesquisa com evidência, o engine só pode (corretamente) dizer
  * "não mensurável" para sempre.
  *
+ * GAP CONFIRMADO (auditoria 2026-09-13): a camada de execução mantinha
+ * `runs = new Map()`. Um run "iniciado" desaparecia no restart do processo,
+ * nenhum achado era auditável depois e `toSamplePatch()` não tinha consumidor
+ * real — foi assim que um patch com `findingsInventory` em formato que o engine
+ * REJEITA (objeto de contadores em vez de array de referências) passou
+ * desapercebido por completo.
+ *
+ * AGORA:
+ *   - `store` é OBRIGATÓRIO (Postgres em produção). Sem store a operação falha
+ *     com `persistence_required` — nunca existe fallback em memória aqui;
+ *   - este módulo é POLÍTICA (fail-closed), o store é ESTADO;
+ *   - `buildSamplePatch()` substitui `toSamplePatch()`: produz um patch no
+ *     formato EXATO do engine (array de referências, fontes com id, evidência
+ *     declarada, `inventoryVersion` por benchmark) e é consumido de verdade
+ *     pelo supervisor / registro do sample — não é código morto.
+ *
  * Este serviço é essa camada. Ele é FAIL-CLOSED por construção:
  *
  *  - o DISCOVERY SET é registrado ANTES de qualquer análise (§5) — analisar
@@ -48,7 +64,6 @@ const RESEARCH_STATES = Object.freeze({
   NOT_STARTED: 'RESEARCH_NOT_STARTED',
   DISCOVERY_OPEN: 'RESEARCH_DISCOVERY_OPEN',
   IN_PROGRESS: 'RESEARCH_IN_PROGRESS',
-  HOLDOUT_BLOCKED: 'RESEARCH_HOLDOUT_BLOCKED',
   COMPLETE: 'RESEARCH_COMPLETE',
 });
 
@@ -60,6 +75,20 @@ const RESEARCH_BLOCKERS = Object.freeze({
   INVALID_KIND: 'research_finding_kind_invalid',
   HOLDOUT_ORDER_VIOLATION: 'research_holdout_analyzed_before_saturation',
   ANALYSIS_INCOMPLETE: 'research_analysis_evidence_incomplete',
+  PERSISTENCE_REQUIRED: 'persistence_required',
+});
+
+/**
+ * kind do finding → campos de novidade por dimensão no sample do engine.
+ * A semântica é do próprio engine: `new*` é o NUMERADOR da taxa de novidade;
+ * `newRequired*`/`newCritical*` são contagens ABSOLUTAS com limiar 0. Um item
+ * novo porém REQUIRED/CRITICAL entra nos dois lugares — ele é novo E tem
+ * severidade, e omiti-lo do numerador reduziria a taxa artificialmente.
+ */
+const NOVELTY_FIELDS = Object.freeze({
+  [FINDING_KINDS.CAPABILITY]: { new: 'newCapabilities', required: 'newRequiredCapabilities', critical: 'newCriticalCapabilities' },
+  [FINDING_KINDS.JOURNEY]: { new: 'newJourneys', required: 'newRequiredJourneys', critical: 'newCriticalJourneys' },
+  [FINDING_KINDS.BUSINESS_RULE]: { new: 'newBusinessRules', required: 'newRequiredBusinessRules', critical: 'newCriticalBusinessRules' },
 });
 
 function isNonEmptyString(value) {
@@ -74,91 +103,110 @@ function normalizeKind(kind) {
   return null;
 }
 
+/** ISO-8601 ou null. Datas inválidas NUNCA viram `new Date()` silencioso. */
+function toIso(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
+/** Vocabulário de novidade do engine, vazio — nunca `undefined`. */
+function emptyNovelty() {
+  return {
+    newCapabilities: [],
+    newRequiredCapabilities: [],
+    newCriticalCapabilities: [],
+    newJourneys: [],
+    newRequiredJourneys: [],
+    newCriticalJourneys: [],
+    newBusinessRules: [],
+    newRequiredBusinessRules: [],
+    newCriticalBusinessRules: [],
+  };
+}
+
+/** Erro com `code` estável (os consumidores decidem por código, não por texto). */
+function blocker(code, detail = '') {
+  const error = new Error(detail ? `${code}: ${detail}` : code);
+  error.code = code;
+  return error;
+}
+
 /**
- * Cria o serviço de pesquisa. Estado em memória por execução de pesquisa —
- * o que vai para o sample do engine é sempre um PATCH explícito
- * (`toSamplePatch()`), nunca um recálculo silencioso.
+ * Cria o serviço de pesquisa. O `store` é a AUTORIDADE do estado (§B4):
+ * sem ele não há serviço — `persistence_required`.
  *
- * @param {object} [deps]
+ * @param {object} deps
+ * @param {object} deps.store  store persistente (Postgres) — obrigatório
  * @param {Function} [deps.now] relógio injetável (testes determinísticos)
  */
-function createBenchmarkResearchService({ now } = {}) {
+function createBenchmarkResearchService({ store, now } = {}) {
+  if (!store) {
+    throw blocker(RESEARCH_BLOCKERS.PERSISTENCE_REQUIRED, 'store persistente é obrigatório');
+  }
   const clock = typeof now === 'function' ? now : () => new Date().toISOString();
-  const runs = new Map();
 
-  function ensureRun(vertical) {
-    const key = String(vertical || '');
-    if (!key) throw new Error('research_vertical_required');
-    if (!runs.has(key)) {
-      runs.set(key, {
-        vertical: key,
-        state: RESEARCH_STATES.NOT_STARTED,
-        researchVersion: null,
-        discoverySet: [],
-        registeredAt: null,
-        benchmarks: new Map(),
-        holdoutBenchmarkId: null,
-        saturationReached: false,
-      });
+  function requireTenant(tenantId) {
+    if (!isNonEmptyString(tenantId)) {
+      throw blocker(RESEARCH_BLOCKERS.PERSISTENCE_REQUIRED, 'tenantId é obrigatório');
     }
-    return runs.get(key);
+    return String(tenantId);
+  }
+
+  /** Carrega o run do store. Sem discovery set registrado, a operação é recusada. */
+  async function loadRun(tenantId, vertical) {
+    const run = await store.getRun({ tenantId: requireTenant(tenantId), vertical });
+    if (!run) throw blocker(RESEARCH_BLOCKERS.NO_DISCOVERY_SET, String(vertical));
+    return run;
   }
 
   /**
    * §5 — o DISCOVERY SET é registrado ANTES da análise. A ordem importa:
    * registrar depois permitiria escolher a ordem que produz o resultado.
    */
-  function openDiscoverySet({ vertical, researchVersion, benchmarkIds = [], holdoutBenchmarkId = null }) {
-    const run = ensureRun(vertical);
+  async function openDiscoverySet({ tenantId, vertical, researchVersion, benchmarkIds = [], holdoutBenchmarkId = null }) {
     if (!isNonEmptyString(researchVersion)) throw new Error('research_version_required');
-    const ids = benchmarkIds.map((id) => String(id || '').trim()).filter(Boolean);
+    // Validação de POLÍTICA antes do store: a mensagem é do domínio, não do
+    // driver de persistência.
+    const ids = (Array.isArray(benchmarkIds) ? benchmarkIds : [])
+      .map((id) => String(id ?? '').trim())
+      .filter(Boolean);
     if (ids.length === 0) throw new Error('research_discovery_set_empty');
     if (new Set(ids).size !== ids.length) throw new Error('research_discovery_set_duplicate');
-
-    run.researchVersion = researchVersion;
-    run.discoverySet = ids;
-    run.registeredAt = clock();
-    run.holdoutBenchmarkId = holdoutBenchmarkId ? String(holdoutBenchmarkId) : null;
-    run.state = RESEARCH_STATES.DISCOVERY_OPEN;
-    for (const id of ids) {
-      if (!run.benchmarks.has(id)) {
-        run.benchmarks.set(id, {
-          id,
-          analyzedAt: null,
-          findings: [],
-          verifiedFindings: 0,
-          unverifiedFindings: 0,
-          marketArchetypeMapping: null,
-        });
-      }
-    }
-    return { vertical: run.vertical, discoverySet: [...run.discoverySet], registeredAt: run.registeredAt };
-  }
-
-  function assertDiscoveryOpen(run) {
-    if (run.state === RESEARCH_STATES.NOT_STARTED) {
-      const error = new Error(RESEARCH_BLOCKERS.NO_DISCOVERY_SET);
-      error.code = RESEARCH_BLOCKERS.NO_DISCOVERY_SET;
-      throw error;
-    }
+    if (!isNonEmptyString(vertical)) throw new Error('research_vertical_required');
+    const run = await store.openRun({
+      tenantId: requireTenant(tenantId),
+      vertical,
+      researchVersion,
+      benchmarkIds: ids,
+      holdoutBenchmarkId,
+      registeredAt: clock(),
+    });
+    return summarizeFrom(run);
   }
 
   /**
-   * Registra um achado. Um achado sem fonte verificável é registrado como
-   * UNVERIFIED e NÃO conta para novidade/saturação/certificação.
+   * Registra um achado. Um achado sem fonte verificável (ou sem evidência
+   * capturada) é persistido como UNVERIFIED e NÃO conta para
+   * novidade/saturação/certificação.
+   *
+   * A cadeia finding → evidence → source é gravada em LINHAS próprias: uma
+   * afirmação sem linha de evidência não é prova, é texto.
    *
    * @param {object} args
+   * @param {string} args.tenantId
    * @param {string} args.vertical
    * @param {string} args.benchmarkId
    * @param {string} args.kind            capability | journey | businessRule
    * @param {string} args.externalName    nome no produto externo
    * @param {string} [args.canonicalId]   capability/jornada/regra canônica
-   * @param {object} args.source          `{ url, tier, specificity? }`
+   * @param {object} args.source          `{ url, tier, specificity?, httpStatus? }`
    * @param {string} [args.evidenceRef]   referência da evidência capturada
    * @param {string} [args.classification] CRITICAL | REQUIRED | OPTIONAL
    * @param {string} [args.archetype]
    */
-  function recordFinding({
+  async function recordFinding({
+    tenantId,
     vertical,
     benchmarkId,
     kind,
@@ -169,47 +217,71 @@ function createBenchmarkResearchService({ now } = {}) {
     classification = null,
     archetype = null,
   }) {
-    const run = ensureRun(vertical);
-    assertDiscoveryOpen(run);
+    const tenant = requireTenant(tenantId);
+    const run = await loadRun(tenant, vertical);
 
     const id = String(benchmarkId || '');
-    const entry = run.benchmarks.get(id);
-    if (!entry) {
-      const error = new Error(`${RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK}: ${id}`);
-      error.code = RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK;
-      throw error;
-    }
+    const subject = await store.getSubject({ tenantId: tenant, runId: run.id, benchmarkId: id });
+    if (!subject) throw blocker(RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK, id);
 
     const normalizedKind = normalizeKind(kind);
-    if (!normalizedKind) {
-      const error = new Error(`${RESEARCH_BLOCKERS.INVALID_KIND}: ${kind}`);
-      error.code = RESEARCH_BLOCKERS.INVALID_KIND;
-      throw error;
-    }
+    if (!normalizedKind) throw blocker(RESEARCH_BLOCKERS.INVALID_KIND, String(kind));
 
     const sourceVerification = classifyResearchSource(source);
     const verified = sourceVerification.verified && isNonEmptyString(evidenceRef);
 
-    const finding = {
+    const sourceRow = isNonEmptyString(source?.url)
+      ? await store.upsertSource({
+        tenantId: tenant,
+        runId: run.id,
+        benchmarkId: id,
+        source: {
+          url: source.url,
+          tier: source.tier ?? null,
+          specificity: source.specificity || null,
+          httpStatus: source.httpStatus ?? null,
+          verified: sourceVerification.verified,
+          verificationState: sourceVerification.state,
+        },
+      })
+      : null;
+
+    // Evidência só existe se FOI capturada. Sem referência não há linha — e sem
+    // linha não há como um achado ser verificado.
+    const evidenceRow = verified
+      ? await store.appendEvidence({
+        tenantId: tenant,
+        runId: run.id,
+        benchmarkId: id,
+        sourceId: sourceRow ? sourceRow.id : null,
+        evidenceRef: String(evidenceRef),
+        contentHash: source?.contentHash || null,
+        httpStatus: source?.httpStatus ?? null,
+        capturedAt: clock(),
+      })
+      : null;
+
+    const findingRow = await store.insertFinding({
+      tenantId: tenant,
+      runId: run.id,
       benchmarkId: id,
       kind: normalizedKind,
       externalName: String(externalName || '').trim() || null,
       canonicalId: canonicalId ? String(canonicalId) : null,
-      source: source ? { url: source.url || null, tier: source.tier ?? null, specificity: source.specificity || null } : null,
-      evidenceRef: evidenceRef || null,
-      classification,
-      archetype,
+      classification: classification ? String(classification) : null,
+      archetype: archetype ? String(archetype) : null,
       verified,
       verificationState: sourceVerification.state,
+      sourceId: sourceRow ? sourceRow.id : null,
+      evidenceId: evidenceRow ? evidenceRow.id : null,
       recordedAt: clock(),
-    };
+    });
 
-    entry.findings.push(finding);
-    if (verified) entry.verifiedFindings += 1;
-    else entry.unverifiedFindings += 1;
+    if (run.state !== RESEARCH_STATES.IN_PROGRESS && run.state !== RESEARCH_STATES.COMPLETE) {
+      await store.updateRunState({ tenantId: tenant, runId: run.id, state: RESEARCH_STATES.IN_PROGRESS });
+    }
 
-    run.state = RESEARCH_STATES.IN_PROGRESS;
-    return finding;
+    return toFinding(findingRow, sourceRow, evidenceRow, sourceVerification);
   }
 
   /**
@@ -217,18 +289,17 @@ function createBenchmarkResearchService({ now } = {}) {
    * Analisá-lo cedo destrói a única medição de generalização que existe.
    */
   function assertHoldoutNotAnalyzedEarly(run, benchmarkId) {
-    if (!run.holdoutBenchmarkId) return;
-    if (String(benchmarkId) !== run.holdoutBenchmarkId) return;
-    if (run.saturationReached) return;
-    const error = new Error(`${RESEARCH_BLOCKERS.HOLDOUT_ORDER_VIOLATION}: ${benchmarkId}`);
-    error.code = RESEARCH_BLOCKERS.HOLDOUT_ORDER_VIOLATION;
-    throw error;
+    if (!run.holdout_benchmark_id) return;
+    if (String(benchmarkId) !== String(run.holdout_benchmark_id)) return;
+    if (run.saturation_reached) return;
+    throw blocker(RESEARCH_BLOCKERS.HOLDOUT_ORDER_VIOLATION, String(benchmarkId));
   }
 
   /** Marca que a saturação APARENTE foi atingida (habilita abrir o holdout). */
-  function markApparentSaturation(vertical) {
-    const run = ensureRun(vertical);
-    run.saturationReached = true;
+  async function markApparentSaturation({ tenantId, vertical }) {
+    const tenant = requireTenant(tenantId);
+    const run = await loadRun(tenant, vertical);
+    await store.updateRunState({ tenantId: tenant, runId: run.id, saturationReached: true });
     return { vertical: run.vertical, saturationReached: true };
   }
 
@@ -236,96 +307,235 @@ function createBenchmarkResearchService({ now } = {}) {
    * Marca um benchmark como ANALISADO. Só é permitido com evidência completa:
    *   - pelo menos 1 achado VERIFICADO;
    *   - mapeamento de arquétipo;
-   *   - a ordem de discovery registrada.
+   *   - a ordem de discovery registrada;
+   *   - o holdout apenas depois da saturação declarada.
    *
    * Sem isso o benchmark permanece sem `analyzedAt` — e o engine, corretamente,
    * o trata como NOT_MEASURABLE em vez de "zero novidade".
    */
-  function markAnalyzed({ vertical, benchmarkId, marketArchetypeMapping = null, analyzedAt = null }) {
-    const run = ensureRun(vertical);
-    assertDiscoveryOpen(run);
+  async function markAnalyzed({ tenantId, vertical, benchmarkId, marketArchetypeMapping = null, analyzedAt = null }) {
+    const tenant = requireTenant(tenantId);
+    const run = await loadRun(tenant, vertical);
     const id = String(benchmarkId || '');
-    const entry = run.benchmarks.get(id);
-    if (!entry) {
-      const error = new Error(`${RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK}: ${id}`);
-      error.code = RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK;
-      throw error;
-    }
+    const subject = await store.getSubject({ tenantId: tenant, runId: run.id, benchmarkId: id });
+    if (!subject) throw blocker(RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK, id);
     assertHoldoutNotAnalyzedEarly(run, id);
 
-    const missing = [];
-    if (entry.verifiedFindings === 0) missing.push('verifiedFindings');
-    if (!marketArchetypeMapping || !isNonEmptyString(marketArchetypeMapping.archetype)) missing.push('marketArchetypeMapping');
+    const findings = await store.listFindings({ tenantId: tenant, runId: run.id, benchmarkId: id });
+    const verifiedFindings = findings.filter((finding) => finding.verified === true);
 
+    const missing = [];
+    if (verifiedFindings.length === 0) missing.push('verifiedFindings');
+    if (!marketArchetypeMapping || !isNonEmptyString(marketArchetypeMapping.archetype)) missing.push('marketArchetypeMapping');
     if (missing.length > 0) {
-      const error = new Error(`${RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE}: ${id} (${missing.join(',')})`);
-      error.code = RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE;
-      error.missing = missing;
-      throw error;
+      throw blocker(RESEARCH_BLOCKERS.ANALYSIS_INCOMPLETE, `${id} (${missing.join(',')})`);
     }
 
-    entry.analyzedAt = analyzedAt || clock();
-    entry.marketArchetypeMapping = {
-      archetype: String(marketArchetypeMapping.archetype),
-      rationale: marketArchetypeMapping.rationale || null,
-    };
-    entry.findingsInventory = {
-      total: entry.findings.length,
-      verified: entry.verifiedFindings,
-      unverified: entry.unverifiedFindings,
-    };
-    return { ...entry };
+    const row = await store.markSubjectAnalyzed({
+      tenantId: tenant,
+      runId: run.id,
+      benchmarkId: id,
+      analyzedAt: analyzedAt || clock(),
+      researchVersion: run.research_version,
+      // Array de REFERÊNCIAS: é este o formato que PROVA análise (§5 do engine).
+      findingsInventory: verifiedFindings.map((finding) => finding.id),
+      marketArchetypeMapping: {
+        archetype: String(marketArchetypeMapping.archetype),
+        rationale: marketArchetypeMapping.rationale || null,
+      },
+    });
+
+    const subjects = await store.listSubjects({ tenantId: tenant, runId: run.id });
+    const allAnalyzed = subjects.length > 0 && subjects.every((item) => isNonEmptyString(toIso(item.analyzed_at)));
+    if (allAnalyzed && run.state !== RESEARCH_STATES.COMPLETE) {
+      await store.updateRunState({ tenantId: tenant, runId: run.id, state: RESEARCH_STATES.COMPLETE });
+    }
+
+    return toBenchmarkSummary(row, findings);
   }
 
-  /**
-   * Snapshot do estado da pesquisa para UMA vertical, no vocabulário
-   * consumido pelo engine (`HOLDOUT_ANALYSIS_EVIDENCE_FIELDS`).
-   */
-  function summarize(vertical) {
-    const run = ensureRun(vertical);
-    const analysed = [...run.benchmarks.values()].filter((b) => isNonEmptyString(b.analyzedAt));
-    const unanalysed = [...run.benchmarks.values()].filter((b) => !isNonEmptyString(b.analyzedAt));
-    const totalFindings = [...run.benchmarks.values()].reduce((acc, b) => acc + b.findings.length, 0);
-    const unverifiedFindings = [...run.benchmarks.values()].reduce((acc, b) => acc + b.unverifiedFindings, 0);
+  function toBenchmarkSummary(subject, findings = []) {
+    const own = findings.filter((finding) => finding.benchmark_id === subject.benchmark_id);
+    const verified = own.filter((finding) => finding.verified === true);
+    return {
+      id: subject.benchmark_id,
+      discoveryOrder: subject.discovery_order,
+      analyzedAt: toIso(subject.analyzed_at),
+      researchVersion: subject.research_version || null,
+      verifiedFindings: verified.length,
+      unverifiedFindings: own.length - verified.length,
+      findingsInventory: Array.isArray(subject.findings_inventory) ? [...subject.findings_inventory] : null,
+      marketArchetypeMapping: subject.market_archetype_mapping || null,
+    };
+  }
+
+  function summarizeFrom(run, subjects = [], findings = [], sources = []) {
+    if (!run) {
+      return {
+        vertical: null,
+        state: RESEARCH_STATES.NOT_STARTED,
+        researchVersion: null,
+        discoverySet: [],
+        holdoutBenchmarkId: null,
+        saturationReached: false,
+        analysedBenchmarks: 0,
+        unanalysedBenchmarks: [],
+        totalFindings: 0,
+        unverifiedFindings: 0,
+        requiresRevalidation: false,
+        sources: 0,
+        benchmarks: [],
+      };
+    }
+
+    const analysed = subjects.filter((subject) => isNonEmptyString(toIso(subject.analyzed_at)));
+    const unanalysed = subjects.filter((subject) => !isNonEmptyString(toIso(subject.analyzed_at)));
+    const unverifiedFindings = findings.filter((finding) => finding.verified !== true).length;
 
     return {
       vertical: run.vertical,
       state: run.state,
-      researchVersion: run.researchVersion,
-      discoverySet: [...run.discoverySet],
-      holdoutBenchmarkId: run.holdoutBenchmarkId,
-      saturationReached: run.saturationReached,
+      researchVersion: run.research_version,
+      discoverySet: Array.isArray(run.discovery_set) ? [...run.discovery_set] : [],
+      holdoutBenchmarkId: run.holdout_benchmark_id || null,
+      saturationReached: run.saturation_reached === true,
       analysedBenchmarks: analysed.length,
-      unanalysedBenchmarks: unanalysed.map((b) => b.id),
-      totalFindings,
+      unanalysedBenchmarks: unanalysed.map((subject) => subject.benchmark_id),
+      totalFindings: findings.length,
       unverifiedFindings,
       requiresRevalidation: unverifiedFindings > 0,
-      benchmarks: [...run.benchmarks.values()].map((b) => ({
-        id: b.id,
-        analyzedAt: b.analyzedAt,
-        verifiedFindings: b.verifiedFindings,
-        unverifiedFindings: b.unverifiedFindings,
-        findingsInventory: b.findingsInventory || null,
-        marketArchetypeMapping: b.marketArchetypeMapping,
-      })),
+      sources: sources.length,
+      benchmarks: subjects.map((subject) => toBenchmarkSummary(subject, findings)),
+    };
+  }
+
+  /** Snapshot do estado da pesquisa — SEMPRE lido do store (nunca de memória). */
+  async function summarize({ tenantId, vertical }) {
+    const tenant = requireTenant(tenantId);
+    const run = await store.getRun({ tenantId: tenant, vertical });
+    if (!run) return summarizeFrom(null);
+    const [subjects, findings, sources] = await Promise.all([
+      store.listSubjects({ tenantId: tenant, runId: run.id }),
+      store.listFindings({ tenantId: tenant, runId: run.id }),
+      store.listSources({ tenantId: tenant, runId: run.id }),
+    ]);
+    return summarizeFrom(run, subjects, findings, sources);
+  }
+
+  function toFinding(findingRow, sourceRow, evidenceRow, sourceVerification) {
+    return {
+      id: findingRow.id,
+      benchmarkId: findingRow.benchmark_id,
+      kind: findingRow.kind,
+      externalName: findingRow.external_name,
+      canonicalId: findingRow.canonical_id,
+      classification: findingRow.classification,
+      archetype: findingRow.archetype,
+      source: sourceRow
+        ? { id: sourceRow.id, url: sourceRow.url, tier: sourceRow.tier, specificity: sourceRow.specificity }
+        : null,
+      evidenceRef: evidenceRow ? evidenceRow.evidence_ref : null,
+      evidenceId: evidenceRow ? evidenceRow.id : null,
+      verified: findingRow.verified === true,
+      verificationState: sourceVerification.state,
+      verificationReason: sourceVerification.reason,
+      recordedAt: toIso(findingRow.recorded_at),
     };
   }
 
   /**
-   * PATCH para o sample do engine — apenas campos de PESQUISA. O inventário
-   * canônico, baselines e criticalidade NÃO são tocados por aqui.
+   * Normaliza os achados VERIFICADOS de um benchmark no vocabulário de novidade
+   * do engine. Somente itens verificados entram — um achado UNVERIFIED não é
+   * descoberta, é alegação (§B6).
+   *
+   * Um achado com `canonicalId` JÁ mapeado no inventário canônico não é
+   * novidade: é confirmação. Só capacidade/jornada/regra NÃO mapeada conta.
    */
-  function toSamplePatch(vertical) {
-    const run = ensureRun(vertical);
+  function buildNovelty(findings, sourcesById) {
+    const novelty = emptyNovelty();
+    for (const finding of findings) {
+      if (finding.verified !== true) continue;
+      if (isNonEmptyString(finding.canonical_id)) continue;
+      const fields = NOVELTY_FIELDS[finding.kind];
+      if (!fields) continue;
+      const sourceRow = finding.source_id ? sourcesById.get(finding.source_id) : null;
+      const item = {
+        id: finding.id,
+        name: finding.external_name || null,
+        // sourceRef/evidenceRef são IDs: precisam resolver contra as fontes do
+        // benchmark e contra `sample.evidence` (gate evidenceTraceability).
+        sourceRef: sourceRow ? sourceRow.id : null,
+        evidenceRef: finding.evidence_id || null,
+      };
+      novelty[fields.new].push(item);
+      const classification = String(finding.classification || '').toUpperCase();
+      if (classification === 'CRITICAL') novelty[fields.critical].push(item);
+      else if (classification === 'REQUIRED') novelty[fields.required].push(item);
+    }
+    return novelty;
+  }
+
+  /**
+   * PATCH para o sample do engine — apenas campos de PESQUISA, no formato que o
+   * engine realmente valida:
+   *   - `findingsInventory` é ARRAY de referências (não contadores);
+   *   - `inventoryVersion` por benchmark (exigido por `analysisEvidence`);
+   *   - `sources[]` com `id` (para `sourceRef` resolver);
+   *   - `evidence[]` declarada (para `evidenceRef` resolver);
+   *   - apenas achados VERIFICADOS alimentam `novelty`.
+   *
+   * Baseline canônico, arquétipos, dimensões e criticalidade NÃO são tocados.
+   */
+  async function buildSamplePatch({ tenantId, vertical, inventoryVersion = null }) {
+    const tenant = requireTenant(tenantId);
+    const run = await store.getRun({ tenantId: tenant, vertical });
+    if (!run) throw blocker(RESEARCH_BLOCKERS.NO_DISCOVERY_SET, String(vertical));
+
+    const [subjects, findings, sources, evidenceRows] = await Promise.all([
+      store.listSubjects({ tenantId: tenant, runId: run.id }),
+      store.listFindings({ tenantId: tenant, runId: run.id }),
+      store.listSources({ tenantId: tenant, runId: run.id }),
+      store.listEvidence({ tenantId: tenant, runId: run.id }),
+    ]);
+    const sourcesById = new Map(sources.map((row) => [row.id, row]));
+
     return {
-      researchVersion: run.researchVersion,
-      benchmarks: [...run.benchmarks.values()].map((b) => ({
-        id: b.id,
-        analyzedAt: b.analyzedAt,
-        researchVersion: b.analyzedAt ? run.researchVersion : null,
-        findingsInventory: b.findingsInventory || null,
-        marketArchetypeMapping: b.marketArchetypeMapping,
+      vertical: run.vertical,
+      researchVersion: run.research_version,
+      holdoutBenchmarkId: run.holdout_benchmark_id || null,
+      saturationReached: run.saturation_reached === true,
+      inventoryVersion: inventoryVersion || null,
+      evidence: evidenceRows.map((row) => ({
+        id: row.id,
+        benchmarkId: row.benchmark_id,
+        url: row.source_id && sourcesById.has(row.source_id) ? sourcesById.get(row.source_id).url : null,
+        evidenceRef: row.evidence_ref,
+        capturedAt: toIso(row.captured_at),
       })),
+      benchmarks: subjects.map((subject) => {
+        const own = findings.filter((finding) => finding.benchmark_id === subject.benchmark_id);
+        const ownVerified = own.filter((finding) => finding.verified === true);
+        const ownSources = sources.filter((row) => row.benchmark_id === subject.benchmark_id);
+        const analyzedAt = toIso(subject.analyzed_at);
+        return {
+          id: subject.benchmark_id,
+          analyzedAt,
+          researchVersion: analyzedAt ? (subject.research_version || run.research_version) : null,
+          inventoryVersion: analyzedAt ? (inventoryVersion || null) : null,
+          findingsInventory: analyzedAt ? ownVerified.map((finding) => finding.id) : null,
+          marketArchetypeMapping: subject.market_archetype_mapping || null,
+          sources: ownSources.map((row) => ({
+            id: row.id,
+            url: row.url,
+            tier: row.tier,
+            specificity: row.specificity,
+            verified: row.verified === true,
+            httpStatus: row.http_status,
+            retrievedAt: (toIso(row.verified_at || row.created_at) || '').slice(0, 10) || null,
+          })),
+          novelty: buildNovelty(own, sourcesById),
+        };
+      }),
     };
   }
 
@@ -335,8 +545,8 @@ function createBenchmarkResearchService({ now } = {}) {
     markAnalyzed,
     markApparentSaturation,
     summarize,
-    toSamplePatch,
-    getRun: (vertical) => (runs.has(String(vertical)) ? summarize(vertical) : null),
+    buildSamplePatch,
+    states: RESEARCH_STATES,
   };
 }
 
@@ -369,6 +579,7 @@ module.exports = {
   FINDING_KINDS,
   RESEARCH_STATES,
   RESEARCH_BLOCKERS,
+  NOVELTY_FIELDS,
   DEFAULT_POLICY,
   classifyResearchSource,
   createBenchmarkResearchService,

@@ -16,6 +16,11 @@ const adaptiveService = require('./adaptiveService');
 const analyticsService = require('./analyticsService');
 const journeyFaqService = require('./journeyFaqService');
 const { authorizeReplaySurface } = require('./replayAccessPolicy');
+// §L4: as respostas que servem manual passam por Projeção PRODUCTION explícita.
+// Nenhuma rota devolve o `metadata.json` interno (replayId/selector) ao cliente.
+const {
+  toProductionManualMetadata, assertProductionManualDto,
+} = require('../../services/learning/manualProjection');
 
 const ADMIN_ROLES = new Set(['owner', 'admin', 'super_admin']);
 
@@ -441,7 +446,11 @@ async function handleLearningCoreRoutes(ctx) {
         journeyKey: body.journeyKey,
         createdBy: req.agent?.id,
       });
-      sendJson(result, 201);
+      // O cliente recebe o DTO de produção, nunca o modelo interno.
+      sendJson(assertProductionManualDto(
+        toProductionManualMetadata(result),
+        'resposta POST /api/learning/manuals/from-replay',
+      ), 201);
     } catch (error) {
       if (error.code === 'BAD_REQUEST') { badRequest(error.message); return true; }
       if (error.code === 'NOT_FOUND') { sendJson({ error: 'not_found', message: error.message }, 404); return true; }
@@ -483,7 +492,17 @@ async function handleLearningCoreRoutes(ctx) {
 
     const tenantId = resolveTenantId(req);
     if (!tenantId) { sendJson({ error: 'tenant_required' }, 400); return true; }
-    sendJson({ manuals: manualService.listManuals({ tenantId }) });
+    // §L4: projeção explícita por item. O `metadata.json` interno do manual
+    // contém replayId, selector, action e success — nada disso é resposta.
+    const manuals = manualService.listManuals({ tenantId }).map((internal) => (
+      assertProductionManualDto(
+        toProductionManualMetadata(internal),
+        // O contexto carrega o id: se UM manual antigo estiver contaminado, o
+        // erro é diagnosticável em vez de derrubar a listagem sem pista.
+        `resposta GET /api/learning/manuals (manual ${internal.id})`,
+      )
+    ));
+    sendJson({ manuals });
     return true;
   }
 
