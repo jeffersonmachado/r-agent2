@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-09-13T11:20:04.996Z
+- Generated at: 2026-09-13T12:27:16.129Z
 - Canonical mesh execution: mesh-20260911003113-iji3vq
 - Canonical mesh decision: GO
-- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
+- Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | SELF_PROOF_NOT_PASS | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]]
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Proof artifacts presentes mas semanticamente invalidos (presenca != validade) [gap-proof-invalid-artifact-semantics]
+- Sem bloqueadores ativos.

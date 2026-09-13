@@ -105,18 +105,12 @@ async function main() {
       'qa/enterprise/pbx-voice-flow-prod-like.json',
       'governance/package-validation-report.json',
       'governance/package-integrity-report.json',
-      // DAG do release e identidade do artefato entregue: derivados do run
-      // corrente. Sem o stamp eles ficam com runId ESTRANGEIRO após um run novo
-      // — e o contamination cleaner (corretamente) reprova o run por
-      // FOREIGN_RUN_ARTIFACT num arquivo committed.
-      'governance/release-dag-report.json',
+      // DAG do release, identidade do artefato entregue e montagem de routers:
+      // relatórios de auditoria que vivem SOMENTE em reports/ (fora do payload).
+      // O stamp garante que não carreguem runId estrangeiro (FOREIGN_RUN_ARTIFACT
+      // no contamination cleaner).
       'reports/release-dag-report.json',
-      'governance/release-artifact-identity-report.json',
       'reports/release-artifact-identity-report.json',
-      // Auditoria estática de montagem de routers: derivada do código do run
-      // corrente. Sem o stamp, o runId commitado vira ESTRANGEIRO no run novo e
-      // o contamination cleaner (corretamente) reprova o run inteiro em RAP-064.
-      'governance/route-mount-report.json',
       'reports/route-mount-report.json',
       // NÃO stampar delivered-release-verification-report.json: ele é produzido
       // EXCLUSIVAMENTE por verify-delivered-release.js em fase DELIVERED, com a

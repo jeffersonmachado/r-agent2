@@ -42,5 +42,9 @@
     }
   ],
   "details": [],
-  "status": "PASS"
+  "status": "PASS",
+  "runId": "rap-governed-20260913122108916-92290d43",
+  "sourceFingerprint": "a1b2a01158ea3aaa611d0e1bc5ce639322bdd3a8332f9961713a40bb0d33f54e",
+  "artifactType": "rag-domain-segregation-report",
+  "artifactVersion": "1.0.0"
 }

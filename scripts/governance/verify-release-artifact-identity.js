@@ -130,7 +130,6 @@ function main() {
     const pendingSerialized = `${JSON.stringify(pendingReport, null, 2)}\n`;
     fs.mkdirSync(path.join(ROOT, 'reports'), { recursive: true });
     fs.writeFileSync(path.join(ROOT, 'reports', 'release-artifact-identity-report.json'), pendingSerialized);
-    fs.writeFileSync(path.join(ROOT, 'governance', 'release-artifact-identity-report.json'), pendingSerialized);
     console.log(`[release-identity] status=${GATE_STATUS.PENDING_PHASE} (fase ${effectivePhase} < DELIVERED) — não avaliável ainda`);
     process.exit(0);
   }
@@ -255,8 +254,12 @@ function main() {
   const serialized = `${JSON.stringify(report, null, 2)}\n`;
   const reportsDir = path.join(ROOT, 'reports');
   fs.mkdirSync(reportsDir, { recursive: true });
+  // SOMENTE reports/: este relatório é produzido DEPOIS do empacotamento (ele
+  // verifica os BYTES do payload entregue). Uma cópia versionada em governance/
+  // entraria no payload e, ao ser reescrita, viraria "stale reference" para o
+  // self-proving (o payload conteria um arquivo diferente do workspace).
+  // AGENTS.md: relatórios oficiais vivem em reports/*.json.
   fs.writeFileSync(path.join(reportsDir, 'release-artifact-identity-report.json'), serialized);
-  fs.writeFileSync(path.join(ROOT, 'governance', 'release-artifact-identity-report.json'), serialized);
 
   console.log(`[release-identity] status=${status} decision=${report.decision} release=${release || '-'}`);
   for (const failure of failures) {

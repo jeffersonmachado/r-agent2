@@ -110,11 +110,12 @@ function main() {
   };
 
   const reportsDir = path.join(ROOT, 'reports');
-  const governanceDir = path.join(ROOT, 'governance');
   fs.mkdirSync(reportsDir, { recursive: true });
   const serialized = `${JSON.stringify(report, null, 2)}\n`;
+  // SOMENTE reports/ (ver nota em verify-release-artifact-identity.js): o gate
+  // roda também DEPOIS do empacotamento, e uma cópia versionada em governance/
+  // entraria no payload e viraria stale reference para o self-proving.
   fs.writeFileSync(path.join(reportsDir, 'release-dag-report.json'), serialized);
-  fs.writeFileSync(path.join(governanceDir, 'release-dag-report.json'), serialized);
 
   console.log(`[release-dag] status=${status} decision=${report.decision}`);
   console.log(`[release-dag] nós=${dag.nodeCount} artefatos=${dag.artifactCount} ciclos=${cycles.cycles.length}`);

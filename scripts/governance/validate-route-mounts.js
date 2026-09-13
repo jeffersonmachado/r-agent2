@@ -65,8 +65,8 @@ function main() {
 
   fs.mkdirSync(path.join(ROOT, 'reports'), { recursive: true });
   const serialized = `${JSON.stringify(report, null, 2)}\n`;
+  // SOMENTE reports/ (ver nota em verify-release-artifact-identity.js).
   fs.writeFileSync(path.join(ROOT, 'reports', 'route-mount-report.json'), serialized);
-  fs.writeFileSync(path.join(ROOT, 'governance', 'route-mount-report.json'), serialized);
 
   console.log(`[route-mounts] status=${report.status} declarados=${report.declaredCount} montados=${report.mountedCount}`);
   if (!result.ok) {
