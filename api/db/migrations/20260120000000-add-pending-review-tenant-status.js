@@ -4,6 +4,8 @@
 
 'use strict';
 
+const logger = require('../../utils/logger');
+
 module.exports = {
   async up(queryInterface) {
     // Postgres enum type name padrão do Sequelize: enum_<table>_<column>
@@ -15,7 +17,7 @@ module.exports = {
     } catch (err) {
       // Em ambientes não-Postgres ou se o tipo não existir, não bloqueia migração.
       // eslint-disable-next-line no-console
-      console.warn('[migration] Ignorando alteração de enum_tenants_status:', err.message);
+      logger.warn('[migration] Ignorando alteração de enum_tenants_status:', err.message);
     }
   },
 

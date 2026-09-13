@@ -1,3 +1,4 @@
+const bootstrapLog = require('./bootstrapLog');
 /**
  * Gerenciador de configuração centralizado.
  * 
@@ -26,13 +27,13 @@ function isTestRuntime() {
 function logConfigInfo(message) {
   if (isTestRuntime()) return;
   // eslint-disable-next-line no-console
-  console.log(message);
+  logger.info(message);
 }
 
 function logConfigWarn(message) {
   if (isTestRuntime()) return;
   // eslint-disable-next-line no-console
-  console.warn(message);
+  logger.warn(message);
 }
 
 /**
@@ -170,7 +171,7 @@ function loadConfig() {
     }
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[Config] Erro ao carregar configuração:', err.message);
+    logger.error('[Config] Erro ao carregar configuração:', err.message);
     cachedConfig = {};
   }
 
@@ -296,7 +297,7 @@ function getAll() {
     
     // Garante que config é um objeto válido
     if (!config || typeof config !== 'object' || Array.isArray(config)) {
-      console.warn('[Config] Configuração inválida, retornando objeto vazio');
+      logger.warn('[Config] Configuração inválida, retornando objeto vazio');
       return {};
     }
     
@@ -304,7 +305,7 @@ function getAll() {
     return sanitizeConfig(config);
   } catch (err) {
     // Erro geral ao obter configuração
-    console.error('[Config] Erro ao obter configuração:', err.message, err.stack);
+    logger.error('[Config] Erro ao obter configuração:', err.message, err.stack);
     return {};
   }
 }

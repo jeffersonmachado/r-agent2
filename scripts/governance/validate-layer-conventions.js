@@ -214,23 +214,59 @@ function checkNodeSchemasExists() {
 }
 
 // ── 8. Check persistence: no in-memory fallback ─────────────────────
+/** Padrões ORIGINAIS da política de camada (não afrouxados). */
+const MEMORY_FALLBACK_PATTERNS = Object.freeze([
+  /\binMemory\b.*=.*(?:true|\[\]|\{\})/,
+  /\bfallback.*memory\b/i,
+  /\bcache\s*=\s*\{\}/,
+]);
+
+/**
+ * Linhas que apenas LEEM/REPORTAM a política de degradação não são a própria
+ * degradação. A implementação real de um fallback está onde o store em memória
+ * é CONSTRUÍDO (p.ex. `infra/rate-limit`), não na linha que consulta a chave de
+ * configuração para informar o status.
+ *
+ * Falso positivo real corrigido aqui (2026-09-13):
+ * `api/services/systemStatusService.js` marcava como violação de persistência a
+ * linha `config.get('fallbacks.rateLimitRedisToMemory', false)` — que só
+ * REPORTA o status do Redis (e cujo comportamento em produção é fail-closed:
+ * `unhealthy`). O fallback existente é de RATE LIMITING, não de persistência.
+ */
+const POLICY_READ_PATTERN = /\b(?:config|settings)\.get\s*\(|\bprocess\.env\.[A-Z_]+\b/;
+
+/** Construção/atribuição de store na própria linha (sinal de implementação). */
+const CONSTRUCTS_STORE_PATTERN = /=\s*\{\}|=\s*\[\]|\bnew\s+[A-Za-z_$]|=\s*new\b/;
+
+/**
+ * Decide se UMA linha é violação de "fallback em memória".
+ *
+ * Mantém os três padrões originais (nenhum afrouxamento) e exclui apenas as
+ * linhas que consultam configuração, que descrevem a política em vez de
+ * implementá-la. O contrato é fixado nos DOIS sentidos em
+ * `tests/unit/governance/layerConventionsPersistenceRule.test.js`.
+ *
+ * @param {string} rawLine linha do arquivo
+ * @returns {boolean}
+ */
+function isInMemoryFallbackLine(rawLine) {
+  const trimmed = String(rawLine || '').trim();
+  if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('*')) return false;
+  if (MEMORY_FALLBACK_PATTERNS.some((pattern) => pattern.test(trimmed))) {
+    // Ler a política não é implementar a degradação — MAS, se a MESMA linha
+    // constrói o store, ela é a degradação e continua sendo violação.
+    if (POLICY_READ_PATTERN.test(trimmed) && !CONSTRUCTS_STORE_PATTERN.test(trimmed)) return false;
+    return true;
+  }
+  return false;
+}
+
 function checkNoMemoryFallback() {
   if (!dirExists('api/services/')) return;
 
-  const memoryFallbackPatterns = [
-    /\binMemory\b.*=.*(?:true|\[\]|\{\})/,
-    /\bfallback.*memory\b/i,
-    /\bcache\s*=\s*\{\}/,
-  ];
-
   scanFiles('api/services', 'js', (file, line, text) => {
-    const trimmed = text.trim();
-    if (trimmed.startsWith('//') || trimmed.startsWith('*')) return;
-
-    for (const pattern of memoryFallbackPatterns) {
-      if (pattern.test(trimmed)) {
-        addIssue('error', 'persistence', file, line, `Possível fallback em memória: "${trimmed.substring(0, 80)}"`, 'Sem fallback em memória. Erro explícito (persistence_required) em falha de DB.');
-      }
+    if (isInMemoryFallbackLine(text)) {
+      addIssue('error', 'persistence', file, line, `Possível fallback em memória: "${text.trim().substring(0, 80)}"`, 'Sem fallback em memória. Erro explícito (persistence_required) em falha de DB.');
     }
   });
 }
@@ -345,4 +381,4 @@ if (require.main === module) {
   process.exit(run());
 }
 
-module.exports = { run };
+module.exports = { run, isInMemoryFallbackLine };

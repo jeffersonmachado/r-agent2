@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 /**
  * Migration: create queue_assignment_states
  *
@@ -31,7 +33,7 @@ module.exports = {
     const exists = await tableExists(queryInterface, 'queue_assignment_states');
     if (exists) {
       // eslint-disable-next-line no-console
-      console.log('[Migration] Tabela queue_assignment_states já existe, pulando');
+      logger.info('[Migration] Tabela queue_assignment_states já existe, pulando');
       return;
     }
 

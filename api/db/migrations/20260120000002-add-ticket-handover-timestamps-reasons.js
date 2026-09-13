@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 /**
  * Migration: Add detailed handover timestamps/reasons to tickets table (Blip-like).
  *
@@ -39,7 +41,7 @@ async function addColumnIfNotExists(queryInterface, tableName, columnName, defin
   const exists = await columnExists(queryInterface, tableName, columnName);
   if (exists) {
     // eslint-disable-next-line no-console
-    console.log(`[Migration] Coluna ${tableName}.${columnName} já existe, pulando`);
+    logger.info(`[Migration] Coluna ${tableName}.${columnName} já existe, pulando`);
     return;
   }
   await queryInterface.addColumn(tableName, columnName, definition);
@@ -79,7 +81,7 @@ module.exports = {
   async down(queryInterface) {
     const qi = queryInterface;
     // eslint-disable-next-line no-console
-    console.log('[Migration] down: removendo colunas de handover timestamps/reasons em tickets (best-effort)');
+    logger.info('[Migration] down: removendo colunas de handover timestamps/reasons em tickets (best-effort)');
     for (const col of ['takeover_at', 'return_to_bot_at', 'takeover_reason', 'return_reason']) {
       // eslint-disable-next-line no-await-in-loop
       const exists = await columnExists(qi, 'tickets', col);

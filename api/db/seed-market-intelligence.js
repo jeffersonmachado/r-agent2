@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../utils/logger');
+
 const { connect, close } = require('./sequelize');
 const { buildId } = require('../core/tenant-intelligence/helpers');
 
@@ -260,12 +262,12 @@ async function seedMarketIntelligence() {
 if (require.main === module) {
   seedMarketIntelligence()
     .then(async (summary) => {
-      console.log(JSON.stringify({ ok: true, summary }, null, 2));
+      logger.info(JSON.stringify({ ok: true, summary }, null, 2));
       await close();
       process.exit(0);
     })
     .catch(async (err) => {
-      console.error(err);
+      logger.error(err);
       try { await close(); } catch (_) {}
       process.exit(1);
     });

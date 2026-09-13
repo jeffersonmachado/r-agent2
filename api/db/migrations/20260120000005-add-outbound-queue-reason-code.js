@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 /**
  * Migration: add reason_code to outbound_queue (operacional)
  */
@@ -28,7 +30,7 @@ async function addColumnIfNotExists(queryInterface, tableName, columnName, defin
   const exists = await columnExists(queryInterface, tableName, columnName);
   if (exists) {
     // eslint-disable-next-line no-console
-    console.log(`[Migration] Coluna ${tableName}.${columnName} já existe, pulando`);
+    logger.info(`[Migration] Coluna ${tableName}.${columnName} já existe, pulando`);
     return;
   }
   await queryInterface.addColumn(tableName, columnName, definition);

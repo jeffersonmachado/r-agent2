@@ -809,7 +809,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                 // Executa o teste
                 logger.info('[RPA Overlay] Executando teste do listener...');
                 await page.evaluate(() => {
-                  console.log('[RPA Overlay] [TEST] Teste de listener do console');
+                  logger.info('[RPA Overlay] [TEST] Teste de listener do console');
                 });
                 logger.info('[RPA Overlay] Teste executado, aguardando captura...');
                 
@@ -826,8 +826,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                 try {
                   const injectResult = await page.evaluate((script) => {
                     try {
-                      console.log('[RPA Overlay] [INJECT] Iniciando injeção do script...');
-                      console.log('[RPA Overlay] [INJECT] Tamanho do script:', script.length);
+                      logger.info('[RPA Overlay] [INJECT] Iniciando injeção do script...');
+                      logger.info('[RPA Overlay] [INJECT] Tamanho do script:', script.length);
                       
                       // Executa o script como código
                       let evalError = null;
@@ -835,9 +835,9 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                         eval(script);
                       } catch (e) {
                         evalError = e;
-                        console.error('[RPA Overlay] [INJECT] ERRO no eval():', e);
-                        console.error('[RPA Overlay] [INJECT] Mensagem:', e.message);
-                        console.error('[RPA Overlay] [INJECT] Stack:', e.stack);
+                        logger.error('[RPA Overlay] [INJECT] ERRO no eval():', e);
+                        logger.error('[RPA Overlay] [INJECT] Mensagem:', e.message);
+                        logger.error('[RPA Overlay] [INJECT] Stack:', e.stack);
                         // Não retorna ainda, tenta verificar se window.rpaOverlay foi criado mesmo com erro
                       }
                       
@@ -871,7 +871,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                       
                       // Verifica se window.rpaOverlay foi criado
                       if (!checkResult.exists) {
-                        console.error('[RPA Overlay] [INJECT] ERRO: window.rpaOverlay não foi criado após eval()');
+                        logger.error('[RPA Overlay] [INJECT] ERRO: window.rpaOverlay não foi criado após eval()');
                         if (evalError) {
                           return { success: false, error: `Erro no eval: ${evalError.message}`, stack: evalError.stack };
                         }
@@ -880,12 +880,12 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                       
                       // Verifica se tem os métodos necessários
                       if (!checkResult.hasCreate && !checkResult.hasInit) {
-                        console.error('[RPA Overlay] [INJECT] ERRO: window.rpaOverlay não tem create() nem init()');
+                        logger.error('[RPA Overlay] [INJECT] ERRO: window.rpaOverlay não tem create() nem init()');
                         return { success: false, error: 'window.rpaOverlay não tem métodos necessários' };
                       }
                       
-                      console.log('[RPA Overlay] [INJECT] ✅ Script injetado com sucesso');
-                      console.log('[RPA Overlay] [INJECT] Métodos disponíveis:', {
+                      logger.info('[RPA Overlay] [INJECT] ✅ Script injetado com sucesso');
+                      logger.info('[RPA Overlay] [INJECT] Métodos disponíveis:', {
                         hasCreate: checkResult.hasCreate,
                         hasInit: checkResult.hasInit,
                         hasRemove: typeof window.rpaOverlay.remove === 'function',
@@ -899,8 +899,8 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                         evalError: evalError ? evalError.message : null
                       };
                     } catch (error) {
-                      console.error('[RPA Overlay] [INJECT] ERRO ao executar script:', error);
-                      console.error('[RPA Overlay] [INJECT] Stack completo:', error.stack);
+                      logger.error('[RPA Overlay] [INJECT] ERRO ao executar script:', error);
+                      logger.error('[RPA Overlay] [INJECT] Stack completo:', error.stack);
                       return { success: false, error: safeErrorMessage(error), stack: error.stack };
                     }
                   }, getInjectableScript());
@@ -929,7 +929,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                   const hasInit = exists && typeof window.rpaOverlay.init === 'function';
                   const hasDebug = exists && typeof window.rpaOverlay.debug === 'function';
                   
-                  console.log('[RPA Overlay] [VERIFY] Verificação pós-injeção:', {
+                  logger.info('[RPA Overlay] [VERIFY] Verificação pós-injeção:', {
                     exists,
                     hasCreate,
                     hasInit,
@@ -948,9 +948,9 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                     await page.evaluate((script) => {
                       try {
                         eval(script);
-                        console.log('[RPA Overlay] [RETRY] Script re-injetado');
+                        logger.info('[RPA Overlay] [RETRY] Script re-injetado');
                       } catch (error) {
-                        console.error('[RPA Overlay] [RETRY] ERRO:', error);
+                        logger.error('[RPA Overlay] [RETRY] ERRO:', error);
                       }
                     }, getInjectableScript());
                     
@@ -1002,24 +1002,24 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                   logger.info('[RPA Overlay] Executando page.evaluate() para chamar init()...');
                   // Playwright/Puppeteer só aceita 1 argumento além da função, então envolvemos em um objeto
                   initResult = await page.evaluate(({ apiUrl, execId, token }) => {
-                    console.log('[RPA Overlay] [SERVER] Chamando init()...');
+                    logger.info('[RPA Overlay] [SERVER] Chamando init()...');
                     
                     try {
                       if (window.rpaOverlay && window.rpaOverlay.init) {
                         const result = window.rpaOverlay.init(apiUrl, execId, token);
-                        console.log('[RPA Overlay] [SERVER] init() retornou:', result);
+                        logger.info('[RPA Overlay] [SERVER] init() retornou:', result);
                         return { success: true, method: 'init', result: result };
                       } else if (window.rpaOverlay && window.rpaOverlay.create) {
-                        console.log('[RPA Overlay] [SERVER] init() não disponível, usando create()...');
+                        logger.info('[RPA Overlay] [SERVER] init() não disponível, usando create()...');
                         const result = window.rpaOverlay.create(apiUrl, execId, token);
-                        console.log('[RPA Overlay] [SERVER] create() retornou:', result !== null);
+                        logger.info('[RPA Overlay] [SERVER] create() retornou:', result !== null);
                         return { success: true, method: 'create', result: result !== null };
                       } else {
-                        console.error('[RPA Overlay] [SERVER] ERRO: window.rpaOverlay não tem init() nem create()');
+                        logger.error('[RPA Overlay] [SERVER] ERRO: window.rpaOverlay não tem init() nem create()');
                         return { success: false, error: 'window.rpaOverlay não tem init() nem create()' };
                       }
                     } catch (error) {
-                      console.error('[RPA Overlay] [SERVER] ERRO ao chamar init/create:', error);
+                      logger.error('[RPA Overlay] [SERVER] ERRO ao chamar init/create:', error);
                       return { success: false, error: safeErrorMessage(error), stack: error.stack };
                     }
                   }, { apiUrl: apiBaseUrl, execId: executionId, token: authToken });
@@ -1040,14 +1040,14 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                   logger.info('[RPA Overlay] Tentando usar create() diretamente como fallback...');
                   try {
                     const createResult = await page.evaluate(({ apiUrl, execId, token }) => {
-                      console.log('[RPA Overlay] [FALLBACK] Tentando create() diretamente...');
+                      logger.info('[RPA Overlay] [FALLBACK] Tentando create() diretamente...');
                       if (window.rpaOverlay && window.rpaOverlay.create) {
-                        console.log('[RPA Overlay] [FALLBACK] Chamando create()...');
+                        logger.info('[RPA Overlay] [FALLBACK] Chamando create()...');
                         const result = window.rpaOverlay.create(apiUrl, execId, token);
-                        console.log('[RPA Overlay] [FALLBACK] create() retornou:', result !== null);
+                        logger.info('[RPA Overlay] [FALLBACK] create() retornou:', result !== null);
                         return result !== null;
                       }
-                      console.error('[RPA Overlay] [FALLBACK] window.rpaOverlay.create não está disponível');
+                      logger.error('[RPA Overlay] [FALLBACK] window.rpaOverlay.create não está disponível');
                       return false;
                     }, { apiUrl: apiBaseUrl, execId: executionId, token: authToken });
                     
@@ -1099,7 +1099,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                                      parseFloat(boxComputed.opacity) > 0;
                     
                     if (!isVisible) {
-                      console.warn('[RPA Overlay] Overlay não está visível, forçando...');
+                      logger.warn('[RPA Overlay] Overlay não está visível, forçando...');
                       boxElement.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important;';
                       overlayElement.style.cssText += ' display: block !important; visibility: visible !important; opacity: 1 !important;';
                     }
@@ -1121,7 +1121,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                       boxHeight: finalRect.height
                     };
                   } catch (error) {
-                    console.error('[RPA Overlay] ERRO ao verificar overlay:', error);
+                    logger.error('[RPA Overlay] ERRO ao verificar overlay:', error);
                     return { success: false, error: safeErrorMessage(error) };
                   }
                 });
@@ -1138,7 +1138,7 @@ async function executeRecording(recordingId, config = {}, data = {}, authToken =
                     try {
                       await page.evaluate(({ apiUrl, execId, token }) => {
                         if (window.rpaOverlay && window.rpaOverlay.create) {
-                          console.log('[RPA Overlay] [FORÇA] Chamando create() novamente...');
+                          logger.info('[RPA Overlay] [FORÇA] Chamando create() novamente...');
                           return window.rpaOverlay.create(apiUrl, execId, token);
                         }
                         return null;

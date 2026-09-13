@@ -13,6 +13,8 @@
 
 'use strict';
 
+const logger = require('../../utils/logger');
+
 const { addIndexIfNotExists } = require('../migrations-helper');
 
 async function columnExists(queryInterface, tableName, columnName) {
@@ -39,7 +41,7 @@ async function addColumnIfNotExists(queryInterface, tableName, columnName, defin
   const exists = await columnExists(queryInterface, tableName, columnName);
   if (exists) {
     // eslint-disable-next-line no-console
-    console.log(`[Migration] Coluna ${tableName}.${columnName} já existe, pulando`);
+    logger.info(`[Migration] Coluna ${tableName}.${columnName} já existe, pulando`);
     return;
   }
   await queryInterface.addColumn(tableName, columnName, definition);
@@ -84,7 +86,7 @@ module.exports = {
     // Down best-effort: remove colunas se existirem
     const qi = queryInterface;
     // eslint-disable-next-line no-console
-    console.log('[Migration] down: removendo colunas de handover em tickets (best-effort)');
+    logger.info('[Migration] down: removendo colunas de handover em tickets (best-effort)');
     for (const col of ['conversation_id', 'channel_type', 'mode', 'pause_reason']) {
       // eslint-disable-next-line no-await-in-loop
       const exists = await columnExists(qi, 'tickets', col);

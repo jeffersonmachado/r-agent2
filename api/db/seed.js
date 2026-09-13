@@ -340,7 +340,7 @@ async function ensureBootstrapUser({ username, email, name, password, role, isSu
  * - Se a senha não for informada via env, gera e loga uma vez por execução do seed.
  */
 async function ensureAdminAndSystemAdmin(systemTenantId) {
-  console.log('[Seed] Garantindo usuários bootstrap (admin/systemadmin)...');
+  logger.info('[Seed] Garantindo usuários bootstrap (admin/systemadmin)...');
   logger.info('[Seed] Garantindo usuários bootstrap (admin/systemadmin)...');
 
   // Admin (tenant system)
@@ -361,11 +361,11 @@ async function ensureAdminAndSystemAdmin(systemTenantId) {
   await ensureTenantUser(systemTenantId, admin.id, 'admin');
 
   if (admin.created && admin.passwordWasGenerated) {
-    console.log(`[Seed] Senha do admin (${adminEmail}): ${admin.password} (salve em local seguro!)`);
+    logger.info(`[Seed] Senha do admin (${adminEmail}): ${admin.password} (salve em local seguro!)`);
     logger.warn(`[Seed] ⚠️  Senha do admin (${adminEmail}): ${admin.password} (salve em local seguro!)`);
   }
   if (!admin.created && admin.passwordWasUpdated) {
-    console.log(`[Seed] Senha do admin (${adminEmail}) foi atualizada via env (salve em local seguro!)`);
+    logger.info(`[Seed] Senha do admin (${adminEmail}) foi atualizada via env (salve em local seguro!)`);
     logger.warn(`[Seed] ⚠️  Senha do admin (${adminEmail}) foi atualizada via env (salve em local seguro!)`);
   }
 
@@ -387,15 +387,15 @@ async function ensureAdminAndSystemAdmin(systemTenantId) {
   await ensureTenantUser(systemTenantId, systemadmin.id, 'owner');
 
   if (systemadmin.created && systemadmin.passwordWasGenerated) {
-    console.log(`[Seed] Senha do systemadmin (${sysEmail}): ${systemadmin.password} (salve em local seguro!)`);
+    logger.info(`[Seed] Senha do systemadmin (${sysEmail}): ${systemadmin.password} (salve em local seguro!)`);
     logger.warn(`[Seed] ⚠️  Senha do systemadmin (${sysEmail}): ${systemadmin.password} (salve em local seguro!)`);
   }
   if (!systemadmin.created && systemadmin.passwordWasUpdated) {
-    console.log(`[Seed] Senha do systemadmin (${sysEmail}) foi atualizada via env (salve em local seguro!)`);
+    logger.info(`[Seed] Senha do systemadmin (${sysEmail}) foi atualizada via env (salve em local seguro!)`);
     logger.warn(`[Seed] ⚠️  Senha do systemadmin (${sysEmail}) foi atualizada via env (salve em local seguro!)`);
   }
 
-  console.log('[Seed] Usuários bootstrap garantidos');
+  logger.info('[Seed] Usuários bootstrap garantidos');
   logger.info('[Seed] ✅ Usuários bootstrap garantidos');
 }
 
@@ -413,7 +413,7 @@ async function ensureSuperAdmin(systemTenantId) {
   // ensureAdminAndSystemAdmin quando somente SYSTEMADMIN_* foi configurado.
   const { email, username, name, password } = resolveSuperAdminBootstrapConfig();
 
-  console.log(`[Seed] Garantindo superadmin: ${email}...`);
+  logger.info(`[Seed] Garantindo superadmin: ${email}...`);
   logger.info(`[Seed] Garantindo superadmin: ${email}...`);
 
   const result = await ensureBootstrapUser({
@@ -429,15 +429,15 @@ async function ensureSuperAdmin(systemTenantId) {
   await ensureTenantUser(systemTenantId, result.id, 'owner');
 
   if (result.created && result.passwordWasGenerated) {
-    console.log(`[Seed] Senha do superadmin (${email}): ${result.password} (salve em local seguro!)`);
+    logger.info(`[Seed] Senha do superadmin (${email}): ${result.password} (salve em local seguro!)`);
     logger.warn(`[Seed] ⚠️  Senha do superadmin (${email}): ${result.password} (salve em local seguro!)`);
   }
   if (!result.created && result.passwordWasUpdated) {
-    console.log(`[Seed] Senha do superadmin (${email}) foi atualizada via env (salve em local seguro!)`);
+    logger.info(`[Seed] Senha do superadmin (${email}) foi atualizada via env (salve em local seguro!)`);
     logger.warn(`[Seed] ⚠️  Senha do superadmin (${email}) foi atualizada via env (salve em local seguro!)`);
   }
 
-  console.log('[Seed] Superadmin garantido');
+  logger.info('[Seed] Superadmin garantido');
   logger.info('[Seed] ✅ Superadmin garantido');
   return result.id;
 }
@@ -447,7 +447,7 @@ async function ensureSuperAdmin(systemTenantId) {
  */
 async function runSeed() {
   try {
-    console.log('[Seed] Iniciando seed...');
+    logger.info('[Seed] Iniciando seed...');
     logger.info('[Seed] Iniciando seed...');
     
     // Inicializa conexão Sequelize
@@ -465,7 +465,7 @@ async function runSeed() {
     // Garante superadmin (obrigatório)
     await ensureSuperAdmin(systemTenantId);
     
-    console.log('[Seed] Seed concluído com sucesso');
+    logger.info('[Seed] Seed concluído com sucesso');
     logger.info('[Seed] ✅ Seed concluído com sucesso');
   } catch (err) {
     logger.error('[Seed] ❌ Erro ao executar seed:', err);

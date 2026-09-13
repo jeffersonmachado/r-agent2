@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 /**
  * Migration: Corrige drift de schema em access_decisions.signature
  *
@@ -35,24 +37,24 @@ async function columnType(queryInterface) {
 module.exports = {
   async up(queryInterface) {
     if (!(await tableExists(queryInterface, TABLE))) {
-      console.log(`[Migration] Tabela ${TABLE} não existe, pulando (criada pela migration 20260314130000)`);
+      logger.info(`[Migration] Tabela ${TABLE} não existe, pulando (criada pela migration 20260314130000)`);
       return;
     }
 
     const column = await columnType(queryInterface);
     if (!column) {
-      console.log(`[Migration] Coluna ${TABLE}.${COLUMN} não existe, pulando`);
+      logger.info(`[Migration] Coluna ${TABLE}.${COLUMN} não existe, pulando`);
       return;
     }
     if (column.data_type === 'text') {
-      console.log(`[Migration] ${TABLE}.${COLUMN} já é TEXT, pulando`);
+      logger.info(`[Migration] ${TABLE}.${COLUMN} já é TEXT, pulando`);
       return;
     }
 
     await queryInterface.sequelize.query(
       `ALTER TABLE ${TABLE} ALTER COLUMN ${COLUMN} TYPE TEXT`
     );
-    console.log(`[Migration] ${TABLE}.${COLUMN} alterada de ${column.data_type}(${column.character_maximum_length}) para TEXT`);
+    logger.info(`[Migration] ${TABLE}.${COLUMN} alterada de ${column.data_type}(${column.character_maximum_length}) para TEXT`);
   },
 
   async down(queryInterface) {
@@ -74,6 +76,6 @@ module.exports = {
     await queryInterface.sequelize.query(
       `ALTER TABLE ${TABLE} ALTER COLUMN ${COLUMN} TYPE character varying(255)`
     );
-    console.log(`[Migration] ${TABLE}.${COLUMN} revertida para varchar(255)`);
+    logger.info(`[Migration] ${TABLE}.${COLUMN} revertida para varchar(255)`);
   },
 };

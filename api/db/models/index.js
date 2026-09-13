@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 /**
  * Index de models - Carrega todos os models e define relacionamentos
  */
@@ -393,7 +394,7 @@ const IntegrationInboundEvent = () => getIntegrationInboundEvent();
 function defineRelationships() {
   const sequelize = getSequelize();
   if (!sequelize) {
-    console.warn('[Models] Sequelize não inicializado, relacionamentos não serão definidos');
+    logger.warn('[Models] Sequelize não inicializado, relacionamentos não serão definidos');
     return;
   }
 

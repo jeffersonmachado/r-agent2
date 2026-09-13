@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Helper para tornar migrations resilientes
  * 
@@ -27,7 +28,7 @@ async function tableExists(queryInterface, tableName) {
     }
     return false;
   } catch (err) {
-    console.error(`[Migration Helper] Erro ao verificar tabela ${tableName}:`, err.message);
+    logger.error(`[Migration Helper] Erro ao verificar tabela ${tableName}:`, err.message);
     return false;
   }
 }
@@ -60,7 +61,7 @@ async function indexExists(queryInterface, tableName, indexName) {
     }
     return false;
   } catch (err) {
-    console.error(`[Migration Helper] Erro ao verificar índice ${indexName}:`, err.message);
+    logger.error(`[Migration Helper] Erro ao verificar índice ${indexName}:`, err.message);
     return false;
   }
 }
@@ -106,7 +107,7 @@ async function uniqueIndexExistsOnColumn(queryInterface, tableName, columnName) 
     }
     return false;
   } catch (err) {
-    console.error(`[Migration Helper] Erro ao verificar índice único na coluna ${columnName}:`, err.message);
+    logger.error(`[Migration Helper] Erro ao verificar índice único na coluna ${columnName}:`, err.message);
     // Em caso de erro, retorna false para tentar criar (pode falhar, mas pelo menos tenta)
     return false;
   }
@@ -118,7 +119,7 @@ async function uniqueIndexExistsOnColumn(queryInterface, tableName, columnName) 
 async function createTableIfNotExists(queryInterface, tableName, attributes, options = {}) {
   const exists = await tableExists(queryInterface, tableName);
   if (exists) {
-    console.log(`[Migration] Tabela ${tableName} já existe, pulando criação`);
+    logger.info(`[Migration] Tabela ${tableName} já existe, pulando criação`);
     return;
   }
   return queryInterface.createTable(tableName, attributes, options);
@@ -133,7 +134,7 @@ async function addIndexIfNotExists(queryInterface, tableName, fields, options = 
   // Verifica se o índice com o nome específico já existe
   const existsByName = await indexExists(queryInterface, tableName, indexName);
   if (existsByName) {
-    console.log(`[Migration] Índice ${indexName} já existe, pulando criação`);
+    logger.info(`[Migration] Índice ${indexName} já existe, pulando criação`);
     return;
   }
   
@@ -142,7 +143,7 @@ async function addIndexIfNotExists(queryInterface, tableName, fields, options = 
   if (options.unique && fields.length === 1) {
     const existsOnColumn = await uniqueIndexExistsOnColumn(queryInterface, tableName, fields[0]);
     if (existsOnColumn) {
-      console.log(`[Migration] Índice único na coluna ${fields[0]} já existe (criado automaticamente), pulando criação`);
+      logger.info(`[Migration] Índice único na coluna ${fields[0]} já existe (criado automaticamente), pulando criação`);
       return;
     }
   }
@@ -153,7 +154,7 @@ async function addIndexIfNotExists(queryInterface, tableName, fields, options = 
   } catch (err) {
     // Se o erro for que o índice já existe, ignora
     if (err.message && err.message.includes('already exists')) {
-      console.log(`[Migration] Índice ${indexName} já existe (detectado ao tentar criar), pulando criação`);
+      logger.info(`[Migration] Índice ${indexName} já existe (detectado ao tentar criar), pulando criação`);
       return;
     }
     // Caso contrário, relança o erro

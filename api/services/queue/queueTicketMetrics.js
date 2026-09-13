@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 function buildTicketMetrics({ tickets, logger, memoryUsageProvider }) {
   const allTickets = Array.from(tickets.values());
   const now = Date.now();
@@ -42,7 +44,7 @@ function buildTicketMetrics({ tickets, logger, memoryUsageProvider }) {
       }
     } else {
       // eslint-disable-next-line no-console
-      console.warn('[QueueService] Ticket sem status:', { ticketId: ticket.id, ticket });
+      logger.warn('[QueueService] Ticket sem status:', { ticketId: ticket.id, ticket });
     }
 
     if (ticket.queue) {

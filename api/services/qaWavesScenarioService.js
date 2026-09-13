@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../utils/logger');
+
 const fs = require('fs');
 const path = require('path');
 const { getRpaSeedReadDirs } = require('../../lib/rpaPathResolver');
@@ -96,7 +98,7 @@ function ensureStore() {
         Atomics.wait(sleepBuffer, 0, 0, attempt * 15);
         continue;
       }
-      console.error(`Erro ao ler store (após ${attempt} tentativas): ${error.message}`);
+      logger.error(`Erro ao ler store (após ${attempt} tentativas): ${error.message}`);
     }
   }
 
@@ -352,7 +354,7 @@ function dedupeStoreScenarios(store) {
   }
 
   if (invalidScenarios.length > 0) {
-    console.warn('[qaWavesScenarioService] Ignorando cenarios invalidos no store durante deduplicacao', invalidScenarios);
+    logger.warn('[qaWavesScenarioService] Ignorando cenarios invalidos no store durante deduplicacao', invalidScenarios);
   }
 
   store.scenarios = Array.from(deduped.values());

@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 const REMOVE = Symbol('remove');
 
 function isLegacySupportMediaUrl(value) {
@@ -114,7 +116,7 @@ module.exports = {
 
     for (const r of reports) {
       // eslint-disable-next-line no-console
-      console.log(
+      logger.info(
         `[migration:sanitize-legacy-support-media-json] ${r.tableName} scanned=${r.rowsScanned} updated=${r.rowsUpdated} removedUrls=${r.removedUrls} removedKeys=${r.removedKeys}`,
       );
     }

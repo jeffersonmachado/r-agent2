@@ -18,7 +18,7 @@ import {
   RolloutStrategy,
   getFeatureFlagManager,
   initializeFeatureFlagManager,
-} from '../../../../api/core/featureFlags';
+} from '../../../../lib/featureFlags';
 
 describe('BPMN Adapter', () => {
   const validBpmnXml = `<?xml version="1.0" encoding="UTF-8"?>

@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 /**
  * Migration: create ticket_events (Blip-like ticket timeline)
  *
@@ -35,7 +37,7 @@ module.exports = {
     const exists = await tableExists(queryInterface, 'ticket_events');
     if (exists) {
       // eslint-disable-next-line no-console
-      console.log('[Migration] Tabela ticket_events já existe, pulando');
+      logger.info('[Migration] Tabela ticket_events já existe, pulando');
       return;
     }
 

@@ -1,3 +1,4 @@
+const logger = require('./logger');
 /**
  * Validador estrutural completo para planos RPA.
  * 
@@ -41,7 +42,7 @@ try {
   restrictions = JSON.parse(fs.readFileSync(restrictionsPath, 'utf8'));
   knownErrors = JSON.parse(fs.readFileSync(errorsPath, 'utf8'));
 } catch (err) {
-  console.error('[validateRpaPlan] Erro ao carregar arquivos RAG_RPA:', err.message);
+  logger.error('[validateRpaPlan] Erro ao carregar arquivos RAG_RPA:', err.message);
   throw new Error(`Falha ao carregar arquivos RAG_RPA: ${err.message}`);
 }
 

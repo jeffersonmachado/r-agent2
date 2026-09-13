@@ -4,7 +4,7 @@ import {
   RolloutStrategy,
   getFeatureFlagManager,
   initializeFeatureFlagManager,
-} from '../../../../api/core/featureFlags';
+} from '../../../../lib/featureFlags';
 
 describe('featureFlags edge cases', () => {
   it('nao quebra com flags invalidas em setTenantFlags/setUserFlags', () => {

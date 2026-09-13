@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 /**
  * Migration: Adiciona PRIMARY KEY (tenant_id, term) em tenant_exclusions
  *
@@ -21,7 +23,7 @@ const UNIQUE_INDEX = 'tenant_exclusions_unique';
 module.exports = {
   async up(queryInterface) {
     if (!(await tableExists(queryInterface, TABLE))) {
-      console.log(`[Migration] Tabela ${TABLE} não existe, pulando (criada pela migration 20260129000001)`);
+      logger.info(`[Migration] Tabela ${TABLE} não existe, pulando (criada pela migration 20260129000001)`);
       return;
     }
 
@@ -32,7 +34,7 @@ module.exports = {
           AND table_name = '${TABLE}'`
     );
     if (pkRows.length > 0) {
-      console.log(`[Migration] ${TABLE} já possui PRIMARY KEY, pulando`);
+      logger.info(`[Migration] ${TABLE} já possui PRIMARY KEY, pulando`);
       return;
     }
 
@@ -58,7 +60,7 @@ module.exports = {
          ADD CONSTRAINT ${TABLE}_pkey PRIMARY KEY (tenant_id, term)`
       );
     }
-    console.log(`[Migration] PRIMARY KEY (tenant_id, term) adicionada em ${TABLE}`);
+    logger.info(`[Migration] PRIMARY KEY (tenant_id, term) adicionada em ${TABLE}`);
   },
 
   async down(queryInterface) {

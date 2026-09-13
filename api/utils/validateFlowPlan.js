@@ -1,3 +1,4 @@
+const logger = require('./logger');
 /**
  * Validador estrutural completo para planos de fluxo de chatbot.
  * 
@@ -35,7 +36,7 @@ try {
   rules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
   knownErrors = JSON.parse(fs.readFileSync(errorsPath, 'utf8'));
 } catch (err) {
-  console.error('[validateFlowPlan] Erro ao carregar arquivos RAG_CHATBOT:', err.message);
+  logger.error('[validateFlowPlan] Erro ao carregar arquivos RAG_CHATBOT:', err.message);
   throw new Error(`Falha ao carregar arquivos RAG_CHATBOT: ${err.message}`);
 }
 

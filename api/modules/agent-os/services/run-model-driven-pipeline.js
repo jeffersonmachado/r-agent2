@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../../utils/logger');
+
 /**
  * Model-Driven Waves & Journeys - Pipeline Completo
  *
@@ -19,78 +21,78 @@ function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }
 function writeReport(filename, data) {
   ensureDir(DIST_DIR);
   fs.writeFileSync(path.join(DIST_DIR, filename), JSON.stringify(data, null, 2) + '\n', 'utf8');
-  console.log(`  ✓ ${filename}`);
+  logger.info(`  ✓ ${filename}`);
 }
 
 async function run() {
-  console.log('='.repeat(60));
-  console.log('Model-Driven Waves & Journeys Pipeline');
-  console.log('='.repeat(60));
-  console.log();
+  logger.info('='.repeat(60));
+  logger.info('Model-Driven Waves & Journeys Pipeline');
+  logger.info('='.repeat(60));
+  logger.info();
 
   // FASE 1: Model Introspection
-  console.log('[FASE 1] Model Introspection...');
+  logger.info('[FASE 1] Model Introspection...');
   const { introspectAllModels } = require('./model-introspection-service');
   const introspection = introspectAllModels();
   writeReport('model-introspection-report.json', introspection);
-  console.log(`  ${introspection.totalModels} models, ${introspection.modelsLoaded} loaded, ${introspection.modelsWithErrors} errors`);
-  console.log();
+  logger.info(`  ${introspection.totalModels} models, ${introspection.modelsLoaded} loaded, ${introspection.modelsWithErrors} errors`);
+  logger.info();
 
   // FASE 2: Domain Map
-  console.log('[FASE 2] Domain Map...');
+  logger.info('[FASE 2] Domain Map...');
   const { buildDomainMap } = require('./domain-map-service');
   const domainMap = buildDomainMap(introspection);
   writeReport('domain-map-report.json', domainMap);
-  console.log(`  ${domainMap.totalDomains} domains, ${domainMap.totalModelsAssigned} models assigned, ${domainMap.totalModelsUnassigned} unassigned`);
+  logger.info(`  ${domainMap.totalDomains} domains, ${domainMap.totalModelsAssigned} models assigned, ${domainMap.totalModelsUnassigned} unassigned`);
   if (domainMap.unassignedModels.length > 0) {
-    console.log(`  Unassigned: ${domainMap.unassignedModels.join(', ')}`);
+    logger.info(`  Unassigned: ${domainMap.unassignedModels.join(', ')}`);
   }
-  console.log();
+  logger.info();
 
   // FASE 3: Entity Graph
-  console.log('[FASE 3] Entity Graph...');
+  logger.info('[FASE 3] Entity Graph...');
   const { buildEntityGraph } = require('./model-driven-pipeline');
   const entityGraph = buildEntityGraph(introspection, domainMap);
   writeReport('entity-graph-report.json', entityGraph);
-  console.log(`  ${entityGraph.totalNodes} nodes, ${entityGraph.totalEdges} edges`);
-  console.log();
+  logger.info(`  ${entityGraph.totalNodes} nodes, ${entityGraph.totalEdges} edges`);
+  logger.info();
 
   // FASE 4: Journey Inference
-  console.log('[FASE 4] Journey Inference...');
+  logger.info('[FASE 4] Journey Inference...');
   const { inferJourneys } = require('./model-driven-pipeline');
   const journeys = inferJourneys(introspection, domainMap, entityGraph);
   writeReport('journey-inference-report.json', journeys);
-  console.log(`  ${journeys.totalJourneys} journeys inferred`);
+  logger.info(`  ${journeys.totalJourneys} journeys inferred`);
   for (const j of journeys.journeys) {
-    console.log(`    - ${j.name} [${j.domain}] (${j.completeness * 100}% complete, ${j.availableModels.length}/${j.sourceModels.length} models)`);
+    logger.info(`    - ${j.name} [${j.domain}] (${j.completeness * 100}% complete, ${j.availableModels.length}/${j.sourceModels.length} models)`);
   }
-  console.log();
+  logger.info();
 
   // FASE 5-6: Scenarios
-  console.log('[FASE 5-6] Scenario Generation...');
+  logger.info('[FASE 5-6] Scenario Generation...');
   const { generateScenarios } = require('./model-driven-pipeline');
   const scenarios = generateScenarios(introspection, journeys);
-  console.log(`  ${scenarios.totalScenarios} scenarios generated`);
-  console.log();
+  logger.info(`  ${scenarios.totalScenarios} scenarios generated`);
+  logger.info();
 
   // FASE 7: Seeds
-  console.log('[FASE 7] Seed Generation...');
+  logger.info('[FASE 7] Seed Generation...');
   const { generateSeeds } = require('./model-driven-pipeline');
   const seeds = generateSeeds(introspection, journeys);
   writeReport('model-driven-seeds-report.json', seeds);
-  console.log(`  ${seeds.totalSeeds} seeds generated`);
-  console.log();
+  logger.info(`  ${seeds.totalSeeds} seeds generated`);
+  logger.info();
 
   // FASE 8: QA Waves
-  console.log('[FASE 8] QA Waves Model-Driven...');
+  logger.info('[FASE 8] QA Waves Model-Driven...');
   const { generateModelDrivenWaves } = require('./model-driven-pipeline');
   const waves = generateModelDrivenWaves(journeys, scenarios);
   writeReport('model-driven-waves-report.json', waves);
-  console.log(`  ${waves.totalWaves} waves generated`);
-  console.log();
+  logger.info(`  ${waves.totalWaves} waves generated`);
+  logger.info();
 
   // FASE 11: Agent Factory Integration Report
-  console.log('[FASE 11] Agent Factory Integration...');
+  logger.info('[FASE 11] Agent Factory Integration...');
   // FASES 13-14 — o flag NÃO é literal: deriva de uma verificação real que
   // requer o consumidor (agent-hardening-service), invoca o resolvedor de
   // jornadas model-driven e confere que a saída deriva desta execução.
@@ -120,7 +122,7 @@ async function run() {
   // Final Attestation — NENHUM boolean é autoatestado: cada critério deriva de
   // uma contagem real da execução. Zero-data (modelsLoaded=0, scenarios=0,
   // seeds=0, waves=0, journeys=0) ⇒ critério false ⇒ status NÃO é complete.
-  console.log('[FINAL] Attestation...');
+  logger.info('[FINAL] Attestation...');
   const criteriaChecklist = {
     modelsIntrospected:              introspection.modelsLoaded > 0,
     domainMapGenerated:              domainMap.totalDomains > 0 || domainMap.totalModelsAssigned > 0,
@@ -165,11 +167,11 @@ async function run() {
   };
   writeReport('model-driven-final-attestation.json', attestation);
 
-  console.log();
-  console.log('='.repeat(60));
-  console.log('PIPELINE COMPLETO');
-  console.log(`  ${introspection.totalModels} models → ${domainMap.totalDomains} domains → ${journeys.totalJourneys} journeys → ${scenarios.totalScenarios} scenarios → ${seeds.totalSeeds} seeds → ${waves.totalWaves} waves`);
-  console.log('='.repeat(60));
+  logger.info();
+  logger.info('='.repeat(60));
+  logger.info('PIPELINE COMPLETO');
+  logger.info(`  ${introspection.totalModels} models → ${domainMap.totalDomains} domains → ${journeys.totalJourneys} journeys → ${scenarios.totalScenarios} scenarios → ${seeds.totalSeeds} seeds → ${waves.totalWaves} waves`);
+  logger.info('='.repeat(60));
 
   return { introspection, domainMap, entityGraph, journeys, scenarios, seeds, waves, attestation };
 }
@@ -177,7 +179,7 @@ async function run() {
 // Executa se chamado diretamente
 if (require.main === module) {
   run().catch(err => {
-    console.error('Pipeline failed:', err);
+    logger.error('Pipeline failed:', err);
     process.exit(1);
   });
 }

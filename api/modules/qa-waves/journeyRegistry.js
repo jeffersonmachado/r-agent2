@@ -1,5 +1,7 @@
 'use strict';
 
+const logger = require('../../utils/logger');
+
 const fs = require('fs');
 const path = require('path');
 
@@ -143,7 +145,7 @@ function maybeLogFallbackScenario(scenario, domainResult) {
     fallbackReason: domainResult.reason,
   };
 
-  console.warn('[qa-waves] fallback mapping detected', payload);
+  logger.warn('[qa-waves] fallback mapping detected', payload);
 }
 
 function inferJourneyId(domainId, scenarioId) {

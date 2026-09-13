@@ -150,20 +150,20 @@ if (require.main === module) {
   if (showStatus) {
     getMigrationStatus()
       .then(status => {
-        console.log('\n📊 Status das Migrations:');
-        console.log(`✅ Executadas: ${status.totalExecuted}`);
-        console.log(`⏳ Pendentes: ${status.totalPending}`);
+        logger.info('\n📊 Status das Migrations:');
+        logger.info(`✅ Executadas: ${status.totalExecuted}`);
+        logger.info(`⏳ Pendentes: ${status.totalPending}`);
         
         if (status.executed.length > 0) {
-          console.log('\n✅ Migrations Executadas:');
-          status.executed.forEach(name => console.log(`   - ${name}`));
+          logger.info('\n✅ Migrations Executadas:');
+          status.executed.forEach(name => logger.info(`   - ${name}`));
         }
         
         if (status.pending.length > 0) {
-          console.log('\n⏳ Migrations Pendentes:');
-          status.pending.forEach(name => console.log(`   - ${name}`));
+          logger.info('\n⏳ Migrations Pendentes:');
+          status.pending.forEach(name => logger.info(`   - ${name}`));
         } else {
-          console.log('\n✨ Nenhuma migration pendente!');
+          logger.info('\n✨ Nenhuma migration pendente!');
         }
         
         return close();
@@ -176,7 +176,7 @@ if (require.main === module) {
           name: err.name,
           ...err
         });
-        console.error('Erro detalhado:', err);
+        logger.error('Erro detalhado:', err);
         process.exit(1);
       });
   } else {
@@ -193,7 +193,7 @@ if (require.main === module) {
           name: err.name,
           ...err
         });
-        console.error('Erro detalhado:', err);
+        logger.error('Erro detalhado:', err);
         process.exit(1);
       });
   }
