@@ -13,7 +13,7 @@ const { executeStep } = require('../../engine/executeStep');
 const { NodeRegistry } = require('../../engine/nodeRegistry');
 const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
 const { appendEventV1 } = require('./eventLedgerService');
-const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
+const { getAiProviderForTenant } = require('./aiProviderManager.js');
 const {
   startNodeHandler,
   messageNodeHandler,

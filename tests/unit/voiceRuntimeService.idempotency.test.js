@@ -23,7 +23,7 @@ describe('voiceRuntimeService idempotency', () => {
     jest.doMock('../../api/services/eventLedgerService', () => ({
       appendEventV1: jest.fn(async () => ({ ok: true })),
     }));
-    jest.doMock('../../engine/aiProviderManager', () => ({
+    jest.doMock('../../api/services/aiProviderManager.js', () => ({
       getAiProviderForTenant: () => null,
     }));
     jest.doMock('../../engine/nodes/basicNodes', () => ({

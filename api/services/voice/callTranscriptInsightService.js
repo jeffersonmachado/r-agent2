@@ -90,7 +90,7 @@ async function analyzeCallTranscript({ tenantId, transcript } = {}) {
   try {
     // Require tardio: mantém o serviço carregável em ambientes sem engine.
     // eslint-disable-next-line global-require
-    const { getAiProviderForTenant } = require('../../../engine/aiProviderManager');
+    const { getAiProviderForTenant } = require('../aiProviderManager.js');
     const provider = getAiProviderForTenant(tenantId);
     if (!provider || typeof provider.generate !== 'function') return null;
 

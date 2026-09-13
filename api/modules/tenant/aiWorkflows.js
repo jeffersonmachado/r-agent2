@@ -252,7 +252,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
 }
 
 async function getTenantAiProviderStatus({ tenantId, tenantAIService }) {
-  const { getAiProviderForTenant } = require('../../../engine/aiProviderManager');
+  const { getAiProviderForTenant } = require('../../services/aiProviderManager.js');
 
   // A engine decide o provider (roteamento engine-wide). O tenant tem provider
   // válido quando há pelo menos UM provider registrado com credencial salva.

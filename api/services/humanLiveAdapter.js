@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Adapter de atendimento humano em tempo real (síncrono).
  * 
@@ -62,7 +63,7 @@ function createHumanSession({ sessionId, state, returnNodeId = null }) {
   humanSessions.set(sessionId, humanSession);
   
   // eslint-disable-next-line no-console
-  console.log(`[HumanLiveAdapter] Sessão humana criada: ${humanSessionId} para sessão ${sessionId}`);
+  logger.info(`[HumanLiveAdapter] Sessão humana criada: ${humanSessionId} para sessão ${sessionId}`);
   
   return humanSession;
 }
@@ -110,7 +111,7 @@ function endHumanSession(sessionId, options = {}) {
   session.endedAt = new Date().toISOString();
   
   // eslint-disable-next-line no-console
-  console.log(`[HumanLiveAdapter] Sessão humana encerrada: ${session.humanSessionId} (status: ${session.status})`);
+  logger.info(`[HumanLiveAdapter] Sessão humana encerrada: ${session.humanSessionId} (status: ${session.status})`);
   
   return session;
 }
@@ -155,7 +156,7 @@ function cleanupOldSessions(maxAgeHours = 24) {
   
   if (cleaned > 0) {
     // eslint-disable-next-line no-console
-    console.log(`[HumanLiveAdapter] Limpeza: ${cleaned} sessão(ões) antiga(s) removida(s)`);
+    logger.info(`[HumanLiveAdapter] Limpeza: ${cleaned} sessão(ões) antiga(s) removida(s)`);
   }
   
   return cleaned;

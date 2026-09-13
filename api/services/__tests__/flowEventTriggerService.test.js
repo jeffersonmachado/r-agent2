@@ -8,7 +8,7 @@ jest.mock('../../../engine/executeStep', () => ({
   executeStep: jest.fn(),
 }));
 
-jest.mock('../../../engine/aiProviderManager', () => ({
+jest.mock('../aiProviderManager.js', () => ({
   getAiProviderForTenant: jest.fn(() => ({ provider: 'mock' })),
 }));
 

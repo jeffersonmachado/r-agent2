@@ -61,14 +61,14 @@ const {
   createHumanSession, 
   isInHumanSession, 
   getHumanSession 
-} = require('../../engine/services/humanLiveAdapter');
+} = require('./humanLiveAdapter');
 const { ESCALATION_MODES } = require('../../engine/fallbackController');
 const { emitEvent } = require('./websocketService');
 const config = require('../utils/config');
 const { decideEntryPath } = require('./cognitive/cognitiveEntryPolicy');
 const { handleInboundWithCognitiveCore } = require('./cognitive/inboundCognitiveHandler');
 const { checkLimit } = require('./planLimitsService');
-const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
+const { getAiProviderForTenant } = require('./aiProviderManager.js');
 const { validateCDR, getSafeResponse, generateViolationLog } = require('../../qa/cdrValidator');
 const { ReplaySystem } = require('../../lib/replaySystem');
 const { RecordingSystem } = require('../../lib/recordingSystem');

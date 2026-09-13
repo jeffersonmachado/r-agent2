@@ -1,8 +1,8 @@
-const { NodeRegistry } = require('../nodeRegistry');
-const { messageNodeHandler, endNodeHandler } = require('../nodes/basicNodes');
-const { wrapHandlerWithChaos, runChaosSimulation, _internal } = require('../chaosTesting');
-const { executeStep } = require('../executeStep');
-const { buildConversationReplay } = require('../replay');
+const { NodeRegistry } = require('../../engine/nodeRegistry');
+const { messageNodeHandler, endNodeHandler } = require('../../engine/nodes/basicNodes');
+const { wrapHandlerWithChaos, runChaosSimulation, _internal } = require('../../api/services/chaosTesting');
+const { executeStep } = require('../../engine/executeStep');
+const { buildConversationReplay } = require('../../engine/replay');
 
 describe('chaosTesting', () => {
   test('shouldFail usa failurePlan de forma determinística', () => {

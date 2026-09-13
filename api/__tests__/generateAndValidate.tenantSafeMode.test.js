@@ -78,7 +78,7 @@ describe('POST /system/generate-and-validate (tenant safe-mode)', () => {
     jest.resetModules();
 
     const aiProviderServicePath = require.resolve('../services/aiProviderService');
-    const aiProviderManagerPath = require.resolve('../../engine/aiProviderManager');
+    const aiProviderManagerPath = require.resolve('../services/aiProviderManager.js');
     const generateAndValidatePath = require.resolve('../services/generate-and-validate');
 
     // Evita dependência real de provider

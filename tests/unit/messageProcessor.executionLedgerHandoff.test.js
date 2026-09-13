@@ -96,7 +96,7 @@ describe('messageProcessor - execution ledger on human handoff', () => {
         nodes: [{ id: 'start-1', type: 'start' }],
       }),
     }));
-    jest.doMock('../../engine/services/humanLiveAdapter', () => ({
+    jest.doMock('../../api/services/humanLiveAdapter', () => ({
       createHumanSession: jest.fn(),
       isInHumanSession: jest.fn().mockReturnValue(false),
       getHumanSession: jest.fn(),
@@ -125,7 +125,7 @@ describe('messageProcessor - execution ledger on human handoff', () => {
     jest.doMock('../../api/services/planLimitsService', () => ({
       checkLimit: jest.fn().mockResolvedValue({ allowed: true }),
     }));
-    jest.doMock('../../engine/aiProviderManager', () => ({
+    jest.doMock('../../api/services/aiProviderManager.js', () => ({
       getAiProviderForTenant: jest.fn().mockReturnValue({}),
     }));
     jest.doMock('../../qa/cdrValidator', () => ({

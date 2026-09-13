@@ -27,7 +27,7 @@ describe('rpaFlowPipelineService coercion hardening', () => {
   }
 
   function mockBaseDeps({ resolveDependenciesImpl, executeRecordingImpl } = {}) {
-    jest.doMock('../../engine/rpaDependencyResolver', () => ({
+    jest.doMock('../../api/services/rpaDependencyResolver.js', () => ({
       resolveDependencies: jest.fn(resolveDependenciesImpl || (async () => ({
         allSatisfied: true,
         missingDependencies: [],

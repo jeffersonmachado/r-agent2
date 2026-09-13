@@ -42,7 +42,7 @@ function buildMocks({ flowOverride = null, failLoad = false } = {}) {
     },
   }));
 
-  jest.doMock('../../engine/aiProviderManager', () => ({
+  jest.doMock('../../api/services/aiProviderManager.js', () => ({
     getAiProviderForTenant: jest.fn(() => null),
   }));
 

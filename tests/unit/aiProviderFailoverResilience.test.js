@@ -21,7 +21,7 @@ const {
   setTenantAiConfig,
   getAiProviderForTenant,
   clearAiProviderConfig,
-} = require('../../engine/aiProviderManager');
+} = require('../../api/services/aiProviderManager.js');
 
 describe('provider outage — failover e fail-closed', () => {
   beforeEach(() => {

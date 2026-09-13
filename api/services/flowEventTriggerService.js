@@ -13,7 +13,7 @@ const persistence = require('../../engine/services/persistenceServices');
 const { getOrCompileFlow } = require('../../engine/compiledFlowCache');
 const { executeStep } = require('../../engine/executeStep');
 const { NodeRegistry } = require('../../engine/nodeRegistry');
-const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
+const { getAiProviderForTenant } = require('./aiProviderManager.js');
 const { startFlowExecution, finishFlowExecutionSafe, buildExecutionLedgerAdapter } = require('./flowExecutionLedgerService');
 
 const {

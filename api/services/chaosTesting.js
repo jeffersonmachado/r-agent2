@@ -12,10 +12,10 @@
  *   introduzido apenas por quem opta por usar estes helpers.
  */
 
-const { runUntilHalt } = require('./simulator');
-const { buildConversationReplay } = require('./replay');
-const { ReplaySystem } = require('../lib/replaySystem');
-const { RecordingSystem } = require('../lib/recordingSystem');
+const { runUntilHalt } = require('../../engine/simulator');
+const { buildConversationReplay } = require('../../engine/replay');
+const { ReplaySystem } = require('../../lib/replaySystem');
+const { RecordingSystem } = require('../../lib/recordingSystem');
 const path = require('path');
 
 /**

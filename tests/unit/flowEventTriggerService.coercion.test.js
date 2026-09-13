@@ -22,7 +22,7 @@ describe('flowEventTriggerService coercion hardening', () => {
     jest.doMock('../../engine/compiledFlowCache', () => ({ getOrCompileFlow: jest.fn((f) => f) }));
     jest.doMock('../../engine/executeStep', () => ({ executeStep: jest.fn() }));
     jest.doMock('../../engine/nodeRegistry', () => ({ NodeRegistry: class { register() {} } }));
-    jest.doMock('../../engine/aiProviderManager', () => ({ getAiProviderForTenant: jest.fn(() => ({})) }));
+    jest.doMock('../../api/services/aiProviderManager.js', () => ({ getAiProviderForTenant: jest.fn(() => ({})) }));
     jest.doMock('../../api/services/flowExecutionLedgerService', () => ({
       startFlowExecution: jest.fn(async () => ({ ok: true, executionId: 'fx-1' })),
       finishFlowExecutionSafe: jest.fn(async () => ({})),
@@ -68,7 +68,7 @@ describe('flowEventTriggerService coercion hardening', () => {
     jest.doMock('../../engine/compiledFlowCache', () => ({ getOrCompileFlow: jest.fn((f) => f) }));
     jest.doMock('../../engine/executeStep', () => ({ executeStep: jest.fn() }));
     jest.doMock('../../engine/nodeRegistry', () => ({ NodeRegistry: class { register() {} } }));
-    jest.doMock('../../engine/aiProviderManager', () => ({ getAiProviderForTenant: jest.fn(() => ({})) }));
+    jest.doMock('../../api/services/aiProviderManager.js', () => ({ getAiProviderForTenant: jest.fn(() => ({})) }));
     jest.doMock('../../api/services/flowExecutionLedgerService', () => ({
       startFlowExecution: jest.fn(async () => ({ ok: true, executionId: 'fx-1' })),
       finishFlowExecutionSafe: jest.fn(async () => ({})),
@@ -118,7 +118,7 @@ describe('flowEventTriggerService coercion hardening', () => {
     jest.doMock('../../engine/compiledFlowCache', () => ({ getOrCompileFlow: jest.fn((f) => f) }));
     jest.doMock('../../engine/executeStep', () => ({ executeStep: jest.fn() }));
     jest.doMock('../../engine/nodeRegistry', () => ({ NodeRegistry: class { register() {} } }));
-    jest.doMock('../../engine/aiProviderManager', () => ({ getAiProviderForTenant: jest.fn(() => ({})) }));
+    jest.doMock('../../api/services/aiProviderManager.js', () => ({ getAiProviderForTenant: jest.fn(() => ({})) }));
     jest.doMock('../../api/services/flowExecutionLedgerService', () => ({
       startFlowExecution: jest.fn(async () => ({ ok: true, executionId: 'fx-1' })),
       finishFlowExecutionSafe: jest.fn(async () => ({})),
@@ -186,7 +186,7 @@ describe('flowEventTriggerService coercion hardening', () => {
       }),
     }));
     jest.doMock('../../engine/nodeRegistry', () => ({ NodeRegistry: class { register() {} } }));
-    jest.doMock('../../engine/aiProviderManager', () => ({ getAiProviderForTenant: jest.fn(() => ({})) }));
+    jest.doMock('../../api/services/aiProviderManager.js', () => ({ getAiProviderForTenant: jest.fn(() => ({})) }));
     jest.doMock('../../api/services/flowExecutionLedgerService', () => ({
       startFlowExecution: jest.fn(async () => ({ ok: true, executionId: 'fx-1' })),
       finishFlowExecutionSafe: jest.fn(async () => ({})),

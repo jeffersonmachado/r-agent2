@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 /**
  * Adapter genérico de escalada humana.
  * 
@@ -87,7 +88,7 @@ class HumanEscalationAdapter {
 class DefaultHumanEscalationAdapter extends HumanEscalationAdapter {
   async escalateToHuman(data) {
     // eslint-disable-next-line no-console
-    console.log('[HumanEscalationAdapter] Escalada simulada:', {
+    logger.info('[HumanEscalationAdapter] Escalada simulada:', {
       sessionId: data.sessionId,
       reason: data.reason,
       attempt: data.attempt,
@@ -109,7 +110,7 @@ class DefaultHumanEscalationAdapter extends HumanEscalationAdapter {
 
   async returnToBot(sessionId, returnNodeId) {
     // eslint-disable-next-line no-console
-    console.log('[HumanEscalationAdapter] Retorno ao bot:', {
+    logger.info('[HumanEscalationAdapter] Retorno ao bot:', {
       sessionId,
       returnNodeId,
     });

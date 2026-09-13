@@ -15,13 +15,13 @@
  * - Dependências de teste (usuário de teste, ambiente autenticado, permissões)
  */
 
-const logger = require('../api/utils/logger');
-const departmentsService = require('../api/services/departmentsService');
-const queueService = require('../api/services/queueService');
-const authService = require('../api/services/authService');
-const ragDocumentsService = require('../api/services/ragDocumentsService');
-const ragService = require('../api/services/ragService');
-const config = require('../api/utils/config');
+const logger = require('../utils/logger');
+const departmentsService = require('./departmentsService');
+const queueService = require('./queueService');
+const authService = require('./authService');
+const ragDocumentsService = require('./ragDocumentsService');
+const ragService = require('./ragService');
+const config = require('../utils/config');
 
 /**
  * @typedef {Object} Dependency

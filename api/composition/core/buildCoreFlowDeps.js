@@ -10,7 +10,7 @@ const { validateFlow, addUiMessage } = require('../../../engine/validator');
 const { validateVoiceFlow } = require('../../utils/voiceFlowValidator');
 const { simulateFlow } = require('../../../engine/flowSimulation');
 const { buildConversationReplay } = require('../../../engine/replay');
-const rpaDependencyResolver = require('../../../engine/rpaDependencyResolver');
+const rpaDependencyResolver = require('../../services/rpaDependencyResolver.js');
 
 function buildCoreFlowDeps(localDeps) {
   const {

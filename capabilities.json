@@ -177,7 +177,7 @@
       "implementation": {
         "node": "engine/nodes/basicNodes.js (handoffNodeHandler)",
         "service": "api/services/queueService.js",
-        "adapter": "engine/services/humanLiveAdapter.js"
+        "adapter": "api/services/humanLiveAdapter.js"
       },
       "features": [
         "Criação de tickets em filas",

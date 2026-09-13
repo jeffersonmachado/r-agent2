@@ -5,10 +5,10 @@
  * Provider de IA mockado via engine/aiProviderManager.
  */
 
-const { getAiProviderForTenant } = require('../../engine/aiProviderManager');
+const { getAiProviderForTenant } = require('../../api/services/aiProviderManager.js');
 const logger = require('../../api/utils/logger');
 
-jest.mock('../../engine/aiProviderManager', () => ({
+jest.mock('../../api/services/aiProviderManager.js', () => ({
   getAiProviderForTenant: jest.fn(),
 }));
 

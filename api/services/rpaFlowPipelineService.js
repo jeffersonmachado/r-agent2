@@ -11,7 +11,7 @@
  */
 
 const logger = require('../utils/logger');
-const rpaDependencyResolver = require('../../engine/rpaDependencyResolver');
+const rpaDependencyResolver = require('./rpaDependencyResolver.js');
 const flowToRpaConverter = require('../../engine/flowToRpaConverter');
 const rpaService = require('./rpaService');
 const fs = require('fs');

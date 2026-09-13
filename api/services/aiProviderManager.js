@@ -20,12 +20,12 @@
  */
 
 // engine → api (acesso a logger/config) é best-effort
-const logger = require('../api/utils/logger');
-const { classifyProviderError, PROVIDER_ERROR_CATEGORY } = require('./aiControlPlaneResilience');
+const logger = require('../utils/logger');
+const { classifyProviderError, PROVIDER_ERROR_CATEGORY } = require('../../engine/aiControlPlaneResilience');
 let config = null;
 try {
   // eslint-disable-next-line global-require
-  config = require('../api/utils/config');
+  config = require('../utils/config');
 } catch {
   // Se não conseguir carregar config, mantém postura segura (ver getAiProviderForTenant).
   config = null;

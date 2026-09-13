@@ -152,7 +152,7 @@ describe('POST /system/suggest-description - institutional mode', () => {
     }));
 
     // Provider ativo para o tenant (Gate 1 do endpoint)
-    jest.doMock('../../engine/aiProviderManager', () => ({
+    jest.doMock('../../api/services/aiProviderManager.js', () => ({
       getAiProviderForTenant: jest.fn(() => ({ id: 'mock-provider' })),
     }));
 

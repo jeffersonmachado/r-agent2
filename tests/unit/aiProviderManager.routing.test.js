@@ -23,7 +23,7 @@ const {
   registerAiProvider,
   getAiProviderForTenant,
   clearAiProviderConfig,
-} = require('../../engine/aiProviderManager');
+} = require('../../api/services/aiProviderManager.js');
 
 describe('aiProviderManager — roteamento engine-wide (sem config por tenant)', () => {
   beforeEach(() => {

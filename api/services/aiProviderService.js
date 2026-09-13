@@ -7,7 +7,7 @@
  * - Fornecer interface para gerar respostas de IA
  */
 
-const { registerAiProvider, setTenantAiConfig, getAiProviderForTenant } = require('../../engine/aiProviderManager');
+const { registerAiProvider, setTenantAiConfig, getAiProviderForTenant } = require('./aiProviderManager.js');
 const config = require('../utils/config');
 const logger = require('../utils/logger');
 const aiControlPlaneStatus = require('./aiControlPlaneStatus');
@@ -772,7 +772,7 @@ async function initializeAiProviders() {
     // menos um provider registrado; BLOCKED caso contrário (roteamento sem
     // rota homologada deve falhar fechado, nunca escolher modelo arbitrário).
     try {
-      const { getRegisteredProviderIds } = require('../../engine/aiProviderManager');
+      const { getRegisteredProviderIds } = require('./aiProviderManager.js');
       const registered = getRegisteredProviderIds();
       aiControlPlaneStatus.setComponentStatus(
         'MODEL_REGISTRY',

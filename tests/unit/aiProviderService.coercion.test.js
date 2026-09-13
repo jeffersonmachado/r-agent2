@@ -11,7 +11,7 @@ const path = require('path');
 jest.mock('../../api/utils/config', () => ({
   get: jest.fn((key, def) => def),
 }));
-jest.mock('../../engine/aiProviderManager', () => ({
+jest.mock('../../api/services/aiProviderManager.js', () => ({
   registerAiProvider: jest.fn(),
   setTenantAiConfig: jest.fn(),
   getAiProviderForTenant: jest.fn(),

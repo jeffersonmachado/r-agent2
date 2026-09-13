@@ -42,7 +42,7 @@ const {
 } = require('../../engine/aiControlPlaneResilience');
 
 const aiControlPlaneStatus = require('../../api/services/aiControlPlaneStatus');
-const { clearAiProviderConfig } = require('../../engine/aiProviderManager');
+const { clearAiProviderConfig } = require('../../api/services/aiProviderManager.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const REPORT_PATH = path.join(ROOT, 'reports', 'ai-control-plane-resilience-report.json');
