@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-13T20:13:20.609Z",
+  "generatedAt": "2026-09-13T20:28:11.622Z",
   "runtimeClean": true,
   "workspaceClean": true,
-  "runtimeCheck": "\u001b[0;34m[runtime-clean] Inspecionando resíduos operacionais no workspace\u001b[0m\n\u001b[0;32m  ✓ limpeza concluída; resíduos removidos: 0\u001b[0m\n",
+  "runtimeCheck": "\u001b[0;34m[runtime-clean] Inspecionando resíduos operacionais no workspace\u001b[0m\n\u001b[0;32m  ✓ removido: recordings\u001b[0m\n\u001b[0;32m  ✓ removido: replays\u001b[0m\n\u001b[0;32m  ✓ limpeza concluída; resíduos removidos: 2\u001b[0m\n",
   "workspaceArtifacts": []
 }
