@@ -679,8 +679,15 @@ for old_zip in "$DIST_DIR"/r-agent2-*.zip; do
   echo "  Removido: $(basename "$old_zip")"
 done
 # Retenção do arquivo: mantém os 5 releases publicados mais recentes.
-if [[ -d "$ARCHIVE_DIR" ]]; then
-  ls -1dt "$ARCHIVE_DIR"/*/ 2>/dev/null | tail -n +6 | while read -r old_dir; do
+#
+# CLEAN-ROOM DEFECT (corrigido 2026-09-13, detectado no release #1 a partir de
+# `dist/archive/` VAZIO): `ls` sem correspondências retorna 2; sob `pipefail` +
+# `set -e` isso ABORTAVA o pipeline inteiro (exit 2) logo no primeiro passo do
+# PASS 1. O comando oficial precisa funcionar no estado PRISTINO — era
+# exatamente para isso que o clean-room existe. O glob é checado antes, e nada
+# é silenciado: quando há diretórios, a poda roda e reporta normalmente.
+if compgen -G "$ARCHIVE_DIR/*/" > /dev/null; then
+  ls -1dt "$ARCHIVE_DIR"/*/ | tail -n +6 | while read -r old_dir; do
     rm -rf "$old_dir" && echo "  Arquivo podado: $(basename "$old_dir")"
   done
 fi
