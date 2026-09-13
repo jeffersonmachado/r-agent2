@@ -13,7 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { readQaResults, getQaStats } = require('../engine/qa/qaTelemetry');
+const { readQaResults, getQaStats } = require('../api/services/qaTelemetry');
 const logger = require('../api/utils/logger');
 
 const METRICS_FILE = path.join(__dirname, 'metrics.json');

@@ -23,9 +23,33 @@ const { validateRpaPlan } = require('../../api/utils/validateRpaPlan');
 // NOTE: este gate vive hoje na pasta engine/ai, mas não deve depender da API.
 // Para logs, usamos console (compatível com .debug/.info/.warn/.error).
 const logger = console;
-const { recordValidationFailure } = require('./aiTelemetry');
-const { recordAiGateFailure } = require('../qa/qaTelemetry');
 const { validateChatbotFlowSemantic } = require('./chatbotSemanticValidator');
+
+// Telemetria é side-effect (grava arquivo em disco) e por isso NÃO é importada
+// aqui: `engine/` não pode depender de I/O nem da API. O chamador injeta o sink
+// real via `options.telemetry`; sem injeção o gate permanece silencioso e puro.
+const NOOP_TELEMETRY = Object.freeze({
+  recordValidationFailure() {},
+  recordAiGateFailure() {},
+});
+
+/**
+ * Resolve o sink de telemetria injetado, preenchendo funções ausentes com no-op.
+ * @param {Object} options - Opções de validação
+ * @returns {{recordValidationFailure: Function, recordAiGateFailure: Function}}
+ */
+function resolveTelemetry(options = {}) {
+  const sink = options && typeof options === 'object' ? options.telemetry : null;
+  if (!sink || typeof sink !== 'object') return NOOP_TELEMETRY;
+  return {
+    recordValidationFailure: typeof sink.recordValidationFailure === 'function'
+      ? sink.recordValidationFailure
+      : NOOP_TELEMETRY.recordValidationFailure,
+    recordAiGateFailure: typeof sink.recordAiGateFailure === 'function'
+      ? sink.recordAiGateFailure
+      : NOOP_TELEMETRY.recordAiGateFailure,
+  };
+}
 
 /**
  * Identifica o domínio do plano (chatbot ou rpa)
@@ -86,6 +110,9 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
     forcedDomain = opts.domain;
     strict = opts.strict !== undefined ? opts.strict : true;
   }
+
+  // Sink de telemetria injetado pelo chamador (ver NOOP_TELEMETRY acima).
+  const telemetry = resolveTelemetry(options);
 
   // 1. Validação básica
   if (!plan || typeof plan !== 'object') {
@@ -261,7 +288,7 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
       ? 'rpa.generator.prompt.md' 
       : 'chatbot.generator.prompt.md';
     
-    recordValidationFailure({
+    telemetry.recordValidationFailure({
       domain,
       errors: result.errors,
       promptUsed,
@@ -269,7 +296,7 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
     });
 
     // Registra também no sistema unificado de QA
-    recordAiGateFailure({
+    telemetry.recordAiGateFailure({
       domain,
       errors: result.errors,
       promptUsed
@@ -292,7 +319,8 @@ function validateGeneratedPlan(plan, domainOrOptions = {}, options = {}) {
 function validateGeneratedPlanOrThrow(plan, domainOrOptions = {}, options = {}) {
   let result;
   if (typeof domainOrOptions === 'string') {
-    result = validateGeneratedPlan(plan, domainOrOptions);
+    // `options` segue encaminhado para permitir injeção do sink de telemetria.
+    result = validateGeneratedPlan(plan, domainOrOptions, options);
   } else {
     result = validateGeneratedPlan(plan, { ...domainOrOptions, strict: true });
   }

@@ -27,7 +27,7 @@ describe('qaService coercion hardening', () => {
     };
 
     jest.doMock('../../qa/qaRunner', () => ({ runQa: jest.fn() }));
-    jest.doMock('../../engine/qa/qaTelemetry', () => ({
+    jest.doMock('../../api/services/qaTelemetry', () => ({
       readQaResults: jest.fn(() => {
         throw hostileError;
       }),
@@ -74,7 +74,7 @@ describe('qaService coercion hardening', () => {
         throw hostileError;
       }),
     }));
-    jest.doMock('../../engine/qa/qaTelemetry', () => ({
+    jest.doMock('../../api/services/qaTelemetry', () => ({
       readQaResults: jest.fn(() => []),
       getQaStats: jest.fn(() => ({ total: 0 })),
     }));

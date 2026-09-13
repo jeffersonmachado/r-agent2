@@ -12,7 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('../api/utils/logger');
-const { readQaResults, getQaStats } = require('../engine/qa/qaTelemetry');
+const { readQaResults, getQaStats } = require('../api/services/qaTelemetry');
 const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..');

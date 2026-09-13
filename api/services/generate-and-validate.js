@@ -1,3 +1,4 @@
+const aiTelemetrySink = require('./aiTelemetrySink');
 /**
  * Orquestrador Único - generate-and-validate
  * 
@@ -692,7 +693,7 @@ async function generateAndValidate(payload, options = {}, onProgress = null) {
           logger.info(`[Pipeline][${execution.executionId}] BLOCO 5: Validando fluxo gerado por IA no gate obrigatório`);
           const { validateGeneratedPlanOrThrow } = require('../../engine/ai/validateGeneratedPlan');
           try {
-            validateGeneratedPlanOrThrow(execution.flow, 'chatbot');
+            validateGeneratedPlanOrThrow(execution.flow, 'chatbot', { telemetry: aiTelemetrySink });
             logger.info(`[Pipeline][${execution.executionId}] BLOCO 5: Fluxo gerado por IA passou no gate de validação`, {
               flowId: execution.flow.id,
               flowName: execution.flow.name

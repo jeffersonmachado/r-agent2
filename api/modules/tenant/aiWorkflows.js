@@ -136,7 +136,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
     } catch {}
 
     try {
-      const { logFailure } = require('../../../engine/ai/aiTelemetry');
+      const { logFailure } = require('../../../services/aiTelemetry');
       logFailure({
         domain: 'tenant',
         requestId,
@@ -186,7 +186,7 @@ Retorne APENAS o JSON, sem markdown, sem explicações adicionais.`;
   } catch {}
 
   try {
-    const { logSuccess } = require('../../../engine/ai/aiTelemetry');
+    const { logSuccess } = require('../../../services/aiTelemetry');
     logSuccess({
       domain: 'tenant',
       requestId,

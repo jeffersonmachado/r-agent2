@@ -1,3 +1,4 @@
+const aiTelemetrySink = require('../../../services/aiTelemetrySink');
 /**
  * RPA Test Generation Routes Handler
  * Handles: POST /flows/:flowId/generate-rpa-test, POST /rpa-tests
@@ -142,7 +143,7 @@ async function handleRpaTestGenerationRoutes(ctx) {
       logger.info('Passo 4: Validando plano gerado pelo gate de validacao', { flowId });
       const { validateGeneratedPlanOrThrow } = require('../../../../engine/ai/validateGeneratedPlan');
       try {
-        validateGeneratedPlanOrThrow(rpaTest, 'rpa');
+        validateGeneratedPlanOrThrow(rpaTest, 'rpa', { telemetry: aiTelemetrySink });
         logger.info('Passo 4: Validacao do script concluida', {
           flowId,
           valid: true,
@@ -238,7 +239,7 @@ async function handleRpaTestGenerationRoutes(ctx) {
 
       const { validateGeneratedPlanOrThrow } = require('../../../../engine/ai/validateGeneratedPlan');
       try {
-        validateGeneratedPlanOrThrow(rpaTest, 'rpa');
+        validateGeneratedPlanOrThrow(rpaTest, 'rpa', { telemetry: aiTelemetrySink });
       } catch (validationError) {
         logger.error('Gate de validacao bloqueou plano RPA', {
           testId: rpaTest.id,

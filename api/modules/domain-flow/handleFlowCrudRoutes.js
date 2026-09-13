@@ -1,3 +1,4 @@
+const aiTelemetrySink = require('../../services/aiTelemetrySink');
 /**
  * Hander para operações CRUD de fluxos
  * GET /flows, GET /flows/:id, POST /flows, PUT /flows/:id, DELETE /flows/:id
@@ -151,7 +152,7 @@ async function handleFlowCrudRoutes(ctx) {
         };
         const { validateGeneratedPlanOrThrow } = require('../../engine/ai/validateGeneratedPlan');
         try {
-          validateGeneratedPlanOrThrow(flow, 'chatbot');
+          validateGeneratedPlanOrThrow(flow, 'chatbot', { telemetry: aiTelemetrySink });
           logger.info('[POST /flows] Fluxo gerado por IA passou no gate de validação', {
             flowId: flow.id,
             flowName: flow.name
@@ -355,7 +356,7 @@ async function handleFlowCrudRoutes(ctx) {
 
         const { validateGeneratedPlanOrThrow } = require('../../engine/ai/validateGeneratedPlan');
         try {
-          validateGeneratedPlanOrThrow(merged, 'chatbot');
+          validateGeneratedPlanOrThrow(merged, 'chatbot', { telemetry: aiTelemetrySink });
           logger.info('[PUT /flows/:id] Fluxo gerado por IA passou no gate de validação', {
             flowId: id,
             flowName: merged.name

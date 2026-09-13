@@ -11,7 +11,7 @@
  * NÃO integrar sistemas externos.
  */
 
-const { readQaResults } = require('../engine/qa/qaTelemetry');
+const { readQaResults } = require('../api/services/qaTelemetry');
 const logger = require('../api/utils/logger');
 const fs = require('fs');
 const path = require('path');

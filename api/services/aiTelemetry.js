@@ -16,7 +16,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const logger = require('../../api/utils/logger');
+const logger = require('../utils/logger');
 
 // Diretório para logs de telemetria
 // Usa cwd para ficar ancorado na raiz do repo (evita path relativo quebrado).

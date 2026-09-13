@@ -11,7 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const { runQa } = require('../../qa/qaRunner');
-const { readQaResults, getQaStats } = require('../../engine/qa/qaTelemetry');
+const { readQaResults, getQaStats } = require('./qaTelemetry');
 const qaMeshService = require('./qaMeshService');
 const logger = require('../utils/logger');
 const { ReplaySystem } = require('../../lib/replaySystem');
