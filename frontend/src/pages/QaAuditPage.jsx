@@ -6,6 +6,7 @@ import { isSuperAdmin } from '../utils/menuPermissions';
 import { fetchJson } from '../api/client';
 import logger from '../utils/logger';
 import { formatDateTime } from '../utils/dateFormatter';
+import { resolveJourneyDecision, resolveMeshDecision, decisionToneClass } from './qaAuditDecision';
 
 // ============================================================
 // Helpers
@@ -279,7 +280,7 @@ function QaWavesAuditTab() {
                       <span className="text-xs text-text-secondary">{rate}%</span>
                     </div>
                   </td>
-                  <td className="px-4 py-2"><StatusBadge value={j.decision || j.goNoGo || (failed === 0 ? 'GO' : 'NO_GO')} /></td>
+                  <td className="px-4 py-2"><StatusBadge value={resolveJourneyDecision(j)} /></td>
                 </tr>
               );
             })}
@@ -327,7 +328,7 @@ function QaMeshAuditTab() {
       infraErrors: latest.infraErrors || latest.infra_errors || 0,
       flaky: latest.flaky || 0,
       coverage: latest.executionCoverage ? `${(latest.executionCoverage * 100).toFixed(0)}%` : 'N/A',
-      decision: latest.goNoGo || latest.decision || (latest.status === 'GO' ? 'GO' : 'NO_GO'),
+      decision: resolveMeshDecision(latest),
     };
   }, [history, currentMesh]);
 
@@ -343,7 +344,7 @@ function QaMeshAuditTab() {
         <MetricCard label="Skipped" value={stats.skipped} color="text-yellow-400" />
         <MetricCard label="Infra Errors" value={stats.infraErrors} color="text-orange-400" />
         <MetricCard label="Flaky" value={stats.flaky} color="text-purple-400" />
-        <MetricCard label="Decisão" value={stats.decision} color={stats.decision === 'GO' ? 'text-green-400' : 'text-red-400'} sub={`Coverage: ${stats.coverage}`} />
+        <MetricCard label="Decisão" value={stats.decision} color={decisionToneClass(stats.decision)} sub={`Coverage: ${stats.coverage}`} />
       </div>
 
       {/* Current Mesh Status */}
