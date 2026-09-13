@@ -74,13 +74,28 @@ function isCircularRequirement(requirement) {
  * própria, apenas gaps/blockers derivados).
  */
 function isCircularOnlyDimension(dimension) {
-  const failures = ((dimension && dimension.requirements) || []).filter((requirement) => (
+  const requirements = (dimension && dimension.requirements) || [];
+  const failures = requirements.filter((requirement) => (
     requirement.mandatory !== false
     && requirement.status !== 'PASS'
     && !['NO_KNOWN_GAP', 'NO_OPEN_BLOCKER'].includes(requirement.category)
   ));
-  if (failures.length === 0) return true; // só falhas derivadas (gap/blocker dos circulares)
-  return failures.every(isCircularRequirement);
+  if (failures.length > 0) return failures.every(isCircularRequirement);
+  // Sem falha substantiva: a dimensão abaixo de 10 só se explica pelos
+  // contadores DERIVADOS (gaps/blockers abertos). Isso é o fixpoint circular
+  // documentado (os gaps nasceram das projeções que a própria dimensão avalia)
+  // — tolerável SOMENTE quando existe ao menos um contador derivado reprovando.
+  //
+  // PONTO CEGO REMOVIDO (2026-09-13): antes qualquer dimensão sem falhas era
+  // classificada como circular, inclusive uma dimensão abaixo de 10 SEM nenhum
+  // requisito reprovado — tolerância silenciosa sem demonstração (padrão
+  // "validador incapaz de falhar"). Sem contador derivado reprovando, não
+  // conseguimos demonstrar auto-referência: a classificação é conservadora
+  // (falha real).
+  return requirements.some((requirement) => (
+    requirement.status !== 'PASS'
+    && ['NO_KNOWN_GAP', 'NO_OPEN_BLOCKER'].includes(requirement.category)
+  ));
 }
 
 module.exports = {

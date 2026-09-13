@@ -36,6 +36,9 @@
 const fs = require('fs');
 const path = require('path');
 
+const { classifyBelow10Dimensions } = require('./scorecard-phase-deferral');
+const { isCircularOnlyDimension, isCircularRequirement } = require('./circular-projection');
+
 const ROOT = path.join(__dirname, '..', '..');
 const DELIVERED_PHASE_DIMS = new Set(['RAP-055', 'RAP-056']);
 const GO_DECISIONS = new Set(['GO', 'AUTONOMOUS_READY_GO', 'AUTONOMOUS_READY']);
@@ -67,7 +70,19 @@ function evaluateSealState(rootDir = ROOT) {
     return { decision: 'SEAL_NO_GO', failures, warnings };
   }
   const below10 = scorecard.dimensions.filter((d) => Number(d.score) < 10).map((d) => d.id);
-  const nonDeliveredBelow10 = below10.filter((id) => !DELIVERED_PHASE_DIMS.has(id));
+  // Classificação de fase CANÔNICA (a mesma do scorecard persistido): uma
+  // dimensão abaixo de 10 que é PENDING_PHASE (pacote ainda não construído),
+  // DELIVERED_PHASE ou projeção CIRCULAR não é falha real. Antes o gate mantinha
+  // a própria lista e tratava RAP-052/054 como falha real mesmo com
+  // package-validation DEFERRED — era isso que abortava a fase `prepare` do
+  // `release:seal` com dist/ zerado.
+  const below10Assessment = classifyBelow10Dimensions(scorecard.dimensions, {
+    deliveredPhaseDimensions: DELIVERED_PHASE_DIMS,
+    isCircularOnly: isCircularOnlyDimension,
+    isCircularRequirement,
+  });
+  const realFailures = below10Assessment.realFailures.map((entry) => entry.id);
+  const nonDeliveredBelow10 = realFailures;
 
   const governance = read('governance/final-governance-report.json');
   const governanceDecision = governance?.finalDecision || null;
@@ -92,6 +107,14 @@ function evaluateSealState(rootDir = ROOT) {
   const pkgValidation = read('governance/package-validation-report.json');
   if (!pkgValidation?.runId || !pkgValidation?.sourceFingerprint) {
     failures.push('ARTIFACT_RUN_ID_MISSING — package-validation-report.json sem lineage no selo');
+  } else if (
+    pkgValidation.deferred === true
+    || String(pkgValidation.status || '').toUpperCase() === 'DEFERRED'
+  ) {
+    // PENDING_PHASE: o pacote ainda NÃO existe. DEFERRED significa "não
+    // avaliável nesta fase" — nunca "reprovado". É o estado honesto do
+    // `release:seal` na fase prepare (dist/ sem nenhum ZIP) e do PRE_PACKAGE.
+    warnings.push(`PACKAGE_VALIDATION_PENDING_PHASE — ${pkgValidation.status || 'DEFERRED'} (candidato ainda não construído; não é falha de conteúdo)`);
   } else if (pkgValidation.ok !== true) {
     failures.push(`PACKAGE_VALIDATION_NOT_PASS — ok=${pkgValidation.ok} (o pacote provisional precisa validar antes de selar)`);
   }
@@ -120,10 +143,12 @@ function evaluateSealState(rootDir = ROOT) {
   }
 
   // SEAL_PENDING: fase DELIVERED legítima — hard gates verdes, decisões no
-  // máximo DEFERRED e below10 ⊆ {RAP-055,RAP-056}. O candidato é selado com a
-  // decisão DEFERRED verdadeira de ponta a ponta (nunca envelope GO); o
-  // release final exige o ciclo pós-entrega (verify:delivered-release).
-  if (below10.length > 0 && below10.every((id) => DELIVERED_PHASE_DIMS.has(id))) {
+  // máximo DEFERRED e NENHUMA falha real abaixo de 10 (as pendências são de
+  // fase: pacote não construído, entregue não mensurável ou projeção circular).
+  // O candidato é selado com a decisão DEFERRED verdadeira de ponta a ponta
+  // (nunca envelope GO); o release final exige o ciclo pós-entrega
+  // (verify:delivered-release).
+  if (below10.length > 0 && realFailures.length === 0) {
     warnings.push(`DELIVERED_PENDING — below10=[${below10.join(',')}] decisions=[proof=${proofDecision}, readiness=${readinessDecision}, governance=${governanceDecision}] (fase DELIVERED legítima; candidato será selado com decisão DEFERRED verdadeira)`);
     return { decision: 'SEAL_PENDING', failures, warnings };
   }

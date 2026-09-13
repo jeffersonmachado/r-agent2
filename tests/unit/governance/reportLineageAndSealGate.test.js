@@ -119,6 +119,37 @@ describe('seal-time-gate — convergência antes de selar o payload', () => {
     expect(result.failures.join(' ')).toContain('RAP-052');
   });
 
+  test('SEAL_PENDING: RAP-052 abaixo de 10 cuja ÚNICA falha é package-validation DEFERRED (candidato ainda não construído)', () => {
+    buildConvergedRoot(dir, {
+      scorecard: {
+        dimensions: Array.from({ length: 78 }, (_, i) => ({
+          id: `RAP-${String(i + 1).padStart(3, '0')}`,
+          score: i === 51 ? 6 : 10,
+          requirements: i === 51
+            ? [{
+              id: 'runtime-validated',
+              category: 'RUNTIME_VALIDATED',
+              status: 'FAIL',
+              code: 'ARTIFACT_DID_NOT_PASS',
+              mandatory: true,
+              reason: 'Artifact não aprovou: governance/package-validation-report.json (DEFERRED)',
+              evidence: [{ path: 'governance/package-validation-report.json', code: 'ARTIFACT_DID_NOT_PASS' }],
+            }]
+            : [],
+        })),
+        blockers: [], gaps: [],
+      },
+      governance: { finalDecision: 'PASS_WITH_DEFERRED_PACKAGE_GATE' },
+      proof: { finalDecision: 'PASS_WITH_DEFERRED_PACKAGE_GATE' },
+      readiness: { finalDecision: 'PASS_WITH_DEFERRED_PACKAGE_GATE' },
+      pkgVal: { ok: false, deferred: true, status: 'DEFERRED', runId: RUN_ID, sourceFingerprint: FP },
+    });
+    const result = evaluateSealState(dir);
+    expect(result.decision).toBe('SEAL_PENDING');
+    expect(result.warnings.join(' ')).toContain('PACKAGE_VALIDATION_PENDING_PHASE');
+    expect(result.warnings.join(' ')).toContain('DELIVERED_PENDING');
+  });
+
   test('SEAL_NO_GO: package-validation sem lineage (root cause RAP-052/054)', () => {
     buildConvergedRoot(dir, { pkgVal: { ok: true } });
     const result = evaluateSealState(dir);
