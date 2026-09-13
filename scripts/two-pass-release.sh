@@ -1281,14 +1281,21 @@ node_with_workspace_env "$PROJECT_ROOT/scripts/governance/write-release-identity
   || fail "não foi possível materializar a identidade do payload entregue"
 ok "identidade do entregue vinculada ao candidato ($H_CANDIDATE→$PAYLOAD_SHA)"
 
-# ── AUTHORITY DE FASE: DELIVERED ────────────────────────────────
-# O payload entregue existe e a identidade dele foi gravada em sidecar EXTERNO
-# (sem paradoxo de auto-hash). A fase avança porque o ARTEFATO existe de fato —
-# nunca por declaração.
-phase advance --to DELIVERED
-node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-release-artifact-identity.js" \
-  --kind delivered --phase DELIVERED \
-  || fail "identidade do payload ENTREGUE inválida — lineage candidato→payload não confere"
+# ── AUTHORITY DE FASE: DELIVERED (somente no passe FINAL) ───────────────
+#
+# O ciclo oficial tem DOIS passes: o primeiro produz o CANDIDATO (decisão
+# DEFERRED verdadeira, `SEAL_PENDING`) e o segundo produz o release SELADO
+# (`SEAL_GO`) com o pacote já validado. A fase DELIVERED só existe no passe
+# final: exigir o artefato entregue de um candidato seria declarar entrega que
+# ainda não aconteceu — e a transição seria (corretamente) recusada.
+if [[ "$SEAL_DECISION" == "SEAL_GO" ]]; then
+  phase advance --to DELIVERED
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-release-artifact-identity.js" \
+    --kind delivered --phase DELIVERED \
+    || fail "identidade do payload ENTREGUE inválida — lineage candidato→payload não confere"
+else
+  ok "fase DELIVERED não alcançada (decisão=${SEAL_DECISION}) — passe de CANDIDATO: gates de entrega seguem PENDING_PHASE"
+fi
 
 step "Criando envelope final com payload + governança externa..."
 ENVELOPE_PATH="$RELEASE_DIR/$ENVELOPE_ZIP_NAME"
