@@ -106,12 +106,17 @@ async function main() {
     console.error(created.stderr || '');
     throw new Error(`create_governed_run_failed: exit=${created.status}`);
   }
-  const lastLine = String(created.stdout || '').trim().split('\n').pop();
-  const parsed = JSON.parse(lastLine);
+  // O run recém-criado é lido do ARTEFATO canônico (governance/.current-run.json),
+  // nunca do stdout do filho — o filho também emite logs de conexão no stdout e
+  // um parse ingênuo da última linha falha (defeito real observado em 2026-09-13).
+  const fresh = readRunContext();
+  if (!fresh || !fresh.runId || fresh.sourceFingerprint !== currentFingerprint) {
+    throw new Error('create_governed_run_output_unparsable: governance/.current-run.json não reflete o source atual');
+  }
   console.log(JSON.stringify({
     decision: 'CREATE',
-    runId: parsed.runId,
-    sourceFingerprint: parsed.sourceFingerprint,
+    runId: fresh.runId,
+    sourceFingerprint: fresh.sourceFingerprint,
     source: 'created',
     reason: decision.reason,
   }));

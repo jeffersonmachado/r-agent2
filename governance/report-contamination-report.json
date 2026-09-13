@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-12T19:08:48.014Z",
-  "runId": "rap-governed-20260913111030691-17755d14",
-  "sourceFingerprint": "f3ac49503b5cc2113cec153d4c83dc6818c1e6292d5eddec1a1a7c4ba4b79df8",
+  "runId": "rap-governed-20260913111234064-175793a2",
+  "sourceFingerprint": "e9f18ffa248834702ef44d939186fe70f284e64cb93ebfa81e39cf82db9bbebb",
   "artifactType": "report-contamination-report",
   "artifactVersion": "1.0.0",
   "engine": "report-contamination-cleaner/v3",
