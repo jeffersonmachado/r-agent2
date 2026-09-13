@@ -1,9 +1,24 @@
 {
-  "generatedAt": "2026-09-13T02:57:38.944Z",
-  "ok": false,
-  "zipPath": null,
-  "zipName": null,
+  "generatedAt": "2026-09-13T03:45:41.232Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260913-003533.zip",
+  "zipName": "r-agent2-20260913-003533.zip",
+  "zipSha256": "06399d1b30a8108edbc31dbd35755f8849a79e49366c576fbc61dde1956a21ec",
+  "payloadCentric": false,
+  "envelopePath": null,
+  "selectionMode": "audited",
+  "candidateFallbackUsed": false,
+  "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260913-003533.manifest.json",
+  "manifestAudit": "passed",
+  "auditSatisfied": true,
+  "selfContainmentCheck": {
+    "passed": true,
+    "missing": []
+  },
   "requiredEntries": [
+    "governance/final-proof-report.json",
+    "governance/evidence-manifest.json",
+    "governance/blocker-engine.js",
+    "governance/final-consistency-report.json",
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
     "qa/l02-ura-publish-rollback-evidence.json",
@@ -29,15 +44,22 @@
     "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
+  "entryCount": 6491,
   "missingEntries": [],
-  "error": "artifact_missing:none_found_in_dist",
-  "deferred": true,
-  "phase": "PRE_PACKAGE",
-  "status": "DEFERRED",
+  "missingEntryCodes": [],
+  "ok": true,
+  "error": null,
+  "packageBinding": {
+    "boundTo": "r-agent2-20260913-003533.zip",
+    "sha256": "06399d1b30a8108edbc31dbd35755f8849a79e49366c576fbc61dde1956a21ec",
+    "immutable": true,
+    "selfProving": true,
+    "offlineAuditable": true
+  },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260912190751544-129cef1e",
-  "sourceFingerprint": "1d0e2b817dc4a847e78a43641a5918f9aadf9b862239909ad05c05bb72c6fe9b",
-  "gitCommit": "20a3920b52018522cf657b261eea0a387c20bc35",
-  "gitTree": "f3959e4dba9fd394ec3fe20d7bce21a0243093f1"
+  "runId": "rap-governed-20260913030242689-9fc8c702",
+  "sourceFingerprint": "fd95c8800a632ff8fd88ae47f4a9024e4f5646a0b460b0e7bfd6f4121b3c8235",
+  "gitCommit": "a27997ce612fa9bf1d75c08192f432756ffb6a77",
+  "gitTree": "6ea336b7acfbbae16e94a25961848c9e756ef974"
 }
