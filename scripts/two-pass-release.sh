@@ -633,12 +633,66 @@ pass "PASS 1 — PACOTE PROVISIONAL"
 # que findCurrentZip() e findLatestReleaseArtifact() encontrem o ZIP errado
 step "Removendo ZIPs e manifests anteriores de dist/ e dist/release/..."
 mkdir -p "$DIST_DIR"
-for old_zip in "$DIST_DIR"/r-agent2-*.zip "$DIST_DIR/release"/r-agent2-*.zip; do
+# R31/R33 — RETENÇÃO: o release oficialmente publicado NÃO é destruído por um
+# run novo. Ele sai do caminho do run atual (para não ser confundido com o
+# artefato corrente) e vai para dist/archive/<release>/ com retenção própria.
+ARCHIVE_DIR="$DIST_DIR/archive"
+for old_zip in "$DIST_DIR/release"/r-agent2-*.zip; do
   [[ -f "$old_zip" ]] || continue
-  rm -f "$old_zip" "${old_zip%.zip}.manifest.json" "${old_zip%.zip}.approval.json"
+  base="$(basename "${old_zip%.zip}")"
+  mkdir -p "$ARCHIVE_DIR/$base"
+  for sidecar in "$old_zip" "${old_zip%.zip}.manifest.json" "${old_zip%.zip}.delivered.identity.json" "${old_zip%.zip}.approval.json"; do
+    if [[ -f "$sidecar" ]]; then mv "$sidecar" "$ARCHIVE_DIR/$base/"; fi
+  done
+  echo "  Arquivado (release publicado preservado): $base"
+done
+for old_zip in "$DIST_DIR"/r-agent2-*.zip; do
+  [[ -f "$old_zip" ]] || continue
+  rm -f "$old_zip" "${old_zip%.zip}.manifest.json" "${old_zip%.zip}.approval.json" "${old_zip%.zip}.delivered.identity.json"
   echo "  Removido: $(basename "$old_zip")"
 done
-ok "dist/ limpo de releases anteriores"
+# Retenção do arquivo: mantém os 5 releases publicados mais recentes.
+if [[ -d "$ARCHIVE_DIR" ]]; then
+  ls -1dt "$ARCHIVE_DIR"/*/ 2>/dev/null | tail -n +6 | while read -r old_dir; do
+    rm -rf "$old_dir" && echo "  Arquivo podado: $(basename "$old_dir")"
+  done
+fi
+# R4 — namespace do CANDIDATO é por run: limpo a cada execução.
+rm -rf "$DIST_DIR/candidate"
+mkdir -p "$DIST_DIR/candidate"
+ok "dist/ limpo (publicados preservados em dist/archive/, candidato zerado)"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PRE_PACKAGE — PROVISIONAMENTO DO RUN GOVERNADO PARA O SOURCE ATUAL
+# ═══════════════════════════════════════════════════════════════════════════
+# Deadlock real (2026-09-13, reproduzido a partir de dist/release vazio):
+# sem um governance run CONGELADO para o source atual, o proof é STALE e o
+# `zip:release` abortava já em PRE_PACKAGE com `platform-readiness NO_GO` +
+# gap `gap-proof-stale-fingerprints`. A cura existia, mas era uma sequência
+# manual secreta (create-governed-run -> converge -> commit) — um comando
+# oficial que só funciona depois de passos não documentados não é oficial.
+# Aqui o pipeline provisiona o próprio run sobre o source JÁ CONGELADO no
+# snapshot (GIT_COMMIT/GIT_TREE capturados acima) e converge a governança.
+if [[ "${RAP_SKIP_PRE_PACKAGE_PROVISION:-}" == "1" ]]; then
+  warn "RAP_SKIP_PRE_PACKAGE_PROVISION=1 — provisionamento PRE_PACKAGE ignorado (release NÃO reproduzível)"
+else
+  step "PRE_PACKAGE: garantindo governance run do source atual..."
+  node_with_workspace_env "$PROJECT_ROOT/scripts/governance/ensure-governed-run.js" \
+    || fail "não foi possível garantir um governance run para o source atual (persistência é autoridade)"
+
+  step "PRE_PACKAGE: package-validation honesta (candidato ainda não existe)..."
+  # Sem ZIP em dist/ o validator produz DEFERRED/PRE_PACKAGE — nunca FAIL de
+  # conteúdo, nunca PASS. Exit 1 é ESPERADO nesta fase.
+  node_with_workspace_env "$PROJECT_ROOT/governance/package-validator.js" >/dev/null 2>&1 || true
+
+  step "PRE_PACKAGE: convergindo governança para o run atual..."
+  CONVERGE_LOG="${TMPDIR:-/tmp}/r-agent2-converge-${RELEASE_NAME}.log"
+  if bash "$PROJECT_ROOT/scripts/governance/converge-governance.sh" > "$CONVERGE_LOG" 2>&1; then
+    ok "convergência PRE_PACKAGE concluída (log: $CONVERGE_LOG)"
+  else
+    warn "convergência reportou decisão não-GO em PRE_PACKAGE (log: $CONVERGE_LOG) — avaliada pelos gates abaixo"
+  fi
+fi
 
 # Frontend (opcional)
 if [[ "$SKIP_FRONTEND" == true ]]; then
@@ -712,6 +766,23 @@ cat > "$DIST_DIR/${RELEASE_NAME}.manifest.json" <<EOF
 }
 EOF
 ok "Manifest provisional gerado"
+
+# ── R4/R5 — CANDIDATO COMO ARTEFATO DE PRIMEIRA CLASSE ──────────────────────
+# O candidato é materializado em dist/candidate/ com identidade própria
+# (artifactType=CANDIDATE). Ele NUNCA é rotulado DELIVERED/PUBLISHED/FINAL, e
+# seus bytes não são reescritos depois (R23) — o payload final é um artefato
+# DERIVADO que registra parentCandidateHash.
+CANDIDATE_DIR="$DIST_DIR/candidate"
+CANDIDATE_ZIP="$CANDIDATE_DIR/${RELEASE_NAME}.candidate.zip"
+mkdir -p "$CANDIDATE_DIR"
+cp "$PROVISIONAL_ZIP" "$CANDIDATE_ZIP"
+H_CANDIDATE="$(sha256sum "$CANDIDATE_ZIP" | awk '{print $1}')"
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/write-release-identity.js" \
+  --kind candidate --release "$RELEASE_NAME" --candidate-hash "$H_CANDIDATE" \
+  --commit "$GIT_COMMIT" --phase CANDIDATE_BUILT \
+  || fail "não foi possível materializar a identidade do candidato"
+ok "Candidato materializado: dist/candidate/${RELEASE_NAME}.candidate.zip"
+ok "H_candidate    : $H_CANDIDATE"
 
 # ══════════════════════════════════════════════════════════════════════════════
 pass "PASS 2 — VINCULAÇÃO DE GOVERNANÇA AO PROVISIONAL (H_provisional)"
@@ -1146,6 +1217,16 @@ materialize_payload_governance "$PAYLOAD_ZIP_NAME" "$PAYLOAD_SHA" "$MANIFEST_PAT
   "$RELEASE_TIMESTAMP" "$GOV_DIR" "$SIG_DIR" "$VER_DIR"
 ok "Governança e assinaturas vinculadas ao payload"
 
+# ── R6 — IDENTIDADE DO PAYLOAD FINAL (DELIVERED_PAYLOAD) ────────────────────
+# O hash do payload vive num sidecar EXTERNO (paradoxo do auto-hash evitado):
+# nenhum arquivo precisa conter o hash dos próprios bytes que ele cobre.
+step "Identidade e lineage do payload entregue (candidato -> payload)..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/write-release-identity.js" \
+  --kind delivered --release "$RELEASE_NAME" \
+  --candidate-hash "$H_CANDIDATE" --payload-hash "$PAYLOAD_SHA" \
+  || fail "não foi possível materializar a identidade do payload entregue"
+ok "identidade do entregue vinculada ao candidato ($H_CANDIDATE→$PAYLOAD_SHA)"
+
 step "Criando envelope final com payload + governança externa..."
 ENVELOPE_PATH="$RELEASE_DIR/$ENVELOPE_ZIP_NAME"
 # HYGIENE GATE (STALE_VERIFIER_RESULT): verify-result.json é o recibo que o
@@ -1183,6 +1264,23 @@ step "GATE release-hygiene: inspecionando envelope físico final..."
 node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-release-hygiene.js" \
   && ok "release-hygiene PASS" \
   || fail "release-hygiene FAIL — envelope com artefato stale/estrangeiro"
+
+# ── GATE RELEASE-DAG: nenhum ciclo de dependência antes de concluir ────────
+step "GATE release-dag: detectando ciclos de dependência e violações de fase..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/validate-release-dag.js" \
+  && ok "release-dag PASS (acíclico e phase-aware)" \
+  || fail "RELEASE_DEPENDENCY_CYCLE/PHASE_ORDER — DAG de release inválido"
+
+# ── GATE RELEASE-ARTIFACT-IDENTITY: bytes reais + lineage candidato→payload ─
+step "GATE release-artifact-identity: candidato -> payload entregue..."
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/write-release-identity.js" \
+  --kind candidate --release "$RELEASE_NAME" --candidate-hash "$H_CANDIDATE" \
+  --commit "$GIT_COMMIT" --phase CANDIDATE_VALIDATED >/dev/null \
+  && ok "Candidato re-identificado como CANDIDATE_VALIDATED (bytes do ZIP inalterados)"
+node_with_workspace_env "$PROJECT_ROOT/scripts/governance/verify-release-artifact-identity.js" \
+  --phase DELIVERED --release "$RELEASE_NAME" \
+  && ok "release-artifact-identity PASS (payload verificado pelos bytes exatos)" \
+  || fail "release-artifact-identity FAIL — identidade/lineage do payload entregue inválida"
 
 # Verificar estrutura resultante
 # Na fase DELIVERED (SEAL_PENDING) o candidato carrega a decisão DEFERRED

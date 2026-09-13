@@ -46,5 +46,9 @@
   "details": [
     "RAG_INTERNAL_TOKEN ausente: não é possível executar probes autenticados"
   ],
-  "status": "FAIL"
+  "status": "FAIL",
+  "runId": "rap-governed-20260913111030691-17755d14",
+  "sourceFingerprint": "f3ac49503b5cc2113cec153d4c83dc6818c1e6292d5eddec1a1a7c4ba4b79df8",
+  "artifactType": "rag-domain-segregation-report",
+  "artifactVersion": "1.0.0"
 }
