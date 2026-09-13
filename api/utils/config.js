@@ -27,13 +27,13 @@ function isTestRuntime() {
 function logConfigInfo(message) {
   if (isTestRuntime()) return;
   // eslint-disable-next-line no-console
-  logger.info(message);
+  bootstrapLog.info(message);
 }
 
 function logConfigWarn(message) {
   if (isTestRuntime()) return;
   // eslint-disable-next-line no-console
-  logger.warn(message);
+  bootstrapLog.warn(message);
 }
 
 /**
@@ -171,7 +171,7 @@ function loadConfig() {
     }
   } catch (err) {
     // eslint-disable-next-line no-console
-    logger.error('[Config] Erro ao carregar configuração:', err.message);
+    bootstrapLog.error('[Config] Erro ao carregar configuração:', err.message);
     cachedConfig = {};
   }
 
@@ -297,7 +297,7 @@ function getAll() {
     
     // Garante que config é um objeto válido
     if (!config || typeof config !== 'object' || Array.isArray(config)) {
-      logger.warn('[Config] Configuração inválida, retornando objeto vazio');
+      bootstrapLog.warn('[Config] Configuração inválida, retornando objeto vazio');
       return {};
     }
     
@@ -305,7 +305,7 @@ function getAll() {
     return sanitizeConfig(config);
   } catch (err) {
     // Erro geral ao obter configuração
-    logger.error('[Config] Erro ao obter configuração:', err.message, err.stack);
+    bootstrapLog.error('[Config] Erro ao obter configuração:', err.message, err.stack);
     return {};
   }
 }
