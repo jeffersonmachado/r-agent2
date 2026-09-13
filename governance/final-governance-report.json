@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-13T17:38:17.783Z",
+  "generatedAt": "2026-09-13T17:48:08.184Z",
   "engine": "final-governance-engine/v1",
   "artifactType": "final-governance-report",
   "artifactVersion": "2.0.0",
@@ -25,7 +25,7 @@
         "runId": "rap-governed-20260913172044563-5de1148b",
         "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
         "startedAt": "2026-09-13T17:20:44.776Z",
-        "generatedAt": "2026-09-13T17:38:14.466Z",
+        "generatedAt": "2026-09-13T17:48:04.502Z",
         "status": "RUNNING",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
@@ -33,7 +33,7 @@
         "policyVersion": "1.0.3",
         "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
         "lastGovernedStage": "final-governance",
-        "lastSourceVerificationAt": "2026-09-13T17:38:14.466Z",
+        "lastSourceVerificationAt": "2026-09-13T17:48:04.502Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -84,6 +84,36 @@
             "stage": "final-governance",
             "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
             "verifiedAt": "2026-09-13T17:38:14.466Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:45:19.452Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:45:52.869Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:45:53.321Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:46:50.100Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:48:04.066Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:48:04.502Z"
           }
         ]
       }
@@ -195,9 +225,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260913-143132.payload.zip",
-      "computed": "48acfecb5a3b368fa36b6dc7…",
-      "recorded": "48acfecb5a3b368fa36b6dc7…",
+      "zipName": "r-agent2-20260913-144220.payload.zip",
+      "computed": "2d9a96989e09f1a23e784d75…",
+      "recorded": "2d9a96989e09f1a23e784d75…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },

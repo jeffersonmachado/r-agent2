@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-13T17:38:14.084Z",
+  "generatedAt": "2026-09-13T17:48:04.084Z",
   "engine": "final-consistency-gate/v1",
   "artifactType": "final-consistency-report",
   "artifactVersion": "2.0.0",
@@ -28,7 +28,7 @@
         "runId": "rap-governed-20260913172044563-5de1148b",
         "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
         "startedAt": "2026-09-13T17:20:44.776Z",
-        "generatedAt": "2026-09-13T17:38:14.070Z",
+        "generatedAt": "2026-09-13T17:48:04.066Z",
         "status": "RUNNING",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
@@ -36,7 +36,7 @@
         "policyVersion": "1.0.3",
         "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
         "lastGovernedStage": "final-consistency",
-        "lastSourceVerificationAt": "2026-09-13T17:38:14.070Z",
+        "lastSourceVerificationAt": "2026-09-13T17:48:04.066Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -82,6 +82,36 @@
             "stage": "final-consistency",
             "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
             "verifiedAt": "2026-09-13T17:38:14.070Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:38:14.466Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:45:19.452Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:45:52.869Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:45:53.321Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:46:50.100Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "9759275c470b5070e0985c08241090824df0a182d082cfac330a3765a0b698b8",
+            "verifiedAt": "2026-09-13T17:48:04.066Z"
           }
         ]
       }
