@@ -137,7 +137,12 @@ step "5. Verificando dist/ raiz sem artefatos inesperados..."
 # (scripts/release-package.sh) escreve o ZIP auditado + manifesto sidecar em
 # dist/ por design — são artefatos aprovados, não sujeira. O fluxo de envelope
 # governado (two-pass-release) vive em dist/release/ e é verificado no passo 6.
-UNEXPECTED="$(ls "$DIST_DIR/" 2>/dev/null | grep -Ev '^(release|governance|signatures|verifier|ci-logs)$' | grep -Ev '^r-agent2-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.(zip|manifest\.json)$' || true)"
+#
+# `candidate/` e `archive/` são namespaces GOVERNADOS da release state machine
+# (governance/release-state-machine.js): candidate/ materializa o candidato de
+# primeira classe (artifactType=CANDIDATE) e archive/ preserva o release
+# publicado anterior (retenção independente do run corrente). Não são sujeira.
+UNEXPECTED="$(ls "$DIST_DIR/" 2>/dev/null | grep -Ev '^(release|governance|signatures|verifier|ci-logs|candidate|archive)$' | grep -Ev '^r-agent2-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.(zip|manifest\.json)$' || true)"
 if [[ -n "$UNEXPECTED" ]]; then
   fail "Arquivos/dirs inesperados na raiz de dist/: $(echo "$UNEXPECTED" | tr '\n' ' ')"
 else
