@@ -137,8 +137,8 @@
   "governanceSignature": "hmac-sha256:ad9f92ac49648ee31102f628d5e185f9b24dd816f92f3866ffb2b9c9f36d3426",
   "summary": "Todos os 9 replays têm integridade verificada.",
   "reboundAt": "2026-09-13T12:49:33.333Z",
-  "runId": "rap-governed-20260913123432552-cba17795",
-  "sourceFingerprint": "fe3358b107b501b9e6b4ee1ddde05e9579c7a4aa0ed8b83a3b05096b08fd236a",
+  "runId": "rap-governed-20260913142636075-0ca0cd07",
+  "sourceFingerprint": "c7c7ee993bf7e7bddd809e71520eee44d3ce7bac3a2247f2c658ff119e644f38",
   "artifactType": "replay-integrity-report",
   "artifactVersion": "1.0.0"
 }
