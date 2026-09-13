@@ -113,6 +113,11 @@ async function main() {
       'reports/release-dag-report.json',
       'governance/release-artifact-identity-report.json',
       'reports/release-artifact-identity-report.json',
+      // Auditoria estática de montagem de routers: derivada do código do run
+      // corrente. Sem o stamp, o runId commitado vira ESTRANGEIRO no run novo e
+      // o contamination cleaner (corretamente) reprova o run inteiro em RAP-064.
+      'governance/route-mount-report.json',
+      'reports/route-mount-report.json',
       // NÃO stampar delivered-release-verification-report.json: ele é produzido
       // EXCLUSIVAMENTE por verify-delivered-release.js em fase DELIVERED, com a
       // decisão real. Stampar aqui re-injetaria lineage sobre conteúdo stale e
