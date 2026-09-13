@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { fetchJson } from '../api/client';
 
-function Badge({ value }) {
+function Badge({ value, neutral = false }) {
+  if (neutral) {
+    return (
+      <span className="inline-flex rounded px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600">
+        —
+      </span>
+    );
+  }
   const go = String(value || '').toUpperCase() === 'GO';
   return (
     <span className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${go ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -43,6 +50,13 @@ export function QaWavesEnterpriseGovernancePage() {
   const blockers = report?.activeBlockers || [];
   const failedProofs = report?.failedProofs || [];
   const deployAllowed = report?.deploymentSafety?.deployAllowed === true;
+  // Sem relatório carregado NÃO existe veredito. Renderizar "BLOCKED"/"INVALID"
+  // durante o carregamento (ou após erro) apresenta falha de governança que não
+  // foi medida — num console de governança isso é indistinguível de falha real.
+  const hasReport = report !== null && typeof report === 'object';
+  const pendingLabel = '—';
+  const tileValue = (value) => (hasReport ? value : pendingLabel);
+  const tileGood = (value) => (hasReport ? value : undefined);
   const globalDecision = report?.globalGoNoGo || report?.governanceStatus || 'N/A';
   const runtimeGateStatus = String(report?.runtimeGovernance?.gateStatus || '').toLowerCase();
   const runtimeGovernanceGood = runtimeGateStatus === 'go' || runtimeGateStatus === 'go_degraded';
@@ -65,18 +79,18 @@ export function QaWavesEnterpriseGovernancePage() {
       {error ? <div className="border border-red-300 bg-red-50 text-red-700 rounded-md p-3 text-sm">{error}</div> : null}
 
       <section className="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <Tile label="Global GO/NO_GO" value={<Badge value={globalDecision} />} good={String(globalDecision).startsWith('GO')} />
-        <Tile label="Operational Confidence" value={`${report?.operationalConfidence ?? 0}%`} good={(report?.operationalConfidence || 0) >= (report?.threshold || 95)} />
-        <Tile label="Runtime Governance" value={runtimeGovernanceLabel} good={runtimeGovernanceGood} />
-        <Tile label="Release Readiness" value={report?.releaseReadiness?.go ? 'READY' : 'BLOCKED'} good={report?.releaseReadiness?.go === true} />
-        <Tile label="Deployment Safety" value={deployAllowed ? 'ALLOWED' : 'BLOCKED'} good={deployAllowed} />
+        <Tile label="Global GO/NO_GO" value={<Badge value={globalDecision} neutral={!hasReport} />} good={tileGood(String(globalDecision).startsWith('GO'))} />
+        <Tile label="Operational Confidence" value={tileValue(`${report?.operationalConfidence ?? 0}%`)} good={tileGood((report?.operationalConfidence || 0) >= (report?.threshold || 95))} />
+        <Tile label="Runtime Governance" value={tileValue(runtimeGovernanceLabel)} good={tileGood(runtimeGovernanceGood)} />
+        <Tile label="Release Readiness" value={tileValue(report?.releaseReadiness?.go ? 'READY' : 'BLOCKED')} good={tileGood(report?.releaseReadiness?.go === true)} />
+        <Tile label="Deployment Safety" value={tileValue(deployAllowed ? 'ALLOWED' : 'BLOCKED')} good={tileGood(deployAllowed)} />
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Tile label="Replay Integrity" value={report?.replayIntegrity?.valid ? 'VALID' : 'INVALID'} good={report?.replayIntegrity?.valid === true} />
-        <Tile label="Governance Signatures" value={report?.governanceSignature?.valid ? 'VALID' : 'INVALID'} good={report?.governanceSignature?.valid === true} />
-        <Tile label="Failed Proofs" value={failedProofs.length} good={failedProofs.length === 0} />
-        <Tile label="Runtime Risk" value={report?.riskLevel || 'N/A'} good={report?.riskLevel === 'LOW'} />
+        <Tile label="Replay Integrity" value={tileValue(report?.replayIntegrity?.valid ? 'VALID' : 'INVALID')} good={tileGood(report?.replayIntegrity?.valid === true)} />
+        <Tile label="Governance Signatures" value={tileValue(report?.governanceSignature?.valid ? 'VALID' : 'INVALID')} good={tileGood(report?.governanceSignature?.valid === true)} />
+        <Tile label="Failed Proofs" value={tileValue(failedProofs.length)} good={tileGood(failedProofs.length === 0)} />
+        <Tile label="Runtime Risk" value={tileValue(report?.riskLevel || 'N/A')} good={tileGood(report?.riskLevel === 'LOW')} />
       </section>
 
       <section className="bg-bg-elevated border border-border rounded-lg p-4">
@@ -84,15 +98,15 @@ export function QaWavesEnterpriseGovernancePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
           <div>
             <div className="text-text-secondary">Last smoke</div>
-            <div className="font-medium">{report?.lastSmokeExecution?.generatedAt || 'N/A'}</div>
+            <div className="font-medium">{tileValue(report?.lastSmokeExecution?.generatedAt || 'N/A')}</div>
           </div>
           <div>
             <div className="text-text-secondary">Continuous validation</div>
-            <div className="font-medium">{report?.continuousValidationStatus?.status || 'N/A'}</div>
+            <div className="font-medium">{tileValue(report?.continuousValidationStatus?.status || 'N/A')}</div>
           </div>
           <div>
             <div className="text-text-secondary">Tenant</div>
-            <div className="font-medium break-all">{report?.lastSmokeExecution?.tenantId || 'N/A'}</div>
+            <div className="font-medium break-all">{tileValue(report?.lastSmokeExecution?.tenantId || 'N/A')}</div>
           </div>
         </div>
       </section>

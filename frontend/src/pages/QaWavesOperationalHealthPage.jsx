@@ -53,6 +53,13 @@ export function QaWavesOperationalHealthPage() {
   }, [load]);
 
   const blockers = useMemo(() => report?.governance?.blockers || [], [report]);
+  // Sem relatório carregado NÃO existe veredito. Este painel renderizava
+  // "OK"/"Clean"/"0" em VERDE e "NO_GO"/"N/A" em vermelho a partir de um
+  // relatório nulo — saúde de governança que não foi medida.
+  const hasReport = report !== null && typeof report === 'object';
+  const pendingLabel = '—';
+  const metricValue = (value) => (hasReport ? value : pendingLabel);
+  const metricTone = (tone) => (hasReport ? tone : 'neutral');
   const goNoGo = report?.summary?.goNoGo || report?.governance?.goNoGo || 'N/A';
   const confidence = Math.max(0, Math.min(100, Number(report?.summary?.operationalConfidenceScore || report?.confidenceScore || 0)));
   const mutationMismatches = countBlockers(blockers, 'mutation');
@@ -74,17 +81,17 @@ export function QaWavesOperationalHealthPage() {
       {error ? <div className="border border-red-300 bg-red-50 text-red-700 rounded-md p-3 text-sm">{error}</div> : null}
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Metric label="GO/NO_GO" value={<StatusBadge value={goNoGo} />} tone={goNoGo === 'GO' ? 'good' : 'bad'} />
-        <Metric label="Replay Integrity" value={failedProofs === 0 ? 'OK' : 'NO_GO'} tone={failedProofs === 0 ? 'good' : 'bad'} />
-        <Metric label="Governance Status" value={report?.governance?.goNoGo || goNoGo} tone={goNoGo === 'GO' ? 'good' : 'bad'} />
-        <Metric label="Confidence" value={`${confidence}%`} tone={confidence >= 90 ? 'good' : 'neutral'} />
+        <Metric label="GO/NO_GO" value={hasReport ? <StatusBadge value={goNoGo} /> : pendingLabel} tone={metricTone(goNoGo === 'GO' ? 'good' : 'bad')} />
+        <Metric label="Replay Integrity" value={metricValue(failedProofs === 0 ? 'OK' : 'NO_GO')} tone={metricTone(failedProofs === 0 ? 'good' : 'bad')} />
+        <Metric label="Governance Status" value={metricValue(report?.governance?.goNoGo || goNoGo)} tone={metricTone(goNoGo === 'GO' ? 'good' : 'bad')} />
+        <Metric label="Confidence" value={metricValue(`${confidence}%`)} tone={metricTone(confidence >= 90 ? 'good' : 'neutral')} />
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Metric label="Failed Proofs" value={failedProofs} tone={failedProofs === 0 ? 'good' : 'bad'} />
-        <Metric label="Mutation Mismatches" value={mutationMismatches} tone={mutationMismatches === 0 ? 'good' : 'bad'} />
-        <Metric label="Provenance Mismatches" value={provenanceMismatches} tone={provenanceMismatches === 0 ? 'good' : 'bad'} />
-        <Metric label="Replay Health" value={failedProofs === 0 ? 'Clean' : 'Blocked'} tone={failedProofs === 0 ? 'good' : 'bad'} />
+        <Metric label="Failed Proofs" value={metricValue(failedProofs)} tone={metricTone(failedProofs === 0 ? 'good' : 'bad')} />
+        <Metric label="Mutation Mismatches" value={metricValue(mutationMismatches)} tone={metricTone(mutationMismatches === 0 ? 'good' : 'bad')} />
+        <Metric label="Provenance Mismatches" value={metricValue(provenanceMismatches)} tone={metricTone(provenanceMismatches === 0 ? 'good' : 'bad')} />
+        <Metric label="Replay Health" value={metricValue(failedProofs === 0 ? 'Clean' : 'Blocked')} tone={metricTone(failedProofs === 0 ? 'good' : 'bad')} />
       </section>
 
       <section className="bg-bg-elevated border border-border rounded-lg p-4">
