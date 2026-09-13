@@ -16,11 +16,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const { validateGeneratedPlan } = require('./validateGeneratedPlan');
+const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
 // NOTE: este módulo roda no contexto da engine e não deve depender da API.
 // Para logs, usamos console (compatível com .debug/.info/.warn/.error).
 const logger = console;
-const { buildAiEnvelope, validateAiEnvelopeOrThrow, validateByContract } = require('./aiEnvelope');
+const { buildAiEnvelope, validateAiEnvelopeOrThrow, validateByContract } = require('../../engine/ai/aiEnvelope');
 
 // Caminho do prompt oficial
 // Corrigido: usa caminho absoluto baseado na raiz do projeto

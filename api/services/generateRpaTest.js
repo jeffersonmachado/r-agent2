@@ -16,10 +16,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { validateGeneratedPlan } = require('./validateGeneratedPlan');
-const logger = require('../../api/utils/logger');
-const config = require('../../api/utils/config');
-const { buildAiEnvelope, validateAiEnvelopeOrThrow, validateByContract } = require('./aiEnvelope');
+const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
+const logger = require('../utils/logger');
+const config = require('../utils/config');
+const { buildAiEnvelope, validateAiEnvelopeOrThrow, validateByContract } = require('../../engine/ai/aiEnvelope');
 
 // Caminho do prompt oficial
 // Corrigido: usa caminho absoluto baseado na raiz do projeto

@@ -236,8 +236,8 @@ function runWrapperChecks() {
 
   // Check: Wrappers existem
   const requiredWrappers = [
-    'engine/ai/generateChatbotFlow.js',
-    'engine/ai/generateRpaTest.js'
+    'api/services/generateChatbotFlow.js',
+    'api/services/generateRpaTest.js'
   ];
 
   requiredWrappers.forEach(wrapperPath => {

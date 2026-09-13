@@ -7,8 +7,8 @@
  */
 
 const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
-const { generateRpaTest } = require('../../engine/ai/generateRpaTest');
-const { generateChatbotFlow } = require('../../engine/ai/generateChatbotFlow');
+const { generateRpaTest } = require('../../api/services/generateRpaTest');
+const { generateChatbotFlow } = require('../../api/services/generateChatbotFlow');
 
 describe('CI - Anti-bypass', () => {
   

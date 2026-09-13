@@ -7,7 +7,7 @@
  */
 
 const { validateGeneratedPlan } = require('../../engine/ai/validateGeneratedPlan');
-const { generateRpaTest } = require('../../engine/ai/generateRpaTest');
+const { generateRpaTest } = require('../../api/services/generateRpaTest');
 
 describe('Stress Test - Sistema bloqueia sem quebrar', () => {
   

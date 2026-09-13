@@ -101,8 +101,8 @@ Esta auditoria mapeia:
 **Descrição:** Funções de geração de IA podem ser chamadas diretamente, sem passar por validação de contrato.
 
 **Pontos Afetados:**
-- `engine/ai/generateChatbotFlow.js` - Função `generateChatbotFlow()`
-- `engine/ai/generateRpaTest.js` - Função `generateRpaTest()`
+- `api/services/generateChatbotFlow.js` - Função `generateChatbotFlow()`
+- `api/services/generateRpaTest.js` - Função `generateRpaTest()`
 - `api/services/flowGeneratorService.js` - Serviço de geração de fluxo
 - `api/services/rpaTestGeneratorService.js` - Serviço de geração de teste RPA
 
