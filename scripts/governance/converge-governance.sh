@@ -40,7 +40,20 @@ CONV_ZIP="$(ls -t dist/r-agent2-converge-provisional.zip 2>/dev/null | head -1 |
 if [[ -n "$CONV_ZIP" ]]; then
   $NODE governance/package-validator.js --zip "$CONV_ZIP" --audited-only
 else
-  echo "[converge]   (sem zip de convergência — package-validation ficará para o PASS 2.9 do release)"
+  # Nenhum ZIP NESTE ciclo ainda. Se NÃO existe pacote algum no disco, o estado
+  # honesto da fase é DEFERRED (o pacote ainda não foi construído) — rodar o
+  # validator sem --zip faz ele resolver o artefato mais recente e reportar
+  # DEFERRED/PRE_PACKAGE. Sem este passo, o relatório fica apontando para o
+  # payload do release ANTERIOR (que já não existe em dist/) e o scorecard passa
+  # a contar RAP-052/RAP-054 como FALHA REAL — foi assim que o `release:seal`
+  # travava na fase prepare com `dist/` zerado (PACKAGE_VALIDATION_NOT_PASS +
+  # MASTER_SCORECARD_NOT_10_OF_10 em [RAP-052,RAP-054]).
+  if compgen -G "dist/release/*.payload.zip" > /dev/null || compgen -G "dist/r-agent2-*.zip" > /dev/null; then
+    echo "[converge]   (pacote presente em dist/ — package-validation fica para o PASS 2.9 do release)"
+  else
+    echo "[converge]   (nenhum pacote em dist/ — gravando package-validation DEFERRED honesta)"
+    $NODE governance/package-validator.js >/dev/null 2>&1 || true
+  fi
 fi
 
 echo "[converge] 4/8 readiness projection (lineage do run corrente)"
