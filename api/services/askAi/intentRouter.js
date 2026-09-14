@@ -246,6 +246,14 @@ function classifyIntent({ question, context = {}, classification = 'PRODUCTION' 
 
   if (hasLiveData && (hasRecommendation || hasProcedure)) {
     intent = INTENTS.MIXED;
+  } else if (hasNavigation && !hasRecommendation) {
+    // Pergunta de LOCAL vence marcador de dado vivo. Medido antes do fix: as
+    // cinco perguntas abaixo viravam OPERATIONAL_DATA e o sinal
+    // `navigation_marker` era descartado — "Onde encontro o relatório de
+    // frequência?" mandava buscar dado de entidade em vez de responder onde
+    // fica. O interrogativo é o que separa LOCAL de VALOR: "onde" → tela;
+    // "qual/quanto/está" → dado vivo (esse caminho continua igual).
+    intent = INTENTS.NAVIGATION_HELP;
   } else if (hasLiveData || (entity && entityQuestionsState(text))) {
     intent = INTENTS.OPERATIONAL_DATA;
   } else if (hasProcedure) {
