@@ -219,26 +219,65 @@ function computeConfidence({ accessDenied, facts, knowledgeAnswer, failedTools }
   return 'insufficient_evidence';
 }
 
-function buildSources({ toolResults, knowledgeSources }) {
+const SOURCE_LABEL_MAX_LENGTH = 120;
+const DEFAULT_SOURCE_LABEL = 'Fonte consultada';
+const TECHNICAL_SOURCE_TITLE = /\.(?:md|markdown|json|html|txt)$|^src-|^chunk\s+\d+/i;
+
+/**
+ * Converte o identificador interno do documento em rótulo humano.
+ * `src-docs-manual-verticals-beauty-html` -> "Manual Verticals Beauty".
+ * Devolve null quando o resultado não é legível (ex.: id numérico).
+ */
+function prettifyDocumentId(documentId) {
+  const base = String(documentId || '')
+    .replace(/^src-/, '')
+    .replace(/-(?:md|markdown|json|html|txt)$/i, '')
+    .replace(/\.(?:md|markdown|json|html|txt)$/i, '')
+    .replace(/^(?:docs|doc)-/i, '')
+    .replace(/[-_]+/g, ' ')
+    .trim();
+  if (!base) return null;
+  const nice = base
+    .split(/\s+/)
+    .map((word) => (word.length > 2 ? word[0].toUpperCase() + word.slice(1) : word))
+    .join(' ');
+  return /[a-zà-ú]{3,}/i.test(nice) ? nice : null;
+}
+
+/**
+ * Rótulo exibível de uma fonte de conhecimento.
+ * O produtor real do RAG entrega `title = "Chunk N"` (opaco) e o caminho de
+ * arquivo aparece embutido no `documentId`; nenhum dos dois pode chegar ao
+ * usuário, então o rótulo é derivado do identificador.
+ */
+function buildFriendlySourceLabel(title, documentId) {
+  const raw = typeof title === 'string' ? title.trim() : '';
+  const isTechnical = !raw || TECHNICAL_SOURCE_TITLE.test(raw) || /\bdocs\//i.test(raw);
+  if (!isTechnical) return raw.slice(0, SOURCE_LABEL_MAX_LENGTH);
+  return prettifyDocumentId(documentId) || DEFAULT_SOURCE_LABEL;
+}
+
+/**
+ * Fontes EXIBÍVEIS ao usuário, no formato do cliente: `{ sourceType, label, url }`.
+ *
+ * Contrato (missão: TAREFA 21/22/24/35/46/94):
+ *  - toda fonte exibida TEM url — o frontend não renderiza fonte sem link;
+ *  - nada de identificador interno no payload (`documentId`, `chunkId`, `score`,
+ *    `toolId`): a proveniência completa fica no servidor/auditoria;
+ *  - documento interno aponta para rota INTERNA do RAP (`/rag-documents?documentId=`),
+ *    nunca para o filesystem;
+ *  - dado vivo NÃO entra na lista: é a origem do conteúdo, não documento citável —
+ *    exibi-lo sem link violaria a regra "toda fonte visível é clicável".
+ */
+function buildSources({ knowledgeSources }) {
   const sources = [];
-  for (const result of toolResults) {
-    if (result.failed || !result.found) continue;
-    // Rótulo HUMANO do catálogo canônico: o usuário final lia o id técnico
-    // (`askai.billing.membershipHistory`) — e o widget, sem campo amigável,
-    // imprimia o objeto inteiro em JSON cru na resposta.
-    const catalogTool = findAskAiTool(result.toolId);
-    sources.push({
-      type: 'OPERATIONAL_DATA',
-      toolId: result.toolId,
-      label: catalogTool?.label || result.toolId,
-    });
-  }
   for (const source of knowledgeSources || []) {
+    const documentId = source?.documentId || source?.document_id || null;
+    if (!documentId) continue;
     sources.push({
-      type: 'KNOWLEDGE_DOCUMENT',
-      documentId: source.documentId || source.document_id || null,
-      title: source.title || null,
-      score: source.score ?? null,
+      sourceType: 'KNOWLEDGE_DOCUMENT',
+      label: buildFriendlySourceLabel(source.title, documentId),
+      url: `/rag-documents?documentId=${encodeURIComponent(documentId)}`,
     });
   }
   return sources;

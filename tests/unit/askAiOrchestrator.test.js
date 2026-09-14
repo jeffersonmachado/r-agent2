@@ -126,7 +126,7 @@ function buildRag() {
     queryRag: jest.fn(async () => ({
       success: true,
       response: 'Aplicar a jornada de recuperação: contato ativo e oferta de reagendamento.',
-      sources: [{ documentId: 'src-docs-roteiros-jornada-fitness-renovacao-md', title: 'docs/roteiros/jornada-fitness-renovacao.md', score: 0.71 }],
+      sources: [{ documentId: 'src-docs-roteiros-jornada-fitness-renovacao-md', title: 'Chunk 15', score: 0.71 }],
     })),
   };
 }
@@ -158,7 +158,7 @@ describe('ask-ai orchestrator — dados vivos + conhecimento', () => {
       'askai.fitness.membershipSummary',
       'askai.fitness.attendanceSummary',
     ]));
-    expect(turn.sources.some((s) => s.type === 'KNOWLEDGE_DOCUMENT')).toBe(true);
+    expect(turn.sources.some((s) => s.sourceType === 'KNOWLEDGE_DOCUMENT')).toBe(true);
     expect(turn.conversationId).toBeTruthy();
     expect(turn.policy.accessDenied).toBe(false);
   });

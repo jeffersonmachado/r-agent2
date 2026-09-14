@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchJson } from '../api/client';
+import AskAiSources from './askAi/AskAiSources';
 import logger from '../utils/logger';
 import { buildAskAiContext, describeAskAiContext, subscribeToRouteChanges } from '../askAi/contextProvider';
 
@@ -178,20 +179,7 @@ export function AskAiWidget() {
                   data-testid={message.role === 'user' ? 'ask-ai-user-msg' : 'ask-ai-assistant-msg'}
                 >
                   {message.content}
-                  {message.sources && message.sources.length > 0 && (
-                    <div className="mt-2 border-t border-border-default pt-2">
-                      <p className="text-xs font-medium text-text-secondary mb-1">Fontes:</p>
-                      <ul className="text-xs text-text-tertiary space-y-1">
-                        {message.sources.slice(0, 5).map((source, sourceIndex) => (
-                          <li key={sourceIndex} className="truncate">
-                            {typeof source === 'string'
-                              ? source
-                              : (source.title || source.label || source.id || source.chunkId || source.documentId || 'Fonte consultada')}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  <AskAiSources sources={message.sources} />
                 </div>
               </div>
             ))}

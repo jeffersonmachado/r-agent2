@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-09-14T16:14:11.439Z",
+  "generatedAt": "2026-09-14T16:27:42.747Z",
   "engine": "generate-self-proving-report/v1",
-  "zipName": "r-agent2-20260914-131049.zip",
-  "zipHash": "57b6c7851bdf14f5f5d756a8ccc6c52ff9d17c4d0ab1d49038ae88ba3052a076",
-  "manifestHash": "1f6ba454e3aa1525bc95e3fd66640e56349d6307d1c62a17051492c7ed0b6fe4",
+  "zipName": null,
+  "zipHash": null,
+  "manifestHash": "b9294fd870586452f58f39b588e87671afcc0c528aee8e1d82553a3d6ca4ad30",
   "replayHash": "ee8a0518465b93cb7f1e58b6c078f2718149d91b3cfe8eb323f6ab5e4004d3c8",
-  "governanceHash": "8385c0c58d7bbb6027d166491b69c795d40b31020795f1d175cd08ffa2ebf67f",
-  "readinessHash": "8809fbe199d2c43880976c193d80272d1ab4577b4715438c03bd4fa1df0e2241",
+  "governanceHash": "9f7ba10f1402d7510cfa29c22f4db6e0b1a2936d1813289261b26148e6ef50e3",
+  "readinessHash": "163fd55af2ada46b5ccfab349c273f0a17272e96cd25843a2baf8e0bf223e93d",
   "consistencyHash": "874822f75b53d314f2a54880edd1ebf0200bd905cb08ca33c8a27e572ff5201a",
   "contaminationHash": "01e7219954621837901d059525852c5da488d0a6134108a986e4494fc86405ac",
-  "packageIntegrityHash": "771f579218d5f00460077298e8b99c295730646d784221a9ada3d6dde915227b",
+  "packageIntegrityHash": "b578a20231fc336bd1eda0689ec0968d378a023b0f394e47ddfe0d96af40ce87",
   "driftHash": "4182b320f5350bd05b0b54d6a88d435b010d72c0f0dfd798eb530a42ea711f7b",
-  "gateHash": "d3ff176946c675f284e072a68666cb07ddf5905585742e30ce8d7a1774da20ba",
+  "gateHash": "4570a12cd257baad23f6b523919a00aabf6024663570724b13e1e8ed053d9596",
   "recalculatedReadinessHash": "73fc0fc15274f62a8ac2b0111263b2e43918c401206ccf04752bc035d3601ae2",
   "engineDecisions": {
     "replayHardening": "REPLAY_HARDENING_GO",
@@ -28,5 +28,5 @@
   "autonomousReady": true,
   "mandatoryFailures": [],
   "ok": true,
-  "summary": "Self-proving report gerado. ZIP: r-agent2-20260914-131049.zip. Package: ÍNTEGRO. Validadores falhos: 0."
+  "summary": "Self-proving report gerado. ZIP: ausente. Package: ÍNTEGRO. Validadores falhos: 0."
 }
