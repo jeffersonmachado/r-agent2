@@ -14,5 +14,7 @@
   "testsFailed": 0,
   "testsPending": 0,
   "violations": 0,
-  "failingSuites": []
+  "failingSuites": [],
+  "runId": "rap-governed-20260914030613794-2f902129",
+  "sourceFingerprint": "257f0fa97145545b2378aca515dc950db2afebd2689fc68d39cdac68d12cd4da"
 }
