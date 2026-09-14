@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-13T11:26:16.757Z",
+  "generatedAt": "2026-09-14T15:57:54.205Z",
   "ragServiceUrl": "http://localhost:8001",
   "metrics": {
     "crossDomainLeakage": 0,
@@ -9,15 +9,17 @@
     "indexedSecrets": 0,
     "operationalAccessToSystemDomain": 0,
     "dbChecksFailed": 0,
-    "runtimeChecksFailed": 0,
-    "internalTokenMissing": 0
+    "runtimeChecksFailed": 1,
+    "internalTokenMissing": 1
   },
   "probes": {
     "serviceReachable": true,
-    "crossDomainLeakage": 0,
-    "crossTenantLeakage": 0,
-    "operationalAccessToSystemDomain": 0,
-    "details": []
+    "crossDomainLeakage": "skipped",
+    "crossTenantLeakage": "skipped",
+    "operationalAccessToSystemDomain": "skipped",
+    "details": [
+      "RAG_INTERNAL_TOKEN ausente: não é possível executar probes autenticados"
+    ]
   },
   "distribution": [
     {
@@ -41,8 +43,10 @@
       "count": 2291
     }
   ],
-  "details": [],
-  "status": "PASS",
+  "details": [
+    "RAG_INTERNAL_TOKEN ausente: não é possível executar probes autenticados"
+  ],
+  "status": "FAIL",
   "runId": "rap-governed-20260914154036770-143b9502",
   "sourceFingerprint": "7a692133a93a583f94128e6ba757d6971f75e5f0afb6bfbe81b3be0ac9f710a7",
   "artifactType": "rag-domain-segregation-report",
