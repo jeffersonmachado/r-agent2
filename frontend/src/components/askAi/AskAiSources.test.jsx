@@ -1,5 +1,15 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+
+const navigate = vi.fn();
+vi.mock('../../hooks/useRouter', () => ({
+  useRouter: () => ({ currentPath: '/x', navigate }),
+}));
+let basePath = '';
+vi.mock('../../utils', () => ({
+  getBasePath: () => basePath,
+}));
+
 import AskAiSources from './AskAiSources';
 
 /**
@@ -12,6 +22,46 @@ import AskAiSources from './AskAiSources';
  */
 
 describe('AskAiSources — toda fonte visível é um link', () => {
+  beforeEach(() => {
+    basePath = '';
+    navigate.mockClear();
+  });
+
+  it('link interno recebe o base path da aplicação (não 404 em produção)', () => {
+    // Em produção a aplicação vive sob `/r-agent2/`: href sem prefixo dava 404.
+    basePath = '/r-agent2';
+    render(
+      <AskAiSources
+        sources={[{
+          sourceType: 'KNOWLEDGE_DOCUMENT',
+          label: 'Manual',
+          url: '/rag-documents?documentId=abc',
+        }]}
+      />
+    );
+    expect(screen.getByTestId('ask-ai-source-link').getAttribute('href'))
+      .toBe('/r-agent2/rag-documents?documentId=abc');
+  });
+
+  it('clique simples em fonte interna navega pela aplicação; ctrl/meta não intercepta', () => {
+    render(
+      <AskAiSources
+        sources={[{
+          sourceType: 'KNOWLEDGE_DOCUMENT',
+          label: 'Manual',
+          url: '/rag-documents?documentId=abc',
+        }]}
+      />
+    );
+    const link = screen.getByTestId('ask-ai-source-link');
+
+    fireEvent.click(link, { ctrlKey: true });
+    expect(navigate).not.toHaveBeenCalled();
+
+    fireEvent.click(link);
+    expect(navigate).toHaveBeenCalledWith('/rag-documents?documentId=abc');
+  });
+
   it('renderiza cada fonte como link clicável com rótulo humano', () => {
     render(
       <AskAiSources

@@ -16,6 +16,7 @@ import { RagDocumentDetailsModal } from './rag-documents/RagDocumentDetailsModal
 import { RagQueryModal } from './rag-documents/RagQueryModal';
 import { RagAnalysisModal } from './rag-documents/RagAnalysisModal';
 import { RagLearningModal } from './rag-documents/RagLearningModal';
+import { useRagDocumentDeepLink } from './rag-documents/useRagDocumentDeepLink';
 import {
   formatDateOnly,
   formatDateTime,
@@ -94,6 +95,42 @@ export function RAGDocumentsPage() {
   const deletingIdsRef = useRef(new Set());
   const uploadInputRef = useRef(null);
   const [deletingById, setDeletingById] = useState({});
+
+  // Deep link de fonte do Ask AI (`/rag-documents?documentId=…`).
+  // Até esta fatia a rota IGNORAVA o parâmetro: clicar na fonte citada abria a
+  // lista, não o documento. A leitura do documento passa pela API (que aplica
+  // tenant e permissão); falha de leitura fecha o caminho e avisa o usuário,
+  // em vez de abrir a tela com dado não verificado.
+  const [routeSearch, setRouteSearch] = useState(() => (
+    typeof window !== 'undefined' ? window.location.search : ''
+  ));
+  const openDocumentFromDeepLinkRef = useRef(null);
+
+  useRagDocumentDeepLink({
+    search: routeSearch,
+    loadDocument: getDocument,
+    onOpen: (doc) => {
+      if (typeof openDocumentFromDeepLinkRef.current === 'function') {
+        openDocumentFromDeepLinkRef.current(doc);
+      }
+    },
+    onDeny: (failure) => {
+      showToast(failure.message, failure.code === 'load_failed' ? 'warning' : 'error', 9000);
+    },
+  });
+
+  // A query muda sem que o path mude (navegação SPA para o próprio
+  // `/rag-documents`), então a página precisa re-ler a URL por evento.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const readSearch = () => setRouteSearch(window.location.search);
+    window.addEventListener('popstate', readSearch);
+    window.addEventListener('router:change', readSearch);
+    return () => {
+      window.removeEventListener('popstate', readSearch);
+      window.removeEventListener('router:change', readSearch);
+    };
+  }, []);
   const [learningData, setLearningData] = useState(null);
   const [loadingLearning, setLoadingLearning] = useState(false);
   const [questionGenerationRules, setQuestionGenerationRules] = useState(null);
@@ -567,6 +604,9 @@ export function RAGDocumentsPage() {
       logger.warn('[RAGDocumentsPage] Falha ao buscar detalhes completos do documento', { error: error?.message, documentId: doc?.id });
     }
   };
+
+  // O deep link usa exatamente o mesmo caminho de abertura da lista.
+  openDocumentFromDeepLinkRef.current = handleShowDetails;
 
   const analyzeDocuments = async (maxDocuments = null) => {
     logger.debug('🚀 [ANÁLISE] FUNÇÃO analyzeDocuments CHAMADA', {
