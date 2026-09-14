@@ -55,11 +55,27 @@ const DEFAULT_TARGETS = [
 function defaultReplayDirs() {
   const os = require('os');
   const runtimeRoot = process.env.RAGENT2_RUNTIME_ROOT || path.join(os.homedir(), '.local/share/ragent2-runtime');
-  return [
-    path.join(runtimeRoot, 'rpa', 'replay'),
-    path.join(runtimeRoot, 'replays'),
-    path.join(runtimeRoot, 'recordings'),
-  ];
+  // Descoberta ROBUSTA em vez de lista fixa: o layout é multi-tenant
+  // (`rpa/tenants/<tenantKey>/replay/`) e ainda tem `replays/generation/<tenant>/`.
+  // Uma lista fixa deixou 50 artefatos inválidos de fora na primeira tentativa.
+  const found = new Set();
+  const NAMES = new Set(['replay', 'replays', 'recordings']);
+  const walk = (dir, depth = 0) => {
+    if (depth > 6) return;
+    let entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const full = path.join(dir, entry.name);
+      if (NAMES.has(entry.name)) { found.add(full); continue; }
+      walk(full, depth + 1);
+    }
+  };
+  if (fs.existsSync(runtimeRoot)) walk(runtimeRoot);
+  // Diretórios fixos conhecidos continuam válidos mesmo se vazios/ausentes.
+  [path.join(runtimeRoot, 'rpa', 'replay'), path.join(runtimeRoot, 'replays'), path.join(runtimeRoot, 'recordings')]
+    .forEach((dir) => found.add(dir));
+  return [...found];
 }
 
 const REPORT_PATH = path.join(ROOT, 'reports', 'replay-signature-migration-report.json');
@@ -254,12 +270,29 @@ function main() {
   // Modo replays gravados: artefatos planos nos diretórios de runtime.
   const replayResults = [];
   if (includeReplays) {
-    for (const dir of defaultReplayDirs()) {
+    // Artefatos de replay do REPOSITÓRIO (evidência por jornada do prod-like) —
+    // irmãos das evidências de smoke já migradas.
+    for (const rel of ['qa/smoke/prod-like', 'qa/smoke']) {
+      const dir = path.join(ROOT, rel);
       if (!fs.existsSync(dir)) continue;
-      for (const name of fs.readdirSync(dir).filter((n) => n.endsWith('.json'))) {
+      for (const name of fs.readdirSync(dir)) {
+        if (!name.endsWith('-replay.json')) continue;
         replayResults.push(migrateReplayArtifact(path.join(dir, name)));
       }
     }
+    // Artefatos de replay do RUNTIME — recursivo: há replays em subdiretórios
+    // (ex.: replays/generation/<tenant>/), e uma varredura só do nível raiz
+    // deixou 65 artefatos inválidos na primeira passada.
+    const walkReplays = (dir, depth = 0) => {
+      if (depth > 6 || !fs.existsSync(dir)) return;
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) { walkReplays(full, depth + 1); continue; }
+        if (!entry.name.endsWith('.json')) continue;
+        replayResults.push(migrateReplayArtifact(full));
+      }
+    };
+    for (const dir of defaultReplayDirs()) walkReplays(dir);
   }
   const aborted = results.filter((item) => item.aborted);
   const migrated = results.reduce((acc, item) => acc + item.migrated, 0);
