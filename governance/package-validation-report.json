@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-14T21:36:31.498Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-152013.payload.zip",
-  "zipName": "r-agent2-20260914-152013.payload.zip",
-  "zipSha256": "fb824d2f4fc1a55b871dbaab4e4c17a272f10f57983188c0c658ed882244892d",
+  "generatedAt": "2026-09-14T21:40:32.586Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-183645.payload.zip",
+  "zipName": "r-agent2-20260914-183645.payload.zip",
+  "zipSha256": "ef1c5d379037798821b39adef7e369d22a3b4978f5e794f23eaab0bf06a12403",
   "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-152013.zip",
-  "selectionMode": "audited",
+  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-183645.payload.zip",
+  "selectionMode": "explicit",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-152013.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-183645.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -50,8 +50,8 @@
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20260914-152013.payload.zip",
-    "sha256": "fb824d2f4fc1a55b871dbaab4e4c17a272f10f57983188c0c658ed882244892d",
+    "boundTo": "r-agent2-20260914-183645.payload.zip",
+    "sha256": "ef1c5d379037798821b39adef7e369d22a3b4978f5e794f23eaab0bf06a12403",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
@@ -60,6 +60,6 @@
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260914181529637-9c1c6d00",
   "sourceFingerprint": "80109ffff483bd7678bf950790741d1d24250eb766f7d4c46b45d2b00769cabe",
-  "gitCommit": "17688ede3b095dd2ad069f4940803661c92fe8d8",
-  "gitTree": "ce305eb1a48ed22bb5b2288325960b36e75dbe13"
+  "gitCommit": "24d781caaea8fa405a6b53473051f073bd3901d9",
+  "gitTree": "54e85fb1cfe86bae62747beea7fca3196167b7a5"
 }
