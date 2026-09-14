@@ -593,7 +593,15 @@ function loadRagDomainSegregationViolations() {
     console.log('[coverage-gate] relatório de segregação RAG ausente/desatualizado; '
       + 'executando rag-domain-segregation-report...');
     try {
-      execFileSync(process.execPath, [RAG_SEGREGATION_REPORT_SCRIPT_PATH], { stdio: 'inherit' });
+      // O processo FILHO precisa do `.env` do projeto: o gerador usa
+      // `RAG_INTERNAL_TOKEN` para os probes autenticados, e sem o token eles são
+      // pulados e o relatório sai FAIL — derrubando a consolidação do release
+      // mesmo com o token presente em `.env` (defesa em profundidade; o gerador
+      // também carrega o `.env` por conta própria).
+      execFileSync(process.execPath, [
+        `--env-file-if-exists=${path.join(ROOT_DIR, '.env')}`,
+        RAG_SEGREGATION_REPORT_SCRIPT_PATH,
+      ], { stdio: 'inherit', cwd: ROOT_DIR });
     } catch {
       // exit != 0 (violações ou ambiente): o relatório, se gravado, é lido abaixo.
     }

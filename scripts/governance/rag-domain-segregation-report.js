@@ -23,6 +23,21 @@ const path = require('path');
 const ROOT_DIR = path.resolve(__dirname, '..', '..');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'rag-domain-segregation-report.json');
 
+// O gate de cobertura invoca este script num processo FILHO (`execFileSync`), que
+// NÃO herda o `--env-file` do npm script pai. Sem carregar o `.env` aqui,
+// `RAG_INTERNAL_TOKEN` chega vazio, os probes autenticados são PULADOS e o
+// relatório sai FAIL — derrubando o gate agregado e a consolidação do release
+// mesmo com o token presente no `.env` (observado em 2026-09-14, ciclo
+// r-agent2-20260914-125012: `internalTokenMissing=1`, `runtimeChecksFailed=1`).
+//
+// `loadEnvFile` NÃO sobrescreve variável já exportada no ambiente (verificado no
+// Node 22.12), então um token explicitamente exportado continua vencendo.
+try {
+  process.loadEnvFile(path.join(ROOT_DIR, '.env'));
+} catch {
+  // `.env` ausente: segue com o ambiente do processo (comportamento anterior).
+}
+
 const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:8001';
 const INTERNAL_TOKEN = process.env.RAG_INTERNAL_TOKEN || '';
 const CANARY_TENANT = 'rag-seg-gate-canary';
