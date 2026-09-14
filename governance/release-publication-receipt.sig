@@ -5,17 +5,17 @@
   "signaturePurpose": "RAP_RELEASE_PUBLICATION_RECEIPT",
   "signedDocument": "canonicalJSON(publicationReceipt)",
   "receipt": {
-    "releaseId": "r-agent2-20260913-190358",
-    "envelopeSha256": "4e2fb94c8ac99dee0bdf1972df7a29cbc3bd26bc2ee0c89912e941824faa734c",
-    "payloadSha256": "6a71fbe4d6fc259d1e78acbb5b9e2337507b6413d77fb404f4e71d14d2f578c4",
-    "manifestSha256": "89497a6a9e8924bc19d3b452540d6ec3f2a6bb5187ffaa047fcb13c2d6ddcd4d",
-    "gitCommit": "f64f2657e216678790eb6257f081117b7e7fb591",
-    "gitTree": "d4e7b30fb7c93f6fd81b7762c085bb7463f3fe12",
-    "releaseTag": "r-agent2-20260913-190358",
-    "tagTarget": "f64f2657e216678790eb6257f081117b7e7fb591"
+    "releaseId": "r-agent2-20260914-001419",
+    "envelopeSha256": "62aaa1629f4431c48d33951c4545725cf634d39fa88bad19ca60a66b0e06e64c",
+    "payloadSha256": "002bb28b7270234a9d76a2ec7b1a197f929f2827f3dd85b79604c166806e87e9",
+    "manifestSha256": "d47ae5ea4503c1377515941b0be319474fa828095ca90d5f3b6573cb31e3c832",
+    "gitCommit": "59fe9a54b3fa77a722120129a0ddadd99fb20f7e",
+    "gitTree": "57948a4db2bde18884f33c30468b98c6760fa6a1",
+    "releaseTag": "r-agent2-20260914-001419",
+    "tagTarget": "59fe9a54b3fa77a722120129a0ddadd99fb20f7e"
   },
-  "canonicalPayload": "{\"envelopeSha256\":\"4e2fb94c8ac99dee0bdf1972df7a29cbc3bd26bc2ee0c89912e941824faa734c\",\"gitCommit\":\"f64f2657e216678790eb6257f081117b7e7fb591\",\"gitTree\":\"d4e7b30fb7c93f6fd81b7762c085bb7463f3fe12\",\"manifestSha256\":\"89497a6a9e8924bc19d3b452540d6ec3f2a6bb5187ffaa047fcb13c2d6ddcd4d\",\"payloadSha256\":\"6a71fbe4d6fc259d1e78acbb5b9e2337507b6413d77fb404f4e71d14d2f578c4\",\"releaseId\":\"r-agent2-20260913-190358\",\"releaseTag\":\"r-agent2-20260913-190358\",\"tagTarget\":\"f64f2657e216678790eb6257f081117b7e7fb591\"}",
-  "signature": "e238cbb43d4447939437dcc4a28f8a0384332d2edc7b7156ceb4f18a79e8d75ca66163d61d1fb97758e444ece25d90de0c675f7a5a0396961631bcf60cc93605",
+  "canonicalPayload": "{\"envelopeSha256\":\"62aaa1629f4431c48d33951c4545725cf634d39fa88bad19ca60a66b0e06e64c\",\"gitCommit\":\"59fe9a54b3fa77a722120129a0ddadd99fb20f7e\",\"gitTree\":\"57948a4db2bde18884f33c30468b98c6760fa6a1\",\"manifestSha256\":\"d47ae5ea4503c1377515941b0be319474fa828095ca90d5f3b6573cb31e3c832\",\"payloadSha256\":\"002bb28b7270234a9d76a2ec7b1a197f929f2827f3dd85b79604c166806e87e9\",\"releaseId\":\"r-agent2-20260914-001419\",\"releaseTag\":\"r-agent2-20260914-001419\",\"tagTarget\":\"59fe9a54b3fa77a722120129a0ddadd99fb20f7e\"}",
+  "signature": "cdc97fb57ce2095d0a9ca91dfb79f728a84b1192a497b69b8f769baafbe998c13c3a00d3287c1e3889bc690161db5ae0af5da45d8a969a87f3fd6696cdd76e0c",
   "publicKeyFingerprint": "2e52a6d299a3e8d6c10f6e1cf7a440e260692139398367989230e2688ed0bf96",
-  "signedAt": "2026-09-13T22:11:24.642Z"
+  "signedAt": "2026-09-14T03:22:05.418Z"
 }
