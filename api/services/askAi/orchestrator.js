@@ -27,7 +27,8 @@
  *  - Se não há fonte confirmando um estado, o copiloto NÃO afirma o estado.
  */
 
-const { classifyIntent, needsKnowledge, needsOperationalData } = require('./intentRouter');
+const { classifyIntent, needsKnowledge, needsOperationalData, isAssistantMeta } = require('./intentRouter');
+const { buildAssistantSelfDescription } = require('./assistantSelfDescription');
 const { buildRegistry, executeTool } = require('./toolRegistry');
 const { authorizeTools } = require('./toolAuthorization');
 const { sanitizeUntrustedContent, detectInjection } = require('./injectionGuard');
@@ -366,6 +367,65 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
       },
       historyWindow: stored.window.length,
       blocked: true,
+    };
+  }
+
+  // ── Pergunta sobre o PRÓPRIO assistente: responde por configuração ──────
+  // Antes desta fatia "Quem é você?" e "O que você pode fazer?" eram tratadas
+  // como KNOWLEDGE e consumiam recuperação documental. Nenhuma ferramenta de
+  // dado e nenhuma busca são executadas aqui: o texto vem da configuração
+  // canônica e as capacidades, das ferramentas JÁ AUTORIZADAS para o ator.
+  if (isAssistantMeta(intentResult.intent)) {
+    const metaAuthorization = authorizeTools({ actor, tools: registry.all() });
+    const deniedIdsMeta = new Set(metaAuthorization.denied.map((entry) => entry.toolId));
+    const allowedLabels = registry.all()
+      .filter((tool) => !deniedIdsMeta.has(tool.id))
+      .map((tool) => tool.label || tool.id);
+
+    const description = buildAssistantSelfDescription({
+      intent: intentResult.intent,
+      availableTools: allowedLabels,
+      classification,
+    });
+
+    const storedMeta = await appendTurn({
+      conversation,
+      question: payload.question,
+      answer: description.answer,
+      intent: intentResult.intent,
+      context: effectiveContext,
+    });
+
+    logger.info('[ask-ai] Turno de auto-descrição respondido por configuração', {
+      tenantId,
+      intent: intentResult.intent,
+      toolsAutorizadas: allowedLabels.length,
+    });
+
+    return {
+      conversationId: conversation.id,
+      answer: description.answer,
+      sources: [],
+      facts: [description.facts],
+      intent: intentResult.intent,
+      confidence: 'canonical_configuration',
+      provenance: { liveData: [], knowledge: [], inference: 'none', recommendation: 'none' },
+      policy: {
+        classification,
+        accessDenied: false,
+        deniedTools: metaAuthorization.denied.map((entry) => entry.toolId),
+        injectionDetected: false,
+        entityValidated: false,
+        conversation: describeConversationUse({
+          history,
+          effectiveContextSource: contextSource,
+          inheritedIntent: false,
+          hasSummary: Boolean(history.summary),
+          context: effectiveContext,
+        }),
+      },
+      historyWindow: storedMeta.window.length,
+      selfDescription: true,
     };
   }
 

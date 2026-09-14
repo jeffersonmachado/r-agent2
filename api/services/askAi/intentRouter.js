@@ -18,6 +18,10 @@
  *   PROCEDURE         → roteiro/manual de "como fazer"
  *   NAVIGATION_HELP   → ajuda de navegação/tela atual
  *   SYSTEM_INTERNAL   → pedido sobre internals técnicos (SYSTEM)
+ *   ASSISTANT_*       → perguntas sobre o PRÓPRIO assistente (identidade,
+ *                       capacidades, limites, fontes, privacidade, uso).
+ *                       Respondidas por configuração canônica: NÃO recuperam
+ *                       RAG nem consultam dado vivo (TAREFAS 04-20).
  */
 
 const INTENTS = Object.freeze({
@@ -27,7 +31,22 @@ const INTENTS = Object.freeze({
   PROCEDURE: 'PROCEDURE',
   NAVIGATION_HELP: 'NAVIGATION_HELP',
   SYSTEM_INTERNAL: 'SYSTEM_INTERNAL',
+  ASSISTANT_IDENTITY: 'ASSISTANT_IDENTITY',
+  ASSISTANT_CAPABILITIES: 'ASSISTANT_CAPABILITIES',
+  ASSISTANT_LIMITATIONS: 'ASSISTANT_LIMITATIONS',
+  ASSISTANT_SOURCES: 'ASSISTANT_SOURCES',
+  ASSISTANT_PRIVACY: 'ASSISTANT_PRIVACY',
+  ASSISTANT_HELP: 'ASSISTANT_HELP',
 });
+
+const ASSISTANT_META_INTENTS = Object.freeze([
+  INTENTS.ASSISTANT_IDENTITY,
+  INTENTS.ASSISTANT_CAPABILITIES,
+  INTENTS.ASSISTANT_LIMITATIONS,
+  INTENTS.ASSISTANT_SOURCES,
+  INTENTS.ASSISTANT_PRIVACY,
+  INTENTS.ASSISTANT_HELP,
+]);
 
 // Marcadores de dado vivo: exigem consulta ao domínio, nunca ao RAG estático.
 const LIVE_DATA_MARKERS = [
@@ -85,6 +104,90 @@ function matchesAny(text, patterns) {
   return patterns.some((pattern) => pattern.test(text));
 }
 
+// Perguntas sobre o PRÓPRIO assistente. O sujeito é o assistente ("você"), não o
+// domínio: por isso os padrões exigem o pronome/segunda pessoa junto do
+// substantivo. Sem isso, "o que você pode fazer" viraria ASSISTANT_CAPABILITIES
+// mas "o que posso fazer com um aluno inadimplente" também — e essa é uma
+// pergunta de negócio, não sobre o assistente.
+const ASSISTANT_META_MARKERS = Object.freeze([
+  {
+    intent: INTENTS.ASSISTANT_IDENTITY,
+    patterns: [
+      // `\b` do JavaScript é ASCII: depois de `você` (termina em `ê`, não-ASCII)
+      // o boundary NÃO casa. Toda terminação acentuada usa lookahead explícito.
+      /\bquem\s+(?:é|e)\s+voc[êe](?=\s|$|[,.!?;:])/i,
+      /\bvoc[êe]\s+(?:é|e)\s+(?:um|uma|o|a)?\s*(?:rob[ôo]|bot|ia|intelig[êe]ncia|assistente|humano|pessoa)/i,
+      /\b(?:qual|qual\s+é)\s+(?:o\s+)?seu\s+nome\b/i,
+      /\bo\s+que\s+voc[êe]\s+(?:é|e)(?=\s|$|[,.!?;:])/i,
+    ],
+  },
+  {
+    intent: INTENTS.ASSISTANT_CAPABILITIES,
+    patterns: [
+      /\bo\s+que\s+voc[êe]\s+(?:pode|consegue|sabe|faz)\b/i,
+      /\b(?:quais|que)\s+(?:s[ãa]o\s+)?(?:as\s+)?suas\s+(?:fun[çc][õo]es|capacidades|habilidades|tarefas)\b/i,
+      /\bvoc[êe]\s+(?:consegue|pode)\s+(?:me\s+)?(?:ajudar|fazer|responder|buscar|consultar|executar)\b/i,
+      /\bpara\s+que\s+voc[êe]\s+serve\b/i,
+    ],
+  },
+  {
+    intent: INTENTS.ASSISTANT_LIMITATIONS,
+    patterns: [
+      /\bo\s+que\s+voc[êe]\s+n[ãa]o\s+(?:pode|consegue|sabe|faz)\b/i,
+      /\b(?:quais|que)\s+(?:s[ãa]o\s+)?(?:os\s+)?seus\s+limites\b/i,
+      /\bquais\s+s[ãa]o\s+suas\s+limita[çc][õo]es\b/i,
+      /\bvoc[êe]\s+(?:tem|possui)\s+acesso\s+a\b/i,
+    ],
+  },
+  {
+    intent: INTENTS.ASSISTANT_SOURCES,
+    patterns: [
+      /\bde\s+onde\s+(?:v[êe]m|vem|saem)\s+(?:as\s+)?suas\s+respostas\b/i,
+      /\b(?:quais|que)\s+fontes\s+voc[êe]\s+usa\b/i,
+      /\bvoc[êe]\s+usa\s+(?:quais\s+)?(?:fontes|documentos)\b/i,
+      /\bcomo\s+voc[êe]\s+(?:sabe|descobre|encontra)\s+(?:isso|as\s+respostas)\b/i,
+    ],
+  },
+  {
+    intent: INTENTS.ASSISTANT_PRIVACY,
+    patterns: [
+      /\b(?:meus|nossos)\s+dados\s+(?:est[ãa]o|ficam|s[ãa]o)\s+(?:seguros|protegidos)\b/i,
+      /\bquem\s+(?:v[êe]|pode\s+ver)\s+(?:o\s+que\s+eu\s+pergunto|minhas\s+perguntas)\b/i,
+      /\bvoc[êe]\s+(?:guarda|armazena|salva)\s+(?:minhas|as)\s+(?:perguntas|conversas)\b/i,
+      /\boutros\s+(?:clientes|tenants|empresas)\s+(?:veem|vêem|conseguem\s+ver)\b/i,
+    ],
+  },
+  {
+    intent: INTENTS.ASSISTANT_HELP,
+    patterns: [
+      /\bcomo\s+(?:eu\s+)?(?:uso|utilizo)\s+voc[êe](?=\s|$|[,.!?;:])/i,
+      /\bcomo\s+(?:fa[çc]o|devo)\s+(?:uma\s+)?pergunt/i,
+      /\bajuda\s+(?:do|sobre\s+o)\s+assistente\b/i,
+      /\bo\s+que\s+eu\s+posso\s+perguntar\b/i,
+    ],
+  },
+]);
+
+/**
+ * Detecta pergunta sobre o próprio assistente.
+ *
+ * @param {string} text
+ * @returns {string|null} intenção ASSISTANT_* ou null
+ */
+function detectAssistantMetaIntent(text) {
+  for (const entry of ASSISTANT_META_MARKERS) {
+    if (matchesAny(text, entry.patterns)) return entry.intent;
+  }
+  return null;
+}
+
+/**
+ * Intenções respondidas por configuração canônica — nunca por recuperação.
+ */
+function isAssistantMeta(intent) {
+  return ASSISTANT_META_INTENTS.includes(intent);
+}
+
 /**
  * Classifica a intenção da pergunta.
  *
@@ -97,6 +200,14 @@ function matchesAny(text, patterns) {
 function classifyIntent({ question, context = {}, classification = 'PRODUCTION' }) {
   const text = String(question || '');
   const signals = [];
+
+  // Pergunta sobre o próprio assistente é resolvida primeiro: ela não descreve
+  // o domínio nem pede dado vivo, e o pedido é sobre COMO o assistente funciona.
+  const metaIntent = detectAssistantMetaIntent(text);
+  if (metaIntent) {
+    signals.push('assistant_meta_marker');
+    return { intent: metaIntent, signals, entity: null, blocked: false };
+  }
 
   const hasSystemMarker = matchesAny(text, SYSTEM_INTERNAL_MARKERS);
   const isPrivileged = classification === 'SUPPORT' || classification === 'DEVELOPMENT';
@@ -178,12 +289,16 @@ function needsOperationalData(intent) {
 
 module.exports = {
   INTENTS,
+  ASSISTANT_META_INTENTS,
+  ASSISTANT_META_MARKERS,
   LIVE_DATA_MARKERS,
   PROCEDURE_MARKERS,
   RECOMMENDATION_MARKERS,
   NAVIGATION_MARKERS,
   SYSTEM_INTERNAL_MARKERS,
   classifyIntent,
+  detectAssistantMetaIntent,
+  isAssistantMeta,
   needsKnowledge,
   needsOperationalData,
 };
