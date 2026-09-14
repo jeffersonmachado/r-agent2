@@ -254,7 +254,20 @@ function createDemoOrchestratorService() {
       const selectedScenario = pickQaScenario(scenariosPayload, seed);
       const replaySummary = pickReplayForScenario(replayList, selectedScenario);
       const replayId = replaySummary?.replayId || null;
-      const replayDetails = replayId ? getReplayFile(`${replayId}.json`, tenantId) : null;
+      let replayDetails = null;
+      if (replayId) {
+        try {
+          replayDetails = getReplayFile(`${replayId}.json`, tenantId);
+        } catch (replayError) {
+          // Replay ilegível não pode derrubar a orquestração do demo, mas o
+          // motivo NÃO pode ser silenciado (integridade falhou != não existe).
+          logger.warn('[demoOrchestrator] Replay indisponível para o demo', {
+            replayId,
+            code: replayError.code || null,
+            reason: replayError.message,
+          });
+        }
+      }
       const firstTicket = Array.isArray(ticketsPayload?.tickets) ? ticketsPayload.tickets[0] : null;
       const firstLead = Array.isArray(crmSnapshot?.leads) ? crmSnapshot.leads[0] : null;
 

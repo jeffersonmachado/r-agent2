@@ -9,6 +9,7 @@ function createTestExecutionsRoutes({ buildDeps }) {
   function mapErrorCodeToHttp(code) {
     if (code === 'BAD_REQUEST') return 400;
     if (code === 'NOT_FOUND') return 404;
+    if (code === 'REPLAY_INTEGRITY_FAILED') return 422;
     if (code === 'NOT_SUPPORTED') return 409;
     if (code === 'EXECUTION_ALREADY_RUNNING') return 409;
     if (code === 'FORBIDDEN') return 403;

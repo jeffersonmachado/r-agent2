@@ -1176,19 +1176,48 @@ function listReplayFiles({
   return paginateResult(sorted);
 }
 
+/**
+ * Verifica a integridade de um replay ANTES de entregá-lo para leitura.
+ *
+ * Antes, uma falha de integridade fazia `getReplayFile` devolver `null` e o
+ * endpoint respondia 404 "Replay não encontrado" — sinal ERRADO: o artefato
+ * existe, o que falhou foi a verificação (assinatura/checksum). Isso tornou
+ * invisível a migração de assinatura de 2026-09-13, em que os 118 replays
+ * gravados ficaram inacessíveis pelo visualizador sem aparecer como problema de
+ * integridade.
+ *
+ * Agora a falha é explícita (`REPLAY_INTEGRITY_FAILED` → HTTP 422), com os
+ * motivos preservados no erro para diagnóstico.
+ *
+ * @param {Object} parsed - Artefato já lido do disco
+ * @returns {boolean} true se o artefato está assinado
+ * @throws {Error} com code `REPLAY_INTEGRITY_FAILED` quando assinado e inválido
+ */
+function assertReplayIntegrityForRead(parsed = {}) {
+  const signed = Boolean(parsed.replayHash || parsed.replayChecksum || parsed.governanceSignature);
+  if (!signed && process.env.NODE_ENV !== 'production') return false;
+  const integrity = validateReplayIntegrity(parsed, parsed.governance || parsed.governanceResult || {}, {
+    maxAgeMs: -1,
+  });
+  if (!integrity.valid) {
+    const reasons = integrity.blockers.map((blocker) => blocker.reason);
+    const error = makeError(
+      `Replay encontrado, porém a verificação de integridade falhou: ${reasons.join(', ')}`,
+      'REPLAY_INTEGRITY_FAILED'
+    );
+    error.blockers = integrity.blockers;
+    throw error;
+  }
+  return signed;
+}
+
 function getReplayFile(filename, tenantId = 'system') {
   const safeName = ensureSafeJsonFilename(filename);
   const scopedTenantId = normalizeTenantKey(tenantId);
   const owned = findOwnedJsonFile(getAllReplayReadDirs(scopedTenantId), safeName, scopedTenantId);
   if (!owned) return null;
   const { filePath: replayPath, payload: parsed } = owned;
-  const signed = Boolean(parsed.replayHash || parsed.replayChecksum || parsed.governanceSignature);
-  if (signed || process.env.NODE_ENV === 'production') {
-    const integrity = validateReplayIntegrity(parsed, parsed.governance || parsed.governanceResult || {}, {
-      maxAgeMs: -1,
-    });
-    if (!integrity.valid) return null;
-  }
+  const signed = assertReplayIntegrityForRead(parsed);
   // Não transforme evidência assinada em memória: o objeto entregue pela API
   // deve continuar verificável exatamente como foi persistido.
   if (signed) return parsed;
@@ -1284,6 +1313,7 @@ module.exports = {
   startManualRecording,
   stopManualRecording,
   getRecordingStatus,
+  assertReplayIntegrityForRead,
   listReplayFiles,
   getReplayFile,
   getReportFile,
