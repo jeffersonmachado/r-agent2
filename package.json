@@ -335,7 +335,8 @@
     "test:workspace-core": "WORKSPACE_TEST_MODE=real node scripts/workspace-core-smoke.js",
     "test:workspace-core:failure": "WORKSPACE_TEST_MODE=failure node scripts/workspace-core-smoke.js",
     "report:rag-domain-segregation": "node --env-file-if-exists=.env scripts/governance/rag-domain-segregation-report.js",
-    "generate:outbound-reliability": "node --env-file-if-exists=.env scripts/governance/generate-outbound-reliability-evidence.js"
+    "generate:outbound-reliability": "node --env-file-if-exists=.env scripts/governance/generate-outbound-reliability-evidence.js",
+    "smoke:replay-viewer": "node scripts/smoke/replay-viewer-smoke.js"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",
