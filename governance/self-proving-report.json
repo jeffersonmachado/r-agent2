@@ -221,8 +221,8 @@
   "summary": "Pacote r-agent2-20260914-131049.payload.zip é completamente self-proving. Score: 100/100.",
   "artifactType": "self-proving-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260914160508860-faf77fc5",
-  "sourceFingerprint": "327e3de9440cc688c132d31b3f0baa3965ec1af80074c4f9b1b386e77b7c38cd",
+  "runId": "rap-governed-20260914181529637-9c1c6d00",
+  "sourceFingerprint": "80109ffff483bd7678bf950790741d1d24250eb766f7d4c46b45d2b00769cabe",
   "gitCommit": "6181dfba05d4f80afcf8a470c7327a5466b5e302",
   "gitTree": "a3fac22ba66a5643b735233e8ce67f434a377877"
 }
