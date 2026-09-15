@@ -9,7 +9,7 @@ const {
   setTenantAiConfig,
   getAiProviderForTenant,
   clearAiProviderConfig,
-} = require('../aiProviderManager');
+} = require('../../api/services/aiProviderManager');
 
 describe('aiProviderManager', () => {
   beforeEach(() => {

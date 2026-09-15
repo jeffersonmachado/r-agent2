@@ -12,7 +12,7 @@ const {
   setTenantAiConfig,
   getAiProviderForTenant,
   clearAiProviderConfig,
-} = require('../aiProviderManager');
+} = require('../../api/services/aiProviderManager');
 
 const ORIGINAL_ENV = process.env.ENGINE_AI_TIMEOUT_MS;
 
