@@ -20,6 +20,12 @@
 #     fica com lineage estrangeiro e o contamination cleaner derruba o run
 #     (FOREIGN_RUN_ARTIFACT em arquivo de decisão);
 #   - re-stampa lineage (runId/sourceFingerprint) nos relatórios governados;
+#   - REGERA a evidência executável com validade temporal (maxAgeMs=7d no
+#     registry): master-scorecard test/regression, reports de domínio e o
+#     relatório de persistência. O stamp NÃO pode refrescar generatedAt (seria
+#     freshness fabricada) — só o produtor real, rodando as suítes Jest, pode.
+#     Sem este passo, os relatórios cruzam 168h e o fixpoint derruba as 78
+#     dimensões para 5 (ARTIFACT_EXPIRED em TESTED/REGRESSION_PROTECTED);
 #   - roda o fixpoint persistido 2x (1ª: projeta DEFERRED a partir do DB;
 #     2ª: revalida contra os relatórios projetados — fixpoint estável);
 #   - avalia o seal-time-gate (esperado: SEAL_PENDING na fase DELIVERED ou
@@ -59,18 +65,27 @@ fi
 echo "[converge] 4/8 readiness projection (lineage do run corrente)"
 # O exit code deste produtor ESPELHA A DECISÃO (1 quando a decisão não é GO),
 # não uma falha de execução. A avaliação da decisão é feita pelo fixpoint
-# (passos 6-7); aqui o objetivo é apenas regerar a projeção com o lineage do run
+# (passos 7-8); aqui o objetivo é apenas regerar a projeção com o lineage do run
 # corrente. Sob `set -e` o abort seria um falso bloqueio.
 $NODE tools/system/platform-readiness.js >/dev/null || true
 
-echo "[converge] 5/8 stamp de lineage"
+echo "[converge] 5/9 stamp de lineage"
 $NODE scripts/governance/stamp-report-lineage.js >/dev/null
 
-echo "[converge] 6/8 fixpoint (pass 1 — projeção)"
+echo "[converge] 6/9 evidência executável com validade temporal (test/regression + domínios + persistência)"
+# Produtores reais (rodam as suítes Jest e gravam o exit code): únicos que
+# podem refrescar generatedAt sem fabricar freshness. Se uma suíte falhar, o
+# report sai FAIL e o fixpoint/seal-time-gate reprovam — comportamento honesto
+# desejado (set -e aborta aqui de propósito).
+$NODE scripts/governance/generate-policy-evidence.js
+$NODE scripts/governance/generate-domain-evidence.js >/dev/null
+$NODE scripts/governance/generate-persistence-evidence.js >/dev/null
+
+echo "[converge] 7/9 fixpoint (pass 1 — projeção)"
 $NODE scripts/governance/run-persisted-scorecard.js >/dev/null
 
-echo "[converge] 7/8 fixpoint (pass 2 — revalidação estável)"
+echo "[converge] 8/9 fixpoint (pass 2 — revalidação estável)"
 $NODE scripts/governance/run-persisted-scorecard.js
 
-echo "[converge] 8/8 seal-time-gate"
+echo "[converge] 9/9 seal-time-gate"
 node scripts/governance/seal-time-gate.js
