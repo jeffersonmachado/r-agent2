@@ -25,7 +25,14 @@
 
 const { createMcpServerAdapter } = require('./server-adapter');
 const { createMcpClientHub, validateConnection, AUTH_MODES } = require('./client-hub');
-const { registerExternalMcpTools, externalMcpTenantToken, resolveCapability } = require('./external-tool-adapter');
+const {
+  registerExternalMcpTools,
+  revokeExternalMcpConnection,
+  externalMcpTenantToken,
+  externalMcpConnectionScope,
+  resolveCapability,
+} = require('./external-tool-adapter');
+const connectionDelegation = require('./connection-delegation');
 const { buildMcpExecutionContext, stripTenantOverride } = require('./auth');
 const endpointPolicy = require('./endpoint-policy');
 const toolPolicy = require('./tool-policy');
@@ -38,8 +45,11 @@ module.exports = {
   validateConnection,
   AUTH_MODES,
   registerExternalMcpTools,
+  revokeExternalMcpConnection,
   externalMcpTenantToken,
+  externalMcpConnectionScope,
   resolveCapability,
+  connectionDelegation,
   buildMcpExecutionContext,
   stripTenantOverride,
   endpointPolicy,

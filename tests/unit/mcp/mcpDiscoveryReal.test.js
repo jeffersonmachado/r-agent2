@@ -681,10 +681,11 @@ describe('M9/M10/M12/M15–M18 — descoberta real contra servidor MCP no protoc
         actor: { id: 'a-1', permissions: [`mcp.t${tenantTokenB}.erp`] },
         entity,
       }).then(() => null, (error) => error);
-      // Tenant A não tem provider externo registrado: a permissão existe, mas a
-      // chamada falha ao validar o tenant da conexão (fail closed).
+      // Fail closed em DUAS camadas: o binding de tenant já impede a RESOLUÇÃO
+      // do provider de outro tenant (capability_unavailable); se algo resolvesse,
+      // a execução ainda validaria o tenant da conexão (mcp_connection_tenant_mismatch).
       expect(crossTenant).not.toBeNull();
-      expect(String(crossTenant.message)).toMatch(/mcp_connection_tenant_mismatch|cognitive_tool/);
+      expect(String(crossTenant.message)).toMatch(/mcp_connection_tenant_mismatch|cognitive_tool|capability_unavailable/);
     });
   });
 

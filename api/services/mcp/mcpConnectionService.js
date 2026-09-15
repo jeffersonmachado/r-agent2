@@ -29,6 +29,7 @@ const crypto = require('crypto');
 const getMcpConnectionModel = require('../../db/models/McpConnection');
 const { evaluateEndpoint } = require('../../../src/core/mcp/endpoint-policy');
 const { evaluateAuthModeUse, AUTH_CAPABILITIES } = require('../../../src/core/mcp/auth-capabilities');
+const { validateDelegatedCapabilities } = require('../../../src/core/mcp/connection-delegation');
 
 /** §M10 — estados de ciclo de vida persistidos (nunca só memória). */
 const LIFECYCLE_STATES = Object.freeze({
@@ -198,6 +199,15 @@ function normalizeOperationalConfig(input = {}, { currentMappingVersion = null, 
 
   const quota = input.quota === undefined || input.quota === null ? null : requirePlainObject(input.quota, 'quota');
 
+  // Delegação explícita do escopo da conexão (policy): validada contra as
+  // capabilities DECLARADAS — fail closed com código de serviço.
+  let delegatedCapabilities;
+  try {
+    delegatedCapabilities = validateDelegatedCapabilities(input);
+  } catch (error) {
+    throw serviceError(ERROR_CODES.INVALID, error.message);
+  }
+
   return {
     allowedCapabilities: requireStringArray(input.allowedCapabilities, 'allowedCapabilities'),
     allowedTools: requireStringArray(input.allowedTools, 'allowedTools'),
@@ -208,6 +218,7 @@ function normalizeOperationalConfig(input = {}, { currentMappingVersion = null, 
     quota,
     timeoutMs,
     retryPolicy,
+    delegatedCapabilities,
   };
 }
 
@@ -242,6 +253,7 @@ function toConnectionRecord(row) {
     allowedCapabilities: row.allowed_capabilities || [],
     allowedTools: row.allowed_tools || [],
     toolCapabilityMap: row.tool_capability_map || {},
+    delegatedCapabilities: row.delegated_capabilities || [],
     mappingVersion: row.mapping_version || null,
     toolPolicies: row.tool_policies || {},
     endpointPolicy: row.endpoint_policy || {},
@@ -274,6 +286,7 @@ function toConnectionConfig(row) {
     allowedCapabilities: [...(pick('allowed_capabilities', 'allowedCapabilities') || [])],
     allowedTools: [...(pick('allowed_tools', 'allowedTools') || [])],
     toolCapabilityMap: { ...(pick('tool_capability_map', 'toolCapabilityMap') || {}) },
+    delegatedCapabilities: [...(pick('delegated_capabilities', 'delegatedCapabilities') || [])],
     mappingVersion: pick('mapping_version', 'mappingVersion') || null,
     toolPolicies: { ...(pick('tool_policies', 'toolPolicies') || {}) },
     endpointPolicy: { ...(pick('endpoint_policy', 'endpointPolicy') || {}) },
@@ -430,6 +443,7 @@ async function createConnection({ tenantId, input, actor = null } = {}) {
     allowed_tools: normalized.allowedTools,
     tool_capability_map: normalized.toolCapabilityMap,
     mapping_version: normalized.mappingVersion,
+    delegated_capabilities: normalized.delegatedCapabilities,
     tool_policies: normalized.toolPolicies,
     endpoint_policy: normalized.endpointPolicy,
     quota: normalized.quota,
@@ -461,6 +475,7 @@ async function updateConnection({ tenantId, id, patch = {}, actor = null } = {})
   const OPERATIONAL_PATCH_FIELDS = [
     'allowedCapabilities', 'allowedTools', 'toolCapabilityMap', 'mappingVersion',
     'toolPolicies', 'endpointPolicy', 'quota', 'timeoutMs', 'retryPolicy',
+    'delegatedCapabilities',
   ];
   const touchesOperational = OPERATIONAL_PATCH_FIELDS.some((field) => patch[field] !== undefined);
   const operational = touchesOperational
@@ -475,6 +490,9 @@ async function updateConnection({ tenantId, id, patch = {}, actor = null } = {})
         quota: patch.quota !== undefined ? patch.quota : current.quota,
         timeoutMs: patch.timeoutMs !== undefined ? patch.timeoutMs : current.timeout_ms,
         retryPolicy: patch.retryPolicy !== undefined ? patch.retryPolicy : current.retry_policy,
+        delegatedCapabilities: patch.delegatedCapabilities !== undefined
+          ? patch.delegatedCapabilities
+          : current.delegated_capabilities,
       },
       { currentMappingVersion: current.mapping_version || null, mappingTouched: patch.toolCapabilityMap !== undefined },
     )
@@ -500,6 +518,7 @@ async function updateConnection({ tenantId, id, patch = {}, actor = null } = {})
     updates.quota = operational.quota;
     updates.timeout_ms = operational.timeoutMs;
     updates.retry_policy = operational.retryPolicy;
+    updates.delegated_capabilities = operational.delegatedCapabilities;
   }
   // Endpoint/auth alterados invalidam descoberta e schema conhecidos (§M12).
   if (patch.endpoint !== undefined || patch.authType !== undefined) {

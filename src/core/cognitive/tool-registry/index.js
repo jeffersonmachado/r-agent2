@@ -34,6 +34,13 @@
  * input schema e (para tools com sideEffects + idempotencyPolicy 'required')
  * propagação de idempotencyKey. As tools delegam para serviços já existentes
  * do RAP (não duplicam domínio).
+ *
+ * Revogação e delegação:
+ *  - `deregister(id)` remove uma tool (provider revogado, ex.: conexão MCP
+ *    externa desabilitada) com seus aliases e schema cache;
+ *  - `addDelegationResolver(fn)` permite que uma FONTE DE POLÍTICA (ex.: a
+ *    config persistida da conexão MCP, via `delegatedCapabilities`) conceda
+ *    permissões adicionais ao ator na verificação — nunca `*`, fail closed.
  */
 
 const { sanitize } = require('../sanitize');
@@ -108,9 +115,34 @@ function resolveActorClassification(actor) {
   return isValidVisibility(classification) ? classification : VISIBILITY.PRODUCTION;
 }
 
-function actorHasPermissions(actor, required) {
-  if (!required || required.length === 0) return true;
+/**
+ * Permissões efetivas do ator: as declaradas mais as DELEGADAS por resolvers
+ * registrados (ex.: delegação de escopo de conexão MCP, dirigida pela config
+ * persistida da conexão — nunca wildcard). Um resolver que falha não concede
+ * nada (fail closed), e sua saída nunca pode introduzir `*`.
+ */
+function resolveGrantedPermissions(actor, delegationResolvers) {
   const granted = new Set(Array.isArray(actor?.permissions) ? actor.permissions : []);
+  for (const resolver of delegationResolvers) {
+    let delegated = null;
+    try {
+      delegated = resolver(actor);
+    } catch (_) {
+      delegated = null; // fail closed: resolver quebrado não concede permissão
+    }
+    if (!Array.isArray(delegated)) continue;
+    for (const permission of delegated) {
+      const value = String(permission || '');
+      if (!value || value.includes('*')) continue; // delegação nunca é wildcard
+      granted.add(value);
+    }
+  }
+  return granted;
+}
+
+function actorHasPermissions(actor, required, delegationResolvers) {
+  if (!required || required.length === 0) return true;
+  const granted = resolveGrantedPermissions(actor, delegationResolvers);
   if (granted.has('*')) return true;
   return required.every((perm) => granted.has(perm));
 }
@@ -119,6 +151,7 @@ function createToolRegistry({ logger } = {}) {
   const tools = new Map();
   const aliases = new Map();
   const schemaCache = new Map();
+  const delegationResolvers = new Set();
   const log = logger || defaultLogger();
 
   function compileSchema(toolId, kind, schema) {
@@ -167,8 +200,11 @@ function createToolRegistry({ logger } = {}) {
    */
   function list(actor = {}) {
     const classification = resolveActorClassification(actor);
+    // Se o ator não declarou permissões, só visibility é aplicada (a execução
+    // sempre valida permissions) — semântica preservada. Quando declarou, o
+    // filtro usa as permissões efetivas (declaradas + delegadas por resolver).
     const hasPermissions = Array.isArray(actor.permissions) && actor.permissions.length > 0;
-    const grantedPermissions = new Set(hasPermissions ? actor.permissions : []);
+    const grantedPermissions = resolveGrantedPermissions(actor, delegationResolvers);
     const wildcard = grantedPermissions.has('*');
 
     return Array.from(tools.values())
@@ -216,7 +252,7 @@ function createToolRegistry({ logger } = {}) {
     if (!canAccess(classification, tool.visibility)) {
       throw new Error(`cognitive_tool_visibility_denied: ${canonicalId} (actor=${classification}, tool=${tool.visibility})`);
     }
-    if (!actorHasPermissions(actor, tool.permissions)) {
+    if (!actorHasPermissions(actor, tool.permissions, delegationResolvers)) {
       throw new Error(`cognitive_tool_permission_denied: ${canonicalId} (required=${tool.permissions.join(',')})`);
     }
 
@@ -320,8 +356,41 @@ function createToolRegistry({ logger } = {}) {
     return { supported: true };
   }
 
+  /**
+   * Remove uma tool do registry (revogação de provider — ex.: conexão MCP
+   * externa desabilitada). Aceita id canônico ou alias. Remove também os
+   * aliases da tool e as entradas de schema cache. Idempotente: devolve
+   * `false` quando o id não existe (nunca lança por ausência).
+   */
+  function deregister(id) {
+    const canonical = tools.has(id) ? id : aliases.get(id) || null;
+    if (!canonical) return false;
+    const tool = tools.get(canonical);
+    tools.delete(canonical);
+    for (const alias of tool.aliases || []) aliases.delete(alias);
+    for (const key of Array.from(schemaCache.keys())) {
+      if (key.startsWith(`${canonical}:`)) schemaCache.delete(key);
+    }
+    return true;
+  }
+
+  /**
+   * Registra um resolver de delegação de permissões (ex.: escopo de conexão
+   * MCP delegado a portadores de capabilities, conforme config persistida).
+   * A saída do resolver é UNIDA às permissões do ator nas verificações de
+   * `list`/`execute`; `*` na saída é descartado — delegação nunca é wildcard.
+   * Devolve uma função para remover o resolver.
+   */
+  function addDelegationResolver(resolver) {
+    if (typeof resolver !== 'function') throw new Error('cognitive_delegation_resolver_invalid');
+    delegationResolvers.add(resolver);
+    return () => delegationResolvers.delete(resolver);
+  }
+
   return {
     register,
+    deregister,
+    addDelegationResolver,
     get,
     resolveId,
     list,

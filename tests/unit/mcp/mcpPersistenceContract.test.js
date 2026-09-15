@@ -73,6 +73,8 @@ function operationalInput(overrides = {}) {
     quota: { tenant: 100, connection: 50, tool: 10 },
     timeoutMs: 15000,
     retryPolicy: { attempts: 2 },
+    // Delegação explícita do escopo da conexão a portadores de `crm.read`.
+    delegatedCapabilities: ['crm.read'],
     ...overrides,
   };
 }
@@ -130,6 +132,7 @@ describe('M1/M3–M6/M11/M12 — contrato REAL (model + serviço + Postgres)', (
         'allowed_capabilities', 'allowed_tools', 'tool_capability_map', 'mapping_version',
         'tool_policies', 'endpoint_policy', 'quota', 'timeout_ms', 'retry_policy',
         'discovered_tools', 'schema_revalidated_at', 'credential_ref',
+        'delegated_capabilities',
       ]) {
         expect(attributes).toContain(column);
       }
@@ -156,12 +159,14 @@ describe('M1/M3–M6/M11/M12 — contrato REAL (model + serviço + Postgres)', (
       expect(created.quota).toEqual({ tenant: 100, connection: 50, tool: 10 });
       expect(created.timeoutMs).toBe(15000);
       expect(created.retryPolicy).toEqual({ attempts: 2 });
+      expect(created.delegatedCapabilities).toEqual(['crm.read']);
       // §M8 — mapeamento versionado.
       expect(created.mappingVersion).toBe('1');
 
       const reread = await service.getConnection({ tenantId, id: created.id });
       expect(reread.toolPolicies).toEqual(created.toolPolicies);
       expect(reread.allowedTools).toEqual(['crm.byId']);
+      expect(reread.delegatedCapabilities).toEqual(['crm.read']);
     });
 
     it('listConnections NÃO dropa a config operacional (regressão do defeito real)', async () => {

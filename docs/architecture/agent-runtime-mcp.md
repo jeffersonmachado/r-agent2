@@ -206,12 +206,26 @@ SDK oficial `@modelcontextprotocol/sdk` (v1.30, CJS).
 - **Client Hub** (`client-hub.js`): conexões externas **registradas**
   (`tenant, name, endpoint, authType, authRef|credentialRef, enabled,
   classification, allowedCapabilities, allowedTools, toolCapabilityMap,
-  toolPolicies, endpointPolicy, timeout, retry`). Sem conexão:
-  `no_configured_mcp_connection`. `authRef`/`credentialRef` são referências —
-  segredos em claro (`token`, `apiKey`, ...) são recusados na configuração.
+  delegatedCapabilities, toolPolicies, endpointPolicy, timeout, retry`).
+  Sem conexão: `no_configured_mcp_connection`. `authRef`/`credentialRef` são
+  referências — segredos em claro (`token`, `apiKey`, ...) são recusados na
+  configuração. `setConnectionEnabled` aplica enable/disable **em memória**
+  (sem restart); a persistência segue autoridade.
 - **External Tool Adapter** (`external-tool-adapter.js`): tools externas
   viram proxies governados `mcp.t<tenantToken>.<connection>.<tool>` **dentro**
   do Tool Registry — o agente nunca chama MCP externo diretamente.
+  `revokeExternalMcpConnection` desabilita a conexão no hub e **remove os
+  proxies do registry** (`deregister`), então `resolveProvider` deixa de
+  selecioná-los na hora; a rota `enable/disable` chama esse caminho (via
+  `api/runtime/mcpRuntimeHandles`) além de persistir.
+- **Connection Delegation** (`connection-delegation.js`): o escopo da conexão
+  (`mcp.t<tenantToken>.<connection>`) pode ser **delegado** — via config
+  persistida `delegated_capabilities` (coluna `mcp_connections`) — a
+  portadores de capabilities canônicas nominalmente declaradas. É o que
+  permite a um consumidor capability-neutral (ex.: research principal)
+  alcançar o provider externo sem wildcard `mcp.*` (proibido e recusado na
+  configuração) e sem conhecer o nome da conexão. O resolver vive no registry
+  (`addDelegationResolver`), ignora conexões desabilitadas e nunca concede `*`.
 
 ### 2.8.1 MCP Control Plane
 
@@ -255,6 +269,11 @@ endpoint-policy (SSRF · TLS · DNS rebinding · redirect)
   pede **capability** (`crm.read`, `research.search`), nunca provider. Seleção
   determinística (nativo primeiro; fallback externo só sem side effect;
   todos com side effect ⇒ `side_effect_provider_fallback_not_safe`).
+  **Binding de tenant**: um proxy de MCP externo (`metadata.source =
+  'external_mcp'`) só é elegível para atores do tenant da conexão
+  (`metadata.tenantId`) — ator de outro tenant ou sem tenant nunca o resolve
+  (fail closed; cross-tenant exigiria delegação persistida explícita, que não
+  existe).
 - **`observability.js`** — 9 métricas (`mcp_connections`,
   `mcp_connection_failures`, `mcp_tool_discoveries`, `mcp_tool_calls`,
   `mcp_tool_failures`, `mcp_tool_denials`, `mcp_schema_changes`,

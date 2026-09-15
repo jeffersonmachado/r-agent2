@@ -191,6 +191,11 @@ async function startMcpClientComposition(deps = {}) {
       logger,
     });
 
+    // Expõe o par VIVO (hub + registry) para a superfície de administração:
+    // enable/disable passam a valer em runtime, não só após restart.
+    const { setMcpRuntimeHandles } = require('./mcpRuntimeHandles');
+    setMcpRuntimeHandles({ hub, toolRegistry });
+
     metrics.recordDiscovery({
       toolsDiscovered: result.registered.length,
       schemaChanged: 0,

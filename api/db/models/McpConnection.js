@@ -49,6 +49,9 @@ function getMcpConnectionModel() {
       // §M8 — mapeamento tool remota → capability CANÔNICA, versionado.
       tool_capability_map: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
       mapping_version: { type: DataTypes.STRING(32), allowNull: true },
+      // Delegação EXPLÍCITA do escopo da conexão a portadores de capabilities
+      // canônicas (nunca wildcard; validada contra as capabilities declaradas).
+      delegated_capabilities: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       tool_policies: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
       endpoint_policy: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
       quota: { type: DataTypes.JSONB, allowNull: true },

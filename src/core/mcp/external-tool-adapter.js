@@ -21,26 +21,68 @@
  * expõe o tenantId em ids listados para outros tenants. A permissão exigida
  * (`mcp.t<tenantToken>.<connection>`) é igualmente escopada, então um ator de
  * outro tenant não lista nem executa a tool no registry — e a execução ainda
- * valida que o tenant do contexto governado é o tenant da conexão.
+ * valida que o tenant do contexto governado é o tenant da conexão. Quando a
+ * conexão declara `delegatedCapabilities`, o portador da capability pode
+ * listar o proxy (a camada de permissão é tenant-agnóstica por design), mas a
+ * resolução de provider filtra pelo binding de tenant (metadata.tenantId) e a
+ * execução continua fail-closed no guard de tenant.
+ *
+ * Delegação (config persistida `delegatedCapabilities` da conexão): portadores
+ * de uma capability canônica declarada recebem o escopo da conexão na
+ * verificação de permissão do registry — é assim que um consumidor
+ * capability-neutral (ex.: research principal) alcança o provider externo sem
+ * wildcard e sem conhecer o nome da conexão. Ver `connection-delegation.js`.
+ *
+ * Revogação: `revokeExternalMcpConnection` desabilita a conexão no hub em
+ * memória e remove os proxies do registry (sem restart).
  */
 
-const crypto = require('crypto');
 const { resolveToolPolicy, sanitizeRemoteDescription, redactToolOutput } = require('./tool-policy');
+const {
+  sanitizeToolIdPart,
+  externalMcpTenantToken,
+  externalMcpConnectionScope,
+  createConnectionDelegationResolver,
+} = require('./connection-delegation');
 
 function defaultLogger() {
   return require('../../../api/utils/logger');
 }
 
-function sanitizeToolIdPart(value) {
-  return String(value || '').replace(/[^a-zA-Z0-9_.-]/g, '_');
-}
+/**
+ * Delegação de escopo por (registry, hub): o resolver lê as conexões VIVAS do
+ * hub a cada verificação, então um disable em memória passa a valer na hora.
+ * WeakMap para não reter registry/hub além do ciclo de vida deles.
+ */
+const delegationByRegistry = new WeakMap();
 
 /**
- * Token opaco e determinístico do tenant para ids/permissões de tools
- * externas (não reversível, não vaza tenantId).
+ * Garante que o registry consulta a delegação persistida das conexões DESTE
+ * hub (`delegatedCapabilities`) nas verificações de permissão. Sem isto, os
+ * proxies `mcp.t*` ficam listados mas iralcançáveis por qualquer principal
+ * capability-neutral — o bug histórico do research principal.
  */
-function externalMcpTenantToken(tenantId) {
-  return crypto.createHash('sha256').update(String(tenantId)).digest('hex').slice(0, 12);
+function ensureConnectionDelegation(toolRegistry, hub) {
+  if (typeof toolRegistry.addDelegationResolver !== 'function') return;
+  let perHub = delegationByRegistry.get(toolRegistry);
+  if (!perHub) {
+    perHub = new Map();
+    delegationByRegistry.set(toolRegistry, perHub);
+  }
+  if (perHub.has(hub)) return;
+  perHub.set(hub, toolRegistry.addDelegationResolver(createConnectionDelegationResolver({ hub })));
+}
+
+/** ToolIds registrados por (registry, connectionKey) — base da revogação. */
+const registrationsByRegistry = new WeakMap();
+
+function trackRegistrations(toolRegistry) {
+  let registrations = registrationsByRegistry.get(toolRegistry);
+  if (!registrations) {
+    registrations = new Map();
+    registrationsByRegistry.set(toolRegistry, registrations);
+  }
+  return registrations;
 }
 
 /**
@@ -82,6 +124,9 @@ async function registerExternalMcpTools({ toolRegistry, hub, logger } = {}) {
     // Nenhum MCP externo configurado: estado explícito, não fake success.
     return { registered: [], skipped: [], reason: 'no_configured_mcp_connection' };
   }
+
+  ensureConnectionDelegation(toolRegistry, hub);
+  const registrations = trackRegistrations(toolRegistry);
 
   const registered = [];
   const skipped = [];
@@ -134,14 +179,15 @@ async function registerExternalMcpTools({ toolRegistry, hub, logger } = {}) {
         classification: connection.classification,
       });
 
-      const tenantToken = externalMcpTenantToken(connection.tenant);
-      const toolId = `mcp.t${tenantToken}.${sanitizeToolIdPart(connection.name)}.${sanitizeToolIdPart(remoteTool.name)}`;
+      const connectionKey = `${connection.tenant}:${connection.name}`;
+      const scope = externalMcpConnectionScope(connection.tenant, connection.name);
+      const toolId = `${scope}.${sanitizeToolIdPart(remoteTool.name)}`;
       try {
         toolRegistry.register({
           id: toolId,
           capability,
           visibility: connection.classification,
-          permissions: [`mcp.t${tenantToken}.${sanitizeToolIdPart(connection.name)}`],
+          permissions: [scope],
           description: `[MCP externo: ${connection.name}] ${safeDescription.text}`,
           inputSchema: remoteTool.inputSchema && typeof remoteTool.inputSchema === 'object'
             ? remoteTool.inputSchema
@@ -155,6 +201,10 @@ async function registerExternalMcpTools({ toolRegistry, hub, logger } = {}) {
           metadata: Object.freeze({
             source: 'external_mcp',
             descriptionTrusted: false,
+            // Binding de tenant: a resolução de provider (capability-resolution)
+            // nunca seleciona este proxy para um ator de outro tenant.
+            tenantId: connection.tenant,
+            connection: connection.name,
             sensitivity: toolPolicy.sensitivity,
             policyProvenance: toolPolicy.provenance,
           }),
@@ -189,6 +239,8 @@ async function registerExternalMcpTools({ toolRegistry, hub, logger } = {}) {
         // toolCapabilityMap) É a validação local da tool. Mudanças POSTERIORES
         // de schema remoto continuam exigindo revalidação.
         hub.lifecycle.validateTool(`${connection.tenant}:${connection.name}`, remoteTool.name);
+        if (!registrations.has(connectionKey)) registrations.set(connectionKey, new Set());
+        registrations.get(connectionKey).add(toolId);
         registered.push(toolId);
       } catch (error) {
         skipped.push({ connection: connection.name, tool: remoteTool.name, reason: 'register_failed', error: error.message });
@@ -202,4 +254,50 @@ async function registerExternalMcpTools({ toolRegistry, hub, logger } = {}) {
   return { registered, skipped };
 }
 
-module.exports = { registerExternalMcpTools, externalMcpTenantToken, resolveCapability };
+/**
+ * Revoga uma conexão externa EM RUNTIME (disable sem restart):
+ *  1. desabilita a conexão no hub em memória — `connect`/`callTool` passam a
+ *     recusar com `mcp_connection_disabled` imediatamente;
+ *  2. remove os proxies da conexão do Canonical Tool Registry — `resolveProvider`
+ *     deixa de selecioná-los e `execute` falha com `cognitive_tool_not_found`;
+ *  3. a delegação de escopo deixa de ser concedida (o resolver ignora conexões
+ *     desabilitadas).
+ *
+ * A persistência (mcpConnectionService.setEnabled) é a autoridade e é chamada
+ * pela rota ANTES desta revogação; em restart, conexões desabilitadas nunca
+ * são re-registradas (o adapter filtra `enabled`).
+ *
+ * @returns {{deregistered: string[], connection: object}}
+ */
+function revokeExternalMcpConnection({ toolRegistry, hub, tenantId, name, logger } = {}) {
+  if (!toolRegistry) throw new Error('external_mcp_adapter_registry_required');
+  if (!hub) throw new Error('external_mcp_adapter_hub_required');
+  const log = logger || defaultLogger();
+
+  const connection = hub.setConnectionEnabled(name, { tenantId, enabled: false });
+
+  const deregistered = [];
+  const registrations = registrationsByRegistry.get(toolRegistry);
+  const tracked = registrations?.get(`${connection.tenant}:${connection.name}`);
+  if (tracked) {
+    for (const toolId of tracked) {
+      if (typeof toolRegistry.deregister === 'function' && toolRegistry.deregister(toolId)) {
+        deregistered.push(toolId);
+      }
+    }
+    registrations.delete(`${connection.tenant}:${connection.name}`);
+  }
+
+  log.info('[ExternalMcpToolAdapter] External MCP connection revoked', {
+    connection: connection.name, tenant: connection.tenant, deregistered: deregistered.length,
+  });
+  return { deregistered, connection };
+}
+
+module.exports = {
+  registerExternalMcpTools,
+  revokeExternalMcpConnection,
+  externalMcpTenantToken,
+  externalMcpConnectionScope,
+  resolveCapability,
+};

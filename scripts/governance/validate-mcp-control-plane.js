@@ -34,6 +34,13 @@
  *  23. schema_change_not_auto_promoted  — schema novo fica pendente até revalidação explícita
  *  24. persistence_is_runtime_authority — banco é a autoridade do startup (sem lista de tenants)
  *  25. json_body_is_awaited        — rotas aguardam o corpo JSON (guard §M9 e create/update reais)
+ *  26. research_delegation_real_path — research principal alcança o provider MCP externo
+ *      pelo caminho REAL (adapter+registry), dirigido pela config persistida
+ *      (`delegatedCapabilities`), sem wildcard `mcp.*`
+ *  27. revocation_deregisters_provider — disable/revoke remove os proxies do registry
+ *      (resolveProvider não seleciona mais) e o restart nunca re-registra desabilitada
+ *  28. cross_tenant_provider_binding — provider MCP de outro tenant nunca resolve nem
+ *      executa para o research principal SYSTEM
  */
 
 const fs = require('fs');
@@ -619,7 +626,7 @@ check('persistence_is_runtime_authority', 'runtime carrega TODAS as conexões ha
     mapping_version: '2',
     discovered_tools: [{ name: 'crm.read' }],
   });
-  for (const field of ['toolPolicies', 'toolCapabilityMap', 'allowedTools', 'allowedCapabilities', 'endpointPolicy', 'retryPolicy']) {
+  for (const field of ['toolPolicies', 'toolCapabilityMap', 'allowedTools', 'allowedCapabilities', 'endpointPolicy', 'retryPolicy', 'delegatedCapabilities']) {
     assert(projection[field] !== undefined, `projeção do runtime descarta '${field}'`);
   }
   assert(projection.toolPolicies['crm.read'] !== undefined, 'política declarada por tool não chega ao hub');
@@ -669,9 +676,74 @@ check('json_body_is_awaited', 'rotas MCP aguardam o corpo JSON (guard de invent�
 });
 
 async function main() {
+  // Harness compartilhado das checagens 26–28: servidor MCP externo real no
+  // protocolo (SDK oficial via InMemoryTransport) — adapter, hub, registry e
+  // principal são os módulos de produção.
+  const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
+  const { ListToolsRequestSchema, CallToolRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
+  const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+  const adapter = require(path.join(ROOT, 'src', 'core', 'mcp', 'external-tool-adapter'));
+  const capabilityResolution = require(path.join(ROOT, 'src', 'core', 'mcp', 'capability-resolution'));
+  const supervisor = require(path.join(ROOT, 'api', 'services', 'benchmark', 'benchmarkResearchSupervisor'));
+  const { RESEARCH_CAPABILITY_IDS } = require(path.join(ROOT, 'api', 'services', 'benchmark', 'researchCapabilities'));
+
+  const RESEARCH_REMOTE_TOOLS = [
+    { name: 'search', capability: 'research.search' },
+    { name: 'fetch', capability: 'research.fetch' },
+  ];
+
+  function researchServer() {
+    const server = new Server({ name: 'gate-research-mcp', version: '1.0.0' }, { capabilities: { tools: {} } });
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: RESEARCH_REMOTE_TOOLS.map((tool) => ({
+        name: tool.name,
+        description: `${tool.name} tool`,
+        inputSchema: { type: 'object', additionalProperties: true },
+      })),
+    }));
+    server.setRequestHandler(CallToolRequestSchema, async (request) => ({
+      content: [{ type: 'text', text: `ok:${request.params.name}` }],
+    }));
+    return server;
+  }
+
+  function researchConnection(overrides = {}) {
+    return {
+      tenant: 'system',
+      name: 'market-research',
+      endpoint: 'https://research.example.com/mcp',
+      enabled: true,
+      classification: 'DEVELOPMENT',
+      allowedCapabilities: [...RESEARCH_CAPABILITY_IDS],
+      toolCapabilityMap: Object.fromEntries(RESEARCH_REMOTE_TOOLS.map((tool) => [tool.name, tool.capability])),
+      toolPolicies: Object.fromEntries(RESEARCH_REMOTE_TOOLS.map((tool) => [tool.name, {
+        sideEffects: false, riskLevel: 'low', confirmationPolicy: 'autonomous', idempotencyPolicy: 'none',
+      }])),
+      delegatedCapabilities: RESEARCH_REMOTE_TOOLS.map((tool) => tool.capability),
+      ...overrides,
+    };
+  }
+
+  async function bootResearchStack(connections) {
+    const server = researchServer();
+    const hub = createMcpClientHub({
+      connections,
+      logger: { warn() {}, info() {}, error() {} },
+      transportFactory: () => {
+        const pair = InMemoryTransport.createLinkedPair();
+        server.connect(pair[1]);
+        return pair[0];
+      },
+    });
+    const registry = createToolRegistry({});
+    const registration = await adapter.registerExternalMcpTools({
+      toolRegistry: registry, hub, logger: { warn() {}, info() {}, error() {} },
+    });
+    return { hub, registry, registration };
+  }
+
   const asyncChecks = [
     ['connection_isolation_detail', 'registro de tools externas com conexão fora do ar', async () => {
-      const adapter = require(path.join(ROOT, 'src', 'core', 'mcp', 'external-tool-adapter'));
       const hub = createMcpClientHub({
         connections: [BASE_CONNECTION],
         logger: { warn() {}, info() {}, error() {} },
@@ -683,6 +755,86 @@ async function main() {
       });
       assert(result.registered.length === 0 && registry.size() === 0, 'tool fantasma registrada');
       return 'nenhuma tool registrada com conexão indisponível';
+    }],
+
+    // 26. Delegação REAL da pesquisa: o principal do supervisor alcança o
+    // provider externo pelo caminho de produção — dirigido pela config
+    // persistida, nunca por wildcard.
+    ['research_delegation_real_path', 'research principal resolve e executa research.* via provider MCP externo (caminho real, policy-driven)', async () => {
+      const { registry, registration } = await bootResearchStack([researchConnection()]);
+      assert(registration.registered.length === RESEARCH_REMOTE_TOOLS.length, 'proxy de pesquisa não registrado pelo adapter real');
+
+      const principal = supervisor.buildResearchPrincipal();
+      assert(!principal.permissions.some((p) => p.includes('*')), 'research principal com wildcard');
+      assert(!principal.permissions.some((p) => p.startsWith('mcp.')), 'research principal com escopo de conexão em blanket');
+
+      const resolution = capabilityResolution.resolveProvider({ registry, capability: 'research.search', actor: principal });
+      assert(resolution.provider, `provider não resolveu pelo principal real (${resolution.reason})`);
+      assert(resolution.reason === 'external_read_only_provider_selected', `razão não auditável: ${resolution.reason}`);
+
+      // Policy-driven: sem `delegatedCapabilities` persistido, NÃO resolve.
+      const noDelegation = await bootResearchStack([researchConnection({ delegatedCapabilities: [] })]);
+      const denied = capabilityResolution.resolveProvider({
+        registry: noDelegation.registry, capability: 'research.search', actor: principal,
+      });
+      assert(denied.provider === null, 'resolução funcionou SEM delegação persistida — não é policy-driven');
+
+      // Execução ponta a ponta pelo proxy governado.
+      const execution = await registry.execute(resolution.provider.id, { query: 'q' }, {
+        tenantId: 'system', actor: principal,
+      });
+      assert(execution.success === true && execution.output.remote === 'market-research', 'execução pelo proxy governado falhou');
+      return 'delegação persistida resolve e executa; sem delegação, fail closed; principal sem wildcard';
+    }],
+
+    // 27. Revogação: disable/ref revoke tira o provider do registry na hora e
+    // o restart nunca re-registra conexão desabilitada.
+    ['revocation_deregisters_provider', 'disable/revoke remove proxies do registry; restart não re-registra desabilitada', async () => {
+      const { hub, registry, registration } = await bootResearchStack([researchConnection()]);
+      const principal = supervisor.buildResearchPrincipal();
+
+      hub.setConnectionEnabled('market-research', { tenantId: 'system', enabled: false });
+      let hubRefused = false;
+      try {
+        await hub.callTool('market-research', 'search', {}, { tenantId: 'system' });
+      } catch (error) {
+        hubRefused = /mcp_connection_disabled/.test(error.message);
+      }
+      assert(hubRefused, 'hub não recusou conexão desabilitada em runtime');
+
+      const revoked = adapter.revokeExternalMcpConnection({
+        toolRegistry: registry, hub, tenantId: 'system', name: 'market-research',
+        logger: { warn() {}, info() {}, error() {} },
+      });
+      assert(revoked.deregistered.length === registration.registered.length, 'revoke não removeu todos os proxies');
+      const after = capabilityResolution.resolveProvider({ registry, capability: 'research.search', actor: principal });
+      assert(after.provider === null, 'resolveProvider ainda seleciona provider revogado');
+
+      // Restart simulado: config persistida desabilitada nunca re-registra.
+      const reboot = await bootResearchStack([researchConnection({ enabled: false })]);
+      assert(reboot.registration.registered.length === 0 && reboot.registry.size() === 0,
+        'conexão desabilitada re-registrou no restart');
+      return 'disable recusa no hub; revoke deregistra; restart não re-registra desabilitada';
+    }],
+
+    // 28. Cross-tenant: provider do tenant B nunca é do research principal SYSTEM.
+    ['cross_tenant_provider_binding', 'provider MCP de outro tenant não resolve nem executa para o principal SYSTEM', async () => {
+      const connectionB = researchConnection({ tenant: 'tenant-b', name: 'partner-research' });
+      const { registry, registration } = await bootResearchStack([connectionB]);
+      assert(registration.registered.length === RESEARCH_REMOTE_TOOLS.length, 'setup: proxies do tenant B não registrados');
+
+      const principal = supervisor.buildResearchPrincipal(); // tenant: 'system'
+      const resolution = capabilityResolution.resolveProvider({ registry, capability: 'research.search', actor: principal });
+      assert(resolution.provider === null, 'provider do tenant B resolveu para o principal SYSTEM');
+
+      let refused = false;
+      try {
+        await registry.execute(registration.registered[0], {}, { tenantId: 'system', actor: principal });
+      } catch (error) {
+        refused = /mcp_connection_tenant_mismatch|cognitive_tool_permission_denied/.test(error.message);
+      }
+      assert(refused, 'execução cross-tenant não foi recusada');
+      return 'binding de tenant na resolução + guard de tenant na execução';
     }],
   ];
 

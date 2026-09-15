@@ -25,6 +25,7 @@ const {
 } = require('./endpoint-policy');
 const { createMcpToolLifecycle } = require('./tool-lifecycle');
 const { createMcpQuota } = require('./quota');
+const { validateDelegatedCapabilities } = require('./connection-delegation');
 
 const CONNECTION_REQUIRED_FIELDS = ['tenant', 'name', 'endpoint'];
 
@@ -89,6 +90,10 @@ function validateConnection(connection) {
     allowedTools: Object.freeze([...(connection.allowedTools || [])]),
     toolCapabilityMap: Object.freeze({ ...(connection.toolCapabilityMap || {}) }),
     toolPolicies: Object.freeze({ ...(connection.toolPolicies || {}) }),
+    // Delegação EXPLÍCITA do escopo da conexão a portadores de capabilities
+    // declaradas (policy persistida; wildcard e capability não declarada são
+    // recusados — fail closed na configuração).
+    delegatedCapabilities: Object.freeze(validateDelegatedCapabilities(connection)),
     endpointPolicy,
     allowNoAuth: connection.allowNoAuth === true,
     // Quota local (M49): declarada por conexão, aplicada por tenant/conexão/tool.
@@ -154,6 +159,7 @@ function createMcpClientHub({
         allowedCapabilities: [...c.allowedCapabilities],
         allowedTools: [...c.allowedTools],
         toolCapabilityMap: { ...c.toolCapabilityMap },
+        delegatedCapabilities: [...c.delegatedCapabilities],
         // Política DECLARADA por tool: sem isto o adapter cairia sempre na
         // heurística e uma mutação declarada autônoma/idempotente seria
         // tratada como confirmação obrigatória (ou vice-versa).
@@ -509,9 +515,29 @@ function createMcpClientHub({
     }
   }
 
+  /**
+   * Revoga/reativa a conexão EM MEMÓRIA (a persistência é autoridade à parte,
+   * via mcpConnectionService.setEnabled). Sem isto, um disable persistido só
+   * valia após restart: o hub em memória continuava executando. Fail closed:
+   * conexão desconhecida é erro explícito, nunca no-op silencioso.
+   */
+  function setConnectionEnabled(name, { tenantId = null, enabled } = {}) {
+    const connection = getConnection(name, { tenantId });
+    if (!connection) {
+      throw new Error(`no_configured_mcp_connection: ${name} (tenant=${tenantId})`);
+    }
+    const updated = Object.freeze({ ...connection, enabled: enabled === true });
+    registry.set(_key(updated.tenant, updated.name), updated);
+    log.info('[McpClientHub] Connection enabled-state changed', {
+      connection: updated.name, tenant: updated.tenant, enabled: updated.enabled,
+    });
+    return updated;
+  }
+
   return {
     getConnection,
     listConnections,
+    setConnectionEnabled,
     connect,
     callTool,
     discoverTools,

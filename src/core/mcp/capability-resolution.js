@@ -15,7 +15,11 @@
  *    semanticamente seguro (operação sem side effect);
  *  - a decisão é AUDITÁVEL: devolve `reason`, não um booleano opaco;
  *  - provider com escopo de entidade declarado só é elegível para os tipos
- *    declarados; provider SEM escopo declarado é elegível (não é entity-bound).
+ *    declarados; provider SEM escopo declarado é elegível (não é entity-bound);
+ *  - provider de MCP externo (`metadata.source = 'external_mcp'`) é ligado ao
+ *    tenant da conexão (`metadata.tenantId`): nunca é elegível para ator de
+ *    outro tenant ou sem tenant (fail closed; cross-tenant exigiria delegação
+ *    persistida explícita, que não existe).
  */
 
 const NATIVE_PROVIDER = 'native';
@@ -53,9 +57,22 @@ function resolveCapabilityProviders({ registry, capability, entityType = null, a
     permissions: actor?.permissions,
   });
 
+  // Binding de tenant: um proxy de MCP externo declarado para o tenant X
+  // (metadata.tenantId, gravado pelo External MCP Tool Adapter) só é elegível
+  // para atores DESSE tenant. Ator sem tenant nunca resolve provider externo
+  // (fail closed) — uso cross-tenant exigiria delegação persistida explícita,
+  // que não existe: ausência de delegação é recusa, não exceção.
+  const actorTenant = actor?.tenant || actor?.tenantId || null;
+
   return candidates
     .filter((tool) => tool.capability === target)
     .map((tool) => ({ tool, canonical: registry.get(tool.id) }))
+    .filter(({ canonical }) => {
+      if (canonical?.metadata?.source !== 'external_mcp') return true;
+      const boundTenant = canonical?.metadata?.tenantId;
+      if (!boundTenant) return true;
+      return actorTenant !== null && String(actorTenant) === String(boundTenant);
+    })
     .filter(({ canonical }) => {
       if (!entityType) return true;
       const entityTypes = canonical?.metadata?.entityTypes;

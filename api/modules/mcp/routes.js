@@ -264,6 +264,41 @@ function createMcpRoutes({ buildDeps }) {
     }
   });
 
+  /**
+   * Aplica enable/disable ao RUNTIME (hub em memória + proxies no Canonical
+   * Tool Registry), não só à persistência. Sem isto, o disable só valia após
+   * restart. Best-effort: se o MCP Client não está ativo neste processo, a
+   * persistência segue autoridade e o restart reconcilia — e a falha é
+   * registrada, nunca silenciada.
+   */
+  async function applyRuntimeEnabledState({ tenantId, connectionName, enabled }) {
+    const logger = require('../../utils/logger');
+    try {
+      const { getMcpRuntimeHandles } = require('../../runtime/mcpRuntimeHandles');
+      const handles = getMcpRuntimeHandles();
+      if (!handles) return { applied: false, reason: 'mcp_client_not_started' };
+      const {
+        registerExternalMcpTools, revokeExternalMcpConnection,
+      } = require('../../../src/core/mcp/external-tool-adapter');
+      if (!enabled) {
+        const revoked = revokeExternalMcpConnection({
+          toolRegistry: handles.toolRegistry, hub: handles.hub, tenantId, name: connectionName,
+        });
+        return { applied: true, deregistered: revoked.deregistered.length };
+      }
+      handles.hub.setConnectionEnabled(connectionName, { tenantId, enabled: true });
+      const registration = await registerExternalMcpTools({
+        toolRegistry: handles.toolRegistry, hub: handles.hub, logger,
+      });
+      return { applied: true, registered: registration.registered.length };
+    } catch (error) {
+      logger.warn('[McpRoutes] Falha ao aplicar enable/disable ao runtime (persistência segue autoridade)', {
+        tenantId, connection: connectionName, enabled, error: error.message,
+      });
+      return { applied: false, reason: error.message };
+    }
+  }
+
   // ── ENABLE / DISABLE (estado persistido, nunca remoção) ─────────────────
   router.post('/mcp/connections/:id/(enable|disable)', async (req, res) => {
     const deps = buildDeps();
@@ -275,7 +310,8 @@ function createMcpRoutes({ buildDeps }) {
       const { setEnabled } = require('../../services/mcp/mcpConnectionService');
       const enabled = /\/enable$/.test(req.path);
       const connection = await setEnabled({ tenantId, id: req.params.id, enabled });
-      deps.sendJson(res, 200, { connection });
+      const runtime = await applyRuntimeEnabledState({ tenantId, connectionName: connection.name, enabled });
+      deps.sendJson(res, 200, { connection, runtime });
     } catch (error) {
       fail(deps, res, error);
     }
