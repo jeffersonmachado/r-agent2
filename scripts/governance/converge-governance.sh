@@ -19,13 +19,19 @@
 #     ela carregue o runId CORRENTE — sem isso `dev/platform-readiness/latest.json`
 #     fica com lineage estrangeiro e o contamination cleaner derruba o run
 #     (FOREIGN_RUN_ARTIFACT em arquivo de decisão);
-#   - re-stampa lineage (runId/sourceFingerprint) nos relatórios governados;
 #   - REGERA a evidência executável com validade temporal (maxAgeMs=7d no
 #     registry): master-scorecard test/regression, reports de domínio e o
 #     relatório de persistência. O stamp NÃO pode refrescar generatedAt (seria
 #     freshness fabricada) — só o produtor real, rodando as suítes Jest, pode.
 #     Sem este passo, os relatórios cruzam 168h e o fixpoint derruba as 78
 #     dimensões para 5 (ARTIFACT_EXPIRED em TESTED/REGRESSION_PROTECTED);
+#   - re-stampa lineage (runId/sourceFingerprint) nos relatórios governados.
+#     ORDEM OBRIGATÓRIA: o stamp roda DEPOIS da evidência temporal, porque as
+#     suítes Jest executadas pelos geradores reescrevem relatórios governados
+#     SEM lineage como efeito colateral real (coverage-gate-report,
+#     coverage-completeness-report, model-driven-e2e-report) — stamp antes do
+#     Jest é clobberado e o fixpoint reprova com ARTIFACT_RUN_ID_MISSING /
+#     ARTIFACT_SOURCE_FINGERPRINT_MISSING (falha real de 2026-09-15);
 #   - roda o fixpoint persistido 2x (1ª: projeta DEFERRED a partir do DB;
 #     2ª: revalida contra os relatórios projetados — fixpoint estável);
 #   - avalia o seal-time-gate (esperado: SEAL_PENDING na fase DELIVERED ou
@@ -35,13 +41,13 @@ cd "$(dirname "$0")/../.."
 
 NODE="node --env-file-if-exists=.env"
 
-echo "[converge] 1/8 critical-journey-evidence (v2 — evidência real de handoff)"
+echo "[converge] 1/9 critical-journey-evidence (v2 — evidência real de handoff)"
 $NODE scripts/governance/generate-critical-journey-evidence-v2.js
 
-echo "[converge] 2/8 qa-waves enterprise governance (bridge)"
+echo "[converge] 2/9 qa-waves enterprise governance (bridge)"
 $NODE tools/system/qa-waves-enterprise-governance-bridge.js >/dev/null
 
-echo "[converge] 3/8 package-validation (zip de convergência, se presente)"
+echo "[converge] 3/9 package-validation (zip de convergência, se presente)"
 CONV_ZIP="$(ls -t dist/r-agent2-converge-provisional.zip 2>/dev/null | head -1 || true)"
 if [[ -n "$CONV_ZIP" ]]; then
   $NODE governance/package-validator.js --zip "$CONV_ZIP" --audited-only
@@ -62,24 +68,26 @@ else
   fi
 fi
 
-echo "[converge] 4/8 readiness projection (lineage do run corrente)"
+echo "[converge] 4/9 readiness projection (lineage do run corrente)"
 # O exit code deste produtor ESPELHA A DECISÃO (1 quando a decisão não é GO),
 # não uma falha de execução. A avaliação da decisão é feita pelo fixpoint
 # (passos 7-8); aqui o objetivo é apenas regerar a projeção com o lineage do run
 # corrente. Sob `set -e` o abort seria um falso bloqueio.
 $NODE tools/system/platform-readiness.js >/dev/null || true
 
-echo "[converge] 5/9 stamp de lineage"
-$NODE scripts/governance/stamp-report-lineage.js >/dev/null
-
-echo "[converge] 6/9 evidência executável com validade temporal (test/regression + domínios + persistência)"
+echo "[converge] 5/9 evidência executável com validade temporal (test/regression + domínios + persistência)"
 # Produtores reais (rodam as suítes Jest e gravam o exit code): únicos que
 # podem refrescar generatedAt sem fabricar freshness. Se uma suíte falhar, o
 # report sai FAIL e o fixpoint/seal-time-gate reprovam — comportamento honesto
-# desejado (set -e aborta aqui de propósito).
+# desejado (set -e aborta aqui de propósito). ATENÇÃO: estas suítes reescrevem
+# relatórios governados sem lineage (coverage/model-driven) — por isso o stamp
+# é o passo SEGUINTE, nunca o anterior.
 $NODE scripts/governance/generate-policy-evidence.js
 $NODE scripts/governance/generate-domain-evidence.js >/dev/null
 $NODE scripts/governance/generate-persistence-evidence.js >/dev/null
+
+echo "[converge] 6/9 stamp de lineage"
+$NODE scripts/governance/stamp-report-lineage.js >/dev/null
 
 echo "[converge] 7/9 fixpoint (pass 1 — projeção)"
 $NODE scripts/governance/run-persisted-scorecard.js >/dev/null
