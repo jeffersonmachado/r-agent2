@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-15T11:25:43.734Z",
+  "generatedAt": "2026-09-15T11:35:34.166Z",
   "sourceArtifact": "qa/qa-waves-enterprise-governance.json",
-  "signature": "hmac-sha256:a3301ca81498f0234604aacdb667c15c20609e26bb91c2225deb2636ef00851e",
-  "reportHash": "2f6995aaded0259075a4fab09da9f94dd87b9bf0296101e9747045a2429fc764",
+  "signature": "hmac-sha256:acf8f0fb82f029d207b26b5b99006c9d8733fbb9986c1075041752a82f33e66e",
+  "reportHash": "b4a1cafbf06cf4b581a0ab42ab259c06505515daed395b1e92de367f7313cb78",
   "subjectHashes": [
     {
       "journeyId": "support_ticket_flow",
