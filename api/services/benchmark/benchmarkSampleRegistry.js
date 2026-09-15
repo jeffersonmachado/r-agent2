@@ -51,6 +51,9 @@ const ERROR_CODES = Object.freeze({
   ENGINE_UNAVAILABLE: 'sample_validation_engine_unavailable',
 });
 
+/** Eixos cuja completude PROVA que um inventário vazio é novidade medida (T-B1). */
+const RESEARCH_AXIS_IDS = Object.freeze(['CAPABILITY_AXIS', 'JOURNEY_AXIS', 'BUSINESS_RULE_AXIS']);
+
 function registryError(code, message, extra = {}) {
   const error = new Error(`${code}: ${message}`);
   error.code = code;
@@ -113,16 +116,35 @@ function mergeSamplePatch(sample, patch) {
     }
     if (!isNonEmptyString(incoming.analyzedAt)) continue;
 
-    // O inventário de um benchmark ANALISADO é um ARRAY NÃO VAZIO de referências
+    // O inventário de um benchmark ANALISADO é um ARRAY de referências
     // verificadas. Coagir um formato inválido para `[]` esconderia exatamente o
     // bug que motivou este módulo (`findingsInventory` como objeto de
     // contadores): o engine considera análise NÃO PROVADA e a taxa de novidade
-    // fica por ausência de trabalho. Recusar é a única resposta honesta.
-    if (!Array.isArray(incoming.findingsInventory) || incoming.findingsInventory.length === 0) {
+    // fica por ausência de trabalho.
+    //
+    // T-B1 (2026-09-15): o array VAZIO passa a ser legítimo quando — e somente
+    // quando — o patch carrega a completude por eixo provando que os três eixos
+    // foram efetivamente pesquisados (RESEARCHED_NO_FINDINGS é zero novidade
+    // MEDIDO). Sem essa prova, inventário vazio continua recusado: "não
+    // pesquisei" nunca pode ser escrito como "zero novidade".
+    if (!Array.isArray(incoming.findingsInventory)) {
       throw registryError(
         ERROR_CODES.FINDINGS_INVENTORY_INVALID,
-        `benchmark ${incoming.id}: findingsInventory deve ser array não vazio de referências verificadas`,
+        `benchmark ${incoming.id}: findingsInventory deve ser array de referências verificadas`,
       );
+    }
+    if (incoming.findingsInventory.length === 0) {
+      const axisProof = Array.isArray(incoming.axisCompleteness) ? incoming.axisCompleteness : [];
+      const fullyResearched = axisProof.length > 0
+        && RESEARCH_AXIS_IDS.every((axis) => axisProof.some(
+          (entry) => entry && entry.axis === axis && entry.researched === true,
+        ));
+      if (!fullyResearched) {
+        throw registryError(
+          ERROR_CODES.FINDINGS_INVENTORY_INVALID,
+          `benchmark ${incoming.id}: findingsInventory vazio exige os três eixos pesquisados (axisCompleteness)`,
+        );
+      }
     }
 
     target.analyzedAt = incoming.analyzedAt;

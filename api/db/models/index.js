@@ -47,6 +47,12 @@ const getBenchmarkResearchSubject = require('./BenchmarkResearchSubject');
 const getBenchmarkResearchSource = require('./BenchmarkResearchSource');
 const getBenchmarkResearchEvidence = require('./BenchmarkResearchEvidence');
 const getBenchmarkResearchFinding = require('./BenchmarkResearchFinding');
+const getBenchmarkSourceInspection = require('./BenchmarkSourceInspection');
+// Descoberta autônoma de mercado (camada anterior ao Discovery Set de benchmark).
+const getMarketDiscoveryRun = require('./MarketDiscoveryRun');
+const getMarketArchetype = require('./MarketArchetype');
+const getMarketCandidate = require('./MarketCandidate');
+const getMarketDiscoverySet = require('./MarketDiscoverySet');
 const getSchedule = require('./Schedule');
 const getPublicAccessToken = require('./PublicAccessToken');
 const getFlowExecution = require('./FlowExecution');
@@ -240,6 +246,12 @@ const BenchmarkResearchSubject = () => getBenchmarkResearchSubject();
 const BenchmarkResearchSource = () => getBenchmarkResearchSource();
 const BenchmarkResearchEvidence = () => getBenchmarkResearchEvidence();
 const BenchmarkResearchFinding = () => getBenchmarkResearchFinding();
+const BenchmarkSourceInspection = () => getBenchmarkSourceInspection();
+// Autoridade persistente da descoberta de mercado (nunca Map em memória).
+const MarketDiscoveryRun = () => getMarketDiscoveryRun();
+const MarketArchetype = () => getMarketArchetype();
+const MarketCandidate = () => getMarketCandidate();
+const MarketDiscoverySet = () => getMarketDiscoverySet();
 const Schedule = () => getSchedule();
 const PublicAccessToken = () => getPublicAccessToken();
 const FlowExecution = () => getFlowExecution();
@@ -890,6 +902,11 @@ module.exports = {
   BenchmarkResearchSource,
   BenchmarkResearchEvidence,
   BenchmarkResearchFinding,
+  BenchmarkSourceInspection,
+  MarketDiscoveryRun,
+  MarketArchetype,
+  MarketCandidate,
+  MarketDiscoverySet,
   Schedule,
   PublicAccessToken,
   FlowExecution,
@@ -1081,6 +1098,11 @@ module.exports = {
   getBenchmarkResearchSource,
   getBenchmarkResearchEvidence,
   getBenchmarkResearchFinding,
+  getBenchmarkSourceInspection,
+  getMarketDiscoveryRun,
+  getMarketArchetype,
+  getMarketCandidate,
+  getMarketDiscoverySet,
   getSchedule,
   getPublicAccessToken,
   getFlowExecution,

@@ -31,6 +31,8 @@
  */
 
 const { createBenchmarkResearchRunner, RESEARCH_RUN_STATES } = require('./benchmarkResearchRunner');
+const { evaluateSaturation } = require('../../../qa/benchmarks/benchmarkSufficiencyEngine');
+const { mergeSamplePatch } = require('./benchmarkSampleRegistry');
 const {
   RESEARCH_AXES,
   RESEARCH_AXIS_LIST,
@@ -49,6 +51,12 @@ const {
   RESEARCH_STATES,
   RESEARCH_BLOCKERS,
 } = require('./benchmarkResearchService');
+
+/**
+ * Política de suficiência canônica — os thresholds que definem "saturação
+ * aparente" são POLÍTICA versionada, nunca constante de código (T-B3).
+ */
+const SATURATION_POLICY = require('../../../config/benchmark-sufficiency-policy.json');
 
 /**
  * §TAREFA 27/28/83 — PERMISSIONS EXPLÍCITAS do research principal.
@@ -231,6 +239,9 @@ function buildResearchPlanFromSample(sample) {
         aliases: Array.isArray(benchmark.aliases) ? [...benchmark.aliases] : [],
       },
       apiApplicable: benchmark.apiApplicable !== false,
+      // T-B1 — "API não aplicável" exige justificativa DECLARADA no sample;
+      // sem ela o critério de análise recusa (omissão não é isenção).
+      apiNotApplicableRationale: benchmark.apiNotApplicableRationale || null,
       declaredSources: declaredUrls,
       query: `${benchmark.name || benchmark.id} funcionalidades documentação oficial`,
     });
@@ -381,7 +392,17 @@ function createBenchmarkResearchSupervisor({
         [RESEARCH_AXES.JOURNEY]: 0,
         [RESEARCH_AXES.BUSINESS_RULE]: 0,
       };
-      const inspections = { documentation: false, api: false, apiApplicable };
+      const inspections = {
+        documentation: false,
+        api: false,
+        apiApplicable,
+        ...(isNonEmptyString(entry.apiNotApplicableRationale)
+          ? { apiNotApplicableRationale: entry.apiNotApplicableRationale }
+          : {}),
+      };
+      // Evidência REAL capturada nesta passagem (hash do conteúdo analisado) —
+      // alimenta o pré-check do critério sem placeholders sintéticos.
+      const capturedEvidence = [];
       let blocked = false;
 
       for (const declared of entry.declaredSources) {
@@ -424,11 +445,80 @@ function createBenchmarkResearchSupervisor({
             resolved: false,
             at: clock(),
           });
+          // T-B2 — uma fonte OBTIDA cuja inspeção falhou também deixa
+          // proveniência (status FAILED + erro): o fracasso é fato de pesquisa.
+          if (outcome.status === RESEARCH_RUN_STATES.INSPECTION_FAILED && isNonEmptyString(outcome.analyzedContentHash)) {
+            try {
+              await service.recordSourceInspection({
+                tenantId: researchTenant,
+                vertical,
+                benchmarkId: entry.benchmarkId,
+                source: {
+                  url: declared.url,
+                  tier: declared.tier,
+                  httpStatus: outcome.source?.httpStatus ?? null,
+                  contentHash: outcome.analyzedContentHash,
+                },
+                evidenceRef: outcome.evidenceRef || null,
+                analyzedContentHash: outcome.analyzedContentHash,
+                documentType: outcome.source?.contentType || null,
+                provider: outcome.provenance?.provider || null,
+                documentationStatus: outcome.inspections?.documentation === true ? 'INSPECTED' : 'FAILED',
+                apiStatus: !apiApplicable ? 'NOT_APPLICABLE' : (outcome.inspections?.api === true ? 'INSPECTED' : 'FAILED'),
+                errors: [{ code: outcome.status, reason: outcome.reason || null }],
+              });
+            } catch (error) {
+              errors.push({
+                severity: 'ERROR',
+                code: error.code || 'research_inspection_not_recorded',
+                reason: error.message,
+                resolved: false,
+                at: clock(),
+              });
+            }
+          }
           continue;
         }
 
         inspections.documentation = inspections.documentation || outcome.inspections.documentation === true;
         inspections.api = inspections.api || outcome.inspections.api === true;
+        capturedEvidence.push({
+          verified: true,
+          contentHash: outcome.analyzedContentHash,
+          locator: `document:${declared.url}`,
+        });
+
+        // T-B2 — proveniência da inspeção é gravada ANTES dos achados e MESMO
+        // com zero achados: é o que distingue "pesquisei e nada era novo" de
+        // "não pesquisei" depois do restart.
+        try {
+          await service.recordSourceInspection({
+            tenantId: researchTenant,
+            vertical,
+            benchmarkId: entry.benchmarkId,
+            source: { ...outcome.source },
+            evidenceRef: outcome.evidenceRef,
+            analyzedContentHash: outcome.analyzedContentHash,
+            documentType: outcome.source?.contentType || null,
+            provider: outcome.provenance?.provider || null,
+            documentationStatus: outcome.inspections.documentation === true ? 'INSPECTED' : 'FAILED',
+            apiStatus: !apiApplicable ? 'NOT_APPLICABLE' : (outcome.inspections.api === true ? 'INSPECTED' : 'NOT_EXECUTED'),
+            axisStatuses: Object.fromEntries(RESEARCH_AXIS_LIST.map((axis) => {
+              const accepted = (outcome.perAxis?.documentation?.[axis]?.accepted || 0)
+                + (outcome.perAxis?.api?.[axis]?.accepted || 0);
+              return [axis, accepted > 0 ? AXIS_STATES.RESEARCHED_WITH_FINDINGS : AXIS_STATES.RESEARCHED_NO_FINDINGS];
+            })),
+            metadata: { axesAttempted: Array.isArray(outcome.axesAttempted) ? outcome.axesAttempted : [] },
+          });
+        } catch (error) {
+          errors.push({
+            severity: 'ERROR',
+            code: error.code || 'research_inspection_not_recorded',
+            reason: error.message,
+            resolved: false,
+            at: clock(),
+          });
+        }
 
         for (const extracted of outcome.findings) {
           try {
@@ -513,12 +603,14 @@ function createBenchmarkResearchSupervisor({
 
       // §TAREFA 20/25/80 — `markAnalyzed` só é TENTADO quando o critério forte
       // é satisfeito. A recusa é reportada nominalmente, nunca silenciada.
+      // T-B1/T-B2: a evidência do pré-check é a evidência REAL capturada nesta
+      // passagem (não placeholders) e zero achados não bloqueia por si só.
       const criterion = evaluateAnalyzedCriterion({
         benchmark: subject,
         inspections,
         axes,
         findings: Object.values(findingsByAxis).some((count) => count > 0) ? [{ verified: true }] : [],
-        evidence: inspections.documentation ? [{ verified: true, contentHash: 'bound', locator: 'bound' }] : [],
+        evidence: capturedEvidence,
         errors,
         sourceDiscovery: attempts.some((attempt) => attempt.status === RESEARCH_RUN_STATES.EVIDENCE_CAPTURED),
       });
@@ -554,11 +646,18 @@ function createBenchmarkResearchSupervisor({
     else if (analyzed.length > 0) status = RESEARCH_RUN_OUTCOMES.ANALYZED;
     else if (results.some((result) => result.attempts.length > 0)) status = RESEARCH_RUN_OUTCOMES.PARTIAL;
 
+    // T-B3 — a saturação aparente é ALCANÇÁVEL pelo caminho de produção: quando
+    // a janela analisada passa nos thresholds da política nas TRÊS dimensões, o
+    // próprio supervisor a marca. Sem isso, `markApparentSaturation` não tinha
+    // chamador e o holdout ficava legalmente inanalisável para sempre.
+    const saturation = await maybeMarkApparentSaturation({ vertical, sample });
+
     log.info('[benchmark-research] run concluído', {
       tenant: researchTenant,
       vertical,
       status,
       analyzed: analyzed.length,
+      saturationMarked: saturation.marked === true,
       missingCapabilities: availability.missing,
     });
 
@@ -569,8 +668,54 @@ function createBenchmarkResearchSupervisor({
       results,
       analyzed,
       skipped,
+      saturation,
       summary: await service.summarize({ tenantId: researchTenant, vertical }),
     };
+  }
+
+  /**
+   * T-B3 — marca a saturação APARENTE quando a janela analisada passa na
+   * política. A avaliação é feita sobre o sample MESCLADO com o patch dos fatos
+   * persistidos (nunca sobre o sample cru nem sobre declarações):
+   *
+   *   - sem sample disponível, não há baseline para a taxa — nada é marcado;
+   *   - sem análise alguma, `mergeSamplePatch` recusa — nada é marcado;
+   *   - qualquer dimensão fora de PASS (FAIL ou NOT_MEASURABLE) — nada é
+   *     marcado. Janela insuficiente ou ponto não analisado NUNCA é saturação.
+   *
+   * @returns {Promise<{evaluated: boolean, marked: boolean, reason?: string, gates?: object}>}
+   */
+  async function maybeMarkApparentSaturation({ vertical, sample }) {
+    const summary = await service.summarize({ tenantId: researchTenant, vertical });
+    if (summary.saturationReached) return { evaluated: false, marked: false, alreadyMarked: true };
+    if (!sample || typeof sample !== 'object') {
+      return { evaluated: false, marked: false, reason: 'sample_unavailable' };
+    }
+
+    let merged;
+    try {
+      const patch = await service.buildSamplePatch({
+        tenantId: researchTenant,
+        vertical,
+        inventoryVersion: sample.inventoryVersion || null,
+      });
+      merged = mergeSamplePatch(sample, patch).sample;
+    } catch (error) {
+      return { evaluated: false, marked: false, reason: error.code || 'sample_merge_failed' };
+    }
+
+    const evaluation = evaluateSaturation({ sample: merged, policy: SATURATION_POLICY });
+    const gates = {
+      capability: evaluation.capability.status,
+      journey: evaluation.journey.status,
+      businessRule: evaluation.businessRule.status,
+    };
+    if (!Object.values(gates).every((gateStatus) => gateStatus === 'PASS')) {
+      return { evaluated: true, marked: false, gates };
+    }
+
+    await service.markApparentSaturation({ tenantId: researchTenant, vertical });
+    return { evaluated: true, marked: true, gates };
   }
 
   /** PATCH do sample derivado dos fatos PERSISTIDOS (consumido pelo registro). */

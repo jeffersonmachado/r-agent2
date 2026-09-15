@@ -90,8 +90,10 @@ const SEMANTIC_CODES = Object.freeze({
   AXIS_BLOCKED: 'benchmark_axis_blocked',
   NO_VERIFIED_FINDING: 'benchmark_no_verified_finding',
   NO_VALID_EVIDENCE: 'benchmark_no_valid_evidence',
+  API_NOT_APPLICABLE_UNJUSTIFIED: 'benchmark_api_not_applicable_unjustified',
   EVIDENCE_HASH_MISSING: 'benchmark_evidence_hash_missing',
   EVIDENCE_HASH_MISMATCH: 'EVIDENCE_HASH_MISMATCH',
+  INSPECTION_HASH_MISMATCH: 'INSPECTION_HASH_MISMATCH',
   EVIDENCE_LOCATOR_MISSING: 'benchmark_evidence_locator_missing',
   RESEARCH_ERROR_UNRESOLVED: 'benchmark_research_error_unresolved',
   SYSTEM_TENANT_REQUIRED: 'benchmark_research_system_tenant_required',
@@ -303,18 +305,27 @@ function resolveFindingOrigin({ locator, origin } = {}) {
 }
 
 /**
- * Critério de ANALYZED (TAREFA 20). `ANALYZED` significa "pesquisa suficiente",
- * não "achei uma página":
+ * Critério de ANALYZED (TAREFA 20, revisado pela missão T-B1 de 2026-09-15).
+ * `ANALYZED` significa "pesquisa suficiente", não "achei uma página" — e
+ * TAMBÉM não significa "achei algo novo":
  *
  *   [x] source discovery concluído
  *   [x] documentation inspection concluída
- *   [x] API inspection concluída quando aplicável
+ *   [x] API inspection concluída quando aplicável — `apiApplicable === false`
+ *       exige JUSTIFICATIVA explícita (documentada), nunca omissão
  *   [x] eixo de capability pesquisado
  *   [x] eixo de jornada pesquisado
  *   [x] eixo de regra de negócio pesquisado
  *   [x] evidence validity gate passou (hash + locator, casando com o conteúdo)
  *   [x] nenhum erro crítico de pesquisa em aberto
  *   [x] completude registrada
+ *
+ * ZERO ACHADOS é um resultado legítimo: com os três eixos em
+ * `RESEARCHED_NO_FINDINGS`, inspeção executada e evidência válida persistida,
+ * o benchmark É analisado com novidade medida igual a zero. O que continua
+ * proibido é o atalho: `NO_VERIFIED_FINDING` só bloqueia quando os eixos NÃO
+ * estão completamente pesquisados ou a evidência está ausente/inválida — ou
+ * seja, ele nunca é o ÚNICO motivo de recusa de uma pesquisa suficiente.
  *
  * @returns {{satisfied: boolean, missing: string[], detail: object}}
  */
@@ -339,9 +350,15 @@ function evaluateAnalyzedCriterion({
 
   if (inspections?.documentation !== true) missing.push(SEMANTIC_CODES.INSPECTION_DOCUMENTATION_MISSING);
   // API é obrigatória por padrão; `apiApplicable === false` precisa ser uma
-  // declaração EXPLÍCITA do plano (documentada), nunca uma omissão.
+  // declaração EXPLÍCITA e JUSTIFICADA do plano (documentada), nunca uma
+  // omissão. Sem rationale, "não aplicável" é indistinguível de "não olhei".
   const apiRequired = benchmark?.apiApplicable !== false && inspections?.apiApplicable !== false;
-  if (apiRequired && inspections?.api !== true) missing.push(SEMANTIC_CODES.INSPECTION_API_MISSING);
+  if (apiRequired && inspections?.api !== true) {
+    missing.push(SEMANTIC_CODES.INSPECTION_API_MISSING);
+  } else if (!apiRequired) {
+    const rationale = inspections?.apiNotApplicableRationale || benchmark?.apiNotApplicableRationale;
+    if (!isNonEmptyString(rationale)) missing.push(SEMANTIC_CODES.API_NOT_APPLICABLE_UNJUSTIFIED);
+  }
 
   const completeness = buildAxisCompleteness({ axes });
   for (const axis of completeness.missing) {
@@ -349,13 +366,26 @@ function evaluateAnalyzedCriterion({
     missing.push(state === AXIS_STATES.BLOCKED ? SEMANTIC_CODES.AXIS_BLOCKED : AXIS_TO_MISSING_CODE[axis]);
   }
 
-  if (verifiedFindings.length === 0) missing.push(SEMANTIC_CODES.NO_VERIFIED_FINDING);
   if (validEvidence.length === 0) missing.push(SEMANTIC_CODES.NO_VALID_EVIDENCE);
-  if (validEvidence.length > 0 && validEvidence.every((row) => !isNonEmptyString(row.contentHash || row.content_hash))) {
+  const evidenceHasHash = validEvidence.length > 0
+    && validEvidence.some((row) => isNonEmptyString(row.contentHash || row.content_hash));
+  if (validEvidence.length > 0 && !evidenceHasHash) {
     missing.push(SEMANTIC_CODES.EVIDENCE_HASH_MISSING);
   }
-  if (validEvidence.length > 0 && validEvidence.every((row) => !isNonEmptyString(row.locator))) {
+  const evidenceHasLocator = validEvidence.length > 0
+    && validEvidence.some((row) => isNonEmptyString(row.locator));
+  if (validEvidence.length > 0 && !evidenceHasLocator) {
     missing.push(SEMANTIC_CODES.EVIDENCE_LOCATOR_MISSING);
+  }
+
+  // T-B1 — ZERO ACHADOS não é bloqueio absoluto: `RESEARCHED_NO_FINDINGS` nos
+  // três eixos + inspeção executada + evidência válida É análise ("pesquisei e
+  // nada era novo" é medição, não ausência de trabalho). O bloqueio só existe
+  // quando a ausência de achado convive com pesquisa INCOMPLETA ou evidência
+  // inválida — nesses casos o código acompanha o bloqueio específico.
+  const evidenceValid = validEvidence.length > 0 && evidenceHasHash && evidenceHasLocator;
+  if (verifiedFindings.length === 0 && (!completeness.complete || !evidenceValid)) {
+    missing.push(SEMANTIC_CODES.NO_VERIFIED_FINDING);
   }
 
   const criticalErrors = (Array.isArray(errors) ? errors : [])

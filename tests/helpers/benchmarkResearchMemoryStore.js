@@ -25,7 +25,10 @@ function clone(row) {
 }
 
 function createBenchmarkResearchMemoryStore() {
-  const state = { runs: new Map(), subjects: new Map(), sources: new Map(), evidence: new Map(), findings: new Map() };
+  const state = {
+    runs: new Map(), subjects: new Map(), sources: new Map(), evidence: new Map(),
+    findings: new Map(), inspections: new Map(),
+  };
 
   function required(value, field) {
     const normalized = String(value ?? '').trim();
@@ -232,6 +235,68 @@ function createBenchmarkResearchMemoryStore() {
       .map(clone);
   }
 
+  async function upsertSourceInspection({
+    tenantId,
+    runId,
+    benchmarkId,
+    subjectId = null,
+    sourceId = null,
+    url,
+    contentHash,
+    retrievedAt = null,
+    inspectedAt = null,
+    documentType = null,
+    provider = null,
+    documentationStatus = 'NOT_EXECUTED',
+    apiStatus = 'NOT_EXECUTED',
+    axisStatuses = {},
+    errors = [],
+    metadata = {},
+  }) {
+    const tenant = required(tenantId, 'tenantId');
+    const run = required(runId, 'runId');
+    const benchmark = required(benchmarkId, 'benchmarkId');
+    const sourceUrl = required(url, 'url');
+    const hash = required(contentHash, 'contentHash');
+
+    const id = deterministicId('brsi', [tenant, run, benchmark, sourceId || sourceUrl, hash]);
+    const payload = {
+      tenant_key: tenant,
+      run_id: run,
+      subject_id: subjectId ? String(subjectId) : deterministicId('brs', [tenant, run, benchmark]),
+      benchmark_id: benchmark,
+      source_id: sourceId ? String(sourceId) : null,
+      url: sourceUrl,
+      content_hash: hash,
+      retrieved_at: retrievedAt || new Date().toISOString(),
+      inspected_at: inspectedAt || new Date().toISOString(),
+      document_type: documentType ? String(documentType) : null,
+      provider: provider ? String(provider) : null,
+      documentation_status: String(documentationStatus),
+      api_status: String(apiStatus),
+      capability_axis_status: String(axisStatuses.CAPABILITY_AXIS || 'NOT_RESEARCHED'),
+      journey_axis_status: String(axisStatuses.JOURNEY_AXIS || 'NOT_RESEARCHED'),
+      business_rule_axis_status: String(axisStatuses.BUSINESS_RULE_AXIS || 'NOT_RESEARCHED'),
+      errors: Array.isArray(errors) ? errors : [],
+      metadata: metadata || {},
+    };
+    const existing = state.inspections.get(id);
+    if (existing) {
+      Object.assign(existing, payload);
+      return clone(existing);
+    }
+    const row = { id, ...payload };
+    state.inspections.set(id, row);
+    return clone(row);
+  }
+
+  async function listSourceInspections({ tenantId, runId, benchmarkId = null }) {
+    return [...state.inspections.values()]
+      .filter((row) => row.tenant_key === tenantId && row.run_id === runId
+        && (!benchmarkId || row.benchmark_id === benchmarkId))
+      .map(clone);
+  }
+
   return {
     getRun,
     openRun,
@@ -246,6 +311,8 @@ function createBenchmarkResearchMemoryStore() {
     listEvidence,
     insertFinding,
     listFindings,
+    upsertSourceInspection,
+    listSourceInspections,
   };
 }
 

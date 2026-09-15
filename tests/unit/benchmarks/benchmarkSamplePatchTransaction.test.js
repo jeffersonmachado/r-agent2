@@ -127,11 +127,33 @@ describe('§B7 — patch do sample: formato que o engine ACEITA', () => {
     expect(point.rateState).toBe('NOT_ANALYZED');
   });
 
-  test('inventário VAZIO também é recusado (análise sem achado verificado não existe)', () => {
-    const broken = validPatch();
-    broken.benchmarks[0].findingsInventory = [];
-    expect(() => mergeSamplePatch(realSample(), broken))
+  test('inventário VAZIO sem prova de eixos pesquisados é recusado; com prova é zero novidade MEDIDA (T-B1)', () => {
+    // Contrato novo (T-B1, 2026-09-15): 0 achados é análise legítima quando os
+    // três eixos estão comprovadamente pesquisados. Sem a prova, a recusa
+    // continua — "não pesquisei" nunca vira "zero novidade".
+    const withoutProof = validPatch();
+    withoutProof.benchmarks[0].findingsInventory = [];
+    expect(() => mergeSamplePatch(realSample(), withoutProof))
       .toThrow(new RegExp(ERROR_CODES.FINDINGS_INVENTORY_INVALID));
+
+    const withProof = validPatch();
+    withProof.benchmarks[0].findingsInventory = [];
+    withProof.benchmarks[0].novelty = {};
+    withProof.benchmarks[0].axisCompleteness = [
+      { axis: 'CAPABILITY_AXIS', state: 'RESEARCHED_NO_FINDINGS', researched: true },
+      { axis: 'JOURNEY_AXIS', state: 'RESEARCHED_NO_FINDINGS', researched: true },
+      { axis: 'BUSINESS_RULE_AXIS', state: 'RESEARCHED_NO_FINDINGS', researched: true },
+    ];
+    const { sample } = mergeSamplePatch(realSample(), withProof);
+    const benchmark = sample.benchmarks.find((entry) => entry.id === 'evo-w12');
+    expect(benchmark.findingsInventory).toEqual([]);
+
+    // E o engine o lê como ponto MENSURÁVEL com taxa 0 — não NOT_ANALYZED.
+    const curve = engine.evaluateSampleSufficiency({ sample, policy: POLICY }).inventoryCurves.capabilities;
+    const point = curve.points.find((entry) => entry.benchmarkId === 'evo-w12');
+    expect(point.analysisGaps).toEqual([]);
+    expect(point.rateState).toBe('MEASURED');
+    expect(point.noveltyRate).toBe(0);
   });
 
   test('novelty só aceita as chaves canônicas do engine', () => {

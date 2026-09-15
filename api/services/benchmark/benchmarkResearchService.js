@@ -88,6 +88,7 @@ const RESEARCH_BLOCKERS = Object.freeze({
   INVALID_KIND: 'research_finding_kind_invalid',
   HOLDOUT_ORDER_VIOLATION: 'research_holdout_analyzed_before_saturation',
   ANALYSIS_INCOMPLETE: 'research_analysis_evidence_incomplete',
+  INSPECTION_HASH_REQUIRED: 'benchmark_source_inspection_hash_required',
   PERSISTENCE_REQUIRED: 'persistence_required',
 });
 
@@ -385,6 +386,145 @@ function createBenchmarkResearchService({ store, now } = {}) {
     });
   }
 
+  /**
+   * Persiste a proveniência de INSPEÇÃO de UMA fonte (T-B2) — INDEPENDENTE de
+   * haver achado. Antes desta operação, uma fonte buscada + inspecionada com
+   * zero achados não deixava rastro: sem contentHash/retrievedAt/inspectedAt/
+   * documentType/estado por eixo persistidos, "pesquisei e não achei nada" era
+   * indistinguível de "não pesquisei" depois do restart.
+   *
+   * Hash binding (fail-closed):
+   *   - `analyzedContentHash` ≠ hash da fonte → INSPECTION_HASH_MISMATCH;
+   *   - mesma `evidenceRef` já capturada com OUTRO hash → EVIDENCE_HASH_MISMATCH;
+   *   - nenhum hash disponível → benchmark_source_inspection_hash_required.
+   *
+   * Idempotente por `(fonte, contentHash)` (o store garante): re-inspeção do
+   * mesmo conteúdo é UPSERT; conteúdo novo é nova linha.
+   */
+  async function recordSourceInspection({
+    tenantId,
+    vertical,
+    benchmarkId,
+    source,
+    evidenceRef = null,
+    contentHash = null,
+    analyzedContentHash = null,
+    retrievedAt = null,
+    inspectedAt = null,
+    documentType = null,
+    provider = null,
+    documentationStatus = null,
+    apiStatus = null,
+    axisStatuses = {},
+    errors = [],
+    metadata = {},
+  }) {
+    const tenant = requireTenant(tenantId);
+    const run = await loadRun(tenant, vertical);
+    const id = String(benchmarkId || '');
+    const subject = await store.getSubject({ tenantId: tenant, runId: run.id, benchmarkId: id });
+    if (!subject) throw blocker(RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK, id);
+
+    const sourceHash = isNonEmptyString(source?.contentHash) ? String(source.contentHash) : null;
+    if (analyzedContentHash && sourceHash && String(analyzedContentHash) !== sourceHash) {
+      throw blocker(
+        SEMANTIC_CODES.INSPECTION_HASH_MISMATCH,
+        `${id}: analyzed=${analyzedContentHash} source=${sourceHash}`,
+      );
+    }
+    const boundHash = isNonEmptyString(analyzedContentHash) ? String(analyzedContentHash)
+      : (isNonEmptyString(contentHash) ? String(contentHash) : sourceHash);
+    if (!isNonEmptyString(boundHash)) {
+      throw blocker(RESEARCH_BLOCKERS.INSPECTION_HASH_REQUIRED, id);
+    }
+
+    // A MESMA referência de evidência com hash diferente é prova de OUTRO
+    // documento — recusada antes de qualquer escrita.
+    if (isNonEmptyString(evidenceRef)) {
+      const existing = (await store.listEvidence({ tenantId: tenant, runId: run.id, benchmarkId: id }))
+        .find((row) => row.evidence_ref === String(evidenceRef));
+      if (existing && isNonEmptyString(existing.content_hash) && String(existing.content_hash) !== boundHash) {
+        throw blocker(
+          SEMANTIC_CODES.EVIDENCE_HASH_MISMATCH,
+          `${id}: evidence=${existing.content_hash} inspection=${boundHash}`,
+        );
+      }
+    }
+
+    const sourceVerification = classifyResearchSource(source);
+    const sourceRow = isNonEmptyString(source?.url)
+      ? await store.upsertSource({
+        tenantId: tenant,
+        runId: run.id,
+        benchmarkId: id,
+        source: {
+          url: source.url,
+          tier: source.tier ?? null,
+          specificity: source.specificity || null,
+          httpStatus: source.httpStatus ?? null,
+          verified: sourceVerification.verified,
+          verificationState: sourceVerification.state,
+        },
+      })
+      : null;
+
+    // A evidência capturada de uma fonte inspecionada vale MESMO sem achado:
+    // é ela que sustenta o critério de análise com zero findings (T-B1).
+    const evidenceRow = sourceVerification.verified && isNonEmptyString(evidenceRef)
+      ? await store.appendEvidence({
+        tenantId: tenant,
+        runId: run.id,
+        benchmarkId: id,
+        sourceId: sourceRow ? sourceRow.id : null,
+        evidenceRef: String(evidenceRef),
+        contentHash: boundHash,
+        httpStatus: source?.httpStatus ?? null,
+        capturedAt: clock(),
+        metadata: { locator: metadata.locator || `document:${source.url}` },
+      })
+      : null;
+
+    const row = await store.upsertSourceInspection({
+      tenantId: tenant,
+      runId: run.id,
+      benchmarkId: id,
+      subjectId: subject.id,
+      sourceId: sourceRow ? sourceRow.id : null,
+      url: source?.url,
+      contentHash: boundHash,
+      retrievedAt: retrievedAt || clock(),
+      inspectedAt: inspectedAt || clock(),
+      documentType: documentType || source?.contentType || null,
+      provider,
+      documentationStatus: documentationStatus || 'INSPECTED',
+      apiStatus: apiStatus || 'INSPECTED',
+      axisStatuses,
+      errors,
+      metadata: { ...metadata, evidenceId: evidenceRow ? evidenceRow.id : null },
+    });
+
+    if (run.state !== RESEARCH_STATES.IN_PROGRESS && run.state !== RESEARCH_STATES.COMPLETE) {
+      await store.updateRunState({ tenantId: tenant, runId: run.id, state: RESEARCH_STATES.IN_PROGRESS });
+    }
+
+    return {
+      id: row.id,
+      benchmarkId: row.benchmark_id,
+      sourceId: row.source_id,
+      url: row.url,
+      contentHash: row.content_hash,
+      retrievedAt: toIso(row.retrieved_at),
+      inspectedAt: toIso(row.inspected_at),
+      documentType: row.document_type,
+      provider: row.provider,
+      documentationStatus: row.documentation_status,
+      apiStatus: row.api_status,
+      evidenceId: evidenceRow ? evidenceRow.id : null,
+      verified: sourceVerification.verified,
+      verificationState: sourceVerification.state,
+    };
+  }
+
   /** Marca que a saturação APARENTE foi atingida (habilita abrir o holdout). */
   async function markApparentSaturation({ tenantId, vertical }) {
     const tenant = requireTenant(tenantId);
@@ -411,10 +551,11 @@ function createBenchmarkResearchService({ store, now } = {}) {
     if (!subject) throw blocker(RESEARCH_BLOCKERS.UNKNOWN_BENCHMARK, id);
     assertHoldoutNotAnalyzedEarly(run, id);
 
-    const [findings, evidence, sources] = await Promise.all([
+    const [findings, evidence, sources, sourceInspections] = await Promise.all([
       store.listFindings({ tenantId: tenant, runId: run.id, benchmarkId: id }),
       store.listEvidence({ tenantId: tenant, runId: run.id, benchmarkId: id }),
       store.listSources({ tenantId: tenant, runId: run.id, benchmarkId: id }),
+      store.listSourceInspections({ tenantId: tenant, runId: run.id, benchmarkId: id }),
     ]);
     const verifiedFindings = findings.filter((finding) => finding.verified === true);
 
@@ -422,16 +563,31 @@ function createBenchmarkResearchService({ store, now } = {}) {
     const persistedAxes = subjectMetadata.researchAxes || {};
     const persistedInspections = { ...(subjectMetadata.inspections || {}), ...(inspections || {}) };
 
+    // T-B2 — a inspeção persistida por fonte também é evidência de análise:
+    // sem ela, uma fonte inspecionada com ZERO achados não sustentaria o
+    // critério. Só contam inspeções EFETIVAMENTE executadas e com hash ligado.
+    const inspectionEvidence = sourceInspections
+      .filter((row) => (row.documentation_status === 'INSPECTED' || row.api_status === 'INSPECTED')
+        && isNonEmptyString(row.content_hash))
+      .map((row) => ({
+        verified: true,
+        contentHash: row.content_hash,
+        locator: (row.metadata && row.metadata.locator) || `document:${row.url}`,
+      }));
+
     const criterion = evaluateAnalyzedCriterion({
       benchmark: { id, ...(subjectMetadata.benchmark || {}) },
       inspections: persistedInspections,
       axes: persistedAxes,
       findings,
-      evidence: evidence.map((row) => ({
-        verified: true,
-        contentHash: row.content_hash,
-        locator: (row.metadata && row.metadata.locator) || null,
-      })),
+      evidence: [
+        ...evidence.map((row) => ({
+          verified: true,
+          contentHash: row.content_hash,
+          locator: (row.metadata && row.metadata.locator) || null,
+        })),
+        ...inspectionEvidence,
+      ],
       errors: Array.isArray(subjectMetadata.errors) ? subjectMetadata.errors : [],
       sourceDiscovery: sources.length > 0,
     });
@@ -695,6 +851,7 @@ function createBenchmarkResearchService({ store, now } = {}) {
   return {
     openDiscoverySet,
     recordFinding,
+    recordSourceInspection,
     setAxisState,
     recordInspections,
     markAnalyzed,

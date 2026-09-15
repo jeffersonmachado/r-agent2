@@ -261,6 +261,32 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
     }
   });
 
+  // --- POST /api/benchmark-research/runs/:vertical/apparent-saturation ------
+  // T-B3 — a saturação aparente precisa ser ALCANÇÁVEL pelo caminho de
+  // produção. Sem esta rota (e sem a auto-marcação do supervisor), o holdout
+  // ficava bloqueado para sempre por `assertHoldoutNotAnalyzedEarly`. O módulo
+  // endereça runs por `:vertical` (mesma convenção de GET/execute/sample-patch).
+  router.post('/api/benchmark-research/runs/:vertical/apparent-saturation', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const context = authenticate(deps, req, res);
+    if (!context) return;
+    const vertical = String(req.params.vertical || '');
+    try {
+      const { supervisor } = buildSupervisor(deps, req, context);
+      const result = await supervisor.service.markApparentSaturation({
+        tenantId: context.tenantId,
+        vertical,
+      });
+      deps.logAction?.(req, 'benchmark_research.apparent_saturation_marked', { vertical });
+      deps.sendJson(res, 200, {
+        ...result,
+        summary: await supervisor.summarize({ vertical }),
+      });
+    } catch (error) {
+      sendError(deps, res, error);
+    }
+  });
+
   // --- POST /api/benchmark-research/runs/:vertical/sample-patch -----------
   router.post('/api/benchmark-research/runs/:vertical/sample-patch', async (req, res) => {
     const deps = buildDeps(req, res);

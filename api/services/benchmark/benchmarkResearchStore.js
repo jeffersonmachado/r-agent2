@@ -19,6 +19,7 @@
  *   upsertSource / listSources
  *   appendEvidence / listEvidence        (append-only)
  *   insertFinding / listFindings
+ *   upsertSourceInspection / listSourceInspections   (proveniência por fonte)
  *
  * Regras aplicadas AQUI (e não só na camada de política):
  *   - `tenant_key` obrigatório em toda operação: nenhuma leitura cruza tenant;
@@ -82,6 +83,7 @@ function defaultModels() {
     source: require('../../db/models/BenchmarkResearchSource')(),
     evidence: require('../../db/models/BenchmarkResearchEvidence')(),
     finding: require('../../db/models/BenchmarkResearchFinding')(),
+    inspection: require('../../db/models/BenchmarkSourceInspection')(),
   };
 }
 
@@ -92,7 +94,7 @@ function defaultModels() {
 function createBenchmarkResearchStore({ models } = {}) {
   function resolveModels() {
     const resolved = models || defaultModels();
-    for (const key of ['run', 'subject', 'source', 'evidence', 'finding']) {
+    for (const key of ['run', 'subject', 'source', 'evidence', 'finding', 'inspection']) {
       if (!resolved[key]) {
         throw storeError(ERROR_CODES.PERSISTENCE_REQUIRED, `model ausente: ${key}`);
       }
@@ -393,6 +395,77 @@ function createBenchmarkResearchStore({ models } = {}) {
     return finding.findAll({ where, order: [['recorded_at', 'ASC']] });
   }
 
+  /**
+   * UPSERT da inspeção de UMA fonte (T-B2). Identidade determinística por
+   * `(tenant, run, benchmark, source, contentHash)`: re-inspecionar o MESMO
+   * conteúdo ATUALIZA a linha (o estado por eixo pode mudar), mas nunca cria
+   * uma segunda inspeção. Um `contentHash` NOVO é outra linha — o conteúdo
+   * mudou, logo é outro documento analisado.
+   */
+  async function upsertSourceInspection({
+    tenantId,
+    runId,
+    benchmarkId,
+    subjectId = null,
+    sourceId = null,
+    url,
+    contentHash,
+    retrievedAt = null,
+    inspectedAt = null,
+    documentType = null,
+    provider = null,
+    documentationStatus = 'NOT_EXECUTED',
+    apiStatus = 'NOT_EXECUTED',
+    axisStatuses = {},
+    errors = [],
+    metadata = {},
+  }) {
+    const { inspection } = resolveModels();
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const run = requireNonEmpty(runId, 'runId');
+    const benchmark = requireNonEmpty(benchmarkId, 'benchmarkId');
+    const sourceUrl = requireNonEmpty(url, 'url');
+    const hash = requireNonEmpty(contentHash, 'contentHash');
+
+    const id = deterministicId('brsi', [tenant, run, benchmark, sourceId || sourceUrl, hash]);
+    const payload = {
+      tenant_key: tenant,
+      run_id: run,
+      // O subject id é determinístico por (tenant, run, benchmark): resolvido
+      // aqui para a linha ser auto-suficiente sem JOIN.
+      subject_id: subjectId ? String(subjectId) : deterministicId('brs', [tenant, run, benchmark]),
+      benchmark_id: benchmark,
+      source_id: sourceId ? String(sourceId) : null,
+      url: sourceUrl,
+      content_hash: hash,
+      retrieved_at: retrievedAt ? new Date(retrievedAt) : new Date(),
+      inspected_at: inspectedAt ? new Date(inspectedAt) : new Date(),
+      document_type: documentType ? String(documentType) : null,
+      provider: provider ? String(provider) : null,
+      documentation_status: String(documentationStatus),
+      api_status: String(apiStatus),
+      capability_axis_status: String(axisStatuses.CAPABILITY_AXIS || 'NOT_RESEARCHED'),
+      journey_axis_status: String(axisStatuses.JOURNEY_AXIS || 'NOT_RESEARCHED'),
+      business_rule_axis_status: String(axisStatuses.BUSINESS_RULE_AXIS || 'NOT_RESEARCHED'),
+      errors: Array.isArray(errors) ? errors : [],
+      metadata: jsonObject(metadata),
+    };
+
+    const existing = await inspection.findByPk(id);
+    if (existing) {
+      await existing.update(payload);
+      return existing;
+    }
+    return inspection.create({ id, ...payload });
+  }
+
+  async function listSourceInspections({ tenantId, runId, benchmarkId = null }) {
+    const { inspection } = resolveModels();
+    const where = { tenant_key: requireNonEmpty(tenantId, 'tenantId'), run_id: requireNonEmpty(runId, 'runId') };
+    if (benchmarkId) where.benchmark_id = String(benchmarkId);
+    return inspection.findAll({ where, order: [['inspected_at', 'ASC']] });
+  }
+
   return {
     errorCodes: ERROR_CODES,
     getRun,
@@ -408,6 +481,8 @@ function createBenchmarkResearchStore({ models } = {}) {
     listEvidence,
     insertFinding,
     listFindings,
+    upsertSourceInspection,
+    listSourceInspections,
   };
 }
 
