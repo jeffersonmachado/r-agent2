@@ -49,6 +49,8 @@ const {
 const { independenceReport } = require('./independence');
 const { selectDiscoverySet, selectHoldout, SELECTION_WEIGHTS, DEFAULT_SET_SIZE } = require('./discoverySetSelection');
 const { createHoldoutPreregistration, HOLDOUT_SET_STATES } = require('./holdoutPreregistration');
+const { buildMarketQueries } = require('./marketQueries');
+const { evaluateMarketRelevance, RELEVANCE_STATES } = require('./relevance');
 
 /** A capability canônica pela qual o runtime alcança a descoberta de mercado. */
 const MARKET_DISCOVERY_CAPABILITY = Object.freeze({
@@ -246,26 +248,47 @@ function createMarketDiscoverySupervisor({
    * Obtém evidência REAL para um termo: search → fetch (HTTP confirmado) →
    * captureEvidence (hash). Retorna item de evidência válido ou null com o
    * motivo registrado — nunca fabrica evidência.
+   *
+   * Falha de REDE de um candidato (timeout, bloqueio de endpoint) é um FATO da
+   * descoberta, não uma exceção que derruba o run: um único host inalcançável
+   * não pode abortar a varredura inteira. O motivo tipado do provider vai em
+   * `reason` e o candidato simplesmente não acumula evidência (não entra no
+   * universo aceito).
    */
   async function gatherEvidence({ query, url = null, tier = 5, note = null }) {
-    const search = await executeResearch('research.search', { query });
+    let search;
+    try {
+      search = await executeResearch('research.search', { query });
+    } catch (error) {
+      return { evidence: null, reason: `search_failed: ${error?.code || error?.message || 'unknown'}` };
+    }
     const candidates = list(search.output?.candidates);
     const targetUrl = url
       || candidates.find((candidate) => isNonEmptyString(candidate?.url))?.url
       || null;
     if (!targetUrl) return { evidence: null, reason: 'search_returned_no_source' };
 
-    const fetch = await executeResearch('research.fetch', { url: targetUrl });
+    let fetch;
+    try {
+      fetch = await executeResearch('research.fetch', { url: targetUrl });
+    } catch (error) {
+      return { evidence: null, reason: `fetch_failed: ${error?.code || error?.message || 'unknown'}` };
+    }
     const httpStatus = Number(fetch.output?.httpStatus);
     if (!Number.isFinite(httpStatus) || httpStatus >= 400 || !isNonEmptyString(fetch.output?.contentHash)) {
       return { evidence: null, reason: `fetch_not_confirmed: status=${fetch.output?.httpStatus ?? 'unknown'}` };
     }
 
-    const capture = await executeResearch('research.captureEvidence', {
-      url: targetUrl,
-      contentHash: fetch.output.contentHash,
-      contentType: fetch.output.contentType || null,
-    });
+    let capture;
+    try {
+      capture = await executeResearch('research.captureEvidence', {
+        url: targetUrl,
+        contentHash: fetch.output.contentHash,
+        contentType: fetch.output.contentType || null,
+      });
+    } catch (error) {
+      return { evidence: null, reason: `evidence_capture_failed: ${error?.code || error?.message || 'unknown'}` };
+    }
     const evidenceRef = capture.output?.evidenceRef;
     if (!isNonEmptyString(evidenceRef)) return { evidence: null, reason: 'evidence_capture_without_ref' };
 
@@ -384,9 +407,13 @@ function createMarketDiscoverySupervisor({
     const seeds = list(sample?.benchmarks).map((b) => seedFromBenchmark(verticalId, b));
 
     // ── MARKET ──────────────────────────────────────────────────────────
+    // Queries DOMÍNIO-ESPECÍFICAS derivadas do contexto de mercado declarado
+    // pela vertical (`marketContext` do sample). Queries genéricas poluem o
+    // universo (a varredura real de 2026-09-15 descobriu lojas de roupa e
+    // Wikipedia com "fitness software gestão mercado fornecedores").
     const queries = Array.isArray(marketQueries) && marketQueries.length > 0
       ? marketQueries
-      : [`${verticalId} software gestão mercado fornecedores`, `${verticalId} platform competitors official`];
+      : buildMarketQueries({ vertical: verticalId, sample });
     const marketScan = [];
     for (const query of queries) {
       const result = await executeResearch('research.search', { query });
@@ -441,6 +468,14 @@ function createMarketDiscoverySupervisor({
 
     // ── CANDIDATES ──────────────────────────────────────────────────────
     // Seeds são referência; a pesquisa confirma seeds e ACRESCENTA novos.
+    // T-S2: cada candidato DESCOBERTO passa pelo gate de relevância — o
+    // conteúdo obtido precisa casar os termos de categoria do marketContext
+    // declarado. Página obtível fora do mercado (Wikipedia, loja de roupa,
+    // help center) é persistida como OUT_OF_MARKET com o motivo, nunca como
+    // membro do universo. A identidade é o domínio registrável, não o título.
+    const marketContext = sample?.marketContext && typeof sample.marketContext === 'object'
+      ? sample.marketContext
+      : null;
     const researchResults = [];
     const seenUrls = new Set();
     for (const scan of marketScan) {
@@ -459,6 +494,11 @@ function createMarketDiscoverySupervisor({
           independenceGroup: hit.independenceGroup || null,
           cloneOf: hit.cloneOf || null,
           sourceEvidence: [gathered.evidence],
+          marketRelevance: evaluateMarketRelevance({
+            content: gathered.content,
+            url: hit.url,
+            marketContext,
+          }),
           rationale: `descoberto pela varredura de mercado: ${scan.query}`,
         });
       }
@@ -488,7 +528,12 @@ function createMarketDiscoverySupervisor({
       tenantId: discoveryTenant,
       runId: run.id,
       state: DISCOVERY_RUN_STATES.CANDIDATES_DISCOVERED,
-      metadata: { candidateStats: discovery.stats, candidatesRejected: discovery.rejected },
+      metadata: {
+        candidateStats: discovery.stats,
+        candidatesRejected: discovery.rejected,
+        candidatesOutOfMarket: discovery.outOfMarket,
+        relevanceGate: marketContext ? 'evaluated' : RELEVANCE_STATES.NOT_EVALUABLE,
+      },
     });
 
     // ── CANDIDATE ANALYSIS ──────────────────────────────────────────────
@@ -631,7 +676,7 @@ function createMarketDiscoverySupervisor({
         rejected: revalidation.rejected,
         gaps: archetypeGaps,
       },
-      candidates: discovery.stats,
+      candidates: { ...discovery.stats, outOfMarket: discovery.outOfMarket },
       diversity,
       discoverySet: { id: set.id, selected: selectionResult.selected, rationale: selectionResult.rationale },
       holdout,

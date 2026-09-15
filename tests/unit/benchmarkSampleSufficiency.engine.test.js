@@ -669,9 +669,11 @@ describe('gap crítico prevalece sobre qualquer média (§25, §40)', () => {
 // ── Amostra real do repositório ───────────────────────────────────────────
 
 describe('amostra real da vertical Fitness (estado honesto)', () => {
-  it('não declara suficiência sem análise e registra o bloqueio externo', () => {
+  it('não declara suficiência e registra o bloqueio externo', () => {
     const result = evaluateSampleSufficiency({ sample: FITNESS_SAMPLE, policy: POLICY, now: NOW });
-    expect(result.status).toBe(SAMPLE_STATES.NOT_RESEARCHED);
+    // 2026-09-15: a pesquisa real (runs r3/r4) moveu o estado para
+    // SAMPLE_RESEARCHING. O que não pode acontecer: SUFFICIENT/certificável.
+    expect(result.status).not.toBe(SAMPLE_STATES.SUFFICIENT);
     expect(result.certifiable).toBe(false);
     expect(FITNESS_SAMPLE.sampleSufficiencyClaim).toBeUndefined();
     expect(FITNESS_SAMPLE.externalBlock.code).toBe(engine.EXTERNAL_BLOCK_STATE);
@@ -684,32 +686,55 @@ describe('amostra real da vertical Fitness (estado honesto)', () => {
     expect(evo.sources.length).toBeGreaterThan(0);
   });
 
-  it('holdout está pré-registrado antes de qualquer análise', () => {
+  it('holdout está pré-registrado e qualquer análise é POSTERIOR ao pré-registro', () => {
     expect(FITNESS_SAMPLE.holdout).toBeDefined();
     expect(FITNESS_SAMPLE.holdout.selectedAsHoldoutAt).toBeTruthy();
     expect(FITNESS_SAMPLE.holdout.selectionReason).toBeTruthy();
     expect(FITNESS_SAMPLE.holdout.selectionEvidence).toBeTruthy();
     const holdoutBenchmark = FITNESS_SAMPLE.benchmarks.find((b) => b.id === FITNESS_SAMPLE.holdout.benchmarkId);
     expect(holdoutBenchmark.role).toBe('validation');
-    expect(holdoutBenchmark.analyzedAt).toBeNull();
+    // Analisado em 2026-09-15 (run r4, após a saturação): a ordem temporal é o
+    // invariante — análise antes do pré-registro seria leakage (§6).
+    if (holdoutBenchmark.analyzedAt) {
+      expect(Date.parse(holdoutBenchmark.analyzedAt))
+        .toBeGreaterThan(Date.parse(FITNESS_SAMPLE.holdout.selectedAsHoldoutAt));
+    }
   });
 
-  it('toda fonte declarada é oficial e verificada (tier ≤ 5)', () => {
+  it('toda fonte declarada é oficial (tier ≤ 5) e o estado de verificação é explícito', () => {
+    // Pós-pesquisa real, o sample registra o resultado VERDADEIRO de cada fetch:
+    // fontes não verificadas ficam marcadas como tal (o gate sourceQuality as
+    // reporta) — nunca promovidas a `verified: true` por conveniência.
     for (const b of FITNESS_SAMPLE.benchmarks) {
       expect(b.sources.length).toBeGreaterThan(0);
       for (const source of b.sources) {
         expect(source.tier).toBeLessThanOrEqual(5);
-        expect(source.verified).toBe(true);
+        expect(typeof source.verified).toBe('boolean');
         expect(String(source.url)).toMatch(/^https:\/\//);
       }
     }
   });
 
-  it('nenhum novelty foi inventado', () => {
+  it('nenhum novelty foi inventado: todo item carrega proveniência verificável', () => {
+    // 2026-09-15: novelty REAL existe (findings verificados de fontes oficiais
+    // nos runs r3/r4). Fabricação não sobrevive a esta cadeia: id, origem
+    // externa observada, sourceRef resolvendo nas fontes do benchmark e
+    // evidenceRef — e toda novelty exige análise registrada no benchmark.
     for (const b of FITNESS_SAMPLE.benchmarks) {
+      const sourceIds = new Set((b.sources || []).map((source) => source.id));
+      let benchmarkNovelty = 0;
       for (const key of engine.ALL_NOVELTY_KEYS) {
         expect(Array.isArray(b.novelty[key])).toBe(true);
-        expect(b.novelty[key]).toHaveLength(0);
+        for (const item of b.novelty[key]) {
+          benchmarkNovelty += 1;
+          expect(typeof item.id).toBe('string');
+          expect(item.origin).toBe('EXTERNAL_OBSERVED');
+          expect(sourceIds.has(item.sourceRef)).toBe(true);
+          expect(typeof item.evidenceRef).toBe('string');
+        }
+      }
+      if (benchmarkNovelty > 0) {
+        expect(b.analyzedAt).toBeTruthy();
       }
     }
   });

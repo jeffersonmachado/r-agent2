@@ -11,9 +11,14 @@
  * e a classificação vem do ator resolvido server-side (nunca do corpo).
  *
  * Postura de honestidade:
- *   - sem provider governado para as capabilities `research.*`, `execute`
- *     devolve `RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS` com a lista NOMINAL do que
- *     falta. Nada é registrado e nenhum sample é tocado;
+ *   - o provider DEFAULT é o provider NATIVO de pesquisa
+ *     (`api/services/research/nativeResearchProvider.js`): fetch real sob a
+ *     política de endpoint do MCP (SSRF guard), busca DuckDuckGo sem chave,
+ *     inspeções determinísticas. A injeção via `resolveResearchDeps` continua
+ *     disponível para testes;
+ *   - se um provider injetado omitir capabilities, `execute` devolve
+ *     `RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS` com a lista NOMINAL do que falta.
+ *     Nada é registrado e nenhum sample é tocado;
  *   - o DISCOVERY SET é pré-registrado por `POST /runs` (§5). `execute` recusa
  *     rodar sem ele;
  *   - a escrita no sample versionado exige tenant `system` e é transacional.
@@ -33,7 +38,21 @@ const {
 const { canonicalResearchTenant, SEMANTIC_CODES } = require('../../services/benchmark/benchmarkResearchSemantics');
 const { applySamplePatch, SAMPLES_DIR } = require('../../services/benchmark/benchmarkSampleRegistry');
 const { evaluateSampleSufficiency } = require('../../../qa/benchmarks/benchmarkSufficiencyEngine');
+const { createNativeResearchProvider } = require('../../services/research/nativeResearchProvider');
 const policy = require('../../../config/benchmark-sufficiency-policy.json');
+
+/**
+ * Provider NATIVO compartilhado do módulo (lazy): uma única instância preserva
+ * a polidez por host entre requisições. Injeção via `resolveResearchDeps`
+ * continua tendo precedência (testes).
+ */
+let sharedNativeProviders = null;
+function defaultResearchProviders(log) {
+  if (!sharedNativeProviders) {
+    sharedNativeProviders = createNativeResearchProvider({ logger: log });
+  }
+  return sharedNativeProviders;
+}
 
 /** Vertical só pode virar caminho de arquivo com este formato. */
 const VERTICAL_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -131,7 +150,7 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
       supervisor: createBenchmarkResearchSupervisor({
         store,
         registry,
-        providers: injected.providers || {},
+        providers: injected.providers || defaultResearchProviders(deps.logger),
         // O tenant do run é SEMPRE SYSTEM (já resolvido em `authenticate`).
         tenantId: injected.tenantId || context.tenantId || 'system',
         // §TAREFA 27/28 — principal interno com delegação EXPLÍCITA a

@@ -182,8 +182,14 @@ async function executeResearchCapability({ registry, capability, tenantId, actor
 /**
  * Proveniência da execução de pesquisa (§22) — liga agente, tool, conexão,
  * fonte e evidência. Nunca contém segredo nem credencial.
+ *
+ * `sourceSelection` registra COMO a fonte foi escolhida:
+ *   - `search`          → candidato devolvido por `research.search`;
+ *   - `declared-config` → a URL declarada no sample governado foi obtida
+ *     diretamente porque a busca não a superficiou (confirmação de fonte
+ *     pré-registrada, nunca substituição por outro candidato).
  */
-function buildResearchProvenance({ agentId = null, capability, toolId, provider, source = null, evidenceRef = null, at = null }) {
+function buildResearchProvenance({ agentId = null, capability, toolId, provider, source = null, evidenceRef = null, at = null, sourceSelection = null }) {
   return Object.freeze({
     agentId,
     capability: String(capability),
@@ -191,6 +197,7 @@ function buildResearchProvenance({ agentId = null, capability, toolId, provider,
     provider: String(provider),
     sourceUrl: source?.url || null,
     sourceTier: source?.tier ?? null,
+    sourceSelection: sourceSelection || null,
     evidenceRef: evidenceRef || null,
     at: at || new Date().toISOString(),
   });

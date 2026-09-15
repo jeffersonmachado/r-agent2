@@ -430,6 +430,9 @@ describe('Research capabilities — subagente sem acesso externo irrestrito', ()
       provider: 'native',
       sourceUrl: OFFICIAL_SOURCE.url,
       sourceTier: 5,
+      // 2026-09-15 — a seleção da fonte é parte da auditoria (search vs
+      // declared-config); chamadas que não a informam registram null.
+      sourceSelection: null,
       evidenceRef: 'ev-42',
       at: '2026-09-11T00:00:00.000Z',
     });

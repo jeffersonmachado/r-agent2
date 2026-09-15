@@ -117,6 +117,8 @@
     "validate:replay-governance": "node scripts/governance/validate-replay-governance.js",
     "validate:model-field-contracts": "node scripts/governance/validate-model-field-contracts.js",
     "validate:benchmark-sufficiency": "node scripts/governance/validate-benchmark-sufficiency.js",
+    "benchmark:derive-fitness-baselines": "node scripts/benchmark/derive-fitness-inventory-baselines.js",
+    "benchmark:derive-fitness-baselines:check": "node scripts/benchmark/derive-fitness-inventory-baselines.js --check",
     "validate:manual-sanitization": "node scripts/governance/validate-manual-sanitization.js",
     "validate:readiness-consistency": "node scripts/governance/validate-readiness-consistency.js",
     "validate:evo-contract": "node scripts/governance/validate-evo-contract.js",

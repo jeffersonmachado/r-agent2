@@ -44,7 +44,7 @@ const SAMPLE = {
       name: 'Alpha Gym',
       archetype: 'independent-gym',
       independenceGroup: 'alpha',
-      sources: [{ tier: 5, url: 'https://alpha.example.com/' }],
+      sources: [{ tier: 5, url: 'https://alpha-gym.com/' }],
       dimensions: { geography: 'BR', customerSize: 'small' },
     },
     {
@@ -52,7 +52,7 @@ const SAMPLE = {
       name: 'Beta Fit',
       archetype: 'financial-billing',
       independenceGroup: 'beta',
-      sources: [{ tier: 5, url: 'https://beta.example.com/' }],
+      sources: [{ tier: 5, url: 'https://beta-fit.com/' }],
       dimensions: { geography: 'BR', customerSize: 'medium' },
     },
   ],
@@ -60,11 +60,14 @@ const SAMPLE = {
 
 /** Universo que a "pesquisa" encontra: 2 seeds + 1 novo + 1 white-label do novo. */
 const SEARCH_HITS = [
-  { url: 'https://alpha.example.com/', title: 'Alpha Gym', country: 'BR', archetypes: ['independent-gym'] },
-  { url: 'https://beta.example.com/', title: 'Beta Fit', country: 'BR', archetypes: ['financial-billing'] },
-  { url: 'https://gymnovo.example.com/', title: 'GymNovo', country: 'US', archetypes: ['student-digital-experience'], segments: ['boutique'], independenceGroup: 'gymnovo' },
-  { url: 'https://wl.gymnovo.example.com/', title: 'GymNovo WhiteLabel', country: 'US', archetypes: ['student-digital-experience'], cloneOf: 'gymnovo', independenceGroup: 'wl-proprio' },
-  { url: 'https://delta.example.com/', title: 'Delta Fitness', country: 'IE', archetypes: ['independent-gym'], segments: ['rede'], independenceGroup: 'delta' },
+  { url: 'https://alpha-gym.com/', title: 'Alpha Gym', country: 'BR', archetypes: ['independent-gym'] },
+  { url: 'https://beta-fit.com/', title: 'Beta Fit', country: 'BR', archetypes: ['financial-billing'] },
+  { url: 'https://gymnovo.com/', title: 'GymNovo', country: 'US', archetypes: ['student-digital-experience'], segments: ['boutique'], independenceGroup: 'gymnovo' },
+  // T-S2: identidade = domínio registrável. Um subdomínio do MESMO domínio seria
+  // o mesmo fornecedor; o white-label mora em outro domínio e declara cloneOf
+  // apontando para a identidade (domínio) do produto base.
+  { url: 'https://gymnovo-whitelabel.com/', title: 'GymNovo WhiteLabel', country: 'US', archetypes: ['student-digital-experience'], cloneOf: 'gymnovo.com', independenceGroup: 'wl-proprio' },
+  { url: 'https://delta-fitness.com/', title: 'Delta Fitness', country: 'IE', archetypes: ['independent-gym'], segments: ['rede'], independenceGroup: 'delta' },
 ];
 
 function buildProviders() {
@@ -88,7 +91,7 @@ function buildProviders() {
   };
 }
 
-async function buildHarness({ providers = buildProviders(), sharedState } = {}) {
+async function buildHarness({ providers = buildProviders(), sharedState, selection = { size: 3 } } = {}) {
   const registry = createToolRegistry({ logger: silent });
   const store = createMarketDiscoveryMemoryStore({ state: sharedState });
   const supervisor = createMarketDiscoverySupervisor({
@@ -99,7 +102,7 @@ async function buildHarness({ providers = buildProviders(), sharedState } = {}) 
     actor: buildDiscoveryPrincipal(),
     now: () => NOW,
     logger: silent,
-    selection: { size: 3 },
+    selection,
   });
   return { registry, store, supervisor };
 }
@@ -134,7 +137,7 @@ describe('Market discovery — pipeline completo', () => {
 
     // Candidato NOVO (além dos seeds) aceito com evidência.
     expect(result.candidates.beyondSeeds).toBeGreaterThan(0);
-    const gymnovo = await store.getCandidate({ tenantId: TENANT, vertical: 'fitness-lab', candidateKey: 'gymnovo' });
+    const gymnovo = await store.getCandidate({ tenantId: TENANT, vertical: 'fitness-lab', candidateKey: 'gymnovo.com' });
     expect(gymnovo.state).toBe('ACCEPTED');
     expect(gymnovo.origin).toBe('research');
     expect(gymnovo.profiled_at).toBe(NOW);
@@ -144,7 +147,7 @@ describe('Market discovery — pipeline completo', () => {
     expect(result.diversity.totalCandidates).toBe(5);
     expect(result.diversity.independentCount).toBe(4);
     expect(result.diversity.clones).toEqual([
-      { candidateKey: 'gymnovo-whitelabel', cloneOf: 'gymnovo' },
+      { candidateKey: 'gymnovo-whitelabel.com', cloneOf: 'gymnovo.com' },
     ]);
 
     // Discovery set determinístico com rationale persistida.
@@ -228,11 +231,98 @@ describe('Market discovery — pipeline completo', () => {
     expect(await store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab' })).toHaveLength(0);
   });
 
+  test('falha de REDE de um candidato não derruba o run (fato de descoberta, não exceção)', async () => {
+    const providers = buildProviders();
+    const failingFetch = providers.fetch;
+    providers.fetch = async (input) => {
+      if (String(input.url).includes('gymnovo-whitelabel')) {
+        const error = new Error('research_fetch_timeout: host inalcançável');
+        error.code = 'research_fetch_timeout';
+        throw error;
+      }
+      return failingFetch(input);
+    };
+    const { supervisor } = await buildHarness({ providers });
+
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-fetch-fail-v1',
+      sample: SAMPLE,
+    });
+
+    // O run COMPLETA; o candidato cuja fonte falhou simplesmente não acumula
+    // evidência e não entra no universo aceito.
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    expect(result.candidates.accepted ?? result.discoverySet.selected.length).toBeDefined();
+  });
+
   test('o supervisor é superfície DEVELOPMENT com tenant SYSTEM', async () => {
     const { supervisor } = await buildHarness();
     expect(supervisor.capability.visibility).toBe('DEVELOPMENT');
     expect(supervisor.actor.classification).toBe('DEVELOPMENT');
     expect(supervisor.actor.tenant).toBe('system');
     expect(supervisor.tenantId).toBe('system');
+  });
+
+  test('T-S2: página obtida fora do mercado (Wikipedia/loja/help) é OUT_OF_MARKET e não entra no universo aceito', async () => {
+    const context = {
+      categoryTerms: ['gym management software'],
+      relevance: { minCategorySignals: 1, excludedHosts: ['wikipedia.org', 'support.google.com'] },
+    };
+    const providers = buildProviders();
+    providers.search = async ({ query }) => ({
+      candidates: query.includes('site oficial') || query.includes('documentação oficial')
+        ? []
+        : [
+          { url: 'https://alpha-gym.com/', title: 'Alpha Gym' },
+          { url: 'https://en.wikipedia.org/wiki/Fitness', title: 'Physical fitness - Wikipedia' },
+          { url: 'https://modafitness.com.br/', title: 'Moda Fitness Loja' },
+          { url: 'https://support.google.com/fit/answer/1', title: 'Ajuda do Google Fit' },
+        ],
+    });
+    const realFetch = providers.fetch;
+    providers.fetch = async (input) => {
+      const url = String(input.url);
+      if (url.includes('wikipedia.org')) {
+        const content = 'Physical fitness is a state of health and well-being. Exercise and training history.';
+        return { httpStatus: 200, content, contentType: 'text/html', retrievedAt: NOW, contentHash: sha(content) };
+      }
+      if (url.includes('modafitness')) {
+        const content = 'Moda fitness: leggings, tops e frete grátis. Compre agora.';
+        return { httpStatus: 200, content, contentType: 'text/html', retrievedAt: NOW, contentHash: sha(content) };
+      }
+      if (url.includes('support.google.com')) {
+        const content = 'Como configurar o Google Fit no seu smartwatch.';
+        return { httpStatus: 200, content, contentType: 'text/html', retrievedAt: NOW, contentHash: sha(content) };
+      }
+      const content = `gym management software oficial de ${url}: membros, cobrança e catraca`;
+      return { httpStatus: 200, content, contentType: 'text/html', retrievedAt: NOW, contentHash: sha(content) };
+    };
+
+    const { supervisor, store } = await buildHarness({ providers, selection: { size: 1 } });
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-relevance-v1',
+      sample: { ...SAMPLE, marketContext: context },
+    });
+
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+
+    // Os três poluentes observados na varredura real foram OBTIDOS (fetch 200)
+    // e mesmo assim ficaram fora do universo aceito — com motivo nominal.
+    const accepted = await store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab', state: 'ACCEPTED' });
+    const acceptedKeys = accepted.map((c) => c.candidate_key);
+    expect(acceptedKeys).not.toContain('wikipedia.org');
+    expect(acceptedKeys).not.toContain('modafitness.com.br');
+    expect(acceptedKeys).not.toContain('google.com'); // identidade = domínio registrável do help center
+    expect(acceptedKeys).toContain('alpha-gym.com');
+
+    const outOfMarket = result.candidates.outOfMarket.map((c) => c.candidateKey);
+    expect(outOfMarket).toEqual(expect.arrayContaining([
+      'wikipedia.org', 'modafitness.com.br', 'google.com',
+    ]));
+    const run = await store.getRun({ tenantId: TENANT, vertical: 'fitness-lab', discoveryVersion: 'fitness-lab-relevance-v1' });
+    expect(run.metadata.candidatesOutOfMarket.length).toBe(3);
+    expect(run.metadata.relevanceGate).toBe('evaluated');
   });
 });

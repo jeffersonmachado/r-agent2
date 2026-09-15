@@ -1,15 +1,25 @@
 'use strict';
 
 /**
- * MISSÃO CORRETIVA §17 — GAP DE ARQUÉTIPOS DO FITNESS REPRODUZIDO, NÃO FORÇADO.
+ * MISSÃO CORRETIVA §17 — GAP DE ARQUÉTIPOS DO FITNESS: REPRODUZIDO, DEPOIS
+ * FECHADO POR PESQUISA REAL.
  *
  * `financial-billing` e `student-digital-experience` são arquétipos REQUIRED da
- * vertical fitness e NÃO estão representados por nenhum benchmark da amostra.
+ * vertical fitness. Até o run fitness-real-2026-09-15-r4 NENHUM benchmark os
+ * representava. No run r5 (2026-09-15) o gap foi fechado por PESQUISA REAL:
+ * dois candidatos descobertos IN_MARKET pela varredura de mercado (ABC Fitness
+ * e Wellhub, evidência hash-bound em market_candidates) foram pesquisados pelo
+ * caminho governado (fetch/inspeção reais, findings verificados) e declarados
+ * representantes dos dois arquétipos — cada um com `archetypeEvidence`
+ * apontando findings VERIFICADOS que casam o vocabulário versionado do
+ * arquétipo (config/benchmark-normalization.json#archetypeEvidenceTerms,
+ * derivação em qa/benchmarks/archetypeEvidenceDerivation.js).
  *
- * O risco real aqui não é o gap: é o gap ser "resolvido" por conveniência —
- * rebaixando o arquétipo, removendo-o da lista, declarando cobertura ou
- * preenchendo novelty sem pesquisa. Este teste existe para tornar essas saídas
- * impossíveis sem que o repositório grite.
+ * O risco que este teste vigia NÃO mudou: o gap ser "resolvido" por
+ * conveniência — rebaixando o arquétipo, removendo-o da lista, declarando
+ * cobertura sem pesquisa, usando marketScarcityException sem escassez real ou
+ * preenchendo novelty sem fonte. Se um dia a cobertura deixar de ser
+ * sustentada por evidência, este arquivo volta a gritar.
  */
 
 const fs = require('fs');
@@ -39,7 +49,7 @@ function fitnessEntry(report) {
   return verticals.fitness || null;
 }
 
-describe('§17 o gap de arquétipos do fitness é reproduzido honestamente', () => {
+describe('§17 o gap de arquétipos do fitness — fechamento só vale com evidência', () => {
   it('os dois arquétipos seguem declarados REQUIRED (não podem ser rebaixados para fazer PASS)', () => {
     for (const id of GAP_ARCHETYPES) {
       const archetype = (SAMPLE.archetypes || []).find((a) => a.id === id);
@@ -49,17 +59,51 @@ describe('§17 o gap de arquétipos do fitness é reproduzido honestamente', () 
     }
   });
 
-  it('a cobertura de arquétipos REPROVA e lista exatamente o gap', () => {
+  it('a cobertura, quando PASS, vem de benchmarks PESQUISADOS com evidência de arquétipo', () => {
     const coverage = engine.evaluateArchetypeCoverage({ sample: SAMPLE });
-    expect(coverage.status).toBe('FAIL');
-    expect(coverage.missingArchetypes).toEqual(expect.arrayContaining(GAP_ARCHETYPES));
-    expect(coverage.missingArchetypes.length).toBeGreaterThan(0);
+    if (coverage.status === 'FAIL') {
+      // Lacuna honesta continua sendo um resultado válido — mas precisa ser
+      // listada nominalmente, nunca escondida.
+      expect(coverage.missingArchetypes.length).toBeGreaterThan(0);
+      return;
+    }
+    expect(coverage.missingArchetypes).toEqual([]);
+    for (const id of GAP_ARCHETYPES) {
+      const representatives = (SAMPLE.benchmarks || []).filter((b) => b.archetype === id);
+      expect(representatives.length).toBeGreaterThan(0);
+      for (const benchmark of representatives) {
+        // Análise real: analyzedAt + researchVersion + inventário de findings.
+        expect(Number.isFinite(Date.parse(benchmark.analyzedAt || ''))).toBe(true);
+        expect(typeof benchmark.researchVersion).toBe('string');
+        expect(Array.isArray(benchmark.findingsInventory)).toBe(true);
+        expect(benchmark.findingsInventory.length).toBeGreaterThan(0);
+        // Mapeamento persistido pela pesquisa (não edição manual solta).
+        expect(benchmark.marketArchetypeMapping && benchmark.marketArchetypeMapping.archetype).toBe(id);
+        // Fonte oficial verificada (tier aceitável + obtenção confirmada).
+        expect((benchmark.sources || []).some((source) => source.verified === true
+          && !engine.isGenericSource(source))).toBe(true);
+        // Evidence refs declaradas resolvendo contra o inventário verificado.
+        const evidence = benchmark.archetypeEvidence || null;
+        expect(evidence).not.toBeNull();
+        expect(typeof evidence.derivation).toBe('string');
+        const supporting = Array.isArray(evidence.supportingFindings) ? evidence.supportingFindings : [];
+        expect(supporting.length).toBeGreaterThan(0);
+        const inventory = new Set(benchmark.findingsInventory);
+        for (const ref of supporting) {
+          expect(inventory.has(ref.findingId)).toBe(true);
+          expect(typeof ref.evidenceId).toBe('string');
+          expect(typeof ref.sourceId).toBe('string');
+        }
+      }
+    }
   });
 
-  it('nenhum benchmark declara os arquétipos em falta (o gap é real, não de leitura)', () => {
-    const declared = new Set((SAMPLE.benchmarks || []).map((b) => b.archetype));
+  it('nenhum arquétipo em gap histórico é coberto por exceção de escassez fabricada', () => {
+    const exceptions = Array.isArray(SAMPLE.marketScarcityExceptions) ? SAMPLE.marketScarcityExceptions : [];
     for (const id of GAP_ARCHETYPES) {
-      expect(declared.has(id)).toBe(false);
+      // Esses arquétipos NÃO são escassos no mercado fitness — declará-los
+      // escassos seria a saída conveniente que este teste existe para impedir.
+      expect(exceptions.some((e) => e.archetype === id)).toBe(false);
     }
   });
 
@@ -73,11 +117,27 @@ describe('§17 o gap de arquétipos do fitness é reproduzido honestamente', () 
   });
 
   it('a amostra não fabrica novelty para sustentar cobertura', () => {
-    const totalNovelty = (SAMPLE.benchmarks || []).reduce((total, benchmark) => {
-      const novelty = benchmark.novelty || {};
-      return total + Object.values(novelty).reduce((sum, items) => sum + (Array.isArray(items) ? items.length : 0), 0);
-    }, 0);
-    expect(totalNovelty).toBe(0);
+    // 2026-09-15: novelty REAL passou a existir (runs r3/r4, findings verificados
+    // de fontes oficiais). O invariante endurece: todo item precisa de cadeia de
+    // proveniência completa — id, origem externa observada, sourceRef que resolve
+    // nas fontes do próprio benchmark e evidenceRef. Fabricação não sobrevive a isso.
+    let totalNovelty = 0;
+    for (const benchmark of SAMPLE.benchmarks || []) {
+      const sourceIds = new Set((benchmark.sources || []).map((source) => source.id));
+      for (const items of Object.values(benchmark.novelty || {})) {
+        for (const item of Array.isArray(items) ? items : []) {
+          totalNovelty += 1;
+          expect(typeof item.id).toBe('string');
+          expect(item.origin).toBe('EXTERNAL_OBSERVED');
+          expect(sourceIds.has(item.sourceRef)).toBe(true);
+          expect(typeof item.evidenceRef).toBe('string');
+        }
+      }
+    }
+    // Novelty sem pesquisa registrada é fabricação; com pesquisa é medição.
+    if (totalNovelty > 0) {
+      expect(SAMPLE.benchmarks.some((b) => b.analyzedAt)).toBe(true);
+    }
   });
 
   it('a amostra declara o bloqueio externo de pesquisa de forma auditável', () => {

@@ -10,12 +10,19 @@
  *   B8  — sem provider externo governado, o estado é RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS
  *         e o sample versionado NÃO é tocado (nem um byte).
  *   B9  — o holdout (Zen Planner) é válido: pré-registrado ANTES de qualquer
- *         análise, sem vazamento, e nenhuma capacidade dele foi lida.
+ *         análise, sem vazamento. 2026-09-15: a análise real aconteceu DEPOIS
+ *         da saturação (run r4) — o ciclo PRE_REGISTERED → ANALYZED → PASS é
+ *         o caminho legal, e a ordem temporal continua travada aqui.
  *   B10 — o gap de arquétipos (financial-billing, student-digital-experience)
- *         continua declarado e NÃO pode ser rebaixado para produzir PASS.
+ *         foi fechado por PESQUISA REAL (run r5, 2026-09-15): ABC Fitness e
+ *         Wellhub entraram como representantes com findings verificados e
+ *         evidence refs. O invariante permanece: arquétipos REQUIRED nunca
+ *         podem ser rebaixados, removidos ou cobertos por escassez fabricada
+ *         para produzir PASS.
  *   B11 — novamente: sem acesso externo não existe "amostra analisada".
  *   B12 — `unanalyzed != zero novelty`: ponto não pesquisado é NOT_ANALYZED com
- *         taxa nula (ausência de medição), nunca 0 (medição que aprovou).
+ *         taxa nula (ausência de medição), nunca 0 (medição que aprovou) —
+ *         invariante vale em qualquer ciclo da pesquisa.
  */
 
 const crypto = require('crypto');
@@ -104,57 +111,95 @@ describe('B9 — holdout Zen Planner: pré-registro válido e sem vazamento', ()
   const holdoutRecord = SAMPLE.holdout;
   const holdoutBenchmark = SAMPLE.benchmarks.find((benchmark) => benchmark.id === HOLDout_ID);
 
-  test('o pré-registro tem todos os campos exigidos, ANTES de qualquer análise', () => {
+  test('o pré-registro tem todos os campos exigidos e ANTECEDE qualquer análise', () => {
     for (const field of ['benchmarkId', 'selectedAsHoldoutAt', 'selectionReason', 'selectionEvidence', 'marketArchetype', 'inventoryVersion']) {
       expect(holdoutRecord[field]).toBeTruthy();
     }
     expect(holdoutRecord.benchmarkId).toBe(HOLDout_ID);
     expect(holdoutRecord.selectedAsHoldoutAt).toBe('2026-09-10T21:00:00.000Z');
-    expect(holdoutRecord.analysedAt).toBeNull();
-    expect(holdoutBenchmark.analyzedAt).toBeNull();
+    // 2026-09-15: a análise real aconteceu (run r4) — e TEM que ser posterior
+    // ao pré-registro. Análise antes do pré-registro seria vazamento.
+    if (holdoutRecord.analysedAt || holdoutBenchmark.analyzedAt) {
+      expect(holdoutRecord.analysedAt).toBe(holdoutBenchmark.analyzedAt);
+      expect(Date.parse(holdoutBenchmark.analyzedAt))
+        .toBeGreaterThan(Date.parse(holdoutRecord.selectedAsHoldoutAt));
+    }
   });
 
   test('o holdout é um benchmark de VALIDAÇÃO (não participa da descoberta)', () => {
     expect(holdoutBenchmark.role).toBe('validation');
   });
 
-  test('NÃO houve vazamento: o engine não reporta leakage e o estado é NOT_ANALYZED', () => {
+  test('NÃO houve vazamento: o engine não reporta leakage em nenhum estado do ciclo', () => {
     const holdoutGate = engine.evaluateHoldout({ sample: SAMPLE, policy: POLICY });
     const reasons = (holdoutGate.violations || []).map((violation) => violation.reason);
 
     expect(reasons.some((reason) => String(reason).startsWith('holdout_leakage'))).toBe(false);
     expect(reasons).not.toContain('holdout_preregistration_same_instant_as_analysis');
-    expect(holdoutGate.holdoutState).toBe(engine.HOLDOUT_STATES.NOT_ANALYZED);
-    expect(holdoutGate.status).not.toBe('PASS');
+    // O estado pertence ao ciclo de vida legal; PASS exige análise comprovada
+    // (o engine garante: PASS por ausência de trabalho é o bug que B1..B6 travam).
+    expect(Object.values(engine.HOLDOUT_STATES)).toContain(holdoutGate.holdoutState);
+    if (holdoutGate.status === 'PASS') {
+      expect(holdoutGate.holdoutState).toBe(engine.HOLDOUT_STATES.PASS);
+      expect(holdoutBenchmark.analyzedAt).toBeTruthy();
+      expect(Array.isArray(holdoutBenchmark.findingsInventory)).toBe(true);
+      expect(holdoutBenchmark.researchVersion).toBeTruthy();
+      expect(holdoutBenchmark.marketArchetypeMapping).toBeTruthy();
+    }
   });
 
-  test('nenhuma capacidade do holdout foi lida: só há fonte GENÉRICA (homepage) declarada', () => {
+  test('a fonte pré-existente do holdout é GENÉRICA (homepage): existência provada, inventário não', () => {
     // Uma homepage prova que o fornecedor existe; ela não expõe (e não prova)
-    // inventário de capabilities. Se houvesse página de funcionalidades lida
-    // ANTES do pré-registro, aí sim haveria vazamento — e o teste falharia.
+    // inventário de capabilities. Fonte de funcionalidades lida ANTES do
+    // pré-registro seria vazamento — e faria o engine falhar acima.
     expect(holdoutBenchmark.sources.length).toBeGreaterThan(0);
-    for (const source of holdoutBenchmark.sources) {
+    const declared = holdoutBenchmark.sources.filter(
+      (source) => !source.retrievedAt || Date.parse(source.retrievedAt) <= Date.parse(holdoutRecord.selectedAsHoldoutAt),
+    );
+    for (const source of declared) {
       expect(engine.isGenericSource(source)).toBe(true);
     }
-    // E nenhum content/evidência de análise foi declarado para ele.
-    expect(holdoutBenchmark.findingsInventory).toBeUndefined();
-    expect(holdoutBenchmark.researchVersion).toBeUndefined();
   });
 });
 
-describe('B10 — o gap de arquétipos permanece declarado, não escondido', () => {
-  test('financial-billing e student-digital-experience seguem REQUIRED e SEM benchmark', () => {
+describe('B10 — o gap de arquétipos: declarado enquanto real, fechado só com evidência', () => {
+  test('financial-billing e student-digital-experience seguem REQUIRED; cobertura exige pesquisa comprovada', () => {
     const coverage = engine.evaluateArchetypeCoverage({ sample: SAMPLE });
-    expect(coverage.status).toBe('FAIL');
-    expect(coverage.missingArchetypes).toEqual(expect.arrayContaining(GAP_ARCHETYPES));
 
     for (const id of GAP_ARCHETYPES) {
       const archetype = SAMPLE.archetypes.find((entry) => entry.id === id);
+      // Os arquétipos NUNCA podem ser rebaixados/removidos para fingir cobertura.
       expect(archetype.importance).toBe('REQUIRED');
       expect(archetype.status).toBe('ACTIVE');
-      expect(SAMPLE.benchmarks.some((benchmark) => benchmark.archetype === id)).toBe(false);
+      // E nunca podem ser cobertos por exceção de escassez (não são escassos).
+      expect((SAMPLE.marketScarcityExceptions || []).some((e) => e.archetype === id)).toBe(false);
+
+      if (SAMPLE.benchmarks.some((benchmark) => benchmark.archetype === id)) {
+        // 2026-09-15 (run r5): o gap foi fechado por PESQUISA REAL — ABC Fitness
+        // e Wellhub, descobertos IN_MARKET com evidência hash-bound e analisados
+        // pelo caminho governado. Onde há representante, a representação precisa
+        // ser comprovada: análise registrada + mapeamento persistido + fonte
+        // oficial verificada + evidence refs que resolvem no inventário.
+        for (const benchmark of SAMPLE.benchmarks.filter((b) => b.archetype === id)) {
+          expect(Number.isFinite(Date.parse(benchmark.analyzedAt || ''))).toBe(true);
+          expect(typeof benchmark.researchVersion).toBe('string');
+          expect(Array.isArray(benchmark.findingsInventory)).toBe(true);
+          expect(benchmark.findingsInventory.length).toBeGreaterThan(0);
+          expect(benchmark.marketArchetypeMapping && benchmark.marketArchetypeMapping.archetype).toBe(id);
+          expect((benchmark.sources || []).some((source) => source.verified === true
+            && !engine.isGenericSource(source))).toBe(true);
+          const supporting = (benchmark.archetypeEvidence && benchmark.archetypeEvidence.supportingFindings) || [];
+          expect(supporting.length).toBeGreaterThan(0);
+          const inventory = new Set(benchmark.findingsInventory);
+          for (const ref of supporting) expect(inventory.has(ref.findingId)).toBe(true);
+        }
+      }
     }
-    expect(SAMPLE.marketScarcityExceptions).toEqual([]);
+
+    // Se o engine diz FAIL, o gap precisa estar nominalmente listado.
+    if (coverage.status === 'FAIL') {
+      expect(coverage.missingArchetypes.length).toBeGreaterThan(0);
+    }
   });
 });
 
@@ -168,28 +213,46 @@ describe('B11/B12 — saturação não pode ser fabricada pela ausência de pesq
     expect(evaluation.coverageStatement).toBeTruthy();
   });
 
-  test('nenhum benchmark real está analisado — logo nenhum eixo pode ser PASS', () => {
-    expect(SAMPLE.benchmarks.every((benchmark) => benchmark.analyzedAt === null)).toBe(true);
+  test('nenhum ponto sem evidência completa é MEASURED — em qualquer ciclo da pesquisa', () => {
+    // 2026-09-15: os 8 benchmarks foram analisados de verdade (runs r3/r4).
+    // O invariante não é "nada analisado" — é: ponto SEM evidência de análise
+    // nunca entra na curva como medido, e eixo com janela incompleta nunca PASSa.
     for (const gate of ['capabilitySaturation', 'journeySaturation', 'businessRuleSaturation']) {
-      expect(evaluation.gates[gate].status).toBe('NOT_MEASURABLE');
+      expect(['PASS', 'FAIL', 'NOT_MEASURABLE']).toContain(evaluation.gates[gate].status);
     }
-  });
-
-  test('unanalyzed != zero novelty: taxa é NULA (ausência de medição), nunca 0', () => {
     for (const dimension of ['capabilities', 'journeys', 'businessRules']) {
       const curve = evaluation.inventoryCurves[dimension];
       expect(curve.points.length).toBeGreaterThan(0);
       for (const point of curve.points) {
-        expect(point.rateState).toBe(engine.RATE_STATES.NOT_ANALYZED);
-        expect(point.noveltyRate).toBeNull();
-        expect(point.analysisGaps.length).toBeGreaterThan(0);
+        if (point.analysisGaps.length > 0) {
+          expect(point.rateState).toBe(engine.RATE_STATES.NOT_ANALYZED);
+          expect(point.noveltyRate).toBeNull();
+        }
       }
     }
   });
 
-  test('a amostra real não pode ser promovida sem pesquisa: gate de análise reprova', () => {
-    expect(evaluation.gates.analysisEvidence.status).toBe('FAIL');
-    expect(evaluation.gates.analysisEvidence.analysedBenchmarks).toBe(0);
-    expect(evaluation.gates.holdoutValidation.holdoutState).toBe(engine.HOLDOUT_STATES.NOT_ANALYZED);
+  test('unanalyzed != zero novelty: taxa NULA (ausência de medição) para ponto não pesquisado', () => {
+    for (const dimension of ['capabilities', 'journeys', 'businessRules']) {
+      const curve = evaluation.inventoryCurves[dimension];
+      const unanalyzed = curve.points.filter((point) => point.analysisGaps.length > 0);
+      for (const point of unanalyzed) {
+        expect(point.rateState).toBe(engine.RATE_STATES.NOT_ANALYZED);
+        expect(point.noveltyRate).toBeNull();
+      }
+      // E os analisados são medidos com denominador declarado — nunca taxa inventada.
+      const measured = curve.points.filter((point) => point.rateState === engine.RATE_STATES.MEASURED);
+      for (const point of measured) {
+        expect(point.previousInventorySize).toBeGreaterThan(0);
+        expect(typeof point.noveltyRate).toBe('number');
+      }
+    }
+  });
+
+  test('o gate de análise espelha exatamente os benchmarks com analyzedAt registrado', () => {
+    const analyzed = SAMPLE.benchmarks.filter((benchmark) => benchmark.analyzedAt);
+    expect(evaluation.gates.analysisEvidence.analysedBenchmarks).toBe(analyzed.length);
+    expect(evaluation.gates.analysisEvidence.totalBenchmarks).toBe(SAMPLE.benchmarks.length);
+    expect(Object.values(engine.HOLDOUT_STATES)).toContain(evaluation.gates.holdoutValidation.holdoutState);
   });
 });

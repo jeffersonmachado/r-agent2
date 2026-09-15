@@ -138,17 +138,26 @@ function isNonEmptyString(value) {
 }
 
 /**
- * Normaliza uma URL de fonte para COMPARAÇÃO (barra final e caixa do host).
- * Não é uma normalização de segurança: é só para não recusar a fonte declarada
- * por causa de `https://x.com` vs `https://x.com/`.
+ * Normaliza uma URL de fonte para COMPARAÇÃO (barra final, caixa do host e
+ * equivalência `www.`). Não é uma normalização de segurança: é só para não
+ * recusar a fonte declarada por causa de `https://x.com` vs `https://x.com/`
+ * ou de `https://www.x.com/` vs `https://x.com/` — o mesmo site visto pela
+ * busca com ou sem o label `www`.
+ *
+ * A garantia anti-substituição é preservada: apenas um label `www.` À
+ * ESQUERDA é ignorado. Host/registrável diferente (`x.com` vs `y.com`),
+ * subdomínio real (`app.x.com` vs `x.com`), porta ou protocolo diferentes
+ * NUNCA casam.
  */
 function normalizeSourceUrl(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
   try {
     const url = new URL(raw);
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, '');
+    const host = url.port ? `${hostname}:${url.port}` : hostname;
     const pathname = url.pathname === '/' ? '' : url.pathname.replace(/\/$/, '');
-    return `${url.protocol}//${url.host.toLowerCase()}${pathname}${url.search}`;
+    return `${url.protocol}//${host}${pathname}${url.search}`;
   } catch (_) {
     return raw;
   }
@@ -305,10 +314,13 @@ function createBenchmarkResearchSupervisor({
       externalAccess,
       /**
        * Por que a lista de ausentes é o que é (auditável, nunca implícito):
-       * a plataforma NÃO implementa provider nativo de pesquisa — as
-       * capabilities são atendidas por tools externas governadas registradas
-       * no Canonical Tool Registry (MCP Control Plane). Sem conexão MCP
-       * habilitada que atenda `research.*`, não há pesquisa possível.
+       * desde 2026-09-15 a plataforma TEM provider nativo de pesquisa
+       * (`api/services/research/nativeResearchProvider.js`), injetado por
+       * padrão pelo módulo de rotas de produção. As capabilities também podem
+       * ser atendidas por tools externas governadas registradas no Canonical
+       * Tool Registry (MCP Control Plane). Ausências aqui significam que o
+       * chamador injetou um conjunto de providers INCOMPLETO (teste ou wiring
+       * customizado) e nenhuma conexão MCP cobre o restante.
        *
        * Importante: um provedor de LLM NÃO é um provider de pesquisa. A
        * política canônica de fontes é explícita — inferência de LLM não é prova
@@ -317,7 +329,7 @@ function createBenchmarkResearchSupervisor({
        */
       reason: externalAccess
         ? 'research_provider_available'
-        : 'no_governed_research_provider: nenhum provider nativo existe e nenhuma conexão MCP atende research.* (LLM não é fonte de pesquisa)',
+        : 'no_governed_research_provider: capabilities research.* sem runner atendível neste runtime (provider nativo não injetado pelo chamador e nenhuma conexão MCP cobre a lacuna; LLM não é fonte de pesquisa)',
     };
   }
 
@@ -420,6 +432,11 @@ function createBenchmarkResearchSupervisor({
           // silenciosa que transforma evidência em ficção.
           pickCandidate: (candidates) => (Array.isArray(candidates) ? candidates : [])
             .find((candidate) => normalizeSourceUrl(candidate?.url) === normalizeSourceUrl(declared.url)) || null,
+          // Quando a busca não superficia a URL declarada, a fonte — que vem do
+          // SAMPLE GOVERNADO (pré-registrado, verificado por humano) — é obtida
+          // diretamente: confirmação de fonte, não descoberta. A auditoria
+          // distingue os dois caminhos por `sourceSelection`.
+          declaredUrlFallback: true,
         });
 
         attempts.push({
@@ -427,6 +444,7 @@ function createBenchmarkResearchSupervisor({
           status: outcome.status,
           reason: outcome.reason || null,
           findings: Array.isArray(outcome.findings) ? outcome.findings.length : 0,
+          sourceSelection: outcome.source?.sourceSelection || outcome.provenance?.sourceSelection || null,
         });
 
         if (outcome.status === RESEARCH_RUN_STATES.BLOCKED_NO_EXTERNAL_ACCESS) {
@@ -466,6 +484,7 @@ function createBenchmarkResearchSupervisor({
                 documentationStatus: outcome.inspections?.documentation === true ? 'INSPECTED' : 'FAILED',
                 apiStatus: !apiApplicable ? 'NOT_APPLICABLE' : (outcome.inspections?.api === true ? 'INSPECTED' : 'FAILED'),
                 errors: [{ code: outcome.status, reason: outcome.reason || null }],
+                metadata: { sourceSelection: outcome.sourceSelection || outcome.provenance?.sourceSelection || null },
               });
             } catch (error) {
               errors.push({
@@ -508,7 +527,10 @@ function createBenchmarkResearchSupervisor({
                 + (outcome.perAxis?.api?.[axis]?.accepted || 0);
               return [axis, accepted > 0 ? AXIS_STATES.RESEARCHED_WITH_FINDINGS : AXIS_STATES.RESEARCHED_NO_FINDINGS];
             })),
-            metadata: { axesAttempted: Array.isArray(outcome.axesAttempted) ? outcome.axesAttempted : [] },
+            metadata: {
+              axesAttempted: Array.isArray(outcome.axesAttempted) ? outcome.axesAttempted : [],
+              sourceSelection: outcome.source?.sourceSelection || outcome.provenance?.sourceSelection || null,
+            },
           });
         } catch (error) {
           errors.push({
@@ -751,4 +773,5 @@ module.exports = {
   buildResearchPlanFromSample,
   ensureBenchmarkResearchCapability,
   createBenchmarkResearchSupervisor,
+  normalizeSourceUrl,
 };

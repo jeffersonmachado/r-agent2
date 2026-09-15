@@ -4,11 +4,12 @@
  * Composição Express do módulo de PESQUISA DE BENCHMARKS.
  *
  * Superfície de ENGENHARIA (DEVELOPMENT): monta apenas o necessário para o
- * módulo — autenticação, helpers HTTP e o factory do supervisor. Providers
- * nativos de pesquisa NÃO existem na plataforma: as capabilities `research.*`
- * são atendidas por tools externas governadas via MCP (registradas no mesmo
- * Canonical Tool Registry no startup) ou ficam ausentes — caso em que a
- * pesquisa reporta `RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS` em vez de inventar.
+ * módulo — autenticação, helpers HTTP e o factory do supervisor. As
+ * capabilities `research.*` são atendidas pelo provider NATIVO de pesquisa
+ * (`api/services/research/nativeResearchProvider.js`, default no módulo de
+ * rotas) ou por tools externas governadas via MCP (registradas no mesmo
+ * Canonical Tool Registry no startup); se nenhuma das duas atender, a pesquisa
+ * reporta `RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS` em vez de inventar.
  */
 
 const { requireAuth, requirePermission } = require('../../middleware/auth');

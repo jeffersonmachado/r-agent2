@@ -206,8 +206,16 @@ describe('§B7 — patch do sample: formato que o engine ACEITA', () => {
   });
 
   test('o registro de auditoria do holdout só é espelhado quando o holdout foi analisado', () => {
-    const { sample } = mergeSamplePatch(realSample(), validPatch());
-    // O sample real declara `analysedAt: null` — e continua null.
+    // Premissa isolada do estado real da pesquisa: simula um sample em que o
+    // holdout AINDA não foi analisado (o sample real passou a carregar a
+    // análise real de 2026-09-15 — o espelho pré-existente é preservado).
+    const preHoldout = realSample();
+    preHoldout.holdout.analysedAt = null;
+    preHoldout.benchmarks = preHoldout.benchmarks.map((benchmark) => (
+      benchmark.id === 'zenplanner' ? { ...benchmark, analyzedAt: null } : benchmark
+    ));
+    const { sample } = mergeSamplePatch(preHoldout, validPatch());
+    // Sem análise do holdout no patch, o espelho permanece null.
     expect(sample.holdout.analysedAt).toBeNull();
 
     const withHoldout = validPatch();
@@ -221,7 +229,7 @@ describe('§B7 — patch do sample: formato que o engine ACEITA', () => {
       sources: [{ id: 'brsrc-2', url: 'https://www.zenplanner.com/', tier: 5, verified: true, httpStatus: 200 }],
       novelty: {},
     });
-    const mirrored = mergeSamplePatch(realSample(), withHoldout).sample;
+    const mirrored = mergeSamplePatch(preHoldout, withHoldout).sample;
     expect(mirrored.holdout.analysedAt).toBe('2026-09-14T00:00:00.000Z');
   });
 });

@@ -228,25 +228,35 @@ describe('B1/B2 — a rota é o chamador REAL (HTTP de verdade)', () => {
       expect(executed.status).toBe(200);
       const executedBody = await executed.json();
       expect(executedBody.status).toBe(RESEARCH_RUN_OUTCOMES.ANALYZED);
-      // Só o benchmark cuja fonte DECLARADA foi devolvida pela busca é
-      // analisado; o outro fica sem candidato e é reportado como tal.
-      expect(executedBody.analyzed).toEqual(['evo-w12']);
+      // FIX 2 (2026-09-15): a fonte DECLARADA no sample governado é obtida
+      // diretamente quando a busca não a superficia — confirmação de fonte
+      // pré-registrada, auditada como `sourceSelection: 'declared-config'`.
+      // Antes desta correção, tecnofit ficava RESEARCH_NO_CANDIDATES.
+      expect(executedBody.analyzed).toEqual(['evo-w12', 'tecnofit']);
       const tecnofit = executedBody.results.find((entry) => entry.benchmarkId === 'tecnofit');
-      expect(tecnofit.attempts[0].status).toBe('RESEARCH_NO_CANDIDATES');
+      expect(tecnofit.attempts[0].status).toBe('RESEARCH_EVIDENCE_CAPTURED');
+      expect(tecnofit.attempts[0].sourceSelection).toBe('declared-config');
+      // evo-w12: a homepage cai no fallback declarado; a página profunda veio
+      // da busca — os dois caminhos ficam distintos na auditoria.
+      const evo = executedBody.results.find((entry) => entry.benchmarkId === 'evo-w12');
+      expect(evo.attempts.map((attempt) => attempt.sourceSelection)).toEqual(['declared-config', 'search']);
 
       const status = await fetch(`${base}/api/benchmark-research/runs/${VERTICAL}`);
       expect(status.status).toBe(200);
       const statusBody = await status.json();
-      expect(statusBody.summary.analysedBenchmarks).toBe(1);
-      expect(statusBody.summary.unanalysedBenchmarks).toEqual(['tecnofit']);
+      expect(statusBody.summary.analysedBenchmarks).toBe(2);
+      expect(statusBody.summary.unanalysedBenchmarks).toEqual([]);
 
       // A persistência aconteceu pelo caminho real (store injetado).
       const run = await store.getRun({ tenantId: TENANT, vertical: VERTICAL });
       expect(run).toBeTruthy();
       const findings = await store.listFindings({ tenantId: TENANT, runId: run.id });
-      expect(findings).toHaveLength(1);
-      expect(findings[0].verified).toBe(true);
-      expect(findings[0].evidence_id).toBeTruthy();
+      expect(findings.length).toBeGreaterThanOrEqual(2);
+      // Regra de honestidade do engine: fonte GENÉRICA (homepage) não prova
+      // capability — achados dela ficam UNVERIFIED e sem vínculo de evidência;
+      // os achados VERIFICADOS (página profunda) carregam evidence_id.
+      expect(findings.some((finding) => finding.verified === true)).toBe(true);
+      expect(findings.filter((finding) => finding.verified).every((finding) => finding.evidence_id)).toBe(true);
     });
   });
 

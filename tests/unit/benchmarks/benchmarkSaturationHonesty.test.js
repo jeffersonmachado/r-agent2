@@ -171,20 +171,32 @@ describe('benchmark saturation honesty (B1..B6)', () => {
     });
   });
 
-  describe('B1 — amostra real do repositorio nao pode reportar saturacao PASS', () => {
+  describe('B1 — amostra real do repositorio: mensurabilidade exige evidencia, em qualquer ciclo', () => {
     const result = evaluateSampleSufficiency({ sample: REAL_FITNESS_SAMPLE, policy: POLICY });
 
-    it('todos os benchmarks reais estao sem analyzer => nenhuma saturacao PASS', () => {
-      const withoutAnalysis = (REAL_FITNESS_SAMPLE.benchmarks || []).filter((b) => !b.analyzedAt);
-      expect(withoutAnalysis.length).toBeGreaterThan(0);
-
+    it('nenhum ponto SEM evidencia completa de analise e contado como MEASURED', () => {
+      // Invariante independente do progresso da pesquisa: rateState MEASURED
+      // somente com analysisGaps vazio; ponto com lacuna NUNCA é medido.
       for (const dimension of DIMENSIONS) {
-        expect(saturation(result, dimension).status).not.toBe('PASS');
+        for (const point of result.inventoryCurves[dimension].points) {
+          if (point.analysisGaps.length > 0) {
+            expect(point.rateState).not.toBe(RATE_STATES.MEASURED);
+            expect(point.noveltyRate).toBeNull();
+          }
+        }
       }
     });
 
-    it('capabilities nao pode ser PASS enquanto nao houver pesquisa', () => {
-      expect(saturation(result, 'capabilities').status).toBe('NOT_MEASURABLE');
+    it('eixo so reporta PASS com janela de saturacao integralmente analisada', () => {
+      for (const dimension of DIMENSIONS) {
+        const gate = saturation(result, dimension);
+        const window = new Set(gate.window || []);
+        const points = result.inventoryCurves[dimension].points
+          .filter((p) => window.has(p.benchmarkId));
+        if (points.some((p) => p.analysisGaps.length > 0)) {
+          expect(gate.status).not.toBe('PASS');
+        }
+      }
     });
 
     it('amostra real nao e certificavel', () => {

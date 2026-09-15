@@ -160,6 +160,13 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
     source,
     apiApplicable = true,
     pickCandidate = null,
+    // Quando a busca NÃO superficia a fonte declarada, a fonte — que vem do
+    // sample GOVERNADO (config/benchmarks/<vertical>.json, pré-registrado e
+    // verificado por humano) — é obtida DIRETAMENTE. Isto é CONFIRMAÇÃO de
+    // fonte: a URL não veio da busca, então não há risco de substituição; a
+    // evidência continua ligada ao conteúdo real obtido, por hash. O default
+    // é `false` para que chamadores de pura descoberta mantenham NO_CANDIDATES.
+    declaredUrlFallback = false,
   } = {}) {
     ensureCapabilities();
 
@@ -179,7 +186,18 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
 
     const search = await callCapability('research.search', { query });
     const candidates = Array.isArray(search.output?.candidates) ? search.output.candidates : [];
-    const chosen = typeof pickCandidate === 'function' ? pickCandidate(candidates) : candidates[0];
+    let chosen = typeof pickCandidate === 'function' ? pickCandidate(candidates) : candidates[0];
+    // A proveniência da SELEÇÃO é parte do registro de auditoria: a mesma URL
+    // alcançada pela busca ou pelo fallback declarado significa coisas
+    // diferentes para quem audita (descoberta vs confirmação de fonte).
+    let sourceSelection = 'search';
+    if ((!chosen || !isNonEmptyString(chosen.url))
+      && declaredUrlFallback === true
+      && isNonEmptyString(source?.url)) {
+      // EXATAMENTE a URL declarada — nunca "o candidato mais parecido".
+      chosen = { url: String(source.url).trim(), title: String(source.url).trim() };
+      sourceSelection = 'declared-config';
+    }
     if (!chosen || !isNonEmptyString(chosen.url)) {
       return {
         status: RESEARCH_RUN_STATES.NO_CANDIDATES,
@@ -207,6 +225,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
           provider: fetched.provider,
           source: { url: chosen.url, tier: source?.tier ?? null },
           at: clock(),
+          sourceSelection,
         }),
       };
     }
@@ -283,6 +302,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         rejected: [],
         evidenceRef,
         analyzedContentHash,
+        sourceSelection,
         provenance: null,
       };
     }
@@ -323,6 +343,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
           perAxis,
           evidenceRef,
           analyzedContentHash,
+          sourceSelection,
           provenance: null,
         };
       }
@@ -354,6 +375,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         httpStatus,
         contentType,
         contentHash: analyzedContentHash,
+        sourceSelection,
       },
       inspections,
       evidenceRef,
@@ -369,6 +391,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         source: { url: chosen.url, tier: source?.tier ?? null },
         evidenceRef,
         at: clock(),
+        sourceSelection,
       }),
     };
   }
