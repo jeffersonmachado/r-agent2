@@ -83,7 +83,14 @@ describe('generate-self-proving-report — falhas obrigatórias e exit code', ()
   });
 
   test('relatório mantém contrato JSON legado e adiciona ok/mandatoryFailures', () => {
-    const report = generateSelfProvingReport();
+    const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
+    // Nunca escrever no artefato governado versionado — worktree sujo quebra
+    // a proveniência de release (source_commit_provenance).
+    const report = generateSelfProvingReport({
+      reportPath: path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'self-proving-')), 'report.json'),
+    });
     // Contrato legado preservado (consumido por rebind-to-current-package)
     for (const field of [
       'generatedAt', 'engine', 'zipName', 'zipHash', 'manifestHash',

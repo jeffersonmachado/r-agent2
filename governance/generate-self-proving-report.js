@@ -83,7 +83,7 @@ function collectMandatoryFailures(engineDecisions, packageOk) {
   return failures;
 }
 
-function generateSelfProvingReport() {
+function generateSelfProvingReport(options = {}) {
   const zipName = findLatestZip();
   const zipHash = zipName ? sha256File(`dist/${zipName}`) : null;
 
@@ -167,8 +167,12 @@ function generateSelfProvingReport() {
     summary: `Self-proving report gerado. ZIP: ${zipName || 'ausente'}. Package: ${packageOk ? 'ÍNTEGRO' : 'DIVERGENTE'}. Validadores falhos: ${mandatoryFailures.length}.`,
   };
 
-  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-  fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  // O destino default é o artefato governado versionado; testes e execuções
+  // ad hoc DEVEM passar outro caminho — um teste nunca pode reescrever o
+  // artefato selado (worktree sujo quebra a proveniência do release).
+  const reportPath = options.reportPath || process.env.SELF_PROVING_REPORT_PATH || REPORT_PATH;
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
   return report;
 }
 
