@@ -105,10 +105,24 @@ fi
 log "START mode=production_health api=$API_URL frontend=$FRONTEND_URL"
 
 cd "$PROJECT_ROOT"
-FRONTEND_URL="$FRONTEND_URL" \
-API_URL="$API_URL" \
-QA_WAVES_SCHEDULED_MODE=production_health \
-node --env-file-if-exists=.env scripts/smoke/qa-waves-scheduled-operational-smoke.js >> "$LOG_FILE" 2>&1
+# --env-file-if-exists exige Node >= 22.12; cron pode resolver um Node mais antigo.
+if node --help 2>/dev/null | grep -q -- '--env-file-if-exists'; then
+  FRONTEND_URL="$FRONTEND_URL" \
+  API_URL="$API_URL" \
+  QA_WAVES_SCHEDULED_MODE=production_health \
+  node --env-file-if-exists=.env scripts/smoke/qa-waves-scheduled-operational-smoke.js >> "$LOG_FILE" 2>&1
+else
+  if [[ -f .env ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.env
+    set +a
+  fi
+  FRONTEND_URL="$FRONTEND_URL" \
+  API_URL="$API_URL" \
+  QA_WAVES_SCHEDULED_MODE=production_health \
+  node scripts/smoke/qa-waves-scheduled-operational-smoke.js >> "$LOG_FILE" 2>&1
+fi
 EXIT_CODE=$?
 
 if [[ $EXIT_CODE -eq 0 ]]; then

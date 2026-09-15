@@ -2,7 +2,8 @@
 
 ## Canonical deployment path
 
-- Build/validate with `npm run system:release`.
+- Full release (seal + publish) authority: `npm run release:seal` (plan with `npm run release:seal:plan`).
+- Build/validate with `npm run system:release` (internal validation+packaging stage, invoked by the seal phases — not the release authority).
 - Deploy only from approved release artifact through `npm run system:deploy`.
 - For pre-deploy gate use `npm run deploy:gate:official`.
 - Real deploy requires explicit `SYSTEM_DEPLOY_EXECUTE=1`.

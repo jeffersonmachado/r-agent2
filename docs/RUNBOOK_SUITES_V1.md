@@ -69,6 +69,7 @@
 
 ## Rollback
 - Referencia: `docs/ROLLBACK_PLAYBOOK_SUITES_CRITICAS.md`
+- Autoridade de release: A autoridade única de release completo (selagem + publicação) é `npm run release:seal`; as referências a `system:release-gate` neste runbook são reruns de gate técnico sobre evidências já produzidas, não o caminho de release.
 - Em qualquer incidente critico:
   - congelar mudancas
   - executar rollback da suite afetada

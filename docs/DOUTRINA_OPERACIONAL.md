@@ -197,6 +197,8 @@ npm run check:green                      # Read qa/final-verdict.json
 
 ### 4.3 Release Gate & Decision
 
+> **Autoridade de release:** A autoridade única de release completo (selagem + publicação) é `npm run release:seal` (planeje com `npm run release:seal:plan`). O encadeamento abaixo documenta etapas internas para depuração: `system:release` e `zip:release` são etapas internas do pipeline de release (validação+empacotamento e helper de pacote), invocadas pelas fases do `release:seal`, e não a autoridade de release.
+
 ```bash
 export runtime_root=/var/lib/r-agent2-release
 
@@ -377,6 +379,8 @@ npm run system:validate
 ```
 
 ### 8.3 Produção / Release
+
+> A autoridade única de release completo (selagem + publicação) é `npm run release:seal`; a sequência abaixo são etapas internas para depuração (ver §4.3).
 
 ```bash
 export runtime_root=/var/lib/r-agent2-release

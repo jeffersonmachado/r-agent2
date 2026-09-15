@@ -2,6 +2,8 @@
 
 Este repositório adota uma trilha operacional única com quatro comandos oficiais.
 
+A autoridade única de release completo (selagem + publicação) é `npm run release:seal` (planeje com `npm run release:seal:plan`): ele orquestra as fases prepare → candidate → final → publish → consolidate. `system:release` e `zip:release` são etapas internas do pipeline de release (validação+empacotamento e helper de pacote), invocadas pelas fases do `release:seal`, e não a autoridade de release.
+
 ## Comandos oficiais
 
 1. npm run system:bootstrap
@@ -36,6 +38,7 @@ Este repositório adota uma trilha operacional única com quatro comandos oficia
 	- o cenário oficial do `qa:mesh` já injeta `PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK=1`
 
 ### system:release
+- etapa interna do pipeline de release (validação + empacotamento), não a autoridade de release — a selagem/publicação completa é `npm run release:seal`
 - executa system:validate
 - exige workspace sem resíduos de runtime conhecidos (`npm run runtime:clean:check`)
 - gera artefato limpo auditado com hash/manifest
@@ -56,4 +59,5 @@ Este repositório adota uma trilha operacional única com quatro comandos oficia
 ## Uso recomendado
 
 - Novas automações devem chamar somente os quatro comandos oficiais.
+- Para release completo (selagem + publicação), chame `npm run release:seal`; não encadeie `system:release`/`zip:release` à mão como substituto do ciclo.
 - Antes de empacotar release em um workspace de desenvolvimento, execute `npm run runtime:clean`.

@@ -46,6 +46,8 @@ npm run runtime:clean
 
 ## Release Pre-Flight
 
+> **Autoridade de release:** A autoridade única de release completo (selagem + publicação) é `npm run release:seal` (planeje com `npm run release:seal:plan`). O encadeamento abaixo documenta etapas internas para depuração: `system:release` e `zip:release` são etapas internas do pipeline de release (validação+empacotamento e helper de pacote), invocadas pelas fases do `release:seal`, e não a autoridade de release.
+
 ```bash
 # 1️⃣ Environment Setup
 export runtime_root=/var/lib/r-agent2-release
@@ -142,6 +144,8 @@ LOG_LEVEL=debug
 ---
 
 ## Checklist Pré-Release (5 min)
+
+> Etapas internas de verificação; o release completo (selagem + publicação) é `npm run release:seal`.
 
 - [ ] `echo $runtime_root` (não-vazio)
 - [ ] `npm ci` ✓

@@ -122,7 +122,7 @@ Documentação não é suficiente. Use os validadores bloqueantes em `scripts/go
 
 ### Release e deploy
 
-- Caminho oficial de release: `npm run system:validate` → `npm run zip:release` → `npm run system:release`.
+- Autoridade única de release completo (selagem + publicação): `npm run release:seal` (ver abaixo). `npm run system:release` e `npm run zip:release` são etapas internas do pipeline de release, não o release completo.
 - Caminho AI-native: `npm run validate:governance-enforcement` seguido de `npm run zip:release` quando packaging está em escopo.
 - **Ciclo completo de selagem + publicação: `npm run release:seal`** (`scripts/governance/seal-release.sh`).
   Use-o em vez de encadear os passos à mão. Ele orquestra as 5 fases
