@@ -37,6 +37,14 @@ const INJECTION_PATTERNS = [
   /\bbypass\s+(?:the\s+)?(?:policy|policies|rules|security)\b/i,
   /\bignore\s+(?:the\s+)?(?:permissions?|restrictions?|policy)\b/i,
   /###\s*(?:system|instruction)/i,
+  // Lacunas MEDIDAS pelo adversarial (tests/unit/askAi/adversarialHardening.test.js):
+  // estas 3 variantes passavam pela detecção antes destes padrões.
+  // "Forget everything above" usa sinônimo ("everything") que os padrões de
+  // `forget` não cobriam; e delimitadores de template de chat (`[INST]`,
+  // `<|im_start|>`) não estavam previstos — são forma canônica de injeção.
+  /\bforget\s+(?:everything|all)\s+(?:above|before|prior)\b/i,
+  /\[\/?INST\]/i,
+  /<\|(?:im_start|im_end|system|user|assistant)\|>/i,
 ];
 
 const NEUTRALIZED_MARKER = '[conteúdo neutralizado: tentativa de instrução detectada]';
