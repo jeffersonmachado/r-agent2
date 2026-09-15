@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-15T11:48:26.069Z",
-  "artifact": "r-agent2-20260915-084102.payload.zip",
-  "gitCommit": "e7b76880495cdf367f1137316616d45a0672ffad",
+  "generatedAt": "2026-09-15T11:57:11.340Z",
+  "artifact": "r-agent2-20260915-085036.payload.zip",
+  "gitCommit": "29f0322dcf2d6f5ec542a506d1ebb12c8f2279fd",
   "chainLength": 10,
-  "chainRoot": "0499e536ad57b5acf4b63b4fc0d00474b30885fb1c86b2b445b06100ea85af5a",
+  "chainRoot": "ada9a64f3590931bd6c719981916a2595a35b74b26039b8a6822e800cd1ba724",
   "completeChain": true,
   "missingLayers": [],
   "valid": true,
@@ -12,23 +12,23 @@
       "index": 0,
       "id": "package",
       "label": "Release ZIP",
-      "path": "dist/release/r-agent2-20260915-084102.payload.zip",
+      "path": "dist/release/r-agent2-20260915-085036.payload.zip",
       "exists": true,
-      "hash": "d87dbfaf7fc4d631ed2b8e8c88a605264c0d4f75134e747225bf8a2bfec89835",
+      "hash": "1dbb4e2e0a1b9525be4b8a0d92f1f49916bb9182f594f91fad62d5baf9646c4f",
       "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "cumulativeHash": "579141c27d4b03caf5be8b903b6bea769379bae2e655cd8a20564d23c72cdb7d",
-      "timestamp": "2026-09-15T11:48:26.061Z"
+      "cumulativeHash": "5a9deffc697c30c06cd13f78660a90bb05625d2605b94e533e8e9a7217917aa2",
+      "timestamp": "2026-09-15T11:57:11.330Z"
     },
     {
       "index": 1,
       "id": "sidecar_manifest",
       "label": "Release Manifest Sidecar",
-      "path": "dist/release/r-agent2-20260915-084102.manifest.json",
+      "path": "dist/release/r-agent2-20260915-085036.manifest.json",
       "exists": true,
-      "hash": "9f293fd21bf03484a447cf01bf8c33e49f945547b80bcd506d7e7a31da250ae0",
-      "previousHash": "d87dbfaf7fc4d631ed2b8e8c88a605264c0d4f75134e747225bf8a2bfec89835",
-      "cumulativeHash": "033e8d3ab693f9a0a2efd1af2202e0ac7beaab84dda54c47f8c4224ee292ae0b",
-      "timestamp": "2026-09-15T11:48:26.062Z"
+      "hash": "55a169286495f3aa347ffade70d75003ac238b333b7b2cd16256a7bf5fcc428e",
+      "previousHash": "1dbb4e2e0a1b9525be4b8a0d92f1f49916bb9182f594f91fad62d5baf9646c4f",
+      "cumulativeHash": "75de03ddb8232f9b13b6d460f76e008fa0454c237d7e6a374b09f724043bbb3d",
+      "timestamp": "2026-09-15T11:57:11.331Z"
     },
     {
       "index": 2,
@@ -36,10 +36,10 @@
       "label": "Evidence Manifest",
       "path": "governance/evidence-manifest.json",
       "exists": true,
-      "hash": "ef93a5a94491b3a67842a25179bf7c910dc21ec6a58a34915400e3b014b81ea4",
-      "previousHash": "9f293fd21bf03484a447cf01bf8c33e49f945547b80bcd506d7e7a31da250ae0",
-      "cumulativeHash": "86f35073e6dc787d515767f98a4b509b1c1b15b4c7672d39dafeeb65c00c6f1b",
-      "timestamp": "2026-09-15T11:48:26.064Z"
+      "hash": "59ef164c9afa419c9b3f9cdf3f948f4624c89b8636913e96f8de8db70d7a4ed9",
+      "previousHash": "55a169286495f3aa347ffade70d75003ac238b333b7b2cd16256a7bf5fcc428e",
+      "cumulativeHash": "52420fcda14e03db1aa66515780abbdc06dea0f5084d3a23e595f3798f989f57",
+      "timestamp": "2026-09-15T11:57:11.332Z"
     },
     {
       "index": 3,
@@ -47,10 +47,10 @@
       "label": "Final Proof Report",
       "path": "governance/final-proof-report.json",
       "exists": true,
-      "hash": "71f30ba082789d5fd642d2cc9982bbae38dc50b132b4086d51f9327aec7bd387",
-      "previousHash": "ef93a5a94491b3a67842a25179bf7c910dc21ec6a58a34915400e3b014b81ea4",
-      "cumulativeHash": "e9169f4be5de186e9c9417976f169abbbaebf850c90ab19c1eaeb8a9b4a8ff29",
-      "timestamp": "2026-09-15T11:48:26.064Z"
+      "hash": "2eee7c6fc904ae72de6e7c89771362acfc854ce6a9c15e0b9ddd09f4c0b331f5",
+      "previousHash": "59ef164c9afa419c9b3f9cdf3f948f4624c89b8636913e96f8de8db70d7a4ed9",
+      "cumulativeHash": "0294cf23ad7997e3cf6eabb82f86ad6394296ba053b115e5770c7bc1db0ed304",
+      "timestamp": "2026-09-15T11:57:11.333Z"
     },
     {
       "index": 4,
@@ -58,10 +58,10 @@
       "label": "Final Readiness Report",
       "path": "governance/final-readiness-report.json",
       "exists": true,
-      "hash": "fc1f4fd28b5dd913b29b7a52d7d3d3ee0beafa32ee783e7af904c0ec18e2eaba",
-      "previousHash": "71f30ba082789d5fd642d2cc9982bbae38dc50b132b4086d51f9327aec7bd387",
-      "cumulativeHash": "5de83c58ba000f53561f572c47b9177618f84e47ba7a798873b6a7c86685b109",
-      "timestamp": "2026-09-15T11:48:26.065Z"
+      "hash": "ba5adfad50af8d4a1bad0c81f9f50e505f9791396a47f7d04da9c7f111cf1af8",
+      "previousHash": "2eee7c6fc904ae72de6e7c89771362acfc854ce6a9c15e0b9ddd09f4c0b331f5",
+      "cumulativeHash": "ae1abb2c90484305e5ea60c4aaed052e21d73c6c68834affc15090675b7d36be",
+      "timestamp": "2026-09-15T11:57:11.333Z"
     },
     {
       "index": 5,
@@ -69,10 +69,10 @@
       "label": "Consistency Report",
       "path": "governance/final-consistency-report.json",
       "exists": true,
-      "hash": "f5a4bba6de0f1e324e7c80d578bc1b7cc76607cbf87d70bf99def32bf73af445",
-      "previousHash": "fc1f4fd28b5dd913b29b7a52d7d3d3ee0beafa32ee783e7af904c0ec18e2eaba",
-      "cumulativeHash": "f4c86b535c2f472491542e1fa022bba479b2145e19dcea636a7af35894c91ab1",
-      "timestamp": "2026-09-15T11:48:26.065Z"
+      "hash": "ba9d81b8bcf069b7b1714112da5f2d19ad684211141811b60d9fb8b89500156b",
+      "previousHash": "ba5adfad50af8d4a1bad0c81f9f50e505f9791396a47f7d04da9c7f111cf1af8",
+      "cumulativeHash": "aaca2d8cadaf5cc4d6d214dd79acd175610749d77ee50cf9a05df36136477d1b",
+      "timestamp": "2026-09-15T11:57:11.333Z"
     },
     {
       "index": 6,
@@ -80,10 +80,10 @@
       "label": "Cross-Report Validation",
       "path": "governance/cross-report-validation.json",
       "exists": true,
-      "hash": "faeef3285f4ea05d9177c6511e47362e55fad8d2c4b8d3ed9f759f9b0cebe2f2",
-      "previousHash": "f5a4bba6de0f1e324e7c80d578bc1b7cc76607cbf87d70bf99def32bf73af445",
-      "cumulativeHash": "34793614c9036694988d116f409cd8e5fedef45412baf33a8817c3492ead8fe7",
-      "timestamp": "2026-09-15T11:48:26.065Z"
+      "hash": "b5734c81f9381de0bd131144cc957c1e7084f781ba17219bca49d5ff1b1a6d53",
+      "previousHash": "ba9d81b8bcf069b7b1714112da5f2d19ad684211141811b60d9fb8b89500156b",
+      "cumulativeHash": "2a0ad930bb49d7978158eee00fe72869737df3a08c4c65d22a4353219e0cbaf8",
+      "timestamp": "2026-09-15T11:57:11.333Z"
     },
     {
       "index": 7,
@@ -91,10 +91,10 @@
       "label": "Proof Signature",
       "path": "governance/proof-signature.json",
       "exists": true,
-      "hash": "d6431fa3aef247e99de3e0638595f34bf5300f7916d1cbd034b9438fed1c517c",
-      "previousHash": "faeef3285f4ea05d9177c6511e47362e55fad8d2c4b8d3ed9f759f9b0cebe2f2",
-      "cumulativeHash": "5259cad0e24dee319aba302a4d85987b4cea31e3b3288a74387edda725a63947",
-      "timestamp": "2026-09-15T11:48:26.065Z"
+      "hash": "7ade91e1a16dba025372181649d3690ecfc60bf0689b1a2e5023c14257d5ab8c",
+      "previousHash": "b5734c81f9381de0bd131144cc957c1e7084f781ba17219bca49d5ff1b1a6d53",
+      "cumulativeHash": "50eb9425c51ec4ba6338281d5aea647b713787123dd00825179c04e4461502d5",
+      "timestamp": "2026-09-15T11:57:11.333Z"
     },
     {
       "index": 8,
@@ -103,9 +103,9 @@
       "path": "governance/blocker-engine.js",
       "exists": true,
       "hash": "97a734d3c969542a4fc7868090d90c48c2bde7d53bdeade52d71cbf34ee84459",
-      "previousHash": "d6431fa3aef247e99de3e0638595f34bf5300f7916d1cbd034b9438fed1c517c",
-      "cumulativeHash": "cd34c71160b269ef46d4a15de5eff7b39fa50a714402f6ee0848710481c6db49",
-      "timestamp": "2026-09-15T11:48:26.069Z"
+      "previousHash": "7ade91e1a16dba025372181649d3690ecfc60bf0689b1a2e5023c14257d5ab8c",
+      "cumulativeHash": "c4a2b34f587eacfd1dd12df5433915ff17b34b5d33f510bda8242a1991531dcb",
+      "timestamp": "2026-09-15T11:57:11.339Z"
     },
     {
       "index": 9,
@@ -113,10 +113,10 @@
       "label": "Package Validation",
       "path": "governance/package-validation-report.json",
       "exists": true,
-      "hash": "f87b9f497ca7cb468b868bb855dbd11eabddaf30d16f069a78c090d7b0841ba1",
+      "hash": "2ae85edf0b7ba47ba03b74077d08843df3d22c3980985f4425fb345a856079bf",
       "previousHash": "97a734d3c969542a4fc7868090d90c48c2bde7d53bdeade52d71cbf34ee84459",
-      "cumulativeHash": "0499e536ad57b5acf4b63b4fc0d00474b30885fb1c86b2b445b06100ea85af5a",
-      "timestamp": "2026-09-15T11:48:26.069Z"
+      "cumulativeHash": "ada9a64f3590931bd6c719981916a2595a35b74b26039b8a6822e800cd1ba724",
+      "timestamp": "2026-09-15T11:57:11.340Z"
     }
   ]
 }
