@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-15T02:51:36.787Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-234154.payload.zip",
-  "zipName": "r-agent2-20260914-234154.payload.zip",
-  "zipSha256": "90041c819c12d06ef024b91ad2701d2982742cb3468d90a3675c8b62d341445c",
+  "generatedAt": "2026-09-15T02:55:20.159Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-235156.payload.zip",
+  "zipName": "r-agent2-20260914-235156.payload.zip",
+  "zipSha256": "23f4ad328f814a1bf9ff1feba38127635e67e9d68d6cbb6616115659cb08c33b",
   "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-234154.zip",
-  "selectionMode": "audited",
+  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-235156.payload.zip",
+  "selectionMode": "explicit",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-234154.manifest.json",
+  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260914-235156.manifest.json",
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -44,14 +44,14 @@
     "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
-  "entryCount": 6584,
+  "entryCount": 6585,
   "missingEntries": [],
   "missingEntryCodes": [],
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20260914-234154.payload.zip",
-    "sha256": "90041c819c12d06ef024b91ad2701d2982742cb3468d90a3675c8b62d341445c",
+    "boundTo": "r-agent2-20260914-235156.payload.zip",
+    "sha256": "23f4ad328f814a1bf9ff1feba38127635e67e9d68d6cbb6616115659cb08c33b",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
@@ -60,6 +60,6 @@
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260915025115600-72476c59",
   "sourceFingerprint": "a5757d78ad0c2e839fbd5d123c3232aaf14dd11830cb811926cdfd7f8788e3cb",
-  "gitCommit": "648545fd657210bf15177925d6715d5c80c90f37",
-  "gitTree": "ebf891327043f64bdc2f44e6738d4f0c21458cd7"
+  "gitCommit": "2ae79a098d3554c2178658aae2eacbcf7ccf50a2",
+  "gitTree": "b5d3caaf5007c65e79987ae5a61411fb09ef86ae"
 }
