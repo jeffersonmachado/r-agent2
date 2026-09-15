@@ -337,7 +337,8 @@
     "report:rag-domain-segregation": "node --env-file-if-exists=.env scripts/governance/rag-domain-segregation-report.js",
     "generate:outbound-reliability": "node --env-file-if-exists=.env scripts/governance/generate-outbound-reliability-evidence.js",
     "smoke:replay-viewer": "node scripts/smoke/replay-viewer-smoke.js",
-    "smoke:ask-ai-source-deeplink": "node scripts/smoke/ask-ai-source-deeplink-smoke.js"
+    "smoke:ask-ai-source-deeplink": "node scripts/smoke/ask-ai-source-deeplink-smoke.js",
+    "release:evidence:bundle": "node scripts/release/release-evidence-bundle.js"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",
