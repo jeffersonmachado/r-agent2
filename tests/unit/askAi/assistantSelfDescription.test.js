@@ -86,8 +86,11 @@ describe('intentRouter — auto-descrição do assistente', () => {
       classification: 'PRODUCTION',
     });
     // O pedido é sobre o assistente; a menção técnica não deve virar SYSTEM.
-    expect(isAssistantMeta(result.intent)).toBe(true);
+    // "…nesta tela" classifica como SCREEN_CONTEXT (contexto de tela, não
+    // catálogo de capacidades) — igualmente sem RAG e sem bloqueio.
+    expect(result.intent === INTENTS.SCREEN_CONTEXT || isAssistantMeta(result.intent)).toBe(true);
     expect(result.blocked).toBe(false);
+    expect(needsKnowledge(result.intent)).toBe(false);
   });
 });
 

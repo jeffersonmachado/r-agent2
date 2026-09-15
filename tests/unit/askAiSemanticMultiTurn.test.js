@@ -254,7 +254,8 @@ describe('Ask AI — Q1/Q2/Q3 com sujeito mantido pela conversa', () => {
     // matrícula do subject. (Antes o `subjectId` era enviado como telefone:
     // a expectativa antiga cristalizava esse defeito.)
     expect(mockLatestFitnessSignal).toHaveBeenCalledWith(expect.objectContaining({ phone: '+5511999990000' }));
-    expect(q3.provenance.liveData).toContain('askai.churn.latestSignal');
+    // Proveniência exibível carrega o rótulo humano — o id da tool fica no servidor.
+    expect(q3.provenance.liveData).toContain('Sinais de risco');
     expect(q3.answer).toContain('jornada de recuperação');
     expect(q3.confidence).toBe('fully_grounded');
 

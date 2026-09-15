@@ -81,7 +81,6 @@ describe('buildSources — DTO de fonte exibível', () => {
       expect(source).not.toHaveProperty('chunkId');
       expect(source).not.toHaveProperty('score');
       expect(source).not.toHaveProperty('toolId');
-      expect(source).not.toHaveProperty('title');
       // path de filesystem e artefato técnico não aparecem em lugar nenhum
       expect(JSON.stringify(source)).not.toMatch(/\.md("|$|\?)/i);
       expect(JSON.stringify(source)).not.toMatch(/docs\//i);
@@ -92,6 +91,41 @@ describe('buildSources — DTO de fonte exibível', () => {
     expect(serialized).not.toMatch(/"score"/);
     expect(serialized).not.toMatch(/chunkId/);
     expect(serialized).not.toMatch(/toolId/);
+  });
+
+  // T-A5: o DTO passa a carregar `title` humano (pode igualar `label`) — o
+  // contrato alvo é { title, url, sourceType, label }.
+  test('toda fonte exibível carrega title humano (contrato {title,url,sourceType,label})', () => {
+    const sources = buildSources({
+      toolResults: TOOL_RESULTS,
+      knowledgeSources: [FRIENDLY_DOC, OPAQUE_CHUNK_TITLE],
+    });
+    expect(sources.length).toBeGreaterThan(0);
+    for (const source of sources) {
+      expect(typeof source.title).toBe('string');
+      expect(source.title.trim().length).toBeGreaterThan(2);
+      expect(source.title).not.toMatch(/^chunk\s+\d+/i);
+      expect(source.title).not.toMatch(/src-docs|\.md$|\.html$/i);
+      expect(typeof source.url).toBe('string');
+      expect(source.url.length).toBeGreaterThan(0);
+      expect(typeof source.label).toBe('string');
+      expect(typeof source.sourceType).toBe('string');
+    }
+  });
+
+  test('deduplica no backend por url: vários chunks do mesmo documento viram UMA fonte', () => {
+    const sources = buildSources({
+      toolResults: [],
+      knowledgeSources: [
+        { documentId: 'src-docs-manual-verticals-beauty-html', title: 'Chunk 1', score: 0.7 },
+        { documentId: 'src-docs-manual-verticals-beauty-html', title: 'Chunk 15', score: 0.66 },
+        { documentId: 'src-docs-roteiros-jornada-fitness-renovacao-md', title: 'Chunk 3', score: 0.6 },
+      ],
+    });
+    const urls = sources.map((source) => source.url);
+    expect(new Set(urls).size).toBe(urls.length);
+    expect(urls.filter((url) => url.includes('manual-verticals-beauty')).length).toBe(1);
+    expect(sources.length).toBe(2);
   });
 
   test('cada fonte declara seu tipo de origem', () => {

@@ -27,8 +27,14 @@
  *  - Se não há fonte confirmando um estado, o copiloto NÃO afirma o estado.
  */
 
-const { classifyIntent, needsKnowledge, needsOperationalData, isAssistantMeta } = require('./intentRouter');
-const { buildAssistantSelfDescription } = require('./assistantSelfDescription');
+const { classifyIntent, needsKnowledge, needsOperationalData, isAssistantMeta, isConversationalIntent } = require('./intentRouter');
+const {
+  buildAssistantSelfDescription,
+  buildScreenContextAnswer,
+  buildSourceFollowUpAnswer,
+  buildPriorProvenanceAnswer,
+  scopeToolsByTenantCapabilities,
+} = require('./assistantSelfDescription');
 const { buildRegistry, executeTool } = require('./toolRegistry');
 const { authorizeTools } = require('./toolAuthorization');
 const { sanitizeUntrustedContent, detectInjection } = require('./injectionGuard');
@@ -41,9 +47,10 @@ const {
 } = require('./conversationContext');
 const { buildGroundedSynthesis } = require('./synthesis');
 const { resolveEntityOwnership, VERIFIABLE_ENTITY_TYPES } = require('./entityResolvers');
+const { buildOperationalLink } = require('./operationalLinks');
 const { findAskAiTool } = require('./askAiToolCatalog');
 const conversationStore = require('./conversationStore');
-const { buildPromptHistory } = conversationStore;
+const { buildPromptHistory, lastAssistantTurn } = conversationStore;
 const logger = require('../../utils/logger');
 const { getClassificationForAgent } = require('../../modules/agent-os/experience-segregation');
 
@@ -222,7 +229,7 @@ function computeConfidence({ accessDenied, facts, knowledgeAnswer, failedTools }
 
 const SOURCE_LABEL_MAX_LENGTH = 120;
 const DEFAULT_SOURCE_LABEL = 'Fonte consultada';
-const TECHNICAL_SOURCE_TITLE = /\.(?:md|markdown|json|html|txt)$|^src-|^chunk\s+\d+/i;
+const TECHNICAL_SOURCE_TITLE = /\.(?:md|markdown|json|html|txt)$|^src-|^chunk\s+\d+|toolid|chunkid|askai\.|\bdocumentid\b/i;
 
 /**
  * Converte o identificador interno do documento em rótulo humano.
@@ -267,21 +274,66 @@ function buildFriendlySourceLabel(title, documentId) {
  *    `toolId`): a proveniência completa fica no servidor/auditoria;
  *  - documento interno aponta para rota INTERNA do RAP (`/rag-documents?documentId=`),
  *    nunca para o filesystem;
- *  - dado vivo NÃO entra na lista: é a origem do conteúdo, não documento citável —
- *    exibi-lo sem link violaria a regra "toda fonte visível é clicável".
+ *  - dado vivo entra como link OPERACIONAL (`LIVE_DATA`, ex.: "Ver aluno")
+ *    somente quando a entidade foi revalidada, o ator mantém a permissão da
+ *    rota de destino e alguma tool devolveu dado — ver `operationalLinks.js`.
  */
-function buildSources({ knowledgeSources }) {
+function buildSources({ knowledgeSources, operationalLink = null }) {
   const sources = [];
+  const seenUrls = new Set();
+  const push = (source) => {
+    if (!source?.url || seenUrls.has(source.url)) return;
+    seenUrls.add(source.url);
+    sources.push(source);
+  };
+  if (operationalLink) push(operationalLink);
   for (const source of knowledgeSources || []) {
     const documentId = source?.documentId || source?.document_id || null;
     if (!documentId) continue;
-    sources.push({
+    const label = buildFriendlySourceLabel(source.title, documentId);
+    push({
       sourceType: 'KNOWLEDGE_DOCUMENT',
-      label: buildFriendlySourceLabel(source.title, documentId),
+      // `title` é o título HUMANO do documento (pode igualar `label`): o
+      // contrato exibível é { title, url, sourceType, label }.
+      title: label,
+      label,
       url: `/rag-documents?documentId=${encodeURIComponent(documentId)}`,
     });
   }
   return sources;
+}
+
+/**
+ * Proveniência EXIBÍVEL do turno: rótulos humanos, nunca identificadores.
+ *
+ * Antes (auditoria 2026-09-15): `liveData` expunha toolIds crus e `knowledge`
+ * expunha `title`/`documentId` crus do produtor RAG ("Chunk 15", slug de
+ * arquivo). A rota repassava tudo verbatim. A proveniência completa (com ids)
+ * permanece no servidor/auditoria; o payload carrega apenas rótulos.
+ */
+function buildProvenance({ toolResults = [], knowledgeSources = [], synthesis }) {
+  const liveData = [];
+  for (const result of toolResults || []) {
+    if (result.failed || !result.found) continue;
+    const label = String(result.label || '').trim() || 'Dado operacional';
+    if (!liveData.includes(label)) liveData.push(label);
+  }
+
+  const knowledge = [];
+  for (const source of knowledgeSources || []) {
+    const label = buildFriendlySourceLabel(source?.title, source?.documentId || source?.document_id);
+    if (label && !knowledge.includes(label)) knowledge.push(label);
+  }
+
+  return {
+    liveData,
+    knowledge,
+    inference: synthesis?.provenance?.inference ? 'derived-from-facts' : 'none',
+    recommendation: synthesis?.provenance?.recommendation || 'none',
+    // A9: cada item carrega o TIPO de afirmação (FACT/KNOWLEDGE/INFERENCE/
+    // RECOMMENDATION) — nunca detalhe técnico desnecessário ao usuário.
+    items: synthesis?.provenance?.items || [],
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -370,6 +422,77 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     };
   }
 
+  // ── Pergunta sobre a TELA ATUAL e sobre o TURNO ANTERIOR ──────
+  // Nenhuma recuperação e nenhuma ferramenta: a resposta vem do estado já
+  // validado (contexto de tela) e do turno anterior persistido. Refazer RAG aqui
+  // atribuiria ao assistente uma base que ele não usou.
+  if (isConversationalIntent(intentResult.intent)) {
+    const previousTurn = lastAssistantTurn(conversation);
+    let conversational;
+    if (intentResult.intent === 'SCREEN_CONTEXT') {
+      const screen = buildScreenContextAnswer({ context: effectiveContext });
+      conversational = { answer: screen.answer, sources: [], facts: [screen.facts] };
+    } else if (intentResult.intent === 'ASSISTANT_SOURCE_FOLLOWUP') {
+      conversational = buildSourceFollowUpAnswer({ previousTurn });
+    } else {
+      conversational = buildPriorProvenanceAnswer({ previousTurn });
+    }
+
+    // Normaliza para ARRAY: o contrato de resposta e o `appendTurn` falam em
+    // lista de fatos. Um objeto solto viraria `facts: []` na persistência e a
+    // proveniência do turno seguinte desapareceria silenciosamente.
+    const conversationalFacts = Array.isArray(conversational.facts)
+      ? conversational.facts
+      : (conversational.facts ? [conversational.facts] : []);
+
+    const storedConversational = await appendTurn({
+      conversation,
+      question: payload.question,
+      answer: conversational.answer,
+      sources: conversational.sources,
+      facts: conversationalFacts,
+      intent: intentResult.intent,
+      context: effectiveContext,
+    });
+
+    logger.info('[ask-ai] Turno conversacional respondido pelo estado', {
+      tenantId,
+      intent: intentResult.intent,
+      reutilizouFontes: conversational.sources.length > 0,
+    });
+
+    return {
+      conversationId: conversation.id,
+      answer: conversational.answer,
+      sources: conversational.sources,
+      facts: conversationalFacts,
+      intent: intentResult.intent,
+      confidence: conversational.sources.length > 0 ? 'grounded' : 'canonical_configuration',
+      provenance: {
+        liveData: [],
+        knowledge: conversational.sources.map((source) => source.label).filter(Boolean),
+        inference: 'none',
+        recommendation: 'none',
+      },
+      policy: {
+        classification,
+        accessDenied: false,
+        deniedTools: [],
+        injectionDetected: false,
+        entityValidated: Boolean(effectiveContext?.entityId),
+        conversation: describeConversationUse({
+          history,
+          effectiveContextSource: contextSource,
+          inheritedIntent: false,
+          hasSummary: Boolean(history.summary),
+          context: effectiveContext,
+        }),
+      },
+      historyWindow: storedConversational.window.length,
+      conversational: true,
+    };
+  }
+
   // ── Pergunta sobre o PRÓPRIO assistente: responde por configuração ──────
   // Antes desta fatia "Quem é você?" e "O que você pode fazer?" eram tratadas
   // como KNOWLEDGE e consumiam recuperação documental. Nenhuma ferramenta de
@@ -378,14 +501,35 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
   if (isAssistantMeta(intentResult.intent)) {
     const metaAuthorization = authorizeTools({ actor, tools: registry.all() });
     const deniedIdsMeta = new Set(metaAuthorization.denied.map((entry) => entry.toolId));
-    const allowedLabels = registry.all()
-      .filter((tool) => !deniedIdsMeta.has(tool.id))
-      .map((tool) => tool.label || tool.id);
+
+    // Capabilities do tenant (`tenant_settings.capabilities`): uma tool cujo
+    // domínio o tenant desligou não é anunciada. Falha de leitura NÃO esconde
+    // nada — o RBAC do ator já governou a lista (fail-safe, com log).
+    let tenantCapabilities = null;
+    if (intentResult.intent === 'ASSISTANT_CAPABILITIES') {
+      const getTenantCapabilities = deps?.getTenantCapabilities
+        || require('../tenantCapabilitiesService').getTenantCapabilities;
+      try {
+        tenantCapabilities = await getTenantCapabilities(tenantId);
+      } catch (error) {
+        logger.warn('[ask-ai] Capabilities do tenant indisponíveis no turno de capacidades', {
+          tenantId,
+          error: error.message,
+        });
+      }
+    }
+
+    const authorizedTools = registry.all().filter((tool) => !deniedIdsMeta.has(tool.id));
+    const scopedTools = scopeToolsByTenantCapabilities(authorizedTools, tenantCapabilities);
+    // Projeção SÓ de rótulos: tool sem rótulo humano não é anunciada (o id é
+    // identificador interno e nunca entra na resposta).
+    const allowedLabels = scopedTools.map((tool) => tool.label).filter(Boolean);
 
     const description = buildAssistantSelfDescription({
       intent: intentResult.intent,
       availableTools: allowedLabels,
       classification,
+      screenContext: effectiveContext,
     });
 
     const storedMeta = await appendTurn({
@@ -413,7 +557,10 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
       policy: {
         classification,
         accessDenied: false,
-        deniedTools: metaAuthorization.denied.map((entry) => entry.toolId),
+        // Rótulos humanos: a negação informa O QUE ficou de fora, nunca o id.
+        deniedTools: metaAuthorization.denied.map(
+          (entry) => registry.get(entry.toolId)?.label || 'consulta não autorizada',
+        ),
         injectionDetected: false,
         entityValidated: false,
         conversation: describeConversationUse({
@@ -526,7 +673,12 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     failedTools,
   });
 
-  const sources = buildSources({ toolResults, knowledgeSources });
+  const operationalLink = buildOperationalLink({
+    entity,
+    actor,
+    liveDataUsed: toolResults.some((result) => !result.failed && result.found),
+  });
+  const sources = buildSources({ knowledgeSources, operationalLink });
 
   const stored = await appendTurn({
     conversation,
@@ -535,6 +687,11 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     sources,
     facts: operational.facts,
     intent,
+    // Trilha exibível das consultas do turno: rótulo humano + status, nunca id.
+    toolCalls: [
+      ...toolResults.map((result) => ({ label: result.label, status: result.failed ? 'failed' : 'ok' })),
+      ...denied.map((tool) => ({ label: tool.label, status: 'denied' })),
+    ],
     // Persiste o contexto EFETIVO (payload validado ou o herdado da conversa)
     // para dar continuidade ao turno seguinte — sempre revalidado lá.
     context: effectiveContext,
@@ -551,19 +708,12 @@ async function runAskAiTurn({ payload, tenantId, actor, deps }) {
     facts: operational.facts,
     intent,
     confidence,
-    provenance: {
-      liveData: toolResults.filter((r) => !r.failed && r.found).map((r) => r.toolId),
-      knowledge: knowledgeSources.map((s) => s.title || s.documentId || null).filter(Boolean),
-      inference: synthesis.provenance.inference ? 'derived-from-facts' : 'none',
-      recommendation: synthesis.provenance.recommendation,
-      // A9: cada item carrega o TIPO de afirmação (FACT/KNOWLEDGE/INFERENCE/
-      // RECOMMENDATION) — nunca detalhe técnico desnecessário ao usuário.
-      items: synthesis.provenance.items,
-    },
+    provenance: buildProvenance({ toolResults, knowledgeSources, synthesis }),
     policy: {
       classification,
       accessDenied,
-      deniedTools: denied.map((tool) => tool.id),
+      // Rótulos humanos: o id da tool é identificador interno e não sai do servidor.
+      deniedTools: denied.map((tool) => tool.label || 'consulta não autorizada'),
       injectionDetected: docInjection,
       entityValidated: entityValidation.validated,
       // Continuidade conversacional auditável (nunca valores de negócio).
@@ -592,5 +742,6 @@ module.exports = {
   buildAnswer,
   computeConfidence,
   buildSources,
+  buildProvenance,
   runAskAiTurn,
 };

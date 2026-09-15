@@ -24,6 +24,12 @@
  * 14. screen_context_bound_to_screens — módulo/pageType derivados das telas reais e navegação SPA
  * 15. grounded_synthesis            — fato e conhecimento rotulados; inferência explícita e tipada
  * 16. canonical_tool_single_source  — projeção derivada do catálogo canônico; registry paralelo reprova
+ * 17. privacy_probe_classification  — "você tem acesso aos meus dados?" é ASSISTANT_PRIVACY, nunca RAG
+ * 18. screen_context_no_internals   — SCREEN_CONTEXT responde rótulo humano, nunca rota/UUID/tenant
+ * 19. source_followup_exactness     — "qual foi a fonte?" devolve EXATAMENTE as fontes do turno anterior
+ * 20. prior_provenance_grounded     — "por que você respondeu isso?" explica com evidências, sem internals
+ * 21. provenance_payload_sanitized  — payload sem toolId/documentId/chunkId fora da URL de fonte
+ * 22. source_dto_title_dedup        — DTO de fonte {title,url,sourceType,label} com dedup por url
  */
 
 const fs = require('fs');
@@ -33,6 +39,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const REPORT_PATH = path.join(ROOT, 'reports', 'ask-ai-copilot-report.json');
 
 const checks = [];
+const asyncChecks = [];
 
 function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
@@ -45,6 +52,11 @@ function check(id, description, fn) {
   } catch (error) {
     checks.push({ id, description, status: 'FAIL', error: error.message });
   }
+}
+
+/** Variante assíncrona: verificações que executam turnos do orquestrador. */
+function checkAsync(id, description, fn) {
+  asyncChecks.push({ id, description, fn });
 }
 
 function assert(condition, message) {
@@ -536,32 +548,302 @@ check('canonical_tool_single_source', 'a projeção do copiloto deriva do catál
   return `${projection.length} tools projetadas de uma única definição (catálogo canônico)`;
 });
 
+// ── 17-22: verificações executáveis das intenções conversacionais e do DTO ──
+
+// Store conversacional com a mesma semântica do real (persistência por conversa),
+// sem banco — o gate roda offline.
+function buildGateConversationStore() {
+  const conversations = new Map();
+  return {
+    openConversation: async ({ conversationId, tenantId, actor, context }) => {
+      const key = `${tenantId}::${actor.id}::${conversationId || 'nova'}`;
+      if (conversationId) {
+        const existing = conversations.get(key);
+        if (!existing) {
+          const error = new Error('Conversa não encontrada');
+          error.code = 'NOT_FOUND';
+          throw error;
+        }
+        return existing;
+      }
+      const conversation = {
+        id: `conv_gate_${conversations.size + 1}`,
+        messages: [],
+        summary: null,
+        context: context || {},
+        turnCount: 0,
+      };
+      conversations.set(`${tenantId}::${actor.id}::${conversation.id}`, conversation);
+      return conversation;
+    },
+    appendTurn: async ({ conversation, question, answer, ...rest }) => {
+      conversation.messages.push(
+        { role: 'user', content: question },
+        { role: 'assistant', content: answer, ...rest },
+      );
+      conversation.turnCount += 1;
+      return { conversation, window: conversation.messages, summary: null };
+    },
+  };
+}
+
+const GATE_RAG_SOURCES = [
+  { documentId: 'src-docs-roteiros-jornada-fitness-renovacao-md', title: 'Chunk 15', score: 0.71 },
+];
+
+function buildGateRag(calls) {
+  return {
+    queryRag: async () => {
+      calls.count += 1;
+      return {
+        success: true,
+        response: 'A renovação segue a jornada documentada.',
+        sources: GATE_RAG_SOURCES,
+      };
+    },
+  };
+}
+
+// 17. Sonda de privacidade ---------------------------------------------------
+check('privacy_probe_classification', '"você tem acesso aos meus dados?" classifica ASSISTANT_PRIVACY e é respondida por configuração (nunca RAG)', () => {
+  const router = require(path.join(ROOT, 'api', 'services', 'askAi', 'intentRouter'));
+  const probes = [
+    'Você tem acesso aos meus dados?',
+    'Você tem acesso aos meus dados',
+    'você possui acesso aos meus dados?',
+  ];
+  for (const question of probes) {
+    const result = router.classifyIntent({ question, classification: 'PRODUCTION' });
+    assert(result.intent === 'ASSISTANT_PRIVACY', `"${question}" classificou como ${result.intent}`);
+    assert(router.needsKnowledge(result.intent) === false, 'sonda de privacidade consumiria RAG');
+  }
+  // A variante de LIMITE ("outros clientes") não pode ter migrado junto.
+  const limit = router.classifyIntent({ question: 'Você tem acesso a outros clientes?', classification: 'PRODUCTION' });
+  assert(limit.intent === 'ASSISTANT_LIMITATIONS', 'sonda sobre outros clientes saiu de LIMITATIONS');
+
+  const selfDescription = require(path.join(ROOT, 'api', 'services', 'askAi', 'assistantSelfDescription'));
+  const { answer } = selfDescription.buildAssistantSelfDescription({ intent: 'ASSISTANT_PRIVACY' });
+  assert(/permiss/i.test(answer) && /necess[áa]ri/i.test(answer), 'resposta de privacidade não declara acesso escopado');
+  assert(!/acesso\s+a\s+tudo|acesso\s+(?:total|irrestrito|completo)\b/i.test(answer), 'resposta afirma acesso irrestrito');
+  return 'sonda de privacidade → ASSISTANT_PRIVACY; resposta declara escopo real';
+});
+
+// 18. SCREEN_CONTEXT sem internals -------------------------------------------
+check('screen_context_no_internals', 'SCREEN_CONTEXT responde rótulo humano e nunca expõe rota, UUID ou tenant', () => {
+  const router = require(path.join(ROOT, 'api', 'services', 'askAi', 'intentRouter'));
+  const { intent } = router.classifyIntent({ question: 'Em que tela estou?', classification: 'PRODUCTION' });
+  assert(intent === 'SCREEN_CONTEXT', `"Em que tela estou?" classificou como ${intent}`);
+  assert(router.needsKnowledge(intent) === false, 'SCREEN_CONTEXT consumiria RAG');
+
+  const selfDescription = require(path.join(ROOT, 'api', 'services', 'askAi', 'assistantSelfDescription'));
+  const hostile = selfDescription.buildScreenContextAnswer({
+    context: {
+      module: 'inbox',
+      pageType: 'detail',
+      route: '/dev/qa-waves?tenant=tenant-secreto',
+      entityType: 'CONVERSATION',
+      entityId: '550e8400-e29b-41d4-a716-446655440000',
+    },
+  });
+  assert(hostile.grounded === true, 'contexto válido não foi reconhecido');
+  assert(!hostile.answer.includes('/dev') && !hostile.answer.includes('/inbox'), 'rota interna vazou');
+  assert(!hostile.answer.includes('550e8400'), 'UUID vazou');
+  assert(!/tenant-secreto/i.test(hostile.answer), 'tenant vazou');
+  const missing = selfDescription.buildScreenContextAnswer({ context: {} });
+  assert(missing.grounded === false, 'sem contexto a resposta deveria declarar ausência');
+  return 'rótulo humano da tela; rota/UUID/tenant nunca expostos';
+});
+
+// 19. Acompanhamento de fonte exato ------------------------------------------
+checkAsync('source_followup_exactness', '"qual foi a fonte?" devolve EXATAMENTE as fontes do turno anterior, sem re-RAG', async () => {
+  const { runAskAiTurn } = require(path.join(ROOT, 'api', 'services', 'askAi', 'orchestrator'));
+  const calls = { count: 0 };
+  const store = buildGateConversationStore();
+  const deps = { ragService: buildGateRag(calls), ...store };
+  const actor = { id: 'u1', username: 'op', role: 'operator' };
+
+  const q1 = await runAskAiTurn({
+    payload: { question: 'O que diz o roteiro de renovação?', context: {} },
+    tenantId: 'tenant-gate', actor, deps,
+  });
+  assert(q1.sources.length === 1, 'turno documental deveria ter 1 fonte');
+
+  const q2 = await runAskAiTurn({
+    payload: { question: 'Qual foi a fonte?', conversationId: q1.conversationId, context: {} },
+    tenantId: 'tenant-gate', actor, deps,
+  });
+  assert(q2.intent === 'ASSISTANT_SOURCE_FOLLOWUP', `follow-up classificou como ${q2.intent}`);
+  assert(calls.count === 1, `re-RAG detectado (${calls.count} consultas)`);
+  assert(JSON.stringify(q2.sources) === JSON.stringify(q1.sources), 'fontes do follow-up diferem das do turno anterior');
+
+  // Conversa nova: nenhuma fonte pode ser atribuída.
+  const outra = await runAskAiTurn({
+    payload: { question: 'Qual foi a fonte?', context: {} },
+    tenantId: 'tenant-gate', actor, deps: { ragService: buildGateRag(calls), ...buildGateConversationStore() },
+  });
+  assert(outra.sources.length === 0, 'conversa nova herdou fonte que não usou');
+  return 'follow-up reutiliza as fontes persistidas; conversa nova não atribui fonte alheia';
+});
+
+// 20. Proveniência da resposta anterior ---------------------------------------
+checkAsync('prior_provenance_grounded', '"por que você respondeu isso?" explica com evidências, sem prompt/CoT/mecânica de tool', async () => {
+  const { runAskAiTurn } = require(path.join(ROOT, 'api', 'services', 'askAi', 'orchestrator'));
+  const calls = { count: 0 };
+  const store = buildGateConversationStore();
+  const deps = { ragService: buildGateRag(calls), ...store };
+  const actor = { id: 'u1', username: 'op', role: 'operator' };
+
+  const q1 = await runAskAiTurn({
+    payload: { question: 'O que diz o roteiro de renovação?', context: {} },
+    tenantId: 'tenant-gate', actor, deps,
+  });
+  const q2 = await runAskAiTurn({
+    payload: { question: 'Por que você respondeu isso?', conversationId: q1.conversationId, context: {} },
+    tenantId: 'tenant-gate', actor, deps,
+  });
+
+  assert(q2.intent === 'ASSISTANT_PRIOR_PROVENANCE', `proveniência classificou como ${q2.intent}`);
+  assert(/foi montada a partir de/i.test(q2.answer), 'resposta não declara a base usada');
+  assert(q2.answer.includes(q1.sources[0].label), 'fonte do turno anterior não foi citada');
+  assert(!/prompt de sistema|system prompt|cadeia de raciocínio|chain.of.thought/i.test(q2.answer), 'mecânica interna exposta');
+  assert(!/askai\.|toolId|queryRag|embedding/i.test(q2.answer), 'identificador/mecânica de tool exposto');
+  return 'justificativa fundamentada (base + fontes), sem internals';
+});
+
+// 21. Payload de proveniência sanitizado --------------------------------------
+checkAsync('provenance_payload_sanitized', 'provenance/policy carregam rótulos humanos — nunca toolId, documentId ou "Chunk N"', async () => {
+  const orchestrator = require(path.join(ROOT, 'api', 'services', 'askAi', 'orchestrator'));
+
+  // Turno documental com fontes crus do produtor RAG ("Chunk 15", slug).
+  const store = buildGateConversationStore();
+  const calls = { count: 0 };
+  const turn = await orchestrator.runAskAiTurn({
+    payload: { question: 'O que diz o roteiro de renovação?', context: {} },
+    tenantId: 'tenant-gate',
+    actor: { id: 'u1', username: 'op', role: 'operator' },
+    deps: { ragService: buildGateRag(calls), ...store },
+  });
+  for (const label of turn.provenance.knowledge) {
+    assert(!/^chunk\s+\d+/i.test(String(label)), `provenance.knowledge com título opaco: ${label}`);
+    assert(!/src-docs/i.test(String(label)), `provenance.knowledge com slug: ${label}`);
+  }
+
+  // Turno meta: deniedTools precisa ser rótulo, não id.
+  const metaTurn = await orchestrator.runAskAiTurn({
+    payload: { question: 'O que você pode fazer?', context: {} },
+    tenantId: 'tenant-gate',
+    actor: { id: 'u1', username: 'op', role: 'operator' },
+    deps: { ...buildGateConversationStore(), getTenantCapabilities: async () => ({}) },
+  });
+  assert(metaTurn.policy.deniedTools.length > 0, 'cenário sem tool negada não prova nada');
+  for (const entry of metaTurn.policy.deniedTools) {
+    assert(!/^askai\./.test(String(entry)), `deniedTools com id de tool: ${entry}`);
+  }
+
+  // Envelope completo serializado (simulando a rota): nenhum identificador
+  // interno fora das URLs de fonte (canal sancionado do documentId).
+  const envelope = JSON.parse(JSON.stringify({
+    success: true, answer: turn.answer, sources: turn.sources, facts: turn.facts,
+    intent: turn.intent, confidence: turn.confidence, provenance: turn.provenance,
+  }));
+  envelope.sources = (envelope.sources || []).map((source) => ({ ...source, url: '<url>' }));
+  const serialized = JSON.stringify(envelope);
+  assert(!/askai\./.test(serialized), 'toolId vazou no payload');
+  assert(!/"toolId"|"documentId"|"chunkId"/.test(serialized), 'campo de identificador interno no payload');
+  assert(!/chunk\s+\d+/i.test(serialized), 'título opaco "Chunk N" no payload');
+
+  // A fonte estática também é verificada: liveData não projeta toolId.
+  const source = read('api/services/askAi/orchestrator.js');
+  assert(!/liveData:.*\.map\(\(r\)\s*=>\s*r\.toolId\)/s.test(source), 'liveData ainda projeta toolId');
+  assert(source.includes('buildProvenance'), 'orquestrador não usa a projeção sanitizada de proveniência');
+  return 'payload com rótulos humanos; ids ficam no servidor';
+});
+
+// 22. DTO de fonte: title + url + dedup ---------------------------------------
+check('source_dto_title_dedup', 'DTO de fonte é { title, url, sourceType, label } com dedup por url e link operacional LIVE_DATA gated por permissão', () => {
+  const orchestrator = require(path.join(ROOT, 'api', 'services', 'askAi', 'orchestrator'));
+  const sources = orchestrator.buildSources({
+    knowledgeSources: [
+      { documentId: 'src-docs-manual-verticals-beauty-html', title: 'Chunk 1', score: 0.7 },
+      { documentId: 'src-docs-manual-verticals-beauty-html', title: 'Chunk 15', score: 0.66 },
+    ],
+  });
+  assert(sources.length === 1, `dedup por url falhou (${sources.length} fontes)`);
+  const [source] = sources;
+  assert(typeof source.title === 'string' && source.title.trim().length > 2, 'fonte sem title humano');
+  assert(typeof source.url === 'string' && source.url.startsWith('/rag-documents'), 'fonte sem url interna');
+  assert(!/^chunk\s+\d+/i.test(source.title), 'title opaco no DTO');
+  assert(!Object.prototype.hasOwnProperty.call(source, 'documentId'), 'documentId virou campo do DTO');
+
+  // Link operacional de dado vivo: só com permissão; tipo sem rota não gera link.
+  const { buildOperationalLink } = require(path.join(ROOT, 'api', 'services', 'askAi', 'operationalLinks'));
+  const link = buildOperationalLink({
+    entity: { type: 'FITNESS_STUDENT', id: 'student-1' },
+    actor: { role: 'admin' },
+    liveDataUsed: true,
+  });
+  assert(link && link.sourceType === 'LIVE_DATA' && link.url === '/fitness/students', 'link operacional ausente para ator autorizado');
+  assert(buildOperationalLink({
+    entity: { type: 'FITNESS_STUDENT', id: 'student-1' },
+    actor: { role: 'viewer' },
+    liveDataUsed: true,
+  }) === null, 'link operacional emitido sem permissão na rota de destino');
+  assert(buildOperationalLink({
+    entity: { type: 'CAMPAIGN', id: 'x' },
+    actor: { role: 'admin' },
+    liveDataUsed: true,
+  }) === null, 'tipo sem rota segura gerou link (deveria falhar fechado)');
+  assert(buildOperationalLink({
+    entity: { type: 'FITNESS_STUDENT', id: 'student-1' },
+    actor: { role: 'admin' },
+    liveDataUsed: false,
+  }) === null, 'link operacional emitido sem dado vivo consultado');
+  return 'DTO com title+url+dedup; LIVE_DATA gated por permissão e fail-closed';
+});
+
 // ── Relatório ───────────────────────────────────────────────────────────────
 
-const failed = checks.filter((entry) => entry.status === 'FAIL');
+async function main() {
+  for (const entry of asyncChecks) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const detail = await entry.fn();
+      checks.push({ id: entry.id, description: entry.description, status: 'PASS', detail: detail || null });
+    } catch (error) {
+      checks.push({ id: entry.id, description: entry.description, status: 'FAIL', error: error.message });
+    }
+  }
 
-const report = {
-  generatedAt: new Date().toISOString(),
-  gate: 'ask-ai-copilot',
-  status: failed.length === 0 ? 'PASS' : 'FAIL',
-  summary: {
-    total: checks.length,
-    passed: checks.length - failed.length,
-    failed: failed.length,
-  },
-  checks,
-};
+  const failed = checks.filter((entry) => entry.status === 'FAIL');
 
-fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
+  const report = {
+    generatedAt: new Date().toISOString(),
+    gate: 'ask-ai-copilot',
+    status: failed.length === 0 ? 'PASS' : 'FAIL',
+    summary: {
+      total: checks.length,
+      passed: checks.length - failed.length,
+      failed: failed.length,
+    },
+    checks,
+  };
 
-for (const entry of checks) {
-  const icon = entry.status === 'PASS' ? '✅' : '❌';
-  console.log(`${icon} ${entry.id} — ${entry.description}`);
-  if (entry.status === 'FAIL') console.log(`     ${entry.error}`);
+  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
+  fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
+
+  for (const entry of checks) {
+    const icon = entry.status === 'PASS' ? '✅' : '❌';
+    console.log(`${icon} ${entry.id} — ${entry.description}`);
+    if (entry.status === 'FAIL') console.log(`     ${entry.error}`);
+  }
+  console.log(`\n${report.status}: ${report.summary.passed}/${report.summary.total} invariantes`);
+
+  if (failed.length > 0) {
+    process.exit(1);
+  }
 }
-console.log(`\n${report.status}: ${report.summary.passed}/${report.summary.total} invariantes`);
 
-if (failed.length > 0) {
+main().catch((error) => {
+  console.error(`Falha inesperada no gate ask-ai-copilot: ${error.message}`);
   process.exit(1);
-}
+});

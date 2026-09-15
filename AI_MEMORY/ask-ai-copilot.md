@@ -70,7 +70,59 @@ chave global e nunca é acessível a ator PRODUCTION.
 ## Gate
 
 `npm run validate:ask-ai-copilot` → `reports/ask-ai-copilot-report.json`
-(11 invariantes; integrado ao `validate:governance-enforcement`).
+(22 invariantes; integrado ao `validate:governance-enforcement`). Além das 16
+invariantes originais (rota, contrato, posse, tools, injeção, escopo RAG,
+replay, manual, projeção, conversa, síntese, fonte única de tools), o gate
+executa turnos reais do orquestrador (com store conversacional stub, offline)
+para provar:
+
+- `privacy_probe_classification` — "você tem acesso aos meus dados?" é
+  `ASSISTANT_PRIVACY` (respondida por configuração, nunca RAG); a resposta
+  declara acesso escopado (tenant + permissão + necessidade), nunca irrestrito;
+- `screen_context_no_internals` — `SCREEN_CONTEXT` responde o rótulo humano da
+  tela e nunca expõe rota, UUID, id de entidade ou tenant;
+- `source_followup_exactness` — "qual foi a fonte?" devolve EXATAMENTE as
+  fontes persistidas do turno anterior (sem re-RAG); conversa nova não atribui
+  fonte alheia;
+- `prior_provenance_grounded` — "por que você respondeu isso?" explica com as
+  evidências usadas, sem prompt de sistema, CoT ou mecânica de tool;
+- `provenance_payload_sanitized` — `provenance.liveData`/`knowledge` e
+  `policy.deniedTools` carregam rótulos humanos; nenhum toolId/documentId/
+  chunkId/"Chunk N" no payload fora das URLs de fonte (canal sancionado);
+- `source_dto_title_dedup` — DTO de fonte é `{ title, url, sourceType, label }`
+  com dedup por url; link `LIVE_DATA` gated por permissão e fail-closed.
+
+## Comportamentos adicionados (2026-09-15)
+
+- **Sonda de privacidade** (T-A1): o artigo flexível em "acesso aos meus dados"
+  classifica `ASSISTANT_PRIVACY`; "acesso a outros clientes?" permanece
+  `ASSISTANT_LIMITATIONS`.
+- **Proveniência sanitizada** (T-A2): `buildProvenance` no orquestrador projeta
+  rótulos; ids completos ficam no servidor/auditoria. Títulos de fonte com
+  marcadores internos (`toolId=`, `chunkId=`, `askai.`) são tratados como
+  técnicos e substituídos pelo rótulo derivado do documento.
+- **Capacidades em contexto** (T-A3): o turno `ASSISTANT_CAPABILITIES` lê as
+  capabilities do tenant (`tenantCapabilitiesService`, injetável via
+  `deps.getTenantCapabilities`) e aplica `scopeToolsByTenantCapabilities` —
+  tool que declara `tenantCapability` só é anunciada com a capability ligada
+  (ausente/desconhecida não esconde; o RBAC já governa). Nenhuma tool do
+  catálogo atual declara `tenantCapability`: o schema de capabilities do tenant
+  (`inbox`/`caseManagement`) não cobre a vertical fitness — gatear fitness por
+  capability de tenant exigiria decisão de schema fora do escopo. Com contexto
+  de tela, a resposta é recortada ("Aqui, em <rótulo humano>, ...") sem expor
+  rota/ids. A projeção de rótulos não tem mais fallback para id de tool.
+- **Links operacionais** (T-A4): `askAi/operationalLinks.js` emite
+  `{ sourceType: 'LIVE_DATA', label, url }` para rota real do frontend
+  (FITNESS_STUDENT→`/fitness/students`, CONVERSATION→`/inbox?conversationId=`,
+  ORDER→`/orders`, BOOKING→`/agenda`) apenas quando a posse foi revalidada, o
+  ator mantém a permissão da rota e alguma tool devolveu dado. Tipo sem
+  mapeamento (CUSTOMER/CASE/TICKET/CAMPAIGN) não gera link.
+- **DTO de fonte** (T-A5): `buildSources` emite `title` humano e deduplica por
+  `url` no backend (vários chunks do mesmo documento viram uma fonte).
+- **Proveniência do turno** (T-A6): turnos assistentes persistidos ganham
+  `answerId` determinístico (`ans_<sha256(conversa:turno)[:16]>`) e
+  `toolCalls[]` (rótulo + status `ok`/`failed`/`denied`, nunca id);
+  `buildPromptHistory` continua projetando apenas role/content/intent.
 Projeções operacionais de jornada: `npm run journey:projections` +
 `npm run validate:journey-projections`
 (`reports/business-journey-projections.json`).

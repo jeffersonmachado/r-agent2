@@ -61,6 +61,40 @@ function truncate(text, max = MAX_MESSAGE_CHARS) {
   return value.length > max ? `${value.slice(0, max)}…` : value;
 }
 
+/** Vocabulário fechado de status de consulta executada no turno. */
+const TOOL_CALL_STATUSES = Object.freeze(['ok', 'failed', 'denied']);
+
+/**
+ * Identificador DETERMINÍSTICO da resposta: deriva de conversa + número do
+ * turno (nunca aleatório), estável entre processos e não reversível para o
+ * conteúdo. É a referência da resposta para auditoria e acompanhamentos.
+ */
+function answerIdFor(conversation, turnNumber) {
+  const digest = crypto
+    .createHash('sha256')
+    .update(`ask-ai-answer:${String(conversation?.id || '')}:${turnNumber}`)
+    .digest('hex')
+    .slice(0, 16);
+  return `ans_${digest}`;
+}
+
+/**
+ * Projeção EXIBÍVEL das consultas do turno: rótulo humano + status. O id da
+ * tool é identificador interno e NUNCA é persistido aqui; status fora do
+ * vocabulário degrada para `failed` (fail-closed — nunca fingir sucesso).
+ */
+function sanitizeToolCalls(toolCalls) {
+  if (!Array.isArray(toolCalls)) return [];
+  const calls = [];
+  for (const call of toolCalls.slice(0, 12)) {
+    const label = String(call?.label || '').trim();
+    if (!label) continue;
+    const status = TOOL_CALL_STATUSES.includes(call?.status) ? call.status : 'failed';
+    calls.push({ label: label.slice(0, 120), status });
+  }
+  return calls;
+}
+
 /**
  * Abre (ou reutiliza) uma conversa do ator.
  *
@@ -154,16 +188,20 @@ async function appendTurn({
   facts = [],
   intent = null,
   context = null,
+  toolCalls = [],
 }) {
   if (!conversation) throw persistenceError('Conversa não carregada');
 
   const now = new Date().toISOString();
+  const nextTurn = (Number(conversation.turnCount) || 0) + 1;
   const appended = [
     ...(Array.isArray(conversation.messages) ? conversation.messages : []),
     { role: 'user', content: truncate(question), createdAt: now },
     {
       role: 'assistant',
       content: truncate(answer),
+      answerId: answerIdFor(conversation, nextTurn),
+      toolCalls: sanitizeToolCalls(toolCalls),
       sources: Array.isArray(sources) ? sources.slice(0, 6) : [],
       // Provenance resumida: apenas chaves/labels, nunca valores sensíveis.
       facts: Array.isArray(facts)
@@ -213,6 +251,37 @@ function buildPromptHistory(conversation) {
 }
 
 /**
+ * Último turno ASSISTENTE persistido, com a proveniência estruturada.
+ *
+ * É a fonte do acompanhamento de fonte ("qual foi a fonte?") e da justificativa
+ * da resposta anterior ("por que você respondeu isso?"): a resposta existe e
+ * não pode ser reconstruída por nova recuperação — refazer RAG devolveria
+ * fontes diferentes das citadas e atribuiria ao assistente uma base que ele não
+ * usou.
+ *
+ * Nunca devolve id de mensagem, tenant nem caminho interno.
+ *
+ * @returns {{answer: string, answerId: string|null, toolCalls: Array, sources: Array, facts: Array, intent: string|null, createdAt: string|null}|null}
+ */
+function lastAssistantTurn(conversation) {
+  const messages = Array.isArray(conversation?.messages) ? conversation.messages : [];
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role !== 'assistant') continue;
+    return {
+      answer: String(message.content || ''),
+      answerId: message.answerId || null,
+      toolCalls: Array.isArray(message.toolCalls) ? message.toolCalls : [],
+      sources: Array.isArray(message.sources) ? message.sources : [],
+      facts: Array.isArray(message.facts) ? message.facts : [],
+      intent: message.intent || null,
+      createdAt: message.createdAt || null,
+    };
+  }
+  return null;
+}
+
+/**
  * Marca a conversa como encerrada. Não altera dados de negócio.
  */
 async function closeConversation({ conversationId, tenantId, actor }) {
@@ -256,6 +325,9 @@ module.exports = {
   appendTurn,
   applyWindow,
   buildPromptHistory,
+  lastAssistantTurn,
+  answerIdFor,
+  sanitizeToolCalls,
   closeConversation,
   purgeExpired,
 };

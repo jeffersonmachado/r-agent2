@@ -146,7 +146,11 @@ async function executeCapability({
   entity,
   idempotencyKey = null,
 }) {
-  const providers = resolveCapabilityProviders({ registry, capability, entityType, actor });
+  // O tenant do ator na resolução vem da SESSÃO autenticada (`tenantId`), nunca
+  // do input: é o que liga o binding de tenant dos providers MCP externos
+  // (metadata.tenantId) ao contexto governado.
+  const scopedActor = actor ? { ...actor, tenant: actor.tenant || tenantId } : actor;
+  const providers = resolveCapabilityProviders({ registry, capability, entityType, actor: scopedActor });
   const { provider, reason } = selectProvider(providers);
   if (!provider) {
     const error = new Error(`ask_ai_capability_unavailable: ${capability} (${reason})`);
