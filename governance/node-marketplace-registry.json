@@ -179,6 +179,30 @@
       "tenantId": "system",
       "publishedAt": "2026-09-13T03:21:34.754Z",
       "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
+    },
+    {
+      "id": "qa-market-node-1789469989047",
+      "label": "QA Market Node 1789469989047",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-09-15T10:59:51.394Z",
+      "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
+    },
+    {
+      "id": "qa-market-node-1789470183150",
+      "label": "QA Market Node 1789470183150",
+      "category": "tenant",
+      "version": "1.0.0",
+      "description": "QA Waves market prod-like node",
+      "configSchema": null,
+      "visibility": "tenant",
+      "tenantId": "system",
+      "publishedAt": "2026-09-15T11:03:05.506Z",
+      "publishedBy": "cc1fbca6-d8cb-4ac8-a858-2d221244a8b3"
     }
   ]
 }
