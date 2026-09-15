@@ -124,6 +124,15 @@ const FORBIDDEN_RULES = [
   { id: 'journey_status_card', pattern: /JourneyStatusCard/ },
   { id: 'replay_details_modal', pattern: /ReplayDetailsModal/ },
   { id: 'action_chain', pattern: /action\schain/i },
+  // URL/caminho técnico não é conteúdo de operador: `file://` é sempre
+  // vazamento (não há navegação por esquema de arquivo na aplicação) e estes
+  // caminhos são o runtime DA PLATAFORMA, não a configuração do cliente.
+  // Caminhos do ambiente do cliente (ex.: `/etc/asterisk/...` numa tela de PBX
+  // que orienta o operador) NÃO entram aqui: são informação operacional
+  // legítima — a regra é sobre internalidade da plataforma, não sobre a
+  // existência de um caminho absoluto.
+  { id: 'file_url', pattern: /file:\/\//i },
+  { id: 'platform_runtime_path', pattern: /\/opt\/results|\/var\/lib\/ragent2|ragent2-runtime|\/\.local\/share\/ragent2/ },
 ];
 
 // Módulos de engenharia (DEVELOPMENT) proibidos em superfícies SUPPORT:
