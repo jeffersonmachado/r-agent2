@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-15T19:06:29.219Z",
-  "artifact": "r-agent2-20260915-155951.payload.zip",
+  "generatedAt": "2026-09-15T22:12:45.517Z",
+  "artifact": "r-agent2-20260915-190718.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260915-155951.payload.zip",
-        "computedHash": "a35a486dec12cfb36ccba2d2938d65bf9c9d4ca4803317493bc75cd1337362de",
-        "recordedHash": "a35a486dec12cfb36ccba2d2938d65bf9c9d4ca4803317493bc75cd1337362de",
+        "zipName": "r-agent2-20260915-190718.payload.zip",
+        "computedHash": "5877e28e381e1897fa1b5e70891cbe0630df2cf40c2ace771aeadf0041a0c8e0",
+        "recordedHash": "5877e28e381e1897fa1b5e70891cbe0630df2cf40c2ace771aeadf0041a0c8e0",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260915-155951.payload.manifest.json"
+        "subject": "r-agent2-20260915-190718.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260915-155951.payload.zip"
+        "subject": "r-agent2-20260915-190718.payload.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "2ad9b8256a5667fd75f2b2cb…"
+        "storedChainRoot": "66718c3f5c8f0b2be82fd435…"
       }
     },
     {
@@ -75,7 +75,7 @@
       "details": {
         "overallConsistencyScore": 100,
         "allChecksPass": true,
-        "finalDecision": "AUTONOMOUS_READY_GO"
+        "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
       }
     },
     {
@@ -93,14 +93,10 @@
       "severity": "HIGH",
       "details": {
         "valid": true,
-        "finalDecision": "AUTONOMOUS_READY_GO",
+        "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
         "governanceLevel": "LEVEL_4_IMMUTABLE"
       }
     }
   ],
-  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
-  "runId": "rap-governed-20260915215218738-1c61982c",
-  "sourceFingerprint": "03f7151feda0a27c05139b4c66b1ca7e93d16a3be4227c1aedb6454912333431",
-  "artifactType": "tamper-detection-report",
-  "artifactVersion": "1.0.0"
+  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada."
 }
