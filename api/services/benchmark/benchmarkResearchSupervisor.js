@@ -33,6 +33,7 @@
 const { createBenchmarkResearchRunner, RESEARCH_RUN_STATES } = require('./benchmarkResearchRunner');
 const { evaluateSaturation } = require('../../../qa/benchmarks/benchmarkSufficiencyEngine');
 const { mergeSamplePatch } = require('./benchmarkSampleRegistry');
+const { mergePipelineMetrics } = require('./benchmarkFindingExtraction');
 const {
   RESEARCH_AXES,
   RESEARCH_AXIS_LIST,
@@ -417,6 +418,10 @@ function createBenchmarkResearchSupervisor({
       const capturedEvidence = [];
       let blocked = false;
 
+      // Métricas do funil semântico desta passagem (somadas por fonte/eixo) —
+      // persistidas no subject para auditoria pós-restart.
+      let pipelineMetrics = null;
+
       for (const declared of entry.declaredSources) {
         // O subagente só age por CAPABILITY governada. Sem provider, o retorno
         // é bloqueio explícito — nunca um achado inventado.
@@ -444,6 +449,7 @@ function createBenchmarkResearchSupervisor({
           status: outcome.status,
           reason: outcome.reason || null,
           findings: Array.isArray(outcome.findings) ? outcome.findings.length : 0,
+          unresolved: Array.isArray(outcome.unresolved) ? outcome.unresolved.length : 0,
           sourceSelection: outcome.source?.sourceSelection || outcome.provenance?.sourceSelection || null,
         });
 
@@ -565,6 +571,11 @@ function createBenchmarkResearchSupervisor({
                 fragmentHash: extracted.fragmentHash,
                 inspectionKind: extracted.inspectionKind,
                 confidence: extracted.confidence,
+                semanticStatus: extracted.semanticStatus,
+                form: extracted.form,
+                structuredRule: extracted.structuredRule,
+                clusterId: extracted.clusterId,
+                normalizationRationale: extracted.normalizationRationale,
               },
             });
             const axis = axisForKind(extracted.kind);
@@ -578,6 +589,51 @@ function createBenchmarkResearchSupervisor({
               at: clock(),
             });
           }
+        }
+
+        // UNRESOLVED_SEMANTIC_CANDIDATE — persistido para AUDITORIA (a recusa de
+        // estruturação é um fato da pesquisa), mas marcado para NUNCA contar
+        // como novidade canônica (o serviço exclui por `semanticStatus`).
+        for (const pending of Array.isArray(outcome.unresolved) ? outcome.unresolved : []) {
+          try {
+            await service.recordFinding({
+              tenantId: researchTenant,
+              vertical,
+              benchmarkId: entry.benchmarkId,
+              kind: pending.kind,
+              externalName: pending.externalName,
+              canonicalId: null,
+              source: { ...outcome.source },
+              evidenceRef: outcome.evidenceRef,
+              classification: pending.classification,
+              archetype: entry.archetype || null,
+              origin: pending.origin,
+              locator: pending.locator,
+              normalizedId: null,
+              analyzedContentHash: outcome.analyzedContentHash,
+              benchmark: subject,
+              metadata: {
+                description: pending.description,
+                fragmentHash: pending.fragmentHash,
+                inspectionKind: pending.inspectionKind,
+                confidence: pending.confidence,
+                semanticStatus: pending.semanticStatus,
+                normalizationRationale: pending.normalizationRationale,
+              },
+            });
+          } catch (error) {
+            errors.push({
+              severity: 'ERROR',
+              code: error.code || 'research_unresolved_finding_not_recorded',
+              reason: error.message,
+              resolved: false,
+              at: clock(),
+            });
+          }
+        }
+
+        if (outcome.semanticMetrics) {
+          pipelineMetrics = mergePipelineMetrics(pipelineMetrics, outcome.semanticMetrics);
         }
       }
 
@@ -610,7 +666,7 @@ function createBenchmarkResearchSupervisor({
         inspections: { ...inspections, executedAt: clock() },
         // O SUJEITO e a lista de erros ficam PERSISTIDOS: o critério de análise
         // e a recusa precisam ser reconstruíveis depois do restart.
-        metadata: { benchmark: subject, errors },
+        metadata: { benchmark: subject, errors, ...(pipelineMetrics ? { pipelineMetrics } : {}) },
       });
 
       const result = {
@@ -619,6 +675,7 @@ function createBenchmarkResearchSupervisor({
         axes,
         findingsByAxis,
         axisCompleteness: buildAxisCompleteness({ axes }),
+        pipelineMetrics,
         errors,
       };
       results.push(result);

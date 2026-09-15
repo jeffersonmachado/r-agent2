@@ -155,7 +155,7 @@ describe('TAREFA 02/24/78 — concorrente NUNCA entra como capability', () => {
 
   test('RED — pesquisa de EVO produz capabilities REAIS e nunca "EVO"', async () => {
     const { providers } = buildProviders();
-    const { supervisor } = buildSupervisor({ providers });
+    const { supervisor, store } = buildSupervisor({ providers });
     await openRun(supervisor);
 
     const result = await supervisor.research({
@@ -169,11 +169,24 @@ describe('TAREFA 02/24/78 — concorrente NUNCA entra como capability', () => {
     const evo = patch.benchmarks.find((benchmark) => benchmark.id === 'evo');
     const newCapabilities = evo.novelty.newCapabilities.map((item) => String(item.name).toLowerCase());
 
-    expect(newCapabilities).toEqual(
-      expect.arrayContaining(['gestão de membros', 'congelamento de matrícula', 'entradas', 'contas a receber']),
-    );
+    // Missão semântica 2026-09-15 — os quatro recursos observados casam com
+    // equivalência DECLARADA da política de normalização: são CONFIRMAÇÕES do
+    // inventário canônico (canonical_id preenchido), não novidade. A pesquisa
+    // continua produzindo os achados REAIS — eles só não inflam a curva.
+    const summary = await supervisor.summarize({ vertical: VERTICAL });
+    expect(summary.totalFindings).toBe(4);
+    const run = await store.getRun({ tenantId: TENANT, vertical: VERTICAL });
+    const stored = await store.listFindings({ tenantId: TENANT, runId: run.id });
+    const byName = new Map(stored.map((finding) => [String(finding.external_name).toLowerCase(), finding.canonical_id]));
+    expect(byName.get('gestão de membros')).toBe('fitness.member.management');
+    expect(byName.get('congelamento de matrícula')).toBe('fitness.membership.freeze');
+    expect(byName.get('entradas')).toBe('fitness.access.turnstile');
+    expect(byName.get('contas a receber')).toBe('fitness.billing.receivable');
     expect(newCapabilities).not.toContain('evo');
     expect(newCapabilities.join(' ')).not.toMatch(/\bw12\b/);
+    expect(newCapabilities).not.toEqual(
+      expect.arrayContaining(['gestão de membros', 'congelamento de matrícula', 'entradas', 'contas a receber']),
+    );
   });
 
   test('a capability extraída é registrada com o NOME DO RECURSO, não o do fornecedor', async () => {
@@ -442,8 +455,15 @@ describe('TAREFA 19/20/21 — completude por eixo e critério de ANALYZED', () =
     const patch = await supervisor.buildSamplePatch({ vertical: VERTICAL });
     const evo = patch.benchmarks.find((benchmark) => benchmark.id === 'evo');
     expect(evo.analyzedAt).toBeTruthy();
-    expect(evo.novelty.newJourneys.length).toBe(1);
-    expect(evo.novelty.newBusinessRules.length).toBe(1);
+    // Missão semântica 2026-09-15 — jornada e regra observadas casam com
+    // equivalência DECLARADA (fitness.journey.lead_to_membership /
+    // fitness.rule.freeze_pauses_billing): confirmações, não novidade. O eixo
+    // foi pesquisado (RESEARCHED_WITH_FINDINGS) — zero novidade MEDIDO.
+    expect(evo.novelty.newJourneys.length).toBe(0);
+    expect(evo.novelty.newBusinessRules.length).toBe(0);
+    const axes = Object.fromEntries((evo.axisCompleteness || []).map((entry) => [entry.axis, entry.researched]));
+    expect(axes.JOURNEY_AXIS).toBe(true);
+    expect(axes.BUSINESS_RULE_AXIS).toBe(true);
   });
 });
 

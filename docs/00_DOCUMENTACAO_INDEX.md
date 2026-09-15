@@ -67,3 +67,4 @@ Este repositório já contém documentação detalhada por área. Alguns pontos 
   - `RAG_POR_TENANT.md`
   - `COMO_TESTAR_RAG.md`
   - `CONFIGURACAO_IA.md`
+- **MCP Research (container das capabilities `research.*`)**: `mcp-research/README.md` (arquitetura/ADR/integração), `mcp-research/tool-contracts.md`, `mcp-research/security-model.md`, `mcp-research/operations.md`, `mcp-research/data-flow.md`

@@ -88,6 +88,8 @@ const { createAgentOsExpressRouter } = require('../composition/agent-os');
 const { createLearningCoreExpressRouter } = require('../composition/learning-core');
 // §B1/§B2: chamador de produção do benchmarkResearchSupervisor (DEVELOPMENT).
 const { createBenchmarkResearchExpressRouter } = require('../composition/benchmark-research');
+// T-MR1: chamador de runtime do marketDiscoverySupervisor (DEVELOPMENT/SYSTEM).
+const { createMarketDiscoveryExpressRouter } = require('../composition/market-discovery');
 const { createCognitiveExpressRouter } = require('../composition/cognitive');
 const { createRouteRegistry } = require('./routeRegistry');
 const { mountMcpRoutes } = require('../runtime/startMcpServer');
@@ -136,6 +138,8 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const qaMeshRouter = createQaMeshExpressRouter();
   // Pesquisa de benchmarks: superfície de engenharia (DEVELOPMENT).
   const benchmarkResearchRouter = createBenchmarkResearchExpressRouter({ buildCoreRoutingContext });
+  // Descoberta de mercado: superfície de engenharia (DEVELOPMENT), tenant SYSTEM.
+  const marketDiscoveryRouter = createMarketDiscoveryExpressRouter({ buildCoreRoutingContext });
   const mcpRouter = createMcpExpressRouter();
   const demoRouter = createDemoExpressRouter();
   const operationalStatusRouter = createOperationalStatusRoutes();
@@ -207,6 +211,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     qaWavesRouter,
     qaMeshRouter,
     benchmarkResearchRouter,
+    marketDiscoveryRouter,
     mcpRouter,
     demoRouter,
     operationalStatusRouter,

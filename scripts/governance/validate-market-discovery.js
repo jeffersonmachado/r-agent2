@@ -8,8 +8,10 @@
  * Invariantes verificados EXECUTAVELMENTE (não é inspeção documental):
  *  1. os módulos do subsistema existem (store, supervisor, archetypes,
  *     candidates, independence, selection, holdout, models, migration);
- *  2. o supervisor é superfície DEVELOPMENT com tenant SYSTEM e nunca é
- *     montado como rota PRODUCTION;
+ *  2. o supervisor é superfície DEVELOPMENT com tenant SYSTEM; a rota HTTP de
+ *     runtime (T-MR1, `api/modules/market-discovery/routes.js`) só é legal com
+ *     guard DEVELOPMENT + tenant SYSTEM fail-closed — nunca PRODUCTION
+ *     (provas de runtime em `validate-market-discovery-runtime.js`);
  *  3. arquétipos são evidence-based: sem evidência NÃO há ACCEPTED, e os
  *     arquétipos fitness `financial-billing`/`student-digital-experience`
  *     são REVALIDADOS (nunca removidos para forçar PASS);
@@ -131,20 +133,37 @@ async function run() {
     return { visibility: capability.visibility, tenant: principal.tenant };
   }, checks, violations);
 
-  // ── 2b. Nenhuma rota HTTP expõe o subsistema ───────────────────────────
-  check('no_http_route', 'nenhuma rota registrada monta o subsistema de descoberta', () => {
+  // ── 2b. Rota HTTP, quando montada, é DEVELOPMENT/SYSTEM-only ───────────
+  // T-MR1 (2026-09-15): o subsistema ganhou um chamador de runtime REAL
+  // (`api/modules/market-discovery/routes.js`). O invariante continua sendo
+  // "nunca superfície PRODUCTION": a montagem é legal APENAS se o módulo
+  // enforce DEVELOPMENT + tenant SYSTEM fail-closed em todas as rotas.
+  check('no_http_route', 'rota HTTP (quando montada) é DEVELOPMENT/SYSTEM-only, nunca PRODUCTION', () => {
     const routeFiles = ['api/app/registerRoutes.js', 'api/app/routeRegistry.js'];
-    const bad = [];
-    for (const file of routeFiles) {
+    const mounted = routeFiles.filter((file) => {
       const abs = path.join(ROOT_DIR, file);
-      if (!fs.existsSync(abs)) continue;
-      const source = fs.readFileSync(abs, 'utf8');
-      if (/marketDiscovery/i.test(source)) {
-        bad.push(violation(VIOLATION_CODES.SUPERVISOR_ROUTE_EXPOSED, { file }));
+      return fs.existsSync(abs) && /marketDiscovery/i.test(fs.readFileSync(abs, 'utf8'));
+    });
+    if (mounted.length === 0) return { mounted: false };
+
+    const routesPath = path.join(ROOT_DIR, 'api', 'modules', 'market-discovery', 'routes.js');
+    const bad = [];
+    if (!fs.existsSync(routesPath)) {
+      bad.push(violation(VIOLATION_CODES.SUPERVISOR_ROUTE_EXPOSED, { file: 'api/modules/market-discovery/routes.js', reason: 'router montado sem módulo de rotas' }));
+    } else {
+      const routesSource = fs.readFileSync(routesPath, 'utf8');
+      if (!routesSource.includes("checkClassification(req, 'DEVELOPMENT')")) {
+        bad.push(violation(VIOLATION_CODES.SUPERVISOR_ROUTE_EXPOSED, { file: 'api/modules/market-discovery/routes.js', reason: 'guard DEVELOPMENT ausente' }));
+      }
+      if (!routesSource.includes('canonicalResearchTenant')) {
+        bad.push(violation(VIOLATION_CODES.SUPERVISOR_ROUTE_EXPOSED, { file: 'api/modules/market-discovery/routes.js', reason: 'tenant SYSTEM fail-closed ausente' }));
+      }
+      if (/requireClassification\('PRODUCTION'\)/.test(routesSource)) {
+        bad.push(violation(VIOLATION_CODES.SUPERVISOR_ROUTE_EXPOSED, { file: 'api/modules/market-discovery/routes.js', reason: 'classificação PRODUCTION declarada' }));
       }
     }
-    expect(bad.length === 0, VIOLATION_CODES.SUPERVISOR_ROUTE_EXPOSED, 'subsistema montado em rotas HTTP', bad);
-    return { inspected: routeFiles };
+    expect(bad.length === 0, VIOLATION_CODES.SUPERVISOR_ROUTE_EXPOSED, 'subsistema exposto sem guard DEVELOPMENT/SYSTEM', bad);
+    return { mounted: true, classification: 'DEVELOPMENT', tenant: 'system' };
   }, checks, violations);
 
   // ── 3. Arquétipos evidence-based + revalidação fitness ─────────────────

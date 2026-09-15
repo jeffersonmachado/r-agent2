@@ -165,6 +165,10 @@ function mergeSamplePatch(sample, patch) {
     }
 
     if (incoming.novelty) target.novelty = normalizeNovelty(incoming.novelty);
+    // "Ainda não classificado" trilha separada da novidade (campo de PESQUISA).
+    if (Number.isFinite(incoming.unresolvedSemanticCandidates)) {
+      target.unresolvedSemanticCandidates = incoming.unresolvedSemanticCandidates;
+    }
     applied.push(incoming.id);
   }
 

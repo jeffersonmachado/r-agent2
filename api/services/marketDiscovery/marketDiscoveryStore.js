@@ -12,7 +12,7 @@
  * Contrato (implementado por este módulo em produção e pelo store em memória
  * dos testes — `tests/helpers/marketDiscoveryMemoryStore.js`):
  *
- *   openRun / getRun / updateRunState / listRuns
+ *   openRun / getRun / getRunById / updateRunState / listRuns
  *   upsertArchetype / listArchetypes / getArchetype
  *   upsertCandidate / listCandidates / getCandidate / updateCandidate
  *   recordDiscoverySet / getDiscoverySet / getLatestDiscoverySet / updateDiscoverySet
@@ -151,6 +151,14 @@ function createMarketDiscoveryStore({ models } = {}) {
     if (metadata) patch.metadata = { ...jsonObject(row.metadata, {}), ...jsonObject(metadata, {}) };
     if (Object.keys(patch).length > 0) await row.update(patch);
     return row;
+  }
+
+  /** Run pelo ID determinístico (leitura pós-restart: o ID é a identidade). */
+  async function getRunById({ tenantId, runId }) {
+    const { run } = resolveModels();
+    return run.findOne({
+      where: { id: requireNonEmpty(runId, 'runId'), tenant_key: requireNonEmpty(tenantId, 'tenantId') },
+    });
   }
 
   async function listRuns({ tenantId, vertical = null }) {
@@ -380,6 +388,7 @@ function createMarketDiscoveryStore({ models } = {}) {
   return {
     errorCodes: ERROR_CODES,
     getRun,
+    getRunById,
     openRun,
     updateRunState,
     listRuns,

@@ -34,7 +34,7 @@ const {
   buildResearchProvenance,
 } = require('./researchCapabilities');
 
-const { extractInspectionFindings } = require('./benchmarkFindingExtraction');
+const { extractInspectionFindings, mergePipelineMetrics } = require('./benchmarkFindingExtraction');
 const { RESEARCH_AXES, SEMANTIC_CODES, FINDING_ORIGINS } = require('./benchmarkResearchSemantics');
 
 const crypto = require('crypto');
@@ -179,6 +179,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         missing,
         inspections: { documentation: false, api: false, apiApplicable },
         findings: [],
+        unresolved: [],
         rejected: [],
         provenance: null,
       };
@@ -204,6 +205,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         reason: 'research_no_candidate_source',
         inspections: { documentation: false, api: false, apiApplicable },
         findings: [],
+        unresolved: [],
         rejected: [],
         provenance: null,
       };
@@ -218,6 +220,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         reason: `research_fetch_not_confirmed: status=${Number.isFinite(httpStatus) ? httpStatus : 'unknown'}`,
         inspections: { documentation: false, api: false, apiApplicable },
         findings: [],
+        unresolved: [],
         rejected: [],
         provenance: buildResearchProvenance({
           capability: 'research.fetch',
@@ -252,6 +255,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         reason: 'research_evidence_not_captured',
         inspections: { documentation: false, api: false, apiApplicable },
         findings: [],
+        unresolved: [],
         rejected: [],
         provenance: null,
       };
@@ -267,6 +271,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         reason: `${SEMANTIC_CODES.EVIDENCE_HASH_MISMATCH}: analyzed=${analyzedContentHash} evidence=${evidenceContentHash}`,
         inspections: { documentation: false, api: false, apiApplicable },
         findings: [],
+        unresolved: [],
         rejected: [],
         evidenceRef,
         analyzedContentHash,
@@ -277,8 +282,10 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
 
     const inspections = { documentation: false, api: false, apiApplicable };
     const findings = [];
+    const unresolved = [];
     const rejected = [];
     const perAxis = {};
+    let semanticMetrics = null;
 
     // Falha de inspeção é um FATO DE PESQUISA (a fonte foi obtida, mas não foi
     // possível extrair estrutura dela) — nunca um crash e nunca "zero achados
@@ -299,6 +306,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         reason: `research_inspection_failed: inspectDocumentation (${error.message})`,
         inspections,
         findings: [],
+        unresolved: [],
         rejected: [],
         evidenceRef,
         analyzedContentHash,
@@ -318,8 +326,10 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
       sourceTier: source?.tier ?? null,
     });
     findings.push(...documentationExtraction.findings.map((finding) => ({ ...finding, inspectionKind: 'documentation' })));
+    unresolved.push(...(documentationExtraction.unresolved || []).map((finding) => ({ ...finding, inspectionKind: 'documentation' })));
     rejected.push(...documentationExtraction.rejected.map((entry) => ({ ...entry, inspectionKind: 'documentation' })));
     perAxis.documentation = documentationExtraction.perAxis;
+    semanticMetrics = mergePipelineMetrics(semanticMetrics, documentationExtraction.semanticMetrics);
 
     if (apiApplicable) {
       let apiInspection;
@@ -339,6 +349,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
           reason: `research_inspection_failed: inspectApiDocs (${error.message})`,
           inspections,
           findings,
+          unresolved,
           rejected,
           perAxis,
           evidenceRef,
@@ -359,8 +370,10 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         sourceTier: source?.tier ?? null,
       });
       findings.push(...apiExtraction.findings.map((finding) => ({ ...finding, inspectionKind: 'api' })));
+      unresolved.push(...(apiExtraction.unresolved || []).map((finding) => ({ ...finding, inspectionKind: 'api' })));
       rejected.push(...apiExtraction.rejected.map((entry) => ({ ...entry, inspectionKind: 'api' })));
       perAxis.api = apiExtraction.perAxis;
+      semanticMetrics = mergePipelineMetrics(semanticMetrics, apiExtraction.semanticMetrics);
     }
 
     return {
@@ -381,8 +394,10 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
       evidenceRef,
       analyzedContentHash,
       findings,
+      unresolved,
       rejected,
       perAxis,
+      semanticMetrics,
       axesAttempted: Object.keys(perAxis),
       provenance: buildResearchProvenance({
         capability: 'research.captureEvidence',

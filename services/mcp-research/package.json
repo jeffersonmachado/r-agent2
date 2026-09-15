@@ -1,0 +1,16 @@
+{
+  "name": "@results/mcp-research",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RAP MCP Research container — MCP server (Streamable HTTP) que atende as capabilities governadas research.* reutilizando o engine nativo da plataforma.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20.19 || >=22.12"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0"
+  }
+}

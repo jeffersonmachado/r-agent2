@@ -22,6 +22,9 @@ function createRouteRegistry(routers) {
     // §B1/§B2: pesquisa competitiva de benchmarks (DEVELOPMENT). Montado aqui
     // porque router fora desta lista simplesmente NÃO é montado.
     { router: routers.benchmarkResearchRouter },
+    // T-MR1: descoberta autônoma de mercado (DEVELOPMENT/SYSTEM). Montado aqui
+    // porque router fora desta lista simplesmente NÃO é montado.
+    { router: routers.marketDiscoveryRouter },
     // MCP Control Plane (§M13): administração das conexões MCP externas.
     // Estava passado em `registerRoutes` mas AUSENTE desta lista — as rotas
     // existiam e nunca eram montadas (superfície morta).

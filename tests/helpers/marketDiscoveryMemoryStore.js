@@ -63,6 +63,13 @@ function createMarketDiscoveryMemoryStore({ state } = {}) {
     return clone(matches[0] || null);
   }
 
+  async function getRunById({ tenantId, runId }) {
+    const tenant = required(tenantId, 'tenantId');
+    const id = required(runId, 'runId');
+    const row = backing.runs.get(id);
+    return row && row.tenant_key === tenant ? clone(row) : null;
+  }
+
   async function openRun({ tenantId, vertical, discoveryVersion, startedAt = null, metadata = {} }) {
     const tenant = required(tenantId, 'tenantId');
     const verticalId = required(vertical, 'vertical');
@@ -301,6 +308,7 @@ function createMarketDiscoveryMemoryStore({ state } = {}) {
 
   return {
     getRun,
+    getRunById,
     openRun,
     updateRunState,
     listRuns,

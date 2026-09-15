@@ -131,6 +131,11 @@ const BASENAME_CLASSIFIED = {
   // o basename. É DERIVADO e regenerável pelo próprio comando de fase — mesma
   // natureza dos demais relatórios de `reports/`, nunca autoridade de estado.
   'release-phase-state.json': 'DB_CANONICAL_JSON_EXPORT',
+  // Fixtures transitórias do gate market-discovery-runtime: escritas em
+  // `fs.mkdtempSync(os.tmpdir())` e apagadas no `finally` do próprio check —
+  // reconstruíveis a cada execução, nunca estado.
+  'market-discovery-gate-fixture.sample.json': 'TEMPORARY_CACHE',
+  'market-discovery-gate-fixture.run-export.json': 'TEMPORARY_CACHE',
 };
 
 // Caminhos de runtime que NÃO devem conter escritas JSON não classificadas.
@@ -146,7 +151,7 @@ const SCAN_ROOTS = ['api', 'core', 'engine', 'lib', 'src', 'qa-mesh', 'qa', 'gov
  * contexto não pode esconder escrita real.
  */
 function isReaderCallContext(source, index) {
-  return /(readFileSync|readJson[A-Za-z]*|require)\s*\(\s*$/.test(String(source).slice(0, index));
+  return /(readFileSync|readJson[A-Za-z]*|require|existsSync|statSync|lstatSync|accessSync|readdirSync)\s*\(\s*$/.test(String(source).slice(0, index));
 }
 
 // Alvos estáticos de escrita JSON. Extrai:

@@ -1,0 +1,8 @@
+{
+  "description": "Documentação canônica exigida do container MCP Research. O gate scripts/governance/validate-mcp-research.js falha enquanto qualquer entrada estiver ausente (fail-closed). Os documentos são produzidos pela frente de documentação (docs/mcp-research/).",
+  "documents": [
+    "docs/mcp-research/README.md",
+    "docs/mcp-research/security-model.md",
+    "docs/mcp-research/operations.md"
+  ]
+}

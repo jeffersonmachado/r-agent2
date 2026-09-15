@@ -34,6 +34,11 @@ services:
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
       RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
       RAG_INTERNAL_TOKEN: "${RAG_INTERNAL_TOKEN:?RAG_INTERNAL_TOKEN obrigatória}"
+      # MCP Research container (auto-registro idempotente no startup do MCP
+      # Client — api/services/mcp/registerMcpResearchConnection.js). Sem clique
+      # manual: a conexão system/mcp-research é persistida a partir deste endpoint.
+      MCP_RESEARCH_ENDPOINT: ${MCP_RESEARCH_ENDPOINT:-http://mcp-research:8080/mcp}
+      MCP_RESEARCH_TOKEN: "${MCP_RESEARCH_TOKEN:?MCP_RESEARCH_TOKEN obrigatória}"
       # PostgreSQL - Configuração de produção
       # PROD_DATABASE_URL dedicada: o DATABASE_URL do .env de dev aponta para
       # localhost e vazaria para o container; credenciais alinhadas ao serviço
@@ -115,10 +120,16 @@ services:
         condition: service_healthy
       asterisk:
         condition: service_healthy
+      mcp-research:
+        condition: service_healthy
     restart: unless-stopped
     logging: *default-logging
     networks:
       - r-agent2-network
+      # rap-internal: alcança o mcp-research SEM dar a ele acesso à rede geral
+      # (o container de pesquisa NÃO está em r-agent2-network — não alcança
+      # postgres/redis/asterisk).
+      - rap-internal
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
@@ -227,6 +238,51 @@ services:
         reservations:
           cpus: '0.5'
           memory: 1G
+
+  # MCP Research — container MCP real das capabilities research.* (ver
+  # services/mcp-research/README.md e docs/mcp-research/). Segmentação:
+  #  - rap-internal (internal: true): API ↔ mcp-research, sem egress;
+  #  - rap-research-egress: ÚNICA saída externa do container de pesquisa.
+  # O serviço NÃO está em r-agent2-network: não alcança postgres/redis/asterisk.
+  mcp-research:
+    build:
+      context: .
+      dockerfile: ./services/mcp-research/Dockerfile
+    image: r-agent2-mcp-research:latest
+    container_name: r-agent2-mcp-research-prod
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      MCP_RESEARCH_MODE: ${MCP_RESEARCH_MODE:-ONLINE}
+      MCP_RESEARCH_TOKEN: "${MCP_RESEARCH_TOKEN:?MCP_RESEARCH_TOKEN obrigatória}"
+      MCP_RESEARCH_SNAPSHOT_DIR: ${MCP_RESEARCH_SNAPSHOT_DIR:-/snapshots}
+      MCP_RESEARCH_TIMEOUT_MS: ${MCP_RESEARCH_TIMEOUT_MS:-15000}
+      MCP_RESEARCH_MAX_BYTES: ${MCP_RESEARCH_MAX_BYTES:-2097152}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    expose:
+      - "8080"
+    volumes:
+      # Snapshot do modo OFFLINE (read-only; conteúdo governado fora da imagem)
+      - r-agent2-research-snapshots:/snapshots:ro
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - rap-internal
+      - rap-research-egress
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -356,7 +412,16 @@ volumes:
   r-agent2-pbx-recordings-data:
   r-agent2-pbx-asterisk-conf:
   r-agent2-rag-data:
+  r-agent2-research-snapshots:
 
 networks:
   r-agent2-network:
+    driver: bridge
+  # Rede interna (sem egress) para o tráfego API ↔ mcp-research.
+  rap-internal:
+    driver: bridge
+    internal: true
+  # ÚNICA rede com saída externa do container de pesquisa (egress de pesquisa
+  # fica isolado do restante da plataforma).
+  rap-research-egress:
     driver: bridge

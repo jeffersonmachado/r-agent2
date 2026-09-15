@@ -124,6 +124,16 @@ async function defaultDnsLookup(hostname) {
 }
 
 /**
+ * Resolução de credencial por REFERÊNCIA quando nenhum resolver é injetado:
+ * a referência é o NOME de uma variável de ambiente. Mesma semântica de
+ * `mcpDiscoveryCore.defaultCredentialResolver` — sem ela, uma conexão
+ * persistida pelo control plane (credentialRef) nunca resolvia no runtime.
+ */
+function defaultEnvCredentialResolver(ref) {
+  return process.env[String(ref)] || null;
+}
+
+/**
  * Inicializa o MCP Client Hub e registra tools externas no Tool Registry.
  *
  * @param {Object} [deps] - dependências
@@ -155,6 +165,27 @@ async function startMcpClientComposition(deps = {}) {
       return null;
     }
 
+    // Auto-registro do container mcp-research (idempotente): quando
+    // MCP_RESEARCH_ENDPOINT está configurado, a conexão é persistida ANTES da
+    // carga — o runtime a encontra no banco como qualquer outra conexão.
+    // Não-bloqueante: falha é reportada e o runtime segue sem ela (ausência
+    // explícita, nunca fake success).
+    if (!deps.connections) {
+      try {
+        const { registerMcpResearchConnection } = require('../services/mcp/registerMcpResearchConnection');
+        const registration = await registerMcpResearchConnection({ actor: 'runtime-startup' });
+        if (registration.registered && registration.action !== 'already_registered') {
+          logger.info('[McpClientComposition] conexão mcp-research auto-registrada', {
+            action: registration.action, id: registration.id,
+          });
+        }
+      } catch (error) {
+        logger.warn('[McpClientComposition] auto-registro mcp-research falhou (não-bloqueante)', {
+          error: error.message,
+        });
+      }
+    }
+
     const loaded = deps.connections
       ? { connections: deps.connections, source: 'injected', imported: null }
       : await loadConnectionsFromPersistence({ actor: 'runtime-startup' });
@@ -170,7 +201,7 @@ async function startMcpClientComposition(deps = {}) {
     hub = createMcpClientHub({
       connections,
       logger,
-      credentialResolver: deps.credentialResolver,
+      credentialResolver: deps.credentialResolver || defaultEnvCredentialResolver,
       // DNS real por padrão: resolve TODOS os endereços e revalida a política
       // antes de abrir a conexão (DNS rebinding).
       dnsLookup: deps.dnsLookup || defaultDnsLookup,
@@ -332,4 +363,5 @@ module.exports = {
   loadMcpConnectionsFromConfig,
   loadConnectionsFromPersistence,
   defaultDnsLookup,
+  defaultEnvCredentialResolver,
 };

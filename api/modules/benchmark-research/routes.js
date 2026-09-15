@@ -227,12 +227,27 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
         return;
       }
       const { supervisor } = buildSupervisor(deps, req, context);
+      // T-MR2 — lineage: quando o discovery set vem de um run de market
+      // discovery, a proveniência (`marketDiscoveryRunId`) é gravada no
+      // metadata do run de benchmark. Lineage declarada sem runId é recusada
+      // pelo serviço (`market_discovery_lineage_invalid`).
+      const lineage = body?.lineage && typeof body.lineage === 'object'
+        ? body.lineage
+        : (body?.marketDiscoveryRunId
+          ? {
+            source: 'market-discovery',
+            marketDiscoveryRunId: body.marketDiscoveryRunId,
+            discoverySetId: body?.discoverySetId || null,
+            holdoutPreregisteredAt: body?.holdoutPreregisteredAt || null,
+          }
+          : null);
       const summary = await supervisor.service.openDiscoverySet({
         tenantId: context.tenantId,
         vertical,
         researchVersion,
         benchmarkIds,
         holdoutBenchmarkId: body?.holdoutBenchmarkId || null,
+        lineage,
       });
       deps.logAction?.(req, 'benchmark_research.run_opened', { vertical, researchVersion, benchmarkIds });
       deps.sendJson(res, 200, { opened: true, summary });

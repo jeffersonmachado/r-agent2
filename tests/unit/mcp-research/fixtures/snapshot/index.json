@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "documents": [
+    {
+      "url": "https://docs.acme-fitness.example/platform",
+      "canonicalUrl": "https://docs.acme-fitness.example/platform",
+      "title": "ACME Fitness — Documentação Oficial da Plataforma",
+      "snippet": "Gestão de alunos, check-ins, cobranças e agendamentos para academias.",
+      "contentType": "text/html; charset=utf-8",
+      "retrievedAt": "2026-09-10T00:00:00.000Z",
+      "domain": "docs.acme-fitness.example",
+      "sourceType": "snapshot",
+      "queryTerms": ["fitness", "academia", "documentação", "plataforma"]
+    },
+    {
+      "url": "https://docs.acme-fitness.example/security-notes",
+      "canonicalUrl": "https://docs.acme-fitness.example/security-notes",
+      "title": "ACME Fitness — Notas de Segurança",
+      "snippet": "Notas de segurança com conteúdo adversarial para teste de neutralização.",
+      "contentType": "text/html; charset=utf-8",
+      "retrievedAt": "2026-09-10T00:00:00.000Z",
+      "domain": "docs.acme-fitness.example",
+      "sourceType": "snapshot",
+      "queryTerms": ["segurança", "notas"]
+    }
+  ]
+}

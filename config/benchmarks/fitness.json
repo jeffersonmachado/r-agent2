@@ -6403,7 +6403,7 @@
       "provenance": {
         "source": "config/benchmark-normalization.json",
         "id": "fitness.rule.access_blocked_when_delinquent",
-        "version": "2026-09-15.1"
+        "version": "2026-09-15.2"
       }
     },
     {
@@ -6412,7 +6412,7 @@
       "provenance": {
         "source": "config/benchmark-normalization.json",
         "id": "fitness.rule.cancel_notice_period",
-        "version": "2026-09-15.1"
+        "version": "2026-09-15.2"
       }
     },
     {
@@ -6421,7 +6421,7 @@
       "provenance": {
         "source": "config/benchmark-normalization.json",
         "id": "fitness.rule.freeze_extends_contract",
-        "version": "2026-09-15.1"
+        "version": "2026-09-15.2"
       }
     },
     {
@@ -6430,7 +6430,7 @@
       "provenance": {
         "source": "config/benchmark-normalization.json",
         "id": "fitness.rule.freeze_pauses_billing",
-        "version": "2026-09-15.1"
+        "version": "2026-09-15.2"
       }
     }
   ],
@@ -6453,7 +6453,7 @@
       },
       "businessRules": {
         "path": "config/benchmark-normalization.json",
-        "version": "2026-09-15.1"
+        "version": "2026-09-15.2"
       }
     }
   },

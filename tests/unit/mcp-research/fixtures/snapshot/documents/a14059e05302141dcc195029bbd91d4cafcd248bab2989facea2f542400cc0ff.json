@@ -1,0 +1,6 @@
+{
+  "url": "https://docs.acme-fitness.example/platform",
+  "contentType": "text/html; charset=utf-8",
+  "retrievedAt": "2026-09-10T00:00:00.000Z",
+  "content": "<!doctype html><html><head><title>ACME Fitness Platform — Docs</title></head><body><h1>Plataforma ACME Fitness</h1><p>Gestão de alunos para academias.</p><h2>Recursos</h2><ul><li>Billing e cobranças recorrentes</li><li>Check-ins com catraca e access control</li><li>Agendamentos de aulas coletivas</li></ul><h2>Jornadas</h2><p>Onboarding do aluno passo a passo.</p><h2>Regras</h2><p>Política de cancelamento e reembolsos.</p></body></html>"
+}

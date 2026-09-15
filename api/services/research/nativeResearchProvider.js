@@ -37,7 +37,13 @@ const crypto = require('crypto');
 const dns = require('dns').promises;
 
 const endpointPolicy = require('../../../src/core/mcp/endpoint-policy');
-const defaultLogger = require('../../utils/logger');
+
+// Logger default é PREGUIÇOSO (mesmo padrão de src/core/mcp/client-hub.js):
+// o módulo pode ser carregado por runtimes fora da API (ex.: o container
+// services/mcp-research) sem arrastar a cadeia api/utils/logger → config.
+function defaultLogger() {
+  return require('../../utils/logger');
+}
 
 const RESEARCH_PROVIDER_ERROR_CODES = Object.freeze({
   INVALID_URL: 'research_fetch_invalid_url',
@@ -184,16 +190,24 @@ const MAX_LINE_LENGTH = 400;
  * @param {Function} [deps.sleep]             `async (ms)` (default setTimeout)
  * @param {object} [deps.logger]
  * @param {object} [deps.options]             sobrescreve DEFAULTS
+ * @param {object} [deps.options.endpointPolicy]  exceções EXPLÍCITAS da política
+ *   de endpoint (`allowPrivateNetwork`, `allowPlaintextHttp`) repassadas a
+ *   `evaluateEndpoint`/`evaluateResolvedAddresses`. Default: NENHUMA exceção
+ *   (loopback/privado/metadata bloqueados, https obrigatório). Reservado a
+ *   harnesses de teste — produção nunca o define.
  */
 function createNativeResearchProvider(deps = {}) {
   const options = { ...DEFAULTS, ...(deps.options || {}) };
+  const endpointPolicyOverrides = options.endpointPolicy && typeof options.endpointPolicy === 'object'
+    ? options.endpointPolicy
+    : {};
   const transport = typeof deps.transport === 'function' ? deps.transport : defaultTransport;
   const resolveAddresses = typeof deps.resolveAddresses === 'function'
     ? deps.resolveAddresses
     : defaultResolveAddresses;
   const now = typeof deps.now === 'function' ? deps.now : () => Date.now();
   const sleep = typeof deps.sleep === 'function' ? deps.sleep : defaultSleep;
-  const log = deps.logger || defaultLogger;
+  const log = deps.logger || defaultLogger();
 
   const lastRequestAtByHost = new Map();
 
@@ -217,10 +231,11 @@ function createNativeResearchProvider(deps = {}) {
    * Client: qualquer destino (declarado ou redirecionado) passa por aqui.
    */
   async function assertEndpointAllowed(url, classification) {
+    const policy = { ...endpointPolicyOverrides, maxRedirects: options.maxRedirects };
     const evaluated = endpointPolicy.evaluateEndpoint({
       endpoint: url,
       classification,
-      policy: { maxRedirects: options.maxRedirects },
+      policy,
     });
     if (!evaluated.allowed) {
       throw researchError(
@@ -250,7 +265,7 @@ function createNativeResearchProvider(deps = {}) {
       hostname,
       addresses,
       classification,
-      policy: { maxRedirects: options.maxRedirects },
+      policy,
     });
     if (!resolved.allowed) {
       throw researchError(
@@ -370,6 +385,7 @@ function createNativeResearchProvider(deps = {}) {
           ? String(responseHeaders['content-type'])
           : null,
         url: current,
+        sizeBytes: body.byteLength,
       };
     }
   }
@@ -390,11 +406,14 @@ function createNativeResearchProvider(deps = {}) {
     }
     const result = await guardedGet(url, { classification: classificationOf(context) });
     // Contrato: o hash é do conteúdo EFETIVAMENTE devolvido (utf8), e é ele que
-    // liga a evidência ao documento analisado.
+    // liga a evidência ao documento analisado. `url` é a URL FINAL (após os
+    // redirects caminhados e reavaliados) — a forma canônica do documento.
     return {
       httpStatus: result.httpStatus,
+      url: result.url,
       content: result.content,
       contentType: result.contentType,
+      sizeBytes: result.sizeBytes,
       retrievedAt: isoNow(),
       contentHash: `sha256:${sha256Hex(result.content)}`,
     };

@@ -61,6 +61,8 @@ const {
   evaluateAnalyzedCriterion,
 } = require('./benchmarkResearchSemantics');
 
+const { SEMANTIC_STATUS } = require('./semantic/semanticExtractor');
+
 /**
  * Política de suficiência versionada — define quais tiers contam como prova.
  * Lida do arquivo canônico (mesmo insumo do gate `validate:benchmark-sufficiency`).
@@ -175,10 +177,37 @@ function createBenchmarkResearchService({ store, now } = {}) {
   }
 
   /**
+   * Normaliza a LINEAGE de um discovery set produzido pela descoberta
+   * autônoma de mercado (T-MR2). A proveniência é persistida no metadata do
+   * run — sem ela, a cadeia mercado → benchmark não seria auditável.
+   * Lineage declarada SEM o run de origem é recusada: proveniência incompleta
+   * não é lineage.
+   */
+  function normalizeLineage(lineage) {
+    if (lineage === null || lineage === undefined) return null;
+    const runId = String(lineage?.marketDiscoveryRunId ?? '').trim();
+    if (!runId) {
+      const error = new Error('market_discovery_lineage_invalid: marketDiscoveryRunId é obrigatório na lineage');
+      error.code = 'market_discovery_lineage_invalid';
+      throw error;
+    }
+    return {
+      source: String(lineage.source || 'market-discovery'),
+      marketDiscoveryRunId: runId,
+      discoverySetId: isNonEmptyString(lineage.discoverySetId) ? String(lineage.discoverySetId) : null,
+      holdoutPreregisteredAt: isNonEmptyString(lineage.holdoutPreregisteredAt) ? String(lineage.holdoutPreregisteredAt) : null,
+    };
+  }
+
+  /**
    * §5 — o DISCOVERY SET é registrado ANTES da análise. A ordem importa:
    * registrar depois permitiria escolher a ordem que produz o resultado.
+   *
+   * @param {object} [args.lineage] proveniência do discovery set quando ele
+   *   vem de um run de market discovery (`marketDiscoveryRunId` obrigatório);
+   *   persistida em `metadata.lineage` do run.
    */
-  async function openDiscoverySet({ tenantId, vertical, researchVersion, benchmarkIds = [], holdoutBenchmarkId = null }) {
+  async function openDiscoverySet({ tenantId, vertical, researchVersion, benchmarkIds = [], holdoutBenchmarkId = null, lineage = null }) {
     if (!isNonEmptyString(researchVersion)) throw new Error('research_version_required');
     // Validação de POLÍTICA antes do store: a mensagem é do domínio, não do
     // driver de persistência.
@@ -188,6 +217,7 @@ function createBenchmarkResearchService({ store, now } = {}) {
     if (ids.length === 0) throw new Error('research_discovery_set_empty');
     if (new Set(ids).size !== ids.length) throw new Error('research_discovery_set_duplicate');
     if (!isNonEmptyString(vertical)) throw new Error('research_vertical_required');
+    const normalizedLineage = normalizeLineage(lineage);
     const run = await store.openRun({
       tenantId: requireTenant(tenantId),
       vertical,
@@ -195,6 +225,7 @@ function createBenchmarkResearchService({ store, now } = {}) {
       benchmarkIds: ids,
       holdoutBenchmarkId,
       registeredAt: clock(),
+      metadata: normalizedLineage ? { lineage: normalizedLineage } : {},
     });
     return summarizeFrom(run);
   }
@@ -747,6 +778,10 @@ function createBenchmarkResearchService({ store, now } = {}) {
       // §TAREFA 18 — inferência interna (RAP_DERIVED) NÃO é observação do
       // concorrente: atribuí-la ao fornecedor seria inventar evidência externa.
       if (metadata.origin === FINDING_ORIGINS.RAP_DERIVED) continue;
+      // Missão semântica 2026-09-15 — UNRESOLVED_SEMANTIC_CANDIDATE é "ainda não
+      // classificado", NUNCA novidade canônica. Ele é persistido para auditoria
+      // e acompanhado em `unresolvedSemanticCandidates`, fora dos contadores.
+      if (metadata.semanticStatus === SEMANTIC_STATUS.UNRESOLVED) continue;
       // §TAREFA 02/03 — o fornecedor é o sujeito, nunca uma capacidade nova.
       if (isSubjectNameFinding({ candidate: finding.external_name, benchmark: benchmark || {} })) continue;
 
@@ -823,6 +858,10 @@ function createBenchmarkResearchService({ store, now } = {}) {
         const subjectMetadata = subject.metadata && typeof subject.metadata === 'object' ? subject.metadata : {};
         const subjectBenchmark = subjectMetadata.benchmark || { id: subject.benchmark_id };
         const axisCompleteness = buildAxisCompleteness({ axes: subjectMetadata.researchAxes || {} });
+        const unresolvedCount = own.filter((finding) => {
+          const metadata = finding.metadata && typeof finding.metadata === 'object' ? finding.metadata : {};
+          return metadata.semanticStatus === SEMANTIC_STATUS.UNRESOLVED;
+        }).length;
         return {
           id: subject.benchmark_id,
           analyzedAt,
@@ -833,6 +872,10 @@ function createBenchmarkResearchService({ store, now } = {}) {
           // Completude por eixo: "pesquisado sem achados" é resultado legítimo;
           // "não pesquisado" não pode ser lido como zero novidade (TAREFA 21).
           axisCompleteness: axisCompleteness.axes,
+          // "Ainda não classificado" é acompanhado SEPARADAMENTE da novidade —
+          // nunca conta como capability/jornada/regra nova (missão semântica).
+          unresolvedSemanticCandidates: unresolvedCount,
+          pipelineMetrics: subjectMetadata.pipelineMetrics || null,
           sources: ownSources.map((row) => ({
             id: row.id,
             url: row.url,
