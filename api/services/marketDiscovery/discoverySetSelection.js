@@ -137,12 +137,17 @@ function scoreCandidate(candidate, context) {
  * @param {Array}  [args.acceptedArchetypeKeys] arquétipos ACCEPTED do run
  * @param {number} [args.size]
  * @param {Array}  [args.excludeKeys] identidades já pesquisadas (ciclo incremental)
+ * @param {Array}  [args.reservedKeys] identidades do holdout pré-registrado
+ *   não-analisado (run real r13): nunca entram no set (seriam pesquisadas como
+ *   membro do set — leakage estrutural) e NÃO alimentam a cobertura (ainda são
+ *   desconhecidas). Permanecem elegíveis na seleção de holdout.
  * @returns {{selected: string[], rationale: Array, excluded: Array, policy: object}}
  */
-function selectDiscoverySet({ candidates, acceptedArchetypeKeys = null, size = DEFAULT_SET_SIZE, excludeKeys = [] } = {}) {
+function selectDiscoverySet({ candidates, acceptedArchetypeKeys = null, size = DEFAULT_SET_SIZE, excludeKeys = [], reservedKeys = [] } = {}) {
   const pool = list(candidates).slice().sort((a, b) => String(a.candidateKey).localeCompare(String(b.candidateKey)));
   const acceptedArchetypes = Array.isArray(acceptedArchetypeKeys) ? new Set(acceptedArchetypeKeys) : null;
   const excludedKeys = new Set(list(excludeKeys).map((key) => String(key)));
+  const reserved = new Set(list(reservedKeys).map((key) => String(key)));
   const resolveGroup = buildEffectiveGroupResolver(pool);
   const targetSize = Math.max(1, Number(size) || DEFAULT_SET_SIZE);
 
@@ -154,19 +159,26 @@ function selectDiscoverySet({ candidates, acceptedArchetypeKeys = null, size = D
   const excluded = [];
   const remaining = [];
   for (const candidate of pool) {
-    if (!excludedKeys.has(String(candidate.candidateKey))) {
-      remaining.push(candidate);
+    if (excludedKeys.has(String(candidate.candidateKey))) {
+      // Já pesquisado: fora do set, mas o que ele cobre passa a ser CONHECIDO.
+      excluded.push({ candidateKey: candidate.candidateKey, reason: 'already_researched', effectiveGroup: resolveGroup(candidate) });
+      for (const a of list(candidate.archetypes)) {
+        if (!acceptedArchetypes || acceptedArchetypes.has(a)) coveredArchetypes.add(a);
+      }
+      coveredGroups.add(resolveGroup(candidate));
+      const geography = candidate.country || candidate.region || null;
+      if (isNonEmptyString(geography)) coveredGeographies.add(String(geography));
+      for (const p of [...list(candidate.segments), ...list(candidate.targetCustomers)]) coveredCustomerProfiles.add(p);
       continue;
     }
-    // Já pesquisado: fora do set, mas o que ele cobre passa a ser CONHECIDO.
-    excluded.push({ candidateKey: candidate.candidateKey, reason: 'already_researched', effectiveGroup: resolveGroup(candidate) });
-    for (const a of list(candidate.archetypes)) {
-      if (!acceptedArchetypes || acceptedArchetypes.has(a)) coveredArchetypes.add(a);
+    if (reserved.has(String(candidate.candidateKey))) {
+      // Holdout pré-registrado não-analisado: fora do set, e NADA do que ele
+      // declara conta como conhecido — o holdout existe exatamente para medir
+      // o que o inventário NÃO cobre.
+      excluded.push({ candidateKey: candidate.candidateKey, reason: 'reserved_holdout_preregistered', effectiveGroup: resolveGroup(candidate) });
+      continue;
     }
-    coveredGroups.add(resolveGroup(candidate));
-    const geography = candidate.country || candidate.region || null;
-    if (isNonEmptyString(geography)) coveredGeographies.add(String(geography));
-    for (const p of [...list(candidate.segments), ...list(candidate.targetCustomers)]) coveredCustomerProfiles.add(p);
+    remaining.push(candidate);
   }
 
   const selected = [];

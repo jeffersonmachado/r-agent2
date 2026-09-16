@@ -226,3 +226,87 @@ describe('discoverySetSelection — ciclo incremental (excludeKeys de já pesqui
     expect(a.selected).toEqual(b.selected);
   });
 });
+
+describe('discoverySetSelection — holdout pré-registrado reservado (run real r13, 2026-09-16)', () => {
+  // Run real r13: o pool elegível era SÓ o holdout pré-registrado (wellable.co,
+  // role=validation no sample, SEM analyzedAt). Sem a reserva, o set o consumiu
+  // e o run morreu sem handoff — e, pior, abrir pesquisa profunda sobre o
+  // próprio holdout seria leakage estrutural. Holdout reservado nunca entra no
+  // set; permanece elegível na seleção de holdout.
+  const RESERVED = candidate({
+    candidateKey: 'reserved-wellness',
+    archetypes: ['personal-wellness'],
+    country: 'US',
+    segments: ['corporate'],
+    independenceGroup: 'reserved-wellness',
+    profile: { dimensions: { operationalDepth: 'high', financialDepth: 'high', customerEngagementDepth: 'high', integrationMaturity: 'high' } },
+  });
+  const NEWCOMER = candidate({
+    candidateKey: 'new-gym',
+    archetypes: ['personal-wellness'],
+    country: 'BR',
+    segments: ['gym'],
+    independenceGroup: 'new-gym',
+  });
+
+  test('candidato reservado nunca entra no set — mesmo com score maior', () => {
+    const { selected, excluded } = selectDiscoverySet({
+      candidates: [RESERVED, NEWCOMER],
+      acceptedArchetypeKeys: ['personal-wellness'],
+      size: 2,
+      reservedKeys: ['reserved-wellness'],
+    });
+
+    expect(selected).toEqual(['new-gym']);
+    expect(excluded).toEqual(expect.arrayContaining([
+      expect.objectContaining({ candidateKey: 'reserved-wellness', reason: 'reserved_holdout_preregistered' }),
+    ]));
+  });
+
+  test('reservado NÃO alimenta a cobertura do set (não foi pesquisado — é desconhecido)', () => {
+    // NEWCOMER tem o MESMO arquétipo do reservado: se o reservado contasse
+    // como coberto, NEWCOMER perderia os pontos de archetypeCoverage.
+    const { rationale } = selectDiscoverySet({
+      candidates: [RESERVED, NEWCOMER],
+      acceptedArchetypeKeys: ['personal-wellness'],
+      size: 1,
+      reservedKeys: ['reserved-wellness'],
+    });
+
+    const entry = rationale.find((r) => r.candidateKey === 'new-gym');
+    expect(entry.breakdown).toEqual(expect.arrayContaining([
+      expect.objectContaining({ dimension: 'archetypeCoverage', newArchetypes: ['personal-wellness'] }),
+    ]));
+  });
+
+  test('pool com APENAS o reservado produz set vazio (o supervisor conclui sem handoff)', () => {
+    const { selected, excluded } = selectDiscoverySet({
+      candidates: [RESERVED],
+      acceptedArchetypeKeys: ['personal-wellness'],
+      size: 1,
+      reservedKeys: ['reserved-wellness'],
+    });
+
+    expect(selected).toEqual([]);
+    expect(excluded).toEqual([
+      expect.objectContaining({ candidateKey: 'reserved-wellness', reason: 'reserved_holdout_preregistered' }),
+    ]);
+  });
+
+  test('o reservado CONTINUA elegível na seleção de holdout', () => {
+    const { selected } = selectDiscoverySet({
+      candidates: [RESERVED, NEWCOMER],
+      acceptedArchetypeKeys: ['personal-wellness'],
+      size: 1,
+      reservedKeys: ['reserved-wellness'],
+    });
+    const { holdoutKey } = selectHoldout({
+      candidates: [RESERVED, NEWCOMER],
+      selectedKeys: selected,
+      acceptedArchetypeKeys: ['personal-wellness'],
+    });
+
+    expect(selected).toEqual(['new-gym']);
+    expect(holdoutKey).toBe('reserved-wellness');
+  });
+});

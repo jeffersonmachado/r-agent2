@@ -11,6 +11,7 @@ const {
   discoverCandidates,
   seedFromBenchmark,
   researchedKeysFromSample,
+  reservedHoldoutKeysFromSample,
 } = require('../../../api/services/marketDiscovery/candidateDiscovery');
 
 const EVIDENCE = {
@@ -277,6 +278,63 @@ describe('candidateDiscovery — researchedKeysFromSample (ciclo incremental)', 
     expect(keys).toEqual(['academia-sem-site']);
     expect(researchedKeysFromSample(null)).toEqual([]);
     expect(researchedKeysFromSample({})).toEqual([]);
+  });
+});
+
+describe('candidateDiscovery — reservedHoldoutKeysFromSample (run real r13, 2026-09-16)', () => {
+  // Run real r13: o pool elegível tinha APENAS o holdout pré-registrado
+  // (wellable.co, role=validation, SEM analyzedAt). `researchedKeysFromSample`
+  // exclui só o que já foi pesquisado (analyzedAt), então o holdout reservado
+  // ficou elegível ao SET, foi selecionado e o run terminou sem handoff
+  // (`holdout_unavailable_all_candidates_selected`). Consumir o holdout no
+  // discovery set é leakage estrutural: ele deixaria de medir a generalização
+  // do inventário. Holdout pré-registrado não-analisado é RESERVADO — nunca
+  // entra no set; permanece elegível na seleção de holdout.
+
+  test('benchmark role=validation SEM analyzedAt é reservado pela identidade do universo', () => {
+    const keys = reservedHoldoutKeysFromSample({
+      benchmarks: [
+        {
+          id: 'wellable.co',
+          name: 'Wellable',
+          role: 'validation',
+          sources: [{ tier: 5, url: 'https://www.wellable.co/' }],
+        },
+        { ...SEED_BENCHMARK, analyzedAt: '2026-09-15T10:00:00.000Z' },
+      ],
+    });
+
+    expect(keys).toEqual(['wellable.co']);
+  });
+
+  test('sample.holdout.benchmarkId reserva pelo id mesmo sem role=validation explícito', () => {
+    const keys = reservedHoldoutKeysFromSample({
+      holdout: { benchmarkId: 'reservado' },
+      benchmarks: [
+        { id: 'reservado', name: 'Reservado', role: 'discovery', sources: [{ tier: 5, url: 'https://reservado.io/' }] },
+        { id: 'livre', name: 'Livre', role: 'discovery', sources: [{ tier: 5, url: 'https://livre.io/' }] },
+      ],
+    });
+
+    expect(keys).toEqual(['reservado.io']);
+  });
+
+  test('holdout JÁ analisado não é reservado (é pesquisado — vale researchedKeys); sample vazio devolve []', () => {
+    const keys = reservedHoldoutKeysFromSample({
+      benchmarks: [
+        {
+          id: 'holdout-medido',
+          name: 'Holdout Medido',
+          role: 'validation',
+          analyzedAt: '2026-09-15T10:00:00.000Z',
+          sources: [{ tier: 5, url: 'https://medido.io/' }],
+        },
+      ],
+    });
+
+    expect(keys).toEqual([]);
+    expect(reservedHoldoutKeysFromSample(null)).toEqual([]);
+    expect(reservedHoldoutKeysFromSample({})).toEqual([]);
   });
 });
 

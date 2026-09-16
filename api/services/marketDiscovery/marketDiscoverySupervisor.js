@@ -45,6 +45,7 @@ const {
   discoverCandidates,
   seedFromBenchmark,
   researchedKeysFromSample,
+  reservedHoldoutKeysFromSample,
   CANDIDATE_STATES,
   CANDIDATE_ORIGINS,
 } = require('./candidateDiscovery');
@@ -664,6 +665,14 @@ function createMarketDiscoverySupervisor({
     // que cobrem passa a contar como conhecido. A exclusão é derivada do
     // sample (mesma identidade do universo) e registrada no metadata do run.
     const incrementalExclusions = researchedKeysFromSample(sample);
+    // Reserva do holdout pré-registrado (run real r13, 2026-09-16): o holdout
+    // vigente ainda NÃO pesquisado nunca entra no set — o r13, com o pool
+    // reduzido ao próprio holdout, o selecionou e o ciclo morreu sem handoff
+    // (`holdout_unavailable_all_candidates_selected`); se tivesse sobrado
+    // holdout alternativo, o holdout original teria sido pesquisado como
+    // membro do set (leakage estrutural). A reserva só vale para o SET: o
+    // `selectHoldout` continua enxergando o reservado e pode re-confirmá-lo.
+    const reservedHoldoutKeys = reservedHoldoutKeysFromSample(sample);
     const selectable = poolRows.map((row) => ({
       candidateKey: row.candidate_key,
       name: row.name,
@@ -692,6 +701,7 @@ function createMarketDiscoverySupervisor({
       acceptedArchetypeKeys,
       size: effectiveSetSize,
       excludeKeys: incrementalExclusions,
+      reservedKeys: reservedHoldoutKeys,
     });
     const holdoutChoice = selectHoldout({
       candidates: selectable,
@@ -724,6 +734,7 @@ function createMarketDiscoverySupervisor({
           holdout: emptyHoldout,
           selected: selectionResult.selected,
           incrementalExclusions,
+          reservedHoldoutKeys,
         },
       });
       log.info('[market-discovery] run concluído sem handoff', {
@@ -771,6 +782,7 @@ function createMarketDiscoverySupervisor({
         discoverySetId: set.id,
         selected: selectionResult.selected,
         incrementalExclusions,
+        reservedHoldoutKeys,
         requestedSetSize: setSize,
         effectiveSetSize,
       },

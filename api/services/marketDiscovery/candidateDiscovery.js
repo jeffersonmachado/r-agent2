@@ -270,6 +270,42 @@ function researchedKeysFromSample(sample) {
 }
 
 /**
+ * Chaves de identidade do HOLDOUT PRÉ-REGISTRADO ainda não pesquisado
+ * (run real r13, 2026-09-16).
+ *
+ * O holdout é escolhido ANTES de qualquer pesquisa profunda exatamente para
+ * medir a generalização do inventário sobre um desconhecido. Enquanto não
+ * analisado, ele NÃO pode entrar no discovery set de um novo ciclo — ser
+ * pesquisado como membro do set apagaria o propósito da medição (leakage
+ * estrutural). O r13 demonstrou o gap: com o pool elegível reduzido ao
+ * próprio holdout, a seleção o consumiu e o run terminou sem handoff
+ * (`holdout_unavailable_all_candidates_selected`).
+ *
+ * Reservado = benchmark do sample que é o holdout vigente (role `validation`
+ * ou id declarado em `sample.holdout.benchmarkId`) E ainda não tem
+ * `analyzedAt`. Uma vez analisado, deixa de ser desconhecido: sai da reserva
+ * e passa a valer `researchedKeysFromSample`. A reserva NÃO o remove do pool
+ * de seleção de holdout — o novo ciclo pode (e deve) re-confirmá-lo.
+ *
+ * @param {object} sample config versionado da vertical
+ * @returns {string[]} chaves de candidato reservadas como holdout
+ */
+function reservedHoldoutKeysFromSample(sample) {
+  const holdoutBenchmarkId = sample?.holdout?.benchmarkId || null;
+  return list(sample?.benchmarks)
+    .filter((benchmark) => !isNonEmptyString(benchmark?.analyzedAt)
+      && (benchmark?.role === 'validation' || (holdoutBenchmarkId && benchmark?.id === holdoutBenchmarkId)))
+    .map((benchmark) => {
+      const primarySource = list(benchmark?.sources).find((source) => isNonEmptyString(source?.url));
+      return candidateIdentityKey({
+        officialSite: primarySource?.url || benchmark?.officialSite || null,
+        name: benchmark?.name || benchmark?.id || null,
+      });
+    })
+    .filter(Boolean);
+}
+
+/**
  * Funde SEEDS + resultados de pesquisa no universo de candidatos.
  *
  * Merge por `candidateKey`: quando a pesquisa confirma um seed, a evidência é
@@ -560,6 +596,7 @@ module.exports = {
   buildCandidateRecord,
   seedFromBenchmark,
   researchedKeysFromSample,
+  reservedHoldoutKeysFromSample,
   discoverCandidates,
   mergeCandidateRecords,
   candidateRecordFromPersistence,
