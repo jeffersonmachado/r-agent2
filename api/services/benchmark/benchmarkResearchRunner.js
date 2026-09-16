@@ -134,6 +134,69 @@ function filterDiscoveredSources({ candidates, officialUrl, declaredUrls = [], l
   return discovered;
 }
 
+/**
+ * FITNESS-ABS-12b — pistas de navegação da PRÓPRIA fonte oficial. Quando a
+ * busca externa é rasa (não superficia páginas do fornecedor — caso real do
+ * ciclo 3), a homepage oficial, já obtida com hash, declara as próprias
+ * páginas específicas nos seus links. Extrair esses links é descoberta de
+ * fonte verificada, nunca invenção: cada URL extraída será obtida, hasheada
+ * e inspecionada individualmente, com proveniência `homepage-crawl`.
+ *
+ * Regras: apenas http(s) resolvíveis contra a base; MESMO domínio
+ * registrável; path específico; fora assets estáticos, âncoras, mailto/tel;
+ * dedup por URL normalizada (path com barra final canônica); ordenação
+ * determinística priorizando paths com vocabulário de produto.
+ *
+ * @returns {Array<{url: string, title: string, via: 'homepage-crawl'}>}
+ */
+const CRAWL_ASSET_RE = /\.(css|js|mjs|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot|pdf|zip|mp4|webm|json|xml|txt)(\?|#|$)/i;
+const CRAWL_PRODUCT_TERM_RE = /(feature|funcionalidade|produto|product|solu|plan|pricing|pre[cç]o|platform|plataforma|app|module|modulo|capabilit|integration|integra)/i;
+
+function extractSameDomainLinks({ content, baseUrl, limit = MAX_DISCOVERED_SOURCES } = {}) {
+  const officialDomain = registrableDomain(baseUrl);
+  if (!officialDomain || !isNonEmptyString(content)) return [];
+  let base;
+  try {
+    base = new URL(String(baseUrl));
+  } catch (_) {
+    return [];
+  }
+  const seen = new Set();
+  const links = [];
+  const hrefRe = /href\s*=\s*["']([^"']+)["']/gi;
+  let match;
+  while ((match = hrefRe.exec(content)) !== null) {
+    const raw = String(match[1] || '').trim();
+    if (!raw || raw.startsWith('#')) continue;
+    if (/^(mailto|tel|javascript|data|ftp|file):/i.test(raw)) continue;
+    let resolved;
+    try {
+      resolved = new URL(raw, base);
+    } catch (_) {
+      continue;
+    }
+    if (resolved.protocol !== 'https:') continue;
+    if (registrableDomain(resolved.href) !== officialDomain) continue;
+    const pathname = resolved.pathname.replace(/\/+$/, '');
+    if (pathname === '') continue;
+    if (CRAWL_ASSET_RE.test(pathname)) continue;
+    const canonical = `${resolved.origin}${pathname}/`;
+    if (seen.has(canonical)) continue;
+    seen.add(canonical);
+    links.push({ url: canonical, title: canonical, via: 'homepage-crawl' });
+  }
+  links.sort((a, b) => {
+    const aProduct = CRAWL_PRODUCT_TERM_RE.test(a.url) ? 0 : 1;
+    const bProduct = CRAWL_PRODUCT_TERM_RE.test(b.url) ? 0 : 1;
+    if (aProduct !== bProduct) return aProduct - bProduct;
+    const aDepth = a.url.split('/').length;
+    const bDepth = b.url.split('/').length;
+    if (aDepth !== bDepth) return aDepth - bDepth;
+    return a.url < b.url ? -1 : (a.url > b.url ? 1 : 0);
+  });
+  return links.slice(0, limit);
+}
+
 function sha256Hex(value) {
   return crypto.createHash('sha256').update(String(value ?? ''), 'utf8').digest('hex');
 }
@@ -270,7 +333,10 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         url: String(discoveredCandidate.url).trim(),
         title: isNonEmptyString(discoveredCandidate.title) ? String(discoveredCandidate.title) : String(discoveredCandidate.url).trim(),
       };
-      sourceSelection = 'search-discovered';
+      // `search-discovered` (superficiada pela busca) ou `homepage-crawl`
+      // (link da própria homepage oficial) — a proveniência distinge os dois
+      // caminhos de descoberta para a auditoria.
+      sourceSelection = discoveredCandidate.via === 'homepage-crawl' ? 'homepage-crawl' : 'search-discovered';
     } else {
       const search = await callCapability('research.search', { query });
       const candidates = Array.isArray(search.output?.candidates) ? search.output.candidates : [];
@@ -513,13 +579,32 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         candidates: [],
       };
     }
+    const declared = Array.isArray(declaredUrls) ? declaredUrls : [];
     const search = await callCapability('research.search', { query });
-    const candidates = Array.isArray(search.output?.candidates) ? search.output.candidates : [];
-    return {
-      status: 'RESEARCH_SOURCES_DISCOVERED',
-      candidates: filterDiscoveredSources({ candidates, officialUrl, declaredUrls, limit }),
-      reason: null,
-    };
+    const searchCandidates = Array.isArray(search.output?.candidates) ? search.output.candidates : [];
+    const fromSearch = filterDiscoveredSources({ candidates: searchCandidates, officialUrl, declaredUrls: declared, limit })
+      .map((candidate) => ({ ...candidate, via: 'search-discovered' }));
+    if (fromSearch.length > 0) {
+      return { status: 'RESEARCH_SOURCES_DISCOVERED', candidates: fromSearch, reason: null };
+    }
+
+    // FITNESS-ABS-12b — busca externa rasa (não superficia o fornecedor): a
+    // homepage OFICIAL declara as próprias páginas específicas nos seus links.
+    // O fetch usa a capability governada (SSRF/timeout/hash aplicados lá) e a
+    // obtenção precisa ser confirmada — sem homepage obtida, sem crawl.
+    if (!isNonEmptyString(officialUrl) || !availableCapabilities().includes('research.fetch')) {
+      return { status: 'RESEARCH_SOURCES_DISCOVERED', candidates: [], reason: null };
+    }
+    const fetched = await callCapability('research.fetch', { url: officialUrl });
+    const httpStatus = Number(fetched.output?.httpStatus);
+    const content = typeof fetched.output?.content === 'string' ? fetched.output.content : '';
+    if (!Number.isFinite(httpStatus) || httpStatus >= 400 || content === '') {
+      return { status: 'RESEARCH_SOURCES_DISCOVERED', candidates: [], reason: null };
+    }
+    const declaredKeys = new Set(declared.map(normalizeDiscoveredUrl));
+    const fromCrawl = extractSameDomainLinks({ content, baseUrl: officialUrl, limit })
+      .filter((candidate) => !declaredKeys.has(normalizeDiscoveredUrl(candidate.url)));
+    return { status: 'RESEARCH_SOURCES_DISCOVERED', candidates: fromCrawl, reason: null };
   }
 
   /**
@@ -677,5 +762,6 @@ module.exports = {
   API_CAPABILITY,
   MAX_DISCOVERED_SOURCES,
   filterDiscoveredSources,
+  extractSameDomainLinks,
   createBenchmarkResearchRunner,
 };

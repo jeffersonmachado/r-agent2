@@ -250,6 +250,9 @@ describe('supervisor — redescoberta de fontes específicas (homepage-only)', (
         searchCandidates: [
           { url: 'https://listicle.example.com/melhores-wellness/', title: 'listicle cross-domain' },
         ],
+        // Homepage SEM links de navegação: nem a busca nem o crawl descobrem
+        // páginas específicas — o resultado honesto é "só a homepage".
+        pageContent: { [HOMEPAGE]: '<html><body><p>wellness para empresas</p></body></html>' },
       }),
     });
     await supervisor.service.openDiscoverySet({
@@ -262,11 +265,55 @@ describe('supervisor — redescoberta de fontes específicas (homepage-only)', (
 
     const result = await supervisor.research({ vertical: VERTICAL, sample: SAMPLE });
     const entry = result.results.find((item) => item.benchmarkId === 'vantagefit.io');
-    expect(fetchedUrls).toEqual([HOMEPAGE]);
+    expect(fetchedUrls.filter((url, index) => fetchedUrls.indexOf(url) === index)).toEqual([HOMEPAGE]);
     expect(entry.attempts.filter((attempt) => attempt.sourceSelection === 'search-discovered')).toEqual([]);
+    expect(entry.attempts.filter((attempt) => attempt.sourceSelection === 'homepage-crawl')).toEqual([]);
     // Zero achados verificados é a medida HONESTA deste benchmark — não um erro.
     const findings = await store.listFindings({ tenantId: TENANT, runId: (await store.getRun({ tenantId: TENANT, vertical: VERTICAL })).id });
     expect(findings.filter((finding) => finding.verified === true)).toEqual([]);
+  });
+
+  test('busca rasa (run real): links same-domain da PRÓPRIA homepage são descobertos via crawl', async () => {
+    const fetchedUrls = [];
+    const { supervisor, store } = buildSupervisorHarness({
+      providers: buildProviders({
+        fetchedUrls,
+        // Busca real do ciclo 3: zero resultado same-domain (só ruído).
+        searchCandidates: [
+          { url: 'https://www.lenovo.com/br/pt/lenovo-vantage/', title: 'Lenovo Vantage' },
+          { url: 'https://www.vantagemarkets.com/', title: 'Vantage Markets' },
+        ],
+        pageContent: {
+          [HOMEPAGE]: `<html><body><nav>
+            <a href="/features">Features</a>
+            <a href="https://vantagefit.io/employee-rewards/">Rewards</a>
+            <a href="https://outro-vendor.com/parceria">cross-domain — fora</a>
+            <a href="/assets/site.css">asset — fora</a>
+            <a href="mailto:hi@vantagefit.io">mail — fora</a>
+            <a href="#section">anchor — fora</a>
+            <a href="http://vantagefit.io/inseguro/">http — fora</a>
+          </nav></body></html>`,
+        },
+      }),
+    });
+    await supervisor.service.openDiscoverySet({
+      tenantId: TENANT,
+      vertical: VERTICAL,
+      researchVersion: 'fitness-rediscovery-v4',
+      benchmarkIds: ['vantagefit.io'],
+      holdoutBenchmarkId: null,
+    });
+
+    const result = await supervisor.research({ vertical: VERTICAL, sample: SAMPLE });
+    expect(result.status).toBe(RESEARCH_RUN_OUTCOMES.ANALYZED);
+    const entry = result.results.find((item) => item.benchmarkId === 'vantagefit.io');
+    const crawled = entry.attempts.filter((attempt) => attempt.sourceSelection === 'homepage-crawl');
+    expect(crawled.map((attempt) => attempt.url).sort()).toEqual([FEATURES_PAGE, REWARDS_PAGE].sort());
+    expect(crawled.every((attempt) => attempt.status === RESEARCH_RUN_STATES.EVIDENCE_CAPTURED)).toBe(true);
+
+    // Os links da homepage produzem achados VERIFICADOS como qualquer fonte específica.
+    const findings = await store.listFindings({ tenantId: TENANT, runId: (await store.getRun({ tenantId: TENANT, vertical: VERTICAL })).id });
+    expect(findings.filter((finding) => finding.verified === true).length).toBe(2);
   });
 
   test('benchmark que JÁ declara fonte específica não dispara redescoberta (sem busca extra)', async () => {

@@ -243,7 +243,12 @@ describe('FIX 2 — obtenção direta da fonte declarada (declaredUrlFallback)',
     const pacto = result.results.find((entry) => entry.benchmarkId === 'pacto');
     expect(pacto.attempts[0].status).toBe(RESEARCH_RUN_STATES.EVIDENCE_CAPTURED);
     expect(pacto.attempts[0].sourceSelection).toBe('declared-config');
-    expect(fetchedUrls).toEqual([DECLARED]);
+    // FITNESS-ABS-12b: com a declarada sendo homepage, a passada de
+    // redescoberta obtém a MESMA URL declarada para extrair links de navegação
+    // (conteúdo sem links → nenhuma fonte extra). O anti-substituição segue
+    // intacto: as duas obtenções são de EXATAMENTE a URL declarada, nenhuma
+    // outra — a duplicata é o crawl, não um substituto.
+    expect(fetchedUrls).toEqual([DECLARED, DECLARED]);
 
     // A inspeção persistida carrega a proveniência da seleção.
     const run = await store.getRun({ tenantId: TENANT, vertical: VERTICAL });
