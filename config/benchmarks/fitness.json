@@ -111,10 +111,15 @@
       "gym management software",
       "fitness studio management platform",
       "gym membership management software",
+      "gym membership software",
+      "fitness studio software",
+      "corporate wellness platform",
+      "employee wellness platform",
       "software para academia gestão",
       "sistema de gestão para academias",
       "software para estúdio de pilates e treino funcional"
     ],
+    "_categoryTermsNote": "2026-09-16 (run real r5): o vocabulário original era mais estreito que os PRÓPRIOS arquétipos do sample — o arquétipo personal-wellness é representado por benchmarks de corporate wellness (wellhub, glofox), mas nenhum termo cobria essa redação, e o fornecedor real vantagefit.io foi rejeitado com 0 sinais. Os termos adicionados ('corporate wellness platform', 'employee wellness platform', 'gym membership software', 'fitness studio software') nomeiam as CATEGORIAS já representadas no sample — nunca fornecedores. Controles negativos do mesmo dia: matthews.com (relatório imobiliário) e circuitopilates.com.br (estúdio de pilates) seguem OUT_OF_MARKET com 0 sinais no vocabulário estendido.",
     "competitorPatterns": [
       "{competitor} alternatives",
       "{competitor} competitors"
