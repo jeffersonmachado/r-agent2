@@ -326,3 +326,46 @@ describe('Market discovery — pipeline completo', () => {
     expect(run.metadata.relevanceGate).toBe('evaluated');
   });
 });
+
+describe('Market discovery — ciclo incremental (absorção)', () => {
+  test('benchmarks JÁ ANALISADOS do sample nunca voltam ao set nem ao holdout', async () => {
+    const { supervisor, store } = await buildHarness();
+    // Ciclo N+1: seed-alpha JÁ foi pesquisado (novelty medida no sample).
+    const sampleIncremental = {
+      ...SAMPLE,
+      benchmarks: [
+        { ...SAMPLE.benchmarks[0], analyzedAt: '2026-09-14T10:00:00.000Z' },
+        SAMPLE.benchmarks[1],
+      ],
+    };
+
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-v2',
+      sample: sampleIncremental,
+    });
+
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    // alpha-gym.com é a identidade do benchmark já analisado: fora do set.
+    expect(result.discoverySet.selected).not.toContain('alpha-gym.com');
+    expect(result.holdout.candidateKey).not.toBe('alpha-gym.com');
+    // A exclusão é auditável no metadata do run.
+    const run = await store.getRun({ tenantId: TENANT, vertical: 'fitness-lab', discoveryVersion: 'fitness-lab-discovery-v2' });
+    expect(run.metadata.incrementalExclusions).toEqual(expect.arrayContaining(['alpha-gym.com']));
+    // O set continua válido: só candidatos NOVOS, com evidência.
+    expect(result.discoverySet.selected.length).toBeGreaterThan(0);
+    expect(result.discoverySet.selected).toEqual(expect.arrayContaining(['gymnovo.com']));
+  });
+
+  test('sem benchmarks analisados o comportamento é o do primeiro ciclo', async () => {
+    const { supervisor } = await buildHarness();
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-v1',
+      sample: SAMPLE,
+    });
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    // Nada analisado → nada excluído: seeds competem normalmente.
+    expect(result.discoverySet.selected).toContain('alpha-gym.com');
+  });
+});

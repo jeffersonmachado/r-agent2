@@ -234,6 +234,36 @@ function seedFromBenchmark(vertical, benchmark) {
 }
 
 /**
+ * Chaves de identidade dos benchmarks JÁ PESQUISADOS do sample (ciclo
+ * incremental — loop de absorção 2026-09-15).
+ *
+ * Um benchmark com `analyzedAt` tem novelty medida no sample versionado.
+ * Re-selecioná-lo num novo ciclo criaria uma entrada fresca SEM pesquisa por
+ * cima da medida (perda de evidência + identidade duplicada no sample). A
+ * seleção incremental exclui exatamente estas chaves — derivadas pela MESMA
+ * regra de identidade do universo (domínio registrável do site oficial, nome
+ * normalizado como fallback), para que o seed confirmado e o benchmark do
+ * sample falem a mesma língua.
+ *
+ * Benchmark NÃO analisado não é excluído: ainda é desconhecido legítimo.
+ *
+ * @param {object} sample config versionado da vertical
+ * @returns {string[]} chaves de candidato já pesquisadas
+ */
+function researchedKeysFromSample(sample) {
+  return list(sample?.benchmarks)
+    .filter((benchmark) => isNonEmptyString(benchmark?.analyzedAt))
+    .map((benchmark) => {
+      const primarySource = list(benchmark?.sources).find((source) => isNonEmptyString(source?.url));
+      return candidateIdentityKey({
+        officialSite: primarySource?.url || benchmark?.officialSite || null,
+        name: benchmark?.name || benchmark?.id || null,
+      });
+    })
+    .filter(Boolean);
+}
+
+/**
  * Funde SEEDS + resultados de pesquisa no universo de candidatos.
  *
  * Merge por `candidateKey`: quando a pesquisa confirma um seed, a evidência é
@@ -324,5 +354,6 @@ module.exports = {
   evaluateCandidateAcceptance,
   buildCandidateRecord,
   seedFromBenchmark,
+  researchedKeysFromSample,
   discoverCandidates,
 };

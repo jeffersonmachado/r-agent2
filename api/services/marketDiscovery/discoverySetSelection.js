@@ -124,15 +124,25 @@ function scoreCandidate(candidate, context) {
 /**
  * Seleciona o Discovery Set (greedy determinístico com rationale persistível).
  *
+ * Ciclo incremental (`excludeKeys`): candidatos JÁ PESQUISADOS (benchmarks com
+ * `analyzedAt` no sample, identidade derivada por `researchedKeysFromSample`)
+ * nunca voltam ao set — re-selecioná-los apagaria a novelty medida. A
+ * cobertura PARTE do inventário já pesquisado: o set novo pontua o que
+ * acrescenta ALÉM do que já se conhece. O resolver de grupo efetivo continua
+ * enxergando os excluídos (clone de produto pesquisado não conta como grupo
+ * novo).
+ *
  * @param {object} args
  * @param {Array}  args.candidates  candidatos ACCEPTED do universo
  * @param {Array}  [args.acceptedArchetypeKeys] arquétipos ACCEPTED do run
  * @param {number} [args.size]
+ * @param {Array}  [args.excludeKeys] identidades já pesquisadas (ciclo incremental)
  * @returns {{selected: string[], rationale: Array, excluded: Array, policy: object}}
  */
-function selectDiscoverySet({ candidates, acceptedArchetypeKeys = null, size = DEFAULT_SET_SIZE } = {}) {
+function selectDiscoverySet({ candidates, acceptedArchetypeKeys = null, size = DEFAULT_SET_SIZE, excludeKeys = [] } = {}) {
   const pool = list(candidates).slice().sort((a, b) => String(a.candidateKey).localeCompare(String(b.candidateKey)));
   const acceptedArchetypes = Array.isArray(acceptedArchetypeKeys) ? new Set(acceptedArchetypeKeys) : null;
+  const excludedKeys = new Set(list(excludeKeys).map((key) => String(key)));
   const resolveGroup = buildEffectiveGroupResolver(pool);
   const targetSize = Math.max(1, Number(size) || DEFAULT_SET_SIZE);
 
@@ -141,10 +151,26 @@ function selectDiscoverySet({ candidates, acceptedArchetypeKeys = null, size = D
   const coveredGeographies = new Set();
   const coveredCustomerProfiles = new Set();
 
+  const excluded = [];
+  const remaining = [];
+  for (const candidate of pool) {
+    if (!excludedKeys.has(String(candidate.candidateKey))) {
+      remaining.push(candidate);
+      continue;
+    }
+    // Já pesquisado: fora do set, mas o que ele cobre passa a ser CONHECIDO.
+    excluded.push({ candidateKey: candidate.candidateKey, reason: 'already_researched', effectiveGroup: resolveGroup(candidate) });
+    for (const a of list(candidate.archetypes)) {
+      if (!acceptedArchetypes || acceptedArchetypes.has(a)) coveredArchetypes.add(a);
+    }
+    coveredGroups.add(resolveGroup(candidate));
+    const geography = candidate.country || candidate.region || null;
+    if (isNonEmptyString(geography)) coveredGeographies.add(String(geography));
+    for (const p of [...list(candidate.segments), ...list(candidate.targetCustomers)]) coveredCustomerProfiles.add(p);
+  }
+
   const selected = [];
   const rationale = [];
-  const excluded = [];
-  const remaining = [...pool];
 
   while (selected.length < targetSize && remaining.length > 0) {
     let best = null;
@@ -208,18 +234,25 @@ function selectDiscoverySet({ candidates, acceptedArchetypeKeys = null, size = D
  * set (arquétipo não coberto, grupo não coberto, geografia não coberta);
  * desempate por candidate_key.
  *
+ * Ciclo incremental (`excludeKeys`): um candidato JÁ PESQUISADO não pode ser
+ * holdout (não é mais desconhecido) — e o que ele cobre conta como CONHECIDO
+ * na medida de distância: o holdout mede a generalização do inventário
+ * completo (set + já pesquisados), não só do set novo.
+ *
  * @returns {{holdoutKey: string|null, basis: object}}
  */
-function selectHoldout({ candidates, selectedKeys, acceptedArchetypeKeys = null }) {
+function selectHoldout({ candidates, selectedKeys, acceptedArchetypeKeys = null, excludeKeys = [] } = {}) {
   const inSet = new Set(list(selectedKeys));
-  const pool = list(candidates).filter((c) => !inSet.has(c.candidateKey));
+  const excludedKeys = new Set(list(excludeKeys).map((key) => String(key)));
+  const pool = list(candidates).filter((c) => !inSet.has(c.candidateKey) && !excludedKeys.has(String(c.candidateKey)));
   if (pool.length === 0) return { holdoutKey: null, basis: { reason: 'no_candidate_outside_discovery_set' } };
 
-  const selected = list(candidates).filter((c) => inSet.has(c.candidateKey));
-  const coveredArchetypes = new Set(selected.flatMap((c) => list(c.archetypes)));
+  // Contexto de conhecimento = set novo + já pesquisados.
+  const known = list(candidates).filter((c) => inSet.has(c.candidateKey) || excludedKeys.has(String(c.candidateKey)));
+  const coveredArchetypes = new Set(known.flatMap((c) => list(c.archetypes)));
   const resolveGroup = buildEffectiveGroupResolver(list(candidates));
-  const coveredGroups = new Set(selected.map((c) => resolveGroup(c)));
-  const coveredGeographies = new Set(selected.map((c) => String(c.country || c.region || '')).filter(Boolean));
+  const coveredGroups = new Set(known.map((c) => resolveGroup(c)));
+  const coveredGeographies = new Set(known.map((c) => String(c.country || c.region || '')).filter(Boolean));
   const acceptedArchetypes = Array.isArray(acceptedArchetypeKeys) ? new Set(acceptedArchetypeKeys) : null;
 
   const scored = pool.map((candidate) => {

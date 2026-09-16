@@ -762,10 +762,14 @@ function createBenchmarkResearchService({ store, now } = {}) {
    *
    * Um achado com `canonicalId` JÁ mapeado no inventário canônico não é
    * novidade: é confirmação. Só capacidade/jornada/regra NÃO mapeada conta.
+   * Novidade INCREMENTAL (2026-09-16): `seen` é o acumulado COMPARTILHADO da
+   * curva — itens já emitidos por benchmarks anteriores (na ordem do
+   * discovery) ou já conhecidos do sample anterior não contam como novos de
+   * novo. A curva do engine mede "o que cada benchmark ACRESCENTA", e sem o
+   * acumulado a mesma descoberta inflava a taxa de todo benchmark tardio.
    */
-  function buildNovelty(findings, sourcesById, benchmark = null) {
+  function buildNovelty(findings, sourcesById, benchmark = null, seen = new Map()) {
     const novelty = emptyNovelty();
-    const seen = new Map();
     for (const finding of findings) {
       if (finding.verified !== true) continue;
       // §TAREFA 20 do engine: achado já mapeado no inventário canônico é
@@ -824,7 +828,22 @@ function createBenchmarkResearchService({ store, now } = {}) {
    *
    * Baseline canônico, arquétipos, dimensões e criticalidade NÃO são tocados.
    */
-  async function buildSamplePatch({ tenantId, vertical, inventoryVersion = null }) {
+  /**
+   * PATCH para o sample do engine — apenas campos de PESQUISA, no formato que o
+   * engine realmente valida:
+   *   - `findingsInventory` é ARRAY de referências (não contadores);
+   *   - `inventoryVersion` por benchmark (exigido por `analysisEvidence`);
+   *   - `sources[]` com `id` (para `sourceRef` resolver);
+   *   - `evidence[]` declarada (para `evidenceRef` resolver);
+   *   - apenas achados VERIFICADOS alimentam `novelty`.
+   *
+   * Baseline canônico, arquétipos, dimensões e criticalidade NÃO são tocados.
+   *
+   * `priorSample` (ciclo N+1): o acumulado de novidade começa no que o sample
+   * versionado JÁ conhece — exceto os benchmarks cobertos por ESTE run, cuja
+   * novelty está sendo substituída (semeá-la impediria a re-medida).
+   */
+  async function buildSamplePatch({ tenantId, vertical, inventoryVersion = null, priorSample = null }) {
     const tenant = requireTenant(tenantId);
     const run = await store.getRun({ tenantId: tenant, vertical });
     if (!run) throw blocker(RESEARCH_BLOCKERS.NO_DISCOVERY_SET, String(vertical));
@@ -836,6 +855,24 @@ function createBenchmarkResearchService({ store, now } = {}) {
       store.listEvidence({ tenantId: tenant, runId: run.id }),
     ]);
     const sourcesById = new Map(sources.map((row) => [row.id, row]));
+
+    // Acumulado de identidades de novidade: semeado pelo sample anterior e
+    // preenchido benchmark a benchmark NA ORDEM do discovery (o store devolve
+    // os subjects em discovery_order ASC).
+    const subjectIds = new Set(subjects.map((subject) => String(subject.benchmark_id)));
+    const accumulatedNovelty = new Map();
+    for (const priorBenchmark of (Array.isArray(priorSample?.benchmarks) ? priorSample.benchmarks : [])) {
+      if (subjectIds.has(String(priorBenchmark?.id ?? ''))) continue;
+      for (const fields of Object.values(NOVELTY_FIELDS)) {
+        const items = Array.isArray(priorBenchmark?.novelty?.[fields.new]) ? priorBenchmark.novelty[fields.new] : [];
+        for (const item of items) {
+          const identity = isNonEmptyString(item?.normalizedId)
+            ? String(item.normalizedId)
+            : String(item?.name ?? '').toLowerCase();
+          if (identity) accumulatedNovelty.set(`${fields.new}:${identity}`, true);
+        }
+      }
+    }
 
     return {
       vertical: run.vertical,
@@ -885,7 +922,7 @@ function createBenchmarkResearchService({ store, now } = {}) {
             httpStatus: row.http_status,
             retrievedAt: (toIso(row.verified_at || row.created_at) || '').slice(0, 10) || null,
           })),
-          novelty: buildNovelty(own, sourcesById, subjectBenchmark),
+          novelty: buildNovelty(own, sourcesById, subjectBenchmark, accumulatedNovelty),
         };
       }),
     };

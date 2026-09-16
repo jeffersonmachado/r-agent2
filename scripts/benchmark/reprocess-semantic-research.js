@@ -56,9 +56,24 @@ const FROM_VERSION = arg('from-version', null);
 const SAMPLE_PATH = path.resolve(ROOT_DIR, arg('sample', `config/benchmarks/${VERTICAL}.json`));
 const REPORT_PATH = path.resolve(ROOT_DIR, arg('report', `reports/benchmark-semantic-reprocess-${VERTICAL}.json`));
 
-if (!TO_VERSION) {
-  process.stderr.write('uso: --to-version é obrigatório\n');
-  process.exit(2);
+/**
+ * Decisão PURA de reprocessamento do holdout (loop de absorção 2026-09-15).
+ *
+ * O reprocesso semântico reclassifica achados JÁ persistidos — não é pesquisa
+ * nova e NUNCA abre o holdout cedo. Duas bases legítimas, ambas auditáveis:
+ *   - `saturation_marked`: o engine marcou saturação aparente NESTE ciclo (o
+ *     caminho original: holdout abre depois da saturação);
+ *   - `previously_analyzed_in_sample`: o sample versionado registra
+ *     `analyzedAt` do holdout — ele já foi ABERTO legitimamente (pré-registro
+ *     + saturação de um ciclo anterior). Sem esta base, um holdout medido com
+ *     o classificador antigo ficaria preso à novelty bruta para sempre.
+ * Holdout nunca aberto continua proibido (`holdout_not_opened`).
+ */
+function shouldReprocessHoldout({ holdoutBenchmarkId, saturationMarked, previouslyAnalyzed }) {
+  if (!isNonEmptyString(holdoutBenchmarkId)) return { reprocess: false, basis: 'no_holdout' };
+  if (saturationMarked === true) return { reprocess: true, basis: 'saturation_marked' };
+  if (previouslyAnalyzed === true) return { reprocess: true, basis: 'previously_analyzed_in_sample' };
+  return { reprocess: false, basis: 'holdout_not_opened' };
 }
 
 const { connect, getSequelize, close } = require('../../api/db/sequelize');
@@ -97,6 +112,10 @@ function rawMetricsOf(findings) {
 }
 
 async function main() {
+  if (!TO_VERSION) {
+    process.stderr.write('uso: --to-version é obrigatório\n');
+    process.exit(2);
+  }
   const sample = JSON.parse(fs.readFileSync(SAMPLE_PATH, 'utf8'));
   const sampleBenchmarks = new Map((sample.benchmarks || []).map((benchmark) => [benchmark.id, benchmark]));
   const discoverySet = (sample.benchmarks || [])
@@ -466,8 +485,22 @@ async function main() {
     saturationEvaluation = { error: error.code || error.message };
   }
 
-  const holdout = { benchmarkId: holdoutBenchmarkId, saturationMarked, saturationEvaluation, reprocessed: false, entry: null };
-  if (holdoutBenchmarkId && saturationMarked) {
+  const holdoutPreviouslyAnalyzed = isNonEmptyString(
+    holdoutBenchmarkId && sampleBenchmarks.get(holdoutBenchmarkId)?.analyzedAt,
+  );
+  const holdoutDecision = shouldReprocessHoldout({
+    holdoutBenchmarkId,
+    saturationMarked,
+    previouslyAnalyzed: holdoutPreviouslyAnalyzed,
+  });
+  const holdout = { benchmarkId: holdoutBenchmarkId, saturationMarked, reprocessBasis: holdoutDecision.basis, saturationEvaluation, reprocessed: false, entry: null };
+  if (holdoutDecision.reprocess) {
+    if (!saturationMarked) {
+      // Reprocessar um holdout JÁ ABERTO legitimamente exige o flag operacional
+      // no run novo (a máquina de estados recusa markAnalyzed sem ele). A base
+      // registrada é a abertura anterior — NUNCA uma alegação de saturação.
+      await service.markApparentSaturation({ tenantId: TENANT, vertical: VERTICAL });
+    }
     holdout.entry = await reprocessBenchmark(holdoutBenchmarkId);
     holdout.reprocessed = true;
     if (holdout.entry?.pipeline) totals.after = mergePipelineMetrics(totals.after, holdout.entry.pipeline);
@@ -520,7 +553,11 @@ async function main() {
   await close();
 }
 
-main().catch((error) => {
-  process.stderr.write(`[reprocess] FALHOU: ${error.code || ''} ${error.message}\n`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`[reprocess] FALHOU: ${error.code || ''} ${error.message}\n`);
+    process.exit(1);
+  });
+}
+
+module.exports = { shouldReprocessHoldout };

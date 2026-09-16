@@ -44,6 +44,7 @@ const {
 const {
   discoverCandidates,
   seedFromBenchmark,
+  researchedKeysFromSample,
   CANDIDATE_STATES,
 } = require('./candidateDiscovery');
 const { independenceReport } = require('./independence');
@@ -566,6 +567,11 @@ function createMarketDiscoverySupervisor({
     });
 
     // ── DISCOVERY SET ───────────────────────────────────────────────────
+    // Ciclo incremental (loop de absorção): benchmarks com `analyzedAt` no
+    // sample JÁ foram pesquisados — nunca voltam ao set nem ao holdout, e o
+    // que cobrem passa a contar como conhecido. A exclusão é derivada do
+    // sample (mesma identidade do universo) e registrada no metadata do run.
+    const incrementalExclusions = researchedKeysFromSample(sample);
     const selectable = analyzed.map((row) => ({
       candidateKey: row.candidate_key,
       name: row.name,
@@ -584,6 +590,7 @@ function createMarketDiscoverySupervisor({
       candidates: selectable,
       acceptedArchetypeKeys,
       size: setSize,
+      excludeKeys: incrementalExclusions,
     });
     const set = await store.recordDiscoverySet({
       tenantId: discoveryTenant,
@@ -601,7 +608,7 @@ function createMarketDiscoverySupervisor({
       tenantId: discoveryTenant,
       runId: run.id,
       state: DISCOVERY_RUN_STATES.DISCOVERY_SET_SELECTED,
-      metadata: { discoverySetId: set.id, selected: selectionResult.selected },
+      metadata: { discoverySetId: set.id, selected: selectionResult.selected, incrementalExclusions },
     });
 
     // ── HOLDOUT PREREGISTRATION ─────────────────────────────────────────
@@ -611,6 +618,7 @@ function createMarketDiscoverySupervisor({
       candidates: selectable,
       selectedKeys: selectionResult.selected,
       acceptedArchetypeKeys,
+      excludeKeys: incrementalExclusions,
     });
     let holdout = null;
     if (holdoutChoice.holdoutKey) {

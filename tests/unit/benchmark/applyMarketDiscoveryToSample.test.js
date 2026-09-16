@@ -189,6 +189,37 @@ describe('apply-market-discovery-to-sample — núcleo puro', () => {
       expect(JSON.stringify(next[key])).toBe(JSON.stringify(sample[key]));
     }
   });
+
+  test('a entrada derivada carrega FONTES DECLARADAS — sem elas o plano de pesquisa a pula', () => {
+    // Gap confirmado em 2026-09-15: o plano de deep research
+    // (`buildResearchPlanFromSample`) IGNORA benchmark sem `sources`. Uma
+    // entrada aplicada pelo gerador sem fonte declarada entrava no sample e
+    // nunca era pesquisada — lineage cortada entre market discovery e deep
+    // research. A fonte declarada vem da EVIDÊNCIA do run (nunca inventada).
+    const next = applyMarketDiscoveryToSample({ sample: buildSample(), runExport: buildRunExport() });
+    const alpha = next.benchmarks.find((b) => b.id === 'alpha-gym.com');
+
+    expect(Array.isArray(alpha.sources)).toBe(true);
+    expect(alpha.sources.length).toBeGreaterThan(0);
+    expect(alpha.sources[0]).toEqual(expect.objectContaining({
+      url: 'https://alpha-gym.com/',
+      tier: expect.any(Number),
+    }));
+
+    // O plano REAL de pesquisa não pode pular a entrada derivada.
+    const { buildResearchPlanFromSample } = require('../../../api/services/benchmark/benchmarkResearchSupervisor');
+    const plan = buildResearchPlanFromSample(next);
+    expect(plan.skipped.map((s) => s.benchmarkId)).not.toContain('alpha-gym.com');
+    const planned = plan.benchmarks.find((b) => b.benchmarkId === 'alpha-gym.com');
+    expect(planned).toBeDefined();
+    expect(planned.declaredSources.length).toBeGreaterThan(0);
+
+    // O holdout (role validation) também precisa ser pesquisável após a
+    // saturação aparente — mesma exigência de fonte declarada.
+    const holdout = next.benchmarks.find((b) => b.id === 'gymnovo.com');
+    expect(Array.isArray(holdout.sources)).toBe(true);
+    expect(holdout.sources.length).toBeGreaterThan(0);
+  });
 });
 
 describe('apply-market-discovery-to-sample — CLI com --check', () => {

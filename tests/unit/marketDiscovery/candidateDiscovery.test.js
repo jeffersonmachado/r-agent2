@@ -10,6 +10,7 @@ const {
   buildCandidateRecord,
   discoverCandidates,
   seedFromBenchmark,
+  researchedKeysFromSample,
 } = require('../../../api/services/marketDiscovery/candidateDiscovery');
 
 const EVIDENCE = {
@@ -234,5 +235,47 @@ describe('candidateDiscovery — gate de relevância de mercado (T-S2)', () => {
       marketRelevance: { evaluated: false, state: 'NOT_EVALUABLE', accepted: true, reason: 'market_context_not_declared' },
     });
     expect(record.state).toBe(CANDIDATE_STATES.ACCEPTED);
+  });
+});
+
+describe('candidateDiscovery — researchedKeysFromSample (ciclo incremental)', () => {
+  // Loop de absorção: benchmarks com `analyzedAt` já foram pesquisados e têm
+  // novelty medida no sample. A seleção de um novo ciclo precisa excluí-los
+  // PELA MESMA IDENTIDADE usada no universo (domínio registrável do site
+  // oficial; nome normalizado como fallback).
+
+  test('deriva a chave de identidade dos benchmarks ANALISADOS', () => {
+    const keys = researchedKeysFromSample({
+      benchmarks: [
+        { ...SEED_BENCHMARK, analyzedAt: '2026-09-15T10:00:00.000Z' },
+        {
+          id: 'zenplanner',
+          name: 'Zen Planner',
+          sources: [{ tier: 5, url: 'https://www.zenplanner.com/' }],
+          analyzedAt: '2026-09-15T11:00:00.000Z',
+        },
+      ],
+    });
+    expect(keys).toEqual(expect.arrayContaining(['w12.com.br', 'zenplanner.com']));
+    expect(keys).toHaveLength(2);
+  });
+
+  test('benchmark NÃO analisado não é excluído (ainda é desconhecido legítimo)', () => {
+    const keys = researchedKeysFromSample({
+      benchmarks: [
+        { ...SEED_BENCHMARK, analyzedAt: '2026-09-15T10:00:00.000Z' },
+        { id: 'novo', name: 'Novo', sources: [{ tier: 5, url: 'https://novo.com.br/' }] },
+      ],
+    });
+    expect(keys).toEqual(['w12.com.br']);
+  });
+
+  test('sem URL parseável cai para o nome normalizado; sample vazio devolve []', () => {
+    const keys = researchedKeysFromSample({
+      benchmarks: [{ id: 'sem-site', name: 'Academia Sem Site', analyzedAt: '2026-09-15T10:00:00.000Z' }],
+    });
+    expect(keys).toEqual(['academia-sem-site']);
+    expect(researchedKeysFromSample(null)).toEqual([]);
+    expect(researchedKeysFromSample({})).toEqual([]);
   });
 });

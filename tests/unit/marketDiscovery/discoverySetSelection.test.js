@@ -127,3 +127,102 @@ describe('discoverySetSelection — holdout antes da pesquisa profunda', () => {
     expect(basis.reason).toBe('no_candidate_outside_discovery_set');
   });
 });
+
+describe('discoverySetSelection — ciclo incremental (excludeKeys de já pesquisados)', () => {
+  // Loop de absorção da missão: depois que um benchmark foi PESQUISADO
+  // (analyzedAt), ele já consta do sample com novelty medida. Re-selecioná-lo
+  // criaria uma entrada fresca SEM pesquisa por cima da medida — perda de
+  // evidência e duplicidade de identidade no sample. A seleção de um novo
+  // ciclo precisa excluir o que já foi pesquisado e medir cobertura A PARTIR
+  // do que já se conhece.
+
+  test('candidato excluído (já pesquisado) nunca é selecionado, mesmo com o maior score', () => {
+    const withoutExclusion = selectDiscoverySet({
+      candidates: POOL,
+      acceptedArchetypeKeys: ['independent-gym', 'financial-billing', 'student-digital-experience'],
+      size: 2,
+    });
+    expect(withoutExclusion.selected).toContain('alpha'); // sanity: sem exclusão, alpha lidera
+
+    const { selected, excluded } = selectDiscoverySet({
+      candidates: POOL,
+      acceptedArchetypeKeys: ['independent-gym', 'financial-billing', 'student-digital-experience'],
+      size: 2,
+      excludeKeys: ['alpha'],
+    });
+
+    expect(selected).not.toContain('alpha');
+    expect(selected).toHaveLength(2);
+    expect(excluded).toEqual(expect.arrayContaining([
+      expect.objectContaining({ candidateKey: 'alpha', reason: 'already_researched' }),
+    ]));
+  });
+
+  test('cobertura parte do inventário já pesquisado: arquétipo já coberto não pontua de novo', () => {
+    // alpha (excluído) já cobre independent-gym. delta-fitness-like só traria
+    // o mesmo arquétipo; beta traz financial-billing (não coberto pelos
+    // excluídos). A seleção incremental deve refletir o que FALTA.
+    const pool = [
+      candidate({ candidateKey: 'researched-gym', archetypes: ['independent-gym'], country: 'BR', independenceGroup: 'rg' }),
+      candidate({ candidateKey: 'same-archetype-new', archetypes: ['independent-gym'], country: 'BR', independenceGroup: 'san' }),
+      candidate({ candidateKey: 'new-archetype', archetypes: ['financial-billing'], country: 'BR', independenceGroup: 'na' }),
+    ];
+    const { selected, rationale } = selectDiscoverySet({
+      candidates: pool,
+      acceptedArchetypeKeys: ['independent-gym', 'financial-billing'],
+      size: 1,
+      excludeKeys: ['researched-gym'],
+    });
+
+    expect(selected).toEqual(['new-archetype']);
+    expect(rationale[0].breakdown.map((d) => d.dimension)).toContain('archetypeCoverage');
+  });
+
+  test('holdout nunca é um candidato já pesquisado', () => {
+    const { holdoutKey, basis } = selectHoldout({
+      candidates: POOL,
+      selectedKeys: ['alpha'],
+      acceptedArchetypeKeys: ['independent-gym', 'financial-billing', 'student-digital-experience'],
+      excludeKeys: ['beta', 'gamma', 'gamma-wl'],
+    });
+
+    // Todos fora do set estão excluídos → não existe holdout honesto.
+    expect(holdoutKey).toBeNull();
+    expect(basis.reason).toBe('no_candidate_outside_discovery_set');
+  });
+
+  test('distância do holdout é medida contra selecionados E já pesquisados', () => {
+    const pool = [
+      candidate({ candidateKey: 'researched-billing', archetypes: ['financial-billing'], country: 'BR', independenceGroup: 'rb' }),
+      candidate({ candidateKey: 'in-set', archetypes: ['independent-gym'], country: 'BR', independenceGroup: 'is' }),
+      candidate({ candidateKey: 'hopeful', archetypes: ['financial-billing'], country: 'BR', independenceGroup: 'hopeful' }),
+    ];
+    const { holdoutKey, basis } = selectHoldout({
+      candidates: pool,
+      selectedKeys: ['in-set'],
+      acceptedArchetypeKeys: ['independent-gym', 'financial-billing'],
+      excludeKeys: ['researched-billing'],
+    });
+
+    expect(holdoutKey).toBe('hopeful');
+    // financial-billing JÁ é conhecido (pesquisado): não conta como distância.
+    const factors = basis.factors.map((f) => f.reason);
+    expect(factors).not.toContain('archetype_not_covered');
+    expect(factors).toContain('independence_group_not_covered');
+  });
+
+  test('sem excludeKeys o comportamento é o de sempre (compatibilidade)', () => {
+    const a = selectDiscoverySet({
+      candidates: POOL,
+      acceptedArchetypeKeys: ['independent-gym', 'financial-billing', 'student-digital-experience'],
+      size: 3,
+    });
+    const b = selectDiscoverySet({
+      candidates: POOL,
+      acceptedArchetypeKeys: ['independent-gym', 'financial-billing', 'student-digital-experience'],
+      size: 3,
+      excludeKeys: [],
+    });
+    expect(a.selected).toEqual(b.selected);
+  });
+});

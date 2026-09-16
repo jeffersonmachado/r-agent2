@@ -338,6 +338,9 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
       const patch = await supervisor.buildSamplePatch({
         vertical,
         inventoryVersion: loaded.sample.inventoryVersion || null,
+        // Ciclo N+1: a novidade dos benchmarks do run é medida contra o
+        // canônico + o que o sample versionado já conhece.
+        priorSample: loaded.sample,
       });
       // Validação pós-merge COM O ENGINE: se o resultado não é avaliável, a
       // escrita é abortada e o arquivo anterior é restaurado.

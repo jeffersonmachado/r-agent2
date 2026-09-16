@@ -88,6 +88,40 @@ function evidenceRefsOf(candidate) {
     .sort();
 }
 
+/**
+ * Fontes DECLARADAS do benchmark derivado — o plano de deep research
+ * (`buildResearchPlanFromSample`) ignora benchmark sem `sources`, então a
+ * entrada aplicada precisa carregá-las ou jamais seria pesquisada. As fontes
+ * vêm da EVIDÊNCIA persistida do run (URL + tier + hash), nunca inventadas;
+ * o site oficial entra como fonte declarada ainda que a evidência aponte
+ * para uma página específica do domínio.
+ */
+function declaredSourcesOf(candidate) {
+  const byUrl = new Map();
+  for (const item of list(candidate?.sourceEvidence ?? candidate?.source_evidence)) {
+    const url = String(item?.url || '').trim();
+    if (!url || byUrl.has(url)) continue;
+    byUrl.set(url, {
+      url,
+      tier: Number.isFinite(Number(item?.tier)) ? Number(item.tier) : 5,
+      specificity: 'official',
+      provenance: {
+        evidenceRef: item?.evidenceRef ? String(item.evidenceRef) : null,
+        contentHash: item?.contentHash ? String(item.contentHash) : null,
+      },
+    });
+  }
+  const site = String(candidate?.officialSite || candidate?.official_site || '').trim();
+  if (site && !byUrl.has(site)) {
+    byUrl.set(site, { url: site, tier: 5, specificity: 'official' });
+  }
+  const apiDocs = String(candidate?.apiDocs || candidate?.api_docs || '').trim();
+  if (apiDocs && !byUrl.has(apiDocs)) {
+    byUrl.set(apiDocs, { url: apiDocs, tier: 5, specificity: 'api-docs' });
+  }
+  return [...byUrl.values()];
+}
+
 function candidateEntry(candidate, { role, order, runExport }) {
   return {
     id: String(candidate.candidateKey || candidate.candidate_key),
@@ -98,6 +132,7 @@ function candidateEntry(candidate, { role, order, runExport }) {
     independenceGroup: candidate.independenceGroup || candidate.independence_group || null,
     cloneOf: candidate.cloneOf || candidate.clone_of || null,
     officialSite: candidate.officialSite || candidate.official_site || null,
+    sources: declaredSourcesOf(candidate),
     country: candidate.country || null,
     segments: list(candidate.segments),
     targetCustomers: list(candidate.targetCustomers || candidate.target_customers),

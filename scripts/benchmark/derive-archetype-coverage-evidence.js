@@ -17,7 +17,14 @@
  * recente da vertical no tenant system) + config/benchmarks/<vertical>.json.
  * Saída: reports/benchmark-archetype-evidence.json.
  *
- * Uso: node scripts/benchmark/derive-archetype-coverage-evidence.js [--vertical fitness] [--json]
+ * WRITE MODE (2026-09-16): o bloco `archetypeEvidence` do sample é DERIVADO
+ * por este gerador (`--write`), nunca digitado. Quando um patch de pesquisa
+ * substitui o `findingsInventory`, o bloco anterior fica stale (referências
+ * a achados de outro run) e precisa ser re-derivado do MESMO run corrente —
+ * `--check` detecta o drift. Benchmark sem suporte tem o bloco removido:
+ * prova velha não é prova.
+ *
+ * Uso: node scripts/benchmark/derive-archetype-coverage-evidence.js [--vertical fitness] [--json] [--write|--check]
  */
 
 const fs = require('fs');
@@ -32,16 +39,52 @@ const {
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const NORMALIZATION_PATH = path.join(ROOT_DIR, 'config', 'benchmark-normalization.json');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'benchmark-archetype-evidence.json');
+const GENERATOR_ID = 'scripts/benchmark/derive-archetype-coverage-evidence.js';
 
 function readJson(absPath) {
   return JSON.parse(fs.readFileSync(absPath, 'utf8'));
 }
 
+/**
+ * Núcleo PURO: aplica os vereditos derivados ao sample. Só a chave
+ * `archetypeEvidence` dos benchmarks é gerenciada; todo o resto é preservado.
+ * Determinístico: `provenance.derivedAt` vem do `registered_at` do run (fato
+ * persistido), nunca do relógio.
+ */
+function applyArchetypeEvidence({ sample, benchmarkVerdicts, provenance }) {
+  const verdictsByBenchmark = new Map(
+    (Array.isArray(benchmarkVerdicts) ? benchmarkVerdicts : []).map((v) => [String(v.benchmarkId), v]),
+  );
+  const next = JSON.parse(JSON.stringify(sample));
+  next.benchmarks = (Array.isArray(next.benchmarks) ? next.benchmarks : []).map((benchmark) => {
+    const verdict = verdictsByBenchmark.get(String(benchmark.id));
+    const evidence = verdict && verdict.declaredArchetypeEvidence;
+    const copy = { ...benchmark };
+    if (evidence && evidence.supported === true) {
+      copy.archetypeEvidence = {
+        derivation: { ...provenance },
+        supported: true,
+        reason: evidence.reason || null,
+        supportingFindings: (Array.isArray(evidence.supportingFindings) ? evidence.supportingFindings : [])
+          .map((entry) => ({ ...entry, findingId: entry.findingId || entry.id || null })),
+        verifiedFindings: Number(evidence.verifiedFindings) || 0,
+        totalFindings: Number(evidence.totalFindings) || 0,
+      };
+    } else {
+      delete copy.archetypeEvidence;
+    }
+    return copy;
+  });
+  return next;
+}
+
 function parseArgs(argv) {
-  const args = { vertical: 'fitness', json: false };
+  const args = { vertical: 'fitness', json: false, write: false, check: false };
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === '--vertical') { args.vertical = argv[index + 1]; index += 1; }
     if (argv[index] === '--json') args.json = true;
+    if (argv[index] === '--write') args.write = true;
+    if (argv[index] === '--check') args.check = true;
   }
   return args;
 }
@@ -113,6 +156,41 @@ async function main() {
   fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
   fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`);
 
+  const provenance = {
+    generator: GENERATOR_ID,
+    researchVersion: run.research_version,
+    normalizationVersion: normalization.version || null,
+    derivedAt: run.registered_at instanceof Date
+      ? run.registered_at.toISOString()
+      : String(run.registered_at),
+  };
+  const nextSample = applyArchetypeEvidence({ sample, benchmarkVerdicts, provenance });
+
+  if (args.write) {
+    const tmpPath = `${samplePath}.tmp-${process.pid}`;
+    fs.writeFileSync(tmpPath, `${JSON.stringify(nextSample, null, 2)}\n`);
+    fs.renameSync(tmpPath, samplePath);
+    process.stdout.write(`[archetype-evidence] sample ${args.vertical}.json re-derivado (run ${run.research_version})\n`);
+  }
+
+  if (args.check) {
+    const drifted = [];
+    const currentById = new Map((sample.benchmarks || []).map((b) => [String(b.id), b]));
+    for (const benchmark of nextSample.benchmarks || []) {
+      const current = currentById.get(String(benchmark.id));
+      const currentBlock = current ? current.archetypeEvidence || null : null;
+      const derivedBlock = benchmark.archetypeEvidence || null;
+      if (JSON.stringify(currentBlock) !== JSON.stringify(derivedBlock)) {
+        drifted.push(benchmark.id);
+      }
+    }
+    if (drifted.length > 0) {
+      process.stderr.write(`[archetype-evidence] DRIFT em ${drifted.length} benchmark(s): ${drifted.join(', ')} — rode --write com o run corrente\n`);
+      process.exit(1);
+    }
+    process.stdout.write('[archetype-evidence] --check OK: archetypeEvidence consistente com o run corrente\n');
+  }
+
   if (args.json) {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   } else {
@@ -131,4 +209,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, REPORT_PATH };
+module.exports = { main, REPORT_PATH, GENERATOR_ID, applyArchetypeEvidence };

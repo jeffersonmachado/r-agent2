@@ -798,8 +798,8 @@ function createBenchmarkResearchSupervisor({
   }
 
   /** PATCH do sample derivado dos fatos PERSISTIDOS (consumido pelo registro). */
-  function buildSamplePatch({ vertical, inventoryVersion = null } = {}) {
-    return service.buildSamplePatch({ tenantId: researchTenant, vertical, inventoryVersion });
+  function buildSamplePatch({ vertical, inventoryVersion = null, priorSample = null } = {}) {
+    return service.buildSamplePatch({ tenantId: researchTenant, vertical, inventoryVersion, priorSample });
   }
 
   function summarize({ vertical } = {}) {

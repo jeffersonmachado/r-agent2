@@ -245,7 +245,11 @@ function runNormalizationPipeline({
     candidates.push({
       ...representativeFields,
       semanticStatus: SEMANTIC_STATUS.NORMALIZED,
-      normalizedId: normalized.canonicalId,
+      // Identidade estável da novidade: a equivalência DECLARADA quando existe;
+      // o FORM semântico (verbo + objeto de negócio) quando não existe. Nunca
+      // null (a missão proíbe novelty contada sem normalizedId) e nunca o
+      // nome bruto do concorrente.
+      normalizedId: normalized.canonicalId || representative.form || null,
       canonicalId: normalized.canonicalId,
       clusterId: cluster.clusterId,
       clusterSize: cluster.size,
