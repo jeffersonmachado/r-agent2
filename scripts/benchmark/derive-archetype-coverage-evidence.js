@@ -50,6 +50,12 @@ function readJson(absPath) {
  * `archetypeEvidence` dos benchmarks é gerenciada; todo o resto é preservado.
  * Determinístico: `provenance.derivedAt` vem do `registered_at` do run (fato
  * persistido), nunca do relógio.
+ *
+ * Contrato do bloco (histórico, verificado pelos testes de honestidade):
+ *  - `derivation` é uma STRING descritiva (módulo + run + vocabulário + contagem);
+ *  - cada ref de suporte carrega `findingId` + `evidenceId` + `sourceId` —
+ *    a cadeia de proveniência completa finding→evidence→source;
+ *  - a proveniência estruturada do gerador fica sob `provenance` (aditiva).
  */
 function applyArchetypeEvidence({ sample, benchmarkVerdicts, provenance }) {
   const verdictsByBenchmark = new Map(
@@ -61,14 +67,23 @@ function applyArchetypeEvidence({ sample, benchmarkVerdicts, provenance }) {
     const evidence = verdict && verdict.declaredArchetypeEvidence;
     const copy = { ...benchmark };
     if (evidence && evidence.supported === true) {
+      const supporting = (Array.isArray(evidence.supportingFindings) ? evidence.supportingFindings : [])
+        .map((entry) => ({
+          findingId: entry.findingId || entry.id || null,
+          evidenceId: entry.evidenceId || null,
+          sourceId: entry.sourceId || null,
+          name: entry.name || null,
+          kind: entry.kind || null,
+          matchedTerm: entry.matchedTerm || null,
+        }));
       copy.archetypeEvidence = {
-        derivation: { ...provenance },
+        derivation: `${provenance.generator} sobre os findings VERIFICADOS do run ${provenance.researchVersion} (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[${verdict.declaredArchetype}]): ${supporting.length} achado(s) verificado(s) casam.`,
         supported: true,
         reason: evidence.reason || null,
-        supportingFindings: (Array.isArray(evidence.supportingFindings) ? evidence.supportingFindings : [])
-          .map((entry) => ({ ...entry, findingId: entry.findingId || entry.id || null })),
+        supportingFindings: supporting,
         verifiedFindings: Number(evidence.verifiedFindings) || 0,
         totalFindings: Number(evidence.totalFindings) || 0,
+        provenance: { ...provenance },
       };
     } else {
       delete copy.archetypeEvidence;

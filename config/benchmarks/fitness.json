@@ -1941,81 +1941,91 @@
         "customerEngagementDepth": "high"
       },
       "archetypeEvidence": {
-        "derivation": {
-          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
-          "researchVersion": "fitness-semantic-2026-09-15-r2",
-          "normalizationVersion": "2026-09-15.2",
-          "derivedAt": "2026-09-16T02:56:27.715Z"
-        },
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS do run fitness-semantic-2026-09-15-r2 (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[financial-billing]): 9 achado(s) verificado(s) casam.",
         "supported": true,
         "reason": null,
         "supportingFindings": [
           {
-            "id": "brf-320d18f873479620d18762a1f69cdf09f640dfd202f212cd",
+            "findingId": "brf-320d18f873479620d18762a1f69cdf09f640dfd202f212cd",
+            "evidenceId": "bre-d6afbc8feb7867ec021f4cc78beb69cce9ab3d0bbae043ba",
+            "sourceId": "brsrc-fcbedd57d3e7ab66e42216eb0efa944b26295e404ae28209",
             "name": "AI for Gyms: Practical Ways to Automate Sales, Service, and Billing in 2026",
             "kind": "capability",
-            "matchedTerm": "billing",
-            "findingId": "brf-320d18f873479620d18762a1f69cdf09f640dfd202f212cd"
+            "matchedTerm": "billing"
           },
           {
-            "id": "brf-583d530cfb27a0c9b4eb236ec1e6f5213a263bd37196043f",
+            "findingId": "brf-583d530cfb27a0c9b4eb236ec1e6f5213a263bd37196043f",
+            "evidenceId": "bre-d6afbc8feb7867ec021f4cc78beb69cce9ab3d0bbae043ba",
+            "sourceId": "brsrc-fcbedd57d3e7ab66e42216eb0efa944b26295e404ae28209",
             "name": "Simplify your daily operations with membership management, billing, scheduling, inventory and staff management, and repo…",
             "kind": "capability",
-            "matchedTerm": "billing",
-            "findingId": "brf-583d530cfb27a0c9b4eb236ec1e6f5213a263bd37196043f"
+            "matchedTerm": "billing"
           },
           {
-            "id": "brf-94567b1779048ab006b8b42b702457f3ff227e3708020d4d",
+            "findingId": "brf-94567b1779048ab006b8b42b702457f3ff227e3708020d4d",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
             "name": "Bring intelligence and flexibility to revenue management. Automate billing and successfully resolve outstanding payments…",
             "kind": "capability",
-            "matchedTerm": "billing",
-            "findingId": "brf-94567b1779048ab006b8b42b702457f3ff227e3708020d4d"
+            "matchedTerm": "billing"
           },
           {
-            "id": "brf-fafbadcbaed3bf8e4a9d2c1380ecaf9f64c21eaf89ad2dce",
+            "findingId": "brf-fafbadcbaed3bf8e4a9d2c1380ecaf9f64c21eaf89ad2dce",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
             "name": "Optimize Billing. Maximize Revenue.",
             "kind": "capability",
-            "matchedTerm": "billing",
-            "findingId": "brf-fafbadcbaed3bf8e4a9d2c1380ecaf9f64c21eaf89ad2dce"
+            "matchedTerm": "billing"
           },
           {
-            "id": "brf-48750931e55b20198b90139768f875bcf20138c4b004b1f2",
+            "findingId": "brf-48750931e55b20198b90139768f875bcf20138c4b004b1f2",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
             "name": "Member profiles, billing details, electronic documents",
             "kind": "capability",
-            "matchedTerm": "billing",
-            "findingId": "brf-48750931e55b20198b90139768f875bcf20138c4b004b1f2"
+            "matchedTerm": "billing"
           },
           {
-            "id": "brf-70c51544448063227c658bf476bfc2a35a9a1db2b40aeb75",
+            "findingId": "brf-70c51544448063227c658bf476bfc2a35a9a1db2b40aeb75",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
             "name": "Automated payment collection for recurring membership dues",
             "kind": "capability",
-            "matchedTerm": "payment",
-            "findingId": "brf-70c51544448063227c658bf476bfc2a35a9a1db2b40aeb75"
+            "matchedTerm": "payment"
           },
           {
-            "id": "brf-58a810d15c7677651b87521f2a5ac282ff93552f6088cc00",
+            "findingId": "brf-58a810d15c7677651b87521f2a5ac282ff93552f6088cc00",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
             "name": "Payment and check-in history",
             "kind": "capability",
-            "matchedTerm": "payment",
-            "findingId": "brf-58a810d15c7677651b87521f2a5ac282ff93552f6088cc00"
+            "matchedTerm": "payment"
           },
           {
-            "id": "brf-1ac4934b8fc1582d1e3bef6b9d706e68fc22c0db2eeed7df",
+            "findingId": "brf-1ac4934b8fc1582d1e3bef6b9d706e68fc22c0db2eeed7df",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
             "name": "Automate payments and revenue recovery through a trusted billing partner specialized in fitness.",
             "kind": "capability",
-            "matchedTerm": "billing",
-            "findingId": "brf-1ac4934b8fc1582d1e3bef6b9d706e68fc22c0db2eeed7df"
+            "matchedTerm": "billing"
           },
           {
-            "id": "brf-4b7b0002e69ec74b174c92781cc0084c052eb25139edf665",
+            "findingId": "brf-4b7b0002e69ec74b174c92781cc0084c052eb25139edf665",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
             "name": "Streamline club operations – front desk, calendars, bookings, check-ins, staff, billings and payments.",
             "kind": "capability",
-            "matchedTerm": "payments",
-            "findingId": "brf-4b7b0002e69ec74b174c92781cc0084c052eb25139edf665"
+            "matchedTerm": "payments"
           }
         ],
         "verifiedFindings": 15,
-        "totalFindings": 18
+        "totalFindings": 18,
+        "provenance": {
+          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
+          "researchVersion": "fitness-semantic-2026-09-15-r2",
+          "normalizationVersion": "2026-09-15.2",
+          "derivedAt": "2026-09-16T02:56:27.715Z"
+        }
       },
       "analyzedAt": "2026-09-16T02:56:33.251Z",
       "researchVersion": "fitness-semantic-2026-09-15-r2",
@@ -2235,25 +2245,27 @@
         "customerEngagementDepth": "high"
       },
       "archetypeEvidence": {
-        "derivation": {
-          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
-          "researchVersion": "fitness-semantic-2026-09-15-r2",
-          "normalizationVersion": "2026-09-15.2",
-          "derivedAt": "2026-09-16T02:56:27.715Z"
-        },
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS do run fitness-semantic-2026-09-15-r2 (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[student-digital-experience]): 1 achado(s) verificado(s) casam.",
         "supported": true,
         "reason": null,
         "supportingFindings": [
           {
-            "id": "brf-b57eaa1b6676957be727911616f4d210e0823fa8b3a84c16",
+            "findingId": "brf-b57eaa1b6676957be727911616f4d210e0823fa8b3a84c16",
+            "evidenceId": "bre-0ee14e168cde7a475a0c4d75686f2b5199c6a180d5f5f2ec",
+            "sourceId": "brsrc-4f900bb8d4126146cb8ba528346087f3740c7fac0d03e9cb",
             "name": "As assinaturas do Wellhub são feitas para todo colaborador, de toda empresa, fazer um check-in de bem-estar todos os dia…",
             "kind": "capability",
-            "matchedTerm": "check in",
-            "findingId": "brf-b57eaa1b6676957be727911616f4d210e0823fa8b3a84c16"
+            "matchedTerm": "check in"
           }
         ],
         "verifiedFindings": 13,
-        "totalFindings": 13
+        "totalFindings": 13,
+        "provenance": {
+          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
+          "researchVersion": "fitness-semantic-2026-09-15-r2",
+          "normalizationVersion": "2026-09-15.2",
+          "derivedAt": "2026-09-16T02:56:27.715Z"
+        }
       },
       "analyzedAt": "2026-09-16T02:56:33.726Z",
       "researchVersion": "fitness-semantic-2026-09-15-r2",

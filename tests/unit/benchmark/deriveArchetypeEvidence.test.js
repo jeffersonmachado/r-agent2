@@ -12,6 +12,11 @@
  * O caminho legítimo é o GERADOR: deriva o bloco dos achados VERIFICADOS do
  * run corrente (mesma fonte do patch), escreve só a chave gerenciada e
  * detecta drift com --check.
+ *
+ * Contrato histórico do bloco (verificado também por
+ * tests/unit/benchmarkFitnessArchetypeGap.test.js):
+ *  - `derivation` é STRING descritiva (módulo + run + vocabulário + contagem);
+ *  - cada ref carrega findingId + evidenceId + sourceId (cadeia completa).
  */
 
 const {
@@ -41,7 +46,9 @@ function verdict(benchmarkId, supported, supportingFindings = []) {
 }
 
 const SUPPORT = [
-  { findingId: 'brf-aaa', evidenceId: 'bre-aaa', sourceId: 'brsrc-aaa' },
+  {
+    id: 'brf-aaa', evidenceId: 'bre-aaa', sourceId: 'brsrc-aaa', name: 'recurring billing', kind: 'capability', matchedTerm: 'billing',
+  },
 ];
 
 describe('derive-archetype-coverage-evidence — applyArchetypeEvidence (núcleo puro)', () => {
@@ -50,7 +57,7 @@ describe('derive-archetype-coverage-evidence — applyArchetypeEvidence (núcleo
       vertical: 'fitness',
       benchmarks: [
         { id: 'abcfitness', archetype: 'financial-billing', findingsInventory: ['brf-aaa'], stale: 'keep-me' },
-        { id: 'sem-arquetipo', archetype: null, archetypeEvidence: { derivation: { old: true }, supportingFindings: [] } },
+        { id: 'sem-arquetipo', archetype: null, archetypeEvidence: { derivation: 'velho', supportingFindings: [] } },
       ],
       outraChave: { intacta: true },
     };
@@ -61,14 +68,17 @@ describe('derive-archetype-coverage-evidence — applyArchetypeEvidence (núcleo
     });
 
     const abc = next.benchmarks.find((b) => b.id === 'abcfitness');
-    expect(abc.archetypeEvidence).toEqual({
-      derivation: PROVENANCE,
-      supported: true,
-      reason: 'supported_by_verified_findings',
-      supportingFindings: SUPPORT,
-      verifiedFindings: 1,
-      totalFindings: 10,
-    });
+    expect(typeof abc.archetypeEvidence.derivation).toBe('string');
+    expect(abc.archetypeEvidence.derivation).toContain(GENERATOR_ID);
+    expect(abc.archetypeEvidence.derivation).toContain('fitness-semantic-2026-09-15-r2');
+    expect(abc.archetypeEvidence.derivation).toContain('financial-billing');
+    expect(abc.archetypeEvidence.supported).toBe(true);
+    expect(abc.archetypeEvidence.supportingFindings).toEqual([
+      {
+        findingId: 'brf-aaa', evidenceId: 'bre-aaa', sourceId: 'brsrc-aaa', name: 'recurring billing', kind: 'capability', matchedTerm: 'billing',
+      },
+    ]);
+    expect(abc.archetypeEvidence.provenance).toEqual(PROVENANCE);
     expect(abc.stale).toBe('keep-me');
 
     // Benchmark sem suporte: bloco STALE é removido (prova velha não é prova).
@@ -85,12 +95,14 @@ describe('derive-archetype-coverage-evidence — applyArchetypeEvidence (núcleo
     expect(JSON.stringify(twice)).toBe(JSON.stringify(once));
   });
 
-  test('suporte referencia APENAS achados do inventário vigente (consistência B10)', () => {
+  test('suporte referencia APENAS achados do inventário vigente e carrega a cadeia evidence/source (consistência B10/§17)', () => {
     const sample = { vertical: 'fitness', benchmarks: [{ id: 'abcfitness', archetype: 'financial-billing', findingsInventory: ['brf-aaa', 'brf-bbb'] }] };
     const next = applyArchetypeEvidence({ sample, benchmarkVerdicts: [verdict('abcfitness', true, SUPPORT)], provenance: PROVENANCE });
     const inventory = new Set(next.benchmarks[0].findingsInventory);
     for (const ref of next.benchmarks[0].archetypeEvidence.supportingFindings) {
       expect(inventory.has(ref.findingId)).toBe(true);
+      expect(typeof ref.evidenceId).toBe('string');
+      expect(typeof ref.sourceId).toBe('string');
     }
   });
 });

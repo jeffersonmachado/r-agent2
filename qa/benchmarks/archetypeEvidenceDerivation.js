@@ -117,6 +117,8 @@ function deriveArchetypeEvidence({ archetype, findings = [], normalizationConfig
       if (containsTerm(tokens, termTokens)) {
         supporting.push({
           id: finding.id || null,
+          evidenceId: finding.evidence_id || finding.evidenceId || null,
+          sourceId: finding.source_id || finding.sourceId || null,
           name,
           kind: finding.kind || null,
           matchedTerm: term,
