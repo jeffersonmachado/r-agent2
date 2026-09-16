@@ -279,3 +279,79 @@ describe('candidateDiscovery — researchedKeysFromSample (ciclo incremental)', 
     expect(researchedKeysFromSample({})).toEqual([]);
   });
 });
+
+describe('candidateDiscovery — merge não destrutivo (run real r9, 2026-09-16)', () => {
+  // O r9 expôs três defeitos de merge: (1) a confirmação de seed — que corre
+  // DEPOIS da varredura — carregava archetypes=[] e sobrescrevia os arquétipos
+  // derivados do mapeamento de sinais; (2) o veredito de relevância observado
+  // na varredura era descartado quando o registro existente não tinha nenhum
+  // (ficava só em metadata); (3) uma segunda página do MESMO domínio sem os
+  // termos de categoria derrubava o veredito IN_MARKET já medido — relevância
+  // é propriedade do CANDIDATO, e uma página sem termos não desmente a outra.
+  const RELEVANCE_IN = {
+    evaluated: true, state: 'IN_MARKET', accepted: true, reason: 'category_signals_present',
+    signalCount: 1, minSignals: 1, matchedTerms: ['corporate wellness platform'], domain: 'vendorx.io',
+  };
+  const RELEVANCE_OUT = {
+    evaluated: true, state: 'OUT_OF_MARKET', accepted: false, reason: 'category_signals_below_minimum',
+    signalCount: 0, minSignals: 1, matchedTerms: [], domain: 'vendorx.io',
+  };
+
+  test('array vazio do registro novo NÃO sobrescreve campos já povoados', () => {
+    const { discoverCandidates } = require('../../../api/services/marketDiscovery/candidateDiscovery');
+    const researchFirst = {
+      name: 'VendorX', officialSite: 'https://vendorx.io/',
+      archetypes: ['personal-wellness'], segments: ['corporate'],
+      sourceEvidence: [{ url: 'https://vendorx.io/blog/a/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      marketRelevance: RELEVANCE_IN,
+    };
+    const seedConfirmationLater = {
+      name: 'VendorX', officialSite: 'https://vendorx.io/',
+      archetypes: [], segments: [],
+      sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-2', contentHash: 'h2' }],
+    };
+    const { candidates } = discoverCandidates({ vertical: 'v', seeds: [], researchResults: [researchFirst, seedConfirmationLater] });
+    const record = candidates.find((c) => c.candidateKey === 'vendorx.io');
+    expect(record.archetypes).toEqual(['personal-wellness']);
+    expect(record.segments).toEqual(['corporate']);
+    expect(record.sourceEvidence.length).toBe(2);
+  });
+
+  test('veredito de relevância é promovido quando o registro existente não tem nenhum', () => {
+    const { discoverCandidates } = require('../../../api/services/marketDiscovery/candidateDiscovery');
+    const seed = {
+      name: 'VendorX', officialSite: 'https://vendorx.io/',
+      sourceEvidence: [], rationale: 'seed de referência',
+    };
+    const found = {
+      name: 'VendorX', officialSite: 'https://vendorx.io/',
+      sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      marketRelevance: RELEVANCE_IN,
+    };
+    const { candidates } = discoverCandidates({ vertical: 'v', seeds: [seed], researchResults: [found] });
+    const record = candidates.find((c) => c.candidateKey === 'vendorx.io');
+    // A confirmação por pesquisa grava o veredito medido — a elegibilidade
+    // histórica depende dele persistido, não de metadata de auditoria.
+    expect(record.marketRelevance?.state).toBe('IN_MARKET');
+    expect(record.origin).toBe('seed'); // origem do seed preservada
+  });
+
+  test('IN_MARKET é estável: página posterior sem termos NÃO derruba o veredito do candidato', () => {
+    const { discoverCandidates } = require('../../../api/services/marketDiscovery/candidateDiscovery');
+    const inMarket = {
+      name: 'VendorX', officialSite: 'https://vendorx.io/blog/a/',
+      sourceEvidence: [{ url: 'https://vendorx.io/blog/a/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      marketRelevance: RELEVANCE_IN,
+    };
+    const pageWithoutTerms = {
+      name: 'VendorX', officialSite: 'https://vendorx.io/careers/',
+      sourceEvidence: [{ url: 'https://vendorx.io/careers/', evidenceRef: 'ev-2', contentHash: 'h2' }],
+      marketRelevance: RELEVANCE_OUT,
+    };
+    const { candidates, outOfMarket } = discoverCandidates({ vertical: 'v', seeds: [], researchResults: [inMarket, pageWithoutTerms] });
+    const record = candidates.find((c) => c.candidateKey === 'vendorx.io');
+    expect(record.state).toBe('ACCEPTED');
+    expect(record.marketRelevance?.state).toBe('IN_MARKET');
+    expect(outOfMarket.map((c) => c.candidateKey)).not.toContain('vendorx.io');
+  });
+});

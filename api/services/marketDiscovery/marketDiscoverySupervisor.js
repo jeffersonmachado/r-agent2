@@ -414,7 +414,16 @@ function createMarketDiscoverySupervisor({
     }
 
     const declaredArchetypes = list(sample?.archetypes).map((a) => ({ ...a, vertical: verticalId }));
-    const seeds = list(sample?.benchmarks).map((b) => seedFromBenchmark(verticalId, b));
+    // Benchmarks aplicados ao sample por um run de market discovery
+    // (`provenance.marketDiscoveryRunId`) NÃO são seeds: seed é referência
+    // declarada por humano; entrada derivada é LINEAGE — a verdade do
+    // candidato vive na tabela market_candidates. Semear de novo rebaixava o
+    // candidato a declaração e, pior (run real r9): uma confirmação de seed
+    // com fetch falho regravava a linha como EVIDENCE_REQUIRED com relevância
+    // e evidência ZERADAS, destruindo o aceite persistido do ciclo anterior.
+    const seeds = list(sample?.benchmarks)
+      .filter((benchmark) => !benchmark?.provenance?.marketDiscoveryRunId)
+      .map((b) => seedFromBenchmark(verticalId, b));
 
     // ── MARKET ──────────────────────────────────────────────────────────
     // Queries DOMÍNIO-ESPECÍFICAS derivadas do contexto de mercado declarado

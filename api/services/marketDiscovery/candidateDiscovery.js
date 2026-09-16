@@ -290,17 +290,31 @@ function discoverCandidates({ vertical, seeds = [], researchResults = [] }) {
       ...list(existing?.sourceEvidence),
       ...list(found?.sourceEvidence),
     ];
-    // Gate de relevância na fusão: o veredito de mercado medido sobre o
-    // conteúdo acompanha o candidato RESEARCH. Ao confirmar um SEED, a
-    // evidência de DECLARAÇÃO do sample governado prevalece sobre o gate de
-    // conteúdo — mas o veredito observado fica em metadata para auditoria.
+    // Merge NÃO destrutivo (run real r9, 2026-09-16):
+    // 1. Array VAZIO do registro novo não sobrescreve campo povoado — a
+    //    confirmação de seed (que corre depois da varredura) chega com
+    //    archetypes=[] e apagava os arquétipos derivados do mapeamento.
+    // 2. Veredito de relevância: sem veredito registrado, vale o observado
+    //    agora (a elegibilidade histórica lê market_relevance persistida).
+    // 3. IN_MARKET é ESTÁVEL: relevância é propriedade do CANDIDATO — uma
+    //    página posterior do mesmo domínio sem os termos de categoria não
+    //    desmente a página que provou o pertencimento.
     const seedWins = existing && existing.origin === CANDIDATE_ORIGINS.SEED;
-    const mergedRelevance = seedWins
-      ? (existing.marketRelevance || null)
-      : (found?.marketRelevance ?? existing?.marketRelevance ?? null);
+    const existingRelevance = existing?.marketRelevance || null;
+    const foundRelevance = found?.marketRelevance || null;
+    const existingInMarket = existingRelevance?.evaluated === true && existingRelevance?.state === RELEVANCE_STATES.IN_MARKET;
+    const foundInMarket = foundRelevance?.evaluated === true && foundRelevance?.state === RELEVANCE_STATES.IN_MARKET;
+    const mergedRelevance = (() => {
+      if (!existingRelevance) return foundRelevance;
+      if (!foundRelevance) return existingRelevance;
+      if (existingInMarket && !foundInMarket) return existingRelevance;
+      return foundRelevance;
+    })();
     const record = buildCandidateRecord({
       ...(existing || {}),
-      ...Object.fromEntries(Object.entries(found || {}).filter(([, value]) => value !== null && value !== undefined)),
+      ...Object.fromEntries(Object.entries(found || {})
+        .filter(([, value]) => value !== null && value !== undefined)
+        .filter(([, value]) => !(Array.isArray(value) && value.length === 0))),
       vertical,
       // A origem do seed é preservada no merge: ser seed não é demérito nem
       // privilégio — o que decide é a evidência acumulada.

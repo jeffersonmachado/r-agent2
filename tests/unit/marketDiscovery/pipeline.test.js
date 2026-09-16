@@ -635,3 +635,51 @@ describe('Market discovery — qualidade do registro do candidato (run real r8)'
     expect(calls).not.toContain('https://imobiliaria.example.com/');
   });
 });
+
+describe('Market discovery — benchmarks derivados de market discovery NÃO são seeds (run real r9)', () => {
+  // Run real r9 (2026-09-16): as entradas aplicadas ao sample pelo gerador
+  // (provenance.marketDiscoveryRunId) viraram SEEDS no run seguinte. A
+  // confirmação de seed do woliba falhou (fetch do blog) e o upsert
+  // DESTRUÍU o candidato aceito no r8: state → EVIDENCE_REQUIRED,
+  // market_relevance → null, source_evidence → []. Benchmark derivado por
+  // market discovery não é referência humana: a verdade do candidato vive na
+  // tabela market_candidates (descoberto) — semear de novo é rebaixar lineage
+  // a declaração e destruir evidência persistida a cada run.
+  test('benchmark com provenance.marketDiscoveryRunId não vira seed nem é re-upsertado sem evidência nova', async () => {
+    const calls = [];
+    const providers = {
+      search: async () => ({ candidates: [] }), // varredura não reencontra nada
+      fetch: async (input) => {
+        calls.push(input.url);
+        const content = `conteúdo de ${input.url}`;
+        return { httpStatus: 200, content, contentType: 'text/html', retrievedAt: NOW, contentHash: sha(content) };
+      },
+      inspectDocumentation: async () => ({ sections: [] }),
+      inspectApiDocs: async () => ({ operations: [] }),
+      captureEvidence: async (input) => ({ evidenceRef: `ev-${sha(input.url).slice(0, 12)}`, contentHash: input.contentHash }),
+    };
+    const { supervisor, store } = await buildHarness({ providers });
+
+    const derivedBenchmark = {
+      id: 'woliba.io',
+      name: 'Woliba',
+      role: 'validation',
+      order: 12,
+      sources: [{ url: 'https://woliba.io/blog/wellhub-alternatives/', tier: 5 }],
+      provenance: { generator: 'scripts/benchmark/apply-market-discovery-to-sample.js', marketDiscoveryRunId: 'mdr-anterior' },
+    };
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-noseed',
+      sample: { ...SAMPLE, benchmarks: [...SAMPLE.benchmarks, derivedBenchmark] },
+    });
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+
+    // Nenhum fetch de confirmação de seed para a fonte do benchmark derivado.
+    expect(calls).not.toContain('https://woliba.io/blog/wellhub-alternatives/');
+    // E nenhum registro de candidato criado/regravado para ele neste run
+    // (a varredura não o encontrou e ele não é seed: simplesmente não é tocado).
+    const touched = await store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab', runId: result.runId });
+    expect(touched.map((row) => row.candidate_key)).not.toContain('woliba.io');
+  });
+});
