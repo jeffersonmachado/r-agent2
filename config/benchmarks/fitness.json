@@ -125,7 +125,7 @@
       "{competitor} competitors"
     ],
     "relevance": {
-      "_description": "Gate de pertencimento ao mercado (T-S2, 2026-09-15): candidato DESCOBERTO só entra no universo se o conteúdo da página obtida casar ao menos `minCategorySignals` termos de categoria (todos os tokens significativos do termo presentes). `excludedHosts` lista domínios registráveis que NUNCA são membros do mercado: (a) enciclopédias e help centers (varredura real de 2026-09-15); (b) CANAIS DE DISTRIBUIÇÃO/SOCIAIS — redes sociais e lojas de aplicativo hospedam páginas DE fornecedores, mas a identidade do fornecedor não é o canal (run real r2 de 2026-09-16 aceitou facebook.com e microsoft.com como se fossem fornecedores); (c) DIRETÓRIOS/AGREGADORES DE SOFTWARE — listicles e catálogos casam o vocabulário da categoria porque DESCREVEM fornecedores, sem ser um (run real r3 de 2026-09-16 selecionou b2bstack, portalsoftware, sourceforge, slashdot, topbusinesssoftware e o portal fitnessbrasil como se fossem produtos). Seeds do sample carregam evidência de declaração e não passam por este gate.",
+      "_description": "Gate de pertencimento ao mercado (T-S2, 2026-09-15): candidato DESCOBERTO só entra no universo se o conteúdo da página obtida casar ao menos `minCategorySignals` termos de categoria (todos os tokens significativos do termo presentes). `excludedHosts` lista domínios registráveis que NUNCA são membros do mercado: (a) enciclopédias e help centers (varredura real de 2026-09-15); (b) CANAIS DE DISTRIBUIÇÃO/SOCIAIS — redes sociais e lojas de aplicativo hospedam páginas DE fornecedores, mas a identidade do fornecedor não é o canal (run real r2 de 2026-09-16 aceitou facebook.com e microsoft.com como se fossem fornecedores); (c) DIRETÓRIOS/AGREGADORES DE SOFTWARE — listicles e catálogos casam o vocabulário da categoria porque DESCREVEM fornecedores, sem ser um (run real r3 de 2026-09-16 selecionou b2bstack, portalsoftware, sourceforge, slashdot, topbusinesssoftware e o portal fitnessbrasil como se fossem produtos; o run real r6 do mesmo dia aceitou techjockey.com — listicle indiano de alternativas — pela mesma classe). Seeds do sample carregam evidência de declaração e não passam por este gate.",
       "minCategorySignals": 1,
       "excludedHosts": [
         "wikipedia.org",
@@ -155,7 +155,8 @@
         "softwareadvice.com",
         "trustradius.com",
         "saasworthy.com",
-        "producthunt.com"
+        "producthunt.com",
+        "techjockey.com"
       ]
     }
   },
