@@ -1837,93 +1837,6 @@
         "financialDepth": "high",
         "customerEngagementDepth": "high"
       },
-      "archetypeEvidence": {
-        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS do run fitness-semantic-2026-09-15-r2 (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[financial-billing]): 9 achado(s) verificado(s) casam.",
-        "supported": true,
-        "reason": null,
-        "supportingFindings": [
-          {
-            "findingId": "brf-320d18f873479620d18762a1f69cdf09f640dfd202f212cd",
-            "evidenceId": "bre-d6afbc8feb7867ec021f4cc78beb69cce9ab3d0bbae043ba",
-            "sourceId": "brsrc-fcbedd57d3e7ab66e42216eb0efa944b26295e404ae28209",
-            "name": "AI for Gyms: Practical Ways to Automate Sales, Service, and Billing in 2026",
-            "kind": "capability",
-            "matchedTerm": "billing"
-          },
-          {
-            "findingId": "brf-583d530cfb27a0c9b4eb236ec1e6f5213a263bd37196043f",
-            "evidenceId": "bre-d6afbc8feb7867ec021f4cc78beb69cce9ab3d0bbae043ba",
-            "sourceId": "brsrc-fcbedd57d3e7ab66e42216eb0efa944b26295e404ae28209",
-            "name": "Simplify your daily operations with membership management, billing, scheduling, inventory and staff management, and repo…",
-            "kind": "capability",
-            "matchedTerm": "billing"
-          },
-          {
-            "findingId": "brf-94567b1779048ab006b8b42b702457f3ff227e3708020d4d",
-            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
-            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
-            "name": "Bring intelligence and flexibility to revenue management. Automate billing and successfully resolve outstanding payments…",
-            "kind": "capability",
-            "matchedTerm": "billing"
-          },
-          {
-            "findingId": "brf-fafbadcbaed3bf8e4a9d2c1380ecaf9f64c21eaf89ad2dce",
-            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
-            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
-            "name": "Optimize Billing. Maximize Revenue.",
-            "kind": "capability",
-            "matchedTerm": "billing"
-          },
-          {
-            "findingId": "brf-48750931e55b20198b90139768f875bcf20138c4b004b1f2",
-            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
-            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
-            "name": "Member profiles, billing details, electronic documents",
-            "kind": "capability",
-            "matchedTerm": "billing"
-          },
-          {
-            "findingId": "brf-70c51544448063227c658bf476bfc2a35a9a1db2b40aeb75",
-            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
-            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
-            "name": "Automated payment collection for recurring membership dues",
-            "kind": "capability",
-            "matchedTerm": "payment"
-          },
-          {
-            "findingId": "brf-58a810d15c7677651b87521f2a5ac282ff93552f6088cc00",
-            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
-            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
-            "name": "Payment and check-in history",
-            "kind": "capability",
-            "matchedTerm": "payment"
-          },
-          {
-            "findingId": "brf-1ac4934b8fc1582d1e3bef6b9d706e68fc22c0db2eeed7df",
-            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
-            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
-            "name": "Automate payments and revenue recovery through a trusted billing partner specialized in fitness.",
-            "kind": "capability",
-            "matchedTerm": "billing"
-          },
-          {
-            "findingId": "brf-4b7b0002e69ec74b174c92781cc0084c052eb25139edf665",
-            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
-            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
-            "name": "Streamline club operations – front desk, calendars, bookings, check-ins, staff, billings and payments.",
-            "kind": "capability",
-            "matchedTerm": "payments"
-          }
-        ],
-        "verifiedFindings": 15,
-        "totalFindings": 18,
-        "provenance": {
-          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
-          "researchVersion": "fitness-semantic-2026-09-15-r2",
-          "normalizationVersion": "2026-09-15.2",
-          "derivedAt": "2026-09-16T02:56:27.715Z"
-        }
-      },
       "analyzedAt": "2026-09-16T02:56:33.251Z",
       "researchVersion": "fitness-semantic-2026-09-15-r2",
       "findingsInventory": [
@@ -2064,7 +1977,100 @@
         "newRequiredBusinessRules": [],
         "newCriticalBusinessRules": []
       },
-      "unresolvedSemanticCandidates": 0
+      "unresolvedSemanticCandidates": 0,
+      "archetypeEvidence": {
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[financial-billing]): 9 achado(s) verificado(s) casam.",
+        "supported": true,
+        "reason": null,
+        "supportingFindings": [
+          {
+            "findingId": "brf-320d18f873479620d18762a1f69cdf09f640dfd202f212cd",
+            "evidenceId": "bre-d6afbc8feb7867ec021f4cc78beb69cce9ab3d0bbae043ba",
+            "sourceId": "brsrc-fcbedd57d3e7ab66e42216eb0efa944b26295e404ae28209",
+            "name": "AI for Gyms: Practical Ways to Automate Sales, Service, and Billing in 2026",
+            "kind": "capability",
+            "matchedTerm": "billing"
+          },
+          {
+            "findingId": "brf-583d530cfb27a0c9b4eb236ec1e6f5213a263bd37196043f",
+            "evidenceId": "bre-d6afbc8feb7867ec021f4cc78beb69cce9ab3d0bbae043ba",
+            "sourceId": "brsrc-fcbedd57d3e7ab66e42216eb0efa944b26295e404ae28209",
+            "name": "Simplify your daily operations with membership management, billing, scheduling, inventory and staff management, and repo…",
+            "kind": "capability",
+            "matchedTerm": "billing"
+          },
+          {
+            "findingId": "brf-94567b1779048ab006b8b42b702457f3ff227e3708020d4d",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
+            "name": "Bring intelligence and flexibility to revenue management. Automate billing and successfully resolve outstanding payments…",
+            "kind": "capability",
+            "matchedTerm": "billing"
+          },
+          {
+            "findingId": "brf-fafbadcbaed3bf8e4a9d2c1380ecaf9f64c21eaf89ad2dce",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
+            "name": "Optimize Billing. Maximize Revenue.",
+            "kind": "capability",
+            "matchedTerm": "billing"
+          },
+          {
+            "findingId": "brf-48750931e55b20198b90139768f875bcf20138c4b004b1f2",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
+            "name": "Member profiles, billing details, electronic documents",
+            "kind": "capability",
+            "matchedTerm": "billing"
+          },
+          {
+            "findingId": "brf-70c51544448063227c658bf476bfc2a35a9a1db2b40aeb75",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
+            "name": "Automated payment collection for recurring membership dues",
+            "kind": "capability",
+            "matchedTerm": "payment"
+          },
+          {
+            "findingId": "brf-58a810d15c7677651b87521f2a5ac282ff93552f6088cc00",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
+            "name": "Payment and check-in history",
+            "kind": "capability",
+            "matchedTerm": "payment"
+          },
+          {
+            "findingId": "brf-1ac4934b8fc1582d1e3bef6b9d706e68fc22c0db2eeed7df",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
+            "name": "Automate payments and revenue recovery through a trusted billing partner specialized in fitness.",
+            "kind": "capability",
+            "matchedTerm": "billing"
+          },
+          {
+            "findingId": "brf-4b7b0002e69ec74b174c92781cc0084c052eb25139edf665",
+            "evidenceId": "bre-16b7b46021e36712d3a4662aa261d88ffa3b0e29a38f2739",
+            "sourceId": "brsrc-411be7ab58de435ef30471c933c8a53df75ffbaf77289dbd",
+            "name": "Streamline club operations – front desk, calendars, bookings, check-ins, staff, billings and payments.",
+            "kind": "capability",
+            "matchedTerm": "payments"
+          }
+        ],
+        "verifiedFindings": 15,
+        "totalFindings": 18,
+        "provenance": {
+          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
+          "researchVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+          "researchVersions": [
+            "dbg4-1789317653921",
+            "fitness-semantic-2026-09-15-r2",
+            "fitness-market-real-2026-09-15-r3-deep-research",
+            "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research"
+          ],
+          "normalizationVersion": "2026-09-15.2",
+          "derivedAt": "2026-09-16T14:58:26.483Z"
+        }
+      }
     },
     {
       "id": "wellhub",
@@ -2140,29 +2146,6 @@
         "physicalOperation": "none",
         "financialDepth": "medium",
         "customerEngagementDepth": "high"
-      },
-      "archetypeEvidence": {
-        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS do run fitness-semantic-2026-09-15-r2 (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[student-digital-experience]): 1 achado(s) verificado(s) casam.",
-        "supported": true,
-        "reason": null,
-        "supportingFindings": [
-          {
-            "findingId": "brf-b57eaa1b6676957be727911616f4d210e0823fa8b3a84c16",
-            "evidenceId": "bre-0ee14e168cde7a475a0c4d75686f2b5199c6a180d5f5f2ec",
-            "sourceId": "brsrc-4f900bb8d4126146cb8ba528346087f3740c7fac0d03e9cb",
-            "name": "As assinaturas do Wellhub são feitas para todo colaborador, de toda empresa, fazer um check-in de bem-estar todos os dia…",
-            "kind": "capability",
-            "matchedTerm": "check in"
-          }
-        ],
-        "verifiedFindings": 13,
-        "totalFindings": 13,
-        "provenance": {
-          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
-          "researchVersion": "fitness-semantic-2026-09-15-r2",
-          "normalizationVersion": "2026-09-15.2",
-          "derivedAt": "2026-09-16T02:56:27.715Z"
-        }
       },
       "analyzedAt": "2026-09-16T02:56:33.726Z",
       "researchVersion": "fitness-semantic-2026-09-15-r2",
@@ -2271,7 +2254,36 @@
         "newRequiredBusinessRules": [],
         "newCriticalBusinessRules": []
       },
-      "unresolvedSemanticCandidates": 0
+      "unresolvedSemanticCandidates": 0,
+      "archetypeEvidence": {
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[student-digital-experience]): 1 achado(s) verificado(s) casam.",
+        "supported": true,
+        "reason": null,
+        "supportingFindings": [
+          {
+            "findingId": "brf-b57eaa1b6676957be727911616f4d210e0823fa8b3a84c16",
+            "evidenceId": "bre-0ee14e168cde7a475a0c4d75686f2b5199c6a180d5f5f2ec",
+            "sourceId": "brsrc-4f900bb8d4126146cb8ba528346087f3740c7fac0d03e9cb",
+            "name": "As assinaturas do Wellhub são feitas para todo colaborador, de toda empresa, fazer um check-in de bem-estar todos os dia…",
+            "kind": "capability",
+            "matchedTerm": "check in"
+          }
+        ],
+        "verifiedFindings": 13,
+        "totalFindings": 13,
+        "provenance": {
+          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
+          "researchVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+          "researchVersions": [
+            "dbg4-1789317653921",
+            "fitness-semantic-2026-09-15-r2",
+            "fitness-market-real-2026-09-15-r3-deep-research",
+            "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research"
+          ],
+          "normalizationVersion": "2026-09-15.2",
+          "derivedAt": "2026-09-16T14:58:26.483Z"
+        }
+      }
     },
     {
       "id": "zenplanner",
@@ -2462,11 +2474,73 @@
           "provenance": {
             "evidenceRef": "ev-4ad14355394322fbae32a0afb15fc8a9786bf751",
             "contentHash": "sha256:9a89acdab85ff6864333229d2a8f2ea8cd409f56f4fa0f1df1368a7cf3b855a2"
-          }
+          },
+          "id": "brsrc-3e611d3c8bc26b4390573c9f89d6ddec2dbfb716c02ee4ef",
+          "httpStatus": 200
+        },
+        {
+          "id": "brsrc-7e07ddc729987c5b1392e574e69df76e8880a912e90f7f9e",
+          "url": "https://vantagefit.io/app-download/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-16"
+        },
+        {
+          "id": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
+          "url": "https://vantagefit.io/pricing/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-16"
+        },
+        {
+          "id": "brsrc-b4a29b5baf94fe340e12c359035146a6fd5be8f74e59b261",
+          "url": "https://vantagefit.io/features/activity-tracking/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-16"
         }
       ],
       "novelty": {
-        "newCapabilities": [],
+        "newCapabilities": [
+          {
+            "id": "brf-52509e8c053cd77d724091fbcf451e4cb07dac1f6bc68d60",
+            "name": "Get the Vantage Fit mobile app Track activity, join challenges, and stay engaged from anywhere.",
+            "normalizedId": "app.track",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-7e07ddc729987c5b1392e574e69df76e8880a912e90f7f9e",
+            "evidenceRef": "bre-348e73482812db430eb1cb89c3cb659768cf5edb13e576cc"
+          },
+          {
+            "id": "brf-64573c18022a581ecea843a5c85a18cd234280d272755303",
+            "name": "Automatic reward delivery (annual plan) –",
+            "normalizedId": "plan.automate",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
+            "evidenceRef": "bre-2fb0fbe4bdfcaf0123eee9f29300d7a74dc987bbd058bdf0"
+          },
+          {
+            "id": "brf-47d549fa18f2d3d14ae19828b76a76e07e109e7e04e2014a",
+            "name": "Year-round activity tracking and ranking tiers (annual plan)",
+            "normalizedId": "plan.track",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
+            "evidenceRef": "bre-2fb0fbe4bdfcaf0123eee9f29300d7a74dc987bbd058bdf0"
+          },
+          {
+            "id": "brf-cb8b96cfec55224b611c395a7a45e6f6c22853988544e5a9",
+            "name": "Your steps become active minutes, and every workout you log or track adds more. A ride or a gym session counts even with…",
+            "normalizedId": "workout.track",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-b4a29b5baf94fe340e12c359035146a6fd5be8f74e59b261",
+            "evidenceRef": "bre-6176e0412864c24b07fe0e0796d38cabedf58a6cac552aa6"
+          }
+        ],
         "newRequiredCapabilities": [],
         "newCriticalCapabilities": [],
         "newJourneys": [],
@@ -2476,7 +2550,14 @@
         "newRequiredBusinessRules": [],
         "newCriticalBusinessRules": []
       },
-      "findingsInventory": [],
+      "findingsInventory": [
+        "brf-52509e8c053cd77d724091fbcf451e4cb07dac1f6bc68d60",
+        "brf-c4f7c3eb5267648b37a0d3d14e5bab671ed6d2819845b93c",
+        "brf-64573c18022a581ecea843a5c85a18cd234280d272755303",
+        "brf-47d549fa18f2d3d14ae19828b76a76e07e109e7e04e2014a",
+        "brf-6b12dcfeac2d6e7d99737b4d60b800aab387a43c2e9093f9",
+        "brf-cb8b96cfec55224b611c395a7a45e6f6c22853988544e5a9"
+      ],
       "country": null,
       "segments": [],
       "targetCustomers": [],
@@ -2492,7 +2573,15 @@
           "ev-1d07f40fedc5d7b6e5ab73ae792411dcfe1d2189",
           "ev-4ad14355394322fbae32a0afb15fc8a9786bf751"
         ]
-      }
+      },
+      "analyzedAt": "2026-09-16T16:36:19.574Z",
+      "researchVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+      "marketArchetypeMapping": {
+        "archetype": "personal-wellness",
+        "rationale": "mapeamento declarado no sample do benchmark"
+      },
+      "inventoryVersion": "canonical-capabilities-1.0.0",
+      "unresolvedSemanticCandidates": 0
     },
     {
       "id": "wellable.co",
@@ -3230,6 +3319,27 @@
       "url": "https://abcfitness.com/pricing/",
       "evidenceRef": "ev-48acfc90429b24956f9679193962e1d2c784f570",
       "capturedAt": "2026-09-15T18:32:23.856Z"
+    },
+    {
+      "id": "bre-348e73482812db430eb1cb89c3cb659768cf5edb13e576cc",
+      "benchmarkId": "vantagefit.io",
+      "url": "https://vantagefit.io/app-download/",
+      "evidenceRef": "ev-76ceb61cbf19abf835a29bd50425354f29985305",
+      "capturedAt": "2026-09-16T16:32:07.805Z"
+    },
+    {
+      "id": "bre-2fb0fbe4bdfcaf0123eee9f29300d7a74dc987bbd058bdf0",
+      "benchmarkId": "vantagefit.io",
+      "url": "https://vantagefit.io/pricing/",
+      "evidenceRef": "ev-b99173a28da67882fc17bcc2fa94f957a3ca9e63",
+      "capturedAt": "2026-09-16T16:32:08.849Z"
+    },
+    {
+      "id": "bre-6176e0412864c24b07fe0e0796d38cabedf58a6cac552aa6",
+      "benchmarkId": "vantagefit.io",
+      "url": "https://vantagefit.io/features/activity-tracking/",
+      "evidenceRef": "ev-6fda98adf7bc3b93ef72bb9f17ce8776fa73d699",
+      "capturedAt": "2026-09-16T16:32:09.957Z"
     }
   ],
   "marketDiscoveryProvenance": {

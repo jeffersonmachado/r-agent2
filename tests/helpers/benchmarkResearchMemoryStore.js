@@ -50,6 +50,16 @@ function createBenchmarkResearchMemoryStore() {
     return clone(matches[0] || null);
   }
 
+  /** TODOS os runs de `(tenant, vertical)` em ordem cronológica ASC (FITNESS-ABS-14). */
+  async function listRuns({ tenantId, vertical }) {
+    const tenant = required(tenantId, 'tenantId');
+    const verticalId = required(vertical, 'vertical');
+    const matches = [...state.runs.values()]
+      .filter((row) => row.tenant_key === tenant && row.vertical === verticalId);
+    matches.sort((a, b) => String(a.registered_at).localeCompare(String(b.registered_at)));
+    return clone(matches);
+  }
+
   async function openRun({ tenantId, vertical, researchVersion, benchmarkIds = [], holdoutBenchmarkId = null, registeredAt = null, metadata = {} }) {
     const tenant = required(tenantId, 'tenantId');
     const verticalId = required(vertical, 'vertical');
@@ -299,6 +309,7 @@ function createBenchmarkResearchMemoryStore() {
 
   return {
     getRun,
+    listRuns,
     openRun,
     updateRunState,
     listSubjects,

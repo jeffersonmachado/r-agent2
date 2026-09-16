@@ -111,6 +111,20 @@ function createBenchmarkResearchStore({ models } = {}) {
   }
 
   /**
+   * TODOS os runs de `(tenant, vertical)` em ordem cronológica ASC.
+   * FITNESS-ABS-14: a derivação de evidência de arquétipo precisa do histórico
+   * completo — os findings que respaldam um benchmark são os do último run que
+   * o contém, não necessariamente do run mais recente da vertical.
+   */
+  async function listRuns({ tenantId, vertical }) {
+    const { run } = resolveModels();
+    return run.findAll({
+      where: { tenant_key: requireNonEmpty(tenantId, 'tenantId'), vertical: requireNonEmpty(vertical, 'vertical') },
+      order: [['registered_at', 'ASC']],
+    });
+  }
+
+  /**
    * Registra o DISCOVERY SET. Idempotente por `(tenant, vertical, version)`:
    * reabrir o mesmo run não recria história nem reordena o discovery set.
    */
@@ -469,6 +483,7 @@ function createBenchmarkResearchStore({ models } = {}) {
   return {
     errorCodes: ERROR_CODES,
     getRun,
+    listRuns,
     openRun,
     updateRunState,
     listSubjects,

@@ -106,3 +106,67 @@ describe('derive-archetype-coverage-evidence — applyArchetypeEvidence (núcleo
     }
   });
 });
+
+/**
+ * FITNESS-ABS-14 (2026-09-16) — escopo MULTI-RUN da derivação. Bug real do
+ * ciclo 3: a derivação lia findings SÓ do run mais recente da vertical. O run
+ * r11 (zenplanner/vantagefit) não contém abcfitness/wellhub — analisados no
+ * run r2 — então os blocos `archetypeEvidence` deles foram REMOVIDOS como
+ * "sem prova", derrubando duas travas de honestidade, embora o
+ * `findingsInventory` deles continuasse referenciando (corretamente) os
+ * findings do run r2, que seguem persistidos.
+ *
+ * A regra correta: os findings que respaldam um benchmark são os do ÚLTIMO
+ * run que o contém como subject — exatamente a fonte do `findingsInventory`
+ * vigente (cada patch substitui os campos de pesquisa do benchmark por
+ * inteiro). Benchmark ausente do run mais recente NÃO perde a prova.
+ */
+describe('FITNESS-ABS-14 — selectFindingsPerBenchmark (multi-run, último run que contém o subject)', () => {
+  const { selectFindingsPerBenchmark } = require('../../../qa/benchmarks/archetypeEvidenceDerivation');
+
+  const R1 = {
+    researchVersion: 'fitness-semantic-2026-09-15-r2',
+    subjects: ['abcfitness', 'wellhub'],
+    findings: [
+      { id: 'brf-abc', benchmark_id: 'abcfitness', external_name: 'recurring billing', verified: true },
+      { id: 'brf-wh', benchmark_id: 'wellhub', external_name: 'student app', verified: true },
+    ],
+  };
+  const R2 = {
+    researchVersion: 'fitness-market-discovery-2026-09-16-r11',
+    subjects: ['vantagefit.io'],
+    findings: [
+      { id: 'brf-vf', benchmark_id: 'vantagefit.io', external_name: 'activity tracking', verified: true },
+    ],
+  };
+
+  test('benchmark fora do run mais recente MANTÉM os findings do run que o analisou', () => {
+    const selected = selectFindingsPerBenchmark({ runs: [R1, R2] });
+    expect(selected.get('abcfitness').researchVersion).toBe(R1.researchVersion);
+    expect(selected.get('abcfitness').findings.map((f) => f.id)).toEqual(['brf-abc']);
+    expect(selected.get('wellhub').researchVersion).toBe(R1.researchVersion);
+    expect(selected.get('vantagefit.io').researchVersion).toBe(R2.researchVersion);
+    expect(selected.get('vantagefit.io').findings.map((f) => f.id)).toEqual(['brf-vf']);
+  });
+
+  test('benchmark reanalisado em run mais novo usa SÓ os findings do run novo (inventário substituído)', () => {
+    const R2b = {
+      researchVersion: 'fitness-r3',
+      subjects: ['abcfitness'],
+      findings: [{ id: 'brf-abc-novo', benchmark_id: 'abcfitness', external_name: 'subscription billing', verified: true }],
+    };
+    const selected = selectFindingsPerBenchmark({ runs: [R1, R2b] });
+    expect(selected.get('abcfitness').researchVersion).toBe('fitness-r3');
+    expect(selected.get('abcfitness').findings.map((f) => f.id)).toEqual(['brf-abc-novo']);
+  });
+
+  test('finding de benchmark fora do discovery set do run NÃO entra (sujeito é a fronteira)', () => {
+    const run = {
+      researchVersion: 'fitness-r4',
+      subjects: ['abcfitness'],
+      findings: [{ id: 'brf-x', benchmark_id: 'intruso', external_name: 'billing', verified: true }],
+    };
+    const selected = selectFindingsPerBenchmark({ runs: [run] });
+    expect(selected.has('intruso')).toBe(false);
+  });
+});

@@ -34,6 +34,7 @@ const { createBenchmarkResearchStore } = require('../../api/services/benchmark/b
 const {
   deriveArchetypeEvidence,
   deriveSampleArchetypeEvidence,
+  selectFindingsPerBenchmark,
 } = require('../../qa/benchmarks/archetypeEvidenceDerivation');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
@@ -77,7 +78,10 @@ function applyArchetypeEvidence({ sample, benchmarkVerdicts, provenance }) {
           matchedTerm: entry.matchedTerm || null,
         }));
       copy.archetypeEvidence = {
-        derivation: `${provenance.generator} sobre os findings VERIFICADOS do run ${provenance.researchVersion} (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[${verdict.declaredArchetype}]): ${supporting.length} achado(s) verificado(s) casam.`,
+        // FITNESS-ABS-14 — escopo multi-run: a string NOMEIA os runs cujos
+        // findings verificados sustentam o bloco (o último run que contém cada
+        // benchmark, não apenas o mais recente da vertical).
+        derivation: `${provenance.generator} sobre os findings VERIFICADOS ${Array.isArray(provenance.researchVersions) && provenance.researchVersions.length > 0 ? `dos runs ${provenance.researchVersions.join(', ')}` : `do run ${provenance.researchVersion}`} (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[${verdict.declaredArchetype}]): ${supporting.length} achado(s) verificado(s) casam.`,
         supported: true,
         reason: evidence.reason || null,
         supportingFindings: supporting,
@@ -113,16 +117,39 @@ async function main() {
   // Store real (Postgres): sem conexão a operação falha — nunca fallback.
   await require('../../api/db').connect(1, 500);
   const store = createBenchmarkResearchStore();
-  const run = await store.getRun({ tenantId: 'system', vertical: args.vertical });
-  if (!run) {
+  const latestRun = await store.getRun({ tenantId: 'system', vertical: args.vertical });
+  if (!latestRun) {
     throw new Error(`nenhum run de pesquisa para a vertical ${args.vertical} (tenant system)`);
   }
 
-  const findings = await store.listFindings({ tenantId: 'system', runId: run.id });
+  // FITNESS-ABS-14 — escopo MULTI-RUN: os findings que respaldam um benchmark
+  // são os do ÚLTIMO run que o contém como subject (a fonte do
+  // `findingsInventory` vigente — cada patch substitui os campos de pesquisa
+  // por inteiro). Ler só o run mais recente apagava a prova de benchmarks
+  // analisados em runs anteriores (abcfitness/wellhub perderam o bloco quando
+  // o run r11 — sem eles — virou o mais recente).
+  const allRuns = await store.listRuns({ tenantId: 'system', vertical: args.vertical });
+  const runsWithData = [];
+  for (const run of allRuns) {
+    const [subjects, findings] = await Promise.all([
+      store.listSubjects({ tenantId: 'system', runId: run.id }),
+      store.listFindings({ tenantId: 'system', runId: run.id }),
+    ]);
+    runsWithData.push({
+      researchVersion: run.research_version,
+      subjects: subjects.map((subject) => String(subject.benchmark_id)),
+      findings,
+    });
+  }
+  const selected = selectFindingsPerBenchmark({ runs: runsWithData });
+  const contributingVersions = [...new Set([...selected.values()]
+    .map((entry) => entry.researchVersion)
+    .filter(Boolean))];
+
   const benchmarks = (sample.benchmarks || []).map((benchmark) => ({
     id: benchmark.id,
     archetype: benchmark.archetype || null,
-    findings: findings.filter((finding) => finding.benchmark_id === benchmark.id),
+    findings: (selected.get(String(benchmark.id)) || { findings: [] }).findings,
   }));
 
   const derivation = deriveSampleArchetypeEvidence({
@@ -161,7 +188,8 @@ async function main() {
     generatedAt: new Date().toISOString(),
     vertical: args.vertical,
     sampleVersion: sample.sampleVersion || null,
-    researchVersion: run.research_version,
+    researchVersion: latestRun.research_version,
+    researchVersions: contributingVersions,
     normalizationVersion: normalization.version || null,
     rule: 'arquétipo só tem suporte quando existe achado VERIFICADO casando o vocabulário versionado; ausência de evidência é lacuna declarada, nunca cobertura',
     archetypes: derivation.results,
@@ -173,11 +201,12 @@ async function main() {
 
   const provenance = {
     generator: GENERATOR_ID,
-    researchVersion: run.research_version,
+    researchVersion: latestRun.research_version,
+    researchVersions: contributingVersions,
     normalizationVersion: normalization.version || null,
-    derivedAt: run.registered_at instanceof Date
-      ? run.registered_at.toISOString()
-      : String(run.registered_at),
+    derivedAt: latestRun.registered_at instanceof Date
+      ? latestRun.registered_at.toISOString()
+      : String(latestRun.registered_at),
   };
   const nextSample = applyArchetypeEvidence({ sample, benchmarkVerdicts, provenance });
 
@@ -185,7 +214,7 @@ async function main() {
     const tmpPath = `${samplePath}.tmp-${process.pid}`;
     fs.writeFileSync(tmpPath, `${JSON.stringify(nextSample, null, 2)}\n`);
     fs.renameSync(tmpPath, samplePath);
-    process.stdout.write(`[archetype-evidence] sample ${args.vertical}.json re-derivado (run ${run.research_version})\n`);
+    process.stdout.write(`[archetype-evidence] sample ${args.vertical}.json re-derivado (runs ${contributingVersions.join(", ")})\n`);
   }
 
   if (args.check) {
@@ -213,7 +242,7 @@ async function main() {
       const supporters = entry.supportingBenchmarks.map((b) => b.benchmarkId).join(', ');
       process.stdout.write(`  ${entry.supported ? 'SUPORTADO  ' : 'SEM PROVA  '}${entry.archetype}${supporters ? ` ← ${supporters}` : ''}\n`);
     }
-    process.stdout.write(`[archetype-evidence] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)} (run ${run.research_version})\n`);
+    process.stdout.write(`[archetype-evidence] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)} (runs ${contributingVersions.join(", ")})\n`);
   }
 }
 

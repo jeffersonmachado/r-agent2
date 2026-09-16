@@ -904,6 +904,16 @@ function createBenchmarkResearchService({ store, now } = {}) {
           analyzedAt,
           researchVersion: analyzedAt ? (subject.research_version || run.research_version) : null,
           inventoryVersion: analyzedAt ? (inventoryVersion || null) : null,
+          // FITNESS-ABS-13 — frescor é FATO da análise + agenda da POLÍTICA:
+          // `researchedAt` espelha o `analyzedAt` persistido; `nextReviewAt`
+          // deriva de `maximumBenchmarkReviewAgeDays` da política versionada.
+          // Benchmark não analisado NÃO ganha freshness (declarar pesquisa que
+          // não aconteceu é evidência fabricada).
+          freshness: analyzedAt ? {
+            researchedAt: analyzedAt.slice(0, 10),
+            nextReviewAt: nextReviewDate(analyzedAt, DEFAULT_POLICY),
+            status: 'FRESH',
+          } : null,
           findingsInventory: analyzedAt ? ownVerified.map((finding) => finding.id) : null,
           marketArchetypeMapping: subject.market_archetype_mapping || null,
           // Completude por eixo: "pesquisado sem achados" é resultado legítimo;
@@ -965,6 +975,18 @@ function classifyResearchSource(source, policy = DEFAULT_POLICY) {
     state,
     reason: verified ? null : (state === 'NEEDS_VERIFICATION' ? 'source_retrieval_not_confirmed' : 'source_not_verifiable'),
   };
+}
+
+/**
+ * FITNESS-ABS-13 — data da próxima revisão: `analyzedAt` + os dias declarados
+ * na POLÍTICA versionada (`maximumBenchmarkReviewAgeDays`). Nunca constante
+ * de código: mudar a política muda a agenda — como o engine exige.
+ */
+function nextReviewDate(analyzedAt, policy = DEFAULT_POLICY) {
+  const days = Number(policy?.maximumBenchmarkReviewAgeDays) || 365;
+  const base = Date.parse(analyzedAt);
+  if (!Number.isFinite(base)) return null;
+  return new Date(base + days * 86400000).toISOString().slice(0, 10);
 }
 
 module.exports = {

@@ -151,6 +151,11 @@ function mergeSamplePatch(sample, patch) {
     target.researchVersion = incoming.researchVersion || target.researchVersion || null;
     target.findingsInventory = [...incoming.findingsInventory];
     target.marketArchetypeMapping = incoming.marketArchetypeMapping || null;
+    // FITNESS-ABS-13 — frescor derivado da análise (fato + agenda de política)
+    // é campo de PESQUISA: o gate de frescor lê `freshness.researchedAt`.
+    if (incoming.freshness && typeof incoming.freshness === 'object') {
+      target.freshness = { ...incoming.freshness };
+    }
     // `analysisEvidence` do engine exige inventoryVersion POR BENCHMARK.
     if (isNonEmptyString(incoming.inventoryVersion) || isNonEmptyString(patch.inventoryVersion)) {
       target.inventoryVersion = incoming.inventoryVersion || patch.inventoryVersion;

@@ -171,10 +171,42 @@ function deriveSampleArchetypeEvidence({ archetypes = [], benchmarks = [], norma
   return { results, coverageSupported };
 }
 
+/**
+ * FITNESS-ABS-14 — seleciona, por benchmark, os findings do ÚLTIMO run (em
+ * ordem cronológica ASC) que o contém como subject do discovery set.
+ *
+ * Por quê: o `findingsInventory` vigente de um benchmark é escrito pelo patch
+ * do run que o analisou por último — os campos de pesquisa são substituídos
+ * por inteiro. Ler findings só do run MAIS RECENTE da vertical apaga a prova
+ * de benchmarks analisados em runs anteriores que continuam vigentes (bug real
+ * do ciclo 3: abcfitness/wellhub perderam `archetypeEvidence` quando o run
+ * r11 — sem eles — virou o mais recente). Findings de benchmark fora do
+ * discovery set do run NUNCA entram: o subject é a fronteira da pesquisa.
+ *
+ * @param {object} args
+ * @param {Array} args.runs `[{ researchVersion, subjects: [benchmarkId], findings: [] }]` ASC
+ * @returns {Map<string, {researchVersion: string|null, findings: Array}>}
+ */
+function selectFindingsPerBenchmark({ runs = [] } = {}) {
+  const selected = new Map();
+  for (const run of Array.isArray(runs) ? runs : []) {
+    const subjects = new Set((Array.isArray(run?.subjects) ? run.subjects : []).map(String));
+    const findings = Array.isArray(run?.findings) ? run.findings : [];
+    for (const benchmarkId of subjects) {
+      selected.set(benchmarkId, {
+        researchVersion: run.researchVersion || null,
+        findings: findings.filter((finding) => String(finding?.benchmark_id ?? finding?.benchmarkId ?? '') === benchmarkId),
+      });
+    }
+  }
+  return selected;
+}
+
 module.exports = {
   REASONS,
   normalizeTerm,
   archetypeTerms,
   deriveArchetypeEvidence,
   deriveSampleArchetypeEvidence,
+  selectFindingsPerBenchmark,
 };
