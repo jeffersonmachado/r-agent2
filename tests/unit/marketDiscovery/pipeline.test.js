@@ -631,8 +631,137 @@ describe('Market discovery — qualidade do registro do candidato (run real r8)'
     expect(homepage.evidenceRef).toBeTruthy();
     expect(homepage.contentHash).toBeTruthy();
 
-    // Candidato OUT_OF_MARKET não recebe fetch de homepage (rejeitado, sem custo).
-    expect(calls).not.toContain('https://imobiliaria.example.com/');
+    // ABS-16 (run real r14): candidato cuja PÁGINA DE SINAL fica abaixo do
+    // mínimo recebe o SEGUNDO JUÍZO pela homepage antes do veredito final —
+    // a economia antiga ("rejeitado não recebe fetch de homepage") produziu a
+    // falsa rejeição do goteamup.com, julgado pela página de login. O custo é
+    // aceito; o veredito final continua OUT_OF_MARKET quando a homepage
+    // também não tem sinais. Nota de identidade: `imobiliaria.example.com`
+    // é SUBDOMÍNIO — o domínio registrável (a identidade) é `example.com`,
+    // então o segundo juízo busca a raiz `https://example.com/` e a chave do
+    // candidato rejeitado é `example.com`.
+    expect(calls).toContain('https://example.com/');
+    const imobiliaria = (await store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab' }))
+      .find((row) => row.candidate_key === 'example.com');
+    expect(imobiliaria.state).toBe('OUT_OF_MARKET');
+    expect(imobiliaria.market_relevance.homepageChecked).toBe(true);
+  });
+});
+
+describe('Market discovery — segundo juízo do gate pela homepage (run real r14)', () => {
+  // Run real r14 (2026-09-16): goteamup.com (TeamUp — software REAL de gestão
+  // de academias, homepage com 5 termos de categoria casados) foi REJEITADO
+  // com 0 sinais porque o hit do buscador era a página de LOGIN
+  // (goteamup.com/login/). O gate julgou o domínio pela landing page e a
+  // economia "rejeitado não recebe fetch de homepage" impediu o segundo
+  // juízo — falsa rejeição de fornecedor real. A identidade do fornecedor é
+  // o DOMÍNIO registrável: quando a página de sinal não é a homepage e fica
+  // abaixo do mínimo, a homepage é consultada UMA vez antes do veredito
+  // final. Host EXCLUÍDO por política (diretório) não ganha segundo juízo:
+  // o banimento é decisão de política sobre o domínio, não de conteúdo.
+  const CONTEXT = {
+    categoryTerms: ['gym management software'],
+    relevance: { minCategorySignals: 1, excludedHosts: [] },
+  };
+
+  function buildLoginLandingProviders(calls) {
+    const contentByUrl = {
+      'https://vendorfit.com/login/':
+        '<html><head><title>Sign in | VendorFit</title></head><body>Entre com e-mail e senha. Esqueci minha senha.</body></html>',
+      'https://vendorfit.com/':
+        '<html><head><title>VendorFit | Fitness Management</title></head><body>VendorFit is a gym management software: members, billing and access control.</body></html>',
+      'https://portaldeadvocacia.com.br/artigo/':
+        '<html><head><title>Artigo jurídico</title></head><body>direito civil e processos</body></html>',
+      'https://portaldeadvocacia.com.br/':
+        '<html><head><title>Portal Advocacia</title></head><body>notícias jurídicas do dia</body></html>',
+    };
+    return {
+      search: async () => ({
+        candidates: [
+          { url: 'https://vendorfit.com/login/', title: 'Sign in | VendorFit' },
+          { url: 'https://portaldeadvocacia.com.br/artigo/', title: 'Artigo jurídico' },
+        ],
+      }),
+      fetch: async (input) => {
+        calls.push(input.url);
+        const content = contentByUrl[input.url] || `conteúdo de ${input.url}`;
+        return {
+          httpStatus: 200,
+          content,
+          contentType: 'text/html',
+          retrievedAt: NOW,
+          contentHash: sha(content),
+        };
+      },
+      inspectDocumentation: async () => ({ sections: ['a', 'b', 'c'] }),
+      inspectApiDocs: async () => ({ operations: [] }),
+      captureEvidence: async (input) => ({ evidenceRef: `ev-${sha(input.url).slice(0, 12)}`, contentHash: input.contentHash }),
+    };
+  }
+
+  test('landing sem sinais (login) + homepage COM sinais → IN_MARKET pelo segundo juízo, auditável', async () => {
+    const calls = [];
+    const { supervisor, store } = await buildHarness({ providers: buildLoginLandingProviders(calls) });
+
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-second-judgment',
+      sample: { ...SAMPLE, marketContext: CONTEXT },
+    });
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+
+    const candidate = (await store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab', state: 'ACCEPTED' }))
+      .find((row) => row.candidate_key === 'vendorfit.com');
+    expect(candidate).toBeDefined();
+    expect(candidate.market_relevance.state).toBe('IN_MARKET');
+    // O veredito registra que veio do SEGUNDO JUÍZO — nunca se passa por
+    // casamento direto da página de sinal.
+    expect(candidate.market_relevance.fallback).toBe('homepage_second_judgment');
+    expect(candidate.market_relevance.signalPageUrl).toBe('https://vendorfit.com/login/');
+    // A homepage foi consultada e consta da evidência (prova de existência).
+    expect(calls).toContain('https://vendorfit.com/');
+    expect(candidate.source_evidence.map((item) => item.url)).toContain('https://vendorfit.com/');
+    // Nome vem do <title> da homepage, não da página de login.
+    expect(candidate.name).toBe('VendorFit');
+  });
+
+  test('landing E homepage sem sinais → OUT_OF_MARKET final, com homepageChecked auditável', async () => {
+    const calls = [];
+    const { supervisor, store } = await buildHarness({ providers: buildLoginLandingProviders(calls) });
+
+    await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-second-judgment-reject',
+      sample: { ...SAMPLE, marketContext: CONTEXT },
+    });
+
+    const rejected = (await store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab' }))
+      .find((row) => row.candidate_key === 'portaldeadvocacia.com.br');
+    expect(rejected).toBeDefined();
+    expect(rejected.state).toBe('OUT_OF_MARKET');
+    expect(rejected.market_relevance.reason).toBe('category_signals_below_minimum');
+    // A homepage FOI consultada antes do veredito final — a rejeição é do
+    // domínio, não de uma página azarada do SERP.
+    expect(calls).toContain('https://portaldeadvocacia.com.br/');
+    expect(rejected.market_relevance.homepageChecked).toBe(true);
+    expect(rejected.market_relevance.homepageSignals).toBe(0);
+  });
+
+  test('host EXCLUÍDO por política não ganha segundo juízo (banimento é do domínio)', async () => {
+    const calls = [];
+    const { supervisor } = await buildHarness({ providers: buildLoginLandingProviders(calls) });
+
+    await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-second-judgment-excluded',
+      sample: {
+        ...SAMPLE,
+        marketContext: { ...CONTEXT, relevance: { minCategorySignals: 1, excludedHosts: ['vendorfit.com'] } },
+      },
+    });
+
+    expect(calls).toContain('https://vendorfit.com/login/');
+    expect(calls).not.toContain('https://vendorfit.com/');
   });
 });
 

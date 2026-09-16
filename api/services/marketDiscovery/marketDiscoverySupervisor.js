@@ -504,7 +504,7 @@ function createMarketDiscoverySupervisor({
         seenUrls.add(hit.url);
         const gathered = await gatherEvidence({ query: `${hit.title || hit.url} oficial`, url: hit.url, tier: 5 });
         if (!gathered.evidence) continue;
-        const marketRelevance = evaluateMarketRelevance({
+        let marketRelevance = evaluateMarketRelevance({
           content: gathered.content,
           url: hit.url,
           marketContext,
@@ -515,13 +515,57 @@ function createMarketDiscoverySupervisor({
         // DESCOBERTA, nunca identidade. O r8 herdou a URL do post como
         // officialSite e o título do post como nome.
         const rootUrl = homepageUrl(hit.url);
-        const relevanceAllowsUniverse = marketRelevance.state !== RELEVANCE_STATES.OUT_OF_MARKET;
         const signalIsHomepage = !rootUrl || gathered.evidence.url === rootUrl;
-        // Homepage como prova de EXISTÊNCIA (fonte genérica): buscada uma vez
-        // por candidato que pode entrar no universo; candidato rejeitado pelo
-        // gate não recebe fetch extra.
         let homepageGathered = null;
-        if (rootUrl && !signalIsHomepage && relevanceAllowsUniverse) {
+        // Segundo juízo do gate (run real r14, 2026-09-16): goteamup.com
+        // (TeamUp — fornecedor REAL) foi rejeitado com 0 sinais porque o hit
+        // do buscador era a página de LOGIN. A identidade do fornecedor é o
+        // domínio registrável, não a landing que o SERP escolheu: quando a
+        // página de sinal não é a homepage e fica abaixo do mínimo POR
+        // CONTEÚDO, a homepage é consultada UMA vez antes do veredito final
+        // (e já vale como prova de existência se o veredito virar). Host
+        // excluído por política (candidate_host_excluded) NÃO recebe segundo
+        // juízo: o banimento é decisão sobre o domínio, não sobre conteúdo.
+        if (marketRelevance.state === RELEVANCE_STATES.OUT_OF_MARKET
+          && marketRelevance.reason === 'category_signals_below_minimum'
+          && rootUrl && !signalIsHomepage) {
+          homepageGathered = await gatherEvidence({
+            query: `${registrableDomain(hit.url)} site oficial`,
+            url: rootUrl,
+            tier: 5,
+            note: 'homepage oficial — segundo juízo do gate de relevância (página de sinal abaixo do mínimo)',
+          });
+          if (homepageGathered?.evidence) {
+            const homepageRelevance = evaluateMarketRelevance({
+              content: homepageGathered.content,
+              url: rootUrl,
+              marketContext,
+            });
+            if (homepageRelevance.state !== RELEVANCE_STATES.OUT_OF_MARKET) {
+              // O veredito registra a ORIGEM (segundo juízo): nunca se passa
+              // por casamento direto da página de sinal.
+              marketRelevance = {
+                ...homepageRelevance,
+                fallback: 'homepage_second_judgment',
+                signalPageUrl: hit.url,
+                signalPageSignals: marketRelevance.signalCount,
+              };
+            } else {
+              // Rejeição do DOMÍNIO (duas páginas avaliadas), não de uma
+              // landing azarada do SERP.
+              marketRelevance = {
+                ...marketRelevance,
+                homepageChecked: true,
+                homepageSignals: homepageRelevance.signalCount,
+              };
+            }
+          }
+        }
+        const relevanceAllowsUniverse = marketRelevance.state !== RELEVANCE_STATES.OUT_OF_MARKET;
+        // Homepage como prova de EXISTÊNCIA (fonte genérica): buscada uma vez
+        // por candidato que pode entrar no universo; se o segundo juízo já a
+        // buscou, é a mesma captura (nunca duas vezes).
+        if (rootUrl && !signalIsHomepage && relevanceAllowsUniverse && !homepageGathered) {
           homepageGathered = await gatherEvidence({
             query: `${registrableDomain(hit.url)} site oficial`,
             url: rootUrl,

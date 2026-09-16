@@ -168,6 +168,16 @@ function buildCandidateRecord({
       minSignals: Number.isFinite(Number(marketRelevance.minSignals)) ? Number(marketRelevance.minSignals) : null,
       matchedTerms: stringList(marketRelevance.matchedTerms),
       domain: marketRelevance.domain ? String(marketRelevance.domain) : null,
+      // Auditoria do segundo juízo do gate (run real r14, 2026-09-16): quando
+      // o veredito veio da HOMEPAGE (a página de sinal era login/etc.), a
+      // origem é registrada — o veredito nunca se passa por casamento direto
+      // da página de sinal. Na rejeição final, homepageChecked prova que a
+      // decisão é do DOMÍNIO (duas páginas avaliadas).
+      ...(marketRelevance.fallback ? { fallback: String(marketRelevance.fallback) } : {}),
+      ...(marketRelevance.signalPageUrl ? { signalPageUrl: String(marketRelevance.signalPageUrl) } : {}),
+      ...(Number.isFinite(Number(marketRelevance.signalPageSignals)) ? { signalPageSignals: Number(marketRelevance.signalPageSignals) } : {}),
+      ...(marketRelevance.homepageChecked === true ? { homepageChecked: true } : {}),
+      ...(Number.isFinite(Number(marketRelevance.homepageSignals)) ? { homepageSignals: Number(marketRelevance.homepageSignals) } : {}),
     }
     : null;
   const verdict = evaluateCandidateAcceptance({
