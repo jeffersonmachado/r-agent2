@@ -209,10 +209,15 @@ describe('§B7 — patch do sample: formato que o engine ACEITA', () => {
     // Premissa isolada do estado real da pesquisa: simula um sample em que o
     // holdout AINDA não foi analisado (o sample real passou a carregar a
     // análise real de 2026-09-15 — o espelho pré-existente é preservado).
+    // O invariante é agnóstico ao holdout CORRENTE: o espelho acontece quando
+    // o benchmark ANALISADO é o holdout registrado — quem quer que ele seja
+    // (ciclo 1: zenplanner; ciclo 2 em diante: o pré-registrado do market
+    // discovery vigente).
     const preHoldout = realSample();
+    const holdoutId = preHoldout.holdout.benchmarkId;
     preHoldout.holdout.analysedAt = null;
     preHoldout.benchmarks = preHoldout.benchmarks.map((benchmark) => (
-      benchmark.id === 'zenplanner' ? { ...benchmark, analyzedAt: null } : benchmark
+      benchmark.id === holdoutId ? { ...benchmark, analyzedAt: null } : benchmark
     ));
     const { sample } = mergeSamplePatch(preHoldout, validPatch());
     // Sem análise do holdout no patch, o espelho permanece null.
@@ -220,7 +225,7 @@ describe('§B7 — patch do sample: formato que o engine ACEITA', () => {
 
     const withHoldout = validPatch();
     withHoldout.benchmarks.push({
-      id: 'zenplanner',
+      id: holdoutId,
       analyzedAt: '2026-09-14T00:00:00.000Z',
       researchVersion: 'fitness-research-patch-v1',
       inventoryVersion: 'canonical-capabilities-1.0.0',
