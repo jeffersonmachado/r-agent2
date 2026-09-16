@@ -532,12 +532,15 @@ function createMarketDiscoverySupervisor({
         if (homepageGathered?.evidence) sourceEvidence.push(homepageGathered.evidence);
         // Nome: marca do <title> da homepage do PRÓPRIO fornecedor; fallback
         // determinístico para o rótulo do domínio. O título da página de sinal
-        // ("Top 11 Alternatives...") nunca é nome de fornecedor.
-        const name = vendorNameFromHomepageTitle(homepageGathered?.content)
-          || (signalIsHomepage ? vendorNameFromHomepageTitle(gathered.content) : null)
-          || nameFromDomain(hit.url)
-          || hit.title
-          || hit.url;
+        // ("Top 11 Alternatives...") nunca é nome de fornecedor. A PROVENIÊNCIA
+        // (`nameSource`) alimenta o rank de nome do merge cross-run.
+        const homepageName = vendorNameFromHomepageTitle(homepageGathered?.content)
+          || (signalIsHomepage ? vendorNameFromHomepageTitle(gathered.content) : null);
+        const domainName = homepageName ? null : nameFromDomain(hit.url);
+        const name = homepageName || domainName || hit.title || hit.url;
+        const nameSource = homepageName
+          ? 'homepage_title'
+          : (domainName ? 'domain_label' : (isNonEmptyString(hit.title) ? 'search_title' : 'url'));
         researchResults.push({
           name,
           officialSite: rootUrl || hit.url,
@@ -559,6 +562,7 @@ function createMarketDiscoverySupervisor({
           sourceEvidence,
           marketRelevance,
           rationale: `descoberto pela varredura de mercado: ${scan.query}`,
+          metadata: { nameSource },
         });
       }
     }
@@ -576,6 +580,7 @@ function createMarketDiscoverySupervisor({
           archetypes: seed.archetypes,
           independenceGroup: seed.independenceGroup,
           sourceEvidence: [gathered.evidence],
+          metadata: { nameSource: 'declared' },
         });
       }
     }

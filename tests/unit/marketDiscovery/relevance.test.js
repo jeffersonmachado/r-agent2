@@ -243,6 +243,30 @@ describe('qualidade do registro de candidato (run real r8, 2026-09-16)', () => {
     expect(archetypesFromMatchedTerms(['corporate wellness platform'], null)).toEqual([]);
   });
 
+  test('config REAL da vertical: google.com (buscador/mapa) é host excluído — canal, não fornecedor', () => {
+    // Run real r2 (2026-09-16): um resultado do Google Maps ('"Academia" no
+    // destino: Pentecoste - Pesquisar no Google Maps') foi ACEITO como
+    // candidato e chegou a ser escolhido HOLDOUT — a "identidade" era o
+    // domínio do PRÓPRIO buscador. O buscador/mapa hospeda páginas SOBRE
+    // fornecedores; não é um fornecedor.
+    const path = require('path');
+    const fs = require('fs');
+    const sample = JSON.parse(fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'config', 'benchmarks', 'fitness.json'), 'utf8',
+    ));
+    const excluded = (sample.marketContext.relevance.excludedHosts || [])
+      .map((host) => registrableDomain(host));
+    expect(excluded).toContain('google.com');
+    const verdict = evaluateMarketRelevance({
+      content: 'Gym Pentecoste Ceará - gym management software fitness studio',
+      url: 'https://www.google.com/maps/search/Gym+Pentecoste+Cear%C3%A1/?hl=pt-BR',
+      marketContext: sample.marketContext,
+    });
+    expect(verdict.evaluated).toBe(true);
+    expect(verdict.state).toBe(RELEVANCE_STATES.OUT_OF_MARKET);
+    expect(verdict.reason).toBe('candidate_host_excluded');
+  });
+
   test('config REAL da vertical: todo termo de categoria tem mapeamento para arquétipo existente', () => {
     // Sem mapeamento completo, um candidato IN_MARKET ficaria sem arquétipo e o
     // pré-registro do holdout (engine: marketArchetype obrigatório) morreria a

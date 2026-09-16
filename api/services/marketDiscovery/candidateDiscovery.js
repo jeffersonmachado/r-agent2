@@ -229,7 +229,13 @@ function seedFromBenchmark(vertical, benchmark) {
     sourceEvidence: [],
     rationale: 'seed de referência do config da vertical; aguardando confirmação por pesquisa',
     origin: CANDIDATE_ORIGINS.SEED,
-    metadata: { seedBenchmarkId: benchmark?.id || null, seedRole: benchmark?.role || null },
+    metadata: {
+      seedBenchmarkId: benchmark?.id || null,
+      seedRole: benchmark?.role || null,
+      // Nome declarado por humano no sample governado — rank acima de título
+      // de busca no merge (ver NAME_SOURCE_RANKS).
+      nameSource: 'declared',
+    },
   };
 }
 
@@ -310,11 +316,21 @@ function discoverCandidates({ vertical, seeds = [], researchResults = [] }) {
       if (existingInMarket && !foundInMarket) return existingRelevance;
       return foundRelevance;
     })();
+    const foundEntries = Object.fromEntries(Object.entries(found || {})
+      .filter(([, value]) => value !== null && value !== undefined)
+      .filter(([, value]) => !(Array.isArray(value) && value.length === 0)));
+    // Nome por rank de proveniência (mesma regra do merge cross-run): um
+    // título de resultado de busca não rebaixa um nome declarado ou extraído
+    // da homepage do próprio fornecedor.
+    const foundNameWins = !existing?.name
+      || nameSourceRank(found?.metadata) > nameSourceRank(existing?.metadata);
+    if (!foundNameWins && foundEntries.name) foundEntries.name = existing.name;
+    const winningNameSource = foundNameWins
+      ? (found?.metadata?.nameSource ?? existing?.metadata?.nameSource ?? null)
+      : (existing?.metadata?.nameSource ?? found?.metadata?.nameSource ?? null);
     const record = buildCandidateRecord({
       ...(existing || {}),
-      ...Object.fromEntries(Object.entries(found || {})
-        .filter(([, value]) => value !== null && value !== undefined)
-        .filter(([, value]) => !(Array.isArray(value) && value.length === 0))),
+      ...foundEntries,
       vertical,
       // A origem do seed é preservada no merge: ser seed não é demérito nem
       // privilégio — o que decide é a evidência acumulada.
@@ -327,6 +343,7 @@ function discoverCandidates({ vertical, seeds = [], researchResults = [] }) {
         ...(existing?.metadata || {}),
         ...(found?.metadata || {}),
         ...(seedWins && found?.marketRelevance ? { observedMarketRelevance: found.marketRelevance } : {}),
+        ...(winningNameSource ? { nameSource: winningNameSource } : {}),
       },
     });
     byKey.set(key, record);
@@ -360,9 +377,183 @@ function discoverCandidates({ vertical, seeds = [], researchResults = [] }) {
   };
 }
 
+/**
+ * Ranks de proveniência do NOME do candidato (merge cross-run, 2026-09-16).
+ * Um nome extraído do <title> da homepage do PRÓPRIO fornecedor vale mais que
+ * o rótulo derivado do domínio, que vale mais que o título de um resultado de
+ * busca (fonte do lixo pré-fix: listicles como "Top 11 Alternatives..."
+ * viraram nome de fornecedor). Registro legado sem `metadata.nameSource`
+ * recebe o rank de `search_title` — foi de lá que os nomes ruins vieram.
+ */
+const NAME_SOURCE_RANKS = Object.freeze({
+  homepage_title: 40,
+  declared: 30,
+  domain_label: 20,
+  search_title: 10,
+  url: 0,
+});
+
+function nameSourceRank(metadata) {
+  const source = metadata && typeof metadata === 'object' ? metadata.nameSource : null;
+  if (source && Object.prototype.hasOwnProperty.call(NAME_SOURCE_RANKS, source)) {
+    return NAME_SOURCE_RANKS[source];
+  }
+  return NAME_SOURCE_RANKS.search_title;
+}
+
+/** União por url, ordem estável: o incoming ATUALIZA o item da mesma fonte. */
+function unionEvidenceByUrl(persistedEvidence, incomingEvidence) {
+  const byUrl = new Map();
+  for (const item of list(persistedEvidence)) {
+    if (isNonEmptyString(item?.url) && !byUrl.has(item.url)) byUrl.set(item.url, item);
+  }
+  for (const item of list(incomingEvidence)) {
+    if (isNonEmptyString(item?.url)) byUrl.set(item.url, item);
+  }
+  return [...byUrl.values()];
+}
+
+function sortedUnion(persistedList, incomingList) {
+  return [...new Set([...list(persistedList), ...list(incomingList)].map((v) => String(v ?? '').trim()).filter(Boolean))].sort();
+}
+
+/**
+ * Veredito de relevância no merge cross-run:
+ *  - host excluído pela POLÍTICA VIGENTE (`candidate_host_excluded`) VENCE um
+ *    IN_MARKET histórico — o aceite anterior foi erro de política, não fato;
+ *  - fora isso, IN_MARKET persistido é ESTÁVEL: uma página posterior sem os
+ *    termos de categoria não desmente a página que provou o pertencimento (o
+ *    veredito divergente fica auditável em `observedMarketRelevance`);
+ *  - incoming sem veredito nunca apaga o persistido.
+ */
+function mergeRelevanceVerdicts(persistedRelevance, incomingRelevance) {
+  if (!persistedRelevance || typeof persistedRelevance !== 'object') {
+    return { relevance: incomingRelevance || null, observed: null };
+  }
+  if (!incomingRelevance || typeof incomingRelevance !== 'object') {
+    return { relevance: persistedRelevance, observed: null };
+  }
+  const persistedInMarket = persistedRelevance.evaluated === true
+    && persistedRelevance.state === RELEVANCE_STATES.IN_MARKET;
+  const incomingInMarket = incomingRelevance.evaluated === true
+    && incomingRelevance.state === RELEVANCE_STATES.IN_MARKET;
+  const incomingHostExcluded = incomingRelevance.evaluated === true
+    && incomingRelevance.state === RELEVANCE_STATES.OUT_OF_MARKET
+    && incomingRelevance.reason === 'candidate_host_excluded';
+  if (incomingHostExcluded) return { relevance: incomingRelevance, observed: null };
+  if (persistedInMarket && !incomingInMarket) return { relevance: persistedRelevance, observed: incomingRelevance };
+  return { relevance: incomingRelevance, observed: null };
+}
+
+/**
+ * Merge CROSS-RUN com o registro PERSISTIDO (run real de 2026-09-16,
+ * woliba.io): o upsert do store sobrescrevia a linha com a visão do run
+ * corrente — uma confirmação com fetch falho apagou evidência, relevância e
+ * nome de um candidato ACEITO. A verdade do candidato vive na tabela
+ * `market_candidates`: o merge ACUMULA (evidência por url, arquétipos,
+ * segmentos), IN_MARKET é estável, nome respeita o rank de proveniência e o
+ * ESTADO é recomputado do registro fundido — nunca escolhido pelo chamador.
+ *
+ * @param {object|null} persisted registro persistido (qualquer camada de
+ *   mapeamento — usar `candidateRecordFromPersistence` para linhas do store)
+ * @param {object} incoming registro do run corrente
+ */
+function mergeCandidateRecords(persisted, incoming) {
+  if (!persisted || typeof persisted !== 'object') return incoming;
+  if (!incoming || typeof incoming !== 'object') return persisted;
+
+  const sourceEvidence = unionEvidenceByUrl(persisted.sourceEvidence, incoming.sourceEvidence);
+  const { relevance, observed } = mergeRelevanceVerdicts(persisted.marketRelevance, incoming.marketRelevance);
+
+  const incomingNameWins = nameSourceRank(incoming.metadata) > nameSourceRank(persisted.metadata)
+    && isNonEmptyString(incoming.name);
+  const name = incomingNameWins
+    ? String(incoming.name).trim()
+    : String(persisted.name ?? incoming.name ?? '').trim();
+  const nameSource = incomingNameWins
+    ? incoming.metadata?.nameSource
+    : (persisted.metadata?.nameSource || incoming.metadata?.nameSource || null);
+
+  const scalar = (field) => (isNonEmptyString(incoming[field])
+    ? String(incoming[field]).trim()
+    : (isNonEmptyString(persisted[field]) ? String(persisted[field]).trim() : null));
+
+  const merged = {
+    vertical: incoming.vertical || persisted.vertical,
+    candidateKey: persisted.candidateKey || incoming.candidateKey,
+    name,
+    vendor: scalar('vendor'),
+    officialSite: scalar('officialSite'),
+    officialDocs: scalar('officialDocs'),
+    apiDocs: scalar('apiDocs'),
+    country: scalar('country'),
+    region: scalar('region'),
+    segments: sortedUnion(persisted.segments, incoming.segments),
+    targetCustomers: sortedUnion(persisted.targetCustomers, incoming.targetCustomers),
+    archetypes: sortedUnion(persisted.archetypes, incoming.archetypes),
+    independenceGroup: scalar('independenceGroup'),
+    cloneOf: scalar('cloneOf'),
+    baseProduct: scalar('baseProduct'),
+    // A origem seed persistida prevalece: ser seed não é demérito nem
+    // privilégio — o que decide aceitação é a evidência acumulada.
+    origin: persisted.origin === CANDIDATE_ORIGINS.SEED
+      ? CANDIDATE_ORIGINS.SEED
+      : (incoming.origin || persisted.origin || CANDIDATE_ORIGINS.RESEARCH),
+    sourceEvidence,
+    rationale: isNonEmptyString(incoming.rationale) ? incoming.rationale : (persisted.rationale ?? null),
+    marketRelevance: relevance,
+    metadata: {
+      ...(persisted.metadata && typeof persisted.metadata === 'object' ? persisted.metadata : {}),
+      ...(incoming.metadata && typeof incoming.metadata === 'object' ? incoming.metadata : {}),
+      ...(nameSource ? { nameSource } : {}),
+      ...(observed ? { observedMarketRelevance: observed } : {}),
+    },
+  };
+  const verdict = evaluateCandidateAcceptance({
+    name: merged.name,
+    origin: merged.origin,
+    sourceEvidence: merged.sourceEvidence,
+    marketRelevance: merged.marketRelevance,
+  });
+  merged.state = verdict.state;
+  return merged;
+}
+
+/**
+ * Mapeia uma linha PERSISTIDA do store (snake_case) para o formato de registro
+ * usado pelo merge. Campos ausentes ficam null/[] — nunca inventados.
+ */
+function candidateRecordFromPersistence(row) {
+  if (!row || typeof row !== 'object') return null;
+  return {
+    vertical: row.vertical ?? null,
+    candidateKey: row.candidate_key ?? row.candidateKey ?? null,
+    name: row.name ?? null,
+    vendor: row.vendor ?? null,
+    officialSite: row.official_site ?? row.officialSite ?? null,
+    officialDocs: row.official_docs ?? row.officialDocs ?? null,
+    apiDocs: row.api_docs ?? row.apiDocs ?? null,
+    country: row.country ?? null,
+    region: row.region ?? null,
+    segments: list(row.segments),
+    targetCustomers: list(row.target_customers ?? row.targetCustomers),
+    archetypes: list(row.archetypes),
+    independenceGroup: row.independence_group ?? row.independenceGroup ?? null,
+    cloneOf: row.clone_of ?? row.cloneOf ?? null,
+    baseProduct: row.base_product ?? row.baseProduct ?? null,
+    origin: row.origin ?? null,
+    state: row.state ?? null,
+    sourceEvidence: list(row.source_evidence ?? row.sourceEvidence),
+    rationale: row.rationale ?? null,
+    marketRelevance: row.market_relevance ?? row.marketRelevance ?? null,
+    metadata: row.metadata && typeof row.metadata === 'object' ? row.metadata : {},
+  };
+}
+
 module.exports = {
   CANDIDATE_STATES,
   CANDIDATE_ORIGINS,
+  NAME_SOURCE_RANKS,
   normalizeCandidateKey,
   candidateIdentityKey,
   evaluateCandidateAcceptance,
@@ -370,4 +561,6 @@ module.exports = {
   seedFromBenchmark,
   researchedKeysFromSample,
   discoverCandidates,
+  mergeCandidateRecords,
+  candidateRecordFromPersistence,
 };

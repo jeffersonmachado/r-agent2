@@ -30,6 +30,7 @@
  */
 
 const crypto = require('crypto');
+const { mergeCandidateRecords, candidateRecordFromPersistence } = require('./candidateDiscovery');
 
 const ERROR_CODES = Object.freeze({
   PERSISTENCE_REQUIRED: 'persistence_required',
@@ -221,8 +222,13 @@ function createMarketDiscoveryStore({ models } = {}) {
 
   /**
    * Candidato é idempotente por `(tenant, vertical, candidate_key)`:
-   * re-descobrir o mesmo fornecedor ATUALIZA evidência/estado, nunca duplica.
+   * re-descobrir o mesmo fornecedor FUNDE evidência/estado, nunca duplica.
    * `deep_research_at` NÃO é gravado aqui — ver `markDeepResearchStarted`.
+   *
+   * Merge CROSS-RUN não destrutivo (run real de 2026-09-16, woliba.io): a
+   * linha persistida é a verdade acumulada do candidato. Regravar com a visão
+   * do run corrente apagava evidência, relevância IN_MARKET e nome quando o
+   * fetch de um ciclo falhava — ver `mergeCandidateRecords`.
    */
   async function upsertCandidate({ tenantId, runId = null, candidate }) {
     const { candidate: candidateModel } = resolveModels();
@@ -231,36 +237,40 @@ function createMarketDiscoveryStore({ models } = {}) {
     const key = requireNonEmpty(candidate?.candidateKey, 'candidate.candidateKey');
 
     const id = deterministicId('mca', [tenant, vertical, key]);
-    const payload = {
+    const payloadFor = (record) => ({
       run_id: runId ? String(runId) : null,
-      name: requireNonEmpty(candidate?.name, 'candidate.name'),
-      vendor: optionalString(candidate?.vendor),
-      official_site: optionalString(candidate?.officialSite),
-      official_docs: optionalString(candidate?.officialDocs),
-      api_docs: optionalString(candidate?.apiDocs),
-      country: optionalString(candidate?.country),
-      region: optionalString(candidate?.region),
-      segments: jsonArray(candidate?.segments),
-      target_customers: jsonArray(candidate?.targetCustomers),
-      archetypes: jsonArray(candidate?.archetypes),
-      independence_group: optionalString(candidate?.independenceGroup),
-      clone_of: optionalString(candidate?.cloneOf),
-      base_product: optionalString(candidate?.baseProduct),
-      origin: String(candidate?.origin || 'research'),
-      state: String(candidate?.state || 'EVIDENCE_REQUIRED'),
-      market_relevance: candidate?.marketRelevance && typeof candidate.marketRelevance === 'object'
-        ? jsonObject(candidate.marketRelevance)
+      name: requireNonEmpty(record?.name, 'candidate.name'),
+      vendor: optionalString(record?.vendor),
+      official_site: optionalString(record?.officialSite),
+      official_docs: optionalString(record?.officialDocs),
+      api_docs: optionalString(record?.apiDocs),
+      country: optionalString(record?.country),
+      region: optionalString(record?.region),
+      segments: jsonArray(record?.segments),
+      target_customers: jsonArray(record?.targetCustomers),
+      archetypes: jsonArray(record?.archetypes),
+      independence_group: optionalString(record?.independenceGroup),
+      clone_of: optionalString(record?.cloneOf),
+      base_product: optionalString(record?.baseProduct),
+      origin: String(record?.origin || 'research'),
+      state: String(record?.state || 'EVIDENCE_REQUIRED'),
+      market_relevance: record?.marketRelevance && typeof record.marketRelevance === 'object'
+        ? jsonObject(record.marketRelevance)
         : null,
-      source_evidence: jsonArray(candidate?.sourceEvidence),
-      rationale: optionalString(candidate?.rationale),
-      metadata: jsonObject(candidate?.metadata),
-    };
+      source_evidence: jsonArray(record?.sourceEvidence),
+      rationale: optionalString(record?.rationale),
+      metadata: jsonObject(record?.metadata),
+    });
     const existing = await candidateModel.findByPk(id);
     if (existing) {
-      await existing.update(payload);
+      const merged = mergeCandidateRecords(
+        candidateRecordFromPersistence(existing.get({ plain: true })),
+        candidate,
+      );
+      await existing.update(payloadFor(merged));
       return existing;
     }
-    return candidateModel.create({ id, tenant_key: tenant, vertical, candidate_key: key, ...payload });
+    return candidateModel.create({ id, tenant_key: tenant, vertical, candidate_key: key, ...payloadFor(candidate) });
   }
 
   /**

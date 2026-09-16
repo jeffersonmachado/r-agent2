@@ -16,6 +16,7 @@
  */
 
 const crypto = require('crypto');
+const { mergeCandidateRecords, candidateRecordFromPersistence } = require('../../api/services/marketDiscovery/candidateDiscovery');
 
 function deterministicId(prefix, parts) {
   const digest = crypto.createHash('sha256').update(parts.map((p) => String(p ?? '')).join('\u0000')).digest('hex');
@@ -154,41 +155,46 @@ function createMarketDiscoveryMemoryStore({ state } = {}) {
     const vertical = required(candidate?.vertical, 'candidate.vertical');
     const key = required(candidate?.candidateKey, 'candidate.candidateKey');
     const id = deterministicId('mca', [tenant, vertical, key]);
-    const existing = backing.candidates.get(id) || {};
-    const payload = {
+    const existing = backing.candidates.get(id) || null;
+    const payloadFor = (record) => ({
       id,
       tenant_key: tenant,
       vertical,
       run_id: runId ? String(runId) : null,
       candidate_key: key,
-      name: required(candidate?.name, 'candidate.name'),
-      vendor: optionalString(candidate?.vendor),
-      official_site: optionalString(candidate?.officialSite),
-      official_docs: optionalString(candidate?.officialDocs),
-      api_docs: optionalString(candidate?.apiDocs),
-      country: optionalString(candidate?.country),
-      region: optionalString(candidate?.region),
-      segments: jsonArray(candidate?.segments),
-      target_customers: jsonArray(candidate?.targetCustomers),
-      archetypes: jsonArray(candidate?.archetypes),
-      independence_group: optionalString(candidate?.independenceGroup),
-      clone_of: optionalString(candidate?.cloneOf),
-      base_product: optionalString(candidate?.baseProduct),
-      origin: String(candidate?.origin || 'research'),
-      state: String(candidate?.state || 'EVIDENCE_REQUIRED'),
-      market_relevance: candidate?.marketRelevance && typeof candidate.marketRelevance === 'object'
-        ? jsonObject(candidate.marketRelevance)
+      name: required(record?.name, 'candidate.name'),
+      vendor: optionalString(record?.vendor),
+      official_site: optionalString(record?.officialSite),
+      official_docs: optionalString(record?.officialDocs),
+      api_docs: optionalString(record?.apiDocs),
+      country: optionalString(record?.country),
+      region: optionalString(record?.region),
+      segments: jsonArray(record?.segments),
+      target_customers: jsonArray(record?.targetCustomers),
+      archetypes: jsonArray(record?.archetypes),
+      independence_group: optionalString(record?.independenceGroup),
+      clone_of: optionalString(record?.cloneOf),
+      base_product: optionalString(record?.baseProduct),
+      origin: String(record?.origin || 'research'),
+      state: String(record?.state || 'EVIDENCE_REQUIRED'),
+      market_relevance: record?.marketRelevance && typeof record.marketRelevance === 'object'
+        ? jsonObject(record.marketRelevance)
         : null,
-      source_evidence: jsonArray(candidate?.sourceEvidence),
-      rationale: optionalString(candidate?.rationale),
-      metadata: jsonObject(candidate?.metadata),
-    };
+      source_evidence: jsonArray(record?.sourceEvidence),
+      rationale: optionalString(record?.rationale),
+      metadata: jsonObject(record?.metadata),
+    });
+    // Merge cross-run não destrutivo (mesmo contrato do store Postgres):
+    // re-descobrir FUNDE com o persistido, nunca apaga evidência/veredito.
+    const record = existing
+      ? mergeCandidateRecords(candidateRecordFromPersistence(existing), candidate)
+      : candidate;
     backing.candidates.set(id, {
       profile: null,
       profiled_at: null,
       deep_research_at: null,
-      ...existing,
-      ...payload,
+      ...(existing || {}),
+      ...payloadFor(record),
     });
     return clone(backing.candidates.get(id));
   }

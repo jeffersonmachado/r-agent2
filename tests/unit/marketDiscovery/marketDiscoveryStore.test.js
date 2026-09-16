@@ -105,6 +105,76 @@ describe('marketDiscoveryStore — persistência entre restarts', () => {
   });
 });
 
+describe('marketDiscoveryStore — merge cross-run não destrutivo (contrato do store)', () => {
+  // Run real de 2026-09-16 (woliba.io): o upsert sobrescrevia a linha
+  // persistida com a visão do run corrente — evidência, relevância e nome de
+  // um candidato ACEITO foram apagados por uma confirmação com fetch falho.
+  // O store é a autoridade persistente: o MERGE é aplicado AQUI, em qualquer
+  // caminho de escrita, não só na boa vontade do chamador.
+  const REL_IN = {
+    evaluated: true, state: 'IN_MARKET', accepted: true, reason: 'category_signals_present',
+    signalCount: 1, minSignals: 1, matchedTerms: ['employee wellness platform'], domain: 'vendorx.io',
+  };
+  const REL_OUT_CONTENT = {
+    evaluated: true, state: 'OUT_OF_MARKET', accepted: false, reason: 'category_signals_below_minimum',
+    signalCount: 0, minSignals: 1, matchedTerms: [], domain: 'vendorx.io',
+  };
+  const REL_OUT_HOST = {
+    evaluated: true, state: 'OUT_OF_MARKET', accepted: false, reason: 'candidate_host_excluded',
+    signalCount: 0, minSignals: 1, matchedTerms: [], domain: 'vendorx.io',
+  };
+
+  test('run posterior com página fraca NÃO destrói aceite, evidência nem nome persistidos', async () => {
+    const store = createMarketDiscoveryMemoryStore();
+    await store.upsertCandidate({
+      tenantId: TENANT,
+      candidate: {
+        vertical: 'fitness', candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research',
+        state: 'ACCEPTED', marketRelevance: REL_IN, archetypes: ['personal-wellness'],
+        sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+        metadata: { nameSource: 'homepage_title' },
+      },
+    });
+    const after = await store.upsertCandidate({
+      tenantId: TENANT,
+      candidate: {
+        vertical: 'fitness', candidateKey: 'vendorx.io', name: 'Vendorx', origin: 'research',
+        state: 'OUT_OF_MARKET', marketRelevance: REL_OUT_CONTENT, archetypes: [],
+        sourceEvidence: [{ url: 'https://vendorx.io/careers/', evidenceRef: 'ev-2', contentHash: 'h2' }],
+        metadata: { nameSource: 'domain_label' },
+      },
+    });
+    expect(after.state).toBe('ACCEPTED');
+    expect(after.market_relevance.state).toBe('IN_MARKET');
+    expect(after.source_evidence.map((e) => e.url).sort()).toEqual(['https://vendorx.io/', 'https://vendorx.io/careers/']);
+    expect(after.name).toBe('VendorX');
+    expect(after.archetypes).toEqual(['personal-wellness']);
+    expect(after.metadata.observedMarketRelevance.state).toBe('OUT_OF_MARKET');
+  });
+
+  test('host excluído pela política vigente corrige o aceite histórico no próprio store', async () => {
+    const store = createMarketDiscoveryMemoryStore();
+    await store.upsertCandidate({
+      tenantId: TENANT,
+      candidate: {
+        vertical: 'fitness', candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research',
+        state: 'ACCEPTED', marketRelevance: REL_IN,
+        sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      },
+    });
+    const after = await store.upsertCandidate({
+      tenantId: TENANT,
+      candidate: {
+        vertical: 'fitness', candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research',
+        state: 'OUT_OF_MARKET', marketRelevance: REL_OUT_HOST,
+        sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      },
+    });
+    expect(after.state).toBe('OUT_OF_MARKET');
+    expect(after.market_relevance.reason).toBe('candidate_host_excluded');
+  });
+});
+
 describe('marketDiscoveryStore — fail-closed sem Postgres', () => {
   test('sem Sequelize inicializado TODA operação falha com persistence_required', async () => {
     // Este arquivo de teste nunca conecta: getSequelize() é null neste worker.

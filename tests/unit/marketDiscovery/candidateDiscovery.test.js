@@ -355,3 +355,163 @@ describe('candidateDiscovery — merge não destrutivo (run real r9, 2026-09-16)
     expect(outOfMarket.map((c) => c.candidateKey)).not.toContain('vendorx.io');
   });
 });
+
+describe('candidateDiscovery — mergeCandidateRecords (merge cross-run com o persistido)', () => {
+  // Run real de 2026-09-16 (woliba.io): o upsert do store sobrescrevia o
+  // registro PERSISTIDO com a visão do run corrente — uma confirmação de seed
+  // com fetch falho regravou a linha como EVIDENCE_REQUIRED, com relevância e
+  // evidência ZERADAS e o nome trocado pelo título de um listicle. A verdade
+  // do candidato vive na tabela market_candidates: o merge cross-run ACUMULA
+  // — evidência faz união por url, IN_MARKET é estável, e só a POLÍTICA
+  // vigente (host excluído) corrige um aceite histórico.
+  const { mergeCandidateRecords } = require('../../../api/services/marketDiscovery/candidateDiscovery');
+  const REL_IN = {
+    evaluated: true, state: 'IN_MARKET', accepted: true, reason: 'category_signals_present',
+    signalCount: 1, minSignals: 1, matchedTerms: ['employee wellness platform'], domain: 'vendorx.io',
+  };
+  const REL_OUT_CONTENT = {
+    evaluated: true, state: 'OUT_OF_MARKET', accepted: false, reason: 'category_signals_below_minimum',
+    signalCount: 0, minSignals: 1, matchedTerms: [], domain: 'vendorx.io',
+  };
+  const REL_OUT_HOST = {
+    evaluated: true, state: 'OUT_OF_MARKET', accepted: false, reason: 'candidate_host_excluded',
+    signalCount: 0, minSignals: 1, matchedTerms: [], domain: 'vendorx.io',
+  };
+
+  test('sem registro persistido, o incoming passa como veio', () => {
+    const incoming = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research', state: 'ACCEPTED',
+      sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      marketRelevance: REL_IN,
+    };
+    expect(mergeCandidateRecords(null, incoming)).toBe(incoming);
+    expect(mergeCandidateRecords(undefined, incoming)).toBe(incoming);
+  });
+
+  test('evidência ACUMULA por url entre runs: mesma fonte atualiza o hash, nunca duplica', () => {
+    const persisted = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research',
+      sourceEvidence: [{ url: 'https://vendorx.io/blog/a/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      marketRelevance: REL_IN, metadata: {},
+    };
+    const incoming = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research',
+      sourceEvidence: [
+        { url: 'https://vendorx.io/blog/a/', evidenceRef: 'ev-1b', contentHash: 'h1-novo' },
+        { url: 'https://vendorx.io/', evidenceRef: 'ev-2', contentHash: 'h2' },
+      ],
+      marketRelevance: REL_IN, metadata: {},
+    };
+    const merged = mergeCandidateRecords(persisted, incoming);
+    expect(merged.sourceEvidence).toHaveLength(2);
+    const byUrl = Object.fromEntries(merged.sourceEvidence.map((e) => [e.url, e]));
+    expect(byUrl['https://vendorx.io/blog/a/'].contentHash).toBe('h1-novo');
+    expect(byUrl['https://vendorx.io/'].evidenceRef).toBe('ev-2');
+    // Idempotência: fundir de novo o MESMO incoming não cresce a evidência.
+    const again = mergeCandidateRecords(merged, incoming);
+    expect(again.sourceEvidence).toHaveLength(2);
+  });
+
+  test('IN_MARKET persistido é ESTÁVEL entre runs: página nova sem termos não derruba o candidato', () => {
+    const persisted = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research', state: 'ACCEPTED',
+      sourceEvidence: [
+        { url: 'https://vendorx.io/blog/a/', evidenceRef: 'ev-1', contentHash: 'h1' },
+        { url: 'https://vendorx.io/', evidenceRef: 'ev-2', contentHash: 'h2' },
+      ],
+      marketRelevance: REL_IN, archetypes: ['personal-wellness'], metadata: { nameSource: 'homepage_title' },
+    };
+    const incoming = {
+      candidateKey: 'vendorx.io', name: 'Vendorx', origin: 'research', state: 'OUT_OF_MARKET',
+      sourceEvidence: [{ url: 'https://vendorx.io/careers/', evidenceRef: 'ev-3', contentHash: 'h3' }],
+      marketRelevance: REL_OUT_CONTENT, archetypes: [], metadata: { nameSource: 'domain_label' },
+    };
+    const merged = mergeCandidateRecords(persisted, incoming);
+    expect(merged.marketRelevance.state).toBe('IN_MARKET');
+    expect(merged.state).toBe('ACCEPTED');
+    expect(merged.sourceEvidence).toHaveLength(3);
+    expect(merged.archetypes).toEqual(['personal-wellness']);
+    // O veredito divergente fica auditável, nunca some em silêncio.
+    expect(merged.metadata.observedMarketRelevance.state).toBe('OUT_OF_MARKET');
+  });
+
+  test('host excluído pela POLÍTICA VIGENTE corrige o aceite histórico', () => {
+    const persisted = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research', state: 'ACCEPTED',
+      sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      marketRelevance: REL_IN, metadata: {},
+    };
+    const incoming = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research', state: 'OUT_OF_MARKET',
+      sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      marketRelevance: REL_OUT_HOST, metadata: {},
+    };
+    const merged = mergeCandidateRecords(persisted, incoming);
+    expect(merged.marketRelevance.state).toBe('OUT_OF_MARKET');
+    expect(merged.marketRelevance.reason).toBe('candidate_host_excluded');
+    expect(merged.state).toBe('OUT_OF_MARKET');
+  });
+
+  test('incoming sem veredito (confirmação de seed) NÃO apaga o veredito persistido', () => {
+    const persisted = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research', state: 'ACCEPTED',
+      sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1', contentHash: 'h1' }],
+      marketRelevance: REL_IN, metadata: {},
+    };
+    const incoming = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research',
+      sourceEvidence: [], marketRelevance: null, metadata: {},
+    };
+    const merged = mergeCandidateRecords(persisted, incoming);
+    expect(merged.marketRelevance.state).toBe('IN_MARKET');
+    expect(merged.state).toBe('ACCEPTED');
+    expect(merged.sourceEvidence).toHaveLength(1);
+  });
+
+  test('nome: proveniência de rank MAIOR sara nome legado; rank menor não rebaixa', () => {
+    const { mergeCandidateRecords: merge } = require('../../../api/services/marketDiscovery/candidateDiscovery');
+    // Legado sem nameSource é tratado como título de busca (foi de lá que o
+    // lixo pré-fix veio): homepage/domain_label sarão o título de listicle.
+    const legado = {
+      candidateKey: 'woliba.io', name: 'Top 11 Wellhub Alternatives or Competitors in 2026',
+      origin: 'research', sourceEvidence: [{ url: 'https://woliba.io/blog/x/', evidenceRef: 'ev-1' }],
+      marketRelevance: REL_IN, metadata: {},
+    };
+    const sarado = merge(legado, {
+      candidateKey: 'woliba.io', name: 'Woliba', origin: 'research',
+      sourceEvidence: [{ url: 'https://woliba.io/', evidenceRef: 'ev-2' }],
+      marketRelevance: REL_IN, metadata: { nameSource: 'homepage_title' },
+    });
+    expect(sarado.name).toBe('Woliba');
+    expect(sarado.metadata.nameSource).toBe('homepage_title');
+    // Rank menor NÃO rebaixa um nome bom.
+    const bom = {
+      candidateKey: 'vantagefit.io', name: 'Vantage Fit', origin: 'research',
+      sourceEvidence: [{ url: 'https://vantagefit.io/', evidenceRef: 'ev-1' }],
+      marketRelevance: REL_IN, metadata: { nameSource: 'homepage_title' },
+    };
+    const rebaixado = merge(bom, {
+      candidateKey: 'vantagefit.io', name: 'Vantagefit', origin: 'research',
+      sourceEvidence: [{ url: 'https://vantagefit.io/pricing/', evidenceRef: 'ev-2' }],
+      marketRelevance: REL_IN, metadata: { nameSource: 'domain_label' },
+    });
+    expect(rebaixado.name).toBe('Vantage Fit');
+  });
+
+  test('arrays fazem união determinística e origem seed persistida prevalece', () => {
+    const persisted = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'seed',
+      sourceEvidence: [{ url: 'https://vendorx.io/', evidenceRef: 'ev-1' }],
+      archetypes: ['personal-wellness'], segments: ['corporate'], metadata: {},
+    };
+    const incoming = {
+      candidateKey: 'vendorx.io', name: 'VendorX', origin: 'research',
+      sourceEvidence: [{ url: 'https://vendorx.io/docs/', evidenceRef: 'ev-2' }],
+      archetypes: ['boutique-studio', 'personal-wellness'], segments: [], metadata: {},
+    };
+    const merged = mergeCandidateRecords(persisted, incoming);
+    expect(merged.archetypes).toEqual(['boutique-studio', 'personal-wellness']);
+    expect(merged.segments).toEqual(['corporate']);
+    expect(merged.origin).toBe('seed');
+  });
+});
