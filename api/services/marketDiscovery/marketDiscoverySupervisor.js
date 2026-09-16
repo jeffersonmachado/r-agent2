@@ -46,12 +46,13 @@ const {
   seedFromBenchmark,
   researchedKeysFromSample,
   CANDIDATE_STATES,
+  CANDIDATE_ORIGINS,
 } = require('./candidateDiscovery');
 const { independenceReport } = require('./independence');
 const { selectDiscoverySet, selectHoldout, SELECTION_WEIGHTS, DEFAULT_SET_SIZE } = require('./discoverySetSelection');
 const { createHoldoutPreregistration, HOLDOUT_SET_STATES } = require('./holdoutPreregistration');
 const { buildMarketQueries } = require('./marketQueries');
-const { evaluateMarketRelevance, RELEVANCE_STATES } = require('./relevance');
+const { evaluateMarketRelevance, RELEVANCE_STATES, registrableDomain } = require('./relevance');
 
 /** A capability canônica pela qual o runtime alcança a descoberta de mercado. */
 const MARKET_DISCOVERY_CAPABILITY = Object.freeze({
@@ -538,11 +539,11 @@ function createMarketDiscoverySupervisor({
     });
 
     // ── CANDIDATE ANALYSIS ──────────────────────────────────────────────
-    // ESCOPO DO RUN (2026-09-16, run real r2): o universo persistido é por
-    // (tenant, vertical) e ACUMULA candidatos de runs anteriores. A análise,
-    // a diversidade e a seleção de um run são derivadas do que ESSE run
-    // verificou — candidato aceito por outro run nunca volta à seleção sem
-    // evidência nova (foi assim que lixo de runs antigos entrou no set do r2).
+    // ESCOPO DO RUN (2026-09-16, run real r2): o PROFILING é do que ESSE run
+    // verificou. A SELEÇÃO (abaixo) amplia o pool com o histórico elegível —
+    // aceites AVALIADOS IN_MARKET com host não excluído pela política vigente;
+    // aceites sem avaliação persistida (lixo pré-gate, como o do r2) nunca
+    // voltam.
     const accepted = await store.listCandidates({ tenantId: discoveryTenant, vertical: verticalId, state: CANDIDATE_STATES.ACCEPTED, runId: run.id });
     const profiles = [];
     for (const candidate of accepted) {
@@ -557,7 +558,31 @@ function createMarketDiscoverySupervisor({
 
     // ── DIVERSITY ───────────────────────────────────────────────────────
     const analyzed = await store.listCandidates({ tenantId: discoveryTenant, vertical: verticalId, state: CANDIDATE_STATES.ACCEPTED, runId: run.id });
-    const diversity = independenceReport(analyzed.map((row) => ({
+
+    // Elegibilidade HISTÓRICA (2026-09-16, run real r7): um candidato AVALIADO
+    // IN_MARKET pelo gate corrigido continua elegível nos ciclos seguintes
+    // mesmo quando a busca viva não o ressurge — a evidência persistida não
+    // expira por instabilidade do mecanismo de busca (woliba.io, verificado no
+    // r6, sumiu do pool do r7 e o ciclo morreu sem handoff). O filtro é duro:
+    // só volta ao pool quem tem `market_relevance` PERSISTIDA com
+    // evaluated=true e state=IN_MARKET, E cujo host NÃO é excluído pela
+    // política VIGENTE. Aceites anteriores ao gate (relevance ausente — o lixo
+    // do r2) e hosts banidos depois do aceite (diretórios como techjockey)
+    // ficam de fora.
+    const excludedHostsCurrent = list(marketContext?.relevance?.excludedHosts)
+      .map((host) => registrableDomain(host))
+      .filter(Boolean);
+    const historicalEligible = (await store.listCandidates({ tenantId: discoveryTenant, vertical: verticalId, state: CANDIDATE_STATES.ACCEPTED }))
+      .filter((row) => row.run_id !== run.id
+        && row.origin === CANDIDATE_ORIGINS.RESEARCH
+        && row.market_relevance
+        && row.market_relevance.evaluated === true
+        && row.market_relevance.state === RELEVANCE_STATES.IN_MARKET
+        && !excludedHostsCurrent.includes(registrableDomain(row.official_site) || ''));
+    const analyzedKeys = new Set(analyzed.map((row) => row.candidate_key));
+    const poolRows = [...analyzed, ...historicalEligible.filter((row) => !analyzedKeys.has(row.candidate_key))];
+
+    const diversity = independenceReport(poolRows.map((row) => ({
       candidateKey: row.candidate_key,
       independenceGroup: row.independence_group,
       cloneOf: row.clone_of,
@@ -568,7 +593,7 @@ function createMarketDiscoverySupervisor({
       tenantId: discoveryTenant,
       runId: run.id,
       state: DISCOVERY_RUN_STATES.DIVERSITY_EVALUATED,
-      metadata: { diversity },
+      metadata: { diversity, historicalEligible: historicalEligible.map((row) => row.candidate_key) },
     });
 
     // ── DISCOVERY SET ───────────────────────────────────────────────────
@@ -577,7 +602,7 @@ function createMarketDiscoverySupervisor({
     // que cobrem passa a contar como conhecido. A exclusão é derivada do
     // sample (mesma identidade do universo) e registrada no metadata do run.
     const incrementalExclusions = researchedKeysFromSample(sample);
-    const selectable = analyzed.map((row) => ({
+    const selectable = poolRows.map((row) => ({
       candidateKey: row.candidate_key,
       name: row.name,
       country: row.country,

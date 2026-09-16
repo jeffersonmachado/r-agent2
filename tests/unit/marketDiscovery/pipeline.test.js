@@ -468,3 +468,86 @@ describe('Market discovery — reserva de holdout no ciclo incremental', () => {
     expect(result.handoff).toBeNull();
   });
 });
+
+describe('Market discovery — elegibilidade histórica com relevância persistida', () => {
+  test('candidato AVALIADO IN_MARKET em run anterior continua elegível quando não ressurge', async () => {
+    // Run real r7 (2026-09-16): woliba.io foi verificado pelo gate corrigido no
+    // r6, mas a busca viva do r7 não o ressurgiu — o escopo estrito de run o
+    // apagou do pool e o ciclo morreu sem handoff. Aceites AVALIADOS
+    // (market_relevance.evaluated, IN_MARKET, host não excluído pela política
+    // corrente) são evidência persistida legítima: o pool da seleção é a UNIÃO
+    // do que o run verificou com o histórico elegível. O que NÃO volta: aceite
+    // sem avaliação persistida (lixo pré-gate, como o r2) ou host excluído
+    // pela config vigente (diretório banido depois do aceite, como techjockey).
+    const sharedState = { runs: new Map(), archetypes: new Map(), candidates: new Map(), sets: new Map() };
+    const context = { categoryTerms: ['conteúdo oficial'], relevance: { minCategorySignals: 1, excludedHosts: [] } };
+    const sampleCtx = { ...SAMPLE, marketContext: context };
+
+    const first = await buildHarness({ sharedState });
+    const runOne = await first.supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-h1',
+      sample: sampleCtx,
+    });
+    expect(runOne.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    const gymnovo = await first.store.getCandidate({ tenantId: TENANT, vertical: 'fitness-lab', candidateKey: 'gymnovo.com' });
+    expect(gymnovo.state).toBe('ACCEPTED');
+    expect(gymnovo.market_relevance && gymnovo.market_relevance.evaluated).toBe(true);
+    expect(gymnovo.market_relevance.state).toBe('IN_MARKET');
+
+    // Ciclo N+1: a busca viva NÃO ressurge gymnovo — só os seeds (já analisados).
+    const providersV2 = {
+      ...buildProviders(),
+      search: async () => ({ candidates: SEARCH_HITS.slice(0, 2) }),
+    };
+    const second = await buildHarness({ sharedState, providers: providersV2 });
+    const sampleAnalyzed = {
+      ...sampleCtx,
+      benchmarks: sampleCtx.benchmarks.map((b) => ({ ...b, analyzedAt: '2026-09-15T10:00:00.000Z' })),
+    };
+    const runTwo = await second.supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-h2',
+      sample: sampleAnalyzed,
+    });
+
+    expect(runTwo.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    const pool = [...runTwo.discoverySet.selected, runTwo.holdout.candidateKey].filter(Boolean);
+    expect(pool).toContain('gymnovo.com');
+    expect(runTwo.handoff).not.toBeNull();
+  });
+
+  test('aceite histórico com host EXCLUÍDO pela política corrente NÃO volta ao pool', async () => {
+    const sharedState = { runs: new Map(), archetypes: new Map(), candidates: new Map(), sets: new Map() };
+    const context = { categoryTerms: ['conteúdo oficial'], relevance: { minCategorySignals: 1, excludedHosts: [] } };
+    const first = await buildHarness({ sharedState });
+    await first.supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-x1',
+      sample: { ...SAMPLE, marketContext: context },
+    });
+
+    // Política nova: o host do gymnovo passa a ser excluído (ex.: virou diretório).
+    const providersV2 = {
+      ...buildProviders(),
+      search: async () => ({ candidates: SEARCH_HITS.slice(0, 2) }),
+    };
+    const second = await buildHarness({ sharedState, providers: providersV2 });
+    const strictContext = { categoryTerms: ['conteúdo oficial'], relevance: { minCategorySignals: 1, excludedHosts: ['gymnovo.com', 'gymnovo-whitelabel.com', 'delta-fitness.com'] } };
+    const runTwo = await second.supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-x2',
+      sample: {
+        ...SAMPLE,
+        marketContext: strictContext,
+        benchmarks: SAMPLE.benchmarks.map((b) => ({ ...b, analyzedAt: '2026-09-15T10:00:00.000Z' })),
+      },
+    });
+
+    expect(runTwo.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    const pool = [...runTwo.discoverySet.selected, runTwo.holdout.candidateKey].filter(Boolean);
+    expect(pool).not.toContain('gymnovo.com');
+    expect(pool).not.toContain('gymnovo-whitelabel.com');
+    expect(pool).not.toContain('delta-fitness.com');
+  });
+});
