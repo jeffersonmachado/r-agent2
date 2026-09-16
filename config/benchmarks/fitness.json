@@ -121,16 +121,41 @@
     ],
     "_categoryTermsNote": "2026-09-16 (run real r5): o vocabulário original era mais estreito que os PRÓPRIOS arquétipos do sample — o arquétipo personal-wellness é representado por benchmarks de corporate wellness (wellhub, glofox), mas nenhum termo cobria essa redação, e o fornecedor real vantagefit.io foi rejeitado com 0 sinais. Os termos adicionados ('corporate wellness platform', 'employee wellness platform', 'gym membership software', 'fitness studio software') nomeiam as CATEGORIAS já representadas no sample — nunca fornecedores. Controles negativos do mesmo dia: matthews.com (relatório imobiliário) e circuitopilates.com.br (estúdio de pilates) seguem OUT_OF_MARKET com 0 sinais no vocabulário estendido.",
     "categoryTermArchetypes": {
-      "gym management software": ["independent-gym", "gym-network"],
-      "fitness studio management platform": ["boutique-studio"],
-      "gym membership management software": ["independent-gym", "gym-network"],
-      "gym membership software": ["independent-gym", "gym-network"],
-      "fitness studio software": ["boutique-studio"],
-      "corporate wellness platform": ["personal-wellness"],
-      "employee wellness platform": ["personal-wellness"],
-      "software para academia gestão": ["independent-gym"],
-      "sistema de gestão para academias": ["independent-gym", "gym-network"],
-      "software para estúdio de pilates e treino funcional": ["boutique-studio", "crossfit-box"]
+      "gym management software": [
+        "independent-gym",
+        "gym-network"
+      ],
+      "fitness studio management platform": [
+        "boutique-studio"
+      ],
+      "gym membership management software": [
+        "independent-gym",
+        "gym-network"
+      ],
+      "gym membership software": [
+        "independent-gym",
+        "gym-network"
+      ],
+      "fitness studio software": [
+        "boutique-studio"
+      ],
+      "corporate wellness platform": [
+        "personal-wellness"
+      ],
+      "employee wellness platform": [
+        "personal-wellness"
+      ],
+      "software para academia gestão": [
+        "independent-gym"
+      ],
+      "sistema de gestão para academias": [
+        "independent-gym",
+        "gym-network"
+      ],
+      "software para estúdio de pilates e treino funcional": [
+        "boutique-studio",
+        "crossfit-box"
+      ]
     },
     "_categoryTermArchetypesNote": "2026-09-16 (run real r8): candidatos IN_MARKET entravam no universo SEM arquétipo (archetypes: []) — o pré-registro do holdout exige marketArchetype e a seleção por cobertura não tinha insumo. Este mapa DECLARA, por termo de categoria, os arquétipos do sample que o sinal evidencia; o candidato recebe a união dos mapeamentos dos seus sinais casados (api/services/marketDiscovery/relevance.js#archetypesFromMatchedTerms). Todo termo de categoryTerms precisa ter entrada aqui — a completude é travada em tests/unit/marketDiscovery/relevance.test.js. Julgamento humano auditável: termos de gestão de academias cobrem os arquétipos de academia (independent-gym/gym-network), termos de estúdio cobrem boutique-studio (e crossfit-box na redação de treino funcional), termos de wellness corporativo cobrem personal-wellness (a categoria dos representantes wellhub/glofox no sample).",
     "competitorPatterns": [
@@ -1727,168 +1752,6 @@
       "unresolvedSemanticCandidates": 1
     },
     {
-      "id": "zenplanner",
-      "name": "Zen Planner",
-      "role": "validation",
-      "order": 8,
-      "archetype": "crossfit-box",
-      "independenceGroup": "zenplanner",
-      "cloneOf": null,
-      "analyzedAt": "2026-09-16T02:56:34.455Z",
-      "previousInventorySize": null,
-      "novelty": {
-        "newCapabilities": [
-          {
-            "id": "brf-65b2af5d789ace0cf989b181b7b0676aac9022ee4c7ddcb1",
-            "name": "Expert team handles billing for you",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
-            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
-          },
-          {
-            "id": "brf-684b2c3425f43b862860353611bb720110a69cf1cafbdaa7",
-            "name": "PaySimple provides seamless member payment processing via processors like Stripe and WorldPay for Zen Planner software u…",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
-            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
-          },
-          {
-            "id": "brf-88f3ebd4bea7d8ec047932114392bc86c2ba5d7d0f044d71",
-            "name": "Membership Management",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
-            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
-          },
-          {
-            "id": "brf-9d801cc25450f43948b2b564c7220cbb59c4fc515e4b25bd",
-            "name": "Secure, Flexible, and Transparent Payment Solutions for Your Gym or Studio",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
-            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
-          },
-          {
-            "id": "brf-03d9f5bd0909db891432f9da07346876486636d041d84cc4",
-            "name": "Easy bill viewing and payment",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
-            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
-          },
-          {
-            "id": "brf-a82a02035f5c13b8ea15a9c9d01eb6665cea858b84613591",
-            "name": "Empower members to view and pay bills online, making payments convenient and hassle-free reducing your workload.",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
-            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
-          },
-          {
-            "id": "brf-e945220feeda54a04d3802f242579a8b4a287ff7a30c903b",
-            "name": "Workout Tracking",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
-            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
-          },
-          {
-            "id": "brf-9eb5365ca1c4e54eda321c04bf8362c7ca3a4112ff8c362d",
-            "name": "[It] is awesome you can now add a member note to the profile on the app. My coaches use the app for check-ins during cla…",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-b6cf531673aa4ca8c9ce78a2d8a3307331367e7cd6c19451",
-            "evidenceRef": "bre-f622f78e5deae2f359e5545e684540c20a3e55a6f35b99d4"
-          },
-          {
-            "id": "brf-eaf5f0a03f9c4fb5ff738c425f70703041764c691768a42d",
-            "name": "Never miss a check-in. Staff can manage schedules and take roll directly in the app.",
-            "normalizedId": null,
-            "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-b6cf531673aa4ca8c9ce78a2d8a3307331367e7cd6c19451",
-            "evidenceRef": "bre-f622f78e5deae2f359e5545e684540c20a3e55a6f35b99d4"
-          }
-        ],
-        "newRequiredCapabilities": [],
-        "newCriticalCapabilities": [],
-        "newJourneys": [],
-        "newRequiredJourneys": [],
-        "newCriticalJourneys": [],
-        "newBusinessRules": [],
-        "newRequiredBusinessRules": [],
-        "newCriticalBusinessRules": []
-      },
-      "sources": [
-        {
-          "tier": 5,
-          "url": "https://www.zenplanner.com/",
-          "retrievedAt": null,
-          "verified": false,
-          "httpStatus": 200,
-          "id": "brsrc-94e4e0c1f11bf0e487a482d59877a15d57632e361536e506",
-          "specificity": "SPECIFIC"
-        },
-        {
-          "tier": 5,
-          "url": "https://zenplanner.com/payments/",
-          "retrievedAt": "2026-09-16",
-          "verified": true,
-          "httpStatus": 200,
-          "specificity": "SPECIFIC",
-          "note": "página oficial de payments — HTTP 200 confirmado em recon 2026-09-15",
-          "id": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246"
-        },
-        {
-          "tier": 5,
-          "url": "https://zenplanner.com/mobile-app/",
-          "retrievedAt": "2026-09-16",
-          "verified": true,
-          "httpStatus": 200,
-          "specificity": "SPECIFIC",
-          "note": "página oficial do mobile app do aluno — HTTP 200 confirmado em recon 2026-09-15",
-          "id": "brsrc-b6cf531673aa4ca8c9ce78a2d8a3307331367e7cd6c19451"
-        }
-      ],
-      "freshness": {
-        "researchedAt": "2026-09-10",
-        "nextReviewAt": "2027-03-10",
-        "status": "FRESH"
-      },
-      "dimensions": {
-        "marketArchetype": "crossfit-box",
-        "customerSize": "small",
-        "geography": "US",
-        "businessModel": "saas-vertical",
-        "operationalDepth": "medium",
-        "integrationMaturity": "low",
-        "physicalOperation": "partial",
-        "financialDepth": "medium",
-        "customerEngagementDepth": "medium"
-      },
-      "researchVersion": "fitness-semantic-2026-09-15-r2",
-      "findingsInventory": [
-        "brf-65b2af5d789ace0cf989b181b7b0676aac9022ee4c7ddcb1",
-        "brf-684b2c3425f43b862860353611bb720110a69cf1cafbdaa7",
-        "brf-88f3ebd4bea7d8ec047932114392bc86c2ba5d7d0f044d71",
-        "brf-9d801cc25450f43948b2b564c7220cbb59c4fc515e4b25bd",
-        "brf-03d9f5bd0909db891432f9da07346876486636d041d84cc4",
-        "brf-a82a02035f5c13b8ea15a9c9d01eb6665cea858b84613591",
-        "brf-e945220feeda54a04d3802f242579a8b4a287ff7a30c903b",
-        "brf-9eb5365ca1c4e54eda321c04bf8362c7ca3a4112ff8c362d",
-        "brf-41a8639276e029dd6835acdfa993382aa1e8bbe7c315e702",
-        "brf-eaf5f0a03f9c4fb5ff738c425f70703041764c691768a42d",
-        "brf-7286312d3c0d21dc1461842c197483ce50edc15a8621b7bb"
-      ],
-      "marketArchetypeMapping": {
-        "archetype": "crossfit-box",
-        "rationale": "mapeamento declarado no sample do benchmark (reprocessamento semântico)"
-      },
-      "inventoryVersion": "canonical-capabilities-1.0.0",
-      "unresolvedSemanticCandidates": 0
-    },
-    {
       "id": "abcfitness",
       "name": "ABC Fitness (ABC Ignite)",
       "aliases": [
@@ -2411,83 +2274,305 @@
       "unresolvedSemanticCandidates": 0
     },
     {
-      "id": "vantagefit.io",
-      "name": "Top 6 Wellhub alternatives in 2026 - Vantage Fit",
+      "id": "zenplanner",
+      "name": "Zen Planner",
       "role": "discovery",
       "order": 11,
-      "archetype": null,
-      "independenceGroup": null,
+      "archetype": "crossfit-box",
+      "independenceGroup": "zenplanner",
       "cloneOf": null,
-      "officialSite": "https://www.vantagefit.io/alternatives/wellhub-alternatives/",
+      "analyzedAt": "2026-09-16T02:56:34.455Z",
+      "previousInventorySize": null,
+      "novelty": {
+        "newCapabilities": [
+          {
+            "id": "brf-65b2af5d789ace0cf989b181b7b0676aac9022ee4c7ddcb1",
+            "name": "Expert team handles billing for you",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
+            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
+          },
+          {
+            "id": "brf-684b2c3425f43b862860353611bb720110a69cf1cafbdaa7",
+            "name": "PaySimple provides seamless member payment processing via processors like Stripe and WorldPay for Zen Planner software u…",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
+            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
+          },
+          {
+            "id": "brf-88f3ebd4bea7d8ec047932114392bc86c2ba5d7d0f044d71",
+            "name": "Membership Management",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
+            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
+          },
+          {
+            "id": "brf-9d801cc25450f43948b2b564c7220cbb59c4fc515e4b25bd",
+            "name": "Secure, Flexible, and Transparent Payment Solutions for Your Gym or Studio",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
+            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
+          },
+          {
+            "id": "brf-03d9f5bd0909db891432f9da07346876486636d041d84cc4",
+            "name": "Easy bill viewing and payment",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
+            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
+          },
+          {
+            "id": "brf-a82a02035f5c13b8ea15a9c9d01eb6665cea858b84613591",
+            "name": "Empower members to view and pay bills online, making payments convenient and hassle-free reducing your workload.",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
+            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
+          },
+          {
+            "id": "brf-e945220feeda54a04d3802f242579a8b4a287ff7a30c903b",
+            "name": "Workout Tracking",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246",
+            "evidenceRef": "bre-e7a6adbd7552f9ad8f36198cf40421476350904471abb021"
+          },
+          {
+            "id": "brf-9eb5365ca1c4e54eda321c04bf8362c7ca3a4112ff8c362d",
+            "name": "[It] is awesome you can now add a member note to the profile on the app. My coaches use the app for check-ins during cla…",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-b6cf531673aa4ca8c9ce78a2d8a3307331367e7cd6c19451",
+            "evidenceRef": "bre-f622f78e5deae2f359e5545e684540c20a3e55a6f35b99d4"
+          },
+          {
+            "id": "brf-eaf5f0a03f9c4fb5ff738c425f70703041764c691768a42d",
+            "name": "Never miss a check-in. Staff can manage schedules and take roll directly in the app.",
+            "normalizedId": null,
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-b6cf531673aa4ca8c9ce78a2d8a3307331367e7cd6c19451",
+            "evidenceRef": "bre-f622f78e5deae2f359e5545e684540c20a3e55a6f35b99d4"
+          }
+        ],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
       "sources": [
         {
-          "url": "https://www.vantagefit.io/alternatives/wellhub-alternatives/",
           "tier": 5,
-          "specificity": "official",
+          "url": "https://www.zenplanner.com/",
+          "retrievedAt": null,
+          "verified": false,
+          "httpStatus": 200,
+          "id": "brsrc-94e4e0c1f11bf0e487a482d59877a15d57632e361536e506",
+          "specificity": "SPECIFIC"
+        },
+        {
+          "tier": 5,
+          "url": "https://zenplanner.com/payments/",
+          "retrievedAt": "2026-09-16",
+          "verified": true,
+          "httpStatus": 200,
+          "specificity": "SPECIFIC",
+          "note": "página oficial de payments — HTTP 200 confirmado em recon 2026-09-15",
+          "id": "brsrc-1d5fc7b64a8b73065e82b91c098c166f7979b951611c3246"
+        },
+        {
+          "tier": 5,
+          "url": "https://zenplanner.com/mobile-app/",
+          "retrievedAt": "2026-09-16",
+          "verified": true,
+          "httpStatus": 200,
+          "specificity": "SPECIFIC",
+          "note": "página oficial do mobile app do aluno — HTTP 200 confirmado em recon 2026-09-15",
+          "id": "brsrc-b6cf531673aa4ca8c9ce78a2d8a3307331367e7cd6c19451"
+        }
+      ],
+      "freshness": {
+        "researchedAt": "2026-09-10",
+        "nextReviewAt": "2027-03-10",
+        "status": "FRESH"
+      },
+      "dimensions": {
+        "marketArchetype": "crossfit-box",
+        "customerSize": "small",
+        "geography": "US",
+        "businessModel": "saas-vertical",
+        "operationalDepth": "medium",
+        "integrationMaturity": "low",
+        "physicalOperation": "partial",
+        "financialDepth": "medium",
+        "customerEngagementDepth": "medium"
+      },
+      "researchVersion": "fitness-semantic-2026-09-15-r2",
+      "findingsInventory": [
+        "brf-65b2af5d789ace0cf989b181b7b0676aac9022ee4c7ddcb1",
+        "brf-684b2c3425f43b862860353611bb720110a69cf1cafbdaa7",
+        "brf-88f3ebd4bea7d8ec047932114392bc86c2ba5d7d0f044d71",
+        "brf-9d801cc25450f43948b2b564c7220cbb59c4fc515e4b25bd",
+        "brf-03d9f5bd0909db891432f9da07346876486636d041d84cc4",
+        "brf-a82a02035f5c13b8ea15a9c9d01eb6665cea858b84613591",
+        "brf-e945220feeda54a04d3802f242579a8b4a287ff7a30c903b",
+        "brf-9eb5365ca1c4e54eda321c04bf8362c7ca3a4112ff8c362d",
+        "brf-41a8639276e029dd6835acdfa993382aa1e8bbe7c315e702",
+        "brf-eaf5f0a03f9c4fb5ff738c425f70703041764c691768a42d",
+        "brf-7286312d3c0d21dc1461842c197483ce50edc15a8621b7bb"
+      ],
+      "marketArchetypeMapping": {
+        "archetype": "crossfit-box",
+        "rationale": "mapeamento declarado no sample do benchmark (reprocessamento semântico)"
+      },
+      "inventoryVersion": "canonical-capabilities-1.0.0",
+      "unresolvedSemanticCandidates": 0,
+      "incorporation": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "fromRole": "validation",
+        "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+        "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+        "appliedAt": "2026-09-16T14:56:50.899Z",
+        "note": "holdout de ciclo anterior incorporado ao discovery set — os achados passam a contar no inventário; substituído pelo holdout pré-registrado deste run"
+      }
+    },
+    {
+      "id": "vantagefit.io",
+      "name": "Vantage Fit",
+      "role": "discovery",
+      "order": 12,
+      "archetype": "personal-wellness",
+      "independenceGroup": "vantagefit.io",
+      "cloneOf": null,
+      "officialSite": "https://vantagefit.io/",
+      "sources": [
+        {
+          "url": "https://vantagefit.io/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
           "provenance": {
-            "evidenceRef": "ev-e7ae45a2cefe79e0cfd1dfb3f43f5adaa9d35dd0",
-            "contentHash": "sha256:f0af2de4f91d47c785d19ac23c8a2f21a742efef9b072e2eb84d99e0ab04569c"
+            "evidenceRef": "ev-4ad14355394322fbae32a0afb15fc8a9786bf751",
+            "contentHash": "sha256:9a89acdab85ff6864333229d2a8f2ea8cd409f56f4fa0f1df1368a7cf3b855a2"
           }
         }
       ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
       "country": null,
       "segments": [],
       "targetCustomers": [],
-      "archetypes": [],
+      "archetypes": [
+        "personal-wellness"
+      ],
       "provenance": {
         "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-        "marketDiscoveryRunId": "mdr-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
-        "discoverySetId": "mds-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
-        "appliedAt": "2026-09-16T09:51:00.966Z",
+        "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+        "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+        "appliedAt": "2026-09-16T14:56:50.899Z",
         "evidenceRefs": [
-          "ev-e7ae45a2cefe79e0cfd1dfb3f43f5adaa9d35dd0"
+          "ev-1d07f40fedc5d7b6e5ab73ae792411dcfe1d2189",
+          "ev-4ad14355394322fbae32a0afb15fc8a9786bf751"
         ]
       }
     },
     {
-      "id": "woliba.io",
-      "name": "Top 11 Wellhub Alternatives or Competitors in 2026",
+      "id": "wellable.co",
+      "name": "All-In-One Employee Wellness, Rewards, & Recognition",
       "role": "validation",
-      "order": 12,
-      "archetype": null,
-      "independenceGroup": null,
+      "order": 13,
+      "archetype": "personal-wellness",
+      "independenceGroup": "wellable.co",
       "cloneOf": null,
-      "officialSite": "https://woliba.io/blog/wellhub-alternatives/",
+      "officialSite": "https://wellable.co/",
       "sources": [
         {
-          "url": "https://woliba.io/blog/wellhub-alternatives/",
+          "url": "https://www.wellable.co/",
           "tier": 5,
-          "specificity": "official",
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
           "provenance": {
-            "evidenceRef": "ev-ba83f94d7053932a4636e08500f7e8252871d8d7",
-            "contentHash": "sha256:c33ce8b4aa2fab2aba4c6d8973c847fdb7ffca0665068e2af49bd613ea82844a"
+            "evidenceRef": "ev-b760c4c16b01f7cb38a71032884a47aa276f608d",
+            "contentHash": "sha256:866fc17f7acce0e908befdf99ade9b4bfd5dac62719cd0eabc24f7a5fb179db3"
+          }
+        },
+        {
+          "url": "https://wellable.co/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-e8890993870649a05f8a30acd42d43a136e32d25",
+            "contentHash": "sha256:866fc17f7acce0e908befdf99ade9b4bfd5dac62719cd0eabc24f7a5fb179db3"
           }
         }
       ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
       "country": null,
       "segments": [],
       "targetCustomers": [],
-      "archetypes": [],
+      "archetypes": [
+        "personal-wellness"
+      ],
       "provenance": {
         "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-        "marketDiscoveryRunId": "mdr-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
-        "discoverySetId": "mds-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
-        "appliedAt": "2026-09-16T09:51:00.966Z",
+        "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+        "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+        "appliedAt": "2026-09-16T14:56:50.899Z",
         "evidenceRefs": [
-          "ev-ba83f94d7053932a4636e08500f7e8252871d8d7"
+          "ev-144be0d5471f45543b75bb39e0ff6a4f9236ded2",
+          "ev-412d77226f6d86113087433e8a5780510dd429a9",
+          "ev-b760c4c16b01f7cb38a71032884a47aa276f608d",
+          "ev-b95ac4c00d04df25cd1ec3b764d761a10ea5fb55",
+          "ev-e8890993870649a05f8a30acd42d43a136e32d25",
+          "ev-e8890993870649a05f8a30acd42d43a136e32d25"
         ]
       }
     }
   ],
   "holdout": {
-    "benchmarkId": "woliba.io",
-    "selectedAsHoldoutAt": "2026-09-16T09:51:00.935Z",
+    "benchmarkId": "wellable.co",
+    "selectedAsHoldoutAt": "2026-09-16T14:56:50.852Z",
     "selectionReason": "maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos)",
+    "selectionEvidence": "Existência verificada no run mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee por evidência hash-bound (ev-144be0d5471f45543b75bb39e0ff6a4f9236ded2, ev-412d77226f6d86113087433e8a5780510dd429a9, ev-b760c4c16b01f7cb38a71032884a47aa276f608d, ev-b95ac4c00d04df25cd1ec3b764d761a10ea5fb55, ev-e8890993870649a05f8a30acd42d43a136e32d25, ev-e8890993870649a05f8a30acd42d43a136e32d25). Site oficial declarado: https://wellable.co/. Pré-registrado em 2026-09-16T14:56:50.852Z ANTES de qualquer pesquisa profunda de inventário (deep research); fases executadas até aqui: MARKET, ARCHETYPES, CANDIDATES, CANDIDATE_ANALYSIS (profiling de mercado), DIVERSITY, DISCOVERY_SET — conforme o pipeline governado. Base da seleção: maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos).",
+    "marketArchetype": "personal-wellness",
+    "inventoryVersion": "canonical-capabilities-1.0.0",
     "provenance": {
       "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-      "marketDiscoveryRunId": "mdr-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
-      "discoverySetId": "mds-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
-      "appliedAt": "2026-09-16T09:51:00.966Z"
+      "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+      "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+      "appliedAt": "2026-09-16T14:56:50.899Z"
     }
   },
   "criticalityRegistry": {},
@@ -3149,15 +3234,15 @@
   ],
   "marketDiscoveryProvenance": {
     "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-    "marketDiscoveryRunId": "mdr-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
-    "discoverySetId": "mds-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+    "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+    "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
     "vertical": "fitness",
-    "discoveryVersion": "fitness-market-discovery-2026-09-16-r8-historical-eligible",
-    "appliedAt": "2026-09-16T09:51:00.966Z",
+    "discoveryVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe",
+    "appliedAt": "2026-09-16T14:56:50.899Z",
     "selectedCandidates": [
       "vantagefit.io"
     ],
-    "holdoutCandidateKey": "woliba.io",
+    "holdoutCandidateKey": "wellable.co",
     "rule": "sample derivado do run de market discovery por gerador determinístico; edição manual é drift (`--check` falha)"
   }
 }

@@ -253,28 +253,28 @@ function applyMarketDiscoveryToSample({ sample, runExport }) {
     );
   }
 
-  // INCORPORAÇÃO do holdout substituído (regra do ciclo de absorção: holdout
+  // INCORPORAÇÃO de holdouts aposentados (regra do ciclo de absorção: holdout
   // que cumpriu seu papel — analisado ou não — NUNCA some nem fica eternamente
-  // fora do discovery set; seus achados passam a contar no inventário). Sem
-  // isto o zenplanner do ciclo 1 ficou com role 'validation' para sempre:
-  // fora do discovery set, seus findings não contavam — denominador
-  // encolhido por omissão.
-  const previousHoldoutKey = isNonEmptyString(next.holdout?.benchmarkId) ? String(next.holdout.benchmarkId) : null;
+  // fora do discovery set; seus achados passam a contar no inventário). A regra
+  // vale para QUALQUER 'validation' que não é o holdout pré-registrado DESTE
+  // run — não só para o registro corrente de holdout: a aplicação do r8 (ciclo
+  // 2) rodou com o gerador anterior a esta regra e o zenplanner (holdout do
+  // ciclo 1, analisado) ficou 'validation' depois que o registro passou a ser
+  // outro benchmark — fora do discovery set, seus achados não contavam no
+  // inventário (denominador encolhido por omissão).
   const demoted = [];
-  if (previousHoldoutKey && previousHoldoutKey !== holdoutKey) {
-    const previous = list(next.benchmarks).find((b) => b && b.id === previousHoldoutKey);
-    if (previous && previous.role === 'validation') {
-      previous.role = 'discovery';
-      previous.incorporation = {
-        generator: GENERATOR_ID,
-        fromRole: 'validation',
-        marketDiscoveryRunId: String(runExport.runId),
-        discoverySetId: String(runExport.discoverySetId),
-        appliedAt: String(runExport.completedAt),
-        note: 'holdout do ciclo anterior incorporado ao discovery set — os achados passam a contar no inventário; substituído pelo holdout pré-registrado deste run',
-      };
-      demoted.push(previous);
-    }
+  for (const entry of list(next.benchmarks)) {
+    if (!entry || entry.role !== 'validation' || String(entry.id) === holdoutKey) continue;
+    entry.role = 'discovery';
+    entry.incorporation = {
+      generator: GENERATOR_ID,
+      fromRole: 'validation',
+      marketDiscoveryRunId: String(runExport.runId),
+      discoverySetId: String(runExport.discoverySetId),
+      appliedAt: String(runExport.completedAt),
+      note: 'holdout de ciclo anterior incorporado ao discovery set — os achados passam a contar no inventário; substituído pelo holdout pré-registrado deste run',
+    };
+    demoted.push(entry);
   }
 
   // Benchmarks: entradas gerenciadas por ESTE gerador são re-derivadas; as

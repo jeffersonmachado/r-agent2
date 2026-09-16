@@ -374,6 +374,48 @@ describe('apply-market-discovery-to-sample — contrato completo do holdout (cic
     expect(JSON.stringify(reapplied.benchmarks)).toBe(JSON.stringify(next.benchmarks));
   });
 
+  test('holdout substituído é INCORPORADO mesmo quando já não é o registro corrente (zenplanner do ciclo 1, 2026-09-16)', () => {
+    // Caso real: a aplicação do r8 (ciclo 2) rodou com o gerador ANTERIOR à
+    // regra de incorporação — o zenplanner (holdout do ciclo 1, analisado)
+    // ficou role 'validation' e o registro de holdout do sample passou a ser
+    // OUTRO benchmark. A regra que olha só o registro corrente não o alcança:
+    // qualquer 'validation' que não é o holdout pré-registrado DESTE run é
+    // holdout aposentado e precisa ser incorporado — senão seus achados saem
+    // do discovery set e o denominador encolhe por omissão.
+    const sample = buildCycleTwoSample();
+    sample.benchmarks.push({
+      id: 'older-holdout',
+      name: 'Older Holdout',
+      role: 'validation',
+      order: 6,
+      archetype: 'personal-wellness',
+      independenceGroup: 'older-holdout',
+      sources: [{ url: 'https://older-holdout.com/', tier: 5 }],
+      analyzedAt: '2026-09-05T10:00:00.000Z',
+      researchVersion: 'v-older',
+      findingsInventory: ['f-older'],
+      novelty: { newCapabilities: [] },
+    });
+    const next = applyMarketDiscoveryToSample({ sample, runExport: buildRunExport() });
+
+    const stale = next.benchmarks.find((b) => b.id === 'older-holdout');
+    expect(stale.role).toBe('discovery');
+    expect(stale.analyzedAt).toBe('2026-09-05T10:00:00.000Z');
+    expect(stale.findingsInventory).toEqual(['f-older']);
+    expect(stale.incorporation).toEqual(expect.objectContaining({
+      generator: GENERATOR_ID,
+      fromRole: 'validation',
+      marketDiscoveryRunId: 'mdr-test-run',
+    }));
+    // O registro corrente também foi incorporado (regra original preservada).
+    expect(next.benchmarks.find((b) => b.id === 'old-holdout').role).toBe('discovery');
+    // O ÚNICO benchmark de validação é o holdout pré-registrado deste run.
+    expect(next.benchmarks.filter((b) => b.role === 'validation').map((b) => b.id)).toEqual(['gymnovo.com']);
+    // Idempotente.
+    const reapplied = applyMarketDiscoveryToSample({ sample: next, runExport: buildRunExport() });
+    expect(JSON.stringify(reapplied.benchmarks)).toBe(JSON.stringify(next.benchmarks));
+  });
+
   test('fontes declaradas das entradas derivadas são GENÉRICAS (existência, não inventário)', () => {
     const runExport = buildRunExport();
     // Candidato cuja evidência de descoberta é uma página profunda (listicle).

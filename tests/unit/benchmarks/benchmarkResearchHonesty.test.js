@@ -9,10 +9,18 @@
  *
  *   B8  — sem provider externo governado, o estado é RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS
  *         e o sample versionado NÃO é tocado (nem um byte).
- *   B9  — o holdout (Zen Planner) é válido: pré-registrado ANTES de qualquer
- *         análise, sem vazamento. 2026-09-15: a análise real aconteceu DEPOIS
- *         da saturação (run r4) — o ciclo PRE_REGISTERED → ANALYZED → PASS é
- *         o caminho legal, e a ordem temporal continua travada aqui.
+ *   B9  — o holdout é válido: pré-registrado ANTES de qualquer análise, sem
+ *         vazamento. Linhagem REAL dos ciclos: ciclo 1 = Zen Planner
+ *         (pré-registrado 2026-09-10, analisado DEPOIS da saturação no run r4 —
+ *         caminho legal — e INCORPORADO ao discovery set: seus achados contam
+ *         no inventário). Ciclo 2 = woliba.io, pré-registrado pelo run de
+ *         2026-09-16T09:51 mas INALCANÇÁVEL para o fetcher governado (HTTP 403
+ *         total — homepage e blog — verificado em 2026-09-16): abandonado
+ *         ANTES de qualquer pesquisa profunda, sem novelty revelada; NUNCA
+ *         pode constar como analisado. Ciclo 3 = wellable.co, descoberto
+ *         IN_MARKET no run mdr-ad508ef481 (2 sinais de categoria, 6 evidências
+ *         hash-bound) e pré-registrado em 2026-09-16T14:56:50Z antes do deep
+ *         research — o registro abaixo trava esse pré-registro.
  *   B10 — o gap de arquétipos (financial-billing, student-digital-experience)
  *         foi fechado por PESQUISA REAL (run r5, 2026-09-15): ABC Fitness e
  *         Wellhub entraram como representantes com findings verificados e
@@ -45,7 +53,7 @@ const SAMPLE = JSON.parse(fs.readFileSync(SAMPLE_PATH, 'utf8'));
 
 const silent = { info() {}, warn() {}, error() {}, debug() {} };
 const GAP_ARCHETYPES = ['financial-billing', 'student-digital-experience'];
-const HOLDout_ID = 'zenplanner';
+const HOLDout_ID = 'wellable.co';
 
 function sha256File(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -107,7 +115,7 @@ describe('B8/B11 — sem acesso externo o estado é BLOQUEIO, não resultado', (
   });
 });
 
-describe('B9 — holdout Zen Planner: pré-registro válido e sem vazamento', () => {
+describe('B9 — holdout wellable.co: pré-registro válido e sem vazamento', () => {
   const holdoutRecord = SAMPLE.holdout;
   const holdoutBenchmark = SAMPLE.benchmarks.find((benchmark) => benchmark.id === HOLDout_ID);
 
@@ -116,14 +124,34 @@ describe('B9 — holdout Zen Planner: pré-registro válido e sem vazamento', ()
       expect(holdoutRecord[field]).toBeTruthy();
     }
     expect(holdoutRecord.benchmarkId).toBe(HOLDout_ID);
-    expect(holdoutRecord.selectedAsHoldoutAt).toBe('2026-09-10T21:00:00.000Z');
-    // 2026-09-15: a análise real aconteceu (run r4) — e TEM que ser posterior
-    // ao pré-registro. Análise antes do pré-registro seria vazamento.
+    // Fato persistido do run mdr-ad508ef481 (2026-09-16): a pré-inscrição do
+    // wellable.co — se o holdout mudar de novo, este pin muda JUNTO com a
+    // narrativa do ciclo no cabeçalho (nunca em silêncio).
+    expect(holdoutRecord.selectedAsHoldoutAt).toBe('2026-09-16T14:56:50.852Z');
+    // Análise (quando houver) TEM que ser posterior ao pré-registro — análise
+    // antes do pré-registro seria vazamento.
     if (holdoutRecord.analysedAt || holdoutBenchmark.analyzedAt) {
       expect(holdoutRecord.analysedAt).toBe(holdoutBenchmark.analyzedAt);
       expect(Date.parse(holdoutBenchmark.analyzedAt))
         .toBeGreaterThan(Date.parse(holdoutRecord.selectedAsHoldoutAt));
     }
+  });
+
+  test('a linhagem dos ciclos anteriores é honesta: zenplanner INCORPORADO, woliba NUNCA analisado', () => {
+    // Zen Planner (holdout do ciclo 1) foi incorporado ao discovery set —
+    // incorporação é obrigatória, não opcional: seus achados contam no
+    // inventário e a proveniência da incorporação é auditável.
+    const zenplanner = SAMPLE.benchmarks.find((benchmark) => benchmark.id === 'zenplanner');
+    expect(zenplanner.role).toBe('discovery');
+    expect(zenplanner.analyzedAt).toBeTruthy();
+    expect(Array.isArray(zenplanner.findingsInventory)).toBe(true);
+    expect(zenplanner.incorporation?.marketDiscoveryRunId).toBeTruthy();
+    expect(zenplanner.incorporation?.fromRole).toBe('validation');
+    // Woliba (pré-registro do ciclo 2) foi abandonado por inalcançabilidade
+    // (403 total) ANTES de qualquer pesquisa profunda: não pode constar no
+    // sample como benchmark analisado — nem aqui nem nunca.
+    const woliba = SAMPLE.benchmarks.find((benchmark) => benchmark.id === 'woliba.io');
+    expect(woliba?.analyzedAt).toBeFalsy();
   });
 
   test('o holdout é um benchmark de VALIDAÇÃO (não participa da descoberta)', () => {
