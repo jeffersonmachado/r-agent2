@@ -248,6 +248,9 @@ function createMarketDiscoveryStore({ models } = {}) {
       base_product: optionalString(candidate?.baseProduct),
       origin: String(candidate?.origin || 'research'),
       state: String(candidate?.state || 'EVIDENCE_REQUIRED'),
+      market_relevance: candidate?.marketRelevance && typeof candidate.marketRelevance === 'object'
+        ? jsonObject(candidate.marketRelevance)
+        : null,
       source_evidence: jsonArray(candidate?.sourceEvidence),
       rationale: optionalString(candidate?.rationale),
       metadata: jsonObject(candidate?.metadata),

@@ -53,6 +53,7 @@ function getMarketCandidateModel() {
       base_product: { type: DataTypes.STRING(128), allowNull: true },
       origin: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'research' },
       state: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'EVIDENCE_REQUIRED' },
+      market_relevance: { type: DataTypes.JSONB, allowNull: true, defaultValue: null },
       source_evidence: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       rationale: { type: DataTypes.TEXT, allowNull: true },
       profile: { type: DataTypes.JSONB, allowNull: true },

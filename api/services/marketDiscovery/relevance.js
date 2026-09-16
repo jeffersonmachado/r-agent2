@@ -50,6 +50,19 @@ const STOPWORDS = Object.freeze([
 const DEFAULT_MIN_CATEGORY_SIGNALS = 1;
 
 /**
+ * Janela LOCAL do casamento de sinais (2026-09-16, falso positivo do run r4):
+ * o casamento bag-of-words aceitava páginas que continham os tokens do termo
+ * ESPALHADOS em seções sem relação (um relatório imobiliário com "gym",
+ * "management" e "software" em parágrafos distintos virou "fornecedor de gym
+ * management software"). Quem É do mercado declara a categoria junto, numa
+ * mesma frase/redação natural ("Sistema completo para gestão de academias");
+ * quem só cita palavras soltas em contextos diferentes não é. O termo casa
+ * quando TODOS os seus tokens significativos ocorrem dentro de UMA janela de
+ * `SIGNAL_WINDOW_TOKENS` tokens do conteúdo — determinístico, sem NLP.
+ */
+const SIGNAL_WINDOW_TOKENS = 8;
+
+/**
  * Sufixos públicos compostos conhecidos (heurística determinística, não PSL
  * completa): quando o sufixo registrável é composto (`com.br`), o domínio
  * registrável tem TRÊS labels.
@@ -94,17 +107,29 @@ function registrableDomain(input) {
 /**
  * Sinais de categoria presentes no conteúdo: para CADA termo declarado em
  * `marketContext.categoryTerms`, o termo é um sinal quando TODOS os seus
- * tokens significativos (sem stopwords) aparecem no conteúdo obtido.
+ * tokens significativos (sem stopwords) aparecem dentro de UMA JANELA LOCAL
+ * de `SIGNAL_WINDOW_TOKENS` tokens do conteúdo (ver constante: tokens
+ * espalhados pela página não são evidência de pertencimento).
  *
  * @returns {{matchedTerms: string[], signalCount: number}}
  */
+function termMatchesWithinWindow(contentTokens, termTokens) {
+  const windowSize = Math.max(SIGNAL_WINDOW_TOKENS, termTokens.length);
+  if (contentTokens.length < termTokens.length) return false;
+  for (let start = 0; start <= contentTokens.length - termTokens.length; start += 1) {
+    const window = new Set(contentTokens.slice(start, start + windowSize));
+    if (termTokens.every((token) => window.has(token))) return true;
+  }
+  return false;
+}
+
 function matchCategorySignals({ content, categoryTerms } = {}) {
-  const contentTokens = new Set(tokenize(content));
+  const contentTokens = tokenize(content);
   const matchedTerms = [];
   for (const term of list(categoryTerms)) {
     const tokens = tokenize(term).filter((token) => !STOPWORDS.includes(token));
     if (tokens.length === 0) continue;
-    if (tokens.every((token) => contentTokens.has(token))) {
+    if (termMatchesWithinWindow(contentTokens, tokens)) {
       matchedTerms.push(normalizeTerm(term));
     }
   }
@@ -195,6 +220,7 @@ module.exports = {
   RELEVANCE_STATES,
   STOPWORDS,
   DEFAULT_MIN_CATEGORY_SIGNALS,
+  SIGNAL_WINDOW_TOKENS,
   COMPOUND_SUFFIXES,
   registrableDomain,
   matchCategorySignals,

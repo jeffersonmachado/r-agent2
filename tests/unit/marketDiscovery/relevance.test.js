@@ -63,6 +63,37 @@ describe('relevance — sinais de categoria no conteúdo', () => {
     });
     expect(signalCount).toBe(0);
   });
+
+  test('tokens ESPALHADOS pela página NÃO são sinal (falso positivo do run real r4)', () => {
+    // Reproduz o defeito observado no run real r4 (2026-09-16): um relatório
+    // de mercado imobiliário continha "fitness", "club", "management" e
+    // "platform" em seções distantes — o casamento bag-of-words aceitou como
+    // sinal da categoria. O termo precisa ocorrer numa JANELA local do texto:
+    // quem É do mercado declara a categoria junto; quem só cita palavras
+    // soltas em contextos diferentes não é.
+    const content = [
+      'Hospitality market report: the local gym scene grew this year.',
+      'In another section, asset management remains the core business of the firm.',
+      'Our software division released a new brokerage dashboard this quarter.',
+    ].join(' ');
+    const { signalCount } = matchCategorySignals({
+      content,
+      categoryTerms: FITNESS_CONTEXT.categoryTerms,
+    });
+    expect(signalCount).toBe(0);
+  });
+
+  test('redação natural do fornecedor (palavras intercaladas) CONTINUA sinal', () => {
+    // "Sistema completo para gestão de academias" é como um fornecedor real
+    // escreve — os tokens do termo `sistema de gestão para academias` não são
+    // contíguos, mas estão juntos na mesma declaração.
+    const { signalCount, matchedTerms } = matchCategorySignals({
+      content: 'Sistema completo para gestão de academias: matrículas, cobrança recorrente, catraca e app do aluno.',
+      categoryTerms: FITNESS_CONTEXT.categoryTerms,
+    });
+    expect(signalCount).toBeGreaterThanOrEqual(1);
+    expect(matchedTerms).toContain('sistema de gestao para academias');
+  });
 });
 
 describe('relevance — veredito de pertencimento', () => {
