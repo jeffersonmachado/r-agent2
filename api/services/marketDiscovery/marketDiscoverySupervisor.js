@@ -591,10 +591,19 @@ function createMarketDiscoverySupervisor({
       profile: row.profile || null,
       metadata: row.metadata || {},
     }));
+    // Reserva de holdout (2026-09-16, run real r4): o tamanho declarado do set
+    // é TETO, não cota. Quando o pool elegível (após as exclusões incrementais)
+    // tem 2+ candidatos, o set é limitado a pool-1 — sem essa reserva o set
+    // consumia TODOS os candidatos novos e o ciclo terminava sem holdout nem
+    // handoff, travando o loop de absorção. Pool de 1 não divide: o único
+    // candidato vai ao set e o ciclo completa honestamente sem handoff.
+    const incrementalExclusionSet = new Set(incrementalExclusions.map((key) => String(key)));
+    const eligiblePoolSize = selectable.filter((c) => !incrementalExclusionSet.has(String(c.candidateKey))).length;
+    const effectiveSetSize = eligiblePoolSize >= 2 ? Math.min(setSize, eligiblePoolSize - 1) : setSize;
     const selectionResult = selectDiscoverySet({
       candidates: selectable,
       acceptedArchetypeKeys,
-      size: setSize,
+      size: effectiveSetSize,
       excludeKeys: incrementalExclusions,
     });
     const holdoutChoice = selectHoldout({
@@ -671,7 +680,13 @@ function createMarketDiscoverySupervisor({
       tenantId: discoveryTenant,
       runId: run.id,
       state: DISCOVERY_RUN_STATES.DISCOVERY_SET_SELECTED,
-      metadata: { discoverySetId: set.id, selected: selectionResult.selected, incrementalExclusions },
+      metadata: {
+        discoverySetId: set.id,
+        selected: selectionResult.selected,
+        incrementalExclusions,
+        requestedSetSize: setSize,
+        effectiveSetSize,
+      },
     });
 
     // ── HOLDOUT PREREGISTRATION ─────────────────────────────────────────

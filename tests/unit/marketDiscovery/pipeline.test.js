@@ -414,3 +414,57 @@ describe('Market discovery — ciclo incremental (absorção)', () => {
     expect(universe.some((c) => c.candidate_key === 'gymnovo.com')).toBe(true);
   });
 });
+
+describe('Market discovery — reserva de holdout no ciclo incremental', () => {
+  test('pool pequeno reserva candidato para o holdout (set nunca consome tudo quando dá para dividir)', async () => {
+    // Run real r4 (2026-09-16): 3 candidatos novos aceitos → set levou os 3,
+    // holdout ficou sem pool e o ciclo completou SEM handoff. Com pool ≥ 2 o
+    // protocolo consegue set + holdout: o tamanho efetivo do set é limitado a
+    // pool-1 (o tamanho declarado é TETO, não cota).
+    const { supervisor, store } = await buildHarness({ selection: { size: 3 } });
+    const sampleAllAnalyzed = {
+      ...SAMPLE,
+      benchmarks: SAMPLE.benchmarks.map((b) => ({ ...b, analyzedAt: '2026-09-15T10:00:00.000Z' })),
+    };
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-reserve',
+      sample: sampleAllAnalyzed,
+    });
+
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    // Pool elegível = 3 novos (seeds excluídos): set com no máximo 2, holdout 1.
+    expect(result.discoverySet.selected.length).toBe(2);
+    expect(result.holdout.candidateKey).toBeTruthy();
+    expect(result.holdout.preregistered).toBe(true);
+    expect(result.discoverySet.selected).not.toContain(result.holdout.candidateKey);
+    expect(result.handoff).not.toBeNull();
+    expect(result.handoff.holdoutBenchmarkId).toBe(result.holdout.candidateKey);
+    // A reserva é auditável no metadata do run.
+    const run = await store.getRun({ tenantId: TENANT, vertical: 'fitness-lab', discoveryVersion: 'fitness-lab-discovery-reserve' });
+    expect(run.metadata.effectiveSetSize).toBe(2);
+    expect(run.metadata.requestedSetSize).toBe(3);
+  });
+
+  test('pool de UM candidato novo não divide: set leva o único e o ciclo completa sem handoff', async () => {
+    const providersOne = {
+      ...buildProviders(),
+      search: async () => ({ candidates: SEARCH_HITS.slice(2, 3) }),
+    };
+    const { supervisor } = await buildHarness({ providers: providersOne, selection: { size: 3 } });
+    const sampleAllAnalyzed = {
+      ...SAMPLE,
+      benchmarks: SAMPLE.benchmarks.map((b) => ({ ...b, analyzedAt: '2026-09-15T10:00:00.000Z' })),
+    };
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-single',
+      sample: sampleAllAnalyzed,
+    });
+
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    expect(result.discoverySet.selected).toEqual(['gymnovo.com']);
+    expect(result.holdout.candidateKey).toBeNull();
+    expect(result.handoff).toBeNull();
+  });
+});
