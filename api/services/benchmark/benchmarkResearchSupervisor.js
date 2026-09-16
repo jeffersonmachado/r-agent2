@@ -165,6 +165,23 @@ function normalizeSourceUrl(value) {
 }
 
 /**
+ * FITNESS-ABS-12 — fonte declarada GENÉRICA: `specificity: 'GENERIC'` explícito
+ * ou URL raiz (homepage). Só benchmarks cujas fontes são TODAS genéricas
+ * disparam a redescoberta — quem já declara página específica foi curado e não
+ * precisa de busca extra (mesma regra do engine de suficiência).
+ */
+function isGenericDeclaredSource(source) {
+  if (!source || typeof source !== 'object') return true;
+  if (String(source.specificity || '').toUpperCase() === 'GENERIC') return true;
+  try {
+    const parsed = new URL(String(source.url || ''));
+    return parsed.pathname.replace(/\/+$/, '') === '' && parsed.search.length <= 1;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Registra a capability do supervisor no Canonical Tool Registry (idempotente).
  * Runner ausente é ERRO — capability declarada sem executor é promessa vazia.
  */
@@ -422,7 +439,44 @@ function createBenchmarkResearchSupervisor({
       // persistidas no subject para auditoria pós-restart.
       let pipelineMetrics = null;
 
-      for (const declared of entry.declaredSources) {
+      // FITNESS-ABS-12 — REDESCOBERTA de fontes específicas. Benchmark derivado
+      // do market discovery declara só fontes GENÉRICAS (homepage): a disciplina
+      // de fases do pré-registro proíbe declarar páginas profundas antes da
+      // análise. O deep research cumpre a fase dele aqui: UMA busca governada,
+      // filtrada pelo anti-substituição puro do runner (mesmo domínio
+      // registrável, https, path específico, teto limitado), e cada página
+      // descoberta é inspecionada pelo MESMO pipeline fetch → hash → evidence →
+      // inspeção das declaradas, com proveniência `search-discovered`.
+      // Benchmark que já declara fonte específica (curadoria anterior) NÃO
+      // dispara busca extra — a redescoberta não é ruído nem substituição.
+      const sourcesToInspect = [...entry.declaredSources];
+      if (entry.declaredSources.length > 0 && entry.declaredSources.every(isGenericDeclaredSource)) {
+        const officialSource = entry.declaredSources[0];
+        const discovery = await runner.discoverSources({
+          query: entry.query,
+          officialUrl: officialSource.url,
+          declaredUrls: entry.declaredSources.map((declared) => declared.url),
+        });
+        if (discovery.status === RESEARCH_RUN_STATES.BLOCKED_NO_EXTERNAL_ACCESS) {
+          errors.push({
+            severity: 'INFO',
+            code: discovery.status,
+            reason: `source_rediscovery: ${discovery.reason}`,
+            resolved: false,
+            at: clock(),
+          });
+        }
+        for (const candidate of Array.isArray(discovery.candidates) ? discovery.candidates : []) {
+          sourcesToInspect.push({
+            url: candidate.url,
+            tier: officialSource.tier ?? null,
+            specificity: 'SPECIFIC',
+            discoveredCandidate: candidate,
+          });
+        }
+      }
+
+      for (const declared of sourcesToInspect) {
         // O subagente só age por CAPABILITY governada. Sem provider, o retorno
         // é bloqueio explícito — nunca um achado inventado.
         const outcome = await runner.inspectSource({
@@ -432,16 +486,22 @@ function createBenchmarkResearchSupervisor({
           query: entry.query,
           source: { url: declared.url, tier: declared.tier },
           apiApplicable,
-          // A fonte precisa ser EXATAMENTE a declarada. Aceitar "a primeira que
-          // veio" atribuiria a um fornecedor a fonte de outro — o tipo de troca
-          // silenciosa que transforma evidência em ficção.
-          pickCandidate: (candidates) => (Array.isArray(candidates) ? candidates : [])
-            .find((candidate) => normalizeSourceUrl(candidate?.url) === normalizeSourceUrl(declared.url)) || null,
-          // Quando a busca não superficia a URL declarada, a fonte — que vem do
-          // SAMPLE GOVERNADO (pré-registrado, verificado por humano) — é obtida
-          // diretamente: confirmação de fonte, não descoberta. A auditoria
-          // distingue os dois caminhos por `sourceSelection`.
-          declaredUrlFallback: true,
+          // Fonte REDESCOBERTA: a busca já a superficiou nesta passada —
+          // obtém EXATAMENTE ela, sem repetir a busca nem aceitar substituto.
+          ...(declared.discoveredCandidate
+            ? { discoveredCandidate: declared.discoveredCandidate }
+            : {
+              // A fonte precisa ser EXATAMENTE a declarada. Aceitar "a primeira que
+              // veio" atribuiria a um fornecedor a fonte de outro — o tipo de troca
+              // silenciosa que transforma evidência em ficção.
+              pickCandidate: (candidates) => (Array.isArray(candidates) ? candidates : [])
+                .find((candidate) => normalizeSourceUrl(candidate?.url) === normalizeSourceUrl(declared.url)) || null,
+              // Quando a busca não superficia a URL declarada, a fonte — que vem do
+              // SAMPLE GOVERNADO (pré-registrado, verificado por humano) — é obtida
+              // diretamente: confirmação de fonte, não descoberta. A auditoria
+              // distingue os dois caminhos por `sourceSelection`.
+              declaredUrlFallback: true,
+            }),
         });
 
         attempts.push({

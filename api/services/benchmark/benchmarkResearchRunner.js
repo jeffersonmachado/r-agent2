@@ -36,6 +36,7 @@ const {
 
 const { extractInspectionFindings, mergePipelineMetrics } = require('./benchmarkFindingExtraction');
 const { RESEARCH_AXES, SEMANTIC_CODES, FINDING_ORIGINS } = require('./benchmarkResearchSemantics');
+const { registrableDomain } = require('../marketDiscovery/relevance');
 
 const crypto = require('crypto');
 
@@ -65,6 +66,73 @@ const REQUIRED_CAPABILITIES = Object.freeze([
 
 /** Exigida sempre que o benchmark declara superfície de API. */
 const API_CAPABILITY = 'research.inspectApiDocs';
+
+/**
+ * FITNESS-ABS-12 — teto de fontes ESPECÍFICAS redescobertas por benchmark por
+ * passada. Limita egress e mantém a redescoberta focalizada nas páginas mais
+ * ranqueadas pela busca governada.
+ */
+const MAX_DISCOVERED_SOURCES = 3;
+
+/**
+ * URL "raiz" (homepage): path vazio e sem query — prova existência do
+ * fornecedor, não capability específica (mesma regra do engine de suficiência).
+ */
+function isRootUrl(url) {
+  try {
+    const parsed = new URL(String(url || ''));
+    return parsed.pathname.replace(/\/+$/, '') === '' && parsed.search.length <= 1;
+  } catch (_) {
+    return false;
+  }
+}
+
+/** Normalização para dedup/comparação: host sem `www.`, path sem barra final. */
+function normalizeDiscoveredUrl(url) {
+  try {
+    const parsed = new URL(String(url || ''));
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const pathname = parsed.pathname.replace(/\/+$/, '');
+    return `${parsed.protocol}//${host}${pathname}${parsed.search}`;
+  } catch (_) {
+    return String(url || '').trim().toLowerCase();
+  }
+}
+
+/**
+ * FITNESS-ABS-12 — filtro puro da REDESCOBERTA de fontes específicas.
+ *
+ * O gerador governado declara só a homepage (fase de pré-registro); o deep
+ * research redescobre as páginas específicas NO TEMPO DA ANÁLISE. Regras
+ * (anti-substituição intacta):
+ *
+ *   - apenas `https://`;
+ *   - MESMO domínio registrável da fonte oficial declarada — um candidato de
+ *     outro domínio NUNCA é inspecionado como fonte do fornecedor;
+ *   - path específico (raiz/homepage não é redescoberta, é a própria declarada);
+ *   - fora as URLs já declaradas; dedup por URL normalizada; teto `limit`.
+ *
+ * @returns {Array<{url: string, title: string}>}
+ */
+function filterDiscoveredSources({ candidates, officialUrl, declaredUrls = [], limit = MAX_DISCOVERED_SOURCES } = {}) {
+  const officialDomain = registrableDomain(officialUrl);
+  if (!officialDomain) return [];
+  const declared = new Set((Array.isArray(declaredUrls) ? declaredUrls : []).map(normalizeDiscoveredUrl));
+  const seen = new Set();
+  const discovered = [];
+  for (const candidate of Array.isArray(candidates) ? candidates : []) {
+    const url = String(candidate?.url || '').trim();
+    if (!url.startsWith('https://')) continue;
+    if (registrableDomain(url) !== officialDomain) continue;
+    if (isRootUrl(url)) continue;
+    const key = normalizeDiscoveredUrl(url);
+    if (declared.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    discovered.push({ url, title: isNonEmptyString(candidate?.title) ? String(candidate.title) : url });
+    if (discovered.length >= limit) break;
+  }
+  return discovered;
+}
 
 function sha256Hex(value) {
   return crypto.createHash('sha256').update(String(value ?? ''), 'utf8').digest('hex');
@@ -167,6 +235,13 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
     // evidência continua ligada ao conteúdo real obtido, por hash. O default
     // é `false` para que chamadores de pura descoberta mantenham NO_CANDIDATES.
     declaredUrlFallback = false,
+    // FITNESS-ABS-12 — fonte ESPECÍFICA redescoberta pela passada de
+    // descoberta do supervisor (`discoverSources`): a busca JÁ aconteceu lá e
+    // superficiou EXATAMENTE esta URL no mesmo domínio registrável. Repetir a
+    // busca aqui seria egress duplicado e poderia não superficiá-la de novo.
+    // A proveniência registra `search-discovered` (descoberta real por busca
+    // governada — distinta de `declared-config` e de `search`).
+    discoveredCandidate = null,
   } = {}) {
     ensureCapabilities();
 
@@ -185,19 +260,28 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
       };
     }
 
-    const search = await callCapability('research.search', { query });
-    const candidates = Array.isArray(search.output?.candidates) ? search.output.candidates : [];
-    let chosen = typeof pickCandidate === 'function' ? pickCandidate(candidates) : candidates[0];
+    let chosen = null;
     // A proveniência da SELEÇÃO é parte do registro de auditoria: a mesma URL
     // alcançada pela busca ou pelo fallback declarado significa coisas
     // diferentes para quem audita (descoberta vs confirmação de fonte).
     let sourceSelection = 'search';
-    if ((!chosen || !isNonEmptyString(chosen.url))
-      && declaredUrlFallback === true
-      && isNonEmptyString(source?.url)) {
-      // EXATAMENTE a URL declarada — nunca "o candidato mais parecido".
-      chosen = { url: String(source.url).trim(), title: String(source.url).trim() };
-      sourceSelection = 'declared-config';
+    if (discoveredCandidate && isNonEmptyString(discoveredCandidate.url)) {
+      chosen = {
+        url: String(discoveredCandidate.url).trim(),
+        title: isNonEmptyString(discoveredCandidate.title) ? String(discoveredCandidate.title) : String(discoveredCandidate.url).trim(),
+      };
+      sourceSelection = 'search-discovered';
+    } else {
+      const search = await callCapability('research.search', { query });
+      const candidates = Array.isArray(search.output?.candidates) ? search.output.candidates : [];
+      chosen = typeof pickCandidate === 'function' ? pickCandidate(candidates) : candidates[0];
+      if ((!chosen || !isNonEmptyString(chosen.url))
+        && declaredUrlFallback === true
+        && isNonEmptyString(source?.url)) {
+        // EXATAMENTE a URL declarada — nunca "o candidato mais parecido".
+        chosen = { url: String(source.url).trim(), title: String(source.url).trim() };
+        sourceSelection = 'declared-config';
+      }
     }
     if (!chosen || !isNonEmptyString(chosen.url)) {
       return {
@@ -412,6 +496,33 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
   }
 
   /**
+   * FITNESS-ABS-12 — passada de REDESCOBERTA de fontes específicas. Uma busca
+   * governada (`research.search`), filtrada pelo anti-substituição puro
+   * (`filterDiscoveredSources`): mesmo domínio registrável, https, path
+   * específico, fora o já declarado. Sem provider de busca o retorno é
+   * bloqueio explícito — nunca lista inventada.
+   *
+   * @returns {Promise<{status, candidates: Array, reason?}>}
+   */
+  async function discoverSources({ query, officialUrl, declaredUrls = [], limit = MAX_DISCOVERED_SOURCES } = {}) {
+    ensureCapabilities();
+    if (!availableCapabilities().includes('research.search')) {
+      return {
+        status: RESEARCH_RUN_STATES.BLOCKED_NO_EXTERNAL_ACCESS,
+        reason: 'research_capability_unavailable: research.search',
+        candidates: [],
+      };
+    }
+    const search = await callCapability('research.search', { query });
+    const candidates = Array.isArray(search.output?.candidates) ? search.output.candidates : [];
+    return {
+      status: 'RESEARCH_SOURCES_DISCOVERED',
+      candidates: filterDiscoveredSources({ candidates, officialUrl, declaredUrls, limit }),
+      reason: null,
+    };
+  }
+
+  /**
    * Descobre uma fonte, obtém o conteúdo, captura evidência e REGISTRA o achado.
    *
    * ATENÇÃO (missão corretiva): este método registra UM achado cujo nome vem do
@@ -549,6 +660,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
   return {
     researchAndRecord,
     inspectSource,
+    discoverSources,
     markAnalyzed,
     availableCapabilities,
     ensureCapabilities,
@@ -559,4 +671,11 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
   };
 }
 
-module.exports = { RESEARCH_RUN_STATES, REQUIRED_CAPABILITIES, API_CAPABILITY, createBenchmarkResearchRunner };
+module.exports = {
+  RESEARCH_RUN_STATES,
+  REQUIRED_CAPABILITIES,
+  API_CAPABILITY,
+  MAX_DISCOVERED_SOURCES,
+  filterDiscoveredSources,
+  createBenchmarkResearchRunner,
+};
