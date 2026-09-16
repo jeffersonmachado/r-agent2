@@ -368,4 +368,49 @@ describe('Market discovery — ciclo incremental (absorção)', () => {
     // Nada analisado → nada excluído: seeds competem normalmente.
     expect(result.discoverySet.selected).toContain('alpha-gym.com');
   });
+
+  test('candidato aceito em run ANTERIOR não contamina a seleção do run corrente', async () => {
+    // Reproduz o defeito observado no run real r2 (2026-09-16): candidatos
+    // aceitos por runs antigos (universo persistido por tenant+vertical)
+    // voltavam ao DISCOVERY SET do run novo porque CANDIDATE ANALYSIS /
+    // DIVERSITY / DISCOVERY SET / HOLDOUT liam o universo SEM escopo de run.
+    // A seleção de um run é derivada do que ESSE run verificou.
+    const sharedState = { runs: new Map(), archetypes: new Map(), candidates: new Map(), sets: new Map() };
+    const first = await buildHarness({ sharedState });
+    const runOne = await first.supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-v1',
+      sample: SAMPLE,
+    });
+    expect(runOne.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    expect(runOne.discoverySet.selected).toContain('gymnovo.com');
+
+    // Ciclo N+1: a pesquisa NÃO reencontra gymnovo/delta — só os seeds.
+    const providersV2 = {
+      ...buildProviders(),
+      search: async () => ({ candidates: SEARCH_HITS.slice(0, 2) }),
+    };
+    const second = await buildHarness({ sharedState, providers: providersV2 });
+    const sampleIncremental = {
+      ...SAMPLE,
+      benchmarks: SAMPLE.benchmarks.map((b) => ({ ...b, analyzedAt: '2026-09-15T10:00:00.000Z' })),
+    };
+    const runTwo = await second.supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-v2',
+      sample: sampleIncremental,
+    });
+
+    expect(runTwo.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    // gymnovo.com/delta-fitness.com/gymnovo-whitelabel.com foram aceitos no
+    // run v1, mas NÃO foram verificados pelo run v2: não podem ser selecionados.
+    expect(runTwo.discoverySet.selected).not.toContain('gymnovo.com');
+    expect(runTwo.discoverySet.selected).not.toContain('delta-fitness.com');
+    expect(runTwo.discoverySet.selected).not.toContain('gymnovo-whitelabel.com');
+    expect(runTwo.holdout.candidateKey).not.toBe('gymnovo.com');
+    // O universo histórico permanece persistido (nada é apagado) — o que muda
+    // é o ESCOPO da seleção, não a memória.
+    const universe = await second.store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab' });
+    expect(universe.some((c) => c.candidate_key === 'gymnovo.com')).toBe(true);
+  });
 });

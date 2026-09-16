@@ -215,12 +215,13 @@ function createMarketDiscoveryMemoryStore({ state } = {}) {
     return clone(row);
   }
 
-  async function listCandidates({ tenantId, vertical, state: filterState = null }) {
+  async function listCandidates({ tenantId, vertical, state: filterState = null, runId = null }) {
     const tenant = required(tenantId, 'tenantId');
     const verticalId = required(vertical, 'vertical');
     return [...backing.candidates.values()]
       .filter((row) => row.tenant_key === tenant && row.vertical === verticalId
-        && (!filterState || row.state === filterState))
+        && (!filterState || row.state === filterState)
+        && (!runId || row.run_id === String(runId)))
       .sort((a, b) => a.candidate_key.localeCompare(b.candidate_key))
       .map(clone);
   }

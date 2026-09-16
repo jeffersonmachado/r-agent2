@@ -296,10 +296,11 @@ function createMarketDiscoveryStore({ models } = {}) {
     return row;
   }
 
-  async function listCandidates({ tenantId, vertical, state = null }) {
+  async function listCandidates({ tenantId, vertical, state = null, runId = null }) {
     const { candidate } = resolveModels();
     const where = { tenant_key: requireNonEmpty(tenantId, 'tenantId'), vertical: requireNonEmpty(vertical, 'vertical') };
     if (state) where.state = String(state);
+    if (runId) where.run_id = requireNonEmpty(runId, 'runId');
     return candidate.findAll({ where, order: [['candidate_key', 'ASC']] });
   }
 

@@ -538,7 +538,12 @@ function createMarketDiscoverySupervisor({
     });
 
     // ── CANDIDATE ANALYSIS ──────────────────────────────────────────────
-    const accepted = await store.listCandidates({ tenantId: discoveryTenant, vertical: verticalId, state: CANDIDATE_STATES.ACCEPTED });
+    // ESCOPO DO RUN (2026-09-16, run real r2): o universo persistido é por
+    // (tenant, vertical) e ACUMULA candidatos de runs anteriores. A análise,
+    // a diversidade e a seleção de um run são derivadas do que ESSE run
+    // verificou — candidato aceito por outro run nunca volta à seleção sem
+    // evidência nova (foi assim que lixo de runs antigos entrou no set do r2).
+    const accepted = await store.listCandidates({ tenantId: discoveryTenant, vertical: verticalId, state: CANDIDATE_STATES.ACCEPTED, runId: run.id });
     const profiles = [];
     for (const candidate of accepted) {
       profiles.push(await profileCandidate({ vertical: verticalId, candidate }));
@@ -551,7 +556,7 @@ function createMarketDiscoverySupervisor({
     });
 
     // ── DIVERSITY ───────────────────────────────────────────────────────
-    const analyzed = await store.listCandidates({ tenantId: discoveryTenant, vertical: verticalId, state: CANDIDATE_STATES.ACCEPTED });
+    const analyzed = await store.listCandidates({ tenantId: discoveryTenant, vertical: verticalId, state: CANDIDATE_STATES.ACCEPTED, runId: run.id });
     const diversity = independenceReport(analyzed.map((row) => ({
       candidateKey: row.candidate_key,
       independenceGroup: row.independence_group,
@@ -592,6 +597,64 @@ function createMarketDiscoverySupervisor({
       size: setSize,
       excludeKeys: incrementalExclusions,
     });
+    const holdoutChoice = selectHoldout({
+      candidates: selectable,
+      selectedKeys: selectionResult.selected,
+      acceptedArchetypeKeys,
+      excludeKeys: incrementalExclusions,
+    });
+
+    // Conclusão honesta do ciclo incremental (2026-09-16): quando não há NADA
+    // novo para pesquisar (set vazio após as exclusões) ou nenhum candidato
+    // sobrou fora do set para ser holdout, o run completa SEM handoff e SEM
+    // discovery set persistido (a store recusa set vazio — um artefato vazio
+    // não é um discovery set). Abrir o set sem holdout pré-registrado é
+    // leakage; fabricar um holdout é fraude. O orquestrador decide o próximo
+    // ciclo (novas queries) ou declara o esgotamento.
+    const canHandoff = selectionResult.selected.length > 0 && Boolean(holdoutChoice.holdoutKey);
+    if (!canHandoff) {
+      const terminalReason = selectionResult.selected.length === 0
+        ? 'empty_discovery_set_after_incremental_exclusions'
+        : 'holdout_unavailable_all_candidates_selected';
+      const emptyHoldout = { candidateKey: null, basis: holdoutChoice.basis, preregistered: false };
+      await store.updateRunState({
+        tenantId: discoveryTenant,
+        runId: run.id,
+        state: DISCOVERY_RUN_STATES.DISCOVERY_SET_SELECTED,
+        completedAt: clock(),
+        metadata: {
+          handoff: null,
+          terminalReason,
+          holdout: emptyHoldout,
+          selected: selectionResult.selected,
+          incrementalExclusions,
+        },
+      });
+      log.info('[market-discovery] run concluído sem handoff', {
+        tenant: discoveryTenant,
+        vertical: verticalId,
+        runId: run.id,
+        terminalReason,
+      });
+      return {
+        status: DISCOVERY_RUN_OUTCOMES.COMPLETED,
+        vertical: verticalId,
+        runId: run.id,
+        availability,
+        archetypes: {
+          accepted: revalidation.accepted,
+          evidenceRequired: revalidation.evidenceRequired,
+          rejected: revalidation.rejected,
+          gaps: archetypeGaps,
+        },
+        candidates: { ...discovery.stats, outOfMarket: discovery.outOfMarket },
+        diversity,
+        discoverySet: { id: null, selected: selectionResult.selected, rationale: selectionResult.rationale },
+        holdout: emptyHoldout,
+        handoff: null,
+      };
+    }
+
     const set = await store.recordDiscoverySet({
       tenantId: discoveryTenant,
       runId: run.id,
@@ -614,12 +677,6 @@ function createMarketDiscoverySupervisor({
     // ── HOLDOUT PREREGISTRATION ─────────────────────────────────────────
     // ANTES de qualquer pesquisa profunda: escolha determinística + registro
     // de selectedAt/selectionBasis/preregistered.
-    const holdoutChoice = selectHoldout({
-      candidates: selectable,
-      selectedKeys: selectionResult.selected,
-      acceptedArchetypeKeys,
-      excludeKeys: incrementalExclusions,
-    });
     let holdout = null;
     if (holdoutChoice.holdoutKey) {
       await holdouts.preregisterHoldout({
