@@ -532,7 +532,10 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
       source: {
         url: chosen.url,
         tier: source?.tier ?? null,
-        specificity: chosen.specificity || 'SPECIFIC',
+        // O rótulo reflete a FORMA da URL: homepage/raiz é GENERIC mesmo sem
+        // declaração — rotulá-la SPECIFIC faria o sample mentir sobre o que a
+        // fonte pode provar (o engine já recusa por URL; isto alinha o rótulo).
+        specificity: chosen.specificity || (isRootUrl(chosen.url) ? 'GENERIC' : 'SPECIFIC'),
         // A VERIFICAÇÃO vem do status HTTP real — nunca de uma afirmação do agente.
         verified: true,
         httpStatus,
@@ -694,7 +697,7 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
     const source = {
       url: chosen.url,
       tier: sourceTier,
-      specificity: chosen.specificity || 'SPECIFIC',
+      specificity: chosen.specificity || (isRootUrl(chosen.url) ? 'GENERIC' : 'SPECIFIC'),
       // A VERIFICAÇÃO vem do status HTTP real obtido pela capability — nunca de
       // uma afirmação do agente.
       verified: true,
