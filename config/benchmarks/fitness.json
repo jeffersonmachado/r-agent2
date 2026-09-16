@@ -2581,7 +2581,12 @@
         "rationale": "mapeamento declarado no sample do benchmark"
       },
       "inventoryVersion": "canonical-capabilities-1.0.0",
-      "unresolvedSemanticCandidates": 0
+      "unresolvedSemanticCandidates": 0,
+      "freshness": {
+        "researchedAt": "2026-09-16",
+        "nextReviewAt": "2027-09-16",
+        "status": "FRESH"
+      }
     },
     {
       "id": "wellable.co",
