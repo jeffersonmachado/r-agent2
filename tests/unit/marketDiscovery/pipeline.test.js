@@ -21,6 +21,7 @@ const {
   buildDiscoveryPrincipal,
 } = require('../../../api/services/marketDiscovery/marketDiscoverySupervisor');
 const { createMarketDiscoveryMemoryStore } = require('../../helpers/marketDiscoveryMemoryStore');
+const { buildCandidateRecord } = require('../../../api/services/marketDiscovery/candidateDiscovery');
 
 const TENANT = 'system';
 const NOW = '2026-09-15T12:00:00.000Z';
@@ -810,5 +811,148 @@ describe('Market discovery — benchmarks derivados de market discovery NÃO sã
     // (a varredura não o encontrou e ele não é seed: simplesmente não é tocado).
     const touched = await store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab', runId: result.runId });
     expect(touched.map((row) => row.candidate_key)).not.toContain('woliba.io');
+  });
+});
+
+describe('Market discovery — re-juízo de vereditos stale do gate (run real r15, ABS-17)', () => {
+  // Run real r15 (2026-09-16): o goteamup.com ficou marcado OUT_OF_MARKET pelo
+  // gate PRÉ-ABS-16 (julgado pela página de login, sem homepageChecked) e a
+  // busca instável do r15 não o ressurgiu — sem re-juízo, o veredito errado
+  // viveria para sempre: o pool só reavalia o que a busca ressurge. Veredito
+  // anterior ao segundo juízo é evidência STALE: candidato rejeitado POR
+  // CONTEÚDO (category_signals_below_minimum) sem `homepageChecked`, com host
+  // não banido pela política vigente, é reavaliado UMA vez pela homepage — no
+  // MESMO funil (evidência hash-bound, merge não destrutivo, estado
+  // recomputado). Veredito já completo (homepageChecked) nunca é re-varrido.
+  const CONTEXT = {
+    categoryTerms: ['gym management software'],
+    relevance: { minCategorySignals: 1, excludedHosts: [] },
+  };
+
+  async function seedStaleRejection(store, { key = 'vendorfit.com', homepageChecked = undefined } = {}) {
+    const stale = buildCandidateRecord({
+      vertical: 'fitness-lab',
+      name: key === 'vendorfit.com' ? 'VendorFit' : 'Portal Jurídico',
+      officialSite: `https://${key}/`,
+      sourceEvidence: [{ url: `https://${key}/login/`, evidenceRef: 'ev-old', contentHash: sha('login'), tier: 5 }],
+      marketRelevance: {
+        evaluated: true,
+        state: 'OUT_OF_MARKET',
+        accepted: false,
+        reason: 'category_signals_below_minimum',
+        signalCount: 0,
+        minSignals: 1,
+        matchedTerms: [],
+        domain: key,
+        ...(homepageChecked === true ? { homepageChecked: true, homepageSignals: 0 } : {}),
+      },
+      rationale: `descoberto pela varredura de mercado: ${key} alternatives`,
+    });
+    await store.upsertCandidate({ tenantId: TENANT, runId: 'mdr-old', candidate: stale });
+  }
+
+  function buildSweepProviders(calls) {
+    const contentByUrl = {
+      'https://vendorfit.com/':
+        '<html><head><title>VendorFit | Fitness Management</title></head><body>VendorFit is a gym management software: members, billing and access control.</body></html>',
+      'https://portaljuridico.com.br/':
+        '<html><head><title>Portal Jurídico</title></head><body>notícias de direito civil</body></html>',
+    };
+    return {
+      search: async () => ({ candidates: [] }), // a busca viva NÃO ressurge nada
+      fetch: async (input) => {
+        calls.push(input.url);
+        const content = contentByUrl[input.url] || `gym management software oficial de ${input.url}`;
+        return { httpStatus: 200, content, contentType: 'text/html', retrievedAt: NOW, contentHash: sha(content) };
+      },
+      inspectDocumentation: async () => ({ sections: ['a', 'b', 'c'] }),
+      inspectApiDocs: async () => ({ operations: [] }),
+      captureEvidence: async (input) => ({ evidenceRef: `ev-${sha(input.url).slice(0, 12)}`, contentHash: input.contentHash }),
+    };
+  }
+
+  test('veredito stale (sem homepageChecked) é re-julgado pela homepage e PROMOVIDO quando há sinais', async () => {
+    const sharedState = { runs: new Map(), archetypes: new Map(), candidates: new Map(), sets: new Map() };
+    const calls = [];
+    const { supervisor, store } = await buildHarness({ providers: buildSweepProviders(calls), sharedState });
+    await seedStaleRejection(store);
+
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-rejudge-v1',
+      sample: { ...SAMPLE, marketContext: CONTEXT },
+    });
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+
+    // A homepage foi consultada pelo re-juízo (o profiling do candidato
+    // aceito também a busca — o que se prova é que o RE-JUÍZO aconteceu).
+    expect(calls).toContain('https://vendorfit.com/');
+
+    const candidate = await store.getCandidate({ tenantId: TENANT, vertical: 'fitness-lab', candidateKey: 'vendorfit.com' });
+    expect(candidate.state).toBe('ACCEPTED');
+    expect(candidate.market_relevance.state).toBe('IN_MARKET');
+    // O veredito registra que veio do RE-JUÍZO de veredito stale — nunca se
+    // passa por veredito da varredura corrente.
+    expect(candidate.market_relevance.fallback).toBe('stale_verdict_rejudgment');
+    // Evidência acumulada: a página de login antiga permanece, a homepage entra.
+    const urls = candidate.source_evidence.map((item) => item.url).sort();
+    expect(urls).toEqual(['https://vendorfit.com/', 'https://vendorfit.com/login/']);
+    // Promovido entra no pool da seleção (set ou holdout).
+    const pool = [...result.discoverySet.selected, result.holdout.candidateKey].filter(Boolean);
+    expect(pool).toContain('vendorfit.com');
+    // A varredura de re-juízo é auditável no metadata do run.
+    const run = await store.getRun({ tenantId: TENANT, vertical: 'fitness-lab', discoveryVersion: 'fitness-lab-rejudge-v1' });
+    expect(run.metadata.rejudgeSweep).toEqual(expect.objectContaining({ considered: expect.any(Number) }));
+    expect(run.metadata.rejudgeSweep.promoted).toContain('vendorfit.com');
+  });
+
+  test('re-juízo SEM sinais mantém OUT_OF_MARKET com homepageChecked — e nunca é re-varrido', async () => {
+    const sharedState = { runs: new Map(), archetypes: new Map(), candidates: new Map(), sets: new Map() };
+    const calls = [];
+    const first = await buildHarness({ providers: buildSweepProviders(calls), sharedState });
+    await seedStaleRejection(first.store, { key: 'portaljuridico.com.br' });
+
+    await first.supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-rejudge-out-v1',
+      sample: { ...SAMPLE, marketContext: CONTEXT },
+    });
+
+    const rejected = await first.store.getCandidate({ tenantId: TENANT, vertical: 'fitness-lab', candidateKey: 'portaljuridico.com.br' });
+    expect(rejected.state).toBe('OUT_OF_MARKET');
+    expect(rejected.market_relevance.homepageChecked).toBe(true);
+    expect(calls).toContain('https://portaljuridico.com.br/');
+
+    // Run seguinte: o veredito já está completo — nenhuma nova varredura.
+    const callsV2 = [];
+    const second = await buildHarness({ providers: buildSweepProviders(callsV2), sharedState });
+    await second.supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-rejudge-out-v2',
+      sample: { ...SAMPLE, marketContext: CONTEXT },
+    });
+    expect(callsV2).not.toContain('https://portaljuridico.com.br/');
+  });
+
+  test('veredito já completo (homepageChecked) e host banido pela política vigente NÃO são re-julgados', async () => {
+    const sharedState = { runs: new Map(), archetypes: new Map(), candidates: new Map(), sets: new Map() };
+    const calls = [];
+    const { supervisor, store } = await buildHarness({ providers: buildSweepProviders(calls), sharedState });
+    // Veredito completo: não é stale.
+    await seedStaleRejection(store, { key: 'vendorfit.com', homepageChecked: true });
+    // Veredito stale, mas o host passou a ser banido (virou diretório etc.).
+    await seedStaleRejection(store, { key: 'portaljuridico.com.br' });
+
+    await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-rejudge-skip',
+      sample: {
+        ...SAMPLE,
+        marketContext: { ...CONTEXT, relevance: { minCategorySignals: 1, excludedHosts: ['portaljuridico.com.br'] } },
+      },
+    });
+
+    expect(calls).not.toContain('https://vendorfit.com/');
+    expect(calls).not.toContain('https://portaljuridico.com.br/');
   });
 });

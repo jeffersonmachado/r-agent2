@@ -46,6 +46,7 @@ const {
   seedFromBenchmark,
   researchedKeysFromSample,
   reservedHoldoutKeysFromSample,
+  candidateIdentityKey,
   CANDIDATE_STATES,
   CANDIDATE_ORIGINS,
 } = require('./candidateDiscovery');
@@ -629,6 +630,76 @@ function createMarketDiscoverySupervisor({
         });
       }
     }
+    // ── Re-juízo de vereditos STALE do gate (run real r15, 2026-09-16) ────
+    // O r15 provou o buraco: o goteamup.com ficou marcado OUT_OF_MARKET pelo
+    // gate PRÉ-segundo-juízo (julgado pela página de login, sem
+    // `homepageChecked`) e a busca instável do r15 não o ressurgiu — o pool
+    // só reavalia o que a busca viva traz, então o veredito errado viveria
+    // para sempre. Veredito por CONTEÚDO anterior ao segundo juízo é
+    // evidência STALE: o candidato é reavaliado UMA vez pela homepage, no
+    // MESMO funil (evidência hash-bound, merge não destrutivo, estado
+    // recomputado — nunca escolhido). Veredito completo (homepageChecked) ou
+    // host banido pela política vigente nunca é re-varrido; o que a varredura
+    // viva já ressurgiu neste run também é pulado (já foi julgado agora).
+    const excludedHostsForSweep = list(marketContext?.relevance?.excludedHosts)
+      .map((host) => registrableDomain(host))
+      .filter(Boolean);
+    const scannedKeys = new Set(
+      researchResults
+        .map((entry) => candidateIdentityKey({ officialSite: entry.officialSite, name: entry.name }))
+        .filter(Boolean),
+    );
+    const staleRejections = marketContext
+      ? (await store.listCandidates({ tenantId: discoveryTenant, vertical: verticalId, state: CANDIDATE_STATES.OUT_OF_MARKET }))
+        .filter((row) => row.run_id !== run.id
+          && row.origin === CANDIDATE_ORIGINS.RESEARCH
+          && row.market_relevance
+          && row.market_relevance.evaluated === true
+          && row.market_relevance.reason === 'category_signals_below_minimum'
+          && row.market_relevance.homepageChecked !== true
+          && isNonEmptyString(row.official_site)
+          && !excludedHostsForSweep.includes(registrableDomain(row.official_site) || '')
+          && !scannedKeys.has(candidateIdentityKey({ officialSite: row.official_site, name: row.name })))
+      : [];
+    const rejudgeSweep = { considered: staleRejections.length, promoted: [], stillOut: [], skipped: [] };
+    for (const row of staleRejections) {
+      const homeUrl = homepageUrl(row.official_site) || row.official_site;
+      const gathered = await gatherEvidence({
+        query: `${registrableDomain(row.official_site)} site oficial`,
+        url: homeUrl,
+        tier: 5,
+        note: 're-juízo de veredito stale do gate (anterior ao segundo juízo) — homepage oficial',
+      });
+      if (!gathered.evidence) {
+        rejudgeSweep.skipped.push({ candidateKey: row.candidate_key, reason: gathered.reason });
+        continue;
+      }
+      const relevance = evaluateMarketRelevance({ content: gathered.content, url: homeUrl, marketContext });
+      const promoted = relevance.state !== RELEVANCE_STATES.OUT_OF_MARKET;
+      const marked = promoted
+        ? { ...relevance, fallback: 'stale_verdict_rejudgment' }
+        : { ...relevance, homepageChecked: true, homepageSignals: relevance.signalCount };
+      const homepageName = vendorNameFromHomepageTitle(gathered.content);
+      const mapped = archetypesFromMatchedTerms(marked.matchedTerms, marketContext?.categoryTermArchetypes);
+      researchResults.push({
+        name: homepageName || row.name,
+        officialSite: homeUrl,
+        country: row.country,
+        region: row.region,
+        segments: list(row.segments),
+        targetCustomers: list(row.target_customers),
+        archetypes: mapped.length > 0 ? mapped : list(row.archetypes),
+        independenceGroup: row.independence_group,
+        cloneOf: row.clone_of,
+        baseProduct: row.base_product,
+        sourceEvidence: [gathered.evidence],
+        marketRelevance: marked,
+        rationale: `re-juízo de veredito stale do gate de relevância (veredito original do run ${row.run_id})`,
+        metadata: { nameSource: homepageName ? 'homepage_title' : 'declared', rejudgment: true },
+      });
+      if (promoted) rejudgeSweep.promoted.push(row.candidate_key);
+      else rejudgeSweep.stillOut.push(row.candidate_key);
+    }
     const discovery = discoverCandidates({ vertical: verticalId, seeds, researchResults });
     for (const record of discovery.candidates) {
       await store.upsertCandidate({ tenantId: discoveryTenant, runId: run.id, candidate: { ...record, vertical: verticalId } });
@@ -642,6 +713,7 @@ function createMarketDiscoverySupervisor({
         candidatesRejected: discovery.rejected,
         candidatesOutOfMarket: discovery.outOfMarket,
         relevanceGate: marketContext ? 'evaluated' : RELEVANCE_STATES.NOT_EVALUABLE,
+        rejudgeSweep,
       },
     });
 
