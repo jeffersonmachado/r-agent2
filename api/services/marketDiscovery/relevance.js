@@ -216,6 +216,86 @@ function evaluateMarketRelevance({ content, url, marketContext } = {}) {
   };
 }
 
+/**
+ * URL da HOMEPAGE do domínio registrável de uma URL qualquer
+ * (`https://woliba.io/blog/x/` → `https://woliba.io/`). O esquema da entrada
+ * é preservado; sem domínio registrável, null.
+ *
+ * Por que existe (run real r8, 2026-09-16): o candidato herdava como
+ * `officialSite` a URL da PÁGINA DE SINAL (blog listicle do próprio
+ * fornecedor). O site oficial de um fornecedor é a raiz do domínio — a página
+ * de sinal é evidência de DESCOBERTA, nunca identidade.
+ */
+function homepageUrl(input) {
+  const raw = String(input ?? '').trim();
+  if (!raw) return null;
+  const domain = registrableDomain(raw);
+  if (!domain) return null;
+  let protocol = 'https:';
+  try {
+    protocol = new URL(raw.includes('://') ? raw : `https://${raw}`).protocol || 'https:';
+  } catch (_) {
+    return null;
+  }
+  if (protocol !== 'http:' && protocol !== 'https:') return null;
+  return `${protocol}//${domain}/`;
+}
+
+/** Separadores comuns entre a MARCA e o restante do <title> da homepage. */
+const TITLE_SEGMENT_SEPARATOR = /\s*[:|–—·•]\s+|\s+-\s+/;
+
+/**
+ * Nome do fornecedor extraído do `<title>` da homepage: o primeiro segmento
+ * antes do separador típico ("Vantage Fit: Employee Wellness Platform" →
+ * "Vantage Fit"). Determinístico, extraído do documento do PRÓPRIO fornecedor
+ * — nunca inventado. Sem título utilizável, null (o chamador decide o
+ * fallback; o título de um listicle/blog NÃO é nome de fornecedor).
+ */
+function vendorNameFromHomepageTitle(html) {
+  const content = String(html ?? '');
+  if (!content) return null;
+  const match = content.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (!match) return null;
+  const title = match[1].replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  if (!title) return null;
+  const segment = title.split(TITLE_SEGMENT_SEPARATOR)[0].trim();
+  return segment.length > 0 ? segment : null;
+}
+
+/**
+ * Fallback determinístico de nome: o primeiro rótulo do domínio registrável
+ * com inicial maiúscula (`vantagefit.io` → `Vantagefit`). É um rótulo
+ * DERIVADO do identificador, não uma marca inventada.
+ */
+function nameFromDomain(domain) {
+  const normalized = registrableDomain(domain);
+  if (!normalized) return null;
+  const label = normalized.split('.')[0];
+  if (!label) return null;
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+/**
+ * Arquétipos de mercado do candidato a partir dos sinais de categoria
+ * casados: `marketContext.categoryTermArchetypes` (declarado pela vertical)
+ * mapeia cada termo aos arquétipos do sample que ele evidencia. Termo sem
+ * mapeamento não inventa arquétipo; a união é ordenada para determinismo.
+ */
+function archetypesFromMatchedTerms(matchedTerms, categoryTermArchetypes) {
+  const mapping = categoryTermArchetypes && typeof categoryTermArchetypes === 'object'
+    ? categoryTermArchetypes
+    : {};
+  const found = new Set();
+  for (const term of list(matchedTerms)) {
+    const mapped = mapping[normalizeTerm(term)] || mapping[String(term ?? '').trim()];
+    for (const id of list(mapped)) {
+      const key = String(id ?? '').trim();
+      if (key) found.add(key);
+    }
+  }
+  return [...found].sort();
+}
+
 module.exports = {
   RELEVANCE_STATES,
   STOPWORDS,
@@ -225,4 +305,8 @@ module.exports = {
   registrableDomain,
   matchCategorySignals,
   evaluateMarketRelevance,
+  homepageUrl,
+  vendorNameFromHomepageTitle,
+  nameFromDomain,
+  archetypesFromMatchedTerms,
 };

@@ -49,6 +49,7 @@ const ERROR_CODES = Object.freeze({
   RUN_NOT_FOUND: 'market_discovery_run_not_found',
   RUN_NOT_COMPLETED: 'market_run_not_completed',
   HOLDOUT_NOT_PREREGISTERED: 'market_run_holdout_not_preregistered',
+  HOLDOUT_WITHOUT_ARCHETYPE: 'market_run_holdout_without_archetype',
   EVIDENCE_MISSING: 'market_run_evidence_missing',
   SAMPLE_NOT_EVALUABLE: 'market_sample_not_evaluable',
   DRIFT: 'market_discovery_sample_drift_detected',
@@ -89,22 +90,42 @@ function evidenceRefsOf(candidate) {
 }
 
 /**
+ * URL GENÉRICA: raiz do host, sem path nem query — mesma semântica de
+ * `isGenericSource` do engine de suficiência. Uma homepage prova que o
+ * fornecedor existe; uma página profunda já é conteúdo de marketing/produto.
+ */
+function isGenericUrl(url) {
+  try {
+    const parsed = new URL(String(url || ''));
+    return parsed.pathname.replace(/\/+$/, '') === '' && parsed.search.length <= 1;
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Fontes DECLARADAS do benchmark derivado — o plano de deep research
  * (`buildResearchPlanFromSample`) ignora benchmark sem `sources`, então a
- * entrada aplicada precisa carregá-las ou jamais seria pesquisada. As fontes
- * vêm da EVIDÊNCIA persistida do run (URL + tier + hash), nunca inventadas;
- * o site oficial entra como fonte declarada ainda que a evidência aponte
- * para uma página específica do domínio.
+ * entrada aplicada precisa carregá-las ou jamais seria pesquisada.
+ *
+ * Disciplina de fases (ciclo 2, run real r8): as fontes declaradas são apenas
+ * as GENÉRICAS (homepage/raiz) — o que se sabia antes do pré-registro é a
+ * EXISTÊNCIA do fornecedor, nunca o inventário. As páginas profundas da
+ * evidência de descoberta (listicles onde o sinal foi encontrado) NÃO viram
+ * fonte declarada: permanecem auditáveis em `provenance.evidenceRefs`, e o
+ * conteúdo específico é redescoberto pelo deep research no tempo próprio
+ * (com `retrievedAt` de análise). Misturar as fases faria o engine
+ * (evaluateHoldout) ler exposição pré-registro de conteúdo específico.
  */
 function declaredSourcesOf(candidate) {
   const byUrl = new Map();
   for (const item of list(candidate?.sourceEvidence ?? candidate?.source_evidence)) {
     const url = String(item?.url || '').trim();
-    if (!url || byUrl.has(url)) continue;
+    if (!url || byUrl.has(url) || !isGenericUrl(url)) continue;
     byUrl.set(url, {
       url,
       tier: Number.isFinite(Number(item?.tier)) ? Number(item.tier) : 5,
-      specificity: 'official',
+      specificity: 'GENERIC',
       provenance: {
         evidenceRef: item?.evidenceRef ? String(item.evidenceRef) : null,
         contentHash: item?.contentHash ? String(item.contentHash) : null,
@@ -112,24 +133,24 @@ function declaredSourcesOf(candidate) {
     });
   }
   const site = String(candidate?.officialSite || candidate?.official_site || '').trim();
-  if (site && !byUrl.has(site)) {
-    byUrl.set(site, { url: site, tier: 5, specificity: 'official' });
-  }
-  const apiDocs = String(candidate?.apiDocs || candidate?.api_docs || '').trim();
-  if (apiDocs && !byUrl.has(apiDocs)) {
-    byUrl.set(apiDocs, { url: apiDocs, tier: 5, specificity: 'api-docs' });
+  if (site && isGenericUrl(site) && !byUrl.has(site)) {
+    byUrl.set(site, { url: site, tier: 5, specificity: 'GENERIC' });
   }
   return [...byUrl.values()];
 }
 
 function candidateEntry(candidate, { role, order, runExport }) {
+  const candidateKey = String(candidate.candidateKey || candidate.candidate_key);
   return {
-    id: String(candidate.candidateKey || candidate.candidate_key),
-    name: String(candidate.name || candidate.candidateKey || candidate.candidate_key),
+    id: candidateKey,
+    name: String(candidate.name || candidateKey),
     role,
     order,
     archetype: list(candidate.archetypes)[0] || null,
-    independenceGroup: candidate.independenceGroup || candidate.independence_group || null,
+    // Grupo de independência: o estágio DIVERSITY não encontrou grupo
+    // compartilhado → o candidato é o próprio grupo até prova em contrário
+    // (null esvaziaria as janelas de grupos independentes da saturação).
+    independenceGroup: candidate.independenceGroup || candidate.independence_group || candidateKey,
     cloneOf: candidate.cloneOf || candidate.clone_of || null,
     officialSite: candidate.officialSite || candidate.official_site || null,
     sources: declaredSourcesOf(candidate),
@@ -198,33 +219,97 @@ function applyMarketDiscoveryToSample({ sample, runExport }) {
 
   const next = JSON.parse(JSON.stringify(sample));
 
+  // Contrato completo do registro de holdout (ciclo 2, run real r8): o engine
+  // (evaluateHoldout.preregistrationFields) exige selectionEvidence,
+  // marketArchetype e inventoryVersion — emitir só benchmarkId/selectedAt/
+  // reason produzia holdout_preregistration_incomplete a jusante.
+  const holdoutKey = String(holdout.candidateKey);
+  const holdoutCandidate = candidatesByKey.get(holdoutKey);
+  const holdoutArchetype = list(holdoutCandidate.archetypes)[0] || null;
+  if (!isNonEmptyString(holdoutArchetype)) {
+    throw generatorError(
+      ERROR_CODES.HOLDOUT_WITHOUT_ARCHETYPE,
+      `candidato holdout ${holdoutKey} sem arquétipo no run ${runExport.runId}: marketArchetype é obrigatório e nunca é inventado`,
+    );
+  }
+  const inventoryVersion = isNonEmptyString(next.inventoryVersion)
+    ? String(next.inventoryVersion)
+    : (isNonEmptyString(next.holdout?.inventoryVersion) ? String(next.holdout.inventoryVersion) : null);
+  if (!inventoryVersion) {
+    throw generatorError(
+      ERROR_CODES.SAMPLE_NOT_EVALUABLE,
+      'sample sem inventoryVersion: o pré-registro do holdout exige a versão do inventário canônico',
+    );
+  }
+
+  // INCORPORAÇÃO do holdout substituído (regra do ciclo de absorção: holdout
+  // que cumpriu seu papel — analisado ou não — NUNCA some nem fica eternamente
+  // fora do discovery set; seus achados passam a contar no inventário). Sem
+  // isto o zenplanner do ciclo 1 ficou com role 'validation' para sempre:
+  // fora do discovery set, seus findings não contavam — denominador
+  // encolhido por omissão.
+  const previousHoldoutKey = isNonEmptyString(next.holdout?.benchmarkId) ? String(next.holdout.benchmarkId) : null;
+  const demoted = [];
+  if (previousHoldoutKey && previousHoldoutKey !== holdoutKey) {
+    const previous = list(next.benchmarks).find((b) => b && b.id === previousHoldoutKey);
+    if (previous && previous.role === 'validation') {
+      previous.role = 'discovery';
+      previous.incorporation = {
+        generator: GENERATOR_ID,
+        fromRole: 'validation',
+        marketDiscoveryRunId: String(runExport.runId),
+        discoverySetId: String(runExport.discoverySetId),
+        appliedAt: String(runExport.completedAt),
+        note: 'holdout do ciclo anterior incorporado ao discovery set — os achados passam a contar no inventário; substituído pelo holdout pré-registrado deste run',
+      };
+      demoted.push(previous);
+    }
+  }
+
   // Benchmarks: entradas gerenciadas por ESTE gerador são re-derivadas; as
   // demais (análises anteriores, seeds históricos) são preservadas intactas.
   const preserved = list(next.benchmarks).filter((entry) => entry?.provenance?.generator !== GENERATOR_ID);
   const maxOrder = preserved.reduce((max, entry) => Math.max(max, Number(entry?.order) || 0), 0);
+  // O holdout incorporado foi analisado DEPOIS de todos os benchmarks do ciclo
+  // anterior (era o holdout de validação deles): fecha a sequência preservada.
+  for (const entry of demoted) {
+    entry.order = maxOrder + demoted.indexOf(entry) + 1;
+  }
+  const derivedBase = maxOrder + demoted.length;
   const derived = selected.map((key, index) => candidateEntry(candidatesByKey.get(key), {
     role: 'discovery',
-    order: maxOrder + index + 1,
+    order: derivedBase + index + 1,
     runExport,
   }));
-  const holdoutKey = String(holdout.candidateKey);
   if (!selected.includes(holdoutKey)) {
     derived.push(candidateEntry(candidatesByKey.get(holdoutKey), {
       role: 'validation',
-      order: maxOrder + derived.length + 1,
+      order: derivedBase + derived.length + 1,
       runExport,
     }));
   }
   next.benchmarks = [...preserved, ...derived]
     .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || String(a.id).localeCompare(String(b.id)));
 
-  // Holdout do sample = holdout PRÉ-REGISTRADO do run (com proveniência).
+  // Holdout do sample = holdout PRÉ-REGISTRADO do run (com proveniência e
+  // evidência de seleção composta de FATOS do run — nunca texto genérico).
+  const holdoutEvidenceRefs = evidenceRefsOf(holdoutCandidate);
+  const basisText = isNonEmptyString(holdout.basis?.reason)
+    ? String(holdout.basis.reason)
+    : JSON.stringify(holdout.basis || {});
+  const selectionEvidence = [
+    `Existência verificada no run ${runExport.runId} por evidência hash-bound (${holdoutEvidenceRefs.join(', ')}).`,
+    `Site oficial declarado: ${holdoutCandidate.officialSite || holdoutCandidate.official_site || 'não identificado'}.`,
+    `Pré-registrado em ${holdout.preregisteredAt} ANTES de qualquer pesquisa profunda de inventário (deep research); fases executadas até aqui: MARKET, ARCHETYPES, CANDIDATES, CANDIDATE_ANALYSIS (profiling de mercado), DIVERSITY, DISCOVERY_SET — conforme o pipeline governado.`,
+    `Base da seleção: ${basisText}.`,
+  ].join(' ');
   next.holdout = {
     benchmarkId: holdoutKey,
     selectedAsHoldoutAt: String(holdout.preregisteredAt),
-    selectionReason: isNonEmptyString(holdout.basis?.reason)
-      ? String(holdout.basis.reason)
-      : JSON.stringify(holdout.basis || {}),
+    selectionReason: basisText,
+    selectionEvidence,
+    marketArchetype: String(holdoutArchetype),
+    inventoryVersion,
     provenance: {
       generator: GENERATOR_ID,
       marketDiscoveryRunId: String(runExport.runId),

@@ -120,6 +120,19 @@
       "software para estúdio de pilates e treino funcional"
     ],
     "_categoryTermsNote": "2026-09-16 (run real r5): o vocabulário original era mais estreito que os PRÓPRIOS arquétipos do sample — o arquétipo personal-wellness é representado por benchmarks de corporate wellness (wellhub, glofox), mas nenhum termo cobria essa redação, e o fornecedor real vantagefit.io foi rejeitado com 0 sinais. Os termos adicionados ('corporate wellness platform', 'employee wellness platform', 'gym membership software', 'fitness studio software') nomeiam as CATEGORIAS já representadas no sample — nunca fornecedores. Controles negativos do mesmo dia: matthews.com (relatório imobiliário) e circuitopilates.com.br (estúdio de pilates) seguem OUT_OF_MARKET com 0 sinais no vocabulário estendido.",
+    "categoryTermArchetypes": {
+      "gym management software": ["independent-gym", "gym-network"],
+      "fitness studio management platform": ["boutique-studio"],
+      "gym membership management software": ["independent-gym", "gym-network"],
+      "gym membership software": ["independent-gym", "gym-network"],
+      "fitness studio software": ["boutique-studio"],
+      "corporate wellness platform": ["personal-wellness"],
+      "employee wellness platform": ["personal-wellness"],
+      "software para academia gestão": ["independent-gym"],
+      "sistema de gestão para academias": ["independent-gym", "gym-network"],
+      "software para estúdio de pilates e treino funcional": ["boutique-studio", "crossfit-box"]
+    },
+    "_categoryTermArchetypesNote": "2026-09-16 (run real r8): candidatos IN_MARKET entravam no universo SEM arquétipo (archetypes: []) — o pré-registro do holdout exige marketArchetype e a seleção por cobertura não tinha insumo. Este mapa DECLARA, por termo de categoria, os arquétipos do sample que o sinal evidencia; o candidato recebe a união dos mapeamentos dos seus sinais casados (api/services/marketDiscovery/relevance.js#archetypesFromMatchedTerms). Todo termo de categoryTerms precisa ter entrada aqui — a completude é travada em tests/unit/marketDiscovery/relevance.test.js. Julgamento humano auditável: termos de gestão de academias cobrem os arquétipos de academia (independent-gym/gym-network), termos de estúdio cobrem boutique-studio (e crossfit-box na redação de treino funcional), termos de wellness corporativo cobrem personal-wellness (a categoria dos representantes wellhub/glofox no sample).",
     "competitorPatterns": [
       "{competitor} alternatives",
       "{competitor} competitors"
@@ -2395,16 +2408,86 @@
         "newCriticalBusinessRules": []
       },
       "unresolvedSemanticCandidates": 0
+    },
+    {
+      "id": "vantagefit.io",
+      "name": "Top 6 Wellhub alternatives in 2026 - Vantage Fit",
+      "role": "discovery",
+      "order": 11,
+      "archetype": null,
+      "independenceGroup": null,
+      "cloneOf": null,
+      "officialSite": "https://www.vantagefit.io/alternatives/wellhub-alternatives/",
+      "sources": [
+        {
+          "url": "https://www.vantagefit.io/alternatives/wellhub-alternatives/",
+          "tier": 5,
+          "specificity": "official",
+          "provenance": {
+            "evidenceRef": "ev-e7ae45a2cefe79e0cfd1dfb3f43f5adaa9d35dd0",
+            "contentHash": "sha256:f0af2de4f91d47c785d19ac23c8a2f21a742efef9b072e2eb84d99e0ab04569c"
+          }
+        }
+      ],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+        "discoverySetId": "mds-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+        "appliedAt": "2026-09-16T09:51:00.966Z",
+        "evidenceRefs": [
+          "ev-e7ae45a2cefe79e0cfd1dfb3f43f5adaa9d35dd0"
+        ]
+      }
+    },
+    {
+      "id": "woliba.io",
+      "name": "Top 11 Wellhub Alternatives or Competitors in 2026",
+      "role": "validation",
+      "order": 12,
+      "archetype": null,
+      "independenceGroup": null,
+      "cloneOf": null,
+      "officialSite": "https://woliba.io/blog/wellhub-alternatives/",
+      "sources": [
+        {
+          "url": "https://woliba.io/blog/wellhub-alternatives/",
+          "tier": 5,
+          "specificity": "official",
+          "provenance": {
+            "evidenceRef": "ev-ba83f94d7053932a4636e08500f7e8252871d8d7",
+            "contentHash": "sha256:c33ce8b4aa2fab2aba4c6d8973c847fdb7ffca0665068e2af49bd613ea82844a"
+          }
+        }
+      ],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+        "discoverySetId": "mds-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+        "appliedAt": "2026-09-16T09:51:00.966Z",
+        "evidenceRefs": [
+          "ev-ba83f94d7053932a4636e08500f7e8252871d8d7"
+        ]
+      }
     }
   ],
   "holdout": {
-    "benchmarkId": "zenplanner",
-    "selectedAsHoldoutAt": "2026-09-10T21:00:00.000Z",
-    "selectionReason": "Arquétipo crossfit-box é o mais distante dos demais da amostra (nenhum outro benchmark cobre box de treino funcional), geografia fora do Brasil e maturidade de integração baixa — maximiza a chance de revelar generalização fraca do inventário. Selecionado ANTES de qualquer análise de suas capacidades.",
-    "selectionEvidence": "Arquétipo declarado em archetypes[crossfit-box] com fonte oficial verificada (https://www.wodify.com/ e https://www.zenplanner.com/ como representantes da categoria). Nenhum conteúdo de capability do Zen Planner foi lido até o momento do pré-registro.",
-    "marketArchetype": "crossfit-box",
-    "inventoryVersion": "canonical-capabilities-1.0.0",
-    "analysedAt": "2026-09-16T02:56:34.455Z"
+    "benchmarkId": "woliba.io",
+    "selectedAsHoldoutAt": "2026-09-16T09:51:00.935Z",
+    "selectionReason": "maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos)",
+    "provenance": {
+      "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+      "marketDiscoveryRunId": "mdr-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+      "discoverySetId": "mds-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+      "appliedAt": "2026-09-16T09:51:00.966Z"
+    }
   },
   "criticalityRegistry": {},
   "criticalityOverrides": [],
@@ -3062,5 +3145,18 @@
       "evidenceRef": "ev-48acfc90429b24956f9679193962e1d2c784f570",
       "capturedAt": "2026-09-15T18:32:23.856Z"
     }
-  ]
+  ],
+  "marketDiscoveryProvenance": {
+    "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+    "marketDiscoveryRunId": "mdr-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+    "discoverySetId": "mds-b57b1838101c7a7eb8d9ae30be40ed695c47677f7ba2d2bd",
+    "vertical": "fitness",
+    "discoveryVersion": "fitness-market-discovery-2026-09-16-r8-historical-eligible",
+    "appliedAt": "2026-09-16T09:51:00.966Z",
+    "selectedCandidates": [
+      "vantagefit.io"
+    ],
+    "holdoutCandidateKey": "woliba.io",
+    "rule": "sample derivado do run de market discovery por gerador determinístico; edição manual é drift (`--check` falha)"
+  }
 }

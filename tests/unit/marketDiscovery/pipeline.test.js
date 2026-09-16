@@ -551,3 +551,87 @@ describe('Market discovery — elegibilidade histórica com relevância persisti
     expect(pool).not.toContain('delta-fitness.com');
   });
 });
+
+describe('Market discovery — qualidade do registro do candidato (run real r8)', () => {
+  // Run real r8 (2026-09-16): vantagefit.io e woliba.io entraram no universo
+  // com officialSite = URL do BLOG POST onde o sinal foi encontrado e name =
+  // título do post ("Top 11 Wellhub Alternatives..."). O registro canônico
+  // exige: officialSite = raiz do domínio, name = marca (título da homepage,
+  // com fallback para o rótulo do domínio), evidência da HOMEPAGE como prova de
+  // existência e arquétipos derivados dos sinais de categoria mapeados.
+  const SAMPLE_CONTEXT = {
+    categoryTerms: ['corporate wellness platform', 'gym management software'],
+    categoryTermArchetypes: {
+      'corporate wellness platform': ['personal-wellness'],
+      'gym management software': ['independent-gym'],
+    },
+    relevance: { minCategorySignals: 1 },
+  };
+
+  function buildBlogUniverseProviders(calls) {
+    const contentByUrl = {
+      'https://vendorx.io/blog/wellhub-alternatives/':
+        '<html><head><title>Top 11 Wellhub Alternatives or Competitors in 2026</title></head>'
+        + '<body>VendorX is a corporate wellness platform compared with Wellhub.</body></html>',
+      'https://vendorx.io/':
+        '<html><head><title>VendorX | Employee Wellness</title></head><body>homepage</body></html>',
+      'https://imobiliaria.example.com/blog/relatorio/':
+        '<html><head><title>Relatório imobiliário 2026</title></head><body>mercado de bairro</body></html>',
+    };
+    return {
+      search: async () => ({
+        candidates: [
+          { url: 'https://vendorx.io/blog/wellhub-alternatives/', title: 'Top 11 Wellhub Alternatives or Competitors in 2026' },
+          { url: 'https://imobiliaria.example.com/blog/relatorio/', title: 'Relatório imobiliário' },
+        ],
+      }),
+      fetch: async (input) => {
+        calls.push(input.url);
+        const content = contentByUrl[input.url] || `conteúdo de ${input.url}`;
+        return {
+          httpStatus: 200,
+          content,
+          contentType: 'text/html',
+          retrievedAt: NOW,
+          contentHash: sha(content),
+        };
+      },
+      inspectDocumentation: async () => ({ sections: ['a', 'b', 'c'] }),
+      inspectApiDocs: async () => ({ operations: [] }),
+      captureEvidence: async (input) => ({ evidenceRef: `ev-${sha(input.url).slice(0, 12)}`, contentHash: input.contentHash }),
+    };
+  }
+
+  test('candidato descoberto via blog: identidade canônica, nome limpo, homepage como prova de existência', async () => {
+    const calls = [];
+    const { supervisor, store } = await buildHarness({ providers: buildBlogUniverseProviders(calls) });
+
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-discovery-r8fix',
+      sample: { ...SAMPLE, marketContext: SAMPLE_CONTEXT },
+    });
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+
+    const candidate = (await store.listCandidates({
+      tenantId: TENANT, vertical: 'fitness-lab', state: 'ACCEPTED',
+    })).find((row) => row.candidate_key === 'vendorx.io');
+    expect(candidate).toBeDefined();
+
+    // officialSite é a RAIZ — a página de sinal fica só na evidência.
+    expect(candidate.official_site).toBe('https://vendorx.io/');
+    // Nome vem do <title> da homepage, nunca do título do listicle.
+    expect(candidate.name).toBe('VendorX');
+    // Arquétipo derivado do sinal de categoria mapeado pela vertical.
+    expect(candidate.archetypes).toEqual(['personal-wellness']);
+    // Evidência: página de descoberta + homepage (prova de existência), ambas hash-bound.
+    const urls = candidate.source_evidence.map((item) => item.url).sort();
+    expect(urls).toEqual(['https://vendorx.io/', 'https://vendorx.io/blog/wellhub-alternatives/']);
+    const homepage = candidate.source_evidence.find((item) => item.url === 'https://vendorx.io/');
+    expect(homepage.evidenceRef).toBeTruthy();
+    expect(homepage.contentHash).toBeTruthy();
+
+    // Candidato OUT_OF_MARKET não recebe fetch de homepage (rejeitado, sem custo).
+    expect(calls).not.toContain('https://imobiliaria.example.com/');
+  });
+});

@@ -177,3 +177,89 @@ describe('relevance — veredito de pertencimento', () => {
     expect(JSON.stringify(evaluateMarketRelevance(input))).toBe(JSON.stringify(evaluateMarketRelevance(input)));
   });
 });
+
+describe('qualidade do registro de candidato (run real r8, 2026-09-16)', () => {
+  // O run r8 aceitou vantagefit.io e woliba.io, mas o registro herdou a URL da
+  // PÁGINA DE SINAL (blog listicle do próprio fornecedor) como officialSite e o
+  // TÍTULO do post como name — officialSite é a raiz do domínio, e a página de
+  // sinal fica como evidência de descoberta, nunca como identidade.
+  const {
+    homepageUrl,
+    vendorNameFromHomepageTitle,
+    nameFromDomain,
+    archetypesFromMatchedTerms,
+  } = require('../../../api/services/marketDiscovery/relevance');
+
+  test('homepageUrl canonicaliza qualquer página do domínio para a raiz', () => {
+    expect(homepageUrl('https://woliba.io/blog/wellhub-alternatives/')).toBe('https://woliba.io/');
+    expect(homepageUrl('https://www.vantagefit.io/alternatives/wellhub-alternatives/')).toBe('https://vantagefit.io/');
+    expect(homepageUrl('http://app.tecnofit.com.br/login?x=1')).toBe('http://tecnofit.com.br/');
+    expect(homepageUrl('https://alpha-gym.com/')).toBe('https://alpha-gym.com/');
+    expect(homepageUrl('não é url')).toBe(null);
+    expect(homepageUrl('')).toBe(null);
+  });
+
+  test('vendorNameFromHomepageTitle extrai a marca do <title> da homepage', () => {
+    expect(vendorNameFromHomepageTitle(
+      '<html><head><title>Vantage Fit: Employee Wellness Platform</title></head><body/></html>',
+    )).toBe('Vantage Fit');
+    expect(vendorNameFromHomepageTitle(
+      '<title>Woliba | Corporate Wellness Platform</title>',
+    )).toBe('Woliba');
+    expect(vendorNameFromHomepageTitle(
+      '<title>GymNovo — Sistema de gestão para academias</title>',
+    )).toBe('GymNovo');
+    // Sem título utilizável: null (o chamador cai para o domínio, nunca inventa).
+    expect(vendorNameFromHomepageTitle('<html><body>sem title</body></html>')).toBe(null);
+    expect(vendorNameFromHomepageTitle('<title>   </title>')).toBe(null);
+    expect(vendorNameFromHomepageTitle('')).toBe(null);
+    expect(vendorNameFromHomepageTitle(null)).toBe(null);
+  });
+
+  test('nameFromDomain é o fallback determinístico (rótulo do domínio, não invenção)', () => {
+    expect(nameFromDomain('vantagefit.io')).toBe('Vantagefit');
+    expect(nameFromDomain('woliba.io')).toBe('Woliba');
+    expect(nameFromDomain('tecnofit.com.br')).toBe('Tecnofit');
+    expect(nameFromDomain(null)).toBe(null);
+    expect(nameFromDomain('')).toBe(null);
+  });
+
+  test('archetypesFromMatchedTerms mapeia sinais aos arquétipos declarados pela vertical', () => {
+    const mapping = {
+      'corporate wellness platform': ['personal-wellness'],
+      'employee wellness platform': ['personal-wellness'],
+      'gym management software': ['independent-gym', 'gym-network'],
+    };
+    expect(archetypesFromMatchedTerms(['corporate wellness platform'], mapping)).toEqual(['personal-wellness']);
+    // União determinística (ordem estável) de vários sinais.
+    expect(archetypesFromMatchedTerms(
+      ['employee wellness platform', 'gym management software', 'corporate wellness platform'],
+      mapping,
+    )).toEqual(['gym-network', 'independent-gym', 'personal-wellness']);
+    // Sinal sem mapeamento não inventa arquétipo.
+    expect(archetypesFromMatchedTerms(['termo desconhecido'], mapping)).toEqual([]);
+    expect(archetypesFromMatchedTerms([], mapping)).toEqual([]);
+    expect(archetypesFromMatchedTerms(null, mapping)).toEqual([]);
+    expect(archetypesFromMatchedTerms(['corporate wellness platform'], null)).toEqual([]);
+  });
+
+  test('config REAL da vertical: todo termo de categoria tem mapeamento para arquétipo existente', () => {
+    // Sem mapeamento completo, um candidato IN_MARKET ficaria sem arquétipo e o
+    // pré-registro do holdout (engine: marketArchetype obrigatório) morreria a
+    // jusante. A completude é exigência do contrato, não conveniência.
+    const path = require('path');
+    const fs = require('fs');
+    const sample = JSON.parse(fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'config', 'benchmarks', 'fitness.json'), 'utf8',
+    ));
+    const known = new Set(sample.archetypes.map((a) => a.id));
+    const mapping = sample.marketContext.categoryTermArchetypes || {};
+    const { normalizeTerm } = require('../../../api/services/benchmark/benchmarkResearchSemantics');
+    for (const term of sample.marketContext.categoryTerms) {
+      const mapped = mapping[normalizeTerm(term)] || mapping[term];
+      expect(Array.isArray(mapped)).toBe(true);
+      expect(mapped.length).toBeGreaterThan(0);
+      for (const id of mapped) expect(known.has(id)).toBe(true);
+    }
+  });
+});

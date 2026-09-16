@@ -282,3 +282,122 @@ describe('apply-market-discovery-to-sample — CLI com --check', () => {
     });
   });
 });
+
+describe('apply-market-discovery-to-sample — contrato completo do holdout (ciclo 2, run real r8)', () => {
+  // O gerador emitia o registro de holdout só com benchmarkId/selectedAt/reason
+  // — o ENGINE (evaluateHoldout) exige selectionEvidence, marketArchetype e
+  // inventoryVersion, e marcava holdout_preregistration_incomplete. Além
+  // disso, o holdout SUBSTITUÍDO (zenplanner, analisado no ciclo 1) ficava com
+  // role 'validation' para sempre: fora do discovery set, seus achados não
+  // contavam no inventário — denominador encolhido por omissão. "Incorporar a
+  // descoberta" é obrigatório: o holdout anterior vira benchmark de discovery.
+
+  function buildCycleTwoSample() {
+    const sample = buildSample();
+    sample.benchmarks.push({
+      id: 'old-holdout',
+      name: 'Old Holdout',
+      role: 'validation',
+      order: 5,
+      archetype: 'financial-billing',
+      independenceGroup: 'old-holdout',
+      sources: [{ url: 'https://old-holdout.com/', tier: 5 }],
+      analyzedAt: '2026-09-10T10:00:00.000Z',
+      researchVersion: 'v-old',
+      findingsInventory: ['f-1', 'f-2'],
+      novelty: { newCapabilities: [] },
+    });
+    sample.holdout = {
+      benchmarkId: 'old-holdout',
+      selectedAsHoldoutAt: '2026-09-01T00:00:00.000Z',
+      selectionReason: 'ciclo 1',
+      selectionEvidence: 'ciclo 1',
+      marketArchetype: 'financial-billing',
+      inventoryVersion: 'inv-1',
+      analysedAt: '2026-09-10T10:00:00.000Z',
+    };
+    return sample;
+  }
+
+  test('o registro de holdout emitido satisfaz o contrato do engine', () => {
+    const next = applyMarketDiscoveryToSample({ sample: buildCycleTwoSample(), runExport: buildRunExport() });
+
+    // Todos os campos que evaluateHoldout exige (preregistrationFields).
+    for (const field of ['benchmarkId', 'selectedAsHoldoutAt', 'selectionReason', 'selectionEvidence', 'marketArchetype', 'inventoryVersion']) {
+      expect(next.holdout[field]).toBeTruthy();
+    }
+    expect(next.holdout.marketArchetype).toBe('financial-billing'); // archetypes[0] do candidato
+    expect(next.holdout.inventoryVersion).toBe('inv-1'); // sample.inventoryVersion
+    // selectionEvidence é composto de FATOS do run — nunca texto genérico.
+    expect(next.holdout.selectionEvidence).toContain('mdr-test-run');
+    expect(next.holdout.selectionEvidence).toContain('ev-gymnovo');
+
+    // E o PRÓPRIO engine concorda: nenhuma violação de pré-registro incompleto.
+    const engine = require('../../../qa/benchmarks/benchmarkSufficiencyEngine');
+    const gate = engine.evaluateHoldout({ sample: next, policy: require('../../../config/benchmark-sufficiency-policy.json') });
+    expect(gate.violations.map((v) => v.reason)).not.toContain('holdout_preregistration_incomplete');
+  });
+
+  test('fail-closed: holdout sem arquétipo no run não vira registro pela metade', () => {
+    const runExport = buildRunExport();
+    runExport.candidates[2].archetypes = [];
+    expect(() => applyMarketDiscoveryToSample({ sample: buildSample(), runExport }))
+      .toThrow(/archetype|arqu[eé]tipo/i);
+  });
+
+  test('o holdout substituído é INCORPORADO ao discovery set (achados contam no inventário)', () => {
+    const next = applyMarketDiscoveryToSample({ sample: buildCycleTwoSample(), runExport: buildRunExport() });
+
+    const incorporated = next.benchmarks.find((b) => b.id === 'old-holdout');
+    expect(incorporated.role).toBe('discovery');
+    // Análise do ciclo 1 preservada — incorporar não é apagar.
+    expect(incorporated.analyzedAt).toBe('2026-09-10T10:00:00.000Z');
+    expect(incorporated.findingsInventory).toEqual(['f-1', 'f-2']);
+    // A incorporação é auditável: de onde veio, em que run.
+    expect(incorporated.incorporation).toEqual(expect.objectContaining({
+      generator: GENERATOR_ID,
+      fromRole: 'validation',
+      marketDiscoveryRunId: 'mdr-test-run',
+    }));
+    // Foi analisado DEPOIS de todos os benchmarks do ciclo 1: ordem no fim dos
+    // preservados, antes das entradas derivadas deste run.
+    const legacy = next.benchmarks.find((b) => b.id === 'legacy-manual');
+    const alpha = next.benchmarks.find((b) => b.id === 'alpha-gym.com');
+    expect(incorporated.order).toBeGreaterThan(legacy.order);
+    expect(alpha.order).toBeGreaterThan(incorporated.order);
+
+    // O único benchmark de validação restante é o NOVO holdout.
+    expect(next.benchmarks.filter((b) => b.role === 'validation').map((b) => b.id)).toEqual(['gymnovo.com']);
+
+    // Idempotente: re-aplicar não re-demove nem reordena.
+    const reapplied = applyMarketDiscoveryToSample({ sample: next, runExport: buildRunExport() });
+    expect(JSON.stringify(reapplied.benchmarks)).toBe(JSON.stringify(next.benchmarks));
+  });
+
+  test('fontes declaradas das entradas derivadas são GENÉRICAS (existência, não inventário)', () => {
+    const runExport = buildRunExport();
+    // Candidato cuja evidência de descoberta é uma página profunda (listicle).
+    runExport.candidates[2].sourceEvidence = [
+      { url: 'https://gymnovo.com/blog/wellhub-alternatives/', evidenceRef: 'ev-deep', contentHash: 'h-deep' },
+      { url: 'https://gymnovo.com/', evidenceRef: 'ev-home', contentHash: 'h-home' },
+    ];
+    const next = applyMarketDiscoveryToSample({ sample: buildSample(), runExport });
+    const engine = require('../../../qa/benchmarks/benchmarkSufficiencyEngine');
+
+    const holdout = next.benchmarks.find((b) => b.id === 'gymnovo.com');
+    expect(holdout.sources.length).toBeGreaterThan(0);
+    for (const source of holdout.sources) {
+      expect(engine.isGenericSource(source)).toBe(true);
+    }
+    // A página profunda não desaparece: fica auditável na proveniência.
+    expect(holdout.provenance.evidenceRefs).toEqual(expect.arrayContaining(['ev-deep', 'ev-home']));
+  });
+
+  test('independenceGroup ausente vira o próprio candidateKey (grupo próprio até prova em contrário)', () => {
+    const runExport = buildRunExport();
+    runExport.candidates[0].independenceGroup = null;
+    const next = applyMarketDiscoveryToSample({ sample: buildSample(), runExport });
+    const alpha = next.benchmarks.find((b) => b.id === 'alpha-gym.com');
+    expect(alpha.independenceGroup).toBe('alpha-gym.com');
+  });
+});

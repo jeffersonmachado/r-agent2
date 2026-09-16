@@ -52,7 +52,15 @@ const { independenceReport } = require('./independence');
 const { selectDiscoverySet, selectHoldout, SELECTION_WEIGHTS, DEFAULT_SET_SIZE } = require('./discoverySetSelection');
 const { createHoldoutPreregistration, HOLDOUT_SET_STATES } = require('./holdoutPreregistration');
 const { buildMarketQueries } = require('./marketQueries');
-const { evaluateMarketRelevance, RELEVANCE_STATES, registrableDomain } = require('./relevance');
+const {
+  evaluateMarketRelevance,
+  RELEVANCE_STATES,
+  registrableDomain,
+  homepageUrl,
+  vendorNameFromHomepageTitle,
+  nameFromDomain,
+  archetypesFromMatchedTerms,
+} = require('./relevance');
 
 /** A capability canônica pela qual o runtime alcança a descoberta de mercado. */
 const MARKET_DISCOVERY_CAPABILITY = Object.freeze({
@@ -486,21 +494,61 @@ function createMarketDiscoverySupervisor({
         seenUrls.add(hit.url);
         const gathered = await gatherEvidence({ query: `${hit.title || hit.url} oficial`, url: hit.url, tier: 5 });
         if (!gathered.evidence) continue;
+        const marketRelevance = evaluateMarketRelevance({
+          content: gathered.content,
+          url: hit.url,
+          marketContext,
+        });
+        // Qualidade do registro (run real r8, 2026-09-16): o officialSite do
+        // candidato é a RAIZ do domínio registrável — a página onde o sinal
+        // foi encontrado (blog listicle do próprio fornecedor) é evidência de
+        // DESCOBERTA, nunca identidade. O r8 herdou a URL do post como
+        // officialSite e o título do post como nome.
+        const rootUrl = homepageUrl(hit.url);
+        const relevanceAllowsUniverse = marketRelevance.state !== RELEVANCE_STATES.OUT_OF_MARKET;
+        const signalIsHomepage = !rootUrl || gathered.evidence.url === rootUrl;
+        // Homepage como prova de EXISTÊNCIA (fonte genérica): buscada uma vez
+        // por candidato que pode entrar no universo; candidato rejeitado pelo
+        // gate não recebe fetch extra.
+        let homepageGathered = null;
+        if (rootUrl && !signalIsHomepage && relevanceAllowsUniverse) {
+          homepageGathered = await gatherEvidence({
+            query: `${registrableDomain(hit.url)} site oficial`,
+            url: rootUrl,
+            tier: 5,
+            note: 'homepage oficial — prova de existência (fonte genérica)',
+          });
+        }
+        const sourceEvidence = [gathered.evidence];
+        if (homepageGathered?.evidence) sourceEvidence.push(homepageGathered.evidence);
+        // Nome: marca do <title> da homepage do PRÓPRIO fornecedor; fallback
+        // determinístico para o rótulo do domínio. O título da página de sinal
+        // ("Top 11 Alternatives...") nunca é nome de fornecedor.
+        const name = vendorNameFromHomepageTitle(homepageGathered?.content)
+          || (signalIsHomepage ? vendorNameFromHomepageTitle(gathered.content) : null)
+          || nameFromDomain(hit.url)
+          || hit.title
+          || hit.url;
         researchResults.push({
-          name: hit.title || hit.url,
-          officialSite: hit.url,
+          name,
+          officialSite: rootUrl || hit.url,
           country: hit.country || null,
           segments: list(hit.segments),
           targetCustomers: list(hit.targetCustomers),
-          archetypes: list(hit.archetypes),
+          // Arquétipos derivados dos sinais de categoria mapeados pela vertical
+          // (`categoryTermArchetypes`); quando a vertical não mapeia, vale a
+          // classificação declarada pelo provedor de busca (registrada como veio).
+          archetypes: (() => {
+            const mapped = archetypesFromMatchedTerms(
+              marketRelevance.matchedTerms,
+              marketContext?.categoryTermArchetypes,
+            );
+            return mapped.length > 0 ? mapped : list(hit.archetypes);
+          })(),
           independenceGroup: hit.independenceGroup || null,
           cloneOf: hit.cloneOf || null,
-          sourceEvidence: [gathered.evidence],
-          marketRelevance: evaluateMarketRelevance({
-            content: gathered.content,
-            url: hit.url,
-            marketContext,
-          }),
+          sourceEvidence,
+          marketRelevance,
           rationale: `descoberto pela varredura de mercado: ${scan.query}`,
         });
       }
