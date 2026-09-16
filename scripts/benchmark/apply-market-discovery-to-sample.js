@@ -40,6 +40,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { emptyNovelty } = require('../../qa/benchmarks/benchmarkSufficiencyEngine');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const GENERATOR_ID = 'scripts/benchmark/apply-market-discovery-to-sample.js';
@@ -121,11 +122,16 @@ function declaredSourcesOf(candidate) {
   const byUrl = new Map();
   for (const item of list(candidate?.sourceEvidence ?? candidate?.source_evidence)) {
     const url = String(item?.url || '').trim();
-    if (!url || byUrl.has(url) || !isGenericUrl(url)) continue;
+    if (!url || byUrl.has(url) || !isGenericUrl(url) || !url.startsWith('https://')) continue;
     byUrl.set(url, {
       url,
       tier: Number.isFinite(Number(item?.tier)) ? Number(item.tier) : 5,
       specificity: 'GENERIC',
+      // Declarada, NÃO verificada: a verificação é do deep research, no tempo
+      // dele (com retrievedAt de análise). Declarar como verificada seria
+      // fabricar trabalho que ainda não aconteceu.
+      retrievedAt: null,
+      verified: false,
       provenance: {
         evidenceRef: item?.evidenceRef ? String(item.evidenceRef) : null,
         contentHash: item?.contentHash ? String(item.contentHash) : null,
@@ -133,8 +139,8 @@ function declaredSourcesOf(candidate) {
     });
   }
   const site = String(candidate?.officialSite || candidate?.official_site || '').trim();
-  if (site && isGenericUrl(site) && !byUrl.has(site)) {
-    byUrl.set(site, { url: site, tier: 5, specificity: 'GENERIC' });
+  if (site && isGenericUrl(site) && site.startsWith('https://') && !byUrl.has(site)) {
+    byUrl.set(site, { url: site, tier: 5, specificity: 'GENERIC', retrievedAt: null, verified: false });
   }
   return [...byUrl.values()];
 }
@@ -154,6 +160,11 @@ function candidateEntry(candidate, { role, order, runExport }) {
     cloneOf: candidate.cloneOf || candidate.clone_of || null,
     officialSite: candidate.officialSite || candidate.official_site || null,
     sources: declaredSourcesOf(candidate),
+    // Novelty AUSENTE é ambíguo (não medido × medido zerado): a entrada
+    // derivada declara a estrutura completa e vazia — o que a distingue de
+    // "analisado" é a ausência de analyzedAt, como em todo o engine.
+    novelty: emptyNovelty(),
+    findingsInventory: [],
     country: candidate.country || null,
     segments: list(candidate.segments),
     targetCustomers: list(candidate.targetCustomers || candidate.target_customers),

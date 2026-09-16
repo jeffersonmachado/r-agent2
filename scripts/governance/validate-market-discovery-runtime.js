@@ -156,6 +156,7 @@ check('sample_generator_check_mode', 'apply-market-discovery-to-sample existe; -
     const sample = {
       vertical: 'gate-vertical',
       sampleVersion: 'gate-v1',
+      inventoryVersion: 'inv-gate-1',
       archetypes: [{ id: 'a1', importance: 'REQUIRED', status: 'ACTIVE', name: 'A1' }],
       benchmarks: [{
         id: 'legacy', name: 'Legacy', role: 'discovery', order: 1, archetype: 'a1',
