@@ -124,12 +124,13 @@ describe('B9 — holdout wellable.co: pré-registro válido e sem vazamento', ()
       expect(holdoutRecord[field]).toBeTruthy();
     }
     expect(holdoutRecord.benchmarkId).toBe(HOLDout_ID);
-    // Fato persistido do run mdr-68e3a9b68e (r21, 2026-09-17): o holdout foi
-    // RE-CONFIRMADO pelo ciclo r21 e o pré-registro renovado neste timestamp
-    // (substitui o pin do r17, 2026-09-17T02:35:06.572Z, que substituiu o do
-    // run mdr-ad508ef481, 2026-09-16T14:56:50.852Z — sempre JUNTO com a
-    // narrativa do ciclo, nunca em silêncio).
-    expect(holdoutRecord.selectedAsHoldoutAt).toBe('2026-09-17T08:34:17.970Z');
+    // Fato persistido do run mdr-a6929e8b98 (r22, 2026-09-17): o holdout foi
+    // RE-CONFIRMADO pelo ciclo r22 e o pré-registro renovado neste timestamp
+    // (substitui o pin do r21, 2026-09-17T08:34:17.970Z, que substituiu o do
+    // r17, 2026-09-17T02:35:06.572Z, que substituiu o do run mdr-ad508ef481,
+    // 2026-09-16T14:56:50.852Z — sempre JUNTO com a narrativa do ciclo, nunca
+    // em silêncio).
+    expect(holdoutRecord.selectedAsHoldoutAt).toBe('2026-09-17T10:11:59.065Z');
     // Análise (quando houver) TEM que ser posterior ao pré-registro — análise
     // antes do pré-registro seria vazamento.
     if (holdoutRecord.analysedAt || holdoutBenchmark.analyzedAt) {

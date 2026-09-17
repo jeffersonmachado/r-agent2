@@ -1979,7 +1979,7 @@
       },
       "unresolvedSemanticCandidates": 0,
       "archetypeEvidence": {
-        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research, fitness-market-discovery-2026-09-16-r17-name-contract-deep-research, fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[financial-billing]): 9 achado(s) verificado(s) casam.",
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research, fitness-market-discovery-2026-09-16-r17-name-contract-deep-research, fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research, fitness-market-discovery-2026-09-17-r22-final-window-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[financial-billing]): 9 achado(s) verificado(s) casam.",
         "supported": true,
         "reason": null,
         "supportingFindings": [
@@ -2060,17 +2060,18 @@
         "totalFindings": 18,
         "provenance": {
           "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
-          "researchVersion": "fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research",
+          "researchVersion": "fitness-market-discovery-2026-09-17-r22-final-window-deep-research",
           "researchVersions": [
             "dbg4-1789317653921",
             "fitness-semantic-2026-09-15-r2",
             "fitness-market-real-2026-09-15-r3-deep-research",
             "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
             "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research",
-            "fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research"
+            "fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research",
+            "fitness-market-discovery-2026-09-17-r22-final-window-deep-research"
           ],
-          "normalizationVersion": "2026-09-15.2",
-          "derivedAt": "2026-09-17T08:34:48.629Z"
+          "normalizationVersion": "2026-09-17.1",
+          "derivedAt": "2026-09-17T10:52:03.746Z"
         }
       }
     },
@@ -2258,7 +2259,7 @@
       },
       "unresolvedSemanticCandidates": 0,
       "archetypeEvidence": {
-        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research, fitness-market-discovery-2026-09-16-r17-name-contract-deep-research, fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[student-digital-experience]): 1 achado(s) verificado(s) casam.",
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research, fitness-market-discovery-2026-09-16-r17-name-contract-deep-research, fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research, fitness-market-discovery-2026-09-17-r22-final-window-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[student-digital-experience]): 1 achado(s) verificado(s) casam.",
         "supported": true,
         "reason": null,
         "supportingFindings": [
@@ -2275,17 +2276,18 @@
         "totalFindings": 13,
         "provenance": {
           "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
-          "researchVersion": "fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research",
+          "researchVersion": "fitness-market-discovery-2026-09-17-r22-final-window-deep-research",
           "researchVersions": [
             "dbg4-1789317653921",
             "fitness-semantic-2026-09-15-r2",
             "fitness-market-real-2026-09-15-r3-deep-research",
             "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
             "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research",
-            "fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research"
+            "fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research",
+            "fitness-market-discovery-2026-09-17-r22-final-window-deep-research"
           ],
-          "normalizationVersion": "2026-09-15.2",
-          "derivedAt": "2026-09-17T08:34:48.629Z"
+          "normalizationVersion": "2026-09-17.1",
+          "derivedAt": "2026-09-17T10:52:03.746Z"
         }
       }
     },
@@ -2460,10 +2462,329 @@
       }
     },
     {
+      "id": "vantagefit.io",
+      "name": "Vantage Fit",
+      "role": "discovery",
+      "order": 12,
+      "archetype": "personal-wellness",
+      "independenceGroup": "vantagefit.io",
+      "cloneOf": null,
+      "officialSite": "https://vantagefit.io/",
+      "sources": [
+        {
+          "url": "https://vantagefit.io/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-4ad14355394322fbae32a0afb15fc8a9786bf751",
+            "contentHash": "sha256:9a89acdab85ff6864333229d2a8f2ea8cd409f56f4fa0f1df1368a7cf3b855a2"
+          },
+          "id": "brsrc-3e611d3c8bc26b4390573c9f89d6ddec2dbfb716c02ee4ef",
+          "httpStatus": 200
+        },
+        {
+          "id": "brsrc-7e07ddc729987c5b1392e574e69df76e8880a912e90f7f9e",
+          "url": "https://vantagefit.io/app-download/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-16"
+        },
+        {
+          "id": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
+          "url": "https://vantagefit.io/pricing/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-16"
+        },
+        {
+          "id": "brsrc-b4a29b5baf94fe340e12c359035146a6fd5be8f74e59b261",
+          "url": "https://vantagefit.io/features/activity-tracking/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-16"
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [
+          {
+            "id": "brf-52509e8c053cd77d724091fbcf451e4cb07dac1f6bc68d60",
+            "name": "Get the Vantage Fit mobile app Track activity, join challenges, and stay engaged from anywhere.",
+            "normalizedId": "app.track",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-7e07ddc729987c5b1392e574e69df76e8880a912e90f7f9e",
+            "evidenceRef": "bre-348e73482812db430eb1cb89c3cb659768cf5edb13e576cc"
+          },
+          {
+            "id": "brf-64573c18022a581ecea843a5c85a18cd234280d272755303",
+            "name": "Automatic reward delivery (annual plan) –",
+            "normalizedId": "plan.automate",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
+            "evidenceRef": "bre-2fb0fbe4bdfcaf0123eee9f29300d7a74dc987bbd058bdf0"
+          },
+          {
+            "id": "brf-47d549fa18f2d3d14ae19828b76a76e07e109e7e04e2014a",
+            "name": "Year-round activity tracking and ranking tiers (annual plan)",
+            "normalizedId": "plan.track",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
+            "evidenceRef": "bre-2fb0fbe4bdfcaf0123eee9f29300d7a74dc987bbd058bdf0"
+          },
+          {
+            "id": "brf-cb8b96cfec55224b611c395a7a45e6f6c22853988544e5a9",
+            "name": "Your steps become active minutes, and every workout you log or track adds more. A ride or a gym session counts even with…",
+            "normalizedId": "workout.track",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-b4a29b5baf94fe340e12c359035146a6fd5be8f74e59b261",
+            "evidenceRef": "bre-6176e0412864c24b07fe0e0796d38cabedf58a6cac552aa6"
+          }
+        ],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [
+        "brf-52509e8c053cd77d724091fbcf451e4cb07dac1f6bc68d60",
+        "brf-c4f7c3eb5267648b37a0d3d14e5bab671ed6d2819845b93c",
+        "brf-64573c18022a581ecea843a5c85a18cd234280d272755303",
+        "brf-47d549fa18f2d3d14ae19828b76a76e07e109e7e04e2014a",
+        "brf-6b12dcfeac2d6e7d99737b4d60b800aab387a43c2e9093f9",
+        "brf-cb8b96cfec55224b611c395a7a45e6f6c22853988544e5a9"
+      ],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "personal-wellness"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+        "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+        "appliedAt": "2026-09-16T14:56:50.899Z",
+        "evidenceRefs": [
+          "ev-1d07f40fedc5d7b6e5ab73ae792411dcfe1d2189",
+          "ev-4ad14355394322fbae32a0afb15fc8a9786bf751"
+        ]
+      },
+      "analyzedAt": "2026-09-16T16:36:19.574Z",
+      "researchVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+      "marketArchetypeMapping": {
+        "archetype": "personal-wellness",
+        "rationale": "mapeamento declarado no sample do benchmark"
+      },
+      "inventoryVersion": "canonical-capabilities-1.0.0",
+      "unresolvedSemanticCandidates": 0,
+      "freshness": {
+        "researchedAt": "2026-09-16",
+        "nextReviewAt": "2027-09-16",
+        "status": "FRESH"
+      }
+    },
+    {
+      "id": "goteamup.com",
+      "name": "TeamUp",
+      "role": "discovery",
+      "order": 13,
+      "archetype": "boutique-studio",
+      "independenceGroup": "goteamup.com",
+      "cloneOf": null,
+      "officialSite": "https://goteamup.com/",
+      "sources": [
+        {
+          "url": "https://goteamup.com/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-89c7871cdca6c44a1ebb289887f3c774401d70af",
+            "contentHash": "sha256:67f33e668f2563268532f1d7fd5d6bce370ec5c9aabd3e5be78cd38b6a63e33b"
+          },
+          "id": "brsrc-4e41e2214e00066057e4588273ba17ae813c11e43902db1d",
+          "httpStatus": 200
+        },
+        {
+          "id": "brsrc-934baf33d809d181f55021f2a4157754322eef6b06d49633",
+          "url": "https://goteamup.com/pricing/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        },
+        {
+          "id": "brsrc-10b168da70242169793c2f18ba73b7d935b76f4e4ce9e6c4",
+          "url": "https://goteamup.com/compare/zenplanner/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        },
+        {
+          "id": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+          "url": "https://goteamup.com/features/access-control/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [
+          {
+            "id": "brf-f3d0ce3d7e88956d5cab300f91291e7f3205cf486acda3dc",
+            "name": "It is simple and easy to switch to TeamUp. We manage the data migration so you never miss a booking. This is part of you…",
+            "normalizedId": "booking.manage",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-10b168da70242169793c2f18ba73b7d935b76f4e4ce9e6c4",
+            "evidenceRef": "bre-3fd9ff1a7a9dcdf816f32c48dbf129e2f8024353e0bf72fe"
+          },
+          {
+            "id": "brf-8892908d800578ce85e6c02598971d91b8ce03ae2bc7872b",
+            "name": "Payment flexibility",
+            "normalizedId": "pay",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-10b168da70242169793c2f18ba73b7d935b76f4e4ce9e6c4",
+            "evidenceRef": "bre-3fd9ff1a7a9dcdf816f32c48dbf129e2f8024353e0bf72fe"
+          },
+          {
+            "id": "brf-3ae3a655bb73747f08aa91cd67759ee48435661d0ea51e0f",
+            "name": "Manage popular time slots automatically, messaging via mobile app or email with access updating in real time",
+            "normalizedId": "app.manage",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-af2e21ddcc8054508832c1b673b18c1006d46b2badbe02f0",
+            "name": "Integrate smart security into your booking software.",
+            "normalizedId": "booking.integrate",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-8e8a52af1f65a2f82fb8ab71b4f5f28944bc78467ae8da3b",
+            "name": "Cloud-based functionality means you can use your phone, tablet, or desktop device to manage your members' access and sta…",
+            "normalizedId": "member.manage",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-44cae81127713c20222618fa7f8c8c6fcccf74a701098b1c",
+            "name": "Disable non-paying or late payment members from entering until they've paid",
+            "normalizedId": "member.pay",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-1d30def3494804dd522fdd6ffc91171a3ec632a53e471c73",
+            "name": "Having one place to manage your memberships, payment methods, form and waiver collection, and client details will add va…",
+            "normalizedId": "membership.manage",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          }
+        ],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [
+          {
+            "id": "brf-c5ef644523c9b0c3aac571ecd7938143a6e36abda7d33f1a",
+            "name": "Your clients know when they do or don't have access or if they need to make a payment before they can return and enjoy y…",
+            "normalizedId": "access.pay",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-59b17fa61711a33a46a924f966b2eafff90dc3687398dcdd",
+            "name": "See when and what your members are booking and know when they'll be coming to your facility",
+            "normalizedId": "member.book",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          }
+        ],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [
+        "brf-0f6bcaff9872c25856b547a25ad2da8908b103425c3219c4",
+        "brf-5838f351c98681ed36e93558f99262d278617d6f9fa97fc7",
+        "brf-368300654c5a8bd480926667392b0e029a19142073427af3",
+        "brf-eb7af2a049a796aaccba9b4278e93033de9a16bfa7bc2d6c",
+        "brf-f3d0ce3d7e88956d5cab300f91291e7f3205cf486acda3dc",
+        "brf-8892908d800578ce85e6c02598971d91b8ce03ae2bc7872b",
+        "brf-86cd02af6c0572186371b881b6284a8cd283d203fa354b5a",
+        "brf-78b24b0ec442996b7bd6f32ef1ae79659a777a87051a0030",
+        "brf-0d9f2f2b3f1923f53b81296d374cdb7ebb074bbe4a25699d",
+        "brf-c5ef644523c9b0c3aac571ecd7938143a6e36abda7d33f1a",
+        "brf-59b17fa61711a33a46a924f966b2eafff90dc3687398dcdd",
+        "brf-3ae3a655bb73747f08aa91cd67759ee48435661d0ea51e0f",
+        "brf-af2e21ddcc8054508832c1b673b18c1006d46b2badbe02f0",
+        "brf-8e8a52af1f65a2f82fb8ab71b4f5f28944bc78467ae8da3b",
+        "brf-44cae81127713c20222618fa7f8c8c6fcccf74a701098b1c",
+        "brf-1d30def3494804dd522fdd6ffc91171a3ec632a53e471c73"
+      ],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "boutique-studio",
+        "gym-network",
+        "independent-gym"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-8572d09901c915970b0288b8b6784914972b8488099e5600",
+        "discoverySetId": "mds-8572d09901c915970b0288b8b6784914972b8488099e5600",
+        "appliedAt": "2026-09-17T02:35:06.625Z",
+        "evidenceRefs": [
+          "ev-89c7871cdca6c44a1ebb289887f3c774401d70af",
+          "ev-d94cf3759f9a367540d7f9a4397ea2f814d8fdc0"
+        ]
+      },
+      "analyzedAt": "2026-09-17T02:42:10.045Z",
+      "researchVersion": "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research",
+      "marketArchetypeMapping": {
+        "archetype": "boutique-studio",
+        "rationale": "mapeamento declarado no sample do benchmark"
+      },
+      "freshness": {
+        "researchedAt": "2026-09-17",
+        "nextReviewAt": "2027-09-17",
+        "status": "FRESH"
+      },
+      "inventoryVersion": "canonical-capabilities-1.0.0",
+      "unresolvedSemanticCandidates": 1
+    },
+    {
       "id": "bsport.io",
       "name": "BSport",
       "role": "discovery",
-      "order": 12,
+      "order": 14,
       "archetype": "boutique-studio",
       "independenceGroup": "bsport.io",
       "cloneOf": null,
@@ -2648,7 +2969,7 @@
       "id": "gymdesk.com",
       "name": "GymDesk",
       "role": "discovery",
-      "order": 13,
+      "order": 15,
       "archetype": "independent-gym",
       "independenceGroup": "gymdesk.com",
       "cloneOf": null,
@@ -2871,7 +3192,7 @@
       "id": "momence.com",
       "name": "Momence",
       "role": "discovery",
-      "order": 14,
+      "order": 16,
       "archetype": "boutique-studio",
       "independenceGroup": "momence.com",
       "cloneOf": null,
@@ -3033,7 +3354,7 @@
       "id": "perfectgym.com",
       "name": "Perfect Gym",
       "role": "discovery",
-      "order": 15,
+      "order": 17,
       "archetype": "gym-network",
       "independenceGroup": "perfectgym.com",
       "cloneOf": null,
@@ -3177,7 +3498,7 @@
       "id": "pushpress.com",
       "name": "PushPress",
       "role": "discovery",
-      "order": 16,
+      "order": 18,
       "archetype": "crossfit-box",
       "independenceGroup": "pushpress.com",
       "cloneOf": null,
@@ -3331,7 +3652,7 @@
       "id": "trainingym.com",
       "name": "Trainingym",
       "role": "discovery",
-      "order": 17,
+      "order": 19,
       "archetype": "gym-network",
       "independenceGroup": "trainingym.com",
       "cloneOf": null,
@@ -3420,10 +3741,527 @@
       "unresolvedSemanticCandidates": 0
     },
     {
+      "id": "exercise.com",
+      "name": "Exercise.com",
+      "role": "discovery",
+      "order": 20,
+      "archetype": "gym-network",
+      "independenceGroup": "exercise.com",
+      "cloneOf": null,
+      "officialSite": "https://exercise.com/",
+      "sources": [
+        {
+          "url": "https://exercise.com/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-24c6446a14f2d81fc9886c3faf3280899335caa6",
+            "contentHash": "sha256:fce3d0d3a47c0f9d7522eb5d7314cc6e915c499bd60a2a1d2cdbce2b09a37826"
+          },
+          "id": "brsrc-f88d4a82fe507e193e7b2211965d222a8176499b5b440d6e",
+          "httpStatus": 200
+        },
+        {
+          "id": "brsrc-284db549468b5bc792294664feb6b1ed8bb6c91a8ffe7412",
+          "url": "https://exercise.com/grow/how-to-make-a-fitness-app/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        },
+        {
+          "id": "brsrc-e36076d44050943b35141e4fad367330e210bd50c66b7645",
+          "url": "https://exercise.com/grow/how-to-make-money-selling-workout-plans-online/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        },
+        {
+          "id": "brsrc-5b5b89ef7c2d070f5e16227bf4d4aad2c1c9dc09945d8c95",
+          "url": "https://exercise.com/platform/account-balances/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [
+          {
+            "id": "brf-8c0c331a261ce664227c310964488fae4bbf3750089001f6",
+            "name": "Sell Workout Plans",
+            "normalizedId": "workout.sell",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-284db549468b5bc792294664feb6b1ed8bb6c91a8ffe7412",
+            "evidenceRef": "bre-e068076f633e95006fc590313e8e5d12ea6b2aa9141971cb"
+          }
+        ],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [
+        "brf-4720006fd0ab0f13b16037d09d4206e4e6eaca0f7d7d34db",
+        "brf-58f713c7f2c50031a7c1389461b1e363de1362e1071daf58",
+        "brf-8c0c331a261ce664227c310964488fae4bbf3750089001f6",
+        "brf-4021c74d6ff7080286316b46be0d09df8af339034ece1d59",
+        "brf-7e1795155ecd54f3c3d4e80cbeb9533e67070576ada4de23",
+        "brf-5ea397e22c5b826554240260cae9c3803304149061b71a56",
+        "brf-f73f9e7e882b569bc2f0b7c77c06043ad6e16ce37c5eccb9",
+        "brf-9f897a9456c98e3e818ed6d0573bc60376705a2cbe430c2d",
+        "brf-c7d32c67c34dbf655d65eef55342c066b15c47eba997cb38",
+        "brf-95747db01f79f2ecb31c9c0235c09da1509de2b80b02c478",
+        "brf-4ef0348c139fa5be7abffd42688bacafcf250eeac493ac9a"
+      ],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "gym-network"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+        "discoverySetId": "mds-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+        "appliedAt": "2026-09-17T10:11:59.105Z",
+        "evidenceRefs": [
+          "ev-24c6446a14f2d81fc9886c3faf3280899335caa6"
+        ]
+      },
+      "analyzedAt": "2026-09-17T10:52:48.477Z",
+      "researchVersion": "fitness-market-discovery-2026-09-17-r22-final-window-deep-research",
+      "marketArchetypeMapping": {
+        "archetype": "gym-network",
+        "rationale": "mapeamento declarado no sample do benchmark"
+      },
+      "freshness": {
+        "researchedAt": "2026-09-17",
+        "nextReviewAt": "2027-09-17",
+        "status": "FRESH"
+      },
+      "inventoryVersion": "canonical-capabilities-1.0.0",
+      "unresolvedSemanticCandidates": 0
+    },
+    {
+      "id": "marianatek.com",
+      "name": "Mariana Tek",
+      "role": "discovery",
+      "order": 21,
+      "archetype": "boutique-studio",
+      "independenceGroup": "marianatek.com",
+      "cloneOf": null,
+      "officialSite": "https://marianatek.com/",
+      "sources": [
+        {
+          "url": "https://marianatek.com/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-dc44862b657624f8b3e1d8f165daf9f8c662633a",
+            "contentHash": "sha256:b5c3512211f29c25b989ed5b9558bc98a7cafb94d85e36cffc513eb1b1b8a33e"
+          },
+          "id": "brsrc-c3a263a57bcdb3abc3b2197c6748e5370675262b4b8d89b0",
+          "httpStatus": 200
+        },
+        {
+          "id": "brsrc-4fed1f5c152e21338405da0a335908a9926e109745c1e8af",
+          "url": "https://www.marianatek.com/appointments/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        },
+        {
+          "id": "brsrc-0f34ba2e5d90a44f65325649c5a2f59455ea26dd1f81fd94",
+          "url": "https://www.marianatek.com/pricing/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        },
+        {
+          "id": "brsrc-98b2cfc8f20e21ad549899903e3fe482dc851a33e56403e5",
+          "url": "https://www.marianatek.com/features/business-management/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [
+          {
+            "id": "brf-96fe3dda011e555fa1e61ad27f79ef9948499a4580b1b8fb",
+            "name": "Let clients discover and book appointments through your app or website with real time availability and a seamless bookin…",
+            "normalizedId": "app.book",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-4fed1f5c152e21338405da0a335908a9926e109745c1e8af",
+            "evidenceRef": "bre-ae359638a88ee95134411fbd2b1ae220fda5441500649691"
+          },
+          {
+            "id": "brf-95e1d51aa800ad752c0dcb480a1e21ffc147728b16a4b070",
+            "name": "Turn one-off sessions into repeat bookings with built-in recurring scheduling for private sessions.",
+            "normalizedId": "schedule.recurring",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-4fed1f5c152e21338405da0a335908a9926e109745c1e8af",
+            "evidenceRef": "bre-ae359638a88ee95134411fbd2b1ae220fda5441500649691"
+          },
+          {
+            "id": "brf-f72a10bb5df4706ab66446433a27920afdaea5c35e34a070",
+            "name": "Use kiosk mode to turn your app into a self check-in kiosk",
+            "normalizedId": "app.checkin",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-98b2cfc8f20e21ad549899903e3fe482dc851a33e56403e5",
+            "evidenceRef": "bre-320c4739d8eff6d7c57edb867f266f8d4c059c625a350967"
+          },
+          {
+            "id": "brf-ea625f441923c50e6da8a947edb388a55daa0e626f105db8",
+            "name": "Prevent overbooking by setting automatic booking limits",
+            "normalizedId": "booking.automate",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-98b2cfc8f20e21ad549899903e3fe482dc851a33e56403e5",
+            "evidenceRef": "bre-320c4739d8eff6d7c57edb867f266f8d4c059c625a350967"
+          },
+          {
+            "id": "brf-b84cfaf65406c0d02e0784654b514e25f6569548f103a037",
+            "name": "Bookings & Check-Ins",
+            "normalizedId": "booking.checkin",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-98b2cfc8f20e21ad549899903e3fe482dc851a33e56403e5",
+            "evidenceRef": "bre-320c4739d8eff6d7c57edb867f266f8d4c059c625a350967"
+          },
+          {
+            "id": "brf-adacf4cc64252226a4df68554216239beef99a047a4a58d8",
+            "name": "Fill available space and notify customers they've been added to a class with waitlist management tools",
+            "normalizedId": "class.notify",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-98b2cfc8f20e21ad549899903e3fe482dc851a33e56403e5",
+            "evidenceRef": "bre-320c4739d8eff6d7c57edb867f266f8d4c059c625a350967"
+          },
+          {
+            "id": "brf-65e48cc7561d951319b45bb64866fab7df9a09fd928e8468",
+            "name": "Free up your staff with in-app or kiosk self-check-in",
+            "normalizedId": "staff.checkin",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-98b2cfc8f20e21ad549899903e3fe482dc851a33e56403e5",
+            "evidenceRef": "bre-320c4739d8eff6d7c57edb867f266f8d4c059c625a350967"
+          }
+        ],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [
+          {
+            "id": "brf-b3c07fd07fe5ccc9b014cceecc130e883c62966b7218f7ec",
+            "name": "Deliver a premium private training experience from booking to check-in with scheduling, availability, and trainer workfl…",
+            "normalizedId": "schedule.book",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-4fed1f5c152e21338405da0a335908a9926e109745c1e8af",
+            "evidenceRef": "bre-ae359638a88ee95134411fbd2b1ae220fda5441500649691"
+          }
+        ],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [
+          {
+            "id": "brf-313cc6104eb8bdc0e78691070bee1b40c17dd23883b80a7c",
+            "name": "Give clients the ability to pick their favorite spot and a spot for their guests when booking",
+            "normalizedId": "book",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-98b2cfc8f20e21ad549899903e3fe482dc851a33e56403e5",
+            "evidenceRef": "bre-320c4739d8eff6d7c57edb867f266f8d4c059c625a350967"
+          }
+        ],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [
+        "brf-96fe3dda011e555fa1e61ad27f79ef9948499a4580b1b8fb",
+        "brf-cc83fd91b39b4ce5b813342078108975254f5c70d18a3a71",
+        "brf-6fb9d291150073ed0df93f53dafd6cce81554540a3f70fae",
+        "brf-95e1d51aa800ad752c0dcb480a1e21ffc147728b16a4b070",
+        "brf-b3c07fd07fe5ccc9b014cceecc130e883c62966b7218f7ec",
+        "brf-433001c80cd16e8fd69ede11862906121d9568f45dba6cc8",
+        "brf-c1083dfdb3d0a1994dde4f0438b031fdf1b0820a32c1ec85",
+        "brf-313cc6104eb8bdc0e78691070bee1b40c17dd23883b80a7c",
+        "brf-78528bd9aaa7bed9c6f3140f3047941f7a3a54b913550148",
+        "brf-f72a10bb5df4706ab66446433a27920afdaea5c35e34a070",
+        "brf-ea625f441923c50e6da8a947edb388a55daa0e626f105db8",
+        "brf-b84cfaf65406c0d02e0784654b514e25f6569548f103a037",
+        "brf-688586e5e5e6143d96da4db8cb3b99ecbe890b414493a25b",
+        "brf-b60b2ce929ec81eb771e881f26003c6b76d2bd58b13eb680",
+        "brf-2aa68cfe1f6f536609fb7b12cf6cb0f013fee2e1c0df3a04",
+        "brf-8592571d765d2a61bbdec4d0f6a5a6238321f925ff27684b",
+        "brf-adacf4cc64252226a4df68554216239beef99a047a4a58d8",
+        "brf-a4b4881573a01065effa8cdb3cc099c9d33e329cdbd13758",
+        "brf-65e48cc7561d951319b45bb64866fab7df9a09fd928e8468",
+        "brf-6859073fea10c8648814386f5cdd3dd65bf1a31f4bbc5a9a"
+      ],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "boutique-studio"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+        "discoverySetId": "mds-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+        "appliedAt": "2026-09-17T10:11:59.105Z",
+        "evidenceRefs": [
+          "ev-dc44862b657624f8b3e1d8f165daf9f8c662633a"
+        ]
+      },
+      "analyzedAt": "2026-09-17T10:53:16.849Z",
+      "researchVersion": "fitness-market-discovery-2026-09-17-r22-final-window-deep-research",
+      "marketArchetypeMapping": {
+        "archetype": "boutique-studio",
+        "rationale": "mapeamento declarado no sample do benchmark"
+      },
+      "freshness": {
+        "researchedAt": "2026-09-17",
+        "nextReviewAt": "2027-09-17",
+        "status": "FRESH"
+      },
+      "inventoryVersion": "canonical-capabilities-1.0.0",
+      "unresolvedSemanticCandidates": 0
+    },
+    {
+      "id": "trainerize.com",
+      "name": "Trainerize",
+      "role": "discovery",
+      "order": 22,
+      "archetype": "student-digital-experience",
+      "independenceGroup": "trainerize.com",
+      "cloneOf": null,
+      "officialSite": "https://trainerize.com/",
+      "sources": [
+        {
+          "url": "https://trainerize.com/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-29ffc2f6c7dda033cf7db2c715a6b7c80f61af41",
+            "contentHash": "sha256:a1774900f608b8af5aed011efd3f375196d71adaba3af49a26743679d2dd5517"
+          },
+          "id": "brsrc-df939b77d40fba1735df3a2fe274cb41a2ed7ac7e894d4ae",
+          "httpStatus": 200
+        },
+        {
+          "id": "brsrc-76e56215fe1c1f9eaf25c2ab29a70da72052aece0da6f46b",
+          "url": "https://resources.trainerize.com/live-feature-masterclass-calls/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        },
+        {
+          "id": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+          "url": "https://trainerize.com/features/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        },
+        {
+          "id": "brsrc-04a4a07514e761b2741f0aded779f30d2b60b8164c6f92b7",
+          "url": "https://trainerize.com/integrations/",
+          "tier": 5,
+          "specificity": "SPECIFIC",
+          "verified": true,
+          "httpStatus": 200,
+          "retrievedAt": "2026-09-17"
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [
+          {
+            "id": "brf-504ec71019df8a9ce76255284b072988653e84c75bfe4fe9",
+            "name": "Create and sell any type of service - digital memberships, online training packages, discounts or coaching subscriptions…",
+            "normalizedId": "membership.create",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+            "evidenceRef": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e"
+          },
+          {
+            "id": "brf-0cebbdb1719e66b9cd7ce87714b1b74ce055c5c1676ed433",
+            "name": "Enjoy a seamless payment experience by connecting Stripe to ABC Trainerize. Sell your products online, take payments, au…",
+            "normalizedId": "payment.pay",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+            "evidenceRef": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e"
+          },
+          {
+            "id": "brf-b72974a466bf59f1916f90ff176a7eaf17ecd0057ba76247",
+            "name": "Easily sell your products online, take payments, automate product delivery, and more.",
+            "normalizedId": "payment.sell",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+            "evidenceRef": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e"
+          },
+          {
+            "id": "brf-efac143003aaafe0d31f369836767e3b616f5e53cc912527",
+            "name": "Create a meal plan suggestion for your clients in minutes with the Smart Meal Planner, or deliver flexible and personali…",
+            "normalizedId": "plan.create",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+            "evidenceRef": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e"
+          },
+          {
+            "id": "brf-beeecf58b73602ce13efc8749e7e2dede3b30bd4c6a300d6",
+            "name": "Generate workouts in half the time. Describe your client's goals and preferences, and let the builder create a structure…",
+            "normalizedId": "workout.generate",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+            "evidenceRef": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e"
+          },
+          {
+            "id": "brf-b15f2189c54005439a059aa6aea5b901cfed2b69f33a7f25",
+            "name": "ABC Trainerize integrates with fitness apps, wearable devices, nutrition platforms, payment providers, scheduling tools,…",
+            "normalizedId": "schedule.pay",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-04a4a07514e761b2741f0aded779f30d2b60b8164c6f92b7",
+            "evidenceRef": "bre-c09004a5d97d501cfd0b33cf91de7167a6ac4a24979cb561"
+          },
+          {
+            "id": "brf-763fb8a1cebd6b085408e19d1d4ba71990d348a4068cc3a9",
+            "name": "Automate client creation and program subscriptions by integrating ABC Trainerize with payment platforms like PayPal and…",
+            "normalizedId": "subscription.automate",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-04a4a07514e761b2741f0aded779f30d2b60b8164c6f92b7",
+            "evidenceRef": "bre-c09004a5d97d501cfd0b33cf91de7167a6ac4a24979cb561"
+          }
+        ],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [
+        "brf-61f3ecc3eeb8522b54cefec23d9f30e7335e407c5fe85a99",
+        "brf-66db47e52573d5ca5a188a99f4aa63ad1d03c419dab991b4",
+        "brf-9116c447bc1eec8e4ad2ca986be2193adfb755d2fe2fae55",
+        "brf-df948844f0f4ffe6d5659adab281024325ef118e22016d33",
+        "brf-504ec71019df8a9ce76255284b072988653e84c75bfe4fe9",
+        "brf-32110ba032eca71df2f86eae1f1223e72be66057fdf6d6b4",
+        "brf-0cebbdb1719e66b9cd7ce87714b1b74ce055c5c1676ed433",
+        "brf-a70f8f089f76047681deb693a6252eae69e0780b93d59d30",
+        "brf-b72974a466bf59f1916f90ff176a7eaf17ecd0057ba76247",
+        "brf-efac143003aaafe0d31f369836767e3b616f5e53cc912527",
+        "brf-72f1947b61ed919249da6b1435c6b903d7d02fa11b7d9d0e",
+        "brf-beeecf58b73602ce13efc8749e7e2dede3b30bd4c6a300d6",
+        "brf-275c2743975e94ff368bb536232f44a3951f993b87c326ed",
+        "brf-5b29d2ee4035ef86f64d33ddc1ca8595d130263e78df8b68",
+        "brf-3adeaa72013d29117d2390621bf074131eb7cc015d52cf6e",
+        "brf-b15f2189c54005439a059aa6aea5b901cfed2b69f33a7f25",
+        "brf-763fb8a1cebd6b085408e19d1d4ba71990d348a4068cc3a9",
+        "brf-736d50c7b19310f97f70f68f18bb8420465097ea0f38889d"
+      ],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "student-digital-experience"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+        "discoverySetId": "mds-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+        "appliedAt": "2026-09-17T10:11:59.105Z",
+        "evidenceRefs": [
+          "ev-29ffc2f6c7dda033cf7db2c715a6b7c80f61af41"
+        ]
+      },
+      "analyzedAt": "2026-09-17T10:53:46.648Z",
+      "researchVersion": "fitness-market-discovery-2026-09-17-r22-final-window-deep-research",
+      "marketArchetypeMapping": {
+        "archetype": "student-digital-experience",
+        "rationale": "mapeamento declarado no sample do benchmark"
+      },
+      "freshness": {
+        "researchedAt": "2026-09-17",
+        "nextReviewAt": "2027-09-17",
+        "status": "FRESH"
+      },
+      "inventoryVersion": "canonical-capabilities-1.0.0",
+      "unresolvedSemanticCandidates": 0,
+      "archetypeEvidence": {
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research, fitness-market-discovery-2026-09-16-r17-name-contract-deep-research, fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research, fitness-market-discovery-2026-09-17-r22-final-window-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[student-digital-experience]): 3 achado(s) verificado(s) casam.",
+        "supported": true,
+        "reason": null,
+        "supportingFindings": [
+          {
+            "findingId": "brf-9116c447bc1eec8e4ad2ca986be2193adfb755d2fe2fae55",
+            "evidenceId": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e",
+            "sourceId": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+            "name": "Run free or paid 1-1 appointments, group sessions and classes, consultations, and more. With client self-booking, you do…",
+            "kind": "capability",
+            "matchedTerm": "self booking"
+          },
+          {
+            "findingId": "brf-504ec71019df8a9ce76255284b072988653e84c75bfe4fe9",
+            "evidenceId": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e",
+            "sourceId": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+            "name": "Create and sell any type of service - digital memberships, online training packages, discounts or coaching subscriptions…",
+            "kind": "capability",
+            "matchedTerm": "digital memberships"
+          },
+          {
+            "findingId": "brf-32110ba032eca71df2f86eae1f1223e72be66057fdf6d6b4",
+            "evidenceId": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e",
+            "sourceId": "brsrc-6643dfcacef52118d06817c99dbb7e94c5ad17c0dd413f11",
+            "name": "Level up your nutrition coaching, deliver live and on-demand video content, collect and automate payments, boost referra…",
+            "kind": "capability",
+            "matchedTerm": "on demand video"
+          }
+        ],
+        "verifiedFindings": 18,
+        "totalFindings": 21,
+        "provenance": {
+          "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
+          "researchVersion": "fitness-market-discovery-2026-09-17-r22-final-window-deep-research",
+          "researchVersions": [
+            "dbg4-1789317653921",
+            "fitness-semantic-2026-09-15-r2",
+            "fitness-market-real-2026-09-15-r3-deep-research",
+            "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+            "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research",
+            "fitness-market-discovery-2026-09-17-r21-declared-seeds-deep-research",
+            "fitness-market-discovery-2026-09-17-r22-final-window-deep-research"
+          ],
+          "normalizationVersion": "2026-09-17.1",
+          "derivedAt": "2026-09-17T10:52:03.746Z"
+        }
+      }
+    },
+    {
       "id": "wellable.co",
       "name": "All-In-One Employee Wellness, Rewards, & Recognition",
       "role": "validation",
-      "order": 18,
+      "order": 23,
       "archetype": "personal-wellness",
       "independenceGroup": "wellable.co",
       "cloneOf": null,
@@ -3472,9 +4310,9 @@
       ],
       "provenance": {
         "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-        "marketDiscoveryRunId": "mdr-68e3a9b68e272761c1ed1cdfb3fdb76409d1b06d962bfb9c",
-        "discoverySetId": "mds-68e3a9b68e272761c1ed1cdfb3fdb76409d1b06d962bfb9c",
-        "appliedAt": "2026-09-17T08:34:18.017Z",
+        "marketDiscoveryRunId": "mdr-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+        "discoverySetId": "mds-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+        "appliedAt": "2026-09-17T10:11:59.105Z",
         "evidenceRefs": [
           "ev-144be0d5471f45543b75bb39e0ff6a4f9236ded2",
           "ev-412d77226f6d86113087433e8a5780510dd429a9",
@@ -3488,16 +4326,16 @@
   ],
   "holdout": {
     "benchmarkId": "wellable.co",
-    "selectedAsHoldoutAt": "2026-09-17T08:34:17.970Z",
+    "selectedAsHoldoutAt": "2026-09-17T10:11:59.065Z",
     "selectionReason": "maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos)",
-    "selectionEvidence": "Existência verificada no run mdr-68e3a9b68e272761c1ed1cdfb3fdb76409d1b06d962bfb9c por evidência hash-bound (ev-144be0d5471f45543b75bb39e0ff6a4f9236ded2, ev-412d77226f6d86113087433e8a5780510dd429a9, ev-b760c4c16b01f7cb38a71032884a47aa276f608d, ev-b95ac4c00d04df25cd1ec3b764d761a10ea5fb55, ev-e8890993870649a05f8a30acd42d43a136e32d25, ev-e8890993870649a05f8a30acd42d43a136e32d25). Site oficial declarado: https://wellable.co/. Pré-registrado em 2026-09-17T08:34:17.970Z ANTES de qualquer pesquisa profunda de inventário (deep research); fases executadas até aqui: MARKET, ARCHETYPES, CANDIDATES, CANDIDATE_ANALYSIS (profiling de mercado), DIVERSITY, DISCOVERY_SET — conforme o pipeline governado. Base da seleção: maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos).",
+    "selectionEvidence": "Existência verificada no run mdr-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd por evidência hash-bound (ev-144be0d5471f45543b75bb39e0ff6a4f9236ded2, ev-412d77226f6d86113087433e8a5780510dd429a9, ev-b760c4c16b01f7cb38a71032884a47aa276f608d, ev-b95ac4c00d04df25cd1ec3b764d761a10ea5fb55, ev-e8890993870649a05f8a30acd42d43a136e32d25, ev-e8890993870649a05f8a30acd42d43a136e32d25). Site oficial declarado: https://wellable.co/. Pré-registrado em 2026-09-17T10:11:59.065Z ANTES de qualquer pesquisa profunda de inventário (deep research); fases executadas até aqui: MARKET, ARCHETYPES, CANDIDATES, CANDIDATE_ANALYSIS (profiling de mercado), DIVERSITY, DISCOVERY_SET — conforme o pipeline governado. Base da seleção: maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos).",
     "marketArchetype": "personal-wellness",
     "inventoryVersion": "canonical-capabilities-1.0.0",
     "provenance": {
       "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-      "marketDiscoveryRunId": "mdr-68e3a9b68e272761c1ed1cdfb3fdb76409d1b06d962bfb9c",
-      "discoverySetId": "mds-68e3a9b68e272761c1ed1cdfb3fdb76409d1b06d962bfb9c",
-      "appliedAt": "2026-09-17T08:34:18.017Z"
+      "marketDiscoveryRunId": "mdr-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+      "discoverySetId": "mds-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+      "appliedAt": "2026-09-17T10:11:59.105Z"
     }
   },
   "criticalityRegistry": {},
@@ -3674,7 +4512,7 @@
       "provenance": {
         "source": "config/benchmark-normalization.json",
         "id": "fitness.rule.access_blocked_when_delinquent",
-        "version": "2026-09-15.2"
+        "version": "2026-09-17.1"
       }
     },
     {
@@ -3683,7 +4521,7 @@
       "provenance": {
         "source": "config/benchmark-normalization.json",
         "id": "fitness.rule.cancel_notice_period",
-        "version": "2026-09-15.2"
+        "version": "2026-09-17.1"
       }
     },
     {
@@ -3692,7 +4530,7 @@
       "provenance": {
         "source": "config/benchmark-normalization.json",
         "id": "fitness.rule.freeze_extends_contract",
-        "version": "2026-09-15.2"
+        "version": "2026-09-17.1"
       }
     },
     {
@@ -3701,7 +4539,7 @@
       "provenance": {
         "source": "config/benchmark-normalization.json",
         "id": "fitness.rule.freeze_pauses_billing",
-        "version": "2026-09-15.2"
+        "version": "2026-09-17.1"
       }
     }
   ],
@@ -3724,7 +4562,7 @@
       },
       "businessRules": {
         "path": "config/benchmark-normalization.json",
-        "version": "2026-09-15.2"
+        "version": "2026-09-17.1"
       }
     }
   },
@@ -4330,22 +5168,82 @@
       "url": "https://app.pushpress.com/login/",
       "evidenceRef": "ev-2052e00d7c53f49a6989b027a96996701ff25872",
       "capturedAt": "2026-09-17T08:40:17.973Z"
+    },
+    {
+      "id": "bre-e068076f633e95006fc590313e8e5d12ea6b2aa9141971cb",
+      "benchmarkId": "exercise.com",
+      "url": "https://exercise.com/grow/how-to-make-a-fitness-app/",
+      "evidenceRef": "ev-e60ce4048374c6906de24be08759d721d3145cd8",
+      "capturedAt": "2026-09-17T10:52:45.863Z"
+    },
+    {
+      "id": "bre-85b3ff046cd61edf567b935f1249f0c24cb26a424ffc4536",
+      "benchmarkId": "exercise.com",
+      "url": "https://exercise.com/grow/how-to-make-money-selling-workout-plans-online/",
+      "evidenceRef": "ev-4b0ec9d5676905a83359fa0bbae45c3f49d2ec35",
+      "capturedAt": "2026-09-17T10:52:48.026Z"
+    },
+    {
+      "id": "bre-0f9c169d8d1ff41d3f4ff575bb7fc463f2193bedeadfa7ad",
+      "benchmarkId": "exercise.com",
+      "url": "https://exercise.com/platform/account-balances/",
+      "evidenceRef": "ev-39f5a351c57adb645e00dfa9d5c4c92ec47b784d",
+      "capturedAt": "2026-09-17T10:52:48.383Z"
+    },
+    {
+      "id": "bre-ae359638a88ee95134411fbd2b1ae220fda5441500649691",
+      "benchmarkId": "marianatek.com",
+      "url": "https://www.marianatek.com/appointments/",
+      "evidenceRef": "ev-a289a4ae5010419b10e433372c7ec5633a7641c5",
+      "capturedAt": "2026-09-17T10:53:14.470Z"
+    },
+    {
+      "id": "bre-33a1becba6ffcf0f6a4c8843d41ddbd9533717651744f8b7",
+      "benchmarkId": "marianatek.com",
+      "url": "https://www.marianatek.com/pricing/",
+      "evidenceRef": "ev-78880eb6a776548d68c228175f9f85d97e64159d",
+      "capturedAt": "2026-09-17T10:53:14.760Z"
+    },
+    {
+      "id": "bre-320c4739d8eff6d7c57edb867f266f8d4c059c625a350967",
+      "benchmarkId": "marianatek.com",
+      "url": "https://www.marianatek.com/features/business-management/",
+      "evidenceRef": "ev-9b370c084d9c1f805eebdbc9d1a9685403e915fe",
+      "capturedAt": "2026-09-17T10:53:16.644Z"
+    },
+    {
+      "id": "bre-b0953f147e60ca7ed94174b4f7b712eede6c22ba74f0b7e5",
+      "benchmarkId": "trainerize.com",
+      "url": "https://resources.trainerize.com/live-feature-masterclass-calls/",
+      "evidenceRef": "ev-e7f57a3e4b0ae2d62d655c39e605bb81bb21e587",
+      "capturedAt": "2026-09-17T10:53:43.696Z"
+    },
+    {
+      "id": "bre-57b3a246e9bb3cc80f66d95b4f8c35667aee819abb80f36e",
+      "benchmarkId": "trainerize.com",
+      "url": "https://trainerize.com/features/",
+      "evidenceRef": "ev-a7dd394355cee16044e50f678c584e75317e7575",
+      "capturedAt": "2026-09-17T10:53:44.691Z"
+    },
+    {
+      "id": "bre-c09004a5d97d501cfd0b33cf91de7167a6ac4a24979cb561",
+      "benchmarkId": "trainerize.com",
+      "url": "https://trainerize.com/integrations/",
+      "evidenceRef": "ev-93e683397dee1094d58fefb41ebe676f4b4b77aa",
+      "capturedAt": "2026-09-17T10:53:46.383Z"
     }
   ],
   "marketDiscoveryProvenance": {
     "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-    "marketDiscoveryRunId": "mdr-68e3a9b68e272761c1ed1cdfb3fdb76409d1b06d962bfb9c",
-    "discoverySetId": "mds-68e3a9b68e272761c1ed1cdfb3fdb76409d1b06d962bfb9c",
+    "marketDiscoveryRunId": "mdr-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
+    "discoverySetId": "mds-a6929e8b98cb00f9439a88b5cf09c18522e94d82ad236dbd",
     "vertical": "fitness",
-    "discoveryVersion": "fitness-market-discovery-2026-09-17-r21-declared-seeds",
-    "appliedAt": "2026-09-17T08:34:18.017Z",
+    "discoveryVersion": "fitness-market-discovery-2026-09-17-r22-final-window",
+    "appliedAt": "2026-09-17T10:11:59.105Z",
     "selectedCandidates": [
-      "bsport.io",
-      "gymdesk.com",
-      "momence.com",
-      "perfectgym.com",
-      "pushpress.com",
-      "trainingym.com"
+      "exercise.com",
+      "marianatek.com",
+      "trainerize.com"
     ],
     "holdoutCandidateKey": "wellable.co",
     "rule": "sample derivado do run de market discovery por gerador determinístico; edição manual é drift (`--check` falha)"

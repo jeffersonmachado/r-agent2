@@ -210,6 +210,91 @@ describe('apply-market-discovery-to-sample — núcleo puro', () => {
     }));
   });
 
+  test('ABS-22 (runs reais r17/r21/r22): benchmark ANALISADO NUNCA é dropado pela aplicação de um run novo', () => {
+    // Run real r22 (2026-09-17): a aplicação do r22 dropou os 6 benchmarks
+    // ANALISADOS no deep research do r21 (provenance.generator = este gerador)
+    // porque não estavam no set do r22 — o mesmo bug já tinha dropado
+    // vantagefit.io (aplicação do r17) e goteamup.com (regen do ABS-21).
+    // Análise persistida (analyzedAt + novelty + findings) é FATO: sumir com
+    // ela encolhe o denominador da saturação — remover benchmark para ficar
+    // verde é proibido. Só propostas NÃO analisadas são suplantadas pelo run
+    // novo; as analisadas são preservadas intactas.
+    const sample = buildSample();
+    const analyzedEntry = {
+      id: 'analyzed-old.com',
+      name: 'Analyzed Old',
+      role: 'discovery',
+      order: 2,
+      archetype: 'independent-gym',
+      independenceGroup: 'analyzed-old',
+      sources: [{ url: 'https://analyzed-old.com/', tier: 5 }],
+      novelty: {},
+      analyzedAt: '2026-09-16T10:00:00.000Z',
+      researchVersion: 'fitness-lab-deep-research-r-old',
+      findingsInventory: [{ kind: 'capability', id: 'legacy-cap' }],
+      provenance: {
+        generator: GENERATOR_ID,
+        marketDiscoveryRunId: 'mdr-old-run',
+        discoverySetId: 'mds-old',
+        appliedAt: '2026-09-16T09:00:00.000Z',
+      },
+    };
+    sample.benchmarks.push(analyzedEntry);
+    sample.benchmarks.push({
+      id: 'stale-proposal.com',
+      name: 'Stale Proposal',
+      role: 'discovery',
+      order: 3,
+      archetype: 'financial-billing',
+      independenceGroup: 'stale-proposal',
+      sources: [{ url: 'https://stale-proposal.com/', tier: 5 }],
+      novelty: {},
+      provenance: {
+        generator: GENERATOR_ID,
+        marketDiscoveryRunId: 'mdr-old-run',
+        discoverySetId: 'mds-old',
+        appliedAt: '2026-09-16T09:00:00.000Z',
+      },
+    });
+    const next = applyMarketDiscoveryToSample({ sample, runExport: buildRunExport() });
+
+    // Analisado: preservado byte a byte.
+    const analyzed = next.benchmarks.find((b) => b.id === 'analyzed-old.com');
+    expect(analyzed).toEqual(analyzedEntry);
+    // Proposta não analisada de run anterior: suplantada (nunca virou fato).
+    expect(next.benchmarks.find((b) => b.id === 'stale-proposal.com')).toBeUndefined();
+    // A ordem relativa do analisado não anda: a cronologia da saturação é por `order`.
+    expect(analyzed.order).toBe(2);
+  });
+
+  test('ABS-22: fail-closed quando o run RE-SELECIONA benchmark já analisado', () => {
+    // A exclusão durável (ABS-20) impede a re-seleção de benchmark analisado
+    // na origem (market discovery). Se mesmo assim um run export trouxer uma
+    // chave analisada no set/holdout, derivar uma entrada nova apagaria a
+    // análise silenciosamente — o gerador recusa em vez de escrever.
+    const sample = buildSample();
+    sample.benchmarks.push({
+      id: 'alpha-gym.com',
+      name: 'Alpha Gym',
+      role: 'discovery',
+      order: 2,
+      archetype: 'independent-gym',
+      independenceGroup: 'alpha',
+      sources: [{ url: 'https://alpha-gym.com/', tier: 5 }],
+      novelty: {},
+      analyzedAt: '2026-09-16T10:00:00.000Z',
+      researchVersion: 'fitness-lab-deep-research-r-old',
+      provenance: {
+        generator: GENERATOR_ID,
+        marketDiscoveryRunId: 'mdr-old-run',
+        discoverySetId: 'mds-old',
+        appliedAt: '2026-09-16T09:00:00.000Z',
+      },
+    });
+    expect(() => applyMarketDiscoveryToSample({ sample, runExport: buildRunExport() }))
+      .toThrow(new RegExp(ERROR_CODES.ANALYZED_RESELECTED));
+  });
+
   test('só as chaves gerenciadas mudam', () => {
     const sample = buildSample();
     const next = applyMarketDiscoveryToSample({ sample, runExport: buildRunExport() });

@@ -2,7 +2,7 @@
   "_description": "Vocabulário de NORMALIZAÇÃO da pesquisa competitiva. Mapeia nomes observados em produtos externos para ids canônicos internos. É dado versionado, não heurística: um nome que não casa com nenhum termo declarado NÃO recebe canônico inventado — ele é novidade candidata e vai para revisão humana.",
   "_honesty": "Este arquivo NÃO cria capacidade nenhuma. Ele só declara equivalência semântica entre termos. A ausência de um termo aqui é a resposta correta para 'ainda não sei se isso é equivalente'.",
   "_mergePolicy": "Longest-match-wins. O termo declarado mais longo que casa decide o canônico; empate entre regras diferentes é OVER_MERGE_REFUSED (nunca fundir por aproximação). Termos com semântica distinta (freeze/cancel/scheduled cancel/suspend access/inactive/expired) são regras separadas com `exclusiveTokens` próprios — fundi-los silenciosamente inflaria a saturação e apagaria diferenças de produto.",
-  "version": "2026-09-15.2",
+  "version": "2026-09-17.1",
   "vertical": "fitness",
   "rules": [
     {
@@ -301,7 +301,10 @@
         "autoatendimento",
         "self-service",
         "baixam o app",
-        "baixe o app"
+        "baixe o app",
+        "self booking",
+        "digital memberships",
+        "on demand video"
       ]
     }
   }

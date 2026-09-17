@@ -384,16 +384,38 @@ function createBenchmarkResearchSupervisor({
     // benchmark fora do discovery set não é "pesquisa extra": é análise sem
     // ordem declarada, e a curva de novidade deixaria de ser auditável.
     const registered = new Set(Array.isArray(summary.discoverySet) ? summary.discoverySet : []);
-    const planned = rawPlan.benchmarks.filter((entry) => registered.has(entry.benchmarkId));
-    const skipped = rawPlan.benchmarks
+    const inScope = rawPlan.benchmarks.filter((entry) => registered.has(entry.benchmarkId));
+    const outOfScope = rawPlan.benchmarks
       .filter((entry) => !registered.has(entry.benchmarkId))
       .map((entry) => ({ benchmarkId: entry.benchmarkId, reason: 'benchmark_not_in_discovery_set' }));
+
+    // ABS-23 (incidente real r22, 2026-09-17): re-execução do MESMO run é
+    // RESUME, nunca re-análise. Um execute acidental contra o run errado (o
+    // handoff do r22 ainda não tinha aberto o research run novo) re-analisou
+    // os 6 seeds do r21: `analyzed_at` bumpado e `findings_inventory`
+    // sobrescrito com o resultado degradado da re-passagem. Quem já tem
+    // `analyzedAt` neste run é FATO persistido — refresh exige run NOVO
+    // (research_version nova), nunca overwrite silencioso.
+    const alreadyAnalyzed = new Set(
+      (Array.isArray(summary.benchmarks) ? summary.benchmarks : [])
+        .filter((benchmark) => isNonEmptyString(benchmark.analyzedAt))
+        .map((benchmark) => String(benchmark.id)),
+    );
+    const planned = inScope.filter((entry) => !alreadyAnalyzed.has(String(entry.benchmarkId)));
+    const skipped = [
+      ...outOfScope,
+      ...inScope
+        .filter((entry) => alreadyAnalyzed.has(String(entry.benchmarkId)))
+        .map((entry) => ({ benchmarkId: entry.benchmarkId, reason: 'benchmark_already_analyzed' })),
+    ];
 
     if (planned.length === 0) {
       return {
         status: RESEARCH_RUN_OUTCOMES.NOTHING_ANALYZED,
         vertical,
-        reason: 'research_plan_outside_discovery_set',
+        // Razão honesta: plano fora do set × run já todo analisado são estados
+        // operacionais diferentes — o auditor precisa distingui-los.
+        reason: inScope.length > 0 ? 'research_run_already_analyzed' : 'research_plan_outside_discovery_set',
         availability,
         results: [],
         analyzed: [],

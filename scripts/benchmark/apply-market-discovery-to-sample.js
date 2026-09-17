@@ -27,9 +27,10 @@
  *   - candidato selecionado sem evidência (`evidenceRef`);
  *   - sample resultante não avaliável pelo engine de suficiência.
  *
- * Chaves gerenciadas (apenas estas são tocadas): `benchmarks` (apenas as
- * entradas cuja `provenance.generator` é ESTE gerador), `holdout` e
- * `marketDiscoveryProvenance`. Todo o resto do sample é preservado byte a
+ * Chaves gerenciadas (apenas estas são tocadas): `benchmarks` (re-deriva as
+ * entradas cuja `provenance.generator` é ESTE gerador — EXCETO as já
+ * analisadas, que são fato persistido e jamais são dropadas, ABS-22), `holdout`
+ * e `marketDiscoveryProvenance`. Todo o resto do sample é preservado byte a
  * byte em conteúdo.
  *
  * Uso:
@@ -53,6 +54,7 @@ const ERROR_CODES = Object.freeze({
   HOLDOUT_WITHOUT_ARCHETYPE: 'market_run_holdout_without_archetype',
   EVIDENCE_MISSING: 'market_run_evidence_missing',
   SAMPLE_NOT_EVALUABLE: 'market_sample_not_evaluable',
+  ANALYZED_RESELECTED: 'market_run_reselected_analyzed_benchmark',
   DRIFT: 'market_discovery_sample_drift_detected',
 });
 
@@ -284,8 +286,27 @@ function applyMarketDiscoveryToSample({ sample, runExport }) {
   // seria preservado E derivado — o r21 terminou com 6 vendors duplicados e o
   // plano de deep research analisou cada um duas vezes. Uma chave = UMA
   // entrada; a versão derivada (com lineage do run) absorve a declaração.
+  //
+  // ABS-22 (runs reais r17/r21/r22, 2026-09-17): entrada gerenciada COM
+  // análise persistida (`analyzedAt`) é FATO — o deep research aconteceu, a
+  // novelty foi medida, os achados alimentam o inventário. A aplicação de um
+  // run novo NUNCA a dropa (o r22 dropou os 6 analisados do r21; o r17 já
+  // tinha dropado o vantagefit.io; a regen do ABS-21, o goteamup.com) —
+  // sumir com análise encolhe o denominador da saturação, e remover benchmark
+  // para ficar verde é proibido. Só propostas gerenciadas NÃO analisadas são
+  // suplantadas pelo run novo. E se o run novo RE-SELECIONAR uma chave
+  // analisada (a exclusão durável ABS-20 falhou a montante), a recusa é
+  // fail-closed: derivar por cima apagaria a análise em silêncio.
   const runKeys = new Set([...selected.map(String), ...(selected.includes(holdoutKey) ? [] : [String(holdoutKey)])]);
-  const preserved = list(next.benchmarks).filter((entry) => entry?.provenance?.generator !== GENERATOR_ID
+  const hasAnalysis = (entry) => isNonEmptyString(entry?.analyzedAt);
+  const reselected = list(next.benchmarks).find((entry) => hasAnalysis(entry) && runKeys.has(String(entry?.id)));
+  if (reselected) {
+    throw generatorError(
+      ERROR_CODES.ANALYZED_RESELECTED,
+      `run ${runExport.runId} re-selecionou o benchmark analisado ${reselected.id} (analyzedAt=${reselected.analyzedAt}): a exclusão durável falhou a montante — nunca derive por cima de análise persistida`,
+    );
+  }
+  const preserved = list(next.benchmarks).filter((entry) => (entry?.provenance?.generator !== GENERATOR_ID || hasAnalysis(entry))
     && !runKeys.has(String(entry?.id)));
   const maxOrder = preserved.reduce((max, entry) => Math.max(max, Number(entry?.order) || 0), 0);
   // O holdout incorporado foi analisado DEPOIS de todos os benchmarks do ciclo

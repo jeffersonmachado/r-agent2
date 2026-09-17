@@ -350,6 +350,50 @@ describe('B3 — fluxo real: supervisor → subagente → registry → fonte →
       .rejects.toThrow(/research_discovery_set_not_registered/);
   });
 
+  test('ABS-23 (incidente real r22, 2026-09-17): re-executar o MESMO run NÃO re-analisa nem sobrescreve quem já foi analisado', async () => {
+    // Incidente real: `POST /runs/fitness/execute` foi chamado ANTES do handoff
+    // do r22 abrir o research run novo. O supervisor resolveu o run r21
+    // (RESEARCH_COMPLETE) e RE-ANALISOU os 6 seeds: `analyzed_at` foi bumpado
+    // e `findings_inventory` sobrescrito com o resultado degradado da
+    // re-passagem (trainingym ficou com inventário 0). Re-execução do mesmo
+    // run é RESUME: pesquisa só quem ainda não tem análise; quem já tem é
+    // reportado em `skipped` com razão explícita. Refresh de análise é por
+    // run NOVO (research_version nova), nunca por overwrite silencioso.
+    const { supervisor, store } = buildSupervisor({ providers: buildProviders() });
+    await supervisor.service.openDiscoverySet({
+      tenantId: TENANT,
+      vertical: VERTICAL,
+      researchVersion: 'fitness-research-abs23-v1',
+      benchmarkIds: ['evo'],
+      holdoutBenchmarkId: null,
+    });
+
+    const first = await supervisor.research({ vertical: VERTICAL, sample: SAMPLE });
+    expect(first.status).toBe(RESEARCH_RUN_OUTCOMES.ANALYZED);
+    expect(first.analyzed).toEqual(['evo']);
+
+    const run = await store.getRun({ tenantId: TENANT, vertical: VERTICAL });
+    const firstSubjects = await store.listSubjects({ tenantId: TENANT, runId: run.id });
+    const evoBefore = firstSubjects.find((subject) => subject.benchmark_id === 'evo');
+    const analyzedAtBefore = evoBefore.analyzed_at && new Date(evoBefore.analyzed_at).toISOString();
+    const inventoryBefore = JSON.stringify(evoBefore.findings_inventory);
+    expect(analyzedAtBefore).toBeTruthy();
+
+    const second = await supervisor.research({ vertical: VERTICAL, sample: SAMPLE });
+    expect(second.status).toBe(RESEARCH_RUN_OUTCOMES.NOTHING_ANALYZED);
+    expect(second.analyzed).toEqual([]);
+    expect(second.skipped).toEqual([{ benchmarkId: 'evo', reason: 'benchmark_already_analyzed' }]);
+
+    // Nada mudou: mesma análise, mesmo inventário, mesma evidência — idempotente.
+    const afterSubjects = await store.listSubjects({ tenantId: TENANT, runId: run.id });
+    const evoAfter = afterSubjects.find((subject) => subject.benchmark_id === 'evo');
+    expect(new Date(evoAfter.analyzed_at).toISOString()).toBe(analyzedAtBefore);
+    expect(JSON.stringify(evoAfter.findings_inventory)).toBe(inventoryBefore);
+    expect(await store.listFindings({ tenantId: TENANT, runId: run.id })).toHaveLength(1);
+    expect(await store.listEvidence({ tenantId: TENANT, runId: run.id })).toHaveLength(1);
+    expect(await store.listSources({ tenantId: TENANT, runId: run.id })).toHaveLength(1);
+  });
+
   test('o plano de pesquisa usa SOMENTE as fontes declaradas pelo sample', () => {
     const plan = buildResearchPlanFromSample(SAMPLE);
     expect(plan.benchmarks.map((entry) => entry.benchmarkId)).toEqual(['evo']);
