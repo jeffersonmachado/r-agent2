@@ -171,9 +171,19 @@ describe('certification-states: sem medição não se publica 0', () => {
       coreReady: true,
     });
     expect(states.corePlatformReadiness.state).toBe('CORE_GO');
-    // 100% de implementação convive com 0 verticais certificadas de MERCADO.
+    // 100% de implementação NÃO certifica mercado: o estado de mercado só vira
+    // CERTIFIED quando TODAS as verticais medirem SAMPLE_SUFFICIENT. 2026-09-17:
+    // fitness concluiu o caminho real (17/17 gates + HOLDOUT_PASS, ciclo
+    // r1/r23→r25) — a contagem acompanha o relatório, nunca o core GO.
     expect(states.verticalMarketCertification.state).toBe('VERTICAL_MARKET_NOT_CERTIFIED');
-    expect(states.verticalMarketCertification.certifiedVerticals).toBe(0);
+    const benchmarkReport = JSON.parse(fs.readFileSync(
+      path.join(REPO_ROOT, 'reports', 'benchmark-sufficiency-report.json'), 'utf8',
+    ));
+    const reportSufficient = (benchmarkReport.verticals || [])
+      .filter((v) => v.status === 'SAMPLE_SUFFICIENT').length;
+    expect(states.verticalMarketCertification.certifiedVerticals).toBe(reportSufficient);
+    expect(states.verticalMarketCertification.certifiedVerticals)
+      .toBeLessThan(states.verticalMarketCertification.requiredVerticals);
     expect(states.liveProviderCertification.state).toBe('PENDING');
   });
 

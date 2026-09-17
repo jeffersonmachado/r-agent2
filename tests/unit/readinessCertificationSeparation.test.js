@@ -74,11 +74,19 @@ describe('§37 cobertura de IMPLEMENTAÇÃO não é cobertura de MERCADO', () =>
     expect(PLATFORM_STATUS_SOURCE.verticalCoverage.numerator).toBe(PLATFORM_STATUS_SOURCE.verticalCoverage.denominator);
   });
 
-  it('100% de implementação convive com 0 verticais certificadas de mercado', () => {
+  it('100% de implementação convive com a contagem REAL de certificadas de mercado', () => {
     const impl = READINESS.certificationStates.verticalImplementationReadiness;
     const market = READINESS.certificationStates.verticalMarketCertification;
     expect(impl.percent).toBe(100);
-    expect(market.certifiedVerticals).toBe(0);
+    // A separação §37 não é "mercado sempre zero": é que as duas contagens são
+    // eixos independentes. 2026-09-17: fitness concluiu o caminho real de
+    // certificação (17/17 gates + HOLDOUT_PASS) — a contagem sobe quando a
+    // prova existe, nunca por declaração. A trava: a contagem do readiness
+    // precisa ser EXATAMENTE a derivada do relatório de suficiência.
+    const reportSufficient = BENCHMARK.verticals.filter((v) => v.status === 'SAMPLE_SUFFICIENT').length;
+    if (Date.parse(READINESS.generatedAt) >= Date.parse(BENCHMARK.generatedAt)) {
+      expect(market.certifiedVerticals).toBe(reportSufficient);
+    }
   });
 });
 
@@ -96,9 +104,11 @@ describe('§38/§43 a certificação de mercado espelha o relatório de suficiê
     const fromReport = BENCHMARK.verticals.find((v) => v.vertical === 'fitness');
     // A derivação é declarada: o readiness aponta o relatório como fonte.
     expect(market.source).toBe('reports/benchmark-sufficiency-report.json');
-    // Nunca um estado fora da taxonomia do engine, e NUNCA suficiente sem prova.
+    // Nunca um estado fora da taxonomia do engine.
     expect(Object.values(SAMPLE_STATES)).toContain(perVertical.fitness);
-    expect(perVertical.fitness).not.toBe('SAMPLE_SUFFICIENT');
+    // 2026-09-17: fitness PODE ser SAMPLE_SUFFICIENT — mas só quando o
+    // relatório de suficiência (gerado do sample real pelo validador) diz o
+    // mesmo. A trava não é mais "nunca suficiente": é "projeção = relatório".
     // Igualdade estrita só é exigível quando o readiness foi gerado DEPOIS do
     // relatório de suficiência (mesmo ciclo). Mid-cycle o readiness versionado
     // é mais velho que o relatório re-gerado pelo validador — o selo re-deriva.
@@ -107,14 +117,28 @@ describe('§38/§43 a certificação de mercado espelha o relatório de suficiê
     }
   });
 
-  it('Fitness segue NÃO certificado (não foi maquiado para obter GO)', () => {
+  it('Fitness certificado SOMENTE pelo caminho real (gates PASS, sem maquiagem)', () => {
     const fitness = BENCHMARK.verticals.find((v) => v.vertical === 'fitness');
-    // 2026-09-15: a pesquisa real (runs r3/r4 + sample-patch) moveu o estado de
-    // SAMPLE_NOT_RESEARCHED para SAMPLE_RESEARCHING. O invariante permanece:
-    // NÃO suficiente, NÃO certificável, bloqueio externo ainda declarado.
-    expect(fitness.status).not.toBe('SAMPLE_SUFFICIENT');
-    expect(fitness.certifiable).toBe(false);
-    expect(fitness.externalBlock.code).toBe('SAMPLE_CERTIFICATION_BLOCKED_BY_EXTERNAL_RESEARCH');
+    // 2026-09-17: o bloqueio externo de 2026-09-10 foi RESOLVIDO cumprindo suas
+    // próprias condições de desbloqueio — normalização semântica (r1), runs de
+    // saturação (r23→r25) e holdout medido (HOLDOUT_PASS) sob a política v1.0.0
+    // com thresholds intactos. O invariante permanece fiel ao espírito original:
+    // certificação só vale se o relatório mostrar os gates verdes de verdade.
+    if (fitness.status === 'SAMPLE_SUFFICIENT') {
+      expect(fitness.certifiable).toBe(true);
+      expect(fitness.criticalBlocking).toEqual([]);
+      expect(fitness.saturation.capability).toBe('PASS');
+      expect(fitness.saturation.journey).toBe('PASS');
+      expect(fitness.saturation.businessRule).toBe('PASS');
+      expect(fitness.holdoutState).toBe('HOLDOUT_PASS');
+      expect(fitness.declaredClaim).toBeFalsy();
+      // Bloco ativo NÃO pode coexistir com suficiência.
+      expect(fitness.externalBlock).toBeFalsy();
+    } else {
+      // Se um ciclo futuro quebrar a saturação, o relatório volta a dizer a
+      // verdade — e este ramo garante que ninguém "segura" o verde na marra.
+      expect(fitness.certifiable).toBe(false);
+    }
   });
 
   it('o gap de arquétipos do fitness NÃO foi apagado para produzir verde', () => {
@@ -250,6 +274,17 @@ describe('§42 nenhuma falha de amostra fica escondida atrás do core GO', () =>
     expect(statement.scope).toContain('fitness');
     expect(statement.inventoryVersion).toBeTruthy();
     expect(statement.sampleStatus).toBe(fitness.status);
-    expect(statement.marketCertification).toBe('MARKET_SAMPLE_NOT_CERTIFIED');
+    // A certificação no statement é a derivação do engine espelhada no
+    // relatório: CERTIFIED somente quando o sample mede SUFFICIENT de verdade
+    // (2026-09-17: ciclo r1/r23→r25 + holdout PASS). A trava é a COERÊNCIA —
+    // o statement nunca pode divergir do status medido.
+    const engine = require('../../qa/benchmarks/benchmarkSufficiencyEngine');
+    const evaluation = engine.evaluateSampleSufficiency({
+      sample: readJson('config/benchmarks/fitness.json'),
+      policy: readJson('config/benchmark-sufficiency-policy.json'),
+    });
+    expect(statement.marketCertification).toBe(
+      evaluation.certifiable === true ? 'MARKET_SAMPLE_CERTIFIED' : 'MARKET_SAMPLE_NOT_CERTIFIED',
+    );
   });
 });

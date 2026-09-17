@@ -22,6 +22,7 @@ const {
   evaluateHoldout,
   evaluateLeaveOneOut,
   evaluateOrderSensitivity,
+  evaluateNormalizedNovelty,
   evaluateSourceQuality,
   evaluateFreshness,
   evaluateAnalysisEvidence,
@@ -427,6 +428,116 @@ describe('sensibilidade de ordem (§28)', () => {
     });
     expect(evaluateOrderSensitivity({ sample: saturated, policy: POLICY }).orderSensitivity).toBe('LOW');
   });
+
+  it('pioneiro com novidade alta na cauda rotacionada NÃO torna a amostra instável quando toda ordem atinge saturação', () => {
+    // ABS-26: a novidade gravada é snapshot da ordem REAL (b1 descobriu 11
+    // capabilities sobre o baseline 12). Rotacionar b1 para a cauda sem
+    // recomputar o que ele descobriria depois dos demais é contrafactual
+    // fictício — e tornava o gate estruturalmente inalcançável com baseline
+    // PASS (o pioneiro sempre tem novidade alta). A pergunta respondível é:
+    // "nessa ordem alternativa, o processo de amostragem ATINGIRIA uma janela
+    // saturada completa?" (o processo real para quando satura). Denominadores
+    // são recalculados pela curva rotacionada (o previousInventorySize
+    // declarado só é válido na ordem real).
+    const pioneer = sample({
+      canonicalInventoryBaseline: 12,
+      benchmarks: [
+        benchmark({ id: 'b1', order: 1, archetype: 'a1', independenceGroup: 'g1', previousInventorySize: 12, novelty: novelty({ newCapabilities: Array.from({ length: 11 }, (_, i) => `c${i}`) }) }),
+        benchmark({ id: 'b2', order: 2, archetype: 'a2', independenceGroup: 'g2', previousInventorySize: 23, novelty: novelty() }),
+        benchmark({ id: 'b3', order: 3, archetype: 'a1', independenceGroup: 'g3', previousInventorySize: 23, novelty: novelty() }),
+        benchmark({ id: 'b4', order: 4, archetype: 'a2', independenceGroup: 'g4', previousInventorySize: 23, novelty: novelty() }),
+        benchmark({ id: 'b5', order: 5, archetype: 'a1', independenceGroup: 'g5', previousInventorySize: 23, novelty: novelty() }),
+      ],
+    });
+    const result = evaluateOrderSensitivity({ sample: pioneer, policy: POLICY });
+    expect(result.baselineVerdict).toBe(true);
+    expect(result.orderSensitivity).toBe('LOW');
+    expect(result.status).toBe('PASS');
+  });
+
+  it('FAIL-CLOSED preservado: saturação que só existe por diluição de denominador na ordem real reporta HIGH', () => {
+    // A janela da cauda só passa porque o denominador acumulado dilui a taxa
+    // (1/25, 1/26). Em qualquer ordem alternativa esses pontos caem sobre
+    // denominadores pequenos e estouram o threshold — a saturação era artefato
+    // da ordem, e o gate precisa continuar apontando isso.
+    const diluted = sample({
+      canonicalInventoryBaseline: 12,
+      benchmarks: [
+        benchmark({ id: 'b1', order: 1, archetype: 'a1', independenceGroup: 'g1', previousInventorySize: 12, novelty: novelty({ newCapabilities: Array.from({ length: 6 }, (_, i) => `a${i}`) }) }),
+        benchmark({ id: 'b2', order: 2, archetype: 'a2', independenceGroup: 'g2', previousInventorySize: 18, novelty: novelty({ newCapabilities: Array.from({ length: 6 }, (_, i) => `b${i}`) }) }),
+        benchmark({ id: 'b3', order: 3, archetype: 'a1', independenceGroup: 'g3', previousInventorySize: 24, novelty: novelty({ newCapabilities: ['c1'] }) }),
+        benchmark({ id: 'b4', order: 4, archetype: 'a2', independenceGroup: 'g4', previousInventorySize: 25, novelty: novelty({ newCapabilities: ['d1'] }) }),
+        benchmark({ id: 'b5', order: 5, archetype: 'a1', independenceGroup: 'g5', previousInventorySize: 26, novelty: novelty() }),
+      ],
+    });
+    const result = evaluateOrderSensitivity({ sample: diluted, policy: POLICY });
+    expect(result.baselineVerdict).toBe(true);
+    expect(result.orderSensitivity).toBe('HIGH');
+    expect(result.status).toBe('FAIL');
+  });
+});
+
+// ── §29 Novelty normalizada ──────────────────────────────────────────────
+
+describe('novelty normalizada (ABS-25)', () => {
+  it('finding bruto sem normalizedId NÃO conta como novelty canônica', () => {
+    const s = sample({
+      benchmarks: [
+        benchmark({
+          id: 'b1',
+          order: 1,
+          archetype: 'a1',
+          independenceGroup: 'g1',
+          novelty: novelty({
+            newCapabilities: [
+              { id: 'brf-1', name: 'Every payment, every membership, every dollar. In one place.', normalizedId: null, origin: 'EXTERNAL_OBSERVED' },
+            ],
+          }),
+        }),
+      ],
+    });
+    const result = evaluateNormalizedNovelty({ sample: s });
+    expect(result.status).toBe('FAIL');
+    expect(result.violations[0].reason).toBe('novelty_item_without_normalized_id');
+    expect(result.violations[0].benchmarkId).toBe('b1');
+  });
+
+  it('item com normalizedId passa; string simples é id normalizado direto (fixtures/histórico)', () => {
+    const s = sample({
+      benchmarks: [
+        benchmark({
+          id: 'b1',
+          order: 1,
+          archetype: 'a1',
+          independenceGroup: 'g1',
+          novelty: novelty({
+            newCapabilities: [
+              { id: 'brf-1', name: 'Members can freeze memberships', normalizedId: 'fitness.membership.freeze', origin: 'EXTERNAL_OBSERVED' },
+              'legacy.direct.id',
+            ],
+          }),
+        }),
+      ],
+    });
+    expect(evaluateNormalizedNovelty({ sample: s }).status).toBe('PASS');
+  });
+
+  it('o gate entra no veredito agregado', () => {
+    const s = sample({
+      benchmarks: [
+        benchmark({
+          id: 'b1',
+          order: 1,
+          archetype: 'a1',
+          independenceGroup: 'g1',
+          novelty: novelty({ newJourneys: [{ id: 'brf-9', name: 'headline promocional', normalizedId: null }] }),
+        }),
+      ],
+    });
+    const result = evaluateSampleSufficiency({ sample: s, policy: POLICY, now: NOW });
+    expect(result.gates.normalizedNovelty.status).toBe('FAIL');
+    expect(result.blocking.some((b) => b.gate === 'normalizedNovelty')).toBe(true);
+  });
 });
 
 // ── §18/§19 Fontes e frescor ──────────────────────────────────────────────
@@ -669,14 +780,22 @@ describe('gap crítico prevalece sobre qualquer média (§25, §40)', () => {
 // ── Amostra real do repositório ───────────────────────────────────────────
 
 describe('amostra real da vertical Fitness (estado honesto)', () => {
-  it('não declara suficiência e registra o bloqueio externo', () => {
+  it('suficiência é DERIVADA pelo engine, nunca declarada pelo sample', () => {
     const result = evaluateSampleSufficiency({ sample: FITNESS_SAMPLE, policy: POLICY, now: NOW });
-    // 2026-09-15: a pesquisa real (runs r3/r4) moveu o estado para
-    // SAMPLE_RESEARCHING. O que não pode acontecer: SUFFICIENT/certificável.
-    expect(result.status).not.toBe(SAMPLE_STATES.SUFFICIENT);
-    expect(result.certifiable).toBe(false);
+    // 2026-09-17: o ciclo de convergência (normalização semântica
+    // fitness-semantic-2026-09-17-r1 → runs r23/r24/r25 → holdout
+    // fitness-holdout-validation-2026-09-17-r25 com HOLDOUT_PASS) cumpriu as
+    // condições de desbloqueio do externalBlock de 2026-09-10 sob a MESMA
+    // política v1.0.0 (thresholds intactos). O estado SUFFICIENT é a derivação
+    // do engine sobre 17/17 gates PASS — o sample não declara suficiência.
+    expect(result.status).toBe(SAMPLE_STATES.SUFFICIENT);
+    expect(result.certifiable).toBe(true);
+    expect(result.criticalBlocking).toEqual([]);
     expect(FITNESS_SAMPLE.sampleSufficiencyClaim).toBeUndefined();
-    expect(FITNESS_SAMPLE.externalBlock.code).toBe(engine.EXTERNAL_BLOCK_STATE);
+    // O bloqueio histórico não foi apagado: virou registro RESOLVED auditável.
+    expect(FITNESS_SAMPLE.externalBlock).toBeUndefined();
+    const history = FITNESS_SAMPLE.externalBlockHistory || [];
+    expect(history.some((entry) => entry.code === engine.EXTERNAL_BLOCK_STATE && entry.status === 'RESOLVED')).toBe(true);
   });
 
   it('EVO está presente como benchmark obrigatório (§31)', () => {

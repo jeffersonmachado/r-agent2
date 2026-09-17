@@ -120,6 +120,47 @@ describe('runner — filterDiscoveredSources (filtro puro anti-substituição)',
       candidates: [{ url: FEATURES_PAGE }],
     })).toEqual([]);
   });
+
+  test('ABS-24 (run real r23): endpoints de MÁQUINA/CMS nunca são fonte de documentação', () => {
+    // Run real r23 (2026-09-17): a homepage WordPress do wellnessliving.com
+    // declara `<link rel="alternate" type="application/json+oembed">` e o crawl
+    // extraiu `/wp-json/oembed/1.0/embed/` como "fonte específica". O GET pelado
+    // do endpoint oEmbed responde 400 (exige `?url=`) e o erro não resolvido
+    // BLOQUEOU a análise do benchmark inteiro — que tinha homepage 200 com
+    // evidência capturada. Plumbing de CMS/API machine-readable não é
+    // documentação de produto: fora da redescoberta E do crawl.
+    const { filterDiscoveredSources, extractSameDomainLinks } = require('../../../api/services/benchmark/benchmarkResearchRunner');
+    const plumbing = [
+      'https://vantagefit.io/wp-json/oembed/1.0/embed/',
+      'https://vantagefit.io/wp-json/wp/v2/pages/',
+      'https://vantagefit.io/wp-admin/admin-ajax.php',
+      'https://vantagefit.io/xmlrpc.php',
+      'https://vantagefit.io/feed/',
+      'https://vantagefit.io/cdn-cgi/challenge-platform/',
+    ];
+    const filtered = filterDiscoveredSources({
+      officialUrl: HOMEPAGE,
+      declaredUrls: [HOMEPAGE],
+      candidates: [
+        { url: FEATURES_PAGE, title: 'Features' },
+        ...plumbing.map((url) => ({ url, title: 'plumbing' })),
+      ],
+    });
+    expect(filtered.map((c) => c.url)).toEqual([FEATURES_PAGE]);
+
+    const crawled = extractSameDomainLinks({
+      baseUrl: HOMEPAGE,
+      content: `<html><head>
+        <link rel="alternate" type="application/json+oembed" href="https://vantagefit.io/wp-json/oembed/1.0/embed/?url=x">
+        </head><body>
+        <a href="/funcionalidades/">Funcionalidades</a>
+        <a href="https://vantagefit.io/wp-json/oembed/1.0/embed/?url=x">oembed</a>
+        <a href="https://vantagefit.io/wp-admin/">admin</a>
+        <a href="https://vantagefit.io/feed/">feed</a>
+        </body></html>`,
+    });
+    expect(crawled.map((c) => c.url)).toEqual(['https://vantagefit.io/funcionalidades/']);
+  });
 });
 
 describe('runner — inspectSource com discoveredCandidate', () => {
@@ -265,9 +306,15 @@ describe('supervisor — redescoberta de fontes específicas (homepage-only)', (
 
     const result = await supervisor.research({ vertical: VERTICAL, sample: SAMPLE });
     const entry = result.results.find((item) => item.benchmarkId === 'vantagefit.io');
-    expect(fetchedUrls.filter((url, index) => fetchedUrls.indexOf(url) === index)).toEqual([HOMEPAGE]);
+    // ABS-27: a descoberta agora também CONSULTA o sitemap.xml público (aqui sem
+    // <loc> de produto — conteúdo HTML genérico do provider). O que o teste
+    // continua garantindo: nenhuma página ESPECÍFICA é inspecionada.
+    const uniqueFetched = fetchedUrls.filter((url, index) => fetchedUrls.indexOf(url) === index);
+    expect(uniqueFetched).toEqual(expect.arrayContaining([HOMEPAGE]));
+    expect(uniqueFetched.filter((url) => url !== HOMEPAGE && url !== 'https://vantagefit.io/sitemap.xml')).toEqual([]);
     expect(entry.attempts.filter((attempt) => attempt.sourceSelection === 'search-discovered')).toEqual([]);
     expect(entry.attempts.filter((attempt) => attempt.sourceSelection === 'homepage-crawl')).toEqual([]);
+    expect(entry.attempts.filter((attempt) => attempt.sourceSelection === 'sitemap-discovery')).toEqual([]);
     // Zero achados verificados é a medida HONESTA deste benchmark — não um erro.
     const findings = await store.listFindings({ tenantId: TENANT, runId: (await store.getRun({ tenantId: TENANT, vertical: VERTICAL })).id });
     expect(findings.filter((finding) => finding.verified === true)).toEqual([]);
@@ -343,5 +390,95 @@ describe('supervisor — redescoberta de fontes específicas (homepage-only)', (
     expect(result.status).toBe(RESEARCH_RUN_OUTCOMES.ANALYZED);
     // Uma busca por fonte declarada — nenhuma busca de redescoberta adicional.
     expect(searchCalls.length).toBe(1);
+  });
+});
+
+describe('runner — discoverSources com fallback de sitemap (ABS-27)', () => {
+  // Run real r23 (2026-09-17): wellnessliving.com é SPA — a homepage (200,
+  // 179KB) não declara links de produto no HTML inicial, a busca pública veio
+  // degradada e o benchmark ficou "analisado" com UMA fonte genérica. O
+  // sitemap.xml público do PRÓPRIO fornecedor declara as páginas específicas
+  // (/fitness/software/ etc.) — fonte primária legítima, mesmo domínio,
+  // obtida pela capability governada (SSRF/timeout/hash no provider).
+  const SPA_HOME = 'https://spa-vendor.com/';
+  const SPA_HTML = '<html><head><script src="/app.js"></script></head><body><div id="root"></div></body></html>';
+  const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <url><loc>https://spa-vendor.com/</loc></url>
+      <url><loc>https://spa-vendor.com/fitness/software/</loc></url>
+      <url><loc>https://spa-vendor.com/pricing/</loc></url>
+      <url><loc>https://spa-vendor.com/wp-json/oembed/1.0/embed/</loc></url>
+      <url><loc>https://outro-dominio.com/features/</loc></url>
+    </urlset>`;
+  const SITEMAP_INDEX_XML = `<?xml version="1.0" encoding="UTF-8"?>
+    <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      <sitemap><loc>https://spa-vendor.com/main-sitemap.xml</loc></sitemap>
+    </sitemapindex>`;
+
+  function buildRunner({ pageContent }) {
+    const registry = createToolRegistry({ logger: silent });
+    const runner = createBenchmarkResearchRunner({
+      registry,
+      runners: buildProviders({ searchCandidates: [], pageContent }),
+      tenantId: TENANT,
+      actor: { classification: 'DEVELOPMENT', permissions: RESEARCH_CAPABILITY_IDS },
+      service: { recordFinding: async () => { throw new Error('not_used'); } },
+      now: () => NOW,
+    });
+    return runner;
+  }
+
+  test('SPA sem links: sitemap.xml declara as páginas específicas (via sitemap-discovery)', async () => {
+    const runner = buildRunner({
+      pageContent: { [SPA_HOME]: SPA_HTML, 'https://spa-vendor.com/sitemap.xml': SITEMAP_XML },
+    });
+    const outcome = await runner.discoverSources({
+      query: 'spa vendor funcionalidades',
+      officialUrl: SPA_HOME,
+      declaredUrls: [SPA_HOME],
+    });
+    expect(outcome.status).toBe('RESEARCH_SOURCES_DISCOVERED');
+    const urls = outcome.candidates.map((candidate) => candidate.url);
+    expect(urls).toEqual([
+      'https://spa-vendor.com/fitness/software/',
+      'https://spa-vendor.com/pricing/',
+    ]);
+    // homepage genérica, machine endpoint (ABS-24) e cross-domain ficam fora.
+    expect(outcome.candidates.every((candidate) => candidate.via === 'sitemap-discovery')).toBe(true);
+  });
+
+  test('sitemapindex é seguido ao sub-sitemap (fetch limitado e governado)', async () => {
+    const runner = buildRunner({
+      pageContent: {
+        [SPA_HOME]: SPA_HTML,
+        'https://spa-vendor.com/sitemap.xml': SITEMAP_INDEX_XML,
+        'https://spa-vendor.com/main-sitemap.xml': SITEMAP_XML,
+      },
+    });
+    const outcome = await runner.discoverSources({
+      query: 'spa vendor funcionalidades',
+      officialUrl: SPA_HOME,
+      declaredUrls: [SPA_HOME],
+    });
+    expect(outcome.candidates.map((candidate) => candidate.url)).toEqual([
+      'https://spa-vendor.com/fitness/software/',
+      'https://spa-vendor.com/pricing/',
+    ]);
+  });
+
+  test('sem sitemap obtido (404/vazio) o retorno é lista vazia honesta', async () => {
+    const runner = buildRunner({
+      pageContent: {
+        [SPA_HOME]: SPA_HTML,
+        'https://spa-vendor.com/sitemap.xml': '',
+      },
+    });
+    const outcome = await runner.discoverSources({
+      query: 'spa vendor funcionalidades',
+      officialUrl: SPA_HOME,
+      declaredUrls: [SPA_HOME],
+    });
+    expect(outcome.status).toBe('RESEARCH_SOURCES_DISCOVERED');
+    expect(outcome.candidates).toEqual([]);
   });
 });

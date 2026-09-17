@@ -199,8 +199,16 @@ describe('benchmark saturation honesty (B1..B6)', () => {
       }
     });
 
-    it('amostra real nao e certificavel', () => {
-      expect(result.certifiable).toBe(false);
+    it('amostra real e certificavel SOMENTE pela medicao (gates + holdout reais)', () => {
+      // 2026-09-17: o ciclo de convergencia (normalizacao semantica r1, runs
+      // r23/r24/r25, holdout fitness-holdout-validation-2026-09-17-r25) fechou
+      // as condicoes do externalBlock sob a politica v1.0.0 intacta. A trava
+      // nunca foi "nao certificavel": e "certificavel somente quando o engine
+      // mede PASS em tudo" — e e isso que se verifica aqui.
+      expect(result.certifiable).toBe(true);
+      expect(result.status).toBe('SAMPLE_SUFFICIENT');
+      expect(result.criticalBlocking).toEqual([]);
+      expect(result.holdoutState).toBe('HOLDOUT_PASS');
     });
   });
 

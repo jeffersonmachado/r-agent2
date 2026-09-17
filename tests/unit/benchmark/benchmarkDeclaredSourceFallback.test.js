@@ -245,10 +245,11 @@ describe('FIX 2 — obtenção direta da fonte declarada (declaredUrlFallback)',
     expect(pacto.attempts[0].sourceSelection).toBe('declared-config');
     // FITNESS-ABS-12b: com a declarada sendo homepage, a passada de
     // redescoberta obtém a MESMA URL declarada para extrair links de navegação
-    // (conteúdo sem links → nenhuma fonte extra). O anti-substituição segue
-    // intacto: as duas obtenções são de EXATAMENTE a URL declarada, nenhuma
-    // outra — a duplicata é o crawl, não um substituto.
-    expect(fetchedUrls).toEqual([DECLARED, DECLARED]);
+    // (conteúdo sem links → nenhuma fonte extra). ABS-27: sem links, a
+    // descoberta consulta o sitemap.xml público (aqui sem <loc> de produto) —
+    // fetch de DESCOBERTA, não inspeção de fonte. O anti-substituição segue
+    // intacto: nenhuma URL de terceiro é obtida como fonte do fornecedor.
+    expect(fetchedUrls).toEqual([DECLARED, 'https://www.sistemapacto.com.br/sitemap.xml', DECLARED]);
 
     // A inspeção persistida carrega a proveniência da seleção.
     const run = await store.getRun({ tenantId: TENANT, vertical: VERTICAL });

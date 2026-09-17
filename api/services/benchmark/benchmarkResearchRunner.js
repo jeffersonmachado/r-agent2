@@ -125,6 +125,7 @@ function filterDiscoveredSources({ candidates, officialUrl, declaredUrls = [], l
     if (!url.startsWith('https://')) continue;
     if (registrableDomain(url) !== officialDomain) continue;
     if (isRootUrl(url)) continue;
+    if (isMachineEndpointPath(url)) continue;
     const key = normalizeDiscoveredUrl(url);
     if (declared.has(key) || seen.has(key)) continue;
     seen.add(key);
@@ -151,6 +152,30 @@ function filterDiscoveredSources({ candidates, officialUrl, declaredUrls = [], l
  */
 const CRAWL_ASSET_RE = /\.(css|js|mjs|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot|pdf|zip|mp4|webm|json|xml|txt)(\?|#|$)/i;
 const CRAWL_PRODUCT_TERM_RE = /(feature|funcionalidade|produto|product|solu|plan|pricing|pre[cç]o|platform|plataforma|app|module|modulo|capabilit|integration|integra)/i;
+
+/**
+ * ABS-24 (run real r23, 2026-09-17) — plumbing de CMS/endpoint de MÁQUINA
+ * nunca é fonte de documentação. O crawl da homepage WordPress do
+ * wellnessliving.com extraiu o link `application/json+oembed`
+ * (`/wp-json/oembed/1.0/embed/`): o GET pelado responde 400 (o endpoint exige
+ * `?url=`) e o erro não resolvido bloqueou a análise do benchmark INTEIRO —
+ * que tinha homepage 200 com evidência capturada. O mesmo vale para a
+ * redescoberta via busca: um hit de plumbing não é página de produto.
+ * Vale para os dois canais de descoberta (busca governada e crawl da
+ * homepage) — `/api/` NÃO é bloqueado: documentação de API é insumo legítimo
+ * (inspectApiDocs); o alvo aqui é plumbing que nunca carrega conteúdo de
+ * produto.
+ */
+const MACHINE_ENDPOINT_PATH_RE = /\/(wp-json|wp-admin|wp-includes|wp-content|xmlrpc\.php|feed|comments|oembed|cdn-cgi|graphql|\.well-known)(\/|$|\.)/i;
+
+/** Path técnico/de máquina? (CMS plumbing, feeds, challenges — nunca docs.) */
+function isMachineEndpointPath(url) {
+  try {
+    return MACHINE_ENDPOINT_PATH_RE.test(new URL(String(url)).pathname);
+  } catch (_) {
+    return false;
+  }
+}
 
 function extractSameDomainLinks({ content, baseUrl, limit = MAX_DISCOVERED_SOURCES } = {}) {
   const officialDomain = registrableDomain(baseUrl);
@@ -180,6 +205,7 @@ function extractSameDomainLinks({ content, baseUrl, limit = MAX_DISCOVERED_SOURC
     const pathname = resolved.pathname.replace(/\/+$/, '');
     if (pathname === '') continue;
     if (CRAWL_ASSET_RE.test(pathname)) continue;
+    if (isMachineEndpointPath(resolved.href)) continue;
     const canonical = `${resolved.origin}${pathname}/`;
     if (seen.has(canonical)) continue;
     seen.add(canonical);
@@ -196,6 +222,33 @@ function extractSameDomainLinks({ content, baseUrl, limit = MAX_DISCOVERED_SOURC
   });
   return links.slice(0, limit);
 }
+
+/**
+ * ABS-27 (run real r23, 2026-09-17) — SPA sem links no HTML inicial: o
+ * sitemap.xml público do PRÓPRIO fornecedor declara as páginas específicas
+ * (ex.: wellnessliving.com/fitness/software/). Parser mínimo e defensivo:
+ * extrai apenas `<loc>` de urlset/sitemapindex; a VALIDAÇÃO das URLs (mesmo
+ * domínio, https, path específico, fora plumbing) é a do
+ * `filterDiscoveredSources` — nenhuma regra nova.
+ *
+ * @returns {{ indexUrls: string[], pageUrls: string[] }}
+ */
+function parseSitemapLocations(xml) {
+  const indexUrls = [];
+  const pageUrls = [];
+  if (!isNonEmptyString(xml)) return { indexUrls, pageUrls };
+  const isIndex = /<sitemapindex[\s>]/i.test(xml);
+  const locRe = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
+  let match;
+  while ((match = locRe.exec(xml)) !== null) {
+    const url = String(match[1] || '').trim();
+    if (!url) continue;
+    (isIndex ? indexUrls : pageUrls).push(url);
+  }
+  return { indexUrls, pageUrls };
+}
+
+const MAX_SUB_SITEMAPS = 3;
 
 function sha256Hex(value) {
   return crypto.createHash('sha256').update(String(value ?? ''), 'utf8').digest('hex');
@@ -607,7 +660,54 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
     const declaredKeys = new Set(declared.map(normalizeDiscoveredUrl));
     const fromCrawl = extractSameDomainLinks({ content, baseUrl: officialUrl, limit })
       .filter((candidate) => !declaredKeys.has(normalizeDiscoveredUrl(candidate.url)));
-    return { status: 'RESEARCH_SOURCES_DISCOVERED', candidates: fromCrawl, reason: null };
+    if (fromCrawl.length > 0) {
+      return { status: 'RESEARCH_SOURCES_DISCOVERED', candidates: fromCrawl, reason: null };
+    }
+
+    // ABS-27 — SPA: o HTML inicial não declara links de produto. O sitemap.xml
+    // público do PRÓPRIO fornecedor declara as páginas específicas; cada URL
+    // obtida depois passa pelo mesmo fetch governado + filtro anti-substituição.
+    const fromSitemap = await discoverViaSitemap({ officialUrl, declaredUrls: declared, limit });
+    return { status: 'RESEARCH_SOURCES_DISCOVERED', candidates: fromSitemap, reason: null };
+  }
+
+  /**
+   * ABS-27 — descoberta via sitemap público do fornecedor. Segue sitemapindex
+   * a sub-sitemaps (teto MAX_SUB_SITEMAPS); todos os fetches passam pela
+   * capability governada e as URLs pelo `filterDiscoveredSources`.
+   */
+  async function discoverViaSitemap({ officialUrl, declaredUrls = [], limit = MAX_DISCOVERED_SOURCES }) {
+    let origin;
+    try {
+      origin = new URL(String(officialUrl)).origin;
+    } catch (_) {
+      return [];
+    }
+    const fetchXml = async (url) => {
+      const fetched = await callCapability('research.fetch', { url });
+      const httpStatus = Number(fetched.output?.httpStatus);
+      const content = typeof fetched.output?.content === 'string' ? fetched.output.content : '';
+      if (!Number.isFinite(httpStatus) || httpStatus >= 400 || content === '') return '';
+      return content;
+    };
+
+    const root = parseSitemapLocations(await fetchXml(`${origin}/sitemap.xml`));
+    let pageUrls = root.pageUrls;
+    if (pageUrls.length === 0 && root.indexUrls.length > 0) {
+      for (const subUrl of root.indexUrls.slice(0, MAX_SUB_SITEMAPS)) {
+        // Sub-sitemap TEM que ser do mesmo domínio — um índice não pode puxar
+        // conteúdo de outro fornecedor para dentro da amostra.
+        if (registrableDomain(subUrl) !== registrableDomain(officialUrl)) continue;
+        pageUrls = pageUrls.concat(parseSitemapLocations(await fetchXml(subUrl)).pageUrls);
+      }
+    }
+    if (pageUrls.length === 0) return [];
+    return filterDiscoveredSources({
+      candidates: pageUrls.map((url) => ({ url, title: url })),
+      officialUrl,
+      declaredUrls,
+      limit,
+    }).map((candidate) => ({ ...candidate, via: 'sitemap-discovery' }));
   }
 
   /**

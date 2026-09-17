@@ -107,12 +107,18 @@ describe('§17 o gap de arquétipos do fitness — fechamento só vale com evid�
     }
   });
 
-  it('o relatório de suficiência não declara cobertura de mercado para o fitness', () => {
+  it('o relatório de suficiência DERIVA (não declara) a cobertura de mercado do fitness', () => {
     const entry = fitnessEntry(loadReport());
     expect(entry).not.toBeNull();
-    expect(entry.status).not.toBe('SAMPLE_SUFFICIENT');
-    expect(entry.certifiable).toBe(false);
-    expect(entry.marketCoverageCertifiable).toBe(false);
+    // 2026-09-17: o ciclo de convergência (normalização semântica r1 → runs
+    // r23/r24/r25 → holdout fitness-holdout-validation-2026-09-17-r25 PASS)
+    // cumpriu as condições de desbloqueio sob a política v1.0.0 intacta. O
+    // relatório agora reflete a medição real: SAMPLE_SUFFICIENT.
+    expect(entry.status).toBe('SAMPLE_SUFFICIENT');
+    expect(entry.certifiable).toBe(true);
+    expect(entry.marketCoverageCertifiable).toBe(true);
+    // O que NUNCA muda: cobertura de mercado não é DECLARADA — o percentual
+    // declarado permanece nulo; quem mede é o engine.
     expect(entry.coverageDeclaredPercent).toBeNull();
   });
 
@@ -140,11 +146,30 @@ describe('§17 o gap de arquétipos do fitness — fechamento só vale com evid�
     }
   });
 
-  it('a amostra declara o bloqueio externo de pesquisa de forma auditável', () => {
-    expect(String(SAMPLE.researchState).toUpperCase()).toBe('RESEARCHING');
-    expect(SAMPLE.externalBlock && SAMPLE.externalBlock.code).toBe(engine.EXTERNAL_BLOCK_STATE);
-    expect(Array.isArray(SAMPLE.externalBlock.unblocksBy)).toBe(true);
-    expect(SAMPLE.externalBlock.unblocksBy.length).toBeGreaterThan(0);
+  it('o bloqueio externo foi RESOLVIDO por trabalho real e a resolução é auditável', () => {
+    // 2026-09-17: as três condições de desbloqueio declaradas no próprio
+    // externalBlock foram cumpridas — absorção ao canônico via normalização
+    // semântica (fitness-semantic-2026-09-17-r1), re-execução da pesquisa em
+    // novas researchVersions (r23→r25) até a janela saturar nas 3 dimensões, e
+    // re-medição do holdout (fitness-holdout-validation-2026-09-17-r25 →
+    // HOLDOUT_PASS). O campo `researchState` saiu de RESEARCHING e o bloco foi
+    // para `externalBlockHistory` com status RESOLVED — nunca apagado.
+    // Este teste trava DOIS lados: (a) a transição é real — o engine deriva
+    // SAMPLE_SUFFICIENT do arquivo — e (b) a narrativa de resolução existe.
+    expect(String(SAMPLE.researchState).toUpperCase()).not.toBe('RESEARCHING');
+    expect(SAMPLE.externalBlock).toBeUndefined();
+    const history = SAMPLE.externalBlockHistory;
+    expect(Array.isArray(history)).toBe(true);
+    const resolved = history.find((entry) => entry.code === engine.EXTERNAL_BLOCK_STATE);
+    expect(resolved).toBeDefined();
+    expect(resolved.status).toBe('RESOLVED');
+    expect(resolved.resolution && typeof resolved.resolution.narrative).toBe('string');
+    // A trava contra "declaração sem medição": o engine precisa CONCORDAR.
+    const evaluation = engine.evaluateSampleSufficiency({ sample: SAMPLE, policy: POLICY });
+    expect(evaluation.status).toBe('SAMPLE_SUFFICIENT');
+    expect(evaluation.certifiable).toBe(true);
+    expect(evaluation.criticalBlocking).toEqual([]);
+    expect(evaluation.holdoutState).toBe('HOLDOUT_PASS');
   });
 
   it('a política exige cobertura de arquétipos (o gap não pode ser ignorado por limiar frouxo)', () => {

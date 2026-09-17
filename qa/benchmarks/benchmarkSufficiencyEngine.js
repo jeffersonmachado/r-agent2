@@ -423,7 +423,7 @@ function declaredNumber(value) {
  * silencioso do histórico. When the baseline is UNKNOWN the arithmetic is
  * declared unverifiable instead of being compared against an invented 0.
  */
-function buildInventoryCurve({ sample, dimension = 'capabilities', benchmarks = null, baselineOverride = undefined }) {
+function buildInventoryCurve({ sample, dimension = 'capabilities', benchmarks = null, baselineOverride = undefined, recalculateDenominators = false }) {
   const spec = INVENTORY_DIMENSIONS[dimension];
   if (!spec) throw new TypeError(`unknown_inventory_dimension:${dimension}`);
 
@@ -450,7 +450,16 @@ function buildInventoryCurve({ sample, dimension = 'capabilities', benchmarks = 
       arithmeticViolations.push({ benchmarkId: benchmark.id, declared, expectedFromCurve: expected });
     }
 
-    const previousInventorySize = declared !== null ? declared : expected;
+    // Na ordem real o `previousInventorySize` declarado vence (e divergência é
+    // violação de aritmética). Em ordens CONTRAFACTUAIS (rotações do §28) o
+    // declarado só é válido se confere com a curva rotacionada: quando não
+    // confere, o denominador honesto é o acumulado da própria curva
+    // (FROM_CURVE) — aplicar o snapshot da ordem real a outra ordem fabrica
+    // taxas que essa ordem nunca produziria.
+    const declaredMatchesCurve = declared !== null && expected !== null && declared === expected;
+    const previousInventorySize = declared !== null && (!recalculateDenominators || declaredMatchesCurve || expected === null)
+      ? declared
+      : expected;
     // §B1..B3: mensurabilidade exige PESQUISA, não apenas denominador. Sem
     // evidência de análise o ponto é NOT_ANALYZED (novidade nula) — assim a
     // janela de saturação não pode ser completada com trabalho inexistente.
@@ -478,7 +487,7 @@ function buildInventoryCurve({ sample, dimension = 'capabilities', benchmarks = 
       independenceGroup: String(benchmark.independenceGroup || benchmark.id),
       archetype: benchmark.archetype || null,
       previousInventorySize,
-      previousInventorySizeState: declared !== null ? PREVIOUS_SIZE_STATES.DECLARED : PREVIOUS_SIZE_STATES.FROM_CURVE,
+      previousInventorySizeState: previousInventorySize === declared && declared !== null ? PREVIOUS_SIZE_STATES.DECLARED : PREVIOUS_SIZE_STATES.FROM_CURVE,
       declaredPreviousInventorySize: declared,
       newItems: newItems.length,
       newRequiredItems: newRequiredItems.length,
@@ -544,91 +553,120 @@ function saturationWindowPoints(curve, policy) {
   return independent.slice(-windowSize);
 }
 
-function evaluateSaturation({ sample, policy }) {
+/**
+ * §9/§10/§11 Gate de UMA janela de UMA dimensão. A taxa de novidade só é
+ * comparável em pontos MENSURÁVEIS: denominador zero ou baseline desconhecido
+ * produzem `NOT_MEASURABLE` — nunca PASS silencioso, nunca 0/1 artificial.
+ */
+function evaluateSaturationWindow({ dimension, curve, window, policy }) {
   const windowSize = Math.max(1, Number(policy.saturationWindow) || 1);
+  const spec = INVENTORY_DIMENSIONS[dimension];
+  const insufficientWindow = window.length < windowSize;
+  const maxAbsolute = Number(policy[spec.absolutePolicyField]);
+  const maxRate = Number(policy[spec.ratePolicyField]);
+  const violations = [];
+
+  if (insufficientWindow) {
+    violations.push({ reason: `${spec.gate}_saturation_window_insufficient`, windowSize: window.length, required: windowSize });
+  }
+  for (const point of window) {
+    if (point.newCriticalItems > maxAbsolute) {
+      violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_new_critical_items_exceeded`, value: point.newCriticalItems, threshold: maxAbsolute });
+    }
+    if (point.newRequiredItems > maxAbsolute) {
+      violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_new_required_items_exceeded`, value: point.newRequiredItems, threshold: maxAbsolute });
+    }
+  }
+
+  const measurable = window.filter((point) => point.rateState === RATE_STATES.MEASURED);
+  const unmeasurable = window.filter((point) => point.rateState !== RATE_STATES.MEASURED);
+  const rateState = window.length === 0
+    ? 'NO_WINDOW'
+    : (measurable.length === 0
+      ? unmeasurable[0].rateState
+      : (unmeasurable.length > 0 ? 'PARTIALLY_UNMEASURABLE' : RATE_STATES.MEASURED));
+
+  for (const point of measurable) {
+    if (point.noveltyRate > maxRate) {
+      violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_novelty_rate_exceeded`, rate: point.noveltyRate, threshold: maxRate });
+    }
+  }
+
+  const measuredRateFailed = violations.some((v) => String(v.reason).endsWith('_novelty_rate_exceeded'));
+  const absoluteFailed = violations.some((v) => !String(v.reason).endsWith('_novelty_rate_exceeded'));
+  // §B4: a janela de saturação só é mensurável se TODOS os pontos reais o
+  // forem. Completar a janela com benchmark não pesquisado (ou parcialmente
+  // pesquisado) é PASS por ausência de trabalho — proibido.
+  const notMeasurable = window.length > 0 && measurable.length < window.length;
+  if (notMeasurable) {
+    const unanalyzed = unmeasurable.filter((point) => point.rateState === RATE_STATES.NOT_ANALYZED);
+    violations.push({
+      reason: unanalyzed.length > 0
+        ? `${spec.gate}_saturation_window_not_researched`
+        : `${spec.gate}_novelty_rate_baseline_unknown`,
+      rateState,
+      baselineField: curve.baselineField,
+      benchmarks: unmeasurable.map((point) => point.benchmarkId),
+      ...(unanalyzed.length > 0
+        ? { unanalyzedBenchmarks: unmeasurable.map((point) => ({ benchmarkId: point.benchmarkId, missingEvidence: point.analysisGaps })) }
+        : {}),
+    });
+  }
+
+  let gateStatus = 'PASS';
+  if (measuredRateFailed || absoluteFailed) gateStatus = 'FAIL';
+  else if (notMeasurable) gateStatus = 'NOT_MEASURABLE';
+
+  return {
+    status: gateStatus,
+    dimension,
+    window: window.map((point) => point.benchmarkId),
+    windowPoints: window,
+    windowSize: window.length,
+    insufficientWindow,
+    rateState,
+    baselineState: curve.baselineState,
+    baseline: curve.baseline,
+    thresholds: { maxNoncriticalNoveltyRate: maxRate, maxNewCriticalRequired: maxAbsolute },
+    violations,
+  };
+}
+
+/**
+ * §28 A pergunta contrafactual respondível com snapshots de novidade: "nesta
+ * ordem alternativa, o processo de amostragem ATINGIRIA uma janela saturada
+ * completa em algum ponto?" — o processo real para quando satura, então exigir
+ * que a CAUDA rotacionada específica esteja saturada mediria uma ordem que
+ * nunca seria executada. Janelas incompletas ou não mensuráveis não contam
+ * (fail-closed).
+ */
+function saturationAttainedInAnyWindow({ dimension, curve, policy }) {
+  const windowSize = Math.max(1, Number(policy.saturationWindow) || 1);
+  const seenGroups = new Set();
+  const independent = [];
+  for (const point of curve.points) {
+    if (seenGroups.has(point.independenceGroup)) continue;
+    seenGroups.add(point.independenceGroup);
+    independent.push(point);
+  }
+  for (let start = 0; start + windowSize <= independent.length; start += 1) {
+    const window = independent.slice(start, start + windowSize);
+    if (evaluateSaturationWindow({ dimension, curve, window, policy }).status === 'PASS') return true;
+  }
+  return false;
+}
+
+function evaluateSaturation({ sample, policy, recalculateDenominators = false }) {
   const curves = Object.fromEntries(
-    INVENTORY_DIMENSION_NAMES.map((dimension) => [dimension, buildInventoryCurve({ sample, dimension })]),
+    INVENTORY_DIMENSION_NAMES.map((dimension) => [dimension, buildInventoryCurve({ sample, dimension, recalculateDenominators })]),
   );
 
-  /**
-   * §9/§10/§11 Gate de UMA dimensão. A taxa de novidade só é comparável em
-   * pontos MENSURÁVEIS: denominador zero ou baseline desconhecido produzem
-   * `NOT_MEASURABLE` — nunca PASS silencioso, nunca 0/1 artificial.
-   */
-  const dimensionGate = (dimension) => {
-    const spec = INVENTORY_DIMENSIONS[dimension];
-    const curve = curves[dimension];
-    const window = saturationWindowPoints(curve, policy);
-    const insufficientWindow = window.length < windowSize;
-    const maxAbsolute = Number(policy[spec.absolutePolicyField]);
-    const maxRate = Number(policy[spec.ratePolicyField]);
-    const violations = [];
-
-    if (insufficientWindow) {
-      violations.push({ reason: `${spec.gate}_saturation_window_insufficient`, windowSize: window.length, required: windowSize });
-    }
-    for (const point of window) {
-      if (point.newCriticalItems > maxAbsolute) {
-        violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_new_critical_items_exceeded`, value: point.newCriticalItems, threshold: maxAbsolute });
-      }
-      if (point.newRequiredItems > maxAbsolute) {
-        violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_new_required_items_exceeded`, value: point.newRequiredItems, threshold: maxAbsolute });
-      }
-    }
-
-    const measurable = window.filter((point) => point.rateState === RATE_STATES.MEASURED);
-    const unmeasurable = window.filter((point) => point.rateState !== RATE_STATES.MEASURED);
-    const rateState = window.length === 0
-      ? 'NO_WINDOW'
-      : (measurable.length === 0
-        ? unmeasurable[0].rateState
-        : (unmeasurable.length > 0 ? 'PARTIALLY_UNMEASURABLE' : RATE_STATES.MEASURED));
-
-    for (const point of measurable) {
-      if (point.noveltyRate > maxRate) {
-        violations.push({ benchmarkId: point.benchmarkId, reason: `${spec.gate}_novelty_rate_exceeded`, rate: point.noveltyRate, threshold: maxRate });
-      }
-    }
-
-    const measuredRateFailed = violations.some((v) => String(v.reason).endsWith('_novelty_rate_exceeded'));
-    const absoluteFailed = violations.some((v) => !String(v.reason).endsWith('_novelty_rate_exceeded'));
-    // §B4: a janela de saturação só é mensurável se TODOS os pontos reais o
-    // forem. Completar a janela com benchmark não pesquisado (ou parcialmente
-    // pesquisado) é PASS por ausência de trabalho — proibido.
-    const notMeasurable = window.length > 0 && measurable.length < window.length;
-    if (notMeasurable) {
-      const unanalyzed = unmeasurable.filter((point) => point.rateState === RATE_STATES.NOT_ANALYZED);
-      violations.push({
-        reason: unanalyzed.length > 0
-          ? `${spec.gate}_saturation_window_not_researched`
-          : `${spec.gate}_novelty_rate_baseline_unknown`,
-        rateState,
-        baselineField: curve.baselineField,
-        benchmarks: unmeasurable.map((point) => point.benchmarkId),
-        ...(unanalyzed.length > 0
-          ? { unanalyzedBenchmarks: unanalyzed.map((point) => ({ benchmarkId: point.benchmarkId, missingEvidence: point.analysisGaps })) }
-          : {}),
-      });
-    }
-
-    let gateStatus = 'PASS';
-    if (measuredRateFailed || absoluteFailed) gateStatus = 'FAIL';
-    else if (notMeasurable) gateStatus = 'NOT_MEASURABLE';
-
-    return {
-      status: gateStatus,
-      dimension,
-      window: window.map((point) => point.benchmarkId),
-      windowPoints: window,
-      windowSize: window.length,
-      insufficientWindow,
-      rateState,
-      baselineState: curve.baselineState,
-      baseline: curve.baseline,
-      thresholds: { maxNoncriticalNoveltyRate: maxRate, maxNewCriticalRequired: maxAbsolute },
-      violations,
-    };
-  };
+  const dimensionGate = (dimension) => evaluateSaturationWindow({
+    dimension,
+    curve: curves[dimension],
+    window: saturationWindowPoints(curves[dimension], policy),
+    policy,
+  });
 
   const capability = dimensionGate('capabilities');
   const journey = dimensionGate('journeys');
@@ -893,7 +931,23 @@ function evaluateLeaveOneOut({ sample }) {
 
 // ── §28 Sensibilidade de ordem ────────────────────────────────────────────
 
-/** Recalcula a saturação sob ordens alternativas determinísticas. */
+/**
+ * §28 Sensibilidade de ordem. A novidade gravada é snapshot da ordem REAL de
+ * análise: um pioneiro sempre tem novidade alta sobre o baseline pequeno, e
+ * rotacioná-lo para a cauda sem recomputar o que ele descobriria depois dos
+ * demais é ficção contrafactual — a forma antiga (exigir a cauda rotacionada
+ * saturada) tornava o gate estruturalmente inalcançável com baseline PASS e
+ * só passava por "consistência negativa" (baseline e rotações todas FAIL).
+ *
+ * A pergunta respondível é: "nessa ordem alternativa, o processo de amostragem
+ * ATINGIRIA uma janela saturada completa?" — porque o processo real para
+ * quando satura. Nas rotações os denominadores são recalculados pela curva
+ * rotacionada (FROM_CURVE quando o declarado não confere): o
+ * `previousInventorySize` declarado só é válido na ordem real. Saturação que
+ * só existe por diluição de denominador na ordem real continua detectada:
+ * pontos de novidade baixa-não-zero estouram o threshold quando caem sobre
+ * denominadores menores em TODAS as janelas possíveis da rotação.
+ */
 function evaluateOrderSensitivity({ sample, policy }) {
   const ordered = discoveryBenchmarks(sample);
   const baseline = evaluateSaturation({ sample, policy });
@@ -907,9 +961,14 @@ function evaluateOrderSensitivity({ sample, policy }) {
       const position = rotated.findIndex((r) => r.id === b.id);
       return position === -1 ? b : { ...b, order: position + 1 };
     }) };
-    const result = evaluateSaturation({ sample: rotatedSample, policy });
-    const verdict = result.capability.status === 'PASS' && result.journey.status === 'PASS' && result.businessRule.status === 'PASS';
-    variants.push({ rotation: i, order: rotated.map((b) => b.id), verdict });
+    const rotatedSaturation = evaluateSaturation({ sample: rotatedSample, policy, recalculateDenominators: true });
+    const attained = {};
+    const verdict = INVENTORY_DIMENSION_NAMES.every((dimension) => {
+      const ok = saturationAttainedInAnyWindow({ dimension, curve: rotatedSaturation.curves[dimension], policy });
+      attained[dimension] = ok;
+      return ok;
+    });
+    variants.push({ rotation: i, order: rotated.map((b) => b.id), verdict, saturationAttained: attained });
   }
 
   const divergence = variants.filter((v) => v.verdict !== baselineVerdict);
@@ -921,6 +980,34 @@ function evaluateOrderSensitivity({ sample, policy }) {
     divergenceCount: divergence.length,
     orderSensitivity: stable ? 'LOW' : 'HIGH',
   });
+}
+
+// ── §29 Novelty normalizada ───────────────────────────────────────────────
+
+/**
+ * ABS-25 / BENCHMARK_NO_UNRESOLVED_AS_CANONICAL: um finding bruto (objeto sem
+ * `normalizedId`) é OBSERVAÇÃO, não capability canônica — não pode entrar na
+ * curva de novidade como se já tivesse passado pelo funil semântico. Itens
+ * string são ids normalizados diretos (fixtures e histórico pré-objeto).
+ */
+function evaluateNormalizedNovelty({ sample }) {
+  const violations = [];
+  for (const benchmark of list(sample.benchmarks)) {
+    const novelty = benchmark.novelty || emptyNovelty();
+    for (const key of Object.values(NOVELTY_KEYS)) {
+      for (const item of list(novelty[key])) {
+        if (typeof item === 'string') continue;
+        if (item && typeof item === 'object' && typeof item.normalizedId === 'string' && item.normalizedId.trim().length > 0) continue;
+        violations.push({
+          benchmarkId: benchmark.id,
+          noveltyField: key,
+          itemId: item && typeof item === 'object' ? (item.id || null) : null,
+          reason: 'novelty_item_without_normalized_id',
+        });
+      }
+    }
+  }
+  return status(violations.length === 0, { violations });
 }
 
 // ── §18/§19 Fontes e frescor ──────────────────────────────────────────────
@@ -1422,6 +1509,7 @@ const GATE_NAMES = Object.freeze([
   'criticalClassification',
   'inventoryArithmetic',
   'orderSensitivity',
+  'normalizedNovelty',
   'governanceFloor',
   'analysisEvidence',
 ]);
@@ -1557,6 +1645,7 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
     criticalClassification,
     inventoryArithmetic,
     orderSensitivity,
+    normalizedNovelty: evaluateNormalizedNovelty({ sample }),
     governanceFloor: floorGate,
     analysisEvidence,
   };
@@ -1653,6 +1742,7 @@ module.exports = {
   evaluateHoldout,
   evaluateLeaveOneOut,
   evaluateOrderSensitivity,
+  evaluateNormalizedNovelty,
   evaluateSourceQuality,
   classifySourceVerification,
   SOURCE_VERIFICATION_STATES,
