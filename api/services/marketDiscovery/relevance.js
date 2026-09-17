@@ -262,8 +262,17 @@ function decodeTitleEntities(text) {
 }
 
 /**
+ * Claim de RANKING numerado ("#1 Fitness Software", "Top 10 Apps", "The #1 …")
+ * nunca é marca — é marketing. (Run real r17, 2026-09-16: o <title> do
+ * goteamup.com é `#1 Fitness Management Software | TeamUp`; a marca é o
+ * SEGUNDO segmento.) Apenas formato de ranking numerado — marca legítima com
+ * número ("Studio 57") não cai.
+ */
+const RANKING_CLAIM_SEGMENT = /^(the\s+)?#\s*\d+|^top\s+\d+/i;
+
+/**
  * Nome do fornecedor extraído do `<title>` da homepage: o primeiro segmento
- * antes do separador típico ("Vantage Fit: Employee Wellness Platform" →
+ * que NÃO é claim de ranking ("Vantage Fit: Employee Wellness Platform" →
  * "Vantage Fit"). Determinístico, extraído do documento do PRÓPRIO fornecedor
  * — nunca inventado. Sem título utilizável, null (o chamador decide o
  * fallback; o título de um listicle/blog NÃO é nome de fornecedor).
@@ -282,8 +291,9 @@ function vendorNameFromHomepageTitle(html) {
   if (!match) return null;
   const title = decodeTitleEntities(match[1].replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
   if (!title) return null;
-  const segment = title.split(TITLE_SEGMENT_SEPARATOR)[0].trim();
-  return segment.length > 0 && segment.length <= 256 ? segment : null;
+  const segments = title.split(TITLE_SEGMENT_SEPARATOR).map((s) => s.trim());
+  const segment = segments.find((s) => s.length > 0 && !RANKING_CLAIM_SEGMENT.test(s));
+  return segment && segment.length <= 256 ? segment : null;
 }
 
 /**

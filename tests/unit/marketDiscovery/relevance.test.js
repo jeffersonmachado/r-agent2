@@ -235,6 +235,20 @@ describe('qualidade do registro de candidato (run real r8, 2026-09-16)', () => {
     expect(vendorNameFromHomepageTitle(`<title>${'A'.repeat(256)}</title>`)).toBe('A'.repeat(256));
   });
 
+  test('ABS-19 (run real r17): claim de ranking ("#1 …") NUNCA é marca — marca é o próximo segmento', () => {
+    // goteamup.com: <title>#1 Fitness Management Software | TeamUp</title> —
+    // o primeiro segmento é claim de marketing numerado, não nome; a marca
+    // (TeamUp) é o segmento seguinte. Verificado no documento real do
+    // fornecedor em 2026-09-17.
+    expect(vendorNameFromHomepageTitle('<title>#1 Fitness Management Software | TeamUp</title>')).toBe('TeamUp');
+    expect(vendorNameFromHomepageTitle('<title>Top 10 Gym Software — GymNovo</title>')).toBe('GymNovo');
+    expect(vendorNameFromHomepageTitle('<title>The #1 Pilates Software: Global Pilates</title>')).toBe('Global Pilates');
+    // Todos os segmentos são claim de ranking: sem marca, null.
+    expect(vendorNameFromHomepageTitle('<title>#1 Software | Top 10 Apps</title>')).toBe(null);
+    // Claim só é claim no formato de RANKING: marca legítima com número não cai.
+    expect(vendorNameFromHomepageTitle('<title>Studio 57 | Pilates</title>')).toBe('Studio 57');
+  });
+
   test('nameFromDomain é o fallback determinístico (rótulo do domínio, não invenção)', () => {
     expect(nameFromDomain('vantagefit.io')).toBe('Vantagefit');
     expect(nameFromDomain('woliba.io')).toBe('Woliba');
