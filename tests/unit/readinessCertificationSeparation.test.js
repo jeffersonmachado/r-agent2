@@ -50,8 +50,13 @@ describe('§55 o artefato canônico publica os cinco estados SEPARADOS', () => {
     expect(corePlatformReadiness.state).toBe('CORE_GO');
     expect(verticalMarketCertification.state).toBe('VERTICAL_MARKET_NOT_CERTIFIED');
     // Não é contradição: são estados independentes, e é exatamente isso que o
-    // relatório precisa mostrar.
-    expect(verticalMarketCertification.certifiedVerticals).toBe(0);
+    // relatório precisa mostrar. A contagem de certificadas não é pinada em
+    // zero: é EXATAMENTE a derivada do relatório de suficiência (mesma trava
+    // de ciclo dos demais testes deste arquivo).
+    const reportSufficient = BENCHMARK.verticals.filter((v) => v.status === 'SAMPLE_SUFFICIENT').length;
+    if (Date.parse(READINESS.generatedAt) >= Date.parse(BENCHMARK.generatedAt)) {
+      expect(verticalMarketCertification.certifiedVerticals).toBe(reportSufficient);
+    }
   });
 
   it('nenhum campo de certificação é um "100%" sem escopo', () => {

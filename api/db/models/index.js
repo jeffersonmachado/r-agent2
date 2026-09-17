@@ -48,6 +48,8 @@ const getBenchmarkResearchSource = require('./BenchmarkResearchSource');
 const getBenchmarkResearchEvidence = require('./BenchmarkResearchEvidence');
 const getBenchmarkResearchFinding = require('./BenchmarkResearchFinding');
 const getBenchmarkSourceInspection = require('./BenchmarkSourceInspection');
+// Propostas de mudança do sample de benchmarks (aprovação humana obrigatória).
+const getBenchmarkResearchChangeProposal = require('./BenchmarkResearchChangeProposal');
 // Descoberta autônoma de mercado (camada anterior ao Discovery Set de benchmark).
 const getMarketDiscoveryRun = require('./MarketDiscoveryRun');
 const getMarketArchetype = require('./MarketArchetype');
@@ -247,6 +249,7 @@ const BenchmarkResearchSource = () => getBenchmarkResearchSource();
 const BenchmarkResearchEvidence = () => getBenchmarkResearchEvidence();
 const BenchmarkResearchFinding = () => getBenchmarkResearchFinding();
 const BenchmarkSourceInspection = () => getBenchmarkSourceInspection();
+const BenchmarkResearchChangeProposal = () => getBenchmarkResearchChangeProposal();
 // Autoridade persistente da descoberta de mercado (nunca Map em memória).
 const MarketDiscoveryRun = () => getMarketDiscoveryRun();
 const MarketArchetype = () => getMarketArchetype();
@@ -903,6 +906,7 @@ module.exports = {
   BenchmarkResearchEvidence,
   BenchmarkResearchFinding,
   BenchmarkSourceInspection,
+  BenchmarkResearchChangeProposal,
   MarketDiscoveryRun,
   MarketArchetype,
   MarketCandidate,
@@ -1099,6 +1103,7 @@ module.exports = {
   getBenchmarkResearchEvidence,
   getBenchmarkResearchFinding,
   getBenchmarkSourceInspection,
+  getBenchmarkResearchChangeProposal,
   getMarketDiscoveryRun,
   getMarketArchetype,
   getMarketCandidate,

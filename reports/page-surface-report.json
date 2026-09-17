@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-13T12:05:09.399Z",
-  "commit": "403e4e1186cd08f1aacb58247a3d3c5025093f04",
+  "generatedAt": "2026-09-17T20:20:20.818Z",
+  "commit": "268cff18fc645cb91492b0881d2e2647398cc795",
   "baseUrl": "http://localhost:5173",
   "sessions": {
     "development": true,
     "production": true
   },
   "totals": {
-    "items": 141,
+    "items": 142,
     "byState": {
-      "VALIDATED": 141
+      "VALIDATED": 142
     }
   },
   "status": "PASS",
@@ -734,7 +734,7 @@
         {
           "name": "pageLoads",
           "passed": true,
-          "detail": "página carregou são para papel PRODUCTION | NOT_APPLICABLE — isenção justificada: Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado. (aprovada por jeffersonmachado em 2026-07-28)",
+          "detail": "falha de carregamento para papel PRODUCTION: console.error=100 pageerror=0 | NOT_APPLICABLE — isenção justificada: Os console.errors são ruído interno da biblioteca bpmn-js 18 (deprecations 'keyboard.bindTo' e acesso 'di' via businessObject), logados pela própria lib em qualquer inicialização do modeler — sem pageerror e com a página renderizando normalmente. Não há defeito da página; eventual upgrade/migração da config da lib é trabalho separado. (aprovada por jeffersonmachado em 2026-07-28)",
           "notApplicable": true
         }
       ],
@@ -759,8 +759,13 @@
           "rendered": true,
           "loginSurface": false,
           "denied": false,
-          "consoleErrors": 0,
-          "pageErrors": 0
+          "consoleErrors": 100,
+          "pageErrors": 0,
+          "errorSamples": [
+            "unsupported configuration <keyboard.bindTo> Error: Keyboard binding is now implicit; explicit binding to an element got removed. For more information, see https://github.com/bpmn-io/diagram-js/issues/",
+            "unsupported configuration <keyboard.bindTo> Error: Keyboard binding is now implicit; explicit binding to an element got removed. For more information, see https://github.com/bpmn-io/diagram-js/issues/",
+            "unhandled error in event listener Error: Tried to access di from the businessObject. The di is available through the diagram element only. For more information, see https://github.com/bpmn-io/bpmn-js/"
+          ]
         },
         "p3": "skipped"
       }
@@ -1731,6 +1736,53 @@
     },
     {
       "id": "page:/dev-dashboard",
+      "state": "VALIDATED",
+      "assertions": [
+        {
+          "name": "authEnforced",
+          "passed": true,
+          "detail": "anônimo barrado (superfície de login exibida)"
+        },
+        {
+          "name": "classificationEnforced",
+          "passed": true,
+          "detail": "papel PRODUCTION bloqueado em página DEVELOPMENT"
+        },
+        {
+          "name": "pageLoads",
+          "passed": true,
+          "detail": "página carregou são para super_admin"
+        }
+      ],
+      "probes": {
+        "p1": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": true,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p2": {
+          "docStatus": 200,
+          "rendered": false,
+          "loginSurface": false,
+          "denied": true,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        },
+        "p3": {
+          "docStatus": 200,
+          "rendered": true,
+          "loginSurface": false,
+          "denied": false,
+          "consoleErrors": 0,
+          "pageErrors": 0
+        }
+      }
+    },
+    {
+      "id": "page:/dev/benchmark-research",
       "state": "VALIDATED",
       "assertions": [
         {
@@ -5253,9 +5305,5 @@
         "p3": "skipped"
       }
     }
-  ],
-  "runId": "rap-governed-20260917172555820-614f467c",
-  "sourceFingerprint": "995558386fad18ea92980d5ac36313a9964144b13e3d4c2e555f408d5575d704",
-  "artifactType": "page-surface-report",
-  "artifactVersion": "1.0.0"
+  ]
 }

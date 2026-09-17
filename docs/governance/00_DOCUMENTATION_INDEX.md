@@ -20,6 +20,9 @@
 - docs/O_QUE_FALTA_DIVERGENCIAS.md
 - docs/O_QUE_FALTA_UI_CHECKLIST.md
 
+## Engineering process docs
+- docs/benchmark/change-proposals.md (propostas de mudança da pesquisa de benchmarks: aprovação humana obrigatória antes de escrever a amostra)
+
 ## Generated artifacts
 - governance/final-readiness-report.json
 - dev/platform-readiness/latest.json

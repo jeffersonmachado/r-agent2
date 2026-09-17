@@ -386,6 +386,7 @@ export const navigationMenu = [
               { id: 'rpa-test', label: 'Teste RPA', path: '/dev/rpa-test', permission: { resource: 'flows', action: 'read' }, roles: ['super_admin'] },
               { id: 'rpa-replays', label: 'Replays RPA', path: '/rpa-replays', permission: { resource: 'reports', action: 'read' }, classifications: ['SUPPORT', 'DEVELOPMENT'] },
               { id: 'rpa-seeds', label: 'Seeds RPA', path: '/dev/rpa-seeds', permission: { resource: 'flows', action: 'read' }, roles: ['super_admin'] },
+              { id: 'dev-benchmark-research', label: 'Pesquisa de Benchmark', path: '/dev/benchmark-research', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
             ],
           },
         ],

@@ -63,6 +63,7 @@ Este repositório já contém documentação detalhada por área. Alguns pontos 
 - **Replay**: `COMO_USAR_REPLAY.md`
 - **Multi-tenant (arquitetura e contexto cognitivo)**: `TENANT_MULTI_TENANT_ARCHITECTURE.md`
 - **Motor de cobertura (inventário, grafo de rastreabilidade, evidências, gate GO/NO_GO, impacto)**: `qa/coverage-engine.md`
+- **Propostas de mudança da pesquisa de benchmarks (pesquisa propõe → aprovação humana com ressalvas → aplicação)**: `benchmark/change-proposals.md`
 - **RAG**:
   - `RAG_POR_TENANT.md`
   - `COMO_TESTAR_RAG.md`

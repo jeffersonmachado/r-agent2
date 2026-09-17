@@ -141,6 +141,14 @@ describe('B1/B2 — capability explícita e chamador de produção', () => {
       '/api/benchmark-research/runs/:vertical',
       '/api/benchmark-research/runs/:vertical/execute',
       '/api/benchmark-research/runs/:vertical/sample-patch',
+      // Fluxo de PROPOSTAS (2026-09-17): pesquisa propõe, humano aprova.
+      '/api/benchmark-research/proposals',
+      '/api/benchmark-research/proposals/:id',
+      '/api/benchmark-research/runs/:vertical/proposals',
+      '/api/benchmark-research/proposals/:id/review',
+      '/api/benchmark-research/proposals/:id/approve',
+      '/api/benchmark-research/proposals/:id/reject',
+      '/api/benchmark-research/proposals/:id/apply',
     ]));
   });
 });
@@ -260,14 +268,17 @@ describe('B1/B2 — a rota é o chamador REAL (HTTP de verdade)', () => {
     });
   });
 
-  test('o sample versionado NÃO é tocado quando não há análise (patch recusado)', async () => {
+  test('o sample versionado NUNCA é tocado sem proposta aprovada (approval_required)', async () => {
     const { app } = buildApp({ classification: 'DEVELOPMENT' });
     await withServer(app, async (base) => {
-      // Sem run aberto: o patch não pode existir.
+      // Política 2026-09-17: a aplicação DIRETA deixou de existir. Sem
+      // `proposalId` a rota responde `approval_required` e aponta o fluxo de
+      // proposta — mesmo com run aberto e análise pronta, nada é escrito.
       const response = await fetch(`${base}/api/benchmark-research/runs/${VERTICAL}/sample-patch`, { method: 'POST' });
       expect(response.status).toBe(400);
       const body = await response.json();
-      expect(body.error).toBe('research_discovery_set_not_registered');
+      expect(body.error).toBe('approval_required');
+      expect(body.message).toContain('/proposals');
     });
   });
 });

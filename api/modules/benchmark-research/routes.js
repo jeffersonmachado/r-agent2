@@ -21,7 +21,10 @@
  *     Nada é registrado e nenhum sample é tocado;
  *   - o DISCOVERY SET é pré-registrado por `POST /runs` (§5). `execute` recusa
  *     rodar sem ele;
- *   - a escrita no sample versionado exige tenant `system` e é transacional.
+ *   - a escrita no sample versionado NUNCA é direta: a pesquisa gera uma
+ *     PROPOSTA persistida (`POST /runs/:vertical/proposals`) com avaliação
+ *     documentada, que exige revisão (token HMAC de 30 min) e APROVAÇÃO humana
+ *     (com ressalvas) antes da aplicação — tudo sob tenant `system`.
  */
 
 const express = require('express');
@@ -36,10 +39,12 @@ const {
   buildResearchPrincipal,
 } = require('../../services/benchmark/benchmarkResearchSupervisor');
 const { canonicalResearchTenant, SEMANTIC_CODES } = require('../../services/benchmark/benchmarkResearchSemantics');
-const { applySamplePatch, SAMPLES_DIR } = require('../../services/benchmark/benchmarkSampleRegistry');
-const { evaluateSampleSufficiency } = require('../../../qa/benchmarks/benchmarkSufficiencyEngine');
+const { SAMPLES_DIR } = require('../../services/benchmark/benchmarkSampleRegistry');
 const { createNativeResearchProvider } = require('../../services/research/nativeResearchProvider');
-const policy = require('../../../config/benchmark-sufficiency-policy.json');
+const {
+  createBenchmarkChangeProposalService,
+  PROPOSAL_ERROR_CODES,
+} = require('../../services/benchmark/benchmarkChangeProposalService');
 
 /**
  * Provider NATIVO compartilhado do módulo (lazy): uma única instância preserva
@@ -187,6 +192,68 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
     deps.sendJson(res, status, { error: code, message: error.message });
   }
 
+  /**
+   * Códigos do fluxo de PROPOSTAS → status HTTP. A regra de ouro: pesquisa
+   * nunca escreve a amostra sem aprovação humana — `approval_required` é a
+   * resposta permanente para quem tentar o caminho antigo.
+   */
+  const PROPOSAL_ERROR_STATUS = Object.freeze({
+    [PROPOSAL_ERROR_CODES.NOT_FOUND]: 404,
+    [PROPOSAL_ERROR_CODES.INVALID_STATUS]: 409,
+    [PROPOSAL_ERROR_CODES.PATCH_TAMPERED]: 409,
+    [PROPOSAL_ERROR_CODES.SELF_APPROVAL]: 403,
+    [PROPOSAL_ERROR_CODES.TOKEN_REQUIRED]: 401,
+    [PROPOSAL_ERROR_CODES.TOKEN_INVALID]: 401,
+    [PROPOSAL_ERROR_CODES.TOKEN_EXPIRED]: 401,
+    [PROPOSAL_ERROR_CODES.TOKEN_REVIEWER_MISMATCH]: 401,
+    approval_required: 400,
+    [PROPOSAL_ERROR_CODES.REASON_REQUIRED]: 400,
+    [PROPOSAL_ERROR_CODES.RUN_MISMATCH]: 400,
+    [PROPOSAL_ERROR_CODES.ACTOR_REQUIRED]: 400,
+    [PROPOSAL_ERROR_CODES.SAMPLE_NOT_FOUND]: 404,
+  });
+
+  function sendProposalError(deps, res, error) {
+    const code = error?.code || 'benchmark_research_failed';
+    const status = PROPOSAL_ERROR_STATUS[code]
+      || (code === 'persistence_required' ? 503 : 400);
+    deps.sendJson(res, status, { error: code, message: error.message });
+  }
+
+  /** Ator humano autenticado (server-side; nunca do corpo da requisição). */
+  function actorFromContext(context) {
+    const agent = context.auth?.agent || {};
+    return agent.username || agent.id || agent.userId || null;
+  }
+
+  /**
+   * Serviço de propostas montado POR REQUISIÇÃO: o `buildPatch` é uma closure
+   * sobre o supervisor desta requisição (store/registry/providers injetados em
+   * teste, reais em produção) e o `logAction` liga no audit real do módulo.
+   */
+  function buildProposalService(deps, req, context) {
+    return createBenchmarkChangeProposalService({
+      buildPatch: async ({ vertical, priorSample }) => {
+        const { supervisor, store } = buildSupervisor(deps, req, context);
+        const run = typeof store.getRun === 'function'
+          ? await store.getRun({ tenantId: context.tenantId, vertical })
+          : null;
+        const patch = await supervisor.buildSamplePatch({
+          vertical,
+          inventoryVersion: priorSample?.inventoryVersion || null,
+          // Ciclo N+1: a novidade dos benchmarks do run é medida contra o
+          // canônico + o que o sample versionado já conhece.
+          priorSample,
+        });
+        return { patch, runId: run?.id || null };
+      },
+      logAction: typeof deps.logAction === 'function'
+        ? (event, details) => deps.logAction(req, event, details)
+        : null,
+      logger: deps.logger,
+    });
+  }
+
   // --- GET /api/benchmark-research/status ---------------------------------
   router.get('/api/benchmark-research/status', async (req, res) => {
     const deps = buildDeps(req, res);
@@ -321,7 +388,154 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
     }
   });
 
+  // --- GET /api/benchmark-research/proposals ------------------------------
+  router.get('/api/benchmark-research/proposals', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const context = authenticate(deps, req, res);
+    if (!context) return;
+    try {
+      const service = buildProposalService(deps, req, context);
+      const proposals = await service.listProposals({
+        vertical: req.query.vertical || null,
+        status: req.query.status || null,
+      });
+      deps.sendJson(res, 200, { proposals });
+    } catch (error) {
+      sendProposalError(deps, res, error);
+    }
+  });
+
+  // --- GET /api/benchmark-research/proposals/:id --------------------------
+  router.get('/api/benchmark-research/proposals/:id', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const context = authenticate(deps, req, res);
+    if (!context) return;
+    try {
+      const service = buildProposalService(deps, req, context);
+      const proposal = await service.getProposal(req.params.id);
+      if (!proposal) {
+        deps.sendJson(res, 404, { error: 'proposal_not_found', message: `proposta ${req.params.id} não encontrada` });
+        return;
+      }
+      deps.sendJson(res, 200, { proposal });
+    } catch (error) {
+      sendProposalError(deps, res, error);
+    }
+  });
+
+  // --- POST /api/benchmark-research/runs/:vertical/proposals ---------------
+  // Pesquisa NUNCA escreve a amostra: ela propõe. A proposta carrega o patch
+  // e a avaliação documentada (o que muda, prós, contras, riscos).
+  router.post('/api/benchmark-research/runs/:vertical/proposals', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const context = authenticate(deps, req, res);
+    if (!context) return;
+    if (!enforceSystemTenant(deps, res, context.tenantId)) return;
+    const vertical = String(req.params.vertical || '');
+    try {
+      const body = deps.hasJsonContentType(req) ? await deps.parseJsonBody(req) : {};
+      const service = buildProposalService(deps, req, context);
+      const result = await service.createProposal({
+        vertical,
+        runId: body?.runId || null,
+        actor: actorFromContext(context),
+      });
+      deps.sendJson(res, result.created ? 201 : 200, result);
+    } catch (error) {
+      sendProposalError(deps, res, error);
+    }
+  });
+
+  // --- POST /api/benchmark-research/proposals/:id/review -------------------
+  router.post('/api/benchmark-research/proposals/:id/review', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const context = authenticate(deps, req, res);
+    if (!context) return;
+    if (!enforceSystemTenant(deps, res, context.tenantId)) return;
+    try {
+      const service = buildProposalService(deps, req, context);
+      const review = await service.startReview({
+        proposalId: req.params.id,
+        actor: actorFromContext(context),
+      });
+      deps.sendJson(res, 200, review);
+    } catch (error) {
+      sendProposalError(deps, res, error);
+    }
+  });
+
+  // --- POST /api/benchmark-research/proposals/:id/approve ------------------
+  router.post('/api/benchmark-research/proposals/:id/approve', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const context = authenticate(deps, req, res);
+    if (!context) return;
+    if (!enforceSystemTenant(deps, res, context.tenantId)) return;
+    if (!deps.hasJsonContentType(req)) {
+      deps.badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await deps.parseJsonBody(req);
+      const service = buildProposalService(deps, req, context);
+      const result = await service.approveProposal({
+        proposalId: req.params.id,
+        actor: actorFromContext(context),
+        reviewToken: body?.reviewToken,
+        caveats: Array.isArray(body?.caveats) ? body.caveats : [],
+        reason: body?.reason || null,
+      });
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      sendProposalError(deps, res, error);
+    }
+  });
+
+  // --- POST /api/benchmark-research/proposals/:id/reject -------------------
+  router.post('/api/benchmark-research/proposals/:id/reject', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const context = authenticate(deps, req, res);
+    if (!context) return;
+    if (!enforceSystemTenant(deps, res, context.tenantId)) return;
+    if (!deps.hasJsonContentType(req)) {
+      deps.badRequest(res, 'Content-Type deve ser application/json');
+      return;
+    }
+    try {
+      const body = await deps.parseJsonBody(req);
+      const service = buildProposalService(deps, req, context);
+      const result = await service.rejectProposal({
+        proposalId: req.params.id,
+        actor: actorFromContext(context),
+        reason: body?.reason,
+      });
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      sendProposalError(deps, res, error);
+    }
+  });
+
+  // --- POST /api/benchmark-research/proposals/:id/apply --------------------
+  router.post('/api/benchmark-research/proposals/:id/apply', async (req, res) => {
+    const deps = buildDeps(req, res);
+    const context = authenticate(deps, req, res);
+    if (!context) return;
+    if (!enforceSystemTenant(deps, res, context.tenantId)) return;
+    try {
+      const service = buildProposalService(deps, req, context);
+      const result = await service.applyProposal({
+        proposalId: req.params.id,
+        actor: actorFromContext(context),
+      });
+      deps.sendJson(res, 200, result);
+    } catch (error) {
+      sendProposalError(deps, res, error);
+    }
+  });
+
   // --- POST /api/benchmark-research/runs/:vertical/sample-patch -----------
+  // Política (2026-09-17): a aplicação DIRETA deixou de existir. Esta rota só
+  // aplica uma PROPOSTA APROVADA (`proposalId` no corpo); sem ele, responde
+  // `approval_required` com o fluxo novo — pesquisa propõe, humano decide.
   router.post('/api/benchmark-research/runs/:vertical/sample-patch', async (req, res) => {
     const deps = buildDeps(req, res);
     const context = authenticate(deps, req, res);
@@ -334,33 +548,27 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
       return;
     }
     try {
-      const { supervisor } = buildSupervisor(deps, req, context);
-      const patch = await supervisor.buildSamplePatch({
-        vertical,
-        inventoryVersion: loaded.sample.inventoryVersion || null,
-        // Ciclo N+1: a novidade dos benchmarks do run é medida contra o
-        // canônico + o que o sample versionado já conhece.
-        priorSample: loaded.sample,
+      const body = deps.hasJsonContentType(req) ? await deps.parseJsonBody(req) : {};
+      const proposalId = String(body?.proposalId || '').trim();
+      if (!proposalId) {
+        deps.sendJson(res, 400, {
+          error: 'approval_required',
+          message: 'Aplicação direta não existe mais: crie a proposta '
+            + '(POST /api/benchmark-research/runs/:vertical/proposals), revise '
+            + '(POST /proposals/:id/review), aprove com ressalvas '
+            + '(POST /proposals/:id/approve) e só então aplique '
+            + '(POST /proposals/:id/apply ou esta rota com proposalId).',
+        });
+        return;
+      }
+      const service = buildProposalService(deps, req, context);
+      const result = await service.applyProposal({
+        proposalId,
+        actor: actorFromContext(context),
       });
-      // Validação pós-merge COM O ENGINE: se o resultado não é avaliável, a
-      // escrita é abortada e o arquivo anterior é restaurado.
-      const applied = applySamplePatch({
-        patch,
-        samplePath: loaded.samplePath,
-        validate: (candidate) => {
-          const evaluation = evaluateSampleSufficiency({ sample: candidate, policy });
-          if (!evaluation || !evaluation.status) {
-            throw new Error('engine não produziu avaliação para o sample candidato');
-          }
-        },
-      });
-      deps.logAction?.(req, 'benchmark_research.sample_patched', {
-        vertical,
-        applied: applied.applied,
-      });
-      deps.sendJson(res, 200, applied);
+      deps.sendJson(res, 200, result);
     } catch (error) {
-      sendError(deps, res, error);
+      sendProposalError(deps, res, error);
     }
   });
 

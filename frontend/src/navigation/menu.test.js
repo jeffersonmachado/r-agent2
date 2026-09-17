@@ -75,6 +75,7 @@ describe('QA & RPA navigation structure', () => {
       '/dev/rpa-test',
       '/rpa-replays',
       '/dev/rpa-seeds',
+      '/dev/benchmark-research',
     ]);
   });
 
@@ -130,5 +131,14 @@ describe('itens de menu: inbox, chamados e replays', () => {
     expect(platformSupport).toBeTruthy();
     expect(platformSupport.path).toBe('/platform-support');
     expect(platformSupport.classifications).toEqual(['SUPPORT', 'DEVELOPMENT']);
+  });
+
+  it('/dev/benchmark-research é restrito à classificação DEVELOPMENT', () => {
+    const benchmarkResearch = leaves.find((l) => l.id === 'dev-benchmark-research');
+    expect(benchmarkResearch).toBeTruthy();
+    expect(benchmarkResearch.path).toBe('/dev/benchmark-research');
+    expect(benchmarkResearch.label).toBe('Pesquisa de Benchmark');
+    expect(benchmarkResearch.roles).toBeUndefined();
+    expect(benchmarkResearch.classifications).toEqual(['DEVELOPMENT']);
   });
 });

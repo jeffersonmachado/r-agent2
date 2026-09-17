@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-10T20:05:45.921Z",
+  "generatedAt": "2026-09-17T19:51:05.096Z",
   "counts": {
-    "total": 3087,
+    "total": 3350,
     "byKind": {
-      "api": 813,
-      "field": 1756,
-      "model": 184,
-      "page": 141,
+      "api": 846,
+      "field": 1959,
+      "model": 197,
+      "page": 142,
       "relation": 9,
-      "table": 184
+      "table": 197
     },
     "byClassification": {
-      "PRODUCTION": 2861,
-      "DEVELOPMENT": 134,
+      "PRODUCTION": 3123,
+      "DEVELOPMENT": 135,
       "SUPPORT": 92
     },
-    "orphaned": 2
+    "orphaned": 18
   },
   "items": [
     {
@@ -1463,6 +1463,66 @@
       "fingerprint": "187cd7db3114151eaa86fdda2fe4b0a52a28699365b07c3355c377a4b4a841cc"
     },
     {
+      "id": "api:GET:/api/benchmark-research/proposals",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/benchmark-research/proposals",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "b0bb6285c244ef4b8700ac03962e364ae7ab5ff7671abb9628f0a8c8eef3137f"
+    },
+    {
+      "id": "api:GET:/api/benchmark-research/proposals/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/benchmark-research/proposals/:id",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "8d097843b04be960384574ba36c8c904c4ef34dbf8f7ca2d8b773ac020593f8f"
+    },
+    {
+      "id": "api:GET:/api/benchmark-research/runs/:vertical",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/benchmark-research/runs/:vertical",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "fbb1a20bc53ebeaa845c29c57e87212431e1ce4bfbd4fd68022599e5d1c37454"
+    },
+    {
+      "id": "api:GET:/api/benchmark-research/status",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/benchmark-research/status",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "43595503317d0955cc3301a238e49003d708abcbd91310afc6f73826832e45a6"
+    },
+    {
       "id": "api:GET:/api/calendar/me",
       "kind": "api",
       "method": "GET",
@@ -2860,6 +2920,54 @@
       ],
       "linkedDomains": [],
       "fingerprint": "799bce5bb2d4726d421660d277f7efaf239f6be2087fcf321cf4b75a908feb4a"
+    },
+    {
+      "id": "api:GET:/api/market-discovery/runs",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/market-discovery/runs",
+      "module": "market-discovery",
+      "source": "api/modules/market-discovery/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "ad8b7b024dcdd385a48a242227d3ad51ebe02f698d457ea815c5ccf98f31bb1e"
+    },
+    {
+      "id": "api:GET:/api/market-discovery/runs/:runId",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/market-discovery/runs/:runId",
+      "module": "market-discovery",
+      "source": "api/modules/market-discovery/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "ad9a7a4b14019af639d46f0a96eabffa3f2134273e1de073a5c6109ac87d3e75"
     },
     {
       "id": "api:GET:/api/market/benchmarks",
@@ -4296,6 +4404,45 @@
       ],
       "linkedDomains": [],
       "fingerprint": "c03499bf3d6aff26cbc1fc178e0b09d2bc10a7fd242eeadeb0371ba5cb4ee121"
+    },
+    {
+      "id": "api:GET:/api/product-metrics/summary",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/product-metrics/summary",
+      "module": "product-metrics",
+      "source": "api/modules/product-metrics/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireAuth",
+        "requirePermission:reports:read"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "product_docs"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "eecf779b06aa321a7fe8374d655ff9ea1cda5e7ac103a04e2071423bdcf5dda9"
+    },
+    {
+      "id": "api:GET:/api/push/public-key",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/push/public-key",
+      "module": "push",
+      "source": "api/modules/push/routes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "public_tokens"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ea3633b18b992123590f380fd8f817586eb7f4a9649293e6994a2875628e64e8"
     },
     {
       "id": "api:GET:/api/qa-waves/closure/analyze-gaps",
@@ -6220,6 +6367,101 @@
       "technicalWave": "observability",
       "linkedJourneys": [],
       "fingerprint": "a8c66bf9da986a1bfc92e214dcc4cc670f58fa11b5633e28d5c9f836737593bc"
+    },
+    {
+      "id": "api:GET:/mcp/connections",
+      "kind": "api",
+      "method": "GET",
+      "path": "/mcp/connections",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1f62f15f90bd0cf2f3691d86896a0cf75e4d6a93daed3eb93f39014981ceddf1"
+    },
+    {
+      "id": "api:GET:/mcp/connections/:id",
+      "kind": "api",
+      "method": "GET",
+      "path": "/mcp/connections/:id",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ef554d1db68d021bed91813d5c6e695b9ad675995e5fb246ffb5aa87634a2159"
+    },
+    {
+      "id": "api:GET:/mcp/connections/:id/health",
+      "kind": "api",
+      "method": "GET",
+      "path": "/mcp/connections/:id/health",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1c19b6ee367437869bbf1463acf73547d0078a97735a2639ad52f1b884841657"
+    },
+    {
+      "id": "api:GET:/mcp/connections/auth-capabilities",
+      "kind": "api",
+      "method": "GET",
+      "path": "/mcp/connections/auth-capabilities",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "96b5d0a1ed138747a5b7fa7c44a66c5cfec0899005333ca45468af83915f2769"
+    },
+    {
+      "id": "api:GET:/mcp/ecosystem",
+      "kind": "api",
+      "method": "GET",
+      "path": "/mcp/ecosystem",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "6a191a64c962e8cccd7b9328373f472dc971bc683636aca5af711d45c887f03e"
     },
     {
       "id": "api:GET:/metrics/queues",
@@ -8698,6 +8940,26 @@
       "fingerprint": "b0b4241961f01feba54854b15469e10c8d7b5c35eb1af0f1d7fccd6d5866f1f6"
     },
     {
+      "id": "api:PATCH:/mcp/connections/:id",
+      "kind": "api",
+      "method": "PATCH",
+      "path": "/mcp/connections/:id",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f79d4f8f486a57212f7c1a171fb0d07b495c8d8dafab2dda32825afbc230a902"
+    },
+    {
       "id": "api:PATCH:/projects/:projectId",
       "kind": "api",
       "method": "PATCH",
@@ -9726,6 +9988,141 @@
       "fingerprint": "4452017566ed4be781601742b21b8681e399beab7c7d9230211950a9dc7232cb"
     },
     {
+      "id": "api:POST:/api/benchmark-research/proposals/:id/apply",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/proposals/:id/apply",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "bfe7d9c5403e9ba260d426abff040007ad48777f70525379b23f6fc7338b0e40"
+    },
+    {
+      "id": "api:POST:/api/benchmark-research/proposals/:id/approve",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/proposals/:id/approve",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "dc360d09200847c65b5b30650d1f47ec66e6fa0dd8e51bcc086089145ea33d84"
+    },
+    {
+      "id": "api:POST:/api/benchmark-research/proposals/:id/reject",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/proposals/:id/reject",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "30efa459646e9c9d4c1c86dfb3d1feec1e6b5e9cc37eb3e091ddfacdebf1f70f"
+    },
+    {
+      "id": "api:POST:/api/benchmark-research/proposals/:id/review",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/proposals/:id/review",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "95bb04e7ef77f6bb42750c49d308b3c9e1447a9410cdcb00a00e731beb4641ff"
+    },
+    {
+      "id": "api:POST:/api/benchmark-research/runs",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/runs",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "0f2f7b0281f80f925e0b875966a994e8a15ed6f48dd6e41e138ad74cb755318b"
+    },
+    {
+      "id": "api:POST:/api/benchmark-research/runs/:vertical/apparent-saturation",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/runs/:vertical/apparent-saturation",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "536ca110893bf880553cfa938080d75cc1307a346186bfb6d8b0207e41f26afa"
+    },
+    {
+      "id": "api:POST:/api/benchmark-research/runs/:vertical/execute",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/runs/:vertical/execute",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "77195b9565c054b18138155ecc55520e255ee493b1f10ced9729b0d05ed8590c"
+    },
+    {
+      "id": "api:POST:/api/benchmark-research/runs/:vertical/proposals",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/runs/:vertical/proposals",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "a0f40ce4bff221e718abc1dfbe32b900b5db7ac38bb75f5af3a2bd18929ee671"
+    },
+    {
+      "id": "api:POST:/api/benchmark-research/runs/:vertical/sample-patch",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/benchmark-research/runs/:vertical/sample-patch",
+      "module": "benchmark-research",
+      "source": "api/modules/benchmark-research/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "c2dc4988efc0eac9621039e0ae8afdbf7979a4a7ee413107b63099c9e63bd956"
+    },
+    {
       "id": "api:POST:/api/calendar/resource/:resourceId/blocks",
       "kind": "api",
       "method": "POST",
@@ -10719,6 +11116,54 @@
       ],
       "linkedDomains": [],
       "fingerprint": "a54cc249c69384b172e7d03c8386368becf8f96493cc792e5ed2eae25523b0eb"
+    },
+    {
+      "id": "api:POST:/api/market-discovery/runs",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/market-discovery/runs",
+      "module": "market-discovery",
+      "source": "api/modules/market-discovery/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "267eaed7205d1731957267ae81dd6721591c3cf1f2383ff6325253fd85bd065f"
+    },
+    {
+      "id": "api:POST:/api/market-discovery/runs/:runId/handoff",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/market-discovery/runs/:runId/handoff",
+      "module": "market-discovery",
+      "source": "api/modules/market-discovery/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "authenticate"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "00f0bde9dfe39a541d04a208d73a82e30673a785a1fefd21784b8c09b72622eb"
     },
     {
       "id": "api:POST:/api/market/journey/event",
@@ -11805,6 +12250,36 @@
       ],
       "linkedDomains": [],
       "fingerprint": "014140b0b2e2dc483486db01db468f9e33b63dafd15b77766a149429d899d3e4"
+    },
+    {
+      "id": "api:POST:/api/push/subscribe",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/push/subscribe",
+      "module": "push",
+      "source": "api/modules/push/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireTenantAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "d8e656bade9d32cd6a84610328f2e3f770e25b25d84f89720c9213ea2f963c6d"
+    },
+    {
+      "id": "api:POST:/api/push/unsubscribe",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/push/unsubscribe",
+      "module": "push",
+      "source": "api/modules/push/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "requireTenantAuth"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "ORPHANED",
+      "fingerprint": "511e4a8608c043fd53323a005e33507678934cdfd1055aff0ecf629d2ba44f76"
     },
     {
       "id": "api:POST:/api/qa-waves/bot/apply-remediations",
@@ -13952,6 +14427,122 @@
       "technicalWave": "observability",
       "linkedJourneys": [],
       "fingerprint": "7b0bffd490ec592d725eddc1455d126d1cffa3b6c7d87dfc74512a252f280d98"
+    },
+    {
+      "id": "api:POST:/mcp/connections",
+      "kind": "api",
+      "method": "POST",
+      "path": "/mcp/connections",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "e08abf1fda409d39da0097d3d4dd8e850da49a34da0636bfcc59f426a0d27c45"
+    },
+    {
+      "id": "api:POST:/mcp/connections/:id/(enable|disable)",
+      "kind": "api",
+      "method": "POST",
+      "path": "/mcp/connections/:id/(enable|disable)",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "253c54ca6c035a1e3809e23c4e2b47106e249b592eabaefe08ae89540f5931fc"
+    },
+    {
+      "id": "api:POST:/mcp/connections/:id/discover",
+      "kind": "api",
+      "method": "POST",
+      "path": "/mcp/connections/:id/discover",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "584470662db21e737f4210f0bfeda8d4f487f9a2e611e3066c2f0985b1938e0a"
+    },
+    {
+      "id": "api:POST:/mcp/connections/:id/revalidate",
+      "kind": "api",
+      "method": "POST",
+      "path": "/mcp/connections/:id/revalidate",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "f1d313974317a351149076697b22e55472f914cf5a587ff27962c7727a536945"
+    },
+    {
+      "id": "api:POST:/mcp/connections/:id/revalidate-schema",
+      "kind": "api",
+      "method": "POST",
+      "path": "/mcp/connections/:id/revalidate-schema",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": false,
+      "authorization": [],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "5134f2176171975697fb92959567186878c8971c2ccc42fc47ea438d8ac98944"
+    },
+    {
+      "id": "api:POST:/mcp/connections/:id/test",
+      "kind": "api",
+      "method": "POST",
+      "path": "/mcp/connections/:id/test",
+      "module": "mcp",
+      "source": "api/modules/mcp/routes.js",
+      "authRequired": true,
+      "authorization": [
+        "guard"
+      ],
+      "classification": "PRODUCTION",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7483c02078efc3a57d9931cf00dbb4f559860140349b8f8ddfaef10cf36f7ee5"
     },
     {
       "id": "api:POST:/messenger/send",
@@ -19327,6 +19918,308 @@
       "fingerprint": "e9338a5473d6fd2a98a9da6dc9ff2923aa3ca289906bd2da317cd128acfb8f0a"
     },
     {
+      "id": "field:AskAiConversation.agentId",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "agentId",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "column": "agent_id",
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "824df9d2d48ad3210ab0b9b8b68ee50ca95c0bad07b1a0ec882d183bd0e30d51"
+    },
+    {
+      "id": "field:AskAiConversation.context",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "context",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2374217723a92f768db09cd142983c685dcfa74ebb7bd6bbc51497cd88455c51"
+    },
+    {
+      "id": "field:AskAiConversation.createdAt",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "createdAt",
+      "type": "DATE",
+      "allowNull": false,
+      "default": "DataTypes.NOW",
+      "primaryKey": false,
+      "unique": false,
+      "column": "created_at",
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "9fd106f5c90ff4f64f9131e046153a5aac55da41b9660eea67ad907cf4ffa462"
+    },
+    {
+      "id": "field:AskAiConversation.expiresAt",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "expiresAt",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "column": "expires_at",
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "7e476e9ed4bf35c141d70caa474bdbf6b42368ca1bdbc85b7514579ec88a03cd"
+    },
+    {
+      "id": "field:AskAiConversation.id",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": null,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "5d8743e7c9f06c35f8e08c52cf2c1843b472b1c6f631c7cc83549c1f3c358fec"
+    },
+    {
+      "id": "field:AskAiConversation.lastActivityAt",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "lastActivityAt",
+      "type": "DATE",
+      "allowNull": false,
+      "default": "DataTypes.NOW",
+      "primaryKey": false,
+      "unique": false,
+      "column": "last_activity_at",
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "5438a3baf0ca435cb8f9512eff7d3d4dce55d3ff3fbfa433fade9f63a86ada3c"
+    },
+    {
+      "id": "field:AskAiConversation.messages",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "messages",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "49abb0767107b27896af4daa85478853f08601ea1358c8307b066717b8e8ea3f"
+    },
+    {
+      "id": "field:AskAiConversation.status",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'active'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "d34a9d620945d2298b3e727c007ceb10b3537196e6c562b2296402b8b7074823"
+    },
+    {
+      "id": "field:AskAiConversation.summary",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "summary",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "897e8da1e9a5667af4068bdc0a20b36eae5d6bde50cf2e218017c010496656fa"
+    },
+    {
+      "id": "field:AskAiConversation.tenantKey",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "tenantKey",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "column": "tenant_key",
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "efe9ab8ea919c84d60afda7780c1209182fd27eae0000af5d44d6aefd711d9fc"
+    },
+    {
+      "id": "field:AskAiConversation.turnCount",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "turnCount",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "column": "turn_count",
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a47b0144f64766e03ce0065cc3dc52acc298906e35d7e0bbed72c3cf38566444"
+    },
+    {
+      "id": "field:AskAiConversation.updatedAt",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "updatedAt",
+      "type": "DATE",
+      "allowNull": false,
+      "default": "DataTypes.NOW",
+      "primaryKey": false,
+      "unique": false,
+      "column": "updated_at",
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "a028d4f38eb5849f605211d3ab5445e02e94b4a922ede157ddcfbb8d74395fed"
+    },
+    {
+      "id": "field:AskAiConversation.userKey",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "userKey",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "column": "user_key",
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3442f78e9019327a6f0beb7c345a53eec80b87f67a9fd10f616fcfee8c529c16"
+    },
+    {
+      "id": "field:AskAiConversation.username",
+      "kind": "field",
+      "model": "AskAiConversation",
+      "field": "username",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "3dc2e7ec0c56d1f1453aba595bd165ea3f7dd41ea5be39d6d18d9889bcacce24"
+    },
+    {
       "id": "field:AuditEvent.action",
       "kind": "field",
       "model": "AuditEvent",
@@ -19993,6 +20886,1680 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "83da453f7c1a0371522ff2f0164a42635e9e7480debd7aac6bf0e3b10e30c05a"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.applied_at",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "applied_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a721abf2ff9aa59296c788345c2673afb643251c57995284068ea53a0a439f44"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.applied_by",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "applied_by",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "9758db16cb8085c64b90b1024362520fdd4ccefbfc896c1acb878c7b5df2836e"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.caveats",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "caveats",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6898b596ac302ced30c53a0a4c22c018d85b462b7c0e23e4b6d247d6d6130d33"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.decision_reason",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "decision_reason",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "caa4d6bf7cbfebece27b3705cb4b984e582a938306e7b21b6631de6fd6be57c8"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.evaluation",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "evaluation",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a75cf7428f8b58a157a60f998c38a82b3199e6410cb22c43280ce7d933cfc395"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.id",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ce7aa3c9ac67231fad1821f99524c085f9fad80c589437dfa86bf8ad0e0ba39f"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.patch",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "patch",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "671acaba4db7a1e114605688651b45f8483a81c99d419f180dba07a68cf91be7"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.patch_sha256",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "patch_sha256",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "fb4bb6764ec42754e415f44cee6e50302cf944db08cb7b9ad31b6658349abc9b"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.proposed_at",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "proposed_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e0ba084072ac25d3f9eeb1d3d2841b97c1abc4d4331db37df5852cc38a1813c7"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.proposed_by",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "proposed_by",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d5037bf0991514a5d928655f27cd73249a708b0be258f5aded88b6dbc9d38cac"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.review_token_expires_at",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "review_token_expires_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "99c7acc4b2e96dcb766c31bf47f482270e99e09d42a9a91d40514c195f3e8546"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.review_token_sha256",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "review_token_sha256",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b0ad29bfe43e15ee97929ef71425d8e14effd1e14f4006784ef931bf89af6066"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.reviewed_at",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "reviewed_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d53b1da27d8fbe0574c3a6dfe1c958a03d9084d5a06488c9208a7e701f374a33"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.reviewed_by",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "reviewed_by",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bf1c2456324d37b3450f572d5274656c2e63d37559e165bde1269623bcfe6d14"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.run_id",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e52e37ca9528858cc8a6c9a014039501407b04f4709815734d2f80dbbe96f34a"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.status",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'proposed'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e7d7d4677bbad270b8975647cdb788559da5fe34100b9c60422537def73c4b06"
+    },
+    {
+      "id": "field:BenchmarkResearchChangeProposal.vertical",
+      "kind": "field",
+      "model": "BenchmarkResearchChangeProposal",
+      "field": "vertical",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "abc65486642905fceca2f1ec97b9ebf8a5a2e4027b911d9cef4f6918a1d25505"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.benchmark_id",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "benchmark_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1b34799ab1e08b512fed2e234dc792a588bba94143db560cff1e46c4495bb05d"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.captured_at",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "captured_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f35fa308b7070c0f3481da879f31e81d98d1348d2313ca80fe4d0be52d6d8461"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.content_hash",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "content_hash",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "af78725821bb44f4042c643b3341c3758a34041873d755ff3bcf696557967951"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.evidence_ref",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "evidence_ref",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "eac1b8b35b2352f9242121dc49325f73c09e6b4604153a682ef0118391ff69df"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.http_status",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "http_status",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "64f83bd5590e08a8d2cf0112fef8f1ce45535fe69bbbc07b39fdc8d007749bd7"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.id",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "9d1f6eb2e2a79cf2dabc1f769a48d8a431a353f7fba3c6bc1c6813a085b14cb9"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.metadata",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4d493bcfe8c95cc35501858944cdbb3ac2ec59ffafef8254703971edc82b051a"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.run_id",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "033fbd73b890f206c3f4d93a860bb9002d8587219d05e85b69b8060161b8dd86"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.source_id",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "source_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "225420553ccb329407188e0c4c550eac9be9f40870a63a17f5d3a2334f602d3a"
+    },
+    {
+      "id": "field:BenchmarkResearchEvidence.tenant_key",
+      "kind": "field",
+      "model": "BenchmarkResearchEvidence",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "02c3b2e7eeba37ca6c0790dbe41f8fe1f8e1a851229346e42f964fac8d87fe9d"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.archetype",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "archetype",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1531ae20f7292a7e3223228807ef844e5e18142d9d97fcb26a8b8bfbd731a60f"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.benchmark_id",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "benchmark_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f9e2f64d3a1ebec0b5e33592911fbd2d925095d10754f58fe15ba2aa40a5ebdb"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.canonical_id",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "canonical_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1891b6292973fe0a1bdb45db1a92a335782df8cd12e7f91405db8101c90a4ba4"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.classification",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "classification",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bd03a7c75f0d4252c0cf504d6a14ad376b0233785eab7ed6955466442d3d54cb"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.evidence_id",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "evidence_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "3d20c6cf2b9ac1fdd1644e18a784e6a1e6affcaa11820d10301008c2b9e2738f"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.external_name",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "external_name",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "cf383f78e6f5964466cd0a80fae88f7113a7bb15e016ca24931188dbcf648376"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.id",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4f06113b5dfe8b29f131389d29ad76227d184e1b2c05bbd8ac860db527ee451e"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.kind",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "kind",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6dbafc3b8b6b17992c3c0c62f80803d7ad8551c628b65e5b45bdc1ac774032a7"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.metadata",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "736dc9c639d938ce9ce8cd9a27abd992695ea1e82151bfa238e6fa36a32f9fea"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.recorded_at",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "recorded_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6f41a009c4e9ef7a0b07242e0bd9195eef975136bad74c8a77a4d3b4417c1875"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.run_id",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f1532383ed633a479703f23c1e9630db3d0cff431200037f1c3121e3c7d85c41"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.source_id",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "source_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "617fd2cce2762abd2116a5de67acf79939dbc14c01148fdc58055f23e6229190"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.tenant_key",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "2c890188dfbab8d6b78acb5d32055913021ed57914fd86fcecd86d0a8a808a3a"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.verification_state",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "verification_state",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'UNVERIFIED'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6d53263b7a7585a69b5c989f7f4ff291962c15f73d46af23864f9746c21c419c"
+    },
+    {
+      "id": "field:BenchmarkResearchFinding.verified",
+      "kind": "field",
+      "model": "BenchmarkResearchFinding",
+      "field": "verified",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "7c0200e23eefb018368d2acf605c6205e9a0c0c43ce3b89d0f8d5afe622c6139"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.discovery_set",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "discovery_set",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "462e72b9058ac7e53c48fce1c8473dc3b125456ef6c00e3bfbf45aea419b6dfc"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.holdout_benchmark_id",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "holdout_benchmark_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0701dba7620af5997b0a9fb436860fdfc3b383aa0d45e6fa1f7e3891661e58d8"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.id",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "1010f7da09d2732c0dcb308eaf9e5b44024be01dbd1de1bdc1502fe319ff3e19"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.metadata",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "da02bd05ab2bafc159538f54812d5cf3021dc11767d35aea16eae612970e510f"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.registered_at",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "registered_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f9816b0838395df1c0c4a2089e2e62b4acfed7592916323c518911548ebdf4d7"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.research_version",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "research_version",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b61ce0276a50f4d3b53d6d537347bac0176e38c6fe3f7ad5c9e52da4611185ef"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.saturation_reached",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "saturation_reached",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "934dcfddf4ac2ab8ba9a340fbbd868b7846b1832d90dc3b6321d4f9e35411a0b"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.state",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "state",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'RESEARCH_DISCOVERY_OPEN'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "37ada47f6ef952422a37fec38c7d1a69965f3d1a43a4f869ebfca6af5abb0230"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.tenant_key",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f18c5b1e3809fbe9aa2ef9484b6da5a482775ba2587e1d8940046c7f49c776af"
+    },
+    {
+      "id": "field:BenchmarkResearchRun.vertical",
+      "kind": "field",
+      "model": "BenchmarkResearchRun",
+      "field": "vertical",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "193c7c9dcb4d56a392497bc92189c1fdbbb483e993f1a20b7b82b61fc664c3ea"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.benchmark_id",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "benchmark_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "aabae3a65013b800f8e3ffd0449f28ca4d20975537868fab5eea93ea3a82c141"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.http_status",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "http_status",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "59b2d8d83ae26d86b66a73aad0bd9a2e389d7298a07fecf1d070dae13fccee69"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.id",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "27546c63d7d4b2ba86bcc1e350661d7618c5db727803efe001277fad163503a5"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.metadata",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c29fa7711d9f9f26a3f4781006a41312fe5d1aad416c4a93694769b444e1e644"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.run_id",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a58109358bde716ce27a88f39a38e82470c4b38af97ad3fbf09223216a9b2b5f"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.specificity",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "specificity",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d2a1ad41453b2cc15a2e57468ecefa6006172bfdc7dd414220b668a36927f01c"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.tenant_key",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ec7cf8580f71f21e929a0d896cddc18e9f33b65ddd056e21eeb287c5adcb8085"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.tier",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "tier",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b232481b3b01a4645ae275c6ac729ddab2c878a63fca0c2d1d8efe4808935e60"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.url",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "url",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bea858ee349f0fef15befec9dc038f3dba90e05bb3bdcbfa4c1c4ce7c1162a01"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.verification_state",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "verification_state",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'UNVERIFIED'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "40306f28985f15096573e97ce87a74b3602fa061722e60092e825c88b24d53a1"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.verified",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "verified",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "dab8193debb3e7b7279b3048d951637e3bdd3b80d416a50ed3a1f4b1dae5e49b"
+    },
+    {
+      "id": "field:BenchmarkResearchSource.verified_at",
+      "kind": "field",
+      "model": "BenchmarkResearchSource",
+      "field": "verified_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8ff8eb8fd39a928e6d66c992ea5952469fbc354c9eb7e89f519a062ee3858457"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.analyzed_at",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "analyzed_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f0ef83edbd90c68219b073c5d6fc8663442931a883559ef12c544b848f6c7de9"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.benchmark_id",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "benchmark_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "471f5c47e2ac239abc4e3676f58feae817745e02c047d141641a3cebaec547fe"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.discovery_order",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "discovery_order",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "944a98c68f3bb16810549fd157d52696794d5ac6d427766569375562f6034c70"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.findings_inventory",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "findings_inventory",
+      "type": "JSONB",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "51d341bba5b3fe6524ad436cdccfd6cb93ed75d4b11c0ae405f155355f92aa8e"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.id",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "9b46a2ef36e0900fde60714c3fda03961e081a72b4da351bcea5f621c0b67c4e"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.market_archetype_mapping",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "market_archetype_mapping",
+      "type": "JSONB",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bc2fa39177ac1a905cd9775f061d28a0373c1f88428f61d9211039263772a0f0"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.metadata",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "14e4ca7968f6fa5391e7f516e0ce2ff524382cafefda19cd06184a1c24ca8a7d"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.research_version",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "research_version",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a8b5612dc29a23fa939f3597cf7ad0af41f0d227b614b7f29c649bbee2db8c98"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.run_id",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "cc7bb35e6c3a3cac79bee11a114816e49962758dede3223a3af44caca7285d62"
+    },
+    {
+      "id": "field:BenchmarkResearchSubject.tenant_key",
+      "kind": "field",
+      "model": "BenchmarkResearchSubject",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f78bc664cd9c42c807a0ab3d5762355c6149e8e96b0c439c361e6c2468e557bb"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.api_status",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "api_status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "38657d9c8e06cd849045fce5ff6a53f83e6bcf3ae3d5bc4f03ab00d11c66887f"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.benchmark_id",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "benchmark_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8eb816202afebfd60536960c9e7c708c1c6ad6077173e1bd9f88a1c756325229"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.business_rule_axis_status",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "business_rule_axis_status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5d0298e3d4da23310303308fc08f823e1c4260b335f12f82aa146cf02ce8d853"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.capability_axis_status",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "capability_axis_status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "857a892eb1af0a8620f78f4c6de20de283005480eea2a2624781f803ec7d9902"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.content_hash",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "content_hash",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "6559c63e07f26f575ddb18bde026751b219a644a4f129a6fe74c7e47b2f7e4ec"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.document_type",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "document_type",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "afaac704bd38bd3d313c296917861ef1fd336bef39672f6983a1ee901f3905df"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.documentation_status",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "documentation_status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0a94cf09899ebdb1a37fbff0fd1d700b7d153128214f6a263bc87ce70b646675"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.errors",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "errors",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "513cda8e8b1b2b0cf786b3021fe7221d83cb7eaf4b06f41fea903fb6f8622a35"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.id",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "0e627b555e6b2519f4f9a379f69d3750c7912a939cff319dc6398713fc508297"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.inspected_at",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "inspected_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a9e4333c84ef18328e8313711b6b21c21bce75af1525134d033cfa71eea37638"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.journey_axis_status",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "journey_axis_status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ea000341544d35c84427136c139038bb589ae5faa2379cdad4d45f8882733dfa"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.metadata",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "14a429edb0264fb8f5a4c4f41433b09ad378cdf1346cde311c1ee81c95bc3c29"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.provider",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "provider",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "21cd7d769f8abd5e6fdc41efea3e4caab9ef364e0bb01bcbfecf9cb5f4115c61"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.retrieved_at",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "retrieved_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "2936c21709a2841172e5826566ba647a1aa412e0e29c1625ec5e993d15013df5"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.run_id",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d8a6e7eb0eace9caa81288f82cf6602221c8ba0684418a49703020996aa9ff8d"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.source_id",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "source_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "faa20eaaeb4cc446ce6e23310e00fd067e804eacd874ede48503d6fefd845ca2"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.subject_id",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "subject_id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "904d7f0d77d5f7f236df32a39270961a66f583748ab3fd33b7c244136dd716d7"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.tenant_key",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d2b2ddf0c28b244301709a67bac3101fb9ecf568b1cbbff44c0e26f4ac4e5ca5"
+    },
+    {
+      "id": "field:BenchmarkSourceInspection.url",
+      "kind": "field",
+      "model": "BenchmarkSourceInspection",
+      "field": "url",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "91cf0fef99f6dbabc9aa336ec0d735b356fa5ba1563a39aa6e1139fed30c87e4"
     },
     {
       "id": "field:BillingSubscription.amount",
@@ -29901,6 +32468,342 @@
       "fingerprint": "da0d0afc8f943d400f3535e95f072ee60eb332e4d47da3d8cdc286a2e7acd0a3"
     },
     {
+      "id": "field:MarketArchetype.archetype_key",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "archetype_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "1348d52bff32a10ebb8c15bb44660280f93b0a7a12c32aa2750ce2dcc3080850"
+    },
+    {
+      "id": "field:MarketArchetype.description",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "description",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "3b4e7505023ae43d5133c0e236f279a5be81f982a2a103287aeb9db1aa51142a"
+    },
+    {
+      "id": "field:MarketArchetype.id",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "d4f4bfad922ac19883efb5a2f8cbeb09b064da5057647d433e36a2b37106ae8f"
+    },
+    {
+      "id": "field:MarketArchetype.importance",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "importance",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'RELEVANT'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "453537a36299b54c8c582ad9e93565b3b17564ef56acf0c4c9c509d868ed5fbf"
+    },
+    {
+      "id": "field:MarketArchetype.metadata",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "f0a1c1232d73bddaa8515bb199bb138088353cd04b50e98e264b969a61319424"
+    },
+    {
+      "id": "field:MarketArchetype.name",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "name",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "376f0cb0ae091ce3f66719487a638a86ed2cc3bd70c61932eb33ecd9e4bd6e3d"
+    },
+    {
+      "id": "field:MarketArchetype.origin",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "origin",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'research'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "f58738bbf30ee5b9b627efeac606bcebc066187d83ff88a581c98e979af0725d"
+    },
+    {
+      "id": "field:MarketArchetype.rationale",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "rationale",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "f0e1163c2be8e34900e7e0e60f05fee46274e17d71cb5471c5fe5fc05b341219"
+    },
+    {
+      "id": "field:MarketArchetype.run_id",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "bec06894c7c870eaef2c94055799977d08d290074f02f40c4aabf7f3ffc9a475"
+    },
+    {
+      "id": "field:MarketArchetype.source_evidence",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "source_evidence",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "6a0cff7c605a23e0ff23253350610f15f16d302f106242b93ae35261e5e8fbae"
+    },
+    {
+      "id": "field:MarketArchetype.state",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "state",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'EVIDENCE_REQUIRED'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "326bdb19705c3c37fbee0efddacd7214fdbf9759ff62fec89354e091fbfbc52c"
+    },
+    {
+      "id": "field:MarketArchetype.tenant_key",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "09e2a58f4708ace5523b2a662e63645788710fa4f88c1505f54110c8610a86cf"
+    },
+    {
+      "id": "field:MarketArchetype.validated_at",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "validated_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "372ac5cfc1ccb4026dce3711c5e4ade0951030712ff62efe49abaab72af7f770"
+    },
+    {
+      "id": "field:MarketArchetype.vertical",
+      "kind": "field",
+      "model": "MarketArchetype",
+      "field": "vertical",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "050471dda48b769b6912f0e44346ffd37b7198c6db4eaf890ddb2380570737d6"
+    },
+    {
       "id": "field:MarketBenchmark.evaluated_at",
       "kind": "field",
       "model": "MarketBenchmark",
@@ -30115,6 +33018,1230 @@
         "market"
       ],
       "fingerprint": "7e926f4de36656da6f94d5e3a2434ec3ca87489b94c124ed3b7fdc17334dd6a7"
+    },
+    {
+      "id": "field:MarketCandidate.api_docs",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "api_docs",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "5f7697bcc7fcc6d6b96d2dd086c5490eafe4f7a28a4d09412a10761e7c13dfe5"
+    },
+    {
+      "id": "field:MarketCandidate.archetypes",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "archetypes",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "9b028fa6a3b4d096951c51d9db619652f0e0970043f514554d5e18396d77ea66"
+    },
+    {
+      "id": "field:MarketCandidate.base_product",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "base_product",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "3514b5f1a9941106041c312026dec3ab213cf9b0e3ccdaa1b82dcf3017a0574c"
+    },
+    {
+      "id": "field:MarketCandidate.candidate_key",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "candidate_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "d9016d25c02137d5cc0edf0fead5a84e22fc40002d4b89eab62e0630c963f152"
+    },
+    {
+      "id": "field:MarketCandidate.clone_of",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "clone_of",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "4f1aa527c9d17cb84476add862ebdbd747374f6df08aa7ec18924f89d2ea8c01"
+    },
+    {
+      "id": "field:MarketCandidate.country",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "country",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "9d2ecdc0d6108f717eaafd3055a60ed66ac7068a963a4af8971eb5521a06b182"
+    },
+    {
+      "id": "field:MarketCandidate.deep_research_at",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "deep_research_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "dc98d4c3db40fbaf0588518104588c658046147abc58157ea0a1e646149969c0"
+    },
+    {
+      "id": "field:MarketCandidate.id",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "e4a5cbb8b1a529be3a958113165926107f26e0f4313efb167bdf80a518cc6809"
+    },
+    {
+      "id": "field:MarketCandidate.independence_group",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "independence_group",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "7d5a88916e26aea72d3165e568f280172d0342c4437bf529f33c6a6ba8110456"
+    },
+    {
+      "id": "field:MarketCandidate.market_relevance",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "market_relevance",
+      "type": "JSONB",
+      "allowNull": true,
+      "default": "null",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "b94b6dfbdeb5ac6aade8566dfed082f243a6728969dd04a713afd3c28b7cf255"
+    },
+    {
+      "id": "field:MarketCandidate.metadata",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "f2fce15187f9be2488d60796840586beb617b0a699aedf0c31a5b37f3152fe47"
+    },
+    {
+      "id": "field:MarketCandidate.name",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "name",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "ec63b4d35000fd47d88c5d9e87dd9a892a67d5c52b5106aef316d2a5a900f37c"
+    },
+    {
+      "id": "field:MarketCandidate.official_docs",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "official_docs",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "5495186728cbf44029e0ff518fab3876493fd63b6a4f5e76a67182978a6a8ef6"
+    },
+    {
+      "id": "field:MarketCandidate.official_site",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "official_site",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "ca40c84fc810c80aabe2eec992341f19b5ebb24aa85ebbe3a8bea9b689de1da4"
+    },
+    {
+      "id": "field:MarketCandidate.origin",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "origin",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'research'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "5401bb80531e4ea0b79f3c6ecbffa0270a7492dad7508258b69358955d16f7dc"
+    },
+    {
+      "id": "field:MarketCandidate.profile",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "profile",
+      "type": "JSONB",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "ca4a51882f92126a5a86c291b253bc6cc5784c92d7ccb910c64eb112300b1de2"
+    },
+    {
+      "id": "field:MarketCandidate.profiled_at",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "profiled_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "8f7e9535cb8657e7068787fb6fb873a29fbbdb7119e5b86b150c2943c145c16c"
+    },
+    {
+      "id": "field:MarketCandidate.rationale",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "rationale",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "1544c17a3ac5bb4bb267258582365e963b02ad1e47d5b3978b176a75164e432c"
+    },
+    {
+      "id": "field:MarketCandidate.region",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "region",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "b7fd9d67e330a489d5c7a17d488ca58cee1fa066c19d90d059e1b0da40427939"
+    },
+    {
+      "id": "field:MarketCandidate.run_id",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "eb2ebdfcd6723551cbf153c5408b96b3f2d391f9654d7ae8cf4bb432bd2ec48b"
+    },
+    {
+      "id": "field:MarketCandidate.segments",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "segments",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "7376b87f9c4e119e79ba0e98f0ba78bfb3e0c19b9e2ec6ed1787e832e0ecb6c9"
+    },
+    {
+      "id": "field:MarketCandidate.source_evidence",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "source_evidence",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "187c7227dd9b5c69da46239e48cf534d3b9dcb43a32b5e06966e38090b397996"
+    },
+    {
+      "id": "field:MarketCandidate.state",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "state",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'EVIDENCE_REQUIRED'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "3e264ee2c4b005e57defca188bd3b75263fde1b53afa2012d5a0b9b76e04381e"
+    },
+    {
+      "id": "field:MarketCandidate.target_customers",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "target_customers",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "1693a4bcf1e3c116cbc55a4647c0ea5e5aea8690a8f8e6d687080e05e8cbd393"
+    },
+    {
+      "id": "field:MarketCandidate.tenant_key",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "16cb4951f63bf4454d0d033afc998371fa123bdf8883554a0ec5c4cf14acd1f7"
+    },
+    {
+      "id": "field:MarketCandidate.vendor",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "vendor",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "58463882c5983eac760399a595ef861bd2d21ea4ff856add71b6e7af74c14f86"
+    },
+    {
+      "id": "field:MarketCandidate.vertical",
+      "kind": "field",
+      "model": "MarketCandidate",
+      "field": "vertical",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "38e4229bd472c06f3be03e3017d28706e0e95a86537ca84b188d975298b3eb10"
+    },
+    {
+      "id": "field:MarketDiscoveryRun.completed_at",
+      "kind": "field",
+      "model": "MarketDiscoveryRun",
+      "field": "completed_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "d4007c69c06a9803f488158656d19b4b76c84556c89788d760da089d26edb7bd"
+    },
+    {
+      "id": "field:MarketDiscoveryRun.discovery_version",
+      "kind": "field",
+      "model": "MarketDiscoveryRun",
+      "field": "discovery_version",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "4a18ae2b39a159defc03fee37358c4f360ee4b8bd5f7cef753c0b482e51b49b2"
+    },
+    {
+      "id": "field:MarketDiscoveryRun.id",
+      "kind": "field",
+      "model": "MarketDiscoveryRun",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "7d73a22fd973f25ec39fd76d62213ce368c19a3da03cb7babe5dea0c08b46543"
+    },
+    {
+      "id": "field:MarketDiscoveryRun.metadata",
+      "kind": "field",
+      "model": "MarketDiscoveryRun",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "0f3762c56b89024ba627b87545fe871f8ddc1cb81fc2b428492396fb7df7ff84"
+    },
+    {
+      "id": "field:MarketDiscoveryRun.started_at",
+      "kind": "field",
+      "model": "MarketDiscoveryRun",
+      "field": "started_at",
+      "type": "DATE",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "ebeab485211da62d12e74aaebb59ec9ac16bec82431822594da5a0aab839dfa8"
+    },
+    {
+      "id": "field:MarketDiscoveryRun.state",
+      "kind": "field",
+      "model": "MarketDiscoveryRun",
+      "field": "state",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'MARKET_DISCOVERY_OPEN'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "913649b7ddaf9cd33b37904145a9ae64fc069c95c11d63b6e34a3872ed9a9826"
+    },
+    {
+      "id": "field:MarketDiscoveryRun.tenant_key",
+      "kind": "field",
+      "model": "MarketDiscoveryRun",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "6c8006889db2c8c5da53ef681a3344f338f602ac2a2317175f46d2a5e2465691"
+    },
+    {
+      "id": "field:MarketDiscoveryRun.vertical",
+      "kind": "field",
+      "model": "MarketDiscoveryRun",
+      "field": "vertical",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "6e9b675913fedf82704303aaf425b64ff9411bed8967f94c25d9ff03a8bf2992"
+    },
+    {
+      "id": "field:MarketDiscoverySet.deep_research_run_id",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "deep_research_run_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "854a1158b087b0a461a907b52358c3e9696915c5acfb4ad2fdf2dbc1046cb1b4"
+    },
+    {
+      "id": "field:MarketDiscoverySet.discovery_set_version",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "discovery_set_version",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "590eced7c346d89c48c2cf3c0563407f68fb7907d22f19c439d7ec8bd3bc61b7"
+    },
+    {
+      "id": "field:MarketDiscoverySet.holdout_candidate_id",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "holdout_candidate_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "040a0de6a7c66ef06eccf740308e0325ebee013fd6b976c0a0c3ca8e22d77ebf"
+    },
+    {
+      "id": "field:MarketDiscoverySet.holdout_preregistered",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "holdout_preregistered",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "9c619b7d8cca8ed69a278ffb867cc4760cd95c77713b69c5153eeff3d11d87f6"
+    },
+    {
+      "id": "field:MarketDiscoverySet.holdout_selected_at",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "holdout_selected_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "d6f96b9b09857bb950638fcf218fb39eaf7e606bca46e58a1295f6fe0e06a0e2"
+    },
+    {
+      "id": "field:MarketDiscoverySet.holdout_selection_basis",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "holdout_selection_basis",
+      "type": "JSONB",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "6c78a196d4488bcd7481cdaff2e4eaf25e169d34ebaee2a20b3ba3a72bb5178f"
+    },
+    {
+      "id": "field:MarketDiscoverySet.id",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "a46979de241424777ae135528cf0adfa4dbaa72f01dc167189190fc2bd909543"
+    },
+    {
+      "id": "field:MarketDiscoverySet.metadata",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "399f51326a304c76f874a43f1f7a329ccc3840d4655cec46965024ab914e0c90"
+    },
+    {
+      "id": "field:MarketDiscoverySet.opened_at",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "opened_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "dba6f332b34114f1e83b1d09e26a59ec9f2bac18e517dfc2cb65affec245a36b"
+    },
+    {
+      "id": "field:MarketDiscoverySet.run_id",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "run_id",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "4ac514f2282558ae20d00ca1383b51a7dc4d8b258e577864a96a48fd69623846"
+    },
+    {
+      "id": "field:MarketDiscoverySet.selected_candidates",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "selected_candidates",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "62d6bd4111b389b9b2030637b4e0d26d54107496aeb7beb7dbf56f0663ff61c7"
+    },
+    {
+      "id": "field:MarketDiscoverySet.selection_policy",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "selection_policy",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "a7c3e8f149e8a53c8701fd1aa07c873541f1253203a75a4396f0c8461abb5ff9"
+    },
+    {
+      "id": "field:MarketDiscoverySet.selection_rationale",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "selection_rationale",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "a0fd927f72748ed0be58ccb0e9d16711774c6e16580059623db4353fd5756151"
+    },
+    {
+      "id": "field:MarketDiscoverySet.state",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "state",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'SELECTED'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "ef92b643750d42d17cae976a340b40bddf13319165faad9c6e4900d10e0aea1c"
+    },
+    {
+      "id": "field:MarketDiscoverySet.tenant_key",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "98ce7171a6dfa96c85c768ebacf53f470d94e8c7950b44c990c9856ea870dca4"
+    },
+    {
+      "id": "field:MarketDiscoverySet.vertical",
+      "kind": "field",
+      "model": "MarketDiscoverySet",
+      "field": "vertical",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "66238784de9f1169d00978db87719a0fc93b341a505a5d151d4581e9de1bf5ac"
     },
     {
       "id": "field:MarketingAdConversion.attempts",
@@ -33814,6 +37941,564 @@
         "market"
       ],
       "fingerprint": "3bc7ac988be734bda4d31be08840d2ef2a209418acbfc0b772395179c21a1fa6"
+    },
+    {
+      "id": "field:McpConnection.allowed_capabilities",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "allowed_capabilities",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "206b9c062973d9a6aeb68947e500f546b4d45e22b2f58eabfc09fb392785da10"
+    },
+    {
+      "id": "field:McpConnection.allowed_tools",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "allowed_tools",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e23e6e111fc946910f1113d0575259405f1d3f8036f52ff2c601b005b21a8323"
+    },
+    {
+      "id": "field:McpConnection.auth_type",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "auth_type",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'bearer'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bd4d94034dec5c912e81824cbccfc22f129778796ca48e3550d73f9e56e74da7"
+    },
+    {
+      "id": "field:McpConnection.classification_ceiling",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "classification_ceiling",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'PRODUCTION'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8fa293cfb81b45925b460e7e7dd0e904a2791497238ba8bcc74e8ed4a9fe35fd"
+    },
+    {
+      "id": "field:McpConnection.consecutive_failures",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "consecutive_failures",
+      "type": "INTEGER",
+      "allowNull": false,
+      "default": "0",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "bb2db3aca3f36f5347337650a4df671e3752cd88f27aba0ed80c53e62e60b503"
+    },
+    {
+      "id": "field:McpConnection.credential_ref",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "credential_ref",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "2aceb61a861c69e12c578c5debf0c77e910c2e37b73f36e7ad060f1e1137a9cd"
+    },
+    {
+      "id": "field:McpConnection.delegated_capabilities",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "delegated_capabilities",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d5918064379602e8d604eb06fff67bb085b08bcb2f17dad301d28b6048c5352a"
+    },
+    {
+      "id": "field:McpConnection.discovered_tools",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "discovered_tools",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "[]",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5a87e753991ad0ea8a69bc6f27379e89f12772c11f0e5da39b7606f6747c3893"
+    },
+    {
+      "id": "field:McpConnection.enabled",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "enabled",
+      "type": "BOOLEAN",
+      "allowNull": false,
+      "default": "false",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "cffd4f2651f1883318c5077781651eba7803f049592f2e5f088eec1750ae36d9"
+    },
+    {
+      "id": "field:McpConnection.endpoint",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "endpoint",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c6e93e411cb9f40fe03ce507cdabe78826cd226f20fb7f1650eb863392d8cfa1"
+    },
+    {
+      "id": "field:McpConnection.endpoint_policy",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "endpoint_policy",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "883fbf0e497c31ba8be4cab7d7793ab29eca1aa4473a9a4655a1507c48114fba"
+    },
+    {
+      "id": "field:McpConnection.id",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "id",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": true,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ca9780f6a901aca73a559315fee6c7199eedc7af4d6fcfef5f02b6dde6a84095"
+    },
+    {
+      "id": "field:McpConnection.last_discovery_at",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "last_discovery_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "a8c577f3eebb5da616a6fa5084ec306ab998aaf16577f9b54ddfec9e6ff786f6"
+    },
+    {
+      "id": "field:McpConnection.last_error",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "last_error",
+      "type": "TEXT",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "dd40659bb5a5d2f3a82fc2e7719dfa49a26c9d7ca61c86b0f11e95ec8c1f5de0"
+    },
+    {
+      "id": "field:McpConnection.last_failure_at",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "last_failure_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "8a0ce200a5b570bcd6a805764769ad4d679948838aaeeb199b8dff3278aff31f"
+    },
+    {
+      "id": "field:McpConnection.last_health_at",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "last_health_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5ca31818ad40a1b725583e07477b24a1d1f41069165ff30646b14a8991f81319"
+    },
+    {
+      "id": "field:McpConnection.last_success_at",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "last_success_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "24a046dfb3b48e2a071d541a3287b9b1f4c46d074b9616674bef6168c5550260"
+    },
+    {
+      "id": "field:McpConnection.mapping_version",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "mapping_version",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "54fdad525d5d04d343e688f9b65ffd5fbdbc42ff8a097e9d373cf1ad135e6c9e"
+    },
+    {
+      "id": "field:McpConnection.metadata",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "metadata",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4f34affeea32c88423802a16097adff74c012a613831329c3c962305aac0743d"
+    },
+    {
+      "id": "field:McpConnection.name",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "name",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "e4bf76a48daa5c146eeda99bdd513ac8cd1d12802937d62a46bd7707b47d7021"
+    },
+    {
+      "id": "field:McpConnection.quota",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "quota",
+      "type": "JSONB",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "800a6199adcc62decadffa1d06a4854e6ef18f7e269b5b51e0e3870e50b89876"
+    },
+    {
+      "id": "field:McpConnection.retry_policy",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "retry_policy",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "322be932ce74d26ccfff8f265f24656dac83ede51813f98486f8060a7e63b012"
+    },
+    {
+      "id": "field:McpConnection.schema_fingerprint",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "schema_fingerprint",
+      "type": "STRING",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "912fd58facfe284ab9e01e9f107d2f72edfcf46f88288123d4d4a4668b88c0eb"
+    },
+    {
+      "id": "field:McpConnection.schema_revalidated_at",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "schema_revalidated_at",
+      "type": "DATE",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "817615a83355d94b0d5718501fea4eb01ced513358f74ea5dda98cd4ff021fe7"
+    },
+    {
+      "id": "field:McpConnection.source",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "source",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'control-plane'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "22dd1005cae4cbf793dc407161507eaca3cbd7c50588dd7180363b3a32440b9b"
+    },
+    {
+      "id": "field:McpConnection.status",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "status",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'CONFIGURED'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "f54fc03817da286714c29970e991f078a82b8a4b9b094d793f962cdfcc64dc84"
+    },
+    {
+      "id": "field:McpConnection.tenant_key",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "tenant_key",
+      "type": "STRING",
+      "allowNull": false,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "d6bcdfbde4f79ea4ba411e7e165533c142762ec93d5a9fd70e8d119aafbee0c5"
+    },
+    {
+      "id": "field:McpConnection.timeout_ms",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "timeout_ms",
+      "type": "INTEGER",
+      "allowNull": true,
+      "default": null,
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "b0684371a5b2707133669247228e5a1a82e7e99198fe148bd199baf972aabf16"
+    },
+    {
+      "id": "field:McpConnection.tool_capability_map",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "tool_capability_map",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "66b370604c729bb482c8c3579150d2c65db64aab35a6c05ce4f0fefe49b20429"
+    },
+    {
+      "id": "field:McpConnection.tool_policies",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "tool_policies",
+      "type": "JSONB",
+      "allowNull": false,
+      "default": "{}",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c4030a1494c50d5226a073cbdec89448590de347e61332f64ea2fbb0191fec58"
+    },
+    {
+      "id": "field:McpConnection.transport",
+      "kind": "field",
+      "model": "McpConnection",
+      "field": "transport",
+      "type": "STRING",
+      "allowNull": false,
+      "default": "'http'",
+      "primaryKey": false,
+      "unique": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "063c04e83919c79469dffae7754abf7a60cc3e2c0d92d82951938a2662286b3a"
     },
     {
       "id": "field:NodeExecution.error_message",
@@ -51460,6 +56145,25 @@
       "fingerprint": "5282d7824e0b6f4d53c091c35047d79e67186aa4aadfbd707f9125c5f93d54aa"
     },
     {
+      "id": "model:AskAiConversation",
+      "kind": "model",
+      "model": "AskAiConversation",
+      "tableName": "ask_ai_conversations",
+      "fieldCount": 14,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools",
+        "conversations_chat"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "1769712cb028bbef0b24003804c2827c2bb1769c8fc50ba3aa42fa4a6c9d6b86"
+    },
+    {
       "id": "model:AuditEvent",
       "kind": "model",
       "model": "AuditEvent",
@@ -51535,6 +56239,111 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "f0e6b8cfe9ea1ecca78fefee83f69e4fccfcae5aa88b29508076bbc736c0bb2a"
+    },
+    {
+      "id": "model:BenchmarkResearchChangeProposal",
+      "kind": "model",
+      "model": "BenchmarkResearchChangeProposal",
+      "tableName": "benchmark_research_change_proposals",
+      "fieldCount": 17,
+      "hasTenantId": false,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "4499fc9c7178238f4731d7d4860be90b59ab1662e234b22ccafbcb0d64b734b8"
+    },
+    {
+      "id": "model:BenchmarkResearchEvidence",
+      "kind": "model",
+      "model": "BenchmarkResearchEvidence",
+      "tableName": "benchmark_research_evidence",
+      "fieldCount": 10,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "798b597002e5301677a9920269f3936171d434826250789b46a82ebf98b7f1d4"
+    },
+    {
+      "id": "model:BenchmarkResearchFinding",
+      "kind": "model",
+      "model": "BenchmarkResearchFinding",
+      "tableName": "benchmark_research_findings",
+      "fieldCount": 15,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "725f43686b3a2a10a4abe03da2c0376d2169bcea65e960f62c7dc3abee8185e5"
+    },
+    {
+      "id": "model:BenchmarkResearchRun",
+      "kind": "model",
+      "model": "BenchmarkResearchRun",
+      "tableName": "benchmark_research_runs",
+      "fieldCount": 10,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c589b530a63de0888899f52b0e5601733569b2e0ffdce318136546c44bead045"
+    },
+    {
+      "id": "model:BenchmarkResearchSource",
+      "kind": "model",
+      "model": "BenchmarkResearchSource",
+      "tableName": "benchmark_research_sources",
+      "fieldCount": 12,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "82a784e14a2f1af9f4bc49cc44002c2b8d6f9e0a2d96f999742eddbb5537d91d"
+    },
+    {
+      "id": "model:BenchmarkResearchSubject",
+      "kind": "model",
+      "model": "BenchmarkResearchSubject",
+      "tableName": "benchmark_research_subjects",
+      "fieldCount": 10,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "79e5834bac94ee8eb6876223062c845314863f8e28cca31e9543588f88dc0f83"
+    },
+    {
+      "id": "model:BenchmarkSourceInspection",
+      "kind": "model",
+      "model": "BenchmarkSourceInspection",
+      "tableName": "benchmark_source_inspections",
+      "fieldCount": 19,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ee5dea2dabcb8899abb80797190184c5656d65c2a32d820b6fca84303b596724"
     },
     {
       "id": "model:BillingSubscription",
@@ -52403,6 +57212,27 @@
       "fingerprint": "68bfa903b4fc3973b054c895b6975c26162377f0953ff1c62a5e5bd5e316229c"
     },
     {
+      "id": "model:MarketArchetype",
+      "kind": "model",
+      "model": "MarketArchetype",
+      "tableName": "market_archetypes",
+      "fieldCount": 14,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "b6065c980743e5dd1ec5533d6ce08390cc74b508eefd782d05215c4663af37cd"
+    },
+    {
       "id": "model:MarketBenchmark",
       "kind": "model",
       "model": "MarketBenchmark",
@@ -52422,6 +57252,69 @@
         "market"
       ],
       "fingerprint": "6c3dfdb867581dd8ac4c472fd76bacd76ea416e35267314f785c78777f935fe2"
+    },
+    {
+      "id": "model:MarketCandidate",
+      "kind": "model",
+      "model": "MarketCandidate",
+      "tableName": "market_candidates",
+      "fieldCount": 27,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "6bdac631846ef42f30b4257749ad78fc73640dd5b3394f62d2948796c970b688"
+    },
+    {
+      "id": "model:MarketDiscoveryRun",
+      "kind": "model",
+      "model": "MarketDiscoveryRun",
+      "tableName": "market_discovery_runs",
+      "fieldCount": 8,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "526da98ff426c9ca4115b84d33e074f4a39f6510f15c18d263c8735197480696"
+    },
+    {
+      "id": "model:MarketDiscoverySet",
+      "kind": "model",
+      "model": "MarketDiscoverySet",
+      "tableName": "market_discovery_sets",
+      "fieldCount": 16,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "0e94bbe5e4f0a465b154a8d3b0871695e30759f25d58414566b956134538e3ed"
     },
     {
       "id": "model:MarketingAdConversion",
@@ -52696,6 +57589,23 @@
         "market"
       ],
       "fingerprint": "1f1976f757d907b02b793dfc4ac8a18736f0e81fdea27275b12ddd4e37aa0776"
+    },
+    {
+      "id": "model:McpConnection",
+      "kind": "model",
+      "model": "McpConnection",
+      "tableName": "mcp_connections",
+      "fieldCount": 31,
+      "hasTenantId": true,
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "2557010e08e2c02c3060700a0a9aa3a740728eb51d0f1be20850827a9a448fc9"
     },
     {
       "id": "model:NodeExecution",
@@ -55405,6 +60315,27 @@
       "fingerprint": "f57d37b5b15d30e211634296470ca17c28dabd2b9875c57c1badc7d707e936fb"
     },
     {
+      "id": "page:/dev/benchmark-research",
+      "kind": "page",
+      "path": "/dev/benchmark-research",
+      "roles": [
+        "super_admin"
+      ],
+      "permission": "reports:read",
+      "classifications": [
+        "DEVELOPMENT"
+      ],
+      "section": "plataforma",
+      "guarded": true,
+      "classification": "DEVELOPMENT",
+      "source": "frontend/src/main.jsx",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "platform",
+      "linkedJourneys": [],
+      "fingerprint": "6c762c46fe615f1695501307800ef1d22587d4cd813587aab51e309f2c82d174"
+    },
+    {
       "id": "page:/dev/qa-audit",
       "kind": "page",
       "path": "/dev/qa-audit",
@@ -58080,6 +63011,42 @@
       "fingerprint": "a11d8e406b24edbbf36f7931eb108f3718b0117e86bcaba38dc36fdb09a44f84"
     },
     {
+      "id": "table:ask_ai_conversations",
+      "kind": "table",
+      "table": "ask_ai_conversations",
+      "model": "AskAiConversation",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "user_key",
+            "last_activity_at"
+          ],
+          "name": "ask_ai_conv_tenant_user_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "expires_at"
+          ],
+          "name": "ask_ai_conv_expires_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/AskAiConversation.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "ai_governance",
+        "ai_tools",
+        "conversations_chat"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "ea0dad0676ea613beffcc60a5c52032322710a5a6c746ec6d4e1c9d5e62353c1"
+    },
+    {
       "id": "table:audit_events",
       "kind": "table",
       "table": "audit_events",
@@ -58275,6 +63242,238 @@
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
       "fingerprint": "14a38c83134ed67e361c2c2d267723ee8b689d174b0da953dd84bd20ea6005db"
+    },
+    {
+      "id": "table:benchmark_research_change_proposals",
+      "kind": "table",
+      "table": "benchmark_research_change_proposals",
+      "model": "BenchmarkResearchChangeProposal",
+      "hasTenantId": false,
+      "indexes": [
+        {
+          "fields": [
+            "vertical",
+            "status"
+          ],
+          "name": "benchmark_research_change_proposals_vertical_status_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "run_id"
+          ],
+          "name": "benchmark_research_change_proposals_run_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchChangeProposal.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "de22a8fcda3db554b5a70eb2f58ae2f5585b652dd8e25903fb30f166ea8038e4"
+    },
+    {
+      "id": "table:benchmark_research_evidence",
+      "kind": "table",
+      "table": "benchmark_research_evidence",
+      "model": "BenchmarkResearchEvidence",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "run_id",
+            "benchmark_id",
+            "evidence_ref"
+          ],
+          "name": "benchmark_research_evidence_identity_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "run_id"
+          ],
+          "name": "benchmark_research_evidence_run_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchEvidence.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c9adaa74c79283b59576854e43d24d6f89f5471ba907faca474b48dbcc670a16"
+    },
+    {
+      "id": "table:benchmark_research_findings",
+      "kind": "table",
+      "table": "benchmark_research_findings",
+      "model": "BenchmarkResearchFinding",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "run_id",
+            "benchmark_id"
+          ],
+          "name": "benchmark_research_findings_run_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "run_id",
+            "verified"
+          ],
+          "name": "benchmark_research_findings_verified_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchFinding.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "5b065a9ce7d72bc628c4ccc82fece1da4fddb1780df5a4d50bcb4c6a362e413d"
+    },
+    {
+      "id": "table:benchmark_research_runs",
+      "kind": "table",
+      "table": "benchmark_research_runs",
+      "model": "BenchmarkResearchRun",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "vertical",
+            "research_version"
+          ],
+          "name": "benchmark_research_runs_identity_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "vertical"
+          ],
+          "name": "benchmark_research_runs_tenant_vertical_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "c2bbc7e7b748860a69bf01d15f3636fbd20647ff120bd82f768b7cfc0f8fb643"
+    },
+    {
+      "id": "table:benchmark_research_sources",
+      "kind": "table",
+      "table": "benchmark_research_sources",
+      "model": "BenchmarkResearchSource",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "run_id",
+            "benchmark_id",
+            "url"
+          ],
+          "name": "benchmark_research_sources_identity_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "run_id"
+          ],
+          "name": "benchmark_research_sources_run_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSource.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "2eba848c07a6e7a0308792090e01c810b23db46249fe70281c29911463525ad9"
+    },
+    {
+      "id": "table:benchmark_research_subjects",
+      "kind": "table",
+      "table": "benchmark_research_subjects",
+      "model": "BenchmarkResearchSubject",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "run_id",
+            "benchmark_id"
+          ],
+          "name": "benchmark_research_subjects_identity_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "run_id"
+          ],
+          "name": "benchmark_research_subjects_run_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkResearchSubject.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "ef6645c276773628380bb6d7dc83cef029ab237deb23d6ab98d85a9c369e628d"
+    },
+    {
+      "id": "table:benchmark_source_inspections",
+      "kind": "table",
+      "table": "benchmark_source_inspections",
+      "model": "BenchmarkSourceInspection",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "run_id",
+            "benchmark_id"
+          ],
+          "name": "benchmark_source_inspections_benchmark_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "run_id"
+          ],
+          "name": "benchmark_source_inspections_run_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/BenchmarkSourceInspection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "technical-wave",
+      "technicalWave": "database-integrity",
+      "linkedJourneys": [],
+      "fingerprint": "7115688dd74d94eaeabba69262ebb5e68d983c3b7923e82bc1b3ab9a1acf274f"
     },
     {
       "id": "table:billing_subscriptions",
@@ -59057,6 +64256,24 @@
           ],
           "name": "execution_jobs_tenant_kind_idempotency_uq",
           "unique": true
+        },
+        {
+          "fields": [
+            "priority",
+            "DESC",
+            "next_attempt_at",
+            "ASC"
+          ],
+          "name": "priority",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "processing_at"
+          ],
+          "name": "execution_jobs_processing_tenant_idx",
+          "unique": false
         }
       ],
       "classification": "PRODUCTION",
@@ -59065,7 +64282,7 @@
       "linkKind": "technical-wave",
       "technicalWave": "database-integrity",
       "linkedJourneys": [],
-      "fingerprint": "97d71de77f79206a8d8013fa4282675dbb37f13d1aad6845327f7b43d52331f0"
+      "fingerprint": "3f2e618b499e47de47349da71e1830079fd59ed0e2acc1b0ae7b3d23b5d90174"
     },
     {
       "id": "table:execution_trace_events",
@@ -60070,6 +65287,45 @@
       "fingerprint": "4907bf2c74e40e7be122d4e31c94468a58b78f896561c12f599d84e3ac63dbf8"
     },
     {
+      "id": "table:market_archetypes",
+      "kind": "table",
+      "table": "market_archetypes",
+      "model": "MarketArchetype",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "vertical",
+            "archetype_key"
+          ],
+          "name": "market_archetypes_identity_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "vertical"
+          ],
+          "name": "market_archetypes_tenant_vertical_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketArchetype.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "d14108053929809fc879b12298643d9d9d03ae1f8d2a6d4a3db404c0f2f43f81"
+    },
+    {
       "id": "table:market_benchmarks",
       "kind": "table",
       "table": "market_benchmarks",
@@ -60112,6 +65368,132 @@
         "market"
       ],
       "fingerprint": "2c0b3158635874fb0bfb68fd7aef7745061ecd0847fc5ff08db29f05ff1caf13"
+    },
+    {
+      "id": "table:market_candidates",
+      "kind": "table",
+      "table": "market_candidates",
+      "model": "MarketCandidate",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "vertical",
+            "candidate_key"
+          ],
+          "name": "market_candidates_identity_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "vertical"
+          ],
+          "name": "market_candidates_tenant_vertical_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "vertical",
+            "state"
+          ],
+          "name": "market_candidates_state_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketCandidate.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "e6046b568e1ffc462c3f5385e4f6d4b634b28180be63660ae6b209acf21aec4c"
+    },
+    {
+      "id": "table:market_discovery_runs",
+      "kind": "table",
+      "table": "market_discovery_runs",
+      "model": "MarketDiscoveryRun",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "vertical",
+            "discovery_version"
+          ],
+          "name": "market_discovery_runs_identity_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "vertical"
+          ],
+          "name": "market_discovery_runs_tenant_vertical_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoveryRun.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "329a2ca37ecda34f670cf2a03714dce62badb11cd214a992f2bc48c1b5bd2219"
+    },
+    {
+      "id": "table:market_discovery_sets",
+      "kind": "table",
+      "table": "market_discovery_sets",
+      "model": "MarketDiscoverySet",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "vertical",
+            "discovery_set_version"
+          ],
+          "name": "market_discovery_sets_identity_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "vertical"
+          ],
+          "name": "market_discovery_sets_tenant_vertical_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/MarketDiscoverySet.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "agent_marketplace",
+        "market_default_journey",
+        "marketing"
+      ],
+      "linkedDomains": [
+        "market"
+      ],
+      "fingerprint": "12e8186cc8ad0620ef340c2150aea52654b0e1ac957a0a1c9d9c58c7bffebec1"
     },
     {
       "id": "table:market_metric_aggregates",
@@ -60697,6 +66079,55 @@
       ],
       "linkedDomains": [],
       "fingerprint": "a829ecf3bb1ab15b5e16c0e8122aa02f97a36f8c63716a2476b136cfa7f1f4ba"
+    },
+    {
+      "id": "table:mcp_connections",
+      "kind": "table",
+      "table": "mcp_connections",
+      "model": "McpConnection",
+      "hasTenantId": true,
+      "indexes": [
+        {
+          "fields": [
+            "tenant_key",
+            "name"
+          ],
+          "name": "mcp_connections_tenant_name_uq",
+          "unique": true
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "enabled"
+          ],
+          "name": "mcp_connections_tenant_enabled_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "status"
+          ],
+          "name": "mcp_connections_status_idx",
+          "unique": false
+        },
+        {
+          "fields": [
+            "tenant_key",
+            "status"
+          ],
+          "name": "mcp_connections_tenant_status_idx",
+          "unique": false
+        }
+      ],
+      "classification": "PRODUCTION",
+      "source": "api/db/models/McpConnection.js",
+      "linkStatus": "LINKED",
+      "linkKind": "journey",
+      "linkedJourneys": [
+        "whatsapp_connections"
+      ],
+      "linkedDomains": [],
+      "fingerprint": "30af8d1d8ae07da39f5403dd6b6065d35a7d4afaf161249892a274c11e844318"
     },
     {
       "id": "table:node_executions",

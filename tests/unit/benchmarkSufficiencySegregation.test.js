@@ -20,8 +20,22 @@ const BENCHMARK_PATHS = [
   'reports/benchmark-sufficiency-report.json',
 ];
 
+// Exceção governada (2026-09-17): a UI de governança de propostas de pesquisa
+// é superfície DEVELOPMENT-only (rota /dev/benchmark-research, item de menu com
+// classifications:['DEVELOPMENT'], API sob checkClassification('DEVELOPMENT') +
+// tenant system fail-closed). O que continua PROIBIDO no frontend é material de
+// benchmark fora dessa superfície: dados, relatórios, snapshots, páginas novas
+// sem a mesma classificação. Qualquer arquivo frontend com "benchmark" no nome
+// fora desta lista exata falha este teste.
+const ALLOWED_DEV_GOVERNANCE_UI = [
+  'frontend/src/api/benchmarkResearch.js',
+  'frontend/src/pages/BenchmarkResearchGovernancePage.jsx',
+  'frontend/src/pages/BenchmarkResearchGovernancePage.css',
+  'frontend/src/pages/BenchmarkResearchGovernancePage.test.jsx',
+];
+
 describe('artefatos de benchmark são ENGINEERING, não operação do cliente', () => {
-  it('nenhum artefato de benchmark vive no frontend', () => {
+  it('nenhum artefato de benchmark vive no frontend fora da UI DEVELOPMENT de governança', () => {
     for (const rel of BENCHMARK_PATHS) {
       expect(rel.startsWith('frontend/')).toBe(false);
     }
@@ -37,8 +51,27 @@ describe('artefatos de benchmark são ENGINEERING, não operação do cliente', 
         }
       };
       walk(abs);
-      expect(offenders).toEqual([]);
+      const notAllowed = offenders.filter((rel) => !ALLOWED_DEV_GOVERNANCE_UI.includes(rel));
+      expect(notAllowed).toEqual([]);
+      // A exceção não pode virar porteira aberta: os arquivos permitidos devem
+      // existir e ser exatamente os declarados (nem mais, nem menos).
+      for (const rel of ALLOWED_DEV_GOVERNANCE_UI) {
+        expect(fs.existsSync(path.join(REPO_ROOT, rel))).toBe(true);
+      }
     }
+  });
+
+  it('a UI de governança de pesquisa é DEVELOPMENT-only no menu e na rota', () => {
+    const menu = fs.readFileSync(path.join(REPO_ROOT, 'frontend', 'src', 'navigation', 'menu.js'), 'utf8');
+    const start = menu.indexOf("id: 'dev-benchmark-research'");
+    expect(start).toBeGreaterThan(-1);
+    const end = menu.indexOf("id: '", start + 10);
+    const block = menu.slice(start, end === -1 ? start + 800 : end);
+    expect(block).toContain("path: '/dev/benchmark-research'");
+    expect(block).toMatch(/classifications:\s*\[\s*'DEVELOPMENT'\s*\]/);
+    expect(block).not.toMatch(/'PRODUCTION'/);
+    const main = fs.readFileSync(path.join(REPO_ROOT, 'frontend', 'src', 'main.jsx'), 'utf8');
+    expect(main).toContain('/dev/benchmark-research');
   });
 
   it('os diretórios de benchmark estão fora das superfícies PRODUCTION conhecidas', () => {
