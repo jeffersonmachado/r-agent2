@@ -216,6 +216,25 @@ describe('qualidade do registro de candidato (run real r8, 2026-09-16)', () => {
     expect(vendorNameFromHomepageTitle(null)).toBe(null);
   });
 
+  test('ABS-18 (run real r16): entidades HTML do <title> são decodificadas antes do separador', () => {
+    // globalpilates.com.br: <title> de 286 chars com en-dash como ENTIDADE
+    // (`&#8211;`). Sem decodificação o separador nunca casa, o título INTEIRO
+    // vira "nome" e o INSERT em `market_candidates.name varchar(256)` mata o
+    // run com `value too long for type character varying(256)`.
+    const tail = 'Sistema completo de gestão para estúdios de pilates. '.repeat(6);
+    expect(vendorNameFromHomepageTitle(`<title>Global Pilates &#8211; ${tail}</title>`)).toBe('Global Pilates');
+    expect(vendorNameFromHomepageTitle('<title>Academia Exemplo &#x2014; Software de gestão</title>')).toBe('Academia Exemplo');
+    expect(vendorNameFromHomepageTitle('<title>Gym &amp; Fit | Software</title>')).toBe('Gym & Fit');
+  });
+
+  test('ABS-18 (run real r16): título-junk sem separador NUNCA vira nome — guarda do contrato varchar(256)', () => {
+    // Segmento único > 256 chars não é marca: null, e o chamador cai para o
+    // rótulo do domínio (fallback determinístico) em vez de estourar a coluna.
+    expect(vendorNameFromHomepageTitle(`<title>${'Palavra '.repeat(40)}</title>`)).toBe(null);
+    // Exatamente no limite do contrato, passa.
+    expect(vendorNameFromHomepageTitle(`<title>${'A'.repeat(256)}</title>`)).toBe('A'.repeat(256));
+  });
+
   test('nameFromDomain é o fallback determinístico (rótulo do domínio, não invenção)', () => {
     expect(nameFromDomain('vantagefit.io')).toBe('Vantagefit');
     expect(nameFromDomain('woliba.io')).toBe('Woliba');

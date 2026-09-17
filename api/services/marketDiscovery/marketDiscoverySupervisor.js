@@ -94,6 +94,10 @@ const DISCOVERY_RUN_STATES = Object.freeze({
   HOLDOUT_PREREGISTERED: 'HOLDOUT_PREREGISTERED',
   HANDED_OFF: 'MARKET_DISCOVERY_HANDED_OFF',
   BLOCKED: 'MARKET_DISCOVERY_BLOCKED_NO_EXTERNAL_ACCESS',
+  // Falha inesperada no meio do pipeline (run real r16, 2026-09-16): sem este
+  // estado o run ficava ÓRFÃO no último estágio alcançado (não-terminal)
+  // quando uma exceção escapava — indistinguível de um run em andamento.
+  FAILED: 'MARKET_DISCOVERY_FAILED',
 });
 
 const DISCOVERY_RUN_OUTCOMES = Object.freeze({
@@ -382,6 +386,14 @@ function createMarketDiscoverySupervisor({
    * @param {object} [args.sample]          config da vertical (seeds + arquétipos declarados)
    * @param {Array}  [args.marketQueries]   queries de varredura de mercado
    */
+  /**
+   * Abre o run e executa o pipeline com MARCAÇÃO DE FALHA (run real r16,
+   * 2026-09-16): uma exceção inesperada (ex.: `value too long` num INSERT)
+   * deixava o run ÓRFÃO no último estágio alcançado — não-terminal, como se
+   * ainda estivesse rodando. Qualquer erro que escape do corpo marca o run
+   * FAILED com o motivo (tipado) e relança — nunca catch vazio, nunca run
+   * fantasma.
+   */
   async function discover({ vertical, discoveryVersion, sample = null, marketQueries = null } = {}) {
     const verticalId = requireString(vertical, 'vertical');
     const version = requireString(discoveryVersion, 'discoveryVersion');
@@ -394,6 +406,36 @@ function createMarketDiscoverySupervisor({
       metadata: { pipeline: ['MARKET', 'ARCHETYPES', 'CANDIDATES', 'CANDIDATE_ANALYSIS', 'DIVERSITY', 'DISCOVERY_SET', 'HOLDOUT_PREREGISTRATION', 'DEEP_RESEARCH_HANDOFF'] },
     });
 
+    try {
+      return await discoverPipeline({ verticalId, version, run, sample, marketQueries });
+    } catch (error) {
+      const failure = {
+        code: error?.code || null,
+        message: String(error?.message || error || 'unknown').slice(0, 500),
+      };
+      try {
+        await store.updateRunState({
+          tenantId: discoveryTenant,
+          runId: run.id,
+          state: DISCOVERY_RUN_STATES.FAILED,
+          completedAt: clock(),
+          metadata: { failure },
+        });
+      } catch (markError) {
+        // A marcação falhou (ex.: store indisponível): registra nos logs e
+        // relança o erro ORIGINAL — nunca engole a causa raiz.
+        log.error('[market-discovery] falha ao marcar run como FAILED', {
+          tenant: discoveryTenant,
+          runId: run.id,
+          failure,
+          markError: String(markError?.message || markError),
+        });
+      }
+      throw error;
+    }
+  }
+
+  async function discoverPipeline({ verticalId, version, run, sample = null, marketQueries = null }) {
     register();
     const availability = providerAvailability();
     if (!availability.externalAccess) {
@@ -583,10 +625,18 @@ function createMarketDiscoverySupervisor({
         const homepageName = vendorNameFromHomepageTitle(homepageGathered?.content)
           || (signalIsHomepage ? vendorNameFromHomepageTitle(gathered.content) : null);
         const domainName = homepageName ? null : nameFromDomain(hit.url);
-        const name = homepageName || domainName || hit.title || hit.url;
+        // Guarda do contrato varchar(256) (run real r16, 2026-09-16): o
+        // título/URL vindos do SERP passam pela MESMA guarda — um hit.title
+        // longo nunca estoura `market_candidates.name`. Sem nome utilizável,
+        // null → rejeição honesta `candidate_name_missing`, nunca overflow.
+        const usable = (value) => {
+          const text = isNonEmptyString(value) ? value.trim() : null;
+          return text && text.length <= 256 ? text : null;
+        };
+        const name = homepageName || domainName || usable(hit.title) || usable(hit.url);
         const nameSource = homepageName
           ? 'homepage_title'
-          : (domainName ? 'domain_label' : (isNonEmptyString(hit.title) ? 'search_title' : 'url'));
+          : (domainName ? 'domain_label' : (usable(hit.title) ? 'search_title' : 'url'));
         researchResults.push({
           name,
           officialSite: rootUrl || hit.url,

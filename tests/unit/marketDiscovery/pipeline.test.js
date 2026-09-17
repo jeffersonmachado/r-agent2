@@ -956,3 +956,92 @@ describe('Market discovery — re-juízo de vereditos stale do gate (run real r1
     expect(calls).not.toContain('https://portaljuridico.com.br/');
   });
 });
+
+
+describe('Market discovery — contrato de nome varchar(256) e estado FAILED (run real r16, ABS-18)', () => {
+  // Run real r16 (2026-09-16): o candidato globalpilates.com.br tem <title>
+  // de 286 chars com o separador como ENTIDADE HTML (`&#8211;`). Sem
+  // decodificação o título INTEIRO virou "nome" e o INSERT em
+  // `market_candidates.name varchar(256)` derrubou o run com
+  // `value too long for type character varying(256)` — e, sem tratamento, o
+  // run ficou ÓRFÃO em ARCHETYPES_VALIDATED para sempre (não-terminal).
+
+  function buildNameContractProviders() {
+    const tail = 'Sistema completo de gestão para estúdios de pilates. '.repeat(6);
+    const junkTitle = 'Palavra '.repeat(40).trim();
+    const contentByUrl = {
+      'https://globalpilates.com.br/': `<html><head><title>Global Pilates &#8211; ${tail}</title></head><body>gestão</body></html>`,
+      'https://junk-title.com.br/': `<html><head><title>${junkTitle}</title></head><body>gestão</body></html>`,
+    };
+    return {
+      search: async () => ({
+        candidates: [
+          { url: 'https://globalpilates.com.br/', title: 'Global Pilates', archetypes: ['independent-gym'] },
+          { url: 'https://junk-title.com.br/', title: junkTitle, archetypes: ['independent-gym'] },
+        ],
+      }),
+      fetch: async (input) => {
+        const content = contentByUrl[input.url] || `conteúdo oficial de ${input.url}`;
+        return { httpStatus: 200, content, contentType: 'text/html', retrievedAt: NOW, contentHash: sha(content) };
+      },
+      inspectDocumentation: async () => ({ sections: ['a', 'b', 'c'] }),
+      inspectApiDocs: async () => ({ operations: [] }),
+      captureEvidence: async (input) => ({ evidenceRef: `ev-${sha(input.url).slice(0, 12)}`, contentHash: input.contentHash }),
+    };
+  }
+
+  test('nome decodifica entidades e honra varchar(256): título-junk cai para o rótulo do domínio', async () => {
+    const { supervisor, store } = await buildHarness({ providers: buildNameContractProviders() });
+
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-name-contract-v1',
+      sample: SAMPLE,
+    });
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+
+    const candidates = await store.listCandidates({ tenantId: TENANT, vertical: 'fitness-lab', runId: result.runId });
+    const byHost = Object.fromEntries(candidates.map((row) => [row.official_site, row]));
+
+    // Entidade `&#8211;` decodificada → separador casa → nome é a marca curta.
+    expect(byHost['https://globalpilates.com.br/'].name).toBe('Global Pilates');
+    // Título-junk de 319 chars sem separador NUNCA estoura a coluna: o nome é
+    // o rótulo determinístico do domínio (e o hit.title longo do SERP também
+    // é recusado pela mesma guarda — nunca é fallback).
+    expect(byHost['https://junk-title.com.br/'].name).toBe('Junk-title');
+    expect(byHost['https://junk-title.com.br/'].metadata.nameSource).toBe('domain_label');
+    // Contrato: TODO nome persistido cabe em varchar(256).
+    for (const row of candidates) {
+      expect(row.name.length).toBeLessThanOrEqual(256);
+    }
+  });
+
+  test('exceção inesperada no meio do pipeline marca o run FAILED — nunca órfão em estado não-terminal', async () => {
+    const { supervisor, store } = await buildHarness();
+    // Falha de contrato de coluna no meio do estágio CANDIDATES (o que o r16
+    // viveu): o run deve ser marcado FAILED com o motivo, não ficar órfão.
+    const original = store.upsertCandidate.bind(store);
+    store.upsertCandidate = async (args) => {
+      if (args?.candidate?.origin !== 'seed') {
+        const error = new Error('value too long for type character varying(256)');
+        error.code = '23501';
+        throw error;
+      }
+      return original(args);
+    };
+
+    await expect(supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-failed-v1',
+      sample: SAMPLE,
+    })).rejects.toThrow('value too long');
+
+    const run = await store.getRun({ tenantId: TENANT, vertical: 'fitness-lab', discoveryVersion: 'fitness-lab-failed-v1' });
+    expect(run.state).toBe(DISCOVERY_RUN_STATES.FAILED);
+    expect(run.completed_at).toBe(NOW);
+    expect(run.metadata.failure).toEqual(expect.objectContaining({
+      code: '23501',
+      message: expect.stringContaining('value too long'),
+    }));
+  });
+});

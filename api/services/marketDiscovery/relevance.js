@@ -245,21 +245,45 @@ function homepageUrl(input) {
 const TITLE_SEGMENT_SEPARATOR = /\s*[:|–—·•]\s+|\s+-\s+/;
 
 /**
+ * Decodifica as entidades HTML comuns de um <title>. Numéricas PRIMEIRO
+ * (`&#8211;` → en-dash), `&amp;` por ÚLTIMO — decodificar `&amp;` antes
+ * criaria entidades novas a partir de texto literal (`&amp;#8211;`).
+ */
+function decodeTitleEntities(text) {
+  return String(text ?? '')
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+/**
  * Nome do fornecedor extraído do `<title>` da homepage: o primeiro segmento
  * antes do separador típico ("Vantage Fit: Employee Wellness Platform" →
  * "Vantage Fit"). Determinístico, extraído do documento do PRÓPRIO fornecedor
  * — nunca inventado. Sem título utilizável, null (o chamador decide o
  * fallback; o título de um listicle/blog NÃO é nome de fornecedor).
+ *
+ * Guarda de contrato (run real r16, 2026-09-16): entidades HTML são
+ * decodificadas ANTES do separador — o `<title>` do globalpilates.com.br
+ * (286 chars, en-dash como `&#8211;`) nunca casava o separador e o título
+ * inteiro virava "nome", estourando `market_candidates.name varchar(256)`.
+ * Segmento vazio ou maior que a coluna é título-junk: null, e o chamador cai
+ * para o rótulo do domínio (fallback determinístico).
  */
 function vendorNameFromHomepageTitle(html) {
   const content = String(html ?? '');
   if (!content) return null;
   const match = content.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   if (!match) return null;
-  const title = match[1].replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  const title = decodeTitleEntities(match[1].replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
   if (!title) return null;
   const segment = title.split(TITLE_SEGMENT_SEPARATOR)[0].trim();
-  return segment.length > 0 ? segment : null;
+  return segment.length > 0 && segment.length <= 256 ? segment : null;
 }
 
 /**
