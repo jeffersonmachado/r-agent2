@@ -191,6 +191,12 @@ function ensureMarketDiscoveryCapability(registry, runners = {}) {
  * @param {Function} [args.now]
  * @param {object} [args.logger]
  * @param {object} [args.selection] { size } tamanho alvo do discovery set
+ * @param {Function} [args.researchedKeysProvider] async ({tenantId, vertical})
+ *        → chaves de candidato JÁ ANALISADAS segundo a verdade durável
+ *        (benchmark research store). Run real r18 (2026-09-17): o sample
+ *        esquece benchmark graduado; sem esta fonte o ciclo re-seleciona
+ *        vendor já pesquisado (vantagefit.io) e a janela de saturação desliza
+ *        com novidade ~0 — gaming estrutural do denominador.
  */
 function createMarketDiscoverySupervisor({
   store,
@@ -201,6 +207,7 @@ function createMarketDiscoverySupervisor({
   now,
   logger,
   selection = {},
+  researchedKeysProvider = null,
 } = {}) {
   if (!store) throw new Error('persistence_required: market discovery store é obrigatório');
   if (!registry) throw new Error('market_discovery_registry_required');
@@ -830,7 +837,21 @@ function createMarketDiscoverySupervisor({
     // sample JÁ foram pesquisados — nunca voltam ao set nem ao holdout, e o
     // que cobrem passa a contar como conhecido. A exclusão é derivada do
     // sample (mesma identidade do universo) e registrada no metadata do run.
-    const incrementalExclusions = researchedKeysFromSample(sample);
+    const incrementalExclusionsFromSample = researchedKeysFromSample(sample);
+    // União com a verdade DURÁVEL (run real r18, 2026-09-17): o sample esquece
+    // benchmark graduado — o research store lembra. Sem esta união o ciclo
+    // re-seleciona vendor já pesquisado (vantagefit.io foi re-selecionado no
+    // r18) e a re-pesquisa mede novidade ~0, deslizando a janela de saturação
+    // sem conhecimento novo (gaming estrutural do denominador).
+    const incrementalExclusionsFromStore = typeof researchedKeysProvider === 'function'
+      ? list(await researchedKeysProvider({ tenantId: discoveryTenant, vertical: verticalId }))
+        .map((key) => String(key ?? '').trim())
+        .filter(Boolean)
+      : [];
+    const incrementalExclusions = [...new Set([
+      ...incrementalExclusionsFromSample,
+      ...incrementalExclusionsFromStore,
+    ])];
     // Reserva do holdout pré-registrado (run real r13, 2026-09-16): o holdout
     // vigente ainda NÃO pesquisado nunca entra no set — o r13, com o pool
     // reduzido ao próprio holdout, o selecionou e o ciclo morreu sem handoff

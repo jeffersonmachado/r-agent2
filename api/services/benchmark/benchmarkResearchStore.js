@@ -480,6 +480,29 @@ function createBenchmarkResearchStore({ models } = {}) {
     return inspection.findAll({ where, order: [['inspected_at', 'ASC']] });
   }
 
+  /**
+   * Ids de benchmarks JÁ ANALISADOS na vertical, em qualquer run — a verdade
+   * DURÁVEL de "já pesquisado" (run real r18, 2026-09-17): o sample esquece
+   * benchmark graduado (o gerador re-deriva as entradas gerenciadas), então a
+   * exclusão derivada só do sample evapora e o market discovery re-seleciona
+   * vendor já pesquisado — re-pesquisa mede novidade ~0 e desliza a janela de
+   * saturação sem conhecimento novo (gaming estrutural do denominador).
+   */
+  async function listAnalyzedBenchmarkIds({ tenantId, vertical }) {
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const runs = await listRuns({ tenantId: tenant, vertical: requireNonEmpty(vertical, 'vertical') });
+    const ids = new Set();
+    for (const run of runs) {
+      const runId = typeof run.get === 'function' ? run.get({ plain: true }).id : run.id;
+      const subjects = await listSubjects({ tenantId: tenant, runId });
+      for (const subject of subjects) {
+        const row = typeof subject.get === 'function' ? subject.get({ plain: true }) : subject;
+        if (row.analyzed_at) ids.add(String(row.benchmark_id));
+      }
+    }
+    return [...ids].sort();
+  }
+
   return {
     errorCodes: ERROR_CODES,
     getRun,
@@ -498,6 +521,7 @@ function createBenchmarkResearchStore({ models } = {}) {
     listFindings,
     upsertSourceInspection,
     listSourceInspections,
+    listAnalyzedBenchmarkIds,
   };
 }
 

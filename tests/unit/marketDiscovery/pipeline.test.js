@@ -92,7 +92,7 @@ function buildProviders() {
   };
 }
 
-async function buildHarness({ providers = buildProviders(), sharedState, selection = { size: 3 } } = {}) {
+async function buildHarness({ providers = buildProviders(), sharedState, selection = { size: 3 }, researchedKeysProvider } = {}) {
   const registry = createToolRegistry({ logger: silent });
   const store = createMarketDiscoveryMemoryStore({ state: sharedState });
   const supervisor = createMarketDiscoverySupervisor({
@@ -104,9 +104,55 @@ async function buildHarness({ providers = buildProviders(), sharedState, selecti
     now: () => NOW,
     logger: silent,
     selection,
+    ...(researchedKeysProvider ? { researchedKeysProvider } : {}),
   });
   return { registry, store, supervisor };
 }
+
+describe('Market discovery — exclusão durável de benchmark já pesquisado (run real r18, ABS-20)', () => {
+  // Run real r18 (2026-09-17): vantagefit.io foi ANALISADO num ciclo anterior
+  // e depois GRADUOU para fora do sample (o gerador re-deriva as entradas
+  // gerenciadas). Como `researchedKeysFromSample` só enxerga o sample, a
+  // exclusão evaporou e o r18 RE-SELECIONOU vantagefit.io — re-pesquisar o
+  // mesmo fornecedor mede novidade ~0 e desliza a janela de saturação sem
+  // conhecimento novo (gaming estrutural). A verdade durável de "já
+  // pesquisado" é o benchmark research store: o supervisor a consulta via
+  // `researchedKeysProvider` injetado.
+  test('chave analisada fora do sample (provider) NUNCA entra no discovery set', async () => {
+    const providers = buildProviders();
+    // delta-fitness.com: no universo da varredura, mas JÁ ANALISADO segundo o
+    // research store (não está no sample — exatamente o caso do vantagefit).
+    const { supervisor, store } = await buildHarness({
+      providers,
+      researchedKeysProvider: async () => ['delta-fitness.com'],
+    });
+
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-durable-exclusion-v1',
+      sample: SAMPLE,
+    });
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+
+    expect(result.discoverySet.selected).not.toContain('delta-fitness.com');
+    expect(result.holdout.candidateKey).not.toBe('delta-fitness.com');
+    const run = await store.getRun({ tenantId: TENANT, vertical: 'fitness-lab', discoveryVersion: 'fitness-lab-durable-exclusion-v1' });
+    expect(run.metadata.incrementalExclusions).toContain('delta-fitness.com');
+  });
+
+  test('sem provider injetado o comportamento é o de antes (só o sample exclui)', async () => {
+    const { supervisor } = await buildHarness();
+    const result = await supervisor.discover({
+      vertical: 'fitness-lab',
+      discoveryVersion: 'fitness-lab-durable-exclusion-v2',
+      sample: SAMPLE,
+    });
+    expect(result.status).toBe(DISCOVERY_RUN_OUTCOMES.COMPLETED);
+    // Sem provider, nada muda: delta-fitness.com continua elegível.
+    const pool = [...result.discoverySet.selected, result.holdout.candidateKey].filter(Boolean);
+    expect(pool.length).toBeGreaterThan(0);
+  });
+});
 
 describe('Market discovery — pipeline completo', () => {
   test('caminho feliz MARKET → … → HOLDOUT PREREGISTERED → handoff', async () => {

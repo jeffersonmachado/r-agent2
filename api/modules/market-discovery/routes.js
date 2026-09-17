@@ -160,6 +160,12 @@ function createMarketDiscoveryRoutes({ buildDeps, resolveDiscoveryDeps }) {
       now: injected.now,
       logger: deps.logger,
       selection: injected.selection || {},
+      // Exclusão DURÁVEL (run real r18, ABS-20): benchmarks já analisados
+      // segundo o benchmark research store nunca voltam ao set — o sample
+      // esquece benchmark graduado, o store não.
+      researchedKeysProvider: injected.researchedKeysProvider
+        || (({ tenantId, vertical }) => (injected.benchmarkStore || createBenchmarkResearchStore())
+          .listAnalyzedBenchmarkIds({ tenantId, vertical })),
     });
   }
 

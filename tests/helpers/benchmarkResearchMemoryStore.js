@@ -307,6 +307,23 @@ function createBenchmarkResearchMemoryStore() {
       .map(clone);
   }
 
+  /**
+   * Mesmo contrato do store Postgres (`listAnalyzedBenchmarkIds`): ids de
+   * benchmarks já analisados na vertical, em qualquer run.
+   */
+  async function listAnalyzedBenchmarkIds({ tenantId, vertical }) {
+    const runIds = [...state.runs.values()]
+      .filter((row) => row.tenant_key === tenantId && row.vertical === vertical)
+      .map((row) => row.id);
+    const ids = new Set();
+    for (const row of state.subjects.values()) {
+      if (row.tenant_key === tenantId && runIds.includes(row.run_id) && row.analyzed_at) {
+        ids.add(String(row.benchmark_id));
+      }
+    }
+    return [...ids].sort();
+  }
+
   return {
     getRun,
     listRuns,
@@ -324,6 +341,7 @@ function createBenchmarkResearchMemoryStore() {
     listFindings,
     upsertSourceInspection,
     listSourceInspections,
+    listAnalyzedBenchmarkIds,
   };
 }
 
