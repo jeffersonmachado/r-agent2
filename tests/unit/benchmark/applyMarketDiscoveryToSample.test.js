@@ -180,6 +180,36 @@ describe('apply-market-discovery-to-sample — núcleo puro', () => {
       .toThrow(new RegExp(ERROR_CODES.EVIDENCE_MISSING));
   });
 
+  test('ABS-21 (run real r21): seed DECLARADO que também está no discovery set NUNCA é duplicado', () => {
+    // Run real r21 (2026-09-17): o operador declarou seeds (proveniência
+    // `declaredBy: operator`, sem `generator`) e o run os selecionou — o
+    // gerador preservou a declaração E derivou uma segunda entrada para a
+    // mesma chave: 6 vendors ficaram duplicados no sample e o plano de deep
+    // research analisou cada um DUAS vezes. Uma chave = uma entrada; a versão
+    // derivada (com lineage do run) prevalece sobre a declaração.
+    const sample = buildSample();
+    sample.benchmarks.push({
+      id: 'alpha-gym.com',
+      name: 'Alpha Gym',
+      role: 'discovery',
+      order: 2,
+      archetype: 'independent-gym',
+      independenceGroup: 'alpha',
+      sources: [{ url: 'https://alpha-gym.com/', tier: 5 }],
+      novelty: {},
+      provenance: { declaredBy: 'operator', declaredAt: '2026-09-17' },
+    });
+    const next = applyMarketDiscoveryToSample({ sample, runExport: buildRunExport() });
+
+    const alphas = next.benchmarks.filter((b) => b.id === 'alpha-gym.com');
+    expect(alphas).toHaveLength(1);
+    // A versão que fica é a DERIVADA (carrega a lineage do run).
+    expect(alphas[0].provenance).toEqual(expect.objectContaining({
+      generator: GENERATOR_ID,
+      marketDiscoveryRunId: 'mdr-test-run',
+    }));
+  });
+
   test('só as chaves gerenciadas mudam', () => {
     const sample = buildSample();
     const next = applyMarketDiscoveryToSample({ sample, runExport: buildRunExport() });

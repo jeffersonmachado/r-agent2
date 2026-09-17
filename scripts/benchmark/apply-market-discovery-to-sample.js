@@ -278,8 +278,15 @@ function applyMarketDiscoveryToSample({ sample, runExport }) {
   }
 
   // Benchmarks: entradas gerenciadas por ESTE gerador são re-derivadas; as
-  // demais (análises anteriores, seeds históricos) são preservadas intactas.
-  const preserved = list(next.benchmarks).filter((entry) => entry?.provenance?.generator !== GENERATOR_ID);
+  // demais (análises anteriores, seeds históricos) são preservadas intactas —
+  // EXCETO quando a chave está no set/holdout DESTE run (run real r21,
+  // 2026-09-17): um seed DECLARADO pelo operador que também foi selecionado
+  // seria preservado E derivado — o r21 terminou com 6 vendors duplicados e o
+  // plano de deep research analisou cada um duas vezes. Uma chave = UMA
+  // entrada; a versão derivada (com lineage do run) absorve a declaração.
+  const runKeys = new Set([...selected.map(String), ...(selected.includes(holdoutKey) ? [] : [String(holdoutKey)])]);
+  const preserved = list(next.benchmarks).filter((entry) => entry?.provenance?.generator !== GENERATOR_ID
+    && !runKeys.has(String(entry?.id)));
   const maxOrder = preserved.reduce((max, entry) => Math.max(max, Number(entry?.order) || 0), 0);
   // O holdout incorporado foi analisado DEPOIS de todos os benchmarks do ciclo
   // anterior (era o holdout de validação deles): fecha a sequência preservada.
@@ -299,6 +306,7 @@ function applyMarketDiscoveryToSample({ sample, runExport }) {
       runExport,
     }));
   }
+  // A deduplicação por chave já aconteceu no filtro de `preserved` (acima).
   next.benchmarks = [...preserved, ...derived]
     .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0) || String(a.id).localeCompare(String(b.id)));
 
