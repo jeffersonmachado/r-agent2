@@ -1979,7 +1979,7 @@
       },
       "unresolvedSemanticCandidates": 0,
       "archetypeEvidence": {
-        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[financial-billing]): 9 achado(s) verificado(s) casam.",
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research, fitness-market-discovery-2026-09-16-r17-name-contract-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[financial-billing]): 9 achado(s) verificado(s) casam.",
         "supported": true,
         "reason": null,
         "supportingFindings": [
@@ -2060,15 +2060,16 @@
         "totalFindings": 18,
         "provenance": {
           "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
-          "researchVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+          "researchVersion": "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research",
           "researchVersions": [
             "dbg4-1789317653921",
             "fitness-semantic-2026-09-15-r2",
             "fitness-market-real-2026-09-15-r3-deep-research",
-            "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research"
+            "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+            "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research"
           ],
           "normalizationVersion": "2026-09-15.2",
-          "derivedAt": "2026-09-16T14:58:26.483Z"
+          "derivedAt": "2026-09-17T02:35:48.453Z"
         }
       }
     },
@@ -2256,7 +2257,7 @@
       },
       "unresolvedSemanticCandidates": 0,
       "archetypeEvidence": {
-        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[student-digital-experience]): 1 achado(s) verificado(s) casam.",
+        "derivation": "scripts/benchmark/derive-archetype-coverage-evidence.js sobre os findings VERIFICADOS dos runs dbg4-1789317653921, fitness-semantic-2026-09-15-r2, fitness-market-real-2026-09-15-r3-deep-research, fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research, fitness-market-discovery-2026-09-16-r17-name-contract-deep-research (vocabulário config/benchmark-normalization.json#archetypeEvidenceTerms[student-digital-experience]): 1 achado(s) verificado(s) casam.",
         "supported": true,
         "reason": null,
         "supportingFindings": [
@@ -2273,15 +2274,16 @@
         "totalFindings": 13,
         "provenance": {
           "generator": "scripts/benchmark/derive-archetype-coverage-evidence.js",
-          "researchVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+          "researchVersion": "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research",
           "researchVersions": [
             "dbg4-1789317653921",
             "fitness-semantic-2026-09-15-r2",
             "fitness-market-real-2026-09-15-r3-deep-research",
-            "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research"
+            "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+            "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research"
           ],
           "normalizationVersion": "2026-09-15.2",
-          "derivedAt": "2026-09-16T14:58:26.483Z"
+          "derivedAt": "2026-09-17T02:35:48.453Z"
         }
       }
     },
@@ -2456,89 +2458,113 @@
       }
     },
     {
-      "id": "vantagefit.io",
-      "name": "Vantage Fit",
+      "id": "goteamup.com",
+      "name": "TeamUp",
       "role": "discovery",
       "order": 12,
-      "archetype": "personal-wellness",
-      "independenceGroup": "vantagefit.io",
+      "archetype": "boutique-studio",
+      "independenceGroup": "goteamup.com",
       "cloneOf": null,
-      "officialSite": "https://vantagefit.io/",
+      "officialSite": "https://goteamup.com/",
       "sources": [
         {
-          "url": "https://vantagefit.io/",
+          "url": "https://goteamup.com/",
           "tier": 5,
           "specificity": "GENERIC",
           "retrievedAt": null,
           "verified": false,
           "provenance": {
-            "evidenceRef": "ev-4ad14355394322fbae32a0afb15fc8a9786bf751",
-            "contentHash": "sha256:9a89acdab85ff6864333229d2a8f2ea8cd409f56f4fa0f1df1368a7cf3b855a2"
+            "evidenceRef": "ev-89c7871cdca6c44a1ebb289887f3c774401d70af",
+            "contentHash": "sha256:67f33e668f2563268532f1d7fd5d6bce370ec5c9aabd3e5be78cd38b6a63e33b"
           },
-          "id": "brsrc-3e611d3c8bc26b4390573c9f89d6ddec2dbfb716c02ee4ef",
+          "id": "brsrc-4e41e2214e00066057e4588273ba17ae813c11e43902db1d",
           "httpStatus": 200
         },
         {
-          "id": "brsrc-7e07ddc729987c5b1392e574e69df76e8880a912e90f7f9e",
-          "url": "https://vantagefit.io/app-download/",
+          "id": "brsrc-934baf33d809d181f55021f2a4157754322eef6b06d49633",
+          "url": "https://goteamup.com/pricing/",
           "tier": 5,
           "specificity": "SPECIFIC",
           "verified": true,
           "httpStatus": 200,
-          "retrievedAt": "2026-09-16"
+          "retrievedAt": "2026-09-17"
         },
         {
-          "id": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
-          "url": "https://vantagefit.io/pricing/",
+          "id": "brsrc-10b168da70242169793c2f18ba73b7d935b76f4e4ce9e6c4",
+          "url": "https://goteamup.com/compare/zenplanner/",
           "tier": 5,
           "specificity": "SPECIFIC",
           "verified": true,
           "httpStatus": 200,
-          "retrievedAt": "2026-09-16"
+          "retrievedAt": "2026-09-17"
         },
         {
-          "id": "brsrc-b4a29b5baf94fe340e12c359035146a6fd5be8f74e59b261",
-          "url": "https://vantagefit.io/features/activity-tracking/",
+          "id": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+          "url": "https://goteamup.com/features/access-control/",
           "tier": 5,
           "specificity": "SPECIFIC",
           "verified": true,
           "httpStatus": 200,
-          "retrievedAt": "2026-09-16"
+          "retrievedAt": "2026-09-17"
         }
       ],
       "novelty": {
         "newCapabilities": [
           {
-            "id": "brf-52509e8c053cd77d724091fbcf451e4cb07dac1f6bc68d60",
-            "name": "Get the Vantage Fit mobile app Track activity, join challenges, and stay engaged from anywhere.",
-            "normalizedId": "app.track",
+            "id": "brf-f3d0ce3d7e88956d5cab300f91291e7f3205cf486acda3dc",
+            "name": "It is simple and easy to switch to TeamUp. We manage the data migration so you never miss a booking. This is part of you…",
+            "normalizedId": "booking.manage",
             "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-7e07ddc729987c5b1392e574e69df76e8880a912e90f7f9e",
-            "evidenceRef": "bre-348e73482812db430eb1cb89c3cb659768cf5edb13e576cc"
+            "sourceRef": "brsrc-10b168da70242169793c2f18ba73b7d935b76f4e4ce9e6c4",
+            "evidenceRef": "bre-3fd9ff1a7a9dcdf816f32c48dbf129e2f8024353e0bf72fe"
           },
           {
-            "id": "brf-64573c18022a581ecea843a5c85a18cd234280d272755303",
-            "name": "Automatic reward delivery (annual plan) –",
-            "normalizedId": "plan.automate",
+            "id": "brf-8892908d800578ce85e6c02598971d91b8ce03ae2bc7872b",
+            "name": "Payment flexibility",
+            "normalizedId": "pay",
             "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
-            "evidenceRef": "bre-2fb0fbe4bdfcaf0123eee9f29300d7a74dc987bbd058bdf0"
+            "sourceRef": "brsrc-10b168da70242169793c2f18ba73b7d935b76f4e4ce9e6c4",
+            "evidenceRef": "bre-3fd9ff1a7a9dcdf816f32c48dbf129e2f8024353e0bf72fe"
           },
           {
-            "id": "brf-47d549fa18f2d3d14ae19828b76a76e07e109e7e04e2014a",
-            "name": "Year-round activity tracking and ranking tiers (annual plan)",
-            "normalizedId": "plan.track",
+            "id": "brf-3ae3a655bb73747f08aa91cd67759ee48435661d0ea51e0f",
+            "name": "Manage popular time slots automatically, messaging via mobile app or email with access updating in real time",
+            "normalizedId": "app.manage",
             "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-dbb7bd8d31ed841c57f6c06ab40f963a1baf353f5d1cae50",
-            "evidenceRef": "bre-2fb0fbe4bdfcaf0123eee9f29300d7a74dc987bbd058bdf0"
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
           },
           {
-            "id": "brf-cb8b96cfec55224b611c395a7a45e6f6c22853988544e5a9",
-            "name": "Your steps become active minutes, and every workout you log or track adds more. A ride or a gym session counts even with…",
-            "normalizedId": "workout.track",
+            "id": "brf-af2e21ddcc8054508832c1b673b18c1006d46b2badbe02f0",
+            "name": "Integrate smart security into your booking software.",
+            "normalizedId": "booking.integrate",
             "origin": "EXTERNAL_OBSERVED",
-            "sourceRef": "brsrc-b4a29b5baf94fe340e12c359035146a6fd5be8f74e59b261",
-            "evidenceRef": "bre-6176e0412864c24b07fe0e0796d38cabedf58a6cac552aa6"
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-8e8a52af1f65a2f82fb8ab71b4f5f28944bc78467ae8da3b",
+            "name": "Cloud-based functionality means you can use your phone, tablet, or desktop device to manage your members' access and sta…",
+            "normalizedId": "member.manage",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-44cae81127713c20222618fa7f8c8c6fcccf74a701098b1c",
+            "name": "Disable non-paying or late payment members from entering until they've paid",
+            "normalizedId": "member.pay",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-1d30def3494804dd522fdd6ffc91171a3ec632a53e471c73",
+            "name": "Having one place to manage your memberships, payment methods, form and waiver collection, and client details will add va…",
+            "normalizedId": "membership.manage",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
           }
         ],
         "newRequiredCapabilities": [],
@@ -2546,47 +2572,76 @@
         "newJourneys": [],
         "newRequiredJourneys": [],
         "newCriticalJourneys": [],
-        "newBusinessRules": [],
+        "newBusinessRules": [
+          {
+            "id": "brf-c5ef644523c9b0c3aac571ecd7938143a6e36abda7d33f1a",
+            "name": "Your clients know when they do or don't have access or if they need to make a payment before they can return and enjoy y…",
+            "normalizedId": "access.pay",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          },
+          {
+            "id": "brf-59b17fa61711a33a46a924f966b2eafff90dc3687398dcdd",
+            "name": "See when and what your members are booking and know when they'll be coming to your facility",
+            "normalizedId": "member.book",
+            "origin": "EXTERNAL_OBSERVED",
+            "sourceRef": "brsrc-e6473b1e3fe4426414927c6dbe019e89eabf293c45148493",
+            "evidenceRef": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c"
+          }
+        ],
         "newRequiredBusinessRules": [],
         "newCriticalBusinessRules": []
       },
       "findingsInventory": [
-        "brf-52509e8c053cd77d724091fbcf451e4cb07dac1f6bc68d60",
-        "brf-c4f7c3eb5267648b37a0d3d14e5bab671ed6d2819845b93c",
-        "brf-64573c18022a581ecea843a5c85a18cd234280d272755303",
-        "brf-47d549fa18f2d3d14ae19828b76a76e07e109e7e04e2014a",
-        "brf-6b12dcfeac2d6e7d99737b4d60b800aab387a43c2e9093f9",
-        "brf-cb8b96cfec55224b611c395a7a45e6f6c22853988544e5a9"
+        "brf-0f6bcaff9872c25856b547a25ad2da8908b103425c3219c4",
+        "brf-5838f351c98681ed36e93558f99262d278617d6f9fa97fc7",
+        "brf-368300654c5a8bd480926667392b0e029a19142073427af3",
+        "brf-eb7af2a049a796aaccba9b4278e93033de9a16bfa7bc2d6c",
+        "brf-f3d0ce3d7e88956d5cab300f91291e7f3205cf486acda3dc",
+        "brf-8892908d800578ce85e6c02598971d91b8ce03ae2bc7872b",
+        "brf-86cd02af6c0572186371b881b6284a8cd283d203fa354b5a",
+        "brf-78b24b0ec442996b7bd6f32ef1ae79659a777a87051a0030",
+        "brf-0d9f2f2b3f1923f53b81296d374cdb7ebb074bbe4a25699d",
+        "brf-c5ef644523c9b0c3aac571ecd7938143a6e36abda7d33f1a",
+        "brf-59b17fa61711a33a46a924f966b2eafff90dc3687398dcdd",
+        "brf-3ae3a655bb73747f08aa91cd67759ee48435661d0ea51e0f",
+        "brf-af2e21ddcc8054508832c1b673b18c1006d46b2badbe02f0",
+        "brf-8e8a52af1f65a2f82fb8ab71b4f5f28944bc78467ae8da3b",
+        "brf-44cae81127713c20222618fa7f8c8c6fcccf74a701098b1c",
+        "brf-1d30def3494804dd522fdd6ffc91171a3ec632a53e471c73"
       ],
       "country": null,
       "segments": [],
       "targetCustomers": [],
       "archetypes": [
-        "personal-wellness"
+        "boutique-studio",
+        "gym-network",
+        "independent-gym"
       ],
       "provenance": {
         "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-        "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
-        "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
-        "appliedAt": "2026-09-16T14:56:50.899Z",
+        "marketDiscoveryRunId": "mdr-8572d09901c915970b0288b8b6784914972b8488099e5600",
+        "discoverySetId": "mds-8572d09901c915970b0288b8b6784914972b8488099e5600",
+        "appliedAt": "2026-09-17T02:35:06.625Z",
         "evidenceRefs": [
-          "ev-1d07f40fedc5d7b6e5ab73ae792411dcfe1d2189",
-          "ev-4ad14355394322fbae32a0afb15fc8a9786bf751"
+          "ev-89c7871cdca6c44a1ebb289887f3c774401d70af",
+          "ev-d94cf3759f9a367540d7f9a4397ea2f814d8fdc0"
         ]
       },
-      "analyzedAt": "2026-09-16T16:36:19.574Z",
-      "researchVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe-deep-research",
+      "analyzedAt": "2026-09-17T02:42:10.045Z",
+      "researchVersion": "fitness-market-discovery-2026-09-16-r17-name-contract-deep-research",
       "marketArchetypeMapping": {
-        "archetype": "personal-wellness",
+        "archetype": "boutique-studio",
         "rationale": "mapeamento declarado no sample do benchmark"
       },
-      "inventoryVersion": "canonical-capabilities-1.0.0",
-      "unresolvedSemanticCandidates": 0,
       "freshness": {
-        "researchedAt": "2026-09-16",
-        "nextReviewAt": "2027-09-16",
+        "researchedAt": "2026-09-17",
+        "nextReviewAt": "2027-09-17",
         "status": "FRESH"
-      }
+      },
+      "inventoryVersion": "canonical-capabilities-1.0.0",
+      "unresolvedSemanticCandidates": 1
     },
     {
       "id": "wellable.co",
@@ -2641,9 +2696,9 @@
       ],
       "provenance": {
         "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-        "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
-        "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
-        "appliedAt": "2026-09-16T14:56:50.899Z",
+        "marketDiscoveryRunId": "mdr-8572d09901c915970b0288b8b6784914972b8488099e5600",
+        "discoverySetId": "mds-8572d09901c915970b0288b8b6784914972b8488099e5600",
+        "appliedAt": "2026-09-17T02:35:06.625Z",
         "evidenceRefs": [
           "ev-144be0d5471f45543b75bb39e0ff6a4f9236ded2",
           "ev-412d77226f6d86113087433e8a5780510dd429a9",
@@ -2657,16 +2712,16 @@
   ],
   "holdout": {
     "benchmarkId": "wellable.co",
-    "selectedAsHoldoutAt": "2026-09-16T14:56:50.852Z",
+    "selectedAsHoldoutAt": "2026-09-17T02:35:06.572Z",
     "selectionReason": "maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos)",
-    "selectionEvidence": "Existência verificada no run mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee por evidência hash-bound (ev-144be0d5471f45543b75bb39e0ff6a4f9236ded2, ev-412d77226f6d86113087433e8a5780510dd429a9, ev-b760c4c16b01f7cb38a71032884a47aa276f608d, ev-b95ac4c00d04df25cd1ec3b764d761a10ea5fb55, ev-e8890993870649a05f8a30acd42d43a136e32d25, ev-e8890993870649a05f8a30acd42d43a136e32d25). Site oficial declarado: https://wellable.co/. Pré-registrado em 2026-09-16T14:56:50.852Z ANTES de qualquer pesquisa profunda de inventário (deep research); fases executadas até aqui: MARKET, ARCHETYPES, CANDIDATES, CANDIDATE_ANALYSIS (profiling de mercado), DIVERSITY, DISCOVERY_SET — conforme o pipeline governado. Base da seleção: maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos).",
+    "selectionEvidence": "Existência verificada no run mdr-8572d09901c915970b0288b8b6784914972b8488099e5600 por evidência hash-bound (ev-144be0d5471f45543b75bb39e0ff6a4f9236ded2, ev-412d77226f6d86113087433e8a5780510dd429a9, ev-b760c4c16b01f7cb38a71032884a47aa276f608d, ev-b95ac4c00d04df25cd1ec3b764d761a10ea5fb55, ev-e8890993870649a05f8a30acd42d43a136e32d25, ev-e8890993870649a05f8a30acd42d43a136e32d25). Site oficial declarado: https://wellable.co/. Pré-registrado em 2026-09-17T02:35:06.572Z ANTES de qualquer pesquisa profunda de inventário (deep research); fases executadas até aqui: MARKET, ARCHETYPES, CANDIDATES, CANDIDATE_ANALYSIS (profiling de mercado), DIVERSITY, DISCOVERY_SET — conforme o pipeline governado. Base da seleção: maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos).",
     "marketArchetype": "personal-wellness",
     "inventoryVersion": "canonical-capabilities-1.0.0",
     "provenance": {
       "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-      "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
-      "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
-      "appliedAt": "2026-09-16T14:56:50.899Z"
+      "marketDiscoveryRunId": "mdr-8572d09901c915970b0288b8b6784914972b8488099e5600",
+      "discoverySetId": "mds-8572d09901c915970b0288b8b6784914972b8488099e5600",
+      "appliedAt": "2026-09-17T02:35:06.625Z"
     }
   },
   "criticalityRegistry": {},
@@ -3345,17 +3400,38 @@
       "url": "https://vantagefit.io/features/activity-tracking/",
       "evidenceRef": "ev-6fda98adf7bc3b93ef72bb9f17ce8776fa73d699",
       "capturedAt": "2026-09-16T16:32:09.957Z"
+    },
+    {
+      "id": "bre-60b7357c4c2d8df035f10abb9c4b7922e862d603f76c6b6b",
+      "benchmarkId": "goteamup.com",
+      "url": "https://goteamup.com/pricing/",
+      "evidenceRef": "ev-6b18c4edad8a6f747dee5f310b49264e890981a0",
+      "capturedAt": "2026-09-17T02:42:05.732Z"
+    },
+    {
+      "id": "bre-3fd9ff1a7a9dcdf816f32c48dbf129e2f8024353e0bf72fe",
+      "benchmarkId": "goteamup.com",
+      "url": "https://goteamup.com/compare/zenplanner/",
+      "evidenceRef": "ev-cd87ec1fca0ee06fd5a346eb871244ccfdd1ae30",
+      "capturedAt": "2026-09-17T02:42:07.751Z"
+    },
+    {
+      "id": "bre-1017b1983bfca689c9731b129cf85a0444178bfc1eaf6c4c",
+      "benchmarkId": "goteamup.com",
+      "url": "https://goteamup.com/features/access-control/",
+      "evidenceRef": "ev-c6f18cb9d0a9e8b71156592d8d349bb998535e85",
+      "capturedAt": "2026-09-17T02:42:09.886Z"
     }
   ],
   "marketDiscoveryProvenance": {
     "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
-    "marketDiscoveryRunId": "mdr-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
-    "discoverySetId": "mds-ad508ef4818dcb5df57d7f0bef5ef81f8feeba815d57b3ee",
+    "marketDiscoveryRunId": "mdr-8572d09901c915970b0288b8b6784914972b8488099e5600",
+    "discoverySetId": "mds-8572d09901c915970b0288b8b6784914972b8488099e5600",
     "vertical": "fitness",
-    "discoveryVersion": "fitness-market-discovery-2026-09-16-r11-expanded-universe",
-    "appliedAt": "2026-09-16T14:56:50.899Z",
+    "discoveryVersion": "fitness-market-discovery-2026-09-16-r17-name-contract",
+    "appliedAt": "2026-09-17T02:35:06.625Z",
     "selectedCandidates": [
-      "vantagefit.io"
+      "goteamup.com"
     ],
     "holdoutCandidateKey": "wellable.co",
     "rule": "sample derivado do run de market discovery por gerador determinístico; edição manual é drift (`--check` falha)"
