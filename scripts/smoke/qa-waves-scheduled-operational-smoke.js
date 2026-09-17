@@ -78,8 +78,23 @@ async function runScheduledOperationalSmoke(options = {}) {
   const scheduledMode = resolveMode(options.mode);
   const forceRealStack = options.realStack ?? scheduledMode.realStack;
   const previousProdLike = process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE;
+  const previousTestDatabaseUrl = process.env.TEST_DATABASE_URL;
   if (forceRealStack) {
     process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE = '1';
+    // A stack prod-like (docker-compose.yml) escreve no Postgres do container,
+    // exposto no host (porta resolvida pelo wrapper shell via `docker port`,
+    // fallback PG_HOST_PORT/5432). O observador host-side (stateSnapshotService)
+    // precisa ler o MESMO banco, senão os snapshots before/after não veem as
+    // mutações reais (mutation_provenance_missing). TEST_DATABASE_URL tem
+    // prioridade máxima em api/utils/config.getDatabaseUrl() e é o mecanismo
+    // canônico para processos host que observam um banco diferente do dev.
+    // Credenciais default = as do serviço postgres do docker-compose.yml;
+    // PGUSER/PGPASSWORD do ambiente NÃO são herdados aqui porque no .env eles
+    // costumam apontar para o banco de DEV.
+    if (previousTestDatabaseUrl === undefined) {
+      const pgPort = process.env.PG_HOST_PORT || '5432';
+      process.env.TEST_DATABASE_URL = `postgresql://results_app:StrongPass@127.0.0.1:${pgPort}/results_saas`;
+    }
   } else if (!previousProdLike) {
     process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE = '0';
   }
@@ -94,6 +109,9 @@ async function runScheduledOperationalSmoke(options = {}) {
     delete process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE;
   } else {
     process.env.RUN_QA_WAVES_PROD_LIKE_SMOKE = previousProdLike;
+  }
+  if (forceRealStack && previousTestDatabaseUrl === undefined) {
+    delete process.env.TEST_DATABASE_URL;
   }
 
   const flows = Array.isArray(summary.flows) ? summary.flows.map(summarizeFlow) : [];

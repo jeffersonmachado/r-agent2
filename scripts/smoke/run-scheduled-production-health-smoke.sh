@@ -13,9 +13,13 @@
 # Pré-requisitos (stack viva REAL — o modo production_health recusa fixture):
 #   prod-like requer containers no Docker local (docker-compose.yml) para
 #   simular o ambiente real (não usa Vite/dev server nem fixtures):
-#   - API em http://localhost:3001   (docker: 3001 -> 3001)
+#   - API em http://localhost:3001   (docker: host 3001 -> container 3000)
 #   - Frontend em http://localhost:8080 (docker nginx: 8080 -> 80)
 #   - PostgreSQL, Redis e rag-service acessíveis (.env carregado via --env-file)
+#   - Observação de estado host-side: o smoke lê o Postgres do CONTAINER
+#     (porta resolvida via `docker port chatbot-postgres`, fallback PG_HOST_PORT/5432)
+#     através de TEST_DATABASE_URL — o observador precisa enxergar o mesmo banco
+#     em que a stack escreve (override: QA_SMOKE_OBSERVE_DATABASE_URL).
 #
 # Política de agendamento: este cron respeita a MESMA política do QA Mesh
 # (opt-in explícito + fail-closed). Sem enabled:true persistido (toggle da UI)
@@ -103,6 +107,23 @@ if ! reachable "$FRONTEND_URL/"; then
 fi
 
 log "START mode=production_health api=$API_URL frontend=$FRONTEND_URL"
+
+# ── Observação de estado host-side ──
+# O observador (stateSnapshotService) roda no HOST, mas a API prod-like escreve
+# no Postgres do CONTAINER. Sem apontar o observador para o mesmo banco, os
+# snapshots before/after não veem as mutações reais (mutation_provenance_missing).
+# A porta publicada é resolvida do container (docker port) porque PG_HOST_PORT
+# pode não estar no .env; credenciais default = as do docker-compose.yml.
+# Override explícito: QA_SMOKE_OBSERVE_DATABASE_URL ou TEST_DATABASE_URL.
+if [ -z "${TEST_DATABASE_URL:-}" ]; then
+  observe_pg_port=""
+  if command -v docker >/dev/null 2>&1; then
+    observe_pg_port="$(docker port chatbot-postgres 5432 2>/dev/null | head -n1 | sed 's/.*://')"
+  fi
+  observe_pg_port="${observe_pg_port:-${PG_HOST_PORT:-5432}}"
+  export TEST_DATABASE_URL="${QA_SMOKE_OBSERVE_DATABASE_URL:-postgresql://results_app:StrongPass@127.0.0.1:${observe_pg_port}/results_saas}"
+  log "OBSERVE db=127.0.0.1:${observe_pg_port}/results_saas (Postgres do container prod-like)"
+fi
 
 cd "$PROJECT_ROOT"
 # --env-file-if-exists exige Node >= 22.12; cron pode resolver um Node mais antigo.
