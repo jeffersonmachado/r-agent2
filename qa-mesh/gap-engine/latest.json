@@ -1,8 +1,22 @@
 {
-  "generatedAt": "2026-09-18T15:11:26.968Z",
-  "status": "AUTONOMOUS_READY_GO",
-  "platformMaturity": "autonomous-ready",
-  "backlog": [],
-  "blocking": 0,
+  "generatedAt": "2026-09-18T15:53:28.921Z",
+  "status": "NO_GO:BLOCKING_GAPS",
+  "platformMaturity": "enterprise-partial",
+  "backlog": [
+    {
+      "id": "gap-proof-stale-fingerprints",
+      "severity": "critical",
+      "area": "proof-governance",
+      "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
+      "evidence": {
+        "diverged": [
+          "sourceFingerprint",
+          "chainFingerprint"
+        ]
+      },
+      "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
+    }
+  ],
+  "blocking": 1,
   "nonBlocking": 0
 }
