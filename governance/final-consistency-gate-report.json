@@ -1,19 +1,14 @@
 {
   "artifactType": "final-consistency-gate-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-18T10:57:06.425Z",
+  "generatedAt": "2026-09-18T11:08:52.868Z",
   "runId": "rap-governed-20260918105142979-cbf0a8df",
   "sourceFingerprint": "4c8e62423b47979bab4c9c56abdeedd86b1d3a47d5a8917abbf6d59275c7b5b9",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.3",
   "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
-  "phase": "PRE_PACKAGE",
-  "transitional": true,
-  "decision": "FINAL_CONSISTENCY_NO_GO",
-  "failures": [
-    {
-      "id": "master_scorecard",
-      "reason": "dimensionsBelow10=29 (real failures: RAP-052,RAP-054)"
-    }
-  ]
+  "phase": "FINAL",
+  "transitional": false,
+  "decision": "FINAL_CONSISTENCY_GO",
+  "failures": []
 }

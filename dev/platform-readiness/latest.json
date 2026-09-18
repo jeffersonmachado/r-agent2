@@ -1,18 +1,15 @@
 {
-  "generatedAt": "2026-09-18T10:58:27.718Z",
+  "generatedAt": "2026-09-18T11:08:52.867Z",
   "runId": "rap-governed-20260918105142979-cbf0a8df",
   "sourceFingerprint": "4c8e62423b47979bab4c9c56abdeedd86b1d3a47d5a8917abbf6d59275c7b5b9",
-  "finalDecision": "NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]",
-  "candidateMaturityLevel": "ENTERPRISE_READY_GO",
-  "stageReadiness": "ENTERPRISE_READY_GO",
-  "blockingReasons": [
-    "gap-proof-package-validation",
-    "gap-cross-report-package_validation_failed"
-  ],
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "candidateMaturityLevel": "AUTONOMOUS_READY_GO",
+  "stageReadiness": "AUTONOMOUS_READY_GO",
+  "blockingReasons": [],
   "mandatoryBlockReasons": [
-    "governance=NO_GO"
+    "governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
   ],
-  "platformMaturity": "enterprise-partial",
+  "platformMaturity": "autonomous-ready",
   "canonicalMeshExecutionId": "mesh-2026-09-18T10-11-13-577Z",
   "canonicalMeshArtifacts": {
     "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-18T10-11-13-577Z.json",
@@ -219,7 +216,7 @@
     }
   },
   "docsValidation": {
-    "generatedAt": "2026-09-18T10:58:27.718Z",
+    "generatedAt": "2026-09-18T11:07:27.217Z",
     "filesScanned": 406,
     "totalMarkdownLinks": 255,
     "brokenMarkdownLinks": [],
@@ -530,32 +527,7 @@
       "blocker": false
     }
   ],
-  "blockingGaps": [
-    {
-      "id": "gap-proof-package-validation",
-      "severity": "critical",
-      "area": "package",
-      "title": "ZIP de release nao contem todos os proofs obrigatorios",
-      "evidence": {
-        "missingEntries": [],
-        "missingEntryCodes": []
-      },
-      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
-    },
-    {
-      "id": "gap-cross-report-package_validation_failed",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: package_validation_failed",
-      "evidence": {
-        "type": "package_validation_failed",
-        "missingEntries": [],
-        "blocker": true,
-        "message": "Pacote não passou na validação: 0 entradas ausentes."
-      },
-      "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
-    }
-  ],
+  "blockingGaps": [],
   "nonBlockingGaps": [],
   "enterpriseProofs": {
     "proofs": {
@@ -575,7 +547,7 @@
     "missingProofs": []
   },
   "proofReport": {
-    "generatedAt": "2026-09-18T10:58:45.268Z",
+    "generatedAt": "2026-09-18T11:07:40.672Z",
     "runId": "rap-governed-20260918105142979-cbf0a8df",
     "artifactType": "final-proof-report",
     "artifactVersion": "2.0.0",
@@ -585,7 +557,7 @@
     "policyFingerprint": "5fa01a7c5e125f52a32e4d849d3770b8cf7991f31e2101afdad472dd7fecdbbe",
     "evidenceFingerprint": "f4ea63561b8952abc3b88afb5743bc310e9ca4109cb30df470a1e77ae1b74b23",
     "chainFingerprint": "f4ea63561b8952abc3b88afb5743bc310e9ca4109cb30df470a1e77ae1b74b23",
-    "fingerprintGeneratedAt": "2026-09-18T10:58:45.268Z",
+    "fingerprintGeneratedAt": "2026-09-18T11:07:40.672Z",
     "fingerprintStatus": "FRESH",
     "proofCoverage": {
       "total": 24,
@@ -2986,44 +2958,30 @@
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-09-18T10:58:45.268Z",
-      "expectedZipName": "r-agent2-20260918-053055.zip",
+      "generatedAt": "2026-09-18T11:07:40.671Z",
+      "expectedZipName": "r-agent2-20260918-075936.zip",
       "pbxMaturity": "enterprise-real",
-      "contradictions": [
-        {
-          "type": "package_validation_failed",
-          "missingEntries": [],
-          "blocker": true,
-          "message": "Pacote não passou na validação: 0 entradas ausentes."
-        }
-      ],
-      "blockers": [
-        {
-          "type": "package_validation_failed",
-          "missingEntries": [],
-          "blocker": true,
-          "message": "Pacote não passou na validação: 0 entradas ausentes."
-        }
-      ],
+      "contradictions": [],
+      "blockers": [],
       "warnings": [],
-      "blockerCount": 1,
+      "blockerCount": 0,
       "warningCount": 0,
-      "maximumAllowedReadiness": "operational",
-      "autonomousReadyBlocked": true,
-      "summary": "1 contradição(ões) crítica(s) detectada(s). autonomous-ready BLOQUEADO. Máximo permitido: operational."
+      "maximumAllowedReadiness": "autonomous-ready",
+      "autonomousReadyBlocked": false,
+      "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-09-18T10:58:45.115Z",
-      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260918-053055.zip",
-      "zipName": "r-agent2-20260918-053055.zip",
-      "zipSha256": "3e09f30c746cc59d6e4d1981caf1cb3627374ab56d6fb9fd6000a7e25994df3e",
+      "generatedAt": "2026-09-18T11:07:40.551Z",
+      "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260918-075936.zip",
+      "zipName": "r-agent2-20260918-075936.zip",
+      "zipSha256": "3dc38252f0315419ffa1377f8793b03e26ef33aa79a61cfc52ea2fcf26de354d",
       "payloadCentric": false,
       "envelopePath": null,
       "selectionMode": "audited",
       "candidateFallbackUsed": false,
-      "manifestPath": null,
-      "manifestAudit": "failed",
-      "auditSatisfied": false,
+      "manifestPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260918-075936.manifest.json",
+      "manifestAudit": "passed",
+      "auditSatisfied": true,
       "selfContainmentCheck": {
         "passed": true,
         "missing": []
@@ -3058,14 +3016,14 @@
         "governance/outbound-reliability-report.json",
         "governance/source-remote-provenance-report.json"
       ],
-      "entryCount": 6725,
+      "entryCount": 6736,
       "missingEntries": [],
       "missingEntryCodes": [],
-      "ok": false,
-      "error": "artifact_candidate_without_audit_passed",
+      "ok": true,
+      "error": null,
       "packageBinding": {
-        "boundTo": "r-agent2-20260918-053055.zip",
-        "sha256": "3e09f30c746cc59d6e4d1981caf1cb3627374ab56d6fb9fd6000a7e25994df3e",
+        "boundTo": "r-agent2-20260918-075936.zip",
+        "sha256": "3dc38252f0315419ffa1377f8793b03e26ef33aa79a61cfc52ea2fcf26de354d",
         "immutable": true,
         "selfProving": true,
         "offlineAuditable": true
@@ -3074,11 +3032,11 @@
       "artifactVersion": "1.0.0",
       "runId": "rap-governed-20260918105142979-cbf0a8df",
       "sourceFingerprint": "4c8e62423b47979bab4c9c56abdeedd86b1d3a47d5a8917abbf6d59275c7b5b9",
-      "gitCommit": "b55fb1ab6ac4c2fd1235a61ac613dc8dff80d1c7",
-      "gitTree": "6ccde30d979731bbd88b0ec56ec9e87e1ada11e5"
+      "gitCommit": "cf3c48c1f56f81e946306e88639e2beea30b2929",
+      "gitTree": "a53862f3afd7c42a9ebb3a09aee6772f8b0ebba0"
     },
     "evidenceManifest": {
-      "generatedAt": "2026-09-18T10:58:44.494Z",
+      "generatedAt": "2026-09-18T11:07:40.178Z",
       "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
       "runId": "rap-governed-20260918105142979-cbf0a8df",
       "sourceFingerprint": "4c8e62423b47979bab4c9c56abdeedd86b1d3a47d5a8917abbf6d59275c7b5b9",
@@ -3250,9 +3208,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-screenshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "2b771a8328771fc8a4243b42c276e4fbd6ce5d02b55a259cbde6611c2dc7621e",
-          "checksum": "2b771a8328771fc8a4243b42c276e4fbd6ce5d02b55a259cbde6611c2dc7621e",
-          "timestamp": "2026-09-18T10:58:27.798Z",
+          "hash": "ea989f3f0baa1e23f0fab7ec733f21656d3e86e9604562543db4cf91b9ebe810",
+          "checksum": "ea989f3f0baa1e23f0fab7ec733f21656d3e86e9604562543db4cf91b9ebe810",
+          "timestamp": "2026-09-18T11:07:27.420Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3275,7 +3233,7 @@
           "packageRequired": true,
           "hash": "0b9374ccec164c4c4c8bb9601f29bf8a3c8bb1a6d6829b88acfc172d9e0927d5",
           "checksum": "0b9374ccec164c4c4c8bb9601f29bf8a3c8bb1a6d6829b88acfc172d9e0927d5",
-          "timestamp": "2026-09-18T10:56:45.936Z",
+          "timestamp": "2026-09-18T11:07:27.161Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3296,9 +3254,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "bb268677aeb08eedcfaf147a11b7f1a3431d1c63a38a130735cad8fa44e9caf1",
-          "checksum": "bb268677aeb08eedcfaf147a11b7f1a3431d1c63a38a130735cad8fa44e9caf1",
-          "timestamp": "2026-09-18T10:58:27.754Z",
+          "hash": "7a22e9445ec271cc3e9233f011bd1c8f375971103c95711c0531dd0f01107dfd",
+          "checksum": "7a22e9445ec271cc3e9233f011bd1c8f375971103c95711c0531dd0f01107dfd",
+          "timestamp": "2026-09-18T11:07:27.278Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3319,9 +3277,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "b821c7a41e01d1cdb2c80cca66a7011630936a214b660ef07d2f55137f37920b",
-          "checksum": "b821c7a41e01d1cdb2c80cca66a7011630936a214b660ef07d2f55137f37920b",
-          "timestamp": "2026-09-18T10:58:27.754Z",
+          "hash": "9ea6591d6ccee09946ca613a2e4da85649c445a2bdd02301c49ca2df4aeae297",
+          "checksum": "9ea6591d6ccee09946ca613a2e4da85649c445a2bdd02301c49ca2df4aeae297",
+          "timestamp": "2026-09-18T11:07:27.278Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3342,9 +3300,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f21145ba3223090695dbbb29dd796f8b3dad3a3f926fecf957a4498891099061",
-          "checksum": "f21145ba3223090695dbbb29dd796f8b3dad3a3f926fecf957a4498891099061",
-          "timestamp": "2026-09-18T10:58:27.755Z",
+          "hash": "905f62ed4574f77da27b71db8b50515c9a4862532e5c61d647ce4d00560f15c2",
+          "checksum": "905f62ed4574f77da27b71db8b50515c9a4862532e5c61d647ce4d00560f15c2",
+          "timestamp": "2026-09-18T11:07:27.279Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3388,9 +3346,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-crm-mutations.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "3a16df77de851e124ac4fa7a8bdab023f33bd147a85607877e0f192382fb3ae0",
-          "checksum": "3a16df77de851e124ac4fa7a8bdab023f33bd147a85607877e0f192382fb3ae0",
-          "timestamp": "2026-09-18T10:58:27.763Z",
+          "hash": "8a79e4b2c4218200c78d603e56cfa894f14a918ba6a653356d22ac0bb24ab2f5",
+          "checksum": "8a79e4b2c4218200c78d603e56cfa894f14a918ba6a653356d22ac0bb24ab2f5",
+          "timestamp": "2026-09-18T11:07:27.304Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3411,9 +3369,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/digital-twin-snapshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "fdea8238ed77cc2000dabc242d1105cb81bd53eb229a88dc34122da8beb7ac12",
-          "checksum": "fdea8238ed77cc2000dabc242d1105cb81bd53eb229a88dc34122da8beb7ac12",
-          "timestamp": "2026-09-18T10:58:27.773Z",
+          "hash": "dca52854f80911355daeb2d65a1db8a82401b945aef170a318ea263aab11ec25",
+          "checksum": "dca52854f80911355daeb2d65a1db8a82401b945aef170a318ea263aab11ec25",
+          "timestamp": "2026-09-18T11:07:27.329Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3430,9 +3388,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/qa-waves-enterprise-governance.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "4658221141ce3b03d3002e57606a82142e24ba6df5ba373d6d335d8ce04bab9e",
-          "checksum": "4658221141ce3b03d3002e57606a82142e24ba6df5ba373d6d335d8ce04bab9e",
-          "timestamp": "2026-09-18T10:51:50.104Z",
+          "hash": "ee9ec3443c8e9d209023853bdcefb9dffbbbdf8df89b738860d8917a68e62de0",
+          "checksum": "ee9ec3443c8e9d209023853bdcefb9dffbbbdf8df89b738860d8917a68e62de0",
+          "timestamp": "2026-09-18T11:00:00.287Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3449,9 +3407,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "3178e171305cf913facefddebee16cce4d4b8713abd6dd7e2cf7a99facb938b5",
-          "checksum": "3178e171305cf913facefddebee16cce4d4b8713abd6dd7e2cf7a99facb938b5",
-          "timestamp": "2026-09-18T10:58:27.802Z",
+          "hash": "1e0bf38ecc63bd57e1796d682a4c5f0d960d586da010ba001d11f9dd6a07c682",
+          "checksum": "1e0bf38ecc63bd57e1796d682a4c5f0d960d586da010ba001d11f9dd6a07c682",
+          "timestamp": "2026-09-18T11:07:27.426Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3468,9 +3426,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f0cac737038f9d6dc9cd0e3c103e784c060578cc3e1eb4b55dab7d772df1bea4",
-          "checksum": "f0cac737038f9d6dc9cd0e3c103e784c060578cc3e1eb4b55dab7d772df1bea4",
-          "timestamp": "2026-09-18T10:58:27.883Z",
+          "hash": "b02242a06b07a7580144b461f507c0fb3dfbe889c008972f64d1c04ad5e14d69",
+          "checksum": "b02242a06b07a7580144b461f507c0fb3dfbe889c008972f64d1c04ad5e14d69",
+          "timestamp": "2026-09-18T11:07:27.620Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3487,9 +3445,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "1225f0f144e9b3289ca73c0b2b3a4eae78cfbf29a31363d49ca2de8ff2cd2c80",
-          "checksum": "1225f0f144e9b3289ca73c0b2b3a4eae78cfbf29a31363d49ca2de8ff2cd2c80",
-          "timestamp": "2026-09-18T10:57:19.931Z",
+          "hash": "5edd2fb32af73e260f24bb397ab0a25d19aa3e5aa3ef5442002f213aca4c0714",
+          "checksum": "5edd2fb32af73e260f24bb397ab0a25d19aa3e5aa3ef5442002f213aca4c0714",
+          "timestamp": "2026-09-18T11:07:27.137Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3506,9 +3464,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/experience-segregation-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "a843f1a65273f414b11a4790a35c397b4f4ccd3f65214ab4490a78a1f6ad2bb8",
-          "checksum": "a843f1a65273f414b11a4790a35c397b4f4ccd3f65214ab4490a78a1f6ad2bb8",
-          "timestamp": "2026-09-18T10:56:45.934Z",
+          "hash": "1aa7fd504813a86238669fc684a93ed5d2d97f66ff38494e11aea55d0f429eae",
+          "checksum": "1aa7fd504813a86238669fc684a93ed5d2d97f66ff38494e11aea55d0f429eae",
+          "timestamp": "2026-09-18T11:07:27.158Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3525,9 +3483,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/experience-api-segregation-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "fef2d58fa676dbb9bcebfac6fde50537a460cf5d53bf29ec743660d9074133e6",
-          "checksum": "fef2d58fa676dbb9bcebfac6fde50537a460cf5d53bf29ec743660d9074133e6",
-          "timestamp": "2026-09-18T10:56:45.934Z",
+          "hash": "7190ba43becca3a08f010be38b3e3aadaeac08dcc160e094a21a891dd4c172d2",
+          "checksum": "7190ba43becca3a08f010be38b3e3aadaeac08dcc160e094a21a891dd4c172d2",
+          "timestamp": "2026-09-18T11:07:27.159Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3544,9 +3502,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/outbound-reliability-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "cc0558ecbff4651d823b0759060636ba98b75ce11c0cf3562de5499204d8e1ca",
-          "checksum": "cc0558ecbff4651d823b0759060636ba98b75ce11c0cf3562de5499204d8e1ca",
-          "timestamp": "2026-09-18T10:56:45.935Z",
+          "hash": "7502a829d01d831c7ea8c645e1c15f68fabf0851a3ed8b4ea6fb24cfa36db935",
+          "checksum": "7502a829d01d831c7ea8c645e1c15f68fabf0851a3ed8b4ea6fb24cfa36db935",
+          "timestamp": "2026-09-18T11:07:27.159Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3563,9 +3521,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/source-remote-provenance-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "0fd60c50a47530c13969d1afaa224f36ea25f9ee2130754727604addfe848e34",
-          "checksum": "0fd60c50a47530c13969d1afaa224f36ea25f9ee2130754727604addfe848e34",
-          "timestamp": "2026-09-18T10:56:45.934Z",
+          "hash": "1609ad498e72cbe1f04a55c825301b0f70d3647f5cd4fdab67aa8f7832793a0d",
+          "checksum": "1609ad498e72cbe1f04a55c825301b0f70d3647f5cd4fdab67aa8f7832793a0d",
+          "timestamp": "2026-09-18T11:07:27.159Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3699,7 +3657,7 @@
         "enterprise-ready": "ENTERPRISE_READY_GO",
         "autonomous-ready": "AUTONOMOUS_READY_GO"
       },
-      "currentLevel": "enterprise-ready",
+      "currentLevel": "autonomous-ready",
       "blockersClear": true,
       "gateChecks": {
         "blockersClear": true,
@@ -3713,11 +3671,11 @@
         "handoffFullyNormalized": true,
         "digitalTwinCoverageOk": true,
         "governanceCoverageOk": true,
-        "packageValidationOk": false,
+        "packageValidationOk": true,
         "evidenceManifestValid": true,
         "fingerprintsFresh": true,
         "intelligenceStable": true,
-        "crossReportConsistent": false,
+        "crossReportConsistent": true,
         "verticalCoverageValid": true
       },
       "autonomousReadyGate": {
@@ -3726,45 +3684,17 @@
         "handoffFullyNormalized": true,
         "noSyntheticCriticalPaths": true,
         "intelligenceStable": true,
-        "crossReportConsistent": false,
+        "crossReportConsistent": true,
         "verticalCoverageValid": true,
-        "allPassed": false
+        "allPassed": true
       }
     },
-    "finalDecision": "NO_GO:BLOCKING_GAPS",
+    "finalDecision": "AUTONOMOUS_READY_GO",
     "deferredGates": [],
-    "blockingGaps": [
-      {
-        "id": "gap-proof-package-validation",
-        "severity": "critical",
-        "area": "package",
-        "title": "ZIP de release nao contem todos os proofs obrigatorios",
-        "evidence": {
-          "missingEntries": [],
-          "missingEntryCodes": []
-        },
-        "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
-      },
-      {
-        "id": "gap-cross-report-package_validation_failed",
-        "severity": "critical",
-        "area": "cross-report",
-        "title": "Contradição cross-report: package_validation_failed",
-        "evidence": {
-          "type": "package_validation_failed",
-          "missingEntries": [],
-          "blocker": true,
-          "message": "Pacote não passou na validação: 0 entradas ausentes."
-        },
-        "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
-      }
-    ],
-    "candidateMaturityLevel": "ENTERPRISE_READY_GO",
-    "stageReadiness": "ENTERPRISE_READY_GO",
-    "blockingReasons": [
-      "gap-proof-package-validation",
-      "gap-cross-report-package_validation_failed"
-    ]
+    "blockingGaps": [],
+    "candidateMaturityLevel": "AUTONOMOUS_READY_GO",
+    "stageReadiness": "AUTONOMOUS_READY_GO",
+    "blockingReasons": []
   },
   "operationalDigitalTwin": {
     "status": "complete",
@@ -3986,13 +3916,10 @@
     "Foundation prod-like QA Waves governance exists and is machine-readable.",
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
   ],
-  "noGoReasons": [
-    "ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]",
-    "Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]"
-  ],
+  "noGoReasons": [],
   "productionReadiness": {
-    "status": "NO_GO:BLOCKING_GAPS",
-    "classification": "enterprise-partial",
+    "status": "AUTONOMOUS_READY_GO",
+    "classification": "autonomous-ready",
     "productionLikeFlows": [
       "WhatsApp",
       "Chat",
@@ -4007,39 +3934,14 @@
     ]
   },
   "enterpriseReadiness": {
-    "status": "enterprise-ready",
+    "status": "autonomous-ready",
     "evidenceBased": true,
     "missingProofs": []
   },
-  "automaticGapBacklog": [
-    {
-      "id": "gap-proof-package-validation",
-      "severity": "critical",
-      "area": "package",
-      "title": "ZIP de release nao contem todos os proofs obrigatorios",
-      "evidence": {
-        "missingEntries": [],
-        "missingEntryCodes": []
-      },
-      "suggestedFix": "Regenerar o pacote com todos os artifacts auditaveis e revalidar o ZIP fisico."
-    },
-    {
-      "id": "gap-cross-report-package_validation_failed",
-      "severity": "critical",
-      "area": "cross-report",
-      "title": "Contradição cross-report: package_validation_failed",
-      "evidence": {
-        "type": "package_validation_failed",
-        "missingEntries": [],
-        "blocker": true,
-        "message": "Pacote não passou na validação: 0 entradas ausentes."
-      },
-      "suggestedFix": "Pacote não passou na validação: 0 entradas ausentes."
-    }
-  ],
+  "automaticGapBacklog": [],
   "journeyCoverage": {
     "beauty": {
-      "generatedAt": "2026-09-18T10:58:27.718Z",
+      "generatedAt": "2026-09-18T11:07:27.217Z",
       "vertical": "beauty",
       "maturity": "production-like",
       "replaySupported": true,
@@ -4503,7 +4405,7 @@
       ]
     },
     "fitness": {
-      "generatedAt": "2026-09-18T10:58:27.718Z",
+      "generatedAt": "2026-09-18T11:07:27.217Z",
       "vertical": "fitness",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7353,7 +7255,7 @@
       ]
     },
     "food": {
-      "generatedAt": "2026-09-18T10:58:27.718Z",
+      "generatedAt": "2026-09-18T11:07:27.217Z",
       "vertical": "food",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7643,7 +7545,7 @@
       ]
     },
     "services": {
-      "generatedAt": "2026-09-18T10:58:27.718Z",
+      "generatedAt": "2026-09-18T11:07:27.217Z",
       "vertical": "services",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7801,7 +7703,7 @@
       ]
     },
     "clinic": {
-      "generatedAt": "2026-09-18T10:58:27.718Z",
+      "generatedAt": "2026-09-18T11:07:27.217Z",
       "vertical": "clinic",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7943,7 +7845,7 @@
       ]
     },
     "market": {
-      "generatedAt": "2026-09-18T10:58:27.718Z",
+      "generatedAt": "2026-09-18T11:07:27.217Z",
       "vertical": "market",
       "maturity": "production-like",
       "replaySupported": true,
@@ -8111,7 +8013,7 @@
       ]
     },
     "bakery": {
-      "generatedAt": "2026-09-18T10:58:27.718Z",
+      "generatedAt": "2026-09-18T11:07:27.217Z",
       "vertical": "bakery",
       "maturity": "production-like",
       "replaySupported": true,
@@ -8827,7 +8729,7 @@
       ]
     },
     "core": {
-      "generatedAt": "2026-09-18T10:58:27.718Z",
+      "generatedAt": "2026-09-18T11:07:27.217Z",
       "vertical": "core",
       "kind": "system",
       "maturity": "system",
