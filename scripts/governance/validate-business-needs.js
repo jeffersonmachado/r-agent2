@@ -52,6 +52,36 @@ function loadLinkedScenarioCounts() {
 }
 
 /**
+ * Jornadas de NEGÓCIO canônicas.
+ *
+ * `config/business-journey-catalog.json` declara-se a autoridade: "Catálogo
+ * operacional de jornadas de negócio ... Nenhum identificador técnico (wave,
+ * cenário, seed, replay, passo de RPA, rota interna) pertence a este arquivo".
+ *
+ * `config/journey-contracts.json`, porém, tem contratos para 97 ids — e a maioria
+ * é DERIVADA de módulo/domínio/capability, cada uma com UM cenário placeholder
+ * (ex.: `orders` → `business-core-cap-scheduling`, steps `["Tenant autenticado"]`).
+ * Aplicar a regra de CONTRATO DE NEGÓCIO a essa população produzia avisos
+ * permanentes que escondiam os casos reais: medido em 2026-09-18, 70 avisos de
+ * baixa confiança dos quais só 2 eram jornadas de negócio (`campaigns`, `billing`)
+ * e 68 eram entradas derivadas que nunca cruzarão 0,7 sem vínculo fabricado.
+ *
+ * @returns {Set<string>} ids canônicos de jornada de negócio
+ */
+function loadBusinessJourneyIds() {
+  const catalog = readJson('config/business-journey-catalog.json', null);
+  return new Set(Object.keys((catalog && catalog.journeys) || {}));
+}
+
+/**
+ * Predicado PURO de escopo: a regra de negócio se aplica a esta jornada?
+ * Exportado para prova por teste sem tocar o disco.
+ */
+function isBusinessJourneyId(journeyId, businessJourneyIds) {
+  return Boolean(businessJourneyIds && businessJourneyIds.has && businessJourneyIds.has(String(journeyId)));
+}
+
+/**
  * Nomeia os DRIVERS medidos da baixa confiança.
  *
  * A mensagem anterior dizia só o veredito ("validação de contrato fraca") e
@@ -134,9 +164,16 @@ function loadQaScenarios() {
 
 // ── 5. Mapear cenários QA para journeys de negócio ──────────────────
 function mapScenariosToBusinessJourneys(qaScenarios, journeys) {
-  const mapping = {};  // Evidência VIVA do vínculo de contrato (mesma entrada da fórmula canônica).
+  const mapping = {};
+  // Evidência VIVA do vínculo de contrato (mesma entrada da fórmula canônica).
   const linkedScenarioCounts = loadLinkedScenarioCounts();
+  // Escopo da regra de NEGÓCIO (ver loadBusinessJourneyIds): só as jornadas do
+  // catálogo são medidas pela régua de contrato de negócio.
+  const businessJourneyIds = loadBusinessJourneyIds();
+  const derivedLowConfidence = [];
+
   for (const journey of journeys) {
+    const inBusinessScope = isBusinessJourneyId(journey.id, businessJourneyIds);
     const journeyCaps = new Set(journey.requiredCapabilities);
     const matchingScenarios = [];
 
@@ -218,6 +255,7 @@ function mapScenariosToBusinessJourneys(qaScenarios, journeys) {
 
     mapping[journey.id] = {
       journey: journey.id,
+      isBusinessJourney: inBusinessScope,
       requiredCapabilities: journey.requiredCapabilities,
       confidence: journey.confidence,
       scenarioCount: matchingScenarios.length,
@@ -271,23 +309,36 @@ function mapScenariosToBusinessJourneys(qaScenarios, journeys) {
       );
     }
     if (journey.confidence < 0.7) {
-      // O aviso de baixa confiança é sobre o VÍNCULO EXPLÍCITO do contrato —
-      // nunca sobre o match amplo por domínio (que casa centenas de cenários e
-      // não diz nada sobre a força do contrato).
-      addIssue('warning', 'business-journey-low-confidence',
-        `Jornada "${journey.id}" com confiança baixa (${Math.round(journey.confidence * 100)}%) — vínculo de contrato fraco`
-        + ` [cenários VINCULADOS: ${hasLinkedEvidence ? linkedScenarioCount : 'n/d'}, capabilities: ${journey.requiredCapabilities.length}/6, match direto: ${hasDirectMatch ? 'sim' : 'não'}]`
-        + ` — driver: ${describeLowConfidenceDrivers({ linkedScenarioCount: hasLinkedEvidence ? linkedScenarioCount : null, requiredCapabilities: journey.requiredCapabilities, hasDirectMatch })}`
-        + ` | (match amplo por domínio: ${matchingScenarios.length} cenários — não é evidência de contrato)`,
-        {
+      if (!inBusinessScope) {
+        // Entrada DERIVADA (módulo/domínio/capability): a confiança de contrato
+        // de NEGÓCIO não é a régua dela. Reportada de forma AGREGADA logo abaixo
+        // — o dado continua visível, o que sai é o ruído de 68 avisos que
+        // escondia `campaigns`/`billing`.
+        derivedLowConfidence.push({
           journey: journey.id,
           confidence: journey.confidence,
           linkedScenarioCount: hasLinkedEvidence ? linkedScenarioCount : null,
-          domainMatchCount: matchingScenarios.length,
           requiredCapabilities: journey.requiredCapabilities.length,
-          hasDirectMatch,
-        }
-      );
+        });
+      } else {
+        // O aviso de baixa confiança é sobre o VÍNCULO EXPLÍCITO do contrato —
+        // nunca sobre o match amplo por domínio (que casa centenas de cenários e
+        // não diz nada sobre a força do contrato).
+        addIssue('warning', 'business-journey-low-confidence',
+          `Jornada de negócio "${journey.id}" com confiança baixa (${Math.round(journey.confidence * 100)}%) — vínculo de contrato fraco`
+          + ` [cenários VINCULADOS: ${hasLinkedEvidence ? linkedScenarioCount : 'n/d'}, capabilities: ${journey.requiredCapabilities.length}/6, match direto: ${hasDirectMatch ? 'sim' : 'não'}]`
+          + ` — driver: ${describeLowConfidenceDrivers({ linkedScenarioCount: hasLinkedEvidence ? linkedScenarioCount : null, requiredCapabilities: journey.requiredCapabilities, hasDirectMatch })}`
+          + ` | (match amplo por domínio: ${matchingScenarios.length} cenários — não é evidência de contrato)`,
+          {
+            journey: journey.id,
+            confidence: journey.confidence,
+            linkedScenarioCount: hasLinkedEvidence ? linkedScenarioCount : null,
+            domainMatchCount: matchingScenarios.length,
+            requiredCapabilities: journey.requiredCapabilities.length,
+            hasDirectMatch,
+          }
+        );
+      }
     }
     if (journey.missingCapabilities.length > 0) {
       addIssue('critical', 'business-journey-missing-caps',
@@ -295,6 +346,18 @@ function mapScenariosToBusinessJourneys(qaScenarios, journeys) {
         { journey: journey.id, missingCaps: journey.missingCapabilities }
       );
     }
+  }
+
+  // Um único registro AGREGADO para a população derivada: nada é escondido (o
+  // número e os ids ficam no relatório), mas o sinal acionável — jornadas de
+  // negócio reais com vínculo fraco — deixa de ser afogado.
+  if (derivedLowConfidence.length > 0) {
+    addIssue('info', 'business-journey-derived-scope',
+      `${derivedLowConfidence.length} entradas DERIVADAS (módulo/domínio/capability, fora do catálogo de jornadas de negócio) com confiança de contrato < 70%`
+      + ` — a régua de "contrato de negócio" não se aplica a elas; a regra é escopada por`
+      + ` config/business-journey-catalog.json (autoridade: "nenhum identificador técnico pertence a este arquivo")`,
+      { count: derivedLowConfidence.length, journeys: derivedLowConfidence.map((d) => d.journey) }
+    );
   }
 
   return mapping;
@@ -540,4 +603,4 @@ if (require.main === module) {
   process.exit(run());
 }
 
-module.exports = { run, describeLowConfidenceDrivers, loadLinkedScenarioCounts };
+module.exports = { run, describeLowConfidenceDrivers, loadLinkedScenarioCounts, loadBusinessJourneyIds, isBusinessJourneyId };
