@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-18T11:42:16.309Z",
-  "artifact": "r-agent2-20260918-083351.payload.zip",
+  "generatedAt": "2026-09-18T11:51:05.764Z",
+  "artifact": "r-agent2-20260918-084241.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260918-083351.payload.zip",
-        "computedHash": "342d014f9795b2eac119d28c966a0337664797e453b17b6c3247a44f96c9389e",
-        "recordedHash": "342d014f9795b2eac119d28c966a0337664797e453b17b6c3247a44f96c9389e",
+        "zipName": "r-agent2-20260918-084241.payload.zip",
+        "computedHash": "23792cca411e64a717c36b37db3e9eec3c597612a4462856d243bb078fefcf18",
+        "recordedHash": "23792cca411e64a717c36b37db3e9eec3c597612a4462856d243bb078fefcf18",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260918-083351.payload.manifest.json"
+        "subject": "r-agent2-20260918-084241.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260918-083351.payload.zip"
+        "subject": "r-agent2-20260918-084241.payload.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "201759af17e465c44df1f9c2…"
+        "storedChainRoot": "30212d2d944a68e3408619be…"
       }
     },
     {
@@ -75,7 +75,7 @@
       "details": {
         "overallConsistencyScore": 100,
         "allChecksPass": true,
-        "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE"
+        "finalDecision": "AUTONOMOUS_READY_GO"
       }
     },
     {
@@ -93,7 +93,7 @@
       "severity": "HIGH",
       "details": {
         "valid": true,
-        "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
+        "finalDecision": "AUTONOMOUS_READY_GO",
         "governanceLevel": "LEVEL_4_IMMUTABLE"
       }
     }
