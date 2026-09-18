@@ -18,10 +18,10 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const os = require('os');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'generate-journey-projections.js');
-const OUTPUT_PATH = path.join(ROOT, 'reports', 'business-journey-projections.json');
 
 const {
   buildProjections,
@@ -29,14 +29,6 @@ const {
   classifyProjectionState,
   computeProjectionDelta,
 } = require(SCRIPT);
-
-function runCli(args) {
-  return spawnSync(process.execPath, [SCRIPT, ...args], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: 60000,
-  });
-}
 
 describe('classifyProjectionState — decisão pura', () => {
   test('artefato ausente → gera (não é obsolescência)', () => {
@@ -117,47 +109,66 @@ describe('buildProjections — determinismo (regenerar é seguro)', () => {
 });
 
 describe('gate 33 — integração real do CLI', () => {
+  // Hermético: o CLI escreve num arquivo TEMPORÁRIO. O artefato real é
+  // compartilhado com outras suítes que o regeneram em paralelo; mutá-lo aqui
+  // criava corrida (artifact_unreadable) sob a suíte completa.
+  let tmpDir = null;
+  let outputPath = null;
   let canonical = null;
 
   beforeAll(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'journey-projections-'));
+    outputPath = path.join(tmpDir, 'business-journey-projections.json');
     canonical = serializeProjections(buildProjections().artifact);
   });
 
   afterAll(() => {
-    // Nunca deixar o workspace com artefato adulterado.
-    if (canonical !== null) {
-      fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
-      fs.writeFileSync(OUTPUT_PATH, canonical);
-    }
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
   });
+
+  function runCliHermetic(args) {
+    return spawnSync(process.execPath, [SCRIPT, ...args], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      timeout: 60000,
+      env: { ...process.env, JOURNEY_PROJECTIONS_OUTPUT_PATH: outputPath },
+    });
+  }
 
   function tamper() {
     const tampered = JSON.parse(canonical);
     tampered.journeys = tampered.journeys.slice(0, 1);
-    fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
-    fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(tampered, null, 2)}\n`);
+    fs.writeFileSync(outputPath, `${JSON.stringify(tampered, null, 2)}\n`);
   }
 
   test('divergente → regenera deterministicamente e sai 0 (sem pré-condição manual)', () => {
     tamper();
-    const result = runCli(['--check']);
+    const result = runCliHermetic(['--check']);
     expect(result.status).toBe(0);
     expect(`${result.stdout}`).toMatch(/regeneradas \(input_changed\)/);
-    expect(fs.readFileSync(OUTPUT_PATH, 'utf8')).toBe(canonical);
+    expect(fs.readFileSync(outputPath, 'utf8')).toBe(canonical);
   });
 
   test('controle negativo: --strict preserva a asserção e falha com divergência', () => {
     tamper();
-    const result = runCli(['--check', '--strict']);
+    const result = runCliHermetic(['--check', '--strict']);
     expect(result.status).toBe(1);
     expect(`${result.stderr}`).toMatch(/modo estrito/);
   });
 
   test('controle negativo: artefato fresco não é reescrito nem reportado como regenerado', () => {
-    fs.writeFileSync(OUTPUT_PATH, canonical);
-    const result = runCli(['--check']);
+    fs.writeFileSync(outputPath, canonical);
+    const result = runCliHermetic(['--check']);
     expect(result.status).toBe(0);
     expect(`${result.stdout}`).toMatch(/atualizadas e limpas/);
     expect(`${result.stdout}`).not.toMatch(/regeneradas/);
+  });
+
+  test('artefato ausente é gerado (ausência não é obsolescência)', () => {
+    fs.rmSync(outputPath, { force: true });
+    const result = runCliHermetic(['--check']);
+    expect(result.status).toBe(0);
+    expect(`${result.stdout}`).toMatch(/regeneradas \(artifact_absent\)/);
+    expect(fs.readFileSync(outputPath, 'utf8')).toBe(canonical);
   });
 });

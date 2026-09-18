@@ -31,7 +31,14 @@ const {
 const ROOT = path.resolve(__dirname, '..');
 const COVERAGE_DIR = path.join(ROOT, 'qa-waves', 'journey-coverage');
 const CATALOG_PATH = path.join(ROOT, 'config', 'business-journey-catalog.json');
-const OUTPUT_PATH = path.join(ROOT, 'reports', 'business-journey-projections.json');
+const OUTPUT_PATH = process.env.JOURNEY_PROJECTIONS_OUTPUT_PATH
+  // Override de saída: permite exercitar o gate (inclusive o modo --check) SEM
+  // tocar o artefato real. Necessário para teste hermético — outras suítes leem
+  // e regeneram `reports/business-journey-projections.json`, então mutá-lo num
+  // teste criava corrida entre workers (medido em 2026-09-18: 1 falha
+  // intermitente de artifact_unreadable sob a suíte completa).
+  ? path.resolve(process.env.JOURNEY_PROJECTIONS_OUTPUT_PATH)
+  : path.join(ROOT, 'reports', 'business-journey-projections.json');
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
