@@ -413,9 +413,18 @@ async function createConnection({ tenantId, input, actor = null } = {}) {
   if (!normalized.name) throw serviceError(ERROR_CODES.INVALID, 'name obrigatório');
   if (!normalized.endpoint) throw serviceError(ERROR_CODES.INVALID, 'endpoint obrigatório');
 
+  // A política DECLARADA e persistida da conexão precisa ser a MESMA aplicada
+  // aqui. Omiti-la fazia a autoridade de escrita recusar o endpoint que ela
+  // própria registrava: `evaluateEndpoint` caía no default estrito
+  // (allowPlaintextHttp/allowPrivateNetwork = false) e negava qualquer MCP
+  // interno com `mcp_endpoint_protocol_not_allowed` (reason
+  // `plaintext_http_not_enabled`) — o bootstrap governado do container de
+  // pesquisa (MCP_RESEARCH_ENDPOINT, teto DEVELOPMENT) nunca conseguia criar a
+  // conexão, e a falha aparecia só como WARN não-bloqueante no startup.
   assertEndpointAllowed(normalized.endpoint, {
     classification: normalized.classificationCeiling,
     allowedHosts: normalized.allowedHosts,
+    policy: normalized.endpointPolicy,
   });
   assertAuthAllowed(normalized.authType, normalized.classificationCeiling);
 
@@ -465,8 +474,18 @@ async function updateConnection({ tenantId, id, patch = {}, actor = null } = {})
     ? String(patch.classificationCeiling).toUpperCase()
     : current.classification_ceiling;
 
+  // Mesma autoridade da criação: valida contra a política EFETIVA após o patch
+  // (a declarada no patch quando presente, senão a já persistida).
+  const effectiveEndpointPolicy = patch.endpointPolicy !== undefined
+    ? patch.endpointPolicy
+    : (current.endpoint_policy || {});
+
   if (patch.endpoint !== undefined) {
-    assertEndpointAllowed(nextEndpoint, { classification: ceiling, allowedHosts: patch.allowedHosts });
+    assertEndpointAllowed(nextEndpoint, {
+      classification: ceiling,
+      allowedHosts: patch.allowedHosts,
+      policy: effectiveEndpointPolicy,
+    });
   }
   if (patch.authType !== undefined) {
     assertAuthAllowed(nextAuth, ceiling);

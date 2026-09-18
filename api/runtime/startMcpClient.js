@@ -19,6 +19,52 @@ const logger = require('../utils/logger');
 const config = require('../utils/config');
 
 /**
+ * Isola conexões PERSISTIDAS inválidas antes de construir o hub.
+ *
+ * Defeito real (2026-09-18): 17 fixtures de teste vazadas no banco real — uma
+ * execução de Jest interrompida nunca rodou o `afterAll` que as purgava. Uma
+ * delas era endpoint loopback (`https://127.0.0.1:9/rpc`). O HUB é estrito por
+ * contrato (config inválida lança, e DEVE continuar lançando: é o que os testes
+ * adversariais de wildcard/delegação exigem), então essa única linha órfã
+ * abortava a criação do hub, a composição caía no catch do startup e ZERAVA
+ * todas as external MCP tools — inclusive a conexão válida. O MCP simplesmente
+ * nunca funcionava no runtime, com um único WARN "não-bloqueante".
+ *
+ * A resiliência mora na FRONTEIRA (carregador), não no componente: aqui o
+ * estado persistido — sujo por definição — é validado conexão a conexão, cada
+ * recusa é REPORTADA (tenant/nome/motivo) e o hub recebe apenas as válidas.
+ *
+ * @returns {{valid: object[], rejected: {tenant: string|null, name: string|null, reason: string}[]}}
+ */
+function partitionConnectionsByPolicy(connections = [], { log = logger } = {}) {
+  let validateConnection;
+  try {
+    ({ validateConnection } = require('../../src/core/mcp/client-hub'));
+  } catch (error) {
+    // Sem validador não há filtro seguro: entrega tudo ao hub (que lança).
+    // Degradar para "tudo válido" silenciosamente seria o pior dos mundos.
+    log.warn('[McpClientComposition] validador de conexões indisponível', { error: error.message });
+    return { valid: connections, rejected: [] };
+  }
+
+  const valid = [];
+  const rejected = [];
+  for (const connection of connections) {
+    try {
+      validateConnection(connection);
+      valid.push(connection);
+    } catch (error) {
+      rejected.push({
+        tenant: connection ? connection.tenant : null,
+        name: connection ? connection.name : null,
+        reason: error.message,
+      });
+    }
+  }
+  return { valid, rejected };
+}
+
+/**
  * Carrega conexões MCP da configuração.
  *
  * Formato esperado em config `mcp.connections` (array ou JSON string):
@@ -189,7 +235,15 @@ async function startMcpClientComposition(deps = {}) {
     const loaded = deps.connections
       ? { connections: deps.connections, source: 'injected', imported: null }
       : await loadConnectionsFromPersistence({ actor: 'runtime-startup' });
-    const connections = loaded.connections;
+    const loadedConnections = loaded.connections;
+    const { valid: connections, rejected } = partitionConnectionsByPolicy(loadedConnections, { log: logger });
+    if (rejected.length > 0) {
+      logger.warn('[McpClientComposition] conexões persistidas recusadas na política (isoladas: as válidas seguem)', {
+        rejected: rejected.length,
+        valid: connections.length,
+        details: rejected.map((entry) => `${entry.tenant || '?'}/${entry.name || '?'}: ${entry.reason}`),
+      });
+    }
 
     if (connections.length === 0) {
       logger.info('[McpClientComposition] Nenhuma conexão MCP configurada — pulando', { source: loaded.source });
@@ -211,6 +265,7 @@ async function startMcpClientComposition(deps = {}) {
 
     logger.info('[McpClientComposition] MCP Client Hub criado', {
       connections: connections.length,
+      rejected: rejected.length,
       source: loaded.source,
       tenants: [...new Set(connections.map((c) => c.tenant))],
     });
@@ -362,6 +417,7 @@ module.exports = {
   loadMcpConnections,
   loadMcpConnectionsFromConfig,
   loadConnectionsFromPersistence,
+  partitionConnectionsByPolicy,
   defaultDnsLookup,
   defaultEnvCredentialResolver,
 };

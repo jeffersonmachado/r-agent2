@@ -126,6 +126,84 @@ describe('M — MCP control plane persistente', () => {
         tenantId: TENANT_A, id: created.id, patch: { endpoint: 'http://127.0.0.1:1/rpc' },
       })).rejects.toThrow(/mcp_endpoint_blocked/);
     });
+
+    // Defeito real reproduzido no runtime (2026-09-18, release #2): o serviço
+    // validava o endpoint SEM repassar a `endpointPolicy` declarada da conexão.
+    // Como o default da política é estrito, o MCP interno documentado
+    // (`http://mcp-research:8080/mcp`, rede privada + HTTP plaintext, teto
+    // DEVELOPMENT) era recusado na CRIAÇÃO — o bootstrap governado por
+    // MCP_RESEARCH_ENDPOINT falhava sempre, com log de WARN não-bloqueante.
+    const PRIVATE_ENDPOINT = 'http://mcp-research:8080/mcp';
+    const DEV_EXEMPTIONS = Object.freeze({
+      allowPlaintextHttp: true,
+      allowPrivateNetwork: true,
+      maxRedirects: 0,
+    });
+
+    it('ACEITA rede privada + http quando a conexão DECLARA as isenções em DEVELOPMENT', async () => {
+      const created = await service.createConnection({
+        tenantId: TENANT_A,
+        input: {
+          name: 'mcp-interno',
+          endpoint: PRIVATE_ENDPOINT,
+          classificationCeiling: 'DEVELOPMENT',
+          endpointPolicy: { ...DEV_EXEMPTIONS },
+        },
+      });
+      expect(created.endpoint).toBe(PRIVATE_ENDPOINT);
+      expect(created.endpoint_policy.allowPrivateNetwork).toBe(true);
+    });
+
+    it('controle negativo: SEM as isenções declaradas o mesmo endpoint segue bloqueado', async () => {
+      await expect(service.createConnection({
+        tenantId: TENANT_A,
+        input: { name: 'sem-excecao', endpoint: PRIVATE_ENDPOINT, classificationCeiling: 'DEVELOPMENT' },
+      })).rejects.toThrow(/mcp_endpoint_blocked/);
+    });
+
+    it('controle negativo: loopback NUNCA é isentado, nem com allowPrivateNetwork declarado', async () => {
+      await expect(service.createConnection({
+        tenantId: TENANT_A,
+        input: {
+          name: 'loopback-isento',
+          endpoint: 'http://127.0.0.1:9000/rpc',
+          classificationCeiling: 'DEVELOPMENT',
+          endpointPolicy: { ...DEV_EXEMPTIONS },
+        },
+      })).rejects.toThrow(/mcp_endpoint_blocked/);
+    });
+
+    it('controle negativo: http em PRODUCTION segue bloqueado mesmo com allowPlaintextHttp declarado', async () => {
+      await expect(service.createConnection({
+        tenantId: TENANT_A,
+        input: {
+          name: 'prod-plaintext',
+          endpoint: 'http://mcp.provedor-externo.com/rpc',
+          endpointPolicy: { allowPlaintextHttp: true },
+        },
+      })).rejects.toThrow(/mcp_endpoint_blocked/);
+    });
+
+    it('ALTERAÇÃO usa a política efetiva: isenta com declaração e recusa sem ela', async () => {
+      const comIsencao = await service.createConnection({ tenantId: TENANT_A, input: { name: 'alt-ok', endpoint: PUBLIC_ENDPOINT } });
+      const updated = await service.updateConnection({
+        tenantId: TENANT_A,
+        id: comIsencao.id,
+        patch: {
+          endpoint: PRIVATE_ENDPOINT,
+          classificationCeiling: 'DEVELOPMENT',
+          endpointPolicy: { ...DEV_EXEMPTIONS },
+        },
+      });
+      expect(updated.endpoint).toBe(PRIVATE_ENDPOINT);
+
+      const semIsencao = await service.createConnection({ tenantId: TENANT_A, input: { name: 'alt-nao', endpoint: PUBLIC_ENDPOINT } });
+      await expect(service.updateConnection({
+        tenantId: TENANT_A,
+        id: semIsencao.id,
+        patch: { endpoint: PRIVATE_ENDPOINT, classificationCeiling: 'DEVELOPMENT' },
+      })).rejects.toThrow(/mcp_endpoint_blocked/);
+    });
   });
 
   describe('M13/M14 — auth mode é validado na escrita', () => {
