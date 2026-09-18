@@ -742,10 +742,31 @@ function verify() {
   }
 
   if (manifest) {
+    // A comparação que DECIDE é a do fingerprint RECALCULADO da árvore atual.
+    // Imprimir só proof vs manifest escondia justamente o valor divergente: os
+    // dois vêm do artefato ENTREGUE e são iguais por construção, então um FAIL
+    // legítimo aparecia como "dois hashes idênticos que divergem". Ruído de
+    // diagnóstico que custou tempo de investigação em 2026-09-18.
+    let worktreeSource = null;
+    try {
+      const { computeFingerprintChain } = require('./proof-engine/fingerprint-chain.js');
+      worktreeSource = computeFingerprintChain(ROOT).sourceFingerprint || null;
+    } catch (_) {
+      worktreeSource = null;
+    }
+    const proofSource = proof?.sourceFingerprint || null;
+    const manifestSource = manifest.sourceFingerprint || null;
+    const same = (a, b) => Boolean(a && b) && String(a).toLowerCase() === String(b).toLowerCase();
+    const sourceAgrees = same(worktreeSource, proofSource) && same(worktreeSource, manifestSource);
+
     console.log('HASH COMPARISON');
     console.log('─'.repeat(60));
-    console.log(`  source from proof:    ${proof?.sourceFingerprint?.slice(0,32) || 'N/A'}`);
-    console.log(`  source from manifest: ${manifest.sourceFingerprint?.slice(0,32) || 'N/A'}`);
+    console.log(`  source from proof:     ${String(proofSource || 'N/A').slice(0,32)}`);
+    console.log(`  source from manifest:  ${String(manifestSource || 'N/A').slice(0,32)}`);
+    console.log(`  source from worktree:  ${String(worktreeSource || 'N/A').slice(0,32)}  <= é ESTE que decide`);
+    console.log(`  veredito:              ${sourceAgrees
+      ? 'OK — árvore atual == artefato entregue'
+      : 'DIVERGE — árvore atual != artefato entregue (o release entregue é válido NO COMMIT DELE; commit posterior exige novo ciclo de selagem)'}`);
     console.log();
   }
 

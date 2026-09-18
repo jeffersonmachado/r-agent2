@@ -10,10 +10,65 @@ const {
   writeReport,
 } = require('./common');
 
+// Fórmula CANÔNICA da confiança — importada do gerador, nunca duplicada.
+// Duas fórmulas seriam duas verdades; a do contrato é esta.
+const { computeConfidenceFromCounts } = require('../qa-waves/generate-business-contracts');
+
 const issues = [];
 
 function addIssue(severity, category, message, detail = {}) {
   issues.push({ severity, category, message, ...detail });
+}
+
+/**
+ * Cenários VINCULADOS explicitamente a cada jornada — a MESMA entrada da
+ * fórmula canônica de confiança (`countJourneyScenarios` no gerador).
+ *
+ * Distinção que custou uma investigação inteira (2026-09-18): o validador casa
+ * cenários também por DOMÍNIO, então uma jornada pode ter "259 cenários" no
+ * match amplo e apenas 1 cenário vinculado ao contrato. Citar o número amplo ao
+ * lado de "contrato fraco" é enganoso — o que a confiança mede é o vínculo
+ * explícito.
+ *
+ * @returns {Record<string, number>} journeyId → quantidade de cenários vinculados
+ */
+function loadLinkedScenarioCounts() {
+  const coverageDir = path.join(ROOT, 'qa-waves', 'journey-coverage');
+  const counts = {};
+  let files = [];
+  try {
+    files = fs.readdirSync(coverageDir).filter((name) => name.endsWith('.json'));
+  } catch (_) {
+    return counts;
+  }
+  for (const name of files) {
+    const data = readJson(`qa-waves/journey-coverage/${name}`, null);
+    for (const journey of (data && data.journeys) || []) {
+      if (!journey || !journey.journey) continue;
+      counts[journey.journey] = (counts[journey.journey] || 0) + (journey.scenarios || []).length;
+    }
+  }
+  return counts;
+}
+
+/**
+ * Nomeia os DRIVERS medidos da baixa confiança.
+ *
+ * A mensagem anterior dizia só o veredito ("validação de contrato fraca") e
+ * omitia a causa. Um aviso que não nomeia o driver não é acionável. Função PURA
+ * (sem I/O), provada por teste sem tocar o disco.
+ *
+ * @param {{linkedScenarioCount?: (number|null), requiredCapabilities?: string[], hasDirectMatch?: boolean}} journey
+ * @returns {string}
+ */
+function describeLowConfidenceDrivers(journey = {}) {
+  const requiredCapabilities = Array.isArray(journey.requiredCapabilities) ? journey.requiredCapabilities : [];
+  const linked = journey.linkedScenarioCount;
+  const drivers = [];
+  if (typeof linked === 'number' && linked < 5) drivers.push(`${linked}/5 cenários vinculados`);
+  if (requiredCapabilities.length < 6) drivers.push(`${requiredCapabilities.length}/6 capabilities`);
+  if (journey.hasDirectMatch === false) drivers.push('sem match direto de jornada');
+  return drivers.length > 0 ? drivers.join(', ') : 'sem driver identificado';
 }
 
 // ── 1. Ler contratos de jornada ─────────────────────────────────────
@@ -79,8 +134,8 @@ function loadQaScenarios() {
 
 // ── 5. Mapear cenários QA para journeys de negócio ──────────────────
 function mapScenariosToBusinessJourneys(qaScenarios, journeys) {
-  const mapping = {};
-
+  const mapping = {};  // Evidência VIVA do vínculo de contrato (mesma entrada da fórmula canônica).
+  const linkedScenarioCounts = loadLinkedScenarioCounts();
   for (const journey of journeys) {
     const journeyCaps = new Set(journey.requiredCapabilities);
     const matchingScenarios = [];
@@ -176,6 +231,33 @@ function mapScenariosToBusinessJourneys(qaScenarios, journeys) {
     };
 
     // Issues
+    //
+    // Guarda de INTEGRIDADE da confiança: ela é um CACHE derivado de (cenários
+    // vinculados, capabilities). Se o cache diverge do que a cobertura atual
+    // produz, o número que o gate usa está errado — e isso precisa aparecer.
+    // Fica FORA do bloco de baixa confiança de propósito: o drift típico
+    // aparece justamente em jornada BEM coberta (cache antigo, cobertura nova),
+    // que nunca entraria naquele bloco. Enquanto isso foi aninhado, o guard não
+    // via as 2 jornadas com drift real.
+    const linkedScenarioCount = linkedScenarioCounts[journey.id];
+    const hasLinkedEvidence = typeof linkedScenarioCount === 'number';
+    const recomputedConfidence = hasLinkedEvidence
+      ? computeConfidenceFromCounts(linkedScenarioCount, journey.requiredCapabilities)
+      : null;
+    if (recomputedConfidence !== null && Math.abs(recomputedConfidence - journey.confidence) > 0.005) {
+      addIssue('warning', 'business-journey-confidence-drift',
+        `Jornada "${journey.id}": confiança armazenada (${journey.confidence}) diverge da recalculada pela cobertura atual (${recomputedConfidence})`
+        + ` [cenários vinculados: ${linkedScenarioCount}, capabilities: ${journey.requiredCapabilities.length}] — regenerar os contratos (npm run qa:business-contracts)`,
+        {
+          journey: journey.id,
+          storedConfidence: journey.confidence,
+          recomputedConfidence,
+          linkedScenarioCount,
+          requiredCapabilities: journey.requiredCapabilities.length,
+        }
+      );
+    }
+
     if (!hasE2E) {
       addIssue('error', 'business-journey-no-e2e',
         `Jornada de negócio "${journey.id}" sem cenário E2E — ${journey.requiredCapabilities.length} capabilities sem validação fim-a-fim`,
@@ -189,9 +271,22 @@ function mapScenariosToBusinessJourneys(qaScenarios, journeys) {
       );
     }
     if (journey.confidence < 0.7) {
+      // O aviso de baixa confiança é sobre o VÍNCULO EXPLÍCITO do contrato —
+      // nunca sobre o match amplo por domínio (que casa centenas de cenários e
+      // não diz nada sobre a força do contrato).
       addIssue('warning', 'business-journey-low-confidence',
-        `Jornada "${journey.id}" com confiança baixa (${Math.round(journey.confidence * 100)}%) — validação de contrato fraca`,
-        { journey: journey.id, confidence: journey.confidence }
+        `Jornada "${journey.id}" com confiança baixa (${Math.round(journey.confidence * 100)}%) — vínculo de contrato fraco`
+        + ` [cenários VINCULADOS: ${hasLinkedEvidence ? linkedScenarioCount : 'n/d'}, capabilities: ${journey.requiredCapabilities.length}/6, match direto: ${hasDirectMatch ? 'sim' : 'não'}]`
+        + ` — driver: ${describeLowConfidenceDrivers({ linkedScenarioCount: hasLinkedEvidence ? linkedScenarioCount : null, requiredCapabilities: journey.requiredCapabilities, hasDirectMatch })}`
+        + ` | (match amplo por domínio: ${matchingScenarios.length} cenários — não é evidência de contrato)`,
+        {
+          journey: journey.id,
+          confidence: journey.confidence,
+          linkedScenarioCount: hasLinkedEvidence ? linkedScenarioCount : null,
+          domainMatchCount: matchingScenarios.length,
+          requiredCapabilities: journey.requiredCapabilities.length,
+          hasDirectMatch,
+        }
       );
     }
     if (journey.missingCapabilities.length > 0) {
@@ -445,4 +540,4 @@ if (require.main === module) {
   process.exit(run());
 }
 
-module.exports = { run };
+module.exports = { run, describeLowConfidenceDrivers, loadLinkedScenarioCounts };

@@ -166,6 +166,7 @@
     "validate:coverage-gate": "node scripts/governance/validate-coverage-gate.js",
     "coverage-gate:snapshot": "node scripts/governance/coverage-gate-snapshot.js",
     "coverage-gate:links": "node scripts/governance/sync-journey-scenario-links.js",
+    "qa:business-contracts": "node scripts/qa-waves/generate-business-contracts.js",
     "report:tenant-isolation": "node scripts/governance/tenant-isolation-report.js",
     "score:operational-experience": "node scripts/product/operational-experience-score.js",
     "wave:db-integrity": "node scripts/governance/db-integrity-wave.js",

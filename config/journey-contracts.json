@@ -1,6 +1,6 @@
 {
-  "version": 6,
-  "generatedAt": "2026-09-02T10:20:30.456Z",
+  "version": 7,
+  "generatedAt": "2026-09-18T14:33:19.523Z",
   "journeys": {
     "omnichannel_engagement": {
       "requiredCapabilities": [
@@ -730,7 +730,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.85
+      "confidence": 0.91
     },
     "bakery_producao_fornada": {
       "requiredCapabilities": [
@@ -740,7 +740,7 @@
         "notifications"
       ],
       "missingCapabilities": [],
-      "confidence": 0.87
+      "confidence": 0.93
     },
     "bakery_estoque_perdas": {
       "requiredCapabilities": [
