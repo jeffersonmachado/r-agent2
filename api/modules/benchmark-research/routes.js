@@ -11,11 +11,14 @@
  * e a classificação vem do ator resolvido server-side (nunca do corpo).
  *
  * Postura de honestidade:
- *   - o provider DEFAULT é o provider NATIVO de pesquisa
- *     (`api/services/research/nativeResearchProvider.js`): fetch real sob a
- *     política de endpoint do MCP (SSRF guard), busca DuckDuckGo sem chave,
- *     inspeções determinísticas. A injeção via `resolveResearchDeps` continua
- *     disponível para testes;
+ *   - o provider DEFAULT é resolvido pelo Canonical Tool Registry: as tools de
+ *     MCP externo (MCP Control Plane, registradas no startup) atendem as
+ *     capabilities `research.*` com delegação de escopo DECLARADA na conexão
+ *     persistida. O provider NATIVO de pesquisa
+ *     (`api/services/research/nativeResearchProvider.js`) NÃO é mais default —
+ *     ele só é usado com opt-in explícito
+ *     (`RESEARCH_NATIVE_PROVIDER_ENABLED=1`), auditado em log. A injeção via
+ *     `resolveResearchDeps` continua disponível para testes;
  *   - se um provider injetado omitir capabilities, `execute` devolve
  *     `RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS` com a lista NOMINAL do que falta.
  *     Nada é registrado e nenhum sample é tocado;
@@ -42,6 +45,11 @@ const { canonicalResearchTenant, SEMANTIC_CODES } = require('../../services/benc
 const { SAMPLES_DIR } = require('../../services/benchmark/benchmarkSampleRegistry');
 const { createNativeResearchProvider } = require('../../services/research/nativeResearchProvider');
 const {
+  resolveGovernedResearchRunners,
+  isNativeResearchProviderEnabled,
+  NATIVE_OPT_IN_ENV,
+} = require('../../services/research/governedResearchProviders');
+const {
   createBenchmarkChangeProposalService,
   PROPOSAL_ERROR_CODES,
 } = require('../../services/benchmark/benchmarkChangeProposalService');
@@ -52,11 +60,57 @@ const {
  * continua tendo precedência (testes).
  */
 let sharedNativeProviders = null;
-function defaultResearchProviders(log) {
+function nativeResearchProviders(log) {
   if (!sharedNativeProviders) {
     sharedNativeProviders = createNativeResearchProvider({ logger: log });
   }
   return sharedNativeProviders;
+}
+
+/**
+ * Providers de pesquisa do caminho PADRÃO.
+ *
+ * Ordem (P0 RAP_CORE_RESEARCH_EGRESS, 2026-09-18):
+ *   1. providers resolvidos pelo Canonical Tool Registry — tools de MCP externo
+ *      registradas no startup, delegadas por política persistida;
+ *   2. provider NATIVO apenas com OPT-IN EXPLÍCITO
+ *      (`RESEARCH_NATIVE_PROVIDER_ENABLED=1`), sempre auditado em log;
+ *   3. nada → conjunto VAZIO. O supervisor reporta
+ *      `RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS` com as capabilities ausentes.
+ *
+ * O egress nativo DEIXOU de ser default: ele falava direto com a Internet de
+ * dentro do Core, fora do registry, do control plane e de qualquer revogação.
+ */
+function defaultResearchProviders(log, { registry, actor, tenantId } = {}) {
+  const governed = resolveGovernedResearchRunners({ registry, actor, tenantId });
+  if (governed.available.length > 0) {
+    if (log && typeof log.info === 'function') {
+      log.info('[benchmark-research] providers governados de pesquisa resolvidos pelo registry', {
+        available: governed.available,
+        missing: governed.missing,
+        toolIds: governed.toolIds,
+      });
+    }
+    return governed.runners;
+  }
+
+  if (isNativeResearchProviderEnabled()) {
+    if (log && typeof log.warn === 'function') {
+      log.warn('[benchmark-research] egress NATIVO de pesquisa habilitado explicitamente', {
+        env: NATIVE_OPT_IN_ENV,
+        missing: governed.missing,
+      });
+    }
+    return nativeResearchProviders(log);
+  }
+
+  if (log && typeof log.warn === 'function') {
+    log.warn('[benchmark-research] sem provider governado de pesquisa; egress nativo desabilitado (fail closed)', {
+      missing: governed.missing,
+      optInEnv: NATIVE_OPT_IN_ENV,
+    });
+  }
+  return {};
 }
 
 /** Vertical só pode virar caminho de arquivo com este formato. */
@@ -151,18 +205,20 @@ function createBenchmarkResearchRoutes({ buildDeps, resolveResearchDeps }) {
       : {};
     const store = injected.store || createBenchmarkResearchStore();
     const registry = injected.registry || resolveSharedToolRegistry();
+    // §TAREFA 27/28 — principal interno com delegação EXPLÍCITA a
+    // `research.*` (sem wildcard). O default antigo só tinha
+    // `benchmark.research.execute`, então os provedores de pesquisa nunca
+    // eram alcançáveis pelo caminho de produção.
+    const actor = injected.actor || buildResearchPrincipal();
+    const researchTenant = injected.tenantId || context.tenantId || 'system';
     return {
       supervisor: createBenchmarkResearchSupervisor({
         store,
         registry,
-        providers: injected.providers || defaultResearchProviders(deps.logger),
+        providers: injected.providers || defaultResearchProviders(deps.logger, { registry, actor, tenantId: researchTenant }),
         // O tenant do run é SEMPRE SYSTEM (já resolvido em `authenticate`).
-        tenantId: injected.tenantId || context.tenantId || 'system',
-        // §TAREFA 27/28 — principal interno com delegação EXPLÍCITA a
-        // `research.*` (sem wildcard). O default antigo só tinha
-        // `benchmark.research.execute`, então os provedores de pesquisa nunca
-        // eram alcançáveis pelo caminho de produção.
-        actor: injected.actor || buildResearchPrincipal(),
+        tenantId: researchTenant,
+        actor,
         logger: deps.logger,
       }),
       store,

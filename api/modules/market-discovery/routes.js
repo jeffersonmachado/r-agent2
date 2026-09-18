@@ -13,14 +13,15 @@
  * vem do ator resolvido server-side).
  *
  * Postura de honestidade:
- *   - o provider DEFAULT é o provider NATIVO de pesquisa
- *     (`api/services/research/nativeResearchProvider.js`); tools MCP externas
- *     registradas no Canonical Tool Registry no startup atendem as mesmas
- *     capabilities `research.*` — a escolha de provider fica no REGISTRY
- *     (capability-driven), nunca hardcoded neste módulo. A injeção via
- *     `resolveDiscoveryDeps` tem precedência (testes);
- *   - sem provider para `research.*` o run termina
- *     `MARKET_DISCOVERY_BLOCKED_NO_EXTERNAL_ACCESS` — nada é inventado;
+ *   - o provider DEFAULT é resolvido pelo Canonical Tool Registry: tools de MCP
+ *     externo registradas no startup atendem as capabilities `research.*` — a
+ *     escolha de provider fica no REGISTRY (capability-driven), nunca hardcoded
+ *     neste módulo. O provider NATIVO de pesquisa só é usado com opt-in
+ *     EXPLÍCITO (`RESEARCH_NATIVE_PROVIDER_ENABLED=1`), auditado em log; a
+ *     injeção via `resolveDiscoveryDeps` tem precedência (testes);
+ *   - sem provider governado e sem opt-in o run termina
+ *     `MARKET_DISCOVERY_BLOCKED_NO_EXTERNAL_ACCESS` — fail closed, nunca egress
+ *     direto do Core;
  *   - o holdout é pré-registrado ANTES de qualquer pesquisa profunda; a rota
  *     de handoff (T-MR2) recusa set sem pré-registro
  *     (`market_discovery_holdout_not_preregistered`);
@@ -41,6 +42,11 @@ const { createBenchmarkResearchStore } = require('../../services/benchmark/bench
 const { createBenchmarkResearchService } = require('../../services/benchmark/benchmarkResearchService');
 const { canonicalResearchTenant, SEMANTIC_CODES } = require('../../services/benchmark/benchmarkResearchSemantics');
 const { createNativeResearchProvider } = require('../../services/research/nativeResearchProvider');
+const {
+  resolveGovernedResearchRunners,
+  isNativeResearchProviderEnabled,
+  NATIVE_OPT_IN_ENV,
+} = require('../../services/research/governedResearchProviders');
 
 const SAMPLES_DIR = path.join(__dirname, '..', '..', '..', 'config', 'benchmarks');
 
@@ -52,11 +58,47 @@ const VERTICAL_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
  * a polidez por host entre requisições.
  */
 let sharedNativeProviders = null;
-function defaultResearchProviders(log) {
+function nativeResearchProviders(log) {
   if (!sharedNativeProviders) {
     sharedNativeProviders = createNativeResearchProvider({ logger: log });
   }
   return sharedNativeProviders;
+}
+
+/**
+ * Providers de pesquisa do caminho PADRÃO (P0 RAP_CORE_RESEARCH_EGRESS).
+ *
+ * Governado pelo registry primeiro; NATIVO apenas com opt-in explícito
+ * (`RESEARCH_NATIVE_PROVIDER_ENABLED=1`); sem nenhum dos dois o conjunto é
+ * VAZIO e a descoberta falha fechada em vez de sair para a Internet pelo Core.
+ */
+function defaultResearchProviders(log, { registry, actor, tenantId } = {}) {
+  const governed = resolveGovernedResearchRunners({ registry, actor, tenantId });
+  if (governed.available.length > 0) {
+    if (log && typeof log.info === 'function') {
+      log.info('[market-discovery] providers governados de pesquisa resolvidos pelo registry', {
+        available: governed.available,
+        missing: governed.missing,
+      });
+    }
+    return governed.runners;
+  }
+  if (isNativeResearchProviderEnabled()) {
+    if (log && typeof log.warn === 'function') {
+      log.warn('[market-discovery] egress NATIVO de pesquisa habilitado explicitamente', {
+        env: NATIVE_OPT_IN_ENV,
+        missing: governed.missing,
+      });
+    }
+    return nativeResearchProviders(log);
+  }
+  if (log && typeof log.warn === 'function') {
+    log.warn('[market-discovery] sem provider governado de pesquisa; egress nativo desabilitado (fail closed)', {
+      missing: governed.missing,
+      optInEnv: NATIVE_OPT_IN_ENV,
+    });
+  }
+  return {};
 }
 
 function readSample(vertical) {
@@ -151,12 +193,14 @@ function createMarketDiscoveryRoutes({ buildDeps, resolveDiscoveryDeps }) {
   }
 
   function buildSupervisor(deps, req, context, injected) {
+    const registry = injected.registry || resolveSharedToolRegistry();
+    const actor = injected.actor || undefined;
     return createMarketDiscoverySupervisor({
       store: injected.store || createMarketDiscoveryStore(),
-      registry: injected.registry || resolveSharedToolRegistry(),
-      providers: injected.providers || defaultResearchProviders(deps.logger),
+      registry,
+      providers: injected.providers || defaultResearchProviders(deps.logger, { registry, actor, tenantId: context.tenantId }),
       tenantId: context.tenantId,
-      actor: injected.actor || undefined,
+      actor,
       now: injected.now,
       logger: deps.logger,
       selection: injected.selection || {},

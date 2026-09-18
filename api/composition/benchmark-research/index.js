@@ -4,12 +4,17 @@
  * Composição Express do módulo de PESQUISA DE BENCHMARKS.
  *
  * Superfície de ENGENHARIA (DEVELOPMENT): monta apenas o necessário para o
- * módulo — autenticação, helpers HTTP e o factory do supervisor. As
- * capabilities `research.*` são atendidas pelo provider NATIVO de pesquisa
- * (`api/services/research/nativeResearchProvider.js`, default no módulo de
- * rotas) ou por tools externas governadas via MCP (registradas no mesmo
- * Canonical Tool Registry no startup); se nenhuma das duas atender, a pesquisa
- * reporta `RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS` em vez de inventar.
+ * módulo — autenticação, helpers HTTP e o factory do supervisor.
+ *
+ * §P0 RAP_CORE_RESEARCH_EGRESS (2026-09-18) — o caminho PADRÃO das capabilities
+ * `research.*` é o Canonical Tool Registry: tools de MCP externo registradas no
+ * startup (MCP Control Plane), resolvidas por capability com delegação de escopo
+ * DECLARADA na configuração persistida da conexão. O provider NATIVO
+ * (`api/services/research/nativeResearchProvider.js`) deixou de ser default: ele
+ * só é usado com opt-in EXPLÍCITO (`RESEARCH_NATIVE_PROVIDER_ENABLED=1`) e o uso
+ * é auditado em log. Sem provider governado e sem opt-in, o conjunto é vazio e a
+ * pesquisa reporta `RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS` com a lista nominal das
+ * capabilities ausentes — fail closed, nunca egress direto do Core.
  */
 
 const { requireAuth, requirePermission } = require('../../middleware/auth');

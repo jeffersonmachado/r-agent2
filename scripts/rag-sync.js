@@ -143,6 +143,20 @@ const SHARED = require('../api/services/rag/knowledgeSurfaceClassification');
 
 const EXTRA_OPERATIONAL_SOURCES_LOCAL = new Set(EXTRA_OPERATIONAL_SOURCES);
 
+/**
+ * Artefatos GERADOS que não são documentação e não devem entrar no índice.
+ *
+ * `docs/governance/_platform-status-source.json` é a PROJEÇÃO canônica de status
+ * (2,5 MB) que embute screenshots de evidência em base64. Não é fonte de
+ * conhecimento: indexá-la infla o corpus com bytes de imagem e o base64 casa por
+ * acidente com o padrão de token do WhatsApp, fazendo o rag-service devolver
+ * `422 secret_detected` — um falso positivo que só existe porque um arquivo
+ * derivado estava sendo tratado como documento.
+ */
+const GENERATED_ARTIFACT_EXCLUSIONS = new Set([
+  'docs/governance/_platform-status-source.json',
+]);
+
 function resolveDomainClassification(rel) {
   // A taxonomia compartilhada já cobre os prefixos PRODUCTION canônicos,
   // SUPPORT e SYSTEM. Adicionamos apenas as fontes operacionais extras
@@ -275,7 +289,7 @@ async function main() {
   const files = [
     ...SOURCE_DIRS.flatMap((d) => walkFiles(path.join(ROOT, d))),
     ...EXTRA_OPERATIONAL_SOURCES.map((rel) => path.join(ROOT, rel)).filter((p) => fs.existsSync(p)),
-  ];
+  ].filter((abs) => !GENERATED_ARTIFACT_EXCLUSIONS.has(path.relative(ROOT, abs)));
   const uniqueFiles = [...new Set(files)];
 
   console.log(`   ${uniqueFiles.length} arquivos-fonte detectados`);
@@ -382,6 +396,7 @@ module.exports = {
   isProductionSurface,
   sha256,
   EXTRA_OPERATIONAL_SOURCES,
+  GENERATED_ARTIFACT_EXCLUSIONS,
   SOURCE_DIRS,
 };
 

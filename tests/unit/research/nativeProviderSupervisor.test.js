@@ -162,9 +162,18 @@ describe('E2E — provider nativo remove RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS', (
     );
   });
 
-  test('o módulo de rotas de produção injeta o provider NATIVO por padrão', async () => {
-    // resolveResearchDeps SEM providers: o default nativo assume (prova real de
-    // wiring — o /status reporta as capabilities research.* como atendíveis).
+  test('o módulo de rotas de produção NÃO injeta o provider NATIVO por padrão (fail closed)', async () => {
+    // §P0 RAP_CORE_RESEARCH_EGRESS (2026-09-18) — CONTRATO INVERTIDO.
+    //
+    // Antes: o default do módulo de rotas era o provider NATIVO, ou seja, o
+    // caminho padrão de pesquisa pública do Core era egress direto para a
+    // Internet, fora do Canonical Tool Registry, fora do MCP Control Plane e
+    // fora de qualquer revogação por configuração.
+    //
+    // Agora: o default é o REGISTRY (tools de MCP externo) e o nativo exige
+    // opt-in EXPLÍCITO (`RESEARCH_NATIVE_PROVIDER_ENABLED=1`). Sem provider
+    // governado e sem opt-in, o registry fica SEM as capabilities `research.*` e
+    // o status reporta a ausência NOMINAL — nunca um provider silencioso.
     const http = require('http');
     const express = require('express');
     const { createBenchmarkResearchRoutes } = require('../../../api/modules/benchmark-research/routes');
@@ -203,12 +212,29 @@ describe('E2E — provider nativo remove RESEARCH_BLOCKED_NO_EXTERNAL_ACCESS', (
       const response = await fetch(`http://127.0.0.1:${port}/api/benchmark-research/status`);
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(body.availability.externalAccess).toBe(true);
-      expect(body.availability.missing).toEqual([]);
-      expect(body.availability.reason).toBe('research_provider_available');
-      expect(registry.get('rap.research.fetch').metadata.provider).toBe('native');
+      expect(body.availability.externalAccess).toBe(false);
+      // A ausência é NOMINAL: as capabilities exigidas em sequência aparecem
+      // uma a uma. (`research.inspectApiDocs` só entra na lista quando o
+      // benchmark declara superfície de API — por isso o `arrayContaining`.)
+      expect(body.availability.missing).toEqual(expect.arrayContaining([
+        'research.search',
+        'research.fetch',
+        'research.inspectDocumentation',
+        'research.captureEvidence',
+      ]));
+      // Nenhuma capability nativa foi registrada por conta própria: o egress
+      // nativo não é mais um efeito colateral do wiring.
+      expect(registry.get('rap.research.fetch')).toBeFalsy();
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }
+  });
+
+  test('o provider NATIVO só é injetado com opt-in EXPLÍCITO', async () => {
+    const { isNativeResearchProviderEnabled } = require('../../../api/services/research/governedResearchProviders');
+    // Sem a variável, o wiring governado não devolve o nativo.
+    expect(isNativeResearchProviderEnabled({})).toBe(false);
+    // Com ela, o opt-in é reconhecido — e é auditado em log pelo módulo.
+    expect(isNativeResearchProviderEnabled({ RESEARCH_NATIVE_PROVIDER_ENABLED: '1' })).toBe(true);
   });
 });

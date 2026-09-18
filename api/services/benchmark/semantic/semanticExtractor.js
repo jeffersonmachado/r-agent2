@@ -51,7 +51,14 @@ const VERB_CANONICAL_MAP = Object.freeze({
   generate: 'generate', gera: 'generate', gerar: 'generate',
   sync: 'sync', sincroniza: 'sync', integrate: 'integrate', integra: 'integrate', integracao: 'integrate',
   import: 'import', importa: 'import', export: 'export', exporta: 'export',
-  check: 'checkin', checkin: 'checkin', 'check-in': 'checkin', libera: 'grant_access', liberacao: 'grant_access',
+  // §P0-SEMANTICS: `check` NÃO tem forma canônica própria — a forma depende do
+  // CONTEXTO e é resolvida em `resolveContextualVerb`. Antes desta correção o
+  // mapa dizia `check: 'checkin'`, e o texto de marketing "We check our
+  // recurring payments constantly" virava `payment.checkin` — um check-in de
+  // academia atribuído a verificação de cobrança. Palavra isolada não é verbo.
+  checkin: 'checkin', 'check-in': 'checkin', libera: 'grant_access', liberacao: 'grant_access',
+  verify: 'verify', verifica: 'verify', verificar: 'verify', verifique: 'verify', conferir: 'verify', confere: 'verify',
+  consult: 'verify', consulta: 'verify', consultar: 'verify',
   prescribe: 'prescribe', prescricao: 'prescribe', prescreve: 'prescribe',
   evaluate: 'evaluate', avalia: 'evaluate', avaliacao: 'evaluate',
   automate: 'automate', automatiza: 'automate', automacao: 'automate',
@@ -100,6 +107,45 @@ function firstCanonical(tokens, map) {
     if (map[token]) return map[token];
   }
   return null;
+}
+
+/**
+ * §P0-SEMANTICS — Contexto de CHECK-IN (entrada física de pessoa).
+ *
+ * Só existe check-in quando o texto declara ENTRADA de uma PESSOA em um local:
+ *   - a forma composta `checkin` / `check-in` (sem ambiguidade);
+ *   - `check <pessoa> in` ("Check members in at the front desk");
+ *   - `check in at/to/no/na ...` ("check in at the front desk").
+ *
+ * O verbo nu `check` NÃO é check-in: "check payments", "check invoices",
+ * "payment status check" são VERIFICAÇÃO de um objeto de negócio.
+ */
+const COMPOUND_CHECKIN_RE = /\bcheck-?ins?\b/i;
+const CHECK_PERSON_IN_RE = /\bcheck(?:ing)?\s+(?:the\s+|a\s+|an\s+|our\s+|your\s+|os\s+|as\s+)?(?:members?|students?|alunos?|membros?|clientes?|guests?|visitantes?|users?|usu[aá]rios?|people|kids|crian[cç]as?)\s+in\b/i;
+const CHECK_INTO_PLACE_RE = /\bcheck\s+in\s+(?:at|to|into|no|na|em|nas|nos)\b/i;
+
+/**
+ * Verbo canônico do token, com o desempate CONTEXTUAL de `check`.
+ *
+ * @param {string} verbToken
+ * @param {string[]} tokens
+ * @param {string} text
+ * @returns {string|null}
+ */
+function resolveContextualVerb(verbToken, tokens = [], text = '') {
+  if (!verbToken) return null;
+  if (verbToken !== 'check') return VERB_CANONICAL_MAP[verbToken] || null;
+
+  const raw = String(text || '');
+  const isCheckIn = COMPOUND_CHECKIN_RE.test(raw)
+    || CHECK_PERSON_IN_RE.test(raw)
+    || CHECK_INTO_PLACE_RE.test(raw);
+  if (isCheckIn) return 'checkin';
+
+  // `check` sobre um objeto de negócio é VERIFICAÇÃO. Sem objeto, não há
+  // semântica determinável — devolve null para o candidato seguir como
+  // UNRESOLVED em vez de receber uma forma inventada.
+  return objectAfterVerb(tokens, 'check') ? 'verify' : null;
 }
 
 /**
@@ -165,8 +211,16 @@ function extractStructuredRule(text) {
 function extractCandidate({ observation, classified, kind }) {
   const text = String(observation.text ?? '').trim();
   const tokens = tokenize(text);
-  const verbToken = verbTokenOf(tokens);
-  const verb = verbToken ? VERB_CANONICAL_MAP[verbToken] : null;
+  // §P0-SEMANTICS: quando NÃO há verbo no léxico, a construção de check-in
+  // ainda pode nomear a ação ("Check in at the front desk", "check-in pelo
+  // app"). `check` é resolvido contextualmente por `resolveContextualVerb`, que
+  // só devolve `checkin` para essas construções — nunca para "check <objeto>".
+  // Só preenche a LACUNA: se o léxico já achou verbo, ele continua vencendo.
+  const checkinContext = COMPOUND_CHECKIN_RE.test(text)
+    || CHECK_PERSON_IN_RE.test(text)
+    || CHECK_INTO_PLACE_RE.test(text);
+  const verbToken = verbTokenOf(tokens) || (checkinContext ? 'check' : null);
+  const verb = resolveContextualVerb(verbToken, tokens, text);
   const object = objectAfterVerb(tokens, verbToken);
   const outcomeMatch = String(text).match(OUTCOME_RE);
   const outcome = outcomeMatch ? outcomeMatch[0].trim() : null;
@@ -266,6 +320,10 @@ module.exports = {
   SEMANTIC_STATUS,
   VERB_CANONICAL_MAP,
   OBJECT_CANONICAL_MAP,
+  COMPOUND_CHECKIN_RE,
+  CHECK_PERSON_IN_RE,
+  CHECK_INTO_PLACE_RE,
+  resolveContextualVerb,
   extractStructuredRule,
   extractCandidate,
 };

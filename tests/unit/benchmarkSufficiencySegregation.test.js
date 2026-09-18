@@ -34,6 +34,21 @@ const ALLOWED_DEV_GOVERNANCE_UI = [
   'frontend/src/pages/BenchmarkResearchGovernancePage.test.jsx',
 ];
 
+/**
+ * Derivados de BUILD da página de governança.
+ *
+ * O Vite emite `frontend/dist/assets/<Nome>-<hash>.js|css`: o nome exato do
+ * fonte NUNCA casa com o artefato compilado, e cada build muda o hash. Permitir
+ * apenas o derivado DESTA página (prefixo + hash + extensão de asset) mantém a
+ * regra viva — qualquer OUTRO arquivo com "benchmark" no nome continua
+ * reprovando — sem quebrar o teste a cada build.
+ */
+const DIST_DERIVATIVE_PATTERN = /^frontend\/dist\/assets\/BenchmarkResearchGovernancePage-[A-Za-z0-9_-]+\.(?:js|css|map)$/;
+
+function isAllowedBenchmarkArtifact(rel) {
+  return ALLOWED_DEV_GOVERNANCE_UI.includes(rel) || DIST_DERIVATIVE_PATTERN.test(rel);
+}
+
 describe('artefatos de benchmark são ENGINEERING, não operação do cliente', () => {
   it('nenhum artefato de benchmark vive no frontend fora da UI DEVELOPMENT de governança', () => {
     for (const rel of BENCHMARK_PATHS) {
@@ -51,7 +66,7 @@ describe('artefatos de benchmark são ENGINEERING, não operação do cliente', 
         }
       };
       walk(abs);
-      const notAllowed = offenders.filter((rel) => !ALLOWED_DEV_GOVERNANCE_UI.includes(rel));
+      const notAllowed = offenders.filter((rel) => !isAllowedBenchmarkArtifact(rel));
       expect(notAllowed).toEqual([]);
       // A exceção não pode virar porteira aberta: os arquivos permitidos devem
       // existir e ser exatamente os declarados (nem mais, nem menos).

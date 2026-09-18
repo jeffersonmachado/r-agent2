@@ -40,6 +40,7 @@ const fs = require('fs');
 const path = require('path');
 const { renderMasterScorecard } = require('../../governance/master-scorecard-docs');
 const { toMarkdownSections } = require('../../tools/system/platform-readiness');
+const { decisionsAgree } = require('../../governance/decision-family');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
@@ -97,8 +98,13 @@ function generateFinalStatusProjections(rootDir) {
   if (!decision || !governanceDecision || !scorecard.data.overallStatus) {
     errors.push('canonical_fields_missing: finalDecision/overallStatus ausentes');
   }
-  if (decision && governanceDecision && decision !== governanceDecision) {
-    errors.push(`canonical_divergence: readiness=${decision} governance=${governanceDecision} — projeção recusada sobre canônica inconsistente`);
+  // §P1 — A divergência que importa é de FAMÍLIA (bloqueado × aprovado), não de
+  // string. Fonte única em `governance/decision-family.js`.
+  if (decision && governanceDecision) {
+    const agreement = decisionsAgree(decision, governanceDecision);
+    if (!agreement.agree) {
+      errors.push(`canonical_divergence: readiness=${decision} (${agreement.left}) governance=${governanceDecision} (${agreement.right}) [${agreement.reason}] — projeção recusada sobre canônica inconsistente`);
+    }
   }
   if (!scorecard.data.summary || !Array.isArray(scorecard.data.dimensions)) {
     errors.push('canonical_fields_missing: scorecard sem summary/dimensions');

@@ -1525,16 +1525,103 @@ function listCriticalGates() {
 }
 
 /**
+ * §46/§P0-COVERAGE — Implementação das capabilities REQUERIDAS da plataforma.
+ *
+ * DEFEITO MEDIDO (2026-09-18): a dimensão `requiredCapabilities` publicava
+ *   numerator   = inventorySize              (133 = inventário de MERCADO)
+ *   denominator = canonicalInventoryBaseline ( 12 = capabilities REQUERIDAS)
+ * como "Required Capability Implementation". São GRANDEZAS DIFERENTES e sem
+ * relação: 133/12 não é cobertura — é divisão de duas contagens. Cobertura com
+ * numerador > denominador é impossível por definição, e o rótulo dava a
+ * entender que a plataforma implementava 1108% do que é requerido.
+ *
+ * Aqui a cobertura é medida contra o PRÓPRIO inventário requerido:
+ *   numerador   = capabilities requeridas COM superfície de execução declarada
+ *                 (tool vinculada OU intent acionável);
+ *   denominador = capabilities requeridas declaradas.
+ *
+ * O inventário canônico é INJETADO (o engine é puro, zero I/O). Sem injeção a
+ * dimensão é `NOT_MEASURABLE` — nunca um número inventado nem o inventário de
+ * mercado disfarçado de implementação.
+ *
+ * @returns {{numerator: number|null, denominator: number|null, state: string, reason: string|null, toolBinding: object}}
+ */
+function buildRequiredCapabilityImplementationCoverage({ canonicalInventory = null, baseline = null } = {}) {
+  const fallbackDenominator = Number.isFinite(baseline) ? baseline : null;
+  const capabilities = canonicalInventory && typeof canonicalInventory.capabilities === 'object'
+    ? Object.entries(canonicalInventory.capabilities)
+    : null;
+
+  if (!capabilities) {
+    return {
+      numerator: null,
+      denominator: fallbackDenominator,
+      state: 'NOT_MEASURABLE',
+      reason: 'canonical_inventory_not_supplied',
+      toolBinding: { numerator: null, denominator: fallbackDenominator, state: 'NOT_MEASURABLE' },
+    };
+  }
+
+  const declared = capabilities.filter(([, entry]) => entry && entry.kind === 'business');
+  const total = declared.length;
+  if (total === 0) {
+    return {
+      numerator: null,
+      denominator: fallbackDenominator,
+      state: 'NOT_MEASURABLE',
+      reason: 'canonical_inventory_empty',
+      toolBinding: { numerator: null, denominator: fallbackDenominator, state: 'NOT_MEASURABLE' },
+    };
+  }
+
+  const hasExecutionSurface = ([, entry]) => (
+    (Array.isArray(entry.tools) && entry.tools.length > 0)
+    || (Array.isArray(entry.intents) && entry.intents.length > 0)
+  );
+  const hasToolBinding = ([, entry]) => Array.isArray(entry.tools) && entry.tools.length > 0;
+
+  const implemented = declared.filter(hasExecutionSurface).length;
+  const toolBound = declared.filter(hasToolBinding).length;
+
+  return {
+    numerator: implemented,
+    denominator: total,
+    state: 'MEASURED',
+    reason: null,
+    // Métrica DISTINTA (não substituta): quantas requeridas têm tool canônica
+    // vinculada. Publicá-la separada evita que "tem intent" seja lido como
+    // "tem execução por tool".
+    toolBinding: { numerator: toolBound, denominator: total, state: 'MEASURED' },
+  };
+}
+
+/**
  * §46 Todo percentual precisa vir acompanhado de numerador, denominador,
  * escopo, versão do inventário e estado da amostra. "Fitness Coverage: 100%" é
  * uma afirmação sem sujeito: 100% DE QUÊ, medido contra O QUÊ, com QUAL estado
  * de amostra? Este objeto torna a afirmação completa — ou a impede.
+ *
+ * §P0-COVERAGE: cada dimensão de COBERTURA declara `metricId`, `meaning` e
+ * `isCoverage`. Tamanho de inventário é um ESCALAR (`isCoverage: false`),
+ * nunca uma fração — era exatamente essa confusão que produzia 133/12.
  */
 function buildCoverageStatement({
-  sample, state, certifiable, findingEvidence, archetypeCoverage, saturation, holdout,
+  sample, state, certifiable, findingEvidence, archetypeCoverage, saturation, holdout, canonicalInventory = null,
 } = {}) {
   const inventorySize = saturation && saturation.curve ? saturation.curve.inventorySize : null;
   const baseline = Number(sample && sample.canonicalInventoryBaseline);
+  const implementation = buildRequiredCapabilityImplementationCoverage({ canonicalInventory, baseline });
+
+  // Invariante de cobertura: numerador NUNCA excede denominador. Violação aqui
+  // é defeito de código, não número de negócio — o estado expõe isso em vez de
+  // publicar a fração.
+  const implementationState = implementation.state === 'MEASURED'
+    && Number.isFinite(implementation.numerator)
+    && Number.isFinite(implementation.denominator)
+    && implementation.numerator > implementation.denominator
+    ? 'INVALID_NUMERATOR_EXCEEDS_DENOMINATOR'
+    : implementation.state;
+
   return {
     scope: `vertical:${sample && sample.vertical ? sample.vertical : 'unknown'}`,
     inventoryVersion: (sample && sample.inventoryVersion) || null,
@@ -1542,23 +1629,53 @@ function buildCoverageStatement({
     sampleStatus: state || null,
     certified: certifiable === true,
     dimensions: {
-      requiredCapabilities: {
+      requiredCapabilityImplementation: {
+        metricId: 'required_capability_implementation_coverage',
         label: 'Required Capability Implementation',
-        numerator: inventorySize,
-        denominator: Number.isFinite(baseline) ? baseline : null,
+        meaning: 'Capabilities REQUERIDAS da plataforma com superfície de execução declarada, sobre o total de capabilities requeridas. Não mede o inventário de mercado.',
+        numerator: implementation.numerator,
+        denominator: implementation.denominator,
         unit: 'capabilities',
+        isCoverage: true,
+        state: implementationState,
+        reason: implementation.reason,
+      },
+      requiredCapabilityToolBinding: {
+        metricId: 'required_capability_tool_binding_coverage',
+        label: 'Required Capability Tool Binding',
+        meaning: 'Capabilities requeridas com TOOL canônica vinculada, sobre o total de capabilities requeridas. Métrica distinta de implementação: um intent acionável implementa a capability sem vinculá-la a uma tool.',
+        numerator: implementation.toolBinding.numerator,
+        denominator: implementation.toolBinding.denominator,
+        unit: 'capabilities',
+        isCoverage: true,
+        state: implementation.toolBinding.state,
+      },
+      marketCapabilityInventory: {
+        metricId: 'market_capability_inventory_size',
+        label: 'Market Capability Inventory Size',
+        meaning: 'TAMANHO do inventário de capabilities descoberto no mercado (não é cobertura e não é comparável com o inventário requerido da plataforma).',
+        value: Number.isFinite(inventorySize) ? inventorySize : null,
+        unit: 'capabilities',
+        isCoverage: false,
+        state: Number.isFinite(inventorySize) ? 'MEASURED' : 'NOT_MEASURABLE',
       },
       marketArchetypes: {
+        metricId: 'market_archetype_coverage',
         label: 'Market Archetype Coverage',
+        meaning: 'Arquétipos de mercado representados na amostra sobre os arquétipos relevantes da vertical.',
         numerator: archetypeCoverage ? archetypeCoverage.representedArchetypes : null,
         denominator: archetypeCoverage ? archetypeCoverage.relevantArchetypes : null,
         unit: 'archetypes',
+        isCoverage: true,
       },
       findings: {
+        metricId: 'evidence_backed_findings',
         label: 'Evidence-backed Findings',
+        meaning: 'Achados com evidência válida sobre o total de achados registrados.',
         numerator: findingEvidence ? findingEvidence.totals.valid : null,
         denominator: findingEvidence ? findingEvidence.totals.findings : null,
         unit: 'findings',
+        isCoverage: true,
       },
     },
     holdoutState: (holdout && holdout.holdoutState) || null,
@@ -1568,7 +1685,7 @@ function buildCoverageStatement({
 }
 
 // ── §40 Gate principal ────────────────────────────────────────────────────
-function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
+function evaluateSampleSufficiency({ sample, policy, now = new Date(), canonicalInventory = null }) {
   const archetypeCoverage = evaluateArchetypeCoverage({ sample });
   const independence = evaluateIndependence({ sample });
   const diversity = evaluateDiversity({ sample, policy });
@@ -1687,6 +1804,9 @@ function evaluateSampleSufficiency({ sample, policy, now = new Date() }) {
     archetypeCoverage,
     saturation,
     holdout,
+    // Inventário canônico INJETADO (o motor não faz I/O): é o denominador real
+    // da cobertura de implementação das capabilities requeridas.
+    canonicalInventory,
   });
 
   return {
@@ -1755,4 +1875,5 @@ module.exports = {
   evaluateAnalysisEvidence,
   evaluateSampleSufficiency,
   buildCoverageStatement,
+  buildRequiredCapabilityImplementationCoverage,
 };

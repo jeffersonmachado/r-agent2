@@ -3188,6 +3188,16 @@ async function runFlowScenario(definition, ctx) {
       throw new Error(`Fila não foi criada: ${JSON.stringify(created)}`);
     }
 
+    // O resultado do DELETE NÃO pode ser descartado.
+    //
+    // DEFEITO MEDIDO (mesh 2026-09-18T09-22-16): a limpeza rodava no `finally` e
+    // ignorava a resposta. `DELETE /queues/:name` RECUSA a exclusão quando há
+    // ticket ativo (exige `force=true`) e devolve `{ success: false, message }` —
+    // mas a mensagem era jogada fora, e a falha aparecia depois como o genérico
+    // "Fila não foi removida", sem a causa. Engolir o erro não deixava o cenário
+    // passar: deixava o diagnóstico impossível.
+    let deleteResult = null;
+    let deleteFailure = null;
     try {
       const listed = await api.get('/queues');
       const names = Array.isArray(listed) ? listed : (listed?.queues || listed?.items || []);
@@ -3205,19 +3215,30 @@ async function runFlowScenario(definition, ctx) {
         throw new Error('Tickets da fila indisponíveis');
       }
     } finally {
-      await api.del(`/queues/${encodeURIComponent(queueName)}`);
+      try {
+        deleteResult = await api.del(`/queues/${encodeURIComponent(queueName)}`);
+      } catch (error) {
+        deleteFailure = error;
+      }
+    }
+
+    if (deleteFailure) {
+      throw new Error(`DELETE da fila falhou: ${deleteFailure.message || deleteFailure}`);
+    }
+    if (deleteResult && deleteResult.success === false) {
+      throw new Error(`Fila não foi removida: ${deleteResult.message || JSON.stringify(deleteResult)}`);
     }
 
     const afterDelete = await api.get('/queues');
     const remaining = Array.isArray(afterDelete) ? afterDelete : (afterDelete?.queues || []);
     if (remaining.some((name) => String(name) === queueName)) {
-      throw new Error('Fila não foi removida');
+      throw new Error('Fila não foi removida: a fila continua na listagem após DELETE');
     }
 
     return {
       detail: 'Fila criada, consultada e removida',
       ids: { queueName },
-      evidence: { deleted: true },
+      evidence: { deleted: true, deleteMessage: deleteResult?.message || null },
     };
   }
 

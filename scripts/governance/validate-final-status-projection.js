@@ -39,6 +39,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// Fonte única da FAMÍLIA de decisão (bloqueado × aprovado).
+const { decisionsAgree } = require('../../governance/decision-family');
+
 const CANONICAL = {
   readiness: 'governance/final-readiness-report.json',
   governance: 'governance/final-governance-report.json',
@@ -51,8 +54,12 @@ const PROJECTIONS_JSON = [
 ];
 
 const PROJECTIONS_MD = [
-  { file: 'docs/governance/ENTERPRISE_READINESS.md', pattern: /Decision:\s*([A-Z_:]+)/, field: 'readinessDecision' },
-  { file: 'docs/governance/PLATFORM_STATUS.md', pattern: /Readiness decision:\s*([A-Z_:]+)/, field: 'readinessDecision' },
+  // Captura a decisão COMPLETA (o veredito pode carregar a causa entre
+  // colchetes: `NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]`). O padrão
+  // antigo `([A-Z_:]+)` cortava no espaço e acusava `stale_readinessDecision`
+  // para uma projeção CORRETA — falso positivo.
+  { file: 'docs/governance/ENTERPRISE_READINESS.md', pattern: /Decision:\s*([^\n]+)/, field: 'readinessDecision' },
+  { file: 'docs/governance/PLATFORM_STATUS.md', pattern: /Readiness decision:\s*([^\n]+)/, field: 'readinessDecision' },
   { file: 'docs/architecture/RAP_MASTER_SCORECARD.md', pattern: /Overall status:\s*\*\*([A-Z_]+)\*\*/, field: 'scorecardStatus' },
 ];
 
@@ -160,11 +167,17 @@ function checkProjectionConsistency(rootDir) {
   if (!canonicalDecision || !governanceDecision || !scorecardStatus) {
     issues.push({ projection: 'canonical', issue: 'canonical_fields_missing' });
   }
-  if (canonicalDecision && governanceDecision && canonicalDecision !== governanceDecision) {
-    issues.push({
-      projection: CANONICAL.governance,
-      issue: `canonical_divergence: readiness=${canonicalDecision} governance=${governanceDecision}`,
-    });
+  if (canonicalDecision && governanceDecision) {
+    // Família, não string: o readiness agrega a causa do bloqueio e o
+    // governance declara o veredito mínimo — ambos bloqueio. Exigir igualdade
+    // textual acusava divergência onde as duas fontes CONCORDAM.
+    const agreement = decisionsAgree(canonicalDecision, governanceDecision);
+    if (!agreement.agree) {
+      issues.push({
+        projection: CANONICAL.governance,
+        issue: `canonical_divergence: readiness=${canonicalDecision} (${agreement.left}) governance=${governanceDecision} (${agreement.right}) [${agreement.reason}]`,
+      });
+    }
   }
 
   // Score canônico (summary preferido; derivação do array como fallback).

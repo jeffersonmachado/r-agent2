@@ -848,8 +848,12 @@ function buildBlockingGaps(report, intelligenceResult, crossReport) {
 // ─── J. Decisão final granular ────────────────────────────────────────────────
 function determineFinalDecision(stage, blockingGaps, deferredGates = []) {
   if (blockingGaps.length > 0) {
-    // Mesmo com blockers, identificamos o estágio máximo alcançado
-    return `NO_GO:${STAGE_DECISIONS[stage] || 'UNKNOWN'}`;
+    // §P1 FINAL_PROOF_DECISION_SEMANTICS — o estágio MÁXIMO ALCANÇADO é
+    // maturidade, não decisão. Antes daqui saía `NO_GO:<estágio>`, que com
+    // estágio AUTONOMOUS_READY produzia `NO_GO:AUTONOMOUS_READY_GO`: um rótulo
+    // que afirma bloqueio e aprovação ao mesmo tempo. A decisão agora nomeia a
+    // CAUSA; a maturidade viaja em `candidateMaturityLevel`.
+    return 'NO_GO:BLOCKING_GAPS';
   }
   // Sem blockers: se há gates DEFERRED (pacote ainda não criado), a decisão é
   // PASS_WITH_DEFERRED_PACKAGE_GATE (pré-package), não um NO_GO. O pós-package
@@ -1119,6 +1123,14 @@ function buildFinalProofReport(context = {}) {
 
   // J. Decisão final granular
   report.finalDecision = determineFinalDecision(stage, report.blockingGaps, report.deferredGates);
+  // §P1 — MATURIDADE e DECISÃO em campos SEPARADOS. O estágio máximo alcançado
+  // continua auditável mesmo quando bloqueado; a decisão nunca o carrega no
+  // próprio rótulo.
+  report.candidateMaturityLevel = STAGE_DECISIONS[stage] || null;
+  report.stageReadiness = STAGE_DECISIONS[stage] || 'UNKNOWN';
+  report.blockingReasons = report.blockingGaps
+    .map((gap) => gap.id || gap.title || 'unnamed_blocking_gap')
+    .filter(Boolean);
 
   return report;
 }

@@ -37,8 +37,26 @@ const {
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const POLICY_PATH = path.join(ROOT_DIR, 'config', 'benchmark-sufficiency-policy.json');
 const SAMPLES_DIR = path.join(ROOT_DIR, 'config', 'benchmarks');
+const CANONICAL_CAPABILITIES_PATH = path.join(ROOT_DIR, 'config', 'canonical-capabilities.json');
 const COVERAGE_REPORT_PATH = path.join(ROOT_DIR, 'reports', 'coverage-completeness-report.json');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'benchmark-sufficiency-report.json');
+
+/**
+ * §P0-COVERAGE — inventário canônico REAL das capabilities requeridas.
+ *
+ * É o denominador correto da cobertura de implementação. Sem ele o engine marca
+ * a dimensão `NOT_MEASURABLE` — nunca reaproveita o inventário de mercado
+ * (era assim que 133 virava numerador de uma cobertura de 12).
+ */
+function loadCanonicalInventory() {
+  try {
+    return JSON.parse(fs.readFileSync(CANONICAL_CAPABILITIES_PATH, 'utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+const CANONICAL_INVENTORY = loadCanonicalInventory();
 
 const VIOLATION_CODES = Object.freeze({
   POLICY_MISSING: 'benchmark_policy_missing',
@@ -46,6 +64,8 @@ const VIOLATION_CODES = Object.freeze({
   SAMPLE_VERSION_MISSING: 'benchmark_sample_version_missing',
   SUFFICIENCY_CLAIM_UNPROVEN: 'sample_sufficiency_claim_unproven',
   MARKET_COVERAGE_CLAIM_WITHOUT_SUFFICIENCY: 'market_coverage_claim_without_sufficiency',
+  COVERAGE_NUMERATOR_EXCEEDS_DENOMINATOR: 'coverage_numerator_exceeds_denominator',
+  COVERAGE_NOT_MEASURABLE: 'coverage_not_measurable',
   HOLDOUT_NOT_PREREGISTERED: 'holdout_not_preregistered',
   HOLDOUT_LEAKAGE: 'holdout_leakage',
   CRITICAL_GATE_FAILED_WITH_SUFFICIENT_CLAIM: 'critical_gate_failed_with_sufficient_claim',
@@ -130,7 +150,29 @@ function run({ policy, samples, registeredVerticals, coverage }) {
       violations.push({ code: VIOLATION_CODES.VERTICAL_NOT_REGISTERED, file, vertical: sample.vertical });
     }
 
-    const evaluation = evaluateSampleSufficiency({ sample, policy });
+    const evaluation = evaluateSampleSufficiency({ sample, policy, canonicalInventory: CANONICAL_INVENTORY });
+
+    // §P0-COVERAGE — cobertura com numerador > denominador é matematicamente
+    // impossível: o relatório estava publicando "Required Capability
+    // Implementation = 133 / 12" porque o numerador era o inventário de MERCADO
+    // e o denominador, as capabilities REQUERIDAS. A violação falha o gate em
+    // vez de publicar a fração.
+    const implementationCoverage = evaluation.coverageStatement.dimensions.requiredCapabilityImplementation;
+    if (implementationCoverage.state === 'INVALID_NUMERATOR_EXCEEDS_DENOMINATOR') {
+      violations.push({
+        code: VIOLATION_CODES.COVERAGE_NUMERATOR_EXCEEDS_DENOMINATOR,
+        vertical: sample.vertical,
+        numerator: implementationCoverage.numerator,
+        denominator: implementationCoverage.denominator,
+      });
+    }
+    if (implementationCoverage.state === 'NOT_MEASURABLE') {
+      violations.push({
+        code: VIOLATION_CODES.COVERAGE_NOT_MEASURABLE,
+        vertical: sample.vertical,
+        reason: implementationCoverage.reason,
+      });
+    }
 
     // Declaração de suficiência só vale com prova.
     if (sample.sampleSufficiencyClaim === SAMPLE_STATES.SUFFICIENT && evaluation.status !== SAMPLE_STATES.SUFFICIENT) {

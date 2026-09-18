@@ -89,7 +89,12 @@ const ACTION_VERB_TERMS = Object.freeze([
   'sell', 'venda', 'vender', 'vendas', 'sale',
   'issue', 'emite', 'emitir', 'emissao', 'generate', 'gera', 'gerar',
   'sync', 'sincroniza', 'integrate', 'integra', 'integracao', 'import', 'importa', 'export', 'exporta',
-  'check', 'checkin', 'check-in', 'libera', 'liberacao', 'bloqueia', 'bloqueio', 'block', 'blocked',
+  // §P0-SEMANTICS: o verbo nu `check` NÃO entra no léxico de ação. Ele era o
+  // único termo que fazia "We check our recurring payments" virar
+  // CAPABILITY_SIGNAL e, adiante, um `checkin`. Entrada física se declara por
+  // `checkin` / `check-in`; verificação se declara por `verify`.
+  'checkin', 'check-in', 'verify', 'verifica', 'verificar', 'confere', 'conferir',
+  'libera', 'liberacao', 'bloqueia', 'bloqueio', 'block', 'blocked',
   'prescribe', 'prescricao', 'prescreve', 'evaluate', 'avalia', 'avaliacao',
   'automate', 'automatiza', 'automacao', 'automatic', 'automatica', 'automatico', 'automaticas', 'automaticos',
   'recorrente', 'recurring', 'recurrence', 'recorrencia',
@@ -101,6 +106,35 @@ const MARKETING_VOICE_RE = /^(economize|aumente|reduza|ganhe|poupe|impulsione|ma
 const CTA_RE = /\b(agende (uma )?demo|fale com|comece (agora|gratis)|try (it )?free|get started|start (your )?free|sign up|request a demo|book a demo|saiba mais|learn more|ver planos|see plans|compre agora|buy now|free trial|teste gr[aá]tis)\b/i;
 
 const SUPERLATIVE_RE = /\b(all[- ]in[- ]one|tudo em (um|uma) s[oó] (lugar|plataforma)|in one place|the best|o melhor|a melhor|#1|number one|l[ií]der|leading|ultimate|complete solution|solu[cç][aã]o completa|mais completo|everything you need|tudo que voc[eê] precisa|tudo o que voc[eê] precisa)\b/i;
+
+/**
+ * §P0-SEMANTICS — CONSTRUÇÃO PROMOCIONAL.
+ *
+ * Template que descreve a FERRAMENTA por adjetivo ("ferramenta completa",
+ * "plataforma poderosa") seguido de finalidade genérica ("para simplificar todo
+ * o processo de venda"). Não nomeia recurso, ação nem comportamento — é
+ * promessa, não capacidade.
+ *
+ * DEFEITO MEDIDO (2026-09-18): "Uma ferramenta completa para simplificar todo o
+ * processo de venda" era classificada como CAPABILITY_SIGNAL e produzia a
+ * capability `sell` a partir de texto promocional.
+ */
+const PROMOTIONAL_CONSTRUCTION_RE = /\b(?:ferramenta|plataforma|solu[cç][aã]o|software|sistema|app|aplicativo|tool|platform)s?\s+(?:completa?s?|robusta?s?|poderosa?s?|inteligente?s?|all[- ]in[- ]one|completo|complete|powerful|robust|intelligent)\b|\b(?:complete|all[- ]in[- ]one|powerful|robust|intelligent)\s+(?:tool|platform|solution|software|system|app)s?\b|\bpara\s+simplificar\b|\bto\s+simplify\b|\b(?:simplifique|descomplique|potencialize|revolucione)\b/i;
+
+/**
+ * §P0-SEMANTICS — Construção inequívoca de CHECK-IN (entrada física de pessoa).
+ *
+ * Espelha o desempate de `resolveContextualVerb` no extrator. Duas famílias:
+ *   - EXPLÍCITA: composto `checkin`/`check-in` ou `check in at/to/no/na <local>`
+ *     — a própria construção já declara a ação, dispensa objeto;
+ *   - COM PESSOA: `check <pessoa> in` — exige o objeto de negócio presente
+ *     (é ele que diz QUEM entra).
+ *
+ * "check <objeto>" ("check payments", "payment status check") NÃO casa em
+ * nenhuma das duas: continua verificação, nunca check-in.
+ */
+const CHECKIN_EXPLICIT_RE = /\bcheck-?ins?\b|\bcheck\s+in\s+(?:at|to|into|no|na|em|nas|nos)\b/i;
+const CHECKIN_PERSON_RE = /\bcheck(?:ing)?\s+(?:the\s+|a\s+|an\s+|our\s+|your\s+|os\s+|as\s+)?(?:members?|students?|alunos?|membros?|clientes?|guests?|visitantes?|users?|usu[aá]rios?|people|kids|crian[cç]as?)\s+in\b/i;
 
 const BENEFIT_RE = /\b(retention|reten[cç][aã]o|revenue|receita|faturamento|lucro|profit|produtividade|productivity|efici[eê]ncia|efficiency|time[- ]saving|economia de tempo|growth|crescimento)\b.*(\+\s?\d+\s?%|\d+\s?%|em at[eé]|up to|mais rápido|faster)/i;
 
@@ -283,6 +317,12 @@ function classifyObservation(observation = {}) {
   if (SUPERLATIVE_RE.test(text)) {
     return result(OBSERVATION_TYPES.MARKETING_CLAIM, 'superlative_slogan', signals);
   }
+  // Construção promocional: adjetivo da ferramenta + finalidade genérica.
+  // Sem termo declarado, o TEMA é a promessa — nunca um recurso, ação ou
+  // comportamento observável do produto.
+  if (PROMOTIONAL_CONSTRUCTION_RE.test(text) && structure.declaredMatches.length === 0) {
+    return result(OBSERVATION_TYPES.MARKETING_CLAIM, 'promotional_construction', signals);
+  }
   // Enumeração de substantivos sem verbo: slogan de "tudo junto".
   if (structure.clauseCount >= 3 && structure.verbs.length === 0 && structure.declaredMatches.length === 0) {
     return result(OBSERVATION_TYPES.MARKETING_CLAIM, 'noun_enumeration_slogan', signals);
@@ -316,6 +356,16 @@ function classifyObservation(observation = {}) {
   // Capability: verbo + objeto de negócio, ou termo declarado da política.
   if (structure.hasVerbObject || structure.declaredMatches.length > 0) {
     return result(OBSERVATION_TYPES.CAPABILITY_SIGNAL, fromFaqAnswer ? 'verb_object_via_faq_answer' : (structure.declaredMatches.length > 0 ? 'declared_term_match' : 'verb_object_structure'), { ...signals, viaFaqAnswer: fromFaqAnswer });
+  }
+
+  // §P0-SEMANTICS — Construção de CHECK-IN.
+  // `check` sozinho NÃO é verbo de ação (é ambíguo e produziu o falso positivo
+  // "check payments" → check-in). Mas "check members in", "check in at ..." e o
+  // composto "check-in" são a AÇÃO de entrada física de pessoa — inequívoca e
+  // com objeto de negócio presente. Sem esta regra o léxico corrigido derrubaria
+  // a capacidade legítima junto com o falso positivo (falso negativo novo).
+  if (CHECKIN_EXPLICIT_RE.test(text) || (CHECKIN_PERSON_RE.test(text) && structure.businessObjects.length > 0)) {
+    return result(OBSERVATION_TYPES.CAPABILITY_SIGNAL, 'checkin_construction', { ...signals, viaFaqAnswer: fromFaqAnswer });
   }
 
   // Heading curto sem estrutura e sem termo declarado: rótulo de seção, não

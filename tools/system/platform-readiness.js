@@ -1406,7 +1406,9 @@ function buildReport() {
   const hardeningReport = loadJson('governance/replay-hardening-report.json', null);
   const hardeningBlock = hardeningReport?.decision === 'REPLAY_HARDENING_NO_GO';
 
-  const mandatoryGateBlocked = meshHardBlock || gateHardBlock || govHardBlock || hardeningBlock;
+  // Motivos NOMINAIS do bloqueio obrigatório — vão para o relatório ao lado da
+  // decisão. O veredito é delegado à função pura de semântica, que separa
+  // decisão de maturidade (nunca `NO_GO:<maturidade>`).
   const mandatoryBlockReasons = [
     ...(meshHardBlock ? [`qa-mesh=${meshGoNoGoReport.status}`] : []),
     ...(gateHardBlock ? [`release-gate=${releaseGateReport.gate}`] : []),
@@ -1414,13 +1416,16 @@ function buildReport() {
     ...(hardeningBlock ? [`replay-hardening=REPLAY_HARDENING_NO_GO`] : []),
   ];
 
-  const finalDecision = mandatoryGateBlocked
-    ? `NO_GO:MANDATORY_GATE_BLOCKED [${mandatoryBlockReasons.join(' | ')}]`
-    : (blockingGaps.length > 0
-      ? `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`
-      : (String(govDecision) === 'PASS_WITH_DEFERRED_PACKAGE_GATE'
-        ? 'PASS_WITH_DEFERRED_PACKAGE_GATE'
-        : proofDecision));
+  const finalDecision = _computeFinalDecisionSemantics({
+    meshHardBlock,
+    gateHardBlock,
+    govDecision,
+    hardeningDecision: hardeningReport?.decision || null,
+    blockingGapIds: blockingGaps,
+    proofDecision,
+    // Estágio REAL do proof engine — nunca derivado do rótulo da decisão.
+    candidateMaturity: proofReport?.candidateMaturityLevel || proofReport?.decisionMatrix?.currentLevel || null,
+  }).finalDecision;
   const platformMaturity = classifyPlatformMaturity({
     qaWavesGovernance,
     prodLikeSummary,
@@ -1445,6 +1450,24 @@ function buildReport() {
     runId: proofReport?.runId || null,
     sourceFingerprint: proofReport?.sourceFingerprint || null,
     finalDecision,
+    // §P1 FINAL_PROOF_DECISION_SEMANTICS — MATURIDADE e DECISÃO são conceitos
+    // DISTINTOS: a maturidade é o estado técnico alcançado; a decisão é a
+    // autorização, que só existe sem blocker obrigatório. Misturá-los num
+    // rótulo único (`NO_GO:AUTONOMOUS_READY_GO`) tornava impossível responder
+    // "está aprovado?" sem interpretar string.
+    //
+    // A maturidade vem do ESTÁGIO do proof engine (`candidateMaturityLevel`),
+    // NUNCA derivada da string de decisão: `NO_GO:BLOCKING_GAPS` não é
+    // maturidade nenhuma, e usá-lo como tal apagava o estágio realmente
+    // alcançado.
+    candidateMaturityLevel: proofReport?.candidateMaturityLevel
+      || proofReport?.decisionMatrix?.currentLevel
+      || null,
+    stageReadiness: proofReport?.stageReadiness || proofDecision,
+    blockingReasons: blockingGaps.length > 0
+      ? blockingGaps.map((gap) => gap.id || gap.code || gap.reason || gap.title || 'unnamed_blocking_gap')
+      : [],
+    mandatoryBlockReasons,
     platformMaturity,
     canonicalMeshExecutionId: meshSummary.executionId,
     canonicalMeshArtifacts: {
@@ -1536,7 +1559,9 @@ function buildReport() {
     ],
     noGoReasons: blockingGaps.map((gap) => `${gap.title} [${gap.id}]`),
     productionReadiness: {
-      status: blockingGaps.length > 0 ? `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}` : proofDecision,
+      // §P1 — mesma separação do agregador: o veredito da fase é o do proof
+      // engine, não um rótulo composto de NO_GO com maturidade.
+      status: blockingGaps.length > 0 ? 'NO_GO:BLOCKING_GAPS' : proofDecision,
       classification: platformMaturity === 'foundation' || platformMaturity === 'operational' ? 'partial' : platformMaturity,
       productionLikeFlows: productionValidation.filter((item) => item.status === 'production-like').map((item) => item.label),
     },
@@ -1597,6 +1622,11 @@ function persistReport(report) {
     artifactVersion: '2.0.0',
     status: report.finalDecision,
     finalDecision: report.finalDecision,
+    // §P1 — maturidade separada da decisão também no artefato canônico.
+    candidateMaturityLevel: report.candidateMaturityLevel,
+    stageReadiness: report.stageReadiness,
+    blockingReasons: report.blockingReasons,
+    mandatoryBlockReasons: report.mandatoryBlockReasons,
     canonicalMeshExecutionId: report.canonicalMeshExecutionId,
     totalCoverage: report.readiness.readinessScore,
     // §55 Os cinco estados de certificação viajam SEPARADOS no artefato
@@ -1645,6 +1675,78 @@ function persistReport(report) {
   writeJson('docs/governance/_platform-status-source.json', report);
 }
 
+/**
+ * §P1 FINAL_PROOF_DECISION_SEMANTICS — MATURIDADE ≠ DECISÃO (função PURA).
+ *
+ * DEFEITO MEDIDO: quando o proof engine declarava `AUTONOMOUS_READY_GO` mas
+ * existiam gaps bloqueantes, o agregador emitia `NO_GO:AUTONOMOUS_READY_GO`.
+ * A string afirma as duas coisas: quem lê `startsWith('NO_GO')` vê bloqueio;
+ * quem lê o rótulo vê aprovação. Nenhum consumidor consegue responder "está
+ * aprovado?" sem interpretar texto.
+ *
+ * Aqui os conceitos viajam SEPARADOS:
+ *   candidateMaturityLevel → estado técnico alcançado (pode ser AUTONOMOUS_READY)
+ *   stageReadiness         → veredito da fase do proof engine
+ *   finalDecision          → GO-família, ou `NO_GO` com causa NOMEADA
+ *   blockingReasons        → motivos nominais (gaps + gates obrigatórios)
+ *
+ * Invariante: `finalDecision` da família NO_GO NUNCA carrega rótulo da família
+ * GO no próprio rótulo.
+ *
+ * @returns {{finalDecision: string, candidateMaturityLevel: string|null, stageReadiness: string, blockingReasons: string[], mandatoryBlockReasons: string[]}}
+ */
+function _computeFinalDecisionSemantics({
+  meshHardBlock = false,
+  gateHardBlock = false,
+  govDecision = null,
+  hardeningDecision = null,
+  blockingGapIds = [],
+  proofDecision = 'NO_GO:UNKNOWN',
+  candidateMaturity = null,
+} = {}) {
+  const govHardBlock = govDecision != null && String(govDecision).startsWith('NO_GO');
+  const hardeningBlock = hardeningDecision === 'REPLAY_HARDENING_NO_GO';
+  const mandatoryGateBlocked = meshHardBlock || gateHardBlock || govHardBlock || hardeningBlock;
+  const mandatoryBlockReasons = [
+    ...(meshHardBlock ? ['qa-mesh=NO_GO'] : []),
+    ...(gateHardBlock ? ['release-gate=NO_GO'] : []),
+    ...(govHardBlock ? [`governance=${govDecision}`] : []),
+    ...(hardeningBlock ? ['replay-hardening=REPLAY_HARDENING_NO_GO'] : []),
+  ];
+  const gapIds = (Array.isArray(blockingGapIds) ? blockingGapIds : [])
+    .map((gap) => (typeof gap === 'string' ? gap : (gap?.id || gap?.code || gap?.reason || gap?.title || 'unnamed_blocking_gap')))
+    .filter(Boolean);
+
+  const stageReadiness = String(proofDecision || 'NO_GO:UNKNOWN');
+  // A maturidade PODE ser informada explicitamente (é o estágio do proof
+  // engine, ex.: `ENTERPRISE_READY_GO`). Sem ela, só é derivável quando o
+  // veredito de fase JÁ é uma maturidade — um veredito bloqueado nomeia a CAUSA
+  // (`NO_GO:BLOCKING_GAPS`) e não pode ser publicado como estágio alcançado.
+  const candidateMaturityLevel = candidateMaturity
+    || (stageReadiness.startsWith('NO_GO') ? null : stageReadiness);
+
+  let finalDecision;
+  if (mandatoryGateBlocked) {
+    finalDecision = `NO_GO:MANDATORY_GATE_BLOCKED [${mandatoryBlockReasons.join(' | ')}]`;
+  } else if (gapIds.length > 0) {
+    finalDecision = 'NO_GO:BLOCKING_GAPS';
+  } else if (String(govDecision) === 'PASS_WITH_DEFERRED_PACKAGE_GATE') {
+    // Fase PRE_PACKAGE honesta: o readiness NÃO pode promover para
+    // AUTONOMOUS_READY_GO enquanto o governance declarar gate diferido.
+    finalDecision = 'PASS_WITH_DEFERRED_PACKAGE_GATE';
+  } else {
+    finalDecision = stageReadiness;
+  }
+
+  return {
+    finalDecision,
+    candidateMaturityLevel,
+    stageReadiness,
+    blockingReasons: [...gapIds, ...mandatoryBlockReasons],
+    mandatoryBlockReasons,
+  };
+}
+
 function main() {
   materializeProofArtifacts();
   const report = buildReport();
@@ -1681,27 +1783,17 @@ function _computeMandatoryDecision({
   blockingGaps = 0,
   proofDecision = 'NO_GO:UNKNOWN',
 } = {}) {
-  const govHardBlock = govDecision != null && String(govDecision).startsWith('NO_GO');
-  const hardeningBlock = hardeningDecision === 'REPLAY_HARDENING_NO_GO';
-  const mandatoryGateBlocked = meshHardBlock || gateHardBlock || govHardBlock || hardeningBlock;
-  const mandatoryBlockReasons = [
-    ...(meshHardBlock ? ['qa-mesh=NO_GO'] : []),
-    ...(gateHardBlock ? ['release-gate=NO_GO'] : []),
-    ...(govHardBlock ? [`governance=${govDecision}`] : []),
-    ...(hardeningBlock ? ['replay-hardening=REPLAY_HARDENING_NO_GO'] : []),
-  ];
-  if (mandatoryGateBlocked) {
-    return `NO_GO:MANDATORY_GATE_BLOCKED [${mandatoryBlockReasons.join(' | ')}]`;
-  }
-  if (blockingGaps > 0) return `NO_GO:${proofDecision.replace(/^NO_GO:/, '')}`;
-  // Fase PRE_PACKAGE honesta: se o governance canônico (DB-derivado) declarou
-  // PASS_WITH_DEFERRED_PACKAGE_GATE (scorecard abaixo de 10 apenas em dimensões
-  // da fase DELIVERED), o readiness NÃO pode promover para AUTONOMOUS_READY_GO.
-  // O pós-package só vira AUTONOMOUS_READY_GO quando o governance declarar GO.
-  if (String(govDecision) === 'PASS_WITH_DEFERRED_PACKAGE_GATE') {
-    return 'PASS_WITH_DEFERRED_PACKAGE_GATE';
-  }
-  return proofDecision;
+  // Delega à função pura de semântica: decisão e maturidade NUNCA se misturam
+  // no rótulo (ver `_computeFinalDecisionSemantics`).
+  const count = Number(blockingGaps) || 0;
+  return _computeFinalDecisionSemantics({
+    meshHardBlock,
+    gateHardBlock,
+    govDecision,
+    hardeningDecision,
+    blockingGapIds: Array.from({ length: count }, (_, index) => `blocking_gap_${index + 1}`),
+    proofDecision,
+  }).finalDecision;
 }
 
 module.exports = {
@@ -1711,5 +1803,5 @@ module.exports = {
   persistReport,
   REQUIRED_REPLAY_JOURNEYS,
   toMarkdownSections,
-  _internal: { _computeMandatoryDecision },
+  _internal: { _computeMandatoryDecision, _computeFinalDecisionSemantics },
 };
