@@ -166,6 +166,35 @@ const SCENARIO_REGISTRY_FILES = [
 
 const INVENTORY_FILE = 'config/system-inventory.json';
 
+/**
+ * Projeções de política: artefatos que MISTURAM política declarada com cache
+ * derivada ou metadados voláteis.
+ *
+ * Sem projeção, `config/journey-contracts.json` torna o fingerprint de POLÍTICA
+ * instável: o gerador reescreve `version`/`generatedAt` e RECALCULA `confidence`
+ * (derivada de cenários vinculados + capabilities) a cada execução. Resultado
+ * medido (2026-09-18): `npm run qa:business-contracts` → fingerprint de política
+ * 5fa01a7c… → 079058b9… → `create-governed-run` falha com AGENT_POLICY_STALE e
+ * `POLICY_VERSION` é hardcoded (nenhum caminho de operador). É a MESMA armadilha
+ * já documentada para `meshRegistry.json`: artefato derivado rastreado como
+ * política = STALE perpétuo.
+ *
+ * O que fica BOUND é a política DECLARADA (requiredCapabilities /
+ * missingCapabilities). A `confidence` continua verificada — por
+ * `validate:business-needs`, no guard `business-journey-confidence-drift`, que a
+ * recalcula da cobertura viva e acusa divergência.
+ */
+const POLICY_FILE_PROJECTIONS = Object.freeze({
+  'config/journey-contracts.json': (doc) => ({
+    journeys: Object.fromEntries(
+      Object.entries((doc && doc.journeys) || {}).map(([id, contract]) => [id, {
+        requiredCapabilities: (contract && contract.requiredCapabilities) || [],
+        missingCapabilities: (contract && contract.missingCapabilities) || [],
+      }]),
+    ),
+  }),
+});
+
 function sha256FileContent(absPath) {
   return sha256(fs.readFileSync(absPath));
 }
@@ -234,10 +263,21 @@ function computeInventoryFingerprint(rootDir, inventoryPath = null) {
  * Fingerprint de conteúdo sobre uma lista de arquivos. Arquivo ausente é
  * registrado como null — remoção de registro/política também invalida.
  */
-function computeFileSetFingerprint(rootDir, relPaths, label) {
+function computeFileSetFingerprint(rootDir, relPaths, label, projections = {}) {
   const entries = relPaths.map((relPath) => {
     const absPath = path.join(rootDir, relPath);
-    return [relPath, fs.existsSync(absPath) ? sha256FileContent(absPath) : null];
+    if (!fs.existsSync(absPath)) return [relPath, null];
+    const project = projections[relPath];
+    if (!project) return [relPath, sha256FileContent(absPath)];
+    // Projeção ilegível NÃO pode degradar para hash de conteúdo cru em
+    // silêncio: falha EXPLÍCITA com o motivo (fail-closed).
+    let projected;
+    try {
+      projected = project(JSON.parse(fs.readFileSync(absPath, 'utf8')));
+    } catch (error) {
+      throw new Error(`policy_projection_failed:${relPath}:${error.message}`);
+    }
+    return [relPath, sha256(Buffer.from(JSON.stringify(projected)))];
   });
   return fingerprintObject({ [label]: entries });
 }
@@ -247,7 +287,7 @@ function computeScenarioRegistryFingerprint(rootDir) {
 }
 
 function computePolicyFingerprint(rootDir) {
-  return computeFileSetFingerprint(rootDir, POLICY_FILES, 'policyFiles');
+  return computeFileSetFingerprint(rootDir, POLICY_FILES, 'policyFiles', POLICY_FILE_PROJECTIONS);
 }
 
 /**
@@ -311,6 +351,7 @@ module.exports = {
   SKIP_REL_DIRS,
   SKIP_REL_FILES,
   POLICY_FILES,
+  POLICY_FILE_PROJECTIONS,
   SCENARIO_REGISTRY_FILES,
   INVENTORY_FILE,
 };

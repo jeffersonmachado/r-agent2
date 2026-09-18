@@ -11,7 +11,13 @@ const getRun = require('../../db/models/GovernanceRun');
 const { computePolicyFingerprint } = require('../../../governance/proof-engine/fingerprint-chain');
 
 const POLICY_ID = 'RAP-AGENT-CONSTITUTION';
-const POLICY_VERSION = '1.0.3';
+// 1.0.4 (2026-09-18) — o VALOR do fingerprint de política mudou de algoritmo:
+// `config/journey-contracts.json` passou a ser projetado (só política declarada)
+// para não tornar o fingerprint instável quando o gerador recalcula a cache
+// derivada (`confidence`) e reescreve `version`/`generatedAt`. A versão sobe
+// porque a identidade do artefato de política mudou — o mecanismo para aceitar
+// uma mudança de política é exatamente este bump, revisado em código.
+const POLICY_VERSION = '1.0.4';
 const CONSTITUTION_PATH = path.resolve(__dirname, '../../../governance/RAP_AGENT_CONSTITUTION.md');
 
 function policyError(code, message) { const error = new Error(`${code}: ${message}`); error.code = code; return error; }
