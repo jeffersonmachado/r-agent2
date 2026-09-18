@@ -55,3 +55,16 @@ Mapa canônico das rotas de QA após revisão completa de menus/rotas:
 - **Aliases preservados**: `/rpa-replays` → `/dev/rpa-replays`; `/rpa-seeds` → `/dev/rpa-seeds` (canonizado nesta data — era a única ferramenta RPA fora de `/dev/*`; o alias legado continua renderizando porque `main.jsx` aceita ambos e `DashboardPage.jsx:498` ainda linka para `/rpa-seeds`); `/system-status` → `/dev/system-status`; `/dev-dashboard` → `/dev`.
 - **Decisão consciente (não movido)**: `/dev/system-status` permanece exposto em Operação > Monitoramento (é monitoramento operacional, apesar do path `/dev`); área `operacoes` em `workspaceAreas.js` mantém o prefixo `/dev/system-status`.
 - **Colisões de path página×API resolvidas**: `/qa/stability` e `/qa/checkpoints` (1 segmento) eram capturados por `/qa/:id` do módulo qa (404 indevido) — guarda com `next()` em `api/modules/qa/routes.js`; proxy Vite `^/qa(/|$)` com bypass de navegação separa página (Accept text/html) de API (Accept application/json), mesmo padrão já usado por `/qa-mesh` e `/rag`.
+
+## Ask AI — validação de jornada real 2026-09-18 (release `r-agent2-20260918-115949`)
+
+Jornada executada em browser real (Chromium headless, 1440×900) com o helper canônico
+`tests/helpers/playwrightAuth.js` → `loginWithTenantSelection(page, { targetUrl: 'http://localhost:5173/ai-tools', tenantId: 'system' })`.
+
+- **`/ai-tools`** carrega `AIToolsPage` ("🤖 Ferramentas de IA" — Sugestão de Resposta / Reescrita Inteligente). Funciona com `systemadmin` + tenant `system`; o modal de tenant é resolvido pelo helper.
+- **GAP de navegação: Ask AI NÃO é uma página.** Não existe rota `/ask-ai` (nem alias): o assistente é um **widget flutuante global** montado no shell (`AskAiWidget`, renderizado em `main.jsx` ~L1138 e ~L1188) e presente em qualquer rota autenticada. Quem procurar "Ask AI" no menu não encontra — o acesso é o botão flutuante com `aria-label="Perguntar à IA"` (alterna com "Fechar assistente de IA"). Placeholder do campo: `Digite sua pergunta…`; envio por Enter ou botão `Enviar`.
+- **Chamada de backend**: `POST /api/ask-ai` (via `fetchJson` em `frontend/src/api/client.js`).
+- **Resposta real verificada**: pergunta procedimental → resposta textual **com seção "Fontes:"** listando documentos do tenant (ex.: `Roteiros Jornada Bakery Bakery Estoque Perdas`, `Roteiros Jornada Beauty Beauty Booking`). O painel NÃO renderiza um `<ol>` de mensagens com testid; a evidência de resposta está no texto do painel + bloco "Fontes:".
+- **Zero** erros de console, **zero** `pageerror`, **zero** requisições falhas (nenhum HTTP ≥ 500) durante toda a jornada.
+- Evidência visual: `AI_MEMORY/evidence/ask-ai-journey-<timestamp>.png`.
+- Complemento de runtime (API, sem UI): `npm run verify:ask-ai-copilot:runtime` → **9/9 PASS** com `ASKAI_VERIFY_USER/PASSWORD/TENANT/BASE` (evidência em `reports/ask-ai-copilot-runtime-evidence.json`).
