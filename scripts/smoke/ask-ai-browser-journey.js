@@ -10,9 +10,16 @@
  * Nunca duplicar login manual (preenchimento de usuário/senha + clique cego no
  * modal de tenant).
  *
- * Evidência (screenshot) em `AI_MEMORY/evidence/ask-ai-journey-latest.png` —
- * diretório governado; nunca em `dist/`. Nome estável: o arquivo representa o
- * estado ATUAL da jornada e é sobrescrito a cada execução.
+ * Evidência (screenshot) em `qa/evidence/ask-ai-journey-latest.png`.
+ *
+ * Por que `qa/evidence/` e não `AI_MEMORY/evidence/`: o smoke SOBRESCREVE o
+ * arquivo a cada execução. Gravar num caminho VERSIONADO deixava o worktree sujo
+ * — e `verify:delivered-release` exige worktree limpo —, ou seja, o próprio ato
+ * de validar quebrava a pré-condição da verificação de release (medido em
+ * 2026-09-18). `qa/evidence/` já é a convenção do repo para evidência
+ * TRANSITÓRIA (governada e ignorada pelo git). Nome estável: representa o estado
+ * ATUAL da jornada.
+ * Regra: smoke de regressão não pode sobrescrever arquivo versionado.
  *
  * Uso:
  *   node scripts/smoke/ask-ai-browser-journey.js
@@ -50,7 +57,7 @@ const USER = process.env.QA_USER || 'systemadmin';
 const PASS = process.env.QA_PASS || 'Admin123!';
 const TENANT = process.env.QA_TENANT || 'system';
 const QUESTION = process.env.RAP_UI_QUESTION || 'Como faço para cadastrar um novo cliente?';
-const EVIDENCE_DIR = path.join(REPO, 'AI_MEMORY', 'evidence');
+const EVIDENCE_DIR = path.join(REPO, 'qa', 'evidence');
 
 /** Marcador de resposta REAL: a seção de fontes que o assistente renderiza. */
 const ANSWER_MARKER = /fontes\s*:/i;
