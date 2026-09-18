@@ -66,6 +66,29 @@ const GOVERNED_RESOLVER_MODULE = 'api/services/research/governedResearchProvider
 const ARTIFACT_DIRS = ['governance', 'reports'];
 const ARTIFACT_SKIP = /(?:state|history|backlog|snapshot|trace)/i;
 
+/**
+ * O relatório do PRÓPRIO gate é evidência de detecção, não uma decisão.
+ * Ele lista as strings ofensoras em `violations[].value` — varrê-lo fazia o gate
+ * acusar a si mesmo (falso positivo auto-referencial).
+ */
+const SELF_REPORT = 'decision-semantics-report.json';
+
+/**
+ * Chaves que CARREGAM uma decisão. A varredura é restrita a elas: qualquer
+ * string contendo `NO_GO` num campo descritivo (mensagem de erro, evidência,
+ * motivo) não é uma decisão publicada e não pode ser tratada como tal.
+ */
+const DECISION_KEYS = new Set([
+  'finaldecision',
+  'decision',
+  'overalldecision',
+  'status',
+  'gate',
+  'stagereadiness',
+  'candidatematuritylevel',
+  'productionreadiness',
+]);
+
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
@@ -79,21 +102,25 @@ function readJsonSafe(absPath) {
 }
 
 /**
- * Percorre um artefato coletando TODO valor string que pareça uma decisão.
+ * Percorre um artefato coletando TODO valor de CHAVE decisória que pareça uma
+ * decisão. Campos descritivos (mensagens, evidências, listas de violação) ficam
+ * de fora por construção.
  * @returns {Array<{path: string, value: string}>}
  */
-function collectDecisionStrings(node, pointer = '', found = []) {
+function collectDecisionStrings(node, pointer = '', key = '', found = []) {
   if (typeof node === 'string') {
-    if (node.includes('NO_GO')) found.push({ path: pointer, value: node });
+    if (key && DECISION_KEYS.has(key.toLowerCase()) && node.includes('NO_GO')) {
+      found.push({ path: pointer, value: node });
+    }
     return found;
   }
   if (Array.isArray(node)) {
-    node.forEach((item, index) => collectDecisionStrings(item, `${pointer}[${index}]`, found));
+    node.forEach((item, index) => collectDecisionStrings(item, `${pointer}[${index}]`, key, found));
     return found;
   }
   if (node && typeof node === 'object') {
-    for (const [key, value] of Object.entries(node)) {
-      collectDecisionStrings(value, pointer ? `${pointer}.${key}` : key, found);
+    for (const [childKey, value] of Object.entries(node)) {
+      collectDecisionStrings(value, pointer ? `${pointer}.${childKey}` : childKey, childKey, found);
     }
   }
   return found;
@@ -110,6 +137,8 @@ function checkDecisionSemantics() {
     for (const entry of fs.readdirSync(absDir)) {
       if (!entry.endsWith('.json')) continue;
       if (ARTIFACT_SKIP.test(entry)) continue;
+      // Relatório do próprio gate: é evidência, não decisão publicada.
+      if (dir === 'reports' && entry === SELF_REPORT) continue;
       const abs = path.join(absDir, entry);
       const data = readJsonSafe(abs);
       if (!data) continue;
@@ -239,4 +268,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { run, checkDecisionSemantics, checkResearchEgress, AMBIGUOUS_BLOCKED_GO, ALLOWED_BLOCKED_SUFFIXES };
+module.exports = { run, checkDecisionSemantics, checkResearchEgress, AMBIGUOUS_BLOCKED_GO, ALLOWED_BLOCKED_SUFFIXES, DECISION_KEYS, SELF_REPORT };
