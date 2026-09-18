@@ -13,7 +13,8 @@
  *
  * Uso:
  *   node scripts/generate-journey-projections.js
- *   node scripts/generate-journey-projections.js --check   # não escreve; falha se divergir
+ *   node scripts/generate-journey-projections.js --check            # garante frescor; regenera se divergir
+ *   node scripts/generate-journey-projections.js --check --strict   # asserção: falha se divergir
  */
 
 const fs = require('fs');
@@ -144,6 +145,93 @@ function ensureProjectionsFresh() {
   return { generated: false, reason: 'fresh', artifact: current };
 }
 
+/**
+ * §P5 — Classificação PURA do estado do artefato derivado. Separada do I/O para
+ * poder ser provada por teste sem tocar no disco.
+ *
+ * O artefato é DERIVADO e NÃO versionado (`.gitignore` → `reports/*`). Reprovar
+ * por divergência exigia que o operador rodasse um comando manual DEPOIS que o
+ * próprio pipeline regenera a matéria-prima: `qa-waves/journey-coverage/*.json`
+ * é reescrito pelo platform-readiness (via `tools/system/go-no-go.js`) durante a
+ * varredura. Ou seja, a mesma varredura mudava a entrada e depois exigia que a
+ * saída já estivesse atualizada — a pré-condição manual oculta já eliminada no
+ * caso "ausente". Regenerar deterministicamente garante o frescor por
+ * CONSTRUÇÃO, que é mais forte do que exigir frescor. `--strict` preserva a
+ * asserção para quem precisa provar que nenhuma escrita ocorreu.
+ *
+ * @returns {{ action: 'keep'|'generate'|'regenerate', reason: string }}
+ */
+function classifyProjectionState({ exists, readable, current, expected }) {
+  if (!exists) return { action: 'generate', reason: 'artifact_absent' };
+  if (!readable) return { action: 'regenerate', reason: 'artifact_unreadable' };
+  if (current !== expected) return { action: 'regenerate', reason: 'input_changed' };
+  return { action: 'keep', reason: 'fresh' };
+}
+
+function projectionKey(projection) {
+  const vertical = projection && projection.vertical ? projection.vertical : '?';
+  const journey = projection && projection.journeyKey ? projection.journeyKey : '?';
+  return `${vertical}/${journey}`;
+}
+
+/**
+ * §P5 — Delta legível entre o artefato anterior e o atual. A regeneração não
+ * pode apagar o SINAL: o operador precisa ver o que mudou, mesmo sem falha.
+ */
+function computeProjectionDelta(previous, next) {
+  const prevList = previous && Array.isArray(previous.journeys) ? previous.journeys : null;
+  const nextList = next && Array.isArray(next.journeys) ? next.journeys : [];
+  if (!prevList) {
+    return { comparable: false, added: [], removed: [], stagesChanged: [] };
+  }
+  const prevMap = new Map(prevList.map((item) => [projectionKey(item), item]));
+  const nextMap = new Map(nextList.map((item) => [projectionKey(item), item]));
+  const added = [];
+  const removed = [];
+  const stagesChanged = [];
+  for (const key of nextMap.keys()) {
+    if (!prevMap.has(key)) added.push(key);
+  }
+  for (const key of prevMap.keys()) {
+    if (!nextMap.has(key)) removed.push(key);
+  }
+  for (const [key, nextValue] of nextMap.entries()) {
+    const prevValue = prevMap.get(key);
+    if (!prevValue) continue;
+    const before = JSON.stringify(prevValue.stages || []);
+    const after = JSON.stringify(nextValue.stages || []);
+    if (before !== after) {
+      const countBefore = (prevValue.stages || []).length;
+      const countAfter = (nextValue.stages || []).length;
+      stagesChanged.push(`${key} (${countBefore}→${countAfter} estágios)`);
+    }
+  }
+  return {
+    comparable: true,
+    added: added.sort(),
+    removed: removed.sort(),
+    stagesChanged: stagesChanged.sort(),
+  };
+}
+
+function formatProjectionDelta(delta, limit = 8) {
+  if (!delta.comparable) return ['   delta não comparável: artefato anterior ilegível'];
+  const lines = [];
+  const push = (label, items) => {
+    if (!items.length) return;
+    const shown = items.slice(0, limit).join(', ');
+    const extra = items.length > limit ? `, +${items.length - limit}` : '';
+    lines.push(`   ${label} (${items.length}): ${shown}${extra}`);
+  };
+  push('jornadas novas', delta.added);
+  push('jornadas removidas', delta.removed);
+  push('estágios alterados', delta.stagesChanged);
+  if (!lines.length) {
+    lines.push('   divergência sem mudança de conjunto/estágios (metadados ou fingerprint)');
+  }
+  return lines;
+}
+
 function main() {
   const checkOnly = process.argv.includes('--check');
   const { artifact, skipped } = buildProjections();
@@ -151,28 +239,48 @@ function main() {
   const serialized = serializeProjections(artifact);
 
   if (checkOnly) {
+    const strict = process.argv.includes('--strict');
     const exists = fs.existsSync(OUTPUT_PATH);
     const current = exists ? fs.readFileSync(OUTPUT_PATH, 'utf8') : null;
-    // Ausência NÃO é obsolescência. O artefato é DERIVADO e não versionado
-    // (`reports/*` é ignorado no .gitignore; só `tenant-isolation-report.json` é
-    // exceção), então num checkout limpo ele simplesmente não existe. Reprovar
-    // aqui transformava este gate numa pré-condição manual oculta ("rode npm run
-    // journey:projections") que derrubava o `validate:governance-enforcement`
-    // sem que houvesse nada obsoleto — o mesmo defeito já corrigido no
-    // `ensureProjectionsFresh()` do Ask AI. Geramos deterministicamente.
-    if (!exists) {
-      fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
-      fs.writeFileSync(OUTPUT_PATH, serialized);
-      console.log('✅ Projeções operacionais ausentes — geradas a partir das entradas atuais.');
+    let currentArtifact = null;
+    if (exists) {
+      try {
+        currentArtifact = JSON.parse(current);
+      } catch (_) {
+        currentArtifact = null;
+      }
+    }
+    // Ausência NÃO é obsolescência, e divergência de artefato DERIVADO não
+    // versionado também não pode ser pré-condição manual oculta: o pipeline
+    // regenera a matéria-prima (`qa-waves/journey-coverage/*.json`, escrito pelo
+    // platform-readiness) no meio desta mesma varredura. Regeneramos
+    // deterministicamente e reportamos o delta, em vez de instruir o operador a
+    // rodar um comando — o frescor passa a ser garantido por CONSTRUÇÃO.
+    const decision = classifyProjectionState({
+      exists,
+      readable: currentArtifact !== null,
+      current,
+      expected: serialized,
+    });
+
+    if (decision.action === 'keep') {
+      console.log('✅ Projeções operacionais atualizadas e limpas.');
       return;
     }
-    // Presente porém divergente = obsolescência REAL (as entradas mudaram e o
-    // artefato não foi regenerado). Isso continua sendo falha.
-    if (current !== serialized) {
-      console.error('❌ Projeções operacionais desatualizadas. Rode: npm run journey:projections');
+
+    const delta = computeProjectionDelta(currentArtifact, artifact);
+
+    if (strict) {
+      console.error(`❌ Projeções operacionais divergentes (${decision.reason}) — modo estrito.`);
+      for (const line of formatProjectionDelta(delta)) console.error(line);
       process.exit(1);
     }
-    console.log('✅ Projeções operacionais atualizadas e limpas.');
+
+    fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
+    fs.writeFileSync(OUTPUT_PATH, serialized);
+    console.log(`✅ Projeções operacionais regeneradas (${decision.reason}).`);
+    for (const line of formatProjectionDelta(delta)) console.log(line);
+    console.log('   frescor garantido por construção: o artefato reflete as entradas ATUAIS.');
     return;
   }
 
@@ -195,6 +303,9 @@ module.exports = {
   ensureProjectionsFresh,
   computeInputFingerprint,
   serializeProjections,
+  classifyProjectionState,
+  computeProjectionDelta,
+  formatProjectionDelta,
   OUTPUT_PATH,
   COVERAGE_DIR,
   CATALOG_PATH,
