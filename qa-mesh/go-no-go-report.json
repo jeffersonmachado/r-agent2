@@ -259,5 +259,9 @@
       "criterion": "serialized_canonical_execution"
     }
   },
-  "generatedAt": "2026-09-18T10:46:59.739Z"
+  "generatedAt": "2026-09-18T10:46:59.739Z",
+  "runId": "rap-governed-20260918105142979-cbf0a8df",
+  "sourceFingerprint": "4c8e62423b47979bab4c9c56abdeedd86b1d3a47d5a8917abbf6d59275c7b5b9",
+  "artifactType": "go-no-go-report",
+  "artifactVersion": "1.0.0"
 }

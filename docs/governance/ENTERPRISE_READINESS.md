@@ -4,10 +4,9 @@
 - Canonical mesh execution: mesh-2026-09-18T10-11-13-577Z
 - Enterprise readiness: enterprise-ready
 - Production readiness: NO_GO:BLOCKING_GAPS
-- Blocking gaps: 3
+- Blocking gaps: 2
 - Blocking domains: none
 
 ## Hard blockers
 - gap-proof-package-validation: ZIP de release nao contem todos os proofs obrigatorios (critical)
-- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)
 - gap-cross-report-package_validation_failed: Contradição cross-report: package_validation_failed (critical)

@@ -1,6 +1,6 @@
 # Platform Status
 
-- Generated at: 2026-09-18T10:49:00.191Z
+- Generated at: 2026-09-18T10:58:27.718Z
 - Canonical mesh execution: mesh-2026-09-18T10-11-13-577Z
 - Canonical mesh decision: GO
 - Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
@@ -24,5 +24,4 @@
 
 ## NO_GO reasons
 - ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]
-- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
 - Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]
