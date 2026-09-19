@@ -56,6 +56,8 @@ const ERROR_CODES = Object.freeze({
   SAMPLE_NOT_EVALUABLE: 'market_sample_not_evaluable',
   ANALYZED_RESELECTED: 'market_run_reselected_analyzed_benchmark',
   DRIFT: 'market_discovery_sample_drift_detected',
+  VERTICAL_MISMATCH: 'market_run_sample_vertical_mismatch',
+  SAMPLE_UNRESOLVED: 'market_sample_vertical_unresolved',
 });
 
 /** Chaves do sample gerenciadas por este gerador. */
@@ -483,12 +485,53 @@ async function resolveRunExport(args, sample) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const samplePath = path.resolve(args.sample || path.join(ROOT_DIR, 'config', 'benchmarks', 'fitness.json'));
+
+  // ── ALVO: o sample da VERTICAL do run — nunca um default fixo ─────────────
+  // DEFEITO CORRIGIDO (2026-09-19): o caminho default era
+  // `config/benchmarks/fitness.json` HARDCODED. Rodar
+  // `--vertical beauty` lia o run de beauty e gravava no sample de FITNESS:
+  // 521 linhas de concorrentes de beleza foram escritas no corpus CURADO de
+  // academias (role/incorporation/holdout sobrescritos). Corrupção cruzada
+  // silenciosa de artefato de pesquisa — o `--vertical` selecionava o RUN e
+  // não o arquivo. Agora o sample é derivado da vertical e uma divergência
+  // entre run e sample é RECUSADA antes de qualquer escrita.
+  const explicitSamplePath = args.sample ? path.resolve(args.sample) : null;
+  const explicitSample = explicitSamplePath && fs.existsSync(explicitSamplePath)
+    ? JSON.parse(fs.readFileSync(explicitSamplePath, 'utf8'))
+    : null;
+
+  const runExport = await resolveRunExport(
+    args,
+    explicitSample || { vertical: args.vertical || null },
+  );
+
+  const targetVertical = String(runExport.vertical || args.vertical || '').trim();
+  const samplePath = explicitSamplePath
+    || (isNonEmptyString(targetVertical)
+      ? path.join(ROOT_DIR, 'config', 'benchmarks', `${targetVertical}.json`)
+      : null);
+  if (!samplePath) {
+    throw generatorError(
+      ERROR_CODES.SAMPLE_UNRESOLVED,
+      'não foi possível resolver a vertical do sample: informe --sample ou --vertical',
+    );
+  }
   if (!fs.existsSync(samplePath)) {
     throw generatorError(ERROR_CODES.SOURCE_REQUIRED, `sample ausente: ${samplePath}`);
   }
   const sample = JSON.parse(fs.readFileSync(samplePath, 'utf8'));
-  const runExport = await resolveRunExport(args, sample);
+
+  // Defesa em profundidade: run e sample precisam ser da MESMA vertical.
+  if (isNonEmptyString(sample.vertical)
+    && isNonEmptyString(runExport.vertical)
+    && sample.vertical !== runExport.vertical) {
+    throw generatorError(
+      ERROR_CODES.VERTICAL_MISMATCH,
+      `sample ${path.relative(ROOT_DIR, samplePath)} é da vertical '${sample.vertical}' `
+      + `e o run ${runExport.runId} é da vertical '${runExport.vertical}': '
+      + 'aplicação cruzada é proibida (corromperia corpus de outra vertical)`,
+    );
+  }
 
   const derived = applyMarketDiscoveryToSample({ sample, runExport });
 

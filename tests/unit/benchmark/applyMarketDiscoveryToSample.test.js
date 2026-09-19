@@ -30,6 +30,7 @@ const {
 } = require('../../../scripts/benchmark/apply-market-discovery-to-sample');
 
 const SCRIPT = path.join(__dirname, '..', '..', '..', 'scripts', 'benchmark', 'apply-market-discovery-to-sample.js');
+const ROOT_DIR = path.join(__dirname, '..', '..', '..');
 
 function buildRunExport(overrides = {}) {
   return {
@@ -394,6 +395,46 @@ describe('apply-market-discovery-to-sample — CLI com --check', () => {
       // nunca exit 0 silencioso.
       expect(result.status).toBe(1);
       expect(`${result.stdout}${result.stderr}`).toMatch(/persistence_required|market_run_source_required|market_discovery_run_not_found/);
+    });
+  });
+
+  test('SEM --sample o alvo vem da VERTICAL do run, nunca de fitness.json hardcoded', () => {
+    // REGRESSÃO (2026-09-19): o caminho default era
+    // `config/benchmarks/fitness.json` FIXO. Rodar `--vertical beauty` lia o run
+    // de beauty e GRAVAVA no corpus curado de fitness — 521 linhas de
+    // concorrentes de beleza dentro do sample de academias.
+    withTempDir((dir) => {
+      const { exportPath } = writeFixtures(dir);
+      const fitnessPath = path.join(ROOT_DIR, 'config', 'benchmarks', 'fitness.json');
+      const before = fs.readFileSync(fitnessPath, 'utf8');
+
+      // O export do fixture é da vertical `fitness-lab`, que NÃO tem sample no
+      // repo: a única saída correta é recusar, jamais cair para fitness.
+      const result = runCli(['--export', exportPath]);
+
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}${result.stderr}`)
+        .toMatch(/market_sample_vertical_unresolved|sample ausente/);
+      // A prova que importa: o corpus de fitness não foi tocado.
+      expect(fs.readFileSync(fitnessPath, 'utf8')).toBe(before);
+    });
+  });
+
+  test('aplicação CRUZADA entre verticais é recusada antes de qualquer escrita', () => {
+    withTempDir((dir) => {
+      const samplePath = path.join(dir, 'sample.json');
+      // Sample de OUTRA vertical que o run export (fitness-lab).
+      const wrongVertical = { ...buildSample(), vertical: 'beauty-lab' };
+      fs.writeFileSync(samplePath, `${JSON.stringify(wrongVertical, null, 2)}\n`);
+      const exportPath = path.join(dir, 'run-export.json');
+      fs.writeFileSync(exportPath, `${JSON.stringify(buildRunExport(), null, 2)}\n`);
+      const before = fs.readFileSync(samplePath, 'utf8');
+
+      const result = runCli(['--sample', samplePath, '--export', exportPath]);
+
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}${result.stderr}`).toMatch(/market_run_sample_vertical_mismatch/);
+      expect(fs.readFileSync(samplePath, 'utf8')).toBe(before);
     });
   });
 });
