@@ -346,19 +346,48 @@ function createMarketDiscoverySupervisor({
     }
 
     const dimensions = {};
-    const docs = await executeResearch('research.inspectDocumentation', {
-      url: site,
-      content: gathered.content || '',
-      contentHash: gathered.contentHash,
-    });
+    // Falha de REDE/inspeção em UM candidato é FATO da descoberta, não motivo
+    // para abortar a varredura inteira — a MESMA doutrina que `gatherEvidence`
+    // já segue. Antes desta correção (run real de beauty, 2026-09-19) um
+    // `research_inspect_documentation: fetch failed` num único host derrubava
+    // o run depois de 26 minutos de pesquisa (1 candidato ruim = 0 achados).
+    let docs;
+    try {
+      docs = await executeResearch('research.inspectDocumentation', {
+        url: site,
+        content: gathered.content || '',
+        contentHash: gathered.contentHash,
+      });
+    } catch (error) {
+      return {
+        candidateKey: candidate.candidate_key || candidate.candidateKey,
+        profiled: false,
+        reason: `inspect_failed: ${error?.code || error?.message || 'unknown'}`,
+      };
+    }
     const sections = list(docs.output?.sections);
     dimensions.operationalDepth = sections.length >= 8 ? 'high' : (sections.length >= 3 ? 'medium' : 'low');
 
     const apiDocsUrl = candidate.api_docs || candidate.apiDocs || null;
+    // `integrationMaturity` NÃO é creditada quando a inspeção não aconteceu
+    // (conservador: não se credita o que não foi verificado), mas o motivo
+    // fica REGISTRADO — 'low' por falha não é a mesma coisa que 'sem API
+    // declarada', e o perfil diz qual dos dois foi.
+    let apiDocsInspection = { attempted: false, reason: 'no_api_docs_declared' };
     if (isNonEmptyString(apiDocsUrl)) {
-      const api = await executeResearch('research.inspectApiDocs', { url: apiDocsUrl });
-      const operations = list(api.output?.operations);
-      dimensions.integrationMaturity = operations.length >= 10 ? 'high' : (operations.length > 0 ? 'medium' : 'low');
+      try {
+        const api = await executeResearch('research.inspectApiDocs', { url: apiDocsUrl });
+        const operations = list(api.output?.operations);
+        dimensions.integrationMaturity = operations.length >= 10 ? 'high' : (operations.length > 0 ? 'medium' : 'low');
+        apiDocsInspection = { attempted: true, operations: operations.length };
+      } catch (error) {
+        dimensions.integrationMaturity = 'low';
+        apiDocsInspection = {
+          attempted: true,
+          failed: true,
+          reason: `inspect_api_failed: ${error?.code || error?.message || 'unknown'}`,
+        };
+      }
     } else {
       dimensions.integrationMaturity = 'low';
     }
@@ -372,6 +401,7 @@ function createMarketDiscoverySupervisor({
       },
       evidence: gathered.evidence,
       documentationSections: sections.length,
+      apiDocsInspection,
       profiledWith: ['research.fetch', 'research.inspectDocumentation'],
     };
 
