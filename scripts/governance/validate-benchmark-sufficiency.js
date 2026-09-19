@@ -100,12 +100,10 @@ function loadSamples() {
 
 /** Verticais registradas em config/verticals.json (kind === 'vertical'). */
 function loadRegisteredVerticals() {
-  const registryPath = path.join(ROOT_DIR, 'config', 'verticals.json');
-  if (!fs.existsSync(registryPath)) return [];
-  const registry = readJson(registryPath);
-  return Object.entries(registry.domains || {})
-    .filter(([, def]) => String(def.kind) === 'vertical')
-    .map(([id]) => id);
+  // Fonte única compartilhada com validate-benchmark-phase-model. Divergir aqui
+  // é silencioso e grave: os dois gates produziriam "verdades" sobre universos
+  // diferentes de verticais (um diria 7/7 enquanto o outro medeia outra lista).
+  return require('./lib/registered-verticals').loadRegisteredVerticals();
 }
 
 function loadCoverageReport() {
@@ -199,10 +197,24 @@ function run({ policy, samples, registeredVerticals, coverage }) {
     // Holdout: pré-registro obrigatório; leakage é fraude metodológica.
     // Holdout NÃO ANALISADO é reportado como estado próprio (§3 do hardening):
     // não é fraude, é pesquisa incompleta — e nunca pode contar como análise.
+    //
+    // DEFEITO CORRIGIDO (2026-09-19): `holdout_not_preregistered` era VIOLAÇÃO
+    // para toda vertical, inclusive as que nunca começaram a pesquisar. Isso
+    // fazia 5 verticais paradas (bakery, clinic, food, market, services)
+    // derrubarem o gate como se o MOTOR estivesse quebrado, confundindo
+    // "trabalho não terminado" com "regra violada". A regra é SENSÍVEL À FASE
+    // (mesma fonte: benchmarkPhaseModel): sem pesquisa iniciada, a ausência do
+    // pré-registro é PENDÊNCIA que impede iniciar, não contaminação.
+    const researchStarted = evaluation.status !== 'SAMPLE_NOT_RESEARCHED';
+    let holdoutPreregistrationPending = false;
     if (evaluation.gates.holdoutValidation.status === 'FAIL') {
       const reasons = (evaluation.gates.holdoutValidation.violations || []).map((v) => v.reason);
       if (reasons.includes('holdout_not_preregistered')) {
-        violations.push({ code: VIOLATION_CODES.HOLDOUT_NOT_PREREGISTERED, vertical: sample.vertical });
+        if (researchStarted) {
+          violations.push({ code: VIOLATION_CODES.HOLDOUT_NOT_PREREGISTERED, vertical: sample.vertical });
+        } else {
+          holdoutPreregistrationPending = true;
+        }
       }
       if (reasons.some((r) => String(r).startsWith('holdout_leakage'))) {
         violations.push({ code: VIOLATION_CODES.HOLDOUT_LEAKAGE, vertical: sample.vertical });
@@ -225,6 +237,9 @@ function run({ policy, samples, registeredVerticals, coverage }) {
       inventoryVersion: sample.inventoryVersion || null,
       file,
       status: evaluation.status,
+      // Pendência que IMPEDE INICIAR a pesquisa (não é violação, é estado).
+      // Reportada explicitamente para não virar silêncio.
+      holdoutPreregistrationPending,
       certifiable: evaluation.certifiable,
       // §B6 — critério explícito da matriz: suficiência da amostra é o
       // `certifiable` do engine, exposto com nome próprio para que nenhum

@@ -48,6 +48,7 @@ const {
   getSemanticPipelineVersion,
   evaluateSemanticVersion,
 } = require('../../api/services/benchmark/semantic/semanticPipelineVersion');
+const { resolveHoldoutId } = require('../../api/services/benchmark/benchmarkPhaseModel');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const SAMPLES_DIR = path.join(ROOT_DIR, 'config', 'benchmarks');
@@ -141,7 +142,7 @@ function loadCertifiedSamples() {
       const benchmarkIds = (Array.isArray(doc.benchmarks) ? doc.benchmarks : [])
         .map((b) => (isNonEmptyString(b?.id) ? String(b.id).trim() : null))
         .filter(Boolean);
-      const holdoutId = isNonEmptyString(doc.holdout?.id) ? String(doc.holdout.id).trim() : null;
+      const holdoutId = resolveHoldoutId(doc);
       certified.push({ vertical: doc.vertical, file: name, benchmarkIds, holdoutId });
     } catch (_) {
       // amostra malformada é responsabilidade do gate de sufficiency
