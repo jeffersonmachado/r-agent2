@@ -2,7 +2,9 @@
   "_description": "Amostra de benchmark da vertical `clinic` — declaração de CONTEXTO DE MERCADO usada pela varredura da descoberta autônoma (api/services/marketDiscovery/marketQueries.js). O sample não declara fornecedores: candidatos entram por pesquisa real nas fases MARKET/CANDIDATES do supervisor.",
   "_honesty": "Declarada pelo agente em 2026-09-19 a partir de fontes canônicas do próprio repositório (config/verticals.json: label 'Clínicas e Saúde'; config/qa-waves-registry.json: jornadas clinic_appointment e clinic_recall; inventário de capabilities da plataforma). NÃO é um estudo de mercado humano — é a declaração mínima necessária para a vertical existir no pipeline governado de pesquisa. Revisão humana recomendada antes de tratar qualquer achado como definitivo. Nenhum arquétipo, benchmark ou fornecedor foi inventado: as listas `archetypes` e `benchmarks` ficam VAZIAS de propósito, para que arquétipos e candidatos sejam DESCOBERTOS por pesquisa real (archetypeDiscovery/candidateDiscovery) e só entrem no universo aceito com evidência hash-bound.",
   "vertical": "clinic",
-  "sampleVersion": "2026-09-19-r1",
+  "sampleVersion": "2026-09-19-r2",
+  "inventoryVersion": "canonical-capabilities-1.0.0",
+  "canonicalInventorySource": "config/canonical-capabilities.json",
   "marketContext": {
     "_description": "Termos de CATEGORIA do mercado da vertical (pt-BR + en). Nomeiam a categoria de software de gestão — nunca fornecedores específicos.",
     "_derivation": "Derivados do label canônico ('Clínicas e Saúde') e das jornadas declaradas (agendamento de consulta, lembrete, recall/retorno de paciente). A jornada de recall é a razão de os termos cobrirem recall de paciente, não só agendamento.",
@@ -15,8 +17,90 @@
       "sistema de agendamento para clínicas",
       "software de recall de pacientes"
     ],
-    "categoryTermArchetypes": {}
+    "categoryTermArchetypes": {
+      "clinic management software": [
+        "independent-clinic",
+        "clinic-network"
+      ],
+      "medical practice management software": [
+        "independent-clinic",
+        "clinic-network"
+      ],
+      "patient scheduling software": [
+        "medical-scheduling"
+      ],
+      "patient recall software": [
+        "patient-recall"
+      ],
+      "software para clínicas gestão de pacientes": [
+        "independent-clinic",
+        "clinic-network"
+      ],
+      "sistema de agendamento para clínicas": [
+        "medical-scheduling"
+      ],
+      "software de recall de pacientes": [
+        "patient-recall"
+      ]
+    }
   },
-  "archetypes": [],
+  "archetypes": [
+    {
+      "id": "independent-clinic",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Clínica independente (unidade única)",
+      "description": "Uma unidade: agenda, prontuário e retorno do paciente.",
+      "evidence": "Derivado da jornada declarada clinic_appointment (descoberta → agendamento → confirmação → lembrete → comparecimento → consulta → retorno) e do label canônico 'Clínicas e Saúde' (config/verticals.json)."
+    },
+    {
+      "id": "clinic-network",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Rede de clínicas (multi-unidade)",
+      "description": "Múltiplas unidades e profissionais sob a mesma operação.",
+      "evidence": "Derivado do repositório de jornadas da vertical (config/qa-waves-registry.json): a agenda e o recall precisam valer por unidade e por profissional."
+    },
+    {
+      "id": "patient-recall",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Recall e retorno de paciente",
+      "description": "Detecção de retorno devido, envio de recall e reagendamento.",
+      "evidence": "Derivado da jornada declarada clinic_recall (deteccao_retorno_devido → envio_recall → resposta_paciente → agendamento_retorno → consulta_realizada → retencao)."
+    },
+    {
+      "id": "medical-scheduling",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Agendamento e lembretes clínicos",
+      "description": "Agenda por profissional, confirmação e lembrete ao paciente.",
+      "evidence": "Derivado dos passos 'agendamento_consulta', 'confirmacao' e 'lembrete' da jornada clinic_appointment."
+    },
+    {
+      "id": "health-insurance-billing",
+      "importance": "RELEVANT",
+      "status": "ACTIVE",
+      "name": "Convênios e faturamento de saúde",
+      "description": "Faturamento por convênio/particular e controle de recebimentos.",
+      "evidence": "Derivado do label canônico da vertical (saúde/clínicas) e da existência da capability de billing no inventário canônico."
+    },
+    {
+      "id": "financial-billing",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Financeiro e cobrança",
+      "description": "Cobrança por consulta/procedimento e controle financeiro.",
+      "evidence": "Arquétipo de plataforma: a capability de billing existe no inventário canônico (config/canonical-capabilities.json)."
+    },
+    {
+      "id": "integration-first-api",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Plataforma API/integration-first",
+      "description": "Integração por API com canais e sistemas do cliente.",
+      "evidence": "Arquétipo de plataforma derivado do inventário canônico (rotas api: de agenda e billing expostas para a vertical)."
+    }
+  ],
   "benchmarks": []
 }

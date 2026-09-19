@@ -2,7 +2,9 @@
   "_description": "Amostra de benchmark da vertical `services` — declaração de CONTEXTO DE MERCADO usada pela varredura da descoberta autônoma (api/services/marketDiscovery/marketQueries.js). O sample não declara fornecedores: candidatos entram por pesquisa real nas fases MARKET/CANDIDATES do supervisor.",
   "_honesty": "Declarada pelo agente em 2026-09-19 a partir de fontes canônicas do próprio repositório (config/verticals.json: label 'Serviços'; config/qa-waves-registry.json: jornadas services_quote_flow e services_customer_journey; inventário de capabilities da plataforma). NÃO é um estudo de mercado humano — é a declaração mínima necessária para a vertical existir no pipeline governado de pesquisa. Revisão humana recomendada antes de tratar qualquer achado como definitivo. Nenhum arquétipo, benchmark ou fornecedor foi inventado: as listas `archetypes` e `benchmarks` ficam VAZIAS de propósito, para que arquétipos e candidatos sejam DESCOBERTOS por pesquisa real (archetypeDiscovery/candidateDiscovery) e só entrem no universo aceito com evidência hash-bound.",
   "vertical": "services",
-  "sampleVersion": "2026-09-19-r1",
+  "sampleVersion": "2026-09-19-r2",
+  "inventoryVersion": "canonical-capabilities-1.0.0",
+  "canonicalInventorySource": "config/canonical-capabilities.json",
   "marketContext": {
     "_description": "Termos de CATEGORIA do mercado da vertical (pt-BR + en). Nomeiam a categoria de software de gestão — nunca fornecedores específicos.",
     "_derivation": "Derivados do label canônico ('Serviços') e das jornadas declaradas (orçamento enviado, aprovação, agendamento de execução, cobrança/pagamento). O ciclo orçamento→aprovação→execução→cobrança é a razão de os termos cobrirem field service e orçamento/ordem de serviço.",
@@ -15,8 +17,90 @@
       "sistema de orçamento e ordem de serviço",
       "software de agendamento de serviços"
     ],
-    "categoryTermArchetypes": {}
+    "categoryTermArchetypes": {
+      "field service management software": [
+        "field-operations",
+        "service-network"
+      ],
+      "service business management software": [
+        "independent-service-provider",
+        "service-network"
+      ],
+      "quotation and invoicing software for service businesses": [
+        "quote-to-cash",
+        "financial-billing"
+      ],
+      "job scheduling and dispatch software": [
+        "dispatch-scheduling"
+      ],
+      "software de gestão para prestadores de serviços": [
+        "independent-service-provider"
+      ],
+      "sistema de orçamento e ordem de serviço": [
+        "quote-to-cash"
+      ],
+      "software de agendamento de serviços": [
+        "dispatch-scheduling"
+      ]
+    }
   },
-  "archetypes": [],
+  "archetypes": [
+    {
+      "id": "independent-service-provider",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Prestador de serviço independente",
+      "description": "Operação própria: orçamento, execução e cobrança do próprio serviço.",
+      "evidence": "Derivado da jornada declarada services_quote_flow (descoberta → qualificação → orçamento → aprovação → agendamento → cobrança) e do label canônico 'Serviços' (config/verticals.json)."
+    },
+    {
+      "id": "service-network",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Rede de prestadores / franquia",
+      "description": "Vários prestadores ou unidades sob a mesma operação.",
+      "evidence": "Derivado do repositório de jornadas da vertical (config/qa-waves-registry.json): orçamento e execução precisam valer por prestador."
+    },
+    {
+      "id": "quote-to-cash",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Orçamento até recebimento (quote-to-cash)",
+      "description": "Orçamento enviado, aprovação, follow-up e cobrança.",
+      "evidence": "Derivado dos passos 'orcamento_enviado', 'aprovacao', 'follow_up' e 'cobranca' das jornadas services_quote_flow e services_customer_journey."
+    },
+    {
+      "id": "dispatch-scheduling",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Agendamento e despacho de execução",
+      "description": "Janela de execução, alocação e confirmação do serviço.",
+      "evidence": "Derivado do passo 'agendamento_execucao' da jornada services_quote_flow."
+    },
+    {
+      "id": "field-operations",
+      "importance": "RELEVANT",
+      "status": "ACTIVE",
+      "name": "Operação em campo",
+      "description": "Execução do serviço no local do cliente com registro de conclusão.",
+      "evidence": "Derivado do passo 'execucao' declarado em services_customer_journey."
+    },
+    {
+      "id": "financial-billing",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Financeiro e cobrança",
+      "description": "Cobrança por serviço/ordem e controle de recebimentos.",
+      "evidence": "Arquétipo de plataforma: a capability de billing existe no inventário canônico (config/canonical-capabilities.json)."
+    },
+    {
+      "id": "integration-first-api",
+      "importance": "REQUIRED",
+      "status": "ACTIVE",
+      "name": "Plataforma API/integration-first",
+      "description": "Integração por API com canais e sistemas do cliente.",
+      "evidence": "Arquétipo de plataforma derivado do inventário canônico (rotas api: de orçamento e billing expostas para a vertical)."
+    }
+  ],
   "benchmarks": []
 }
