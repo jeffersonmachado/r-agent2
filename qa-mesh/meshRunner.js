@@ -178,6 +178,22 @@ function scenarioRequiresOfficialPipeline(scenario = {}) {
   return args[0] === 'core/rpa/cli.js' && args[1] === 'business';
 }
 
+/**
+ * Regra de `journeyId` nos cenários técnicos deste módulo (2026-09-19).
+ *
+ * `journeyId` só é declarado quando o ALVO do cenário corresponde EXATAMENTE a
+ * uma jornada de sistema já declarada (ex.: `qa-core-auth-login` → `login`).
+ * NUNCA por semelhança de token: atribuir jornada por heurística é exatamente o
+ * que `resolveScenarioJourneyId` removeu de propósito ("cenário sem jornada
+ * declarada simplesmente não conta como jornada coberta").
+ *
+ * Consequência ACEITA: as smokes técnicas abaixo não contam para jornada
+ * nenhuma porque não SÃO jornadas de negócio nem de sistema — são verificação
+ * de infraestrutura (PBX/voz, fila física, editor BPMN, provider omnichannel,
+ * URA, exemplo didático de RPA). Isso é uma decisão registrada, não um
+ * esquecimento: inventar uma jornada para elas inflaria a contagem de jornadas
+ * com um cenário cada e não provaria jornada alguma.
+ */
 function loadQaSmokeScenarios() {
   return [
     toScenarioBase({
@@ -186,6 +202,12 @@ function loadQaSmokeScenarios() {
       type: 'smoke',
       source: 'hybrid',
       flow: 'core_auth_login',
+      // Jornada de sistema declarada: o alvo desta smoke é EXATAMENTE a jornada
+      // `login` (autenticação do usuário). Sem `journeyId` o cenário executável
+      // não conta para jornada nenhuma. Só é declarado quando o alvo casa
+      // exatamente — nunca por semelhança de token (ver r-agent2-journey-
+      // coverage-store-not-executable).
+      journeyId: 'login',
       criticality: 'blocking',
       adapter: 'api',
       command: 'node',
@@ -199,6 +221,9 @@ function loadQaSmokeScenarios() {
       type: 'regression',
       source: 'hybrid',
       flow: 'core_tenants_create',
+      // Jornada de sistema declarada: criação de tenant é EXATAMENTE a jornada
+      // `tenants` (ver comentário acima para o critério de declaração).
+      journeyId: 'tenants',
       criticality: 'high',
       adapter: 'api',
       command: 'npm',

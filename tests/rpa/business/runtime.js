@@ -2275,6 +2275,92 @@ async function runFlowScenario(definition, ctx) {
     };
   }
 
+  if (definition.code === 'CORE-BIZ-BILLING-IDEMPOTENCY') {
+    // Invariante REAL do serviço de billing (verificado por sonda em
+    // 2026-09-19): a MESMA idempotencyKey devolve a MESMA transação e não
+    // duplica linha na listagem. Cobrar duas vezes o mesmo pedido é o defeito
+    // clássico de integração de pagamento — este cenário o impede de voltar.
+    const idempotencyKey = `business-qa:${definition.code}:${runId}`;
+    const payload = {
+      type: 'one_time',
+      amount: 31.7,
+      currency: 'BRL',
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      provider: 'sandbox',
+      description: `Idempotencia QA ${definition.code}`,
+      customerName: 'Cliente QA Idempotencia',
+      customerEmail: `core-billing-idem-${runId}@qa.example.com`,
+      idempotencyKey,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    };
+
+    const first = await api.post('/billing/create-charge', payload);
+    const firstTx = first?.transaction;
+    if (!firstTx?.id) throw new Error('Primeira cobranca nao retornou transacao');
+
+    const second = await api.post('/billing/create-charge', payload);
+    const secondTx = second?.transaction;
+    if (!secondTx?.id) throw new Error('Segunda cobranca nao retornou transacao');
+    if (secondTx.id !== firstTx.id) {
+      throw new Error(`idempotencyKey duplicou a cobranca: ${firstTx.id} -> ${secondTx.id}`);
+    }
+
+    const payments = await api.get('/billing/transactions?limit=100');
+    const occurrences = (payments?.items || []).filter((item) => item.id === firstTx.id);
+    if (occurrences.length !== 1) {
+      throw new Error(`Transacao aparece ${occurrences.length}x na listagem (esperado 1)`);
+    }
+
+    return {
+      detail: 'Mesma idempotencyKey devolve a mesma transacao, sem duplicar',
+      ids: { transactionId: firstTx.id },
+      evidence: { occurrences: occurrences.length, idempotencyKey },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-BILLING-STATE') {
+    // A transição pending -> confirmed tem de ser OBSERVÁVEL. Sem observar o
+    // estado inicial, "confirmou" não prova nada (poderia ter nascido
+    // confirmada e o webhook ser decorativo).
+    const idempotencyKey = `business-qa:${definition.code}:${runId}`;
+    const charge = await api.post('/billing/create-charge', {
+      type: 'one_time',
+      amount: 18.4,
+      currency: 'BRL',
+      dueDate: new Date(Date.now() + 86400000).toISOString(),
+      provider: 'sandbox',
+      description: `Transicao QA ${definition.code}`,
+      customerName: 'Cliente QA Transicao',
+      customerEmail: `core-billing-state-${runId}@qa.example.com`,
+      idempotencyKey,
+      metadata: { source: 'business_qa', scenarioCode: definition.code },
+    });
+    const transaction = charge?.transaction;
+    if (!transaction?.id) throw new Error('Cobranca nao retornou transacao');
+
+    const beforeList = await api.get('/billing/transactions?limit=100');
+    const beforeTx = (beforeList?.items || []).find((item) => item.id === transaction.id);
+    if (!beforeTx) throw new Error('Transacao nao aparece na listagem antes da confirmacao');
+    if (String(beforeTx.status) === 'confirmed') {
+      throw new Error('Transacao nasceu confirmed: estado inicial nao observavel');
+    }
+
+    await confirmTransaction(api, transaction);
+
+    const afterList = await api.get('/billing/transactions?limit=100');
+    const afterTx = (afterList?.items || []).find((item) => item.id === transaction.id);
+    if (!afterTx) throw new Error('Transacao sumiu da listagem apos a confirmacao');
+    if (afterTx.status !== 'confirmed') {
+      throw new Error(`Transacao nao ficou confirmed: ${afterTx.status}`);
+    }
+
+    return {
+      detail: 'Transicao pending -> confirmed observada na listagem',
+      ids: { transactionId: transaction.id },
+      evidence: { initialStatus: beforeTx.status, finalStatus: afterTx.status },
+    };
+  }
+
   if (definition.code === 'CORE-BIZ-TASKS') {
     const title = `Tarefa QA ${definition.code} ${runId}`;
     const created = await api.post('/api/tasks', {
@@ -2474,6 +2560,90 @@ async function runFlowScenario(definition, ctx) {
       detail: 'Campanha de e-mail publicada e campanha em massa criada/removida',
       ids: { emailCampaignId: emailCampaign.id, bulkCampaignId: bulkCampaign.id },
       evidence: { bulkDeleted: true },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-CAMPAIGNS-VALIDATION') {
+    // Invariante REAL (verificado por sonda em 2026-09-19): campanha em massa
+    // SEM número válido é recusada com 400 e NÃO cria campanha; com números
+    // válidos, os destinatários voltam normalizados. Disparo em massa para
+    // lista inválida é dano operacional irreversível (mensagem enviada para
+    // quem não é cliente).
+    let rejected = null;
+    try {
+      await api.post('/bulk-campaigns', {
+        name: `Campanha invalida QA ${runId}`,
+        message: 'Mensagem que NAO pode ser enviada.',
+        phoneNumbers: ['nao-e-telefone'],
+      });
+    } catch (error) {
+      rejected = error;
+    }
+    if (!rejected) {
+      throw new Error('Campanha com destinatario invalido NAO foi recusada');
+    }
+    if (rejected.status !== 400) {
+      throw new Error(`Recusa com status inesperado: ${rejected.status}`);
+    }
+
+    const created = await api.post('/bulk-campaigns', {
+      name: `Campanha valida QA ${runId}`,
+      message: 'Mensagem da campanha de validacao.',
+      phoneNumbers: ['+5511999997401', '+5511999997402'],
+    });
+    const campaign = created?.campaign || created;
+    if (!campaign?.id) throw new Error('Campanha valida nao retornou ID');
+    const recipients = Array.isArray(campaign.phoneNumbers) ? campaign.phoneNumbers : [];
+    if (recipients.length !== 2) {
+      throw new Error(`Destinatarios normalizados ausentes: ${JSON.stringify(recipients)}`);
+    }
+
+    // Limpeza: o cenário não deixa campanha criada para trás.
+    await api.del(`/bulk-campaigns/${encodeURIComponent(campaign.id)}`);
+
+    return {
+      detail: 'Destinatario invalido recusado (400); valido aceito e normalizado',
+      ids: { bulkCampaignId: campaign.id },
+      evidence: { rejectedStatus: rejected.status, recipients: recipients.length },
+    };
+  }
+
+  if (definition.code === 'CORE-BIZ-CAMPAIGNS-DETAIL') {
+    // O detalhe e a listagem precisam concordar. Divergência entre GET /:id e
+    // a listagem é como um operador "vê" uma campanha que não existe (ou deixa
+    // de ver uma que existe).
+    const created = await api.post('/bulk-campaigns', {
+      name: `Campanha detalhe QA ${runId}`,
+      message: 'Mensagem da campanha de detalhe.',
+      phoneNumbers: ['+5511999997501'],
+    });
+    const campaign = created?.campaign || created;
+    if (!campaign?.id) throw new Error('Campanha nao retornou ID');
+
+    const detail = await api.get(`/bulk-campaigns/${encodeURIComponent(campaign.id)}`);
+    const fetched = detail?.campaign || detail;
+    if (!fetched?.id || fetched.id !== campaign.id) {
+      throw new Error(`Detalhe devolveu campanha diferente: ${fetched?.id} != ${campaign.id}`);
+    }
+    if (String(fetched.name) !== String(campaign.name)) {
+      throw new Error(`Detalhe com nome divergente: ${fetched.name} != ${campaign.name}`);
+    }
+
+    const listed = await api.get('/bulk-campaigns');
+    if (!(listed?.campaigns || []).some((item) => item.id === campaign.id)) {
+      throw new Error('Campanha criada nao apareceu na listagem');
+    }
+
+    await api.del(`/bulk-campaigns/${encodeURIComponent(campaign.id)}`);
+    const afterDelete = await api.get('/bulk-campaigns');
+    if ((afterDelete?.campaigns || []).some((item) => item.id === campaign.id)) {
+      throw new Error('Campanha nao foi removida');
+    }
+
+    return {
+      detail: 'Detalhe consistente com a listagem; remocao confirmada',
+      ids: { bulkCampaignId: campaign.id },
+      evidence: { nameMatched: true, removed: true },
     };
   }
 
