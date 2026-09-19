@@ -350,21 +350,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      # Fail-closed: sem AMI_SECRET o container NÃO sobe (o entrypoint recusa).
-      # O segredo NÃO vive no repositório: ami-entrypoint.sh gera a seção do AMI
-      # em conf/manager-ami.conf a partir destas variáveis.
-      AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
-      AMI_USERNAME: ${AMI_USERNAME:-ragent2}
-      # Faixa de origem autorizada no AMI. DEVE acompanhar o subnet pinado de
-      # r-agent2-network (RAP_PLATFORM_SUBNET) — ACL e rede fora de sincronia
-      # significa API sem acesso ao AMI.
-      AMI_PERMIT_CIDR: ${AMI_PERMIT_CIDR:-${RAP_PLATFORM_SUBNET:-172.30.0.0/16}}
-    # Entrypoint próprio: gera a credencial do AMI a partir do ambiente e então
-    # entrega o controle ao entrypoint original da imagem.
-    entrypoint: ["/opt/rap/ami-entrypoint.sh"]
+    # NÃO reintroduzir aqui injeção de credencial via entrypoint/#include: medido
+    # em 2026-09-19, o `#include` carrega o usuário mas REINICIA a seção e a ACL
+    # fica inerte (`ACL: no`), mesmo com deny/permit no arquivo principal. A
+    # credencial do AMI em manager.conf segue literal, como pendência aberta —
+    # o mecanismo correto precisa gerar o arquivo COMPLETO num diretório gravável.
     volumes:
-      - ./pbx/asterisk/ami-entrypoint.sh:/opt/rap/ami-entrypoint.sh:ro
       - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
       # Shadow somente de /etc/asterisk/conf: o include de contextos realtime e gerado em
       # runtime pela API e precisa ser visivel aqui (volume compartilhado).
