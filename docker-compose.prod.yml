@@ -351,15 +351,20 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      # Necessária para o mecanismo de injeção do segredo do AMI (PENDENTE: a
-      # seção do manager.conf não aceita ${ENV(...)} — medido, ver manager.conf).
-      # Hoje o valor ainda vive no arquivo, então isto não tem efeito e existe
-      # só para o compose já recusar subir sem a variável definida.
+      # Fail-closed: sem AMI_SECRET o container NÃO sobe (o entrypoint recusa).
+      # O segredo NÃO vive no repositório: ami-entrypoint.sh gera a seção do AMI
+      # em conf/manager-ami.conf a partir destas variáveis.
       AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
-      # NÃO usar AMI_PERMIT_CIDR no manager.conf: `${ENV(...)}` descarta a seção
-      # inteira. A faixa permitida é literal lá e deve acompanhar o subnet
-      # pinado de r-agent2-network abaixo.
+      AMI_USERNAME: ${AMI_USERNAME:-ragent2}
+      # Faixa de origem autorizada no AMI. DEVE acompanhar o subnet pinado de
+      # r-agent2-network (RAP_PLATFORM_SUBNET) — ACL e rede fora de sincronia
+      # significa API sem acesso ao AMI.
+      AMI_PERMIT_CIDR: ${AMI_PERMIT_CIDR:-${RAP_PLATFORM_SUBNET:-172.30.0.0/16}}
+    # Entrypoint próprio: gera a credencial do AMI a partir do ambiente e então
+    # entrega o controle ao entrypoint original da imagem.
+    entrypoint: ["/opt/rap/ami-entrypoint.sh"]
     volumes:
+      - ./pbx/asterisk/ami-entrypoint.sh:/opt/rap/ami-entrypoint.sh:ro
       - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
       # Shadow somente de /etc/asterisk/conf: o include de contextos realtime e gerado em
       # runtime pela API e precisa ser visivel aqui (volume compartilhado).
