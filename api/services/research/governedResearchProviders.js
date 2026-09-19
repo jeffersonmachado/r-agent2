@@ -40,6 +40,7 @@
 const {
   RESEARCH_CAPABILITIES,
   RESEARCH_CAPABILITY_IDS,
+  parseResearchToolOutput,
 } = require('../benchmark/researchCapabilities');
 const { resolveCapabilityProviders } = require('../../../src/core/mcp/capability-resolution');
 
@@ -111,7 +112,9 @@ function resolveGovernedResearchRunners({ registry, actor, tenantId } = {}) {
         actor,
         confirmed: false,
       });
-      return result.output;
+      // O output do registry é a peça CRUA do adapter de MCP; a capability
+      // consome o payload declarado (ver parseResearchToolOutput).
+      return parseResearchToolOutput(result.output, definition.capability);
     };
   }
 

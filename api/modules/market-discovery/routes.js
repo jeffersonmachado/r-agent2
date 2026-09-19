@@ -36,7 +36,10 @@ const path = require('path');
 const { checkClassification } = require('../../middleware/requireClassification');
 const { tenantFromRequest } = require('../../../lib/rpaSecurity');
 const { createMarketDiscoveryStore } = require('../../services/marketDiscovery/marketDiscoveryStore');
-const { createMarketDiscoverySupervisor } = require('../../services/marketDiscovery/marketDiscoverySupervisor');
+const {
+  createMarketDiscoverySupervisor,
+  buildDiscoveryPrincipal,
+} = require('../../services/marketDiscovery/marketDiscoverySupervisor');
 const { createDiscoveryHandoff } = require('../../services/marketDiscovery/discoveryHandoff');
 const { createBenchmarkResearchStore } = require('../../services/benchmark/benchmarkResearchStore');
 const { createBenchmarkResearchService } = require('../../services/benchmark/benchmarkResearchService');
@@ -194,7 +197,14 @@ function createMarketDiscoveryRoutes({ buildDeps, resolveDiscoveryDeps }) {
 
   function buildSupervisor(deps, req, context, injected) {
     const registry = injected.registry || resolveSharedToolRegistry();
-    const actor = injected.actor || undefined;
+    // O principal governado é REQUISITO da resolução de providers: o registry
+    // filtra por classificação/permissão e o binding de tenant externo exige
+    // `actor.tenant` (src/core/mcp/capability-resolution.js). Com `actor`
+    // undefined a resolução descarta TODO proxy de MCP externo (fail-closed) e
+    // o run sai BLOCKED_NO_EXTERNAL_ACCESS mesmo com o MCP research vivo —
+    // era o estado real antes da correção (2026-09-19). Mesmo contrato do
+    // benchmark research (`injected.actor || buildResearchPrincipal()`).
+    const actor = injected.actor || buildDiscoveryPrincipal();
     return createMarketDiscoverySupervisor({
       store: injected.store || createMarketDiscoveryStore(),
       registry,

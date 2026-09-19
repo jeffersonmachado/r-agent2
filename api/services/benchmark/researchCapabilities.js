@@ -145,6 +145,61 @@ function ensureResearchCapabilities(registry, runners = {}) {
 }
 
 /**
+ * Projeta a saída CRUA de um provider no payload DECLARADO da capability.
+ *
+ * Por que isto existe (2026-09-19): o adapter genérico de MCP devolve um
+ * ENVELOPE `{ remote, tool, content, text }` — o payload real do serviço de
+ * pesquisa chega como TEXTO JSON em `text` (o serviço não usa
+ * `structuredContent`). Todo consumidor governado
+ * (`marketDiscoverySupervisor`, `benchmarkResearchRunner`) lê campos
+ * ESTRUTURADOS do output — `candidates` (research.search), `httpStatus`/
+ * `content`/`contentHash` (research.fetch), `evidenceRef`
+ * (research.captureEvidence). Sem esta projeção o objeto não tinha esses
+ * campos e a pesquisa rodava de verdade na rede enquanto o run registrava ZERO
+ * candidatos: falha SILENCIOSA (run `COMPLETED`, 0 hits, nenhum erro).
+ *
+ * Fail-closed: envelope de MCP sem payload JSON utilizável NÃO vira "vazio
+ * silencioso" — lança `research_tool_output_unparsed`, que o supervisor
+ * registra como motivo tipado.
+ *
+ * Idempotente: runner já projetado (objeto sem envelope e sem `text`) passa
+ * inalterado, então a projeção pode ser aplicada em mais de uma camada sem
+ * duplo parse.
+ *
+ * @param {object} output      saída do registry (ou payload já projetado)
+ * @param {string} capability  capability de pesquisa (para o erro)
+ * @returns {object} payload declarado da capability
+ */
+function parseResearchToolOutput(output, capability) {
+  if (!output || typeof output !== 'object') {
+    const error = new Error(`research_tool_output_unparsed: ${capability} não devolveu payload`);
+    error.code = 'research_tool_output_unparsed';
+    throw error;
+  }
+  if (output.structuredContent && typeof output.structuredContent === 'object') {
+    return output.structuredContent;
+  }
+  const isMcpEnvelope = typeof output.remote === 'string' && typeof output.tool === 'string';
+  const text = typeof output.text === 'string' ? output.text.trim() : '';
+  if (text.length > 0) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (_) {
+      // Sem JSON válido: o tratamento abaixo decide (envelope → erro tipado).
+    }
+  }
+  if (isMcpEnvelope) {
+    const error = new Error(
+      `research_tool_output_unparsed: ${capability} devolveu envelope de MCP externo sem payload JSON utilizável`,
+    );
+    error.code = 'research_tool_output_unparsed';
+    throw error;
+  }
+  return output;
+}
+
+/**
  * Resolve o provider de uma capability de pesquisa (nativo ou MCP externo) e
  * executa pelo Canonical Tool Registry.
  *
@@ -175,7 +230,9 @@ async function executeResearchCapability({ registry, capability, tenantId, actor
     toolId: provider.id,
     provider: provider.provider,
     reason,
-    output: result.output,
+    // A peça do registry é CRUA (envelope de MCP externo). A capability promete
+    // um payload ESTRUTURADO — ver parseResearchToolOutput.
+    output: parseResearchToolOutput(result.output, capability),
   };
 }
 
@@ -208,5 +265,6 @@ module.exports = {
   RESEARCH_CAPABILITY_IDS,
   ensureResearchCapabilities,
   executeResearchCapability,
+  parseResearchToolOutput,
   buildResearchProvenance,
 };

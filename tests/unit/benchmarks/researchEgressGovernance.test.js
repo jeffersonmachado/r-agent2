@@ -43,6 +43,7 @@ const {
   isNativeResearchProviderEnabled,
   NATIVE_OPT_IN_ENV,
 } = require('../../../api/services/research/governedResearchProviders');
+const { parseResearchToolOutput } = require('../../../api/services/benchmark/researchCapabilities');
 
 const silent = { info() {}, warn() {}, error() {}, debug() {} };
 
@@ -51,7 +52,7 @@ const RESEARCH_TOOLS = RESEARCH_CAPABILITIES.map((definition) => ({
   capability: definition.capability,
 }));
 
-function createFakeResearchServer() {
+function createFakeResearchServer({ payloadForTool = null } = {}) {
   const server = new Server({ name: 'fake-research-mcp', version: '1.0.0' }, { capabilities: { tools: {} } });
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: RESEARCH_TOOLS.map((tool) => ({
@@ -60,9 +61,19 @@ function createFakeResearchServer() {
       inputSchema: { type: 'object', additionalProperties: true },
     })),
   }));
-  server.setRequestHandler(CallToolRequestSchema, async (request) => ({
-    content: [{ type: 'text', text: `ok:${request.params.name}` }],
-  }));
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    // O serviço de pesquisa REAL devolve o payload como TEXTO JSON em
+    // `content[].text` (não usa `structuredContent`). O fixture espelha isso:
+    // devolver texto arbitrário aqui tornava o teste cego para a projeção de
+    // output — foi assim que a falha silenciosa de 2026-09-19 passou.
+    const custom = typeof payloadForTool === 'function' ? payloadForTool(request.params) : null;
+    const payload = custom !== null && custom !== undefined
+      ? custom
+      : { tool: request.params.name, candidates: [{ title: 'Fonte oficial', url: 'https://oficial.example.com/' }] };
+    return {
+      content: [{ type: 'text', text: typeof payload === 'string' ? payload : JSON.stringify(payload) }],
+    };
+  });
   return server;
 }
 
@@ -83,8 +94,8 @@ function researchConnection(overrides = {}) {
   };
 }
 
-async function buildRealStack({ connectionOverrides = {} } = {}) {
-  const server = createFakeResearchServer();
+async function buildRealStack({ connectionOverrides = {}, payloadForTool = null } = {}) {
+  const server = createFakeResearchServer({ payloadForTool });
   const hub = createMcpClientHub({
     logger: silent,
     connections: [researchConnection(connectionOverrides)],
@@ -145,6 +156,45 @@ describe('resolução de runners pelo registry (adapter REAL)', () => {
       const output = await governed.runners[definition.runner]({ query: 'x', url: 'https://x.test' });
       expect(output).toBeTruthy();
     }
+  });
+
+  test('o runner devolve o PAYLOAD DECLARADO da capability, não o objeto cru do adapter', async () => {
+    const { registry } = await buildRealStack();
+    const governed = resolveGovernedResearchRunners({
+      registry,
+      actor: buildResearchPrincipal(),
+      tenantId: 'system',
+    });
+
+    const output = await governed.runners.search({ query: 'x' });
+    // O adapter devolve { remote, tool, content, text }; a capability promete
+    // { candidates }, conforme documentado em researchCapabilities.js.
+    // Sem a projeção, `candidates` era undefined e todo consumidor registrava
+    // ZERO resultados com o run "COMPLETED" (2026-09-19).
+    expect(output.candidates).toEqual([
+      { title: 'Fonte oficial', url: 'https://oficial.example.com/' },
+    ]);
+    expect(output.remote).toBeUndefined();
+    expect(output.content).toBeUndefined();
+  });
+
+  test('payload não estruturado FALHA de forma tipada — nunca vira vazio silencioso', async () => {
+    const { registry } = await buildRealStack({ payloadForTool: () => 'texto solto sem json' });
+    const governed = resolveGovernedResearchRunners({
+      registry,
+      actor: buildResearchPrincipal(),
+      tenantId: 'system',
+    });
+
+    await expect(governed.runners.search({ query: 'x' }))
+      .rejects.toMatchObject({ code: 'research_tool_output_unparsed' });
+  });
+
+  test('structuredContent tem precedência quando o provider o declara', () => {
+    expect(parseResearchToolOutput(
+      { text: '{"ignorado":true}', structuredContent: { candidates: ['a'] } },
+      'research.search',
+    )).toEqual({ candidates: ['a'] });
   });
 
   test('sem provider governado o conjunto é VAZIO e a ausência é NOMINAL', () => {

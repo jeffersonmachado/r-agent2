@@ -1,0 +1,22 @@
+{
+  "_description": "Amostra de benchmark da vertical `food` — declaração de CONTEXTO DE MERCADO usada pela varredura da descoberta autônoma (api/services/marketDiscovery/marketQueries.js). O sample não declara fornecedores: candidatos entram por pesquisa real nas fases MARKET/CANDIDATES do supervisor.",
+  "_honesty": "Declarada pelo agente em 2026-09-19 a partir de fontes canônicas do próprio repositório (config/verticals.json: label 'Alimentação e Restaurantes'; config/qa-waves-registry.json: jornadas food_order_flow e food_customer_journey; inventário de capabilities da plataforma). NÃO é um estudo de mercado humano — é a declaração mínima necessária para a vertical existir no pipeline governado de pesquisa. Revisão humana recomendada antes de tratar qualquer achado como definitivo. Nenhum arquétipo, benchmark ou fornecedor foi inventado: as listas `archetypes` e `benchmarks` ficam VAZIAS de propósito, para que arquétipos e candidatos sejam DESCOBERTOS por pesquisa real (archetypeDiscovery/candidateDiscovery) e só entrem no universo aceito com evidência hash-bound.",
+  "vertical": "food",
+  "sampleVersion": "2026-09-19-r1",
+  "marketContext": {
+    "_description": "Termos de CATEGORIA do mercado da vertical (pt-BR + en). Nomeiam a categoria de software de gestão — nunca fornecedores específicos.",
+    "_derivation": "Derivados do label canônico ('Alimentação e Restaurantes') e das jornadas declaradas (seleção de produto, checkout, pagamento, confirmação, entrega). O eixo pedido→entrega é a razão de os termos cobrirem ordering e delivery.",
+    "categoryTerms": [
+      "restaurant management software",
+      "online ordering system for restaurants",
+      "restaurant delivery management software",
+      "food service point of sale software",
+      "software para restaurante gestão de pedidos",
+      "sistema de delivery para restaurantes",
+      "software de gestão para food service"
+    ],
+    "categoryTermArchetypes": {}
+  },
+  "archetypes": [],
+  "benchmarks": []
+}
