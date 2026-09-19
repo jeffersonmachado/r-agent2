@@ -375,18 +375,41 @@ function createMarketDiscoverySupervisor({
     // declarada', e o perfil diz qual dos dois foi.
     let apiDocsInspection = { attempted: false, reason: 'no_api_docs_declared' };
     if (isNonEmptyString(apiDocsUrl)) {
-      try {
-        const api = await executeResearch('research.inspectApiDocs', { url: apiDocsUrl });
-        const operations = list(api.output?.operations);
-        dimensions.integrationMaturity = operations.length >= 10 ? 'high' : (operations.length > 0 ? 'medium' : 'low');
-        apiDocsInspection = { attempted: true, operations: operations.length };
-      } catch (error) {
+      // O contrato da capability exige `content` (inspeção é PURA sobre o
+      // conteúdo recebido — `additionalProperties:false`, `content` required).
+      // Então o documento é OBTIDO primeiro e só então inspecionado; sem isso a
+      // chamada é recusada pelo registry (cognitive_tool_input_invalid).
+      const apiDocsGathered = await gatherEvidence({
+        query: `${registrableDomain(apiDocsUrl) || apiDocsUrl} api documentation oficial`,
+        url: apiDocsUrl,
+        tier: 5,
+        note: 'documentação de API oficial — inspeção de contrato',
+      });
+      if (!apiDocsGathered.evidence) {
         dimensions.integrationMaturity = 'low';
         apiDocsInspection = {
           attempted: true,
           failed: true,
-          reason: `inspect_api_failed: ${error?.code || error?.message || 'unknown'}`,
+          reason: `api_docs_unreachable: ${apiDocsGathered.reason}`,
         };
+      } else {
+        try {
+          const api = await executeResearch('research.inspectApiDocs', {
+            url: apiDocsUrl,
+            content: apiDocsGathered.content || '',
+            contentHash: apiDocsGathered.contentHash,
+          });
+          const operations = list(api.output?.operations);
+          dimensions.integrationMaturity = operations.length >= 10 ? 'high' : (operations.length > 0 ? 'medium' : 'low');
+          apiDocsInspection = { attempted: true, operations: operations.length };
+        } catch (error) {
+          dimensions.integrationMaturity = 'low';
+          apiDocsInspection = {
+            attempted: true,
+            failed: true,
+            reason: `inspect_api_failed: ${error?.code || error?.message || 'unknown'}`,
+          };
+        }
       }
     } else {
       dimensions.integrationMaturity = 'low';

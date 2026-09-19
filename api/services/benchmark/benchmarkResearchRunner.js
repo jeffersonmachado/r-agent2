@@ -448,7 +448,6 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
     const captured = await callCapability('research.captureEvidence', {
       url: chosen.url,
       documentRef: chosen.url,
-      benchmarkId,
       contentHash: analyzedContentHash,
     });
     const evidenceRef = captured.output?.evidenceRef || captured.output?.contentHash || null;
@@ -500,8 +499,6 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
         url: chosen.url,
         content,
         contentHash: analyzedContentHash,
-        contentType,
-        query,
       });
     } catch (error) {
       return {
@@ -541,8 +538,6 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
           url: chosen.url,
           content,
           contentHash: analyzedContentHash,
-          contentType,
-          query,
         });
       } catch (error) {
         // A inspeção de documentação JÁ aconteceu: o eixo ainda não pode ser
@@ -780,10 +775,16 @@ function createBenchmarkResearchRunner({ registry, runners, tenantId, actor, ser
       };
     }
 
+    // Hash do conteúdo EFETIVAMENTE obtido (o mesmo contrato do caminho
+    // principal): `research.fetch` devolve contentHash; sem ele, deriva do
+    // conteúdo — o pré-registro do holdout e a evidência exigem hash.
+    const analyzedContentHash = isNonEmptyString(fetched.output?.contentHash)
+      ? String(fetched.output.contentHash)
+      : `sha256:${sha256Hex(content)}`;
     const captured = await callCapability('research.captureEvidence', {
       url: chosen.url,
       documentRef: chosen.url,
-      benchmarkId,
+      contentHash: analyzedContentHash,
     });
     const evidenceRef = captured.output?.evidenceRef || captured.output?.contentHash || null;
     if (!isNonEmptyString(evidenceRef)) {

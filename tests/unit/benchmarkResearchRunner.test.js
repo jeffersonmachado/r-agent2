@@ -147,6 +147,11 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
   });
 
   test('status HTTP ausente também não é prova', async () => {
+    // Fornecedor que OMITE `httpStatus` viola o contrato da capability: o
+    // núcleo falha de forma TIPADA em vez de tratar a resposta como válida.
+    // (O caso "status presente mas não-2xx" segue degradando por benchmark —
+    // ver o teste de 404 acima.) Isto é o que teria pegado o incidente de
+    // 2026-09-19, quando o serviço MCP devolvia `status` em vez de `httpStatus`.
     const { runner, service } = await buildHarness({
       runners: buildRunners({
         candidates: [{ url: 'https://docs.evo.com.br/x', title: 'x' }],
@@ -154,11 +159,10 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
       }),
     });
 
-    const result = await runner.researchAndRecord({
+    await expect(runner.researchAndRecord({
       vertical: 'fitness', benchmarkId: 'evo', query: 'EVO',
       externalName: 'x', kind: FINDING_KINDS.CAPABILITY, sourceTier: 5,
-    });
-    expect(result.status).toBe(RESEARCH_RUN_STATES.FETCH_FAILED);
+    })).rejects.toThrow(/research_tool_output_contract_violation/);
     expect((await fitnessSummary(service)).totalFindings).toBe(0);
   });
 
@@ -176,7 +180,7 @@ describe('Research runner — evidência só entra com obtenção confirmada', (
     const runners = buildRunners({
       candidates: [{ url: 'https://docs.evo.com.br/x', title: 'x' }],
     });
-    runners.captureEvidence = async () => ({});
+    runners.captureEvidence = async () => ({ evidenceRef: null });
     const { runner, service } = await buildHarness({ runners });
 
     const result = await runner.researchAndRecord({
