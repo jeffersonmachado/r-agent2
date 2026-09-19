@@ -104,5 +104,528 @@
       "evidence": "Arquétipo de plataforma derivado do inventário canônico (rotas api: de agenda e billing expostas para a vertical)."
     }
   ],
-  "benchmarks": []
+  "benchmarks": [
+    {
+      "id": "aestheticlinic.io",
+      "name": "Aesthetic clinic software built to grow your clinic",
+      "role": "discovery",
+      "order": 1,
+      "archetype": "aesthetic-clinic",
+      "independenceGroup": "aestheticlinic.io",
+      "cloneOf": null,
+      "officialSite": "https://aestheticlinic.io/",
+      "sources": [
+        {
+          "url": "https://aestheticlinic.io/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-62de9d67bd485cfa79c0416b83c802fb91c869d5",
+            "contentHash": "sha256:e7b37bf2e18b2d014f1c718e542d6b6bc3530718282f0a2931b5d391502ef53e"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "aesthetic-clinic"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-5fc8068aeeef646ba343a73a9f9d9a2ec9a74978",
+          "ev-62de9d67bd485cfa79c0416b83c802fb91c869d5"
+        ]
+      }
+    },
+    {
+      "id": "aestheticnursesoftware.com",
+      "name": "Aesthetic Clinic Management Software",
+      "role": "discovery",
+      "order": 2,
+      "archetype": "aesthetic-clinic",
+      "independenceGroup": "aestheticnursesoftware.com",
+      "cloneOf": null,
+      "officialSite": "https://aestheticnursesoftware.com/",
+      "sources": [
+        {
+          "url": "https://www.aestheticnursesoftware.com/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-c21eec2cab656411649093f6222f5919f7a29bba",
+            "contentHash": "sha256:6a2df425170dd106113a5df595181953516571b5ec0e275411bb8ddd5f7785fb"
+          }
+        },
+        {
+          "url": "https://aestheticnursesoftware.com/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-3b99fdc1f7db87c776efd63649c0a15dd7852194",
+            "contentHash": "sha256:6a2df425170dd106113a5df595181953516571b5ec0e275411bb8ddd5f7785fb"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "aesthetic-clinic"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-3b99fdc1f7db87c776efd63649c0a15dd7852194",
+          "ev-c21eec2cab656411649093f6222f5919f7a29bba"
+        ]
+      }
+    },
+    {
+      "id": "beautis.eu",
+      "name": "Beautis",
+      "role": "discovery",
+      "order": 3,
+      "archetype": "independent-salon",
+      "independenceGroup": "beautis.eu",
+      "cloneOf": null,
+      "officialSite": "https://beautis.eu/",
+      "sources": [
+        {
+          "url": "https://www.beautis.eu/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-34b189e78b650aa4bfa9145132a874601702bbd9",
+            "contentHash": "sha256:2f69c162f9edf0911c16419f6134239b1b78ae6192b7bd7547ece67a98269ea5"
+          }
+        },
+        {
+          "url": "https://beautis.eu/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-17ffeae01fe0dc39944232ed19c0e451c5200848",
+            "contentHash": "sha256:2f69c162f9edf0911c16419f6134239b1b78ae6192b7bd7547ece67a98269ea5"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "independent-salon",
+        "salon-network"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-17ffeae01fe0dc39944232ed19c0e451c5200848",
+          "ev-34b189e78b650aa4bfa9145132a874601702bbd9"
+        ]
+      }
+    },
+    {
+      "id": "bellesoftware.com.br",
+      "name": "Belle Software",
+      "role": "discovery",
+      "order": 4,
+      "archetype": null,
+      "independenceGroup": "bellesoftware.com.br",
+      "cloneOf": null,
+      "officialSite": "https://bellesoftware.com.br/",
+      "sources": [
+        {
+          "url": "https://www.bellesoftware.com.br/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-afa626d1bda133bc065c31ac444462ea37b30d34",
+            "contentHash": "sha256:9efe7b933e6379c6ee378ac7080a446e5de068b0a869ce56797854b1e9ae2992"
+          }
+        },
+        {
+          "url": "https://bellesoftware.com.br/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-2a8cf8b36b4ff566c26392324468520f56d81588",
+            "contentHash": "sha256:b4da3e8dabb9947cfc058302a4cb44cb04dac99e823c376a7f8d15b65429923e"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-1f404a5e8dd1a17e936f61b111bd6fd34bdd5710",
+          "ev-2a8cf8b36b4ff566c26392324468520f56d81588",
+          "ev-afa626d1bda133bc065c31ac444462ea37b30d34"
+        ]
+      }
+    },
+    {
+      "id": "bydoctor.com.br",
+      "name": "ByDoctor",
+      "role": "discovery",
+      "order": 5,
+      "archetype": null,
+      "independenceGroup": "bydoctor.com.br",
+      "cloneOf": null,
+      "officialSite": "https://bydoctor.com.br/",
+      "sources": [
+        {
+          "url": "https://bydoctor.com.br/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-8a6d5c827a4b6cd4cf347b887dee932ed599ad48",
+            "contentHash": "sha256:e94f3d07527beb3906adb91bb3808e658d18bbb026b6ffd14534b415136cd6a0"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-68fe55cc0619d4c138b5e8ae686c00e2bde979dc",
+          "ev-8a6d5c827a4b6cd4cf347b887dee932ed599ad48",
+          "ev-d5c6633974067066d8ef313ad86f5a24d7cd03d4"
+        ]
+      }
+    },
+    {
+      "id": "clinicorp.com",
+      "name": "O software odontológico para clínicas e consultórios",
+      "role": "discovery",
+      "order": 6,
+      "archetype": null,
+      "independenceGroup": "clinicorp.com",
+      "cloneOf": null,
+      "officialSite": "https://clinicorp.com/",
+      "sources": [
+        {
+          "url": "https://clinicorp.com/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-a1b8364b55e21da3f06a4b329d572956338e2d91",
+            "contentHash": "sha256:2796b9b4a06355fa4568169e7598eeee289cb815fa9731e8ec5b465aeabcbbb6"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-a1b8364b55e21da3f06a4b329d572956338e2d91",
+          "ev-f5e85cbca6cca8c52e5a1fd06922a4f0e25a5190"
+        ]
+      }
+    },
+    {
+      "id": "clinora.com.br",
+      "name": "Sistema para Gestão de Clínicas e Consultórios",
+      "role": "discovery",
+      "order": 7,
+      "archetype": null,
+      "independenceGroup": "clinora.com.br",
+      "cloneOf": null,
+      "officialSite": "https://clinora.com.br/",
+      "sources": [
+        {
+          "url": "https://clinora.com.br/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-79bec0f9120458020e0b5b14c08abbbf7d47fdf7",
+            "contentHash": "sha256:fca2e382cae4bea68a90a8a3cbb894d767d34bff16a1e9ee87723ef29945d062"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-79bec0f9120458020e0b5b14c08abbbf7d47fdf7",
+          "ev-79d68ede3c19026d381568808b04c78a16d621ac"
+        ]
+      }
+    },
+    {
+      "id": "cloudia.com.br",
+      "name": "Cloudia",
+      "role": "discovery",
+      "order": 8,
+      "archetype": null,
+      "independenceGroup": "cloudia.com.br",
+      "cloneOf": null,
+      "officialSite": "https://cloudia.com.br/",
+      "sources": [
+        {
+          "url": "https://cloudia.com.br/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-e6e43c5f8e545569f96e44b5db7c9091896ed5f7",
+            "contentHash": "sha256:35965b9b422fdfbc7a885406cc23cc16dd1546bfb35c9568fb9fe8f7211a0fcd"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-a89ffa0d75aeec77160b443aca4457ad5bcdc3ad",
+          "ev-e6e43c5f8e545569f96e44b5db7c9091896ed5f7"
+        ]
+      }
+    },
+    {
+      "id": "fresha.com",
+      "name": "Fresha",
+      "role": "validation",
+      "order": 9,
+      "archetype": "booking-marketplace",
+      "independenceGroup": "fresha.com",
+      "cloneOf": null,
+      "officialSite": "https://fresha.com/",
+      "sources": [
+        {
+          "url": "https://fresha.com/",
+          "tier": 5,
+          "specificity": "GENERIC",
+          "retrievedAt": null,
+          "verified": false,
+          "provenance": {
+            "evidenceRef": "ev-63db43b8bff606624b61a694a816baa4b15fbc1d",
+            "contentHash": "sha256:d07c892f84254c3acce710bf662d5eb5f0da877486bcd11732c25bc7c2fc947b"
+          }
+        }
+      ],
+      "novelty": {
+        "newCapabilities": [],
+        "newRequiredCapabilities": [],
+        "newCriticalCapabilities": [],
+        "newJourneys": [],
+        "newRequiredJourneys": [],
+        "newCriticalJourneys": [],
+        "newBusinessRules": [],
+        "newRequiredBusinessRules": [],
+        "newCriticalBusinessRules": []
+      },
+      "findingsInventory": [],
+      "country": null,
+      "segments": [],
+      "targetCustomers": [],
+      "archetypes": [
+        "booking-marketplace",
+        "independent-salon",
+        "salon-network"
+      ],
+      "provenance": {
+        "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+        "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+        "appliedAt": "2026-09-19T06:01:45.469Z",
+        "evidenceRefs": [
+          "ev-63db43b8bff606624b61a694a816baa4b15fbc1d",
+          "ev-bb3676657279d9063e378ef89a07e93274bb060c",
+          "ev-bb73235957f55540370cd2f49816c2536a278063"
+        ]
+      }
+    }
+  ],
+  "holdout": {
+    "benchmarkId": "fresha.com",
+    "selectedAsHoldoutAt": "2026-09-19T06:01:45.432Z",
+    "selectionReason": "maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos)",
+    "selectionEvidence": "Existência verificada no run mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a por evidência hash-bound (ev-63db43b8bff606624b61a694a816baa4b15fbc1d, ev-bb3676657279d9063e378ef89a07e93274bb060c, ev-bb73235957f55540370cd2f49816c2536a278063). Site oficial declarado: https://fresha.com/. Pré-registrado em 2026-09-19T06:01:45.432Z ANTES de qualquer pesquisa profunda de inventário (deep research); fases executadas até aqui: MARKET, ARCHETYPES, CANDIDATES, CANDIDATE_ANALYSIS (profiling de mercado), DIVERSITY, DISCOVERY_SET — conforme o pipeline governado. Base da seleção: maximiza distância do discovery set (arquétipo/grupo/geografia não cobertos).",
+    "marketArchetype": "booking-marketplace",
+    "inventoryVersion": "canonical-capabilities-1.0.0",
+    "provenance": {
+      "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+      "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+      "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+      "appliedAt": "2026-09-19T06:01:45.469Z"
+    }
+  },
+  "marketDiscoveryProvenance": {
+    "generator": "scripts/benchmark/apply-market-discovery-to-sample.js",
+    "marketDiscoveryRunId": "mdr-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+    "discoverySetId": "mds-575a1ee2e40bfa5837c0ada99e4b76a8d8da69548d38307a",
+    "vertical": "beauty",
+    "discoveryVersion": "market-discovery-2026-09-19-r2",
+    "appliedAt": "2026-09-19T06:01:45.469Z",
+    "selectedCandidates": [
+      "aestheticlinic.io",
+      "aestheticnursesoftware.com",
+      "beautis.eu",
+      "bellesoftware.com.br",
+      "bydoctor.com.br",
+      "clinicorp.com",
+      "clinora.com.br",
+      "cloudia.com.br"
+    ],
+    "holdoutCandidateKey": "fresha.com",
+    "rule": "sample derivado do run de market discovery por gerador determinístico; edição manual é drift (`--check` falha)"
+  }
 }
