@@ -64,7 +64,7 @@ describe('mcp-research OFFLINE — snapshot local, zero egress', () => {
       'mcp-research', 'research_fetch', { url: DOC_URL }, { tenantId: 'system' },
     ));
     expect(isError).toBe(false);
-    expect(json.status).toBe(200);
+    expect(json.httpStatus).toBe(200);
     expect(json.url).toBe(DOC_URL);
     expect(json.canonicalUrl).toBe(DOC_URL);
     expect(json.title).toBe('ACME Fitness Platform — Docs');
@@ -136,7 +136,7 @@ describe('mcp-research OFFLINE — snapshot local, zero egress', () => {
       { tenantId: 'system' },
     ));
     expect(evidence.isError).toBe(false);
-    expect(evidence.json.evidenceId).toMatch(/^ev-[0-9a-f]{40}$/);
+    expect(evidence.json.evidenceRef).toMatch(/^ev-[0-9a-f]{40}$/);
     expect(evidence.json.locator).toBe('section:Recursos');
     expect(evidence.json.contentHash).toBe(fetched.contentHash);
   });

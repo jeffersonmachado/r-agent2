@@ -177,14 +177,14 @@ function parseResearchToolOutput(output, capability) {
     throw error;
   }
   if (output.structuredContent && typeof output.structuredContent === 'object') {
-    return output.structuredContent;
+    return assertRequiredOutputFields(output.structuredContent, capability);
   }
   const isMcpEnvelope = typeof output.remote === 'string' && typeof output.tool === 'string';
   const text = typeof output.text === 'string' ? output.text.trim() : '';
   if (text.length > 0) {
     try {
       const parsed = JSON.parse(text);
-      if (parsed && typeof parsed === 'object') return parsed;
+      if (parsed && typeof parsed === 'object') return assertRequiredOutputFields(parsed, capability);
     } catch (_) {
       // Sem JSON válido: o tratamento abaixo decide (envelope → erro tipado).
     }
@@ -196,7 +196,38 @@ function parseResearchToolOutput(output, capability) {
     error.code = 'research_tool_output_unparsed';
     throw error;
   }
-  return output;
+  return assertRequiredOutputFields(output, capability);
+}
+
+/**
+ * Campos que o consumidor governado EXIGE — sem eles o resultado não é
+ * "sem dado", é CONTRATO VIOLADO, e o consumidor descarta o item em silêncio.
+ *
+ * Registrado a partir do incidente de 2026-09-19: o serviço de MCP devolvia
+ * `status` onde a capability declara `httpStatus` (e `evidenceId` onde declara
+ * `evidenceRef`). O provider NATIVO sempre falou o contrato canônico, então a
+ * integração MCP apenas parecia funcionar: 10 hits por query → 0 candidatos,
+ * run `COMPLETED`, nenhum erro.
+ */
+const REQUIRED_OUTPUT_FIELDS = Object.freeze({
+  'research.search': ['candidates'],
+  'research.fetch': ['httpStatus'],
+  'research.captureEvidence': ['evidenceRef'],
+});
+
+function assertRequiredOutputFields(payload, capability) {
+  const required = REQUIRED_OUTPUT_FIELDS[String(capability)];
+  if (!required) return payload;
+  const missing = required.filter((field) => !(field in payload));
+  if (missing.length > 0) {
+    const error = new Error(
+      `research_tool_output_contract_violation: ${capability} não devolveu ${missing.join(', ')}`,
+    );
+    error.code = 'research_tool_output_contract_violation';
+    error.missing = missing;
+    throw error;
+  }
+  return payload;
 }
 
 /**
@@ -263,6 +294,7 @@ function buildResearchProvenance({ agentId = null, capability, toolId, provider,
 module.exports = {
   RESEARCH_CAPABILITIES,
   RESEARCH_CAPABILITY_IDS,
+  REQUIRED_OUTPUT_FIELDS,
   ensureResearchCapabilities,
   executeResearchCapability,
   parseResearchToolOutput,

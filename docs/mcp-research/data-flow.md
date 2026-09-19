@@ -85,7 +85,7 @@ novidade canônica → política de suficiência → SATURAÇÃO (aparente, audi
    `normalizationRationale`.
 
 9. **Evidência**: `research_capture_evidence` registra evidência de fonte com
-   hash de conteúdo e referência determinística (`evidenceId`, `capturedAt`,
+   hash de conteúdo e referência determinística (`evidenceRef`, `capturedAt`,
    `locator`, `fragmentHash`). `evidenceMissingRejected` e
    `hashMismatchRejected` são contadores do funil — achado sem evidência
    ligada não passa.

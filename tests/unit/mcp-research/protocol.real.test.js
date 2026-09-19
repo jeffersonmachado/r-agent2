@@ -103,7 +103,7 @@ describe('mcp-research — protocolo REAL sobre StreamableHTTP', () => {
     const result = await hub.callTool('mcp-research', 'research_fetch', { url: fixtureUrl }, { tenantId: 'system' });
     const { isError, json } = parseToolResult(result);
     expect(isError).toBe(false);
-    expect(json.status).toBe(200);
+    expect(json.httpStatus).toBe(200);
     expect(json.url).toBe(fixtureUrl);
     expect(json.canonicalUrl).toBe(fixtureUrl);
     expect(json.contentType).toContain('text/html');
@@ -136,7 +136,7 @@ describe('mcp-research — protocolo REAL sobre StreamableHTTP', () => {
       contentType: fetched.contentType,
     }, { tenantId: 'system' }));
     expect(evidence.isError).toBe(false);
-    expect(evidence.json.evidenceId).toMatch(/^ev-[0-9a-f]{40}$/);
+    expect(evidence.json.evidenceRef).toMatch(/^ev-[0-9a-f]{40}$/);
     expect(evidence.json.contentHash).toBe(fetched.contentHash);
     expect(evidence.json.sourceUrl).toBe(fetched.canonicalUrl);
 
@@ -260,10 +260,11 @@ describe('mcp-research — protocolo REAL sobre StreamableHTTP', () => {
       input: { url: fixtureUrl },
     });
     expect(result.provider).toBe('external');
-    expect(result.output.remote).toBe('mcp-research');
-    const output = JSON.parse(result.output.text);
-    expect(output.status).toBe(200);
-    expect(output.contentHash).toMatch(/^sha256:[0-9a-f]{64}$/);
+    // O output da capability é o PAYLOAD projetado (contrato declarado), não o
+    // envelope cru do adapter: a projeção vive em executeResearchCapability.
+    expect(result.toolId).toMatch(/^mcp\.t/);
+    expect(result.output.httpStatus).toBe(200);
+    expect(result.output.contentHash).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
   test('as 5 capabilities research.* resolvem pelo proxy HTTP real', async () => {

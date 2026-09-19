@@ -80,7 +80,7 @@ verificado, tetos de tamanho/timeout/redirect).
 | `allowedDomains` | string[] | máx 50; fora da lista → `research_domain_not_allowed` |
 | `blockedDomains` | string[] | match → `research_domain_blocked` |
 
-**Output**: `{ url, canonicalUrl, status, contentType, retrievedAt, content, contentHash, sizeBytes, title, sanitization, providerMetadata }`.
+**Output**: `{ url, canonicalUrl, httpStatus, contentType, retrievedAt, content, contentHash, sizeBytes, title, sanitization, providerMetadata }`.
 
 - `content` é o corpo **sanitizado** (injeção neutralizada, PII/credenciais
   redigidas); `contentHash` = `sha256:` do conteúdo sanitizado devolvido;
@@ -148,7 +148,7 @@ do chamador (a API) — o container não grava nada.
 | `locator` | ≤500 |
 | `sourceType` | ≤64 (default na saída: `web`) |
 
-**Output**: `{ evidenceId, sourceUrl, canonicalUrl, contentHash, fragmentHash, locator, capturedAt, sourceType, providerMetadata }`.
+**Output**: `{ evidenceRef, sourceUrl, canonicalUrl, contentHash, fragmentHash, locator, capturedAt, sourceType, providerMetadata }`.
 
 **Erros**: `research_invalid_input`, `research_evidence_invalid`.
 

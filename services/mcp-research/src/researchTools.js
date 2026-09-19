@@ -78,7 +78,7 @@ const TOOL_DEFINITIONS = Object.freeze([
   Object.freeze({
     name: 'research_fetch',
     capability: 'research.fetch',
-    description: 'Obtém um documento sob política de endpoint (SSRF guard, DNS revalidado, TLS verificado, tetos de tamanho/timeout). Saída: { url, canonicalUrl, status, contentType, retrievedAt, content, contentHash, sizeBytes, title, sanitization, providerMetadata }.',
+    description: 'Obtém um documento sob política de endpoint (SSRF guard, DNS revalidado, TLS verificado, tetos de tamanho/timeout). Saída: { url, canonicalUrl, httpStatus, contentType, retrievedAt, content, contentHash, sizeBytes, title, sanitization, providerMetadata }.',
     inputSchema: Object.freeze({
       type: 'object',
       properties: {
@@ -123,7 +123,7 @@ const TOOL_DEFINITIONS = Object.freeze([
   Object.freeze({
     name: 'research_capture_evidence',
     capability: 'research.captureEvidence',
-    description: 'Registra evidência de fonte com hash de conteúdo e referência determinística. Saída: { evidenceId, sourceUrl, canonicalUrl, contentHash, fragmentHash, locator, capturedAt, sourceType }.',
+    description: 'Registra evidência de fonte com hash de conteúdo e referência determinística. Saída: { evidenceRef, sourceUrl, canonicalUrl, contentHash, fragmentHash, locator, capturedAt, sourceType }.',
     inputSchema: Object.freeze({
       type: 'object',
       properties: {
@@ -452,10 +452,16 @@ function createToolHandlers({ config, snapshotStore = null, providerDeps = {}, l
     }
 
     const sanitized = sanitizeFetchedContent(upstream.content);
+    // Nomes ALINHADOS ao contrato canônico da capability `research.fetch`
+    // (api/services/benchmark/researchCapabilities.js): `httpStatus`. O serviço
+    // devolvia `status` — divergência que não quebrava nada de forma visível:
+    // o consumidor governado exige `Number.isFinite(httpStatus)` e descartava
+    // TODO candidato em silêncio (medido 2026-09-19: 10 hits/query → 0
+    // candidatos). O provider NATIVO sempre devolveu `httpStatus`.
     return {
       url: String(input.url),
       canonicalUrl: upstream.url || String(input.url),
-      status: upstream.httpStatus,
+      httpStatus: upstream.httpStatus,
       contentType: upstream.contentType || null,
       retrievedAt: upstream.retrievedAt || new Date().toISOString(),
       content: sanitized.content,
@@ -494,7 +500,7 @@ function createToolHandlers({ config, snapshotStore = null, providerDeps = {}, l
       contentType: input.contentType,
     });
     return {
-      evidenceId: result.evidenceRef,
+      evidenceRef: result.evidenceRef,
       sourceUrl: result.url,
       canonicalUrl: input.canonicalUrl || result.url,
       contentHash: result.contentHash,

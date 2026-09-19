@@ -63,18 +63,39 @@ function createFakeResearchServer({ payloadForTool = null } = {}) {
   }));
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // O serviço de pesquisa REAL devolve o payload como TEXTO JSON em
-    // `content[].text` (não usa `structuredContent`). O fixture espelha isso:
-    // devolver texto arbitrário aqui tornava o teste cego para a projeção de
-    // output — foi assim que a falha silenciosa de 2026-09-19 passou.
+    // `content[].text` (não usa `structuredContent`), no formato DECLARADO de
+    // cada capability. Devolver texto arbitrário aqui tornava o teste cego
+    // para a projeção de output — foi assim que a falha silenciosa de
+    // 2026-09-19 passou.
     const custom = typeof payloadForTool === 'function' ? payloadForTool(request.params) : null;
     const payload = custom !== null && custom !== undefined
       ? custom
-      : { tool: request.params.name, candidates: [{ title: 'Fonte oficial', url: 'https://oficial.example.com/' }] };
+      : defaultPayloadFor(request.params.name);
     return {
       content: [{ type: 'text', text: typeof payload === 'string' ? payload : JSON.stringify(payload) }],
     };
   });
   return server;
+}
+
+/** Payload no formato declarado de cada capability de pesquisa. */
+function defaultPayloadFor(toolName) {
+  const contentHash = `sha256:${'a'.repeat(64)}`;
+  if (toolName === 'fetch') {
+    return {
+      url: 'https://oficial.example.com/',
+      httpStatus: 200,
+      content: 'conteúdo oficial',
+      contentType: 'text/html',
+      contentHash,
+    };
+  }
+  if (toolName === 'captureEvidence') {
+    return { evidenceRef: 'ev-abc', contentHash };
+  }
+  if (toolName === 'inspectDocumentation') return { sections: ['Agenda'] };
+  if (toolName === 'inspectApiDocs') return { operations: ['GET /x'] };
+  return { candidates: [{ title: 'Fonte oficial', url: 'https://oficial.example.com/' }] };
 }
 
 function researchConnection(overrides = {}) {
@@ -222,6 +243,33 @@ describe('resolução de runners pelo registry (adapter REAL)', () => {
   test('delegação com wildcard é recusada na configuração da conexão', async () => {
     await expect(buildRealStack({ connectionOverrides: { delegatedCapabilities: ['mcp.*'] } }))
       .rejects.toThrow(/wildcard/i);
+  });
+});
+
+describe('contrato de output por capability (incidente 2026-09-19)', () => {
+  test('research.fetch com `status` em vez de `httpStatus` é CONTRATO VIOLADO — nunca vazio silencioso', () => {
+    // Payload EXATO do serviço de MCP antes da correção: o consumidor exige
+    // Number.isFinite(httpStatus) e descartava TODO candidato sem erro algum.
+    expect(() => parseResearchToolOutput(
+      { url: 'https://x.test/', status: 200, content: 'ok', contentHash: 'sha256:abc' },
+      'research.fetch',
+    )).toThrow(/research_tool_output_contract_violation/);
+  });
+
+  test('research.captureEvidence com `evidenceId` em vez de `evidenceRef` é CONTRATO VIOLADO', () => {
+    expect(() => parseResearchToolOutput(
+      { evidenceId: 'ev-1', contentHash: 'sha256:abc' },
+      'research.captureEvidence',
+    )).toThrow(/research_tool_output_contract_violation/);
+  });
+
+  test('research.search sem `candidates` é CONTRATO VIOLADO', () => {
+    expect(() => parseResearchToolOutput({ query: 'x' }, 'research.search'))
+      .toThrow(/research_tool_output_contract_violation/);
+  });
+
+  test('campo presente com lista VAZIA é resultado legítimo (ausência de achado não é violação)', () => {
+    expect(parseResearchToolOutput({ candidates: [] }, 'research.search')).toEqual({ candidates: [] });
   });
 });
 
