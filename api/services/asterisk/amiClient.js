@@ -21,8 +21,20 @@ function buildAction(action, params = {}) {
 async function withAmiConnection(fn) {
   const host = process.env.AMI_HOST || 'asterisk';
   const port = Number(process.env.AMI_PORT || 5038);
+  // Usuário não é segredo: default continua aceitável.
   const username = process.env.AMI_USERNAME || 'ragent2';
-  const secret = process.env.AMI_SECRET || 'ragent2';
+  // SEGREDO NÃO TEM DEFAULT. Antes: `process.env.AMI_SECRET || 'ragent2'` — uma
+  // implantação sem a variável autenticava silenciosamente com credencial
+  // conhecida, e nada indicava. Medido em 2026-09-19: essa credencial, somada à
+  // exposição do AMI, dava controle total do PBX a partir do container de
+  // pesquisa (AI_MEMORY/security-finding-pbx-ami-exposure.md). Falhar alto é o
+  // único comportamento seguro: ambiente mal configurado deve doer na hora.
+  const secret = process.env.AMI_SECRET;
+  if (typeof secret !== 'string' || secret.trim() === '') {
+    const error = new Error('AMI_SECRET ausente: credencial do AMI não pode ter default');
+    error.code = 'ami_secret_required';
+    throw error;
+  }
   const timeoutMs = Number(process.env.AMI_TIMEOUT_MS || 8000);
 
   return await new Promise((resolve, reject) => {

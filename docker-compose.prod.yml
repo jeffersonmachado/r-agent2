@@ -350,6 +350,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    environment:
+      # O manager.conf NÃO contém o segredo: ele usa ${ENV(AMI_SECRET)}. Se a
+      # variável não existir o container não sobe (fail-closed) — um default
+      # aqui seria uma credencial publicada no repositório, que é exatamente o
+      # que permitia login de dentro do container de pesquisa.
+      AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
+      # ACL por origem do AMI: a rede onde vive o container da API. Acompanha o
+      # subnet pinado de r-agent2-network logo abaixo — se um divergir do outro,
+      # a API perde acesso ao AMI.
+      AMI_PERMIT_CIDR: ${AMI_PERMIT_CIDR:-${RAP_PLATFORM_SUBNET:-172.30.0.0/16}}
     volumes:
       - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
       # Shadow somente de /etc/asterisk/conf: o include de contextos realtime e gerado em
@@ -427,6 +437,13 @@ volumes:
 networks:
   r-agent2-network:
     driver: bridge
+    # Subnet PINADO de propósito: a ACL do AMI é por IP, e com subnet atribuído
+    # dinamicamente pelo Docker a regra correta seria imprevisível (poderia
+    # bloquear a API ou permitir a origem errada). Fixar torna o ambiente
+    # determinístico e a ACL verificável.
+    ipam:
+      config:
+        - subnet: ${RAP_PLATFORM_SUBNET:-172.30.0.0/16}
   # Rede interna (sem egress) para o tráfego API ↔ mcp-research.
   rap-internal:
     driver: bridge
