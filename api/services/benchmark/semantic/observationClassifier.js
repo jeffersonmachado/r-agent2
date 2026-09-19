@@ -122,6 +122,34 @@ const SUPERLATIVE_RE = /\b(all[- ]in[- ]one|tudo em (um|uma) s[oó] (lugar|plata
 const PROMOTIONAL_CONSTRUCTION_RE = /\b(?:ferramenta|plataforma|solu[cç][aã]o|software|sistema|app|aplicativo|tool|platform)s?\s+(?:completa?s?|robusta?s?|poderosa?s?|inteligente?s?|all[- ]in[- ]one|completo|complete|powerful|robust|intelligent)\b|\b(?:complete|all[- ]in[- ]one|powerful|robust|intelligent)\s+(?:tool|platform|solution|software|system|app)s?\b|\bpara\s+simplificar\b|\bto\s+simplify\b|\b(?:simplifique|descomplique|potencialize|revolucione)\b/i;
 
 /**
+ * §P0-SEMANTICS — BENEFÍCIO EM 3ª PESSOA (sujeito = fornecedor).
+ *
+ * DEFEITO MEDIDO (2026-09-19): "Our platform helps your staff sell more
+ * memberships with powerful marketing tools." era classificada como
+ * CAPABILITY_SIGNAL/verb_object_structure (verbo `sell` + objeto `membership`)
+ * e produzia a capability `membership.sell`. É o MESMO defeito que
+ * PROMOTIONAL_CONSTRUCTION_RE fechou para "ferramenta completa para simplificar
+ * todo o processo de venda": aqui o sujeito da frase é o FORNECEDOR ("our
+ * platform helps your staff...") e a ação é apresentada como PROMESSA ao
+ * cliente, não como comportamento observável do produto.
+ *
+ * Por que escapava: MARKETING_VOICE_RE é ancorado no início (`^`) e só pega o
+ * imperativo ("Sell more..."). Na construção em 3ª pessoa o imperativo está no
+ * meio ("helps your staff sell more"), então nenhuma regra de marketing
+ * disparava e a frase chegava à classificação estrutural.
+ *
+ * A EXIGÊNCIA DE GRAU é o que separa promessa de função:
+ *   - "helps your staff sell MORE memberships"  -> grau => benefício  (rejeita)
+ *   - "allows you to schedule appointments"     -> sem grau => função (aceita)
+ * Sem esse discriminador a regra engoliria capacidades legítimas, que é o erro
+ * oposto e mais caro.
+ */
+const THIRD_PARTY_BENEFIT_RE = /\b(?:help|helps|helping|allow|allows|allowing|enable|enables|enabling|let|lets|empower|empowers|boost|boosts|ajuda|ajudam|permite|permitem|deixa|deixam)\s+(?:you|your|your\s+\w+|teams?|staff|equipes?|funcion[aá]rios?|colaboradores?|voc[eê]|seu|sua)\b/i;
+
+/** Marcador de GRAU/comparação — o que transforma uma ação em promessa. */
+const DEGREE_CLAIM_RE = /\b(more|less|mais|menos|faster|quickly|better|easier|higher|mais\s+r[aá]pido|mais\s+f[aá]cil|mais\s+eficiente|melhor)\b/i;
+
+/**
  * §P0-SEMANTICS — Construção inequívoca de CHECK-IN (entrada física de pessoa).
  *
  * Espelha o desempate de `resolveContextualVerb` no extrator. Duas famílias:
@@ -322,6 +350,13 @@ function classifyObservation(observation = {}) {
   // comportamento observável do produto.
   if (PROMOTIONAL_CONSTRUCTION_RE.test(text) && structure.declaredMatches.length === 0) {
     return result(OBSERVATION_TYPES.MARKETING_CLAIM, 'promotional_construction', signals);
+  }
+  // Benefício em 3ª pessoa: sujeito é o fornecedor e a ação vem com grau
+  // ("helps your staff sell MORE"). Promessa, não comportamento observável.
+  if (THIRD_PARTY_BENEFIT_RE.test(text)
+    && DEGREE_CLAIM_RE.test(text)
+    && structure.declaredMatches.length === 0) {
+    return result(OBSERVATION_TYPES.BENEFIT_STATEMENT, 'third_party_benefit_framing', signals);
   }
   // Enumeração de substantivos sem verbo: slogan de "tudo junto".
   if (structure.clauseCount >= 3 && structure.verbs.length === 0 && structure.declaredMatches.length === 0) {
