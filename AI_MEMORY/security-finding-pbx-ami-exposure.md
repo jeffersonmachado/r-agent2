@@ -87,3 +87,48 @@ provar que o antigo parou de valer.
 `npm run validate:mcp-research-docker-e2e` (gate `MCP_RESEARCH_DOCKER_E2E`) —
 mede o runtime e reprova quando o container de pesquisa alcança alvo operacional.
 Rede não medida conta como violação: "não consegui medir" ≠ "está isolado".
+
+## Resolução da ACL (2026-09-19) — a ACL ESTÁ em vigor; a contradição era minha
+
+Duas medições anteriores pareciam contraditórias. Não eram: eu comparava
+ORIGENS diferentes e tratava o resultado como se fosse o mesmo teste.
+
+Discriminador correto — mesma credencial, origens diferentes, mais contra-prova
+de senha errada (sem o terceiro teste, "failed" seria indistinguível de "senha
+trocada"):
+
+| Origem | Credencial | Resultado |
+|---|---|---|
+| `172.17.0.1` (fora dos `permit`) | `ragent2` correta | `Authentication failed` |
+| `127.0.0.1` (permitida) | `ragent2` correta | `Authentication accepted` |
+| `127.0.0.1` (permitida) | senha errada | `Authentication failed` |
+
+A credencial correta passa numa origem permitida e NÃO passa numa origem não
+permitida: quem decide é a ACL. A config
+(`deny 0.0.0.0/0.0.0.0` + `permit 127.0.0.1` + `permit 172.30.0.0/16`) funciona, e
+a semântica é a PRIMEIRA correspondência (o comentário anterior no arquivo
+afirmava "a ÚLTIMA correspondência decide (medido)" — está errado e foi corrigido).
+
+### Lição que quase virou falso positivo
+
+O **banner é entregue antes da decisão da ACL**. Medi
+`BANNER_ENTREGUE :: "Asterisk Call Manager/7.0.3"` de uma origem que a ACL nega e
+quase reportei "exposição mantida". Banner prova que o TCP conecta; **só a
+autenticação prova acesso**. O discriminador tem de ser capaz de distinguir os
+dois desfechos — contar `Response` sem conferir `Message` não distingue.
+
+### Estado real
+
+- **ACL: em vigor.** Origem fora dos `permit` não autentica. Medições anteriores
+  de "banner + `system,all`" foram feitas com a config antiga
+  (`permit = 0.0.0.0/0.0.0.0`), que era exatamente o defeito corrigido.
+- **`secret = ragent2` continua LITERAL e versionado** em
+  `pbx/asterisk/etc/asterisk/manager.conf`. É um segredo fixo, no repositório,
+  com `read/write = all`. A ACL limita QUEM pode usá-lo (`127.0.0.1` e
+  `172.30.0.0/16`), mas qualquer container na rede da plataforma autentica com
+  privilégio total — movimento lateral continua possível. **Item ainda aberto.**
+- O mount do config é `ro`
+  (`/opt/results/ria/r-agent2/pbx/asterisk/etc/asterisk -> /etc/asterisk (ro)`),
+  o que **refuta** a hipótese de a API sobrescrever `/etc/asterisk` em runtime.
+- `ACL: yes` em ambos os containers rodando (`ami-rt`, `ragent2-asterisk-local`),
+  com a mesma config montada — a contradição não vinha de configs divergentes.
