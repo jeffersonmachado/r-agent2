@@ -77,6 +77,21 @@ Serviço: `api/services/journeyReviewService.js`. Endpoints: `/api/qa-waves/revi
 - **Invariante de status:** todo rascunho sai com `status: 'draft_ai'` (`aiModel: 'intelligence_engine_v1'`), persiste em `qa/qa-waves/ai-drafts.json` e **nunca** é executado/gravado automaticamente — exige aprovação manual (→ `approved` → `active`).
 - Doc canônica detalhada: `docs/qa-waves-ai.md` (arquitetura, endpoints `/api/qa-waves/intelligence/*`, ciclo de vida `draft_ai → approved → active`).
 
+## Cobertura de jornadas: declaração (store) ≠ execução (mesh) (2026-09-19)
+
+**Invariante:** cobertura de jornada só conta com cenário **executável**. Registrado aqui porque uma leitura apressada do `scenario-store` sugere (falsamente) que faltam centenas de cenários na cobertura; "corrigir" isso converte declaração em cobertura, ou seja, forja verde.
+
+- `qa-mesh/meshRegistry.json` (**139** cenários) é o registry **executável**. `qa/qa-waves/scenario-store.json` (**456**) é **catálogo declarativo** — capabilities `cap-*`, preconditions `precond-*`, stubs `business-e2e-*`. Apenas **8** ids do store existem no mesh; dos **255** `core` do store, **1**.
+- `qa/coverage/journeyLinks.js`: o link direto (source `journey-coverage`) exige `status ∈ {active, approved}` **e** `meshIds.has(scenarioId)`. Cenário declarado e não executável é **descartado** pelo coverage gate — declará-lo em `config/journey-scenario-links.json` **não** aumenta cobertura.
+- `qa-waves/journey-coverage/core.json` = **74 jornadas / 82 cenários**, idêntico ao conjunto de sistema do mesh (domínio fora das verticais): `ausentes=0`, `extras=0`. O balde `core` é construído **do mesh** (`buildSystemJourneyCoverage`, `tools/system/platform-readiness.js`) por desenho. **Não** trocar a fonte para o corpus do store.
+- Consequência aceita e correta: `campaigns` e `billing` têm `confidence 0.59` com **1 cenário vinculado** porque existe exatamente **1 cenário executável** para cada (`business-core-biz-campaigns`, `business-core-biz-billing`). O aviso de vínculo fraco é **verdadeiro**. Sair dele exige **escrever cenário executável com assertions e registrá-lo no mesh** — nunca rebaixar o limiar de 0.7 (`config/coverage-gate-thresholds.json`) nem inflar o vínculo.
+
+### Gaps reais registrados (não forçar verde)
+
+- **12 cenários do mesh são executáveis e não têm `journeyId` declarado**, logo não contam para jornada alguma: `qa-core-auth-login`, `qa-core-tenants-create`, `qa-core-config-tenant-intelligence`, `qa-physical-queue-smoke`, `rpa-example-test`, `workspace-core`, `qa-pbx-call-events-runtime-smoke`, `qa-pbx-voice-tts-asr-smoke`, `qa-ura-publish-rollback-smoke`, `qa-bpmn-editor-smoke`, `qa-chatpro-omnichannel-smoke`, `rpa-whatsapp-connections-rpa`. Atribuir jornada por convenção de token é **proibido**: é exatamente a heurística que `resolveScenarioJourneyId` removeu por decisão explícita ("cenário sem jornada declarada simplesmente não conta como jornada coberta"). Exige declaração do autor do cenário.
+- `campaigns` e `billing`: 1 cenário executável cada (a régua de negócio pede ≥3).
+- `calendar`: declarada no store, sem cenário executável correspondente.
+
 ## Current state
 
 Observed on 2026-08-14, the executable state is **NO_GO**, regardless of the older generated snapshot in `docs/governance/PLATFORM_STATUS.md` (2026-08-09):
