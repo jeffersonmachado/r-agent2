@@ -16,11 +16,17 @@
 # bridges), mas o AMI era — o isolamento observado era efeito colateral, não o
 # mecanismo projetado.
 #
-# Medição que definiu a correção: `internal: true` BLOQUEIA tanto o vazamento
-# quanto o acesso do HOST ao container. Por isso o E2E não pode depender de a
-# API rodar no host: na topologia projetada a API é CONTAINER nesta rede
-# (docker-compose.prod.yml), e é assim que o serviço `rap-api` aparece abaixo,
-# atrás do profile `with-api` (imagem pesada, construída sob demanda).
+# Medição que orientava a correção (REVISTA em 2026-09-19): eu havia concluído
+# que `internal: true` também bloqueava o acesso do HOST ao container, a partir
+# de um probe cujo container não tinha nada escutando na porta — o `nc` falhou
+# por ausência de listener, não por bloqueio de rede. Medido de novo, com o
+# serviço REAL no ar: o host alcança o container normalmente (tools/list -> 200)
+# com a rede em `internal: true`. A conclusão anterior estava errada, e a
+# consequência prática é boa: o isolamento protege contra egress/rota lateral
+# SEM exigir que a API rode em container.
+#
+# Egress, esse sim, precisa de filtro de destino próprio: `internal: true` aqui
+# não restringe a saída pela rede `rap-research-egress`.
 #
 # Consequência para o gate: com a rede isolada, a sonda API->MCP precisa sair de
 # DENTRO da rede. O gate usa um cliente efêmero na mesma rede e declara
