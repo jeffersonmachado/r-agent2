@@ -37,6 +37,12 @@ const crypto = require('crypto');
 const dns = require('dns').promises;
 
 const endpointPolicy = require('../../../src/core/mcp/endpoint-policy');
+const {
+  listConfiguredApiBackends,
+  buildApiSearchRequest,
+  parseApiSearchResponse,
+  API_SEARCH_RESULT_LIMIT,
+} = require('./apiSearchBackend');
 
 // Logger default é PREGUIÇOSO (mesmo padrão de src/core/mcp/client-hub.js):
 // o módulo pode ser carregado por runtimes fora da API (ex.: o container
@@ -271,6 +277,9 @@ function assessSearchResultRelevance(query, candidates = []) {
 
 function createNativeResearchProvider(deps = {}) {
   const options = { ...DEFAULTS, ...(deps.options || {}) };
+  // Injetável para teste: sem `deps.env`, lê o ambiente do processo. Nenhuma
+  // chave é lida em tempo de módulo — só na construção do provider.
+  const env = deps.env && typeof deps.env === 'object' ? deps.env : process.env;
   const endpointPolicyOverrides = options.endpointPolicy && typeof options.endpointPolicy === 'object'
     ? options.endpointPolicy
     : {};
@@ -391,11 +400,14 @@ function createNativeResearchProvider(deps = {}) {
    *
    * @returns {Promise<{httpStatus, content, contentType, url}>}
    */
-  async function guardedGet(url, { classification = 'DEVELOPMENT' } = {}) {
+  async function guardedGet(url, { classification = 'DEVELOPMENT', headers: extraHeaders = null } = {}) {
     const headers = {
       'user-agent': options.userAgent,
       accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
       'accept-language': 'en-US,en;q=0.9,pt-BR;q=0.8',
+      // Cabeçalhos do chamador vencem: um backend por API precisa de `accept:
+      // application/json` e da chave no header (nunca na URL, que vaza em log).
+      ...(extraHeaders && typeof extraHeaders === 'object' ? extraHeaders : {}),
     };
 
     let current = url;
@@ -600,9 +612,9 @@ function createNativeResearchProvider(deps = {}) {
    * do transporte/política). Nunca lança: a falha de um backend não pode
    * impedir a tentativa do próximo.
    */
-  async function trySearchBackend({ name, url, parse, classification }) {
+  async function trySearchBackend({ name, url, parse, classification, headers = null }) {
     try {
-      const result = await guardedGet(url, { classification });
+      const result = await guardedGet(url, { classification, headers });
       if (result.httpStatus !== 200) {
         return {
           candidates: [],
@@ -625,14 +637,36 @@ function createNativeResearchProvider(deps = {}) {
     }
     const classification = classificationOf(context);
 
+    // Backends por API vêm PRIMEIRO: scraping de HTML de terceiros estava
+    // inoperante e frágil (ver `apiSearchBackend.js`). Um provider só entra aqui
+    // quando a chave existe; sem chave, a lista é exatamente a de antes.
+    const apiBackends = listConfiguredApiBackends(env).map((api) => {
+      const request = buildApiSearchRequest({
+        providerId: api.id,
+        env,
+        query,
+        count: API_SEARCH_RESULT_LIMIT,
+      });
+      return {
+        name: api.id,
+        kind: 'api',
+        url: request.url,
+        headers: request.headers,
+        parse: (content) => parseApiSearchResponse({ providerId: api.id, body: content }),
+      };
+    });
+
     const backends = [
+      ...apiBackends,
       {
         name: 'duckduckgo',
+        kind: 'scrape',
         url: `${options.searchEndpoint}?q=${encodeURIComponent(query)}`,
         parse: parseSearchResults,
       },
       {
         name: 'bing',
+        kind: 'scrape',
         url: `${options.bingSearchEndpoint}?q=${encodeURIComponent(query)}`,
         parse: parseBingResults,
       },
