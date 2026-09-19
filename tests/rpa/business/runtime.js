@@ -2647,6 +2647,48 @@ async function runFlowScenario(definition, ctx) {
     };
   }
 
+  if (definition.code === 'CORE-BIZ-CALENDAR-BLOCK') {
+    // Bloqueio de agenda de um recurso: criar -> aparecer na agenda -> remover
+    // -> sumir. O recurso é resolvido pela PRÓPRIA API (`/api/calendar/me`), não
+    // por id fixo: o cenário não depende de dado semeado. Contrato sondado em
+    // 2026-09-19 (POST devolve 201 `{ item }`; a listagem usa `items`).
+    const me = await api.get('/api/calendar/me');
+    const resourceId = me?.resourceId;
+    if (!resourceId) throw new Error('Agenda do usuario sem resourceId');
+
+    const startAt = new Date(Date.now() + 86400000).toISOString();
+    const endAt = new Date(Date.now() + 90000000).toISOString();
+    const created = await api.post(`/api/calendar/resource/${encodeURIComponent(resourceId)}/blocks`, {
+      title: 'Bloqueio QA',
+      startAt,
+      endAt,
+      reason: `business:${definition.code}:${runId}`,
+    });
+    const block = created?.item;
+    if (!block?.id) throw new Error('Bloqueio nao retornou id');
+    if (block.type !== 'block') throw new Error(`Item criado nao e bloqueio: ${block.type}`);
+    if (block.startAt !== startAt) {
+      throw new Error(`startAt nao respeitado: ${block.startAt} != ${startAt}`);
+    }
+
+    const listed = await api.get(`/api/calendar/resource/${encodeURIComponent(resourceId)}`);
+    if (!(listed?.items || []).some((item) => item.id === block.id)) {
+      throw new Error('Bloqueio nao apareceu na agenda do recurso');
+    }
+
+    await api.del(`/api/calendar/resource/${encodeURIComponent(resourceId)}/blocks/${encodeURIComponent(block.id)}`);
+    const afterDelete = await api.get(`/api/calendar/resource/${encodeURIComponent(resourceId)}`);
+    if ((afterDelete?.items || []).some((item) => item.id === block.id)) {
+      throw new Error('Bloqueio nao foi removido da agenda');
+    }
+
+    return {
+      detail: 'Bloqueio de agenda criado, listado e removido',
+      ids: { resourceId, blockId: block.id },
+      evidence: { type: block.type, startAt: block.startAt, removed: true },
+    };
+  }
+
   if (definition.code === 'CORE-BIZ-PROJECTS') {
     const created = await api.post('/projects', {
       name: `Projeto QA ${runId}`,

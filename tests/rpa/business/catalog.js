@@ -1730,6 +1730,22 @@ const FLOW_SCENARIOS = [
     validations: { requireBackendValidation: true },
   },
   {
+    code: 'CORE-BIZ-CALENDAR-BLOCK',
+    journey: 'calendar',
+    name: 'Core agenda: bloqueio de recurso criado, listado e removido',
+    vertical: 'core',
+    type: 'flow',
+    criticality: 'high',
+    preconditions: ['Tenant autenticado', 'Agenda do usuario resolvivel pela API'],
+    assertions: [
+      'Bloqueio criado como item do tipo block com o startAt pedido',
+      'Bloqueio presente na agenda do recurso',
+      'Bloqueio removido e ausente da agenda',
+    ],
+    integrations: ['calendar-service', 'api'],
+    validations: { requireBackendValidation: true },
+  },
+  {
     code: 'CORE-BIZ-PROJECTS',
     journey: 'projects',
     name: 'Core projetos: projeto criado com item, item concluído e dashboard consistente',
