@@ -130,7 +130,7 @@ function evaluatePersistedFinding(row, context) {
   return { codes: [...integrity, ...policy], integrity, policy };
 }
 
-/** Verticais que DECLARAM certificação (mesmo claim de sufficiency) + seus benchmarks. */
+/** Verticais que DECLARAM certificação + benchmarks + holdout declarado. */
 function loadCertifiedSamples() {
   if (!fs.existsSync(SAMPLES_DIR)) return [];
   const certified = [];
@@ -141,7 +141,8 @@ function loadCertifiedSamples() {
       const benchmarkIds = (Array.isArray(doc.benchmarks) ? doc.benchmarks : [])
         .map((b) => (isNonEmptyString(b?.id) ? String(b.id).trim() : null))
         .filter(Boolean);
-      certified.push({ vertical: doc.vertical, file: name, benchmarkIds });
+      const holdoutId = isNonEmptyString(doc.holdout?.id) ? String(doc.holdout.id).trim() : null;
+      certified.push({ vertical: doc.vertical, file: name, benchmarkIds, holdoutId });
     } catch (_) {
       // amostra malformada é responsabilidade do gate de sufficiency
     }
@@ -234,6 +235,21 @@ function buildReport({ corpus, certifiedSamples, currentVersion }) {
     for (const benchmarkId of sample.benchmarkIds) {
       const runId = resolveSupportingRunId(benchmarkId, runsAsc, findingsByRun);
       if (!runId) {
+        // O HOLDOUT é o INSTRUMENTO de medição de generalização: ele tem de
+        // ficar intocado até a saturação aparente (ordem protegida pelo
+        // serviço — assertHoldoutNotAnalyzedEarly). "Sem achados" aqui não é
+        // lacuna, é o desenho. A isenção é EXPLÍCITA e publicada no relatório,
+        // nunca silenciosa: uma isenção muda deixa de ser auditável.
+        const isUndeclaredHoldout = sample.holdoutId && String(benchmarkId) === String(sample.holdoutId);
+        if (isUndeclaredHoldout) {
+          supportingDetail.push({
+            vertical: sample.vertical,
+            benchmarkId,
+            supportingRunId: null,
+            exempt: 'holdout_not_analyzed_before_saturation',
+          });
+          continue;
+        }
         violations.push({
           code: CODES.CERTIFIED_WITHOUT_RUNS,
           vertical: sample.vertical,
@@ -241,6 +257,8 @@ function buildReport({ corpus, certifiedSamples, currentVersion }) {
         });
         continue;
       }
+      // Holdout ANALISADO entra na política normalmente: se existir corpus do
+      // holdout, ele sustenta a afirmação e é auditado como qualquer outro.
       certifiedRuns.add(runId);
       supportingDetail.push({ vertical: sample.vertical, benchmarkId, supportingRunId: runId });
     }

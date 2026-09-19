@@ -220,6 +220,46 @@ describe('buildReport — agregação por vertical', () => {
     ]);
   });
 
+  it('o HOLDOUT não analisado é isento EXPLICITAMENTE (não é lacuna, é o desenho)', () => {
+    // O holdout é o instrumento de generalização: deve ficar intocado até a
+    // saturação aparente. Sem a isenção, o gate acusaria um estado BY DESIGN
+    // como certificação sem corpus — falso positivo real, medido em 2026-09-19
+    // (wellable.co em fitness.json).
+    const result = buildReport({
+      corpus: { runs: [{ id: RUN_ID, vertical: 'fitness' }], evidenceIds: new Set([EVIDENCE_ID]), findings: [] },
+      certifiedSamples: [{ vertical: 'fitness', benchmarkIds: ['wellable.co'], holdoutId: 'wellable.co' }],
+      currentVersion: CURRENT,
+    });
+    expect(result.violations).toEqual([]);
+    // Isenção auditável: aparece no relatório, com motivo, em vez de sumir.
+    expect(result.supportingDetail).toEqual([
+      { vertical: 'fitness', benchmarkId: 'wellable.co', supportingRunId: null, exempt: 'holdout_not_analyzed_before_saturation' },
+    ]);
+  });
+
+  it('benchmark comum sem achados CONTINUA sendo violação (isenção não é geral)', () => {
+    const result = buildReport({
+      corpus: { runs: [{ id: RUN_ID, vertical: 'fitness' }], evidenceIds: new Set([EVIDENCE_ID]), findings: [] },
+      certifiedSamples: [{ vertical: 'fitness', benchmarkIds: ['wellhub'], holdoutId: 'wellable.co' }],
+      currentVersion: CURRENT,
+    });
+    expect(result.violations.map((v) => v.code)).toContain(CODES.CERTIFIED_WITHOUT_RUNS);
+  });
+
+  it('holdout JÁ analisado entra na política como qualquer benchmark', () => {
+    const result = buildReport({
+      corpus: { runs: [{ id: RUN_ID, vertical: 'fitness' }], evidenceIds: new Set([EVIDENCE_ID]), findings: [finding({ id: 'f-h', benchmark_id: 'wellable.co' })] },
+      certifiedSamples: [{ vertical: 'fitness', benchmarkIds: ['wellable.co'], holdoutId: 'wellable.co' }],
+      currentVersion: CURRENT,
+    });
+    expect(result.violations).toEqual([]);
+    expect(result.supportingDetail[0]).toEqual({
+      vertical: 'fitness',
+      benchmarkId: 'wellable.co',
+      supportingRunId: RUN_ID,
+    });
+  });
+
   it('explica o corpus por vertical em vez de só dizer PASS', () => {
     const { perVertical, violations } = buildReport({
       corpus,
