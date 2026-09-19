@@ -78,8 +78,12 @@ describe('nativeResearchProvider.search — DuckDuckGo (backend primário)', () 
   });
 
   test('respeita o teto de resultados', async () => {
+    // Os títulos citam a query de propósito: o que está sob teste aqui é o TETO
+    // de resultados. Títulos sem relação com a query viraram um caso próprio
+    // (`search_results_unrelated_to_query`), coberto em
+    // `searchResultRelevance.test.js`.
     const many = Array.from({ length: 15 }, (_, index) => (
-      `<a class="result__a" href="https://site${index}.example.com/">Resultado ${index}</a>`
+      `<a class="result__a" href="https://site${index}.example.com/">Fitness software ${index}</a>`
     )).join('\n');
     const { provider } = buildProvider({ ddg: { status: 200, body: many }, bing: null });
     const output = await provider.search({ query: 'fitness software' });

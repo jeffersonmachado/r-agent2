@@ -196,6 +196,79 @@ const MAX_LINE_LENGTH = 400;
  *   (loopback/privado/metadata bloqueados, https obrigatório). Reservado a
  *   harnesses de teste — produção nunca o define.
  */
+/**
+ * Termos que aparecem em quase toda query de mercado e por isso não provam que o
+ * buscador RESPONDEU à pergunta. "software" casando com "software house" não diz
+ * nada; "bakery" casando com "bakery" diz.
+ */
+const QUERY_STOPWORDS = new Set([
+  'software', 'system', 'systems', 'sistema', 'sistemas', 'app', 'apps', 'application',
+  'platform', 'plataforma', 'tool', 'tools', 'ferramenta', 'ferramentas',
+  'management', 'manager', 'gestao', 'gestion', 'manage', 'managing',
+  'solution', 'solutions', 'solucao', 'servico', 'servicos',
+  'service', 'services', 'online', 'web', 'best', 'top', 'melhor', 'melhores',
+  'free', 'gratis', 'para', 'com', 'the', 'and', 'for', 'with', 'your', 'you',
+  'de', 'da', 'do', 'dos', 'das', 'uma', 'como', 'que', 'por',
+]);
+
+/** Radical curto: casa "bakery" com "bakeries" sem casar "bakery" com "electrician". */
+function stemOf(token) {
+  return token.slice(0, Math.min(5, token.length));
+}
+
+function tokenizeText(text) {
+  return String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 4);
+}
+
+/**
+ * O conjunto de resultados RESPONDE à query? Puro e determinístico.
+ *
+ * Um backend que devolve HTTP 200 com conteúdo alheio à query não é um
+ * resultado vazio: é um backend quebrado. Aceitá-lo faz o lixo entrar como
+ * candidato e a falha só aparecer muito depois — foi exatamente o defeito que
+ * travou a vertical `bakery`: 23 candidatos, todos sem um único termo de
+ * categoria, causa real = página sem relação com a busca (medido 2026-09-19).
+ *
+ * Regra deliberadamente CONSERVADORA: só recusa quando NENHUM candidato
+ * compartilha radical com NENHUM termo significativo da query. Um único acerto
+ * basta para aceitar o backend (o veredito de relevância de mercado é de outra
+ * camada, não desta). Se a query não tem termo significativo, não há como
+ * decidir e o backend é aceito — recusar por ambiguidade seria forçar verde.
+ *
+ * @param {string} query
+ * @param {Array<{title?: string, url?: string, snippet?: string}>} candidates
+ * @returns {{unrelated: boolean, decidable: boolean, matched: number, evaluated: number, terms: string[], sample: string[]}}
+ */
+function assessSearchResultRelevance(query, candidates = []) {
+  const evaluated = candidates.length;
+  const terms = [...new Set(tokenizeText(query))].filter((t) => !QUERY_STOPWORDS.has(t));
+  const stems = [...new Set(terms.map(stemOf))];
+
+  if (stems.length === 0 || evaluated === 0) {
+    return { unrelated: false, decidable: false, matched: 0, evaluated, terms, sample: [] };
+  }
+
+  const sample = [];
+  let matched = 0;
+  for (const candidate of candidates) {
+    const hayTokens = [candidate.title, candidate.url, candidate.snippet]
+      .map(tokenizeText)
+      .flat();
+    const hit = hayTokens.some((t) => stems.includes(stemOf(t)));
+    if (hit) {
+      matched += 1;
+      if (sample.length < 3) sample.push(candidate.url || candidate.title || null);
+    }
+  }
+
+  return { unrelated: matched === 0, decidable: true, matched, evaluated, terms, sample };
+}
+
 function createNativeResearchProvider(deps = {}) {
   const options = { ...DEFAULTS, ...(deps.options || {}) };
   const endpointPolicyOverrides = options.endpointPolicy && typeof options.endpointPolicy === 'object'
@@ -423,10 +496,20 @@ function createNativeResearchProvider(deps = {}) {
   // research.search — DuckDuckGo HTML primeiro, Bing como FALLBACK.
   //
   // O DuckDuckGo responde 202 (anomaly check) a IPs de datacenter; o Bing
-  // atende com resultados reais em blocos `<li class="b_algo">` cujos links são
+  // atende com resultados em blocos `<li class="b_algo">` cujos links são
   // redirects `bing.com/ck/a?...&u=a1<base64url(destino)>`. Ambos passam pelo
   // MESMO guarded fetch (política de endpoint, timeout, teto de bytes). Se os
   // dois falham, o resultado é vazio HONESTO com o motivo dos dois backends.
+  //
+  // MEDIDO EM 2026-09-19 (não repetir a suposição): o Bing devolvia HTTP 200
+  // com conteúdo ALHEIO à query — "bakery management software" retornou
+  // eletricistas de Summerville/SC em uma chamada e "When I Work" em outra, e
+  // um fetch CRU (sem esta camada) do mesmo URL trouxe uma tela de login do
+  // Google. HTTP 200 com página sem resultados é o pior modo de falha: parece
+  // sucesso, então o lixo entra como candidato. Por isso `searchRunner` valida
+  // a relevância do conjunto antes de aceitar um backend (ver
+  // `assessSearchResultRelevance`). O DuckDuckGo, por sua vez, falhava no
+  // transporte (`research_fetch_failed`) desta rede.
   // -------------------------------------------------------------------------
 
   function decodeResultUrl(href) {
@@ -559,7 +642,22 @@ function createNativeResearchProvider(deps = {}) {
     for (const backend of backends) {
       const attempt = await trySearchBackend({ ...backend, classification });
       if (attempt.candidates.length > 0) {
-        return { query, candidates: attempt.candidates, backend: backend.name, retrievedAt: isoNow() };
+        // HTTP 200 com página alheia à query NÃO é sucesso (medido 2026-09-19).
+        const relevance = assessSearchResultRelevance(query, attempt.candidates);
+        if (relevance.unrelated) {
+          reasons.push(
+            `${backend.name}: search_results_unrelated_to_query ` +
+            `(0/${relevance.evaluated} casam ${relevance.terms.join('|')})`
+          );
+          continue;
+        }
+        return {
+          query,
+          candidates: attempt.candidates,
+          backend: backend.name,
+          retrievedAt: isoNow(),
+          queryRelevance: { matched: relevance.matched, evaluated: relevance.evaluated, terms: relevance.terms },
+        };
       }
       reasons.push(attempt.reason);
     }
@@ -857,5 +955,6 @@ function createNativeResearchProvider(deps = {}) {
 
 module.exports = {
   RESEARCH_PROVIDER_ERROR_CODES,
+  assessSearchResultRelevance,
   createNativeResearchProvider,
 };

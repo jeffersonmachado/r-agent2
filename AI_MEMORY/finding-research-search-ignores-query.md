@@ -67,3 +67,48 @@ Não é um defeito de configuração de vertical. É do **backend de busca**.
    `mcp_call_failed: research_inspect_documentation: fetch failed`. O backend
    parece instável — verificar se houve mudança entre as execuções.
 3. Só depois reprocessar as verticais.
+
+## Medição decisiva (2026-09-19) — causa raiz confirmada, hipóteses encerradas
+
+Três medições independentes, cada uma isolando uma camada:
+
+| Medição | Resultado | Conclusão |
+|---|---|---|
+| `searchRaw` DDG isolado (código real, Bing apontado p/ endpoint morto) | `n=0`, `reason: duckduckgo: research_fetch_failed` | DDG **inalcançável** desta rede (falha de transporte, não de parsing) |
+| `searchRaw` Bing isolado (DDG apontado p/ endpoint morto) | `n=10` de conteúdo alheio | Bing responde 200 com página **sem relação com a query** |
+| **fetch cru** do mesmo URL, sem nossa camada | HTTP 200, 122699 bytes, `<h2>` = `Gmail - Email from Google`, `Sign in - Google Accounts`, `Connexion : comptes Google` | **não é nosso parser nem nossa URL** — o HTML cru já não tem resultados |
+
+Não-determinismo provado: a MESMA query `bakery management software` retornou
+`eletricistas de Summerville/SC` numa chamada e `When I Work` (software de
+escalas) em outra. Nenhuma das duas tem relação com padaria.
+
+### Correção aplicada
+
+`assessSearchResultRelevance(query, candidates)` (pura, em
+`api/services/research/nativeResearchProvider.js`, exportada): recusa o conjunto
+de um backend quando NENHUM candidato compartilha radical com NENHUM termo
+significativo da query. `searchRunner` passa a cair para o próximo backend com o
+motivo nominal `<backend>: search_results_unrelated_to_query (0/N casam ...)` em
+vez de aceitar lixo.
+
+Antes: `n=10` de eletricistas → 23 candidatos sem um único termo de categoria →
+rejeição em massa → 400 genérico no handoff.
+Depois: `n=0` com `bing: search_results_unrelated_to_query (0/10 casam bakery)`.
+
+Deliberadamente conservadora (um único acerto aceita o backend; query sem termo
+significativo não decide e não recusa) — recusar por ambiguidade seria forçar
+verde.
+
+### O que NÃO está resolvido
+
+A busca em si continua inoperante nesta rede: DDG falha no transporte e o Bing
+devolve página alheia. A correção torna a falha **honesta e localizada na causa**
+(zero candidatos + motivo nominal) em vez de silenciosa (lixo virando candidato).
+Restaurar a capacidade exige outro backend (API paga ou scraper alternativo) —
+decisão do dono do produto, com custo, e por isso não tomada unilateralmente.
+
+### Correção de documentação
+
+O comentário de `nativeResearchProvider.js` afirmava que "o Bing atende com
+resultados reais em blocos `<li class="b_algo">`". Falso no estado medido; o
+comentário foi corrigido com a medição.
