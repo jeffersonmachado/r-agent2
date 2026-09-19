@@ -39,6 +39,33 @@ const QA_MESH_GO_NO_GO_PATH = process.env.QA_MESH_GO_NO_GO_PATH || path.join(__d
 const QA_MESH_RELEASE_GATE_PATH = process.env.QA_MESH_RELEASE_GATE_PATH || path.join(__dirname, 'release-gate-report.json');
 const QA_MESH_CANONICAL_LOCK_PATH = process.env.QA_MESH_CANONICAL_LOCK_PATH || path.join(__dirname, 'canonical.lock.json');
 
+/**
+ * Lineage de execucao — resolvido NA ORIGEM, antes de executar.
+ *
+ * O run governado e fixado pelo orquestrador (release-seal/convergencia) e
+ * injetado por env. Este runner NAO descobre o run depois: um relatorio de QA
+ * so e prova do run que o EXECUTOU. Adotar o run mais recente a posteriori
+ * transforma evidencia antiga em "evidencia" de um run onde nada rodou
+ * (scripts/governance/stamp-report-lineage.js recusa esse caminho e
+ * scripts/governance/validate-qa-evidence-same-run.js reprova).
+ *
+ * Ausente => null explicito. Nao inventamos identidade: o gate reprova
+ * QA_EVIDENCE_LINEAGE_MISSING, que e o resultado honesto para execucao fora de
+ * run governado (ex.: `npm run qa:mesh` local).
+ */
+function resolveOriginLineage() {
+  const read = (name) => {
+    const value = process.env[name];
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+  };
+  return {
+    runId: read('GOVERNANCE_RUN_ID'),
+    sourceFingerprint: read('GOVERNANCE_SOURCE_FINGERPRINT'),
+    sourceCommit: read('GOVERNANCE_SOURCE_COMMIT'),
+    sourceTree: read('GOVERNANCE_SOURCE_TREE'),
+  };
+}
+
 // Configuracoes de auto-limpeza do ambiente
 const MAX_HISTORY_FILES = parseInt(process.env.QA_MESH_MAX_HISTORY || '5', 10);
 const MAX_EVIDENCE_DIRS = parseInt(process.env.QA_MESH_MAX_EVIDENCE || '5', 10);
@@ -2465,6 +2492,7 @@ async function runMeshInner(options = {}, tenantId = 'system') {
       reasons: summary.reasons,
       canonicalPromotion,
       totals: summary,
+      ...resolveOriginLineage(),
       generatedAt: nowIso(),
     });
     writeJson(QA_MESH_RELEASE_GATE_PATH, {
@@ -2478,6 +2506,7 @@ async function runMeshInner(options = {}, tenantId = 'system') {
       totals: summary,
       reasons: summary.reasons,
       canonicalPromotion,
+      ...resolveOriginLineage(),
       generatedAt: nowIso(),
     });
   }

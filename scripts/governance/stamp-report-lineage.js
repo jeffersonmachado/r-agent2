@@ -16,7 +16,36 @@ const path = require('path');
 const { connect, close } = require('../../api/db/sequelize');
 const getRun = require('../../api/db/models/GovernanceRun');
 
+/**
+ * RUNTIME_EVIDENCE não pode receber lineage retroativo.
+ *
+ * DEFEITO CORRIGIDO (2026-09-19): este script estampava
+ * `qa-mesh/go-no-go-report.json`, PRESERVANDO o `generatedAt` original e
+ * anexando `runId`/`sourceFingerprint` do run mais recente. Um relatório
+ * produzido às 10:46 passou a reivindicar o run criado às 20:18 — o engine de
+ * certificação aceitava como prova daquele run algo que ele NUNCA executou.
+ * É pior que não ter lineage, porque elimina a dúvida sem criar a prova.
+ *
+ * A lista canônica vive em `config/runtime-evidence-artifacts.json`, via o
+ * módulo puro `scripts/governance/lib/runtime-evidence-artifacts.js` — a MESMA
+ * fonte usada pelo validador `validate-qa-evidence-same-run.js`.
+ */
+const {
+  REASONS,
+  isRuntimeEvidenceArtifact,
+} = require('./lib/runtime-evidence-artifacts');
+
 function stamp(relativePath, run) {
+  // Fail-closed: artefato de execução exige lineage NA ORIGEM (o produtor
+  // recebe runId/sourceFingerprint ANTES de executar). Estampar aqui seria
+  // adotar retroativamente a prova de um run no qual nada foi executado.
+  if (isRuntimeEvidenceArtifact(relativePath)) {
+    return {
+      path: relativePath,
+      stamped: false,
+      reason: REASONS.RUNTIME_EVIDENCE_REQUIRES_ORIGIN_LINEAGE,
+    };
+  }
   const abs = path.join(process.cwd(), relativePath);
   if (!fs.existsSync(abs)) return { path: relativePath, stamped: false, reason: 'missing' };
   let report;
@@ -101,8 +130,9 @@ async function main() {
       'reports/privacy-retention-report.json',
       'reports/billing-entitlement-report.json',
       'reports/webhook-replay-protection-report.json',
-      'qa-mesh/go-no-go-report.json',
-      'qa/enterprise/pbx-voice-flow-prod-like.json',
+      // NÃO incluir artefatos de RUNTIME_EVIDENCE aqui (qa-mesh/go-no-go-report.json,
+      // qa/enterprise/*): eles exigem lineage NA ORIGEM e são recusados pela
+      // guarda acima. Ver config/runtime-evidence-artifacts.json.
       'governance/package-validation-report.json',
       'governance/package-integrity-report.json',
       // DAG do release, identidade do artefato entregue e montagem de routers:
@@ -126,4 +156,8 @@ async function main() {
   console.log(JSON.stringify({ runId: run.run_id, results }));
 }
 
-main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => close().catch(() => {}));
+if (require.main === module) {
+  main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => close().catch(() => {}));
+}
+
+module.exports = { stamp };

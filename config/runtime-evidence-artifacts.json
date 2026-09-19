@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "_description": "Classificação canônica de artefatos por MODO DE PRODUÇÃO. Existe para impedir a adoção retroativa de lineage: um artefato de RUNTIME_EVIDENCE é o resultado da EXECUÇÃO de algo (mesh, smoke, replay) e só é prova do run em que foi executado. Ele NUNCA pode receber runId/sourceFingerprint de um run posterior (scripts/governance/stamp-report-lineage.js) — isso transforma evidência de 10:46 em 'evidência' de um run de 20:18.",
+  "_rule": "RUNTIME_EVIDENCE exige lineage NA ORIGEM (o produtor recebe runId/sourceFingerprint ANTES de executar). DERIVED_REPORT é recomputável a partir do source atual por um validador determinístico; ainda assim só vale para o run se o validador foi executado nesse run.",
+  "modes": {
+    "RUNTIME_EVIDENCE": {
+      "description": "Resultado de execução real (mesh, smoke prod-like, replay). Não recomputável por leitura do source. Lineage obrigatório na origem + prova temporal de execução dentro do run.",
+      "requires": [
+        "runId",
+        "sourceFingerprint",
+        "generatedAt"
+      ],
+      "sameRunProof": "generatedAt >= governanceRun.startedAt",
+      "artifacts": [
+        "qa-mesh/go-no-go-report.json",
+        "qa-mesh/release-gate-report.json",
+        "qa-mesh/intelligence/latest.json",
+        "qa/enterprise/pbx-voice-flow-prod-like.json",
+        "qa/enterprise/human-handoff-full-validation.json",
+        "qa/enterprise/omnichannel-unified-replay.json"
+      ]
+    },
+    "DERIVED_REPORT": {
+      "description": "Recomputável do source atual por validador determinístico. O valor de verdade vem de reexecutar o validador no run; o stamp só é aceitável quando o validador FOI executado no run.",
+      "requires": [
+        "runId",
+        "sourceFingerprint",
+        "generatedAt"
+      ],
+      "artifacts": [
+        "reports/coverage-gate-report.json",
+        "reports/coverage-completeness-report.json",
+        "reports/api-surface-report.json",
+        "reports/page-surface-report.json",
+        "reports/visibility-policy-report.json",
+        "reports/experience-segregation-report.json",
+        "reports/db-integrity-report.json",
+        "reports/tenant-isolation-report.json",
+        "reports/release-dag-report.json",
+        "reports/release-artifact-identity-report.json",
+        "reports/route-mount-report.json"
+      ]
+    }
+  }
+}
