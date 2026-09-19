@@ -62,6 +62,7 @@ const {
 } = require('./benchmarkResearchSemantics');
 
 const { SEMANTIC_STATUS } = require('./semantic/semanticExtractor');
+const { buildSemanticVersionRecord } = require('./semantic/semanticPipelineVersion');
 
 /**
  * Política de suficiência versionada — define quais tiers contam como prova.
@@ -356,6 +357,13 @@ function createBenchmarkResearchService({ store, now } = {}) {
         normalizedId: normalizedId || null,
         contentHash: boundContentHash,
         axis: axisForKind(normalizedKind),
+        // Versão do pipeline semântico que PRODUZIU este achado. Sem ela, um
+        // achado antigo continua certificando a vertical depois de a regra
+        // mudar — o significado dele foi reescrito em silêncio. Derivada do
+        // conteúdo dos módulos (nunca de timestamp/commit); gravada em
+        // metadata porque `benchmark_research_findings` mapeia colunas fixas e
+        // descartaria qualquer campo não declarado.
+        ...buildSemanticVersionRecord(),
       },
     });
 

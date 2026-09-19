@@ -41,6 +41,7 @@ const {
   resolveFindingOrigin,
 } = require('./benchmarkResearchSemantics');
 const { runNormalizationPipeline, mergePipelineMetrics, SEMANTIC_STATUS } = require('./semantic/normalizationPipeline');
+const { buildSemanticVersionRecord } = require('./semantic/semanticPipelineVersion');
 
 const AXIS_TO_INSPECTION_FIELD = Object.freeze({
   [RESEARCH_AXES.CAPABILITY]: 'capabilities',
@@ -122,6 +123,12 @@ function extractInspectionFindings({
   });
   rejected.push(...pipeline.rejected);
 
+  // Versão do pipeline que PRODUZIU estes achados. Sem ela, um achado antigo
+  // continua certificando a vertical depois de a regra mudar — o significado
+  // dele foi reescrito em silêncio. Derivada do conteúdo dos módulos, nunca de
+  // timestamp (ver semantic/semanticPipelineVersion.js).
+  const semanticLineage = buildSemanticVersionRecord();
+
   const findings = pipeline.candidates.map((candidate) => ({
     vertical,
     benchmarkId,
@@ -149,6 +156,7 @@ function extractInspectionFindings({
     structuredRule: candidate.structuredRule || null,
     clusterId: candidate.clusterId,
     normalizationRationale: candidate.normalizationRationale,
+    ...semanticLineage,
   }));
 
   const unresolved = pipeline.unresolved.map((candidate) => ({
@@ -173,6 +181,7 @@ function extractInspectionFindings({
     structuredRule: null,
     clusterId: null,
     normalizationRationale: candidate.normalizationRationale,
+    ...semanticLineage,
   }));
 
   const perAxis = {};
