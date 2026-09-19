@@ -34,6 +34,7 @@
  */
 
 const { execFileSync } = require('child_process');
+const net = require('net');
 const fs = require('fs');
 const path = require('path');
 
@@ -63,6 +64,7 @@ const CODES = Object.freeze({
   API_UNREACHABLE: 'MCP_E2E_API_TO_MCP_UNREACHABLE',
   EGRESS_BROKEN: 'MCP_E2E_EGRESS_UNREACHABLE',
   OPERATIONAL_LEAK: 'MCP_E2E_OPERATIONAL_LEAK',
+  LEGACY_CREDENTIAL_ACCEPTED: 'MCP_E2E_AMI_LEGACY_CREDENTIAL_ACCEPTED',
   RESTART_FAILED: 'MCP_E2E_RESTART_FAILED',
   MCP_PROTOCOL_INVALID: 'MCP_E2E_PROTOCOL_INVALID',
 });
@@ -116,6 +118,46 @@ function execIn(command, timeout = 25000) {
  * o resultado é `unknown` — e desconhecido NUNCA conta como aprovado, porque
  * "não consegui medir" não é o mesmo que "está isolado".
  */
+/**
+ * Tenta autenticar no AMI com a credencial que já esteve versionada no
+ * repositório.
+ *
+ * POR QUE ESTE CHECK EXISTE (defeito de processo, não de código):
+ * Em 2026-09-19 eu commitei um mecanismo de injeção do segredo e verifiquei só
+ * que o SEGREDO NOVO funcionava. A ACL tinha ficado INERTE e eu não percebi —
+ * só descobri porque apontei `permit` para um endereço impossível e TODAS as
+ * origens continuaram recebendo resposta. Ou seja: o caminho felizinho passou e
+ * a proteção não existia.
+ *
+ * Este check é o critério de aceite durável que faltava: a credencial antiga,
+ * que esteve publicada, NÃO pode autenticar — em nenhuma origem, com nenhuma
+ * ACL. Se ela autentica, o segredo não foi efetivamente trocado, ou a ACL que
+ * deveria barrá-la não está em vigor. Qualquer um dos dois é falha.
+ */
+async function checkLegacyAmiCredential() {
+  const host = process.env.RAP_E2E_AMI_HOST || '127.0.0.1';
+  const port = Number(process.env.RAP_E2E_AMI_PORT || 5038);
+  const legacy = process.env.RAP_E2E_AMI_LEGACY_SECRET || 'ragent2';
+
+  return await new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+    let buffer = '';
+    const done = (result) => { try { socket.destroy(); } catch (_) {} resolve(result); };
+    socket.setTimeout(6000);
+    socket.on('connect', () => {
+      socket.write(`Action: Login\r\nUsername: ragent2\r\nSecret: ${legacy}\r\n\r\n`);
+    });
+    socket.on('data', (chunk) => {
+      buffer += chunk.toString('utf8');
+      if (/Authentication (accepted|failed)/i.test(buffer)) {
+        done({ reachable: true, accepted: /Authentication accepted/i.test(buffer), host, port });
+      }
+    });
+    socket.on('timeout', () => done({ reachable: true, accepted: false, host, port, note: 'timeout' }));
+    socket.on('error', () => done({ reachable: false, accepted: false, host, port }));
+  });
+}
+
 function tcpProbe(host, port) {
   const result = execIn(`(nc -z -w 3 ${host} ${port} && echo OPEN) || echo CLOSED`);
   if (!result.ok) return 'unknown';
@@ -312,6 +354,18 @@ async function main() {
     }
   }
 
+  // 8b. A credencial LEGADA não pode autenticar. Ver o comentário de
+  // checkLegacyAmiCredential: este é o critério que pega ACL inerte, que uma
+  // verificação de caminho felizinho não pega.
+  const legacyCredential = await checkLegacyAmiCredential();
+  checks.legacyCredential = legacyCredential;
+  if (legacyCredential.reachable && legacyCredential.accepted) {
+    violations.push({
+      code: CODES.LEGACY_CREDENTIAL_ACCEPTED,
+      detail: `a credencial do repositório autenticou no AMI em ${legacyCredential.host}:${legacyCredential.port} — o segredo não foi efetivamente trocado, ou a ACL que deveria barrá-la está inerte`,
+    });
+  }
+
   // 9. Restart (opcional: caro e indisponível em CI)
   if (process.argv.includes('--with-restart')) {
     try {
@@ -355,4 +409,4 @@ if (require.main === module) {
   main().catch((error) => { console.error(error); process.exitCode = 1; });
 }
 
-module.exports = { CODES, OPERATIONAL_TARGETS, tcpProbe, probeMcpFromNetwork };
+module.exports = { CODES, OPERATIONAL_TARGETS, tcpProbe, probeMcpFromNetwork, checkLegacyAmiCredential };
