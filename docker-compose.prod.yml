@@ -361,7 +361,17 @@ services:
       - r-agent2-pbx-recordings-data:/var/spool/asterisk/monitor/pbx
     command: sh -c "asterisk -f -vvvvv -d"
     ports:
-      - "${AMI_PUBLIC_PORT:-5038}:5038"
+      # AMI é protocolo de CONTROLE (originar chamadas, ler CDR). Publicá-lo em
+      # 0.0.0.0 o expõe a TODOS os containers do host pelo gateway docker0 —
+      # medido em 2026-09-19: o container de pesquisa do MCP alcançava
+      # 172.17.0.1:5038 e recebia "Asterisk Call Manager/7.0.3", mesmo com a
+      # rede interna dele já isolada. A plataforma não depende dessa publicação:
+      # o cliente AMI usa `AMI_HOST: asterisk` pela rede do compose.
+      #
+      # Default 127.0.0.1 = fail-closed: o AMI só existe no loopback do host.
+      # Expor além disso passa a ser decisão EXPLÍCITA e revisável
+      # (AMI_PUBLIC_BIND), não acidente de default.
+      - "${AMI_PUBLIC_BIND:-127.0.0.1}:${AMI_PUBLIC_PORT:-5038}:5038"
       - "${SIP_UDP_PORT:-5060}:5060/udp"
     restart: unless-stopped
     logging: *default-logging
