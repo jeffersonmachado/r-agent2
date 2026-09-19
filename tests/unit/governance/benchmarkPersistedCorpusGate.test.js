@@ -18,7 +18,8 @@ const {
   INTEGRITY_CODES,
   CERTIFICATION_CLAIM,
   evaluatePersistedFinding,
-  loadCertifiedVerticals,
+  loadCertifiedSamples,
+  resolveSupportingRunId,
   buildReport,
 } = require('../../../scripts/governance/validate-benchmark-persisted-corpus');
 const {
@@ -44,6 +45,7 @@ function finding(overrides = {}) {
   return {
     id: 'f-1',
     run_id: RUN_ID,
+    benchmark_id: 'benchmark-x',
     evidence_id: EVIDENCE_ID,
     verification_state: 'VERIFIED_OFFICIAL',
     metadata: {
@@ -135,6 +137,34 @@ describe('política — só para vertical certificada', () => {
   });
 });
 
+describe('resolveSupportingRunId — ABS-14: o último run que CONTÉM o benchmark', () => {
+  const runsAsc = [{ id: 'r1' }, { id: 'r2' }, { id: 'r3' }];
+
+  it('escolhe o run mais recente que contém o benchmark', () => {
+    const findingsByRun = new Map([
+      ['r1', [{ benchmark_id: 'wellhub' }]],
+      ['r2', [{ benchmark_id: 'wellhub' }]],
+    ]);
+    expect(resolveSupportingRunId('wellhub', runsAsc, findingsByRun)).toBe('r2');
+  });
+
+  it('run mais recente SEM o benchmark não vira respaldo (evita falso positivo em massa)', () => {
+    // r3 é o run mais novo da vertical, mas não contém 'wellhub'. Usar "run mais
+    // recente da vertical" faria o gate auditar findings de outro escopo e
+    // acusar histórico como se fosse a afirmação atual.
+    const findingsByRun = new Map([
+      ['r1', [{ benchmark_id: 'wellhub' }]],
+      ['r3', [{ benchmark_id: 'gymdesk' }]],
+    ]);
+    expect(resolveSupportingRunId('wellhub', runsAsc, findingsByRun)).toBe('r1');
+  });
+
+  it('devolve null quando nenhum run contém o benchmark', () => {
+    const findingsByRun = new Map([['r3', [{ benchmark_id: 'outro' }]]]);
+    expect(resolveSupportingRunId('wellhub', runsAsc, findingsByRun)).toBeNull();
+  });
+});
+
 describe('buildReport — agregação por vertical', () => {
   const corpus = {
     runs: [{ id: RUN_ID, vertical: 'fitness' }],
@@ -148,16 +178,52 @@ describe('buildReport — agregação por vertical', () => {
   it('reporta a vertical certificada sem runs como certificação sem corpus', () => {
     const { violations } = buildReport({
       corpus: { runs: [], evidenceIds: new Set(), findings: [] },
-      certifiedVerticals: ['fitness'],
+      certifiedSamples: [{ vertical: 'fitness', benchmarkIds: ['wellhub'] }],
       currentVersion: CURRENT,
     });
     expect(violations.map((v) => v.code)).toContain(CODES.CERTIFIED_WITHOUT_RUNS);
   });
 
+  it('reporta benchmark certificado sem NENHUM achado persistido', () => {
+    const { violations } = buildReport({
+      corpus: { runs: [{ id: RUN_ID, vertical: 'fitness' }], evidenceIds: new Set(), findings: [] },
+      certifiedSamples: [{ vertical: 'fitness', benchmarkIds: ['wellhub'] }],
+      currentVersion: CURRENT,
+    });
+    expect(violations.map((v) => v.code)).toContain(CODES.CERTIFIED_WITHOUT_RUNS);
+  });
+
+  it('só os achados do run que RESPALDA entram na política; o resto é histórico', () => {
+    const oldRun = { id: 'run-old', vertical: 'fitness' };
+    const newRun = { id: 'run-new', vertical: 'fitness' };
+    const result = buildReport({
+      corpus: {
+        runs: [oldRun, newRun],
+        evidenceIds: new Set([EVIDENCE_ID]),
+        findings: [
+          // histórico: sem versão semântica, mas NÃO é a afirmação atual
+          finding({ id: 'f-old', run_id: 'run-old', metadata: { normalizedId: 'x', contentHash: 'a'.repeat(64) } }),
+          // respaldo real do benchmark: está completo
+          finding({ id: 'f-new', run_id: 'run-new' }),
+        ],
+      },
+      certifiedSamples: [{ vertical: 'fitness', benchmarkIds: ['benchmark-x'] }],
+      currentVersion: CURRENT,
+    });
+
+    const fitness = result.perVertical.find((entry) => entry.vertical === 'fitness');
+    expect(fitness.findings).toBe(2);
+    expect(fitness.supportingFindings).toBe(1);
+    expect(result.violations.filter((v) => v.scope === 'policy')).toEqual([]);
+    expect(result.supportingDetail).toEqual([
+      { vertical: 'fitness', benchmarkId: 'benchmark-x', supportingRunId: 'run-new' },
+    ]);
+  });
+
   it('explica o corpus por vertical em vez de só dizer PASS', () => {
     const { perVertical, violations } = buildReport({
       corpus,
-      certifiedVerticals: [],
+      certifiedSamples: [],
       currentVersion: CURRENT,
     });
     const fitness = perVertical.find((entry) => entry.vertical === 'fitness');
@@ -175,7 +241,7 @@ describe('buildReport — agregação por vertical', () => {
   it('achado cujo run não existe aparece como "(sem run)" e nunca é contado como certificado', () => {
     const { perVertical } = buildReport({
       corpus: { runs: [{ id: RUN_ID, vertical: 'fitness' }], evidenceIds: new Set([EVIDENCE_ID]), findings: [finding({ id: 'f-x', run_id: 'run-desconhecido' })] },
-      certifiedVerticals: ['fitness'],
+      certifiedSamples: [{ vertical: 'fitness', benchmarkIds: ['benchmark-x'] }],
       currentVersion: CURRENT,
     });
     const orphan = perVertical.find((entry) => entry.vertical === '(sem run)');
@@ -184,12 +250,12 @@ describe('buildReport — agregação por vertical', () => {
   });
 });
 
-describe('loadCertifiedVerticals — lê a DECLARAÇÃO real dos samples', () => {
+describe('loadCertifiedSamples — lê a DECLARAÇÃO real dos samples', () => {
   it('nenhuma vertical declara certificação hoje (estado honesto)', () => {
     // Hoje nenhum sample tem `claim: SAMPLE_SUFFICIENT`. Quando tiver, este
     // teste falha de propósito: é o sinal de que o corpus precisa ser
     // reprocessado antes de a certificação valer.
-    expect(loadCertifiedVerticals()).toEqual([]);
+    expect(loadCertifiedSamples()).toEqual([]);
     expect(CERTIFICATION_CLAIM).toBe('SAMPLE_SUFFICIENT');
   });
 });
