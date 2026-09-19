@@ -161,18 +161,41 @@ function loadSamples() {
 /**
  * Confere os achados PERSISTIDOS de uma vertical certificada.
  * Só é chamado quando existe ao menos uma vertical certificada.
+ *
+ * A vertical NÃO vive no achado: `benchmark_research_findings.benchmark_id`
+ * guarda o SUJEITO pesquisado (wellhub, tecnofit, gymdesk...), não a vertical.
+ * A vertical está no RUN (`benchmark_research_runs.vertical`). Consultar
+ * `benchmark_id = <vertical>` não encontra nada e transforma a auditoria em
+ * vacuidade silenciosa — o gate diria "0 achados, tudo certo" sem ter olhado
+ * um único achado. Por isso o caminho é achado -> run_id -> run.vertical.
  */
 async function evaluatePersistedFindings(certifiedVerticals) {
-  const result = { checked: 0, stale: 0, detail: [], dbAvailable: true };
+  const result = { checked: 0, stale: 0, detail: [], dbAvailable: true, runsScanned: 0 };
   if (certifiedVerticals.length === 0) return result;
 
   try {
     const { connect, close } = require('../../api/db/sequelize');
     const getFinding = require('../../api/db/models/BenchmarkResearchFinding');
+    const getRun = require('../../api/db/models/BenchmarkResearchRun');
+    const { Op } = require('sequelize');
     await connect();
     try {
       for (const vertical of certifiedVerticals) {
-        const rows = await getFinding().findAll({ where: { benchmark_id: vertical } });
+        const runs = await getRun().findAll({ where: { vertical } });
+        if (runs.length === 0) {
+          result.detail.push({
+            vertical,
+            findingId: null,
+            code: CODES.DB_UNAVAILABLE,
+            recorded: null,
+            note: 'vertical certificada sem run de pesquisa — certificação sem corpus',
+          });
+          continue;
+        }
+        const runIds = runs.map((run) => run.id);
+        result.runsScanned += runIds.length;
+
+        const rows = await getFinding().findAll({ where: { run_id: { [Op.in]: runIds } } });
         for (const row of rows) {
           result.checked += 1;
           const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
