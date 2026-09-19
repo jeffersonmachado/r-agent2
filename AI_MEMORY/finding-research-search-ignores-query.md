@@ -112,3 +112,44 @@ decisão do dono do produto, com custo, e por isso não tomada unilateralmente.
 O comentário de `nativeResearchProvider.js` afirmava que "o Bing atende com
 resultados reais em blocos `<li class="b_algo">`". Falso no estado medido; o
 comentário foi corrigido com a medição.
+
+## Levantamento de backends gratuitos (2026-09-19) — nenhum viável
+
+Medido com a query `bakery management software`, sem nossa camada (fetch cru):
+
+| Backend | Resultado | Veredito |
+|---|---|---|
+| `html.duckduckgo.com` / `lite.duckduckgo.com` | `fetch failed` | inalcançável (transporte) |
+| `www.bing.com` | HTTP 200, conteúdo alheio (eletricistas / login Google / "When I Work") | responde lixo |
+| `www.mojeek.com` | HTTP 403 | bloqueado |
+| `www.ecosia.org` | HTTP 403 | bloqueado |
+| `search.brave.com` | HTTP 429 | rate limited |
+| `search.yahoo.com` | HTTP 500 | indisponível |
+| `www.startpage.com` | HTTP 200, 0 ocorrências de termo da query | sem resultados |
+| `searx.be` | HTTP 200, 11 KB, 0 link externo | sem resultados |
+| `search.marginalia.nu` | HTTP 200, título ECOA a query, **2 âncoras externas** (`lite.ip2location.com` = anúncio, `creativecommons.org` = licença) | **zero resultados**, e as mesmas 2 âncoras para `gym management software` |
+| `en.wikipedia.org/w/api.php` | HTTP 200, funciona | enciclopédia — não serve para descoberta de fornecedores |
+
+Dois padrões que valem registrar:
+
+1. **Título que ecoa a query não é resultado.** O Marginalia devolve
+   `<title>bakery management software - Marginalia Search</title>` com 37 KB de
+   HTML e zero resultados. Um checador de relevância que olhasse só o TEXTO da
+   página seria enganado pelo eco da própria query — motivo pelo qual
+   `assessSearchResultRelevance` julga os **candidatos extraídos**, não a página.
+2. **Página idêntica para queries diferentes é o mesmo defeito do Bing**: as 2
+   âncoras do Marginalia são as mesmas para padaria e academia.
+
+### Consequência
+
+Não existe backend gratuito por scraping viável nesta rede. A capacidade de busca
+depende hoje **exclusivamente** de scraping de dois endpoints, ambos inoperantes,
+e **nenhum provedor por API está configurado** (não há variável de ambiente nem
+adaptador — `api/services/research/` contém apenas `nativeResearchProvider.js` e
+`governedResearchProviders.js`).
+
+Portanto o destravamento das verticais paradas (bakery, clinic, food, market,
+services) exige escolha de fornecedor com chave — decisão de custo do dono do
+produto. O que **não** falta é adaptador genérico: o `searchRunner` já tem a lista
+`backends` e passa a recusar backend que não responde à query, de modo que um
+backend por chave pode ser acrescentado sem tocar em nada mais.
