@@ -36,9 +36,39 @@ recarregar o PBX. Não é banner nem informação — é controle.
 
 | # | Correção | Estado |
 |---|---|---|
-| 1 | Publicação do AMI amarrada a `127.0.0.1` por padrão (`AMI_PUBLIC_BIND`, fail-closed) | ✅ aplicada |
-| 2 | ACL por origem (permitir só a rede do container da API) | ⏳ precisa do endereço da API |
-| 3 | Segredo AMI forte, fora do versionamento | ⏳ coordenada: mudar sozinho quebra a integração da API |
+| 1 | Publicação do AMI amarrada a `127.0.0.1` por padrão (`AMI_PUBLIC_BIND`, fail-closed) | ✅ aplicada (`165a22c3`) |
+| 2 | ACL por origem (`deny` final + `permit 127.0.0.1` + `172.30.0.0/16`) | ✅ aplicada e **provada** (`66a05e5c`) |
+| 3 | Segredo fora do versionamento | ❌ **ABERTA** — duas tentativas refutadas, ver abaixo |
+| 4 | `amiClient.js` sem default silencioso (`ami_secret_required`) | ✅ aplicada (`6e018dbe`) |
+| 5 | Critério de aceite que pega ACL inerte no gate `MCP_RESEARCH_DOCKER_E2E` | ✅ aplicado (`77393569`) |
+
+### Por que a #3 continua aberta: dois mecanismos refutados por medição
+
+| Tentativa | Como falha |
+|---|---|
+| `secret = ${ENV(AMI_SECRET)}` no manager.conf | descarta a **seção inteira** — `There is no manager called ragent2`. O AMI deixa de existir. |
+| `#include conf/manager-ami.conf` com a seção completa | carrega usuário e segredo, mas o `#include` **reinicia a seção** e a ACL fica **inerte**. Com `permit` apontando para endereço impossível, **todas** as origens continuaram recebendo resposta. |
+
+Ambas foram commitadas por mim e revertidas depois. A segunda quase passou: a
+verificação de caminho felizinho (`o segredo novo funciona`) passou enquanto a
+ACL não protegia nada.
+
+### O que ainda não foi validado
+
+Desenho identificado: gerar o `manager.conf` **completo** (segredo + ACL no mesmo
+bloco) num `astetcdir` próprio em runtime, com **symlinks** para o resto — assim os
+contextos realtime que a API escreve em `/etc/asterisk/conf` continuam visíveis.
+Uma tentativa de probe **não produziu medição** (o `umask 077` herdado da sessão
+deixou o diretório em `0700`, ilegível para o usuário `asterisk`). O mecanismo
+portanto está **não validado** — nem confirmado nem refutado.
+
+### Critério de aceite obrigatório
+
+`npm run`-style: `node scripts/governance/validate-mcp-research-docker-e2e.js`
+precisa ficar **verde**, e ele exige que a credencial legada do repositório
+**não autentique**. Verificar que o segredo novo funciona não basta: é preciso
+provar que o antigo parou de valer.
+
 
 ## Lições
 
