@@ -124,6 +124,56 @@ function tcpProbe(host, port) {
   return 'unknown';
 }
 
+/**
+ * Sonda API -> MCP de DENTRO da rede.
+ *
+ * Com `rap-internal: internal: true` o HOST não alcança mais o container — o
+ * que é o objetivo do controle. Então a sonda precisa sair de dentro. Usa-se o
+ * mesmo image do serviço como cliente efêmero e, quando o container da API real
+ * está provisionado (`--profile with-api`), ele é usado como principal.
+ *
+ * O relatório diz QUAL principal foi exercido. Afirmar "API exercida" quando o
+ * que rodou foi um cliente de teste seria a mesma classe de defeito que este
+ * trabalho vem caçando: prova apresentada por algo diferente do que se afirma.
+ */
+function probeMcpFromNetwork(mcpHost) {
+  const clientContainer = process.env.RAP_E2E_API_CONTAINER || '';
+  const script = `fetch('http://${mcpHost}:${MCP_PORT}/mcp',{method:'POST',headers:{'content-type':'application/json',accept:'application/json, text/event-stream',authorization:'Bearer ${TOKEN}'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})}).then(async r=>{const t=await r.text();console.log(JSON.stringify({status:r.status,body:t.slice(0,4000)}));}).catch(e=>{console.log(JSON.stringify({error:String(e.message||e)}));});`;
+
+  const runClient = (args) => {
+    try {
+      const out = docker(args, { timeout: 45000 });
+      return out.trim();
+    } catch (error) {
+      return `${error.stdout || ''}${error.stderr || ''}`.trim();
+    }
+  };
+
+  let raw;
+  let principal;
+  if (clientContainer) {
+    principal = `api-container:${clientContainer}`;
+    raw = runClient(['exec', clientContainer, 'node', '-e', script]);
+  } else {
+    principal = 'client-on-rap-internal (API real não provisionada)';
+    raw = runClient([
+      'run', '--rm', `--network=${INTERNAL_NETWORK}`,
+      '--entrypoint', 'node', 'ragent2-mcp-research:local', '-e', script,
+    ]);
+  }
+
+  const line = raw.split('\n').filter((l) => l.trim().startsWith('{')).pop();
+  if (!line) return { reachable: false, principal, error: raw.slice(0, 200), tools: [] };
+  try {
+    const parsed = JSON.parse(line);
+    if (parsed.error) return { reachable: false, principal, error: parsed.error, tools: [] };
+    const tools = [...new Set([...String(parsed.body || '').matchAll(/"name":"(research_[a-z_]+)"/g)].map((m) => m[1]))];
+    return { reachable: true, principal, httpStatus: parsed.status, tools };
+  } catch (error) {
+    return { reachable: false, principal, error: error.message, tools: [] };
+  }
+}
+
 /** Chamada real ao MCP pelo endereço da rede interna. */
 async function probeMcp(ip) {
   const url = `http://${ip}:${MCP_PORT}/mcp`;
@@ -214,20 +264,17 @@ async function main() {
     });
   }
 
-  // 6. API -> rap-internal -> MCP (chamada REAL, não smoke)
-  if (containerIp) {
-    const mcp = await probeMcp(containerIp);
-    checks.mcp = mcp;
-    if (!mcp.reachable) {
-      violations.push({ code: CODES.API_UNREACHABLE, detail: `${containerIp}:${MCP_PORT} — ${mcp.error}` });
-    } else if (mcp.tools.length === 0) {
-      violations.push({
-        code: CODES.MCP_PROTOCOL_INVALID,
-        detail: `respondeu HTTP ${mcp.httpStatus} mas tools/list não devolveu nenhuma ferramenta research_*`,
-      });
-    }
-  } else {
-    violations.push({ code: CODES.API_UNREACHABLE, detail: `sem IP em ${INTERNAL_NETWORK} para sondar` });
+  // 6. API -> rap-internal -> MCP (chamada REAL, de dentro da rede)
+  const mcpHost = process.env.RAP_E2E_MCP_HOST || CONTAINER;
+  const mcp = probeMcpFromNetwork(mcpHost);
+  checks.mcp = mcp;
+  if (!mcp.reachable) {
+    violations.push({ code: CODES.API_UNREACHABLE, detail: `principal=${mcp.principal} — ${mcp.error}` });
+  } else if (mcp.tools.length === 0) {
+    violations.push({
+      code: CODES.MCP_PROTOCOL_INVALID,
+      detail: `respondeu HTTP ${mcp.httpStatus} mas tools/list não devolveu nenhuma ferramenta research_*`,
+    });
   }
 
   // 7. Egress real de dentro do container
@@ -238,7 +285,15 @@ async function main() {
     violations.push({ code: CODES.EGRESS_BROKEN, detail: `saída externa indisponível: ${egress.out || 'sem resposta'}` });
   }
 
-  // 8. NEGATIVO: o container de pesquisa não pode alcançar nada operacional
+  // 8. NEGATIVO: o container de pesquisa não pode alcançar nada operacional.
+  //
+  // ATENÇÃO MEDIDA (2026-09-19): bloquear isso NÃO se resolve só isolando
+  // `rap-internal`. O container PRECISA de egress, e a rede de egress
+  // (`rap-research-egress`) é um bridge comum: por ela o container alcança o
+  // gateway do host (docker0, 172.17.0.1) e, com ele, qualquer serviço escutando
+  // em 0.0.0.0 — foi assim que o AMI do Asterisk permaneceu exposto MESMO com a
+  // rede interna já isolada e gerenciada pelo compose. Restringir egress exige
+  // filtro de destino (iptables/proxy): o Docker não oferece isso por si.
   checks.operationalReachability = {};
   for (const target of OPERATIONAL_TARGETS) {
     const result = tcpProbe(target.host, target.port);
@@ -300,4 +355,4 @@ if (require.main === module) {
   main().catch((error) => { console.error(error); process.exitCode = 1; });
 }
 
-module.exports = { CODES, OPERATIONAL_TARGETS, tcpProbe };
+module.exports = { CODES, OPERATIONAL_TARGETS, tcpProbe, probeMcpFromNetwork };

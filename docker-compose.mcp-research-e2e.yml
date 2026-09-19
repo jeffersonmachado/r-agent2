@@ -1,0 +1,106 @@
+# docker-compose.mcp-research-e2e.yml — topologia de E2E do MCP research.
+#
+# POR QUE ESTE ARQUIVO EXISTE (medido em 2026-09-19):
+#
+# O ambiente de E2E estava montado FORA do compose: container criado com
+# `docker run` (labels {}) e rede `rap-internal` criada com `docker network
+# create` SEM `--internal` (labels {}, Internal=false). O
+# docker-compose.prod.yml declara `internal: true`, mas a definição do arquivo
+# não governava o objeto em execução — e nenhum gate olhava o runtime.
+#
+# Consequência medida e provada: de dentro do container de pesquisa,
+#   nc -w 4 172.17.0.1 5038  ->  "Asterisk Call Manager/7.0.3"
+# Ou seja, o container que baixa conteúdo ARBITRÁRIO da internet alcançava o AMI
+# do Asterisk (protocolo de CONTROLE: originar chamadas, ler CDR) pelo gateway
+# docker0. Postgres e Redis não eram alcançáveis por acaso (isolamento entre
+# bridges), mas o AMI era — o isolamento observado era efeito colateral, não o
+# mecanismo projetado.
+#
+# Medição que definiu a correção: `internal: true` BLOQUEIA tanto o vazamento
+# quanto o acesso do HOST ao container. Por isso o E2E não pode depender de a
+# API rodar no host: na topologia projetada a API é CONTAINER nesta rede
+# (docker-compose.prod.yml), e é assim que o serviço `rap-api` aparece abaixo,
+# atrás do profile `with-api` (imagem pesada, construída sob demanda).
+#
+# Consequência para o gate: com a rede isolada, a sonda API->MCP precisa sair de
+# DENTRO da rede. O gate usa um cliente efêmero na mesma rede e declara
+# explicitamente qual principal foi exercido (`client-on-rap-internal`), em vez
+# de afirmar que a API real foi exercida.
+
+name: rap-mcp-research-e2e
+
+services:
+  mcp-research:
+    build:
+      context: .
+      dockerfile: ./services/mcp-research/Dockerfile
+    image: ragent2-mcp-research:local
+    container_name: mcp-research-e2e
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      MCP_RESEARCH_MODE: ${MCP_RESEARCH_MODE:-ONLINE}
+      MCP_RESEARCH_TOKEN: ${MCP_RESEARCH_TOKEN:-e2e-container-token-32chars-minimum}
+      MCP_RESEARCH_TIMEOUT_MS: ${MCP_RESEARCH_TIMEOUT_MS:-15000}
+      MCP_RESEARCH_MAX_BYTES: ${MCP_RESEARCH_MAX_BYTES:-2097152}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    expose:
+      - "8080"
+    restart: unless-stopped
+    networks:
+      # Papel 1: tráfego da plataforma, SEM saída para lugar nenhum.
+      - rap-internal
+      # Papel 2: ÚNICA saída externa do container de pesquisa.
+      - rap-research-egress
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # A API REAL como container, na rede isolada. Fica atrás de profile porque a
+  # imagem é construída sob demanda (build multi-stage com npm ci do backend):
+  #   docker compose -f docker-compose.mcp-research-e2e.yml --profile with-api up -d
+  # Sem ela o gate exercita um cliente na mesma rede e diz isso no relatório —
+  # nunca afirma que a API foi exercida quando não foi.
+  rap-api:
+    profiles: ["with-api"]
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    image: r-agent2-api:e2e
+    container_name: rap-api-e2e
+    environment:
+      NODE_ENV: production
+      MCP_RESEARCH_URL: http://mcp-research:8080/mcp
+      MCP_RESEARCH_TOKEN: ${MCP_RESEARCH_TOKEN:-e2e-container-token-32chars-minimum}
+    depends_on:
+      mcp-research:
+        condition: service_healthy
+    networks:
+      - rap-internal
+    restart: unless-stopped
+
+networks:
+  # `name:` explícito: sem ele o compose prefixaria o nome do projeto e a rede
+  # deixaria de ser a mesma que a produção usa.
+  rap-internal:
+    name: rap-internal
+    driver: bridge
+    # O CONTROLE. Sem `internal: true` a rede é um bridge comum: o container de
+    # pesquisa alcança o gateway docker0 (172.17.0.1) e, por ele, qualquer
+    # serviço escutando em 0.0.0.0 — foi assim que o AMI do Asterisk ficou
+    # exposto.
+    internal: true
+  rap-research-egress:
+    name: rap-research-egress
+    driver: bridge
