@@ -49,6 +49,7 @@ const {
   candidateIdentityKey,
   CANDIDATE_STATES,
   CANDIDATE_ORIGINS,
+  assessDiscoveryInputViability,
 } = require('./candidateDiscovery');
 const { independenceReport } = require('./independence');
 const { selectDiscoverySet, selectHoldout, SELECTION_WEIGHTS, DEFAULT_SET_SIZE } = require('./discoverySetSelection');
@@ -959,9 +960,21 @@ function createMarketDiscoverySupervisor({
     // ciclo (novas queries) ou declara o esgotamento.
     const canHandoff = selectionResult.selected.length > 0 && Boolean(holdoutChoice.holdoutKey);
     if (!canHandoff) {
-      const terminalReason = selectionResult.selected.length === 0
-        ? 'empty_discovery_set_after_incremental_exclusions'
-        : 'holdout_unavailable_all_candidates_selected';
+      // Distingue "mercado sem players" de "provider nao respondeu". Sem isso a
+      // busca quebrada se disfarca de resultado de mercado: o run completa com
+      // zero candidatos e o erro so aparece no handoff
+      // (`market_discovery_handoff_unavailable`), tres camadas adiante da causa.
+      const inputViability = assessDiscoveryInputViability({
+        universe: discovery.stats && discovery.stats.universe,
+        accepted: discovery.accepted,
+        evidenceRequired: discovery.evidenceRequired,
+        outOfMarket: discovery.outOfMarket,
+      });
+      const terminalReason = inputViability.degenerate
+        ? inputViability.reason
+        : (selectionResult.selected.length === 0
+          ? 'empty_discovery_set_after_incremental_exclusions'
+          : 'holdout_unavailable_all_candidates_selected');
       const emptyHoldout = { candidateKey: null, basis: holdoutChoice.basis, preregistered: false };
       await store.updateRunState({
         tenantId: discoveryTenant,
@@ -971,6 +984,7 @@ function createMarketDiscoverySupervisor({
         metadata: {
           handoff: null,
           terminalReason,
+          inputViability,
           holdout: emptyHoldout,
           selected: selectionResult.selected,
           incrementalExclusions,

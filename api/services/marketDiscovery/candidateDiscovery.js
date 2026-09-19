@@ -610,4 +610,57 @@ module.exports = {
   discoverCandidates,
   mergeCandidateRecords,
   candidateRecordFromPersistence,
+  assessDiscoveryInputViability,
 };
+
+/**
+ * A descoberta recebeu entrada util? Um provider quebrado se disfarca de mercado vazio.
+ *
+ * DEFEITO MEDIDO (2026-09-19): o provider de busca devolveu conteudo SEM RELACAO
+ * com a query (gateway de pagamento `login.authorize.net` para
+ * "bakery management software"). O run de `bakery` avaliou 23 candidatos e
+ * rejeitou TODOS por `category_signals_below_minimum` — nenhum casou um unico
+ * termo de categoria, com `minSignals: 1`. O sistema registrou isso como
+ * "mercado sem players" e so falhou tres camadas adiante, no handoff
+ * (`market_discovery_handoff_unavailable`, HTTP 400), longe da causa.
+ *
+ * Zero aceitos NAO e o mesmo em dois casos distintos:
+ *   - mercado vazio de verdade  -> os candidatos tem sinal de categoria e sao
+ *     recusados por outro criterio (dreh, evidencia, independentencia);
+ *   - provider que nao respondeu -> TODOS recusados exatamente por falta de
+ *     sinal de categoria, com um minimo de 1 termo. Um unico termo de
+ *     categoria casando ja seria sinal de que a pagina e do dominio; zero em
+ *     100% da amostra e falha de entrada, nao veredito de mercado.
+ *
+ * Puro e sem I/O: recebe os mesmos arrays que `discoverCandidates` ja devolve.
+ *
+ * @param {{universe?: number, accepted?: Array, evidenceRequired?: Array, outOfMarket?: Array}} input
+ * @returns {{degenerate: boolean, reason: (string|null), detail?: string, evaluated?: number}}
+ */
+function assessDiscoveryInputViability({ universe = 0, accepted = [], evidenceRequired = [], outOfMarket = [] } = {}) {
+  const total = Number(universe) || 0;
+  const acceptedCount = list(accepted).length;
+  const evidenceRequiredCount = list(evidenceRequired).length;
+  const out = list(outOfMarket);
+
+  const viable = { degenerate: false, reason: null };
+
+  if (total === 0) return viable;
+  if (acceptedCount + evidenceRequiredCount > 0) return viable;
+  if (out.length === 0) return viable;
+
+  const allWithoutCategorySignal = out.every(
+    (item) => item && item.relevance && item.relevance.reason === 'category_signals_below_minimum'
+  );
+  if (!allWithoutCategorySignal) return viable;
+
+  return {
+    degenerate: true,
+    reason: 'provider_returned_no_relevant_candidates',
+    evaluated: out.length,
+    detail:
+      `${out.length} candidatos avaliados e nenhum casou um unico termo de categoria ` +
+      '(minSignals=1); a busca nao devolveu conteudo relacionado a query. ' +
+      'Isto e falha de entrada do provider, nao ausencia de players no mercado.',
+  };
+}

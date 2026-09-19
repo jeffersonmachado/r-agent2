@@ -10,6 +10,7 @@ const {
   buildCandidateRecord,
   discoverCandidates,
   seedFromBenchmark,
+  assessDiscoveryInputViability,
   researchedKeysFromSample,
   reservedHoldoutKeysFromSample,
 } = require('../../../api/services/marketDiscovery/candidateDiscovery');
@@ -571,5 +572,76 @@ describe('candidateDiscovery — mergeCandidateRecords (merge cross-run com o pe
     expect(merged.archetypes).toEqual(['boutique-studio', 'personal-wellness']);
     expect(merged.segments).toEqual(['corporate']);
     expect(merged.origin).toBe('seed');
+  });
+});
+
+/**
+ * Um provider quebrado nao se disfarca de mercado vazio.
+ *
+ * DEFEITO MEDIDO (2026-09-19): o run de `bakery` avaliou 23 candidatos e
+ * rejeitou TODOS por `category_signals_below_minimum` (nenhum casou um unico
+ * termo de categoria, `minSignals: 1`). O provider havia devolvido conteudo sem
+ * relacao com a query (`login.authorize.net` para "bakery management software").
+ * O sistema registrou isso como mercado sem players e so falhou no handoff,
+ * tres camadas adiante, com um 400 generico.
+ *
+ * Zero aceitos significa duas coisas OPOSTAS; estes testes fixam a distincao.
+ */
+describe('assessDiscoveryInputViability', () => {
+  const semSinal = (n) => Array.from({ length: n }, (_, i) => ({
+    candidateKey: `cand-${i}`,
+    relevance: { reason: 'category_signals_below_minimum', signalCount: 0, minSignals: 1 },
+  }));
+
+  it('detecta o caso real de bakery: 23 avaliados, 0 aceitos, 100% sem sinal de categoria', () => {
+    const verdict = assessDiscoveryInputViability({
+      universe: 23,
+      accepted: [],
+      evidenceRequired: [],
+      outOfMarket: semSinal(23),
+    });
+    expect(verdict.degenerate).toBe(true);
+    expect(verdict.reason).toBe('provider_returned_no_relevant_candidates');
+    expect(verdict.evaluated).toBe(23);
+  });
+
+  it('NAO acusa mercado vazio de verdade: recusa por outro criterio nao e falha de provider', () => {
+    const verdict = assessDiscoveryInputViability({
+      universe: 5,
+      accepted: [],
+      evidenceRequired: [],
+      outOfMarket: [
+        { candidateKey: 'a', relevance: { reason: 'category_signals_below_minimum' } },
+        { candidateKey: 'b', relevance: { reason: 'different_archetype' } },
+      ],
+    });
+    expect(verdict.degenerate).toBe(false);
+  });
+
+  it('NAO acusa quando existe candidato utilizavel (aceito ou requerendo evidencia)', () => {
+    const comAceito = assessDiscoveryInputViability({
+      universe: 5,
+      accepted: [{ candidateKey: 'x' }],
+      evidenceRequired: [],
+      outOfMarket: semSinal(2),
+    });
+    expect(comAceito.degenerate).toBe(false);
+
+    const comEvidencia = assessDiscoveryInputViability({
+      universe: 5,
+      accepted: [],
+      evidenceRequired: [{ candidateKey: 'y' }],
+      outOfMarket: semSinal(2),
+    });
+    expect(comEvidencia.degenerate).toBe(false);
+  });
+
+  it('NAO acusa universo vazio: nenhum seed nao e falha de entrada do provider', () => {
+    expect(assessDiscoveryInputViability({ universe: 0, outOfMarket: [] }).degenerate).toBe(false);
+    expect(assessDiscoveryInputViability({}).degenerate).toBe(false);
+  });
+
+  it('NAO acusa lista de fora-de-mercado vazia (nada foi analisado, nada a concluir)', () => {
+    expect(assessDiscoveryInputViability({ universe: 3, accepted: [], outOfMarket: [] }).degenerate).toBe(false);
   });
 });
