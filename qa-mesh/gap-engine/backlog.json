@@ -1,12 +1,31 @@
 [
   {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio omnichannel",
+    "evidence": {
+      "scenarios": [
+        "fitness-matricula-leads"
+      ],
+      "sampleError": "4 erro(s) de console detectados"
+    },
+    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+  },
+  {
     "id": "gap-proof-stale-fingerprints",
     "severity": "critical",
     "area": "proof-governance",
     "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
     "evidence": {
       "diverged": [
-        "sourceFingerprint",
+        "scenarioRegistryFingerprint",
         "chainFingerprint"
       ]
     },

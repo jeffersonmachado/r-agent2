@@ -1,25 +1,29 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-20T12-36-20-656Z",
+  "executionId": "mesh-2026-09-20T13-17-53-043Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "GO",
-  "reasons": [],
+  "status": "NO_GO",
+  "reasons": [
+    "CRITICAL_DOMAIN_FAILED:omnichannel",
+    "BASELINE_PASS_RATE_REGRESSION",
+    "BASELINE_INFRA_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-20T12-36-20-656Z",
-    "startedAt": "2026-09-20T12:36:20.656Z",
+    "executionId": "mesh-2026-09-20T13-17-53-043Z",
+    "startedAt": "2026-09-20T13:17:53.043Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-20T13:09:19.317Z",
+    "promotedAt": "2026-09-20T13:51:41.006Z",
     "registryTotal": 144,
-    "goNoGo": "GO",
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-09-20T12-36-20-656Z",
+    "executionId": "mesh-2026-09-20T13-17-53-043Z",
     "tenantId": "system",
-    "timestamp": "2026-09-20T12:36:20.656Z",
+    "timestamp": "2026-09-20T13:17:53.043Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -27,11 +31,11 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 144,
+    "passed": 143,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
-    "infraErrors": 0,
+    "infraErrors": 1,
     "environmentMissing": 0,
     "flaky": 0,
     "fallbackUsed": 0,
@@ -127,11 +131,11 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 4,
+        "passed": 3,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 0,
+        "infra_error": 1,
         "environment_missing": 0,
         "flaky": 0,
         "total": 4
@@ -167,10 +171,22 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "CRITICAL_DOMAIN_FAILED:omnichannel",
+      "BASELINE_PASS_RATE_REGRESSION",
+      "BASELINE_INFRA_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "omnichannel": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "infra_error": 1
+        },
+        "successRate": 0.75
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -219,12 +235,6 @@
         "byType": {},
         "successRate": 1
       },
-      "omnichannel": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
       "bpmn": {
         "total": 0,
         "blocking": 0,
@@ -244,18 +254,25 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
+    "failuresByType": {
+      "infra_error": 1
+    },
+    "topErrors": [
+      {
+        "message": "4 erro(s) de console detectados",
+        "count": 1
+      }
+    ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-20T12-36-20-656Z",
-      "startedAt": "2026-09-20T12:36:20.656Z",
+      "executionId": "mesh-2026-09-20T13-17-53-043Z",
+      "startedAt": "2026-09-20T13:17:53.043Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-20T13:09:19.317Z",
+      "promotedAt": "2026-09-20T13:51:41.006Z",
       "registryTotal": 144,
-      "goNoGo": "GO",
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
@@ -265,5 +282,5 @@
   "sourceFingerprint": "5b8c87ef49ff61242e3a9903b6b5f8f8719da3dd79de68e50745c888ce15ee0c",
   "sourceCommit": "efbbd9984ca187a029d2d399df6949984d93cc1d",
   "sourceTree": "74045d32d3b0332028c91756a91b116d96b2fa2e",
-  "generatedAt": "2026-09-20T13:09:19.319Z"
+  "generatedAt": "2026-09-20T13:51:41.007Z"
 }
