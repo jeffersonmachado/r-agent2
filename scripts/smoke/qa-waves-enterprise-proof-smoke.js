@@ -33,6 +33,17 @@ function writeJson(fileName, payload) {
   const out = artifactPath(fileName);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, `${JSON.stringify(stampArtifact(payload), null, 2)}\n`, 'utf8');
+  // Espelho de workspace: os engines de governança (cross-report-validator,
+  // final-governance-engine, governance-consistency-engine, platform-readiness)
+  // leem `qa/enterprise/<file>` no repositório — sem a cópia, a versão de
+  // workspace congela no último run que a escreveu (RAP-068 FOREIGN_RUN_ARTIFACT,
+  // medido em 2026-09-20). É CÓPIA de bytes já estampados na origem — nunca
+  // re-stamp (lineage retroativo é adoção de prova).
+  const workspaceMirror = path.join(ROOT, 'qa', 'enterprise', fileName);
+  if (path.resolve(out) !== path.resolve(workspaceMirror)) {
+    fs.mkdirSync(path.dirname(workspaceMirror), { recursive: true });
+    fs.copyFileSync(out, workspaceMirror);
+  }
   return out;
 }
 

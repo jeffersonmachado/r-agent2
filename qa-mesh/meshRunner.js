@@ -2492,6 +2492,11 @@ async function runMeshInner(options = {}, tenantId = 'system') {
       reasons: summary.reasons,
       canonicalPromotion,
       totals: summary,
+      // Identidade do artefato (não é lineage): desde o P0.3 o stamp recusa
+      // RUNTIME_EVIDENCE, então artifactType/artifactVersion nascem aqui —
+      // sem eles o scorecard derruba RAP-024/026 com ARTIFACT_CONTRACT_INCOMPLETE.
+      artifactType: 'go-no-go-report',
+      artifactVersion: '1.0.0',
       ...resolveOriginLineage(),
       generatedAt: nowIso(),
     });
