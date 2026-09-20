@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-20T16:25:56.380Z",
+  "generatedAt": "2026-09-20T17:18:12.909Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:3001",
   "authMode": "admin",
@@ -11,7 +11,7 @@
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1789921515531 callId=call-voice-tts-asr-1789921515531 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1789924657446 callId=call-voice-tts-asr-1789924657446 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
@@ -25,7 +25,7 @@
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1789921551249-quh8p2e conversation=conv-1789921551355-105dfa731727 queue=ux1_smoke_1789921551231 quickReply=qr-1789921551551-on792uwag phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1789924691208-nb7ln7l conversation=conv-1789924691233-0a89d39aeaef queue=ux1_smoke_1789924691191 quickReply=qr-1789924691523-8emyck2gh phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
