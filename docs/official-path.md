@@ -61,3 +61,61 @@ A autoridade única de release completo (selagem + publicação) é `npm run rel
 - Novas automações devem chamar somente os quatro comandos oficiais.
 - Para release completo (selagem + publicação), chame `npm run release:seal`; não encadeie `system:release`/`zip:release` à mão como substituto do ciclo.
 - Antes de empacotar release em um workspace de desenvolvimento, execute `npm run runtime:clean`.
+
+## Evidência same-run (proveniência de QA no seal)
+
+Vigente desde 2026-09-19 (gate `QA_EVIDENCE_SAME_RUN`,
+`npm run validate:qa-evidence-same-run`, bloqueante no agregado). O defeito que
+o gate fecha: `stamp-report-lineage.js` preservava o `generatedAt` original e
+anexava o `runId`/`sourceFingerprint` do run mais recente — um relatório
+produzido às 10:46 passou a carregar o runId de um run criado às 20:18. Isso não
+é evidência same-run, é **adoção retroativa de lineage**, pior que não ter
+lineage: o engine de certificação passa a aceitar como prova de um run algo que
+aquele run nunca executou.
+
+A classificação canônica dos artefatos por **modo de produção** vive em
+`config/runtime-evidence-artifacts.json` (módulo puro
+`scripts/governance/lib/runtime-evidence-artifacts.js`, compartilhado entre o
+gate e o produtor, para que "recusar estampar" e "reprovar no gate" nunca
+divirjam):
+
+- **RUNTIME_EVIDENCE** (6 artefatos: `qa-mesh/go-no-go-report.json`,
+  `qa-mesh/release-gate-report.json`, `qa-mesh/intelligence/latest.json`,
+  `qa/enterprise/pbx-voice-flow-prod-like.json`,
+  `qa/enterprise/human-handoff-full-validation.json`,
+  `qa/enterprise/omnichannel-unified-replay.json`) — resultado da **execução**
+  de algo (mesh, smoke prod-like, replay). Não recomputável por leitura do
+  source. Exige lineage **na origem**: `runId` + `sourceFingerprint` resolvidos
+  por `scripts/governance/lib/resolve-run-lineage.js` **antes** de executar, e
+  prova temporal — `generatedAt` dentro da janela `[started_at, completed_at]`
+  do run, com `runId` existente em `GovernanceRun` e `sourceFingerprint` igual
+  ao do run.
+- **DERIVED_REPORT** (relatórios de `reports/` recomputáveis por validador
+  determinístico) — o stamp só é aceitável quando o validador foi executado
+  no run.
+
+`scripts/governance/stamp-report-lineage.js` **recusa** carimbar qualquer
+artefato RUNTIME_EVIDENCE (`RUNTIME_EVIDENCE_REQUIRES_ORIGIN_LINEAGE`) — o
+retroactive-lineage não tem mais caminho. O `meshHistory` recebe lineage na
+origem: `pipeline/entrypoints/runQaMesh.js` resolve o run antes da execução (e
+avisa explicitamente quando grava sem lineage) e `qa-mesh/meshRunner.js` grava
+`runId`/`sourceFingerprint` no relatório.
+
+Violações tipadas do gate: `QA_EVIDENCE_LINEAGE_MISSING` (sem runId ou
+fingerprint), `QA_EVIDENCE_RUN_UNKNOWN` (runId ausente no banco de runs),
+`QA_EVIDENCE_SAME_RUN_VIOLATION` (`generatedAt` anterior ao `started_at` do run
+— produzido antes do run, não pode ser prova dele),
+`QA_EVIDENCE_SOURCE_MISMATCH` (fingerprint difere do run) e
+`QA_EVIDENCE_NO_TIMESTAMP` (sem `generatedAt` não há prova temporal). Relatório:
+`reports/qa-evidence-same-run-report.json`.
+
+### Onde isso muda o `release:seal`
+
+- **Fase `prepare`**: depois da convergência/criação do run governado e **antes**
+  de exigir o veredito `SEAL_GO`, o seal **executa o QA Mesh canônico dentro do
+  próprio run** (`RUNNING_IN_PIPELINE=1 npm run qa:mesh`, ~35 min), com o
+  lineage resolvido na origem. Se o mesh falhar, o seal **aborta** — sem
+  evidência same-run não há seal.
+- **Fase `consolidate`**: depois da varredura agregada e dos reparos de lineage
+  (só DERIVED_REPORT), se o gate agregado ainda falhar o seal **aborta** —
+  evidência same-run/lineage exige reexecução real, nunca carimbo.

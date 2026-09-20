@@ -153,3 +153,27 @@ services) exige escolha de fornecedor com chave — decisão de custo do dono do
 produto. O que **não** falta é adaptador genérico: o `searchRunner` já tem a lista
 `backends` e passa a recusar backend que não responde à query, de modo que um
 backend por chave pode ser acrescentado sem tocar em nada mais.
+
+## Atualização (2026-09-19) — backends por API implementados
+
+A afirmação acima ("nenhum provedor por API configurado, não há adaptador")
+descrevia o estado **anterior** à correção. O adaptador foi criado:
+`api/services/research/apiSearchBackend.js` (módulo puro: monta a requisição e
+extrai resultados, sem I/O) com dois providers, ativados só quando **todas** as
+variáveis existem:
+
+- **Brave Search API** — `BRAVE_SEARCH_API_KEY` (chave no header
+  `x-subscription-token`, nunca na URL);
+- **Google Custom Search JSON API** — `GOOGLE_CSE_API_KEY` **e**
+  `GOOGLE_CSE_ID`.
+
+Ordem determinística `brave` → `google`, **antes** dos backends de scraping no
+`searchRunner` (`nativeResearchProvider.js`); o veredito de relevância continua
+sendo do `assessSearchResultRelevance` — backend por API que responda página
+alheia é recusado exatamente como o de scraping. Sem chaves, o comportamento é o
+de antes (scraping) e a pesquisa online falha **honestamente** (`n=0` + motivo
+nominal por backend; market discovery degrada a
+`provider_returned_no_relevant_candidates`). Estado classificado como
+**BLOCKED_EXTERNAL**: credencial externa ausente, não NO_GO do core local.
+Doc operacional: `docs/mcp-research/operations.md` ("Provider de busca
+indisponível").

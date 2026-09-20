@@ -1,6 +1,6 @@
 # Achado de segurança — controle total do PBX a partir do container de pesquisa
 
-**Data:** 2026-09-19 · **Severidade:** crítica · **Estado:** correções 1, 2, 3, 4 e 5 aplicadas; E2E do mecanismo de render do segredo pendente (coordenador)
+**Data:** 2026-09-19 · **Severidade:** crítica · **Estado:** correções 1, 2, 3, 4 e 5 aplicadas e **validadas ao vivo** (E2E do mecanismo de render do segredo executado pelo coordenador em 2026-09-19 — ver "Prova ao vivo")
 
 ## Cadeia provada
 
@@ -38,7 +38,7 @@ recarregar o PBX. Não é banner nem informação — é controle.
 |---|---|---|
 | 1 | Publicação do AMI amarrada a `127.0.0.1` por padrão (`AMI_PUBLIC_BIND`, fail-closed) | ✅ aplicada (`165a22c3`) |
 | 2 | ACL por origem (`deny` final + `permit 127.0.0.1` + `172.30.0.0/16`) | ✅ aplicada e **provada** (`66a05e5c`) |
-| 3 | Segredo fora do versionamento | ✅ aplicada — mecanismo template + render em runtime (ver abaixo); E2E ao vivo pendente |
+| 3 | Segredo fora do versionamento | ✅ aplicada e **validada ao vivo** — mecanismo template + render em runtime (ver abaixo) |
 | 4 | `amiClient.js` sem default silencioso (`ami_secret_required`) | ✅ aplicada (`6e018dbe`) |
 | 5 | Critério de aceite que pega ACL inerte no gate `MCP_RESEARCH_DOCKER_E2E` | ✅ aplicado (`77393569`) |
 
@@ -63,8 +63,9 @@ e a ACL **no mesmo bloco**. Em runtime:
    mode 1777** em `/etc/asterisk` (o default do Docker, 755 root:root, impede o
    usuário `asterisk` de escrever — medido; o mode é obrigatório).
 2. `pbx/asterisk/asterisk-start.sh` (start do container, na imagem) copia o
-   estático para o tmpfs e renderiza o template com `envsubst '$AMI_SECRET'`
-   (lista explícita: só o segredo é substituído). Sem `AMI_SECRET` o start
+   estático para o tmpfs e renderiza o template com
+   `envsubst '$AMI_SECRET $AMI_BINDADDR'` (lista explícita: só essas duas
+   variáveis são substituídas). Sem `AMI_SECRET` o start
    aborta — fail-closed no compose (`${AMI_SECRET:?}`) E no script.
 3. API e Asterisk leem o **mesmo** `AMI_SECRET` do `.env` via compose; o
    bootstrap (`scripts/bootstrap/ensure-local-secrets.js`) gera o valor quando
@@ -177,9 +178,10 @@ dois desfechos — contar `Response` sem conferir `Message` não distingue.
   runtime no tmpfs do container (ver "Como a #3 foi resolvida"). O gate
   `validate:pbx-ami-secret` (checks `PBX_AMI_NO_DEFAULT_SECRET`,
   `PBX_AMI_NO_PLAINTEXT_SECRET`, `PBX_AMI_ACL`) vigia a regressão.
-  **Pendente:** a matriz de autenticação ao vivo (E2E do coordenador) e a
-  rotação do valor nos `.env` já existentes (o bootstrap rotaciona na próxima
-  execução; até lá o valor legado continua funcional nos ambientes que o usam).
+  **Resolvido também:** a matriz de autenticação ao vivo (E2E do coordenador,
+  2026-09-19 — ver "Prova ao vivo"). **Pendente:** apenas a rotação do valor nos
+  `.env` já existentes (o bootstrap rotaciona na próxima execução; até lá o
+  valor legado continua funcional nos ambientes que o usam).
 - O mount do config estático é `ro` em `/etc/asterisk-static`
   (`/opt/results/ria/r-agent2/pbx/asterisk/etc/asterisk`), o que **refuta** a
   hipótese de a API sobrescrever o config em runtime; o `/etc/asterisk` lido

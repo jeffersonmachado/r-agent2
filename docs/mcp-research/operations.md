@@ -117,13 +117,52 @@ Para CI, desenvolvimento sem rede e reprodução determinística:
 
 ### Provider de busca indisponível (search falha online)
 
-- Sintoma: `research_search` devolve erro tipado (`research_fetch_failed` do
-  backend de busca). O DuckDuckGo responde 202 (bot-check) a datacenters; o
-  provider tem **fallback automático para Bing** (`nativeResearchProvider`).
-- Se ambos falharem: o erro sobe tipado ao chamador; o runner de benchmark
-  registra `BLOCKED_NO_EXTERNAL_ACCESS` — nunca "zero novidade" fingido.
-- Mitigação operacional: repetir mais tarde ou rodar o container em OFFLINE com
-  snapshot governado.
+Estado medido em 2026-09-19 (detalhes em
+`AI_MEMORY/finding-research-search-ignores-query.md`): nesta rede o scraping de
+HTML está **inoperante** — DuckDuckGo falha no transporte e o Bing responde HTTP
+200 com página **alheia à query** ("bakery management software" retornou
+eletricistas e tela de login do Google, de forma não determinística). Um
+levantamento de nove buscadores gratuitos não encontrou nenhum backend de
+scraping viável (403, 429, 500 ou zero resultados).
+
+Comportamento **vigente** da busca online
+(`api/services/research/nativeResearchProvider.js` + `apiSearchBackend.js`):
+
+1. **Backends por API vêm primeiro**, na ordem determinística `brave`,
+   `google` — um provider só entra na lista quando **todas** as suas variáveis
+   estão preenchidas: Brave exige `BRAVE_SEARCH_API_KEY` (chave no header
+   `x-subscription-token`, nunca na URL); Google Custom Search exige
+   `GOOGLE_CSE_API_KEY` **e** `GOOGLE_CSE_ID`. Sem chave, a lista é exatamente a
+   de antes (scraping DDG → Bing), sem quebrar nada.
+2. **Guarda de relevância**: HTTP 200 com página alheia à query **não é
+   sucesso**. `assessSearchResultRelevance(query, candidates)` (pura) recusa o
+   conjunto de um backend quando nenhum candidato compartilha radical com
+   nenhum termo significativo da query; o runner cai para o próximo backend com
+   motivo nominal `<backend>: search_results_unrelated_to_query (0/N casam ...)`
+   em vez de aceitar lixo. Conservadora de propósito: um único acerto aceita o
+   backend; query sem termo significativo não decide e não recusa.
+3. **Falha honesta**: se todos os backends falharem, o resultado é `n=0` com o
+   motivo nominal de cada um (`<backend>: research_fetch_failed`,
+   `search_endpoint_http_*`, `search_results_unrelated_to_query`...). O erro
+   sobe tipado ao chamador; o runner de benchmark registra
+   `BLOCKED_NO_EXTERNAL_ACCESS` — nunca "zero novidade" fingido.
+
+**Classificação `BLOCKED_EXTERNAL`** (2026-09-19): sem chaves de API e com o
+scraping inviável, a pesquisa online está bloqueada por **credencial externa
+ausente** — não é NO_GO do core local. O pipeline de market discovery reage
+honestamente: quando todos os candidatos avaliados falham no filtro de categoria
+(`category_signals_below_minimum`, minSignals=1), o veredito é **degenerado**
+com `reason: provider_returned_no_relevant_candidates`
+(`api/services/marketDiscovery/candidateDiscovery.js`,
+`assessDiscoveryInputViability`) — "falha de entrada do provider, não ausência
+de players no mercado" — em vez de declarar mercado vazio. O destravamento das
+verticais paradas exige escolha de fornecedor com chave (decisão de custo do
+dono do produto); o adaptador genérico já existe e um backend novo não exige
+tocar em mais nada.
+
+Mitigação operacional: configurar `BRAVE_SEARCH_API_KEY` (ou
+`GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_ID`) e repetir; ou rodar o container em
+OFFLINE com snapshot governado.
 
 ### Falha de descoberta MCP (tools/list ou registro)
 
@@ -170,7 +209,57 @@ agindo:
 - **Rollback de config**: reverter as envs no compose/`.env` e recriar; a API
   reconcilia a conexão no próximo startup (drift → update).
 
-## 7. Troubleshooting rápido
+## 7. Gate E2E de runtime Docker (release gate, 2026-09-19)
+
+`npm run validate:mcp-research-docker-e2e`
+(`scripts/governance/validate-mcp-research-docker-e2e.js`, gate
+`MCP_RESEARCH_DOCKER_E2E`, bloqueante no agregado
+`validate:governance-enforcement`). Diferente de `validate:mcp-research`
+(compose_integration), que lê o **texto** do `docker-compose.prod.yml` e confere
+se as redes estão **declaradas**, este gate mede o **runtime** — texto correto
+não é runtime correto, e a divergência era silenciosa: em 2026-09-19 a rede
+`rap-internal` em execução estava `Internal=false` (criada manualmente, sem
+`--internal` nem labels do compose, reutilizada por nome) enquanto o compose
+declarava `internal: true`. O que impedia o vazamento era o isolamento padrão
+entre bridges do Docker — um efeito colateral, não o controle projetado.
+
+O que o gate prova, contra o container real (`mcp-research-e2e`):
+
+1. container presente e **healthy**;
+2. rede `rap-internal` **isolada** (`Internal=true` medido em runtime) e
+   **gerenciada pelo compose** (labels — drift de infraestrutura é violação);
+3. container exatamente nas 2 redes do desenho (`rap-internal` +
+   `rap-research-egress`);
+4. fronteira viva de dentro da rede: `tools/list` responde, `GET /health`
+   devolve 200 e um `tools/call` **real** executa
+   (`research_inspect_documentation` — tool pura, zero rede e zero efeito
+   externo, a única cujo call pode ser exigido em gate);
+5. **egress externo** funciona (a saída projetada existe);
+6. probes **negativos**: Postgres/Redis/Asterisk operacionais **inalcançáveis**
+   a partir do container (alcançar = vazamento, `MCP_E2E_OPERATIONAL_LEAK`) e a
+   **credencial AMI legada** do repositório **não autentica** — verificar que o
+   segredo novo funciona não basta, é preciso provar que o antigo parou de
+   valer (ver `AI_MEMORY/security-finding-pbx-ami-exposure.md`);
+7. `--with-restart`: após `docker restart`, o healthcheck volta a `healthy` e
+   `tools/list` volta a responder (prova de recovery).
+
+Sem daemon Docker o gate sai 0 com status **`REQUIRES_DOCKER_RUNTIME`** —
+decisão correta para CI/dev, mas **não é prova**. É o seal quem a exige:
+`scripts/governance/verify-mcp-research-docker-e2e-pass.js` roda na fase
+`consolidate` do `release:seal` e **reprova o release** se o relatório
+`reports/mcp-research-docker-e2e-report.json` estiver ausente, com
+`status !== 'PASS'` ou stale (teto `MCP_E2E_REPORT_MAX_AGE_MS`, default 24h).
+**Release final não existe sem a prova de runtime.**
+
+Ciclo completo (build → up → wait healthy → gate):
+`npm run validate:mcp-research-docker-e2e:full`
+(`scripts/governance/run-mcp-research-docker-e2e.sh`). **Idempotente**: stack
+viva (container `mcp-research-e2e` existente) é **reutilizada** e nunca
+derrubada; stack subida pelo script também permanece de pé — é o ambiente de
+evidência do gate e o teardown é decisão operacional
+(`docker compose -f docker-compose.mcp-research-e2e.yml down`), nunca do gate.
+
+## 8. Troubleshooting rápido
 
 | Sintoma | Primeira verificação |
 |---|---|

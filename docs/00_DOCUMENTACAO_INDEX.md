@@ -64,6 +64,8 @@ Este repositório já contém documentação detalhada por área. Alguns pontos 
 - **Multi-tenant (arquitetura e contexto cognitivo)**: `TENANT_MULTI_TENANT_ARCHITECTURE.md`
 - **Motor de cobertura (inventário, grafo de rastreabilidade, evidências, gate GO/NO_GO, impacto)**: `qa/coverage-engine.md`
 - **Propostas de mudança da pesquisa de benchmarks (pesquisa propõe → aprovação humana com ressalvas → aplicação)**: `benchmark/change-proposals.md`
+- **Autoridade única de certificação de benchmarks (conjunto de verticais certificadas derivado do relatório do engine; `sample.claim` inerte)**: `benchmark/certification-authority.md`
+- **Versionamento semântico do pipeline de benchmark (`sem-v1:<hash>`, estados de achado, reprocesso e aposento governado)**: `benchmark/semantic-versioning.md`
 - **RAG**:
   - `RAG_POR_TENANT.md`
   - `COMO_TESTAR_RAG.md`
