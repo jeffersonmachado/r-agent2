@@ -115,6 +115,23 @@ function resolveRunLineage(options = {}) {
   };
 }
 
+/**
+ * Estampa o lineage resolvido NA ORIGEM num artefato de RUNTIME_EVIDENCE.
+ * Campos ausentes viram null explícito — nunca inventados. O gate
+ * `validate:qa-evidence-same-run` reprova null com QA_EVIDENCE_LINEAGE_MISSING,
+ * que é o resultado honesto para execução fora de run governado.
+ */
+function applyOriginLineage(payload, lineage) {
+  const resolved = lineage || {};
+  return {
+    ...payload,
+    runId: resolved.runId || null,
+    sourceFingerprint: resolved.sourceFingerprint || null,
+    sourceCommit: resolved.sourceCommit || null,
+    sourceTree: resolved.sourceTree || null,
+  };
+}
+
 /** Converte para o formato de env consumido pelos produtores (omite null). */
 function toLineageEnv(lineage) {
   const result = {};
@@ -131,5 +148,6 @@ module.exports = {
   CURRENT_RUN_RELATIVE_PATH,
   resolveRunLineage,
   resolveGitIdentity,
+  applyOriginLineage,
   toLineageEnv,
 };

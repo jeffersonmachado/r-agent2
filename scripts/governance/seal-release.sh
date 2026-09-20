@@ -195,6 +195,22 @@ phase_prepare() {
       fail "QA Mesh falhou dentro do run governado (exit $mrc) — sem evidência same-run não há seal" "$mlog" prepare
     fi
     ok "QA Mesh: GO dentro do run $(node -e "try{console.log(require('./governance/.current-run.json').runId)}catch(e){console.log('?')}" 2>/dev/null)"
+
+    # ENTERPRISE PROOF SMOKE DENTRO DO RUN (2026-09-20, task T15): os artefatos
+    # qa/enterprise/{human-handoff-full-validation,pbx-voice-flow-prod-like,
+    # omnichannel-unified-replay}.json também são RUNTIME_EVIDENCE. Até aqui
+    # eram produzidos fora de run e adotavam lineage retroativamente (defeito
+    # auditado: pbx gerado em 2026-09-13 com runId de run de 2026-09-18). O
+    # produtor resolve o lineage NA ORIGEM (governance/.current-run.json) e o
+    # smoke sai != 0 quando report.ok=false — sem evidência same-run não há seal.
+    step prepare "Enterprise proof smoke dentro do run governado (evidência same-run qa/enterprise/*)"
+    local elog="$LOG_DIR/enterprise-proof.log"
+    RUNNING_IN_PIPELINE=1 timeout 2700 node --env-file-if-exists=.env scripts/smoke/qa-waves-enterprise-proof-smoke.js > "$elog" 2>&1
+    local erc=$?
+    if [ "$erc" != "0" ]; then
+      fail "Enterprise proof smoke falhou dentro do run governado (exit $erc) — qa/enterprise/* sem evidência same-run" "$elog" prepare
+    fi
+    ok "Enterprise proof: GO dentro do run corrente"
   fi
 
   case "$verdict" in

@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { getOrCreateRpaToken } = require('../../core/rpa/utils/rpaTokenManager');
+const { resolveRunLineage, applyOriginLineage } = require('../governance/lib/resolve-run-lineage');
 const { runtimeAwarePath, resolveWorkspacePath } = require('../../tools/system/lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -31,8 +32,26 @@ function artifactPath(fileName) {
 function writeJson(fileName, payload) {
   const out = artifactPath(fileName);
   fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(out, `${JSON.stringify(stampArtifact(payload), null, 2)}\n`, 'utf8');
   return out;
+}
+
+// Lineage do run governado, resolvido NA ORIGEM — antes de qualquer prova
+// executar. Os artefatos qa/enterprise/* são RUNTIME_EVIDENCE
+// (config/runtime-evidence-artifacts.json): sem runId/sourceFingerprint o gate
+// validate:qa-evidence-same-run reprova com QA_EVIDENCE_LINEAGE_MISSING, e
+// estampar DEPOIS (stamp-report-lineage) é adoção retroativa, também
+// reprovada. Fora de run governado os campos nascem null — nunca inventados.
+let originLineage = null;
+function getOriginLineage() {
+  if (!originLineage) {
+    originLineage = resolveRunLineage({ rootDir: ROOT });
+  }
+  return originLineage;
+}
+
+function stampArtifact(payload) {
+  return applyOriginLineage(payload, getOriginLineage());
 }
 
 function loadJsonIfExists(filePathOrPaths, fallback = null) {
@@ -750,6 +769,9 @@ async function main() {
   const reportPath = writeJson('enterprise-proof-report.json', report);
   // eslint-disable-next-line no-console
   console.log(`[qa-waves-enterprise-proof-smoke] ok=${report.ok} report=${reportPath}`);
+  // Fail-closed: ok=false é NO_GO de evidência, não sucesso. O orquestrador
+  // (seal-release, fase prepare) aborta sem evidência same-run válida.
+  process.exitCode = report.ok ? 0 : 1;
 }
 
 if (require.main === module) {
@@ -760,4 +782,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main };
+module.exports = { main, stampArtifact, getOriginLineage };
