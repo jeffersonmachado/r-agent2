@@ -91,6 +91,16 @@ function buildFailureIntelligence(currentExecution, history = [], options = {}) 
   const intelligence = {
     generatedAt: new Date().toISOString(),
     executionId: currentExecution?.executionId || null,
+    // RUNTIME_EVIDENCE (config/runtime-evidence-artifacts.json): lineage NA
+    // ORIGEM — sem runId/sourceFingerprint o gate validate:qa-evidence-same-run
+    // reprova com QA_EVIDENCE_LINEAGE_MISSING (medido na fase consolidate do
+    // release r-agent2-20260920-141717). Fora de run governado: null explícito.
+    runId: currentExecution?.runId || null,
+    sourceFingerprint: currentExecution?.sourceFingerprint || null,
+    sourceCommit: currentExecution?.sourceCommit || null,
+    sourceTree: currentExecution?.sourceTree || null,
+    artifactType: 'mesh-intelligence',
+    artifactVersion: '1.0.0',
     totalClusters: clusters.length,
     clusters,
     rankedProblems,
