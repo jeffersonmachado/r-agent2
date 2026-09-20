@@ -245,6 +245,66 @@ function createBenchmarkResearchMemoryStore() {
       .map(clone);
   }
 
+  async function retireFinding({ tenantId, findingId, state: nextState, metadata = {} }) {
+    const tenant = required(tenantId, 'tenantId');
+    const id = required(findingId, 'findingId');
+    const row = state.findings.get(id);
+    if (!row || row.tenant_key !== tenant) {
+      const error = new Error(`benchmark_research_store_invalid: achado inexistente: ${id}`);
+      error.code = 'benchmark_research_store_invalid';
+      throw error;
+    }
+    if (['SUPERSEDED', 'REJECTED', 'STALE_SEMANTICS'].includes(String(row.verification_state))) {
+      return { row: clone(row), retired: false, alreadyRetired: true };
+    }
+    row.metadata = {
+      ...(row.metadata || {}),
+      previousVerificationState: row.verification_state,
+      retiredAt: new Date().toISOString(),
+      ...(metadata || {}),
+    };
+    row.verification_state = String(nextState);
+    return { row: clone(row), retired: true, alreadyRetired: false };
+  }
+
+  async function correctRetirement({ tenantId, findingId, expectedReprocessRunId, state: nextState, metadata = {}, correctionReason }) {
+    const tenant = required(tenantId, 'tenantId');
+    const id = required(findingId, 'findingId');
+    const runRef = required(expectedReprocessRunId, 'expectedReprocessRunId');
+    const reason = required(correctionReason, 'correctionReason');
+    const row = state.findings.get(id);
+    if (!row || row.tenant_key !== tenant) {
+      const error = new Error(`benchmark_research_store_invalid: achado inexistente: ${id}`);
+      error.code = 'benchmark_research_store_invalid';
+      throw error;
+    }
+    const current = row.metadata || {};
+    if (!['SUPERSEDED', 'REJECTED', 'STALE_SEMANTICS'].includes(String(row.verification_state))) {
+      const error = new Error(`benchmark_research_store_invalid: achado ${id} não está aposentado — correção exige estado aposentado`);
+      error.code = 'benchmark_research_store_invalid';
+      throw error;
+    }
+    if (String(current.reprocessRunId || '') !== runRef) {
+      const error = new Error(`benchmark_research_store_invalid: aposento de ${id} pertence a outro run — correção recusada`);
+      error.code = 'benchmark_research_store_invalid';
+      throw error;
+    }
+    row.metadata = {
+      ...current,
+      ...(metadata || {}),
+      retirementCorrection: {
+        from: row.verification_state,
+        fromReason: current.supersededReason || null,
+        to: String(nextState),
+        toReason: (metadata || {}).supersededReason || null,
+        reason,
+        correctedAt: new Date().toISOString(),
+      },
+    };
+    row.verification_state = String(nextState);
+    return { row: clone(row), corrected: true };
+  }
+
   async function upsertSourceInspection({
     tenantId,
     runId,
@@ -339,6 +399,8 @@ function createBenchmarkResearchMemoryStore() {
     listEvidence,
     insertFinding,
     listFindings,
+    retireFinding,
+    correctRetirement,
     upsertSourceInspection,
     listSourceInspections,
     listAnalyzedBenchmarkIds,

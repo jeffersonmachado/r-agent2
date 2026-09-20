@@ -166,17 +166,29 @@ describe('§38/§43 a certificação de mercado espelha o relatório de suficiê
     // persistido pela pesquisa e evidence refs que resolvem no inventário
     // verificado. Se um dia a cobertura for só declaração, este teste grita.
     for (const id of gapArchetypes) {
+      let evidenced = 0;
       for (const benchmark of sample.benchmarks.filter((b) => b.archetype === id)) {
         expect(Number.isFinite(Date.parse(benchmark.analyzedAt || ''))).toBe(true);
         expect(typeof benchmark.researchVersion).toBe('string');
         expect(Array.isArray(benchmark.findingsInventory)).toBe(true);
         expect(benchmark.findingsInventory.length).toBeGreaterThan(0);
         expect(benchmark.marketArchetypeMapping && benchmark.marketArchetypeMapping.archetype).toBe(id);
-        const supporting = (benchmark.archetypeEvidence && benchmark.archetypeEvidence.supportingFindings) || [];
+        // O bloco archetypeEvidence é DERIVADO do corpus corrente: representante
+        // cujo único "suporte" era falso positivo semântico tem o bloco REMOVIDO
+        // (medido 2026-09-19: o slogan do wellhub aposentado pelo funil). O
+        // invariante é por ARQUÉTIPO — pelo menos um representante evidenciado —
+        // nunca por benchmark: prova velha não é prova.
+        const evidence = benchmark.archetypeEvidence || null;
+        if (!evidence) continue;
+        evidenced += 1;
+        const supporting = Array.isArray(evidence.supportingFindings) ? evidence.supportingFindings : [];
         expect(supporting.length).toBeGreaterThan(0);
         const inventory = new Set(benchmark.findingsInventory);
         for (const ref of supporting) expect(inventory.has(ref.findingId)).toBe(true);
       }
+      // Arquétipo em gap NUNCA é coberto sem nenhum representante com
+      // evidência derivada do corpus corrente.
+      expect(evidenced).toBeGreaterThan(0);
     }
   });
 

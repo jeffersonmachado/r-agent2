@@ -71,6 +71,7 @@ describe('§17 o gap de arquétipos do fitness — fechamento só vale com evid�
     for (const id of GAP_ARCHETYPES) {
       const representatives = (SAMPLE.benchmarks || []).filter((b) => b.archetype === id);
       expect(representatives.length).toBeGreaterThan(0);
+      let evidenced = 0;
       for (const benchmark of representatives) {
         // Análise real: analyzedAt + researchVersion + inventário de findings.
         expect(Number.isFinite(Date.parse(benchmark.analyzedAt || ''))).toBe(true);
@@ -82,9 +83,17 @@ describe('§17 o gap de arquétipos do fitness — fechamento só vale com evid�
         // Fonte oficial verificada (tier aceitável + obtenção confirmada).
         expect((benchmark.sources || []).some((source) => source.verified === true
           && !engine.isGenericSource(source))).toBe(true);
-        // Evidence refs declaradas resolvendo contra o inventário verificado.
+        // O bloco archetypeEvidence é DERIVADO do corpus corrente
+        // (derive-archetype-coverage-evidence --write): representante sem
+        // achado verificado que case o vocabulário tem o bloco REMOVIDO —
+        // prova velha não é prova. Medido em 2026-09-19 (T3/T7): a limpeza
+        // semântica aposentou o slogan "As assinaturas do Wellhub..." (a
+        // "prova" antiga de wellhub era exatamente o falso positivo que o
+        // funil semântico existe para matar); student-digital-experience
+        // segue evidenciado por trainerize.com.
         const evidence = benchmark.archetypeEvidence || null;
-        expect(evidence).not.toBeNull();
+        if (!evidence) continue;
+        evidenced += 1;
         expect(typeof evidence.derivation).toBe('string');
         const supporting = Array.isArray(evidence.supportingFindings) ? evidence.supportingFindings : [];
         expect(supporting.length).toBeGreaterThan(0);
@@ -95,6 +104,9 @@ describe('§17 o gap de arquétipos do fitness — fechamento só vale com evid�
           expect(typeof ref.sourceId).toBe('string');
         }
       }
+      // O que NUNCA pode acontecer: arquétipo em gap coberto sem NENHUM
+      // representante com evidência derivada do corpus corrente.
+      expect(evidenced).toBeGreaterThan(0);
     }
   });
 

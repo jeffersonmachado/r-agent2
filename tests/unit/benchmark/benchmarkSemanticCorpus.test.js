@@ -123,6 +123,31 @@ describe('corpus semântico — o que DEVE continuar sendo extraído (anti over-
   });
 });
 
+describe('corpus semântico — REGRESSÕES dos dois exemplos históricos (corpus real fitness)', () => {
+  it('EVIDÊNCIA REAL "We check our recurring payments constantly" NÃO produz payment.checkin', () => {
+    // Defeito histórico (2026-09-18): VERB_CANONICAL_MAP mapeava `check` →
+    // `checkin` por PALAVRA isolada, e esta evidência literal virava um
+    // achado `payment.checkin` — verificação de cobrança lida como entrada
+    // de academia. MEDIDO agora: o funil extrai `payment.recurring`.
+    const result = run('We check our recurring payments constantly');
+    expect(normalizedIds(result)).not.toContain('payment.checkin');
+    expect(normalizedIds(result)).not.toContain('checkin');
+    expect(normalizedIds(result)).toContain('payment.recurring');
+  });
+
+  it('EVIDÊNCIA REAL "uma ferramenta completa para simplificar todo o processo de venda" NÃO produz staff.sell', () => {
+    // Defeito histórico: o texto promocional virava a capability `sell`
+    // automaticamente. Promessa de venda não é recurso de venda. MEDIDO
+    // agora: o classificador rejeita como MARKETING_CLAIM (motivo semântico,
+    // não ausência de locator).
+    const result = run('Uma ferramenta completa para simplificar todo o processo de venda');
+    expect(result.accepted).toHaveLength(0);
+    expect(normalizedIds(result)).not.toContain('staff.sell');
+    expect(normalizedIds(result)).not.toContain('sell');
+    expect(result.rejected.map((item) => item.reason)).toContain('semantic_type_marketing_claim');
+  });
+});
+
 /**
  * GAPS REGISTRADOS — falsos NEGATIVOS medidos, NÃO corrigidos aqui.
  *

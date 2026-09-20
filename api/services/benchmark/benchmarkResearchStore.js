@@ -38,6 +38,9 @@ const ERROR_CODES = Object.freeze({
   INVALID: 'benchmark_research_store_invalid',
 });
 
+/** Estados de achado aposentado — trilha preservada, fora do corpus vigente. */
+const RETIRED_FINDING_STATES = Object.freeze(new Set(['SUPERSEDED', 'REJECTED', 'STALE_SEMANTICS']));
+
 function storeError(code, message, extra = {}) {
   const error = new Error(`${code}: ${message}`);
   error.code = code;
@@ -410,6 +413,88 @@ function createBenchmarkResearchStore({ models } = {}) {
   }
 
   /**
+   * Aposenta um achado (SUPERSEDED / REJECTED / STALE_SEMANTICS) SEM apagá-lo:
+   * a linha permanece como trilha de auditoria, com o estado anterior
+   * preservado em `metadata.previousVerificationState` e a razão do
+   * aposento em `metadata`. Quem consome (gates de corpus/versão semântica)
+   * trata esses estados como "fora do corpus vigente" — nunca como ausência.
+   *
+   * Idempotente: um achado já aposentado NÃO é re-aposentado (a primeira
+   * decisão governada é a que fica registrada; re-rodar o produtor não
+   * reescreve a trilha nem troca o `supersededBy`).
+   *
+   * @returns {{ row: object, retired: boolean, alreadyRetired: boolean }}
+   */
+  async function retireFinding({ tenantId, findingId, state, metadata = {} }) {
+    const { finding } = resolveModels();
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const id = requireNonEmpty(findingId, 'findingId');
+    const nextState = requireNonEmpty(state, 'state');
+    const row = await finding.findOne({ where: { id, tenant_key: tenant } });
+    if (!row) throw storeError(ERROR_CODES.INVALID, `achado inexistente: ${id}`);
+
+    const currentMetadata = jsonObject(row.metadata);
+    if (RETIRED_FINDING_STATES.has(String(row.verification_state))) {
+      return { row, retired: false, alreadyRetired: true };
+    }
+
+    await row.update({
+      verification_state: nextState,
+      metadata: {
+        ...currentMetadata,
+        previousVerificationState: row.verification_state,
+        retiredAt: new Date().toISOString(),
+        ...jsonObject(metadata),
+      },
+    });
+    return { row, retired: true, alreadyRetired: false };
+  }
+
+  /**
+   * Corrige um aposento feito pelo MESMO run produtor (`expectedReprocessRunId`)
+   * quando o produtor detecta que a primeira decisão foi computada errado (bug
+   * do produtor, não mudança de política). A correção também é trilha:
+   * `metadata.retirementCorrection` registra de/para, razão e instante — nada
+   * é sobrescrito em silêncio. Aposento de OUTRO run não pode ser tocado.
+   *
+   * @returns {{ row: object, corrected: boolean }}
+   */
+  async function correctRetirement({ tenantId, findingId, expectedReprocessRunId, state, metadata = {}, correctionReason }) {
+    const { finding } = resolveModels();
+    const tenant = requireNonEmpty(tenantId, 'tenantId');
+    const id = requireNonEmpty(findingId, 'findingId');
+    const runRef = requireNonEmpty(expectedReprocessRunId, 'expectedReprocessRunId');
+    const reason = requireNonEmpty(correctionReason, 'correctionReason');
+    const row = await finding.findOne({ where: { id, tenant_key: tenant } });
+    if (!row) throw storeError(ERROR_CODES.INVALID, `achado inexistente: ${id}`);
+
+    const currentMetadata = jsonObject(row.metadata);
+    if (!RETIRED_FINDING_STATES.has(String(row.verification_state))) {
+      throw storeError(ERROR_CODES.INVALID, `achado ${id} não está aposentado — correção exige estado aposentado`);
+    }
+    if (String(currentMetadata.reprocessRunId || '') !== runRef) {
+      throw storeError(ERROR_CODES.INVALID, `aposento de ${id} pertence a outro run — correção recusada`);
+    }
+
+    await row.update({
+      verification_state: requireNonEmpty(state, 'state'),
+      metadata: {
+        ...currentMetadata,
+        ...jsonObject(metadata),
+        retirementCorrection: {
+          from: row.verification_state,
+          fromReason: currentMetadata.supersededReason || null,
+          to: String(state),
+          toReason: jsonObject(metadata).supersededReason || null,
+          reason,
+          correctedAt: new Date().toISOString(),
+        },
+      },
+    });
+    return { row, corrected: true };
+  }
+
+  /**
    * UPSERT da inspeção de UMA fonte (T-B2). Identidade determinística por
    * `(tenant, run, benchmark, source, contentHash)`: re-inspecionar o MESMO
    * conteúdo ATUALIZA a linha (o estado por eixo pode mudar), mas nunca cria
@@ -519,6 +604,8 @@ function createBenchmarkResearchStore({ models } = {}) {
     listEvidence,
     insertFinding,
     listFindings,
+    retireFinding,
+    correctRetirement,
     upsertSourceInspection,
     listSourceInspections,
     listAnalyzedBenchmarkIds,
@@ -527,6 +614,7 @@ function createBenchmarkResearchStore({ models } = {}) {
 
 module.exports = {
   ERROR_CODES,
+  RETIRED_FINDING_STATES,
   deterministicId,
   toIso,
   createBenchmarkResearchStore,
