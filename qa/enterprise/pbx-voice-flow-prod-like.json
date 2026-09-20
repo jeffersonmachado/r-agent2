@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-20T19:53:55.052Z",
+  "generatedAt": "2026-09-20T20:20:11.709Z",
   "ok": true,
   "warnings": [],
   "evidencePaths": [
@@ -11,13 +11,13 @@
   "sources": {
     "l03": {
       "smoke": "L-03",
-      "generatedAt": "2026-09-20T19:53:12.142Z",
+      "generatedAt": "2026-09-20T20:19:45.207Z",
       "ok": true,
       "authMode": "rpa_scoped",
       "tenantId": "tenant-1785061894087-4n7ygpw",
-      "flowId": "flow-voice-tts-asr-smoke-1789933981318",
-      "callId": "call-voice-tts-asr-1789933981318",
-      "extension": "1118",
+      "flowId": "flow-voice-tts-asr-smoke-1789935576408",
+      "callId": "call-voice-tts-asr-1789935576408",
+      "extension": "1108",
       "selftestExtension": "9191",
       "dialplanSignature": "6fc66c9bf36de05fcf1bded3",
       "runtime": {
@@ -31,16 +31,16 @@
       },
       "realCall": {
         "attempted": true,
-        "click2callId": "cc_c2c-1789933981811-589623ac80fa",
+        "click2callId": "cc_c2c-1789935576801-46ea75f1364a",
         "click2callStatus": "originated",
         "synthetic": false,
         "cdrFound": true,
         "cdr": {
-          "uniqueid": "1789933981.113",
+          "uniqueid": "1789935576.117",
           "disposition": "ANSWERED",
           "src": "9191",
           "dst": "9191",
-          "calldate": "2026-09-20T19:53:03.016Z"
+          "calldate": "2026-09-20T20:19:38.006Z"
         }
       },
       "ttsPrompts": [
@@ -73,12 +73,12 @@
         {
           "nodeId": "prompt-1",
           "phase": "prompt",
-          "recordingUrl": "recordings://call-voice-tts-asr-1789933981318/prompt.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1789935576408/prompt.wav"
         },
         {
           "nodeId": "asr-1",
           "phase": "asr",
-          "recordingUrl": "recordings://call-voice-tts-asr-1789933981318/asr.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1789935576408/asr.wav"
         }
       ],
       "selftestStatus": "WARN",
