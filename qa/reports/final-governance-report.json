@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-20T19:49:55.571Z",
+  "generatedAt": "2026-09-20T21:51:06.728Z",
   "engine": "final-governance-engine/v1",
   "artifactType": "final-governance-report",
   "artifactVersion": "2.0.0",
@@ -27,7 +27,7 @@
         "sourceCommit": "43f1cee6e828cf18ae8b4ecb00fbf755495e0054",
         "sourceTree": "b1b03f6a0eb222c7081e79225ce2f9f31f28d25a",
         "startedAt": "2026-09-20T18:18:48.185Z",
-        "generatedAt": "2026-09-20T19:49:52.256Z",
+        "generatedAt": "2026-09-20T21:51:03.878Z",
         "status": "RUNNING",
         "artifactType": "run-context",
         "artifactVersion": "1.0.0",
@@ -35,7 +35,7 @@
         "policyVersion": "1.0.4",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
         "lastGovernedStage": "final-governance",
-        "lastSourceVerificationAt": "2026-09-20T19:49:52.256Z",
+        "lastSourceVerificationAt": "2026-09-20T21:51:03.878Z",
         "stageHistory": [
           {
             "stage": "final-governance",
@@ -56,6 +56,41 @@
             "stage": "final-governance",
             "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
             "verifiedAt": "2026-09-20T19:49:52.256Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
+            "verifiedAt": "2026-09-20T20:08:06.274Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
+            "verifiedAt": "2026-09-20T20:08:50.181Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
+            "verifiedAt": "2026-09-20T20:08:51.103Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
+            "verifiedAt": "2026-09-20T21:48:03.863Z"
+          },
+          {
+            "stage": "final-consistency",
+            "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
+            "verifiedAt": "2026-09-20T21:49:15.367Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
+            "verifiedAt": "2026-09-20T21:49:16.643Z"
+          },
+          {
+            "stage": "final-governance",
+            "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
+            "verifiedAt": "2026-09-20T21:51:03.878Z"
           }
         ]
       }
@@ -145,7 +180,7 @@
       "severity": "OK",
       "status": "GO",
       "reasons": [],
-      "executionId": "mesh-2026-09-20T19-07-52-698Z",
+      "executionId": "mesh-2026-09-20T21-11-03-552Z",
       "passRate": "144/144",
       "reason": null
     },
@@ -175,9 +210,9 @@
       "id": "package_integrity",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260920-165234.zip",
-      "computed": "9efe8d67a104c0d76a2d67f7…",
-      "recorded": "9efe8d67a104c0d76a2d67f7…",
+      "zipName": "r-agent2-20260920-180429.zip",
+      "computed": "4ab67d35b02fb291c9ed34eb…",
+      "recorded": "4ab67d35b02fb291c9ed34eb…",
       "hashSource": "governance/package-validation-report.json",
       "reason": null
     },
@@ -211,6 +246,5 @@
     }
   ],
   "highFailed": [],
-  "summary": "3 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]",
-  "reboundAt": "2026-09-20T20:08:05.648Z"
+  "summary": "3 bloqueio(s) crítico(s). Decisão: NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-055: score=6 target=10 | RAP-055: mandatory requirement failures=runtime-validated,governed,no-known-gap | RAP-055: open gaps=2 | RAP-056: score=6 target=10 | RAP-056: mandatory requirement failures=runtime-validated,no-known-gap | RAP-056: open gaps=1 | scorecard: open gaps=3 | FINAL_PROOF_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE | FINAL_READINESS_NOT_PASS: PASS_WITH_DEFERRED_PACKAGE_GATE]"
 }
