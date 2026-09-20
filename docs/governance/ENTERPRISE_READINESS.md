@@ -1,11 +1,12 @@
 # Enterprise Readiness
 
-- Decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
-- Canonical mesh execution: mesh-2026-09-20T09-41-15-518Z
-- Enterprise readiness: autonomous-ready
+- Decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO]
+- Canonical mesh execution: mesh-2026-09-20T10-40-26-514Z
+- Enterprise readiness: enterprise-ready
 - Production readiness: NO_GO:BLOCKING_GAPS
-- Blocking gaps: 1
-- Blocking domains: none
+- Blocking gaps: 2
+- Blocking domains: core
 
 ## Hard blockers
-- gap-proof-invalid-artifact-semantics: Proof artifacts presentes mas semanticamente invalidos (presenca != validade) (critical)
+- gap-mesh-core-flaky-business-core-biz-login: Falha aberta no dominio core (high)
+- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)

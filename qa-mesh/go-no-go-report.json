@@ -1,25 +1,28 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-20T09-41-15-518Z",
+  "executionId": "mesh-2026-09-20T10-40-26-514Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "GO",
-  "reasons": [],
+  "status": "NO_GO",
+  "reasons": [
+    "CRITICAL_DOMAIN_FAILED:core",
+    "BASELINE_PASS_RATE_REGRESSION"
+  ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-20T09-41-15-518Z",
-    "startedAt": "2026-09-20T09:41:15.519Z",
+    "executionId": "mesh-2026-09-20T10-40-26-514Z",
+    "startedAt": "2026-09-20T10:40:26.514Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-20T10:16:55.430Z",
+    "promotedAt": "2026-09-20T11:17:20.997Z",
     "registryTotal": 144,
-    "goNoGo": "GO",
+    "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-09-20T09-41-15-518Z",
+    "executionId": "mesh-2026-09-20T10-40-26-514Z",
     "tenantId": "system",
-    "timestamp": "2026-09-20T09:41:15.519Z",
+    "timestamp": "2026-09-20T10:40:26.514Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -27,13 +30,13 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 144,
+    "passed": 143,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
-    "flaky": 0,
+    "flaky": 1,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
@@ -77,13 +80,13 @@
         "total": 2
       },
       "core": {
-        "passed": 90,
+        "passed": 89,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 0,
+        "flaky": 1,
         "total": 90
       },
       "fitness": {
@@ -167,10 +170,21 @@
         "total": 1
       }
     },
-    "goNoGo": "GO",
-    "reasons": [],
+    "goNoGo": "NO_GO",
+    "reasons": [
+      "CRITICAL_DOMAIN_FAILED:core",
+      "BASELINE_PASS_RATE_REGRESSION"
+    ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
+      "core": {
+        "total": 1,
+        "blocking": 0,
+        "byType": {
+          "flaky": 1
+        },
+        "successRate": 0.9888888888888889
+      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -184,12 +198,6 @@
         "successRate": 1
       },
       "clinic": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -244,24 +252,33 @@
         "successRate": 1
       }
     },
-    "failuresByType": {},
-    "topErrors": [],
+    "failuresByType": {
+      "flaky": 1
+    },
+    "topErrors": [
+      {
+        "message": "Login UI falhou: Login pode ter falhado - UI ainda aparenta estar no estado de login",
+        "count": 1
+      }
+    ],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-20T09-41-15-518Z",
-      "startedAt": "2026-09-20T09:41:15.519Z",
+      "executionId": "mesh-2026-09-20T10-40-26-514Z",
+      "startedAt": "2026-09-20T10:40:26.514Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-20T10:16:55.430Z",
+      "promotedAt": "2026-09-20T11:17:20.997Z",
       "registryTotal": 144,
-      "goNoGo": "GO",
+      "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
-  "runId": "rap-governed-20260920093537068-aeb33aa7",
-  "sourceFingerprint": "eecd3aa8b323d3c4dcfddf01057604ed11ab767034b01ef25e5993f4e495fe03",
-  "sourceCommit": "1d78bf1d04cf4281d220629b36ac63b9ff86fb47",
-  "sourceTree": "f51e01d33aa389d744a61ac53cb8d799055d5acf",
-  "generatedAt": "2026-09-20T10:16:55.433Z"
+  "artifactType": "go-no-go-report",
+  "artifactVersion": "1.0.0",
+  "runId": "rap-governed-20260920103356648-0c6f7ab6",
+  "sourceFingerprint": "19192f16f6b03088f36da510d4844a1d5e23728534ac403688ce817feb2c4441",
+  "sourceCommit": "b2ae64b6d7000794497ef31074cbc740c8094dc5",
+  "sourceTree": "a039068ea703bf6cd3f03a0474225eacd707a3a5",
+  "generatedAt": "2026-09-20T11:17:21.001Z"
 }

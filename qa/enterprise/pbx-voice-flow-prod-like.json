@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-20T10:28:08.223Z",
+  "generatedAt": "2026-09-20T10:34:22.855Z",
   "ok": true,
   "warnings": [],
   "evidencePaths": [
@@ -9,13 +9,13 @@
   "sources": {
     "l03": {
       "smoke": "L-03",
-      "generatedAt": "2026-09-20T10:27:43.184Z",
+      "generatedAt": "2026-09-20T10:34:01.645Z",
       "ok": true,
       "authMode": "rpa_scoped",
       "tenantId": "tenant-1785061894087-4n7ygpw",
-      "flowId": "flow-voice-tts-asr-smoke-1789900056520",
-      "callId": "call-voice-tts-asr-1789900056520",
-      "extension": "1120",
+      "flowId": "flow-voice-tts-asr-smoke-1789900438495",
+      "callId": "call-voice-tts-asr-1789900438495",
+      "extension": "1195",
       "selftestExtension": "9191",
       "dialplanSignature": "4d4e4586d7a168e2002ebcc0",
       "runtime": {
@@ -29,16 +29,16 @@
       },
       "realCall": {
         "attempted": true,
-        "click2callId": "cc_c2c-1789900057118-010ab04ad6d9",
+        "click2callId": "cc_c2c-1789900438879-be8927296fb0",
         "click2callStatus": "originated",
         "synthetic": false,
         "cdrFound": true,
         "cdr": {
-          "uniqueid": "1789900057.21",
+          "uniqueid": "1789900407.25",
           "disposition": "ANSWERED",
           "src": "9191",
           "dst": "9191",
-          "calldate": "2026-09-20T10:27:38.374Z"
+          "calldate": "2026-09-20T10:33:28.292Z"
         }
       },
       "ttsPrompts": [
@@ -71,12 +71,12 @@
         {
           "nodeId": "prompt-1",
           "phase": "prompt",
-          "recordingUrl": "recordings://call-voice-tts-asr-1789900056520/prompt.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1789900438495/prompt.wav"
         },
         {
           "nodeId": "asr-1",
           "phase": "asr",
-          "recordingUrl": "recordings://call-voice-tts-asr-1789900056520/asr.wav"
+          "recordingUrl": "recordings://call-voice-tts-asr-1789900438495/asr.wav"
         }
       ],
       "selftestStatus": "WARN",
@@ -143,8 +143,8 @@
     "recordings": true,
     "replayTimeline": true
   },
-  "runId": "rap-governed-20260920093537068-aeb33aa7",
-  "sourceFingerprint": "eecd3aa8b323d3c4dcfddf01057604ed11ab767034b01ef25e5993f4e495fe03",
-  "sourceCommit": "1d78bf1d04cf4281d220629b36ac63b9ff86fb47",
-  "sourceTree": "f51e01d33aa389d744a61ac53cb8d799055d5acf"
+  "runId": "rap-governed-20260920103356648-0c6f7ab6",
+  "sourceFingerprint": "19192f16f6b03088f36da510d4844a1d5e23728534ac403688ce817feb2c4441",
+  "sourceCommit": "b2ae64b6d7000794497ef31074cbc740c8094dc5",
+  "sourceTree": "a039068ea703bf6cd3f03a0474225eacd707a3a5"
 }
