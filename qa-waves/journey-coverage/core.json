@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-18T20:42:18.504Z",
+  "generatedAt": "2026-09-20T10:17:16.148Z",
   "vertical": "core",
   "kind": "system",
   "maturity": "system",
@@ -271,6 +271,30 @@
             "Tenant autenticado",
             "Billing sandbox habilitado"
           ]
+        },
+        {
+          "scenarioId": "business-core-biz-billing-idempotency",
+          "scenario": "Core billing: mesma idempotencyKey nao duplica a cobranca",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado",
+            "Billing sandbox habilitado"
+          ]
+        },
+        {
+          "scenarioId": "business-core-biz-billing-state",
+          "scenario": "Core billing: transicao pending para confirmed observada na listagem",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado",
+            "Billing sandbox habilitado"
+          ]
         }
       ]
     },
@@ -336,6 +360,26 @@
     },
     {
       "vertical": "core",
+      "journey": "calendar",
+      "replaySupport": false,
+      "qaSupport": true,
+      "scenarios": [
+        {
+          "scenarioId": "business-core-biz-calendar-block",
+          "scenario": "Core agenda: bloqueio de recurso criado, listado e removido",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado",
+            "Agenda do usuario resolvivel pela API"
+          ]
+        }
+      ]
+    },
+    {
+      "vertical": "core",
       "journey": "campaigns",
       "replaySupport": false,
       "qaSupport": true,
@@ -343,6 +387,28 @@
         {
           "scenarioId": "business-core-biz-campaigns",
           "scenario": "Core campanhas: campanha de e-mail publicada e campanha em massa criada e removida",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado"
+          ]
+        },
+        {
+          "scenarioId": "business-core-biz-campaigns-detail",
+          "scenario": "Core campanhas: detalhe consistente com a listagem e remocao confirmada",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": [
+            "Tenant autenticado"
+          ]
+        },
+        {
+          "scenarioId": "business-core-biz-campaigns-validation",
+          "scenario": "Core campanhas: destinatario invalido recusado e valido aceito normalizado",
           "status": "active",
           "channels": [],
           "preconditions": [],
@@ -954,6 +1020,15 @@
           "steps": [
             "Credenciais QA systemadmin seedadas"
           ]
+        },
+        {
+          "scenarioId": "qa-core-auth-login",
+          "scenario": "core_auth_login",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": []
         }
       ]
     },
@@ -1678,6 +1753,15 @@
           "steps": [
             "Tenant autenticado"
           ]
+        },
+        {
+          "scenarioId": "qa-core-tenants-create",
+          "scenario": "core_tenants_create",
+          "status": "active",
+          "channels": [],
+          "preconditions": [],
+          "integrations": [],
+          "steps": []
         }
       ]
     },
