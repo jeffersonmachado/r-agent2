@@ -158,7 +158,12 @@ phase_prepare() {
   fi
 
   local log="$LOG_DIR/converge.log"
-  timeout 2700 bash scripts/governance/converge-governance.sh > "$log" 2>&1
+  # Orçamento de processo (não é TTL de evidência): o converge executa o QA
+  # Mesh canônico DENTRO de si (passo 8/12, timeout 5400) + enterprise proof +
+  # evidência executável + fixpoint + seal-time-gate. 7200s = 90min do mesh +
+  # 30min de margem para os demais 11 passos (travado em
+  # tests/unit/governance/sealConvergeTimeoutBudget.test.js — T19).
+  timeout 7200 bash scripts/governance/converge-governance.sh > "$log" 2>&1
   local rc=$?
 
   # Self-healing: se o run governado for de um fingerprint anterior, o converge
@@ -167,7 +172,7 @@ phase_prepare() {
     warn "RUN_SOURCE_DRIFT detectado — criando run governado do fingerprint atual"
     node scripts/governance/create-governed-run.js > "$LOG_DIR/create-run.log" 2>&1 || \
       fail "falha ao criar run governado" "$LOG_DIR/create-run.log" prepare
-    timeout 2700 bash scripts/governance/converge-governance.sh > "$log" 2>&1
+    timeout 7200 bash scripts/governance/converge-governance.sh > "$log" 2>&1
     rc=$?
   fi
 
