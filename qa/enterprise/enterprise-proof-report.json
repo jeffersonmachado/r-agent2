@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-20T13:59:40.306Z",
+  "generatedAt": "2026-09-20T14:47:44.099Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:3001",
   "authMode": "admin",
@@ -11,7 +11,7 @@
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1789912751259 callId=call-voice-tts-asr-1789912751259 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1789915631084 callId=call-voice-tts-asr-1789915631084 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
@@ -25,7 +25,7 @@
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1789912777565-u2ajapi conversation=conv-1789912777580-887c362f8bee queue=ux1_smoke_1789912777557 quickReply=qr-1789912778654-ozpasd8cn phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1789915661757-3m5ifdo conversation=conv-1789915661823-3240edbcc26a queue=ux1_smoke_1789915661735 quickReply=qr-1789915662464-xtqgfqonh phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
@@ -78,8 +78,8 @@
     },
     "warnings": []
   },
-  "runId": "rap-governed-20260920123052954-35fa88c9",
-  "sourceFingerprint": "5b8c87ef49ff61242e3a9903b6b5f8f8719da3dd79de68e50745c888ce15ee0c",
-  "sourceCommit": "efbbd9984ca187a029d2d399df6949984d93cc1d",
-  "sourceTree": "74045d32d3b0332028c91756a91b116d96b2fa2e"
+  "runId": "rap-governed-20260920144708338-6ef64de8",
+  "sourceFingerprint": "0edeaee0f0df4c4f2d204fe500b85ca5d42ee224736bcd0dbc513161fc943b68",
+  "sourceCommit": "8cb3c1dca68155947562982d7f7156e75051eb72",
+  "sourceTree": "e953ec33db4682ef8fda5fe6d45f8619b30c93fb"
 }

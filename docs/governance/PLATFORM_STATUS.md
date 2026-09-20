@@ -1,6 +1,6 @@
 # Platform Status
 
-- Generated at: 2026-09-20T13:59:48.743Z
+- Generated at: 2026-09-20T14:47:50.685Z
 - Canonical mesh execution: mesh-2026-09-20T13-17-53-043Z
 - Canonical mesh decision: NO_GO
 - Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO]
@@ -24,3 +24,4 @@
 
 ## NO_GO reasons
 - Falha aberta no dominio omnichannel [gap-mesh-omnichannel-infra_error-fitness-matricula-leads]
+- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]
