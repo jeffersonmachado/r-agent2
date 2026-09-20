@@ -4,9 +4,8 @@
 - Canonical mesh execution: mesh-2026-09-20T13-17-53-043Z
 - Enterprise readiness: enterprise-ready
 - Production readiness: NO_GO:BLOCKING_GAPS
-- Blocking gaps: 2
+- Blocking gaps: 1
 - Blocking domains: omnichannel
 
 ## Hard blockers
 - gap-mesh-omnichannel-infra_error-fitness-matricula-leads: Falha aberta no dominio omnichannel (high)
-- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)
