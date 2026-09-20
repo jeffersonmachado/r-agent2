@@ -114,7 +114,7 @@ if [[ ! -f "$ROOT_DIR/api/data/config.json" ]] && [[ -f "$ROOT_DIR/api/data/conf
 fi
 
 node "$ROOT_DIR/scripts/bootstrap/ensure-local-secrets.js" "$ROOT_DIR" >/dev/null
-ok 'ENCRYPTION_KEY e RAG_INTERNAL_TOKEN locais validados (valores não exibidos)'
+ok 'ENCRYPTION_KEY, RAG_INTERNAL_TOKEN e AMI_SECRET locais validados (valores não exibidos)'
 
 if [[ "$CHECK_ONLY" == true ]]; then
 	ok 'Pré-checagens concluídas'

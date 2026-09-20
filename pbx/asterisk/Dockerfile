@@ -20,5 +20,10 @@ RUN mkdir -p /usr/lib/x86_64-linux-gnu/odbc
 
 COPY --from=odbc_builder /out/odbc/ /usr/lib/x86_64-linux-gnu/odbc/
 
+# Start que renderiza o manager.conf do template (segredo + ACL no mesmo bloco)
+# no /etc/asterisk gravável (tmpfs do compose) antes de subir o Asterisk.
+COPY asterisk-start.sh /usr/local/bin/asterisk-start
+RUN chmod 755 /usr/local/bin/asterisk-start
+
 USER asterisk
 

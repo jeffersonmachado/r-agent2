@@ -89,6 +89,9 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      # Mesma origem da API: o segredo do AMI vem do .env e é renderizado no
+      # manager.conf em runtime (template -> tmpfs), nunca versionado.
+      AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
       # DSN ODBC dirigido por ambiente (opt-in). Sem estes valores o container usa o
       # /etc/odbc.ini montado do repositório, exatamente como antes — prod e test não mudam.
       # Quando definidos, o DSN é renderizado do template e as credenciais deixam de ser
@@ -99,27 +102,26 @@ services:
       PBX_ODBC_USER: ${PBX_ODBC_USER:-}
       PBX_ODBC_PASSWORD: ${PBX_ODBC_PASSWORD:-}
     volumes:
-      - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      - ./pbx/asterisk/etc/asterisk:/etc/asterisk-static:ro
       - ./pbx/asterisk/etc/odbc.ini:/etc/odbc.ini:ro
       - ./pbx/asterisk/etc/odbc.ini.template:/etc/asterisk-odbc.template:ro
       - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
       - pbx-media:/var/lib/asterisk/sounds/pbx
       - pbx-recordings:/var/spool/asterisk/monitor/pbx
-    command:
-      - sh
-      - -c
-      - |
-        PBX_ODBC_PORT="${PBX_ODBC_PORT:-5432}"
-        if [ -n "$PBX_ODBC_HOST" ] && [ -n "$PBX_ODBC_DB" ] && [ -n "$PBX_ODBC_USER" ] && [ -n "$PBX_ODBC_PASSWORD" ]; then
-          envsubst < /etc/asterisk-odbc.template > /tmp/odbc.ini
-          export ODBCINI=/tmp/odbc.ini
-          echo "asterisk[odbc]: DSN renderizado do template (host=$PBX_ODBC_HOST port=$PBX_ODBC_PORT db=$PBX_ODBC_DB user=$PBX_ODBC_USER)"
-        else
-          echo "asterisk[odbc]: PBX_ODBC_* ausente/parcial; usando /etc/odbc.ini montado (default canonico)"
-        fi
-        exec asterisk -f -vvvvv -d
+      # /etc/asterisk gravável só na memória do container: o start renderiza o
+      # manager.conf do template (segredo + ACL no mesmo bloco) antes de subir.
+      # mode 1777 é obrigatório: o processo roda como usuário asterisk.
+      - type: tmpfs
+        target: /etc/asterisk
+        tmpfs:
+          mode: 0o1777
+    command: ["sh", "/usr/local/bin/asterisk-start"]
     ports:
-      - "${AMI_PORT:-5038}:5038"
+      # AMI fail-closed em loopback por padrão (mesmo padrão do prod): publicar
+      # em 0.0.0.0 expõe o controle do PBX a TODO container do host via gateway
+      # docker0 — foi o caminho medido do leak 172.17.0.1:5038 a partir do
+      # container de pesquisa (AI_MEMORY/security-finding-pbx-ami-exposure.md).
+      - "${AMI_PUBLIC_BIND:-127.0.0.1}:${AMI_PUBLIC_PORT:-5038}:5038"
       - "${SIP_UDP_PORT:-5060}:5060/udp"
     restart: unless-stopped
     healthcheck:

@@ -1,0 +1,51 @@
+; manager.conf.template — fonte ÚNICA do manager.conf do AMI.
+;
+; O manager.conf NÃO é versionado: ele NASCE renderizado deste template, em
+; runtime, DENTRO do container (tmpfs em /etc/asterisk), por
+; pbx/asterisk/asterisk-start.sh via `envsubst '$AMI_SECRET'`. O segredo e a
+; ACL ficam no MESMO bloco porque os mecanismos "elegantes" foram REFUTADOS
+; por medição (2026-09-19, AI_MEMORY/security-finding-pbx-ami-exposure.md):
+;   - `secret = ${ENV(AMI_SECRET)}` aqui: a seção INTEIRA é descartada e o AMI
+;     deixa de existir ("There is no manager called ragent2").
+;   - `#include conf/manager-ami.conf` com o segredo lá: o include CARREGA o
+;     usuário e o segredo, mas o `#include` REINICIA a seção e a ACL é perdida
+;     (`manager show user ragent2` -> `ACL: no`), mesmo com deny/permit no
+;     arquivo principal. Com `permit` apontando para um endereço impossível,
+;     TODAS as origens continuaram recebendo resposta: a ACL ficava INERTE.
+; NÃO usar nenhum dos dois. Sem AMI_SECRET no ambiente, o container do PBX
+; não sobe (fail-closed, verificado no compose e no script de start).
+[general]
+enabled = yes
+webenabled = no
+port = 5038
+; bindaddr renderizado: DEFAULT 0.0.0.0 é ACEITÁVEL no deploy em container com
+; netns própria (compose prod/dev) — o 0.0.0.0 é o da netns do container e a
+; exposição é controlada pela PUBLICAÇÃO no compose (pinada em 127.0.0.1), não
+; por este valor. Nesses ambientes NÃO "corrija" para um IP do host: dentro da
+; netns esse IP não existe e o AMI para de subir.
+; Em deploy HOST-NETWORK (stack local de dev fora do compose) o 0.0.0.0 é o do
+; HOST e o AMI fica alcançável por TODAS as interfaces — inclusive o gateway
+; docker0 (vazamento para containers estranhos, medido 2026-09-19 pelo gate
+; MCP_RESEARCH_DOCKER_E2E como MCP_E2E_OPERATIONAL_LEAK). Nesse modo o start é
+; invocado com AMI_BINDADDR=127.0.0.1 e o AMI só escuta no loopback (a ACL por
+; origem continua em vigor como segunda camada).
+bindaddr = ${AMI_BINDADDR}
+
+; Usuário AMI usado pelo r-agent2 para originate/reload.
+;
+; ACL POR ORIGEM — literal porque NÃO é segredo, e é a defesa que impede um
+; container estranho à plataforma de autenticar no AMI.
+; Ordem: a PRIMEIRA correspondência decide (medido 2026-09-19 por origem, com
+; contra-prova de senha errada), por isso o `deny` final é o
+; que fecha.
+;   - 127.0.0.1: API rodando no host (dev);
+;   - 172.30.0.0/16: rede da plataforma (RAP_PLATFORM_SUBNET no compose).
+; NÃO voltar a `permit = 0.0.0.0/0.0.0.0`: era isso que deixava o gateway
+; docker0 autenticar com privilégio system,all.
+[ragent2]
+secret = ${AMI_SECRET}
+read = all
+write = all
+deny = 0.0.0.0/0.0.0.0
+permit = 127.0.0.1/255.255.255.255
+permit = 172.30.0.0/16

@@ -16,7 +16,7 @@ services:
     container_name: r-agent2-postgres-test
     environment:
       POSTGRES_USER: results_app
-      POSTGRES_PASSWORD: StrongPass
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida — stack de teste gera efemero via scripts/test-stack-up.sh}"
       POSTGRES_DB: results_saas_test
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
@@ -63,7 +63,7 @@ services:
       RAG_DATA_ROOT: /var/lib/ragent2/rag
       VECTOR_STORE_PATH: /var/lib/ragent2/rag/vector_store
       ADAPTIVE_LEARNING_DATA_PATH: /var/lib/ragent2/rag/adaptive_learning
-      DATABASE_URL: postgresql://results_app:StrongPass@postgres:5432/results_saas_test
+      DATABASE_URL: postgresql://results_app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida}@postgres:5432/results_saas_test
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "${RAG_TEST_PORT:-18001}:8000"
@@ -96,10 +96,10 @@ services:
       REDIS_URL: redis://redis:6379
       RAG_SERVICE_URL: http://rag-service:8000
       RAG_INTERNAL_TOKEN: ${RAG_INTERNAL_TOKEN:-test-rag-internal-token-at-least-32-bytes}
-      DATABASE_URL: postgresql://results_app:StrongPass@postgres:5432/results_saas_test
+      DATABASE_URL: postgresql://results_app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida}@postgres:5432/results_saas_test
       PGHOST: postgres
       PGUSER: results_app
-      PGPASSWORD: StrongPass
+      PGPASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida}"
       PGDATABASE: results_saas_test
       PGPORT: 5432
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-test-only-not-secure}
@@ -121,7 +121,7 @@ services:
       AMI_HOST: asterisk
       AMI_PORT: 5038
       AMI_USERNAME: ragent2
-      AMI_SECRET: ragent2
+      AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida (scripts/test-stack-up.sh gera um efêmero)}"
       AMI_ORIGINATE_ENABLED: "true"
       PBX_MEDIA_DIR: /app/api/data/pbx-media
       PBX_RECORDINGS_DIR: /app/api/data/pbx-recordings
@@ -158,17 +158,29 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      - ./pbx/asterisk/etc/asterisk:/etc/asterisk-static:ro
       - ./pbx/asterisk/etc/odbc.test.ini:/etc/odbc.ini:ro
       - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
       - r-agent2-pbx-media-test-data:/var/lib/asterisk/sounds/pbx
       - r-agent2-pbx-recordings-test-data:/var/spool/asterisk/monitor/pbx
+      # /etc/asterisk gravável só na memória do container: o start renderiza o
+      # manager.conf do template (segredo + ACL no mesmo bloco) antes de subir.
+      # mode 1777 é obrigatório: o processo roda como usuário asterisk.
+      - type: tmpfs
+        target: /etc/asterisk
+        tmpfs:
+          mode: 0o1777
     environment:
       NODE_ENV: test
-    command: sh -c "asterisk -f -vvvvv -d"
+      # Mesma origem da API de teste: AMI_SECRET efêmero gerado pelo
+      # scripts/test-stack-up.sh; o manager.conf é renderizado em runtime.
+      AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida (scripts/test-stack-up.sh gera um efêmero)}"
+    command: ["sh", "/usr/local/bin/asterisk-start"]
     ports:
       - "5060:5060/udp"
-      - "5038:5038"
+      # AMI é protocolo de CONTROLE: mesmo no stack de teste, publicar só no
+      # loopback do host (fail-closed), nunca em 0.0.0.0.
+      - "127.0.0.1:5038:5038"
     healthcheck:
       test: ["CMD-SHELL", "asterisk -rx 'core show version' >/dev/null 2>&1 || exit 1"]
       interval: 10s

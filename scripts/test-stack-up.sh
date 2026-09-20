@@ -31,6 +31,20 @@ pull_test_images() {
 }
 
 echo "[stack-up] Subindo stack de teste (docker-compose.test.yml)..."
+# AMI_SECRET fail-closed no compose de teste: gera um efêmero por subida quando
+# o caller não fornece um (API e Asterisk leem o MESMO valor). Nunca logar.
+if [[ -z "${AMI_SECRET:-}" ]]; then
+  AMI_SECRET="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")"
+  export AMI_SECRET
+  echo "[stack-up] AMI_SECRET efêmero gerado para o stack de teste (valor não exibido)"
+fi
+# POSTGRES_PASSWORD fail-closed no compose de teste: efêmero por subida quando o
+# caller não fornece um (o DB de teste é descartável; nunca logar o valor).
+if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
+  POSTGRES_PASSWORD="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")"
+  export POSTGRES_PASSWORD
+  echo "[stack-up] POSTGRES_PASSWORD efêmero gerado para o stack de teste (valor não exibido)"
+fi
 if [[ "${STACK_PULL_IMAGES:-}" == "1" ]]; then
   pull_test_images
 fi

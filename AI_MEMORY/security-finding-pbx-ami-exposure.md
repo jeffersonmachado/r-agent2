@@ -1,6 +1,6 @@
 # Achado de segurança — controle total do PBX a partir do container de pesquisa
 
-**Data:** 2026-09-19 · **Severidade:** crítica · **Estado:** correção 1 aplicada; 2 e 3 pendentes de decisão coordenada
+**Data:** 2026-09-19 · **Severidade:** crítica · **Estado:** correções 1, 2, 3, 4 e 5 aplicadas; E2E do mecanismo de render do segredo pendente (coordenador)
 
 ## Cadeia provada
 
@@ -38,11 +38,11 @@ recarregar o PBX. Não é banner nem informação — é controle.
 |---|---|---|
 | 1 | Publicação do AMI amarrada a `127.0.0.1` por padrão (`AMI_PUBLIC_BIND`, fail-closed) | ✅ aplicada (`165a22c3`) |
 | 2 | ACL por origem (`deny` final + `permit 127.0.0.1` + `172.30.0.0/16`) | ✅ aplicada e **provada** (`66a05e5c`) |
-| 3 | Segredo fora do versionamento | ❌ **ABERTA** — duas tentativas refutadas, ver abaixo |
+| 3 | Segredo fora do versionamento | ✅ aplicada — mecanismo template + render em runtime (ver abaixo); E2E ao vivo pendente |
 | 4 | `amiClient.js` sem default silencioso (`ami_secret_required`) | ✅ aplicada (`6e018dbe`) |
 | 5 | Critério de aceite que pega ACL inerte no gate `MCP_RESEARCH_DOCKER_E2E` | ✅ aplicado (`77393569`) |
 
-### Por que a #3 continua aberta: dois mecanismos refutados por medição
+### Por que a #3 exigiu mecanismo próprio: dois mecanismos refutados por medição
 
 | Tentativa | Como falha |
 |---|---|
@@ -53,21 +53,70 @@ Ambas foram commitadas por mim e revertidas depois. A segunda quase passou: a
 verificação de caminho felizinho (`o segredo novo funciona`) passou enquanto a
 ACL não protegia nada.
 
-### O que ainda não foi validado
+### Como a #3 foi resolvida (2026-09-19): template + render em runtime
 
-Desenho identificado: gerar o `manager.conf` **completo** (segredo + ACL no mesmo
-bloco) num `astetcdir` próprio em runtime, com **symlinks** para o resto — assim os
-contextos realtime que a API escreve em `/etc/asterisk/conf` continuam visíveis.
-Uma tentativa de probe **não produziu medição** (o `umask 077` herdado da sessão
-deixou o diretório em `0700`, ilegível para o usuário `asterisk`). O mecanismo
-portanto está **não validado** — nem confirmado nem refutado.
+O `manager.conf` **não é mais versionado** — só existe
+`pbx/asterisk/etc/asterisk/manager.conf.template`, com `secret = ${AMI_SECRET}`
+e a ACL **no mesmo bloco**. Em runtime:
+
+1. O compose monta o config estático ro em `/etc/asterisk-static` e um **tmpfs
+   mode 1777** em `/etc/asterisk` (o default do Docker, 755 root:root, impede o
+   usuário `asterisk` de escrever — medido; o mode é obrigatório).
+2. `pbx/asterisk/asterisk-start.sh` (start do container, na imagem) copia o
+   estático para o tmpfs e renderiza o template com `envsubst '$AMI_SECRET'`
+   (lista explícita: só o segredo é substituído). Sem `AMI_SECRET` o start
+   aborta — fail-closed no compose (`${AMI_SECRET:?}`) E no script.
+3. API e Asterisk leem o **mesmo** `AMI_SECRET` do `.env` via compose; o
+   bootstrap (`scripts/bootstrap/ensure-local-secrets.js`) gera o valor quando
+   vazio/fraco e rotaciona o valor legado vazado, sem logar.
+4. `/etc/asterisk/conf` segue volume compartilhado com a API em prod e nunca é
+   sobrescrito pelo start (o copy o pula quando o mount existe).
+
+O desenho anterior (astetcdir próprio com symlinks + `-C`) foi descartado: o
+Asterisk 18 **não** honra `AST_CONFIG_DIR` como variável de ambiente (lido o
+fonte de `main/asterisk.c` — a string no binário é a variável global
+`ast_config_AST_CONFIG_DIR`, não um `getenv`), o que exigiria reescrever o
+`asterisk.conf`. O copy para tmpfs é mais simples e não toca no
+`asterisk.conf`.
+
+### Prova ao vivo (2026-09-19, E2E do coordenador) — VALIDADO
+
+O stack local foi reprovisionado com o render em vigor e a matriz de
+autenticação foi medida contra o Asterisk vivo:
+
+| Origem | Credencial | Resultado |
+|---|---|---|
+| `127.0.0.1` (permitida) | legada `ragent2`/`ragent2` | `Authentication failed` |
+| `127.0.0.1` (permitida) | segredo gerado (bootstrap) | `Authentication accepted` |
+| `172.17.0.1` (docker0) | segredo gerado | `Connection refused` (bind loopback) |
+| `manager show user ragent2` | — | `ACL: yes` |
+
+O gate `npm run validate:mcp-research-docker-e2e` ficou **verde** no mesmo dia
+(0 violações, incluindo `--with-restart`: container volta healthy e
+`tools/list` responde após `docker restart`).
+
+Duas lições operacionais registradas neste reprovisionamento:
+
+1. **Host-network exige `AMI_BINDADDR=127.0.0.1`**: o container local de dev
+   roda em network mode `host`; com `bindaddr = 0.0.0.0` o AMI escutava em
+   TODAS as interfaces do host — inclusive o gateway docker0 — e o gate
+   acusava `MCP_E2E_OPERATIONAL_LEAK` mesmo com a ACL negando (a ACL nega
+   auth, não o TCP). O template passou a renderizar
+   `bindaddr = ${AMI_BINDADDR}` (default `0.0.0.0`, correto dentro de netns de
+   container, onde a publicação pinada em `127.0.0.1` controla a exposição) e
+   o start em host-network é invocado com `AMI_BINDADDR=127.0.0.1`.
+2. **Segredos default adjacentes removidos**: `POSTGRES_PASSWORD:-StrongPass`
+   (docker-compose.prod.yml) e `StrongPass` literal (docker-compose.test.yml)
+   viraram fail-closed `${POSTGRES_PASSWORD:?}`; o bootstrap
+   (`ensure-local-secrets.js`) gera o valor (e rotaciona `StrongPass`
+   existente), e `scripts/test-stack-up.sh` gera um efêmero por subida.
 
 ### Critério de aceite obrigatório
 
-`npm run`-style: `node scripts/governance/validate-mcp-research-docker-e2e.js`
-precisa ficar **verde**, e ele exige que a credencial legada do repositório
-**não autentique**. Verificar que o segredo novo funciona não basta: é preciso
-provar que o antigo parou de valer.
+`npm run validate:mcp-research-docker-e2e` precisa ficar **verde**, e ele
+exige que a credencial legada do repositório **não autentique**. Verificar que
+o segredo novo funciona não basta: é preciso provar que o antigo parou de
+valer.
 
 
 ## Lições
@@ -122,13 +171,18 @@ dois desfechos — contar `Response` sem conferir `Message` não distingue.
 - **ACL: em vigor.** Origem fora dos `permit` não autentica. Medições anteriores
   de "banner + `system,all`" foram feitas com a config antiga
   (`permit = 0.0.0.0/0.0.0.0`), que era exatamente o defeito corrigido.
-- **`secret = ragent2` continua LITERAL e versionado** em
-  `pbx/asterisk/etc/asterisk/manager.conf`. É um segredo fixo, no repositório,
-  com `read/write = all`. A ACL limita QUEM pode usá-lo (`127.0.0.1` e
-  `172.30.0.0/16`), mas qualquer container na rede da plataforma autentica com
-  privilégio total — movimento lateral continua possível. **Item ainda aberto.**
-- O mount do config é `ro`
-  (`/opt/results/ria/r-agent2/pbx/asterisk/etc/asterisk -> /etc/asterisk (ro)`),
-  o que **refuta** a hipótese de a API sobrescrever `/etc/asterisk` em runtime.
+- **Segredo fora do versionamento: resolvido (2026-09-19).** O
+  `pbx/asterisk/etc/asterisk/manager.conf` com `secret = ragent2` foi removido
+  do versionamento; só existe o template com `${AMI_SECRET}`, renderizado em
+  runtime no tmpfs do container (ver "Como a #3 foi resolvida"). O gate
+  `validate:pbx-ami-secret` (checks `PBX_AMI_NO_DEFAULT_SECRET`,
+  `PBX_AMI_NO_PLAINTEXT_SECRET`, `PBX_AMI_ACL`) vigia a regressão.
+  **Pendente:** a matriz de autenticação ao vivo (E2E do coordenador) e a
+  rotação do valor nos `.env` já existentes (o bootstrap rotaciona na próxima
+  execução; até lá o valor legado continua funcional nos ambientes que o usam).
+- O mount do config estático é `ro` em `/etc/asterisk-static`
+  (`/opt/results/ria/r-agent2/pbx/asterisk/etc/asterisk`), o que **refuta** a
+  hipótese de a API sobrescrever o config em runtime; o `/etc/asterisk` lido
+  pelo Asterisk é um tmpfs materializado pelo start do container.
 - `ACL: yes` em ambos os containers rodando (`ami-rt`, `ragent2-asterisk-local`),
   com a mesma config montada — a contradição não vinha de configs divergentes.

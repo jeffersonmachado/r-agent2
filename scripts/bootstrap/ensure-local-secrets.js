@@ -107,6 +107,26 @@ function ensureLocalSecrets(rootDir) {
     replaySigningKey = crypto.randomBytes(32).toString('hex');
     rootContent = upsertEnvValue(rootContent, 'REPLAY_SIGNING_KEY', replaySigningKey);
   }
+
+  // Segredo do AMI (controle do PBX). O valor legado 'ragent2' esteve
+  // versionado e é público — tratá-lo como inválido força a rotação no
+  // bootstrap. API e Asterisk leem o MESMO valor via compose.
+  let amiSecret = readEnvValue(rootContent, 'AMI_SECRET');
+  const amiSecretGenerated = !isValidInternalToken(amiSecret) || amiSecret === 'ragent2';
+  if (amiSecretGenerated) {
+    amiSecret = crypto.randomBytes(32).toString('hex');
+    rootContent = upsertEnvValue(rootContent, 'AMI_SECRET', amiSecret);
+  }
+
+  // Senha do Postgres dos composes (prod/test). O default versionado
+  // 'StrongPass' era um segredo conhecido — os composes agora são fail-closed
+  // (`${POSTGRES_PASSWORD:?}`) e o bootstrap provisiona um valor gerado.
+  let postgresPassword = readEnvValue(rootContent, 'POSTGRES_PASSWORD');
+  const postgresPasswordGenerated = !isValidInternalToken(postgresPassword) || postgresPassword === 'StrongPass';
+  if (postgresPasswordGenerated) {
+    postgresPassword = crypto.randomBytes(32).toString('hex');
+    rootContent = upsertEnvValue(rootContent, 'POSTGRES_PASSWORD', postgresPassword);
+  }
   writeAtomic(rootEnvPath, rootContent);
 
   let ragContent = fs.existsSync(ragEnvPath) ? fs.readFileSync(ragEnvPath, 'utf8') : '';
@@ -116,7 +136,7 @@ function ensureLocalSecrets(rootDir) {
   }
   writeAtomic(ragEnvPath, ragContent);
 
-  return { encryptionGenerated, ragTokenGenerated, ragTokenSynchronized, replaySigningKeyGenerated };
+  return { encryptionGenerated, ragTokenGenerated, ragTokenSynchronized, replaySigningKeyGenerated, amiSecretGenerated, postgresPasswordGenerated };
 }
 
 if (require.main === module) {

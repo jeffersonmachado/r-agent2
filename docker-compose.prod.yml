@@ -43,10 +43,10 @@ services:
       # PROD_DATABASE_URL dedicada: o DATABASE_URL do .env de dev aponta para
       # localhost e vazaria para o container; credenciais alinhadas ao serviço
       # postgres abaixo (POSTGRES_USER/PASSWORD/DB).
-      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:-StrongPass}@postgres:5432/${POSTGRES_DB:-results_saas}}
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida — provisione via .env bootstrap, nunca usar default}@postgres:5432/${POSTGRES_DB:-results_saas}}
       PGHOST: ${PGHOST:-postgres}
       PGUSER: ${POSTGRES_USER:-results_app}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-StrongPass}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida — provisione via .env bootstrap, nunca usar default}
       PGDATABASE: ${POSTGRES_DB:-results_saas}
       PGPORT: ${PGPORT:-5432}
       # Criptografia de segredos (OBRIGATÓRIO em produção)
@@ -208,7 +208,7 @@ services:
       LLM_PROVIDER: ${RAG_LLM_PROVIDER:-openai}
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-4o-mini}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:-StrongPass}@postgres:5432/${POSTGRES_DB:-results_saas}}
+      DATABASE_URL: ${PROD_DATABASE_URL:-postgresql://${POSTGRES_USER:-results_app}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida — provisione via .env bootstrap, nunca usar default}@postgres:5432/${POSTGRES_DB:-results_saas}}
     expose:
       - "8000"
     volumes:
@@ -289,7 +289,7 @@ services:
     container_name: r-agent2-postgres-prod
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-results_app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-StrongPass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida — provisione via .env bootstrap, nunca usar default}
       POSTGRES_DB: ${POSTGRES_DB:-results_saas}
       PGDATA: /var/lib/postgresql/data/pgdata
       # Configurações de performance para produção
@@ -350,13 +350,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # NÃO reintroduzir aqui injeção de credencial via entrypoint/#include: medido
-    # em 2026-09-19, o `#include` carrega o usuário mas REINICIA a seção e a ACL
-    # fica inerte (`ACL: no`), mesmo com deny/permit no arquivo principal. A
-    # credencial do AMI em manager.conf segue literal, como pendência aberta —
-    # o mecanismo correto precisa gerar o arquivo COMPLETO num diretório gravável.
+    environment:
+      # Mesma origem da API: o segredo do AMI vem do .env e é renderizado no
+      # manager.conf em runtime (template -> tmpfs), nunca versionado. Sem ele
+      # o compose falha na configuração E o container aborta no start.
+      AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
+    # NÃO reintroduzir injeção de credencial via ${ENV()}/#include no
+    # manager.conf: medido em 2026-09-19, o ${ENV()} descarta a seção inteira e
+    # o #include REINICIA a seção, deixando a ACL inerte. O mecanismo vigente é
+    # o render do arquivo COMPLETO (template + envsubst) em /etc/asterisk
+    # (tmpfs gravável) por pbx/asterisk/asterisk-start.sh.
     volumes:
-      - ./pbx/asterisk/etc/asterisk:/etc/asterisk:ro
+      - ./pbx/asterisk/etc/asterisk:/etc/asterisk-static:ro
       # Shadow somente de /etc/asterisk/conf: o include de contextos realtime e gerado em
       # runtime pela API e precisa ser visivel aqui (volume compartilhado).
       - r-agent2-pbx-asterisk-conf:/etc/asterisk/conf
@@ -364,7 +369,15 @@ services:
       - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
       - r-agent2-pbx-media-data:/var/lib/asterisk/sounds/pbx
       - r-agent2-pbx-recordings-data:/var/spool/asterisk/monitor/pbx
-    command: sh -c "asterisk -f -vvvvv -d"
+      # /etc/asterisk gravável só na memória do container: é onde o start
+      # materializa a cópia do config estático + o manager.conf renderizado.
+      # mode 1777 é obrigatório: o processo roda como usuário asterisk e o
+      # default do Docker (755 root:root) o impediria de escrever (medido).
+      - type: tmpfs
+        target: /etc/asterisk
+        tmpfs:
+          mode: 0o1777
+    command: ["sh", "/usr/local/bin/asterisk-start"]
     ports:
       # AMI é protocolo de CONTROLE (originar chamadas, ler CDR). Publicá-lo em
       # 0.0.0.0 o expõe a TODOS os containers do host pelo gateway docker0 —

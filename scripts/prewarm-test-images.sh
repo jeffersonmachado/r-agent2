@@ -11,6 +11,12 @@ export TEST_IMAGE_PREFIX TEST_IMAGE_TAG TEST_API_BASE_IMAGE
 
 MODE="${1:-build}"
 
+# docker-compose.test.yml exige AMI_SECRET e POSTGRES_PASSWORD (fail-closed) já
+# para RESOLVER a config (build/pull/push). Valores placeholder bastam: estas
+# operações não sobem container. Nunca logar.
+export AMI_SECRET="${AMI_SECRET:-prewarm-config-resolution-only}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-prewarm-config-resolution-only}"
+
 usage() {
   cat <<'USAGE'
 Uso: scripts/prewarm-test-images.sh [build|pull|push]
