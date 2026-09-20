@@ -21,6 +21,7 @@ COPY services/mcp-research/src ./services/mcp-research/src
 # Código provado da plataforma, REUSADO (não forkado) — caminhos relativos
 # idênticos aos do monorepo para que os requires resolvam sem adaptação.
 COPY api/services/research/nativeResearchProvider.js ./api/services/research/nativeResearchProvider.js
+COPY api/services/research/apiSearchBackend.js ./api/services/research/apiSearchBackend.js
 COPY api/services/askAi/injectionGuard.js ./api/services/askAi/injectionGuard.js
 COPY src/core/mcp/endpoint-policy.js ./src/core/mcp/endpoint-policy.js
 

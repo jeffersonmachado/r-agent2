@@ -173,6 +173,30 @@ phase_prepare() {
 
   local verdict
   verdict="$(grep -oE 'SEAL_(GO|PENDING|NO_GO)' "$log" | tail -1)"
+
+  # QA MESH DENTRO DO RUN GOVERNADO (2026-09-19, task T4): o go-no-go do mesh
+  # é RUNTIME_EVIDENCE — só é prova do run em que o mesh REALMENTE rodou. O
+  # defeito de 2026-09-18 foi estampar retroativamente o runId de um run de
+  # 20:18 num relatório produzido às 10:46 (QA_EVIDENCE_SAME_RUN_VIOLATION,
+  # sameRunOk 0/6). Aqui o mesh executa DE FATO, depois do converge (run
+  # criado/confirmado) e ANTES de exigir o veredito SEAL_GO e do scorecard da
+  # fase candidate. RUNNING_IN_PIPELINE=1 torna a execução canônica
+  # (executionOrigin=pipeline → go-no-go/release-gate/histórico gravados); o
+  # lineage é resolvido na origem por pipeline/entrypoints/runQaMesh.js a
+  # partir de governance/.current-run.json — nunca anexado depois.
+  # Duração histórica ~35min (2026-09-18, 10:11→10:46): timeout de 90min.
+  # Exit != 0 (NO_GO ou erro) ABORTA a fase: sem evidência same-run não há seal.
+  if [ "$verdict" = "SEAL_PENDING" ] || [ "$verdict" = "SEAL_GO" ]; then
+    step prepare "QA Mesh canônico dentro do run governado (evidência same-run, ~35min)"
+    local mlog="$LOG_DIR/qa-mesh.log"
+    RUNNING_IN_PIPELINE=1 timeout 5400 npm run qa:mesh > "$mlog" 2>&1
+    local mrc=$?
+    if [ "$mrc" != "0" ]; then
+      fail "QA Mesh falhou dentro do run governado (exit $mrc) — sem evidência same-run não há seal" "$mlog" prepare
+    fi
+    ok "QA Mesh: GO dentro do run $(node -e "try{console.log(require('./governance/.current-run.json').runId)}catch(e){console.log('?')}" 2>/dev/null)"
+  fi
+
   case "$verdict" in
     SEAL_PENDING|SEAL_GO)
       ok "seal-time-gate: $verdict"
@@ -375,7 +399,24 @@ phase_consolidate() {
   if [ "$rc" != "0" ]; then
     timeout 3000 npm run validate:governance-enforcement > "$alog" 2>&1
     rc=$?
-    [ "$rc" = "0" ] && ok "gate agregado após reparo: EXIT 0" || warn "gate agregado ainda EXIT $rc"
+    if [ "$rc" != "0" ]; then
+      # BLOQUEANTE (2026-09-19, task T4): antes isto era 'warn' e o seal
+      # continuava com o agregado vermelho — foi assim que
+      # QA_EVIDENCE_SAME_RUN_VIOLATION (sameRunOk 0/6) seguiu adiante. Gate
+      # agregado falho após os reparos ABORTA o ciclo.
+      grep -oE 'QA_EVIDENCE_[A-Z_]+' "$alog" | sort -u | sed 's/^/    violação: /' || true
+      fail "gate agregado ainda EXIT $rc após reparos — seal ABORTADO (evidência same-run/lineage exige reexecução real, não carimbo)" "$alog" consolidate
+    fi
+    ok "gate agregado após reparo: EXIT 0"
+  fi
+
+  # MCP_RESEARCH_DOCKER_E2E: no agregado o gate sai 0 com REQUIRES_DOCKER_RUNTIME
+  # quando não há docker — correto para CI/dev, mas não é prova de release. Aqui
+  # o relatório tem de estar PASS e FRESCO (o agregado acabou de rodar o gate).
+  if node scripts/governance/verify-mcp-research-docker-e2e-pass.js > "$LOG_DIR/mcp-e2e.log" 2>&1; then
+    ok "MCP_RESEARCH_DOCKER_E2E: relatório PASS fresco"
+  else
+    fail "MCP_RESEARCH_DOCKER_E2E não verde (release final não existe sem a prova de runtime)" "$LOG_DIR/mcp-e2e.log" consolidate
   fi
 
   commit_and_push "chore(governance): consolidação final do ciclo de selagem" || \
@@ -419,12 +460,15 @@ preflight
 if [ "$DRY_RUN" = "1" ]; then
   echo
   cyan "PLANO (dry-run)"
-  echo "  1. prepare      create-governed-run (se drift) -> converge -> exige SEAL_PENDING|SEAL_GO -> commit+push"
+  echo "  1. prepare      create-governed-run (se drift) -> converge -> QA Mesh REAL no run (canônico, ~35min;"
+  echo "                 falha do mesh ABORTA) -> exige SEAL_PENDING|SEAL_GO -> commit+push"
   echo "  2. candidate    zip:release (exit 1 esperado) -> verify:delivered-release -> scorecard below10=0"
   echo "                 -> projeções PASS -> fixpoint -> commit+push"
   echo "  3. final        zip:release (exit 0) -> release/commit/H_final do MANIFEST -> commit no remote"
   echo "  4. publish      create-release-tag -> verify-remote-provenance --manifest -> recibo -> publication"
-  echo "  5. consolidate  gate agregado -> journey:projections -> stamp-report-lineage -> commit+push"
+  echo "  5. consolidate  gate agregado (BLOQUEANTE: exit != 0 após reparos ABORTA o seal)"
+  echo "                 -> MCP_RESEARCH_DOCKER_E2E exige relatório PASS fresco (BLOQUEANTE)"
+  echo "                 -> journey:projections -> stamp-report-lineage -> commit+push"
   echo "                 -> verify:delivered-release (ÚLTIMO)"
   echo
   echo "  Fases: ${PHASES[*]}"
