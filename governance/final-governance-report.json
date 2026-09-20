@@ -1,9 +1,9 @@
 {
   "artifactType": "final-governance-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-20T10:17:15.684Z",
-  "runId": "rap-governed-20260920093537068-aeb33aa7",
-  "sourceFingerprint": "eecd3aa8b323d3c4dcfddf01057604ed11ab767034b01ef25e5993f4e495fe03",
+  "generatedAt": "2026-09-20T12:15:48.937Z",
+  "runId": "rap-governed-20260920113643242-cac6169c",
+  "sourceFingerprint": "ab6d1be48c4f7e919de324aa9d59dfdffafbda6843c4f3d4200b73fd8a5374b5",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
@@ -21,7 +21,7 @@
       "id": "master_scorecard",
       "pass": false,
       "status": "FAIL",
-      "reason": "dimensionsBelow10=31 (real failures: RAP-024,RAP-026,RAP-068)"
+      "reason": "dimensionsBelow10=36 (real failures: RAP-002,RAP-018,RAP-020,RAP-022,RAP-023,RAP-025,RAP-040,RAP-068)"
     },
     {
       "id": "source_integrity",

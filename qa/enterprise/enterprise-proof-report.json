@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-20T10:34:22.856Z",
+  "generatedAt": "2026-09-20T11:37:11.294Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:3001",
   "authMode": "admin",
@@ -9,7 +9,7 @@
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1789900438495 callId=call-voice-tts-asr-1789900438495 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1789904205159 callId=call-voice-tts-asr-1789904205159 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
@@ -23,7 +23,7 @@
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1789900460977-gvvzcby conversation=conv-1789900461020-605107dbc805 queue=ux1_smoke_1789900460961 quickReply=qr-1789900461432-h3zssj5x1 phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1789904229294-9fbcdjh conversation=conv-1789904229321-4e27c079c5e6 queue=ux1_smoke_1789904229285 quickReply=qr-1789904229979-fesl2hwhu phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
@@ -76,8 +76,8 @@
     },
     "warnings": []
   },
-  "runId": "rap-governed-20260920103356648-0c6f7ab6",
-  "sourceFingerprint": "19192f16f6b03088f36da510d4844a1d5e23728534ac403688ce817feb2c4441",
-  "sourceCommit": "b2ae64b6d7000794497ef31074cbc740c8094dc5",
-  "sourceTree": "a039068ea703bf6cd3f03a0474225eacd707a3a5"
+  "runId": "rap-governed-20260920113643242-cac6169c",
+  "sourceFingerprint": "ab6d1be48c4f7e919de324aa9d59dfdffafbda6843c4f3d4200b73fd8a5374b5",
+  "sourceCommit": "6c831ae848855c442cd78008e48057621099a350",
+  "sourceTree": "6d139957c2e0d197a53473a79f820d98d762d13b"
 }
