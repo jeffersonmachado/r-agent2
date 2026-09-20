@@ -21,19 +21,35 @@
  * achado nasce STALE e o gate vira ruído.
  *
  * REGRA
- *   - amostra que DECLARA certificação (`claim: SAMPLE_SUFFICIENT`, o mesmo
- *     claim usado por validate-benchmark-sufficiency) PRECISA registrar a
+ *   - quem define "vertical certificada" é a AUTORIDADE ÚNICA
+ *     (`scripts/governance/lib/benchmarkCertificationAuthority.js`): o
+ *     relatório canônico do engine de suficiência, onde a certificação é
+ *     DERIVADA. O campo declarado `sample.claim` NÃO é fonte — nenhum
+ *     produtor o grava e o design proíbe gravá-lo. Até 2026-09-19 este gate
+ *     lia `claim` e PASSava com `certifiedSamples=0`: PASS vacuoso.
+ *   - amostra de vertical CERTIFICADA pela autoridade PRECISA registrar a
  *     versão atual do pipeline, mais `semanticReprocessRunId` e
  *     `semanticReprocessedAt`:
  *       versão ausente  -> SEMANTIC_VERSION_MISSING   (FAIL)
  *       versão diferente-> STALE_SEMANTICS            (FAIL)
  *       formato inválido-> SEMANTIC_VERSION_FORMAT_UNKNOWN (FAIL)
- *   - amostra que NÃO declara certificação é reportada como `NOT_CERTIFIED`
+ *   - amostra de vertical NÃO certificada é reportada como `NOT_CERTIFIED`
  *     (estado honesto, NÃO violação): ausência de prova não é fraude.
  *   - se existir alguma vertical certificada, os achados persistidos dela são
  *     conferidos no banco (`benchmark_research_findings.metadata`). Banco
  *     indisponível nesse cenário é violação (fail-closed) — não dá para
  *     afirmar que a certificação é atual sem olhar o que a sustenta.
+ *   - achados APOSENTADOS (verification_state ∈ SUPERSEDED | REJECTED |
+ *     STALE_SEMANTICS) NÃO são auditados por versão: eles foram removidos do
+ *     corpus vigente por decisão governada registrada na própria linha
+ *     (supersededBy/motivo/runId em metadata — trilha preservada, nada é
+ *     apagado). Auditar a versão de um achado que já não certifica nada é
+ *     falso positivo por desenho: ele foi aposentado exatamente POR ter sido
+ *     produzido por outro pipeline. O aposento é contado e publicado
+ *     (`persistedFindingsRetired`) — nunca silencioso. Achado ATIVO sem
+ *     versão corrente continua FAIL duro.
+ *   - autoridade indisponível (relatório ausente/stale/inconsistente) é
+ *     violação fail-closed, nunca conjunto vazio silencioso.
  *
  * Uso: node --env-file-if-exists=.env scripts/governance/validate-benchmark-semantic-version.js
  */
@@ -46,12 +62,11 @@ const {
   getSemanticPipelineVersion,
   evaluateSemanticVersion,
 } = require('../../api/services/benchmark/semantic/semanticPipelineVersion');
+const { loadCertificationAuthority } = require('./lib/benchmarkCertificationAuthority');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const SAMPLES_DIR = path.join(ROOT_DIR, 'config', 'benchmarks');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'benchmark-semantic-version-report.json');
-
-const CERTIFICATION_CLAIM = 'SAMPLE_SUFFICIENT';
 
 const CODES = Object.freeze({
   VERSION_MISSING: 'SEMANTIC_VERSION_MISSING',
@@ -61,6 +76,8 @@ const CODES = Object.freeze({
   FINDINGS_VERSION_MISSING: 'FINDINGS_SEMANTIC_VERSION_MISSING',
   FINDINGS_VERSION_STALE: 'FINDINGS_STALE_SEMANTICS',
   DB_UNAVAILABLE: 'SEMANTIC_VERSION_DB_UNAVAILABLE',
+  CERTIFIED_SAMPLE_MISSING: 'CERTIFIED_SAMPLE_MISSING',
+  AUTHORITY_UNAVAILABLE: 'BENCHMARK_CERTIFICATION_AUTHORITY_UNAVAILABLE',
 });
 
 const STATUS = Object.freeze({
@@ -69,6 +86,15 @@ const STATUS = Object.freeze({
   NOT_CERTIFIED: 'NOT_CERTIFIED',
   MALFORMED: 'SAMPLE_MALFORMED',
 });
+
+/**
+ * Estados de achado APOSENTADO por decisão governada (produtor:
+ * `scripts/benchmark/apply-semantic-reprocess.js`). Mesmo vocabulário do gate
+ * de corpus (`validate-benchmark-persisted-corpus.js`). Aposentado não é
+ * ausente: a linha continua no banco com a trilha completa — só não sustenta
+ * mais a certificação, logo não é auditada por versão.
+ */
+const RETIRED_STATES = Object.freeze(['SUPERSEDED', 'REJECTED', 'STALE_SEMANTICS']);
 
 function mapReasonToCode(reason) {
   if (reason === STALE_REASONS.VERSION_MISSING) return CODES.VERSION_MISSING;
@@ -79,18 +105,25 @@ function mapReasonToCode(reason) {
 
 /**
  * Avaliação PURA de uma amostra (testável sem banco).
- * @returns {{ vertical, status, claimsCertification, recordedVersion, expectedVersion,
+ *
+ * @param {object} sample
+ * @param {string} currentVersion
+ * @param {object} [options]
+ * @param {boolean} [options.certified]  decisão da AUTORIDADE ÚNICA para a
+ *        vertical desta amostra. Default false (fail-closed): sem autoridade
+ *        afirmando, nada aqui é certificado — `sample.claim` é inerte.
+ * @returns {{ vertical, status, certifiedByAuthority, recordedVersion, expectedVersion,
  *             semanticReprocessRunId, violations: Array<{code, detail}> }}
  */
-function evaluateSample(sample, currentVersion) {
+function evaluateSample(sample, currentVersion, { certified = false } = {}) {
   const vertical = sample && typeof sample.vertical === 'string' ? sample.vertical : null;
-  const claimsCertification = sample?.claim === CERTIFICATION_CLAIM;
+  const certifiedByAuthority = certified === true && vertical !== null;
 
   if (!vertical) {
     return {
       vertical: null,
       status: STATUS.MALFORMED,
-      claimsCertification,
+      certifiedByAuthority: false,
       recordedVersion: null,
       expectedVersion: currentVersion,
       semanticReprocessRunId: null,
@@ -108,31 +141,31 @@ function evaluateSample(sample, currentVersion) {
   // de versão: uma amostra que registra a versão atual sem apontar o run que a
   // reprocessou está afirmando "produzida agora" sem dizer por quem. Versão
   // correta e origem ausente ainda é uma certificação sem proveniência.
-  if (claimsCertification) {
+  if (certifiedByAuthority) {
     if (!evaluation.current) {
       violations.push({
         code: mapReasonToCode(evaluation.reason),
         detail: evaluation.recorded
           ? `registrada=${evaluation.recorded} atual=${evaluation.expected}`
-          : `amostra declara ${CERTIFICATION_CLAIM} sem semanticPipelineVersion`,
+          : 'vertical certificada pelo engine sem semanticPipelineVersion registrado',
       });
     }
     if (!semanticReprocessRunId) {
       violations.push({
         code: CODES.REPROCESS_RUN_MISSING,
-        detail: 'amostra certificada sem semanticReprocessRunId',
+        detail: 'vertical certificada sem semanticReprocessRunId',
       });
     }
   }
 
-  const status = claimsCertification
+  const status = certifiedByAuthority
     ? (violations.length === 0 ? STATUS.CERTIFIED_CURRENT : STATUS.STALE)
     : STATUS.NOT_CERTIFIED;
 
   return {
     vertical,
     status,
-    claimsCertification,
+    certifiedByAuthority,
     recordedVersion: evaluation.recorded,
     expectedVersion: evaluation.expected,
     semanticReprocessRunId,
@@ -170,7 +203,11 @@ function loadSamples() {
  * um único achado. Por isso o caminho é achado -> run_id -> run.vertical.
  */
 async function evaluatePersistedFindings(certifiedVerticals) {
-  const result = { checked: 0, stale: 0, detail: [], dbAvailable: true, runsScanned: 0 };
+  const result = { checked: 0, stale: 0, retired: 0, detail: [], dbAvailable: true, runsScanned: 0, checkedByVertical: {}, retiredByVertical: {} };
+  for (const vertical of certifiedVerticals) {
+    result.checkedByVertical[vertical] = 0;
+    result.retiredByVertical[vertical] = 0;
+  }
   if (certifiedVerticals.length === 0) return result;
 
   try {
@@ -197,7 +234,15 @@ async function evaluatePersistedFindings(certifiedVerticals) {
 
         const rows = await getFinding().findAll({ where: { run_id: { [Op.in]: runIds } } });
         for (const row of rows) {
+          // Aposentado (SUPERSEDED/REJECTED/STALE_SEMANTICS): fora do corpus
+          // vigente por decisão governada — contado e publicado, não auditado.
+          if (RETIRED_STATES.includes(String(row.verification_state))) {
+            result.retired += 1;
+            result.retiredByVertical[vertical] += 1;
+            continue;
+          }
           result.checked += 1;
+          result.checkedByVertical[vertical] += 1;
           const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
           const evaluation = evaluateSemanticVersion(metadata);
           if (!evaluation.current) {
@@ -226,7 +271,43 @@ async function evaluatePersistedFindings(certifiedVerticals) {
   return result;
 }
 
+function writeReport(report) {
+  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
+  fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+}
+
+function failClosed(error) {
+  const report = {
+    validator: 'validate-benchmark-semantic-version',
+    generatedAt: new Date().toISOString(),
+    status: 'FAIL',
+    certifiedVerticals: [],
+    auditedCertifiedVerticals: [],
+    violations: [{
+      code: error.code || CODES.AUTHORITY_UNAVAILABLE,
+      vertical: null,
+      file: null,
+      detail: error.message,
+    }],
+  };
+  writeReport(report);
+  console.log(`[benchmark-semantic-version] status=FAIL autoridade-indisponivel: ${error.message}`);
+  console.log(`[benchmark-semantic-version] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)}`);
+  process.exitCode = 1;
+}
+
 async function main() {
+  // AUTORIDADE ÚNICA primeiro: sem ela não existe conjunto de certificadas —
+  // e continuar com conjunto vazio seria exatamente o PASS vacuoso antigo.
+  let authority;
+  try {
+    authority = loadCertificationAuthority();
+  } catch (error) {
+    failClosed(error);
+    return;
+  }
+  const certifiedSet = new Set(authority.certifiedVerticals);
+
   const { version: currentVersion, components } = getSemanticPipelineVersion();
   const samples = loadSamples();
 
@@ -236,14 +317,15 @@ async function main() {
         file,
         vertical: null,
         status: STATUS.MALFORMED,
-        claimsCertification: false,
+        certifiedByAuthority: false,
         recordedVersion: null,
         expectedVersion: currentVersion,
         semanticReprocessRunId: null,
         violations: [{ code: CODES.VERSION_STALE, detail: `JSON inválido: ${parseError}` }],
       };
     }
-    return { file, ...evaluateSample(doc, currentVersion) };
+    const vertical = typeof doc.vertical === 'string' ? doc.vertical : null;
+    return { file, ...evaluateSample(doc, currentVersion, { certified: vertical !== null && certifiedSet.has(vertical) }) };
   });
 
   const violations = evaluations.flatMap((evaluation) => evaluation.violations.map((violation) => ({
@@ -252,9 +334,20 @@ async function main() {
     vertical: evaluation.vertical,
   })));
 
-  const certifiedVerticals = evaluations
-    .filter((evaluation) => evaluation.status === STATUS.CERTIFIED_CURRENT)
-    .map((evaluation) => evaluation.vertical);
+  // Vertical certificada pela autoridade PRECISA ter amostra legível — sem
+  // ela não há onde registrar a versão semântica que sustenta a certificação.
+  for (const vertical of authority.certifiedVerticals) {
+    if (!evaluations.some((evaluation) => evaluation.vertical === vertical)) {
+      violations.push({
+        code: CODES.CERTIFIED_SAMPLE_MISSING,
+        vertical,
+        file: null,
+        detail: 'vertical certificada pela autoridade sem amostra legível em config/benchmarks',
+      });
+    }
+  }
+
+  const certifiedVerticals = authority.certifiedVerticals;
 
   const findingsAudit = await evaluatePersistedFindings(certifiedVerticals);
   if (!findingsAudit.dbAvailable) {
@@ -269,8 +362,12 @@ async function main() {
     code: item.code,
     file: `benchmark_research_findings:${item.findingId}`,
     vertical: item.vertical,
-    detail: `achado com semantica desatualizada (registrada=${item.recorded || 'ausente'} atual=${currentVersion})`,
+    detail: item.note || `achado com semantica desatualizada (registrada=${item.recorded || 'ausente'} atual=${currentVersion})`,
   })));
+
+  const auditedCertifiedVerticals = certifiedVerticals.filter(
+    (vertical) => (findingsAudit.checkedByVertical[vertical] || 0) > 0,
+  );
 
   const report = {
     validator: 'validate-benchmark-semantic-version',
@@ -278,15 +375,26 @@ async function main() {
     status: violations.length === 0 ? 'PASS' : 'FAIL',
     semanticPipelineVersion: currentVersion,
     semanticPipelineComponents: components.map((c) => c.name),
+    // A autoridade que definiu o conjunto auditado — reproduzível, não implícita.
+    authority: {
+      reportPath: path.relative(ROOT_DIR, authority.reportPath),
+      generatedAt: authority.generatedAt,
+      commit: authority.commit,
+    },
     samplesChecked: evaluations.length,
+    certifiedVerticals,
     certifiedSamples: certifiedVerticals.length,
+    auditedCertifiedVerticals,
     persistedFindingsChecked: findingsAudit.checked,
+    persistedFindingsCheckedByVertical: findingsAudit.checkedByVertical,
     persistedFindingsStale: findingsAudit.stale,
+    persistedFindingsRetired: findingsAudit.retired,
+    persistedFindingsRetiredByVertical: findingsAudit.retiredByVertical,
     verticals: evaluations.map((evaluation) => ({
       file: evaluation.file,
       vertical: evaluation.vertical,
       status: evaluation.status,
-      claimsCertification: evaluation.claimsCertification,
+      certifiedByAuthority: evaluation.certifiedByAuthority,
       recordedVersion: evaluation.recordedVersion,
       expectedVersion: evaluation.expectedVersion,
       semanticReprocessRunId: evaluation.semanticReprocessRunId,
@@ -294,8 +402,7 @@ async function main() {
     violations,
   };
 
-  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-  fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  writeReport(report);
 
   console.log(
     `[benchmark-semantic-version] status=${report.status} `
@@ -314,4 +421,4 @@ if (require.main === module) {
   main().catch((error) => { console.error(error); process.exitCode = 1; });
 }
 
-module.exports = { CODES, STATUS, CERTIFICATION_CLAIM, evaluateSample, mapReasonToCode };
+module.exports = { CODES, STATUS, RETIRED_STATES, evaluateSample, mapReasonToCode };

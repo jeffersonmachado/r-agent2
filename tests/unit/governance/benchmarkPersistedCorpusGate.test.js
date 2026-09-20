@@ -16,7 +16,6 @@
 const {
   CODES,
   INTEGRITY_CODES,
-  CERTIFICATION_CLAIM,
   evaluatePersistedFinding,
   loadCertifiedSamples,
   resolveSupportingRunId,
@@ -116,11 +115,26 @@ describe('política — só para vertical certificada', () => {
     ['sem evidência', { evidence_id: null }, CODES.MISSING_EVIDENCE],
     ['estado não validado', { verification_state: 'UNVERIFIED' }, CODES.NOT_VALIDATED],
     ['sem normalizedId', { metadata: { contentHash: 'a'.repeat(64), semanticPipelineVersion: CURRENT } }, CODES.MISSING_NORMALIZED_ID],
-    ['substituído', { verification_state: 'SUPERSEDED' }, CODES.SUPERSEDED_FINDING],
-    ['recusado', { verification_state: 'REJECTED' }, CODES.SUPERSEDED_FINDING],
   ])('REPROVA achado certificado com %s', (_label, overrides, expectedCode) => {
     const result = evaluatePersistedFinding(finding(overrides), context({ certified: true }));
     expect(result.policy).toContain(expectedCode);
+  });
+
+  it.each([
+    ['SUPERSEDED'],
+    ['REJECTED'],
+    ['STALE_SEMANTICS'],
+  ])('achado APOSENTADO (%s) está fora do corpus vigente: contado, nunca julgado por política', (state) => {
+    // O aposento governado (produtor: apply-semantic-reprocess) é o ÚNICO
+    // caminho honesto de regularização. Julgá-lo por política tornaria o
+    // corpus irreguláável: o run regularizado falharia por ter sido
+    // regularizado (medido em 2026-09-19: run r1 do fitness, 200 violações
+    // no cap, 100% achados aposentados).
+    const result = evaluatePersistedFinding(
+      finding({ verification_state: state, metadata: { normalizedId: 'x', contentHash: 'a'.repeat(64), supersededBy: 'f-2', reprocessRunId: 'run-governado' } }),
+      context({ certified: true }),
+    );
+    expect(result.policy).toEqual([]);
   });
 
   it('APROVA achado certificado completo', () => {
@@ -128,12 +142,21 @@ describe('política — só para vertical certificada', () => {
     expect(result.codes).toEqual([]);
   });
 
-  it('marca superseded por metadata.supersededBy, não só por estado', () => {
+  it('REPROVA o estado INCONSISTENTE: achado ATIVO com marcador de supersessão', () => {
     const result = evaluatePersistedFinding(
       finding({ metadata: { normalizedId: 'x', contentHash: 'a'.repeat(64), semanticPipelineVersion: CURRENT, supersededBy: 'f-2' } }),
       context({ certified: true }),
     );
     expect(result.policy).toContain(CODES.SUPERSEDED_FINDING);
+  });
+
+  it('integridade CONTINUA valendo para achado aposentado (corrupção não se aposenta)', () => {
+    const result = evaluatePersistedFinding(
+      finding({ verification_state: 'SUPERSEDED', evidence_id: 'ev-inexistente' }),
+      context({ certified: true }),
+    );
+    expect(result.integrity).toEqual([CODES.ORPHAN_EVIDENCE]);
+    expect(result.policy).toEqual([]);
   });
 });
 
@@ -290,12 +313,30 @@ describe('buildReport — agregação por vertical', () => {
   });
 });
 
-describe('loadCertifiedSamples — lê a DECLARAÇÃO real dos samples', () => {
-  it('nenhuma vertical declara certificação hoje (estado honesto)', () => {
-    // Hoje nenhum sample tem `claim: SAMPLE_SUFFICIENT`. Quando tiver, este
-    // teste falha de propósito: é o sinal de que o corpus precisa ser
-    // reprocessado antes de a certificação valer.
-    expect(loadCertifiedSamples()).toEqual([]);
-    expect(CERTIFICATION_CLAIM).toBe('SAMPLE_SUFFICIENT');
+describe('loadCertifiedSamples — descoberta via AUTORIDADE, nunca por claim declarado', () => {
+  // CONTRATO NOVO (2026-09-19): o conjunto de verticais certificadas vem da
+  // autoridade única (relatório canônico do engine de suficiência). O teste
+  // antigo esperava `loadCertifiedSamples() === []` porque nenhum sample
+  // declara `claim` — era exatamente o PASS vacuoso: o engine certificava
+  // fitness e este gate auditava zero verticais.
+
+  it('autoridade vazia => nada a auditar (estado honesto)', () => {
+    expect(loadCertifiedSamples([])).toEqual({ samples: [], missing: [] });
+  });
+
+  it('fitness certificada pelo engine é descoberta MESMO sem claim no sample', () => {
+    const { samples, missing } = loadCertifiedSamples(['fitness']);
+    expect(missing).toEqual([]);
+    const fitness = samples.find((s) => s.vertical === 'fitness');
+    expect(fitness).toBeTruthy();
+    expect(fitness.benchmarkIds).toContain('wellhub');
+    expect(fitness.benchmarkIds.length).toBeGreaterThan(20);
+    expect(fitness.holdoutId).toBe('wellable.co');
+  });
+
+  it('vertical certificada SEM sample legível é reportada como missing (fail-closed)', () => {
+    const { samples, missing } = loadCertifiedSamples(['vertical-inexistente']);
+    expect(samples).toEqual([]);
+    expect(missing).toEqual(['vertical-inexistente']);
   });
 });

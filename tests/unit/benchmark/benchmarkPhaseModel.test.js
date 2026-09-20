@@ -103,28 +103,41 @@ describe('resolveResearchPhase — derivada de evidência', () => {
   });
 });
 
-describe('resolvePhase — declaração não é fase', () => {
+describe('resolvePhase — certificação DERIVADA pela autoridade, nunca declarada', () => {
   const runs = [RUN({ saturated: true })];
   const counts = { findings: 10 };
   const holdoutInspected = true;
 
-  it('sem claim, a fase para no ciclo de pesquisa (nunca SAMPLE_SUFFICIENT)', () => {
+  it('sem certificação da autoridade, a fase para no ciclo de pesquisa (nunca SAMPLE_SUFFICIENT)', () => {
     const { phase } = resolvePhase({ sample: { holdout: { benchmarkId: 'x.co' } }, runs, counts, holdoutInspected });
     expect(phase).toBe(PHASES.HOLDOUT);
   });
 
-  it('claim sem versão semântica atual fica em SAMPLE_SUFFICIENT, não CERTIFIED', () => {
+  it('claim declarado SEM a autoridade NÃO levanta fase (declaração não é prova)', () => {
+    // Contrato novo (2026-09-19): quem certifica é o engine via autoridade
+    // única. `claim` no sample é inerte — o design proíbe gravá-lo e nenhum
+    // produtor o grava.
     const { phase } = resolvePhase({
-      sample: { claim: CERTIFICATION_CLAIM, holdout: { benchmarkId: 'x.co' }, semanticPipelineVersion: 'sem-v1:antiga' },
+      sample: { claim: CERTIFICATION_CLAIM, holdout: { benchmarkId: 'x.co' }, semanticPipelineVersion: 'sem-v1:atual' },
       runs, counts, holdoutInspected, currentSemanticVersion: 'sem-v1:atual',
+    });
+    expect(phase).toBe(PHASES.HOLDOUT);
+  });
+
+  it('autoridade certifica sem versão semântica atual: SAMPLE_SUFFICIENT, não CERTIFIED', () => {
+    const { phase } = resolvePhase({
+      sample: { holdout: { benchmarkId: 'x.co' }, semanticPipelineVersion: 'sem-v1:antiga' },
+      runs, counts, holdoutInspected, currentSemanticVersion: 'sem-v1:atual',
+      authorityCertified: true,
     });
     expect(phase).toBe(PHASES.SAMPLE_SUFFICIENT);
   });
 
-  it('claim + versão atual chega a CERTIFIED', () => {
+  it('autoridade certifica + versão atual chega a CERTIFIED', () => {
     const { phase } = resolvePhase({
-      sample: { claim: CERTIFICATION_CLAIM, holdout: { benchmarkId: 'x.co' }, semanticPipelineVersion: 'sem-v1:atual' },
+      sample: { holdout: { benchmarkId: 'x.co' }, semanticPipelineVersion: 'sem-v1:atual' },
       runs, counts, holdoutInspected, currentSemanticVersion: 'sem-v1:atual',
+      authorityCertified: true,
     });
     expect(phase).toBe(PHASES.CERTIFIED);
   });

@@ -37,13 +37,13 @@ const path = require('path');
 const {
   PHASES,
   PHASE_ORDER,
-  CERTIFICATION_CLAIM,
   resolveHoldoutId,
   resolvePhase,
   evaluatePhaseRequirements,
 } = require('../../api/services/benchmark/benchmarkPhaseModel');
 const { loadRegisteredVerticals } = require('./lib/registered-verticals');
 const { getSemanticPipelineVersion } = require('../../api/services/benchmark/semantic/semanticPipelineVersion');
+const { loadCertificationAuthority } = require('./lib/benchmarkCertificationAuthority');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const SAMPLES_DIR = path.join(ROOT_DIR, 'config', 'benchmarks');
@@ -94,7 +94,8 @@ const NON_TERMINAL_INSPECTION_STATES = Object.freeze([
   'PENDING', 'IN_PROGRESS', 'NOT_STARTED', 'NOT_RESEARCHED', 'FAILED', 'ERROR',
 ]);
 
-function buildMeasurement({ verticals, samples, runs, findings, inspections = [], currentSemanticVersion }) {
+function buildMeasurement({ verticals, samples, runs, findings, inspections = [], currentSemanticVersion, certifiedVerticals = [] }) {
+  const certifiedSet = new Set(certifiedVerticals.map(String));
   const runsByVertical = new Map();
   for (const run of runs) {
     if (!runsByVertical.has(run.vertical)) runsByVertical.set(run.vertical, []);
@@ -166,6 +167,7 @@ function buildMeasurement({ verticals, samples, runs, findings, inspections = []
       holdoutAnalyzed,
       holdoutInspected,
       currentSemanticVersion,
+      authorityCertified: certifiedSet.has(String(vertical)),
     });
 
     const { blockers, violations: phaseViolations, researchStarted } = evaluatePhaseRequirements({
@@ -179,6 +181,7 @@ function buildMeasurement({ verticals, samples, runs, findings, inspections = []
       vertical,
       phase,
       researchStarted,
+      certifiedByAuthority: certifiedSet.has(String(vertical)),
       declaredClaim: sample ? sample.claim || null : null,
       holdoutPreregistered: holdoutId !== null,
       holdoutId,
@@ -195,16 +198,17 @@ function buildMeasurement({ verticals, samples, runs, findings, inspections = []
     });
   }
 
-  // O modelo não pode reportar fase acima de SAMPLE_SUFFICIENT sem declaração:
-  // fase alta sem claim seria certificação por omissão.
+  // O modelo não pode reportar fase acima de SAMPLE_SUFFICIENT sem a
+  // AUTORIDADE certificar: fase alta sem derivação do engine seria
+  // certificação por omissão. (`declaredClaim` fica no relatório como
+  // evidência, mas não levanta fase — declaração não é prova.)
   for (const entry of entries) {
-    const declared = entry.declaredClaim === CERTIFICATION_CLAIM;
     const aboveSufficient = PHASE_ORDER.indexOf(entry.phase) >= PHASE_ORDER.indexOf(PHASES.SAMPLE_SUFFICIENT);
-    if (aboveSufficient && !declared) {
+    if (aboveSufficient && !entry.certifiedByAuthority) {
       violations.push({
         code: VIOLATION_CODES.PHASE_REGRESSION,
         vertical: entry.vertical,
-        detail: `fase ${entry.phase} sem claim ${CERTIFICATION_CLAIM} declarado — certificação por omissão`,
+        detail: `fase ${entry.phase} sem certificação derivada pela autoridade — certificação por omissão`,
       });
     }
   }
@@ -230,6 +234,18 @@ async function main() {
   const samples = loadSamples();
   const { version: currentSemanticVersion } = getSemanticPipelineVersion();
 
+  // AUTORIDADE ÚNICA: fase >= SAMPLE_SUFFICIENT só existe quando o engine
+  // derivou a certificação. Sem o relatório canônico o modelo não pode
+  // distinguir "nenhuma certificada" de "certificação não medida" — fail-closed.
+  let authority;
+  try {
+    authority = loadCertificationAuthority();
+  } catch (error) {
+    console.error(`[benchmark-phase-model] autoridade de certificação indisponível: ${error.message}`);
+    process.exitCode = 1;
+    return;
+  }
+
   let researchState;
   try {
     researchState = await loadResearchState();
@@ -246,6 +262,7 @@ async function main() {
     findings: researchState.findings,
     inspections: researchState.inspections,
     currentSemanticVersion,
+    certifiedVerticals: authority.certifiedVerticals,
   });
 
   const engineGovernance = violations.length === 0 ? 'PASS' : 'FAIL';
@@ -268,6 +285,13 @@ async function main() {
       researchNotAppliedToSample: notApplied,
     },
     semanticPipelineVersion: currentSemanticVersion,
+    // A autoridade que define quais verticais podem estar >= SAMPLE_SUFFICIENT.
+    authority: {
+      reportPath: path.relative(ROOT_DIR, authority.reportPath),
+      generatedAt: authority.generatedAt,
+      commit: authority.commit,
+      certifiedVerticals: authority.certifiedVerticals,
+    },
     phaseOrder: model.PHASE_ORDER,
     verticals: entries,
     violations,

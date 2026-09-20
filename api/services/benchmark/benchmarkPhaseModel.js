@@ -111,29 +111,35 @@ function resolveResearchPhase({ runs = [], counts = {}, holdoutId = null, holdou
 }
 
 /**
- * Fase COMPLETA, incluindo a parte DECLARADA.
+ * Fase COMPLETA, incluindo a certificação DERIVADA.
  *
- * `SAMPLE_SUFFICIENT` é declaração (`claim`) e `CERTIFIED` exige, além dela, a
- * versão semântica atual — o corpus em si é auditado pelo gate
- * BENCHMARK_PERSISTED_CORPUS_CURRENT, que é a autoridade das dimensões de
- * evidência/identidade.
+ * `SAMPLE_SUFFICIENT` e `CERTIFIED` só são alcançados quando a AUTORIDADE
+ * ÚNICA (`scripts/governance/lib/benchmarkCertificationAuthority.js`) afirma
+ * que o engine derivou a certificação (`authorityCertified`). `CERTIFIED`
+ * exige, além disso, a versão semântica atual — o corpus em si é auditado
+ * pelo gate BENCHMARK_PERSISTED_CORPUS_CURRENT, que é a autoridade das
+ * dimensões de evidência/identidade.
+ *
+ * `sample.claim` NÃO levanta fase: declaração não é prova. Até 2026-09-19 o
+ * modelo lia `claim` — campo que nenhum produtor grava e cujo design proíbe
+ * gravar — o que fazia a fase depender de um canal morto.
  */
-function resolvePhase({ sample = null, runs = [], counts = {}, holdoutAnalyzed = false, holdoutInspected = false, currentSemanticVersion = null }) {
+function resolvePhase({ sample = null, runs = [], counts = {}, holdoutAnalyzed = false, holdoutInspected = false, currentSemanticVersion = null, authorityCertified = false }) {
   const holdoutId = resolveHoldoutId(sample);
   const research = resolveResearchPhase({ runs, counts, holdoutId, holdoutAnalyzed, holdoutInspected });
 
-  const declared = sample !== null && sample.claim === CERTIFICATION_CLAIM;
-  if (!declared) return research;
+  if (authorityCertified !== true) return research;
 
   const versionCurrent = currentSemanticVersion !== null
+    && sample !== null
     && sample.semanticPipelineVersion === currentSemanticVersion;
 
   return {
     phase: versionCurrent ? PHASES.CERTIFIED : PHASES.SAMPLE_SUFFICIENT,
     evidence: {
       ...research.evidence,
-      declaredClaim: sample.claim,
-      semanticPipelineVersion: sample.semanticPipelineVersion || null,
+      authorityCertified: true,
+      semanticPipelineVersion: sample ? sample.semanticPipelineVersion || null : null,
       semanticVersionCurrent: versionCurrent,
     },
   };

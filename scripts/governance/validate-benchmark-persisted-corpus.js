@@ -25,18 +25,38 @@
  *     Essas três são falha dura hoje.
  *
  *  2. POLÍTICA (só para verticais CERTIFICADAS) — as dimensões que dependem de
- *     a vertical afirmar suficiência:
+ *     a vertical estar certificada:
  *       - versão semântica atual      -> STALE_SEMANTICS
  *       - evidência existe            -> MISSING_EVIDENCE
  *       - estado VALIDATED            -> NOT_VALIDATED
  *       - normalizedId válido         -> MISSING_NORMALIZED_ID
- *       - não superseded/rejected     -> SUPERSEDED_FINDING
+ *       - marcador de supersessão em achado ATIVO -> SUPERSEDED_FINDING
+ *
+ *     Achados APOSENTADOS (verification_state ∈ SUPERSEDED | REJECTED |
+ *     STALE_SEMANTICS) estão FORA do corpus vigente por decisão governada
+ *     (produtor: `scripts/benchmark/apply-semantic-reprocess.js`; trilha
+ *     completa na própria linha — motivo, run, versões, supersededBy).
+ *     Eles são contados e publicados (`retired` por vertical), NUNCA
+ *     julgados por política: flagrá-los tornaria impossível o único caminho
+ *     honesto de regularização do corpus (aposentar com motivo) — um run de
+ *     suporte inteiramente aposentado pelo reprocess viraria violação em
+ *     massa exatamente por ter sido regularizado. `CORPUS_SUPERSEDED_FINDING`
+ *     continua duro para o estado INCONSISTENTE: achado ATIVO (não aposentado)
+ *     carregando `metadata.superseded`/`supersededBy`.
  *
  *     Por que não global: `UNVERIFIED` e `normalizedId` ausente são ESTADOS
  *     legítimos do pipeline (candidato não resolvido não tem identidade
  *     normalizada). Aplicá-los ao corpus inteiro produziria um gate vermelho
  *     por desenho do pipeline, não por defeito — e um gate que sempre falha
  *     deixa de ser lido. Falha dura onde é defeito; política onde é política.
+ *
+ * QUEM CERTIFICA: a AUTORIDADE ÚNICA
+ * (`scripts/governance/lib/benchmarkCertificationAuthority.js`) — o relatório
+ * canônico do engine de suficiência. Até 2026-09-19 este gate filtrava por
+ * `sample.claim` declarado, campo que nenhum produtor grava: o engine
+ * certificava fitness e este gate PASSava com `certifiedVerticals=[]`, sem
+ * nunca aplicar a camada de política. Autoridade indisponível é FAIL
+ * explícito, nunca conjunto vazio silencioso.
  *
  * Uso: node --env-file-if-exists=.env scripts/governance/validate-benchmark-persisted-corpus.js
  */
@@ -49,12 +69,11 @@ const {
   evaluateSemanticVersion,
 } = require('../../api/services/benchmark/semantic/semanticPipelineVersion');
 const { resolveHoldoutId } = require('../../api/services/benchmark/benchmarkPhaseModel');
+const { loadCertificationAuthority } = require('./lib/benchmarkCertificationAuthority');
 
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const SAMPLES_DIR = path.join(ROOT_DIR, 'config', 'benchmarks');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'benchmark-persisted-corpus-report.json');
-
-const CERTIFICATION_CLAIM = 'SAMPLE_SUFFICIENT';
 
 /** Estado do banco que significa "validado com evidência oficial". */
 const VALIDATED_STATES = Object.freeze(['VERIFIED_OFFICIAL']);
@@ -116,14 +135,19 @@ function evaluatePersistedFinding(row, context) {
 
   // --- POLÍTICA (só certificadas) ---
   if (context.certified) {
+    // Aposentado por decisão governada = FORA do corpus vigente: contado e
+    // publicado, nunca julgado. Sem isso, regularizar o corpus (o caminho
+    // honesto) produziria violação em massa no run regularizado.
+    if (RETIRED_STATES.includes(String(row?.verification_state))) {
+      return { codes: [...integrity], integrity, policy };
+    }
     const version = evaluateSemanticVersion(metadata);
     if (!version.current) policy.push(CODES.STALE_SEMANTICS);
     if (!isNonEmptyString(row?.evidence_id)) policy.push(CODES.MISSING_EVIDENCE);
     if (!VALIDATED_STATES.includes(String(row?.verification_state))) policy.push(CODES.NOT_VALIDATED);
     if (!isNonEmptyString(metadata.normalizedId)) policy.push(CODES.MISSING_NORMALIZED_ID);
-    if (RETIRED_STATES.includes(String(row?.verification_state))
-      || metadata.superseded === true
-      || isNonEmptyString(metadata.supersededBy)) {
+    // Estado INCONSISTENTE: achado ATIVO carregando marcador de supersessão.
+    if (metadata.superseded === true || isNonEmptyString(metadata.supersededBy)) {
       policy.push(CODES.SUPERSEDED_FINDING);
     }
   }
@@ -131,24 +155,38 @@ function evaluatePersistedFinding(row, context) {
   return { codes: [...integrity, ...policy], integrity, policy };
 }
 
-/** Verticais que DECLARAM certificação + benchmarks + holdout declarado. */
-function loadCertifiedSamples() {
-  if (!fs.existsSync(SAMPLES_DIR)) return [];
-  const certified = [];
-  for (const name of fs.readdirSync(SAMPLES_DIR).filter((n) => n.endsWith('.json')).sort()) {
+/**
+ * Carrega as amostras das verticais que a AUTORIDADE certifica.
+ *
+ * O conjunto de verticais NÃO é descoberto aqui — vem pronto da autoridade
+ * única. Este loader só resolve, para cada vertical certificada, o inventário
+ * (benchmarks + holdout) que a amostra declara. Vertical certificada sem
+ * amostra legível é `missing` (fail-closed vira violação no gate), nunca
+ * exclusão silenciosa.
+ *
+ * @param {string[]} certifiedVerticals  conjunto resolvido pela autoridade
+ * @returns {{ samples: Array<{vertical, file, benchmarkIds, holdoutId}>, missing: string[] }}
+ */
+function loadCertifiedSamples(certifiedVerticals, samplesDir = SAMPLES_DIR) {
+  const wanted = new Set((certifiedVerticals || []).map(String));
+  const missing = new Set(wanted);
+  const samples = [];
+  if (!fs.existsSync(samplesDir)) return { samples, missing: [...missing].sort() };
+  for (const name of fs.readdirSync(samplesDir).filter((n) => n.endsWith('.json')).sort()) {
     try {
-      const doc = JSON.parse(fs.readFileSync(path.join(SAMPLES_DIR, name), 'utf8'));
-      if (doc?.claim !== CERTIFICATION_CLAIM || !isNonEmptyString(doc.vertical)) continue;
+      const doc = JSON.parse(fs.readFileSync(path.join(samplesDir, name), 'utf8'));
+      if (!isNonEmptyString(doc?.vertical) || !wanted.has(doc.vertical)) continue;
       const benchmarkIds = (Array.isArray(doc.benchmarks) ? doc.benchmarks : [])
         .map((b) => (isNonEmptyString(b?.id) ? String(b.id).trim() : null))
         .filter(Boolean);
       const holdoutId = resolveHoldoutId(doc);
-      certified.push({ vertical: doc.vertical, file: name, benchmarkIds, holdoutId });
+      samples.push({ vertical: doc.vertical, file: name, benchmarkIds, holdoutId });
+      missing.delete(doc.vertical);
     } catch (_) {
       // amostra malformada é responsabilidade do gate de sufficiency
     }
   }
-  return certified;
+  return { samples, missing: [...missing].sort() };
 }
 
 async function loadCorpus() {
@@ -320,9 +358,34 @@ function buildReport({ corpus, certifiedSamples, currentVersion }) {
   };
 }
 
+function writeReport(report) {
+  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
+  fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+}
+
 async function main() {
+  // AUTORIDADE ÚNICA primeiro: sem ela o conjunto de certificadas seria
+  // vazio por omissão — exatamente o PASS vacuoso que este gate tinha.
+  let authority;
+  try {
+    authority = loadCertificationAuthority();
+  } catch (error) {
+    const report = {
+      validator: 'validate-benchmark-persisted-corpus',
+      generatedAt: new Date().toISOString(),
+      status: 'FAIL',
+      certifiedVerticals: [],
+      violations: [{ code: error.code || 'BENCHMARK_CERTIFICATION_AUTHORITY_UNAVAILABLE', detail: error.message }],
+    };
+    writeReport(report);
+    console.error(`[benchmark-persisted-corpus] autoridade indisponível: ${error.message}`);
+    console.log(`[benchmark-persisted-corpus] relatório: ${path.relative(ROOT_DIR, REPORT_PATH)}`);
+    process.exitCode = 1;
+    return;
+  }
+
   const { version: currentVersion } = getSemanticPipelineVersion();
-  const certifiedSamples = loadCertifiedSamples();
+  const { samples: certifiedSamples, missing } = loadCertifiedSamples(authority.certifiedVerticals);
 
   let corpus;
   try {
@@ -334,6 +397,14 @@ async function main() {
   }
 
   const { violations, perVertical, supportingDetail } = buildReport({ corpus, certifiedSamples, currentVersion });
+  for (const vertical of missing) {
+    violations.push({
+      code: CODES.CERTIFIED_WITHOUT_RUNS,
+      vertical,
+      scope: 'policy',
+      detail: 'vertical certificada pela autoridade sem amostra legível em config/benchmarks — certificação sem inventário a auditar',
+    });
+  }
   const integrityViolations = violations.filter((v) => v.scope === 'integrity');
   const policyViolations = violations.filter((v) => v.scope === 'policy');
 
@@ -342,6 +413,12 @@ async function main() {
     generatedAt: new Date().toISOString(),
     status: violations.length === 0 ? 'PASS' : 'FAIL',
     semanticPipelineVersion: currentVersion,
+    // A autoridade que definiu o conjunto auditado — reproduzível, não implícita.
+    authority: {
+      reportPath: path.relative(ROOT_DIR, authority.reportPath),
+      generatedAt: authority.generatedAt,
+      commit: authority.commit,
+    },
     certifiedVerticals: certifiedSamples.map((s) => s.vertical),
     // Qual run respalda cada benchmark certificado — a auditoria precisa ser
     // reproduzível, não apenas um veredito.
@@ -357,8 +434,7 @@ async function main() {
     violations,
   };
 
-  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-  fs.writeFileSync(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  writeReport(report);
 
   console.log(
     `[benchmark-persisted-corpus] status=${report.status} runs=${report.totals.runs} `
@@ -382,7 +458,6 @@ module.exports = {
   INTEGRITY_CODES,
   RETIRED_STATES,
   VALIDATED_STATES,
-  CERTIFICATION_CLAIM,
   evaluatePersistedFinding,
   loadCertifiedSamples,
   resolveSupportingRunId,
