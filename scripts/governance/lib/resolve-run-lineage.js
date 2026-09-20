@@ -23,12 +23,40 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const CURRENT_RUN_RELATIVE_PATH = path.join('governance', '.current-run.json');
 
 function readEnv(env, name) {
   const value = env && env[name];
   return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function readContextField(context, name) {
+  const value = context && context[name];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+/**
+ * Identidade git best-effort (HEAD e HEAD^{tree}) no momento da execução.
+ * Usada apenas para COMPLEMENTAR um lineage já resolvido (env/arquivo): nunca
+ * cria runId/fingerprint e falha fechada — qualquer erro (fora de worktree,
+ * git ausente) devolve nulls. Identidade inventada é pior que ausente.
+ */
+function resolveGitIdentity(rootDir) {
+  const read = (args) => {
+    try {
+      const out = execSync(`git ${args}`, {
+        cwd: rootDir,
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 10000,
+      }).toString('utf8').trim();
+      return /^[0-9a-f]{40}$/.test(out) ? out : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  return { sourceCommit: read('rev-parse HEAD'), sourceTree: read('rev-parse HEAD^{tree}') };
 }
 
 /**
@@ -61,11 +89,16 @@ function resolveRunLineage(options = {}) {
       ? context.sourceFingerprint.trim()
       : '';
     if (runId && fingerprint) {
+      // sourceCommit/sourceTree: do arquivo quando o produtor do run os gravou
+      // (create-governed-run.js >= 2026-09-19); senão, best-effort do git no
+      // momento da execução. Continuam null quando indisponíveis — nunca
+      // inventados.
+      const git = resolveGitIdentity(rootDir);
       return {
         runId,
         sourceFingerprint: fingerprint,
-        sourceCommit: null,
-        sourceTree: null,
+        sourceCommit: readContextField(context, 'sourceCommit') || git.sourceCommit,
+        sourceTree: readContextField(context, 'sourceTree') || git.sourceTree,
         source: 'current-run-file',
       };
     }
@@ -97,5 +130,6 @@ function toLineageEnv(lineage) {
 module.exports = {
   CURRENT_RUN_RELATIVE_PATH,
   resolveRunLineage,
+  resolveGitIdentity,
   toLineageEnv,
 };

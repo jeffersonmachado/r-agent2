@@ -43,30 +43,20 @@ const {
   loadConfig,
 } = require('./lib/runtime-evidence-artifacts');
 
+// Lógica de avaliação extraída para módulo puro (testável): ver
+// tests/unit/governance/qaEvidenceSameRun.test.js.
+const {
+  isNonEmptyString,
+  evaluateArtifact,
+} = require('./lib/qa-evidence-same-run-eval');
+
 const ROOT_DIR = path.join(__dirname, '..', '..');
 const REPORT_PATH = path.join(ROOT_DIR, 'reports', 'qa-evidence-same-run-report.json');
-
-const CODES = Object.freeze({
-  LINEAGE_MISSING: 'QA_EVIDENCE_LINEAGE_MISSING',
-  RUN_UNKNOWN: 'QA_EVIDENCE_RUN_UNKNOWN',
-  SAME_RUN_VIOLATION: 'QA_EVIDENCE_SAME_RUN_VIOLATION',
-  SOURCE_MISMATCH: 'QA_EVIDENCE_SOURCE_MISMATCH',
-  NO_TIMESTAMP: 'QA_EVIDENCE_NO_TIMESTAMP',
-  INVALID_TIMESTAMP: 'QA_EVIDENCE_TIMESTAMP_INVALID',
-});
 
 function readJson(absOrRel) {
   const abs = path.isAbsolute(absOrRel) ? absOrRel : path.join(ROOT_DIR, absOrRel);
   if (!fs.existsSync(abs)) return null;
   try { return JSON.parse(fs.readFileSync(abs, 'utf8')); } catch { return null; }
-}
-
-function isNonEmptyString(v) { return typeof v === 'string' && v.trim().length > 0; }
-
-function parseTime(value) {
-  if (!isNonEmptyString(value)) return null;
-  const t = Date.parse(value);
-  return Number.isFinite(t) ? t : null;
 }
 
 async function loadRunsByIds(runIds) {
@@ -84,76 +74,6 @@ async function loadRunsByIds(runIds) {
   } finally {
     await close().catch(() => {});
   }
-}
-
-function evaluateArtifact(relPath, doc, run) {
-  const violations = [];
-  const mode = 'RUNTIME_EVIDENCE';
-  const runId = doc?.runId || null;
-  const fingerprint = doc?.sourceFingerprint || null;
-  const generatedAt = parseTime(doc?.generatedAt);
-
-  if (!isNonEmptyString(runId) || !isNonEmptyString(fingerprint)) {
-    violations.push({ code: CODES.LINEAGE_MISSING, artifact: relPath, runId, fingerprint });
-  }
-  if (!isNonEmptyString(doc?.generatedAt)) {
-    violations.push({ code: CODES.NO_TIMESTAMP, artifact: relPath });
-  } else if (generatedAt === null) {
-    violations.push({ code: CODES.INVALID_TIMESTAMP, artifact: relPath, generatedAt: doc.generatedAt });
-  }
-  if (!run) {
-    if (isNonEmptyString(runId)) violations.push({ code: CODES.RUN_UNKNOWN, artifact: relPath, runId });
-    return { artifact: relPath, mode, runId, fingerprint, generatedAt: doc?.generatedAt || null, sameRun: false, violations };
-  }
-
-  const startedAt = parseTime(run.started_at instanceof Date ? run.started_at.toISOString() : run.started_at);
-  const completedAt = parseTime(run.completed_at instanceof Date ? run.completed_at.toISOString() : run.completed_at);
-
-  // PROVA TEMPORAL: o artefato tem de ter sido produzido DEPOIS do início do
-  // run que o reivindica. Antes disso é adotação retroativa.
-  let sameRun = true;
-  if (generatedAt !== null && startedAt !== null && generatedAt < startedAt) {
-    sameRun = false;
-    violations.push({
-      code: CODES.SAME_RUN_VIOLATION,
-      artifact: relPath,
-      generatedAt: doc.generatedAt,
-      runStartedAt: new Date(startedAt).toISOString(),
-      deltaSeconds: Math.round((startedAt - generatedAt) / 1000),
-      detail: 'artefato produzido ANTES do run que o reivindica: adoção retroativa de lineage',
-    });
-  }
-  if (generatedAt !== null && completedAt !== null && generatedAt > completedAt) {
-    // Produzido depois do fim do run: também não é prova DESTE run.
-    sameRun = false;
-    violations.push({
-      code: CODES.SAME_RUN_VIOLATION,
-      artifact: relPath,
-      generatedAt: doc.generatedAt,
-      runCompletedAt: new Date(completedAt).toISOString(),
-      detail: 'artefato produzido DEPOIS do run que o reivindica',
-    });
-  }
-  if (isNonEmptyString(fingerprint) && isNonEmptyString(run.source_fingerprint)
-    && fingerprint !== run.source_fingerprint) {
-    violations.push({
-      code: CODES.SOURCE_MISMATCH,
-      artifact: relPath,
-      artifactFingerprint: fingerprint,
-      runFingerprint: run.source_fingerprint,
-    });
-  }
-
-  return {
-    artifact: relPath,
-    mode,
-    runId,
-    fingerprint,
-    generatedAt: doc?.generatedAt || null,
-    runStartedAt: startedAt !== null ? new Date(startedAt).toISOString() : null,
-    sameRun,
-    violations,
-  };
 }
 
 async function main() {

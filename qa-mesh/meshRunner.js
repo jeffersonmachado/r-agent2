@@ -2519,6 +2519,11 @@ async function runMeshInner(options = {}, tenantId = 'system') {
     executionOrigin,
     executionKind,
     isCanonicalExecution,
+    // Lineage do run governado TAMBÉM no registro de histórico (não só nos
+    // reports go-no-go/release-gate): o histórico é a trilha auditável de que
+    // o mesh rodou DENTRO do run que reivindica. Sem run governado os campos
+    // ficam null explícitos — nunca inventados (resolveOriginLineage).
+    ...resolveOriginLineage(),
     changedFiles,
     summary,
     governance,
