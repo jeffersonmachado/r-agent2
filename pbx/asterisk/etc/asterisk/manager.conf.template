@@ -39,7 +39,11 @@ bindaddr = ${AMI_BINDADDR}
 ; contra-prova de senha errada), por isso o `deny` final é o
 ; que fecha.
 ;   - 127.0.0.1: API rodando no host (dev);
-;   - 172.30.0.0/16: rede da plataforma (RAP_PLATFORM_SUBNET no compose).
+;   - ${AMI_ACL_PLATFORM_NET}: rede da plataforma — MESMA variável que fixa a
+;     subnet da rede default nos composes (RAP_PLATFORM_SUBNET /
+;     RAP_TEST_PLATFORM_SUBNET). Literal fixo aqui já divergiu da subnet
+;     atribuída pelo docker e derrubou o login da própria API (medido
+;     2026-09-20 no test stack, subnet 172.21.0.0/16 vs permit 172.30.0.0/16).
 ; NÃO voltar a `permit = 0.0.0.0/0.0.0.0`: era isso que deixava o gateway
 ; docker0 autenticar com privilégio system,all.
 [ragent2]
@@ -48,4 +52,4 @@ read = all
 write = all
 deny = 0.0.0.0/0.0.0.0
 permit = 127.0.0.1/255.255.255.255
-permit = 172.30.0.0/16
+permit = ${AMI_ACL_PLATFORM_NET}

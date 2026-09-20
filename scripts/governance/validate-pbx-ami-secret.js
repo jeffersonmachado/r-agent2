@@ -24,7 +24,11 @@
  *                                justificada (ver ALLOWLIST).
  *   PBX_AMI_ACL                  o template mantém `deny 0.0.0.0/0` ANTES dos
  *                                permits (primeira correspondência decide) e
- *                                só permite 127.0.0.1/32 + 172.30.0.0/16; o
+ *                                só permite 127.0.0.1/32 + a rede da plataforma
+ *                                via ${AMI_ACL_PLATFORM_NET} (mesma variável
+ *                                que fixa a subnet nos composes — literal fixo
+ *                                divergiu da subnet atribuída pelo docker e
+ *                                derrubou a própria API, medido 2026-09-20); o
  *                                serviço asterisk nos 3 compose recebe
  *                                AMI_SECRET fail-closed, monta o config
  *                                estático em /etc/asterisk-static (ro) e tem
@@ -55,6 +59,8 @@ const ALLOWLIST = {
     'doc forense do incidente: registra a credencial vazada como evidência histórica',
   'scripts/governance/validate-mcp-research-docker-e2e.js':
     'default do TESTE NEGATIVO: o gate precisa conhecer a credencial legada para provar que ela NÃO autentica mais',
+  'tests/unit/governance/pbxAmiSecret.test.js':
+    'TESTE NEGATIVO do gate MCP/docker-e2e: a fixture precisa da credencial legada para provar que ela é REJEITADA',
   'api/services/asterisk/amiClient.js':
     'comentário histórico do fail-closed + default de AMI_USERNAME (usuário não é segredo)',
 };
@@ -65,11 +71,12 @@ const SECRET_VALUE_PATTERNS = [
   { id: 'env-yaml-ami-secret', re: /\bAMI_SECRET\b[ \t]*[:=][ \t]*['"]?ragent2['"]?[ \t]*$/ },
   // sem \b inicial: cobre AMI_LEGACY_SECRET (default do teste negativo do gate MCP)
   { id: 'js-fallback-ami-secret', re: /AMI[A-Z_]*SECRET['"]?[ \t]*\|\|[ \t]*['"]ragent2['"]/ },
-  // sem \b inicial: o doc forense tem `...\r\nSecret: ragent2...` (n colada)
+  // sem \b inicial: o doc forense tem o valor legado colado após "Secret:"
+  // na mesma linha (quebra de linha literal \r\n no meio da frase)
   { id: 'ami-protocol-secret', re: /Secret:[ \t]*ragent2\b/ },
 ];
 
-const EXPECTED_PERMITS = ['127.0.0.1/255.255.255.255', '172.30.0.0/16'];
+const EXPECTED_PERMITS = ['127.0.0.1/255.255.255.255', '${AMI_ACL_PLATFORM_NET}'];
 
 function gitCommit(rootDir) {
   try {

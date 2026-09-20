@@ -16,7 +16,7 @@ read = all
 write = all
 deny = 0.0.0.0/0.0.0.0
 permit = 127.0.0.1/255.255.255.255
-permit = 172.30.0.0/16
+permit = \${AMI_ACL_PLATFORM_NET}
 `;
 
 const ASTERISK_SERVICE = `  asterisk:
@@ -119,8 +119,8 @@ describe('validate-pbx-ami-secret (scanner gate)', () => {
       root,
       'pbx/asterisk/etc/asterisk/manager.conf.template',
       GREEN_TEMPLATE.replace(
-        'deny = 0.0.0.0/0.0.0.0\npermit = 127.0.0.1/255.255.255.255\npermit = 172.30.0.0/16',
-        'permit = 127.0.0.1/255.255.255.255\npermit = 172.30.0.0/16\npermit = 0.0.0.0/0.0.0.0\ndeny = 0.0.0.0/0.0.0.0',
+        'deny = 0.0.0.0/0.0.0.0\npermit = 127.0.0.1/255.255.255.255\npermit = ${AMI_ACL_PLATFORM_NET}',
+        'permit = 127.0.0.1/255.255.255.255\npermit = ${AMI_ACL_PLATFORM_NET}\npermit = 0.0.0.0/0.0.0.0\ndeny = 0.0.0.0/0.0.0.0',
       ),
     );
     writeFixture(root, 'docker-compose.test.yml', composeWith('5038:5038'));

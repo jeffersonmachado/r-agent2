@@ -92,6 +92,10 @@ services:
       # Mesma origem da API: o segredo do AMI vem do .env e é renderizado no
       # manager.conf em runtime (template -> tmpfs), nunca versionado.
       AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
+      # ACL do AMI: MESMA variável que fixa a subnet da rede default (fim do
+      # arquivo). Se divergirem, a ACL (deny final) derruba o login da própria
+      # API — medido em 2026-09-20 (subnet atribuída 172.21 vs permit 172.30).
+      AMI_ACL_PLATFORM_NET: "${RAP_PLATFORM_SUBNET:-172.30.0.0/16}"
       # DSN ODBC dirigido por ambiente (opt-in). Sem estes valores o container usa o
       # /etc/odbc.ini montado do repositório, exatamente como antes — prod e test não mudam.
       # Quando definidos, o DSN é renderizado do template e as credenciais deixam de ser
@@ -231,3 +235,13 @@ volumes:
   postgres-data:
   pbx-media:
   pbx-recordings:
+
+# Subnet pinada: a ACL do AMI (manager.conf.template, ${AMI_ACL_PLATFORM_NET})
+# autoriza EXATAMENTE esta rede — a mesma variável alimenta os dois lados.
+# Sem pin, o docker atribui uma subnet aleatória e a ACL derruba a própria API.
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${RAP_PLATFORM_SUBNET:-172.30.0.0/16}

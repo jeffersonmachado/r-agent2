@@ -48,7 +48,16 @@ umask 077
 # publicação controla a exposição. Em host-network o start é invocado com
 # AMI_BINDADDR=127.0.0.1 para o AMI não vazar pelo gateway docker0.
 AMI_BINDADDR="${AMI_BINDADDR:-0.0.0.0}"
-envsubst '$AMI_SECRET $AMI_BINDADDR' < "$TEMPLATE" > "$TARGET_ETC/manager.conf"
+# Rede autorizada na ACL do AMI: MESMA variável que fixa a subnet da rede
+# default nos composes. Default histórico 172.30.0.0/16; fora dele a ACL
+# (deny final, primeira correspondência decide) derruba a própria API.
+AMI_ACL_PLATFORM_NET="${AMI_ACL_PLATFORM_NET:-172.30.0.0/16}"
+# envsubst só enxerga variáveis EXPORTADAS: sem export, os defaults acima
+# viram string vazia (bindaddr) ou literal ${...} (permit) — e o parser do
+# Asterisk descarta a seção [ragent2] inteira ("There is no manager called
+# ragent2", medido 2026-09-20 no test stack).
+export AMI_BINDADDR AMI_ACL_PLATFORM_NET
+envsubst '$AMI_SECRET $AMI_BINDADDR $AMI_ACL_PLATFORM_NET' < "$TEMPLATE" > "$TARGET_ETC/manager.conf"
 chmod 600 "$TARGET_ETC/manager.conf"
 echo "asterisk[ami]: manager.conf renderizado do template (segredo + ACL no mesmo bloco; valor nao exibido)"
 

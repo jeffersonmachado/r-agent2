@@ -175,6 +175,9 @@ services:
       # Mesma origem da API de teste: AMI_SECRET efêmero gerado pelo
       # scripts/test-stack-up.sh; o manager.conf é renderizado em runtime.
       AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida (scripts/test-stack-up.sh gera um efêmero)}"
+      # ACL do AMI: MESMA variável que fixa a subnet da rede default (fim do
+      # arquivo) — divergência derruba o login da própria API de teste.
+      AMI_ACL_PLATFORM_NET: "${RAP_TEST_PLATFORM_SUBNET:-172.30.0.0/16}"
     command: ["sh", "/usr/local/bin/asterisk-start"]
     ports:
       - "5060:5060/udp"
@@ -216,3 +219,14 @@ volumes:
   r-agent2-rag-runtime-test:
   r-agent2-pbx-media-test-data:
   r-agent2-pbx-recordings-test-data:
+
+# Subnet pinada: a ACL do AMI (manager.conf.template, ${AMI_ACL_PLATFORM_NET})
+# autoriza EXATAMENTE esta rede — a mesma variável alimenta os dois lados.
+# Sobrescrever RAP_TEST_PLATFORM_SUBNET quando a default (172.30) já estiver
+# ocupada por outra stack na mesma máquina.
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${RAP_TEST_PLATFORM_SUBNET:-172.30.0.0/16}
