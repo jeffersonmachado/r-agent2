@@ -160,6 +160,20 @@ function classifyOccurrence(filePath, line, match) {
     return 'LEGITIMATE_PLATFORM_SYSTEM';
   }
 
+  // benchmark-research — pipeline INTERNO da plataforma (SYSTEM_INTERNAL/
+  // DEVELOPMENT): o tenant do run é SYSTEM por contrato (resolvido em
+  // `authenticate`), mesma classe da família qawaves/testexecution.
+  if (lower.includes('benchmark-research') || lower.includes('benchmarkresearch')) {
+    return 'LEGITIMATE_PLATFORM_SYSTEM';
+  }
+
+  // pbxDialplanService — 'system' em PBX_ASTERISK_STATIC_CONTEXTS é o NOME do
+  // contexto estático do dialplan do Asterisk (namespace de dialplan), não
+  // escopo de dados de tenant.
+  if (lower.includes('pbxdialplanservice') && lineText.includes('static_contexts')) {
+    return 'STATIC_CONFIG';
+  }
+
   // Vertical services com fallback de tenant — user-facing, precisa de correção
   if (lower.includes('vertical') && lower.includes('service') && !lower.includes('review')) {
     return 'RUNTIME_FAIL_OPEN';
@@ -251,7 +265,7 @@ function run() {
   return report;
 }
 
-module.exports = { run };
+module.exports = { run, classifyOccurrence };
 if (require.main === module) {
   const r = run();
   process.exit(r.pass ? 0 : 1);
