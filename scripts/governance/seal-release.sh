@@ -174,44 +174,15 @@ phase_prepare() {
   local verdict
   verdict="$(grep -oE 'SEAL_(GO|PENDING|NO_GO)' "$log" | tail -1)"
 
-  # QA MESH DENTRO DO RUN GOVERNADO (2026-09-19, task T4): o go-no-go do mesh
-  # é RUNTIME_EVIDENCE — só é prova do run em que o mesh REALMENTE rodou. O
-  # defeito de 2026-09-18 foi estampar retroativamente o runId de um run de
-  # 20:18 num relatório produzido às 10:46 (QA_EVIDENCE_SAME_RUN_VIOLATION,
-  # sameRunOk 0/6). Aqui o mesh executa DE FATO, depois do converge (run
-  # criado/confirmado) e ANTES de exigir o veredito SEAL_GO e do scorecard da
-  # fase candidate. RUNNING_IN_PIPELINE=1 torna a execução canônica
-  # (executionOrigin=pipeline → go-no-go/release-gate/histórico gravados); o
-  # lineage é resolvido na origem por pipeline/entrypoints/runQaMesh.js a
-  # partir de governance/.current-run.json — nunca anexado depois.
-  # Duração histórica ~35min (2026-09-18, 10:11→10:46): timeout de 90min.
-  # Exit != 0 (NO_GO ou erro) ABORTA a fase: sem evidência same-run não há seal.
-  if [ "$verdict" = "SEAL_PENDING" ] || [ "$verdict" = "SEAL_GO" ]; then
-    step prepare "QA Mesh canônico dentro do run governado (evidência same-run, ~35min)"
-    local mlog="$LOG_DIR/qa-mesh.log"
-    RUNNING_IN_PIPELINE=1 timeout 5400 npm run qa:mesh > "$mlog" 2>&1
-    local mrc=$?
-    if [ "$mrc" != "0" ]; then
-      fail "QA Mesh falhou dentro do run governado (exit $mrc) — sem evidência same-run não há seal" "$mlog" prepare
-    fi
-    ok "QA Mesh: GO dentro do run $(node -e "try{console.log(require('./governance/.current-run.json').runId)}catch(e){console.log('?')}" 2>/dev/null)"
-
-    # ENTERPRISE PROOF SMOKE DENTRO DO RUN (2026-09-20, task T15): os artefatos
-    # qa/enterprise/{human-handoff-full-validation,pbx-voice-flow-prod-like,
-    # omnichannel-unified-replay}.json também são RUNTIME_EVIDENCE. Até aqui
-    # eram produzidos fora de run e adotavam lineage retroativamente (defeito
-    # auditado: pbx gerado em 2026-09-13 com runId de run de 2026-09-18). O
-    # produtor resolve o lineage NA ORIGEM (governance/.current-run.json) e o
-    # smoke sai != 0 quando report.ok=false — sem evidência same-run não há seal.
-    step prepare "Enterprise proof smoke dentro do run governado (evidência same-run qa/enterprise/*)"
-    local elog="$LOG_DIR/enterprise-proof.log"
-    RUNNING_IN_PIPELINE=1 timeout 2700 node --env-file-if-exists=.env scripts/smoke/qa-waves-enterprise-proof-smoke.js > "$elog" 2>&1
-    local erc=$?
-    if [ "$erc" != "0" ]; then
-      fail "Enterprise proof smoke falhou dentro do run governado (exit $erc) — qa/enterprise/* sem evidência same-run" "$elog" prepare
-    fi
-    ok "Enterprise proof: GO dentro do run corrente"
-  fi
+  # QA MESH + ENTERPRISE PROOF DENTRO DO RUN (2026-09-20, T4/T15/T17): ambos são
+  # RUNTIME_EVIDENCE e executam DENTRO do converge-governance.sh (passos 1/12 e
+  # 8/12), ANTES do stamp, do scorecard e do seal-time-gate. Até 2026-09-19 o
+  # mesh rodava aqui, DEPOIS do veredito — e o seal-time-gate avaliava o run
+  # novo sem evidência same-run: RAP-024/026/068 caíam como
+  # FOREIGN_RUN_ARTIFACT (falha "real") → SEAL_NO_GO com o mesh nunca executado
+  # (deadlock medido no run rap-governed-20260920040310055). A ordem canônica é
+  # CREATE RUN → QA Mesh → evidências → scorecard → gate, e o converge é o
+  # sequenciador único dessa ordem.
 
   case "$verdict" in
     SEAL_PENDING|SEAL_GO)

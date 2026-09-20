@@ -12,26 +12,40 @@
 #   4. git commit dos artefatos regenerados
 #   5. npm run zip:release
 #
+# PRÉ-REQUISITO DE RUNTIME (2026-09-20): a evidência RUNTIME_EVIDENCE
+# (qa-mesh/* e qa/enterprise/*) só é prova do run se EXECUTAR dentro dele —
+# este script precisa de uma API viva em TEST_BASE_URL (default
+# http://localhost:3001) com as credenciais TEST_USERNAME/TEST_PASSWORD.
+#
 # O que este script faz (tudo derivado de evidência real, nada sintético):
+#   - executa o enterprise proof smoke DENTRO do run (artefatos
+#     qa/enterprise/{human-handoff,pbx-voice-flow,omnichannel-unified-replay}
+#     nascem com o lineage do run corrente — ver T15). ORDEM: antes do
+#     critical-journey, que consome o handoff;
 #   - regenera artefatos cujo produtor é externo ao fixpoint (jornada crítica,
 #     qa-waves enterprise, package-validation do zip de convergência);
 #   - regenera a projeção de readiness (produtor externo ao fixpoint) para que
 #     ela carregue o runId CORRENTE — sem isso `dev/platform-readiness/latest.json`
 #     fica com lineage estrangeiro e o contamination cleaner derruba o run
 #     (FOREIGN_RUN_ARTIFACT em arquivo de decisão);
-#   - REGERA a evidência executável com validade temporal (maxAgeMs=7d no
-#     registry): master-scorecard test/regression, reports de domínio e o
-#     relatório de persistência. O stamp NÃO pode refrescar generatedAt (seria
-#     freshness fabricada) — só o produtor real, rodando as suítes Jest, pode.
-#     Sem este passo, os relatórios cruzam 168h e o fixpoint derruba as 78
-#     dimensões para 5 (ARTIFACT_EXPIRED em TESTED/REGRESSION_PROTECTED);
-#   - re-stampa lineage (runId/sourceFingerprint) nos relatórios governados.
-#     ORDEM OBRIGATÓRIA: o stamp roda DEPOIS da evidência temporal, porque as
-#     suítes Jest executadas pelos geradores reescrevem relatórios governados
-#     SEM lineage como efeito colateral real (coverage-gate-report,
-#     coverage-completeness-report, model-driven-e2e-report) — stamp antes do
-#     Jest é clobberado e o fixpoint reprova com ARTIFACT_RUN_ID_MISSING /
-#     ARTIFACT_SOURCE_FINGERPRINT_MISSING (falha real de 2026-09-15);
+#   - REGERA os relatórios derivados com validade temporal (maxAgeMs=7d no
+#     registry): system-scope-audit, agent-policy-compliance e
+#     replay-hardening. O stamp NÃO pode refrescar generatedAt (seria freshness
+#     fabricada) — só o produtor real pode. Sem este passo os relatórios cruzam
+#     168h e o scorecard derruba as dimensões dependentes (ARTIFACT_EXPIRED,
+#     medido em 2026-09-20 no run rap-governed-20260920040310055);
+#   - REGERA a evidência executável com validade temporal: master-scorecard
+#     test/regression, reports de domínio e o relatório de persistência, e
+#     executa o QA MESH canônico DENTRO do run (RUNNING_IN_PIPELINE=1 →
+#     executionOrigin=pipeline; lineage resolvido na origem por
+#     pipeline/entrypoints/runQaMesh.js). ORDEM OBRIGATÓRIA: o mesh roda ANTES
+#     do stamp e do scorecard — em 2026-09-20 o seal-time-gate avaliou o run
+#     novo antes do mesh executar e RAP-024/026 caíram como
+#     FOREIGN_RUN_ARTIFACT (falha "real") → SEAL_NO_GO com o mesh nunca
+#     executado (deadlock). ATENÇÃO: as suítes Jest reescrevem relatórios
+#     governados sem lineage (coverage/model-driven) — por isso o stamp é o
+#     passo SEGUINTE, nunca o anterior;
+#   - re-stampa lineage (runId/sourceFingerprint) nos relatórios governados;
 #   - roda o fixpoint persistido 2x (1ª: projeta DEFERRED a partir do DB;
 #     2ª: revalida contra os relatórios projetados — fixpoint estável);
 #   - avalia o seal-time-gate (esperado: SEAL_PENDING na fase DELIVERED ou
@@ -41,13 +55,19 @@ cd "$(dirname "$0")/../.."
 
 NODE="node --env-file-if-exists=.env"
 
-echo "[converge] 1/9 critical-journey-evidence (v2 — evidência real de handoff)"
+echo "[converge] 1/12 enterprise proof smoke DENTRO do run (evidência same-run qa/enterprise/*)"
+# RUNTIME_EVIDENCE: só é prova do run se executar nele. O smoke resolve o
+# lineage NA ORIGEM (governance/.current-run.json) e sai != 0 quando
+# report.ok=false — fail-closed, sem evidência same-run não há convergência.
+RUNNING_IN_PIPELINE=1 $NODE scripts/smoke/qa-waves-enterprise-proof-smoke.js
+
+echo "[converge] 2/12 critical-journey-evidence (v2 — evidência real de handoff)"
 $NODE scripts/governance/generate-critical-journey-evidence-v2.js
 
-echo "[converge] 2/9 qa-waves enterprise governance (bridge)"
+echo "[converge] 3/12 qa-waves enterprise governance (bridge)"
 $NODE tools/system/qa-waves-enterprise-governance-bridge.js >/dev/null
 
-echo "[converge] 3/9 package-validation (zip de convergência, se presente)"
+echo "[converge] 4/12 package-validation (zip de convergência, se presente)"
 CONV_ZIP="$(ls -t dist/r-agent2-converge-provisional.zip 2>/dev/null | head -1 || true)"
 if [[ -n "$CONV_ZIP" ]]; then
   $NODE governance/package-validator.js --zip "$CONV_ZIP" --audited-only
@@ -68,14 +88,23 @@ else
   fi
 fi
 
-echo "[converge] 4/9 readiness projection (lineage do run corrente)"
+echo "[converge] 5/12 readiness projection (lineage do run corrente)"
 # O exit code deste produtor ESPELHA A DECISÃO (1 quando a decisão não é GO),
 # não uma falha de execução. A avaliação da decisão é feita pelo fixpoint
-# (passos 7-8); aqui o objetivo é apenas regerar a projeção com o lineage do run
-# corrente. Sob `set -e` o abort seria um falso bloqueio.
+# (passos 10-11); aqui o objetivo é apenas regerar a projeção com o lineage do
+# run corrente. Sob `set -e` o abort seria um falso bloqueio.
 $NODE tools/system/platform-readiness.js >/dev/null || true
 
-echo "[converge] 5/9 evidência executável com validade temporal (test/regression + domínios + persistência)"
+echo "[converge] 6/12 relatórios derivados com TTL de 7d (produtor real, nunca stamp)"
+# maxAgeMs=7d no master-scorecard-registry: cruzou 168h vira ARTIFACT_EXPIRED e
+# derruba as dimensões dependentes (RAP-007/010/011/012/015/016/017/058/077,
+# medido em 2026-09-20). Só o produtor real refresca generatedAt sem fabricar
+# freshness. O lineage (runId/fingerprint) é reaplicado no passo 9 (stamp).
+$NODE scripts/governance/generate-system-scope-audit.js >/dev/null
+$NODE governance/verify-agent-policy-compliance.js >/dev/null
+$NODE governance/replay-hardening-engine.js >/dev/null
+
+echo "[converge] 7/12 evidência executável com validade temporal (test/regression + domínios + persistência)"
 # Produtores reais (rodam as suítes Jest e gravam o exit code): únicos que
 # podem refrescar generatedAt sem fabricar freshness. Se uma suíte falhar, o
 # report sai FAIL e o fixpoint/seal-time-gate reprovam — comportamento honesto
@@ -86,14 +115,23 @@ $NODE scripts/governance/generate-policy-evidence.js
 $NODE scripts/governance/generate-domain-evidence.js >/dev/null
 $NODE scripts/governance/generate-persistence-evidence.js >/dev/null
 
-echo "[converge] 6/9 stamp de lineage"
+echo "[converge] 8/12 QA Mesh canônico DENTRO do run governado (~35min; evidência same-run RAP-024/026)"
+# RUNTIME_EVIDENCE: o go-no-go do mesh só é prova do run em que o mesh
+# REALMENTE rodou. RUNNING_IN_PIPELINE=1 torna a execução canônica
+# (executionOrigin=pipeline → go-no-go/release-gate/histórico gravados) e o
+# lineage é resolvido na origem por pipeline/entrypoints/runQaMesh.js a partir
+# de governance/.current-run.json — nunca anexado depois. Exit != 0 (NO_GO ou
+# erro) aborta a convergência: sem evidência same-run não há seal.
+RUNNING_IN_PIPELINE=1 timeout 5400 npm run qa:mesh
+
+echo "[converge] 9/12 stamp de lineage"
 $NODE scripts/governance/stamp-report-lineage.js >/dev/null
 
-echo "[converge] 7/9 fixpoint (pass 1 — projeção)"
+echo "[converge] 10/12 fixpoint (pass 1 — projeção)"
 $NODE scripts/governance/run-persisted-scorecard.js >/dev/null
 
-echo "[converge] 8/9 fixpoint (pass 2 — revalidação estável)"
+echo "[converge] 11/12 fixpoint (pass 2 — revalidação estável)"
 $NODE scripts/governance/run-persisted-scorecard.js
 
-echo "[converge] 9/9 seal-time-gate"
+echo "[converge] 12/12 seal-time-gate"
 node scripts/governance/seal-time-gate.js
