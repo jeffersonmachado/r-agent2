@@ -184,8 +184,10 @@ describe('T-M1 — caminho REAL: adapter + registry + principal de pesquisa', ()
     expect(result.provider).toBe('external');
     expect(result.toolId).toBe(`mcp.t${externalMcpTenantToken('system')}.market-research.search`);
     expect(result.reason).toBe('external_read_only_provider_selected');
-    expect(result.output.remote).toBe('market-research');
-    expect(JSON.parse(result.output.text).candidates).toHaveLength(1);
+    // A capability devolve o payload PROJETADO (contrato canônico), não o
+    // envelope MCP cru — ver parseResearchToolOutput em researchCapabilities.js.
+    expect(result.output.candidates).toHaveLength(1);
+    expect(result.output.candidates[0].url).toBe('https://vendor.example/docs');
     // A chamada realmente cruzou a fronteira de protocolo.
     expect(calls).toHaveLength(1);
     expect(calls[0].name).toBe('search');
