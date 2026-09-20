@@ -1,14 +1,14 @@
 {
   "artifactType": "final-proof-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-20T19:01:11.463Z",
+  "generatedAt": "2026-09-20T19:52:26.762Z",
   "runId": "rap-governed-20260920181847967-96783363",
   "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-  "finalDecision": "PASS_WITH_DEFERRED_PACKAGE_GATE",
-  "autonomousReady": false,
+  "finalDecision": "AUTONOMOUS_READY_GO",
+  "autonomousReady": true,
   "blockerCount": 0,
   "missingArtifacts": [],
   "fingerprintStatus": "FRESH",
@@ -16,11 +16,11 @@
     "status": "FRESH",
     "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
     "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-    "scenarioRegistryFingerprint": "52de0554888fed4aceb0ccf11c1ce602796d788838531bfd4c30f4632619da4a",
+    "scenarioRegistryFingerprint": "88be64bbb56b08d2ed989a77386616a1a1b1652356dfdb0d12d5097488c9349f",
     "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-    "chainFingerprint": "512363d5900b2d0e5d88801e219b4dcee4ff4d6ae5df94d98db9bfce78e7f913"
+    "chainFingerprint": "f173644220cfec51ca4a9c7bce0f5f6669c70811bb5183351a7af2d1d43a4d83"
   },
   "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-  "scenarioFingerprint": "52de0554888fed4aceb0ccf11c1ce602796d788838531bfd4c30f4632619da4a",
-  "chainFingerprint": "512363d5900b2d0e5d88801e219b4dcee4ff4d6ae5df94d98db9bfce78e7f913"
+  "scenarioFingerprint": "88be64bbb56b08d2ed989a77386616a1a1b1652356dfdb0d12d5097488c9349f",
+  "chainFingerprint": "f173644220cfec51ca4a9c7bce0f5f6669c70811bb5183351a7af2d1d43a4d83"
 }

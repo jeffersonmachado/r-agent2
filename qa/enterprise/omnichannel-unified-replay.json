@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-20T18:19:17.160Z",
+  "generatedAt": "2026-09-20T19:02:01.970Z",
   "ok": true,
   "signals": {
     "whatsapp": true,
@@ -78,105 +78,105 @@
       "text": "agendamento"
     },
     {
-      "timestamp": "2026-09-20T17:55:36.696Z",
+      "timestamp": "2026-09-20T18:56:37.560Z",
       "source": "pbx",
       "kind": "pbx_event_runtime_smoke",
       "actor": "system",
       "text": "replayTimeline=true"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.000Z",
+      "timestamp": "2026-09-20T19:01:32.000Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Cliente inicia conversa enterprise 1789928328396"
+      "text": "Cliente inicia conversa enterprise 1789930892013"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.000Z",
+      "timestamp": "2026-09-20T19:01:32.000Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Cliente confirmou retorno enterprise 1789928328396"
+      "text": "Cliente confirmou retorno enterprise 1789930892013"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.448Z",
+      "timestamp": "2026-09-20T19:01:32.040Z",
       "source": "human_handoff",
       "kind": "channel_message",
       "actor": "customer",
-      "text": "Cliente inicia conversa enterprise 1789928328396"
+      "text": "Cliente inicia conversa enterprise 1789930892013"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.609Z",
+      "timestamp": "2026-09-20T19:01:32.175Z",
       "source": "human_handoff",
       "kind": "audit_log",
       "actor": "systemadmin",
       "text": "ticket_takeover"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.615Z",
+      "timestamp": "2026-09-20T19:01:32.179Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
       "text": "Ticket atribuido para cc1fbca6-d8cb-4ac8-a858-2d221244a8b3."
     },
     {
-      "timestamp": "2026-09-20T18:18:48.617Z",
+      "timestamp": "2026-09-20T19:01:32.180Z",
       "source": "human_handoff",
       "kind": "audit_log",
       "actor": "systemadmin",
       "text": "ticket_assign"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.628Z",
+      "timestamp": "2026-09-20T19:01:32.189Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
-      "text": "Transferencia realizada. Fila: enterprise_support_1789928328396 · Sem atendente"
+      "text": "Transferencia realizada. Fila: enterprise_support_1789930892013 · Sem atendente"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.634Z",
+      "timestamp": "2026-09-20T19:01:32.193Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "agent",
-      "text": "Humano assumiu o atendimento enterprise 1789928328396"
+      "text": "Humano assumiu o atendimento enterprise 1789930892013"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.650Z",
+      "timestamp": "2026-09-20T19:01:32.207Z",
       "source": "human_handoff",
       "kind": "audit_log",
       "actor": "systemadmin",
       "text": "ticket_message"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.668Z",
+      "timestamp": "2026-09-20T19:01:32.224Z",
       "source": "human_handoff",
       "kind": "channel_message",
       "actor": "customer",
-      "text": "Cliente confirmou retorno enterprise 1789928328396"
+      "text": "Cliente confirmou retorno enterprise 1789930892013"
     },
     {
-      "timestamp": "2026-09-20T18:18:48.711Z",
+      "timestamp": "2026-09-20T19:01:32.258Z",
       "source": "human_handoff",
       "kind": "ticket_message",
       "actor": "customer",
       "text": "Ticket encerrado (Resolvido pelo enterprise proof smoke)."
     },
     {
-      "timestamp": "2026-09-20T18:18:48.715Z",
+      "timestamp": "2026-09-20T19:01:32.260Z",
       "source": "human_handoff",
       "kind": "audit_log",
       "actor": "systemadmin",
       "text": "ticket_close"
     },
     {
-      "timestamp": "2026-09-20T18:18:53.921Z",
+      "timestamp": "2026-09-20T19:01:38.642Z",
       "source": "pbx",
       "kind": "voice_runtime_smoke",
       "actor": "system",
       "text": "originate=true tts=true asr=true"
     },
     {
-      "timestamp": "2026-09-20T18:19:14.852Z",
+      "timestamp": "2026-09-20T19:01:59.989Z",
       "source": "omnichannel",
       "kind": "inbox_runtime_smoke",
       "actor": "system",
