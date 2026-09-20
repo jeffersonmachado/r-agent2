@@ -230,7 +230,13 @@ phase_candidate() {
   step candidate "pacote candidato (exit 1 é esperado) + scorecard + projeções"
 
   local zlog="$LOG_DIR/zip-candidate.log"
-  timeout 2700 npm run zip:release > "$zlog" 2>&1
+  # Orçamento de processo (não é TTL de evidência): o zip:release (two-pass)
+  # executa o converge-governance.sh COMPLETO em PRE_PACKAGE — incluindo o QA
+  # Mesh (timeout 5400) desde o T17. 7200s = 90min do mesh + 30min para os
+  # demais passos + packaging (mesma classe do T19; medido em 2026-09-20 com o
+  # two-pass morto aos exatos 45min do antigo timeout 2700 — T25, travado em
+  # tests/unit/governance/sealZipReleaseTimeoutBudget.test.js).
+  timeout 7200 npm run zip:release > "$zlog" 2>&1
   local rc=$?
 
   if grep -q 'CANDIDATO DELIVERED SELADO' "$zlog"; then
@@ -289,7 +295,7 @@ phase_final() {
   step final "pacote final (SEAL_GO, exit 0)"
 
   local zlog="$LOG_DIR/zip-final.log"
-  timeout 2700 npm run zip:release > "$zlog" 2>&1
+  timeout 7200 npm run zip:release > "$zlog" 2>&1
   local rc=$?
   [ "$rc" = "0" ] || fail "zip:release final retornou exit $rc (esperado 0)" "$zlog" final
 
