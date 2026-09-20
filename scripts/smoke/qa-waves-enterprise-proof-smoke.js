@@ -62,7 +62,16 @@ function getOriginLineage() {
 }
 
 function stampArtifact(payload) {
-  return applyOriginLineage(payload, getOriginLineage());
+  // Contrato de identidade NA ORIGEM: o master-scorecard-engine exige
+  // artifactType/artifactVersion em todo artefato com requireLineage (sem
+  // eles RAP-068 cai com ARTIFACT_CONTRACT_INCOMPLETE, medido no run
+  // rap-governed-20260920113643242-cac6169c). Carimbar depois seria adoção
+  // retroativa — o tipo nasce junto com o lineage.
+  return applyOriginLineage({
+    artifactType: 'enterprise-proof-artifact',
+    artifactVersion: '1.0.0',
+    ...payload,
+  }, getOriginLineage());
 }
 
 function loadJsonIfExists(filePathOrPaths, fallback = null) {

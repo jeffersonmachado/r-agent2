@@ -124,6 +124,17 @@ echo "[converge] 8/12 QA Mesh canônico DENTRO do run governado (~35min; evidên
 # erro) aborta a convergência: sem evidência same-run não há seal.
 RUNNING_IN_PIPELINE=1 timeout 5400 npm run qa:mesh
 
+echo "[converge] 8.5/12 coverage gate RECOMPUTADO sobre o mesh do run corrente"
+# Os estados de jornada do coverage gate derivam dos outcomes de cenário do
+# mesh. Até 2026-09-20 o report era regenerado só no passo 7/12 (via suíte
+# coverageGate.test.js), ANTES do mesh do run — o gate avaliava o mesh do run
+# ANTERIOR e derrubava RAP-002/018/020/022/023/025/040 por herança (journey
+# crítica FAILED no seal#8 → NO_GO no seal#9 com o mesh do run corrente GO,
+# medido no run rap-governed-20260920113643242-cac6169c). Aqui o produtor
+# real reexecuta DEPOIS do mesh: evidência recomputada do run, nunca stamp.
+# Exit != 0 (NO_GO) aborta a convergência — sem cobertura válida não há seal.
+$NODE scripts/governance/validate-coverage-gate.js
+
 echo "[converge] 9/12 stamp de lineage"
 $NODE scripts/governance/stamp-report-lineage.js >/dev/null
 
