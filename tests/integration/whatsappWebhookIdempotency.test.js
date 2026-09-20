@@ -5,6 +5,12 @@
 
 const http = require('http');
 
+// Boot do server + POST real levam ~9s ociosos; sob a carga do converge de
+// governança o global de 10s (jest.config.cjs) estourou e derrubou RAP-075
+// (medido na fase final do seal em 2026-09-20). Mesmo padrão das demais
+// suítes de integração que sobem o server (evo*: 120s).
+jest.setTimeout(120000);
+
 jest.mock('../../api/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
