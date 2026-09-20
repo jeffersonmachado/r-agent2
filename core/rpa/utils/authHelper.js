@@ -80,32 +80,107 @@ async function handleTenantSelectorModalIfPresent(page, options = {}) {
       return { handled: false };
     }
 
-    // Aguarda carregar lista, tenta selecionar tenant desejado (se existir)
-    const tenantButtonCandidates = [
-      `button:has-text("${tenantId}")`,
-      `button:has-text("${tenantId.toUpperCase()}")`,
-      'button:has-text("System")',
-      'button:has-text("system")',
-    ];
-
-    for (const selector of tenantButtonCandidates) {
-      const btn = page.locator(selector).first();
-      const visible = await btn.isVisible({ timeout: 800 }).catch(() => false);
-      if (visible) {
-        await btn.click().catch(() => null);
-        break;
-      }
-    }
-
-    // Clica "Acessar" (o modal pode pré-selecionar system automaticamente)
-    await accessButton.click({ timeout }).catch(() => null);
-
-    // Aguarda o modal fechar
-    await modalTitle.waitFor({ state: 'detached', timeout }).catch(() => null);
+    await handleVisibleTenantSelectorModal(page, { timeout, tenantId });
     return { handled: true };
   } catch (error) {
     return { handled: false, error: error.message };
   }
+}
+
+/**
+ * Resolve o modal de seleção de tenant JÁ VISÍVEL: seleciona o tenant
+ * preferido (se existir), clica "Acessar" e aguarda o modal fechar.
+ *
+ * @param {Object} page
+ * @param {Object} options
+ * @param {number} options.timeout
+ * @param {string} options.tenantId
+ */
+async function handleVisibleTenantSelectorModal(page, options = {}) {
+  const timeout = options.timeout || 10000;
+  const tenantId = options.tenantId || process.env.TEST_TENANT_ID || process.env.RPA_TENANT_ID || 'system';
+
+  const modalTitle = page.locator('text=Selecione o Tenant');
+  const accessButton = page.locator('button:has-text("Acessar")');
+
+  // Aguarda carregar lista, tenta selecionar tenant desejado (se existir)
+  const tenantButtonCandidates = [
+    `button:has-text("${tenantId}")`,
+    `button:has-text("${tenantId.toUpperCase()}")`,
+    'button:has-text("System")',
+    'button:has-text("system")',
+  ];
+
+  for (const selector of tenantButtonCandidates) {
+    const btn = page.locator(selector).first();
+    const visible = await btn.isVisible({ timeout: 800 }).catch(() => false);
+    if (visible) {
+      await btn.click().catch(() => null);
+      break;
+    }
+  }
+
+  // Clica "Acessar" (o modal pode pré-selecionar system automaticamente)
+  await accessButton.click({ timeout }).catch(() => null);
+
+  // Aguarda o modal fechar
+  await modalTitle.waitFor({ state: 'detached', timeout }).catch(() => null);
+}
+
+/**
+ * Verificação única (sem polling): se o modal de tenant estiver visível
+ * neste instante, resolve-o. Usada pelo wait pós-login unificado.
+ *
+ * @param {Object} page
+ * @param {Object} options
+ * @returns {Promise<boolean>} true se havia modal e ele foi tratado
+ */
+async function tryHandleTenantSelectorModalOnce(page, options = {}) {
+  const modalTitle = page.locator('text=Selecione o Tenant');
+  const accessButton = page.locator('button:has-text("Acessar")');
+  const modalVisible = await modalTitle.isVisible().catch(() => false);
+  const accessVisible = await accessButton.isVisible().catch(() => false);
+  if (!modalVisible && !accessVisible) {
+    return false;
+  }
+  await handleVisibleTenantSelectorModal(page, options).catch(() => null);
+  return true;
+}
+
+/**
+ * Wait pós-login UNIFICADO e baseado em condição: um único orçamento cobre
+ * redirect, modal de tenant (sempre que aparecer) e saída do estado de login.
+ * Substitui a cadeia de waits fixos (1.5s + poll do modal + 10s de
+ * waitForNotLoginPage), cujo total era excedido sob carga do QA Mesh —
+ * observado: business-core-biz-login flaky/NO_GO com credenciais corretas
+ * (run rap-governed-20260920103356648, 2026-09-20).
+ *
+ * @param {Object} page
+ * @param {Object} options
+ * @param {number} options.timeout - Orçamento total em ms (default: 60000)
+ * @param {string} options.tenantId
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function waitForPostLoginSettled(page, options = {}) {
+  const timeout = options.timeout || 60000;
+  const deadline = Date.now() + timeout;
+
+  // Janela inicial para o redirect/bootstrap começar (dentro do mesmo orçamento)
+  await page.waitForTimeout(1500);
+
+  while (Date.now() < deadline) {
+    await tryHandleTenantSelectorModalOnce(page, { timeout: 5000, tenantId: options.tenantId });
+    const isLogin = await isLoginPage(page);
+    if (!isLogin) {
+      return { success: true };
+    }
+    await page.waitForTimeout(400);
+  }
+
+  return {
+    success: false,
+    error: 'Login pode ter falhado - UI ainda aparenta estar no estado de login',
+  };
 }
 
 /**
@@ -265,23 +340,16 @@ async function performLogin(page, options = {}) {
       };
     }
 
-    // Aguarda redirecionamento/atualização de UI (o app pode não mudar a URL imediatamente)
-    await page.waitForTimeout(1500);
-
-    // Se for super-admin, pode abrir modal de seleção de tenant.
-    // Janela ampla: sob carga o modal (fetch /super-admin/tenants + render) pode demorar.
-    const modalHandled = await handleTenantSelectorModalIfPresent(page, { timeout: options.timeout || 30000, tenantId: options.tenantId });
-    if (modalHandled.error) {
-      // Não falha por isso; só registra via retorno se ainda ficar travado
-    }
-
-    // Valida que saiu do estado de login
-    const notLogin = await waitForNotLoginPage(page, { timeout });
-    if (!notLogin) {
-      return {
-        success: false,
-        error: 'Login pode ter falhado - UI ainda aparenta estar no estado de login',
-      };
+    // Wait pós-login unificado: um único orçamento cobre redirect, modal de
+    // tenant e saída do estado de login (ver waitForPostLoginSettled).
+    const postLoginTimeoutMs = options.postLoginTimeoutMs ||
+      Number(process.env.RPA_LOGIN_POST_TIMEOUT_MS) || 60000;
+    const settled = await waitForPostLoginSettled(page, {
+      timeout: postLoginTimeoutMs,
+      tenantId: options.tenantId,
+    });
+    if (!settled.success) {
+      return { success: false, error: settled.error };
     }
 
     return { success: true };
