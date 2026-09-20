@@ -1,18 +1,18 @@
 {
   "artifactType": "final-readiness-report",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-20T19:52:26.763Z",
+  "generatedAt": "2026-09-20T20:09:22.254Z",
   "runId": "rap-governed-20260920181847967-96783363",
   "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
   "policyId": "RAP-AGENT-CONSTITUTION",
   "policyVersion": "1.0.4",
   "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-  "finalDecision": "AUTONOMOUS_READY_GO",
-  "status": "AUTONOMOUS_READY_GO",
+  "finalDecision": "NO_GO",
+  "status": "NO_GO",
   "blockingGaps": [],
   "certificationStates": {
     "corePlatformReadiness": {
-      "state": "CORE_GO",
+      "state": "CORE_NOT_GO",
       "score": 100,
       "scope": "plataforma (docs, QA mesh, QA waves, replay, verticais implementadas, validação production-like)",
       "doesNotInclude": [

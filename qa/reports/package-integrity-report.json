@@ -3,7 +3,7 @@
   "engine": "package-integrity-engine/v1",
   "pass": true,
   "decision": "PACKAGE_INTEGRITY_GO",
-  "packageName": "r-agent2-20260920-160115.zip",
+  "packageName": "r-agent2-20260920-165234.zip",
   "packageHash": "9efe8d67a104c0d76a2d67f74b891382e606cdd419a519e8f5e208ded737c6d7",
   "generatedAt_pkg": "2026-09-20T19:49:49Z",
   "gitCommit": "c452dd8c06326f83025a7c5dd24584efc73872f4",
@@ -13,7 +13,7 @@
       "check": "zip_hash",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260920-160115.zip",
+      "zipName": "r-agent2-20260920-165234.zip",
       "computed": "9efe8d67a104c0d76a2d67f74b891382e606cdd419a519e8f5e208ded737c6d7",
       "recorded": "9efe8d67a104c0d76a2d67f74b891382e606cdd419a519e8f5e208ded737c6d7",
       "hashSource": "sidecar-manifest",
@@ -25,7 +25,7 @@
       "check": "zip_name_alignment",
       "pass": true,
       "severity": "OK",
-      "zipName": "r-agent2-20260920-160115.zip",
+      "zipName": "r-agent2-20260920-165234.zip",
       "mismatches": [],
       "reason": null
     },
@@ -43,8 +43,8 @@
       "validatorOk": true,
       "selfContained": true,
       "missingEntries": 0,
-      "reportedZip": "r-agent2-20260920-160115.zip",
-      "actualZip": "r-agent2-20260920-160115.zip",
+      "reportedZip": "r-agent2-20260920-165234.zip",
+      "actualZip": "r-agent2-20260920-165234.zip",
       "zipMatch": true,
       "reason": null
     }
@@ -52,10 +52,11 @@
   "failedChecks": 0,
   "criticalChecks": 0,
   "failureReasons": [],
-  "summary": "Pacote r-agent2-20260920-160115.zip íntegro. Todos os hashes correspondem.",
+  "summary": "Pacote r-agent2-20260920-165234.zip íntegro. Todos os hashes correspondem.",
   "artifactType": "package-integrity-report",
   "artifactVersion": "1.0.0",
   "runId": "rap-governed-20260920181847967-96783363",
   "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
-  "gitTree": "05f01a7405e539322d76e02e08369fd3bd78c8b1"
+  "gitTree": "05f01a7405e539322d76e02e08369fd3bd78c8b1",
+  "reboundAt": "2026-09-20T20:08:05.651Z"
 }
