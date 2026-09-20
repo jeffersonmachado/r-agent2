@@ -1,6 +1,6 @@
 # Platform Status
 
-- Generated at: 2026-09-20T12:15:49.508Z
+- Generated at: 2026-09-20T12:31:22.458Z
 - Canonical mesh execution: mesh-2026-09-20T11-43-16-547Z
 - Canonical mesh decision: GO
 - Readiness decision: NO_GO:MANDATORY_GATE_BLOCKED [governance=NO_GO]
@@ -23,4 +23,4 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Proof artifacts presentes mas semanticamente invalidos (presenca != validade) [gap-proof-invalid-artifact-semantics]
+- Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]

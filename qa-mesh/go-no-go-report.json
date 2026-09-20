@@ -1,25 +1,25 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-20T11-43-16-547Z",
+  "executionId": "mesh-2026-09-20T12-36-20-656Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "GO",
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-20T11-43-16-547Z",
-    "startedAt": "2026-09-20T11:43:16.547Z",
+    "executionId": "mesh-2026-09-20T12-36-20-656Z",
+    "startedAt": "2026-09-20T12:36:20.656Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-20T12:15:22.063Z",
+    "promotedAt": "2026-09-20T13:09:19.317Z",
     "registryTotal": 144,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-09-20T11-43-16-547Z",
+    "executionId": "mesh-2026-09-20T12-36-20-656Z",
     "tenantId": "system",
-    "timestamp": "2026-09-20T11:43:16.547Z",
+    "timestamp": "2026-09-20T12:36:20.656Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -249,11 +249,11 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-20T11-43-16-547Z",
-      "startedAt": "2026-09-20T11:43:16.547Z",
+      "executionId": "mesh-2026-09-20T12-36-20-656Z",
+      "startedAt": "2026-09-20T12:36:20.656Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-20T12:15:22.063Z",
+      "promotedAt": "2026-09-20T13:09:19.317Z",
       "registryTotal": 144,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
@@ -261,9 +261,9 @@
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260920113643242-cac6169c",
-  "sourceFingerprint": "ab6d1be48c4f7e919de324aa9d59dfdffafbda6843c4f3d4200b73fd8a5374b5",
-  "sourceCommit": "6c831ae848855c442cd78008e48057621099a350",
-  "sourceTree": "6d139957c2e0d197a53473a79f820d98d762d13b",
-  "generatedAt": "2026-09-20T12:15:22.067Z"
+  "runId": "rap-governed-20260920123052954-35fa88c9",
+  "sourceFingerprint": "5b8c87ef49ff61242e3a9903b6b5f8f8719da3dd79de68e50745c888ce15ee0c",
+  "sourceCommit": "efbbd9984ca187a029d2d399df6949984d93cc1d",
+  "sourceTree": "74045d32d3b0332028c91756a91b116d96b2fa2e",
+  "generatedAt": "2026-09-20T13:09:19.319Z"
 }

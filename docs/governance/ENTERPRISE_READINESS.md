@@ -8,4 +8,4 @@
 - Blocking domains: none
 
 ## Hard blockers
-- gap-proof-invalid-artifact-semantics: Proof artifacts presentes mas semanticamente invalidos (presenca != validade) (critical)
+- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)
