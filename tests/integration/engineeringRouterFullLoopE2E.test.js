@@ -11,10 +11,19 @@
  * Único ponto substituído por um dublê: a chamada de rede ao LLM (`provider.generate`) — via
  * `registerAiProvider` REAL sob um id de provider REAL do registry (`anthropic`, `mistral`),
  * exatamente como a missão instrui ("o fake deve respeitar EXATAMENTE o contrato real").
- * Credencial é uma linha real em `tenant_ai_credentials` (tenant 'system'), removida no
- * teardown. Tudo o mais — classifier, policy, seleção de modelo, path boundary, patch
- * validator, git worktree, test runner, reviewer parsing, state machine, persistência — roda
- * sem nenhum dublê.
+ * Credencial é uma linha real em `tenant_ai_credentials`, sob um TENANT DEDICADO deste teste
+ * (nunca `system`), removida no teardown. Tudo o mais — classifier, policy, seleção de modelo,
+ * path boundary, patch validator, git worktree, test runner, reviewer parsing, state machine,
+ * persistência — roda sem nenhum dublê.
+ *
+ * Achado real: este teste usava o tenant `system` diretamente. Isso funcionou enquanto `system`
+ * não tinha nenhuma credencial real de provider mais barato que anthropic/mistral — mas quebrou
+ * de verdade no dia em que uma credencial real de DeepSeek (LOW cost, qualifica para
+ * CODING/DEBUGGING/TEST_GENERATION) foi configurada em `system` via UI para testar o recurso de
+ * saldo/status: o Router passou a rotear para DeepSeek de verdade (mais barato) em vez dos
+ * fakes registrados sob anthropic/mistral, e a chamada real falhava por saldo insuficiente. Um
+ * tenant isolado, criado e destruído só por este teste, elimina esse acoplamento com o estado
+ * real de credenciais de produção.
  *
  * Banco indisponível ⇒ pulo EXPLÍCITO (nunca verde silencioso).
  */
@@ -26,6 +35,9 @@ const { runTask } = require('../../api/services/engineeringRouter/engineeringRou
 
 const CODER_PROVIDER = 'anthropic';
 const REVIEWER_PROVIDER = 'mistral';
+// Tenant isolado (nunca `system`) — ver nota acima sobre por que reaproveitar `system` quebrou
+// de verdade quando uma credencial real mais barata foi configurada nele.
+const TEST_TENANT_KEY = 'jest-e2e-engineering-router';
 
 const FIXTURE_FILE = 'tests/fixtures/engineering-router-sandbox/mathUtils.js';
 const FIXTURE_TEST_COMMAND = "npx jest --testPathIgnorePatterns=/node_modules/ --testPathPattern=tests/fixtures/engineering-router-sandbox/mathUtils.test.js --no-coverage";
@@ -85,8 +97,16 @@ beforeAll(async () => {
     return;
   }
 
-  await setupCredential('system', CODER_PROVIDER);
-  await setupCredential('system', REVIEWER_PROVIDER);
+  // Tenant dedicado deste teste — nunca `system` (ver nota no topo do arquivo).
+  const getModels = require('../../api/db/models');
+  const TenantModel = getModels.getTenant();
+  await TenantModel.findOrCreate({
+    where: { tenant_key: TEST_TENANT_KEY },
+    defaults: { tenant_key: TEST_TENANT_KEY, name: 'Jest E2E — Engineering Router', status: 'active', plan: 'enterprise' },
+  });
+
+  await setupCredential(TEST_TENANT_KEY, CODER_PROVIDER);
+  await setupCredential(TEST_TENANT_KEY, REVIEWER_PROVIDER);
 
   // Um provider real responde de acordo com o prompt recebido — inclusive quando o MESMO
   // provider é qualificado tanto para CODER quanto para REVIEWER (independência de provider só
@@ -97,7 +117,7 @@ beforeAll(async () => {
   function makeFakeProvider(label) {
     return {
       async generate(prompt, context) {
-        expect(context.tenantId).toBe('system');
+        expect(context.tenantId).toBe(TEST_TENANT_KEY);
         if (context.purpose === 'engineering_coder') {
           return {
             text: JSON.stringify({ summary: 'adiciona função add em mathUtils', diff: FIX_DIFF }),
@@ -141,8 +161,12 @@ afterAll(async () => {
     }
   } catch (_) { /* best-effort */ }
 
-  await teardownCredential('system', CODER_PROVIDER);
-  await teardownCredential('system', REVIEWER_PROVIDER);
+  await teardownCredential(TEST_TENANT_KEY, CODER_PROVIDER);
+  await teardownCredential(TEST_TENANT_KEY, REVIEWER_PROVIDER);
+  try {
+    const TenantModel = getModels.getTenant();
+    await TenantModel.destroy({ where: { tenant_key: TEST_TENANT_KEY } });
+  } catch (_) { /* best-effort */ }
   await sequelizeModule.close().catch(() => {});
 }, 30000);
 
@@ -175,7 +199,7 @@ describe('Engineering Model Router V1 — E2E RED → FIX → REVIEW → GREEN',
     }, { createdBy: 'jest-e2e' });
     createdTaskIds.push(task.id);
 
-    const result = await runTask(task.id, { runnerId: 'jest-e2e-runner' });
+    const result = await runTask(task.id, { runnerId: 'jest-e2e-runner', tenantId: TEST_TENANT_KEY });
 
     expect(result.status).toBe('GREEN');
 

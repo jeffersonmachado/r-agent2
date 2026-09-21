@@ -9,20 +9,33 @@
  *   1. `engine/engineeringRouter/modelCapabilities.js` (capabilities/roles por modelo, V1)
  *   2. `api/services/aiProviderRegistryService.getRuntimeProviders()` (enabled real, built-in+custom)
  *   3. `api/services/aiControlPlaneStatus.getBreakerStates()` (saúde real por circuit breaker)
- *   4. `api/services/tenantAIService.hasCredentials(tenantId, provider)` (credencial real por tenant)
+ *   4. `api/services/tenantAIService.getCredentialDetailsMap(tenantId)` (credencial real por
+ *      tenant + status do último teste real — ver nota abaixo)
  *
  * O tenant usado para checagem de credencial é configurável (`ENGINEERING_ROUTER_TENANT_ID`,
  * default `'system'` — o mesmo tenant interno já usado para chamadas de IA sem tenant real em
  * `api/modules/tenant/aiWorkflows.js`).
+ *
+ * Achado real: o circuit breaker do AI Control Plane (`aiControlPlaneStatus`) NÃO abre para
+ * erros de billing/auth (402/401 — `BUDGET_BLOCK`/`AUTH` em `classifyProviderError`), de
+ * propósito, porque esses erros são de uma CREDENCIAL específica, não de o provider estar fora
+ * do ar para todo mundo. Sem isso, uma credencial restaurada sem saldo (ver
+ * POST_RELEASE_MODEL_ROUTER_BACKLOG.md / manual §1) continuava sendo escolhida como CODER mais
+ * barato indefinidamente, gastando tentativas reais em toda task nova. Por isso o `status`
+ * persistido em `tenant_ai_credentials` (POST /tenants/:id/ai-credentials/test) também entra na
+ * elegibilidade aqui: uma credencial com o último teste real confirmando `no_credit` ou
+ * `invalid_token` não é tratada como "tem credencial usável" para fins de roteamento — mas
+ * continua salva e visível na UI, nunca é apagada.
  */
 
 const { listCapabilityEntries } = require('../../../engine/engineeringRouter/modelCapabilities');
 const { getRuntimeProviders } = require('../aiProviderRegistryService');
 const { getBreakerStates } = require('../aiControlPlaneStatus');
-const { hasCredentials } = require('../tenantAIService');
+const { getCredentialDetailsMap } = require('../tenantAIService');
 const logger = require('../../utils/logger');
 
 const DEFAULT_TENANT_ID = process.env.ENGINEERING_ROUTER_TENANT_ID || 'system';
+const KNOWN_BAD_CREDENTIAL_STATUSES = new Set(['no_credit', 'invalid_token']);
 
 /**
  * Constrói a lista de candidatos (`availableModels`) usada pelo `modelSelector` puro.
@@ -48,6 +61,14 @@ async function buildAvailableModels({ tenantId = DEFAULT_TENANT_ID } = {}) {
   }
   const breakerByProvider = new Map(breakerStates.map((b) => [b.provider, b.state]));
 
+  let credentialDetails = {};
+  try {
+    credentialDetails = await getCredentialDetailsMap(tenantId);
+  } catch (err) {
+    logger.warn('[engineeringModelAvailability] falha ao checar credenciais', { error: err.message });
+    credentialDetails = {};
+  }
+
   const entries = listCapabilityEntries();
   const results = [];
 
@@ -61,13 +82,12 @@ async function buildAvailableModels({ tenantId = DEFAULT_TENANT_ID } = {}) {
     // sistema — o breaker só abre após falhas reais).
     const healthy = breakerState !== 'OPEN';
 
-    let hasCredential = false;
-    try {
-      hasCredential = await hasCredentials(tenantId, entry.providerId);
-    } catch (err) {
-      logger.warn('[engineeringModelAvailability] falha ao checar credencial', { providerId: entry.providerId, error: err.message });
-      hasCredential = false;
-    }
+    const credentialInfo = credentialDetails[entry.providerId];
+    // Credencial existe, mas o último teste real confirmou que está sem saldo/inválida: não
+    // conta como "usável" para roteamento (o breaker global não cobre esse caso — ver nota no
+    // topo do arquivo). Continua aparecendo como credencial configurada em qualquer outra tela.
+    const hasCredential = Boolean(credentialInfo?.hasCredential)
+      && !KNOWN_BAD_CREDENTIAL_STATUSES.has(credentialInfo?.status);
 
     results.push({
       providerId: entry.providerId,
