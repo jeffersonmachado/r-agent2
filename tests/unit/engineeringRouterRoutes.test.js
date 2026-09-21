@@ -30,7 +30,7 @@ function buildDepsFactory(overrides = {}) {
       listReviews: async () => [],
       listTelemetry: async () => [],
     },
-    engineeringRouterService: { runTask: async () => ({ status: 'GREEN' }) },
+    engineeringRouterService: { beginRun: async (taskId) => ({ taskId, status: 'ACCEPTED', accepted: true }) },
     engineeringModelStatsService: { listModelsWithStats: async () => [] },
     releaseClosureService: { getReleaseClosure: async () => ({ cleanReleaseState: false }) },
   };
@@ -122,15 +122,32 @@ describe('engineering-router routes', () => {
     let ran = false;
     deps = buildDepsFactory({
       requireAuth: (req) => { req.agent = { platformClassification: 'DEVELOPMENT' }; return { valid: true }; },
-      engineeringRouterService: { runTask: async () => { ran = true; return { status: 'GREEN' }; } },
+      engineeringRouterService: { beginRun: async (taskId) => { ran = true; return { taskId, status: 'ACCEPTED', accepted: true }; } },
     });
     server = await startServer(deps);
     const res = await fetch(`${baseUrl(server)}/engineering/tasks/task-1/run`, { method: 'POST' });
     expect(res.status).toBe(202);
     const body = await res.json();
     expect(body.status).toBe('ACCEPTED');
-    await new Promise((r) => setTimeout(r, 20));
     expect(ran).toBe(true);
+  });
+
+  test('ERV1-CLOSE-009: run já em andamento responde 409 real (lock verificado antes da resposta)', async () => {
+    deps = buildDepsFactory({
+      requireAuth: (req) => { req.agent = { platformClassification: 'DEVELOPMENT' }; return { valid: true }; },
+      engineeringRouterService: {
+        beginRun: async () => {
+          const err = new Error('EngineeringTask já está em execução');
+          err.code = 'TASK_ALREADY_RUNNING';
+          throw err;
+        },
+      },
+    });
+    server = await startServer(deps);
+    const res = await fetch(`${baseUrl(server)}/engineering/tasks/task-1/run`, { method: 'POST' });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe('task_already_running');
   });
 
   test('ERV1-CLOSE-006: run nunca repassa o tenant do agente como credentialScope, só como eventAudienceTenantId', async () => {
@@ -143,13 +160,12 @@ describe('engineering-router routes', () => {
         return { valid: true };
       },
       engineeringRouterService: {
-        runTask: async (taskId, options) => { capturedOptions = options; return { status: 'GREEN' }; },
+        beginRun: async (taskId, options) => { capturedOptions = options; return { taskId, status: 'ACCEPTED', accepted: true }; },
       },
     });
     server = await startServer(deps);
     const res = await fetch(`${baseUrl(server)}/engineering/tasks/task-1/run`, { method: 'POST' });
     expect(res.status).toBe(202);
-    await new Promise((r) => setTimeout(r, 20));
 
     expect(capturedOptions).not.toBeNull();
     expect(capturedOptions.eventAudienceTenantId).toBe('tenant-cliente-real');

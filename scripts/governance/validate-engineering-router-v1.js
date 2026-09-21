@@ -193,6 +193,27 @@ function main() {
     ...checkFileContains('engine/engineeringRouter/modelSelector.js', [/model\.available/, /excludedModelKeys/]),
   });
 
+  // ERV1-CLOSE-009: lock de execução precisa ser adquirido de forma SÍNCRONA antes de responder
+  // à requisição HTTP — nunca fire-and-forget do lock em si (só a execução longa pode ser
+  // fire-and-forget). Achado real: routes.js chamava runTask sem await, então uma segunda
+  // chamada concorrente sempre recebia 202 mesmo quando TASK_ALREADY_RUNNING acontecia.
+  checks.push({
+    id: 'RESTART_SAFE_LOCK',
+    ...checkFileContains('api/services/engineeringRouter/engineeringTaskService.js', [/LOCK_STALE_MS/, /TASK_ALREADY_RUNNING/, /lock:\s*t\.LOCK\.UPDATE/]),
+  });
+  checks.push({
+    id: 'CONCURRENCY_SAFE_ROUTE',
+    ok: exists('api/services/engineeringRouter/engineeringRouterService.js')
+      && /beginRun/.test(readText('api/services/engineeringRouter/engineeringRouterService.js'))
+      && exists('api/modules/engineering-router/routes.js')
+      && /await deps\.engineeringRouterService\.beginRun/.test(readText('api/modules/engineering-router/routes.js')),
+    reason: 'routes.js precisa aguardar (await) beginRun antes de responder — nunca disparar o lock em fire-and-forget (ERV1-CLOSE-009)',
+  });
+  checks.push({
+    id: 'ORPHAN_WORKSPACE_PRUNING',
+    ...checkFileContains('api/services/engineeringRouter/patchApplyService.js', [/pruneOrphanedWorkspaces/]),
+  });
+
   // 9. Review loop independente.
   checks.push({
     id: 'REVIEW_LOOP',
@@ -254,6 +275,8 @@ function main() {
     'tests/unit/engineeringRouterSafeEnvironment.test.js',
     'tests/unit/engineeringRouterSecretRedactionMultiline.test.js',
     'tests/integration/engineeringRouterModelRerouteE2E.test.js',
+    'tests/integration/engineeringTaskConcurrencyAndRestart.test.js',
+    'tests/integration/engineeringRouterOrphanWorkspacePruning.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });

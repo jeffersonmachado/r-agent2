@@ -30,6 +30,20 @@ function startServerRuntime({
         logger.warn('[Server] MCP Client composition falhou (não-bloqueante)', { error: err.message });
       }
 
+      // ERV1-CLOSE-009: se o processo morreu no meio de uma tentativa do Engineering Router,
+      // o workspace isolado (git worktree) daquela tentativa nunca foi limpo — varre e remove
+      // os órfãos reais no boot, antes de aceitar tráfego. Nunca bloqueia o boot em caso de
+      // falha (repositório git indisponível, etc.).
+      try {
+        const { pruneOrphanedWorkspaces } = require('../services/engineeringRouter/patchApplyService');
+        const { pruned } = await pruneOrphanedWorkspaces();
+        if (pruned.length > 0) {
+          logger.info('[Server] Engineering Router: workspaces órfãos removidos no boot', { count: pruned.length });
+        }
+      } catch (err) {
+        logger.warn('[Server] Engineering Router: pruning de workspaces órfãos falhou (não-bloqueante)', { error: err.message });
+      }
+
       logger.info('[Server] ✅ Inicialização concluída, iniciando servidor...');
       server.listen(port, () => {
         logger.info(`API server listening on http://0.0.0.0:${port}`);

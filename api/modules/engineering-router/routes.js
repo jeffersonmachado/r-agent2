@@ -126,14 +126,23 @@ function createEngineeringRouterRoutes({ buildDeps }) {
       // credencial/budget de IA daquele tenant (inclusive um cliente real) para enviar
       // código-fonte da plataforma — `credentialScope` fica de fora daqui de propósito, sempre
       // com o default fixo `ENGINEERING_CREDENTIAL_SCOPE` do próprio serviço.
+      // ERV1-CLOSE-009: `beginRun` adquire o lock de forma SÍNCRONA (awaited) antes de
+      // responder — uma segunda chamada concorrente genuína lança TASK_ALREADY_RUNNING AQUI,
+      // capturado pelo catch abaixo como 409 real. Achado real: a versão anterior chamava
+      // `runTask` (que só faz o lock DEPOIS de já ter sido disparado em fire-and-forget) sem
+      // `await`, então o `catch` nunca via o erro de lock — toda chamada concorrente recebia
+      // 202 "ACCEPTED" mesmo quando a execução nunca chegava a rodar de verdade.
       const eventAudienceTenantId = req.tenantId || req.agent?.tenantId || undefined;
-      deps.engineeringRouterService.runTask(req.params.id, {
+      const beginResult = await deps.engineeringRouterService.beginRun(req.params.id, {
         runnerId: `http-${req.agent?.id || 'unknown'}-${Date.now()}`,
         ...(eventAudienceTenantId ? { eventAudienceTenantId } : {}),
-      })
-        .catch((err) => deps.logger.error('[engineering-router] run task falhou', { taskId: req.params.id, error: err.message, code: err.code }));
+      });
 
-      deps.sendJson(res, 202, { taskId: req.params.id, status: 'ACCEPTED' });
+      if (!beginResult.accepted) {
+        deps.sendJson(res, 200, { taskId: beginResult.taskId, status: beginResult.status, idempotent: true });
+        return;
+      }
+      deps.sendJson(res, 202, { taskId: beginResult.taskId, status: 'ACCEPTED' });
     } catch (err) {
       if (err.code === 'TASK_ALREADY_RUNNING') {
         deps.sendJson(res, 409, { error: 'task_already_running', message: err.message });

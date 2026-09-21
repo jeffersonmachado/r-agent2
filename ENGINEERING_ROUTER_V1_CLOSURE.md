@@ -152,7 +152,37 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
 
 ### ERV1-CLOSE-009 — Restart/resume + concorrência
 
-- status: PENDENTE
+- RED reproduced: `lockForRun` (SELECT...FOR UPDATE, stale-lock recovery) já existia e
+  funcionava — mas NUNCA tinha teste algum comprovando isso, e a rota HTTP tinha um bug real:
+  `POST /run` chamava `runTask(...)` SEM `await` (fire-and-forget) e só `runTask` fazia
+  `lockForRun` — ou seja, o try/catch da rota nunca via o erro `TASK_ALREADY_RUNNING`, que só
+  era logado via `.catch()`. Duas chamadas concorrentes de `/run` na mesma task sempre
+  recebiam 202+202, mesmo quando a segunda nunca chegava a rodar de verdade — o chamador nunca
+  sabia. Também não existia nenhuma limpeza de workspace órfão se o PROCESSO (não uma exceção
+  JS) morresse no meio de uma tentativa — o `finally` que chamaria `destroyWorkspace` nunca
+  roda nesse caso.
+- fix: `engineeringRouterService.js` ganhou `acquireRunLock`/`runLockedTask`/`beginRun` —
+  `beginRun` adquire o lock de forma SÍNCRONA (awaited) e só DEPOIS dispara a execução longa em
+  background; `routes.js` agora usa `await deps.engineeringRouterService.beginRun(...)`, então
+  uma segunda chamada concorrente recebe `TASK_ALREADY_RUNNING` → 409 de verdade, antes de
+  qualquer resposta ser decidida. Novo `patchApplyService.pruneOrphanedWorkspaces()` varre
+  workspaces reais (`git worktree list --porcelain`) sob `WORKSPACE_ROOT` mais velhos que um
+  TTL e os remove — chamado no boot do servidor (`startServerRuntime.js`), nunca toca no
+  worktree principal do repositório.
+- tests: `tests/integration/engineeringTaskConcurrencyAndRestart.test.js` (4/4 PASS, Postgres
+  real) — duas aquisições de lock concorrentes (uma ganha, outra `TASK_ALREADY_RUNNING` real),
+  lock fresco rejeita intrusos, lock órfão (backdatado além do TTL) é recuperado por um runner
+  diferente, task terminal nunca aceita lock novo.
+  `tests/integration/engineeringRouterOrphanWorkspacePruning.test.js` (3/3 PASS) — workspace
+  real backdatado é removido do disco E do `git worktree list`; workspace recente e o worktree
+  principal do repositório nunca são tocados; pruning é idempotente.
+  `tests/unit/engineeringRouterRoutes.test.js` (novo caso: `beginRun` lançando
+  `TASK_ALREADY_RUNNING` → rota responde 409 real).
+- evidence: gate `RESTART_SAFE_LOCK` + `CONCURRENCY_SAFE_ROUTE` + `ORPHAN_WORKSPACE_PRUNING`.
+- status: GREEN
+- nota (POST_RELEASE_HARDENING): promoção de patch (ERV1-CLOSE-005) ainda não existe na V1 —
+  o cenário "restart não duplica promotion" da missão fica sem objeto até essa etapa existir;
+  tratado no item 005 abaixo.
 
 ### ERV1-CLOSE-004 — Regression e Governance reais
 

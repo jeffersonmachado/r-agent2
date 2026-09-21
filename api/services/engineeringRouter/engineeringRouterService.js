@@ -353,27 +353,30 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
  * sobrescrito por chamadores internos/testes que precisam de isolamento (nunca pela camada
  * HTTP a partir do tenant de quem está autenticado).
  */
-async function runTask(taskId, {
-  runnerId = `runner-${process.pid}-${Date.now()}`,
-  credentialScope = ENGINEERING_CREDENTIAL_SCOPE,
-  eventAudienceTenantId = null,
-} = {}) {
-  let task = await engineeringTaskService.getTask(taskId);
+/**
+ * Adquire o lock de execução (rápido: um round-trip de DB com `SELECT ... FOR UPDATE`, nunca
+ * espera nenhuma chamada de LLM) e devolve o `task` já travado. Lança `TASK_ALREADY_RUNNING`
+ * de verdade quando já existe uma execução em andamento — ponto usado tanto por `runTask`
+ * (espera o loop inteiro) quanto por `beginRun` (ERV1-CLOSE-009: dispara o loop em background
+ * só DEPOIS de garantir o lock, para a resposta HTTP poder refletir 409 de verdade em vez de
+ * sempre 202 mesmo quando a segunda chamada concorrente nunca chega a rodar).
+ */
+async function acquireRunLock(taskId, runnerId) {
+  const task = await engineeringTaskService.getTask(taskId);
   if (!task) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
 
   if (['GREEN', 'RED', 'BLOCKED', 'CANCELLED'].includes(task.status)) {
-    return { taskId, status: task.status, idempotent: true };
+    return { task, alreadyTerminal: true };
   }
 
   await engineeringTaskService.lockForRun(taskId, runnerId);
+  return { task, alreadyTerminal: false };
+}
 
-  // Sem audiência explícita (ex.: worker de background sem requisição HTTP associada), o
-  // evento cai no próprio credentialScope — mesmo default de sempre para quem não pediu uma
-  // audiência específica. Nunca o inverso (nunca derivar credentialScope da audiência).
-  const resolvedAudience = eventAudienceTenantId || credentialScope;
-
+async function runLockedTask(task, { credentialScope, eventAudienceTenantId }) {
+  const taskId = task.id;
   try {
-    return await executeRoutedLoop(task, { credentialScope, eventAudienceTenantId: resolvedAudience });
+    return await executeRoutedLoop(task, { credentialScope, eventAudienceTenantId });
   } catch (err) {
     // Cancelamento concorrente (POST /tasks/:id/cancel enquanto este loop já estava rodando)
     // aparece como uma transição de estado agora inválida a partir de CANCELLED — tratado como
@@ -388,6 +391,48 @@ async function runTask(taskId, {
   } finally {
     await engineeringTaskService.unlockTask(taskId);
   }
+}
+
+async function runTask(taskId, {
+  runnerId = `runner-${process.pid}-${Date.now()}`,
+  credentialScope = ENGINEERING_CREDENTIAL_SCOPE,
+  eventAudienceTenantId = null,
+} = {}) {
+  const { task, alreadyTerminal } = await acquireRunLock(taskId, runnerId);
+  if (alreadyTerminal) return { taskId, status: task.status, idempotent: true };
+
+  // Sem audiência explícita (ex.: worker de background sem requisição HTTP associada), o
+  // evento cai no próprio credentialScope — mesmo default de sempre para quem não pediu uma
+  // audiência específica. Nunca o inverso (nunca derivar credentialScope da audiência).
+  const resolvedAudience = eventAudienceTenantId || credentialScope;
+  return runLockedTask(task, { credentialScope, eventAudienceTenantId: resolvedAudience });
+}
+
+/**
+ * ERV1-CLOSE-009: variante para a camada HTTP. Adquire o lock de forma SÍNCRONA (awaited) —
+ * uma segunda chamada concorrente genuína recebe `TASK_ALREADY_RUNNING` aqui, antes de qualquer
+ * resposta HTTP ser enviada — e só então dispara o loop de execução (que pode envolver várias
+ * chamadas de LLM/testes reais) em background. Nunca use isto para aguardar o resultado final;
+ * é só para tornar a resposta 202/409 honesta sobre se a execução realmente começou.
+ *
+ * @returns {Promise<{taskId:string, status:string, accepted:boolean}>}
+ */
+async function beginRun(taskId, {
+  runnerId = `runner-${process.pid}-${Date.now()}`,
+  credentialScope = ENGINEERING_CREDENTIAL_SCOPE,
+  eventAudienceTenantId = null,
+} = {}) {
+  const { task, alreadyTerminal } = await acquireRunLock(taskId, runnerId);
+  if (alreadyTerminal) return { taskId, status: task.status, accepted: false };
+
+  const resolvedAudience = eventAudienceTenantId || credentialScope;
+  // Fire-and-forget de propósito: o lock já foi adquirido de verdade acima (síncrono); o que
+  // resta (chamadas de LLM, testes reais) pode legitimamente exceder o timeout de uma
+  // requisição HTTP.
+  runLockedTask(task, { credentialScope, eventAudienceTenantId: resolvedAudience })
+    .catch((err) => logger.error('[engineeringRouterService] beginRun: execução em background falhou', { taskId, error: err.message, code: err.code }));
+
+  return { taskId, status: 'ACCEPTED', accepted: true };
 }
 
 async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId }) {
@@ -504,4 +549,5 @@ module.exports = {
   ensureRouted,
   runOneAttempt,
   runTask,
+  beginRun,
 };

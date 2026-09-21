@@ -181,6 +181,60 @@ async function destroyWorkspace(workspacePath) {
   await runGit(['worktree', 'prune'], { cwd: ROOT });
 }
 
+// ERV1-CLOSE-009: se o PROCESSO morre (não uma exceção JS) no meio de uma tentativa, o `finally`
+// que chamaria `destroyWorkspace` nunca roda — o workspace isolado (e o registro de worktree do
+// git) fica órfão em disco para sempre. `pruneOrphanedWorkspaces` varre os worktrees reais
+// registrados sob `WORKSPACE_ROOT` (nunca o worktree principal do repositório) e remove os mais
+// velhos que `olderThanMs`, reaproveitando `destroyWorkspace`. Chamado no boot do servidor
+// (`api/server.js`) e disponível para uma varredura periódica futura, se necessário.
+const DEFAULT_ORPHAN_WORKSPACE_MAX_AGE_MS = Number(process.env.ENGINEERING_ROUTER_ORPHAN_WORKSPACE_MAX_AGE_MS || 60 * 60 * 1000);
+
+async function pruneOrphanedWorkspaces({ olderThanMs = DEFAULT_ORPHAN_WORKSPACE_MAX_AGE_MS } = {}) {
+  const listResult = await runGit(['worktree', 'list', '--porcelain'], { cwd: ROOT });
+  if (!listResult.ok) {
+    logger.warn('[patchApplyService] falha ao listar worktrees para pruning', { stderr: listResult.stderr });
+    return { pruned: [] };
+  }
+
+  const worktreePaths = listResult.stdout
+    .split('\n\n')
+    .map((block) => {
+      const line = block.split('\n').find((l) => l.startsWith('worktree '));
+      return line ? line.slice('worktree '.length).trim() : null;
+    })
+    .filter(Boolean);
+
+  const normalizedRoot = path.resolve(WORKSPACE_ROOT);
+  const now = Date.now();
+  const pruned = [];
+
+  for (const worktreePath of worktreePaths) {
+    // Nunca mexe no worktree principal do repositório — só nos isolados sob WORKSPACE_ROOT.
+    if (!path.resolve(worktreePath).startsWith(normalizedRoot)) continue;
+
+    let mtimeMs;
+    try {
+      mtimeMs = fs.statSync(worktreePath).mtimeMs;
+    } catch (_) {
+      // Diretório já não existe no disco, mas o git ainda tem o registro — worktree prune puro
+      // resolve isso.
+      await runGit(['worktree', 'prune'], { cwd: ROOT });
+      continue;
+    }
+
+    if (now - mtimeMs < olderThanMs) continue; // recente o bastante para ainda estar em uso.
+
+    await destroyWorkspace(worktreePath);
+    pruned.push(worktreePath);
+  }
+
+  if (pruned.length > 0) {
+    logger.info('[patchApplyService] workspaces órfãos removidos no boot/varredura', { count: pruned.length, pruned });
+  }
+
+  return { pruned };
+}
+
 module.exports = {
   WORKSPACE_ROOT,
   createSnapshotCommit,
@@ -188,4 +242,5 @@ module.exports = {
   applyPatch,
   listChangedFiles,
   destroyWorkspace,
+  pruneOrphanedWorkspaces,
 };
