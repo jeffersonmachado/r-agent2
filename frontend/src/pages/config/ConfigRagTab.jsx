@@ -8,28 +8,32 @@ const LLM_PROVIDERS = [
   { value: 'anthropic', label: 'Anthropic (Claude)' },
 ];
 
+// Modelos atualizados (set/2026) — mesmos IDs reais já usados em engine/aiProviderRegistry.js
+// (autoridade canônica da plataforma). Achado real: esta lista estava presa em modelos
+// descontinuados há muito tempo (gpt-4o-mini/gpt-4-turbo, deepseek-chat/reasoner,
+// claude-3-5-sonnet-20241022) — mesma classe de bug corrigida no Engineering Router após um
+// pilot real revelar que os IDs mapeados não existiam mais nas APIs dos providers.
 function getModelOptions(provider) {
   if (provider === 'openai') {
     return [
-      { value: 'gpt-4o-mini', label: 'GPT-4o Mini (padrão)' },
+      { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini (padrão)' },
+      { value: 'gpt-5.4', label: 'GPT-5.4' },
       { value: 'gpt-4o', label: 'GPT-4o' },
-      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-      { value: 'gpt-4', label: 'GPT-4' },
-      { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+      { value: 'gpt-5-codex', label: 'GPT-5 Codex' },
+      { value: 'o4-mini', label: 'o4-mini' },
     ];
   }
   if (provider === 'deepseek') {
     return [
-      { value: 'deepseek-chat', label: 'DeepSeek Chat (V3)' },
-      { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1)' },
+      { value: 'deepseek-flash', label: 'DeepSeek Flash (V4.1)' },
+      { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
     ];
   }
   if (provider === 'anthropic') {
     return [
-      { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-      { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-      { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
-      { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
+      { value: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
+      { value: 'claude-opus-5', label: 'Claude Opus 5' },
+      { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
     ];
   }
   return [];
