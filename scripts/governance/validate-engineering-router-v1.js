@@ -147,6 +147,25 @@ function main() {
     ...checkFileContains('api/services/engineeringRouter/testRunnerService.js', [/redactText/]),
   });
 
+  // ERV1-CLOSE-006: credencial de IA do Engineering nunca pode vir do tenant de quem chama a
+  // API — só a audiência de evento WebSocket pode. Se "credentialScope"/"tenantId" reaparecer
+  // no handler de /run vindo de req.agent/req.tenantId, é uma regressão de isolamento de tenant.
+  checks.push({
+    id: 'CREDENTIAL_SCOPE_ISOLATION',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /ENGINEERING_CREDENTIAL_SCOPE/,
+      /credentialScope/,
+      /eventAudienceTenantId/,
+    ]),
+  });
+  checks.push({
+    id: 'ROUTE_NEVER_PASSES_CALLER_TENANT_AS_CREDENTIAL_SCOPE',
+    ok: exists('api/modules/engineering-router/routes.js')
+      && /eventAudienceTenantId/.test(readText('api/modules/engineering-router/routes.js'))
+      && !/credentialScope\s*:/.test(readText('api/modules/engineering-router/routes.js')),
+    reason: 'routes.js não pode passar credentialScope: <valor> ao chamar runTask — só eventAudienceTenantId (ERV1-CLOSE-006)',
+  });
+
   // 8. RED->FIX loop + max iterations.
   checks.push({
     id: 'RED_FIX_LOOP',

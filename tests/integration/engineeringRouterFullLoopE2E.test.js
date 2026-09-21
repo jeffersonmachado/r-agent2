@@ -199,7 +199,7 @@ describe('Engineering Model Router V1 — E2E RED → FIX → REVIEW → GREEN',
     }, { createdBy: 'jest-e2e' });
     createdTaskIds.push(task.id);
 
-    const result = await runTask(task.id, { runnerId: 'jest-e2e-runner', tenantId: TEST_TENANT_KEY });
+    const result = await runTask(task.id, { runnerId: 'jest-e2e-runner', credentialScope: TEST_TENANT_KEY, eventAudienceTenantId: TEST_TENANT_KEY });
 
     expect(result.status).toBe('GREEN');
 

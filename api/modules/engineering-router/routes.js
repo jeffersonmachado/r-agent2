@@ -119,10 +119,18 @@ function createEngineeringRouterRoutes({ buildDeps }) {
       // levando muito além do timeout aceitável de uma requisição HTTP síncrona. O cliente
       // acompanha progresso ao vivo via WebSocket (evento `engineering.task.stage`, emitido por
       // tenant em engineeringRouterEvents.js) e, como fallback, via GET /engineering/tasks/:id.
-      // tenantId precisa vir do agente autenticado (não do DEFAULT_TENANT_ID) para o broadcast
-      // WS alcançar exatamente quem abriu a tela.
-      const tenantId = req.tenantId || req.agent?.tenantId || undefined;
-      deps.engineeringRouterService.runTask(req.params.id, { runnerId: `http-${req.agent?.id || 'unknown'}-${Date.now()}`, ...(tenantId ? { tenantId } : {}) })
+      //
+      // ERV1-CLOSE-006: o tenant do agente autenticado SÓ pode virar `eventAudienceTenantId`
+      // (para o WebSocket alcançar quem abriu a tela) — NUNCA `credentialScope`. Passar o
+      // tenant da requisição como escopo de credencial faria o Router resolver e gastar a
+      // credencial/budget de IA daquele tenant (inclusive um cliente real) para enviar
+      // código-fonte da plataforma — `credentialScope` fica de fora daqui de propósito, sempre
+      // com o default fixo `ENGINEERING_CREDENTIAL_SCOPE` do próprio serviço.
+      const eventAudienceTenantId = req.tenantId || req.agent?.tenantId || undefined;
+      deps.engineeringRouterService.runTask(req.params.id, {
+        runnerId: `http-${req.agent?.id || 'unknown'}-${Date.now()}`,
+        ...(eventAudienceTenantId ? { eventAudienceTenantId } : {}),
+      })
         .catch((err) => deps.logger.error('[engineering-router] run task falhou', { taskId: req.params.id, error: err.message, code: err.code }));
 
       deps.sendJson(res, 202, { taskId: req.params.id, status: 'ACCEPTED' });

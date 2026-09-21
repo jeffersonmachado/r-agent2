@@ -133,6 +133,30 @@ describe('engineering-router routes', () => {
     expect(ran).toBe(true);
   });
 
+  test('ERV1-CLOSE-006: run nunca repassa o tenant do agente como credentialScope, só como eventAudienceTenantId', async () => {
+    let capturedOptions = null;
+    deps = buildDepsFactory({
+      requireAuth: (req) => {
+        // Tenant de um cliente real qualquer — não pode influenciar qual credencial de IA o
+        // Router usa para gerar/revisar o patch.
+        req.agent = { platformClassification: 'DEVELOPMENT', tenantId: 'tenant-cliente-real' };
+        return { valid: true };
+      },
+      engineeringRouterService: {
+        runTask: async (taskId, options) => { capturedOptions = options; return { status: 'GREEN' }; },
+      },
+    });
+    server = await startServer(deps);
+    const res = await fetch(`${baseUrl(server)}/engineering/tasks/task-1/run`, { method: 'POST' });
+    expect(res.status).toBe(202);
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(capturedOptions).not.toBeNull();
+    expect(capturedOptions.eventAudienceTenantId).toBe('tenant-cliente-real');
+    expect(capturedOptions).not.toHaveProperty('credentialScope');
+    expect(capturedOptions).not.toHaveProperty('tenantId');
+  });
+
   test('GET /engineering/release-closure nunca declara clean state falso-positivo por padrão do mock', async () => {
     deps = buildDepsFactory({ requireAuth: (req) => { req.agent = { platformClassification: 'DEVELOPMENT' }; return { valid: true }; } });
     server = await startServer(deps);

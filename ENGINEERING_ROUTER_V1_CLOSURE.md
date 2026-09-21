@@ -99,7 +99,29 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
 
 ### ERV1-CLOSE-006 — Credential scope isolation
 
-- status: PENDENTE
+- RED reproduced: achado real, não teórico — introduzido pela própria sessão anterior desta
+  missão (feature de feedback em tempo real via WebSocket). `api/modules/engineering-router/
+  routes.js` resolvia `tenantId = req.tenantId || req.agent?.tenantId` e passava ESSE MESMO
+  valor para `engineeringRouterService.runTask({tenantId})`, que usava o valor único tanto para
+  `emitTaskStage` (audiência do evento) quanto para `buildAvailableModels({tenantId})` e
+  `generatePatch/review({tenantId})` — e `aiProviderService.js` usa `context.tenantId`
+  DIRETAMENTE em `getDecryptedAPIKey(tenantId, provider)` para resolver a API key real. Um
+  usuário comum do tenant cliente que cria e roda uma Engineering Task fazia o Router gastar a
+  credencial/budget de IA DAQUELE TENANT para enviar código-fonte real do RAP.
+- fix: `engineeringRouterService.js` separa `credentialScope` (default fixo
+  `ENGINEERING_CREDENTIAL_SCOPE` = `DEFAULT_TENANT_ID`/`SYSTEM_ENGINEERING`, nunca sobrescrito
+  pela rota) de `eventAudienceTenantId` (tenant real de quem chama, só para o WebSocket).
+  `routes.js` só constrói `eventAudienceTenantId` a partir do agente autenticado — nunca mais
+  `tenantId`/`credentialScope`.
+- tests: `tests/unit/engineeringRouterRoutes.test.js` (novo caso: agente com
+  `tenantId: 'tenant-cliente-real'` — confirma que `runTask` recebe `eventAudienceTenantId`
+  igual ao tenant do agente e NUNCA recebe `credentialScope`/`tenantId`);
+  `tests/integration/engineeringRouterFullLoopE2E.test.js` (continua confirmando, ponta a
+  ponta com infra real, que `credentialScope` explícito chega intacto ao `context.tenantId` da
+  chamada real de IA).
+- evidence: gate `CREDENTIAL_SCOPE_ISOLATION` +
+  `ROUTE_NEVER_PASSES_CALLER_TENANT_AS_CREDENTIAL_SCOPE`.
+- status: GREEN
 
 ### ERV1-CLOSE-008 — Model-level availability + reroute
 

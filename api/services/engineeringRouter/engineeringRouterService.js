@@ -12,6 +12,18 @@
  * Reviewer — nunca o texto livre do LLM. Idempotente por lock (uma task não roda duas vezes
  * simultaneamente) e restart-safe (todo progresso é persistido antes de avançar de estado;
  * um restart no meio de uma tentativa apenas perde aquela tentativa parcial, não a task).
+ *
+ * ERV1-CLOSE-006: `tenantId` era usado ao mesmo tempo como (a) audiência do evento WebSocket e
+ * (b) escopo para resolver a credencial de IA real (`getDecryptedAPIKey(tenantId, provider)`
+ * dentro de `aiProviderService.js`). Como a rota HTTP passava o tenant do AGENTE AUTENTICADO
+ * (`req.agent.tenantId`) para os dois usos, um usuário comum de um tenant cliente que cria e
+ * roda uma Engineering Task fazia o Router resolver e gastar A CREDENCIAL/BUDGET DAQUELE
+ * TENANT — enviando código-fonte real do RAP para o provider de IA configurado por um cliente,
+ * não pela plataforma. Corrigido separando explicitamente:
+ *   - `credentialScope` — SEMPRE `SYSTEM_ENGINEERING` (== `DEFAULT_TENANT_ID`,
+ *     `ENGINEERING_ROUTER_TENANT_ID`), nunca influenciável pelo tenant de quem chama a API.
+ *   - `eventAudienceTenantId` — o tenant real de quem abriu a tela, só usado para o WebSocket
+ *     alcançar o cliente certo.
  */
 
 const engineeringTaskService = require('./engineeringTaskService');
@@ -28,6 +40,11 @@ const { FAILURE_CODES } = require('../../../engine/engineeringRouter/constants')
 const { emitTaskStage } = require('./engineeringRouterEvents');
 const logger = require('../../utils/logger');
 
+// Escopo canônico de credencial de IA do Engineering Router — nunca o tenant de quem chama a
+// API. Mesmo valor/env var já usado por `engineeringModelAvailabilityService.js` e
+// `engineeringAiInvoker.js` (autoridade única, não duplicada).
+const ENGINEERING_CREDENTIAL_SCOPE = DEFAULT_TENANT_ID;
+
 function contractFromTask(task) {
   return {
     allowedPaths: task.allowed_paths || [],
@@ -37,12 +54,12 @@ function contractFromTask(task) {
 }
 
 /** Estágio ROUTE: seleciona CODER/REVIEWER e persiste a decisão (idempotente — não reprocessa se já ROUTED+). */
-async function ensureRouted(task, { tenantId }) {
+async function ensureRouted(task, { credentialScope, eventAudienceTenantId }) {
   if (task.status !== 'CLASSIFIED') return task;
 
   const policy = getPolicy(task.task_type);
   const independentRequired = requiresIndependentReview(task.task_type, task.risk);
-  const availableModels = await buildAvailableModels({ tenantId });
+  const availableModels = await buildAvailableModels({ tenantId: credentialScope });
 
   const routingDecision = selectCoderAndReviewer(availableModels, {
     coderCapabilities: policy.coderCapabilities,
@@ -54,7 +71,7 @@ async function ensureRouted(task, { tenantId }) {
 
   await engineeringTaskService.saveRoutingDecision(task.id, routingDecision);
   const routedTask = await engineeringTaskService.transitionTask(task.id, 'ROUTED');
-  emitTaskStage(tenantId, task.id, {
+  emitTaskStage(eventAudienceTenantId, task.id, {
     stage: 'ROUTED',
     status: 'success',
     message: `CODER ${routingDecision.coder?.selected ? `${routingDecision.coder.selected.providerId}:${routingDecision.coder.selected.modelId}` : 'nenhum qualificado'} · REVIEWER ${routingDecision.reviewer?.selected ? `${routingDecision.reviewer.selected.providerId}:${routingDecision.reviewer.selected.modelId}` : 'nenhum qualificado'}`,
@@ -64,7 +81,7 @@ async function ensureRouted(task, { tenantId }) {
 }
 
 /** Um attempt completo: CODE → PATCH VALIDATE → APPLY → TEST → REVIEW. */
-async function runOneAttempt({ task, routingDecision, failureBundle, previousAttempt, tenantId }) {
+async function runOneAttempt({ task, routingDecision, failureBundle, previousAttempt, credentialScope, eventAudienceTenantId }) {
   const coderSelection = routingDecision?.coder?.selected;
   if (!coderSelection) {
     return { outcome: 'FATAL', reasonCode: 'NO_QUALIFIED_CODER' };
@@ -82,7 +99,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     failure_bundle: failureBundle || null,
   });
 
-  emitTaskStage(tenantId, task.id, {
+  emitTaskStage(eventAudienceTenantId, task.id, {
     stage: 'CODING',
     status: 'running',
     attemptNumber: attempt.attempt_number,
@@ -95,7 +112,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   let patchResult;
   const telemetryBase = { task_id: task.id, attempt_id: attempt.id, role: 'CODER', provider: coderSelection.providerId, model: coderSelection.modelId };
   try {
-    patchResult = await generatePatch({ context, providerId: coderSelection.providerId, modelId: coderSelection.modelId, tenantId });
+    patchResult = await generatePatch({ context, providerId: coderSelection.providerId, modelId: coderSelection.modelId, tenantId: credentialScope });
   } catch (err) {
     await engineeringTaskService.recordTelemetry({
       ...telemetryBase,
@@ -105,7 +122,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       result: 'FAILURE',
     });
     await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: err.code, message: err.message }, completed_at: new Date() });
-    emitTaskStage(tenantId, task.id, {
+    emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'CODING',
       status: 'error',
       attemptNumber: attempt.attempt_number,
@@ -142,7 +159,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     const applyResult = await applyPatch(workspace, patchResult.diff);
     if (!applyResult.ok) {
       await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: applyResult.code, stderr: applyResult.stderr }, completed_at: new Date() });
-      emitTaskStage(tenantId, task.id, {
+      emitTaskStage(eventAudienceTenantId, task.id, {
         stage: 'PATCH_APPLY',
         status: 'error',
         attemptNumber: attempt.attempt_number,
@@ -157,7 +174,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     // equivalente, para esta UI, à lista de arquivos editados que a extensão do VSCode mostra
     // em tempo real durante uma edição assistida por IA.
     const changedFiles = await listChangedFiles(workspace).catch(() => []);
-    emitTaskStage(tenantId, task.id, {
+    emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'PATCH_APPLIED',
       status: 'success',
       attemptNumber: attempt.attempt_number,
@@ -168,7 +185,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     await engineeringTaskService.transitionTask(task.id, 'TESTING').catch(() => {});
 
     const testCommands = task.test_commands || [];
-    emitTaskStage(tenantId, task.id, {
+    emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'TESTING',
       status: 'running',
       attemptNumber: attempt.attempt_number,
@@ -194,11 +211,11 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
 
     if (testCommands.length === 0) {
       await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: 'NO_TEST_COMMANDS' }, completed_at: new Date() });
-      emitTaskStage(tenantId, task.id, { stage: 'TESTING', status: 'error', attemptNumber: attempt.attempt_number, message: 'Nenhum testCommand definido — não há como validar o patch.' });
+      emitTaskStage(eventAudienceTenantId, task.id, { stage: 'TESTING', status: 'error', attemptNumber: attempt.attempt_number, message: 'Nenhum testCommand definido — não há como validar o patch.' });
       return { outcome: 'RETRY', failureBundle: { failedCommand: 'TEST_STAGE', stderr: 'Task Contract não define testCommands — nenhum teste determinístico para validar o patch.' }, attempt };
     }
 
-    emitTaskStage(tenantId, task.id, {
+    emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'TEST_RESULT',
       status: testResult.allPass ? 'success' : 'error',
       attemptNumber: attempt.attempt_number,
@@ -229,7 +246,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       return { outcome: 'FATAL', reasonCode: 'NO_QUALIFIED_REVIEWER', attempt };
     }
 
-    emitTaskStage(tenantId, task.id, {
+    emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'REVIEWING',
       status: 'running',
       attemptNumber: attempt.attempt_number,
@@ -246,11 +263,11 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
         contextFiles: context.files,
         providerId: reviewerSelection.providerId,
         modelId: reviewerSelection.modelId,
-        tenantId,
+        tenantId: credentialScope,
       });
     } catch (err) {
       await engineeringTaskService.recordTelemetry({ ...reviewTelemetryBase, result: 'FAILURE', test_pass: true });
-      emitTaskStage(tenantId, task.id, {
+      emitTaskStage(eventAudienceTenantId, task.id, {
         stage: 'REVIEWING',
         status: 'error',
         attemptNumber: attempt.attempt_number,
@@ -281,7 +298,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       independent_of_coder: routingDecision.independentReviewApplied,
     });
 
-    emitTaskStage(tenantId, task.id, {
+    emitTaskStage(eventAudienceTenantId, task.id, {
       stage: 'REVIEW_DECISION',
       status: reviewResult.decision === 'APPROVE' ? 'success' : 'error',
       attemptNumber: attempt.attempt_number,
@@ -306,8 +323,18 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
  * Executa (ou retoma) uma EngineeringTask até um estado terminal ou até esgotar
  * `max_iterations`. Idempotente: se já estiver em estado terminal, retorna o estado atual sem
  * reprocessar.
+ *
+ * ERV1-CLOSE-006: `credentialScope` (resolução real de API key) e `eventAudienceTenantId`
+ * (audiência do WebSocket) são parâmetros SEPARADOS de propósito — nunca reunifique isso.
+ * `credentialScope` tem um default fixo (`ENGINEERING_CREDENTIAL_SCOPE`) e só deve ser
+ * sobrescrito por chamadores internos/testes que precisam de isolamento (nunca pela camada
+ * HTTP a partir do tenant de quem está autenticado).
  */
-async function runTask(taskId, { runnerId = `runner-${process.pid}-${Date.now()}`, tenantId = DEFAULT_TENANT_ID } = {}) {
+async function runTask(taskId, {
+  runnerId = `runner-${process.pid}-${Date.now()}`,
+  credentialScope = ENGINEERING_CREDENTIAL_SCOPE,
+  eventAudienceTenantId = null,
+} = {}) {
   let task = await engineeringTaskService.getTask(taskId);
   if (!task) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
 
@@ -317,8 +344,13 @@ async function runTask(taskId, { runnerId = `runner-${process.pid}-${Date.now()}
 
   await engineeringTaskService.lockForRun(taskId, runnerId);
 
+  // Sem audiência explícita (ex.: worker de background sem requisição HTTP associada), o
+  // evento cai no próprio credentialScope — mesmo default de sempre para quem não pediu uma
+  // audiência específica. Nunca o inverso (nunca derivar credentialScope da audiência).
+  const resolvedAudience = eventAudienceTenantId || credentialScope;
+
   try {
-    return await executeRoutedLoop(task, { tenantId });
+    return await executeRoutedLoop(task, { credentialScope, eventAudienceTenantId: resolvedAudience });
   } catch (err) {
     // Cancelamento concorrente (POST /tasks/:id/cancel enquanto este loop já estava rodando)
     // aparece como uma transição de estado agora inválida a partir de CANCELLED — tratado como
@@ -335,14 +367,14 @@ async function runTask(taskId, { runnerId = `runner-${process.pid}-${Date.now()}
   }
 }
 
-async function executeRoutedLoop(task, { tenantId }) {
+async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId }) {
   const taskId = task.id;
-  task = await ensureRouted(task, { tenantId });
+  task = await ensureRouted(task, { credentialScope, eventAudienceTenantId });
 
   if (!task.routing_decision?.coder?.selected) {
     await engineeringTaskService.saveLastError(taskId, { code: 'NO_QUALIFIED_CODER', message: 'Nenhum CODER qualificado disponível' });
     await engineeringTaskService.transitionTask(taskId, 'RED');
-    emitTaskStage(tenantId, taskId, { stage: 'RED', status: 'error', message: 'Nenhum CODER qualificado disponível.' });
+    emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Nenhum CODER qualificado disponível.' });
     return { taskId, status: 'RED', reasonCode: 'NO_QUALIFIED_CODER' };
   }
 
@@ -353,33 +385,33 @@ async function executeRoutedLoop(task, { tenantId }) {
   if (lastAttempt && lastAttempt.failure_bundle) failureBundle = lastAttempt.failure_bundle;
 
   while (iterationsUsed < task.max_iterations) {
-    const result = await runOneAttempt({ task, routingDecision: task.routing_decision, failureBundle, previousAttempt: lastAttempt, tenantId });
+    const result = await runOneAttempt({ task, routingDecision: task.routing_decision, failureBundle, previousAttempt: lastAttempt, credentialScope, eventAudienceTenantId });
     iterationsUsed += 1;
 
     if (result.outcome === 'FATAL') {
       await engineeringTaskService.saveLastError(taskId, { code: result.reasonCode, message: `Falha fatal: ${result.reasonCode}` });
       await engineeringTaskService.transitionTask(taskId, 'RED');
-      emitTaskStage(tenantId, taskId, { stage: 'RED', status: 'error', message: `Falha fatal: ${result.reasonCode}` });
+      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: `Falha fatal: ${result.reasonCode}` });
       return { taskId, status: 'RED', reasonCode: result.reasonCode };
     }
 
     if (result.outcome === 'ADVANCE') {
       await engineeringTaskService.transitionTask(taskId, 'REGRESSION');
-      emitTaskStage(tenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Verificando regressão local (testCommands já validados em workspace limpo).' });
+      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Verificando regressão local (testCommands já validados em workspace limpo).' });
       // V1: regressão local = o próprio conjunto determinístico de testCommands já executado
       // de forma limpa neste attempt (workspace isolado, sem estado residual). Escopo mais
       // amplo (qa-mesh completo) fica registrado como possibilidade em
       // POST_RELEASE_MODEL_ROUTER_BACKLOG.md quando a task não define testCommands suficientes.
       await engineeringTaskService.transitionTask(taskId, 'GOVERNANCE');
-      emitTaskStage(tenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Checando gate de governança.' });
+      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Checando gate de governança.' });
       await engineeringTaskService.transitionTask(taskId, 'GREEN');
-      emitTaskStage(tenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso.' });
+      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso.' });
       return { taskId, status: 'GREEN', attemptId: result.attempt.id };
     }
 
     // RETRY
     failureBundle = result.failureBundle;
-    emitTaskStage(tenantId, taskId, {
+    emitTaskStage(eventAudienceTenantId, taskId, {
       stage: 'RETRY',
       status: 'info',
       message: `Tentativa ${iterationsUsed}/${task.max_iterations} falhou (${failureBundle?.failedCommand || 'motivo desconhecido'}) — iniciando nova tentativa.`,
@@ -389,11 +421,12 @@ async function executeRoutedLoop(task, { tenantId }) {
 
   await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED, message: `Esgotadas ${task.max_iterations} tentativas` });
   await engineeringTaskService.transitionTask(taskId, 'RED');
-  emitTaskStage(tenantId, taskId, { stage: 'RED', status: 'error', message: `Esgotadas ${task.max_iterations} tentativas.` });
+  emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: `Esgotadas ${task.max_iterations} tentativas.` });
   return { taskId, status: 'RED', reasonCode: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED };
 }
 
 module.exports = {
+  ENGINEERING_CREDENTIAL_SCOPE,
   ensureRouted,
   runOneAttempt,
   runTask,
