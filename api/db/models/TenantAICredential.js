@@ -47,6 +47,26 @@ function getTenantAICredentialModel() {
         allowNull: false,
         comment: 'API key criptografada (AES-256-GCM)',
       },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'unknown',
+        comment: 'unknown|valid|invalid_token|no_credit|error — resultado do último teste real',
+      },
+      last_tested_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      last_error: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      metadata: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: {},
+        comment: 'Ex.: { balance: { amount, currency, checkedAt } } quando o provider expõe saldo real',
+      },
     }, {
       tableName: 'tenant_ai_credentials',
       timestamps: true,
