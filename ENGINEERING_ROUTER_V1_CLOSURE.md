@@ -213,7 +213,41 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
 
 ### ERV1-CLOSE-005 — Promotion do patch exato validado
 
-- status: PENDENTE
+- RED reproduced: por inspeção de código — o `git worktree` de uma tentativa era SEMPRE
+  destruído ao final (`finally { destroyWorkspace(workspace) }`), inclusive quando GREEN.
+  "Validado" e "existe no repositório real" eram coisas diferentes, e nada distinguia isso —
+  GREEN só significava "o patch funcionou dentro de um diretório temporário que não existe
+  mais".
+- fix: novo `promotionService.js`. `runOneAttempt` passou a NÃO destruir o workspace num
+  `ADVANCE` (`keepWorkspace=true`), devolvendo-o para `executeRoutedLoop` cuidar depois de
+  REGRESSION+GOVERNANCE+PROMOTION (destruído sempre num `finally`, em qualquer saída).
+  `promoteValidatedPatch`: (1) resolve o baseline real a partir do próprio workspace (`HEAD^`
+  na tentativa) e bloqueia (`PROMOTION_TARGET_DIVERGED`) se o HEAD real do repositório mudou
+  desde então; (2) `git add -A` + `write-tree` no workspace para obter o hash da árvore
+  REALMENTE patcheada — achado real: `git apply` só toca o working tree, nunca o índice,
+  então `HEAD^{tree}` sozinho continuava apontando para a árvore pré-patch (bug descoberto e
+  corrigido durante a implementação desta mesma correção); (3) `git commit-tree` cria um commit
+  real (nunca referenciado até o passo seguinte, nunca toca HEAD/branch atual/working tree);
+  (4) `git diff --stat` confirma que o commit candidato difere do baseline (diff promovido ==
+  diff validado); (5) `git branch -f engineering-router/candidates/<taskId>` aponta uma branch
+  LOCAL dedicada para o commit — nunca `git push`, nunca merge, nunca publish; (6) smoke
+  pós-promoção real: um `git worktree` NOVO a partir do commit candidato roda os MESMOS
+  testCommands já validados. Task só chega em GREEN se a promoção completar; caso contrário
+  (target divergiu, smoke falhou) vai para o novo estado terminal `READY_FOR_PROMOTION` —
+  nunca RED, porque CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE já passaram de verdade.
+- tests: `tests/integration/engineeringPromotionService.test.js` (2/2 PASS, git real) —
+  promoção com sucesso produz commit+branch reais cujo conteúdo tem exatamente o patch
+  aplicado, nunca move o HEAD real; target divergido (baseline diferente do HEAD real) bloqueia
+  a promoção com o motivo exato. `engineeringRouterFullLoopE2E.test.js` e
+  `engineeringRouterModelRerouteE2E.test.js` continuam GREEN ponta a ponta, agora incluindo
+  promoção real (branch candidata real criada e limpa no teardown do teste).
+- evidence: gate `PROMOTION_SERVICE` + `PROMOTION_NEVER_PUSHES_OR_MERGES` +
+  `PROMOTION_WIRED_BEFORE_GREEN`.
+- status: GREEN
+- nota: integração da branch candidata ao branch principal do time segue sendo, por decisão
+  explícita da missão original, um passo humano fora do escopo do Router V1 — a branch fica
+  real e inspecionável (`git log`/`git diff engineering-router/candidates/<taskId>`), pronta
+  para esse fluxo oficial.
 
 ### ERV1-CLOSE-007 — Release Closure com autoridade real
 

@@ -37,6 +37,8 @@ function getEngineeringAttemptModel() {
       error: { type: DataTypes.JSONB, allowNull: true },
       regression_evidence: { type: DataTypes.JSONB, allowNull: true },
       governance_evidence: { type: DataTypes.JSONB, allowNull: true },
+      promotion_evidence: { type: DataTypes.JSONB, allowNull: true },
+      promotion_status: { type: DataTypes.STRING, allowNull: true },
       started_at: { type: DataTypes.DATE, allowNull: true },
       completed_at: { type: DataTypes.DATE, allowNull: true },
     }, {

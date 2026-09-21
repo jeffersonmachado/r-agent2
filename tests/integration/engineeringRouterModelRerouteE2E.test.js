@@ -64,6 +64,18 @@ async function setupCredential(tenantKey, provider) {
   await saveAICredentials(tenantKey, provider, `jest-fixture-fake-key-${provider}-${Date.now()}`);
 }
 
+// ERV1-CLOSE-005: GREEN real cria uma branch local real (engineering-router/candidates/
+// <taskId>) — limpeza de teste, nunca deve sobrar depois deste arquivo.
+function deleteCandidateBranchIfExists(taskId) {
+  try {
+    const { execFileSync } = require('child_process');
+    execFileSync('git', ['branch', '-D', `engineering-router/candidates/${taskId}`], {
+      cwd: require('path').resolve(__dirname, '..', '..'),
+      stdio: 'ignore',
+    });
+  } catch (_) { /* branch pode não ter sido criada */ }
+}
+
 async function teardownCredential(tenantKey, provider) {
   try {
     const getModels = require('../../api/db/models');
@@ -125,6 +137,7 @@ afterAll(async () => {
   const getModels = require('../../api/db/models');
   try {
     for (const taskId of createdTaskIds) {
+      deleteCandidateBranchIfExists(taskId);
       const attempts = await engineeringTaskService.listAttempts(taskId);
       for (const attempt of attempts) {
         const TestRun = getModels.getEngineeringTestRun();

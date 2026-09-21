@@ -16,7 +16,7 @@ const getEngineeringTelemetryEventModel = require('../../db/models/EngineeringTe
 const { classify } = require('../../../engine/engineeringRouter/taskClassifier');
 const { resolveMaxIterations } = require('../../../engine/engineeringRouter/routingPolicy');
 const { assertTransition, isTerminal } = require('../../../engine/engineeringRouter/stateMachine');
-const { TASK_TYPES, RISK_LEVELS, TASK_SCOPES, FAILURE_CODES } = require('../../../engine/engineeringRouter/constants');
+const { TASK_TYPES, RISK_LEVELS, TASK_SCOPES, FAILURE_CODES, TERMINAL_STATES } = require('../../../engine/engineeringRouter/constants');
 const logger = require('../../utils/logger');
 
 const LOCK_STALE_MS = Number(process.env.ENGINEERING_ROUTER_LOCK_STALE_MS || 15 * 60 * 1000);
@@ -267,16 +267,19 @@ async function listTelemetry(taskId) {
 
 async function computeOverview() {
   const Model = getEngineeringTaskModel();
+  // ERV1-CLOSE-005: usa TERMINAL_STATES (fonte única) em vez de uma lista hardcoded — quando
+  // READY_FOR_PROMOTION foi adicionado como terminal, uma lista solta aqui teria continuado
+  // contando essas tasks como "em execução" para sempre.
   const [total, green, red, running, blocked, releaseBlockers] = await Promise.all([
     Model.count(),
     Model.count({ where: { status: 'GREEN' } }),
     Model.count({ where: { status: 'RED' } }),
-    Model.count({ where: { status: { [Op.notIn]: ['GREEN', 'RED', 'BLOCKED', 'CANCELLED'] } } }),
+    Model.count({ where: { status: { [Op.notIn]: TERMINAL_STATES } } }),
     Model.count({ where: { status: 'BLOCKED' } }),
     Model.count({ where: { release_blocker: true, status: { [Op.notIn]: ['GREEN', 'CANCELLED'] } } }),
   ]);
   const active = await Model.findAll({
-    where: { status: { [Op.notIn]: ['GREEN', 'RED', 'BLOCKED', 'CANCELLED'] } },
+    where: { status: { [Op.notIn]: TERMINAL_STATES } },
     order: [['updated_at', 'DESC']],
     limit: 20,
   });

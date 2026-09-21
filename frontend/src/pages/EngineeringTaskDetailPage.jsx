@@ -90,13 +90,22 @@ function extractTaskId(currentPath) {
 
 function PipelineTrack({ status }) {
   const isTerminalRed = status === 'RED' || status === 'BLOCKED' || status === 'CANCELLED';
-  const currentIndex = isTerminalRed ? -1 : PIPELINE_STAGES.indexOf(status);
+  // ERV1-CLOSE-005: READY_FOR_PROMOTION é distinto de GREEN — CODER/TESTE/REVIEW/REGRESSION/
+  // GOVERNANCE passaram de verdade, mas a promoção do patch validado ao repositório real não
+  // completou (nunca "quase GREEN": é seu próprio estado terminal, com o motivo exato).
+  const isReadyForPromotion = status === 'READY_FOR_PROMOTION';
+  const currentIndex = (isTerminalRed || isReadyForPromotion) ? -1 : PIPELINE_STAGES.indexOf(status);
   return (
     <div className="flex items-center gap-1 overflow-x-auto py-2">
       {isTerminalRed && (
         <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-500/15 text-red-500 border border-red-500/30">{status}</span>
       )}
-      {!isTerminalRed && PIPELINE_STAGES.map((stage, idx) => (
+      {isReadyForPromotion && (
+        <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-500/15 text-amber-500 border border-amber-500/30" title="Patch validado (CODER/teste/review/regressão/governança passaram de verdade), mas a promoção ao repositório real não completou">
+          READY_FOR_PROMOTION
+        </span>
+      )}
+      {!isTerminalRed && !isReadyForPromotion && PIPELINE_STAGES.map((stage, idx) => (
         <React.Fragment key={stage}>
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${
@@ -159,7 +168,7 @@ export function EngineeringTaskDetailPage() {
     onTerminalStage: () => load(),
   });
 
-  const TERMINAL_STATUSES = ['GREEN', 'RED', 'BLOCKED', 'CANCELLED'];
+  const TERMINAL_STATUSES = ['GREEN', 'READY_FOR_PROMOTION', 'RED', 'BLOCKED', 'CANCELLED'];
   // "Em execução" reflete o lock real de runTask (locked_at), não a lista de status —
   // uma task recém-criada já fica em CLASSIFIED (aguardando o clique em Run), e tratar
   // CLASSIFIED/ROUTED como "ativo" travava o botão Run permanentemente antes da primeira

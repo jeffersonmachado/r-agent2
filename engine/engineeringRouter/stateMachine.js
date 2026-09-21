@@ -25,8 +25,12 @@ const TRANSITIONS = Object.freeze({
   // REVIEWING -> CODING é reviewer REJECT com finding BLOCKER/REGRESSION.
   REVIEWING: ['REGRESSION', 'CODING', 'RED', 'CANCELLED', 'BLOCKED'],
   REGRESSION: ['GOVERNANCE', 'RED', 'CANCELLED', 'BLOCKED'],
-  GOVERNANCE: ['GREEN', 'RED', 'CANCELLED', 'BLOCKED'],
+  // GOVERNANCE -> READY_FOR_PROMOTION (ERV1-CLOSE-005): promoção do patch validado não
+  // completou (target divergiu, smoke pós-promoção falhou) mesmo com tudo antes tendo passado
+  // de verdade — nunca finge GREEN nesse caso.
+  GOVERNANCE: ['GREEN', 'READY_FOR_PROMOTION', 'RED', 'CANCELLED', 'BLOCKED'],
   GREEN: [],
+  READY_FOR_PROMOTION: [],
   RED: [],
   BLOCKED: ['CANCELLED'],
   CANCELLED: [],

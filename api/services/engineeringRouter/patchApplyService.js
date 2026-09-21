@@ -75,25 +75,19 @@ async function createSnapshotCommit() {
 }
 
 /**
- * Cria um workspace isolado (git worktree, detached em um snapshot do estado atual) para uma
- * tentativa.
+ * Materializa um `git worktree` isolado (detached) a partir de um commit real já existente, e
+ * linka `node_modules` (gitignored, nunca materializado pelo `git worktree` em si) para
+ * qualquer comando de teste real conseguir rodar ali. Compartilhado por `createWorkspace`
+ * (snapshot do estado atual) e pela verificação pós-promoção (ERV1-CLOSE-005, a partir de um
+ * commit candidato real já criado).
  * @returns {Promise<string>} caminho absoluto do workspace
  */
-async function createWorkspace(taskId, attemptNumber) {
-  const dirName = `task-${taskId}-attempt-${attemptNumber}-${crypto.randomBytes(4).toString('hex')}`;
+async function materializeWorktree(commitHash, dirLabel) {
+  const dirName = `${dirLabel}-${crypto.randomBytes(4).toString('hex')}`;
   const dir = path.join(WORKSPACE_ROOT, dirName);
   fs.mkdirSync(WORKSPACE_ROOT, { recursive: true });
 
-  let snapshotCommit;
-  try {
-    snapshotCommit = await createSnapshotCommit();
-  } catch (err) {
-    const wrapped = new Error(`Falha ao criar snapshot do working tree: ${err.message}`);
-    wrapped.code = FAILURE_CODES.PATCH_APPLY_FAILED;
-    throw wrapped;
-  }
-
-  const result = await runGit(['worktree', 'add', '--detach', dir, snapshotCommit], { cwd: ROOT });
+  const result = await runGit(['worktree', 'add', '--detach', dir, commitHash], { cwd: ROOT });
   if (!result.ok) {
     const err = new Error(`Falha ao criar workspace isolado (git worktree add): ${result.stderr}`);
     err.code = FAILURE_CODES.PATCH_APPLY_FAILED;
@@ -115,6 +109,24 @@ async function createWorkspace(taskId, attemptNumber) {
   }
 
   return dir;
+}
+
+/**
+ * Cria um workspace isolado (git worktree, detached em um snapshot do estado atual) para uma
+ * tentativa.
+ * @returns {Promise<string>} caminho absoluto do workspace
+ */
+async function createWorkspace(taskId, attemptNumber) {
+  let snapshotCommit;
+  try {
+    snapshotCommit = await createSnapshotCommit();
+  } catch (err) {
+    const wrapped = new Error(`Falha ao criar snapshot do working tree: ${err.message}`);
+    wrapped.code = FAILURE_CODES.PATCH_APPLY_FAILED;
+    throw wrapped;
+  }
+
+  return materializeWorktree(snapshotCommit, `task-${taskId}-attempt-${attemptNumber}`);
 }
 
 /**
@@ -239,6 +251,7 @@ module.exports = {
   WORKSPACE_ROOT,
   createSnapshotCommit,
   createWorkspace,
+  materializeWorktree,
   applyPatch,
   listChangedFiles,
   destroyWorkspace,

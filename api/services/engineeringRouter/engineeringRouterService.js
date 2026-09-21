@@ -35,6 +35,7 @@ const { runTestCommands } = require('./testRunnerService');
 const { buildAvailableModels, DEFAULT_TENANT_ID } = require('./engineeringModelAvailabilityService');
 const modelAvailabilityStore = require('./modelAvailabilityStore');
 const { checkRegression, checkGovernance } = require('./regressionGovernanceService');
+const { promoteValidatedPatch } = require('./promotionService');
 const { validatePatch } = require('../../../engine/engineeringRouter/patchValidator');
 const { getPolicy, requiresIndependentReview } = require('../../../engine/engineeringRouter/routingPolicy');
 const { selectCoderAndReviewer } = require('../../../engine/engineeringRouter/modelSelector');
@@ -167,6 +168,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
   }
 
   let workspace = null;
+  let keepWorkspace = false;
   try {
     workspace = await createWorkspace(task.id, attempt.attempt_number);
     await engineeringTaskService.updateAttempt(attempt.id, { workspace_path: workspace });
@@ -337,9 +339,14 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     }
 
     await engineeringTaskService.updateAttempt(attempt.id, { status: 'DONE', completed_at: new Date() });
-    return { outcome: 'ADVANCE', attempt, diff: patchResult.diff, testResult };
+    // ERV1-CLOSE-005: em caso de ADVANCE, o workspace com o patch já aplicado É o material que
+    // a Promotion precisa (tree hash pós-patch) — não pode ser destruído aqui. O chamador
+    // (`executeRoutedLoop`) assume a responsabilidade de destruí-lo depois que a promoção
+    // (ou a decisão de não promover) terminar.
+    keepWorkspace = true;
+    return { outcome: 'ADVANCE', attempt, diff: patchResult.diff, testResult, workspace };
   } finally {
-    if (workspace) await destroyWorkspace(workspace);
+    if (workspace && !keepWorkspace) await destroyWorkspace(workspace);
   }
 }
 
@@ -516,43 +523,90 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
     }
 
     if (result.outcome === 'ADVANCE') {
-      await engineeringTaskService.transitionTask(taskId, 'REGRESSION');
-      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Verificando regressão local (testCommands já validados em workspace limpo).' });
+      // ERV1-CLOSE-005: `runOneAttempt` deliberadamente NÃO destrói o workspace num ADVANCE —
+      // a Promotion precisa dele (tree pós-patch) mais abaixo. Esta função assume a
+      // responsabilidade de destruí-lo, em QUALQUER saída deste bloco (RED de regressão/
+      // governança, READY_FOR_PROMOTION, ou GREEN).
+      try {
+        await engineeringTaskService.transitionTask(taskId, 'REGRESSION');
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Verificando regressão local (testCommands já validados em workspace limpo).' });
 
-      // ERV1-CLOSE-004: REGRESSION é uma checagem REAL, não uma transição decorativa — reler do
-      // banco (não confiar só na variável em memória do loop) que todo EngineeringTestRun desta
-      // tentativa é PASS/exitCode 0. V1: regressão local = o próprio conjunto determinístico de
-      // testCommands já executado de forma limpa neste attempt (workspace isolado, sem estado
-      // residual). Escopo mais amplo (qa-mesh completo) fica registrado como possibilidade em
-      // POST_RELEASE_MODEL_ROUTER_BACKLOG.md quando a task não define testCommands suficientes.
-      const regressionResult = await checkRegression(result.attempt.id);
-      await engineeringTaskService.updateAttempt(result.attempt.id, { regression_evidence: regressionResult.evidence });
-      if (!regressionResult.pass) {
-        await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.REGRESSION_FAILED, message: 'Regressão real reprovou após review aprovar', evidence: regressionResult.evidence });
-        await engineeringTaskService.transitionTask(taskId, 'RED');
-        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Regressão reprovou — nunca GREEN sem evidência real.', meta: regressionResult.evidence });
-        return { taskId, status: 'RED', reasonCode: FAILURE_CODES.REGRESSION_FAILED };
+        // ERV1-CLOSE-004: REGRESSION é uma checagem REAL, não uma transição decorativa — reler
+        // do banco (não confiar só na variável em memória do loop) que todo EngineeringTestRun
+        // desta tentativa é PASS/exitCode 0. V1: regressão local = o próprio conjunto
+        // determinístico de testCommands já executado de forma limpa neste attempt (workspace
+        // isolado, sem estado residual). Escopo mais amplo (qa-mesh completo) fica registrado
+        // como possibilidade em POST_RELEASE_MODEL_ROUTER_BACKLOG.md quando a task não define
+        // testCommands suficientes.
+        const regressionResult = await checkRegression(result.attempt.id);
+        await engineeringTaskService.updateAttempt(result.attempt.id, { regression_evidence: regressionResult.evidence });
+        if (!regressionResult.pass) {
+          await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.REGRESSION_FAILED, message: 'Regressão real reprovou após review aprovar', evidence: regressionResult.evidence });
+          await engineeringTaskService.transitionTask(taskId, 'RED');
+          emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Regressão reprovou — nunca GREEN sem evidência real.', meta: regressionResult.evidence });
+          return { taskId, status: 'RED', reasonCode: FAILURE_CODES.REGRESSION_FAILED };
+        }
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real: ${regressionResult.evidence.testRunCount} comando(s) PASS.`, meta: regressionResult.evidence });
+
+        await engineeringTaskService.transitionTask(taskId, 'GOVERNANCE');
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Executando gate de governança real (scripts/governance/validate-engineering-router-v1.js).' });
+
+        // ERV1-CLOSE-004: GOVERNANCE executa de verdade a autoridade canônica já existente —
+        // nunca reimplementa governança, nunca finge sucesso por status.
+        const governanceResult = await checkGovernance();
+        await engineeringTaskService.updateAttempt(result.attempt.id, { governance_evidence: governanceResult.evidence });
+        if (!governanceResult.pass) {
+          await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.GOVERNANCE_FAILED, message: 'Gate de governança real reprovou', evidence: governanceResult.evidence });
+          await engineeringTaskService.transitionTask(taskId, 'RED');
+          emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Governance reprovou — nunca GREEN sem o gate real passando.', meta: governanceResult.evidence });
+          return { taskId, status: 'RED', reasonCode: FAILURE_CODES.GOVERNANCE_FAILED };
+        }
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'success', message: 'Gate de governança real: PASS.', meta: governanceResult.evidence });
+
+        // ERV1-CLOSE-005: promove o patch EXATO validado (commit real + branch local dedicada,
+        // nunca push/merge/publish) — só GREEN quando isso realmente aconteceu.
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'PROMOTION', status: 'running', message: 'Promovendo patch validado (commit + branch local dedicada, sem push/merge).' });
+        const promotionResult = await promoteValidatedPatch({
+          taskId,
+          attemptId: result.attempt.id,
+          attemptNumber: result.attempt.attempt_number,
+          workspacePath: result.workspace,
+          diff: result.diff,
+          testCommands: task.test_commands || [],
+          taskTitle: task.title,
+        });
+        await engineeringTaskService.updateAttempt(result.attempt.id, {
+          promotion_evidence: promotionResult.evidence,
+          promotion_status: promotionResult.promoted ? 'PROMOTED' : 'READY_FOR_PROMOTION',
+        });
+
+        if (!promotionResult.promoted) {
+          // Nunca RED: CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE passaram de verdade — só a
+          // promoção ao repositório real não completou. READY_FOR_PROMOTION documenta
+          // exatamente por quê, sem fingir que a mudança chegou ao source.
+          await engineeringTaskService.transitionTask(taskId, 'READY_FOR_PROMOTION');
+          emitTaskStage(eventAudienceTenantId, taskId, {
+            stage: 'READY_FOR_PROMOTION',
+            status: 'error',
+            message: `Promoção não completou (${promotionResult.code}) — patch validado, mas não chegou ao repositório real.`,
+            meta: promotionResult.evidence,
+          });
+          return { taskId, status: 'READY_FOR_PROMOTION', reasonCode: promotionResult.code };
+        }
+
+        emitTaskStage(eventAudienceTenantId, taskId, {
+          stage: 'PROMOTION',
+          status: 'success',
+          message: `Promovido: branch ${promotionResult.evidence.candidateBranch} (commit ${promotionResult.evidence.candidateCommit.slice(0, 12)}), smoke pós-promoção PASS.`,
+          meta: promotionResult.evidence,
+        });
+
+        await engineeringTaskService.transitionTask(taskId, 'GREEN');
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso — patch promovido ao repositório real.' });
+        return { taskId, status: 'GREEN', attemptId: result.attempt.id };
+      } finally {
+        if (result.workspace) await destroyWorkspace(result.workspace);
       }
-      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real: ${regressionResult.evidence.testRunCount} comando(s) PASS.`, meta: regressionResult.evidence });
-
-      await engineeringTaskService.transitionTask(taskId, 'GOVERNANCE');
-      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Executando gate de governança real (scripts/governance/validate-engineering-router-v1.js).' });
-
-      // ERV1-CLOSE-004: GOVERNANCE executa de verdade a autoridade canônica já existente —
-      // nunca reimplementa governança, nunca finge sucesso por status.
-      const governanceResult = await checkGovernance();
-      await engineeringTaskService.updateAttempt(result.attempt.id, { governance_evidence: governanceResult.evidence });
-      if (!governanceResult.pass) {
-        await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.GOVERNANCE_FAILED, message: 'Gate de governança real reprovou', evidence: governanceResult.evidence });
-        await engineeringTaskService.transitionTask(taskId, 'RED');
-        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Governance reprovou — nunca GREEN sem o gate real passando.', meta: governanceResult.evidence });
-        return { taskId, status: 'RED', reasonCode: FAILURE_CODES.GOVERNANCE_FAILED };
-      }
-      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'success', message: 'Gate de governança real: PASS.', meta: governanceResult.evidence });
-
-      await engineeringTaskService.transitionTask(taskId, 'GREEN');
-      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso.' });
-      return { taskId, status: 'GREEN', attemptId: result.attempt.id };
     }
 
     // RETRY

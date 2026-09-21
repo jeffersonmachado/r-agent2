@@ -241,6 +241,29 @@ function main() {
     ]),
   });
 
+  // ERV1-CLOSE-005: GREEN não pode significar "patch existiu num workspace temporário" — a
+  // promoção do patch EXATO validado (commit real + branch local dedicada, nunca push/merge/
+  // publish) precisa acontecer antes de declarar GREEN.
+  checks.push({
+    id: 'PROMOTION_SERVICE',
+    ...checkFileContains('api/services/engineeringRouter/promotionService.js', [
+      /promoteValidatedPatch/, /validatedPatchHash/, /validatedTreeHash/, /PROMOTION_TARGET_DIVERGED/, /postPromotionTestPass/,
+    ]),
+  });
+  checks.push({
+    id: 'PROMOTION_NEVER_PUSHES_OR_MERGES',
+    ok: exists('api/services/engineeringRouter/promotionService.js')
+      && !/['"]push['"]/.test(readText('api/services/engineeringRouter/promotionService.js'))
+      && !/['"]merge['"]/.test(readText('api/services/engineeringRouter/promotionService.js')),
+    reason: 'promotionService.js nunca pode conter git push/merge — só commit-tree + branch local (ERV1-CLOSE-005)',
+  });
+  checks.push({
+    id: 'PROMOTION_WIRED_BEFORE_GREEN',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /promoteValidatedPatch/, /READY_FOR_PROMOTION/, /promotionResult\.promoted/,
+    ]),
+  });
+
   // 10. Telemetria básica.
   checks.push({ id: 'TELEMETRY_MODEL', ok: exists('api/db/models/EngineeringTelemetryEvent.js'), reason: 'model de telemetria ausente' });
 
@@ -300,6 +323,7 @@ function main() {
     'tests/integration/engineeringRouterOrphanWorkspacePruning.test.js',
     'tests/integration/engineeringRegressionGovernanceService.test.js',
     'tests/integration/engineeringRouterRegressionGovernanceGate.test.js',
+    'tests/integration/engineeringPromotionService.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });

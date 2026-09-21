@@ -64,12 +64,16 @@ const TASK_STATES = Object.freeze([
   'REGRESSION',
   'GOVERNANCE',
   'GREEN',
+  // ERV1-CLOSE-005: distinto de GREEN — CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE passaram de
+  // verdade, mas a promoção do patch validado ao repositório real não completou (target
+  // divergiu, smoke pós-promoção falhou, etc.). Nunca finge GREEN quando isso acontece.
+  'READY_FOR_PROMOTION',
   'RED',
   'BLOCKED',
   'CANCELLED',
 ]);
 
-const TERMINAL_STATES = Object.freeze(['GREEN', 'RED', 'BLOCKED', 'CANCELLED']);
+const TERMINAL_STATES = Object.freeze(['GREEN', 'READY_FOR_PROMOTION', 'RED', 'BLOCKED', 'CANCELLED']);
 
 /**
  * Reason codes estruturados para decisões de roteamento — nunca texto livre gerado por LLM.
