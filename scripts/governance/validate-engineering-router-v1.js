@@ -297,6 +297,23 @@ function main() {
     id: 'MODEL_AVAILABILITY_RECOGNIZES_NO_CREDIT',
     ...checkFileContains('api/services/engineeringRouter/modelAvailabilityStore.js', [/NO_CREDIT/, /insufficient/i]),
   });
+
+  // Achado real do usuário testando o pilot real: kimi:moonshot-v1-128k (mapeado estaticamente)
+  // não estava mais habilitado para a credencial real, e isso só era descoberto REATIVAMENTE
+  // (tenta rotear, gasta uma chamada real, falha). Discovery proativo consulta os modelIds
+  // REAIS que a credencial pode usar (GET {baseUrl}/models, cache de 15min, fail-open) e filtra
+  // a allowlist estática ANTES de rotear — só para credencial já confirmada `valid` (nunca
+  // `unknown`, para não gastar chamada de rede real com chave possivelmente fake/não testada).
+  checks.push({
+    id: 'PROVIDER_MODEL_DISCOVERY_PROACTIVE',
+    ...checkFileContains('api/services/engineeringRouter/engineeringModelAvailabilityService.js', [
+      /providerModelDiscoveryCache/, /MODEL_NOT_LISTED_BY_PROVIDER/, /status !== 'valid'/,
+    ]),
+  });
+  checks.push({
+    id: 'PROVIDER_MODEL_DISCOVERY_FAIL_OPEN',
+    ...checkFileContains('api/services/aiCredentialValidation.js', [/listAvailableModelIds/]),
+  });
   checks.push({
     id: 'MODEL_SELECTOR_RESPECTS_AVAILABILITY',
     ...checkFileContains('engine/engineeringRouter/modelSelector.js', [/model\.available/, /excludedModelKeys/]),
@@ -471,6 +488,7 @@ function main() {
     'tests/unit/engineeringRouterPatchValidator.test.js',
     'tests/unit/engineeringRouterTestOutputAuthority.test.js',
     'tests/unit/engineeringRouterModelAvailabilityStore.test.js',
+    'tests/unit/engineeringRouterProviderModelDiscovery.test.js',
     'tests/integration/engineeringRouterFullLoopE2E.test.js',
     'tests/unit/engineeringModelAvailabilityService.test.js',
     'tests/unit/engineeringRouterCommandExecutionSecurity.test.js',

@@ -167,9 +167,55 @@ async function fetchProviderBalance(provider, apiKey) {
   return null;
 }
 
+/**
+ * Lista os modelIds REALMENTE disponíveis para esta API key, consultando `GET {baseUrl}/models`
+ * (mesmo endpoint já usado por `validateProviderCredentials` para openai-sdk/openai-compatible —
+ * reaproveitado aqui, nunca uma segunda chamada de rede paralela). Achado real: o Engineering
+ * Model Router mapeia modelos estaticamente em `modelCapabilities.js` (allowlist de segurança —
+ * intencional, nunca removida), mas nada verificava se um modelo mapeado ainda está de fato
+ * habilitado para a chave configurada — um pilot real revelou `kimi:moonshot-v1-128k` retornando
+ * "Not found the model ... or Permission denied" só na primeira tentativa de uso real (reativo,
+ * depois de gastar uma chamada). Esta função permite checar isso ANTES de rotear.
+ *
+ * Nunca lança: retorna `null` quando o provider não expõe um endpoint de listagem consultável
+ * (Anthropic também usa o shape `{data:[{id,...}]}` desde 2024, então está incluído) ou quando a
+ * chamada falha por qualquer motivo — chamador trata `null` como "sem informação, não filtra".
+ *
+ * @returns {Promise<string[]|null>}
+ */
+async function listAvailableModelIds(provider, apiKey) {
+  const cleanApiKey = String(apiKey || '').trim();
+  if (!cleanApiKey) return null;
+
+  // eslint-disable-next-line global-require
+  const aiProviderRegistryService = require('./aiProviderRegistryService');
+  const def = await aiProviderRegistryService.getProviderDef(String(provider || '').trim().toLowerCase());
+  if (!def) return null;
+
+  const baseUrl = def.baseUrl.replace(/\/$/, '');
+  const headers = def.kind === 'anthropic'
+    ? { 'x-api-key': cleanApiKey, 'anthropic-version': '2023-06-01' }
+    : { Authorization: `Bearer ${cleanApiKey}` };
+
+  try {
+    const response = await fetch(`${baseUrl}/models`, {
+      method: 'GET',
+      headers,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json().catch(() => null);
+    if (!Array.isArray(data?.data)) return null;
+    return data.data.map((m) => m?.id).filter((id) => typeof id === 'string' && id.length > 0);
+  } catch {
+    return null;
+  }
+}
+
 module.exports = {
   STATUS,
   classifyStatus,
   validateProviderCredentials,
   fetchProviderBalance,
+  listAvailableModelIds,
 };

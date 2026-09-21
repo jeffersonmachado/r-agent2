@@ -31,8 +31,9 @@
 const { listCapabilityEntries } = require('../../../engine/engineeringRouter/modelCapabilities');
 const { getRuntimeProviders } = require('../aiProviderRegistryService');
 const { getBreakerStates } = require('../aiControlPlaneStatus');
-const { getCredentialDetailsMap } = require('../tenantAIService');
+const { getCredentialDetailsMap, getDecryptedAPIKey } = require('../tenantAIService');
 const modelAvailabilityStore = require('./modelAvailabilityStore');
+const providerModelDiscoveryCache = require('./providerModelDiscoveryCache');
 const logger = require('../../utils/logger');
 
 const DEFAULT_TENANT_ID = process.env.ENGINEERING_ROUTER_TENANT_ID || 'system';
@@ -71,6 +72,40 @@ async function buildAvailableModels({ tenantId = DEFAULT_TENANT_ID } = {}) {
   }
 
   const entries = listCapabilityEntries();
+
+  // Achado real de um pilot com providers de IA reais: um modelo mapeado em
+  // modelCapabilities.js (allowlist estática de segurança, nunca removida) pode não estar mais
+  // habilitado para a credencial configurada — a V1 só descobria isso de forma REATIVA (tentava
+  // rotear, gastava uma chamada real, falhava com "model not found/permission denied"). Consulta
+  // PROATIVA (com cache de 15min — nunca uma chamada de rede por seleção) de quais modelIds a
+  // credencial de cada provider distinto usado nesta lista realmente pode usar agora. Fail-open
+  // por design: quando a consulta falha/não é suportada pelo provider, `knownModelIds` é `null`
+  // e NENHUM filtro extra é aplicado (o comportamento reativo pré-existente continua sendo o
+  // fallback) — esta camada só pode EXCLUIR um candidato da allowlist estática, nunca incluir um
+  // modelo não mapeado.
+  const distinctProviderIds = [...new Set(entries.map((e) => e.providerId))];
+  const knownModelIdsByProvider = new Map();
+  await Promise.all(distinctProviderIds.map(async (providerId) => {
+    const credentialInfo = credentialDetails[providerId];
+    // Discovery só roda para credencial já confirmada `valid` por um teste real anterior —
+    // nunca para `unknown` (nunca testada). Achado real ao integrar isto: os testes E2E do
+    // Router salvam credenciais FAKE (status `unknown` por padrão, nunca testadas de verdade) —
+    // sem esta restrição, cada attempt disparava uma chamada de REDE REAL contra a API do
+    // provider com uma chave fake (sempre caindo em fail-open depois de um timeout), tornando
+    // testes que deveriam ser herméticos lentos e dependentes de rede externa à toa.
+    if (credentialInfo?.status !== 'valid') return;
+    try {
+      const apiKey = await getDecryptedAPIKey(tenantId, providerId);
+      if (!apiKey) return;
+      const modelIds = await providerModelDiscoveryCache.resolveKnownModelIds(providerId, tenantId, apiKey);
+      if (modelIds) knownModelIdsByProvider.set(providerId, new Set(modelIds));
+    } catch (err) {
+      // Fail-open: falha ao descobrir modelos reais nunca bloqueia o roteamento — só significa
+      // que esta camada extra de filtro não se aplica desta vez.
+      logger.warn('[engineeringModelAvailability] falha ao descobrir modelos reais do provider', { providerId, error: err.message });
+    }
+  }));
+
   const results = [];
 
   for (const entry of entries) {
@@ -95,7 +130,20 @@ async function buildAvailableModels({ tenantId = DEFAULT_TENANT_ID } = {}) {
     // enquanto openai em si estava saudável). `available` é `false` quando uma falha real
     // recente marcou este providerId:modelId como RETIRED/AUTH_DENIED/RATE_LIMITED/etc.
     const modelAvailability = modelAvailabilityStore.getAvailability(entry.providerId, entry.modelId);
-    const available = modelAvailabilityStore.isUsable(entry.providerId, entry.modelId);
+    let available = modelAvailabilityStore.isUsable(entry.providerId, entry.modelId);
+    let availabilityReason = available ? null : (modelAvailability.reason || modelAvailability.availability);
+
+    // Discovery proativo: se sabemos de verdade quais modelos o provider expõe para esta
+    // credencial, e este modelId mapeado não está entre eles, marca indisponível ANTES de
+    // qualquer tentativa real — nunca sobrescreve um `available:false` reativo já mais
+    // específico (RATE_LIMITED, NO_CREDIT etc. continuam com seu motivo original).
+    if (available) {
+      const knownModelIds = knownModelIdsByProvider.get(entry.providerId);
+      if (knownModelIds && !knownModelIds.has(entry.modelId)) {
+        available = false;
+        availabilityReason = 'MODEL_NOT_LISTED_BY_PROVIDER';
+      }
+    }
 
     results.push({
       providerId: entry.providerId,
@@ -108,7 +156,7 @@ async function buildAvailableModels({ tenantId = DEFAULT_TENANT_ID } = {}) {
       healthy,
       hasCredential,
       available,
-      availabilityReason: available ? null : (modelAvailability.reason || modelAvailability.availability),
+      availabilityReason,
     });
   }
 
