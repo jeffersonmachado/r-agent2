@@ -501,9 +501,10 @@ dos modelos atualizados de cada provedor no momento do processamento. Trabalho a
    (commit `535c7c24`) e reconfirmados no mesmo browser real após o fix — a seção de promoção
    agora aparece corretamente com branch/commit/verificação pós-promoção.
 
-Duas branches candidatas locais de pilot existem neste ponto (`9224ef8d...` e `b96d8914...`),
-ambas só com patches na fixture de teste dedicada — nunca publicadas, aguardando decisão humana
-sobre limpeza ou descarte.
+As duas branches candidatas locais de pilot (`9224ef8d...` e `b96d8914...`), ambas só com
+patches na fixture de teste dedicada e nunca publicadas, foram removidas por decisão do usuário
+após a evidência já estar registrada acima — `git branch --list 'engineering-router/candidates/*'`
+confirma zero branches candidatas remanescentes no repositório.
 
 ## Relatório final
 
