@@ -18,13 +18,14 @@ const engineeringTaskService = require('./engineeringTaskService');
 const { buildContext } = require('./contextBuilderService');
 const { generatePatch } = require('./coderService');
 const { review } = require('./reviewerService');
-const { createWorkspace, applyPatch, destroyWorkspace } = require('./patchApplyService');
+const { createWorkspace, applyPatch, destroyWorkspace, listChangedFiles } = require('./patchApplyService');
 const { runTestCommands } = require('./testRunnerService');
 const { buildAvailableModels, DEFAULT_TENANT_ID } = require('./engineeringModelAvailabilityService');
 const { validatePatch } = require('../../../engine/engineeringRouter/patchValidator');
 const { getPolicy, requiresIndependentReview } = require('../../../engine/engineeringRouter/routingPolicy');
 const { selectCoderAndReviewer } = require('../../../engine/engineeringRouter/modelSelector');
 const { FAILURE_CODES } = require('../../../engine/engineeringRouter/constants');
+const { emitTaskStage } = require('./engineeringRouterEvents');
 const logger = require('../../utils/logger');
 
 function contractFromTask(task) {
@@ -52,7 +53,14 @@ async function ensureRouted(task, { tenantId }) {
   });
 
   await engineeringTaskService.saveRoutingDecision(task.id, routingDecision);
-  return engineeringTaskService.transitionTask(task.id, 'ROUTED');
+  const routedTask = await engineeringTaskService.transitionTask(task.id, 'ROUTED');
+  emitTaskStage(tenantId, task.id, {
+    stage: 'ROUTED',
+    status: 'success',
+    message: `CODER ${routingDecision.coder?.selected ? `${routingDecision.coder.selected.providerId}:${routingDecision.coder.selected.modelId}` : 'nenhum qualificado'} · REVIEWER ${routingDecision.reviewer?.selected ? `${routingDecision.reviewer.selected.providerId}:${routingDecision.reviewer.selected.modelId}` : 'nenhum qualificado'}`,
+    meta: { routingDecision },
+  });
+  return routedTask;
 }
 
 /** Um attempt completo: CODE → PATCH VALIDATE → APPLY → TEST → REVIEW. */
@@ -74,6 +82,13 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     failure_bundle: failureBundle || null,
   });
 
+  emitTaskStage(tenantId, task.id, {
+    stage: 'CODING',
+    status: 'running',
+    attemptNumber: attempt.attempt_number,
+    message: `Tentativa ${attempt.attempt_number}: ${coderSelection.providerId}:${coderSelection.modelId} gerando patch…`,
+  });
+
   const context = buildContext(task, { failureBundle, previousAttempt });
   await engineeringTaskService.updateAttempt(attempt.id, { context_summary: { includedFiles: context.includedFiles, blockedFiles: context.blockedFiles, skippedFiles: context.skippedFiles, budget: context.budget } });
 
@@ -90,6 +105,13 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       result: 'FAILURE',
     });
     await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: err.code, message: err.message }, completed_at: new Date() });
+    emitTaskStage(tenantId, task.id, {
+      stage: 'CODING',
+      status: 'error',
+      attemptNumber: attempt.attempt_number,
+      message: `CODER falhou: ${err.message}`,
+      meta: { code: err.code },
+    });
     if (err.code === FAILURE_CODES.PROVIDER_UNAVAILABLE) {
       return { outcome: 'FATAL', reasonCode: FAILURE_CODES.PROVIDER_UNAVAILABLE, attempt };
     }
@@ -120,13 +142,39 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     const applyResult = await applyPatch(workspace, patchResult.diff);
     if (!applyResult.ok) {
       await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: applyResult.code, stderr: applyResult.stderr }, completed_at: new Date() });
+      emitTaskStage(tenantId, task.id, {
+        stage: 'PATCH_APPLY',
+        status: 'error',
+        attemptNumber: attempt.attempt_number,
+        message: `Falha ao aplicar patch: ${applyResult.code}`,
+        meta: { stderr: applyResult.stderr },
+      });
       return { outcome: 'RETRY', failureBundle: { failedCommand: 'PATCH_APPLY', stderr: applyResult.stderr, code: applyResult.code }, attempt };
     }
 
     await engineeringTaskService.updateAttempt(attempt.id, { status: 'APPLIED' });
+    // Achado do pilot: mostrar os arquivos realmente tocados assim que o patch aplica é o
+    // equivalente, para esta UI, à lista de arquivos editados que a extensão do VSCode mostra
+    // em tempo real durante uma edição assistida por IA.
+    const changedFiles = await listChangedFiles(workspace).catch(() => []);
+    emitTaskStage(tenantId, task.id, {
+      stage: 'PATCH_APPLIED',
+      status: 'success',
+      attemptNumber: attempt.attempt_number,
+      message: `Patch aplicado — ${changedFiles.length} arquivo(s) alterado(s).`,
+      changedFiles,
+    });
+
     await engineeringTaskService.transitionTask(task.id, 'TESTING').catch(() => {});
 
     const testCommands = task.test_commands || [];
+    emitTaskStage(tenantId, task.id, {
+      stage: 'TESTING',
+      status: 'running',
+      attemptNumber: attempt.attempt_number,
+      message: testCommands.length ? `Rodando ${testCommands.length} comando(s) de teste…` : 'Nenhum testCommand definido.',
+      meta: { commands: testCommands },
+    });
     const testResult = await runTestCommands({ taskId: task.id, attemptNumber: attempt.attempt_number, commands: testCommands, cwd: workspace });
 
     for (const r of testResult.results) {
@@ -146,8 +194,17 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
 
     if (testCommands.length === 0) {
       await engineeringTaskService.updateAttempt(attempt.id, { status: 'FAILED', error: { code: 'NO_TEST_COMMANDS' }, completed_at: new Date() });
+      emitTaskStage(tenantId, task.id, { stage: 'TESTING', status: 'error', attemptNumber: attempt.attempt_number, message: 'Nenhum testCommand definido — não há como validar o patch.' });
       return { outcome: 'RETRY', failureBundle: { failedCommand: 'TEST_STAGE', stderr: 'Task Contract não define testCommands — nenhum teste determinístico para validar o patch.' }, attempt };
     }
+
+    emitTaskStage(tenantId, task.id, {
+      stage: 'TEST_RESULT',
+      status: testResult.allPass ? 'success' : 'error',
+      attemptNumber: attempt.attempt_number,
+      message: testResult.allPass ? 'Todos os testes passaram.' : 'Ao menos um teste falhou.',
+      meta: { results: testResult.results.map((r) => ({ command: r.command, status: r.status, exitCode: r.exitCode })) },
+    });
 
     if (!testResult.allPass) {
       const failed = testResult.results.find((r) => r.status !== 'PASS');
@@ -172,6 +229,13 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       return { outcome: 'FATAL', reasonCode: 'NO_QUALIFIED_REVIEWER', attempt };
     }
 
+    emitTaskStage(tenantId, task.id, {
+      stage: 'REVIEWING',
+      status: 'running',
+      attemptNumber: attempt.attempt_number,
+      message: `${reviewerSelection.providerId}:${reviewerSelection.modelId} revisando o patch…`,
+    });
+
     const reviewTelemetryBase = { task_id: task.id, attempt_id: attempt.id, role: 'REVIEWER', provider: reviewerSelection.providerId, model: reviewerSelection.modelId };
     let reviewResult;
     try {
@@ -186,6 +250,13 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       });
     } catch (err) {
       await engineeringTaskService.recordTelemetry({ ...reviewTelemetryBase, result: 'FAILURE', test_pass: true });
+      emitTaskStage(tenantId, task.id, {
+        stage: 'REVIEWING',
+        status: 'error',
+        attemptNumber: attempt.attempt_number,
+        message: `Reviewer falhou: ${err.message}`,
+        meta: { code: err.code },
+      });
       if (err.code === FAILURE_CODES.PROVIDER_UNAVAILABLE) {
         return { outcome: 'FATAL', reasonCode: FAILURE_CODES.PROVIDER_UNAVAILABLE, attempt };
       }
@@ -208,6 +279,14 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       decision: reviewResult.decision,
       findings: reviewResult.findings,
       independent_of_coder: routingDecision.independentReviewApplied,
+    });
+
+    emitTaskStage(tenantId, task.id, {
+      stage: 'REVIEW_DECISION',
+      status: reviewResult.decision === 'APPROVE' ? 'success' : 'error',
+      attemptNumber: attempt.attempt_number,
+      message: `${reviewResult.decision} — ${reviewerSelection.providerId}:${reviewerSelection.modelId}${routingDecision.independentReviewApplied ? ' (independente)' : ''}`,
+      meta: { decision: reviewResult.decision, findings: reviewResult.findings },
     });
 
     if (reviewResult.decision === 'REJECT') {
@@ -263,6 +342,7 @@ async function executeRoutedLoop(task, { tenantId }) {
   if (!task.routing_decision?.coder?.selected) {
     await engineeringTaskService.saveLastError(taskId, { code: 'NO_QUALIFIED_CODER', message: 'Nenhum CODER qualificado disponível' });
     await engineeringTaskService.transitionTask(taskId, 'RED');
+    emitTaskStage(tenantId, taskId, { stage: 'RED', status: 'error', message: 'Nenhum CODER qualificado disponível.' });
     return { taskId, status: 'RED', reasonCode: 'NO_QUALIFIED_CODER' };
   }
 
@@ -279,27 +359,37 @@ async function executeRoutedLoop(task, { tenantId }) {
     if (result.outcome === 'FATAL') {
       await engineeringTaskService.saveLastError(taskId, { code: result.reasonCode, message: `Falha fatal: ${result.reasonCode}` });
       await engineeringTaskService.transitionTask(taskId, 'RED');
+      emitTaskStage(tenantId, taskId, { stage: 'RED', status: 'error', message: `Falha fatal: ${result.reasonCode}` });
       return { taskId, status: 'RED', reasonCode: result.reasonCode };
     }
 
     if (result.outcome === 'ADVANCE') {
       await engineeringTaskService.transitionTask(taskId, 'REGRESSION');
+      emitTaskStage(tenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Verificando regressão local (testCommands já validados em workspace limpo).' });
       // V1: regressão local = o próprio conjunto determinístico de testCommands já executado
       // de forma limpa neste attempt (workspace isolado, sem estado residual). Escopo mais
       // amplo (qa-mesh completo) fica registrado como possibilidade em
       // POST_RELEASE_MODEL_ROUTER_BACKLOG.md quando a task não define testCommands suficientes.
       await engineeringTaskService.transitionTask(taskId, 'GOVERNANCE');
+      emitTaskStage(tenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Checando gate de governança.' });
       await engineeringTaskService.transitionTask(taskId, 'GREEN');
+      emitTaskStage(tenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso.' });
       return { taskId, status: 'GREEN', attemptId: result.attempt.id };
     }
 
     // RETRY
     failureBundle = result.failureBundle;
+    emitTaskStage(tenantId, taskId, {
+      stage: 'RETRY',
+      status: 'info',
+      message: `Tentativa ${iterationsUsed}/${task.max_iterations} falhou (${failureBundle?.failedCommand || 'motivo desconhecido'}) — iniciando nova tentativa.`,
+    });
     logger.info('[engineeringRouterService] RED->FIX: nova tentativa', { taskId, iterationsUsed, reason: failureBundle?.failedCommand });
   }
 
   await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED, message: `Esgotadas ${task.max_iterations} tentativas` });
   await engineeringTaskService.transitionTask(taskId, 'RED');
+  emitTaskStage(tenantId, taskId, { stage: 'RED', status: 'error', message: `Esgotadas ${task.max_iterations} tentativas.` });
   return { taskId, status: 'RED', reasonCode: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED };
 }
 

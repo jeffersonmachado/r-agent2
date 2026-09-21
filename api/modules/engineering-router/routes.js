@@ -117,9 +117,12 @@ function createEngineeringRouterRoutes({ buildDeps }) {
 
       // Fire-and-forget: uma execução real pode envolver múltiplas chamadas de LLM e testes,
       // levando muito além do timeout aceitável de uma requisição HTTP síncrona. O cliente
-      // acompanha progresso via GET /engineering/tasks/:id (mesmo padrão de
-      // POST /qa-mesh/run, que responde 202 e processa a execução em segundo plano).
-      deps.engineeringRouterService.runTask(req.params.id, { runnerId: `http-${req.agent?.id || 'unknown'}-${Date.now()}` })
+      // acompanha progresso ao vivo via WebSocket (evento `engineering.task.stage`, emitido por
+      // tenant em engineeringRouterEvents.js) e, como fallback, via GET /engineering/tasks/:id.
+      // tenantId precisa vir do agente autenticado (não do DEFAULT_TENANT_ID) para o broadcast
+      // WS alcançar exatamente quem abriu a tela.
+      const tenantId = req.tenantId || req.agent?.tenantId || undefined;
+      deps.engineeringRouterService.runTask(req.params.id, { runnerId: `http-${req.agent?.id || 'unknown'}-${Date.now()}`, ...(tenantId ? { tenantId } : {}) })
         .catch((err) => deps.logger.error('[engineering-router] run task falhou', { taskId: req.params.id, error: err.message, code: err.code }));
 
       deps.sendJson(res, 202, { taskId: req.params.id, status: 'ACCEPTED' });

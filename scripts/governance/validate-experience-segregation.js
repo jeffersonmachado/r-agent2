@@ -104,6 +104,7 @@ const DEV_ONLY_DIRS = [
   'frontend/src/pages/qa/',
   'frontend/src/pages/dev/',
   'frontend/src/pages/generate-system/',
+  'frontend/src/pages/engineering-router/',
   'frontend/src/modules/qa',
   'frontend/src/modules/rpa',
 ];

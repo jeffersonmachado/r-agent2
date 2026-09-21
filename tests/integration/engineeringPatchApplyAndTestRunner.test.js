@@ -49,6 +49,11 @@ describe('patchApplyService + testRunnerService — integração real', () => {
 
       const changed = await listChangedFiles(workspace);
       expect(changed).toContain('tmp-engineering-router-fixture.txt');
+      // Achado real ao validar o feed de atividade em tempo real da UI: o symlink de
+      // node_modules criado por createWorkspace aparecia como "arquivo alterado" porque
+      // `node_modules/` no .gitignore não casa com um symlink de mesmo nome (só com diretório
+      // real) — nunca é uma mudança do patch, deve ser sempre filtrado.
+      expect(changed).not.toContain('node_modules');
 
       const { allPass, results } = await runTestCommands({
         taskId: 'jest-fixture-task',

@@ -5,8 +5,83 @@ import {
   listEngineeringTelemetry, runEngineeringTask, cancelEngineeringTask,
 } from '../api/engineeringRouter';
 import { useToast } from '../components/Toast';
+import { useEngineeringTaskRealtime } from './engineering-router/useEngineeringTaskRealtime';
 
 const PIPELINE_STAGES = ['CREATED', 'CLASSIFIED', 'ROUTED', 'CODING', 'TESTING', 'REVIEWING', 'REGRESSION', 'GOVERNANCE', 'GREEN'];
+
+const STAGE_STATUS_STYLE = {
+  running: 'bg-blue-500/15 text-blue-500 border-blue-500/30',
+  success: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
+  error: 'bg-red-500/15 text-red-500 border-red-500/30',
+  info: 'bg-bg-subtle text-text-secondary border-border-default',
+};
+
+function StageDot({ status }) {
+  const color = status === 'running' ? 'bg-blue-500 animate-pulse'
+    : status === 'success' ? 'bg-emerald-500'
+      : status === 'error' ? 'bg-red-500'
+        : 'bg-text-secondary';
+  return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${color}`} />;
+}
+
+function formatStageTime(ts) {
+  if (!ts) return '';
+  try {
+    return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
+/** Feed ao vivo de estágios da execução — o equivalente, nesta tela, à lista de passos que a
+ * extensão do VSCode mostra durante uma edição assistida por IA (sem polling: cada linha chega
+ * via WebSocket assim que o backend confirma a transição real). */
+function LiveActivityFeed({ feed, connected }) {
+  if (feed.length === 0) {
+    return (
+      <div className="text-sm text-text-secondary">
+        {connected ? 'Nenhum evento ainda — clique em Run para começar.' : 'Conectando ao WebSocket…'}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+      {feed.slice().reverse().map((event, idx) => (
+        <div key={`${event.ts}-${idx}`} className="flex items-start gap-2 text-xs">
+          <span className="mt-1"><StageDot status={event.status} /></span>
+          <span className="text-text-secondary font-mono w-16 flex-shrink-0">{formatStageTime(event.ts)}</span>
+          <span className={`px-1.5 py-0.5 rounded border font-medium flex-shrink-0 ${STAGE_STATUS_STYLE[event.status] || STAGE_STATUS_STYLE.info}`}>
+            {event.stage}{event.attemptNumber ? ` #${event.attemptNumber}` : ''}
+          </span>
+          <span className="text-text-primary">{event.message}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Lista ao vivo dos arquivos tocados pelo patch aplicado — nome de arquivo + caminho, no
+ * mesmo espírito da lista de "changed files" da extensão do VSCode. */
+function ChangedFilesList({ files }) {
+  if (files.length === 0) {
+    return <div className="text-sm text-text-secondary">Nenhum arquivo alterado ainda.</div>;
+  }
+  return (
+    <ul className="space-y-1">
+      {files.map((path) => {
+        const name = path.split('/').pop();
+        const dir = path.slice(0, path.length - name.length);
+        return (
+          <li key={path} className="flex items-baseline gap-1.5 text-xs font-mono">
+            <span className="text-emerald-500">●</span>
+            <span className="text-text-primary">{name}</span>
+            {dir && <span className="text-text-secondary truncate">{dir.replace(/\/$/, '')}</span>}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 function extractTaskId(currentPath) {
   const match = /^\/dev\/engineering\/tasks\/([^/]+)/.exec(currentPath);
@@ -77,6 +152,13 @@ export function EngineeringTaskDetailPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Ao chegar um estágio terminal (GREEN/RED) via WebSocket, sincroniza uma última vez com o
+  // backend para trazer attempts/tests/reviews/telemetria definitivos — nenhum polling entre
+  // esse ponto e o clique em Run: tudo o que acontece no meio chega pelo feed ao vivo.
+  const { feed, changedFiles, resetFeed, connected: wsConnected } = useEngineeringTaskRealtime(taskId, {
+    onTerminalStage: () => load(),
+  });
+
   const TERMINAL_STATUSES = ['GREEN', 'RED', 'BLOCKED', 'CANCELLED'];
   // "Em execução" reflete o lock real de runTask (locked_at), não a lista de status —
   // uma task recém-criada já fica em CLASSIFIED (aguardando o clique em Run), e tratar
@@ -88,9 +170,10 @@ export function EngineeringTaskDetailPage() {
   const handleRun = async () => {
     setActing(true);
     try {
+      resetFeed();
       await runEngineeringTask(taskId);
-      showToast?.('Execução iniciada', 'success');
-      setTimeout(load, 1500);
+      showToast?.('Execução iniciada — acompanhe abaixo em tempo real', 'success');
+      load();
     } catch (err) {
       showToast?.(err.message || 'Falha ao iniciar execução', 'error');
     } finally {
@@ -137,7 +220,21 @@ export function EngineeringTaskDetailPage() {
 
       <PipelineTrack status={task.status} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-text-primary">Atividade em tempo real</h2>
+            <span className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-emerald-500' : 'bg-text-secondary'}`} title={wsConnected ? 'WebSocket conectado' : 'WebSocket desconectado'} />
+          </div>
+          <LiveActivityFeed feed={feed} connected={wsConnected} />
+        </div>
+        <div className="bg-bg-elevated rounded-xl border border-border-default p-5">
+          <h2 className="text-sm font-bold text-text-primary mb-3">Arquivos alterados nesta execução ({changedFiles.length})</h2>
+          <ChangedFilesList files={changedFiles} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         <div className="bg-bg-elevated rounded-xl border border-border-default p-5">
           <h2 className="text-sm font-bold text-text-primary mb-3">Task Contract</h2>
           <dl className="text-sm space-y-1">

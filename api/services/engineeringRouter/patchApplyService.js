@@ -161,7 +161,13 @@ async function listChangedFiles(workspacePath) {
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => line.replace(/^[A-Z?]{1,2}\s+/, ''));
+    .map((line) => line.replace(/^[A-Z?]{1,2}\s+/, ''))
+    // Achado real ao validar o feed de atividade ao vivo: `node_modules` é o SYMLINK de
+    // infraestrutura criado por createWorkspace (não faz parte do patch). Um `.gitignore` com
+    // `node_modules/` (barra final) não casa com um symlink de mesmo nome — só com um diretório
+    // real — então `git status --porcelain` o lista como untracked mesmo estando ignorado para
+    // conteúdo real. Nunca é uma mudança do CODER: sempre excluído aqui.
+    .filter((entry) => entry !== 'node_modules' && !entry.startsWith('node_modules/'));
 }
 
 /** Remove o worktree isolado. Nunca lança — é chamado em `finally`/cleanup. */
