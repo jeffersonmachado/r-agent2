@@ -409,6 +409,42 @@ function createTenantService({
       return { success: true, message: 'Credenciais salvas com sucesso' };
     },
 
+    // Achado real ao testar a tela de config com ?tenant=<id> na URL (fluxo de super-admin
+    // configurando IA para um tenant específico, não o próprio): só existia rota para salvar
+    // credenciais do tenant "current" — o frontend já monta PUT /tenants/:tenantId/ai-credentials
+    // para esse caso (ver frontend/src/api/config.js::saveTenantAiCredentials), mas a rota nunca
+    // existiu no backend, resultando em 404 sempre que alguém tentava.
+    async saveTenantAiCredentials({ tenantIdParam, payload, agent }) {
+      validator.validateSuperAdminAccess({
+        isSuperAdmin: isSuperAdmin(agent),
+        message: 'Apenas super-admins podem configurar credenciais de IA de outro tenant',
+      });
+
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw createHttpError('Body deve ser um objeto JSON válido', 400, 'invalid_request');
+      }
+
+      const provider = typeof payload.provider === 'string' ? payload.provider.trim().toLowerCase() : null;
+      const apiKey = payload.apiKey;
+
+      if (!provider || typeof provider !== 'string') {
+        throw createHttpError('Provider é obrigatório', 400, 'invalid_request');
+      }
+
+      const supported = await aiProviderRegistryService.isSupportedProvider(provider);
+      if (!supported) {
+        const ids = await aiProviderRegistryService.getProviderIds();
+        throw createHttpError(`Provider inválido. Suportados: ${ids.join(', ')}`, 400, 'invalid_request');
+      }
+
+      if (!apiKey || typeof apiKey !== 'string') {
+        throw createHttpError('API key é obrigatória', 400, 'invalid_request');
+      }
+
+      await repository.saveTenantAiCredentials(tenantIdParam, provider, apiKey);
+      return { success: true, message: 'Credenciais salvas com sucesso' };
+    },
+
     async testTenantAiCredentials({ tenantIdParam, payload, agent, headers, emitEvent }) {
       const tenantId = validator.resolvePlanUsageTenantId({ tenantIdParam, agent });
       validator.validateTenantReadAccess({

@@ -19,6 +19,7 @@ function createTenantRoutes({ controller }) {
   router.post('/', requireJsonContentType, jsonParser, controller.createTenant);
   router.put('/current/ai-config', requireJsonContentType, jsonParser, controller.updateCurrentTenantAiConfig);
   router.put('/current/ai-credentials', requireJsonContentType, jsonParser, controller.saveCurrentTenantAiCredentials);
+  router.put('/:tenantId/ai-credentials', requireJsonContentType, jsonParser, controller.saveTenantAiCredentials);
   router.post('/:tenantId/ai-credentials/test', requireJsonContentType, jsonParser, controller.testTenantAiCredentials);
   router.get('/:tenantId/ai-provider-status', controller.getAiProviderStatus);
   router.get('/:tenantId/ai-config', controller.getAiConfig);

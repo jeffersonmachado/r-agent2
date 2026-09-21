@@ -373,6 +373,26 @@ function createTenantController({ requireAuth, requirePermission, service, emitE
     }
   }
 
+  async function saveTenantAiCredentials(req, res, next) {
+    try {
+      const authResult = requireAuth(req);
+      if (!authResult.valid) {
+        res.status(401).json({ error: 'unauthorized', message: authResult.error });
+        return;
+      }
+
+      const payload = await service.saveTenantAiCredentials({
+        tenantIdParam: req.params.tenantId,
+        payload: req.body || {},
+        agent: authResult.agent || req.agent,
+      });
+
+      res.status(200).json(payload);
+    } catch (err) {
+      handleError(err, res, next);
+    }
+  }
+
   async function testTenantAiCredentials(req, res, next) {
     try {
       const authResult = requireAuth(req);
@@ -413,6 +433,7 @@ function createTenantController({ requireAuth, requirePermission, service, emitE
     getAiConfig,
     updateCurrentTenantAiConfig,
     saveCurrentTenantAiCredentials,
+    saveTenantAiCredentials,
     testTenantAiCredentials,
   };
 }
