@@ -39,7 +39,7 @@ const { promoteValidatedPatch } = require('./promotionService');
 const { validatePatch } = require('../../../engine/engineeringRouter/patchValidator');
 const { getPolicy, requiresIndependentReview } = require('../../../engine/engineeringRouter/routingPolicy');
 const { selectCoderAndReviewer } = require('../../../engine/engineeringRouter/modelSelector');
-const { FAILURE_CODES } = require('../../../engine/engineeringRouter/constants');
+const { FAILURE_CODES, TERMINAL_STATES } = require('../../../engine/engineeringRouter/constants');
 const { emitTaskStage } = require('./engineeringRouterEvents');
 const logger = require('../../utils/logger');
 
@@ -373,7 +373,12 @@ async function acquireRunLock(taskId, runnerId) {
   const task = await engineeringTaskService.getTask(taskId);
   if (!task) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
 
-  if (['GREEN', 'RED', 'BLOCKED', 'CANCELLED'].includes(task.status)) {
+  // Usa TERMINAL_STATES (fonte única em constants.js) em vez de uma lista hardcoded — uma lista
+  // solta aqui teria repetido o mesmo bug já encontrado e corrigido em computeOverview(): quando
+  // READY_FOR_PROMOTION foi adicionado como estado terminal (ERV1-CLOSE-005), uma task que
+  // termina ali (promoção bloqueada, ex: target divergido) não seria reconhecida como terminal e
+  // uma nova chamada de /run tentaria travar e reexecutar uma task já finalizada.
+  if (TERMINAL_STATES.includes(task.status)) {
     return { task, alreadyTerminal: true };
   }
 

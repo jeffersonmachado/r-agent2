@@ -22,6 +22,7 @@
 
 const sequelizeModule = require('../../api/db/sequelize');
 const engineeringTaskService = require('../../api/services/engineeringRouter/engineeringTaskService');
+const { beginRun } = require('../../api/services/engineeringRouter/engineeringRouterService');
 
 let dbAvailable = false;
 let dbReason = null;
@@ -132,5 +133,32 @@ describe('ERV1-CLOSE-009 — concorrência real (lockForRun com Postgres real)',
     await engineeringTaskService.transitionTask(task.id, 'GREEN');
 
     await expect(engineeringTaskService.lockForRun(task.id, 'runner-late')).rejects.toMatchObject({ code: 'TASK_TERMINAL' });
+  });
+
+  // ERV1-CLOSE-010 (achado real durante certificação de runtime): `acquireRunLock`, em
+  // engineeringRouterService.js, checava estado terminal com uma lista hardcoded
+  // ['GREEN','RED','BLOCKED','CANCELLED'] em vez de TERMINAL_STATES — o mesmo bug já corrigido
+  // uma vez em computeOverview() quando READY_FOR_PROMOTION virou terminal (ERV1-CLOSE-005).
+  // Impacto real: POST /engineering/tasks/:id/run numa task READY_FOR_PROMOTION não caía no
+  // fast-path `alreadyTerminal` e ia direto para `lockForRun`, que rejeitava com TASK_TERMINAL —
+  // um erro não tratado especificamente pela rota, virando 500 em vez do 200 idempotente correto.
+  test('beginRun numa task READY_FOR_PROMOTION é idempotente (nunca tenta lock/relançar), mesmo sendo um estado terminal "não convencional"', async () => {
+    if (skipIfNoDatabase()) return;
+    const task = await makeTask('ready-for-promotion-idempotent-real-test');
+    await engineeringTaskService.transitionTask(task.id, 'ROUTED');
+    await engineeringTaskService.transitionTask(task.id, 'CODING');
+    await engineeringTaskService.transitionTask(task.id, 'TESTING');
+    await engineeringTaskService.transitionTask(task.id, 'REVIEWING');
+    await engineeringTaskService.transitionTask(task.id, 'REGRESSION');
+    await engineeringTaskService.transitionTask(task.id, 'GOVERNANCE');
+    await engineeringTaskService.transitionTask(task.id, 'READY_FOR_PROMOTION');
+
+    const result = await beginRun(task.id, { runnerId: 'runner-post-promotion-check' });
+    expect(result).toEqual({ taskId: task.id, status: 'READY_FOR_PROMOTION', accepted: false });
+
+    // Nunca deixou lock nenhum pendurado — task segue exatamente como estava.
+    const reloaded = await engineeringTaskService.getTask(task.id);
+    expect(reloaded.status).toBe('READY_FOR_PROMOTION');
+    expect(reloaded.locked_by).toBeFalsy();
   });
 });

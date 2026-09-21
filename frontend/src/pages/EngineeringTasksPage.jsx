@@ -153,7 +153,7 @@ export function EngineeringTasksPage() {
       <div className="flex gap-3 mb-4">
         <select value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} className="px-3 py-2 rounded-lg border border-border-default bg-bg-primary text-sm text-text-primary">
           <option value="">Todos os status</option>
-          {['CREATED', 'CLASSIFIED', 'ROUTED', 'CODING', 'TESTING', 'REVIEWING', 'REGRESSION', 'GOVERNANCE', 'GREEN', 'RED', 'BLOCKED', 'CANCELLED'].map((s) => <option key={s} value={s}>{s}</option>)}
+          {['CREATED', 'CLASSIFIED', 'ROUTED', 'CODING', 'TESTING', 'REVIEWING', 'REGRESSION', 'GOVERNANCE', 'GREEN', 'READY_FOR_PROMOTION', 'RED', 'BLOCKED', 'CANCELLED'].map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <select value={filters.risk} onChange={(e) => setFilters((f) => ({ ...f, risk: e.target.value }))} className="px-3 py-2 rounded-lg border border-border-default bg-bg-primary text-sm text-text-primary">
           <option value="">Todos os riscos</option>
