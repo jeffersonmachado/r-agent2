@@ -573,7 +573,7 @@ function createDeepSeekProvider() {
           );
         }
 
-        const model = context?.model || config.get('ai.deepseek.model', 'deepseek-chat');
+        const model = context?.model || config.get('ai.deepseek.model', 'deepseek-flash');
         logger.debug('🤖 DeepSeek: Iniciando geração', {
           source: context?.source || null,
           executionId: context?.executionId || null,
@@ -650,7 +650,7 @@ function createKimiProvider() {
           );
         }
 
-        const model = context?.model || config.get('ai.kimi.model', 'moonshot-v1-8k');
+        const model = context?.model || config.get('ai.kimi.model', 'kimi-k2.6');
         logger.debug('🤖 Kimi: Iniciando geração', {
           source: context?.source || null,
           executionId: context?.executionId || null,

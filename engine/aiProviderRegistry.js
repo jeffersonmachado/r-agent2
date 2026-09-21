@@ -67,10 +67,13 @@ const AI_PROVIDERS = {
     label: 'DeepSeek',
     kind: 'openai-compatible',
     baseUrl: 'https://api.deepseek.com/v1',
-    defaultModel: 'deepseek-chat',
+    // Achado real (discovery via GET /v1/models numa conta real, set/2026): "deepseek-chat"/
+    // "deepseek-reasoner" não existem mais na API real — a geração atual é "deepseek-flash"
+    // (V4.1-Flash) e "deepseek-v4-pro".
+    defaultModel: 'deepseek-flash',
     models: [
-      { value: 'deepseek-chat', label: 'DeepSeek Chat (V3)' },
-      { value: 'deepseek-reasoner', label: 'DeepSeek Reasoner (R1)' },
+      { value: 'deepseek-flash', label: 'DeepSeek Flash (V4.1)' },
+      { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
     ],
   },
   kimi: {
@@ -78,12 +81,15 @@ const AI_PROVIDERS = {
     label: 'Kimi (Moonshot)',
     kind: 'openai-compatible',
     baseUrl: 'https://api.moonshot.ai/v1',
-    defaultModel: 'moonshot-v1-8k',
+    // Achado real (discovery via GET /v1/models numa conta real, set/2026): a família
+    // "moonshot-v1-*"/"kimi-latest" não existe mais na API real — a geração atual é
+    // "kimi-k2.6"/"kimi-k2.7-code"/"kimi-k2.7-code-highspeed"/"kimi-k3" (flagship).
+    defaultModel: 'kimi-k2.6',
     models: [
-      { value: 'moonshot-v1-8k', label: 'Moonshot v1 8K' },
-      { value: 'moonshot-v1-32k', label: 'Moonshot v1 32K' },
-      { value: 'moonshot-v1-128k', label: 'Moonshot v1 128K' },
-      { value: 'kimi-latest', label: 'Kimi Latest' },
+      { value: 'kimi-k2.6', label: 'Kimi K2.6' },
+      { value: 'kimi-k2.7-code', label: 'Kimi K2.7 Code' },
+      { value: 'kimi-k2.7-code-highspeed', label: 'Kimi K2.7 Code HighSpeed' },
+      { value: 'kimi-k3', label: 'Kimi K3' },
     ],
   },
   mistral: {

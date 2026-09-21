@@ -97,18 +97,22 @@ const MODEL_CAPABILITIES = Object.freeze({
     contextClass: 'LONG',
     costClass: 'MEDIUM',
   }),
-  // DeepSeek — bom para debugging/reasoning a custo baixo.
-  'deepseek:deepseek-reasoner': entry({
-    roles: ['CODER', 'REVIEWER'],
-    capabilities: ['CODING', 'DEBUGGING', 'CODE_REVIEW', 'ARCHITECTURE', 'DATABASE'],
-    contextClass: 'LONG',
+  // DeepSeek — modelos reais atualizados (achado do pilot real + discovery proativo: os
+  // modelos antigos "deepseek-chat"/"deepseek-reasoner" não existem mais na API real; a conta
+  // real atual só expõe "deepseek-flash"/"deepseek-v4-pro" — confirmado via `GET
+  // https://api.deepseek.com/v1/models`). Preço real (set/2026): V4.1-Flash $0.30/$1.20 por 1M
+  // tokens (peak); V4-Pro $1.32/$3.96 por 1M tokens (peak); ambos com 1M de contexto.
+  'deepseek:deepseek-flash': entry({
+    roles: ['CODER'],
+    capabilities: ['CODING', 'DEBUGGING', 'TEST_GENERATION', 'FRONTEND', 'TOOL_USE'],
+    contextClass: 'EXTENDED',
     costClass: 'LOW',
   }),
-  'deepseek:deepseek-chat': entry({
-    roles: ['CODER'],
-    capabilities: ['CODING', 'DEBUGGING', 'TEST_GENERATION', 'FRONTEND'],
-    contextClass: 'STANDARD',
-    costClass: 'LOW',
+  'deepseek:deepseek-v4-pro': entry({
+    roles: ['CODER', 'REVIEWER'],
+    capabilities: [...CODING_CORE, 'CODE_REVIEW', 'ARCHITECTURE', 'DATABASE', 'TEST_GENERATION'],
+    contextClass: 'EXTENDED',
+    costClass: 'MEDIUM',
   }),
   // Mistral — reviewer independente de baixo custo.
   'mistral:mistral-large-latest': entry({
@@ -124,12 +128,35 @@ const MODEL_CAPABILITIES = Object.freeze({
     contextClass: 'STANDARD',
     costClass: 'LOW',
   }),
-  // Kimi — contexto longo para auditoria de repositório.
-  'kimi:moonshot-v1-128k': entry({
+  // Kimi/Moonshot — modelos reais atualizados (achado do pilot real + discovery proativo: o
+  // modelo antigo "moonshot-v1-128k" não existe mais na API real; a conta real atual só expõe a
+  // família "kimi-k2.x"/"kimi-k3" — confirmado via `GET https://api.moonshot.ai/v1/models`).
+  // Preço real (set/2026): K2.6 $0.95/$4.00 e K2.7-Code $0.95/$4.00 (262K ctx); K2.7-Code
+  // HighSpeed $1.90/$8.00 (mesma família, 6x mais rápido); K3 (flagship, 2.8T params, 1M ctx)
+  // $3/$15 por 1M tokens — "complex coding, knowledge work, long-horizon agentic workflows".
+  'kimi:kimi-k2.6': entry({
     roles: ['CODER', 'REVIEWER'],
     capabilities: ['CODING', 'REPOSITORY_AUDIT', 'CODE_REVIEW', 'LONG_CONTEXT', 'ARCHITECTURE'],
-    contextClass: 'EXTENDED',
+    contextClass: 'LONG',
     costClass: 'MEDIUM',
+  }),
+  'kimi:kimi-k2.7-code': entry({
+    roles: ['CODER'],
+    capabilities: [...CODING_CORE, 'TEST_GENERATION'],
+    contextClass: 'LONG',
+    costClass: 'MEDIUM',
+  }),
+  'kimi:kimi-k2.7-code-highspeed': entry({
+    roles: ['CODER'],
+    capabilities: [...CODING_CORE, 'TEST_GENERATION'],
+    contextClass: 'LONG',
+    costClass: 'MEDIUM',
+  }),
+  'kimi:kimi-k3': entry({
+    roles: ['CODER', 'REVIEWER'],
+    capabilities: [...CODING_CORE, ...REVIEW_CORE, 'TEST_GENERATION', 'LONG_CONTEXT', 'DATABASE', 'FRONTEND', 'RELEASE'],
+    contextClass: 'EXTENDED',
+    costClass: 'HIGH',
   }),
 });
 

@@ -109,7 +109,7 @@ describe('engineeringModelAvailabilityService.buildAvailableModels — elegibili
 });
 
 describe('engineeringModelAvailabilityService.buildAvailableModels — discovery proativo de modelos reais', () => {
-  // Achado real de um pilot com providers de IA reais: kimi:moonshot-v1-128k (mapeado em
+  // Achado real de um pilot com providers de IA reais: kimi:kimi-k2.6 (mapeado em
   // modelCapabilities.js) retornou "Not found the model ... or Permission denied" só na
   // primeira tentativa de uso real — nada verificava PROATIVAMENTE se um modelo mapeado ainda
   // estava habilitado para a credencial configurada.
@@ -122,11 +122,11 @@ describe('engineeringModelAvailabilityService.buildAvailableModels — discovery
     getCredentialDetailsMap.mockResolvedValue({ kimi: { hasCredential: true, status: 'valid' } });
     getDecryptedAPIKey.mockResolvedValue('fake-real-key');
     // A API real do provider (achado real do pilot) não lista o único modelo kimi mapeado
-    // estaticamente (moonshot-v1-128k) — só outro modelo qualquer, irrelevante para nós.
+    // estaticamente (kimi-k2.6) — só outro modelo qualquer, irrelevante para nós.
     providerModelDiscoveryCache.resolveKnownModelIds.mockResolvedValue(['moonshot-v1-8k']);
 
     const models = await buildAvailableModels({ tenantId: 'system' });
-    const target = models.find((m) => m.providerId === 'kimi' && m.modelId === 'moonshot-v1-128k');
+    const target = models.find((m) => m.providerId === 'kimi' && m.modelId === 'kimi-k2.6');
 
     expect(target).toBeDefined();
     expect(target.available).toBe(false);
@@ -136,10 +136,10 @@ describe('engineeringModelAvailabilityService.buildAvailableModels — discovery
   test('modelo mapeado que ESTÁ na lista real do provider continua disponível', async () => {
     getCredentialDetailsMap.mockResolvedValue({ kimi: { hasCredential: true, status: 'valid' } });
     getDecryptedAPIKey.mockResolvedValue('fake-real-key');
-    providerModelDiscoveryCache.resolveKnownModelIds.mockResolvedValue(['moonshot-v1-128k']);
+    providerModelDiscoveryCache.resolveKnownModelIds.mockResolvedValue(['kimi-k2.6']);
 
     const models = await buildAvailableModels({ tenantId: 'system' });
-    const target = models.find((m) => m.providerId === 'kimi' && m.modelId === 'moonshot-v1-128k');
+    const target = models.find((m) => m.providerId === 'kimi' && m.modelId === 'kimi-k2.6');
 
     expect(target).toBeDefined();
     expect(target.available).toBe(true);
@@ -192,15 +192,15 @@ describe('engineeringModelAvailabilityService.buildAvailableModels — discovery
     getDecryptedAPIKey.mockResolvedValue('fake-real-key');
     // O modelo ESTÁ na lista real (discovery diria "disponível"), mas uma falha reativa recente
     // (ex.: rate limit) já marcou o estado — o motivo mais específico não pode ser perdido.
-    providerModelDiscoveryCache.resolveKnownModelIds.mockResolvedValue(['moonshot-v1-128k']);
+    providerModelDiscoveryCache.resolveKnownModelIds.mockResolvedValue(['kimi-k2.6']);
     const modelAvailabilityStore = require('../../api/services/engineeringRouter/modelAvailabilityStore');
-    modelAvailabilityStore.markUnavailable('kimi', 'moonshot-v1-128k', { state: 'RATE_LIMITED', reason: 'rate limit', ttlMs: 60000 });
+    modelAvailabilityStore.markUnavailable('kimi', 'kimi-k2.6', { state: 'RATE_LIMITED', reason: 'rate limit', ttlMs: 60000 });
 
     const models = await buildAvailableModels({ tenantId: 'system' });
-    const target = models.find((m) => m.providerId === 'kimi' && m.modelId === 'moonshot-v1-128k');
+    const target = models.find((m) => m.providerId === 'kimi' && m.modelId === 'kimi-k2.6');
 
     expect(target.available).toBe(false);
     expect(target.availabilityReason).toBe('rate limit');
-    modelAvailabilityStore.markAvailable('kimi', 'moonshot-v1-128k');
+    modelAvailabilityStore.markAvailable('kimi', 'kimi-k2.6');
   });
 });
