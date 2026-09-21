@@ -1,5 +1,5 @@
 const { validateInput, schemas } = require('../../utils/inputValidator');
-const { generateTenantByAi, getTenantAiProviderStatus, validateProviderCredentials } = require('./aiWorkflows');
+const { generateTenantByAi, getTenantAiProviderStatus, validateProviderCredentials, fetchProviderBalance } = require('./aiWorkflows');
 const aiProviderRegistryService = require('../../services/aiProviderRegistryService');
 
 function createHttpError(message, httpStatus, code, payload) {
@@ -452,6 +452,18 @@ function createTenantService({
       const validation = await validateProviderCredentials(providerToTest, apiKey);
       const isValid = validation.valid;
       const error = validation.error;
+      // Saldo real só é buscado quando a chave é válida e o provider expõe uma API de billing
+      // consultável com a mesma chave (hoje só DeepSeek) — best-effort, nunca lança.
+      const balance = isValid ? await fetchProviderBalance(providerToTest, apiKey) : null;
+
+      // Registra o resultado na credencial JÁ SALVA — nunca a apaga quando o teste falha (ex.:
+      // sem saldo). É essa persistência que faz o badge de status sobreviver a um reload da
+      // página e a um restart do processo, em vez de depender só do estado efêmero da tela.
+      await tenantAIService.recordCredentialTestResult(tenantId, providerToTest, {
+        status: validation.status || (isValid ? 'valid' : 'error'),
+        lastError: error || null,
+        balance,
+      });
 
       try {
         const executionIdHeader = (headers && (headers['x-execution-id'] || headers['x-pipeline-execution-id'])) || null;
@@ -475,6 +487,8 @@ function createTenantService({
         provider: providerToTest,
         tenantId,
         error: error || null,
+        status: validation.status || null,
+        balance,
       };
     },
   };

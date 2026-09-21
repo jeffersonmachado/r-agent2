@@ -112,12 +112,10 @@ async function getAIConfig(tenantKey) {
       where: { tenant_id: tenant.id },
     });
 
-    // Status de credenciais por provider (uma única query em TenantAICredential)
-    const providersStatus = await getCredentialStatusMap(tenantKey, tenant);
-    const supportedIds = await aiProviderRegistryService.getProviderIds();
-    const providersMap = Object.fromEntries(
-      supportedIds.map((id) => [id, { hasCredential: !!providersStatus[id] }]),
-    );
+    // Status detalhado de credenciais por provider (uma única query em TenantAICredential) —
+    // inclui o resultado do último teste real (status/lastError/balance), não só o booleano
+    // "tem chave", para a UI poder destacar quando uma credencial está sem saldo/inválida.
+    const providersMap = await getCredentialDetailsMap(tenantKey, tenant);
 
     if (!aiSetting) {
       // Retorna configuração padrão
@@ -445,6 +443,102 @@ async function getCredentialStatusMap(tenantKey, resolvedTenant = null) {
   }
 }
 
+/**
+ * Como getCredentialStatusMap, mas retorna o registro completo por provider (status do último
+ * teste real, quando foi testado, mensagem de erro e saldo, quando o provider expõe isso) — não
+ * só o booleano "tem chave". Usado para a UI destacar credenciais sem saldo/inválidas em vez de
+ * a única alternativa ser apagar a linha inteira.
+ *
+ * @param {string} tenantKey
+ * @param {Object} [resolvedTenant]
+ * @returns {Promise<Object<string, {hasCredential:boolean, status:string, lastTestedAt:string|null, lastError:string|null, balance:Object|null}>>}
+ */
+async function getCredentialDetailsMap(tenantKey, resolvedTenant = null) {
+  const ids = await aiProviderRegistryService.getProviderIds();
+  const details = {};
+  for (const id of ids) {
+    details[id] = { hasCredential: false, status: 'unknown', lastTestedAt: null, lastError: null, balance: null };
+  }
+
+  try {
+    const tenant = resolvedTenant || await findTenantByIdentifier(tenantKey);
+    if (!tenant) return details;
+
+    const { TenantAICredential } = getModels();
+    const credentials = await TenantAICredential.findAll({
+      where: { tenant_id: tenant.id },
+      attributes: ['provider', 'status', 'last_tested_at', 'last_error', 'metadata'],
+    });
+
+    for (const cred of credentials) {
+      const pid = normalizeProvider(cred.provider);
+      if (!pid || !Object.prototype.hasOwnProperty.call(details, pid)) continue;
+      details[pid] = {
+        hasCredential: true,
+        status: cred.status || 'unknown',
+        lastTestedAt: cred.last_tested_at ? new Date(cred.last_tested_at).toISOString() : null,
+        lastError: cred.last_error || null,
+        balance: cred.metadata?.balance || null,
+      };
+    }
+    return details;
+  } catch (err) {
+    logger.error('[TenantAIService] Erro ao obter detalhes de credenciais:', err);
+    return details;
+  }
+}
+
+/**
+ * Registra o resultado de um teste real (POST /tenants/:id/ai-credentials/test) na credencial já
+ * salva — NUNCA apaga a credencial quando o teste falha (ex.: sem saldo). Antes desta função, a
+ * única forma encontrada de "reagir" a uma credencial sem saldo/inválida era deletar a linha
+ * inteira, perdendo a chave; agora o estado real fica visível na UI sem descartar nada. Só
+ * atualiza se já existir uma credencial salva para aquele tenant+provider (nunca cria uma linha
+ * a partir de um teste).
+ *
+ * @param {string} tenantKey
+ * @param {string} provider
+ * @param {{status:string, lastError?:string|null, balance?:{amount:number,currency:string}|null}} result
+ * @returns {Promise<boolean>} true se atualizou uma linha existente
+ */
+async function recordCredentialTestResult(tenantKey, provider, { status, lastError = null, balance = null } = {}) {
+  try {
+    const normalizedProvider = normalizeProvider(provider);
+    if (!normalizedProvider || !status) return false;
+
+    const sequelize = getSequelize();
+    if (!sequelize) await connect();
+
+    const { TenantAICredential } = getModels();
+    const tenant = await findTenantByIdentifier(tenantKey);
+    if (!tenant) return false;
+
+    const credential = await TenantAICredential.findOne({
+      where: { tenant_id: tenant.id, provider: normalizedProvider },
+    });
+    if (!credential) return false;
+
+    const nextMetadata = { ...(credential.metadata || {}) };
+    if (balance) {
+      nextMetadata.balance = { ...balance, checkedAt: new Date().toISOString() };
+    }
+
+    await credential.update({
+      status,
+      last_tested_at: new Date(),
+      last_error: lastError || null,
+      metadata: nextMetadata,
+    });
+
+    invalidateAIConfigCache(tenantKey);
+    invalidateAIConfigCache(tenant.tenant_key || tenantKey);
+    return true;
+  } catch (err) {
+    logger.error('[TenantAIService] Erro ao registrar resultado de teste de credencial:', err);
+    return false;
+  }
+}
+
 module.exports = {
   getAIConfig,
   saveAIConfig,
@@ -452,6 +546,8 @@ module.exports = {
   getDecryptedAPIKey,
   hasCredentials,
   getCredentialStatusMap,
+  getCredentialDetailsMap,
+  recordCredentialTestResult,
   invalidateAIConfigCache,
   SUPPORTED_AI_PROVIDERS,
   // Funções internas para testes

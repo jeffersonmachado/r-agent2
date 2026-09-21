@@ -1,5 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+// Fonte única de validação real + classificação de status (valid/invalid_token/no_credit/error)
+// e busca de saldo real quando o provider expõe isso — ver
+// api/services/aiCredentialValidation.js. Reutilizado também por api/modules/config/service.js
+// (testa uma chave ainda não salva, digitada no formulário).
+const { validateProviderCredentials, fetchProviderBalance } = require('../../services/aiCredentialValidation');
 
 async function generateTenantByAi({
   description,
@@ -275,83 +280,9 @@ async function getTenantAiProviderStatus({ tenantId, tenantAIService }) {
   };
 }
 
-async function validateProviderCredentials(provider, apiKey) {
-  const cleanApiKey = String(apiKey || '').trim();
-  if (!cleanApiKey) {
-    return { valid: false, error: 'Token não pode estar vazio' };
-  }
-
-  // Fonte única de providers: registry dinâmico (built-ins + custom).
-  // eslint-disable-next-line global-require
-  const aiProviderRegistryService = require('../../services/aiProviderRegistryService');
-  const def = await aiProviderRegistryService.getProviderDef(String(provider || '').trim().toLowerCase());
-  if (!def) {
-    return { valid: false, error: 'Provider não suportado' };
-  }
-
-  const baseUrl = def.baseUrl.replace(/\/$/, '');
-
-  try {
-    if (def.kind === 'anthropic') {
-      const response = await fetch(`${baseUrl}/messages`, {
-        method: 'POST',
-        headers: {
-          'x-api-key': cleanApiKey,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: def.validationModel || 'claude-haiku-4-5-20251001',
-          max_tokens: 10,
-          messages: [{ role: 'user', content: 'test' }],
-        }),
-        signal: AbortSignal.timeout(10000),
-      });
-
-      if (response.ok) {
-        const data = await response.json().catch(() => null);
-        return data?.content
-          ? { valid: true, error: null }
-          : { valid: false, error: `Resposta inválida da API ${def.label}` };
-      }
-
-      const errorData = await response.json().catch(() => ({}));
-      if (response.status === 401) return { valid: false, error: 'Token inválido ou expirado' };
-      if (response.status === 403) return { valid: false, error: 'Token não tem permissão para acessar a API' };
-      return { valid: false, error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}` };
-    }
-
-    // openai-sdk e openai-compatible: valida via GET /models com Bearer
-    const response = await fetch(`${baseUrl}/models`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${cleanApiKey}` },
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (response.ok) {
-      const data = await response.json().catch(() => null);
-      return Array.isArray(data?.data)
-        ? { valid: true, error: null }
-        : { valid: false, error: `Resposta inválida da API ${def.label}` };
-    }
-
-    const errorData = await response.json().catch(() => ({}));
-    if (response.status === 401) return { valid: false, error: 'Token inválido ou expirado' };
-    if (response.status === 403) return { valid: false, error: 'Token não tem permissão para acessar a API' };
-    return { valid: false, error: errorData.error?.message || `Erro ${response.status}: ${response.statusText}` };
-  } catch (validationError) {
-    if (validationError.name === 'AbortError' || validationError.name === 'TimeoutError') {
-      return { valid: false, error: 'Timeout ao validar token. Verifique sua conexão com a internet.' };
-    }
-    if (validationError.name === 'TypeError' && String(validationError.message || '').includes('fetch')) {
-      return { valid: false, error: 'Erro de conexão. Verifique sua conexão com a internet.' };
-    }
-    return { valid: false, error: validationError.message || 'Erro ao validar token' };
-  }
-}
-
 module.exports = {
   generateTenantByAi,
   getTenantAiProviderStatus,
   validateProviderCredentials,
+  fetchProviderBalance,
 };

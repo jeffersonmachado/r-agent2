@@ -308,7 +308,16 @@ function createConfigController({ service, deps }) {
           return;
         }
         const validation = await service.validateProviderToken(provider, String(apiKey).trim());
-        deps.sendJson(res, 200, { success: true, valid: validation.valid, error: validation.error || null });
+        // Saldo real só é buscado quando a chave é válida e o provider expõe uma API de
+        // billing consultável com a mesma chave (hoje só DeepSeek) — best-effort, nunca lança.
+        const balance = validation.valid ? await service.fetchProviderBalance(provider, String(apiKey).trim()) : null;
+        deps.sendJson(res, 200, {
+          success: true,
+          valid: validation.valid,
+          error: validation.error || null,
+          status: validation.status || null,
+          balance,
+        });
       } catch (err) {
         deps.logger.error('Erro ao validar token de provedor', err);
         deps.sendJson(res, 500, { success: false, error: 'Erro ao validar token', message: err.message });
