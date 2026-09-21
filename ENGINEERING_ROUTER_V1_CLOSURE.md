@@ -473,6 +473,38 @@ Executada após o pilot real, com o código final desta missão:
 - Nenhuma credencial/segredo real commitado (`.env` nunca tocado por `git add`).
 - Nenhum `push --force`, nenhum `--no-verify`, nenhuma operação destrutiva de git executada.
 
+## Pós-fechamento: crédito real adicionado, discovery proativo e validação em browser real
+
+Depois do GO inicial, o usuário adicionou crédito real às contas DeepSeek/Kimi e pediu revisão
+dos modelos atualizados de cada provedor no momento do processamento. Trabalho adicional real:
+
+1. **Discovery proativo de modelos** (`api/services/aiCredentialValidation.js::listAvailableModelIds`,
+   `api/services/engineeringRouter/providerModelDiscoveryCache.js`): consulta real `GET
+   {baseUrl}/models` (cache 15min, fail-open, só para credencial já `valid`) antes de rotear —
+   nunca mais tenta um modelo mapeado que não existe mais na API real do provider.
+2. **Achado real via discovery**: nenhum modelo mapeado estaticamente para DeepSeek/Kimi existia
+   mais nas APIs reais (`deepseek-chat`/`deepseek-reasoner`/`moonshot-v1-*` — todos obsoletos).
+   Pesquisados preços/specs reais (set/2026) e atualizado `engine/aiProviderRegistry.js` +
+   `engine/engineeringRouter/modelCapabilities.js` + defaults em `aiProviderService.js` para os
+   IDs reais atuais (`deepseek-flash`/`deepseek-v4-pro`, `kimi-k2.6`/`kimi-k2.7-code`/
+   `kimi-k2.7-code-highspeed`/`kimi-k3`). Confirmado via discovery real que o mapeamento OpenAI
+   já estava correto/atualizado.
+3. **Pilot real repetido com sucesso usando DeepSeek/Kimi de verdade**: CODER
+   `deepseek:deepseek-flash` gerou o patch correto (3ª tentativa), REVIEWER `kimi:kimi-k2.6`
+   aprovou, com `INDEPENDENT_PROVIDER_APPLIED` real — GREEN, promoção real (branch
+   `engineering-router/candidates/b96d8914-b990-4923-9a5a-c14a8963cbcc`).
+4. **Validação em browser real (Playwright, login real, tenant `system`)** da tela de detalhe da
+   task do pilot — regra do projeto de nunca declarar comportamento de tela como real sem
+   confirmação visual. Revelou uma lacuna real: a UI nunca exibia nenhuma informação de
+   promoção, e investigando descobriu-se que `promotion_evidence` persistido no banco nem
+   sempre incluía o `code` de falha (só existia no evento WebSocket ao vivo). Ambos corrigidos
+   (commit `535c7c24`) e reconfirmados no mesmo browser real após o fix — a seção de promoção
+   agora aparece corretamente com branch/commit/verificação pós-promoção.
+
+Duas branches candidatas locais de pilot existem neste ponto (`9224ef8d...` e `b96d8914...`),
+ambas só com patches na fixture de teste dedicada — nunca publicadas, aguardando decisão humana
+sobre limpeza ou descarte.
+
 ## Relatório final
 
 **MISSÃO: ENGINEERING MODEL ROUTER V1 — RELEASE CLOSURE HARDENING**
