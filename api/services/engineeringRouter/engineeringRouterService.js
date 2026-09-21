@@ -34,6 +34,7 @@ const { createWorkspace, applyPatch, destroyWorkspace, listChangedFiles } = requ
 const { runTestCommands } = require('./testRunnerService');
 const { buildAvailableModels, DEFAULT_TENANT_ID } = require('./engineeringModelAvailabilityService');
 const modelAvailabilityStore = require('./modelAvailabilityStore');
+const { checkRegression, checkGovernance } = require('./regressionGovernanceService');
 const { validatePatch } = require('../../../engine/engineeringRouter/patchValidator');
 const { getPolicy, requiresIndependentReview } = require('../../../engine/engineeringRouter/routingPolicy');
 const { selectCoderAndReviewer } = require('../../../engine/engineeringRouter/modelSelector');
@@ -517,12 +518,38 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
     if (result.outcome === 'ADVANCE') {
       await engineeringTaskService.transitionTask(taskId, 'REGRESSION');
       emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Verificando regressão local (testCommands já validados em workspace limpo).' });
-      // V1: regressão local = o próprio conjunto determinístico de testCommands já executado
-      // de forma limpa neste attempt (workspace isolado, sem estado residual). Escopo mais
-      // amplo (qa-mesh completo) fica registrado como possibilidade em
+
+      // ERV1-CLOSE-004: REGRESSION é uma checagem REAL, não uma transição decorativa — reler do
+      // banco (não confiar só na variável em memória do loop) que todo EngineeringTestRun desta
+      // tentativa é PASS/exitCode 0. V1: regressão local = o próprio conjunto determinístico de
+      // testCommands já executado de forma limpa neste attempt (workspace isolado, sem estado
+      // residual). Escopo mais amplo (qa-mesh completo) fica registrado como possibilidade em
       // POST_RELEASE_MODEL_ROUTER_BACKLOG.md quando a task não define testCommands suficientes.
+      const regressionResult = await checkRegression(result.attempt.id);
+      await engineeringTaskService.updateAttempt(result.attempt.id, { regression_evidence: regressionResult.evidence });
+      if (!regressionResult.pass) {
+        await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.REGRESSION_FAILED, message: 'Regressão real reprovou após review aprovar', evidence: regressionResult.evidence });
+        await engineeringTaskService.transitionTask(taskId, 'RED');
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Regressão reprovou — nunca GREEN sem evidência real.', meta: regressionResult.evidence });
+        return { taskId, status: 'RED', reasonCode: FAILURE_CODES.REGRESSION_FAILED };
+      }
+      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real: ${regressionResult.evidence.testRunCount} comando(s) PASS.`, meta: regressionResult.evidence });
+
       await engineeringTaskService.transitionTask(taskId, 'GOVERNANCE');
-      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Checando gate de governança.' });
+      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Executando gate de governança real (scripts/governance/validate-engineering-router-v1.js).' });
+
+      // ERV1-CLOSE-004: GOVERNANCE executa de verdade a autoridade canônica já existente —
+      // nunca reimplementa governança, nunca finge sucesso por status.
+      const governanceResult = await checkGovernance();
+      await engineeringTaskService.updateAttempt(result.attempt.id, { governance_evidence: governanceResult.evidence });
+      if (!governanceResult.pass) {
+        await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.GOVERNANCE_FAILED, message: 'Gate de governança real reprovou', evidence: governanceResult.evidence });
+        await engineeringTaskService.transitionTask(taskId, 'RED');
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Governance reprovou — nunca GREEN sem o gate real passando.', meta: governanceResult.evidence });
+        return { taskId, status: 'RED', reasonCode: FAILURE_CODES.GOVERNANCE_FAILED };
+      }
+      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'success', message: 'Gate de governança real: PASS.', meta: governanceResult.evidence });
+
       await engineeringTaskService.transitionTask(taskId, 'GREEN');
       emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso.' });
       return { taskId, status: 'GREEN', attemptId: result.attempt.id };

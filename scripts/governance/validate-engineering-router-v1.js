@@ -220,6 +220,27 @@ function main() {
     ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [/REVIEWING/, /decision === 'REJECT'/]),
   });
 
+  // ERV1-CLOSE-004: REGRESSION/GOVERNANCE precisam ser checagens REAIS capazes de reprovar —
+  // nunca transições de status decorativas. Achado real: antes desta correção, GREEN só exigia
+  // status=GOVERNANCE sem nenhuma evidência checada.
+  checks.push({
+    id: 'REAL_REGRESSION_CHECK',
+    ...checkFileContains('api/services/engineeringRouter/regressionGovernanceService.js', [/checkRegression/, /listTestRuns/]),
+  });
+  checks.push({
+    id: 'REAL_GOVERNANCE_CHECK',
+    ...checkFileContains('api/services/engineeringRouter/regressionGovernanceService.js', [/checkGovernance/, /validate-engineering-router-v1/]),
+  });
+  checks.push({
+    id: 'REGRESSION_GOVERNANCE_CAN_FAIL',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /REGRESSION_FAILED/,
+      /GOVERNANCE_FAILED/,
+      /regressionResult\.pass/,
+      /governanceResult\.pass/,
+    ]),
+  });
+
   // 10. Telemetria básica.
   checks.push({ id: 'TELEMETRY_MODEL', ok: exists('api/db/models/EngineeringTelemetryEvent.js'), reason: 'model de telemetria ausente' });
 
@@ -277,6 +298,8 @@ function main() {
     'tests/integration/engineeringRouterModelRerouteE2E.test.js',
     'tests/integration/engineeringTaskConcurrencyAndRestart.test.js',
     'tests/integration/engineeringRouterOrphanWorkspacePruning.test.js',
+    'tests/integration/engineeringRegressionGovernanceService.test.js',
+    'tests/integration/engineeringRouterRegressionGovernanceGate.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });

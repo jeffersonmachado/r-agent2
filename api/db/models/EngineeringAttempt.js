@@ -35,6 +35,8 @@ function getEngineeringAttemptModel() {
       failure_bundle: { type: DataTypes.JSONB, allowNull: true },
       workspace_path: { type: DataTypes.STRING, allowNull: true },
       error: { type: DataTypes.JSONB, allowNull: true },
+      regression_evidence: { type: DataTypes.JSONB, allowNull: true },
+      governance_evidence: { type: DataTypes.JSONB, allowNull: true },
       started_at: { type: DataTypes.DATE, allowNull: true },
       completed_at: { type: DataTypes.DATE, allowNull: true },
     }, {

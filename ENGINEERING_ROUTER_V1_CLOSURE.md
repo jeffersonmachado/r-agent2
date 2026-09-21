@@ -186,7 +186,30 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
 
 ### ERV1-CLOSE-004 — Regression e Governance reais
 
-- status: PENDENTE
+- RED reproduced: por inspeção de código — `executeRoutedLoop`, no outcome `ADVANCE`, apenas
+  chamava `transitionTask(taskId, 'REGRESSION')` e `transitionTask(taskId, 'GOVERNANCE')` em
+  sequência, sem executar nem verificar nada real entre elas. `status` dizendo REGRESSION/
+  GOVERNANCE nunca era evidência de que algo determinístico tinha rodado.
+- fix: novo `regressionGovernanceService.js` — `checkRegression(attemptId)` reler do banco
+  (não confia na variável em memória do loop) que TODO `EngineeringTestRun` da tentativa é
+  PASS/exitCode 0 (reprova explicitamente se não houver nenhum testRun persistido);
+  `checkGovernance()` executa de verdade, como subprocess real, o gate canônico já existente
+  (`scripts/governance/validate-engineering-router-v1.js`) — nunca reimplementa governança.
+  `executeRoutedLoop` agora persiste a evidência real (`regression_evidence`/
+  `governance_evidence`, nova migration em `engineering_attempts`) e vai para RED
+  (`REGRESSION_FAILED`/`GOVERNANCE_FAILED`) se qualquer checagem reprovar — só chega em GREEN
+  se as duas passarem de verdade.
+- tests: `tests/integration/engineeringRegressionGovernanceService.test.js` (5/5 PASS) — DB
+  real: todos os testRuns PASS aprova; um FAIL real reprova; ausência de testRun reprova;
+  execução real do gate canônico aprova no estado atual do repo; reprovação real propagada
+  corretamente (subprocess mockado só para simular reprovação sem quebrar o gate real).
+  `tests/integration/engineeringRouterRegressionGovernanceGate.test.js` (1/1 PASS) — prova de
+  ORQUESTRAÇÃO ponta a ponta: CODER/TESTING/REVIEWER todos aprovam de verdade (infra real), mas
+  GOVERNANCE mockado para reprovar faz a task terminar RED com `GOVERNANCE_FAILED`, nunca GREEN
+  decorativo.
+- evidence: gate `REAL_REGRESSION_CHECK` + `REAL_GOVERNANCE_CHECK` +
+  `REGRESSION_GOVERNANCE_CAN_FAIL`.
+- status: GREEN
 
 ### ERV1-CLOSE-005 — Promotion do patch exato validado
 

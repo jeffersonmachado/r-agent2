@@ -108,6 +108,10 @@ const FAILURE_CODES = Object.freeze({
   // ERV1-CLOSE-008: reroute esgotou todos os candidatos qualificados restantes (diferente de
   // NO_QUALIFIED_CODER, que é quando não havia NENHUM candidato desde o início do roteamento).
   NO_ALTERNATIVE_CANDIDATE: 'NO_ALTERNATIVE_CANDIDATE',
+  // ERV1-CLOSE-004: REGRESSION/GOVERNANCE agora são checagens reais que podem reprovar — nunca
+  // são só uma transição de status decorativa.
+  REGRESSION_FAILED: 'REGRESSION_FAILED',
+  GOVERNANCE_FAILED: 'GOVERNANCE_FAILED',
 });
 
 const FINDING_SEVERITIES = Object.freeze(['BLOCKER', 'REGRESSION', 'POST_RELEASE']);
