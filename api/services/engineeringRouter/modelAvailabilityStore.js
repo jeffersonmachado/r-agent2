@@ -26,13 +26,19 @@ const AVAILABILITY_STATES = Object.freeze([
   'AUTH_DENIED',
   'RATE_LIMITED',
   'TEMPORARILY_UNAVAILABLE',
+  // Achado real do PILOT REAL (provider de IA real, não fake): DeepSeek sem saldo retorna HTTP
+  // 402 com `error.code: "invalid_request_error"` — um código genérico, não específico de
+  // saldo. Sem um estado dedicado, isso caía no fallback TEMPORARILY_UNAVAILABLE (TTL de só 10
+  // min), mas falta de saldo não se resolve sozinha em minutos — precisa de um TTL bem mais
+  // longo para não martelar o mesmo provider sem crédito repetidamente.
+  'NO_CREDIT',
 ]);
 
 // Estados que excluem o modelo da seleção enquanto a entrada não expirar. Só AVAILABLE/UNKNOWN
 // (nunca falhou, ou falhou e o TTL já passou) contam como usáveis — inclusive falhas
 // transitórias (RATE_LIMITED/TEMPORARILY_UNAVAILABLE) ficam de fora até expirar, com TTL bem
 // mais curto que falhas permanentes (RETIRED/AUTH_DENIED/UNAVAILABLE).
-const UNUSABLE_STATES = new Set(['UNAVAILABLE', 'RETIRED', 'AUTH_DENIED', 'RATE_LIMITED', 'TEMPORARILY_UNAVAILABLE']);
+const UNUSABLE_STATES = new Set(['UNAVAILABLE', 'RETIRED', 'AUTH_DENIED', 'RATE_LIMITED', 'TEMPORARILY_UNAVAILABLE', 'NO_CREDIT']);
 
 /** @type {Map<string, {availability:string, reason:string|null, checkedAt:number, expiresAt:number, source:string}>} */
 const store = new Map();
@@ -84,13 +90,23 @@ function isUsable(providerId, modelId) {
  */
 function classifyModelFailure(err) {
   const message = String(err?.message || '').toLowerCase();
-  const status = err?.httpStatus || err?.status || null;
+  // `httpStatus` é o campo que engineeringAiInvoker.js preserva do erro ORIGINAL do provider —
+  // `err.status` sozinho não é confiável aqui porque o erro pode já estar embrulhado (o `.code`
+  // do wrapper é sempre PROVIDER_UNAVAILABLE no nosso domínio; o status HTTP real do provider
+  // vem só de `httpStatus`).
+  const status = err?.httpStatus ?? err?.cause?.status ?? err?.status ?? null;
 
   if (status === 404 || /not a chat model|does not exist|model_not_found|deprecated|descontinuad/i.test(message)) {
     return { state: 'RETIRED', reason: err?.message || 'modelo não existe/descontinuado' };
   }
   if (status === 401 || /invalid api key|unauthorized/i.test(message)) {
     return { state: 'AUTH_DENIED', reason: err?.message || 'não autorizado' };
+  }
+  if (status === 402 || /insufficient balance|insufficient.?credit|insufficient_quota|sem saldo/i.test(message)) {
+    // Achado real (PILOT REAL, provider de verdade): sem saldo é praticamente permanente até
+    // alguém recarregar a conta — TTL igual ao de RETIRED/AUTH_DENIED (DEFAULT_TTL_MS), nunca o
+    // TTL curto de uma falha transitória de rede.
+    return { state: 'NO_CREDIT', reason: err?.message || 'sem saldo/crédito', ttlMs: DEFAULT_TTL_MS };
   }
   if (status === 429 || /rate limit/i.test(message)) {
     return { state: 'RATE_LIMITED', reason: err?.message || 'rate limit', ttlMs: 5 * 60 * 1000 };

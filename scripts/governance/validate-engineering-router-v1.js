@@ -280,6 +280,23 @@ function main() {
       /outcome === 'REROUTE'/, /excludedModelKeys/, /NO_ALTERNATIVE_CANDIDATE/,
     ]),
   });
+  // Achado real do PILOT REAL (provider de IA real, não fake): `engineeringAiInvoker.js`
+  // herdava o `error.code` EXTERNO do provider (ex.: DeepSeek sem saldo retorna
+  // `"invalid_request_error"`) como o `wrapped.code` do nosso domínio sempre que não era
+  // undefined/null — nunca virava PROVIDER_UNAVAILABLE, então o reroute (ERV1-CLOSE-008) nunca
+  // disparava para essa classe inteira de falha real. Corrigido: wrapped.code é SEMPRE
+  // PROVIDER_UNAVAILABLE; código/status originais preservados em httpStatus/providerErrorCode.
+  checks.push({
+    id: 'INVOKER_ALWAYS_CLASSIFIES_AS_PROVIDER_UNAVAILABLE',
+    ok: exists('api/services/engineeringRouter/engineeringAiInvoker.js')
+      && /wrapped\.code = FAILURE_CODES\.PROVIDER_UNAVAILABLE/.test(readText('api/services/engineeringRouter/engineeringAiInvoker.js'))
+      && /wrapped\.httpStatus/.test(readText('api/services/engineeringRouter/engineeringAiInvoker.js')),
+    reason: 'engineeringAiInvoker.js precisa sempre marcar falhas reais de invocação como PROVIDER_UNAVAILABLE (nunca herdar o error.code externo do provider), preservando httpStatus/providerErrorCode para classificação (achado do pilot real)',
+  });
+  checks.push({
+    id: 'MODEL_AVAILABILITY_RECOGNIZES_NO_CREDIT',
+    ...checkFileContains('api/services/engineeringRouter/modelAvailabilityStore.js', [/NO_CREDIT/, /insufficient/i]),
+  });
   checks.push({
     id: 'MODEL_SELECTOR_RESPECTS_AVAILABILITY',
     ...checkFileContains('engine/engineeringRouter/modelSelector.js', [/model\.available/, /excludedModelKeys/]),
@@ -453,6 +470,7 @@ function main() {
     'tests/unit/engineeringRouterPathBoundary.test.js',
     'tests/unit/engineeringRouterPatchValidator.test.js',
     'tests/unit/engineeringRouterTestOutputAuthority.test.js',
+    'tests/unit/engineeringRouterModelAvailabilityStore.test.js',
     'tests/integration/engineeringRouterFullLoopE2E.test.js',
     'tests/unit/engineeringModelAvailabilityService.test.js',
     'tests/unit/engineeringRouterCommandExecutionSecurity.test.js',

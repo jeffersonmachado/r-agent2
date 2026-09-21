@@ -53,8 +53,23 @@ async function invokeModel({ providerId, modelId, prompt, tenantId = DEFAULT_TEN
       modelId,
     };
   } catch (err) {
+    // Achado real do PILOT REAL (provider de IA real, não fake): `err.code` aqui é o código de
+    // erro EXTERNO da API do provider (ex.: DeepSeek sem saldo retorna
+    // `error.code: "invalid_request_error"`, um código genérico do vocabulário DELES, não do
+    // nosso). O `wrapped.code = err.code || FAILURE_CODES.PROVIDER_UNAVAILABLE` antigo herdava
+    // esse valor externo sempre que não era `undefined`/`null` — então QUALQUER falha real cujo
+    // provider retornasse um `error.code` próprio (comum: rate limit, sem saldo, request
+    // inválido) nunca virava `PROVIDER_UNAVAILABLE`, e o reroute (ERV1-CLOSE-008) nunca disparava:
+    // a task ficava reenviando pro MESMO provider sem saldo até esgotar max_iterations, mesmo
+    // havendo outro provider real disponível. Toda falha de invocação é candidata a reroute no
+    // nosso domínio — `wrapped.code` é SEMPRE PROVIDER_UNAVAILABLE; o código/status ORIGINAL do
+    // provider fica preservado em `httpStatus`/`providerErrorCode` para
+    // `modelAvailabilityStore.classifyModelFailure` decidir o estado real (RETIRED/AUTH_DENIED/
+    // NO_CREDIT/RATE_LIMITED/genérico).
     const wrapped = new Error(`Falha ao invocar ${providerId}:${modelId} — ${err.message}`);
-    wrapped.code = err.code || FAILURE_CODES.PROVIDER_UNAVAILABLE;
+    wrapped.code = FAILURE_CODES.PROVIDER_UNAVAILABLE;
+    wrapped.httpStatus = err.httpStatus ?? err.status ?? null;
+    wrapped.providerErrorCode = err.code ?? null;
     wrapped.cause = err;
     wrapped.latencyMs = Date.now() - startedAt;
     throw wrapped;
