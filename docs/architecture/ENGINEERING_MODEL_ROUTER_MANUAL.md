@@ -31,11 +31,28 @@ providers têm chave configurada para aquele tenant:
 
 ![Resumo: 4 de 6 providers com chave configurada](assets/engineering-router-manual/03-config-ai-resumo.png)
 
-**Atenção real observada em produção**: "chave configurada" não significa "conta com saldo".
-Ao rodar o pilot desta missão, duas credenciais pré-existentes (Anthropic, DeepSeek) estavam
-sintaticamente válidas mas sem crédito na conta do provedor — o Router corretamente reportou
-`PROVIDER_UNAVAILABLE` em vez de fingir sucesso (ver §5). Recomenda-se testar periodicamente e
-remover/atualizar credenciais que passem a falhar.
+**"Chave configurada" não significa "conta com saldo"** — e a tela mostra isso diretamente, sem
+exigir que você apague nada para descobrir. Ao salvar uma credencial, ela já é testada de
+verdade contra o provider (mesma chamada do botão **Testar API Key**) e o resultado real fica
+persistido e visível como um badge por provider:
+
+![Quatro estados reais lado a lado: não testada, sem chave, válida com saldo negativo, válida](assets/engineering-router-manual/12-config-ai-status-saldo.png)
+
+Neste exemplo real: **OpenAI** está configurada mas ainda não foi testada desde a última vez que
+o processo reiniciou; **Anthropic** está sem chave; **DeepSeek** está `Válida` mas com **saldo
+real negativo** (-US$ 0,04 — a DeepSeek expõe uma API de saldo pública, consultada com a mesma
+API key, então o número é real, não estimado); **Kimi** está `Válida` sem informação de saldo
+(Kimi/Moonshot e a maioria dos providers não expõem uma API de billing pública consultável com a
+chave normal — nesses casos o badge reflete o resultado classificado do último teste real:
+`Sem saldo`, `Token inválido/expirado`, `Erro ao testar` ou `Válida`, sem número).
+
+Uma credencial que passa a falhar **nunca precisa ser apagada** para o problema ficar visível —
+o badge já mostra isso, com a mensagem de erro real do provider em um tooltip. Isso importa
+porque apagar perde a chave (e, historicamente, gerou a necessidade de reconfigurar tudo de
+novo). O próprio Router também passou a levar esse status em conta ao
+escolher CODER/REVIEWER: uma credencial cujo último teste real confirmou `Sem saldo` ou `Token
+inválido` deixa de ser candidata ao roteamento por custo, mesmo continuando salva e visível aqui
+(ver §5, é outro achado real desta mesma extensão).
 
 ## 2. Onde o Router aparece no menu
 
@@ -110,8 +127,27 @@ Ao criar, a task já vem classificada (estado `CLASSIFIED`):
 
 Na Task Detail, clique em **Run** (ou `POST /engineering/tasks/:id/run`). A resposta é
 imediata (`202 Accepted`, fire-and-forget) — o processamento real (chamadas de LLM, aplicação
-de patch, execução de teste) roda em segundo plano. Acompanhe recarregando a página ou fazendo
-polling em `GET /engineering/tasks/:id`.
+de patch, execução de teste) roda em segundo plano.
+
+**Acompanhamento é ao vivo, via WebSocket — sem recarregar a página e sem polling.** Assim que
+cada estágio real termina no backend (roteamento definido, CODER gerando, patch aplicado,
+testes rodando, reviewer decidindo, GREEN/RED final), um evento chega na tela e aparece na
+seção **Atividade em tempo real**, com hora exata e mensagem real do que aconteceu — nunca uma
+estimativa. Assim que o patch é aplicado, os arquivos realmente tocados no workspace isolado
+aparecem na seção **Arquivos alterados nesta execução**, ao lado — o equivalente, nesta tela, à
+lista de arquivos editados que a extensão do VSCode mostra durante uma edição assistida por IA:
+
+![Feed de atividade ao vivo + arquivos alterados, execução real até GREEN](assets/engineering-router-manual/13-task-detail-realtime-feed.png)
+
+Este exemplo real (task `GOVERNANCE`, CODER e REVIEWER ambos `openai:gpt-4o` — reviewer caiu no
+mesmo provider do coder porque nenhum outro provider credenciado tinha as duas capabilities
+exigidas para revisão de `GOVERNANCE`, reason code `INDEPENDENT_PROVIDER_UNAVAILABLE`, nunca
+escondido) foi do clique em **Run** ao `GREEN` em 12 segundos reais, com os dois arquivos
+criados pelo patch (`__manualDemoCheck.js`, `__manualDemoGovernanceCheck.test.js`) aparecendo na
+lista assim que o patch foi aplicado — antes mesmo dos testes rodarem.
+
+Via API, o acompanhamento equivalente (sem WebSocket) é fazer polling em
+`GET /engineering/tasks/:id`:
 
 ```bash
 curl -X POST http://localhost:3001/engineering/tasks/<id>/run -H "Authorization: Bearer $TOKEN"
@@ -157,10 +193,24 @@ causa raiz real, todas registradas sem serem escondidas ou apagadas:
    contagem de LLMs gerando diff — e `git apply` rejeitava o patch inteiro por isso, mesmo com
    o conteúdo perfeitamente correto. Corrigido recalculando a contagem real do hunk antes de
    aplicar (`hunkNormalizer.normalizeHunkHeaders`).
+5. Ao ligar o feed de atividade em tempo real (§4), a lista de "arquivos alterados" mostrava
+   `node_modules` como se fosse uma mudança do patch — na verdade é só o symlink de
+   infraestrutura que o Router cria no workspace isolado para os testes conseguirem rodar
+   (`npx jest` precisa de `node_modules`). Um `.gitignore` com barra final (`node_modules/`) não
+   casa com um *symlink* de mesmo nome, só com um diretório real — então `git status` o listava
+   como não-rastreado. Corrigido filtrando esse nome explicitamente em `listChangedFiles`.
+6. Restaurar uma credencial real que passou a ficar sem saldo (em vez de apagá-la, ver §1) expôs
+   outro efeito real: o Router continuava escolhendo essa credencial como CODER/REVIEWER mais
+   barato em toda task nova, porque o circuit breaker do AI Control Plane não abre para erros de
+   billing/autenticação (são de uma credencial específica, não do provider estar fora do ar para
+   todo mundo) — então nada sinalizava "não use mais isto" para o roteamento. Corrigido fazendo
+   `buildAvailableModels` também consultar o `status` real persistido da credencial (§1): uma
+   credencial cujo último teste confirmou `Sem saldo` ou `Token inválido` deixa de ser candidata
+   ao roteamento por custo, mesmo continuando salva e visível na tela de config.
 
 Nenhuma dessas falhas foi escondida ou contornada fingindo sucesso — cada uma ficou registrada
 como uma task `RED` real, com a causa exata em `last_error`/`error` de cada tentativa, e as
-robustezes que elas motivaram (itens 3 e 4) agora fazem parte do Router para qualquer task
+robustezes que elas motivaram (itens 3, 4, 5 e 6) agora fazem parte do Router para qualquer task
 futura.
 
 ## 6. Consultando os modelos disponíveis
@@ -213,3 +263,11 @@ estado concorrente sem lançar exceção.
 | `GET /engineering/release-closure` | Cruzamento com governança real |
 
 Todas exigem `Authorization: Bearer <token>` de um usuário `DEVELOPMENT` (ex.: `super_admin`).
+
+**Feedback ao vivo (WebSocket, não REST)**: durante `runTask`, o backend emite o evento
+`engineering.task.stage` por tenant (mesmo mecanismo de WebSocket já usado por QA Mesh e pelo
+pipeline de geração — nenhum transporte novo). Payload: `{ taskId, attemptNumber, stage, status,
+message, changedFiles, meta, ts }`, com `stage` em `ROUTED | CODING | PATCH_APPLIED | TESTING |
+TEST_RESULT | REVIEWING | REVIEW_DECISION | REGRESSION | GOVERNANCE | GREEN | RED | RETRY` e
+`status` em `running | success | error | info`. A Task Detail já consome isso — um cliente
+próprio só precisa se inscrever no evento e filtrar por `taskId`.
