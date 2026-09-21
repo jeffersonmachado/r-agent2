@@ -167,6 +167,7 @@ services:
     volumes:
       - ./pbx/asterisk/etc/asterisk:/etc/asterisk-static:ro
       - ./pbx/asterisk/etc/odbc.test.ini:/etc/odbc.ini:ro
+      - ./pbx/asterisk/etc/odbc.ini.template:/etc/asterisk-odbc.template:ro
       - ./pbx/asterisk/etc/odbcinst.ini:/etc/odbcinst.ini:ro
       - r-agent2-pbx-media-test-data:/var/lib/asterisk/sounds/pbx
       - r-agent2-pbx-recordings-test-data:/var/spool/asterisk/monitor/pbx
@@ -185,6 +186,17 @@ services:
       # ACL do AMI: MESMA variável que fixa a subnet da rede default (fim do
       # arquivo) — divergência derruba o login da própria API de teste.
       AMI_ACL_PLATFORM_NET: "${RAP_TEST_PLATFORM_SUBNET:-172.30.0.0/16}"
+      # Achado real (pipeline de convergência de governança): odbc.test.ini tem
+      # "Password=StrongPass" fixo no repositório — quando POSTGRES_PASSWORD real do .env é
+      # diferente, a conexão ODBC do Asterisk falha silenciosamente (só visível via
+      # `asterisk -rx "odbc show all"`, nunca nos logs docker), e NENHUM CDR real de chamada
+      # é gravado em pbx_cdr (só CDRs sintéticos inseridos programaticamente por testes).
+      # Renderiza o DSN a partir da MESMA senha real usada pela API/Postgres de teste.
+      PBX_ODBC_HOST: postgres
+      PBX_ODBC_PORT: "5432"
+      PBX_ODBC_DB: results_saas_test
+      PBX_ODBC_USER: results_app
+      PBX_ODBC_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida}"
     command: ["sh", "/usr/local/bin/asterisk-start"]
     ports:
       - "5060:5060/udp"
