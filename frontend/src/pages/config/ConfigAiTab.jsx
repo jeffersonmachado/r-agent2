@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { validateProviderToken, saveTenantAiCredentials, listAiProviders, createAiProvider, deleteAiProvider, getTenantAiConfig } from '../../api/config';
+import { validateProviderToken, validateTenantAiCredentials, saveTenantAiCredentials, listAiProviders, createAiProvider, deleteAiProvider, getTenantAiConfig } from '../../api/config';
 import logger from '../../utils/logger';
 
 const providerLabel = (providers, p) => {
@@ -7,6 +7,64 @@ const providerLabel = (providers, p) => {
   const def = providers.find((x) => x.key === p || x.id === p);
   return def ? def.label : String(p);
 };
+
+function formatBalance(balance) {
+  if (!balance || typeof balance.amount !== 'number') return null;
+  try {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: balance.currency || 'USD' }).format(balance.amount);
+  } catch {
+    return `${balance.amount} ${balance.currency || ''}`.trim();
+  }
+}
+
+function formatRelativeTime(iso) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin < 1) return 'agora mesmo';
+  if (diffMin < 60) return `há ${diffMin} min`;
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return `há ${diffH}h`;
+  const diffD = Math.round(diffH / 24);
+  return `há ${diffD}d`;
+}
+
+/**
+ * Badge de status de uma credencial já salva. Antes desta melhoria, a única informação
+ * disponível era um booleano "tem chave/não tem" — uma credencial sem saldo ficava indistinguível
+ * de uma saudável até alguém tentar usá-la de verdade. Agora reflete o resultado real do último
+ * teste (POST /tenants/:id/ai-credentials/test), persistido no backend.
+ */
+function CredentialStatusBadge({ providerStatus }) {
+  const { hasCredential, status, lastError, lastTestedAt, balance } = providerStatus || {};
+  if (!hasCredential) {
+    return <span className="shrink-0 px-2 py-0.5 rounded text-xs font-medium bg-bg-secondary text-text-secondary">Sem chave</span>;
+  }
+
+  const balanceText = formatBalance(balance);
+  const relativeTime = formatRelativeTime(lastTestedAt);
+
+  const byStatus = {
+    no_credit: { label: 'Sem saldo', tone: 'bg-status-error/20 text-status-error' },
+    invalid_token: { label: 'Token inválido/expirado', tone: 'bg-status-error/20 text-status-error' },
+    error: { label: 'Erro ao testar', tone: 'bg-status-warning/20 text-status-warning' },
+    valid: { label: balanceText ? `Válida · saldo ${balanceText}` : 'Válida', tone: 'bg-status-success/20 text-status-success' },
+    unknown: { label: 'Configurada (não testada)', tone: 'bg-bg-secondary text-text-secondary' },
+  };
+  const info = byStatus[status] || byStatus.unknown;
+
+  return (
+    <span
+      className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${info.tone}`}
+      title={[lastError, relativeTime ? `Testado ${relativeTime}` : null].filter(Boolean).join(' — ') || undefined}
+    >
+      {info.label}
+      {relativeTime && status !== 'unknown' && <span className="opacity-60">· {relativeTime}</span>}
+    </span>
+  );
+}
 
 export function ConfigAiTab({ 
   editedConfig, agent, targetTenantId, loadingTenantAiConfig, tenantAiConfig,
@@ -211,7 +269,7 @@ export function ConfigAiTab({
               ) : (
                 providers.map((def) => {
                   const key = def.key || def.id;
-                  const hasKey = !!(tenantAiConfig?.providers?.[key]?.hasCredential);
+                  const providerStatus = tenantAiConfig?.providers?.[key];
                   const isDeleting = deletingProviderKey === key;
                   return (
                     <div key={key} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border-default bg-bg-primary">
@@ -226,9 +284,7 @@ export function ConfigAiTab({
                         <p className="text-xs text-text-secondary truncate">modelo: {def.defaultModel}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${hasKey ? 'bg-status-success/20 text-status-success' : 'bg-bg-secondary text-text-secondary'}`}>
-                          {hasKey ? 'Chave configurada' : 'Sem chave'}
-                        </span>
+                        <CredentialStatusBadge providerStatus={providerStatus} />
                         <button
                           type="button"
                           onClick={() => {
@@ -449,7 +505,16 @@ export function ConfigAiTab({
                         provider: apiKeyProvider,
                         apiKey: apiKey.trim()
                       }, targetTenantId || undefined);
-                      // Atualiza o status "Chave configurada" por provider sem limpar o banner de sucesso
+                      // Testa de verdade a chave recém-salva (chamada real ao provider) — o
+                      // backend persiste o resultado (status/erro/saldo) na própria credencial,
+                      // nunca a apaga em caso de falha. É esse teste que popula o badge de
+                      // status abaixo, sem exigir um passo manual separado.
+                      try {
+                        await validateTenantAiCredentials({ tenantId: targetTenantId || undefined, provider: apiKeyProvider });
+                      } catch (testErr) {
+                        logger.warn('Não foi possível testar a credencial recém-salva', testErr);
+                      }
+                      // Atualiza o status por provider (agora com status/saldo reais) sem limpar o banner de sucesso
                       try {
                         const refreshed = await getTenantAiConfig(targetTenantId || undefined);
                         if (refreshed?.providers) {
