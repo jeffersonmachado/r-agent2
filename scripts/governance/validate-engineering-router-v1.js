@@ -389,6 +389,22 @@ function main() {
       /promoteValidatedPatch/, /READY_FOR_PROMOTION/, /promotionResult\.promoted/,
     ]),
   });
+  // Achado real ao validar a tela de detalhe da task no browser: o motivo exato de uma
+  // promoção que não completou (promotionResult.code) nunca era persistido junto com
+  // promotion_evidence — só existia no evento WebSocket ao vivo. Quem abrisse a tela depois da
+  // execução via READY_FOR_PROMOTION sem nenhum motivo.
+  checks.push({
+    id: 'PROMOTION_EVIDENCE_PERSISTS_FAILURE_CODE',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /\.\.\.promotionResult\.evidence,\s*code:\s*promotionResult\.code/,
+    ]),
+  });
+  checks.push({
+    id: 'UI_SHOWS_PROMOTION_EVIDENCE',
+    ...checkFileContains('frontend/src/pages/EngineeringTaskDetailPage.jsx', [
+      /promotion_evidence/, /candidateBranch/, /postPromotionTestPass/,
+    ]),
+  });
 
   // ERV1-CLOSE-007: Release Closure não pode usar um critério paralelo simplificado
   // (goNoGo.status==='GO' && finalReadiness.startsWith('PASS')) — precisa reutilizar a
@@ -489,6 +505,7 @@ function main() {
     'tests/unit/engineeringRouterTestOutputAuthority.test.js',
     'tests/unit/engineeringRouterModelAvailabilityStore.test.js',
     'tests/unit/engineeringRouterProviderModelDiscovery.test.js',
+    'tests/integration/engineeringRouterPromotionEvidencePersistence.test.js',
     'tests/integration/engineeringRouterFullLoopE2E.test.js',
     'tests/unit/engineeringModelAvailabilityService.test.js',
     'tests/unit/engineeringRouterCommandExecutionSecurity.test.js',

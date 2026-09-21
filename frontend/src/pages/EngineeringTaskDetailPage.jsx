@@ -336,6 +336,35 @@ export function EngineeringTaskDetailPage() {
                     ))}
                   </div>
                 ))}
+                {attempt.promotion_evidence && (
+                  <div className="text-xs border-t border-border-default pt-2 mt-2">
+                    <div className={attempt.promotion_status === 'PROMOTED' ? 'text-emerald-500 font-medium' : 'text-amber-500 font-medium'}>
+                      Promoção: {attempt.promotion_status === 'PROMOTED' ? 'commit real criado' : 'não completou'}
+                    </div>
+                    <div className="text-text-secondary mt-1 space-y-0.5">
+                      {attempt.promotion_evidence.candidateBranch && (
+                        <div>Branch: <span className="font-mono">{attempt.promotion_evidence.candidateBranch}</span></div>
+                      )}
+                      {attempt.promotion_evidence.candidateCommit && (
+                        <div>Commit: <span className="font-mono">{attempt.promotion_evidence.candidateCommit.slice(0, 12)}</span></div>
+                      )}
+                      {typeof attempt.promotion_evidence.postPromotionTestPass === 'boolean' && (
+                        <div>
+                          Verificação pós-promoção: {' '}
+                          <span className={attempt.promotion_evidence.postPromotionTestPass ? 'text-emerald-500' : 'text-red-500'}>
+                            {attempt.promotion_evidence.postPromotionTestPass ? 'PASS' : 'FAIL'}
+                          </span>
+                        </div>
+                      )}
+                      {attempt.promotion_evidence.code && (
+                        <div>Motivo: {attempt.promotion_evidence.code}</div>
+                      )}
+                    </div>
+                    <div className="text-text-secondary mt-1 italic">
+                      Branch local, nunca publicada automaticamente — integração ao branch principal é um passo humano.
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

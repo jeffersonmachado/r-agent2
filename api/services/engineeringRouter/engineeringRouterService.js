@@ -580,8 +580,15 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
           testCommands: task.test_commands || [],
           taskTitle: task.title,
         });
+        // Achado real ao validar a tela de detalhe da task no browser: `promotionResult.code`
+        // (o motivo exato de uma promoção não completada, ex.: PROMOTION_TARGET_DIVERGED) só
+        // existia no evento WebSocket ao vivo e no valor de retorno — nunca era persistido junto
+        // com `promotion_evidence`. Quem abrisse a tela DEPOIS da execução via só
+        // "READY_FOR_PROMOTION" sem nenhum motivo. Mesclado aqui para ficar sempre disponível.
         await engineeringTaskService.updateAttempt(result.attempt.id, {
-          promotion_evidence: promotionResult.evidence,
+          promotion_evidence: promotionResult.promoted
+            ? promotionResult.evidence
+            : { ...promotionResult.evidence, code: promotionResult.code },
           promotion_status: promotionResult.promoted ? 'PROMOTED' : 'READY_FOR_PROMOTION',
         });
 
