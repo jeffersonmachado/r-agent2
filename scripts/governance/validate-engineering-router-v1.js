@@ -452,6 +452,7 @@ function main() {
     'tests/unit/engineeringRouterHunkNormalizer.test.js',
     'tests/unit/engineeringRouterPathBoundary.test.js',
     'tests/unit/engineeringRouterPatchValidator.test.js',
+    'tests/unit/engineeringRouterTestOutputAuthority.test.js',
     'tests/integration/engineeringRouterFullLoopE2E.test.js',
     'tests/unit/engineeringModelAvailabilityService.test.js',
     'tests/unit/engineeringRouterCommandExecutionSecurity.test.js',
