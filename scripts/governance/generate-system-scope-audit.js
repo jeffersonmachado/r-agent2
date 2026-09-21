@@ -135,6 +135,14 @@ function classifyOccurrence(filePath, line, match) {
     return 'LEGITIMATE_PLATFORM_SYSTEM';
   }
 
+  // engineeringRouter / engineering-router — Engineering Model Router: superfície
+  // DEVELOPMENT-only (checkClassification server-side em toda rota) que opera sobre
+  // a PRÓPRIA plataforma; o tenant default 'system' é o tenant de plataforma, mesma
+  // classe de qawaves/testexecution — nunca escopo de dados de negócio de tenant.
+  if (lower.includes('engineeringrouter') || lower.includes('engineering-router')) {
+    return 'LEGITIMATE_PLATFORM_SYSTEM';
+  }
+
   // journeyStepDefinitions — QA pipeline interno
   if (lower.includes('journeystepdefinition') || lower.includes('stepdefin')) {
     return 'LEGITIMATE_PLATFORM_SYSTEM';
