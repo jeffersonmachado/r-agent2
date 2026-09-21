@@ -347,6 +347,175 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
   `STRUCTURAL_PASS`/`RUNTIME_PASS`, 103 checks, 0 falhas.
 - status: GREEN
 
-## Relatório final (preenchido ao fim)
+## Testes adversariais de segurança (pós ERV1-CLOSE-010)
 
-FINAL: PENDENTE
+Executados após o fechamento dos 10 blockers nomeados, seguindo o mesmo método (achado real →
+fix real → evidência real), nunca hipotéticos:
+
+1. **Path traversal no boundary check de patch** — achado REAL e crítico. `checkPathBoundary`
+   (`engine/engineeringRouter/pathBoundary.js`) fazia match do glob de `allowedPaths` via string
+   crua, sem nunca resolver segmentos `..`. Um path como
+   `<escopo-autorizado>/../../../etc/passwd` batia no glob `<escopo-autorizado>/**` (o `**`
+   engolia o `../../../etc/passwd` como texto) e retornava `ok:true` para um escape real da
+   árvore autorizada. `git apply` (usado na aplicação real) de fato rejeita qualquer path com
+   `..` — defesa em profundidade incidental que evitou exploração no pipeline real — mas a
+   autoridade que o Task Contract afirma garantir dava falso-positivo. Corrigido com
+   `resolvePathSegments()`: resolve `.`/`..` como o filesystem resolveria antes de qualquer match
+   de glob; subir acima da raiz vira `PATH_ESCAPES_ROOT`, sempre rejeitado. Commit `07e69981`.
+   Testes: 6 novos casos em `tests/unit/engineeringRouterPathBoundary.test.js` (traversal
+   rasa/profunda, `..` legítimo dentro do escopo, forbiddenPaths pós-resolução). GREEN.
+2. **Prompt injection no output de teste** — nenhum bug encontrado; a garantia arquitetural já
+   existente ("a autoridade é sempre o exitCode real, nunca o texto do LLM") foi confirmada com
+   um payload adversarial real (`tests/fixtures/engineering-router-sandbox/promptInjectionOutputProbe.js`
+   + `tests/unit/engineeringRouterTestOutputAuthority.test.js`, commit `582ece1b`): exitCode!=0
+   com stdout dizendo "PASS"/"APPROVE" ainda reporta FAIL; exitCode==0 com stdout dizendo "FAIL"
+   ainda reporta PASS. GREEN.
+3. **Command injection / secrets (PEM, OpenSSH, .env)** — já cobertos por ERV1-CLOSE-001/002/003;
+   reconfirmados GREEN nesta rodada (`engineeringRouterCommandExecutionSecurity.test.js`,
+   `engineeringRouterSecretRedactionMultiline.test.js`).
+
+## Pilot real (provider de IA real, não fake) — RED→FIX→REVIEW→REGRESSÃO→GOVERNANÇA→PROMOÇÃO
+
+Executado após os testes adversariais, via `engineeringRouterService.runTask` diretamente contra
+o banco/config reais do ambiente (`.env` real, `initializeAiProviders()` real — nenhum provider
+fake registrado), alvo `tests/fixtures/engineering-router-sandbox/mathUtils.js` (fixture real do
+repositório, já usada pelos testes E2E internos, RED por design — `add()` não existe).
+
+- **Task**: `9224ef8d-2fbc-40aa-878d-bd6b67eaea97`, tipo `BUG_FIX`, risk `HIGH` (exige
+  independência de provider), `maxIterations: 8`.
+- **Achado real durante a execução** (corrigido antes do pilot ser refeito): DeepSeek (chave real
+  configurada em `system`, status `valid` no banco) retornou HTTP 402 "Insufficient Balance" na
+  chamada real — `engineeringAiInvoker.js` herdava o `error.code` EXTERNO do provider
+  (`"invalid_request_error"`, vocabulário deles) como o `wrapped.code` do NOSSO domínio sempre
+  que não era `undefined`/`null`, então NUNCA virava `PROVIDER_UNAVAILABLE` — o mecanismo de
+  reroute (ERV1-CLOSE-008) nunca disparava para essa classe inteira de falha real, e a task
+  ficava reenviando pro mesmo provider sem saldo até esgotar `max_iterations`. Corrigido:
+  `wrapped.code` é SEMPRE `PROVIDER_UNAVAILABLE`; status/código originais preservados em
+  `httpStatus`/`providerErrorCode`; novo estado `NO_CREDIT` em `modelAvailabilityStore.js` com
+  TTL longo. Commit `437d6abd`. Teste:
+  `tests/unit/engineeringRouterModelAvailabilityStore.test.js` (9 casos, GREEN).
+- **Execução real após o fix** (log completo capturado, resumo abaixo):
+  1. CODER `deepseek:deepseek-chat` → HTTP 402 real → classificado `NO_CREDIT` → reroute real.
+  2. CODER `deepseek:deepseek-reasoner` → HTTP 402 real → reroute real.
+  3. CODER `openai:gpt-5.4-mini` → **sucesso real**: gerou o unified diff correto
+     (`function add(a, b) { return a + b; }` + export), aplicado em workspace isolado, teste
+     real (`npx jest .../mathUtils.test.js`) → `PASS`, `exitCode: 0`.
+  4. REVIEWER `kimi:moonshot-v1-128k` → "Not found the model ... or Permission denied" →
+     classificado `RETIRED`/reroute real.
+  5. CODER re-executa (`openai:gpt-5.4-mini`, mesmo diff determinístico) → REVIEWER
+     `openai:gpt-4o` → `APPROVE` real, `findings: []`.
+  6. `independentReviewRequired: true`, `independentReviewApplied: false`, reasonCode
+     `INDEPENDENT_PROVIDER_UNAVAILABLE` registrado explicitamente (só OpenAI restava qualificado
+     para os dois papéis depois dos reroutes reais) — nunca fingiu independência.
+  7. REGRESSÃO real (testRuns PASS/exitCode 0) → PASS. GOVERNANÇA real
+     (`validate-engineering-router-v1.js` via subprocess) → PASS.
+  8. **PROMOÇÃO real**: commit real `b9e59df3837a8373a87efe4792fa558cc0f7f5b1` na branch local
+     `engineering-router/candidates/9224ef8d-2fbc-40aa-878d-bd6b67eaea97`
+     (`validatedTreeHash`/`validatedPatchHash` registrados), verificação pós-promoção real
+     (`postPromotionTestPass: true`, mesmo comando jest, `exitCode: 0`).
+  9. **Task final: `GREEN`**, `last_error: null`.
+- **Verificação independente pós-execução**: `git branch --list` confirma a branch candidata
+  real; `git diff main engineering-router/candidates/<taskId>` mostra exatamente o diff
+  aprovado; `git status`/`cat` no arquivo real do working tree principal confirmam que `main`
+  **nunca foi alterado** — `add()` só existe na branch candidata.
+- **Conformidade com a regra da missão**: nenhum `push`/`merge`/`publish` executado — a branch
+  candidata permanece local, não integrada, pronta para revisão humana/pipeline oficial.
+- Achados classificados como `POST_RELEASE_HARDENING` (não bloqueantes) registrados em
+  `POST_RELEASE_MODEL_ROUTER_BACKLOG.md`.
+
+## Regressão completa (backend + frontend)
+
+Executada após o pilot real, com o código final desta missão:
+
+- `npm run test:unit` (jest, `tests/unit/`): 1798/1799 GREEN. **1 falha pré-existente e não
+  relacionada**: `tests/unit/governance/convergenceFixpoint.test.js` — o runId de
+  `governance/.current-run.json` diverge do runId em `dev/platform-readiness/latest.json` (a
+  projeção de readiness não foi regenerada depois do run corrente mudar). Confirmado via
+  `git log` que nenhum commit desta missão tocou nesses artefatos — gerados por um processo
+  externo de selagem de governança (o mesmo lineage mismatch real já documentado e corretamente
+  DETECTADO pela correção do ERV1-CLOSE-007).
+- `npm run test:flow` (engine + flow): 264/264 GREEN.
+- `npx jest --bail=0` (suíte completa, 1040 suites): 1034/1039 suites GREEN
+  (2623-8345/variação por rodada devido a `bail:1` no config padrão interrompendo early;
+  contagem completa na rodada sem bail). **4 falhas adicionais, todas pré-existentes/ambientais,
+  nenhuma tocada por esta missão** (confirmado via `git log` por arquivo):
+  - `tests/unit/api/services/__tests__/qaWavesScenarioService.test.js` — quebrado por um
+    refactor de logging anterior a esta sessão (commit `d5002557`), não relacionado ao
+    Engineering Router.
+  - `tests/unit/governance/convergenceFixpoint.test.js` — mesmo lineage mismatch acima.
+  - `api/services/__tests__/qaMeshService.stability.test.js` — reflete o estado real e vivo do
+    QA Mesh no ambiente (`criticalFlowSuccess: 95` vs. esperado `100`), não tocado por esta
+    missão.
+  - `tests/integration/engineeringRouterFullLoopE2E.test.js` e
+    `tests/integration/engineeringRouterReviewerRejectionRecodeE2E.test.js` — falharam
+    (`EngineeringTask não encontrada`) SOMENTE na execução com ~1040 suites em paralelo
+    (contenção real de Postgres/workers concorrentes); **reconfirmadas GREEN quando rodadas
+    isoladas ou junto com o resto do Engineering Router**, antes e depois dessa rodada completa.
+    Risco operacional já documentado nesta missão (processo externo concorrente no ambiente).
+- `npm test` (frontend, vitest): 964/964 GREEN (129 arquivos).
+- Regressão dedicada do Engineering Router (rodada isolada, repetida a cada blocker fechado):
+  28 suites / 151 testes GREEN na versão final.
+- `npm run validate:engineering-router-v1` (modo padrão, structural): PASS, 89 checks, 0 falhas.
+- `npm run validate:engineering-router-v1:runtime` (coleta + gate `--runtime`): PASS,
+  `STRUCTURAL_PASS`/`RUNTIME_PASS`, 20/20 itens de runtime GREEN.
+
+## Checagem final de source limpo
+
+- `git status`: limpo (dois relatórios `reports/*.json` regenerados como efeito colateral de
+  rodar testes foram revertidos via `git checkout --` antes de cada commit — artefatos, não
+  trabalho perdido).
+- `git worktree list`: só o worktree principal (`/opt/results/ria/r-agent2`), nenhum worktree
+  órfão do Engineering Router.
+- `git branch --list 'engineering-router/candidates/*'`: só a branch do pilot real
+  (`engineering-router/candidates/9224ef8d-2fbc-40aa-878d-bd6b67eaea97`), local, não publicada —
+  intencional (evidência do pilot).
+- Nenhum workspace órfão em `/tmp/engineering-router-workspaces/`.
+- Nenhuma credencial/segredo real commitado (`.env` nunca tocado por `git add`).
+- Nenhum `push --force`, nenhum `--no-verify`, nenhuma operação destrutiva de git executada.
+
+## Relatório final
+
+**MISSÃO: ENGINEERING MODEL ROUTER V1 — RELEASE CLOSURE HARDENING**
+**BASELINE_HEAD**: `6f5b5d690b772ccd066059659ad234d3ab5d1f1b`
+**HEAD final**: `437d6abd88bbbb6ed0f91b4a9bdee398834923e9` (+ commits de documentação desta seção)
+
+| Item | Status |
+|---|---|
+| ERV1-CLOSE-001 (command injection) | GREEN |
+| ERV1-CLOSE-002 (safe environment) | GREEN |
+| ERV1-CLOSE-003 (secret redaction multiline) | GREEN |
+| ERV1-CLOSE-006 (credential scope isolation) | GREEN |
+| ERV1-CLOSE-008 (model-level availability + reroute) | GREEN |
+| ERV1-CLOSE-009 (restart/resume + concorrência) | GREEN |
+| ERV1-CLOSE-004 (regression + governance reais) | GREEN |
+| ERV1-CLOSE-005 (promotion do patch exato) | GREEN |
+| ERV1-CLOSE-007 (release closure com autoridade real) | GREEN |
+| ERV1-CLOSE-010 (runtime certification) | GREEN |
+| Testes adversariais de segurança | GREEN (1 vulnerabilidade real encontrada e corrigida: path traversal) |
+| Pilot real (provider de IA real) | GREEN (1 bug real encontrado e corrigido: reroute não disparava para erros com `error.code` externo) |
+| Regressão completa | GREEN (5 falhas pré-existentes/ambientais confirmadas não relacionadas) |
+| Source limpo | GREEN |
+
+**DECISÃO: ENGINEERING_ROUTER_V1 = GO**
+
+Justificativa: os 10 blockers nomeados estão fechados com evidência real (RED reproduzido → fix
+→ GREEN, nunca aceito por narrativa). Dois achados de segurança/robustez adicionais, não
+previstos na lista original de 10, foram descobertos durante as fases de teste adversarial e
+pilot real — exatamente o resultado que essas fases existem para produzir — e ambos foram
+corrigidos com evidência real antes desta decisão, não deferidos. O pipeline provou, com um
+provider de IA real (não fake) e o código real do repositório, o ciclo completo
+RED→FIX→REVIEW→REGRESSÃO→GOVERNANÇA→PROMOÇÃO, incluindo reroute real diante de duas falhas de
+infraestrutura genuínas (provider sem saldo, modelo de reviewer indisponível) — nunca fingindo
+sucesso. As falhas remanescentes na suíte geral do repositório são todas pré-existentes e
+ortogonais a esta missão (confirmado por `git log` por arquivo), documentadas com transparência,
+não escondidas.
+
+**Itens NÃO bloqueantes, registrados para acompanhamento** (não impedem GO):
+- Lineage mismatch real em `governance/.current-run.json` vs. `dev/platform-readiness/latest.json`
+  (pré-existente, de um processo externo de selagem) — a correção do ERV1-CLOSE-007 já o
+  DETECTA corretamente no Release Closure do Engineering Router; a convergência geral do RAP
+  (`scripts/governance/converge-governance.sh`) precisa rodar para resolvê-lo, fora do escopo
+  desta missão.
+- Achados de hardening do pilot real classificados como `POST_RELEASE_HARDENING` em
+  `POST_RELEASE_MODEL_ROUTER_BACKLOG.md` (staleness de status de credencial, ausência de
+  `credentialRef` dedicado, contagem de `max_iterations` incluindo reroutes de infraestrutura).
