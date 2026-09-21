@@ -264,6 +264,32 @@ function main() {
     ]),
   });
 
+  // ERV1-CLOSE-007: Release Closure não pode usar um critério paralelo simplificado
+  // (goNoGo.status==='GO' && finalReadiness.startsWith('PASS')) — precisa reutilizar a
+  // autoridade real já existente (run corrente + Final Consistency Gate) e cruzar cada
+  // artefato lido contra o mesmo runId/sourceFingerprint, nunca aceitar evidência de outro run.
+  checks.push({
+    id: 'RELEASE_CLOSURE_USES_REAL_RUN_AUTHORITY',
+    ...checkFileContains('api/services/engineeringRouter/releaseClosureService.js', [
+      /isSameRun/,
+      /readRunContext/,
+      /final-consistency-gate-report/,
+      /lockReasons/,
+    ]),
+  });
+  checks.push({
+    id: 'RELEASE_CLOSURE_NEVER_ACCEPTS_FOREIGN_RUN_EVIDENCE',
+    ok: exists('api/services/engineeringRouter/releaseClosureService.js')
+      && /FOREIGN_RUN/.test(readText('api/services/engineeringRouter/releaseClosureService.js'))
+      && /cleanReleaseState\s*=\s*lockReasons\.length === 0/.test(readText('api/services/engineeringRouter/releaseClosureService.js')),
+    reason: 'releaseClosureService.js precisa declarar cleanReleaseState apenas quando lockReasons estiver vazio, e listar FOREIGN_RUN quando um artefato não for do run corrente (ERV1-CLOSE-007)',
+  });
+  checks.push({
+    id: 'RELEASE_CLOSURE_TEST_COVERAGE',
+    ok: exists('tests/integration/engineeringReleaseClosureAuthority.test.js'),
+    reason: 'faltando tests/integration/engineeringReleaseClosureAuthority.test.js (ERV1-CLOSE-007)',
+  });
+
   // 10. Telemetria básica.
   checks.push({ id: 'TELEMETRY_MODEL', ok: exists('api/db/models/EngineeringTelemetryEvent.js'), reason: 'model de telemetria ausente' });
 

@@ -251,7 +251,36 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
 
 ### ERV1-CLOSE-007 — Release Closure com autoridade real
 
-- status: PENDENTE
+- RED reproduzido (achado real, não fixture): `api/services/engineeringRouter/releaseClosureService.js`
+  antes desta correção declarava `cleanReleaseState` a partir de um critério paralelo
+  simplificado (`goNoGo.status==='GO' && finalReadiness.finalDecision.startsWith('PASS') &&
+  releaseBlockers===0`), sem NUNCA checar se esses artefatos pertenciam ao run corrente.
+  Confirmado ao vivo neste repositório: `governance/.current-run.json` (run corrente real)
+  tinha `runId`/`sourceFingerprint` completamente diferentes de
+  `qa-mesh/go-no-go-report.json` (evidência de um run do dia anterior) — o código antigo teria
+  aceitado esse GO estrangeiro como válido para fechamento de release.
+- fix: `releaseClosureService.js` reescrito para reutilizar autoridade JÁ EXISTENTE no
+  projeto (nunca reimplementada em paralelo): `governance/shared/run-context.js::readRunContext`
+  (mesma fonte de run corrente usada pelo resto da governança) e
+  `governance/final-consistency-gate-report.json` (Final Consistency Gate já existente, que já
+  agrega replay/readiness/package/governance/contamination/cross-engine numa única decisão
+  GO/NO_GO). Nova função pura `isSameRun(artifact, currentRun)` exige `runId` E
+  `sourceFingerprint` idênticos — qualquer artefato ausente, com decisão negativa, ou de outro
+  run vira um motivo explícito em `lockReasons` (nunca um bloqueio genérico). Frontend
+  (`EngineeringReleaseClosurePage.jsx`) passou a exibir "Mesmo run corrente?" por artefato, um
+  card dedicado ao Final Consistency Gate, e uma caixa vermelha com o `lockReasons` exato.
+- tests: `tests/integration/engineeringReleaseClosureAuthority.test.js` (novo) — 5 testes de
+  unidade para `isSameRun` (runId+fingerprint iguais, runId diferente, fingerprint diferente,
+  artefato nulo, run corrente nulo) + 2 testes de integração rodando `getReleaseClosure()` REAL
+  contra o estado REAL do repositório/Postgres, provando que `cleanReleaseState` nunca é `true`
+  com `lockReasons` não vazio, e que qualquer artefato fora do run corrente aparece com o motivo
+  `*_FOREIGN_RUN`/`*_NOT_GO`/`*_MISSING` exato. 7/7 GREEN.
+- evidence: gate `RELEASE_CLOSURE_USES_REAL_RUN_AUTHORITY` +
+  `RELEASE_CLOSURE_NEVER_ACCEPTS_FOREIGN_RUN_EVIDENCE` + `RELEASE_CLOSURE_TEST_COVERAGE`
+  (novos, incorporados a `scripts/governance/validate-engineering-router-v1.js`, gate completo
+  GREEN com 78 checagens/0 falhas). Regressão relacionada ao Engineering Router (23 suítes/119
+  testes) GREEN.
+- status: GREEN
 
 ### ERV1-CLOSE-010 — Runtime certification
 
