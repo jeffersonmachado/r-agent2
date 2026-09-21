@@ -1,6 +1,6 @@
 'use strict';
 
-const { checkPathBoundary } = require('../../engine/engineeringRouter/pathBoundary');
+const { checkPathBoundary, resolvePathSegments } = require('../../engine/engineeringRouter/pathBoundary');
 
 describe('engineeringRouter/pathBoundary', () => {
   test('permite caminho dentro do allowedPaths com glob **', () => {
@@ -37,5 +37,53 @@ describe('engineeringRouter/pathBoundary', () => {
     expect(attempt1.ok).toBe(true);
     expect(attempt2.ok).toBe(false);
     expect(attempt3.ok).toBe(false);
+  });
+
+  // ERV1-CLOSE-010 (teste adversarial de segurança) — achado real: `checkPathBoundary` fazia
+  // match do allowedPaths glob via STRING CRUA, sem nunca resolver `..` — um caminho como
+  // `tests/fixtures/engineering-router-sandbox/../../../etc/passwd` batia no glob
+  // `tests/fixtures/engineering-router-sandbox/**` (o `**` "engolia" literalmente o
+  // `../../../etc/passwd` como texto) e o boundary check retornava `ok:true` para um escape
+  // real. `git apply` de fato rejeita qualquer path com `..` (defesa em profundidade incidental
+  // no pipeline real), mas a autoridade que o Task Contract afirma garantir dava falso-positivo.
+  describe('path traversal (achado real, corrigido nesta versão)', () => {
+    const contract = { allowedPaths: ['tests/fixtures/engineering-router-sandbox/**'] };
+
+    test('resolvePathSegments colapsa .. como o filesystem resolveria', () => {
+      expect(resolvePathSegments('a/b/../c')).toBe('a/c');
+      expect(resolvePathSegments('a/./b')).toBe('a/b');
+      expect(resolvePathSegments('a/b/..')).toBe('a');
+    });
+
+    test('resolvePathSegments retorna null quando o caminho sobe acima da raiz', () => {
+      expect(resolvePathSegments('a/../../b')).toBeNull();
+      expect(resolvePathSegments('../etc/passwd')).toBeNull();
+    });
+
+    test('travessia que escapa para fora do allowedPaths é rejeitada (nunca aceita por match de string crua)', () => {
+      const result = checkPathBoundary(['tests/fixtures/engineering-router-sandbox/../../../etc/passwd'], contract);
+      expect(result.ok).toBe(false);
+      expect(result.code).toBe('PATCH_OUTSIDE_ALLOWED_SCOPE');
+    });
+
+    test('travessia profunda o bastante para subir acima da raiz do repositório é rejeitada com PATH_ESCAPES_ROOT', () => {
+      const result = checkPathBoundary(['tests/fixtures/engineering-router-sandbox/../../../../../../etc/passwd'], contract);
+      expect(result.ok).toBe(false);
+      expect(result.violations[0].reason).toBe('PATH_ESCAPES_ROOT');
+    });
+
+    test('.. legítimo que permanece DENTRO do escopo continua funcionando (nunca um falso-positivo)', () => {
+      const result = checkPathBoundary(['tests/fixtures/engineering-router-sandbox/subdir/../mathUtils.js'], contract);
+      expect(result.ok).toBe(true);
+    });
+
+    test('forbiddenPaths continua vencendo mesmo depois da resolução de ..', () => {
+      const result = checkPathBoundary(['tests/fixtures/engineering-router-sandbox/subdir/../secret.env'], {
+        allowedPaths: ['tests/fixtures/engineering-router-sandbox/**'],
+        forbiddenPaths: ['tests/fixtures/engineering-router-sandbox/secret.env'],
+      });
+      expect(result.ok).toBe(false);
+      expect(result.violations[0].reason).toBe('FORBIDDEN_PATH');
+    });
   });
 });

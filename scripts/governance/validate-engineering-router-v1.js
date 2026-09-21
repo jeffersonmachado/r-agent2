@@ -174,6 +174,17 @@ function main() {
     id: 'PATH_BOUNDARY',
     ...checkFileContains('engine/engineeringRouter/pathBoundary.js', [/checkPathBoundary/]),
   });
+  // ERV1-CLOSE-010 (teste adversarial de segurança): achado real — `checkPathBoundary` fazia
+  // match do glob de allowedPaths via string crua, sem nunca resolver segmentos `..`. Um path
+  // como `<escopo>/../../../etc/passwd` batia no glob `<escopo>/**` (o `**` "engolia" o
+  // `../../../etc/passwd` como texto) e retornava `ok:true` para um escape real da árvore
+  // autorizada. `git apply` de fato rejeita qualquer path com `..` (defesa em profundidade
+  // incidental), mas o boundary check em si — a autoridade que o Task Contract afirma garantir —
+  // dava falso-positivo. Corrigido resolvendo `..`/`.` antes de qualquer match de glob.
+  checks.push({
+    id: 'PATH_BOUNDARY_TRAVERSAL_RESOLVED',
+    ...checkFileContains('engine/engineeringRouter/pathBoundary.js', [/resolvePathSegments/, /PATH_ESCAPES_ROOT/]),
+  });
   checks.push({
     id: 'CONTROLLED_APPLY',
     ...checkFileContains('api/services/engineeringRouter/patchApplyService.js', [/git worktree/i, /createWorkspace/, /destroyWorkspace/, /normalizeHunkHeaders/]),
@@ -439,6 +450,8 @@ function main() {
     'tests/contracts/engineeringCoderReviewerService.test.js',
     'tests/integration/engineeringPatchApplyAndTestRunner.test.js',
     'tests/unit/engineeringRouterHunkNormalizer.test.js',
+    'tests/unit/engineeringRouterPathBoundary.test.js',
+    'tests/unit/engineeringRouterPatchValidator.test.js',
     'tests/integration/engineeringRouterFullLoopE2E.test.js',
     'tests/unit/engineeringModelAvailabilityService.test.js',
     'tests/unit/engineeringRouterCommandExecutionSecurity.test.js',

@@ -37,7 +37,7 @@ const RUNTIME_ITEMS = [
   { id: 'SHELL_INJECTION_REJECTED', testPath: 'tests/unit/engineeringRouterCommandExecutionSecurity.test.js' },
   { id: 'SAFE_ENVIRONMENT', testPath: 'tests/unit/engineeringRouterSafeEnvironment.test.js' },
   { id: 'SECRET_REDACTION_MULTILINE', testPath: 'tests/unit/engineeringRouterSecretRedactionMultiline.test.js' },
-  { id: 'PATCH_PATH_BOUNDARIES', testPath: 'tests/unit/engineeringRouterPatchValidator.test.js' },
+  { id: 'PATCH_PATH_BOUNDARIES', testPath: 'tests/unit/engineeringRouterPathBoundary.test.js' },
   { id: 'ACTUAL_PATCH_APPLY', testPath: 'tests/integration/engineeringPatchApplyAndTestRunner.test.js' },
   { id: 'DETERMINISTIC_FAILING_TEST_RED', testPath: 'tests/integration/engineeringRouterFullLoopE2E.test.js' },
   { id: 'RED_TO_FIX', testPath: 'tests/integration/engineeringRouterFullLoopE2E.test.js' },
