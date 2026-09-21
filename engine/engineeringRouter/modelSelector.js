@@ -31,6 +31,12 @@ function evaluateCandidate(model, { requiredCapabilities }) {
   if (model.healthy === false) {
     return { qualified: false, reasons: [REASON_CODES.PROVIDER_UNHEALTHY] };
   }
+  // ERV1-CLOSE-008: provider saudável (breaker fechado) não implica que ESTE modelId funcione —
+  // `available` vem de falhas reais recentes específicas do modelo (404/retirado/auth negada),
+  // não do circuit breaker do provider.
+  if (model.available === false) {
+    return { qualified: false, reasons: [REASON_CODES.MODEL_UNAVAILABLE] };
+  }
   const missing = (requiredCapabilities || []).filter((c) => !model.capabilities.includes(c));
   if (missing.length > 0) {
     return { qualified: false, reasons: [REASON_CODES.CAPABILITY_MISSING], missing };
@@ -56,11 +62,15 @@ function compareCandidates(a, b, preferredCostClass) {
  *
  * @returns {{selected: Object|null, qualifiedCandidates: Object[], reasonCodes: string[]}}
  */
-function selectForRole(availableModels, { role, requiredCapabilities, preferredCostClass = 'ANY', excludeProviderId = null }) {
+function selectForRole(availableModels, { role, requiredCapabilities, preferredCostClass = 'ANY', excludeProviderId = null, excludedModelKeys = null }) {
   const roleCandidates = (availableModels || []).filter((m) => Array.isArray(m.roles) && m.roles.includes(role));
+  const excludedKeys = excludedModelKeys instanceof Set ? excludedModelKeys : null;
 
   const evaluated = roleCandidates
     .filter((m) => !excludeProviderId || m.providerId !== excludeProviderId)
+    // ERV1-CLOSE-008: reroute dentro da mesma task exclui explicitamente o(s) modelo(s) que já
+    // falharam nesta tentativa — nunca reselecionar o mesmo candidato que acabou de quebrar.
+    .filter((m) => !excludedKeys || !excludedKeys.has(`${m.providerId}:${m.modelId}`))
     .map((m) => ({ model: m, evaluation: evaluateCandidate(m, { requiredCapabilities }) }));
 
   const qualified = evaluated.filter((e) => e.evaluation.qualified).map((e) => e.model);
@@ -108,11 +118,13 @@ function selectCoderAndReviewer(availableModels, {
   preferredCostClass = 'ANY',
   independentReviewRequired = false,
   policyVersion,
+  excludedModelKeys = null,
 }) {
   const coder = selectForRole(availableModels, {
     role: 'CODER',
     requiredCapabilities: coderCapabilities,
     preferredCostClass,
+    excludedModelKeys,
   });
 
   const excludeProviderId = independentReviewRequired && coder.selected ? coder.selected.providerId : null;
@@ -122,6 +134,7 @@ function selectCoderAndReviewer(availableModels, {
     requiredCapabilities: reviewerCapabilities,
     preferredCostClass,
     excludeProviderId,
+    excludedModelKeys,
   });
 
   let independentReviewApplied = false;
@@ -137,6 +150,7 @@ function selectCoderAndReviewer(availableModels, {
         role: 'REVIEWER',
         requiredCapabilities: reviewerCapabilities,
         preferredCostClass,
+        excludedModelKeys,
       });
       reviewer = {
         ...fallback,

@@ -33,6 +33,7 @@ const { review } = require('./reviewerService');
 const { createWorkspace, applyPatch, destroyWorkspace, listChangedFiles } = require('./patchApplyService');
 const { runTestCommands } = require('./testRunnerService');
 const { buildAvailableModels, DEFAULT_TENANT_ID } = require('./engineeringModelAvailabilityService');
+const modelAvailabilityStore = require('./modelAvailabilityStore');
 const { validatePatch } = require('../../../engine/engineeringRouter/patchValidator');
 const { getPolicy, requiresIndependentReview } = require('../../../engine/engineeringRouter/routingPolicy');
 const { selectCoderAndReviewer } = require('../../../engine/engineeringRouter/modelSelector');
@@ -130,10 +131,23 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       meta: { code: err.code },
     });
     if (err.code === FAILURE_CODES.PROVIDER_UNAVAILABLE) {
-      return { outcome: 'FATAL', reasonCode: FAILURE_CODES.PROVIDER_UNAVAILABLE, attempt };
+      // ERV1-CLOSE-008: provider saudável não implica que ESTE modelo funcione (ex.: 404
+      // "modelo não existe"). Marca o modelo específico e sinaliza reroute em vez de derrubar a
+      // task inteira de cara — o orquestrador tenta o próximo candidato qualificado antes de
+      // desistir.
+      const classified = modelAvailabilityStore.classifyModelFailure(err);
+      modelAvailabilityStore.markUnavailable(coderSelection.providerId, coderSelection.modelId, classified);
+      return {
+        outcome: 'REROUTE',
+        role: 'CODER',
+        failedModelKey: `${coderSelection.providerId}:${coderSelection.modelId}`,
+        reasonCode: FAILURE_CODES.PROVIDER_UNAVAILABLE,
+        attempt,
+      };
     }
     return { outcome: 'RETRY', failureBundle: { failedCommand: 'CODER_GENERATION', stderr: err.message, code: err.code }, attempt };
   }
+  modelAvailabilityStore.markAvailable(coderSelection.providerId, coderSelection.modelId);
 
   await engineeringTaskService.recordTelemetry({
     ...telemetryBase,
@@ -275,10 +289,19 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
         meta: { code: err.code },
       });
       if (err.code === FAILURE_CODES.PROVIDER_UNAVAILABLE) {
-        return { outcome: 'FATAL', reasonCode: FAILURE_CODES.PROVIDER_UNAVAILABLE, attempt };
+        const classified = modelAvailabilityStore.classifyModelFailure(err);
+        modelAvailabilityStore.markUnavailable(reviewerSelection.providerId, reviewerSelection.modelId, classified);
+        return {
+          outcome: 'REROUTE',
+          role: 'REVIEWER',
+          failedModelKey: `${reviewerSelection.providerId}:${reviewerSelection.modelId}`,
+          reasonCode: FAILURE_CODES.PROVIDER_UNAVAILABLE,
+          attempt,
+        };
       }
       return { outcome: 'RETRY', failureBundle: { failedCommand: 'REVIEW_STAGE', stderr: err.message }, attempt };
     }
+    modelAvailabilityStore.markAvailable(reviewerSelection.providerId, reviewerSelection.modelId);
 
     await engineeringTaskService.recordTelemetry({
       ...reviewTelemetryBase,
@@ -384,6 +407,11 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
   const lastAttempt = existingAttempts[existingAttempts.length - 1] || null;
   if (lastAttempt && lastAttempt.failure_bundle) failureBundle = lastAttempt.failure_bundle;
 
+  // ERV1-CLOSE-008: acumula, para esta execução da task, todo modelo que já falhou por
+  // indisponibilidade real — nunca reselecionar o mesmo candidato quebrado num reroute
+  // seguinte dentro da mesma task.
+  const excludedModelKeys = new Set();
+
   while (iterationsUsed < task.max_iterations) {
     const result = await runOneAttempt({ task, routingDecision: task.routing_decision, failureBundle, previousAttempt: lastAttempt, credentialScope, eventAudienceTenantId });
     iterationsUsed += 1;
@@ -393,6 +421,52 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
       await engineeringTaskService.transitionTask(taskId, 'RED');
       emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: `Falha fatal: ${result.reasonCode}` });
       return { taskId, status: 'RED', reasonCode: result.reasonCode };
+    }
+
+    if (result.outcome === 'REROUTE') {
+      excludedModelKeys.add(result.failedModelKey);
+      const policy = getPolicy(task.task_type);
+      const independentRequired = requiresIndependentReview(task.task_type, task.risk);
+      const availableModels = await buildAvailableModels({ tenantId: credentialScope });
+      const newRoutingDecision = selectCoderAndReviewer(availableModels, {
+        coderCapabilities: policy.coderCapabilities,
+        reviewerCapabilities: policy.reviewerCapabilities,
+        preferredCostClass: policy.preferredCostClass,
+        independentReviewRequired: independentRequired,
+        policyVersion: policy.policyVersion,
+        excludedModelKeys,
+      });
+
+      const stillNoCandidate = result.role === 'CODER'
+        ? !newRoutingDecision.coder?.selected
+        : !newRoutingDecision.reviewer?.selected;
+
+      if (stillNoCandidate) {
+        await engineeringTaskService.saveLastError(taskId, {
+          code: FAILURE_CODES.NO_ALTERNATIVE_CANDIDATE,
+          message: `Nenhum ${result.role} alternativo disponível após ${result.failedModelKey} falhar (${result.reasonCode})`,
+        });
+        await engineeringTaskService.transitionTask(taskId, 'RED');
+        emitTaskStage(eventAudienceTenantId, taskId, {
+          stage: 'RED',
+          status: 'error',
+          message: `Nenhum ${result.role} alternativo qualificado após ${result.failedModelKey} falhar.`,
+        });
+        return { taskId, status: 'RED', reasonCode: FAILURE_CODES.NO_ALTERNATIVE_CANDIDATE };
+      }
+
+      await engineeringTaskService.saveRoutingDecision(taskId, newRoutingDecision);
+      task = { ...task, routing_decision: newRoutingDecision };
+      const newSelection = result.role === 'CODER' ? newRoutingDecision.coder.selected : newRoutingDecision.reviewer.selected;
+      emitTaskStage(eventAudienceTenantId, taskId, {
+        stage: 'REROUTE',
+        status: 'info',
+        message: `${result.failedModelKey} indisponível — reroteado para ${newSelection.providerId}:${newSelection.modelId} (${result.role}).`,
+        meta: { failedModelKey: result.failedModelKey, role: result.role, reasonCode: result.reasonCode },
+      });
+      failureBundle = { failedCommand: `${result.role}_REROUTE`, stderr: `${result.failedModelKey} indisponível (${result.reasonCode})` };
+      logger.info('[engineeringRouterService] reroute de modelo', { taskId, role: result.role, failedModelKey: result.failedModelKey });
+      continue;
     }
 
     if (result.outcome === 'ADVANCE') {

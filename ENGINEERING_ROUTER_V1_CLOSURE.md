@@ -125,7 +125,30 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
 
 ### ERV1-CLOSE-008 — Model-level availability + reroute
 
-- status: PENDENTE
+- RED reproduced: por inspeção de código — `runOneAttempt` tratava QUALQUER erro
+  `PROVIDER_UNAVAILABLE` do CODER/REVIEWER como `outcome:'FATAL'`, indo direto para RED sem
+  tentar nenhum outro candidato qualificado. Achado real do próprio pilot desta missão
+  (documentado em `ENGINEERING_MODEL_ROUTER_MANUAL.md`): `openai:gpt-5.5-pro`/`gpt-5-codex`
+  retornaram 404 real ("modelo não existe") enquanto `openai` em si estava saudável — o
+  circuit breaker nunca abre por isso (erro de modelo, não de provider).
+- fix: novo `modelAvailabilityStore.js` (estado em memória com TTL, mesmo padrão do circuit
+  breaker) rastreia disponibilidade por `providerId:modelId` (`AVAILABLE|UNAVAILABLE|RETIRED|
+  AUTH_DENIED|RATE_LIMITED|TEMPORARILY_UNAVAILABLE`), classificando a falha real
+  (`classifyModelFailure`). `modelSelector.evaluateCandidate` passou a checar `model.available`;
+  `selectForRole`/`selectCoderAndReviewer` aceitam `excludedModelKeys` para excluir
+  explicitamente modelos que já falharam NESTA execução da task.
+  `engineeringRouterService`: falha `PROVIDER_UNAVAILABLE` do CODER/REVIEWER agora retorna
+  `outcome:'REROUTE'` (marca o modelo indisponível) em vez de FATAL; `executeRoutedLoop`
+  reseleciona `{coder,reviewer}` excluindo os modelos já marcados e continua a MESMA task —
+  só vai a RED (`NO_ALTERNATIVE_CANDIDATE`) se não sobrar nenhum candidato.
+- tests: `tests/integration/engineeringRouterModelRerouteE2E.test.js` (1/1 PASS) — infra real
+  (DB, git worktree, jest real): provider `anthropic` (3 modelos CODER-qualificados) sempre
+  falha com 404 real; o Router reroteia pelos 3 modelos anthropic até `mistral` (único
+  candidato saudável restante) e chega em GREEN na mesma task, com o histórico de tentativas
+  provando o provider quebrado e o `routing_decision` final apontando para o que funciona.
+- evidence: gate `MODEL_LEVEL_AVAILABILITY` + `MODEL_REROUTE_WITHIN_TASK` +
+  `MODEL_SELECTOR_RESPECTS_AVAILABILITY`.
+- status: GREEN
 
 ### ERV1-CLOSE-009 — Restart/resume + concorrência
 

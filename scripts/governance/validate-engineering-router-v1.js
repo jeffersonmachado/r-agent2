@@ -174,6 +174,24 @@ function main() {
       /RETRY/,
     ]),
   });
+  // ERV1-CLOSE-008: provider saudável (breaker fechado) não implica modelId válido — reroute
+  // real dentro da MESMA task quando um modelo específico falha, em vez de FATAL/RED imediato.
+  checks.push({
+    id: 'MODEL_LEVEL_AVAILABILITY',
+    ...checkFileContains('api/services/engineeringRouter/modelAvailabilityStore.js', [
+      /AVAILABILITY_STATES/, /markUnavailable/, /isUsable/, /classifyModelFailure/,
+    ]),
+  });
+  checks.push({
+    id: 'MODEL_REROUTE_WITHIN_TASK',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /outcome === 'REROUTE'/, /excludedModelKeys/, /NO_ALTERNATIVE_CANDIDATE/,
+    ]),
+  });
+  checks.push({
+    id: 'MODEL_SELECTOR_RESPECTS_AVAILABILITY',
+    ...checkFileContains('engine/engineeringRouter/modelSelector.js', [/model\.available/, /excludedModelKeys/]),
+  });
 
   // 9. Review loop independente.
   checks.push({
@@ -235,6 +253,7 @@ function main() {
     'tests/unit/engineeringRouterCommandExecutionSecurity.test.js',
     'tests/unit/engineeringRouterSafeEnvironment.test.js',
     'tests/unit/engineeringRouterSecretRedactionMultiline.test.js',
+    'tests/integration/engineeringRouterModelRerouteE2E.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });

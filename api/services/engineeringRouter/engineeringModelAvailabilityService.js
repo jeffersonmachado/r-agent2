@@ -32,6 +32,7 @@ const { listCapabilityEntries } = require('../../../engine/engineeringRouter/mod
 const { getRuntimeProviders } = require('../aiProviderRegistryService');
 const { getBreakerStates } = require('../aiControlPlaneStatus');
 const { getCredentialDetailsMap } = require('../tenantAIService');
+const modelAvailabilityStore = require('./modelAvailabilityStore');
 const logger = require('../../utils/logger');
 
 const DEFAULT_TENANT_ID = process.env.ENGINEERING_ROUTER_TENANT_ID || 'system';
@@ -89,6 +90,13 @@ async function buildAvailableModels({ tenantId = DEFAULT_TENANT_ID } = {}) {
     const hasCredential = Boolean(credentialInfo?.hasCredential)
       && !KNOWN_BAD_CREDENTIAL_STATUSES.has(credentialInfo?.status);
 
+    // ERV1-CLOSE-008: provider healthy (breaker fechado) não implica que ESTE modelId
+    // específico funcione — ver nota no topo do arquivo (gpt-5.5-pro/gpt-5-codex 404 reais
+    // enquanto openai em si estava saudável). `available` é `false` quando uma falha real
+    // recente marcou este providerId:modelId como RETIRED/AUTH_DENIED/RATE_LIMITED/etc.
+    const modelAvailability = modelAvailabilityStore.getAvailability(entry.providerId, entry.modelId);
+    const available = modelAvailabilityStore.isUsable(entry.providerId, entry.modelId);
+
     results.push({
       providerId: entry.providerId,
       modelId: entry.modelId,
@@ -99,6 +107,8 @@ async function buildAvailableModels({ tenantId = DEFAULT_TENANT_ID } = {}) {
       enabled,
       healthy,
       hasCredential,
+      available,
+      availabilityReason: available ? null : (modelAvailability.reason || modelAvailability.availability),
     });
   }
 
