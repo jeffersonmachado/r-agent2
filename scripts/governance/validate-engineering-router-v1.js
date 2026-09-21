@@ -15,7 +15,88 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ROOT, writeReport, exists, readText } = require('./common');
+const { ROOT, writeReport, exists, readText, readJson } = require('./common');
+const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
+
+// ERV1-CLOSE-010 (Runtime certification): os IDs abaixo têm que bater exatamente com
+// `RUNTIME_ITEMS` em collect-engineering-router-runtime-evidence.js — mesma lista, autoridade
+// única, nunca duplicada com valores divergentes.
+const REQUIRED_RUNTIME_ITEM_IDS = Object.freeze([
+  'SHELL_INJECTION_REJECTED',
+  'SAFE_ENVIRONMENT',
+  'SECRET_REDACTION_MULTILINE',
+  'PATCH_PATH_BOUNDARIES',
+  'ACTUAL_PATCH_APPLY',
+  'DETERMINISTIC_FAILING_TEST_RED',
+  'RED_TO_FIX',
+  'INDEPENDENT_REVIEW',
+  'REVIEWER_REJECTION_RECODE',
+  'REGRESSION_EXECUTION',
+  'GOVERNANCE_EXECUTION',
+  'PROVIDER_MODEL_FAILURE_REROUTE',
+  'RESTART_RESUME',
+  'CONTROLLED_PROMOTION',
+  'POST_PROMOTION_VERIFICATION',
+  'DEVELOPMENT_AUTHORIZATION',
+  'PRODUCTION_DENIAL',
+  'SUPPORT_DENIAL_DEFAULT',
+  'TENANT_CREDENTIAL_ISOLATION',
+  'RELEASE_CLOSURE_SAME_RUN_INTEGRITY',
+]);
+
+/**
+ * ERV1-CLOSE-010: gate must FAIL se a evidência de runtime estiver ausente, velha (fingerprint
+ * de outra versão do código) ou com qualquer item de exitCode != 0 — nunca aceitar "já rodou algum
+ * dia" como prova de comportamento atual. Cada item aqui vira um `check` normal, entrando no
+ * mesmo `failed`/`status` do restante do gate (nunca uma categoria "best effort" separada que
+ * pode ser ignorada).
+ */
+function buildRuntimeChecks() {
+  const runtimeChecks = [];
+  const evidence = readJson('reports/engineering-router-v1-runtime-evidence.json');
+
+  if (!evidence) {
+    runtimeChecks.push({
+      id: 'RUNTIME_EVIDENCE_PRESENT',
+      ok: false,
+      reason: 'reports/engineering-router-v1-runtime-evidence.json ausente — rode `node scripts/governance/collect-engineering-router-runtime-evidence.js` antes do gate (ERV1-CLOSE-010: sem evidência de runtime, o gate nunca pode aprovar)',
+    });
+    for (const id of REQUIRED_RUNTIME_ITEM_IDS) {
+      runtimeChecks.push({ id: `RUNTIME_${id}`, ok: false, reason: 'evidência de runtime ausente' });
+    }
+    return runtimeChecks;
+  }
+
+  const currentFingerprint = computeSourceFingerprint(ROOT);
+  const isFresh = evidence.sourceFingerprint === currentFingerprint;
+  runtimeChecks.push({
+    id: 'RUNTIME_EVIDENCE_FRESH',
+    ok: isFresh,
+    reason: isFresh
+      ? undefined
+      : `evidência de runtime é de outra versão do código (sourceFingerprint divergente) — evidência: ${evidence.sourceFingerprint?.slice(0, 16)}…, atual: ${currentFingerprint.slice(0, 16)}… (rode o coletor de novo)`,
+  });
+
+  const byId = new Map((evidence.items || []).map((i) => [i.id, i]));
+  for (const id of REQUIRED_RUNTIME_ITEM_IDS) {
+    const item = byId.get(id);
+    if (!item) {
+      runtimeChecks.push({ id: `RUNTIME_${id}`, ok: false, reason: `item de evidência de runtime ausente: ${id}` });
+      continue;
+    }
+    runtimeChecks.push({
+      id: `RUNTIME_${id}`,
+      // Um item de runtime só conta se a evidência inteira for fresca E o exitCode real for 0 —
+      // uma evidência velha nunca "empresta" seu PASS para o commit atual.
+      ok: isFresh && item.exitCode === 0,
+      reason: !isFresh
+        ? 'evidência de runtime obsoleta (ver RUNTIME_EVIDENCE_FRESH)'
+        : (item.exitCode !== 0 ? `${item.testPath}: exitCode real ${item.exitCode} (não é 0)` : undefined),
+    });
+  }
+
+  return runtimeChecks;
+}
 
 function checkFileContains(relPath, patterns) {
   if (!exists(relPath)) return { ok: false, reason: `arquivo ausente: ${relPath}` };
@@ -290,6 +371,25 @@ function main() {
     reason: 'faltando tests/integration/engineeringReleaseClosureAuthority.test.js (ERV1-CLOSE-007)',
   });
 
+  // ERV1-CLOSE-010: certificação de runtime precisa existir como coletor real (nunca só como
+  // "código contém padrão X") e o modo `--runtime` precisa estar isolado do modo padrão usado
+  // pelo gate ao vivo (checkGovernance) — ver comentário grande mais abaixo sobre o deadlock de
+  // bootstrap que essa separação evita.
+  checks.push({
+    id: 'RUNTIME_CERTIFICATION_COLLECTOR_EXISTS',
+    ...checkFileContains('scripts/governance/collect-engineering-router-runtime-evidence.js', [
+      /RUNTIME_ITEMS/, /computeSourceFingerprint/, /engineering-router-v1-runtime-evidence/,
+    ]),
+  });
+  checks.push({
+    id: 'RUNTIME_MODE_SEPARATED_FROM_LIVE_GATE',
+    ok: (() => {
+      const src = readText('scripts/governance/validate-engineering-router-v1.js');
+      return /process\.argv\.includes\('--runtime'\)/.test(src) && /RUNTIME_NOT_REQUESTED/.test(src);
+    })(),
+    reason: 'o modo padrão do gate (usado por checkGovernance no loop ao vivo) precisa continuar sem exigir evidência de runtime — só --runtime explícito ativa RUNTIME_PASS (ERV1-CLOSE-010)',
+  });
+
   // 10. Telemetria básica.
   checks.push({ id: 'TELEMETRY_MODEL', ok: exists('api/db/models/EngineeringTelemetryEvent.js'), reason: 'model de telemetria ausente' });
 
@@ -350,6 +450,8 @@ function main() {
     'tests/integration/engineeringRegressionGovernanceService.test.js',
     'tests/integration/engineeringRouterRegressionGovernanceGate.test.js',
     'tests/integration/engineeringPromotionService.test.js',
+    'tests/integration/engineeringReleaseClosureAuthority.test.js',
+    'tests/integration/engineeringRouterReviewerRejectionRecodeE2E.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });
@@ -369,20 +471,48 @@ function main() {
     checks.push({ id: `DOC_${path.basename(d, '.md')}`, ok: exists(d), reason: `${d} ausente` });
   }
 
+  // ERV1-CLOSE-010: STRUCTURAL_PASS (tudo acima — o código CONTÉM os padrões esperados) é
+  // necessário mas nunca suficiente. RUNTIME_PASS (abaixo) prova que o comportamento
+  // efetivamente ACONTECE, com exitCode real e evidência amarrada à versão atual do código.
+  //
+  // RUNTIME_PASS só entra com a flag `--runtime` explícita — NUNCA no modo padrão. Achado real
+  // ao ligar isto: este MESMO script (`validate-engineering-router-v1.js`) é invocado como
+  // subprocess por `checkGovernance()` (regressionGovernanceService.js), que por sua vez é
+  // chamado dentro do estágio GOVERNANCE de TODA EngineeringTask real, no caminho quente do
+  // próprio loop de auto-melhoria. Exigir evidência de runtime sempre fresca (fingerprint exato)
+  // ali criaria um deadlock de bootstrap: nenhuma task chegaria a GREEN sem evidência fresca, e
+  // gerar evidência fresca exige rodar vários testes que passam pelo próprio estágio GOVERNANCE
+  // (logo, por este gate) — nunca poderiam ficar frescos ao mesmo tempo. RUNTIME_PASS é portanto
+  // uma certificação separada, para release closure/CI (`npm run
+  // validate:engineering-router-v1:runtime`), nunca parte do gate por-task ao vivo.
+  const structuralFailed = checks.filter((c) => !c.ok);
+  const structuralStatus = structuralFailed.length === 0 ? 'STRUCTURAL_PASS' : 'STRUCTURAL_FAIL';
+
+  const runtimeMode = process.argv.includes('--runtime');
+  const runtimeChecks = runtimeMode ? buildRuntimeChecks() : [];
+  const runtimeFailed = runtimeChecks.filter((c) => !c.ok);
+  const runtimeStatus = !runtimeMode ? 'RUNTIME_NOT_REQUESTED' : (runtimeFailed.length === 0 ? 'RUNTIME_PASS' : 'RUNTIME_FAIL');
+
+  checks.push(...runtimeChecks);
   const failed = checks.filter((c) => !c.ok);
+
   const report = {
     status: failed.length === 0 ? 'PASS' : 'FAIL',
     decision: failed.length === 0 ? 'ENGINEERING_ROUTER_V1_GO' : 'ENGINEERING_ROUTER_V1_GAPS',
+    structuralStatus,
+    runtimeStatus,
     artifactType: 'engineering-router-v1-report',
     artifactVersion: '1.0.0',
     totalChecks: checks.length,
     failedChecks: failed.length,
+    structuralFailedChecks: structuralFailed.length,
+    runtimeFailedChecks: runtimeFailed.length,
     checks,
   };
 
   writeReport('engineering-router-v1-report.json', report);
 
-  console.log(`[engineering-router-v1] status=${report.status} checks=${checks.length} falhas=${failed.length}`);
+  console.log(`[engineering-router-v1] status=${report.status} (${structuralStatus}/${runtimeStatus}) checks=${checks.length} falhas=${failed.length}`);
   if (failed.length > 0) {
     for (const f of failed) console.log(` - ${f.id}: ${f.reason}`);
   }

@@ -78,6 +78,27 @@ describe('engineering-router routes', () => {
     expect(body.error).toBe('classification_required');
   });
 
+  // ERV1-CLOSE-010: o teste anterior só prova "ausência de classification" (default do
+  // middleware). Autorização real precisa negar EXPLICITAMENTE cada classificação que não seja
+  // DEVELOPMENT — nunca assumir que "não é o default" cobre todo o resto.
+  test('403 quando classification é PRODUCTION explicitamente', async () => {
+    deps = buildDepsFactory({ requireAuth: (req) => { req.agent = { platformClassification: 'PRODUCTION' }; return { valid: true }; } });
+    server = await startServer(deps);
+    const res = await fetch(`${baseUrl(server)}/engineering/overview`);
+    const body = await res.json();
+    expect(res.status).toBe(403);
+    expect(body.error).toBe('classification_required');
+  });
+
+  test('403 quando classification é SUPPORT (negado por padrão, sem allowlist explícita)', async () => {
+    deps = buildDepsFactory({ requireAuth: (req) => { req.agent = { platformClassification: 'SUPPORT' }; return { valid: true }; } });
+    server = await startServer(deps);
+    const res = await fetch(`${baseUrl(server)}/engineering/overview`);
+    const body = await res.json();
+    expect(res.status).toBe(403);
+    expect(body.error).toBe('classification_required');
+  });
+
   test('GET /engineering/overview retorna 200 para usuário DEVELOPMENT', async () => {
     deps = buildDepsFactory({ requireAuth: (req) => { req.agent = { platformClassification: 'DEVELOPMENT' }; return { valid: true }; } });
     server = await startServer(deps);

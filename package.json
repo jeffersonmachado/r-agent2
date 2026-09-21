@@ -132,6 +132,8 @@
     "validate:release-artifact-identity": "node scripts/governance/verify-release-artifact-identity.js",
     "validate:route-mounts": "node scripts/governance/validate-route-mounts.js",
     "validate:engineering-router-v1": "node scripts/governance/validate-engineering-router-v1.js",
+    "collect:engineering-router-runtime-evidence": "node scripts/governance/collect-engineering-router-runtime-evidence.js",
+    "validate:engineering-router-v1:runtime": "npm run collect:engineering-router-runtime-evidence && node scripts/governance/validate-engineering-router-v1.js --runtime",
     "validate:agent-adherence": "node scripts/governance/validate-agent-adherence.js",
     "validate:self-proving": "node scripts/governance/validate-self-proving.js",
     "validate:system-scope-audit": "node scripts/governance/generate-system-scope-audit.js",

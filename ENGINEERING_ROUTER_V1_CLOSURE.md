@@ -284,7 +284,68 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
 
 ### ERV1-CLOSE-010 — Runtime certification
 
-- status: PENDENTE
+- RED reproduzido (achado real, não fixture): antes desta correção,
+  `scripts/governance/validate-engineering-router-v1.js` provava apenas STRUCTURAL_PASS — que o
+  código-fonte CONTÉM os padrões esperados (regex sobre arquivo). Nunca provava que o
+  comportamento REALMENTE acontece: um teste quebrado silenciosamente, código morto, ou uma
+  regressão introduzida depois do commit em que o check foi escrito passariam despercebidos.
+  Levantando o inventário dos 20 itens de evidência de runtime exigidos pela missão, dois achados
+  reais adicionais surgiram:
+  1. **Bug real de estado terminal**: `acquireRunLock` (engineeringRouterService.js) checava
+     estado terminal com uma lista hardcoded `['GREEN','RED','BLOCKED','CANCELLED']` em vez de
+     `TERMINAL_STATES` — o MESMO bug já corrigido uma vez em `computeOverview()` quando
+     `READY_FOR_PROMOTION` virou terminal (ERV1-CLOSE-005). Impacto real confirmado: `POST
+     /engineering/tasks/:id/run` numa task `READY_FOR_PROMOTION` não caía no fast-path
+     idempotente e ia direto para `lockForRun`, que rejeitava com `TASK_TERMINAL` — erro não
+     tratado especificamente pela rota, virando **500** em vez do 200 idempotente correto.
+     Corrigido importando `TERMINAL_STATES` da fonte única (commit `604ffd30`).
+  2. **Lacuna real de evidência**: nenhum teste do repositório provava, ponta a ponta, o item
+     "reviewer rejection→recode" — `engineeringCoderReviewerService.test.js` só provava o parsing
+     isolado da decisão REJECT, nunca que a task inteira reage com uma nova tentativa real
+     (persistida, com o failureBundle do reviewer) em vez de travar/RED direto. Corrigido com um
+     novo teste E2E real (`engineeringRouterReviewerRejectionRecodeE2E.test.js`).
+  3. **Deadlock de bootstrap descoberto ao ligar RUNTIME_PASS no modo padrão do gate**: este MESMO
+     script é invocado como subprocess por `checkGovernance()`
+     (`regressionGovernanceService.js`), chamado dentro do estágio GOVERNANCE de TODA
+     EngineeringTask real — caminho quente do próprio loop de auto-melhoria. Exigir evidência de
+     runtime sempre fresca (fingerprint exato) ali travaria toda task real em GOVERNANCE_FAILED
+     (evidência nunca pode ficar fresca a tempo, pois gerá-la exige rodar testes que passam pelo
+     próprio estágio GOVERNANCE). Confirmado ao vivo: `engineeringRouterFullLoopE2E.test.js`,
+     `engineeringRouterModelRerouteE2E.test.js` e o novo teste de reject-recode passaram a falhar
+     com `GOVERNANCE_FAILED` assim que RUNTIME_PASS foi ligado incondicionalmente.
+- fix: gate reestruturado em duas categorias reais, nunca uma "best effort" que pode ser ignorada:
+  - `STRUCTURAL_PASS` — todos os checks estruturais pré-existentes (82 checks), executados
+    SEMPRE, inclusive pelo `checkGovernance()` do loop ao vivo — comportamento inalterado ali,
+    exatamente para não reintroduzir o deadlock de bootstrap.
+  - `RUNTIME_PASS` — novo, ativado só com a flag explícita `--runtime` (nunca no modo padrão).
+    `scripts/governance/collect-engineering-router-runtime-evidence.js` (novo) executa de
+    verdade, via Jest, o teste real que prova cada um dos 20 itens de evidência de runtime
+    exigidos pela missão (injeção de shell rejeitada, ambiente seguro, redação multiline,
+    boundary de path do patch, apply real de patch, RED determinístico, RED→FIX, review
+    independente, reviewer reject→recode, execução real de regressão, execução real de
+    governança, reroute de provider/modelo, restart/resume, promoção controlada, verificação
+    pós-promoção, autorização DEVELOPMENT, negação PRODUCTION, negação SUPPORT por padrão,
+    isolamento de credencial por tenant, integridade same-run do release closure), captura o
+    exitCode REAL de cada execução e persiste em
+    `reports/engineering-router-v1-runtime-evidence.json` amarrado ao
+    `sourceFingerprint` REAL da working tree (reaproveitando
+    `governance/proof-engine/fingerprint-chain.js::computeSourceFingerprint` — mesma autoridade
+    já usada pelo resto da governança do RAP, nunca um hash paralelo). O gate em modo `--runtime`
+    rejeita explicitamente evidência ausente, de outra versão do código (fingerprint divergente)
+    ou com qualquer item de exitCode != 0 — nunca aceita "já rodou algum dia" como prova de
+    comportamento atual.
+- tests: os 20 itens de runtime são testes já existentes (ou os dois novos criados aqui:
+  `engineeringRouterReviewerRejectionRecodeE2E.test.js` e o já testado em
+  `tests/integration/engineeringTaskConcurrencyAndRestart.test.js` cobrindo o bug do
+  `acquireRunLock`) — nenhum teste-fantasma criado só para "passar o gate". Regressão completa do
+  Engineering Router (25 suítes) GREEN após a correção; `npm run
+  validate:engineering-router-v1:runtime` roda a coleta + o gate em `--runtime` e confirma
+  `RUNTIME_PASS` real (20/20 itens, exitCode 0, fingerprint fresco).
+- evidence: gate `RUNTIME_CERTIFICATION_COLLECTOR_EXISTS` +
+  `RUNTIME_MODE_SEPARATED_FROM_LIVE_GATE` (novos, modo padrão) + os 21 checks `RUNTIME_*` (modo
+  `--runtime`). Modo padrão: `STRUCTURAL_PASS`, 82 checks, 0 falhas. Modo `--runtime`:
+  `STRUCTURAL_PASS`/`RUNTIME_PASS`, 103 checks, 0 falhas.
+- status: GREEN
 
 ## Relatório final (preenchido ao fim)
 
