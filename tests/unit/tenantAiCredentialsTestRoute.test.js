@@ -89,6 +89,10 @@ describe('POST /tenants/:tenantKey/ai-credentials/test', () => {
       saveAIConfig: jest.fn(async () => ({ success: true })),
       saveAICredentials: jest.fn(async () => ({ success: true })),
       getDecryptedAPIKey: getDecryptedAPIKeyImpl,
+      // Persiste o resultado do teste real na credencial já salva (status/erro/saldo) — nunca
+      // apaga a credencial em caso de falha. Mock no-op: o comportamento real é coberto por
+      // tests/unit/tenantAIServiceCache.test.js e pela integração de config.
+      recordCredentialTestResult: overrides.recordCredentialTestResult || jest.fn(async () => true),
     }));
 
     global.fetch = overrides.fetch || jest.fn(async () => makeFetchResponseOk({ data: [] }));
