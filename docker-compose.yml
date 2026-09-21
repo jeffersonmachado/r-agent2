@@ -179,6 +179,12 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Usa o mesmo Postgres da API (fonte única)
       DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
+      # Achado real (docker-compose.test.yml): mesmo com o modelo de embeddings pré-baixado no
+      # build (Dockerfile), huggingface_hub por padrão tenta validar a versão online no warm-up
+      # de startup — sem rede em runtime isso trava em retries até o healthcheck falhar. Modo
+      # offline força o uso do cache local do build.
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
     expose:
       - "8000"
     # Publicação localhost-only na porta canônica de dev (8001): probes de

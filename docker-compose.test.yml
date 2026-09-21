@@ -65,6 +65,13 @@ services:
       ADAPTIVE_LEARNING_DATA_PATH: /var/lib/ragent2/rag/adaptive_learning
       DATABASE_URL: postgresql://results_app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD nao definida}@postgres:5432/results_saas_test
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Achado real ao rodar o pipeline de convergência de governança: mesmo com o modelo de
+      # embeddings pré-baixado no build (Dockerfile), a biblioteca huggingface_hub por padrão
+      # tenta validar/checar a versão online no warm-up de startup — sem acesso à rede do
+      # container em runtime, isso trava em retries por minutos até o healthcheck falhar
+      # (unhealthy). Modo offline força o uso do cache local do build, sem tentar rede.
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
     ports:
       - "${RAG_TEST_PORT:-18001}:8000"
     depends_on:
