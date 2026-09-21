@@ -66,6 +66,9 @@ function frontendRoutesPlugin() {
                           url.startsWith('/rbac/') ||
                           (url.startsWith('/supervisor/') && url !== '/supervisor') ||
                           (url.startsWith('/qa-mesh/') && url !== '/qa-mesh') ||
+                          // Engineering Model Router V1: API é /engineering/*; a página SPA
+                          // vive em /dev/engineering (namespace diferente, sem colisão).
+                          url.startsWith('/engineering/') ||
                           // /qa e /qa/stability são páginas SPA; endpoints /qa/* (stability,
                           // checkpoints, latest, history, stats...) são API quando Accept JSON
                           (url === '/qa' && isApiRequest) ||
@@ -778,6 +781,14 @@ const viteConfig = defineConfig(({ mode }) => {
 
           return undefined;
         },
+      },
+      // Engineering Model Router V1 — API sob /engineering/*. Sem colisão com página SPA:
+      // a tela vive em /dev/engineering (namespace diferente), então nenhum bypass é
+      // necessário aqui, ao contrário de /qa-mesh.
+      '^/engineering': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+        secure: false,
       },
       // IMPORTANTE:
       // - /rag-documents é rota de página do frontend (SPA)

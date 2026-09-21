@@ -19,6 +19,7 @@ function createRouteRegistry(routers) {
     { router: routers.qaRouter },
     { router: routers.qaWavesRouter },
     { router: routers.qaMeshRouter },
+    { router: routers.engineeringRouterRouter },
     // §B1/§B2: pesquisa competitiva de benchmarks (DEVELOPMENT). Montado aqui
     // porque router fora desta lista simplesmente NÃO é montado.
     { router: routers.benchmarkResearchRouter },

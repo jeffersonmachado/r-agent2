@@ -36,6 +36,7 @@ module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '<rootDir>/tests/rpa/',
+    '<rootDir>/tests/fixtures/engineering-router-sandbox/',
   ],
   verbose: true,
 };

@@ -200,6 +200,11 @@ const getAgentPolicyVersion = require('./AgentPolicyVersion');
 const getAgentPolicyAssignment = require('./AgentPolicyAssignment');
 const getAgentPolicyAttestation = require('./AgentPolicyAttestation');
 const getAiProvider = require('./AiProvider');
+const getEngineeringTask = require('./EngineeringTask');
+const getEngineeringAttempt = require('./EngineeringAttempt');
+const getEngineeringTestRun = require('./EngineeringTestRun');
+const getEngineeringReview = require('./EngineeringReview');
+const getEngineeringTelemetryEvent = require('./EngineeringTelemetryEvent');
 const getIntegrationConnection = require('./IntegrationConnection');
 const getIntegrationObjectLink = require('./IntegrationObjectLink');
 const getIntegrationSyncState = require('./IntegrationSyncState');
@@ -400,6 +405,11 @@ const AgentPolicyVersion = () => getAgentPolicyVersion();
 const AgentPolicyAssignment = () => getAgentPolicyAssignment();
 const AgentPolicyAttestation = () => getAgentPolicyAttestation();
 const AiProvider = () => getAiProvider();
+const EngineeringTask = () => getEngineeringTask();
+const EngineeringAttempt = () => getEngineeringAttempt();
+const EngineeringTestRun = () => getEngineeringTestRun();
+const EngineeringReview = () => getEngineeringReview();
+const EngineeringTelemetryEvent = () => getEngineeringTelemetryEvent();
 const IntegrationConnection = () => getIntegrationConnection();
 const IntegrationObjectLink = () => getIntegrationObjectLink();
 const IntegrationSyncState = () => getIntegrationSyncState();
@@ -861,6 +871,21 @@ function defineRelationships() {
     foreignKey: 'target_node_id',
     as: 'targetNode',
   });
+
+  const EngineeringTaskModel = EngineeringTask();
+  const EngineeringAttemptModel = EngineeringAttempt();
+  const EngineeringTestRunModel = EngineeringTestRun();
+  const EngineeringReviewModel = EngineeringReview();
+  const EngineeringTelemetryEventModel = EngineeringTelemetryEvent();
+
+  EngineeringTaskModel.hasMany(EngineeringAttemptModel, { foreignKey: 'task_id', as: 'attempts' });
+  EngineeringAttemptModel.belongsTo(EngineeringTaskModel, { foreignKey: 'task_id', as: 'task' });
+  EngineeringAttemptModel.hasMany(EngineeringTestRunModel, { foreignKey: 'attempt_id', as: 'testRuns' });
+  EngineeringTestRunModel.belongsTo(EngineeringAttemptModel, { foreignKey: 'attempt_id', as: 'attempt' });
+  EngineeringAttemptModel.hasMany(EngineeringReviewModel, { foreignKey: 'attempt_id', as: 'reviews' });
+  EngineeringReviewModel.belongsTo(EngineeringAttemptModel, { foreignKey: 'attempt_id', as: 'attempt' });
+  EngineeringTaskModel.hasMany(EngineeringTelemetryEventModel, { foreignKey: 'task_id', as: 'telemetryEvents' });
+  EngineeringTelemetryEventModel.belongsTo(EngineeringTaskModel, { foreignKey: 'task_id', as: 'task' });
 }
 
 module.exports = {
@@ -1257,4 +1282,14 @@ module.exports = {
   getIntegrationObjectLink,
   getIntegrationSyncState,
   getIntegrationInboundEvent,
+  EngineeringTask,
+  EngineeringAttempt,
+  EngineeringTestRun,
+  EngineeringReview,
+  EngineeringTelemetryEvent,
+  getEngineeringTask,
+  getEngineeringAttempt,
+  getEngineeringTestRun,
+  getEngineeringReview,
+  getEngineeringTelemetryEvent,
 };

@@ -92,6 +92,13 @@ const DEV_ONLY_PAGES = new Set([
   'frontend/src/pages/AgentOsHubPage.jsx',
   'frontend/src/pages/GenerateSystemPage.jsx',
   'frontend/src/pages/StackVersionsPage.jsx',
+  // Engineering Model Router V1 — DEVELOPMENT-only (gated no backend por
+  // requireClassification, ver api/modules/engineering-router/routes.js).
+  'frontend/src/pages/EngineeringOverviewPage.jsx',
+  'frontend/src/pages/EngineeringTasksPage.jsx',
+  'frontend/src/pages/EngineeringTaskDetailPage.jsx',
+  'frontend/src/pages/EngineeringModelsPage.jsx',
+  'frontend/src/pages/EngineeringReleaseClosurePage.jsx',
 ]);
 const DEV_ONLY_DIRS = [
   'frontend/src/pages/qa/',

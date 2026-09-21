@@ -412,6 +412,14 @@ function clearAiProviderConfig() {
   tenantProviderCache.clear();
 }
 
+function getProviderInstance(providerId) {
+  const normalized = normalizeId(providerId);
+  const provider = providerRegistry.get(normalized);
+  if (!provider) return null;
+  const timeoutMs = resolveAiTimeoutMs();
+  return { id: normalized, generate: withAiTimeout(provider.generate.bind(provider), timeoutMs) };
+}
+
 module.exports = {
   registerAiProvider,
   setTenantAiConfig,
@@ -419,6 +427,7 @@ module.exports = {
   isProviderRegistered,
   getRegisteredProviderIds,
   clearAiProviderConfig,
+  getProviderInstance,
 };
 
 

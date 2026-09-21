@@ -114,7 +114,7 @@ function createOpenAIProvider() {
           );
         }
 
-        const model = config.get('ai.openai.model', 'gpt-5.2');
+        const model = context?.model || config.get('ai.openai.model', 'gpt-5.2');
         const tokenParams = getTokenLimitParam(model, prompt.length);
         
         logger.debug('🤖 OpenAI: Iniciando geração', {
@@ -266,7 +266,7 @@ function createAnthropicProvider() {
           );
         }
 
-        const model = config.get('ai.anthropic.model', 'claude-sonnet-5');
+        const model = context?.model || config.get('ai.anthropic.model', 'claude-sonnet-5');
         logger.debug('🤖 Anthropic: Iniciando geração', {
           // Observabilidade do "porquê" (origem) da chamada:
           source: context?.source || null,
@@ -422,7 +422,7 @@ function createOpenAICompatibleProvider(def) {
           );
         }
 
-        const model = config.get(`ai.${providerId}.model`, def.defaultModel);
+        const model = context?.model || config.get(`ai.${providerId}.model`, def.defaultModel);
         logger.debug(`🤖 ${label}: Iniciando geração`, {
           source: context?.source || null,
           executionId: context?.executionId || null,
@@ -504,7 +504,7 @@ function createAnthropicCompatibleProvider(def) {
           );
         }
 
-        const model = config.get(`ai.${providerId}.model`, def.defaultModel);
+        const model = context?.model || config.get(`ai.${providerId}.model`, def.defaultModel);
         const url = `${def.baseUrl.replace(/\/$/, '')}/messages`;
         const response = await fetch(url, {
           method: 'POST',
@@ -573,7 +573,7 @@ function createDeepSeekProvider() {
           );
         }
 
-        const model = config.get('ai.deepseek.model', 'deepseek-chat');
+        const model = context?.model || config.get('ai.deepseek.model', 'deepseek-chat');
         logger.debug('🤖 DeepSeek: Iniciando geração', {
           source: context?.source || null,
           executionId: context?.executionId || null,
@@ -650,7 +650,7 @@ function createKimiProvider() {
           );
         }
 
-        const model = config.get('ai.kimi.model', 'moonshot-v1-8k');
+        const model = context?.model || config.get('ai.kimi.model', 'moonshot-v1-8k');
         logger.debug('🤖 Kimi: Iniciando geração', {
           source: context?.source || null,
           executionId: context?.executionId || null,

@@ -389,6 +389,16 @@ export const navigationMenu = [
               { id: 'dev-benchmark-research', label: 'Pesquisa de Benchmark', path: '/dev/benchmark-research', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
             ],
           },
+          {
+            id: 'dev-engineering',
+            label: 'Engineering',
+            children: [
+              { id: 'dev-engineering-overview', label: 'Overview', path: '/dev/engineering', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+              { id: 'dev-engineering-tasks', label: 'Tasks', path: '/dev/engineering/tasks', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+              { id: 'dev-engineering-models', label: 'Models / Router', path: '/dev/engineering/models', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+              { id: 'dev-engineering-release-closure', label: 'Release Closure', path: '/dev/engineering/release-closure', permission: { resource: 'reports', action: 'read' }, classifications: ['DEVELOPMENT'] },
+            ],
+          },
         ],
       },
     ],
