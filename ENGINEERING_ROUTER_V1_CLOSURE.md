@@ -36,19 +36,66 @@ Gate estrutural na baseline: `node scripts/governance/validate-engineering-route
 
 ### ERV1-CLOSE-001 — Execução de comandos
 
-- RED reproduced:
-- fix:
-- tests:
-- evidence:
-- status: EM ANDAMENTO
+- RED reproduced: `tests/unit/engineeringRouterCommandExecutionSecurity.test.js` — 5 de 7
+  payloads de injeção (`;`, `&&`, `||`, `$()`, backtick) executaram efeito colateral real
+  (criação de arquivo marcador via `touch`) contra o `testRunnerService.runTestCommands` real,
+  antes da correção. Root cause: `spawn(command, {shell:true})` + allowlist por
+  `startsWith()`/blocklist de padrões específicos (não fronteira real).
+- fix: `engine/engineeringRouter/commandPolicy.js` reescrito — `FORBIDDEN_SHELL_CHARS_RE`
+  rejeita a string inteira se contiver qualquer metacaractere de shell; `parseCommand` tokeniza
+  o que sobra (sem shell, sem expansão) e valida `{executable,args}` contra
+  `validateStructuredCommand` (allowlist fechada por executável: npm/npx/jest/node/git, cada um
+  com sua própria validação de argumentos — nunca uma string livre). `testRunnerService.js`
+  passou a chamar `spawn(executable, args, {shell:false, ...})`.
+- tests: `tests/unit/engineeringRouterCommandExecutionSecurity.test.js` (8/8 PASS),
+  `tests/unit/engineeringRouterCommandPolicy.test.js` (6/6 PASS, sem regressão),
+  `tests/integration/engineeringPatchApplyAndTestRunner.test.js` (4/4 PASS, comando real ainda
+  executa via git worktree real).
+- evidence: gate `NO_SHELL_TRUE_TEST_RUNNER` + `STRUCTURED_COMMAND_EXECUTION` +
+  `COMMAND_POLICY_SHELL_METACHAR_BLOCK` em `validate-engineering-router-v1.js`.
+- status: GREEN
 
 ### ERV1-CLOSE-002 — Safe environment + output redaction
 
-- status: PENDENTE
+- RED reproduced: analisado por inspeção de código — `runOneCommand` passava
+  `env: {...process.env}` para todo subprocess; qualquer patch podia rodar um teste que
+  imprime `process.env` e vazar segredo real do processo pai para stdout/stderr, evidência em
+  disco e excerpt no banco.
+- fix: novo `api/services/engineeringRouter/safeEngineeringEnvironment.js` —
+  `buildSafeTestEnv({cwd})` passa só um allowlist fixo de chaves não-secretas
+  (PATH/NODE_ENV/CI/LANG/LC_ALL/TMPDIR/...) e força `HOME=cwd` (workspace isolado, nunca o HOME
+  real do host). `testRunnerService.js` usa isso no lugar de `{...process.env}`, e passou a
+  aplicar `redactText` (secretRedaction) em stdout/stderr ANTES de persistir em
+  disco/excerpt/DB — nunca a saída bruta do subprocess.
+- tests: `tests/unit/engineeringRouterSafeEnvironment.test.js` (3/3 PASS) — injeta
+  `OPENAI_API_KEY`/`JWT_SECRET`/`DATABASE_PASSWORD`/`AMI_SECRET` falsos reais no
+  `process.env` do processo de teste, confirma por grep real em todo `EVIDENCE_ROOT` que
+  nenhum valor aparece em disco, e confirma que `HOME` do subprocess é o workspace isolado, não
+  `os.homedir()`.
+- evidence: gate `NO_FULL_ENV_PASSTHROUGH_TEST_RUNNER` + `SAFE_TEST_ENVIRONMENT` +
+  `TEST_OUTPUT_REDACTION`.
+- status: GREEN
+- nota (POST_RELEASE_HARDENING): V1 não implementa `credentialRef` para injeção explícita de
+  segredo em teste — nenhum Task Contract real precisa disso hoje (testCommands são sempre
+  npm/jest/git), e negar tudo por padrão é mais seguro que construir esse mecanismo sem caso de
+  uso real.
 
 ### ERV1-CLOSE-003 — Secret redaction multiline
 
-- status: PENDENTE
+- RED reproduced: por inspeção de código — `redactContent` fazia `content.split('\n')` e
+  aplicava os padrões (incluindo o de chave privada, que é multiline por natureza) linha a
+  linha; nenhuma linha isolada de um PEM/RSA/OpenSSH contém `-----BEGIN` e `-----END` ao mesmo
+  tempo, então o padrão nunca casava.
+- fix: extraído `MULTILINE_BLOCK_PATTERNS` (chave privada) e nova função
+  `redactBlockSecrets(content)` que roda sobre o CONTEÚDO INTEIRO antes do split em linhas.
+  Pipeline: bloco multiline → linha a linha (env assignment + tokens de uma linha) →
+  truncamento (já existente no Test Runner). Novo `redactText(text)` exportado para uso direto
+  em stdout/stderr (ERV1-CLOSE-002).
+- tests: `tests/unit/engineeringRouterSecretRedactionMultiline.test.js` (9/9 PASS) — PEM
+  genérico, RSA, OpenSSH, múltiplos blocos no mesmo conteúdo, mistura com secret de uma linha
+  só, idempotência, bearer token.
+- evidence: gate `SECRET_REDACTION_MULTILINE`.
+- status: GREEN
 
 ### ERV1-CLOSE-006 — Credential scope isolation
 

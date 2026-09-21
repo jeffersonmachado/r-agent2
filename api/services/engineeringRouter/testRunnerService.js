@@ -14,7 +14,9 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { checkCommand } = require('../../../engine/engineeringRouter/commandPolicy');
+const { parseCommand } = require('../../../engine/engineeringRouter/commandPolicy');
+const { buildSafeTestEnv } = require('./safeEngineeringEnvironment');
+const { redactText } = require('../../../engine/engineeringRouter/secretRedaction');
 const { ROOT } = require('./contextBuilderService');
 
 const EVIDENCE_ROOT = process.env.ENGINEERING_ROUTER_EVIDENCE_ROOT
@@ -27,18 +29,22 @@ function slugCommand(command) {
   return crypto.createHash('sha1').update(command).digest('hex').slice(0, 12);
 }
 
-function runOneCommand(command, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+function runOneCommand(executable, args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   return new Promise((resolve) => {
     const startedAt = Date.now();
     let stdout = '';
     let stderr = '';
     let settled = false;
 
-    const child = spawn(command, {
+    // ERV1-CLOSE-001: shell:false + executable/args estruturados (nunca uma string inteira
+    // interpretada por um shell) — fecha injeção via ";"/"&&"/"||"/"$()"/pipe/redirecionamento.
+    // ERV1-CLOSE-002: env sandboxed (nunca o environment do processo pai inteiro) — o subprocess não recebe
+    // nenhum segredo real do processo pai por padrão.
+    const child = spawn(executable, args, {
       cwd,
-      shell: true,
+      shell: false,
       timeout: timeoutMs,
-      env: { ...process.env },
+      env: buildSafeTestEnv({ cwd }),
     });
 
     child.stdout?.on('data', (d) => { stdout += d.toString(); });
@@ -82,7 +88,7 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
 
   const results = [];
   for (const command of commands || []) {
-    const policyCheck = checkCommand(command);
+    const policyCheck = parseCommand(command);
     if (!policyCheck.allowed) {
       results.push({
         command,
@@ -98,15 +104,21 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
     }
 
     const startedAt = new Date();
-    const run = await runOneCommand(command, { cwd });
+    const run = await runOneCommand(policyCheck.executable, policyCheck.args, { cwd });
     const completedAt = new Date();
+
+    // ERV1-CLOSE-002: toda saída passa por redação ANTES de tocar disco/DB/telemetria/UI —
+    // um patch malicioso pode imprimir env/segredos mesmo dentro do env sandboxed (ex.: lendo
+    // um arquivo do próprio workspace), então a saída em si nunca é confiável.
+    const safeStdout = redactText(run.stdout || '');
+    const safeStderr = redactText(run.stderr || '');
 
     const fileSlug = slugCommand(command);
     const stdoutFile = path.join(evidenceDir, `${fileSlug}.stdout.log`);
     const stderrFile = path.join(evidenceDir, `${fileSlug}.stderr.log`);
     try {
-      fs.writeFileSync(stdoutFile, run.stdout || '', 'utf8');
-      fs.writeFileSync(stderrFile, run.stderr || '', 'utf8');
+      fs.writeFileSync(stdoutFile, safeStdout, 'utf8');
+      fs.writeFileSync(stderrFile, safeStderr, 'utf8');
     } catch (_) { /* evidência é best-effort quanto à persistência em disco */ }
 
     results.push({
@@ -116,8 +128,8 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
       durationMs: run.durationMs,
       stdoutRef: path.relative(ROOT, stdoutFile),
       stderrRef: path.relative(ROOT, stderrFile),
-      stdoutExcerpt: (run.stdout || '').slice(-EXCERPT_LIMIT),
-      stderrExcerpt: (run.stderr || '').slice(-EXCERPT_LIMIT),
+      stdoutExcerpt: safeStdout.slice(-EXCERPT_LIMIT),
+      stderrExcerpt: safeStderr.slice(-EXCERPT_LIMIT),
       startedAt: startedAt.toISOString(),
       completedAt: completedAt.toISOString(),
     });

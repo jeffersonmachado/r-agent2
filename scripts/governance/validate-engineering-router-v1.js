@@ -76,6 +76,13 @@ function main() {
     id: 'SECRET_REDACTION',
     ...checkFileContains('engine/engineeringRouter/secretRedaction.js', [/BLOCKED_FILENAME_PATTERNS/, /applySecretPolicy/]),
   });
+  // ERV1-CLOSE-003: redação de blocos multiline (chave privada) precisa rodar sobre o CONTEÚDO
+  // INTEIRO antes de qualquer split em linhas — nunca reintroduzir "content.split('\n')" antes
+  // da redação de bloco.
+  checks.push({
+    id: 'SECRET_REDACTION_MULTILINE',
+    ...checkFileContains('engine/engineeringRouter/secretRedaction.js', [/MULTILINE_BLOCK_PATTERNS/, /redactBlockSecrets/, /redactText/]),
+  });
 
   // 6. Patch real + validação + path boundary + controlled apply.
   checks.push({
@@ -105,6 +112,39 @@ function main() {
   checks.push({
     id: 'COMMAND_POLICY',
     ...checkFileContains('engine/engineeringRouter/commandPolicy.js', [/DANGEROUS_PATTERNS/, /DEFAULT_ALLOWED_PREFIXES/]),
+  });
+  // ERV1-CLOSE-001: fronteira real é shell:false + executable/args estruturados, nunca uma
+  // string inteira passada a um shell. `parseCommand` é a única fonte de {executable,args}; se
+  // "shell: true" reaparecer neste arquivo, é uma regressão de segurança grave.
+  checks.push({
+    id: 'NO_SHELL_TRUE_TEST_RUNNER',
+    ok: exists('api/services/engineeringRouter/testRunnerService.js')
+      && !/shell:\s*true/.test(readText('api/services/engineeringRouter/testRunnerService.js')),
+    reason: 'testRunnerService.js não pode usar shell:true (ERV1-CLOSE-001 — regressão de command injection)',
+  });
+  checks.push({
+    id: 'STRUCTURED_COMMAND_EXECUTION',
+    ...checkFileContains('api/services/engineeringRouter/testRunnerService.js', [/parseCommand/, /shell:\s*false/]),
+  });
+  checks.push({
+    id: 'COMMAND_POLICY_SHELL_METACHAR_BLOCK',
+    ...checkFileContains('engine/engineeringRouter/commandPolicy.js', [/FORBIDDEN_SHELL_CHARS_RE/, /parseCommand/, /validateStructuredCommand/]),
+  });
+  // ERV1-CLOSE-002: nunca reintroduzir `{...process.env}` no Test Runner — env sandboxed é a
+  // fronteira contra vazamento de segredo real do processo pai via subprocess de teste.
+  checks.push({
+    id: 'NO_FULL_ENV_PASSTHROUGH_TEST_RUNNER',
+    ok: exists('api/services/engineeringRouter/testRunnerService.js')
+      && !/\.\.\.process\.env/.test(readText('api/services/engineeringRouter/testRunnerService.js')),
+    reason: 'testRunnerService.js não pode passar {...process.env} para subprocess (ERV1-CLOSE-002 — vazamento de segredo)',
+  });
+  checks.push({
+    id: 'SAFE_TEST_ENVIRONMENT',
+    ...checkFileContains('api/services/engineeringRouter/safeEngineeringEnvironment.js', [/SAFE_ENV_PASSTHROUGH_KEYS/, /buildSafeTestEnv/]),
+  });
+  checks.push({
+    id: 'TEST_OUTPUT_REDACTION',
+    ...checkFileContains('api/services/engineeringRouter/testRunnerService.js', [/redactText/]),
   });
 
   // 8. RED->FIX loop + max iterations.
@@ -172,6 +212,10 @@ function main() {
     'tests/integration/engineeringPatchApplyAndTestRunner.test.js',
     'tests/unit/engineeringRouterHunkNormalizer.test.js',
     'tests/integration/engineeringRouterFullLoopE2E.test.js',
+    'tests/unit/engineeringModelAvailabilityService.test.js',
+    'tests/unit/engineeringRouterCommandExecutionSecurity.test.js',
+    'tests/unit/engineeringRouterSafeEnvironment.test.js',
+    'tests/unit/engineeringRouterSecretRedactionMultiline.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });
