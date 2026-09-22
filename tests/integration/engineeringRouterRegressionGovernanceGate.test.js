@@ -153,7 +153,7 @@ afterAll(async () => {
 }, 30000);
 
 describe('ERV1-CLOSE-004 — GOVERNANCE reprovando termina a task em RED, nunca GREEN decorativo', () => {
-  jest.setTimeout(60000);
+  jest.setTimeout(120000);
 
   test('CODER/TESTING/REVIEWER todos aprovam, mas GOVERNANCE real reprova → task RED', async () => {
     if (skipIfNoDatabase()) return;

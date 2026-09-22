@@ -146,7 +146,11 @@ afterAll(async () => {
 }, 30000);
 
 describe('engineeringRouterService — persistência da evidência de promoção não completada', () => {
-  jest.setTimeout(60000);
+  // ER-V1-FINAL-009: 60s não é margem suficiente quando createWorkspace precisa reexecutar o
+  // retry do TOCTOU real de `git add -A` (patchApplyService.js) sob a suíte completa rodando em
+  // paralelo — reproduzido ao vivo (timeout, não falha de lógica). Mesma causa do ajuste em
+  // engineeringRouterOrphanWorkspacePruning.test.js.
+  jest.setTimeout(120000);
 
   test('quando a promoção não completa, o code (motivo exato) sobrevive em promotion_evidence, não só no evento efêmero', async () => {
     if (skipIfNoDatabase()) return;

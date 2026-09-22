@@ -185,7 +185,7 @@ afterAll(async () => {
 }, 30000);
 
 describe('Engineering Model Router V1 — E2E RED → FIX → REVIEW → GREEN', () => {
-  jest.setTimeout(60000);
+  jest.setTimeout(120000);
 
   test('confirma RED antes do patch (fixture real, sem nenhum dublê de teste)', async () => {
     if (skipIfNoDatabase()) return;

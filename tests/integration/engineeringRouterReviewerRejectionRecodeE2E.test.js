@@ -177,7 +177,7 @@ afterAll(async () => {
 }, 30000);
 
 describe('ERV1-CLOSE-010 — reviewer REJECT força recode real (nunca RED direto, nunca ignora o reviewer)', () => {
-  jest.setTimeout(60000);
+  jest.setTimeout(120000);
 
   test('1ª tentativa é rejeitada pelo reviewer (BLOCKER) → 2ª tentativa real é criada e aprovada → GREEN', async () => {
     if (skipIfNoDatabase()) return;

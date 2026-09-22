@@ -164,7 +164,7 @@ afterAll(async () => {
 }, 30000);
 
 describe('ERV1-CLOSE-008 — reroute real de modelo indisponível dentro da mesma task', () => {
-  jest.setTimeout(60000);
+  jest.setTimeout(120000);
 
   test('CODER indisponível (404 real) é reroteado para o próximo candidato até chegar em GREEN', async () => {
     if (skipIfNoDatabase()) return;

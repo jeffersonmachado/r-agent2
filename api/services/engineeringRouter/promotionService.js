@@ -65,12 +65,28 @@ function candidateBranchName(taskId) {
  * Isso prova ao mesmo tempo (1) que nada além do patch está no que será promovido e (2) que o
  * que será promovido é EXATAMENTE o que foi testado (não uma árvore "limpa" nunca exercitada).
  *
+ * ER-V1-FINAL-009 (Full-Suite Isolation) — achado real: "MESMO baseline" (acima) precisa ser o
+ * SNAPSHOT COMMIT que o workspace real usou (`createSnapshotCommit`, que captura TUDO que está
+ * fisicamente no ROOT compartilhado no instante do snapshot — inclusive trabalho em andamento
+ * não commitado do próprio branch main direto, e inclusive um arquivo temporário real de
+ * QUALQUER outro teste do projeto que por acaso exista fisicamente naquele instante, ex.:
+ * `config/benchmarks/__testbrcpXXXXXXXX.json` de `benchmarkChangeProposal.test.js`), NUNCA o
+ * commit HEAD real puro (`HEAD^` do workspace, sem esse estado). Usar o HEAD real puro aqui —
+ * como esta função fazia antes — reconstrói um "expected" que exclui algo que o workspace real
+ * SEMPRE incluiu desde antes do patch, então qualquer coisa não commitada presente no ROOT no
+ * instante do snapshot original é sinalizada como "contaminação" — falso positivo estrutural,
+ * reproduzido ao vivo nesta sessão sob paralelismo real (rodando junto com
+ * `benchmarkChangeProposal.test.js`). Usar o SNAPSHOT COMMIT do próprio workspace preserva a
+ * garantia de segurança real (side-effects de teste acontecem DEPOIS do snapshot, então ainda
+ * divergem do "expected" recalculado a partir do mesmo snapshot+patch) e elimina o falso
+ * positivo (estado pré-existente no snapshot original é herdado igualmente por ambas as árvores).
+ *
  * @returns {Promise<{ok:boolean, expectedTreeHash?:string, code?:string, error?:string}>}
  */
-async function computeExpectedTreeHash({ baselineHead, diff, taskId }) {
+async function computeExpectedTreeHash({ expectedBaseCommit, diff, taskId }) {
   let cleanWorkspace = null;
   try {
-    cleanWorkspace = await materializeWorktree(baselineHead, `promotion-${taskId}-expected`);
+    cleanWorkspace = await materializeWorktree(expectedBaseCommit, `promotion-${taskId}-expected`);
   } catch (err) {
     return { ok: false, code: 'PROMOTION_EXPECTED_TREE_WORKSPACE_FAILED', error: err.message };
   }
@@ -124,6 +140,16 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
   }
   const targetHead = targetHeadResult.stdout;
 
+  const snapshotCommitResult = await runGit(['rev-parse', 'HEAD'], { cwd: workspacePath });
+  if (!snapshotCommitResult.ok) {
+    return { promoted: false, code: 'PROMOTION_BASELINE_UNRESOLVABLE', evidence: { promotionAttemptedAt, error: snapshotCommitResult.stderr, validatedPatchHash } };
+  }
+  // HEAD do workspace = o commit-snapshot inteiro (baseline dirty incluído, ver
+  // computeExpectedTreeHash) — usado para reconstruir o "expected". HEAD^ = o PAI desse
+  // snapshot, que `createSnapshotCommit` sempre gera com `-p HEAD` apontando para o commit REAL
+  // da branch main — usado só para o check de divergência abaixo (só um commit REAL pode mudar
+  // o HEAD real; trabalho não commitado nunca muda isso).
+  const snapshotCommit = snapshotCommitResult.stdout;
   const baselineHeadResult = await runGit(['rev-parse', 'HEAD^'], { cwd: workspacePath });
   if (!baselineHeadResult.ok) {
     return { promoted: false, code: 'PROMOTION_BASELINE_UNRESOLVABLE', evidence: { promotionAttemptedAt, error: baselineHeadResult.stderr, validatedPatchHash } };
@@ -157,7 +183,7 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
   // 2.5. ER-V1-FINAL-002 — Exact Promotion: prova independente de que validatedTreeHash é
   //      EXATAMENTE "baseline + diff validado", nunca "baseline + diff + side-effect de teste".
   //      Ver computeExpectedTreeHash para o achado real reproduzido.
-  const expectedTreeResult = await computeExpectedTreeHash({ baselineHead, diff, taskId });
+  const expectedTreeResult = await computeExpectedTreeHash({ expectedBaseCommit: snapshotCommit, diff, taskId });
   if (!expectedTreeResult.ok) {
     return {
       promoted: false,
@@ -169,6 +195,17 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
   if (expectedTreeHash !== validatedTreeHash) {
     // Diagnóstico preciso do que divergiu — nunca só "não bate": lista os arquivos exatos.
     const diffNameStatus = await runGit(['diff', '--name-status', expectedTreeHash, validatedTreeHash]);
+    // ER-V1-FINAL-009: log real (não só no evidence persistido) — achado real ao investigar
+    // flakiness sob paralelismo: PROMOTION_TREE_CONTAMINATED pode ser tanto um bloqueio de
+    // segurança CORRETO (side-effect real de um testCommand vazando pro workspace) quanto um
+    // efeito colateral do próprio Test Runner (ex.: cache do Jest/transform) — só os arquivos
+    // exatos listados aqui provam qual dos dois é o caso real em cada ocorrência.
+    logger.warn('[promotionService] PROMOTION_TREE_CONTAMINATED — expectedTreeHash != validatedTreeHash', {
+      taskId,
+      expectedTreeHash,
+      candidateTreeHash: validatedTreeHash,
+      contaminatingFiles: diffNameStatus.ok ? diffNameStatus.stdout : diffNameStatus.stderr,
+    });
     return {
       promoted: false,
       code: 'PROMOTION_TREE_CONTAMINATED',

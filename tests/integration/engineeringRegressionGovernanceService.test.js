@@ -19,7 +19,7 @@ const engineeringTaskService = require('../../api/services/engineeringRouter/eng
 const { createWorkspace, applyPatch, destroyWorkspace } = require('../../api/services/engineeringRouter/patchApplyService');
 const { checkRegression, checkGovernance } = require('../../api/services/engineeringRouter/regressionGovernanceService');
 
-jest.setTimeout(30000);
+jest.setTimeout(90000);
 
 let dbAvailable = false;
 let dbReason = null;

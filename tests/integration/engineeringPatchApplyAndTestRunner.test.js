@@ -34,7 +34,7 @@ const INVALID_DIFF = `diff --git a/arquivo/que/nao/existe.js b/arquivo/que/nao/e
 `;
 
 describe('patchApplyService + testRunnerService — integração real', () => {
-  jest.setTimeout(30000);
+  jest.setTimeout(90000);
 
   test('cria workspace isolado, aplica patch real, roda comando e limpa tudo', async () => {
     const workspace = await createWorkspace('jest-fixture-task', 1);

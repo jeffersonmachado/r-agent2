@@ -34,7 +34,14 @@ async function listRealWorktrees() {
 }
 
 describe('ERV1-CLOSE-009 — pruneOrphanedWorkspaces remove workspaces órfãos de verdade', () => {
-  jest.setTimeout(30000);
+  // ER-V1-FINAL-009: este teste cria DOIS workspaces reais em sequência — cada `createWorkspace`
+  // agora pode reexecutar `createSnapshotCommit` até 5 vezes (retry do TOCTOU real de `git add
+  // -A` sob paralelismo pesado, ver patchApplyService.js) antes de suceder. Sob a suíte COMPLETA
+  // rodando em paralelo (contenção real de CPU/IO, não só a race em si), 30s não é suficiente
+  // margem — não é um teste mais lento por design, é a mesma operação levando mais tempo real
+  // sob carga real; 90s dá margem sem mascarar um travamento genuíno (a race sempre resolve em
+  // poucas tentativas, nunca em todas as 5 de forma sistemática).
+  jest.setTimeout(90000);
   const createdWorkspaces = [];
 
   afterAll(async () => {

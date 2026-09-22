@@ -49,7 +49,7 @@ function deleteBranchIfExists(name) {
 }
 
 describe('ERV1-CLOSE-005 — promotionService.promoteValidatedPatch (git real)', () => {
-  jest.setTimeout(30000);
+  jest.setTimeout(90000);
   const createdWorkspaces = [];
   const createdBranches = [];
 
@@ -167,7 +167,7 @@ describe('ERV1-CLOSE-005 — promotionService.promoteValidatedPatch (git real)',
 });
 
 describe('ER-V1-FINAL-002 — Exact Promotion (prova de tree hash, não só diff --stat)', () => {
-  jest.setTimeout(30000);
+  jest.setTimeout(90000);
   const createdWorkspaces = [];
   const createdBranches = [];
 

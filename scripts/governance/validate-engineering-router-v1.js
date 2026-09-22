@@ -743,6 +743,19 @@ function main() {
       /if \(!TRANSIENT_GIT_SCAN_ERROR\.test\(message\)/,
     ]),
   });
+  // ER-V1-FINAL-009 — segunda causa raiz real: `computeExpectedTreeHash` reconstruía o
+  // "expected" a partir do commit HEAD real puro (sem qualquer estado não commitado), enquanto
+  // o workspace validado sempre nasce do SNAPSHOT completo (que inclui qualquer coisa não
+  // commitada presente no ROOT no instante do snapshot — trabalho em andamento do próprio
+  // branch main direto, ou um arquivo temporário real de outro teste do projeto) — falso
+  // positivo estrutural de PROMOTION_TREE_CONTAMINATED sempre que há qualquer dirty state.
+  checks.push({
+    id: 'EXPECTED_TREE_USES_SNAPSHOT_NOT_BARE_HEAD',
+    ...checkFileContains('api/services/engineeringRouter/promotionService.js', [
+      /async function computeExpectedTreeHash\(\{ expectedBaseCommit, diff, taskId \}\)/,
+      /computeExpectedTreeHash\(\{ expectedBaseCommit: snapshotCommit, diff, taskId \}\)/,
+    ]),
+  });
 
   // 15. Documentação V1.
   const docs = [
