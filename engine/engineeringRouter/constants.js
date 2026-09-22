@@ -63,6 +63,13 @@ const TASK_STATES = Object.freeze([
   'REVIEWING',
   'REGRESSION',
   'GOVERNANCE',
+  // ER-V1-SEAL-002 (Full Durable Resume): fases explícitas para o trecho mais crítico do loop —
+  // sem elas, um crash entre "governance passou" e "candidate commit criado" (ou entre
+  // "candidate commit criado" e "smoke pós-promoção confirmado") não tinha nenhum estado
+  // persistido distinto para o reconciliador agir; o restart só via GOVERNANCE ainda como
+  // status corrente e reexecutava promoteValidatedPatch do zero, arriscando promover duas vezes.
+  'PROMOTING',
+  'POST_PROMOTION_VERIFY',
   'GREEN',
   // ERV1-CLOSE-005: distinto de GREEN — CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE passaram de
   // verdade, mas a promoção do patch validado ao repositório real não completou (target

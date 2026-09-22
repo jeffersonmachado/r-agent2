@@ -35,7 +35,18 @@ const { runTestCommands } = require('./testRunnerService');
 const { buildAvailableModels, DEFAULT_TENANT_ID } = require('./engineeringModelAvailabilityService');
 const modelAvailabilityStore = require('./modelAvailabilityStore');
 const { checkRegression, checkGovernance } = require('./regressionGovernanceService');
-const { promoteValidatedPatch } = require('./promotionService');
+const { createPromotionCandidate, verifyPromotedCandidate, findExistingCandidate, computeValidatedPatchHash } = require('./promotionService');
+const operationService = require('./engineeringOperationService');
+const { execFile } = require('child_process');
+const util = require('util');
+const { ROOT } = require('./contextBuilderService');
+
+const execFileAsync = util.promisify(execFile);
+
+async function runGitRevParseHead() {
+  const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: ROOT });
+  return stdout.trim();
+}
 const { validatePatch } = require('../../../engine/engineeringRouter/patchValidator');
 const { getPolicy, requiresIndependentReview } = require('../../../engine/engineeringRouter/routingPolicy');
 const { selectCoderAndReviewer } = require('../../../engine/engineeringRouter/modelSelector');
@@ -587,94 +598,238 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
       // a Promotion precisa dele (tree pós-patch) mais abaixo. Esta função assume a
       // responsabilidade de destruí-lo, em QUALQUER saída deste bloco (RED de regressão/
       // governança, READY_FOR_PROMOTION, ou GREEN).
+      const attemptId = result.attempt.id;
       try {
-        await engineeringTaskService.transitionTask(taskId, 'REGRESSION');
+        await tolerantTransition(taskId, 'REGRESSION');
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Executando RegressionPlan real (proporcional ao risco) em workspace isolado.' });
 
-        // ER-V1-FINAL-006: REGRESSION executa de verdade um RegressionPlan proporcional ao
-        // risco declarado (LOW: targeted; MEDIUM: +related; HIGH: +subsystem; CRITICAL:
-        // +governance gate) — nunca mais uma simples releitura de evidência da fase TESTING.
-        const touchedPaths = await listChangedFiles(result.workspace).catch(() => []);
-        const regressionResult = await checkRegression({
-          taskId,
-          attemptId: result.attempt.id,
-          workspacePath: result.workspace,
-          touchedPaths,
-          risk: task.risk,
-          targetedCommands: task.test_commands || [],
-        });
-        await engineeringTaskService.updateAttempt(result.attempt.id, { regression_evidence: regressionResult.evidence });
+        // ER-V1-SEAL-002 (Full Durable Resume): REGRESSION nunca tem efeito colateral externo
+        // irreversível (só executa comandos e persiste evidência) — um RUNNING órfão (crash no
+        // meio) é seguro reexecutar do zero. RESUME reusa a evidência já persistida sem rodar
+        // os comandos de novo; FAIL_SAFE nunca roda concorrentemente com outra execução real.
+        const regressionOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'REGRESSION' });
+        let regressionResult;
+        if (regressionOp.action === 'RESUME') {
+          regressionResult = { pass: true, evidence: regressionOp.operation.evidence_ref };
+        } else {
+          if (regressionOp.action === 'FAIL_SAFE') {
+            throw Object.assign(new Error('REGRESSION já está em execução em outro processo — nunca duplicar concorrentemente'), { code: 'OPERATION_STILL_RUNNING', phase: 'REGRESSION' });
+          }
+          if (regressionOp.action === 'RECONCILE') {
+            await operationService.forceRun(regressionOp.operation.id, { reason: 'REGRESSION não tem efeito colateral externo irreversível — seguro repetir após RUNNING órfão' });
+          }
+          // ER-V1-FINAL-006: REGRESSION executa de verdade um RegressionPlan proporcional ao
+          // risco declarado (LOW: targeted; MEDIUM: +related; HIGH: +subsystem; CRITICAL:
+          // +governance gate) — nunca mais uma simples releitura de evidência da fase TESTING.
+          const touchedPaths = await listChangedFiles(result.workspace).catch(() => []);
+          regressionResult = await checkRegression({
+            taskId,
+            attemptId,
+            workspacePath: result.workspace,
+            touchedPaths,
+            risk: task.risk,
+            targetedCommands: task.test_commands || [],
+          });
+          if (regressionResult.pass) {
+            await operationService.completeOperation(regressionOp.operation.id, { evidenceRef: regressionResult.evidence });
+          } else {
+            await operationService.failOperation(regressionOp.operation.id, { error: new Error('regressão reprovou') });
+          }
+        }
+        await engineeringTaskService.updateAttempt(attemptId, { regression_evidence: regressionResult.evidence });
         if (!regressionResult.pass) {
           await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.REGRESSION_FAILED, message: 'Regressão real reprovou após review aprovar', evidence: regressionResult.evidence });
-          await engineeringTaskService.transitionTask(taskId, 'RED');
+          await tolerantTransition(taskId, 'RED');
           emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Regressão reprovou — nunca GREEN sem evidência real.', meta: regressionResult.evidence });
           return { taskId, status: 'RED', reasonCode: FAILURE_CODES.REGRESSION_FAILED };
         }
-        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real (${regressionResult.evidence.planTier}): ${regressionResult.evidence.commandCount} comando(s) PASS.`, meta: regressionResult.evidence });
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real: ${regressionResult.evidence.commandCount || 0} comando(s) PASS.`, meta: regressionResult.evidence });
 
-        await engineeringTaskService.transitionTask(taskId, 'GOVERNANCE');
+        await tolerantTransition(taskId, 'GOVERNANCE');
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Executando gate de governança real (scripts/governance/validate-engineering-router-v1.js).' });
 
-        // ERV1-CLOSE-004: GOVERNANCE executa de verdade a autoridade canônica já existente —
-        // nunca reimplementa governança, nunca finge sucesso por status.
-        const governanceResult = await checkGovernance();
-        await engineeringTaskService.updateAttempt(result.attempt.id, { governance_evidence: governanceResult.evidence });
+        // Mesma lógica de reconciliação de REGRESSION — GOVERNANCE também não tem efeito
+        // colateral externo irreversível.
+        const governanceOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'GOVERNANCE' });
+        let governanceResult;
+        if (governanceOp.action === 'RESUME') {
+          governanceResult = { pass: true, evidence: governanceOp.operation.evidence_ref };
+        } else {
+          if (governanceOp.action === 'FAIL_SAFE') {
+            throw Object.assign(new Error('GOVERNANCE já está em execução em outro processo — nunca duplicar concorrentemente'), { code: 'OPERATION_STILL_RUNNING', phase: 'GOVERNANCE' });
+          }
+          if (governanceOp.action === 'RECONCILE') {
+            await operationService.forceRun(governanceOp.operation.id, { reason: 'GOVERNANCE não tem efeito colateral externo irreversível — seguro repetir após RUNNING órfão' });
+          }
+          // ERV1-CLOSE-004: GOVERNANCE executa de verdade a autoridade canônica já existente —
+          // nunca reimplementa governança, nunca finge sucesso por status.
+          governanceResult = await checkGovernance();
+          if (governanceResult.pass) {
+            await operationService.completeOperation(governanceOp.operation.id, { evidenceRef: governanceResult.evidence });
+          } else {
+            await operationService.failOperation(governanceOp.operation.id, { error: new Error('gate de governança reprovou') });
+          }
+        }
+        await engineeringTaskService.updateAttempt(attemptId, { governance_evidence: governanceResult.evidence });
         if (!governanceResult.pass) {
           await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.GOVERNANCE_FAILED, message: 'Gate de governança real reprovou', evidence: governanceResult.evidence });
-          await engineeringTaskService.transitionTask(taskId, 'RED');
+          await tolerantTransition(taskId, 'RED');
           emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Governance reprovou — nunca GREEN sem o gate real passando.', meta: governanceResult.evidence });
           return { taskId, status: 'RED', reasonCode: FAILURE_CODES.GOVERNANCE_FAILED };
         }
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'success', message: 'Gate de governança real: PASS.', meta: governanceResult.evidence });
 
-        // ERV1-CLOSE-005: promove o patch EXATO validado (commit real + branch local dedicada,
-        // nunca push/merge/publish) — só GREEN quando isso realmente aconteceu.
+        // ER-V1-SEAL-002: PROMOTING é o ponto MAIS crítico — `createPromotionCandidate` tem
+        // efeito real e IRREVERSÍVEL (commit + branch reais). Um RUNNING órfão aqui NUNCA pode
+        // ser tratado como "seguro repetir" sem antes checar evidência EXTERNA real (a branch
+        // candidata já existe?) — nunca promover duas vezes por crash.
+        await tolerantTransition(taskId, 'PROMOTING');
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'PROMOTION', status: 'running', message: 'Promovendo patch validado (commit + branch local dedicada, sem push/merge).' });
-        const promotionResult = await promoteValidatedPatch({
-          taskId,
-          attemptId: result.attempt.id,
-          attemptNumber: result.attempt.attempt_number,
-          workspacePath: result.workspace,
-          diff: result.diff,
-          testCommands: task.test_commands || [],
-          taskTitle: task.title,
-        });
-        // Achado real ao validar a tela de detalhe da task no browser: `promotionResult.code`
-        // (o motivo exato de uma promoção não completada, ex.: PROMOTION_TARGET_DIVERGED) só
-        // existia no evento WebSocket ao vivo e no valor de retorno — nunca era persistido junto
-        // com `promotion_evidence`. Quem abrisse a tela DEPOIS da execução via só
-        // "READY_FOR_PROMOTION" sem nenhum motivo. Mesclado aqui para ficar sempre disponível.
-        await engineeringTaskService.updateAttempt(result.attempt.id, {
-          promotion_evidence: promotionResult.promoted
-            ? promotionResult.evidence
-            : { ...promotionResult.evidence, code: promotionResult.code },
-          promotion_status: promotionResult.promoted ? 'PROMOTED' : 'READY_FOR_PROMOTION',
-        });
 
-        if (!promotionResult.promoted) {
-          // Nunca RED: CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE passaram de verdade — só a
-          // promoção ao repositório real não completou. READY_FOR_PROMOTION documenta
-          // exatamente por quê, sem fingir que a mudança chegou ao source.
-          await engineeringTaskService.transitionTask(taskId, 'READY_FOR_PROMOTION');
+        const validatedPatchHashForReconcile = computeValidatedPatchHash(result.diff);
+        const promotingOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'PROMOTING' });
+        let candidateResult;
+        if (promotingOp.action === 'RESUME') {
+          candidateResult = { created: true, evidence: promotingOp.operation.evidence_ref };
+        } else {
+          if (promotingOp.action === 'FAIL_SAFE') {
+            throw Object.assign(new Error('PROMOTING já está em execução em outro processo — nunca duplicar concorrentemente'), { code: 'OPERATION_STILL_RUNNING', phase: 'PROMOTING' });
+          }
+          if (promotingOp.action === 'RECONCILE') {
+            const existing = await findExistingCandidate({ taskId, validatedPatchHash: validatedPatchHashForReconcile });
+            if (existing.found) {
+              // Evidência EXTERNA real confirma: o candidate já foi criado antes do crash.
+              // NUNCA chama createPromotionCandidate de novo — reconstrói o resultado a partir
+              // do que já existe de verdade no git.
+              const targetHeadNow = await runGitRevParseHead();
+              candidateResult = {
+                created: true,
+                evidence: {
+                  candidateCommit: existing.candidateCommit,
+                  candidateBranch: existing.candidateBranch,
+                  validatedPatchHash: validatedPatchHashForReconcile,
+                  targetCommit: targetHeadNow,
+                  targetHead: targetHeadNow,
+                  reconciledFromExternalEvidence: true,
+                },
+              };
+              await operationService.resumeWithEvidence(promotingOp.operation.id, { evidenceRef: candidateResult.evidence, reason: 'branch candidata real encontrada com o mesmo validatedPatchHash' });
+            } else {
+              await operationService.forceRun(promotingOp.operation.id, { reason: 'nenhuma branch candidata real encontrada — seguro criar o candidate agora' });
+            }
+          }
+          if (!candidateResult) {
+            candidateResult = await createPromotionCandidate({
+              taskId,
+              attemptId,
+              attemptNumber: result.attempt.attempt_number,
+              workspacePath: result.workspace,
+              diff: result.diff,
+              taskTitle: task.title,
+            });
+            if (candidateResult.created) {
+              await operationService.completeOperation(promotingOp.operation.id, { evidenceRef: candidateResult.evidence });
+            } else {
+              await operationService.failOperation(promotingOp.operation.id, { error: new Error(candidateResult.code || 'falha ao criar candidate') });
+            }
+          }
+        }
+
+        if (!candidateResult.created) {
+          await engineeringTaskService.updateAttempt(attemptId, {
+            promotion_evidence: { ...candidateResult.evidence, code: candidateResult.code },
+            promotion_status: 'READY_FOR_PROMOTION',
+          });
+          await tolerantTransition(taskId, 'READY_FOR_PROMOTION');
           emitTaskStage(eventAudienceTenantId, taskId, {
             stage: 'READY_FOR_PROMOTION',
             status: 'error',
-            message: `Promoção não completou (${promotionResult.code}) — patch validado, mas não chegou ao repositório real.`,
-            meta: promotionResult.evidence,
+            message: `Promoção não completou (${candidateResult.code}) — patch validado, mas não chegou ao repositório real.`,
+            meta: candidateResult.evidence,
           });
-          return { taskId, status: 'READY_FOR_PROMOTION', reasonCode: promotionResult.code };
+          return { taskId, status: 'READY_FOR_PROMOTION', reasonCode: candidateResult.code };
         }
 
         emitTaskStage(eventAudienceTenantId, taskId, {
           stage: 'PROMOTION',
           status: 'success',
-          message: `Promovido: branch ${promotionResult.evidence.candidateBranch} (commit ${promotionResult.evidence.candidateCommit.slice(0, 12)}), smoke pós-promoção PASS.`,
-          meta: promotionResult.evidence,
+          message: `Candidate real criado: branch ${candidateResult.evidence.candidateBranch} (commit ${candidateResult.evidence.candidateCommit.slice(0, 12)}).`,
+          meta: candidateResult.evidence,
         });
 
-        await engineeringTaskService.transitionTask(taskId, 'GREEN');
+        // ER-V1-SEAL-002: POST_PROMOTION_VERIFY — o candidate já existe de verdade (efeito
+        // irreversível já aconteceu); esta fase só confirma via smoke, nunca duplica nada.
+        await tolerantTransition(taskId, 'POST_PROMOTION_VERIFY');
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'POST_PROMOTION_VERIFY', status: 'running', message: 'Confirmando smoke pós-promoção em worktree novo a partir do candidate real.' });
+
+        const verifyOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'POST_PROMOTION_VERIFY' });
+        let verifyResult;
+        if (verifyOp.action === 'RESUME') {
+          verifyResult = { verified: true, ...verifyOp.operation.evidence_ref };
+        } else {
+          if (verifyOp.action === 'FAIL_SAFE') {
+            throw Object.assign(new Error('POST_PROMOTION_VERIFY já está em execução em outro processo'), { code: 'OPERATION_STILL_RUNNING', phase: 'POST_PROMOTION_VERIFY' });
+          }
+          if (verifyOp.action === 'RECONCILE') {
+            // Só leitura/execução em workspace descartável — seguro reexecutar sempre.
+            await operationService.forceRun(verifyOp.operation.id, { reason: 'POST_PROMOTION_VERIFY não tem efeito colateral irreversível — seguro repetir' });
+          }
+          verifyResult = await verifyPromotedCandidate({
+            taskId,
+            attemptNumber: result.attempt.attempt_number,
+            candidateCommit: candidateResult.evidence.candidateCommit,
+            validatedTreeHash: candidateResult.evidence.validatedTreeHash,
+            testCommands: task.test_commands || [],
+          });
+          if (verifyResult.verified) {
+            await operationService.completeOperation(verifyOp.operation.id, { evidenceRef: verifyResult });
+          } else {
+            await operationService.failOperation(verifyOp.operation.id, { error: new Error(verifyResult.code || 'smoke pós-promoção falhou') });
+          }
+        }
+
+        const createdAt = new Date().toISOString();
+        const promotionEvidence = {
+          ...candidateResult.evidence,
+          postPromotionTreeHash: verifyResult.postPromotionTreeHash,
+          createdAt,
+          promotedAt: createdAt,
+          promotionStatus: verifyResult.verified ? 'PROMOTED' : 'READY_FOR_PROMOTION',
+          postPromotionTestPass: verifyResult.postPromotionTestPass,
+          postPromotionResults: verifyResult.postPromotionResults,
+        };
+        // Achado real ao validar a tela de detalhe da task no browser: o motivo exato de uma
+        // promoção não completada só existia no evento WebSocket ao vivo e no valor de retorno
+        // — nunca era persistido junto com `promotion_evidence`. Mesclado aqui.
+        await engineeringTaskService.updateAttempt(attemptId, {
+          promotion_evidence: verifyResult.verified ? promotionEvidence : { ...promotionEvidence, code: verifyResult.code },
+          promotion_status: verifyResult.verified ? 'PROMOTED' : 'READY_FOR_PROMOTION',
+        });
+
+        if (!verifyResult.verified) {
+          // Nunca RED: CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE passaram de verdade, e o
+          // candidate JÁ EXISTE de verdade no git — só a verificação pós-promoção não
+          // confirmou. READY_FOR_PROMOTION documenta exatamente por quê.
+          await tolerantTransition(taskId, 'READY_FOR_PROMOTION');
+          emitTaskStage(eventAudienceTenantId, taskId, {
+            stage: 'READY_FOR_PROMOTION',
+            status: 'error',
+            message: `Promoção não completou (${verifyResult.code}) — candidate real existe, mas a verificação pós-promoção não confirmou.`,
+            meta: promotionEvidence,
+          });
+          return { taskId, status: 'READY_FOR_PROMOTION', reasonCode: verifyResult.code };
+        }
+
+        emitTaskStage(eventAudienceTenantId, taskId, {
+          stage: 'PROMOTION',
+          status: 'success',
+          message: `Promovido: branch ${promotionEvidence.candidateBranch} (commit ${promotionEvidence.candidateCommit.slice(0, 12)}), smoke pós-promoção PASS.`,
+          meta: promotionEvidence,
+        });
+
+        await tolerantTransition(taskId, 'GREEN');
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso — patch promovido ao repositório real.' });
-        return { taskId, status: 'GREEN', attemptId: result.attempt.id };
+        return { taskId, status: 'GREEN', attemptId };
       } finally {
         if (result.workspace) await destroyWorkspace(result.workspace);
       }

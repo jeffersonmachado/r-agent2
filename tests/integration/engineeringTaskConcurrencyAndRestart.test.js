@@ -134,6 +134,11 @@ describe('ERV1-CLOSE-009 — concorrência real (lockForRun com Postgres real)',
     await engineeringTaskService.transitionTask(task.id, 'REVIEWING');
     await engineeringTaskService.transitionTask(task.id, 'REGRESSION');
     await engineeringTaskService.transitionTask(task.id, 'GOVERNANCE');
+    // ER-V1-SEAL-002: GOVERNANCE não vai mais direto para GREEN — passa por PROMOTING e
+    // POST_PROMOTION_VERIFY (estados persistidos distintos para o reconciliador de durable
+    // resume agir em cada ponto de crash possível no trecho mais crítico do loop).
+    await engineeringTaskService.transitionTask(task.id, 'PROMOTING');
+    await engineeringTaskService.transitionTask(task.id, 'POST_PROMOTION_VERIFY');
     await engineeringTaskService.transitionTask(task.id, 'GREEN');
 
     await expect(engineeringTaskService.lockForRun(task.id, 'runner-late')).rejects.toMatchObject({ code: 'TASK_TERMINAL' });

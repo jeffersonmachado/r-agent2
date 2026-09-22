@@ -4,7 +4,11 @@ const { canTransition, assertTransition, isTerminal } = require('../../engine/en
 
 describe('engineeringRouter/stateMachine', () => {
   test('fluxo feliz completo é permitido', () => {
-    const path = ['CREATED', 'CLASSIFIED', 'ROUTED', 'CODING', 'TESTING', 'REVIEWING', 'REGRESSION', 'GOVERNANCE', 'GREEN'];
+    // ER-V1-SEAL-002: GOVERNANCE não vai mais direto para GREEN — passa por PROMOTING
+    // (candidate commit ainda não criado) e POST_PROMOTION_VERIFY (candidate criado, smoke
+    // pendente) antes de GREEN, dando ao reconciliador um estado persistido distinto para cada
+    // ponto de crash possível no trecho mais crítico do loop (nunca promover duas vezes).
+    const path = ['CREATED', 'CLASSIFIED', 'ROUTED', 'CODING', 'TESTING', 'REVIEWING', 'REGRESSION', 'GOVERNANCE', 'PROMOTING', 'POST_PROMOTION_VERIFY', 'GREEN'];
     for (let i = 0; i < path.length - 1; i += 1) {
       expect(canTransition(path[i], path[i + 1])).toBe(true);
     }

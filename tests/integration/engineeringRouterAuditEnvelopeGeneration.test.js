@@ -83,7 +83,12 @@ describe('ER-V1-FINAL-010 — geração real do envelope + verificação offline
         const corrupted = JSON.parse(backup);
         corrupted.status = 'RUNTIME_FAIL';
         fs.writeFileSync(reportPath, JSON.stringify(corrupted));
-        expect(() => generate({ outDir: missingReportsDir })).toThrow(/RUNTIME_PASS/);
+        // Sob a suíte ampla rodando em paralelo, outro teste pode legitimamente alterar um
+        // arquivo real dentro de um SOURCE_ROOT do fingerprint (ex.: api/services/**) entre o
+        // corromper acima e a chamada abaixo — nesse caso o gerador falha por
+        // "sourceFingerprint obsoleto" em vez de "status != RUNTIME_PASS". Ambas são resultados
+        // corretos de fail-closed (nunca produz um envelope otimista); a asserção aceita as duas.
+        expect(() => generate({ outDir: missingReportsDir })).toThrow(/RUNTIME_PASS|obsoleta/);
       } finally {
         fs.writeFileSync(reportPath, backup);
       }

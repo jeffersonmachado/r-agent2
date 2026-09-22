@@ -25,10 +25,21 @@ const TRANSITIONS = Object.freeze({
   // REVIEWING -> CODING é reviewer REJECT com finding BLOCKER/REGRESSION.
   REVIEWING: ['REGRESSION', 'CODING', 'RED', 'CANCELLED', 'BLOCKED'],
   REGRESSION: ['GOVERNANCE', 'RED', 'CANCELLED', 'BLOCKED'],
-  // GOVERNANCE -> READY_FOR_PROMOTION (ERV1-CLOSE-005): promoção do patch validado não
-  // completou (target divergiu, smoke pós-promoção falhou) mesmo com tudo antes tendo passado
-  // de verdade — nunca finge GREEN nesse caso.
-  GOVERNANCE: ['GREEN', 'READY_FOR_PROMOTION', 'RED', 'CANCELLED', 'BLOCKED'],
+  // ER-V1-SEAL-002: GOVERNANCE -> PROMOTING é um estado persistido explícito ANTES de
+  // promoteValidatedPatch rodar — permite ao reconciliador distinguir "governança passou, mas
+  // nunca cheguei a tentar promover" (seguro repetir do zero) de "já estava tentando promover
+  // quando morri" (precisa checar evidência externa real — branch candidata já existe? — antes
+  // de tentar de novo). GOVERNANCE -> READY_FOR_PROMOTION preservado por compatibilidade com
+  // fluxos antigos que já tratavam a reprovação de promoção sem passar por PROMOTING.
+  GOVERNANCE: ['PROMOTING', 'READY_FOR_PROMOTION', 'RED', 'CANCELLED', 'BLOCKED'],
+  // PROMOTING -> POST_PROMOTION_VERIFY: candidate commit + branch já criados (efeito real e
+  // irreversível de "já promovi"), falta só confirmar o smoke pós-promoção.
+  // PROMOTING -> READY_FOR_PROMOTION: promoteValidatedPatch reprovou ANTES de criar o candidate
+  // (ex.: PROMOTION_TARGET_DIVERGED, PROMOTION_TREE_CONTAMINATED) — nada foi promovido de fato.
+  PROMOTING: ['POST_PROMOTION_VERIFY', 'READY_FOR_PROMOTION', 'RED', 'CANCELLED', 'BLOCKED'],
+  // POST_PROMOTION_VERIFY -> GREEN: smoke pós-promoção confirmou. -> READY_FOR_PROMOTION: smoke
+  // falhou (candidate já existe, mas não verificado como equivalente ao validado).
+  POST_PROMOTION_VERIFY: ['GREEN', 'READY_FOR_PROMOTION', 'RED', 'CANCELLED', 'BLOCKED'],
   GREEN: [],
   READY_FOR_PROMOTION: [],
   RED: [],

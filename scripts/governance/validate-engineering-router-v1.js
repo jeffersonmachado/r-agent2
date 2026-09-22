@@ -428,10 +428,14 @@ function main() {
       && !/['"]merge['"]/.test(readText('api/services/engineeringRouter/promotionService.js')),
     reason: 'promotionService.js nunca pode conter git push/merge — só commit-tree + branch local (ERV1-CLOSE-005)',
   });
+  // ER-V1-SEAL-002: `promoteValidatedPatch` (chamada única) foi dividida em
+  // `createPromotionCandidate` + `verifyPromotedCandidate` no loop real, para dar um ponto de
+  // corte persistido (PROMOTING → POST_PROMOTION_VERIFY) entre o efeito irreversível (candidate
+  // commit) e a verificação (smoke) — ver promotionService.js.
   checks.push({
     id: 'PROMOTION_WIRED_BEFORE_GREEN',
     ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
-      /promoteValidatedPatch/, /READY_FOR_PROMOTION/, /promotionResult\.promoted/,
+      /createPromotionCandidate/, /verifyPromotedCandidate/, /READY_FOR_PROMOTION/, /verifyResult\.verified/,
     ]),
   });
   // ER-V1-FINAL-002 — Exact Promotion: `git add -A` no workspace da tentativa (onde testes já
@@ -467,7 +471,7 @@ function main() {
   checks.push({
     id: 'PROMOTION_EVIDENCE_PERSISTS_FAILURE_CODE',
     ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
-      /\.\.\.promotionResult\.evidence,\s*code:\s*promotionResult\.code/,
+      /\.\.\.promotionEvidence,\s*code:\s*verifyResult\.code/,
     ]),
   });
   checks.push({
@@ -798,6 +802,48 @@ function main() {
     id: 'AUDIT_ENVELOPE_NPM_SCRIPTS_REGISTERED',
     ...checkFileContains('package.json', [
       /"engineering-router:audit-envelope:generate":/, /"engineering-router:audit-envelope:verify":/,
+    ]),
+  });
+
+  // ER-V1-SEAL-002 — Full Durable Resume: `tolerantTransition` sozinho só evitava erro de
+  // re-transição para o MESMO estado — nunca evitava re-execução de efeito colateral (model
+  // call, regression, governance, promotion) num resume após crash. `EngineeringOperation` +
+  // `operationReconciler.js` (RESUME/RETRY/RECONCILE/FAIL_SAFE/MANUAL_REQUIRED) + integração
+  // real no loop fecham essa lacuna nas 4 fases mais críticas.
+  checks.push({ id: 'ENGINEERING_OPERATION_MODEL', ok: exists('api/db/models/EngineeringOperation.js'), reason: 'model EngineeringOperation ausente' });
+  checks.push({
+    id: 'ENGINEERING_OPERATION_MIGRATION',
+    ok: fs.readdirSync(path.join(ROOT, 'api/db/migrations')).some((f) => f.includes('create-engineering-operations')),
+    reason: 'migration de engineering_operations ausente',
+  });
+  checks.push({
+    id: 'OPERATION_RECONCILER_PURE_MODULE',
+    ...checkFileContains('engine/engineeringRouter/operationReconciler.js', [
+      /function reconcileOperation/, /'RESUME'/, /'RETRY'/, /'RECONCILE'/, /'FAIL_SAFE'/, /'MANUAL_REQUIRED'/,
+    ]),
+  });
+  checks.push({
+    id: 'ENGINEERING_OPERATION_SERVICE_IDEMPOTENT',
+    ...checkFileContains('api/services/engineeringRouter/engineeringOperationService.js', [
+      /async function beginOrReconcile/, /async function completeOperation/, /async function failOperation/, /async function resumeWithEvidence/,
+    ]),
+  });
+  checks.push({
+    id: 'STATE_MACHINE_HAS_PROMOTING_AND_VERIFY',
+    ...checkFileContains('engine/engineeringRouter/stateMachine.js', [
+      /PROMOTING: \[/, /POST_PROMOTION_VERIFY: \[/,
+    ]),
+  });
+  // PROMOTING é o ponto mais crítico (efeito real e irreversível) — o loop real precisa checar
+  // evidência EXTERNA real (branch candidata já existe?) antes de decidir promover de novo.
+  checks.push({
+    id: 'ROUTER_LOOP_RECONCILES_CRITICAL_PHASES',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /operationService\.beginOrReconcile\(\{ taskId, attemptId, phase: 'REGRESSION' \}\)/,
+      /operationService\.beginOrReconcile\(\{ taskId, attemptId, phase: 'GOVERNANCE' \}\)/,
+      /operationService\.beginOrReconcile\(\{ taskId, attemptId, phase: 'PROMOTING' \}\)/,
+      /operationService\.beginOrReconcile\(\{ taskId, attemptId, phase: 'POST_PROMOTION_VERIFY' \}\)/,
+      /findExistingCandidate\(\{ taskId, validatedPatchHash: validatedPatchHashForReconcile \}\)/,
     ]),
   });
 

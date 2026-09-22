@@ -8,15 +8,20 @@
  * attempt — só existia no evento WebSocket ao vivo (`emitTaskStage`) e no valor de retorno da
  * função. Quem abrisse a tela DEPOIS da execução via READY_FOR_PROMOTION sem nenhum motivo.
  *
- * Este teste mocka `promotionService.promoteValidatedPatch` (a lógica de promoção em si já tem
- * cobertura real e completa em `engineeringPromotionService.test.js` — inclusive o cenário real
- * de target divergido, que aquele teste evita reproduzir aqui mudando o HEAD real do repo
- * compartilhado) para isolar e provar especificamente a PERSISTÊNCIA: quando a promoção não
- * completa, o `code` precisa sobreviver no banco, não só no evento efêmero.
+ * Este teste mocka `promotionService.createPromotionCandidate` (ER-V1-SEAL-002 dividiu
+ * `promoteValidatedPatch` em `createPromotionCandidate` + `verifyPromotedCandidate` — a lógica
+ * de promoção em si já tem cobertura real e completa em `engineeringPromotionService.test.js` e
+ * `engineeringPromotionCandidateSplit.test.js`, inclusive o cenário real de target divergido,
+ * que aqueles testes evitam reproduzir aqui mudando o HEAD real do repo compartilhado) para
+ * isolar e provar especificamente a PERSISTÊNCIA: quando a promoção não completa, o `code`
+ * precisa sobreviver no banco, não só no evento efêmero.
  */
 
 jest.mock('../../api/services/engineeringRouter/promotionService', () => ({
-  promoteValidatedPatch: jest.fn(),
+  createPromotionCandidate: jest.fn(),
+  verifyPromotedCandidate: jest.fn(),
+  findExistingCandidate: jest.fn().mockResolvedValue({ found: false }),
+  computeValidatedPatchHash: jest.fn((diff) => require('crypto').createHash('sha256').update(String(diff || '')).digest('hex')),
   candidateBranchName: jest.fn((taskId) => `engineering-router/candidates/${taskId}`),
 }));
 
@@ -24,7 +29,7 @@ const sequelizeModule = require('../../api/db/sequelize');
 const { registerAiProvider, clearAiProviderConfig } = require('../../api/services/aiProviderManager');
 const engineeringTaskService = require('../../api/services/engineeringRouter/engineeringTaskService');
 const { runTask } = require('../../api/services/engineeringRouter/engineeringRouterService');
-const { promoteValidatedPatch } = require('../../api/services/engineeringRouter/promotionService');
+const { createPromotionCandidate } = require('../../api/services/engineeringRouter/promotionService');
 
 const CODER_PROVIDER = 'anthropic';
 const REVIEWER_PROVIDER = 'mistral';
@@ -155,8 +160,8 @@ describe('engineeringRouterService — persistência da evidência de promoção
   test('quando a promoção não completa, o code (motivo exato) sobrevive em promotion_evidence, não só no evento efêmero', async () => {
     if (skipIfNoDatabase()) return;
 
-    promoteValidatedPatch.mockResolvedValue({
-      promoted: false,
+    createPromotionCandidate.mockResolvedValue({
+      created: false,
       code: 'PROMOTION_TARGET_DIVERGED',
       evidence: { promotionAttemptedAt: new Date().toISOString(), baselineHead: 'aaa111', targetHead: 'bbb222', validatedPatchHash: 'fake-hash' },
     });
