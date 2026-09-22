@@ -731,6 +731,19 @@ function main() {
     ]),
   });
 
+  // ER-V1-FINAL-009 — Full-Suite Isolation: `createSnapshotCommit()` faz `git add -A` no ROOT
+  // do repositório principal, compartilhado por TODA a suíte de testes do projeto — qualquer
+  // outro teste que escreva um arquivo real dentro do repo (fora do escopo desta missão corrigir
+  // em cada um deles) pode colidir com o scan (TOCTOU). Precisa reexecutar a sequência inteira
+  // quando o erro for especificamente esse padrão transitório, nunca mascarar outro tipo de erro.
+  checks.push({
+    id: 'SNAPSHOT_COMMIT_RETRIES_TRANSIENT_SCAN_ERROR',
+    ...checkFileContains('api/services/engineeringRouter/patchApplyService.js', [
+      /TRANSIENT_GIT_SCAN_ERROR/, /async function createSnapshotCommitOnce/, /SNAPSHOT_RETRY_ATTEMPTS/,
+      /if \(!TRANSIENT_GIT_SCAN_ERROR\.test\(message\)/,
+    ]),
+  });
+
   // 15. Documentação V1.
   const docs = [
     'docs/architecture/ENGINEERING_MODEL_ROUTER_V1.md',

@@ -26,6 +26,33 @@ const execFileAsync = util.promisify(execFile);
 const WORKSPACE_ROOT = process.env.ENGINEERING_ROUTER_WORKSPACE_ROOT
   || path.join(os.tmpdir(), 'engineering-router-workspaces');
 
+// ER-V1-FINAL-009 (Full-Suite Isolation) — achado real, reproduzido ao vivo rodando a suíte
+// completa em paralelo: `createSnapshotCommit()` faz `git add -A` no ROOT do repositório
+// PRINCIPAL, compartilhado por TODA a suíte de testes do projeto (não só o Engineering Router).
+// Qualquer outro teste, em qualquer parte do projeto, que crie e remova um arquivo real DENTRO
+// do repositório (ex.: `api/services/benchmark/benchmarkSampleRegistry.js`, escrita atômica
+// tmp+rename usada por `benchmarkChangeProposal.test.js` em `config/benchmarks/`) pode fazer um
+// arquivo aparecer no scan interno do `git add -A` e sumir antes do `stat`, exatamente como
+// qualquer scan de diretório concorrentemente mutável — TOCTOU clássico, inerente a escanear um
+// diretório compartilhado enquanto outro processo escreve nele. Erro real reproduzido:
+// `fatal: unable to stat 'config/benchmarks/__testbrcpXXXXXXXX.json': Arquivo ou diretório
+// inexistente`.
+//
+// Não há como eliminar a concorrência em si sem coordenar com TODO o resto do projeto (fora do
+// escopo desta missão — "não modernizar arquitetura não relacionada"), e `--runInBand` global
+// não é justificado por nenhum requisito arquitetural real (a spec exige exatamente isso: só
+// serializar se for comprovadamente necessário). A mitigação correta para esta classe de erro —
+// um arquivo que existia no momento do `readdir` e sumiu antes do `stat`, por definição
+// transitório — é detectar o padrão específico e reexecutar a sequência inteira do zero (o
+// índice temporário pode estar parcialmente populado, então não dá para só re-rodar o `add`).
+const TRANSIENT_GIT_SCAN_ERROR = /unable to stat|does not exist|no such file or directory|did not match any files/i;
+const SNAPSHOT_RETRY_ATTEMPTS = 5;
+const SNAPSHOT_RETRY_DELAYS_MS = [50, 150, 400, 800];
+
+function sleep(ms) {
+  return new Promise((resolve) => { setTimeout(resolve, ms); });
+}
+
 async function runGit(args, { cwd } = {}) {
   try {
     const { stdout, stderr } = await execFileAsync('git', args, {
@@ -53,7 +80,7 @@ async function runGit(args, { cwd } = {}) {
  *
  * @returns {Promise<string>} hash do commit snapshot
  */
-async function createSnapshotCommit() {
+async function createSnapshotCommitOnce() {
   const tmpIndex = path.join(os.tmpdir(), `engineering-router-index-${crypto.randomBytes(6).toString('hex')}`);
   const env = {
     ...process.env,
@@ -72,6 +99,34 @@ async function createSnapshotCommit() {
   } finally {
     try { fs.unlinkSync(tmpIndex); } catch (_) { /* best-effort */ }
   }
+}
+
+/**
+ * ER-V1-FINAL-009: envelope de retry sobre `createSnapshotCommitOnce` — ver nota acima de
+ * `TRANSIENT_GIT_SCAN_ERROR`. Só reexecuta quando o erro bate no padrão transitório específico
+ * de "arquivo sumiu entre o scan e o stat"; qualquer outro erro (permissão real, repo
+ * corrompido, etc.) propaga imediatamente, sem retry, na primeira tentativa.
+ */
+async function createSnapshotCommit() {
+  let lastErr;
+  for (let attempt = 1; attempt <= SNAPSHOT_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await createSnapshotCommitOnce();
+    } catch (err) {
+      lastErr = err;
+      const message = `${err.stderr || ''}${err.stdout || ''}${err.message || ''}`;
+      if (!TRANSIENT_GIT_SCAN_ERROR.test(message) || attempt === SNAPSHOT_RETRY_ATTEMPTS) {
+        throw err;
+      }
+      logger.warn('[patchApplyService] createSnapshotCommit: git add -A colidiu com escrita concorrente de outro processo (TOCTOU transitório) — retentando', {
+        attempt,
+        maxAttempts: SNAPSHOT_RETRY_ATTEMPTS,
+        error: message.slice(0, 300),
+      });
+      await sleep(SNAPSHOT_RETRY_DELAYS_MS[attempt - 1] || SNAPSHOT_RETRY_DELAYS_MS[SNAPSHOT_RETRY_DELAYS_MS.length - 1]);
+    }
+  }
+  throw lastErr;
 }
 
 /**
