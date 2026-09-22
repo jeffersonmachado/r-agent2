@@ -68,19 +68,16 @@ const MODEL_CAPABILITIES = Object.freeze({
     contextClass: 'STANDARD',
     costClass: 'LOW',
   }),
-  // OpenAI — codex para CODER, mini para tarefas pequenas.
-  'openai:gpt-5-codex': entry({
-    roles: ['CODER'],
-    capabilities: [...CODING_CORE, 'TEST_GENERATION', 'DATABASE', 'FRONTEND', 'DOCKER_INFRA'],
-    contextClass: 'LONG',
-    costClass: 'MEDIUM',
-  }),
-  'openai:gpt-5.5-pro': entry({
-    roles: ['CODER', 'REVIEWER'],
-    capabilities: [...CODING_CORE, ...REVIEW_CORE, 'TEST_GENERATION', 'LONG_CONTEXT', 'DATABASE', 'FRONTEND', 'RELEASE'],
-    contextClass: 'EXTENDED',
-    costClass: 'HIGH',
-  }),
+  // OpenAI — ER-V1-SEAL-005 (Current Model Policy): `gpt-5-codex` e `gpt-5.5-pro` REMOVIDOS
+  // desta allowlist. Evidência real e já documentada (pilot real, ver histórico deste arquivo
+  // antes desta missão): a API OpenAI real rejeitou ambos com 404 (`model_not_found`/
+  // descontinuado) para a conta/credencial atual — mantê-los mapeados aqui, mesmo sabendo disso,
+  // seria exatamente o que a política proíbe ("NÃO inventar disponibilidade. Se provider não
+  // listar um modelo: UNAVAILABLE/UNKNOWN conforme evidence."). `openai:gpt-4o` é o único modelo
+  // OpenAI com disponibilidade real CONFIRMADA (ver comentário abaixo) e cobre CODER/REVIEWER
+  // sozinho enquanto nenhuma nova evidência positiva justificar remapear outro nome da família
+  // atual. Reintroduzir qualquer modelo OpenAI aqui exige nova confirmação real (discovery
+  // `GET /v1/models` ou chamada real bem-sucedida), nunca assumir pelo nome.
   'openai:gpt-5.4-mini': entry({
     roles: ['CODER'],
     capabilities: ['CODING', 'DEBUGGING', 'TEST_GENERATION', 'FRONTEND'],

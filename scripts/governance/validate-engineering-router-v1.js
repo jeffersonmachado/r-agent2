@@ -735,6 +735,25 @@ function main() {
     ]),
   });
 
+  // ER-V1-SEAL-005 (Current Model Policy) — OBJETIVO: "corrigir a defasagem entre provider
+  // discovery e os modelos realmente elegíveis no Router. NÃO hardcodar automaticamente todo
+  // modelo descoberto como confiável." Achado real: `openai:gpt-5-codex`/`openai:gpt-5.5-pro`
+  // ficaram mapeados como CODER/REVIEWER elegíveis na allowlist estática MESMO com evidência real
+  // e já documentada de rejeição pelo provider (404/descontinuado) — exatamente "inventar
+  // disponibilidade" que a política proíbe. Removidos; `gpt-4o` (única confirmação positiva real)
+  // permanece. Este check impede a regressão de alguém remapear os nomes desmentidos sem nova
+  // evidência real.
+  checks.push({
+    id: 'OPENAI_MODEL_POLICY_NO_DISPROVED_MODELS_MAPPED',
+    ok: !/'openai:gpt-5-codex'|'openai:gpt-5\.5-pro'/.test(readText('engine/engineeringRouter/modelCapabilities.js')),
+    reason: 'engine/engineeringRouter/modelCapabilities.js não pode remapear openai:gpt-5-codex/openai:gpt-5.5-pro sem nova evidência real de disponibilidade (ER-V1-SEAL-005 — ambos já confirmados 404/descontinuados em pilot real)',
+  });
+  checks.push({
+    id: 'OPENAI_MODEL_POLICY_CONFIRMED_MODEL_MAPPED',
+    ok: /'openai:gpt-4o'/.test(readText('engine/engineeringRouter/modelCapabilities.js')),
+    reason: 'openai:gpt-4o (único modelo OpenAI com disponibilidade real confirmada) deve permanecer mapeado',
+  });
+
   // ER-V1-SEAL-001 — Immutable Promotion Baseline: substitui e corrige a abordagem de
   // ER-V1-FINAL-009 (snapshot sujo do ROOT). `createWorkspace` precisa materializar o workspace
   // DIRETAMENTE do HEAD real e imutável — nunca mais um "snapshot" fabricado via `git add -A`
@@ -803,6 +822,45 @@ function main() {
     ...checkFileContains('package.json', [
       /"engineering-router:audit-envelope:generate":/, /"engineering-router:audit-envelope:verify":/,
     ]),
+  });
+
+  // ER-V1-SEAL-004 — Self-Proving Deliverable: estende o envelope de ER-V1-FINAL-010 com 5
+  // artifacts novos (source-fingerprint, runtime-requirements, structural-certification,
+  // sandbox-evidence, resume-evidence — categorias antes misturadas dentro de security/routing)
+  // e garante que a evidência de fato entra no ZIP de release entregue, não só no diretório
+  // dist/ local (achado real: ZIP anterior não continha evidence/engineering-router-v1/).
+  checks.push({
+    id: 'AUDIT_ENVELOPE_GENERATOR_WRITES_SEAL_004_ARTIFACTS',
+    ...checkFileContains('scripts/governance/generate-engineering-router-v1-audit-envelope.js', [
+      /'source-fingerprint\.json': sourceFingerprintArtifact/,
+      /'runtime-requirements\.json': runtimeRequirements/,
+      /'structural-certification\.json': structuralCertification/,
+      /'sandbox-evidence\.json': sandboxEvidence/,
+      /'resume-evidence\.json': resumeEvidence/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFIER_VALIDATES_SEAL_004_ARTIFACTS',
+    ...checkFileContains('scripts/governance/verify-engineering-router-v1-audit-envelope.js', [
+      /RUNTIME_REQUIREMENTS_MATCH_REQUIRED_IDS/, /STRUCTURAL_CERTIFICATION_PASS/,
+      /SANDBOX_ITEM_PASS_/, /RESUME_ITEM_PASS_/, /FINAL_DECISION_RECOMPUTED_MATCHES/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFIER_ACCEPTS_ZIP_INPUT',
+    ...checkFileContains('scripts/governance/verify-engineering-router-v1-audit-envelope.js', [
+      /function extractEnvelopeFromZip/, /evidence\/engineering-router-v1/,
+    ]),
+  });
+  checks.push({
+    id: 'RELEASE_ZIP_INJECTS_AUDIT_ENVELOPE',
+    ...checkFileContains('scripts/generate-zip.sh', [
+      /copy_engineering_router_v1_audit_envelope/, /evidence\/engineering-router-v1/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFY_NPM_ALIAS_REGISTERED',
+    ...checkFileContains('package.json', [/"verify:engineering-router-v1-envelope":/]),
   });
 
   // ER-V1-SEAL-002 — Full Durable Resume: `tolerantTransition` sozinho só evitava erro de
