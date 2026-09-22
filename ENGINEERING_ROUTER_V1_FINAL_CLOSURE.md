@@ -381,4 +381,55 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   (commit `b863c54a`). Confirmado GREEN isolado (59s, plano HIGH real executando a suíte
   inteira do subsistema `engineeringRouter`) e a regressão completa voltando ao padrão TOCTOU
   já conhecido (não esta regressão específica).
+
+### ER-V1-FINAL-007 — Evidence Precision
+
+- RED reproduzido (achado real, ao vivo): a evidência de runtime (ERV1-CLOSE-010) rodava o
+  ARQUIVO INTEIRO via `npx jest <testPath>` e certificava o requirement provado só com
+  `exitCode === 0` — sem nenhuma granularidade sobre QUAL teste, dentro do arquivo, prova aquele
+  requirement específico. Reprodução: `test.skip`-ando (via patch temporário, restaurado
+  imediatamente após, confirmado por `git diff --stat` vazio) o único teste que prova
+  `SUPPORT_DENIAL_DEFAULT` em `engineeringRouterRoutes.test.js` (mantendo os outros 11 testes do
+  arquivo intactos) — o arquivo inteiro continuava saindo com `exitCode 0`, certificando o
+  requirement como provado sem nenhum teste real cobrindo-o.
+- descoberta adicional durante a correção: `npx jest <path> -t "<pattern sem match>"` também sai
+  com `exitCode 0` (todos os testes reportados como "pulados", `numPassedTests:0`,
+  `success:true`) — checar só `exitCode` após trocar para `--testNamePattern` seria uma prova
+  ainda mais falsa que a anterior (aparenta granularidade, mas nada garante que o pattern casou
+  com algum teste real).
+- fix:
+  1. **`scripts/governance/collect-engineering-router-runtime-evidence.js`** reescrito: cada um
+     dos 24 itens roda restrito a `--testNamePattern` (`testId` = nome/substring estável do
+     `test(...)` real que prova aquele requirement específico), captura `--json`
+     (`maxBuffer: 50MB`, `timeout: 120000` — saída `--json` de testes E2E/git-reais passava do
+     limite default de 1MB do `execFileSync`), e exige `numPassedTests >= 1` E
+     `numFailedTests === 0` (nunca só `exitCode`). Report `artifactVersion` `2.0.0`: cada item
+     ganha `testCaseId`, `assertionResult` (nomes/status reais casados), `numPassedTests`/
+     `numFailedTests`/`numPendingTests`, `sourceFingerprint`, `runId`, `evidenceHash` (sha256).
+     4 itens de runtime novos, cobrindo blockers já fechados que ainda não tinham prova de
+     runtime granular: `EXACT_PATCH_PROMOTION`, `FAIL_CLOSED_SCOPE`, `CRASH_RESUME_MID_STAGE`,
+     `EXECUTION_SANDBOX_ISOLATION` (24 itens no total, antes 20).
+  2. **`scripts/governance/validate-engineering-router-v1.js`** (`buildRuntimeChecks`) —
+     `REQUIRED_RUNTIME_ITEM_IDS` sincronizado com os 24 itens do coletor (autoridade única,
+     mesma lista); cada `RUNTIME_<id>` agora exige `isFresh && exitCode===0 && testCaseId
+     presente && numPassedTests>=1 && numFailedTests===0` — não mais só `exitCode===0`.
+- tests: reprodução RED ao vivo (não um teste automatizado permanente — a prova é o próprio
+  comportamento do coletor/gate reescritos, que é o artefato de evidência em si).
+- evidence:
+  - `node scripts/governance/validate-engineering-router-v1.js` (sem `--runtime`, árvore limpa
+    antes do commit `7a2247c1`): `STRUCTURAL_PASS`, 124 checks, 0 falhas.
+  - commit `7a2247c1` (working tree limpo — pré-requisito para um sinal não contaminado pelo
+    padrão "dirty working tree" já documentado nos blockers anteriores).
+  - `node scripts/governance/collect-engineering-router-runtime-evidence.js` rodado com a árvore
+    limpa no commit `7a2247c1`: `status=RUNTIME_PASS items=24 falhas=0
+    fingerprint=2501c21db3b7d890…`. Confirma que as 6 falhas ("saída do Jest não pôde ser
+    parseada como JSON") observadas na rodada anterior (feita com o próprio script do coletor
+    ainda não commitado, isto é, árvore suja) eram o padrão de dirty-working-tree/contaminação
+    já documentado nos blockers 002/003/005/006 — não um problema real de `maxBuffer`/timeout
+    nem uma falha genuína dos testes.
+  - `node scripts/governance/validate-engineering-router-v1.js --runtime` (mesmo commit):
+    `STRUCTURAL_PASS/RUNTIME_PASS`, 149 checks, 0 falhas.
+  - `npm run test:unit` (suíte completa do projeto, mesmo commit): `Test Suites: 1 skipped, 847
+    passed, 848 total`; `Tests: 2 skipped, 6457 passed, 6459 total`; exit code 0.
+- status: GREEN
 - commit: `b6f40f43` (implementação) + `b863c54a` (correção do achado acima)
