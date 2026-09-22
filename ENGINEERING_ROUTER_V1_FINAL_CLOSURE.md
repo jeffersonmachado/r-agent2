@@ -366,4 +366,19 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   `buildRegressionPlan` em vez de `listTestRuns`). `validate-engineering-router-v1.js` →
   `STRUCTURAL_PASS`, 124 checks, 0 falhas.
 - status: GREEN
-- commit: (a seguir)
+- achado real durante a regressão (corrigido no mesmo blocker, não escondido): a primeira
+  rodada da regressão completa expôs uma REGRESSÃO genuína introduzida por esta correção —
+  `engineeringRouterFullLoopE2E.test.js` (task `risk:'HIGH'`, `allowedPaths:
+  [tests/fixtures/engineering-router-sandbox/mathUtils.js]`) terminava em `RED` real (não a
+  race condition TOCTOU já conhecida). Causa raiz: o RegressionPlan HIGH/MEDIUM, ao resolver
+  "testes relacionados"/"subsistema" a partir de `touchedPaths`, encontrava e sugeria `npx
+  jest tests/fixtures/engineering-router-sandbox/mathUtils.test.js` — um comando que SEMPRE
+  falha com "No tests found" porque esse diretório está em `testPathIgnorePatterns` do
+  `jest.config.cjs` real (mesma exclusão de `tests/rpa/`, já descoberta em ER-V1-FINAL-001).
+  Não era uma reprovação real de regressão de código — era o próprio plano sugerindo um
+  comando estruturalmente inválido. Corrigido filtrando os mesmos caminhos excluídos pelo
+  `jest.config.cjs` ao resolver `availableTestFiles` em `checkRegression`
+  (commit `b863c54a`). Confirmado GREEN isolado (59s, plano HIGH real executando a suíte
+  inteira do subsistema `engineeringRouter`) e a regressão completa voltando ao padrão TOCTOU
+  já conhecido (não esta regressão específica).
+- commit: `b6f40f43` (implementação) + `b863c54a` (correção do achado acima)
