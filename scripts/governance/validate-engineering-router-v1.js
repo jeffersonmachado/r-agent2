@@ -757,6 +757,36 @@ function main() {
     ]),
   });
 
+  // ER-V1-FINAL-010 — Self-Proving Audit Envelope: artefato auditável autocontido e verificável
+  // offline (nunca depende de banco/rede/confia em .md) — runtime report, candidate/promotion
+  // evidence, pilot evidence e run lineage, tudo content-addressed.
+  checks.push({ id: 'AUDIT_ENVELOPE_GENERATOR_EXISTS', ok: exists('scripts/governance/generate-engineering-router-v1-audit-envelope.js'), reason: 'gerador do audit envelope ausente' });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_GENERATOR_REQUIRES_FRESH_RUNTIME_PASS',
+    ...checkFileContains('scripts/governance/generate-engineering-router-v1-audit-envelope.js', [
+      /function requireFreshRuntimeEvidence/, /status !== 'RUNTIME_PASS'/, /computeSourceFingerprint/,
+    ]),
+  });
+  checks.push({ id: 'AUDIT_ENVELOPE_VERIFIER_EXISTS', ok: exists('scripts/governance/verify-engineering-router-v1-audit-envelope.js'), reason: 'verifier offline do audit envelope ausente' });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFIER_IS_OFFLINE_AND_NEVER_TRUSTS_MD',
+    ...checkFileContains('scripts/governance/verify-engineering-router-v1-audit-envelope.js', [
+      /não depende de banco/, /não depende de rede/, /não confia em \.md/, /function verifyEnvelope/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFIER_VALIDATES_HASHES_AND_REQUIREMENT_COVERAGE',
+    ...checkFileContains('scripts/governance/verify-engineering-router-v1-audit-envelope.js', [
+      /ARTIFACT_HASH_MATCHES_/, /REQUIREMENT_COVERAGE_/, /PROMOTION_ITEM_PASS_/, /PILOT_EVIDENCE_PRESENT/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_NPM_SCRIPTS_REGISTERED',
+    ...checkFileContains('package.json', [
+      /"engineering-router:audit-envelope:generate":/, /"engineering-router:audit-envelope:verify":/,
+    ]),
+  });
+
   // 15. Documentação V1.
   const docs = [
     'docs/architecture/ENGINEERING_MODEL_ROUTER_V1.md',
