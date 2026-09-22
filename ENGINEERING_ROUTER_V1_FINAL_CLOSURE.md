@@ -227,4 +227,39 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   contra um baseline limpo a partir do HEAD real commitado — sob um working tree sujo de
   desenvolvimento ativo, os dois divergem por definição). Confirmado desaparecendo por completo
   depois do commit (working tree limpo) — ver regressão abaixo.
+- commit: `45faee49`
+
+### ER-V1-FINAL-004 — Mandatory Runtime Gate
+
+- RED reproduzido (achado real, confirmado por leitura + rastreamento da cadeia real de
+  chamadas, não hipotético): `package.json`'s `validate:governance-enforcement` invocava `npm
+  run validate:engineering-router-v1` SEM `--runtime`. Rastreado até a autoridade real de
+  selagem de release: `scripts/governance/seal-release.sh` (o script por trás de `npm run
+  release:seal`, o comando oficial de selagem documentado no `CLAUDE.md` do projeto) chama `npm
+  run validate:governance-enforcement` diretamente (linhas 379/398) — ou seja, o pipeline
+  OFICIAL de selagem aceitava `STRUCTURAL_PASS`/`RUNTIME_NOT_REQUESTED` como suficiente para o
+  Engineering Router V1, sem nenhuma prova de comportamento real (exitCode real, fingerprint
+  amarrado à working tree) exigida antes de selar uma release que incluísse o Router.
+- fix: `package.json`'s `validate:governance-enforcement` agora chama `npm run
+  validate:engineering-router-v1:runtime` — mudança mínima e cirúrgica no ÚNICO ponto de
+  integração real (nenhum segundo pipeline criado). Verificado explicitamente (leitura de
+  `api/services/engineeringRouter/regressionGovernanceService.js::checkGovernance`) que o
+  caminho AO VIVO (chamado dentro do estágio GOVERNANCE de toda EngineeringTask real) invoca o
+  MESMO script via `execFileAsync(process.execPath, [scriptPath])` — nunca via `npm run`, nunca
+  com `--runtime` — logo é estruturalmente imune a esta mudança: o deadlock de bootstrap
+  documentado em ERV1-CLOSE-010 nunca é reintroduzido, porque os dois caminhos de invocação
+  (script direto vs. npm script agregado) são fisicamente distintos no código.
+- tests: `tests/integration/engineeringRouterMandatoryRuntimeGate.test.js` (novo, 6/6 PASS) —
+  prova estruturalmente que `validate:governance-enforcement` exige `:runtime`; prova que
+  `checkGovernance()` nunca passa por `npm`/`--runtime`; roda o GATE REAL (nunca mockado) contra
+  evidência manipulada no disco cobrindo os 4 cenários exigidos pela missão: evidência ausente →
+  FAIL; evidência com fingerprint stale (de "outro código") → FAIL; modo padrão sem `--runtime`
+  continua `RUNTIME_NOT_REQUESTED`/PASS (preserva o comportamento do loop ao vivo); evidência
+  com fingerprint REAL da working tree atual (calculado ao vivo pela mesma autoridade do gate,
+  `computeSourceFingerprint`) e todos os itens `exitCode:0` → PASS real.
+- evidence: gate estrutural `MANDATORY_RUNTIME_GATE_IN_OFFICIAL_PIPELINE` +
+  `LIVE_GOVERNANCE_CHECK_NEVER_REQUIRES_RUNTIME` (novos — o segundo prova a AUSÊNCIA de
+  `--runtime` no caminho ao vivo, não só a presença do padrão correto).
+  `validate-engineering-router-v1.js` → `STRUCTURAL_PASS`, 117 checks, 0 falhas.
+- status: GREEN
 - commit: (a seguir)

@@ -577,6 +577,7 @@ function main() {
     'tests/integration/engineeringRouterReviewerRejectionRecodeE2E.test.js',
     'tests/unit/engineeringRouterExecutionSandboxSecurity.test.js',
     'tests/unit/engineeringRouterFailClosedScope.test.js',
+    'tests/integration/engineeringRouterMandatoryRuntimeGate.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });
@@ -634,6 +635,30 @@ function main() {
     id: 'PATCH_APPLY_NO_WRITABLE_NODE_MODULES_SYMLINK',
     ok: !/symlinkSync\([\s\S]*?node_modules/.test(readText('api/services/engineeringRouter/patchApplyService.js')),
     reason: 'patchApplyService.js não pode mais criar o symlink gravável de node_modules para o node_modules real do repositório (ER-V1-FINAL-001)',
+  });
+  // ER-V1-FINAL-004 — Mandatory Runtime Gate: o pipeline oficial de selagem
+  // (scripts/governance/seal-release.sh → npm run validate:governance-enforcement) precisa
+  // exigir RUNTIME_PASS, nunca aceitar STRUCTURAL_PASS/RUNTIME_NOT_REQUESTED sozinho para
+  // selar uma release que inclui o Engineering Router. O caminho ao vivo (checkGovernance, por
+  // task) continua invocando o script direto sem --runtime — nunca deadlock de bootstrap.
+  checks.push({
+    id: 'MANDATORY_RUNTIME_GATE_IN_OFFICIAL_PIPELINE',
+    ok: (() => {
+      const pkg = JSON.parse(readText('package.json'));
+      const script = pkg.scripts && pkg.scripts['validate:governance-enforcement'];
+      return typeof script === 'string'
+        && script.includes('npm run validate:engineering-router-v1:runtime')
+        && !/validate:engineering-router-v1 &&/.test(script);
+    })(),
+    reason: 'validate:governance-enforcement precisa chamar validate:engineering-router-v1:runtime (nunca a versão structural-only) — é a autoridade que scripts/governance/seal-release.sh usa para selar releases',
+  });
+  checks.push({
+    id: 'LIVE_GOVERNANCE_CHECK_NEVER_REQUIRES_RUNTIME',
+    ok: (() => {
+      const src = readText('api/services/engineeringRouter/regressionGovernanceService.js');
+      return /execFileAsync\(process\.execPath, \[scriptPath\]/.test(src) && !/--runtime/.test(src);
+    })(),
+    reason: 'checkGovernance() (loop ao vivo, por-task) nunca pode passar --runtime — reintroduziria o deadlock de bootstrap documentado em ERV1-CLOSE-010',
   });
 
   // 15. Documentação V1.
