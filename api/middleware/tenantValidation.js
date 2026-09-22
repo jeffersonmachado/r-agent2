@@ -17,6 +17,7 @@
 
 const { getTenant, validateTenantStatus } = require('../services/tenantService');
 const { requireAuth } = require('./auth');
+const { isSuperAdmin } = require('../services/superAdminService');
 const logger = require('../utils/logger');
 
 /**
@@ -24,7 +25,15 @@ const logger = require('../utils/logger');
  * Ordem de prioridade:
  * 1. req.agent.tenantId (do JWT - autentica se necessário)
  * 2. Header X-Tenant-Id
- * 
+ * 3. Query param ?tenantId= (apenas super-admin — mesmo contrato usado por
+ *    rotas como /rag/health via resolveScopedTenantId)
+ *
+ * Super-admin é exceção: nunca herda silenciosamente o próprio tenantId
+ * (tipicamente 'system') — precisa selecionar o tenant explicitamente via
+ * header ou query param, mesmo contrato de
+ * api/middleware/auth.js#requireAuth (hardening: evita super-admin operar
+ * "silenciosamente" no tenant errado).
+ *
  * @param {http.IncomingMessage} req
  * @returns {string|null}
  */
@@ -33,20 +42,35 @@ function extractTenantId(req) {
   // Se req.agent não existe mas há token, tenta autenticar
   if (!req.agent) {
     const authResult = requireAuth(req);
-    if (authResult.valid && authResult.agent && authResult.agent.tenantId) {
+    if (authResult.valid && authResult.agent) {
       // Atualiza req.agent para uso posterior
       req.agent = authResult.agent;
       req.session = authResult.session;
-      return authResult.agent.tenantId;
     }
-  } else if (req.agent && req.agent.tenantId) {
+  }
+
+  if (req.agent && !isSuperAdmin(req.agent) && req.agent.tenantId) {
     return req.agent.tenantId;
   }
 
-  // 2. Do header
+  // 2. Do header (obrigatório para super-admin, fallback para os demais)
   const headerTenantId = req.headers['x-tenant-id'];
   if (headerTenantId) {
     return headerTenantId.trim();
+  }
+
+  // 3. Query param ?tenantId= — apenas super-admin (seleção explícita
+  // equivalente ao header, usada por rotas que já a aceitam nativamente).
+  if (req.agent && isSuperAdmin(req.agent)) {
+    try {
+      const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+      const queryTenantId = url.searchParams.get('tenantId');
+      if (queryTenantId && queryTenantId.trim()) {
+        return queryTenantId.trim();
+      }
+    } catch (_) {
+      // URL malformada: ignora e segue para o null abaixo.
+    }
   }
 
   return null;

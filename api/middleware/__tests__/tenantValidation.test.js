@@ -49,7 +49,29 @@ describe('tenantValidation middleware', () => {
 
     test('deve retornar null quando não há tenantId', () => {
       const tenantId = extractTenantId(mockReq);
-      
+
+      expect(tenantId).toBeNull();
+    });
+
+    test('super_admin sem header X-Tenant-Id NÃO deve herdar o próprio tenantId (evita vazamento entre tenants)', () => {
+      mockReq.agent = { role: 'super_admin', tenantId: 'system' };
+      const tenantId = extractTenantId(mockReq);
+
+      expect(tenantId).toBeNull();
+    });
+
+    test('super_admin com header X-Tenant-Id deve usar o tenant explicitamente selecionado', () => {
+      mockReq.agent = { role: 'super_admin', tenantId: 'system' };
+      mockReq.headers['x-tenant-id'] = 'tenant-2';
+      const tenantId = extractTenantId(mockReq);
+
+      expect(tenantId).toBe('tenant-2');
+    });
+
+    test('owner do tenant system sem header X-Tenant-Id também não deve herdar o próprio tenantId', () => {
+      mockReq.agent = { role: 'owner', tenantId: 'system' };
+      const tenantId = extractTenantId(mockReq);
+
       expect(tenantId).toBeNull();
     });
 
@@ -59,6 +81,24 @@ describe('tenantValidation middleware', () => {
       const tenantId = extractTenantId(mockReq);
 
       expect(tenantId).toBeNull();
+    });
+
+    test('super_admin sem header pode selecionar tenant via query param ?tenantId= (contrato usado por /rag/health)', () => {
+      mockReq.agent = { role: 'super_admin', tenantId: 'system' };
+      mockReq.url = '/test?tenantId=tenant-3';
+      mockReq.headers.host = 'localhost';
+      const tenantId = extractTenantId(mockReq);
+
+      expect(tenantId).toBe('tenant-3');
+    });
+
+    test('não super_admin NÃO pode usar query param ?tenantId= para contornar o próprio tenant', () => {
+      mockReq.agent = { role: 'agent', tenantId: 'tenant-1' };
+      mockReq.url = '/test?tenantId=tenant-outro';
+      mockReq.headers.host = 'localhost';
+      const tenantId = extractTenantId(mockReq);
+
+      expect(tenantId).toBe('tenant-1');
     });
   });
 

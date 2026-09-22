@@ -4811,9 +4811,16 @@ async function runFlowScenario(definition, ctx) {
     }
 
     // Métricas SEM X-Tenant-Id: super-admin sem tenant resolvido deve
-    // receber 403 tenant_required — contrato deliberado de segurança do
-    // módulo voice (commit 57e45ab: "sem tenant explícito a resposta deve
-    // ser 403 tenant_required, nunca um 200 silencioso com lista vazia").
+    // receber 403 — contrato deliberado de segurança do módulo voice
+    // (commit 57e45ab: "sem tenant explícito a resposta deve ser 403,
+    // nunca um 200 silencioso com lista vazia"). O código de erro varia
+    // conforme a camada que bloqueia primeiro: 'tenant_required' quando a
+    // guarda interna da rota decide (rate limit de tenant desativado, ex.:
+    // NODE_ENV=development), ou 'tenant_validation_failed' quando o
+    // middleware global de rate limit por tenant intercepta antes de
+    // chegar na rota (ex.: NODE_ENV=production). Ambos são bloqueios
+    // válidos — o que a asserção garante é que NUNCA vaza 200.
+    const acceptableTenantGuardErrors = ['tenant_required', 'tenant_validation_failed'];
     let noTenantStatus = null;
     try {
       await fetchJson(buildUrl(API_URL, '/api/voice/metrics'), {
@@ -4822,8 +4829,8 @@ async function runFlowScenario(definition, ctx) {
       noTenantStatus = 200;
     } catch (err) {
       noTenantStatus = err.status;
-      if (err.status !== 403 || err.body?.error !== 'tenant_required') {
-        throw new Error(`voice/metrics sem tenant deveria ser 403 tenant_required: ${err.status} ${JSON.stringify(err.body)}`);
+      if (err.status !== 403 || !acceptableTenantGuardErrors.includes(err.body?.error)) {
+        throw new Error(`voice/metrics sem tenant deveria ser 403 tenant_required/tenant_validation_failed: ${err.status} ${JSON.stringify(err.body)}`);
       }
     }
     if (noTenantStatus !== 403) {
