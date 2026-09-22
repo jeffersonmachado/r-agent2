@@ -13,7 +13,12 @@ services:
       API_PORT: ${API_PORT:-3000}
       # DEFAULT_TENANT_ID removido - tenant deve ser fornecido via autenticação
       RATE_LIMIT_REDIS_URL: ${RATE_LIMIT_REDIS_URL:-redis://redis:6379}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # DOCKER_REDIS_URL (não REDIS_URL): o .env do projeto define REDIS_URL
+      # para o cenário "rodar localmente sem Docker" (redis://localhost:6379)
+      # e o Compose lê esse .env automaticamente — usar o mesmo nome aqui
+      # faria esse valor de host vazar para dentro do container, quebrando
+      # a resolução DNS interna do serviço "redis" (achado real, 2026-09-22).
+      REDIS_URL: ${DOCKER_REDIS_URL:-redis://redis:6379}
       # Políticas de rate limiting (opcional, valores padrão em infra/rate-limit/policies.js)
       RATE_LIMIT_DRY_RUN_POINTS: ${RATE_LIMIT_DRY_RUN_POINTS:-50}
       RATE_LIMIT_DRY_RUN_DURATION: ${RATE_LIMIT_DRY_RUN_DURATION:-60}
@@ -28,7 +33,11 @@ services:
       RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
       RAG_INTERNAL_TOKEN: "${RAG_INTERNAL_TOKEN:?RAG_INTERNAL_TOKEN obrigatória}"
       # PostgreSQL
-      DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
+      # DOCKER_DATABASE_URL (não DATABASE_URL): mesmo motivo do REDIS_URL
+      # acima — o .env de modo local define DATABASE_URL apontando para
+      # localhost, que vazaria para dentro do container via interpolação
+      # automática do Compose.
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
       PGHOST: ${PGHOST:-postgres}
       PGUSER: ${PGUSER:-results_app}
       PGPASSWORD: ${PGPASSWORD:-StrongPass}
@@ -46,7 +55,11 @@ services:
       # -------------------------------------------------------------------
       # PBX v1 (Asterisk Realtime/ODBC + AMI)
       # -------------------------------------------------------------------
-      AMI_HOST: ${AMI_HOST:-asterisk}
+      # DOCKER_AMI_HOST (não AMI_HOST): o .env de modo local define
+      # AMI_HOST=127.0.0.1 (Asterisk rodando fora do Docker) — usar o mesmo
+      # nome faria o container tentar conectar nele mesmo em vez do serviço
+      # "asterisk" (achado real: click2call nunca originava, 2026-09-22).
+      AMI_HOST: ${DOCKER_AMI_HOST:-asterisk}
       AMI_PORT: ${AMI_PORT:-5038}
       AMI_USERNAME: ${AMI_USERNAME:-ragent2}
       AMI_SECRET: "${AMI_SECRET:?Erro: AMI_SECRET não definida}"
@@ -178,7 +191,8 @@ services:
       LLM_MODEL: ${RAG_LLM_MODEL:-gpt-3.5-turbo}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # Usa o mesmo Postgres da API (fonte única)
-      DATABASE_URL: ${DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
+      # DOCKER_DATABASE_URL: ver comentário equivalente no serviço "api".
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://results_app:StrongPass@postgres:5432/results_saas}
       # Achado real (docker-compose.test.yml): mesmo com o modelo de embeddings pré-baixado no
       # build (Dockerfile), huggingface_hub por padrão tenta validar a versão online no warm-up
       # de startup — sem rede em runtime isso trava em retries até o healthcheck falhar. Modo
