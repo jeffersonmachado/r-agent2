@@ -308,4 +308,14 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   `transitionTask`) + `TOLERANT_TRANSITION_FAIL_SAFE_ON_TERMINAL` (novos).
   `validate-engineering-router-v1.js` → `STRUCTURAL_PASS`, 120 checks, 0 falhas.
 - status: GREEN
-- commit: (a seguir)
+- nota de investigação (não regressão real — comportamento honesto, melhor que o anterior): na
+  regressão completa em paralelo, `engineeringRouterFullLoopE2E.test.js` falhou com
+  `EngineeringTask não encontrada`, agora com o stack trace passando explicitamente por
+  `tolerantTransition`. Isso é a MESMA race condition TOCTOU pré-existente já documentada em
+  ER-V1-FINAL-002/003 (`git add -A` do `createSnapshotCommit` colidindo com arquivos
+  temporários de outro teste sob paralelismo pesado) — mas agora `tolerantTransition`
+  corretamente PROPAGA o erro real (`not_found`, que não é `INVALID_STATE_TRANSITION`) em vez
+  de mascará-lo como o `.catch(() => {})` antigo faria. Confirmado isolado (PASS 100% das
+  vezes). O sintoma mudou (mensagem de erro mais precisa, aparece mais cedo), a causa raiz
+  continua a mesma e continua sendo escopo do ER-V1-FINAL-009.
+- commit: `44df73f0`
