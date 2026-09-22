@@ -432,4 +432,79 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   - `npm run test:unit` (suíte completa do projeto, mesmo commit): `Test Suites: 1 skipped, 847
     passed, 848 total`; `Tests: 2 skipped, 6457 passed, 6459 total`; exit code 0.
 - status: GREEN
+
+### ER-V1-FINAL-008 — Current Model Catalog
+
+- RED reproduzido (achado real, por inspeção direta): nenhum módulo/tabela de "model catalog"
+  existia (`engine/engineeringRouter/` e `api/services/engineeringRouter/` sem nenhum arquivo
+  com "catalog" no nome). O discovery real de modelos (`providerModelDiscoveryCache`/
+  `listAvailableModelIds`, ERV1-CLOSE-008) já existia, mas era usado SOMENTE para EXCLUIR da
+  allowlist estática (`modelCapabilities.js`) um modelo mapeado que o provider deixou de listar.
+  Quando o provider retornava um modelId REAL que não estava mapeado (modelo novo no catálogo do
+  provider), essa informação era descartada sem nenhum rastro — nunca persistida, nunca
+  auditável — mesmo que a não-elegibilidade automática já fosse correta por padrão fail-closed
+  (só `listCapabilityEntries()`, isto é, o allowlist estático, entra no loop de
+  `buildAvailableModels`).
+- fix (sem tornar a allowlist dinâmica nem redesenhar o Router — `modelCapabilities.js` continua
+  sendo a ÚNICA fonte de elegibilidade real, conforme a spec exige explicitamente: "Discovery
+  deve ser source of truth para existência. Capability policy deve ser source of truth para
+  uso."):
+  1. **`engine/engineeringRouter/constants.js`** — `MODEL_CATALOG_STATUSES`: `DISCOVERED`,
+     `UNCLASSIFIED`, `CLASSIFIED`, `APPROVED`, `RETIRED`, `UNAVAILABLE`, `DENIED` (vocabulário
+     exato pedido pela missão).
+  2. **`engine/engineeringRouter/modelCatalogPolicy.js`** (novo, módulo puro) —
+     `resolveCatalogStatus({isMapped, listedByProviderNow, previousStatus})`: mapeado +
+     confirmado pelo discovery → `APPROVED`; mapeado + discovery confirma ausência → `RETIRED`;
+     não mapeado + discovery confirma presença real → `DISCOVERED` (ou mantém `CLASSIFIED` se já
+     tiver sido classificado manualmente); `DENIED` nunca é sobrescrito automaticamente.
+     `isEligibleForRisk(status)`: só `APPROVED` é elegível, para qualquer risco — a spec exige
+     que HIGH/CRITICAL nunca aceitem unclassified, e a forma fail-closed mais simples de garantir
+     isso é nunca aceitar unclassified para risco nenhum.
+  3. **`api/db/models/EngineeringModelCatalogEntry.js`** + migration
+     (`20260922140000-create-engineering-model-catalog-entries.js`) — tabela
+     `engineering_model_catalog_entries` (`provider_id`+`model_id` único), camada de
+     auditoria/governança, nunca consultada para decidir elegibilidade real.
+  4. **`api/services/engineeringRouter/modelCatalogService.js`** (novo) —
+     `reconcileDiscoveredModel` (idempotente via upsert, nunca lança — falha de persistência é
+     best-effort/logada, nunca derruba o roteamento real), `getCatalogEntry`,
+     `listCatalogEntries`.
+  5. **`engineeringModelAvailabilityService.js::reconcileProviderCatalog`** — quando o discovery
+     real de um provider responde com sucesso (mesmo ponto que já existia para excluir
+     candidatos), reconcilia o catálogo nas DUAS direções: cada modelo mapeado desse provider →
+     `APPROVED` ou `RETIRED` conforme presença real; cada modelId retornado pelo provider que não
+     está mapeado → `DISCOVERED`. Best-effort, mesma política fail-open do resto do discovery.
+  6. `collect-engineering-router-runtime-evidence.js`/`validate-engineering-router-v1.js`: novo
+     item de runtime `MODEL_CATALOG_GOVERNANCE` (25 itens no total) + 6 novos checks estruturais
+     (130 no total).
+- tests:
+  - `tests/unit/engineeringRouterModelCatalogPolicy.test.js` (novo, 9/9 PASS, política pura):
+    modelo novo (discovery confirma, não mapeado) → `DISCOVERED`; `DISCOVERED`/`UNCLASSIFIED`
+    nunca elegível nem para HIGH nem para CRITICAL; `CLASSIFIED` (sem promoção à allowlist)
+    também não elegível; mapeado+confirmado → `APPROVED` elegível para qualquer risco;
+    mapeado+discovery confirma ausência → `RETIRED` nunca elegível; discovery sem confirmação
+    (fail-open) preserva `APPROVED`; `DENIED` nunca é sobrescrito automaticamente; `CLASSIFIED`
+    não regride para `DISCOVERED` enquanto o discovery seguir confirmando existência.
+  - `tests/integration/engineeringModelCatalogService.test.js` (novo, 4/4 PASS, Postgres real):
+    modelo novo real persiste como `DISCOVERED`; modelo mapeado+confirmado persiste como
+    `APPROVED`; modelo mapeado que o provider deixa de listar persiste como `RETIRED`;
+    reconciliação repetida com os mesmos fatos é idempotente (nunca duplica linha).
+  - regressão: `engineeringModelAvailabilityService`/`engineeringRouterProviderModelDiscovery`/
+    `engineeringRouterModelSelector`/`engineeringRouterModelCapabilities` — 33/33 PASS, sem
+    quebra (o comportamento de exclusão pré-existente do discovery continua intacto).
+  - `tests/integration/engineeringRouterModelRerouteE2E.test.js` ("reroute continua funcional",
+    exigido explicitamente pela spec): FAIL isolado na primeira rodada com working tree ainda
+    suja (`READY_FOR_PROMOTION` em vez de `GREEN` — o já documentado padrão de
+    dirty-working-tree/`PROMOTION_TREE_CONTAMINATED`, ver blockers 002/003/005/006/007); commit
+    `d75ef6fb`, re-rodado isolado com árvore limpa → PASS (confirma que não era regressão real).
+- evidence:
+  - `node scripts/governance/validate-engineering-router-v1.js` (sem `--runtime`, commit
+    `d75ef6fb`): `STRUCTURAL_PASS`, 130 checks, 0 falhas.
+  - `node scripts/governance/collect-engineering-router-runtime-evidence.js` (árvore limpa,
+    commit `d75ef6fb`): `status=RUNTIME_PASS items=25 falhas=0
+    fingerprint=2a026d87370649da…`.
+  - `node scripts/governance/validate-engineering-router-v1.js --runtime` (mesmo commit):
+    `STRUCTURAL_PASS/RUNTIME_PASS`, 156 checks, 0 falhas.
+  - `npm run test:unit` (suíte completa, mesmo commit): `Test Suites: 1 skipped, 848 passed, 849
+    total`; `Tests: 2 skipped, 6466 passed, 6468 total`; exit code 0.
+- status: GREEN
 - commit: `b6f40f43` (implementação) + `b863c54a` (correção do achado acima)
