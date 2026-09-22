@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-20T21:05:15.437Z",
+  "generatedAt": "2026-09-22T08:36:12.384Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:3001",
   "authMode": "admin",
@@ -9,23 +9,23 @@
   "dependencyResults": [
     {
       "name": "l03",
-      "ok": true,
-      "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1789938287907 callId=call-voice-tts-asr-1789938287907 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
-      "stderr": ""
+      "ok": false,
+      "status": 1,
+      "stdout": "",
+      "stderr": "[pbx-voice-tts-asr-smoke] FAIL click2call_not_originated:failed"
     },
     {
       "name": "l04",
       "ok": false,
       "status": 1,
       "stdout": "",
-      "stderr": "[pbx-call-events-runtime-smoke] FAIL executions_list_failed:403"
+      "stderr": "[pbx-call-events-runtime-smoke] FAIL synthetic_cdr_insert_failed:1:service \"api\" is not running"
     },
     {
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1789938313620-y2wqlr3 conversation=conv-1789938313662-58e088761e1c queue=ux1_smoke_1789938313592 quickReply=qr-1789938314025-i1grwy09d phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1790066170949-0g2disu conversation=conv-1790066170966-e43624b72472 queue=ux1_smoke_1790066170941 quickReply=qr-1790066171079-yq2kf1bfw phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
@@ -78,8 +78,8 @@
     },
     "warnings": []
   },
-  "runId": "rap-governed-20260920181847967-96783363",
-  "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
-  "sourceCommit": "43f1cee6e828cf18ae8b4ecb00fbf755495e0054",
-  "sourceTree": "b1b03f6a0eb222c7081e79225ce2f9f31f28d25a"
+  "runId": "rap-governed-20260922083602035-87410cca",
+  "sourceFingerprint": "dff0317246365e259edb1b22a2da5b4790c1937b1c19966b9730651da2d21f73",
+  "sourceCommit": "a76204e68029bc9a82bbb879ebdbd1d264eb0fb8",
+  "sourceTree": "170856eabc6c3373dba1113f22714533e9797be5"
 }

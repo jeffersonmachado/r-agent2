@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-09-20T21:52:10.920Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260920-180429.payload.zip",
-  "zipName": "r-agent2-20260920-180429.payload.zip",
-  "zipSha256": "f95aeef04d80ef25e209a75f5809d9f8bf345f394a9007dab40edd51d5603a4a",
-  "payloadCentric": true,
-  "envelopePath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260920-180429.payload.zip",
-  "selectionMode": "explicit",
+  "generatedAt": "2026-09-22T08:36:34.622Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260921-024731.zip",
+  "zipName": "r-agent2-20260921-024731.zip",
+  "zipSha256": "146061b8aa10d3997130ac7ead8736a7dcb7486ad55dcf07b7080302a6d1eb7b",
+  "payloadCentric": false,
+  "envelopePath": null,
+  "selectionMode": "audited",
   "candidateFallbackUsed": false,
-  "manifestPath": "/opt/results/ria/r-agent2/dist/release/r-agent2-20260920-180429.manifest.json",
+  "manifestPath": null,
   "manifestAudit": "passed",
   "auditSatisfied": true,
   "selfContainmentCheck": {
@@ -44,22 +44,22 @@
     "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
-  "entryCount": 6811,
+  "entryCount": 6956,
   "missingEntries": [],
   "missingEntryCodes": [],
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20260920-180429.payload.zip",
-    "sha256": "f95aeef04d80ef25e209a75f5809d9f8bf345f394a9007dab40edd51d5603a4a",
+    "boundTo": "r-agent2-20260921-024731.zip",
+    "sha256": "146061b8aa10d3997130ac7ead8736a7dcb7486ad55dcf07b7080302a6d1eb7b",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
   },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260920181847967-96783363",
-  "sourceFingerprint": "ecc66766f18c030c42ff8c530728cc2259379b9925c93faf9187558c53069c57",
-  "gitCommit": "59e2d88dd1ddcccefb4ec68439327b306d741d98",
-  "gitTree": "3efd1d6c58c930483dea95413988bc976604be22"
+  "runId": "rap-governed-20260922083602035-87410cca",
+  "sourceFingerprint": "dff0317246365e259edb1b22a2da5b4790c1937b1c19966b9730651da2d21f73",
+  "gitCommit": "a76204e68029bc9a82bbb879ebdbd1d264eb0fb8",
+  "gitTree": "170856eabc6c3373dba1113f22714533e9797be5"
 }

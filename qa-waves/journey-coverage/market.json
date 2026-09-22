@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-20T21:51:20.488Z",
+  "generatedAt": "2026-09-22T08:36:18.083Z",
   "vertical": "market",
-  "maturity": "production-like",
+  "maturity": "validated",
   "replaySupported": true,
   "journeys": [
     {
