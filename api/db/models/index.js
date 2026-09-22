@@ -204,6 +204,7 @@ const getEngineeringTask = require('./EngineeringTask');
 const getEngineeringAttempt = require('./EngineeringAttempt');
 const getEngineeringTestRun = require('./EngineeringTestRun');
 const getEngineeringRegressionRun = require('./EngineeringRegressionRun');
+const getEngineeringModelCatalogEntry = require('./EngineeringModelCatalogEntry');
 const getEngineeringReview = require('./EngineeringReview');
 const getEngineeringTelemetryEvent = require('./EngineeringTelemetryEvent');
 const getIntegrationConnection = require('./IntegrationConnection');
@@ -410,6 +411,7 @@ const EngineeringTask = () => getEngineeringTask();
 const EngineeringAttempt = () => getEngineeringAttempt();
 const EngineeringTestRun = () => getEngineeringTestRun();
 const EngineeringRegressionRun = () => getEngineeringRegressionRun();
+const EngineeringModelCatalogEntry = () => getEngineeringModelCatalogEntry();
 const EngineeringReview = () => getEngineeringReview();
 const EngineeringTelemetryEvent = () => getEngineeringTelemetryEvent();
 const IntegrationConnection = () => getIntegrationConnection();
@@ -1291,12 +1293,14 @@ module.exports = {
   EngineeringAttempt,
   EngineeringTestRun,
   EngineeringRegressionRun,
+  EngineeringModelCatalogEntry,
   EngineeringReview,
   EngineeringTelemetryEvent,
   getEngineeringTask,
   getEngineeringAttempt,
   getEngineeringTestRun,
   getEngineeringRegressionRun,
+  getEngineeringModelCatalogEntry,
   getEngineeringReview,
   getEngineeringTelemetryEvent,
 };

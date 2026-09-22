@@ -125,6 +125,33 @@ const FAILURE_CODES = Object.freeze({
 
 const FINDING_SEVERITIES = Object.freeze(['BLOCKER', 'REGRESSION', 'POST_RELEASE']);
 
+/**
+ * ER-V1-FINAL-008 (Current Model Catalog): estados do ciclo de vida de um `providerId:modelId`
+ * no catálogo governado. Um modelo NUNCA pula direto de DISCOVERED/UNCLASSIFIED para elegível —
+ * `modelCapabilities.js` (allowlist estática versionada em código) continua sendo a ÚNICA fonte
+ * de verdade sobre o que é elegível para o Router; o catálogo é a camada de GOVERNANÇA/AUDITORIA
+ * sobre o que o discovery real encontra, nunca uma segunda fonte de elegibilidade.
+ *   DISCOVERED   — provider real listou este modelId e ele NÃO está na allowlist estática.
+ *   UNCLASSIFIED — sinônimo operacional de DISCOVERED sem capability atribuída (nunca elegível).
+ *   CLASSIFIED   — capability/role atribuída por revisão explícita, ainda não promovido ao código.
+ *   APPROVED     — presente na allowlist estática (`modelCapabilities.js`) — elegível.
+ *   RETIRED      — estava na allowlist estática, mas o discovery real confirmou que o provider
+ *                  não lista mais este modelId para a credencial configurada.
+ *   UNAVAILABLE  — indisponibilidade reativa (falha real de runtime), não uma confirmação
+ *                  proativa de remoção pelo provider — ver `modelAvailabilityStore.js`.
+ *   DENIED       — bloqueado explicitamente por decisão humana/política, mesmo que o provider
+ *                  ainda o liste.
+ */
+const MODEL_CATALOG_STATUSES = Object.freeze([
+  'DISCOVERED',
+  'UNCLASSIFIED',
+  'CLASSIFIED',
+  'APPROVED',
+  'RETIRED',
+  'UNAVAILABLE',
+  'DENIED',
+]);
+
 const REVIEW_DECISIONS = Object.freeze(['APPROVE', 'REJECT']);
 
 module.exports = {
@@ -142,4 +169,5 @@ module.exports = {
   FAILURE_CODES,
   FINDING_SEVERITIES,
   REVIEW_DECISIONS,
+  MODEL_CATALOG_STATUSES,
 };

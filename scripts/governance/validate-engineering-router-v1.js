@@ -46,6 +46,7 @@ const REQUIRED_RUNTIME_ITEM_IDS = Object.freeze([
   'TENANT_CREDENTIAL_ISOLATION',
   'RELEASE_CLOSURE_SAME_RUN_INTEGRITY',
   'EXECUTION_SANDBOX_ISOLATION',
+  'MODEL_CATALOG_GOVERNANCE',
 ]);
 
 /**
@@ -711,6 +712,44 @@ function main() {
       return /execFileAsync\(process\.execPath, \[scriptPath\]/.test(src) && !/--runtime/.test(src);
     })(),
     reason: 'checkGovernance() (loop ao vivo, por-task) nunca pode passar --runtime — reintroduziria o deadlock de bootstrap documentado em ERV1-CLOSE-010',
+  });
+
+  // ER-V1-FINAL-008 — Current Model Catalog: modelo real descoberto pelo provider mas ausente da
+  // allowlist estática (`modelCapabilities.js`) nunca pode ser simplesmente descartado sem
+  // rastro — precisa virar uma entrada governada DISCOVERED/UNCLASSIFIED (auditável), NUNCA
+  // elegível automaticamente para roteamento, nem sequer para tasks de risco LOW/MEDIUM.
+  checks.push({
+    id: 'MODEL_CATALOG_POLICY_PURE_MODULE',
+    ...checkFileContains('engine/engineeringRouter/modelCatalogPolicy.js', [
+      /function resolveCatalogStatus/, /function isEligibleForRisk/, /ELIGIBLE_STATUSES = new Set\(\['APPROVED'\]\)/,
+    ]),
+  });
+  checks.push({
+    id: 'MODEL_CATALOG_STATUSES_VOCABULARY',
+    ...checkFileContains('engine/engineeringRouter/constants.js', [
+      /MODEL_CATALOG_STATUSES = Object\.freeze\(\[/, /'DISCOVERED'/, /'UNCLASSIFIED'/, /'CLASSIFIED'/, /'APPROVED'/, /'RETIRED'/, /'DENIED'/,
+    ]),
+  });
+  checks.push({ id: 'ENGINEERING_MODEL_CATALOG_ENTRY_MODEL', ok: exists('api/db/models/EngineeringModelCatalogEntry.js'), reason: 'model EngineeringModelCatalogEntry ausente' });
+  checks.push({
+    id: 'ENGINEERING_MODEL_CATALOG_ENTRY_MIGRATION',
+    ok: fs.readdirSync(path.join(ROOT, 'api/db/migrations')).some((f) => f.includes('create-engineering-model-catalog-entries')),
+    reason: 'migration de engineering_model_catalog_entries ausente',
+  });
+  checks.push({
+    id: 'MODEL_CATALOG_SERVICE_PERSISTS_REAL',
+    ...checkFileContains('api/services/engineeringRouter/modelCatalogService.js', [
+      /getEngineeringModelCatalogEntryModel/, /async function reconcileDiscoveredModel/, /resolveCatalogStatus/,
+    ]),
+  });
+  // Discovery real já era usado só para EXCLUIR candidatos mapeados que sumiram — precisa
+  // também reconciliar o catálogo governado nas duas direções (modelo novo → DISCOVERED; modelo
+  // mapeado que sumiu → RETIRED), nunca só descartar silenciosamente o resultado do discovery.
+  checks.push({
+    id: 'MODEL_AVAILABILITY_RECONCILES_CATALOG',
+    ...checkFileContains('api/services/engineeringRouter/engineeringModelAvailabilityService.js', [
+      /reconcileProviderCatalog/, /modelCatalogService\.reconcileDiscoveredModel/,
+    ]),
   });
 
   // 15. Documentação V1.

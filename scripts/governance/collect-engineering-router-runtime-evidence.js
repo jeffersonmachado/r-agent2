@@ -68,6 +68,7 @@ const RUNTIME_ITEMS = [
   { id: 'TENANT_CREDENTIAL_ISOLATION', testPath: 'tests/unit/engineeringRouterRoutes.test.js', testId: 'ERV1-CLOSE-006' },
   { id: 'RELEASE_CLOSURE_SAME_RUN_INTEGRITY', testPath: 'tests/integration/engineeringReleaseClosureAuthority.test.js', testId: 'nunca declara cleanReleaseState' },
   { id: 'EXECUTION_SANDBOX_ISOLATION', testPath: 'tests/unit/engineeringRouterExecutionSandboxSecurity.test.js', testId: 'não acessa rede externa' },
+  { id: 'MODEL_CATALOG_GOVERNANCE', testPath: 'tests/integration/engineeringModelCatalogService.test.js', testId: 'ausente da allowlist estática' },
 ];
 
 /**

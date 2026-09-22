@@ -29,6 +29,7 @@
  */
 
 const { listCapabilityEntries } = require('../../../engine/engineeringRouter/modelCapabilities');
+const modelCatalogService = require('./modelCatalogService');
 const { getRuntimeProviders } = require('../aiProviderRegistryService');
 const { getBreakerStates } = require('../aiControlPlaneStatus');
 const { getCredentialDetailsMap, getDecryptedAPIKey } = require('../tenantAIService');
@@ -38,6 +39,38 @@ const logger = require('../../utils/logger');
 
 const DEFAULT_TENANT_ID = process.env.ENGINEERING_ROUTER_TENANT_ID || 'system';
 const KNOWN_BAD_CREDENTIAL_STATUSES = new Set(['no_credit', 'invalid_token']);
+
+/**
+ * ER-V1-FINAL-008: reconcilia o catálogo governado para um provider cuja lista real de modelos
+ * (`knownModelIds`, resultado positivo e recente do discovery real) acabou de ser obtida.
+ * Best-effort — nunca lança (cada `reconcileDiscoveredModel` já engole a própria falha).
+ */
+async function reconcileProviderCatalog(providerId, knownModelIds) {
+  const mappedEntriesForProvider = listCapabilityEntries().filter((e) => e.providerId === providerId);
+  const mappedModelIds = new Set(mappedEntriesForProvider.map((e) => e.modelId));
+
+  const jobs = [];
+  for (const entry of mappedEntriesForProvider) {
+    jobs.push(modelCatalogService.reconcileDiscoveredModel({
+      providerId,
+      modelId: entry.modelId,
+      isMapped: true,
+      listedByProviderNow: knownModelIds.has(entry.modelId),
+      evidence: { source: 'provider_discovery', checkedAt: new Date().toISOString() },
+    }));
+  }
+  for (const modelId of knownModelIds) {
+    if (mappedModelIds.has(modelId)) continue;
+    jobs.push(modelCatalogService.reconcileDiscoveredModel({
+      providerId,
+      modelId,
+      isMapped: false,
+      listedByProviderNow: true,
+      evidence: { source: 'provider_discovery', checkedAt: new Date().toISOString() },
+    }));
+  }
+  await Promise.all(jobs);
+}
 
 /**
  * Constrói a lista de candidatos (`availableModels`) usada pelo `modelSelector` puro.
@@ -98,7 +131,21 @@ async function buildAvailableModels({ tenantId = DEFAULT_TENANT_ID } = {}) {
       const apiKey = await getDecryptedAPIKey(tenantId, providerId);
       if (!apiKey) return;
       const modelIds = await providerModelDiscoveryCache.resolveKnownModelIds(providerId, tenantId, apiKey);
-      if (modelIds) knownModelIdsByProvider.set(providerId, new Set(modelIds));
+      if (modelIds) {
+        const knownSet = new Set(modelIds);
+        knownModelIdsByProvider.set(providerId, knownSet);
+        // ER-V1-FINAL-008 (Current Model Catalog): o discovery real já era usado só para
+        // EXCLUIR candidatos mapeados que sumiram (ver uso de `knownModelIdsByProvider` abaixo).
+        // Reconcilia também o catálogo governado, nas duas direções, best-effort (nunca bloqueia
+        // nem derruba o roteamento real, que continua decidindo elegibilidade só pela allowlist
+        // estática — ver modelCatalogPolicy.js):
+        //   - modelo real listado pelo provider mas AUSENTE da allowlist estática → DISCOVERED,
+        //     auditável, nunca elegível automaticamente;
+        //   - modelo mapeado na allowlist estática que o provider deixou de listar → RETIRED.
+        await reconcileProviderCatalog(providerId, knownSet).catch((err) => {
+          logger.warn('[engineeringModelAvailability] falha ao reconciliar catálogo de modelos', { providerId, error: err.message });
+        });
+      }
     } catch (err) {
       // Fail-open: falha ao descobrir modelos reais nunca bloqueia o roteamento — só significa
       // que esta camada extra de filtro não se aplica desta vez.
