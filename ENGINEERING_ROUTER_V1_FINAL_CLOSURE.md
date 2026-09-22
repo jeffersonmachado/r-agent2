@@ -381,6 +381,7 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   (commit `b863c54a`). Confirmado GREEN isolado (59s, plano HIGH real executando a suíte
   inteira do subsistema `engineeringRouter`) e a regressão completa voltando ao padrão TOCTOU
   já conhecido (não esta regressão específica).
+- commit: `b6f40f43` (implementação) + `b863c54a` (correção do achado acima)
 
 ### ER-V1-FINAL-007 — Evidence Precision
 
@@ -432,6 +433,7 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   - `npm run test:unit` (suíte completa do projeto, mesmo commit): `Test Suites: 1 skipped, 847
     passed, 848 total`; `Tests: 2 skipped, 6457 passed, 6459 total`; exit code 0.
 - status: GREEN
+- commit: `7a2247c1` (implementação) + `0ea72c70` (evidência)
 
 ### ER-V1-FINAL-008 — Current Model Catalog
 
@@ -507,6 +509,7 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   - `npm run test:unit` (suíte completa, mesmo commit): `Test Suites: 1 skipped, 848 passed, 849
     total`; `Tests: 2 skipped, 6466 passed, 6468 total`; exit code 0.
 - status: GREEN
+- commit: `d75ef6fb` (implementação) + `49d328bc` (evidência)
 
 ### ER-V1-FINAL-009 — Full-Suite Isolation
 
@@ -615,4 +618,80 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
     nenhuma falha pré-existente encontrada (não é necessário usar `NO_NEW_REGRESSION` aqui; o
     resultado é efetivamente "ALL GREEN" real).
 - status: GREEN
-- commit: `b6f40f43` (implementação) + `b863c54a` (correção do achado acima)
+- commit: `9b257cbe` (causa 1, TOCTOU) + `bb03c37d` (causas 2 e 3, Exact Promotion + timeouts) +
+  `e33d1a25` (REGRESSION do teste 004, achada no caminho) + `061354a0` (evidência)
+
+### ER-V1-FINAL-010 — Self-Proving Audit Envelope
+
+- RED reproduzido (achado real, por inspeção direta): nenhum script de "audit envelope" existia
+  no repositório (`scripts/governance/` sem nenhum arquivo com "envelope" no nome). O projeto já
+  tinha infraestrutura robusta de release/identidade (`write-release-identity.js`,
+  `verify-release-artifact-identity.js`, `governance/proof-engine/fingerprint-chain.js`), mas
+  nada especificamente ESPECÍFICO do fechamento do Engineering Router V1, autocontido e
+  verificável 100% offline sem depender do texto narrativo de
+  `ENGINEERING_ROUTER_V1_FINAL_CLOSURE.md`.
+- fix (reaproveitando a evidência já real produzida pelos gates existentes, nunca fabricando
+  prova nova nem reexecutando os 25 testes reais dentro do gerador):
+  1. **`scripts/governance/generate-engineering-router-v1-audit-envelope.js`** (novo) — lê
+     `reports/engineering-router-v1-runtime-evidence.json` (RUNTIME_PASS, 25 itens granulares,
+     ER-V1-FINAL-007) e `reports/engineering-router-v1-report.json` (gate estrutural+runtime,
+     ER-V1-FINAL-004); FALHA EXPLICITAMENTE se qualquer um estiver ausente, com
+     `sourceFingerprint` obsoleto, ou status diferente de PASS/RUNTIME_PASS — nunca certifica um
+     estado RED/FAIL como se fosse prova de fechamento. Computa baseline real (`git rev-parse
+     HEAD`, `git rev-parse HEAD^{tree}`, `computeSourceFingerprint` — mesma autoridade única de
+     `governance/proof-engine/fingerprint-chain.js`, reaproveitada, nunca duplicada). Distribui
+     os 25 itens de runtime evidence por categoria (routing/security/regression/governance/
+     promotion/pilot) em arquivos JSON separados, mais `release-closure-evidence.json` com o
+     backlog congelado dos 10 blockers e seus commits reais. Cada artifact é content-addressed:
+     `hashes.json` com sha256 real dos BYTES de cada arquivo já escrito em disco, referenciado
+     também em `manifest.json` (schemaVersion, generatedAt, HEAD, sourceFingerprint, treeHash,
+     runId, artifactHashes, testSuiteHash, runtimeStatus, promotionStatus, pilotTaskId,
+     releaseStatus). Nunca inclui secrets — só hashes/status/metadados estruturais.
+  2. **`scripts/governance/verify-engineering-router-v1-audit-envelope.js`** (novo) — verifier
+     100% OFFLINE: nunca depende de banco, nunca depende de rede, nunca confia em nenhum `.md`
+     (lê só os JSONs do próprio envelope). Valida hashes (recalcula sha256 real de cada artifact
+     e compara com `hashes.json` E `manifest.artifactHashes` — as duas referências precisam
+     bater), runId (consistente em todos os 9 artifacts), sourceFingerprint/treeHash/HEAD
+     (`baseline.json` === `manifest.json`), requirement coverage (os 25 IDs obrigatórios
+     presentes com `pass=true`/`testCaseId` presente/`numPassedTests>=1` — mesmo rigor de
+     ER-V1-FINAL-007, nunca só `exitCode`), runtime PASS, promotion exactness (todos os itens de
+     `promotion-evidence.json` com `pass=true`), pilot evidence (loop RED→FIX→REVIEW→GREEN real
+     presente e PASS em `pilot-evidence.json`), e evidence freshness best-effort (compara com
+     `HEAD` do git local quando disponível, nunca EXIGE isso — um envelope copiado para fora do
+     checkout continua verificável).
+  3. `validate-engineering-router-v1.js`: 6 novos checks estruturais (138 no total antes do
+     `--runtime`) confirmando que gerador/verifier existem com os padrões esperados.
+  4. `package.json`: `engineering-router:audit-envelope:generate` /
+     `engineering-router:audit-envelope:verify`.
+- tests:
+  - `tests/unit/engineeringRouterAuditEnvelopeVerifier.test.js` (novo, 9/9 PASS, determinístico
+    — constrói um envelope sintético VÁLIDO em tmpdir, sem depender de `reports/` real, e
+    corrompe uma dimensão por vez): envelope válido → PASS em todos os checks; diretório
+    inexistente → FAIL sem lançar; artifact alterado após a geração → FAIL no hash e na
+    referência do manifest; item de requirement coverage ausente → FAIL específico do ID; runId
+    divergente entre um artifact e o manifest → FAIL; sourceFingerprint divergente entre
+    `baseline.json` e `manifest.json` → FAIL; item de promoção com `pass:false` → FAIL
+    específico, mesmo com hashes íntegros; `pilot-evidence.json` ausente → FAIL explícito;
+    `manifest.json` inválido (não é JSON) → FAIL imediato, nunca lança exceção.
+  - `tests/integration/engineeringRouterAuditEnvelopeGeneration.test.js` (novo, 2/2 PASS) — roda
+    o GERADOR real a partir da evidência real no disco e o VERIFIER real sobre o output, ponta a
+    ponta (skip explícito se a evidência não estiver fresca, nunca finge verde); confirma que
+    gerar com evidência corrompida para `RUNTIME_FAIL` lança explicitamente.
+  - Teste manual de corrupção deliberada (ver evidence abaixo) — a garantia central da spec
+    ("se envelope for alterado: verifica") confirmada tanto no teste automatizado quanto ao vivo
+    contra o envelope real.
+- evidence:
+  - `node scripts/governance/validate-engineering-router-v1.js --runtime` (árvore limpa, commit
+    `e9e12a6b`, coletor rodado de novo com 25/25 `RUNTIME_PASS`): `STRUCTURAL_PASS/RUNTIME_PASS`,
+    **164 checks, 0 falhas**.
+  - `npm run engineering-router:audit-envelope:generate` (mesmo commit):
+    `runId=e9e12a6bcd808612696ebe756881591cb94b72f4 runtimeStatus=RUNTIME_PASS
+    releaseStatus=ENGINEERING_ROUTER_V1_10_OF_10_GREEN`.
+  - `npm run engineering-router:audit-envelope:verify`: `status=PASS checks=98 falhas=0`.
+  - Corrupção deliberada ao vivo (manual, fora do teste automatizado): um byte alterado em
+    `pilot-evidence.json` do envelope real gerado → verifier reportou `status=FAIL checks=98
+    falhas=3` (`ARTIFACT_HASH_MATCHES_pilot-evidence.json`,
+    `MANIFEST_REFERENCES_pilot-evidence.json`, `PILOT_ITEM_PASS_ACTUAL_PATCH_APPLY`) — restaurado
+    o arquivo original → `status=PASS` de novo. Confirma a garantia central da spec.
+- status: GREEN
+- commit: `e9e12a6b`
