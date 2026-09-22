@@ -589,16 +589,20 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
       // governança, READY_FOR_PROMOTION, ou GREEN).
       try {
         await engineeringTaskService.transitionTask(taskId, 'REGRESSION');
-        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Verificando regressão local (testCommands já validados em workspace limpo).' });
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Executando RegressionPlan real (proporcional ao risco) em workspace isolado.' });
 
-        // ERV1-CLOSE-004: REGRESSION é uma checagem REAL, não uma transição decorativa — reler
-        // do banco (não confiar só na variável em memória do loop) que todo EngineeringTestRun
-        // desta tentativa é PASS/exitCode 0. V1: regressão local = o próprio conjunto
-        // determinístico de testCommands já executado de forma limpa neste attempt (workspace
-        // isolado, sem estado residual). Escopo mais amplo (qa-mesh completo) fica registrado
-        // como possibilidade em POST_RELEASE_MODEL_ROUTER_BACKLOG.md quando a task não define
-        // testCommands suficientes.
-        const regressionResult = await checkRegression(result.attempt.id);
+        // ER-V1-FINAL-006: REGRESSION executa de verdade um RegressionPlan proporcional ao
+        // risco declarado (LOW: targeted; MEDIUM: +related; HIGH: +subsystem; CRITICAL:
+        // +governance gate) — nunca mais uma simples releitura de evidência da fase TESTING.
+        const touchedPaths = await listChangedFiles(result.workspace).catch(() => []);
+        const regressionResult = await checkRegression({
+          taskId,
+          attemptId: result.attempt.id,
+          workspacePath: result.workspace,
+          touchedPaths,
+          risk: task.risk,
+          targetedCommands: task.test_commands || [],
+        });
         await engineeringTaskService.updateAttempt(result.attempt.id, { regression_evidence: regressionResult.evidence });
         if (!regressionResult.pass) {
           await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.REGRESSION_FAILED, message: 'Regressão real reprovou após review aprovar', evidence: regressionResult.evidence });
@@ -606,7 +610,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
           emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: 'Regressão reprovou — nunca GREEN sem evidência real.', meta: regressionResult.evidence });
           return { taskId, status: 'RED', reasonCode: FAILURE_CODES.REGRESSION_FAILED };
         }
-        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real: ${regressionResult.evidence.testRunCount} comando(s) PASS.`, meta: regressionResult.evidence });
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real (${regressionResult.evidence.planTier}): ${regressionResult.evidence.commandCount} comando(s) PASS.`, meta: regressionResult.evidence });
 
         await engineeringTaskService.transitionTask(taskId, 'GOVERNANCE');
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Executando gate de governança real (scripts/governance/validate-engineering-router-v1.js).' });

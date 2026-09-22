@@ -319,3 +319,51 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   vezes). O sintoma mudou (mensagem de erro mais precisa, aparece mais cedo), a causa raiz
   continua a mesma e continua sendo escopo do ER-V1-FINAL-009.
 - commit: `44df73f0`
+
+### ER-V1-FINAL-006 — Real Regression
+
+- RED reproduzido (achado real, confirmado por inspeção direta do código-fonte, sem
+  ambiguidade): `regressionGovernanceService.js::checkRegression(attemptId)` só chamava
+  `listTestRuns(attemptId)` — relia os `EngineeringTestRun` já persistidos pela fase TESTING
+  (executada ANTES do REVIEW aprovar). Confirmado programaticamente: a função nunca continha
+  `runTestCommands` no corpo. Isso é evidence revalidation (prova que algo passou no passado),
+  nunca regression execution (prova que o código, no estado ATUAL, ainda passa).
+- fix:
+  1. **`engine/engineeringRouter/regressionPlan.js`** (novo, módulo puro) — `buildRegressionPlan
+     ({touchedPaths, targetedCommands, risk, availableTestFiles})` constrói um plano
+     determinístico e proporcional ao risco (`RISK_LEVELS` reaproveitado, já é exatamente
+     LOW/MEDIUM/HIGH/CRITICAL): LOW = só `targetedCommands` (testCommands do Task Contract);
+     MEDIUM = +testes relacionados por nome de arquivo ao caminho tocado
+     (`findRelatedTestFiles`); HIGH = +suíte inteira do subsistema afetado (diretório pai
+     comum, `findSubsystemTestFiles`); CRITICAL = +o gate de governança canônico
+     (`scripts/governance/validate-engineering-router-v1.js`, reaproveitado, nunca
+     reimplementado). Nunca "rodar tudo sempre" sem justificativa; risco desconhecido cai em
+     LOW (fail-closed conservador).
+  2. **`regressionGovernanceService.js::checkRegression`** — nova assinatura
+     `({taskId, attemptId, workspacePath, touchedPaths, risk, targetedCommands})`. Resolve os
+     candidatos a "related"/"subsystem" via `contextBuilderService.expandGlobsToFiles`
+     (reaproveitado, nunca um glob paralelo), constrói o plano, e EXECUTA de verdade via
+     `runTestCommands` (o mesmo Test Runner real, através do sandbox Docker de
+     ER-V1-FINAL-001) no workspace isolado da tentativa. Persiste um `EngineeringRegressionRun`
+     (novo model + migration) com `plan_tier`, `commands`, `exit_codes` reais,
+     `source_fingerprint` (`computeSourceFingerprint`, mesma autoridade do resto da
+     governança), `result`, `evidence_refs`.
+  3. **`engineeringRouterService.js`** — o ponto de chamada no `executeRoutedLoop` agora
+     resolve `touchedPaths` via `listChangedFiles(result.workspace)` (já existente,
+     reaproveitado) e passa `task.risk`/`task.test_commands` para o novo `checkRegression`.
+- tests: `tests/integration/engineeringRegressionGovernanceService.test.js` reescrito (a versão
+  anterior testava a assinatura antiga de evidence-revalidation, incompatível com a nova
+  semântica por design) — 5/5 PASS com workspace real: comandos do plano executam e passam →
+  `EngineeringRegressionRun` persistido com `result:PASS`; comando do plano falha de verdade
+  (`npx jest` contra um path inexistente, exitCode real != 0, nunca reaproveitando resultado
+  antigo pois não existe nenhum `EngineeringTestRun` anterior para o attempt) → reprova;
+  RegressionPlan MEDIUM inclui targeted + related de verdade (encontrado no repositório real).
+  `tests/unit/engineeringRouterRegressionPlan.test.js` (novo, 11/11 PASS) cobre a política pura
+  isoladamente: os 4 tiers, nunca duplica comando, risco desconhecido cai em LOW.
+- evidence: gate estrutural `REGRESSION_PLAN_PROPORTIONAL_TO_RISK` +
+  `REGRESSION_RUN_PERSISTED_WITH_FINGERPRINT` + `ENGINEERING_REGRESSION_RUN_MODEL_EXISTS`
+  (novos); `REAL_REGRESSION_CHECK` atualizado para a nova arquitetura (`runTestCommands`/
+  `buildRegressionPlan` em vez de `listTestRuns`). `validate-engineering-router-v1.js` →
+  `STRUCTURAL_PASS`, 124 checks, 0 falhas.
+- status: GREEN
+- commit: (a seguir)

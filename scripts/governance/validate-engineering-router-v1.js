@@ -381,7 +381,29 @@ function main() {
   // status=GOVERNANCE sem nenhuma evidência checada.
   checks.push({
     id: 'REAL_REGRESSION_CHECK',
-    ...checkFileContains('api/services/engineeringRouter/regressionGovernanceService.js', [/checkRegression/, /listTestRuns/]),
+    ...checkFileContains('api/services/engineeringRouter/regressionGovernanceService.js', [/checkRegression/, /runTestCommands/, /buildRegressionPlan/]),
+  });
+  // ER-V1-FINAL-006 — Real Regression: checkRegression precisa EXECUTAR comandos de verdade
+  // (nunca só reler EngineeringTestRun da fase TESTING original) e persistir um
+  // EngineeringRegressionRun amarrado ao sourceFingerprint da execução real.
+  checks.push({
+    id: 'REGRESSION_PLAN_PROPORTIONAL_TO_RISK',
+    ...checkFileContains('engine/engineeringRouter/regressionPlan.js', [
+      /buildRegressionPlan/, /findRelatedTestFiles/, /findSubsystemTestFiles/, /GOVERNANCE_GATE_COMMAND/,
+    ]),
+  });
+  checks.push({
+    id: 'REGRESSION_RUN_PERSISTED_WITH_FINGERPRINT',
+    ok: (() => {
+      const src = readText('api/services/engineeringRouter/regressionGovernanceService.js');
+      return /createRegressionRun/.test(src) && /computeSourceFingerprint/.test(src);
+    })(),
+    reason: 'checkRegression precisa persistir EngineeringRegressionRun amarrado ao sourceFingerprint real da execução',
+  });
+  checks.push({
+    id: 'ENGINEERING_REGRESSION_RUN_MODEL_EXISTS',
+    ok: exists('api/db/models/EngineeringRegressionRun.js'),
+    reason: 'api/db/models/EngineeringRegressionRun.js ausente',
   });
   checks.push({
     id: 'REAL_GOVERNANCE_CHECK',
@@ -579,6 +601,7 @@ function main() {
     'tests/unit/engineeringRouterFailClosedScope.test.js',
     'tests/integration/engineeringRouterMandatoryRuntimeGate.test.js',
     'tests/unit/engineeringRouterTolerantTransition.test.js',
+    'tests/unit/engineeringRouterRegressionPlan.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });

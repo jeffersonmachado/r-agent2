@@ -25,34 +25,84 @@ const { execFile } = require('child_process');
 const util = require('util');
 const path = require('path');
 const engineeringTaskService = require('./engineeringTaskService');
-const { ROOT } = require('./contextBuilderService');
+const { ROOT, expandGlobsToFiles } = require('./contextBuilderService');
+const { runTestCommands } = require('./testRunnerService');
+const { buildRegressionPlan } = require('../../../engine/engineeringRouter/regressionPlan');
+const { computeSourceFingerprint } = require('../../../governance/proof-engine/fingerprint-chain');
 
 const execFileAsync = util.promisify(execFile);
 
 /**
- * @param {string} attemptId
+ * ER-V1-FINAL-006 — Real Regression.
+ *
+ * Achado real (confirmado por inspeção direta do código-fonte): a versão anterior desta
+ * função só chamava `listTestRuns(attemptId)` — relia os `EngineeringTestRun` já persistidos
+ * pela fase TESTING (executada ANTES do REVIEW aprovar). Isso é evidence revalidation (prova
+ * que algo passou no passado), nunca regression execution (prova que o código, no estado
+ * ATUAL, ainda passa). Corrigido: constrói um `RegressionPlan` real proporcional ao risco
+ * (`engine/engineeringRouter/regressionPlan.js`) e EXECUTA os comandos de verdade, no mesmo
+ * workspace isolado (via o sandbox real de ER-V1-FINAL-001), persistindo um
+ * `EngineeringRegressionRun` amarrado ao `sourceFingerprint` da working tree no momento da
+ * execução.
+ *
+ * @param {Object} params
+ * @param {string} params.taskId
+ * @param {string} params.attemptId
+ * @param {string} params.workspacePath - workspace isolado da tentativa (patch já aplicado).
+ * @param {string[]} params.touchedPaths - caminhos tocados pelo patch validado.
+ * @param {string} params.risk - LOW|MEDIUM|HIGH|CRITICAL (do Task Contract).
+ * @param {string[]} params.targetedCommands - testCommands do Task Contract.
  * @returns {Promise<{pass:boolean, evidence:Object}>}
  */
-async function checkRegression(attemptId) {
-  const testRuns = await engineeringTaskService.listTestRuns(attemptId);
+async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths, risk, targetedCommands }) {
   const checkedAt = new Date().toISOString();
 
-  if (testRuns.length === 0) {
+  // Candidatos a "teste relacionado"/"subsistema" resolvidos AQUI (I/O real, glob do
+  // repositório) — buildRegressionPlan em si permanece puro, recebendo a lista já pronta.
+  const availableTestFiles = expandGlobsToFiles(['tests/**/*.test.js']);
+  const plan = buildRegressionPlan({ touchedPaths, targetedCommands, risk, availableTestFiles });
+
+  if (plan.commands.length === 0) {
     return {
       pass: false,
-      evidence: { checkedAt, testRunCount: 0, reason: 'Nenhum EngineeringTestRun persistido para esta tentativa' },
+      evidence: { checkedAt, planTier: plan.tier, reason: 'RegressionPlan vazio — nenhum comando determinístico para executar' },
     };
   }
 
-  const failed = testRuns.filter((r) => r.status !== 'PASS' || r.exit_code !== 0);
+  const sourceFingerprint = computeSourceFingerprint(ROOT);
+  const startedAt = new Date();
+  const { results, allPass } = await runTestCommands({
+    taskId,
+    attemptNumber: 'regression',
+    commands: plan.commands,
+    cwd: workspacePath,
+  });
+  const completedAt = new Date();
+
+  const exitCodes = results.map((r) => r.exitCode);
+  const evidenceRefs = results.map((r) => ({ command: r.command, stdoutRef: r.stdoutRef || null, stderrRef: r.stderrRef || null }));
+
+  await engineeringTaskService.createRegressionRun(taskId, attemptId, {
+    plan_tier: plan.tier,
+    commands: plan.commands,
+    exit_codes: exitCodes,
+    source_fingerprint: sourceFingerprint,
+    result: allPass ? 'PASS' : 'FAIL',
+    evidence_refs: evidenceRefs,
+    started_at: startedAt,
+    completed_at: completedAt,
+  });
+
+  const failed = results.filter((r) => r.status !== 'PASS');
   return {
-    pass: failed.length === 0,
+    pass: allPass,
     evidence: {
       checkedAt,
-      testRunCount: testRuns.length,
-      allPass: failed.length === 0,
-      commands: testRuns.map((r) => ({ command: r.command, status: r.status, exitCode: r.exit_code })),
-      failed: failed.map((r) => ({ command: r.command, status: r.status, exitCode: r.exit_code })),
+      planTier: plan.tier,
+      sourceFingerprint,
+      commandCount: plan.commands.length,
+      commands: results.map((r) => ({ command: r.command, status: r.status, exitCode: r.exitCode })),
+      failed: failed.map((r) => ({ command: r.command, status: r.status, exitCode: r.exitCode })),
     },
   };
 }

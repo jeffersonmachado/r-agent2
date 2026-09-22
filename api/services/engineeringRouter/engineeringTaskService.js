@@ -11,6 +11,7 @@ const { Op } = require('sequelize');
 const getEngineeringTaskModel = require('../../db/models/EngineeringTask');
 const getEngineeringAttemptModel = require('../../db/models/EngineeringAttempt');
 const getEngineeringTestRunModel = require('../../db/models/EngineeringTestRun');
+const getEngineeringRegressionRunModel = require('../../db/models/EngineeringRegressionRun');
 const getEngineeringReviewModel = require('../../db/models/EngineeringReview');
 const getEngineeringTelemetryEventModel = require('../../db/models/EngineeringTelemetryEvent');
 const { classify } = require('../../../engine/engineeringRouter/taskClassifier');
@@ -244,6 +245,19 @@ async function listTestRuns(attemptId) {
   return rows.map(toPlain);
 }
 
+/** ER-V1-FINAL-006: um registro por EXECUÇÃO REAL do plano de regressão (nunca evidence revalidation). */
+async function createRegressionRun(taskId, attemptId, data = {}) {
+  const Model = getEngineeringRegressionRunModel();
+  const row = await Model.create({ task_id: taskId, attempt_id: attemptId, ...data });
+  return toPlain(row);
+}
+
+async function listRegressionRuns(attemptId) {
+  const Model = getEngineeringRegressionRunModel();
+  const rows = await Model.findAll({ where: { attempt_id: attemptId }, order: [['created_at', 'ASC']] });
+  return rows.map(toPlain);
+}
+
 async function createReview(attemptId, data = {}) {
   const Model = getEngineeringReviewModel();
   const row = await Model.create({ attempt_id: attemptId, ...data });
@@ -312,6 +326,8 @@ module.exports = {
   createTestRun,
   updateTestRun,
   listTestRuns,
+  createRegressionRun,
+  listRegressionRuns,
   createReview,
   listReviews,
   recordTelemetry,

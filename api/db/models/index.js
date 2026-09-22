@@ -203,6 +203,7 @@ const getAiProvider = require('./AiProvider');
 const getEngineeringTask = require('./EngineeringTask');
 const getEngineeringAttempt = require('./EngineeringAttempt');
 const getEngineeringTestRun = require('./EngineeringTestRun');
+const getEngineeringRegressionRun = require('./EngineeringRegressionRun');
 const getEngineeringReview = require('./EngineeringReview');
 const getEngineeringTelemetryEvent = require('./EngineeringTelemetryEvent');
 const getIntegrationConnection = require('./IntegrationConnection');
@@ -408,6 +409,7 @@ const AiProvider = () => getAiProvider();
 const EngineeringTask = () => getEngineeringTask();
 const EngineeringAttempt = () => getEngineeringAttempt();
 const EngineeringTestRun = () => getEngineeringTestRun();
+const EngineeringRegressionRun = () => getEngineeringRegressionRun();
 const EngineeringReview = () => getEngineeringReview();
 const EngineeringTelemetryEvent = () => getEngineeringTelemetryEvent();
 const IntegrationConnection = () => getIntegrationConnection();
@@ -875,6 +877,7 @@ function defineRelationships() {
   const EngineeringTaskModel = EngineeringTask();
   const EngineeringAttemptModel = EngineeringAttempt();
   const EngineeringTestRunModel = EngineeringTestRun();
+  const EngineeringRegressionRunModel = EngineeringRegressionRun();
   const EngineeringReviewModel = EngineeringReview();
   const EngineeringTelemetryEventModel = EngineeringTelemetryEvent();
 
@@ -882,6 +885,8 @@ function defineRelationships() {
   EngineeringAttemptModel.belongsTo(EngineeringTaskModel, { foreignKey: 'task_id', as: 'task' });
   EngineeringAttemptModel.hasMany(EngineeringTestRunModel, { foreignKey: 'attempt_id', as: 'testRuns' });
   EngineeringTestRunModel.belongsTo(EngineeringAttemptModel, { foreignKey: 'attempt_id', as: 'attempt' });
+  EngineeringAttemptModel.hasMany(EngineeringRegressionRunModel, { foreignKey: 'attempt_id', as: 'regressionRuns' });
+  EngineeringRegressionRunModel.belongsTo(EngineeringAttemptModel, { foreignKey: 'attempt_id', as: 'attempt' });
   EngineeringAttemptModel.hasMany(EngineeringReviewModel, { foreignKey: 'attempt_id', as: 'reviews' });
   EngineeringReviewModel.belongsTo(EngineeringAttemptModel, { foreignKey: 'attempt_id', as: 'attempt' });
   EngineeringTaskModel.hasMany(EngineeringTelemetryEventModel, { foreignKey: 'task_id', as: 'telemetryEvents' });
@@ -1285,11 +1290,13 @@ module.exports = {
   EngineeringTask,
   EngineeringAttempt,
   EngineeringTestRun,
+  EngineeringRegressionRun,
   EngineeringReview,
   EngineeringTelemetryEvent,
   getEngineeringTask,
   getEngineeringAttempt,
   getEngineeringTestRun,
+  getEngineeringRegressionRun,
   getEngineeringReview,
   getEngineeringTelemetryEvent,
 };
