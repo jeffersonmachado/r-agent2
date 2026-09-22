@@ -118,7 +118,10 @@ describe('ERV1-CLOSE-005 — promotionService.promoteValidatedPatch (git real)',
     // muda entre eles neste teste (não temos como commitar de verdade em HEAD sem afetar o
     // repositório), então validamos o code path de divergência diretamente via os pré-requisitos
     // que o service checa (baselineHead resolvido do workspace vs. HEAD real).
-    const baselineFromWorkspace = execFileSync('git', ['rev-parse', 'HEAD^'], { cwd: workspace, encoding: 'utf8' }).trim();
+    //
+    // ER-V1-SEAL-001: o workspace agora é materializado DIRETAMENTE do HEAD real (imutável) —
+    // `HEAD` (não mais `HEAD^`) dentro do workspace É o próprio baseline/targetCommit.
+    const baselineFromWorkspace = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: workspace, encoding: 'utf8' }).trim();
     expect(baselineFromWorkspace).toBe(realHead());
 
     // Prova indireta e real do bloqueio: se o HEAD real do ROOT não bater com o baseline do
@@ -133,19 +136,15 @@ describe('ERV1-CLOSE-005 — promotionService.promoteValidatedPatch (git real)',
     const [currentHead, previousCommit] = log.stdout.trim().split('\n');
     expect(currentHead).not.toBe(previousCommit);
 
-    // `promoteValidatedPatch` resolve targetHead como o HEAD real do ROOT (sempre `currentHead`
-    // no momento do teste), e o baseline do workspace como `HEAD^` DENTRO do workspace — para
-    // provar a reprovação real, criamos um workspace a partir de um commit-snapshot cujo PAI é
-    // `previousCommit` (um commit real anterior, não o HEAD atual), simulando exatamente uma
-    // tentativa cujo baseline ficou velho (mesma técnica de createSnapshotCommit, apontando
-    // para um pai antigo em vez do HEAD atual).
-    const env = { ...process.env, GIT_AUTHOR_NAME: 'jest', GIT_AUTHOR_EMAIL: 'jest@local', GIT_COMMITTER_NAME: 'jest', GIT_COMMITTER_EMAIL: 'jest@local' };
-    const staleTree = execFileSync('git', ['rev-parse', `${previousCommit}^{tree}`], { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
-    const staleSnapshotCommit = execFileSync('git', ['commit-tree', staleTree, '-p', previousCommit, '-m', 'stale snapshot for jest'], { cwd: REPO_ROOT, env, encoding: 'utf8' }).trim();
-
+    // ER-V1-SEAL-001: `promoteValidatedPatch` resolve targetHead como o HEAD real do ROOT
+    // (sempre `currentHead` no momento do teste), e o baseline do workspace como `HEAD` (não
+    // mais `HEAD^`) DENTRO do workspace — o workspace nasce DIRETAMENTE do commit-alvo, sem
+    // indireção de snapshot com pai. Para provar a reprovação real, basta materializar um
+    // worktree diretamente a partir de `previousCommit` (um commit real anterior, não o HEAD
+    // atual) — simula exatamente uma tentativa cujo baseline ficou velho.
     const staleWorkspaceDir = path.join(require('os').tmpdir(), `engineering-router-workspaces`, `jest-stale-${Date.now()}`);
     fs.mkdirSync(path.dirname(staleWorkspaceDir), { recursive: true });
-    execFileSync('git', ['worktree', 'add', '--detach', staleWorkspaceDir, staleSnapshotCommit], { cwd: REPO_ROOT });
+    execFileSync('git', ['worktree', 'add', '--detach', staleWorkspaceDir, previousCommit], { cwd: REPO_ROOT });
     createdWorkspaces.push(staleWorkspaceDir);
 
     const result = await promoteValidatedPatch({
@@ -291,5 +290,161 @@ describe('ER-V1-FINAL-002 — Exact Promotion (prova de tree hash, não só diff
     expect(result.promoted).toBe(false);
     expect(result.code).toBe('PROMOTION_TREE_CONTAMINATED');
     expect(result.evidence.contaminatingFiles).toContain('printEnvProbe.js');
+  });
+});
+
+describe('ER-V1-SEAL-001 — Immutable Promotion Baseline (dirty working tree nunca contamina o candidate)', () => {
+  jest.setTimeout(90000);
+  const createdWorkspaces = [];
+  const createdBranches = [];
+  const createdUntrackedFiles = [];
+
+  afterEach(async () => {
+    for (const ws of createdWorkspaces.splice(0)) {
+      if (fs.existsSync(ws)) await destroyWorkspace(ws).catch(() => {});
+    }
+    for (const branch of createdBranches.splice(0)) {
+      deleteBranchIfExists(branch);
+    }
+    for (const f of createdUntrackedFiles.splice(0)) {
+      fs.rmSync(f, { force: true });
+    }
+    // Reverte qualquer modificação/staging real deixada nos fixtures usados por estes testes —
+    // nunca deve sobrar dirty state real no ROOT depois de qualquer teste deste describe. ORDEM
+    // IMPORTA: `reset` (unstage) precisa rodar ANTES de `checkout --` — se o arquivo ainda está
+    // staged, `checkout --` restaura do ÍNDICE (que já tem a modificação), não do HEAD, e o
+    // resíduo sobrevive silenciosamente (achado real: aconteceu na primeira versão deste teste).
+    execFileSync('git', ['reset', '--quiet', '--', 'tests/fixtures/engineering-router-sandbox/printHardcodedSecretProbe.js', 'tests/fixtures/engineering-router-sandbox/writeOutsideWorkspaceProbe.js'], { cwd: REPO_ROOT, stdio: 'ignore' });
+    execFileSync('git', ['checkout', '--', 'tests/fixtures/engineering-router-sandbox/printHardcodedSecretProbe.js', 'tests/fixtures/engineering-router-sandbox/writeOutsideWorkspaceProbe.js'], { cwd: REPO_ROOT, stdio: 'ignore' });
+  });
+
+  test('achado real: dirty local não relacionado (untracked) NUNCA aparece no candidate promovido', async () => {
+    // RED reproduzido nesta sessão antes da correção: um arquivo `dirty-local-a.txt` criado no
+    // ROOT antes de `createWorkspace` era commitado na branch candidata real junto com o patch
+    // legítimo (promoted:true). A causa era o workspace nascer de um "snapshot" que capturava
+    // TUDO fisicamente presente no ROOT — corrigido materializando o workspace diretamente do
+    // HEAD real e imutável.
+    const dirtyFile = path.join(REPO_ROOT, 'dirty-local-untracked-test.txt');
+    fs.writeFileSync(dirtyFile, 'isto NUNCA pode ser promovido\n');
+    createdUntrackedFiles.push(dirtyFile);
+
+    const taskId = `jest-seal-001-untracked-${Date.now()}`;
+    const workspace = await createWorkspace(taskId, 1);
+    createdWorkspaces.push(workspace);
+
+    const applyResult = await applyPatch(workspace, FIX_DIFF);
+    expect(applyResult.ok).toBe(true);
+
+    const result = await promoteValidatedPatch({
+      taskId,
+      attemptId: 'jest-seal-001-untracked-attempt',
+      attemptNumber: 1,
+      workspacePath: workspace,
+      diff: FIX_DIFF,
+      testCommands: [FIXTURE_TEST_COMMAND],
+      taskTitle: 'seal-001 dirty untracked never promoted',
+    });
+    if (result.promoted) createdBranches.push(candidateBranchName(taskId));
+
+    expect(result.promoted).toBe(true);
+    expect(result.evidence.validatedChangedPaths).toEqual([FIXTURE_FILE]);
+    expect(result.evidence.promotedChangedPaths).toEqual([FIXTURE_FILE]);
+
+    const changed = execFileSync('git', ['diff', '--name-status', result.evidence.targetCommit, result.evidence.candidateCommit], { cwd: REPO_ROOT, encoding: 'utf8' });
+    expect(changed).not.toContain('dirty-local-untracked-test.txt');
+    expect(changed.trim()).toBe(`M\t${FIXTURE_FILE}`);
+  });
+
+  test('achado real: modificação unstaged de um arquivo já rastreado NUNCA aparece no candidate promovido', async () => {
+    const unstagedFile = 'tests/fixtures/engineering-router-sandbox/printHardcodedSecretProbe.js';
+    fs.appendFileSync(path.join(REPO_ROOT, unstagedFile), '\n// modificação unstaged local, nunca deve ser promovida (ER-V1-SEAL-001)\n');
+
+    const taskId = `jest-seal-001-unstaged-${Date.now()}`;
+    const workspace = await createWorkspace(taskId, 1);
+    createdWorkspaces.push(workspace);
+
+    const applyResult = await applyPatch(workspace, FIX_DIFF);
+    expect(applyResult.ok).toBe(true);
+
+    const result = await promoteValidatedPatch({
+      taskId,
+      attemptId: 'jest-seal-001-unstaged-attempt',
+      attemptNumber: 1,
+      workspacePath: workspace,
+      diff: FIX_DIFF,
+      testCommands: [FIXTURE_TEST_COMMAND],
+      taskTitle: 'seal-001 dirty unstaged never promoted',
+    });
+    if (result.promoted) createdBranches.push(candidateBranchName(taskId));
+
+    expect(result.promoted).toBe(true);
+    const changed = execFileSync('git', ['diff', '--name-status', result.evidence.targetCommit, result.evidence.candidateCommit], { cwd: REPO_ROOT, encoding: 'utf8' });
+    expect(changed).not.toContain('printHardcodedSecretProbe.js');
+    expect(changed.trim()).toBe(`M\t${FIXTURE_FILE}`);
+  });
+
+  test('achado real: alteração STAGED (git add sem commit) de um arquivo já rastreado NUNCA aparece no candidate promovido', async () => {
+    const stagedFile = 'tests/fixtures/engineering-router-sandbox/writeOutsideWorkspaceProbe.js';
+    fs.appendFileSync(path.join(REPO_ROOT, stagedFile), '\n// modificação staged local, nunca deve ser promovida (ER-V1-SEAL-001)\n');
+    execFileSync('git', ['add', stagedFile], { cwd: REPO_ROOT });
+
+    const taskId = `jest-seal-001-staged-${Date.now()}`;
+    const workspace = await createWorkspace(taskId, 1);
+    createdWorkspaces.push(workspace);
+
+    const applyResult = await applyPatch(workspace, FIX_DIFF);
+    expect(applyResult.ok).toBe(true);
+
+    const result = await promoteValidatedPatch({
+      taskId,
+      attemptId: 'jest-seal-001-staged-attempt',
+      attemptNumber: 1,
+      workspacePath: workspace,
+      diff: FIX_DIFF,
+      testCommands: [FIXTURE_TEST_COMMAND],
+      taskTitle: 'seal-001 dirty staged never promoted',
+    });
+    if (result.promoted) createdBranches.push(candidateBranchName(taskId));
+
+    expect(result.promoted).toBe(true);
+    const changed = execFileSync('git', ['diff', '--name-status', result.evidence.targetCommit, result.evidence.candidateCommit], { cwd: REPO_ROOT, encoding: 'utf8' });
+    expect(changed).not.toContain('writeOutsideWorkspaceProbe.js');
+    expect(changed.trim()).toBe(`M\t${FIXTURE_FILE}`);
+  });
+
+  test('todas as três formas de dirty state simultaneamente (untracked + unstaged + staged) — candidate contém SOMENTE o patch da task', async () => {
+    const untrackedFile = path.join(REPO_ROOT, 'dirty-local-combined-test.txt');
+    fs.writeFileSync(untrackedFile, 'untracked — nunca promover\n');
+    createdUntrackedFiles.push(untrackedFile);
+
+    const unstagedFile = 'tests/fixtures/engineering-router-sandbox/printHardcodedSecretProbe.js';
+    fs.appendFileSync(path.join(REPO_ROOT, unstagedFile), '\n// unstaged combinado — nunca promover\n');
+
+    const stagedFile = 'tests/fixtures/engineering-router-sandbox/writeOutsideWorkspaceProbe.js';
+    fs.appendFileSync(path.join(REPO_ROOT, stagedFile), '\n// staged combinado — nunca promover\n');
+    execFileSync('git', ['add', stagedFile], { cwd: REPO_ROOT });
+
+    const taskId = `jest-seal-001-combined-${Date.now()}`;
+    const workspace = await createWorkspace(taskId, 1);
+    createdWorkspaces.push(workspace);
+
+    const applyResult = await applyPatch(workspace, FIX_DIFF);
+    expect(applyResult.ok).toBe(true);
+
+    const result = await promoteValidatedPatch({
+      taskId,
+      attemptId: 'jest-seal-001-combined-attempt',
+      attemptNumber: 1,
+      workspacePath: workspace,
+      diff: FIX_DIFF,
+      testCommands: [FIXTURE_TEST_COMMAND],
+      taskTitle: 'seal-001 dirty combined never promoted',
+    });
+    if (result.promoted) createdBranches.push(candidateBranchName(taskId));
+
+    expect(result.promoted).toBe(true);
+    const changed = execFileSync('git', ['diff', '--name-status', result.evidence.targetCommit, result.evidence.candidateCommit], { cwd: REPO_ROOT, encoding: 'utf8' });
+    // 0 contaminações: candidate contém SOMENTE o arquivo do patch da task.
+    expect(changed.trim()).toBe(`M\t${FIXTURE_FILE}`);
   });
 });

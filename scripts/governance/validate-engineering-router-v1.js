@@ -731,29 +731,43 @@ function main() {
     ]),
   });
 
-  // ER-V1-FINAL-009 — Full-Suite Isolation: `createSnapshotCommit()` faz `git add -A` no ROOT
-  // do repositório principal, compartilhado por TODA a suíte de testes do projeto — qualquer
-  // outro teste que escreva um arquivo real dentro do repo (fora do escopo desta missão corrigir
-  // em cada um deles) pode colidir com o scan (TOCTOU). Precisa reexecutar a sequência inteira
-  // quando o erro for especificamente esse padrão transitório, nunca mascarar outro tipo de erro.
+  // ER-V1-SEAL-001 — Immutable Promotion Baseline: substitui e corrige a abordagem de
+  // ER-V1-FINAL-009 (snapshot sujo do ROOT). `createWorkspace` precisa materializar o workspace
+  // DIRETAMENTE do HEAD real e imutável — nunca mais um "snapshot" fabricado via `git add -A`
+  // sobre o estado mutável do ROOT compartilhado (isso também elimina a raiz do TOCTOU, sem
+  // precisar de retry: não há mais nenhum scan de diretório mutável ao criar um workspace).
   checks.push({
-    id: 'SNAPSHOT_COMMIT_RETRIES_TRANSIENT_SCAN_ERROR',
+    id: 'WORKSPACE_MATERIALIZES_FROM_REAL_IMMUTABLE_HEAD',
     ...checkFileContains('api/services/engineeringRouter/patchApplyService.js', [
-      /TRANSIENT_GIT_SCAN_ERROR/, /async function createSnapshotCommitOnce/, /SNAPSHOT_RETRY_ATTEMPTS/,
-      /if \(!TRANSIENT_GIT_SCAN_ERROR\.test\(message\)/,
+      /async function createWorkspace\(taskId, attemptNumber\)/,
+      /const headResult = await runGit\(\['rev-parse', 'HEAD'\]\)/,
     ]),
   });
-  // ER-V1-FINAL-009 — segunda causa raiz real: `computeExpectedTreeHash` reconstruía o
-  // "expected" a partir do commit HEAD real puro (sem qualquer estado não commitado), enquanto
-  // o workspace validado sempre nasce do SNAPSHOT completo (que inclui qualquer coisa não
-  // commitada presente no ROOT no instante do snapshot — trabalho em andamento do próprio
-  // branch main direto, ou um arquivo temporário real de outro teste do projeto) — falso
-  // positivo estrutural de PROMOTION_TREE_CONTAMINATED sempre que há qualquer dirty state.
   checks.push({
-    id: 'EXPECTED_TREE_USES_SNAPSHOT_NOT_BARE_HEAD',
+    id: 'NO_DIRTY_SNAPSHOT_COMMIT_MECHANISM',
+    ok: !/createSnapshotCommit/.test(readText('api/services/engineeringRouter/patchApplyService.js')),
+    reason: 'patchApplyService.js não pode mais conter nenhum mecanismo de "snapshot commit" fabricado a partir do estado mutável do ROOT (ER-V1-SEAL-001) — workspace precisa nascer de um commit HEAD real já existente',
+  });
+  // ER-V1-SEAL-001 — segunda parte do achado real: `computeExpectedTreeHash` precisa reconstruir
+  // o "expected" a partir do MESMO commit HEAD real e imutável usado para materializar o
+  // workspace (`baselineHead`, resolvido como `HEAD` — não mais `HEAD^` — dentro do workspace),
+  // nunca de um snapshot que poderia incluir dirty state. Reproduzido ao vivo: um arquivo
+  // `dirty-local-a.txt` era promovido junto com o patch legítimo antes desta correção.
+  checks.push({
+    id: 'EXPECTED_TREE_USES_REAL_IMMUTABLE_BASELINE',
     ...checkFileContains('api/services/engineeringRouter/promotionService.js', [
       /async function computeExpectedTreeHash\(\{ expectedBaseCommit, diff, taskId \}\)/,
-      /computeExpectedTreeHash\(\{ expectedBaseCommit: snapshotCommit, diff, taskId \}\)/,
+      /computeExpectedTreeHash\(\{ expectedBaseCommit: baselineHead, diff, taskId \}\)/,
+      /runGit\(\['rev-parse', 'HEAD'\], \{ cwd: workspacePath \}\)/,
+    ]),
+  });
+  // ER-V1-SEAL-001 — prova adicional e independente do tree-hash, exigida explicitamente pela
+  // missão: o CONJUNTO DE PATHS alterados no candidato precisa ser comparado explicitamente
+  // contra o conjunto já provado do lado validado — nunca confiar só no hash agregado da árvore.
+  checks.push({
+    id: 'PROMOTION_CHANGED_PATHS_COMPARED_EXPLICITLY',
+    ...checkFileContains('api/services/engineeringRouter/promotionService.js', [
+      /validatedChangedPaths/, /promotedChangedPaths/, /PROMOTION_CHANGED_PATHS_MISMATCH/, /postPromotionTreeHash/,
     ]),
   });
 

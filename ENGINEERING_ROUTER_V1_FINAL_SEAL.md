@@ -81,3 +81,72 @@ partir daqui pertence exclusivamente a esta missão SEAL.
 12. Final seal decision
 
 ## Blockers
+
+### ER-V1-SEAL-001 — Immutable Promotion Baseline
+
+- RED reproduzido AO VIVO (script de reprodução dedicado, não hipotético): com a arquitetura
+  herdada da missão anterior (`createSnapshotCommit` capturando `staged+unstaged+untracked` do
+  ROOT compartilhado via `git add -A` para materializar o workspace de cada tentativa), um
+  arquivo `dirty-local-a.txt` criado no ROOT antes de `createWorkspace` aparecia commitado na
+  branch candidata real (`engineering-router/candidates/<taskId>`) junto com o patch legítimo
+  (`M mathUtils.js`), com `promoted: true` e `expectedTreeHash === validatedTreeHash ===
+  candidateTreeHash` — a "prova matemática" do Exact Promotion (ER-V1-FINAL-002) não detectava a
+  contaminação porque tanto `expected` quanto `validated` derivavam do MESMO snapshot sujo
+  (correção de ER-V1-FINAL-009), concordando em incluir o arquivo estranho. Confirma
+  precisamente o problema descrito na spec: "expected(snapshot+patch) == validated(snapshot+patch)
+  não prova que o candidate contém somente o patch da task."
+- fix (correção na raiz, não um remendo pontual):
+  1. **`patchApplyService.js::createWorkspace`** — reescrita para materializar o workspace
+     DIRETAMENTE do `git rev-parse HEAD` REAL e imutável do branch de trabalho, nunca mais de um
+     "snapshot" fabricado a partir do estado mutável do ROOT. `createSnapshotCommit`/
+     `createSnapshotCommitOnce` (e todo o mecanismo de retry TOCTOU de ER-V1-FINAL-009)
+     REMOVIDOS INTEIRAMENTE — não há mais nenhum `git add -A`/scan de diretório mutável ao criar
+     um workspace, só um `git rev-parse` (leitura pontual) + `git worktree add`. Isso elimina a
+     causa raiz do TOCTOU de ER-V1-FINAL-009 na origem, não só seu sintoma (retry deixa de ser
+     necessário porque a condição de corrida não existe mais).
+  2. **`promotionService.js`** — `baselineHead` agora é resolvido como `HEAD` (não mais `HEAD^`)
+     dentro do workspace, já que o workspace nasce diretamente do commit-alvo (sem indireção de
+     snapshot com pai). `computeExpectedTreeHash` recebe esse mesmo `baselineHead` como
+     `expectedBaseCommit`. Novos campos de evidência exigidos pela spec: `targetCommit`,
+     `targetTreeHash`, `validatedChangedPaths[]`, `promotedChangedPaths[]`,
+     `postPromotionTreeHash`, `createdAt` — mais um novo check explícito e independente do
+     tree-hash: `validatedChangedPaths === promotedChangedPaths` (novo código de falha
+     `PROMOTION_CHANGED_PATHS_MISMATCH`), e verificação de que a árvore do worktree
+     re-materializado pós-promoção bate bit-a-bit com a árvore já provada (`POST_PROMOTION_TREE_MISMATCH`).
+  3. Confirmado que o CONTEXT_SNAPSHOT (visibilidade de trabalho em andamento não commitado para
+     a CODER) nunca dependeu deste mecanismo: `contextBuilderService.js` já lê os arquivos reais
+     diretamente do ROOT via `fs.readFileSync`, independente de qualquer commit/worktree — a
+     separação CONTEXT_SNAPSHOT (leitura) vs PROMOTION_BASELINE (execução/promoção, imutável)
+     exigida pela spec já existia de fato, só a PROMOTION_BASELINE estava errada.
+  4. `validate-engineering-router-v1.js`: checks obsoletos de ER-V1-FINAL-009
+     (`SNAPSHOT_COMMIT_RETRIES_TRANSIENT_SCAN_ERROR`, `EXPECTED_TREE_USES_SNAPSHOT_NOT_BARE_HEAD`)
+     substituídos por 4 novos (`WORKSPACE_MATERIALIZES_FROM_REAL_IMMUTABLE_HEAD`,
+     `NO_DIRTY_SNAPSHOT_COMMIT_MECHANISM`, `EXPECTED_TREE_USES_REAL_IMMUTABLE_BASELINE`,
+     `PROMOTION_CHANGED_PATHS_COMPARED_EXPLICITLY`).
+- tests:
+  - Verificado ao vivo (script de reprodução) que, após o fix, o mesmo cenário de
+    `dirty-local-a.txt` promove SOMENTE `mathUtils.js` — nenhuma contaminação.
+  - `tests/integration/engineeringPromotionService.test.js` — novo describe **"ER-V1-SEAL-001 —
+    Immutable Promotion Baseline"** (4 testes novos, exatamente os cenários exigidos pela spec):
+    dirty local **untracked** nunca aparece no candidate; modificação **unstaged** de arquivo já
+    rastreado nunca aparece; alteração **staged** (git add sem commit) nunca aparece; as três
+    formas SIMULTANEAMENTE — candidate contém SOMENTE o arquivo do patch da task (0 contaminações).
+    Suíte completa do arquivo: **10/10 PASS** (6 testes herdados de ERV1-CLOSE-005/ER-V1-FINAL-002
+    continuam GREEN, incluindo os 3 cenários de contaminação REAL B/C/D — a correção não
+    enfraquece a detecção de side-effects genuínos de teste).
+  - `tests/unit/engineeringRouterSnapshotCommitRetry.test.js` (ER-V1-FINAL-009) REMOVIDO — testava
+    uma função (`createSnapshotCommit`) que não existe mais; a classe de bug que ele provava
+    (TOCTOU do `git add -A`) foi eliminada na raiz, não apenas mitigada.
+  - Regressão dirigida: `engineeringPatchApplyAndTestRunner.test.js` (4/4 PASS),
+    `engineeringRouterOrphanWorkspacePruning.test.js` (3/3 PASS — e ficou ~8x mais rápido, de
+    ~20s para ~2.6s, já que não há mais scan do ROOT compartilhado).
+  - Regressão ampla: suíte completa `tests/unit/engineeringRouter*` + `tests/integration/engineering*`
+    (38 arquivos) — **38/38 suítes PASS**.
+- evidence:
+  - `node scripts/governance/validate-engineering-router-v1.js`: `STRUCTURAL_PASS`, 140 checks,
+    0 falhas.
+  - `promotion_evidence` (model `EngineeringAttempt`) já é `DataTypes.JSONB` genérico — os novos
+    campos de evidência são persistidos automaticamente, sem necessidade de migration.
+  - `npm run test:unit` (suíte completa do projeto): `Test Suites: 1 skipped, 849 passed, 850
+    total`; `Tests: 2 skipped, 6475 passed, 6477 total`; exit code 0 — GREEN limpo.
+- status: GREEN

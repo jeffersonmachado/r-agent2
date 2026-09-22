@@ -65,21 +65,24 @@ function candidateBranchName(taskId) {
  * Isso prova ao mesmo tempo (1) que nada além do patch está no que será promovido e (2) que o
  * que será promovido é EXATAMENTE o que foi testado (não uma árvore "limpa" nunca exercitada).
  *
- * ER-V1-FINAL-009 (Full-Suite Isolation) — achado real: "MESMO baseline" (acima) precisa ser o
- * SNAPSHOT COMMIT que o workspace real usou (`createSnapshotCommit`, que captura TUDO que está
- * fisicamente no ROOT compartilhado no instante do snapshot — inclusive trabalho em andamento
- * não commitado do próprio branch main direto, e inclusive um arquivo temporário real de
- * QUALQUER outro teste do projeto que por acaso exista fisicamente naquele instante, ex.:
- * `config/benchmarks/__testbrcpXXXXXXXX.json` de `benchmarkChangeProposal.test.js`), NUNCA o
- * commit HEAD real puro (`HEAD^` do workspace, sem esse estado). Usar o HEAD real puro aqui —
- * como esta função fazia antes — reconstrói um "expected" que exclui algo que o workspace real
- * SEMPRE incluiu desde antes do patch, então qualquer coisa não commitada presente no ROOT no
- * instante do snapshot original é sinalizada como "contaminação" — falso positivo estrutural,
- * reproduzido ao vivo nesta sessão sob paralelismo real (rodando junto com
- * `benchmarkChangeProposal.test.js`). Usar o SNAPSHOT COMMIT do próprio workspace preserva a
- * garantia de segurança real (side-effects de teste acontecem DEPOIS do snapshot, então ainda
- * divergem do "expected" recalculado a partir do mesmo snapshot+patch) e elimina o falso
- * positivo (estado pré-existente no snapshot original é herdado igualmente por ambas as árvores).
+ * ER-V1-SEAL-001 (Immutable Promotion Baseline) — achado real, reproduzido ao vivo, que
+ * substitui e corrige a abordagem anterior (ER-V1-FINAL-009): "MESMO baseline" (acima) precisa
+ * ser o commit HEAD REAL e IMUTÁVEL do branch de trabalho (`patchApplyService.createWorkspace`
+ * materializa o workspace diretamente dele), NUNCA um "snapshot" fabricado a partir do estado
+ * mutável do ROOT compartilhado. A versão anterior deste sistema usava um snapshot que capturava
+ * TUDO fisicamente presente no ROOT no instante da criação do workspace (staged + unstaged +
+ * untracked, via `git add -A`) — inclusive trabalho em andamento não commitado do próprio branch
+ * main direto, ou um arquivo temporário real de outro teste rodando em paralelo. Como o
+ * "expected" também derivava desse MESMO snapshot, ambas as árvores concordavam em incluir a
+ * contaminação, e a comparação `expectedTree == validatedTree` PASSAVA mesmo com um arquivo
+ * estranho sendo promovido. Reproduzido ao vivo: um arquivo `dirty-local-a.txt` criado no ROOT
+ * antes de `createWorkspace` aparecia commitado na branch candidata real junto com o patch
+ * legítimo, com `promoted: true`. Corrigido na raiz (não só neste cálculo, mas na origem do
+ * workspace): `expectedBaseCommit` agora é sempre o HEAD real do branch de trabalho — o mesmo
+ * commit, já existente e imutável, de onde o workspace da tentativa foi materializado. Isso
+ * continua provando exatamente o que side-effects de teste (ex.: `INJECTED_BY_TEST_SIDE_EFFECT.txt`
+ * acontecendo DEPOIS da materialização) ainda divergem do "expected" recalculado a partir do
+ * mesmo commit+patch — mas agora sem NUNCA herdar estado local não commitado em nenhum dos lados.
  *
  * @returns {Promise<{ok:boolean, expectedTreeHash?:string, code?:string, error?:string}>}
  */
@@ -131,26 +134,19 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
   const validatedPatchHash = sha256(diff);
   const promotionAttemptedAt = new Date().toISOString();
 
-  // 1. Baseline real: o workspace foi criado a partir de um snapshot cujo PAI é o HEAD real de
-  //    quando esta tentativa começou. Comparar com o HEAD real ATUAL prova se algo mudou em
-  //    main enquanto a tentativa rodava — nunca promove sobre um alvo que já divergiu.
+  // 1. Baseline real: ER-V1-SEAL-001 — o workspace foi materializado DIRETAMENTE do HEAD real
+  //    (imutável) de quando esta tentativa começou (`patchApplyService.createWorkspace`, nunca
+  //    mais um snapshot fabricado a partir do estado mutável do ROOT). O HEAD do workspace É o
+  //    próprio `targetCommit` — sem indireção de "snapshot com pai real". Comparar com o HEAD
+  //    real ATUAL do branch de trabalho prova se algo mudou em main enquanto a tentativa rodava
+  //    — nunca promove sobre um alvo que já divergiu (TARGET_BASELINE_DIVERGED).
   const targetHeadResult = await runGit(['rev-parse', 'HEAD']);
   if (!targetHeadResult.ok) {
     return { promoted: false, code: 'PROMOTION_HEAD_UNRESOLVABLE', evidence: { promotionAttemptedAt, error: targetHeadResult.stderr, validatedPatchHash } };
   }
   const targetHead = targetHeadResult.stdout;
 
-  const snapshotCommitResult = await runGit(['rev-parse', 'HEAD'], { cwd: workspacePath });
-  if (!snapshotCommitResult.ok) {
-    return { promoted: false, code: 'PROMOTION_BASELINE_UNRESOLVABLE', evidence: { promotionAttemptedAt, error: snapshotCommitResult.stderr, validatedPatchHash } };
-  }
-  // HEAD do workspace = o commit-snapshot inteiro (baseline dirty incluído, ver
-  // computeExpectedTreeHash) — usado para reconstruir o "expected". HEAD^ = o PAI desse
-  // snapshot, que `createSnapshotCommit` sempre gera com `-p HEAD` apontando para o commit REAL
-  // da branch main — usado só para o check de divergência abaixo (só um commit REAL pode mudar
-  // o HEAD real; trabalho não commitado nunca muda isso).
-  const snapshotCommit = snapshotCommitResult.stdout;
-  const baselineHeadResult = await runGit(['rev-parse', 'HEAD^'], { cwd: workspacePath });
+  const baselineHeadResult = await runGit(['rev-parse', 'HEAD'], { cwd: workspacePath });
   if (!baselineHeadResult.ok) {
     return { promoted: false, code: 'PROMOTION_BASELINE_UNRESOLVABLE', evidence: { promotionAttemptedAt, error: baselineHeadResult.stderr, validatedPatchHash } };
   }
@@ -183,7 +179,7 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
   // 2.5. ER-V1-FINAL-002 — Exact Promotion: prova independente de que validatedTreeHash é
   //      EXATAMENTE "baseline + diff validado", nunca "baseline + diff + side-effect de teste".
   //      Ver computeExpectedTreeHash para o achado real reproduzido.
-  const expectedTreeResult = await computeExpectedTreeHash({ expectedBaseCommit: snapshotCommit, diff, taskId });
+  const expectedTreeResult = await computeExpectedTreeHash({ expectedBaseCommit: baselineHead, diff, taskId });
   if (!expectedTreeResult.ok) {
     return {
       promoted: false,
@@ -192,6 +188,14 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
     };
   }
   const { expectedTreeHash } = expectedTreeResult;
+
+  // ER-V1-SEAL-001: changed paths do lado VALIDADO — camada de prova adicional e independente
+  // do tree-hash (a spec exige comparar explicitamente os PATHS alterados, não só o hash da
+  // árvore agregada), calculada ANTES de saber se expected==validated (para aparecer também no
+  // evidence de PROMOTION_TREE_CONTAMINATED, útil no diagnóstico).
+  const validatedChangedPathsResult = await runGit(['diff', '--name-only', baselineHead, validatedTreeHash]);
+  const validatedChangedPaths = (validatedChangedPathsResult.stdout || '').split('\n').filter(Boolean).sort();
+
   if (expectedTreeHash !== validatedTreeHash) {
     // Diagnóstico preciso do que divergiu — nunca só "não bate": lista os arquivos exatos.
     const diffNameStatus = await runGit(['diff', '--name-status', expectedTreeHash, validatedTreeHash]);
@@ -214,6 +218,7 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
         validatedPatchHash,
         expectedTreeHash,
         candidateTreeHash: validatedTreeHash,
+        validatedChangedPaths,
         contaminatingFiles: diffNameStatus.ok ? diffNameStatus.stdout : diffNameStatus.stderr,
       },
     };
@@ -254,6 +259,22 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
     };
   }
 
+  // ER-V1-SEAL-001: prova adicional e independente do tree-hash — o CONJUNTO DE PATHS alterados
+  // no candidato real precisa ser EXATAMENTE o mesmo conjunto já provado do lado validado. Como
+  // `expectedTreeHash === validatedTreeHash === candidateTreeHash` (candidateTreeHash é
+  // literalmente `validatedTreeHash`, ver commit-tree acima), esta comparação é logicamente
+  // implicada, mas a spec exige a prova explícita por paths — nunca confiar só no hash agregado.
+  const promotedChangedPathsResult = await runGit(['diff', '--name-only', targetHead, candidateCommit]);
+  const promotedChangedPaths = (promotedChangedPathsResult.stdout || '').split('\n').filter(Boolean).sort();
+  const changedPathsMatch = JSON.stringify(validatedChangedPaths) === JSON.stringify(promotedChangedPaths);
+  if (!changedPathsMatch) {
+    return {
+      promoted: false,
+      code: 'PROMOTION_CHANGED_PATHS_MISMATCH',
+      evidence: { promotionAttemptedAt, validatedPatchHash, candidateCommit, validatedChangedPaths, promotedChangedPaths },
+    };
+  }
+
   // 5. Branch local dedicada — único efeito visível fora de objetos soltos do git. Nunca push,
   //    nunca merge em main/branch atual.
   const branchName = candidateBranchName(taskId);
@@ -267,8 +288,15 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
   //    que foi promovido produz o MESMO resultado real já validado.
   let smokeWorkspace = null;
   let postPromotionTestResult = null;
+  let postPromotionTreeHash = null;
   try {
     smokeWorkspace = await materializeWorktree(candidateCommit, `promotion-${taskId}-smoke`);
+    // ER-V1-SEAL-001: prova empírica adicional — a árvore do worktree recém-materializado a
+    // partir do candidateCommit precisa bater bit-a-bit com a árvore já provada
+    // (candidateTreeHash/validatedTreeHash). Nunca assume que "materializar de novo" reproduz o
+    // mesmo conteúdo sem checar.
+    const postPromotionTreeResult = await runGit(['rev-parse', 'HEAD^{tree}'], { cwd: smokeWorkspace });
+    postPromotionTreeHash = postPromotionTreeResult.ok ? postPromotionTreeResult.stdout : null;
     postPromotionTestResult = await runTestCommands({
       taskId: `${taskId}-post-promotion`,
       attemptNumber: attemptNumber,
@@ -282,6 +310,14 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
     if (smokeWorkspace) await destroyWorkspace(smokeWorkspace);
   }
 
+  if (postPromotionTreeHash !== null && postPromotionTreeHash !== validatedTreeHash) {
+    return {
+      promoted: false,
+      code: 'POST_PROMOTION_TREE_MISMATCH',
+      evidence: { promotionAttemptedAt, validatedPatchHash, candidateCommit, candidateTreeHash: validatedTreeHash, postPromotionTreeHash },
+    };
+  }
+
   // ER-V1-FINAL-002: fileSetHash — hash do conjunto exato de arquivos tocados (ordenado,
   // conteúdo-endereçado), calculado do diff real entre baseline e candidato (agora provado
   // idêntico ao expectedTreeHash) — qualquer arquivo adicionado/removido/renomeado fora do
@@ -290,19 +326,29 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
   const fileSetHash = sha256((fileSetResult.stdout || '').split('\n').filter(Boolean).sort().join('\n'));
   const baselineTreeResult = await runGit(['rev-parse', `${baselineHead}^{tree}`]);
 
+  const createdAt = new Date().toISOString();
   const promotionEvidence = {
-    promotionAttemptedAt,
-    promotedAt: new Date().toISOString(),
+    // Campos exatos exigidos por ER-V1-SEAL-001 (Immutable Promotion Baseline):
+    targetCommit: targetHead,
+    targetTreeHash: baselineTreeResult.ok ? baselineTreeResult.stdout : null,
     validatedPatchHash,
-    baselineTreeHash: baselineTreeResult.ok ? baselineTreeResult.stdout : null,
+    validatedChangedPaths,
     expectedTreeHash,
+    validatedTreeHash,
     candidateTreeHash: validatedTreeHash,
+    candidateCommit,
+    promotedChangedPaths,
+    postPromotionTreeHash,
+    createdAt,
+    // Campos herdados (ER-V1-FINAL-002/ERV1-CLOSE-005), mantidos para compatibilidade com
+    // consumidores existentes (UI, testes, relatórios) — nunca removidos, só complementados.
+    promotionAttemptedAt,
+    promotedAt: createdAt,
+    baselineTreeHash: baselineTreeResult.ok ? baselineTreeResult.stdout : null,
     promotedTreeHash: validatedTreeHash,
     fileSetHash,
-    validatedTreeHash,
     baselineHead,
     targetHead,
-    candidateCommit,
     candidateBranch: branchName,
     promotionStatus: 'PROMOTED',
     postPromotionTestPass: Boolean(postPromotionTestResult?.allPass),

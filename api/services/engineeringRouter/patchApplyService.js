@@ -4,10 +4,31 @@
  * api/services/engineeringRouter/patchApplyService.js
  *
  * Aplicação controlada de patch: NUNCA aplica sobre o working tree principal. Cria um
- * `git worktree` isolado a partir de um snapshot do estado atual do repositório (staged +
- * unstaged + untracked, respeitando .gitignore — ver `createSnapshotCommit`), valida o patch
- * com `git apply --check` antes de aplicar de verdade, e remove o worktree ao final
- * (rollback/cleanup garantido mesmo em caminho de erro, via `finally` no chamador).
+ * `git worktree` isolado a partir do commit HEAD REAL e IMUTÁVEL do branch de trabalho (ver
+ * `createWorkspace`), valida o patch com `git apply --check` antes de aplicar de verdade, e
+ * remove o worktree ao final (rollback/cleanup garantido mesmo em caminho de erro, via `finally`
+ * no chamador).
+ *
+ * ER-V1-SEAL-001 (Immutable Promotion Baseline) — achado real, reproduzido ao vivo: a versão
+ * anterior deste módulo materializava o workspace a partir de um "commit snapshot" que capturava
+ * TUDO fisicamente presente no ROOT compartilhado no instante da criação (staged + unstaged +
+ * untracked, via `git add -A`) — inclusive qualquer alteração local NÃO relacionada à task
+ * (trabalho em andamento do próprio branch main direto, ou um arquivo temporário real de outro
+ * teste rodando em paralelo). Como o cálculo de "expected tree" (Exact Promotion,
+ * `promotionService.js`) também derivava desse MESMO snapshot, ambas as árvores concordavam em
+ * incluir a contaminação — a comparação `expectedTree == validatedTree` PASSAVA mesmo com um
+ * arquivo estranho sendo promovido para a branch candidata real. Reproduzido ao vivo: um arquivo
+ * `dirty-local-a.txt` criado no ROOT antes de `createWorkspace` aparecia commitado na branch
+ * `engineering-router/candidates/<taskId>` junto com o patch legítimo, com `promoted: true`.
+ *
+ * Corrigido na raiz: o workspace agora é materializado diretamente do `git rev-parse HEAD` REAL
+ * do branch de trabalho — um commit JÁ EXISTENTE, imutável, nunca um snapshot fabricado a partir
+ * do estado mutável do ROOT. Isso também elimina por completo o TOCTOU de `git add -A` sobre o
+ * ROOT compartilhado (ER-V1-FINAL-009): não há mais nenhum scan de diretório mutável ao criar um
+ * workspace, só um `git rev-parse` (leitura pontual) + `git worktree add` a partir de um commit
+ * já resolvido. O contexto de "trabalho em andamento não commitado" que a CODER precisa nunca
+ * dependeu deste mecanismo — `contextBuilderService.js` já lê os arquivos reais diretamente do
+ * ROOT via `fs`, independente de qualquer commit/worktree.
  */
 
 const { execFile } = require('child_process');
@@ -26,33 +47,6 @@ const execFileAsync = util.promisify(execFile);
 const WORKSPACE_ROOT = process.env.ENGINEERING_ROUTER_WORKSPACE_ROOT
   || path.join(os.tmpdir(), 'engineering-router-workspaces');
 
-// ER-V1-FINAL-009 (Full-Suite Isolation) — achado real, reproduzido ao vivo rodando a suíte
-// completa em paralelo: `createSnapshotCommit()` faz `git add -A` no ROOT do repositório
-// PRINCIPAL, compartilhado por TODA a suíte de testes do projeto (não só o Engineering Router).
-// Qualquer outro teste, em qualquer parte do projeto, que crie e remova um arquivo real DENTRO
-// do repositório (ex.: `api/services/benchmark/benchmarkSampleRegistry.js`, escrita atômica
-// tmp+rename usada por `benchmarkChangeProposal.test.js` em `config/benchmarks/`) pode fazer um
-// arquivo aparecer no scan interno do `git add -A` e sumir antes do `stat`, exatamente como
-// qualquer scan de diretório concorrentemente mutável — TOCTOU clássico, inerente a escanear um
-// diretório compartilhado enquanto outro processo escreve nele. Erro real reproduzido:
-// `fatal: unable to stat 'config/benchmarks/__testbrcpXXXXXXXX.json': Arquivo ou diretório
-// inexistente`.
-//
-// Não há como eliminar a concorrência em si sem coordenar com TODO o resto do projeto (fora do
-// escopo desta missão — "não modernizar arquitetura não relacionada"), e `--runInBand` global
-// não é justificado por nenhum requisito arquitetural real (a spec exige exatamente isso: só
-// serializar se for comprovadamente necessário). A mitigação correta para esta classe de erro —
-// um arquivo que existia no momento do `readdir` e sumiu antes do `stat`, por definição
-// transitório — é detectar o padrão específico e reexecutar a sequência inteira do zero (o
-// índice temporário pode estar parcialmente populado, então não dá para só re-rodar o `add`).
-const TRANSIENT_GIT_SCAN_ERROR = /unable to stat|does not exist|no such file or directory|did not match any files/i;
-const SNAPSHOT_RETRY_ATTEMPTS = 5;
-const SNAPSHOT_RETRY_DELAYS_MS = [50, 150, 400, 800];
-
-function sleep(ms) {
-  return new Promise((resolve) => { setTimeout(resolve, ms); });
-}
-
 async function runGit(args, { cwd } = {}) {
   try {
     const { stdout, stderr } = await execFileAsync('git', args, {
@@ -63,70 +57,6 @@ async function runGit(args, { cwd } = {}) {
   } catch (err) {
     return { ok: false, stdout: err.stdout || '', stderr: err.stderr || err.message || String(err) };
   }
-}
-
-/**
- * Cria um objeto de commit "snapshot" representando EXATAMENTE o estado atual do working tree
- * (staged + unstaged + arquivos novos ainda não commitados, respeitando .gitignore) — sem
- * mutar o HEAD, a branch, o índice ou o working tree reais. Necessário porque este projeto
- * roda em "branch main direto" (sprint de finalização), quase sempre com mudanças pendentes
- * não commitadas; um worktree criado a partir de `HEAD` não veria esse trabalho em andamento
- * nem os próprios arquivos do Task Contract se ainda não commitados.
- *
- * Técnica padrão do git (sem side effects): índice temporário via `GIT_INDEX_FILE`, `add -A`
- * nesse índice isolado, `write-tree` + `commit-tree` apontando HEAD como pai. O commit gerado
- * fica sem nenhuma referência (branch/tag) — nunca aparece em `git log`/`git status` — e é
- * apenas o ponto de partida do `git worktree add`.
- *
- * @returns {Promise<string>} hash do commit snapshot
- */
-async function createSnapshotCommitOnce() {
-  const tmpIndex = path.join(os.tmpdir(), `engineering-router-index-${crypto.randomBytes(6).toString('hex')}`);
-  const env = {
-    ...process.env,
-    GIT_INDEX_FILE: tmpIndex,
-    GIT_AUTHOR_NAME: 'Engineering Model Router',
-    GIT_AUTHOR_EMAIL: 'engineering-router@local',
-    GIT_COMMITTER_NAME: 'Engineering Model Router',
-    GIT_COMMITTER_EMAIL: 'engineering-router@local',
-  };
-  try {
-    await execFileAsync('git', ['read-tree', 'HEAD'], { cwd: ROOT, env });
-    await execFileAsync('git', ['add', '-A'], { cwd: ROOT, env, maxBuffer: 50 * 1024 * 1024 });
-    const { stdout: treeHash } = await execFileAsync('git', ['write-tree'], { cwd: ROOT, env });
-    const { stdout: commitHash } = await execFileAsync('git', ['commit-tree', treeHash.trim(), '-p', 'HEAD', '-m', 'engineering-router-snapshot (unreferenced)'], { cwd: ROOT, env });
-    return commitHash.trim();
-  } finally {
-    try { fs.unlinkSync(tmpIndex); } catch (_) { /* best-effort */ }
-  }
-}
-
-/**
- * ER-V1-FINAL-009: envelope de retry sobre `createSnapshotCommitOnce` — ver nota acima de
- * `TRANSIENT_GIT_SCAN_ERROR`. Só reexecuta quando o erro bate no padrão transitório específico
- * de "arquivo sumiu entre o scan e o stat"; qualquer outro erro (permissão real, repo
- * corrompido, etc.) propaga imediatamente, sem retry, na primeira tentativa.
- */
-async function createSnapshotCommit() {
-  let lastErr;
-  for (let attempt = 1; attempt <= SNAPSHOT_RETRY_ATTEMPTS; attempt += 1) {
-    try {
-      return await createSnapshotCommitOnce();
-    } catch (err) {
-      lastErr = err;
-      const message = `${err.stderr || ''}${err.stdout || ''}${err.message || ''}`;
-      if (!TRANSIENT_GIT_SCAN_ERROR.test(message) || attempt === SNAPSHOT_RETRY_ATTEMPTS) {
-        throw err;
-      }
-      logger.warn('[patchApplyService] createSnapshotCommit: git add -A colidiu com escrita concorrente de outro processo (TOCTOU transitório) — retentando', {
-        attempt,
-        maxAttempts: SNAPSHOT_RETRY_ATTEMPTS,
-        error: message.slice(0, 300),
-      });
-      await sleep(SNAPSHOT_RETRY_DELAYS_MS[attempt - 1] || SNAPSHOT_RETRY_DELAYS_MS[SNAPSHOT_RETRY_DELAYS_MS.length - 1]);
-    }
-  }
-  throw lastErr;
 }
 
 /**
@@ -158,21 +88,21 @@ async function materializeWorktree(commitHash, dirLabel) {
 }
 
 /**
- * Cria um workspace isolado (git worktree, detached em um snapshot do estado atual) para uma
- * tentativa.
+ * Cria um workspace isolado (git worktree, detached no commit HEAD REAL e imutável do branch de
+ * trabalho) para uma tentativa. ER-V1-SEAL-001: nunca um snapshot fabricado a partir do estado
+ * mutável do ROOT — sempre um commit já existente, resolvido por `git rev-parse HEAD` (leitura
+ * pontual, sem scan de diretório, sem TOCTOU possível).
  * @returns {Promise<string>} caminho absoluto do workspace
  */
 async function createWorkspace(taskId, attemptNumber) {
-  let snapshotCommit;
-  try {
-    snapshotCommit = await createSnapshotCommit();
-  } catch (err) {
-    const wrapped = new Error(`Falha ao criar snapshot do working tree: ${err.message}`);
-    wrapped.code = FAILURE_CODES.PATCH_APPLY_FAILED;
-    throw wrapped;
+  const headResult = await runGit(['rev-parse', 'HEAD']);
+  if (!headResult.ok) {
+    const err = new Error(`Falha ao resolver HEAD real do branch de trabalho: ${headResult.stderr}`);
+    err.code = FAILURE_CODES.PATCH_APPLY_FAILED;
+    throw err;
   }
 
-  return materializeWorktree(snapshotCommit, `task-${taskId}-attempt-${attemptNumber}`);
+  return materializeWorktree(headResult.stdout.trim(), `task-${taskId}-attempt-${attemptNumber}`);
 }
 
 /**
@@ -295,7 +225,6 @@ async function pruneOrphanedWorkspaces({ olderThanMs = DEFAULT_ORPHAN_WORKSPACE_
 
 module.exports = {
   WORKSPACE_ROOT,
-  createSnapshotCommit,
   createWorkspace,
   materializeWorktree,
   applyPatch,
