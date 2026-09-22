@@ -100,6 +100,16 @@ async function tenantRateLimitMiddleware(req, res, sendJson) {
   // Valida tenant primeiro
   const tenantValidation = await requireTenant(req);
   if (!tenantValidation.valid) {
+    // Sem agente resolvido, a causa raiz é ausência de autenticação, não
+    // ausência de tenant: 401 precede 403 (uma chamada anônima deve ser
+    // barrada por "não autenticado", nunca por "tenant obrigatório").
+    if (!req.agent) {
+      sendJson(res, 401, {
+        error: 'unauthorized',
+        message: 'Autenticação necessária',
+      });
+      return false;
+    }
     sendJson(res, 403, {
       error: 'tenant_validation_failed',
       message: tenantValidation.error,
@@ -213,6 +223,16 @@ async function tenantUserRateLimitMiddleware(req, res, sendJson) {
   // Valida tenant primeiro
   const tenantValidation = await requireTenant(req);
   if (!tenantValidation.valid) {
+    // Sem agente resolvido, a causa raiz é ausência de autenticação, não
+    // ausência de tenant: 401 precede 403 (uma chamada anônima deve ser
+    // barrada por "não autenticado", nunca por "tenant obrigatório").
+    if (!req.agent) {
+      sendJson(res, 401, {
+        error: 'unauthorized',
+        message: 'Autenticação necessária',
+      });
+      return false;
+    }
     sendJson(res, 403, {
       error: 'tenant_validation_failed',
       message: tenantValidation.error,

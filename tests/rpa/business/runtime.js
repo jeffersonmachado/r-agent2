@@ -3243,10 +3243,20 @@ async function runFlowScenario(definition, ctx) {
       throw new Error(`Role QA não foi criada: ${JSON.stringify(created)}`);
     }
 
-    const users = await api.get('/api/users/search?q=supervisor');
-    const target = (users?.items || [])[0];
+    // Alvo da atribuição: agente de QA próprio e efêmero (não depende de
+    // fixture externa "supervisor" pré-seedada, que nunca é criada pelo
+    // bootstrap padrão em api/db/seed.js — só admin/systemadmin existem).
+    const targetUsername = `qa_rbac_target_${runId}`.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    const createdAgent = await api.post('/auth/agents', {
+      username: targetUsername,
+      email: `${targetUsername}@qa.local`,
+      password: 'QaRbacTarget123!',
+      name: 'QA RBAC Target',
+      role: 'operator',
+    });
+    const target = createdAgent?.agent;
     if (!target?.id) {
-      throw new Error('Agente supervisor seed não encontrado para atribuição de role');
+      throw new Error(`Agente de QA para RBAC não foi criado: ${JSON.stringify(createdAgent)}`);
     }
     const originalRole = target.role;
 
@@ -3255,14 +3265,13 @@ async function runFlowScenario(definition, ctx) {
       if (assigned?.agent?.role !== roleName) {
         throw new Error(`Atribuição de role não aplicada: ${JSON.stringify(assigned?.agent?.role)}`);
       }
-    } finally {
-      await api.post('/rbac/assign', { agentId: target.id, role: originalRole });
-    }
 
-    const restored = await api.get('/api/users/search?q=supervisor');
-    const restoredUser = (restored?.items || []).find((item) => item.id === target.id);
-    if (restoredUser?.role !== originalRole) {
-      throw new Error(`Role original não restaurada: ${restoredUser?.role} != ${originalRole}`);
+      const restored = await api.post('/rbac/assign', { agentId: target.id, role: originalRole });
+      if (restored?.agent?.role !== originalRole) {
+        throw new Error(`Role original não restaurada: ${restored?.agent?.role} != ${originalRole}`);
+      }
+    } finally {
+      await api.del(`/auth/agents/${encodeURIComponent(target.id)}`);
     }
 
     return {

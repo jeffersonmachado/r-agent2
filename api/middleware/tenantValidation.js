@@ -188,6 +188,15 @@ async function validateTenantMiddleware(req, res, sendJson) {
   const validation = await requireTenant(req);
 
   if (!validation.valid) {
+    // Sem agente resolvido, a causa raiz é ausência de autenticação, não
+    // ausência de tenant: 401 precede 403.
+    if (!req.agent) {
+      sendJson(res, 401, {
+        error: 'unauthorized',
+        message: 'Autenticação necessária',
+      });
+      return false;
+    }
     sendJson(res, 403, {
       error: 'tenant_validation_failed',
       message: validation.error,
