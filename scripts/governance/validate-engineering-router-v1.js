@@ -35,13 +35,17 @@ const REQUIRED_RUNTIME_ITEM_IDS = Object.freeze([
   'GOVERNANCE_EXECUTION',
   'PROVIDER_MODEL_FAILURE_REROUTE',
   'RESTART_RESUME',
+  'CRASH_RESUME_MID_STAGE',
   'CONTROLLED_PROMOTION',
   'POST_PROMOTION_VERIFICATION',
+  'EXACT_PATCH_PROMOTION',
+  'FAIL_CLOSED_SCOPE',
   'DEVELOPMENT_AUTHORIZATION',
   'PRODUCTION_DENIAL',
   'SUPPORT_DENIAL_DEFAULT',
   'TENANT_CREDENTIAL_ISOLATION',
   'RELEASE_CLOSURE_SAME_RUN_INTEGRITY',
+  'EXECUTION_SANDBOX_ISOLATION',
 ]);
 
 /**
@@ -84,15 +88,24 @@ function buildRuntimeChecks() {
       runtimeChecks.push({ id: `RUNTIME_${id}`, ok: false, reason: `item de evidência de runtime ausente: ${id}` });
       continue;
     }
-    runtimeChecks.push({
-      id: `RUNTIME_${id}`,
-      // Um item de runtime só conta se a evidência inteira for fresca E o exitCode real for 0 —
-      // uma evidência velha nunca "empresta" seu PASS para o commit atual.
-      ok: isFresh && item.exitCode === 0,
-      reason: !isFresh
-        ? 'evidência de runtime obsoleta (ver RUNTIME_EVIDENCE_FRESH)'
-        : (item.exitCode !== 0 ? `${item.testPath}: exitCode real ${item.exitCode} (não é 0)` : undefined),
-    });
+    // ER-V1-FINAL-007 (Evidence Precision): exitCode===0 sozinho não prova nada — `npx jest -t
+    // "<padrão sem match>"` também sai com exitCode 0 (tudo "pulado"). A prova real exige
+    // testCaseId presente (mira granular por nome, não por arquivo inteiro) e pelo menos um
+    // teste com PASS genuíno (numPassedTests>=1), sem nenhuma falha.
+    const hasTestCaseId = typeof item.testCaseId === 'string' && item.testCaseId.length > 0;
+    const hasRealPass = Number(item.numPassedTests) >= 1 && Number(item.numFailedTests) === 0;
+    const itemOk = isFresh && item.exitCode === 0 && hasTestCaseId && hasRealPass;
+    let reason;
+    if (!isFresh) {
+      reason = 'evidência de runtime obsoleta (ver RUNTIME_EVIDENCE_FRESH)';
+    } else if (item.exitCode !== 0) {
+      reason = `${item.testPath}: exitCode real ${item.exitCode} (não é 0)`;
+    } else if (!hasTestCaseId) {
+      reason = `${item.testPath}: testCaseId ausente na evidência (mira granular por nome não confirmada)`;
+    } else if (!hasRealPass) {
+      reason = `${item.testPath}: numPassedTests=${item.numPassedTests}, numFailedTests=${item.numFailedTests} (precisa >=1 passado e 0 falhado)`;
+    }
+    runtimeChecks.push({ id: `RUNTIME_${id}`, ok: itemOk, reason });
   }
 
   return runtimeChecks;
