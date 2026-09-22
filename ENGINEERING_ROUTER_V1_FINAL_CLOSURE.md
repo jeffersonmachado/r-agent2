@@ -507,4 +507,112 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   - `npm run test:unit` (suíte completa, mesmo commit): `Test Suites: 1 skipped, 848 passed, 849
     total`; `Tests: 2 skipped, 6466 passed, 6468 total`; exit code 0.
 - status: GREEN
+
+### ER-V1-FINAL-009 — Full-Suite Isolation
+
+- RED reproduzido AO VIVO nesta sessão (não hipotético): rodando repetidamente a suíte do
+  Engineering Router junto com testes de outras áreas do projeto que escrevem arquivos reais
+  dentro do repositório (`tests/unit/benchmarks/benchmarkChangeProposal.test.js`, via
+  `api/services/benchmark/benchmarkSampleRegistry.js` — escrita atômica tmp+rename em
+  `config/benchmarks/`), em modo paralelo padrão do Jest (sem `--runInBand`, o modo oficial),
+  a suíte falhava de forma real e repetida — nunca 100% limpa antes das correções abaixo.
+  Investigação encontrou TRÊS causas raiz reais e distintas, todas corrigidas nesta sessão (não
+  apenas a primeira, já suspeitada desde os blockers 002/003/005/006):
+
+  **Causa 1 — TOCTOU no `git add -A` de `createSnapshotCommit`:**
+  `patchApplyService.js::createSnapshotCommit()` faz `git add -A` no ROOT do repositório
+  PRINCIPAL, compartilhado por TODA a suíte de 849 arquivos do projeto — não só o Engineering
+  Router. Sob paralelismo real, um arquivo temporário criado por QUALQUER outro teste do projeto
+  pode ser removido entre o scan interno do `git add -A` e o `stat` de cada arquivo — TOCTOU
+  clássico sobre um diretório mutável compartilhado. Erro real capturado:
+  ```
+  Falha ao criar snapshot do working tree: Command failed: git add -A
+  fatal: unable to stat 'config/benchmarks/__testbrcpf6351e6e.json': Arquivo ou diretório
+  inexistente
+  ```
+  Fix: `createSnapshotCommit()` reescrita para envolver `createSnapshotCommitOnce()` (read-tree +
+  add -A + write-tree + commit-tree) em um retry de até 5 tentativas com delay crescente
+  (50/150/400/800ms), só quando o erro bate no padrão `TRANSIENT_GIT_SCAN_ERROR` (unable to
+  stat/does not exist/no such file or directory/did not match any files) — qualquer outro tipo de
+  erro propaga imediatamente, sem retry, nunca mascarado.
+  Commit: `9b257cbe`.
+
+  **Causa 2 — falso positivo estrutural em Exact Promotion (`PROMOTION_TREE_CONTAMINATED`):**
+  Mesmo com a Causa 1 corrigida, a suíte ainda falhava — desta vez com `READY_FOR_PROMOTION` em
+  vez de `GREEN` em testes E2E variados. `promotionService.js::computeExpectedTreeHash`
+  reconstruía a árvore "esperada" a partir do commit `HEAD^` do workspace (o commit REAL da
+  branch main, SEM qualquer estado não commitado). Mas o workspace "validado" sempre nasce do
+  SNAPSHOT COMMIT completo (`createSnapshotCommit`, que captura intencionalmente TUDO
+  fisicamente presente no ROOT no instante do snapshot — inclusive trabalho em andamento não
+  commitado do próprio branch main direto, e inclusive um arquivo temporário real de QUALQUER
+  outro teste do projeto que por acaso exista naquele instante). Qualquer coisa não commitada
+  capturada no snapshot original SEMPRE aparecia como "contaminação" na comparação entre
+  `expectedTreeHash` e `validatedTreeHash` — mesmo sendo idêntica em ambos os lados por
+  definição, porque só um dos dois lados (`expected`) a excluía por partir do `HEAD^` puro.
+  Reproduzido ao vivo com um log real temporário (`contaminatingFiles`), capturando casos como:
+  ```
+  contaminatingFiles: "M\tapi/services/engineeringRouter/promotionService.js"
+  contaminatingFiles: "M\t...promotionService.js\nA\tconfig/benchmarks/__testbrcp7f03b289.json"
+  ```
+  — confirmando tanto trabalho em andamento próprio quanto arquivos reais de outro teste sendo
+  incorretamente sinalizados como contaminação.
+  Fix: `computeExpectedTreeHash` agora recebe `expectedBaseCommit` = o próprio SNAPSHOT COMMIT do
+  workspace (`HEAD`, não `HEAD^`) — preserva a garantia de segurança real (side-effects de teste
+  acontecem DEPOIS do snapshot, então ainda divergem do expected recalculado a partir do mesmo
+  snapshot+patch) e elimina o falso positivo (estado pré-existente no snapshot é herdado
+  igualmente por ambas as árvores). `baselineHead` (`HEAD^`, commit real) continua sendo usado só
+  para o check de `PROMOTION_TARGET_DIVERGED`, onde é semanticamente correto (só um commit REAL
+  pode mudar o HEAD real da branch). Confirmado sem enfraquecer a segurança: os 3 cenários de
+  contaminação REAL já cobertos por `tests/integration/engineeringPromotionService.test.js`
+  (cenário B — arquivo novo gerado como side-effect; C — arquivo existente alterado fora do
+  diff; D — remoção de arquivo fora do patch) continuam GREEN após a correção.
+  Commit: `bb03c37d`.
+
+  **Causa 3 — timeouts insuficientes para acomodar o retry sob paralelismo real:**
+  O retry da Causa 1 (até 5 tentativas com delay) torna `createSnapshotCommit` legitimamente
+  mais lento sob a suíte completa rodando em paralelo (contenção real de CPU/IO, não só a race
+  em si). Testes que chamam `createWorkspace`/`runTask` com timeout de 30s/60s estouravam por
+  TIMEOUT genuíno (não bug de lógica) — confirmado com a mensagem real "Exceeded timeout of
+  Xms" em `engineeringRouterOrphanWorkspacePruning.test.js` e
+  `engineeringRouterPromotionEvidencePersistence.test.js`.
+  Fix: timeouts aumentados proporcionalmente (30s→90s, 60s→120s) nos ~9 arquivos de teste que de
+  fato exercitam `createWorkspace`/`runTask` real: `engineeringRouterModelRerouteE2E`,
+  `engineeringRouterFullLoopE2E`, `engineeringRouterRegressionGovernanceGate`,
+  `engineeringRouterPromotionEvidencePersistence`, `engineeringRouterReviewerRejectionRecodeE2E`,
+  `engineeringPromotionService`, `engineeringRegressionGovernanceService`,
+  `engineeringPatchApplyAndTestRunner`, `engineeringRouterOrphanWorkspacePruning`.
+  Commit: `bb03c37d`.
+
+  **REGRESSION relacionada, encontrada e corrigida durante esta mesma investigação (não uma das
+  3 causas acima, mas descoberta no caminho):** `tests/integration/engineeringRouterMandatoryRuntimeGate.test.js`
+  (blocker 004, já GREEN) mantinha uma TERCEIRA cópia hardcoded de `REQUIRED_RUNTIME_ITEM_IDS`
+  que os blockers 007/008 deixaram dessincronizada (faltavam 2 dos 25 IDs reais, e a fixture
+  sintética não tinha os campos do schema v2.0.0 de ER-V1-FINAL-007) — corrigido eliminando a
+  duplicação na fonte (`collect-engineering-router-runtime-evidence.js` agora exporta
+  `RUNTIME_ITEMS`, com guard `require.main === module`; gate e teste importam de lá). Commit
+  `e33d1a25`.
+
+- tests:
+  - `tests/unit/engineeringRouterSnapshotCommitRetry.test.js` (novo, 3/3 PASS, determinístico via
+    mock de `child_process.execFile`): retry bem-sucedido após 1 falha transitória; erro NÃO
+    transitório propaga imediatamente sem retry; erro transitório em todas as 5 tentativas
+    propaga o erro real (nunca finge sucesso).
+  - `tests/integration/engineeringPromotionService.test.js` (7/7 PASS, incluindo os 3 cenários de
+    contaminação real B/C/D) — confirma que a Causa 2 não enfraqueceu a detecção real.
+  - `tests/integration/engineeringRouterMandatoryRuntimeGate.test.js` (6/6 PASS) — REGRESSION
+    corrigida.
+  - Regressão ampliada da suíte completa do Engineering Router + testes de escrita real em
+    `config/benchmarks/` (41 suítes), rodada 6 vezes seguidas em modo paralelo padrão do Jest (3
+    rodadas com árvore ainda dirty, iterando; 3 rodadas finais com árvore limpa no commit
+    `bb03c37d`) — **41/41 suítes PASS em todas as 6 rodadas**, nenhuma falha, nenhum padrão de
+    TOCTOU/contaminação/timeout reaparecendo.
+- evidence:
+  - `node scripts/governance/validate-engineering-router-v1.js` (árvore limpa, commit
+    `bb03c37d`): `STRUCTURAL_PASS`, 132 checks, 0 falhas (inclui os 2 novos checks
+    `SNAPSHOT_COMMIT_RETRIES_TRANSIENT_SCAN_ERROR` e `EXPECTED_TREE_USES_SNAPSHOT_NOT_BARE_HEAD`).
+  - `npm run test:unit` (suíte completa do projeto, mesmo commit): `Test Suites: 1 skipped, 849
+    passed, 850 total`; `Tests: 2 skipped, 6469 passed, 6471 total`; exit code 0 — GREEN limpo,
+    nenhuma falha pré-existente encontrada (não é necessário usar `NO_NEW_REGRESSION` aqui; o
+    resultado é efetivamente "ALL GREEN" real).
+- status: GREEN
 - commit: `b6f40f43` (implementação) + `b863c54a` (correção do achado acima)
