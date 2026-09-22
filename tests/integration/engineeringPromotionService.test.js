@@ -165,3 +165,131 @@ describe('ERV1-CLOSE-005 — promotionService.promoteValidatedPatch (git real)',
     expect(result.evidence.baselineHead).not.toBe(result.evidence.targetHead);
   });
 });
+
+describe('ER-V1-FINAL-002 — Exact Promotion (prova de tree hash, não só diff --stat)', () => {
+  jest.setTimeout(30000);
+  const createdWorkspaces = [];
+  const createdBranches = [];
+
+  afterEach(async () => {
+    for (const ws of createdWorkspaces.splice(0)) {
+      if (fs.existsSync(ws)) await destroyWorkspace(ws).catch(() => {});
+    }
+    for (const branch of createdBranches.splice(0)) {
+      deleteBranchIfExists(branch);
+    }
+  });
+
+  test('promoção legítima expõe expectedTreeHash == candidateTreeHash e fileSetHash (prova positiva, cenário A)', async () => {
+    const taskId = `jest-exact-promotion-clean-${Date.now()}`;
+    const workspace = await createWorkspace(taskId, 1);
+    createdWorkspaces.push(workspace);
+
+    const applyResult = await applyPatch(workspace, FIX_DIFF);
+    expect(applyResult.ok).toBe(true);
+
+    const result = await promoteValidatedPatch({
+      taskId,
+      attemptId: 'jest-exact-attempt-1',
+      attemptNumber: 1,
+      workspacePath: workspace,
+      diff: FIX_DIFF,
+      testCommands: [FIXTURE_TEST_COMMAND],
+      taskTitle: 'jest exact promotion clean',
+    });
+    createdBranches.push(candidateBranchName(taskId));
+
+    expect(result.promoted).toBe(true);
+    expect(result.evidence.expectedTreeHash).toBe(result.evidence.candidateTreeHash);
+    expect(result.evidence.promotedTreeHash).toBe(result.evidence.candidateTreeHash);
+    expect(result.evidence.fileSetHash).toEqual(expect.any(String));
+    expect(result.evidence.promotionStatus).toBe('PROMOTED');
+  });
+
+  test('arquivo NOVO gerado como side-effect no workspace (fora do patch) bloqueia a promoção (cenário B)', async () => {
+    const taskId = `jest-exact-promotion-side-effect-new-${Date.now()}`;
+    const workspace = await createWorkspace(taskId, 1);
+    createdWorkspaces.push(workspace);
+
+    const applyResult = await applyPatch(workspace, FIX_DIFF);
+    expect(applyResult.ok).toBe(true);
+
+    // Simula side-effect real de um testCommand: um arquivo NOVO aparece no workspace depois
+    // do patch aplicado (cache, artefato, log — ou qualquer escrita fora do diff validado).
+    const injectedFile = 'INJECTED_BY_TEST_SIDE_EFFECT.txt';
+    fs.writeFileSync(path.join(workspace, injectedFile), 'nunca deveria ser promovido');
+
+    const result = await promoteValidatedPatch({
+      taskId,
+      attemptId: 'jest-exact-attempt-b',
+      attemptNumber: 1,
+      workspacePath: workspace,
+      diff: FIX_DIFF,
+      testCommands: [FIXTURE_TEST_COMMAND],
+      taskTitle: 'jest exact promotion side-effect new file',
+    });
+
+    expect(result.promoted).toBe(false);
+    expect(result.code).toBe('PROMOTION_TREE_CONTAMINATED');
+    expect(result.evidence.expectedTreeHash).not.toBe(result.evidence.candidateTreeHash);
+    expect(result.evidence.contaminatingFiles).toContain(injectedFile);
+  });
+
+  test('arquivo EXISTENTE alterado fora do diff validado bloqueia a promoção (cenário C)', async () => {
+    const taskId = `jest-exact-promotion-side-effect-modify-${Date.now()}`;
+    const workspace = await createWorkspace(taskId, 1);
+    createdWorkspaces.push(workspace);
+
+    const applyResult = await applyPatch(workspace, FIX_DIFF);
+    expect(applyResult.ok).toBe(true);
+
+    // Simula side-effect real: um comando (não o patch) reescreve um arquivo já existente e
+    // não relacionado ao diff validado.
+    const unrelatedFile = path.join(workspace, 'package.json');
+    const original = fs.readFileSync(unrelatedFile, 'utf8');
+    fs.writeFileSync(unrelatedFile, original.replace('"name"', '"nameTamperedBySideEffect"'));
+
+    const result = await promoteValidatedPatch({
+      taskId,
+      attemptId: 'jest-exact-attempt-c',
+      attemptNumber: 1,
+      workspacePath: workspace,
+      diff: FIX_DIFF,
+      testCommands: [FIXTURE_TEST_COMMAND],
+      taskTitle: 'jest exact promotion side-effect modify unrelated file',
+    });
+
+    expect(result.promoted).toBe(false);
+    expect(result.code).toBe('PROMOTION_TREE_CONTAMINATED');
+    expect(result.evidence.contaminatingFiles).toContain('package.json');
+  });
+
+  test('remoção de arquivo fora do patch validado bloqueia a promoção (cenário D)', async () => {
+    const taskId = `jest-exact-promotion-side-effect-delete-${Date.now()}`;
+    const workspace = await createWorkspace(taskId, 1);
+    createdWorkspaces.push(workspace);
+
+    const applyResult = await applyPatch(workspace, FIX_DIFF);
+    expect(applyResult.ok).toBe(true);
+
+    // Simula side-effect real: algo remove um arquivo do workspace que nunca fez parte do
+    // diff validado.
+    const deletedFile = path.join(workspace, 'tests', 'fixtures', 'engineering-router-sandbox', 'printEnvProbe.js');
+    expect(fs.existsSync(deletedFile)).toBe(true);
+    fs.unlinkSync(deletedFile);
+
+    const result = await promoteValidatedPatch({
+      taskId,
+      attemptId: 'jest-exact-attempt-d',
+      attemptNumber: 1,
+      workspacePath: workspace,
+      diff: FIX_DIFF,
+      testCommands: [FIXTURE_TEST_COMMAND],
+      taskTitle: 'jest exact promotion side-effect delete unrelated file',
+    });
+
+    expect(result.promoted).toBe(false);
+    expect(result.code).toBe('PROMOTION_TREE_CONTAMINATED');
+    expect(result.evidence.contaminatingFiles).toContain('printEnvProbe.js');
+  });
+});

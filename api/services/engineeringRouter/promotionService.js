@@ -22,7 +22,7 @@ const { execFile } = require('child_process');
 const util = require('util');
 const crypto = require('crypto');
 const { ROOT } = require('./contextBuilderService');
-const { materializeWorktree, destroyWorkspace } = require('./patchApplyService');
+const { materializeWorktree, destroyWorkspace, applyPatch } = require('./patchApplyService');
 const { runTestCommands } = require('./testRunnerService');
 const logger = require('../../utils/logger');
 
@@ -44,6 +44,53 @@ async function runGit(args, { cwd, env } = {}) {
 
 function candidateBranchName(taskId) {
   return `${CANDIDATE_BRANCH_PREFIX}${taskId}`;
+}
+
+/**
+ * ER-V1-FINAL-002 — Exact Promotion.
+ *
+ * Achado real reproduzido (ver ENGINEERING_ROUTER_V1_FINAL_CLOSURE.md): `git add -A` no
+ * workspace da TENTATIVA (onde CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE já rodaram de verdade)
+ * captura QUALQUER COISA fisicamente presente ali — inclusive arquivos gerados como
+ * side-effect de um testCommand (cache, artefato, log, ou pior: qualquer escrita fora do diff
+ * original). Reproduzido ao vivo: um arquivo `INJECTED_BY_TEST_SIDE_EFFECT.txt`, escrito no
+ * workspace DEPOIS do patch aplicado (simulando o efeito colateral de rodar um teste), era
+ * promovido silenciosamente junto com o patch real — `diff --stat` sozinho não pega isso
+ * porque só prova "não está vazio", nunca "é EXATAMENTE o patch".
+ *
+ * Prova matemática real: aplica o MESMO diff validado sobre o MESMO baseline, mas num
+ * workspace LIMPO e descartável (nunca tocado por CODER/TESTE/REVIEW — nasce e morre só para
+ * este cálculo), produzindo `expectedTreeHash`. Compara com a árvore do workspace REAL onde os
+ * testes de fato rodaram (`validatedTreeHash`) — só promove se forem BIT-A-BIT idênticas.
+ * Isso prova ao mesmo tempo (1) que nada além do patch está no que será promovido e (2) que o
+ * que será promovido é EXATAMENTE o que foi testado (não uma árvore "limpa" nunca exercitada).
+ *
+ * @returns {Promise<{ok:boolean, expectedTreeHash?:string, code?:string, error?:string}>}
+ */
+async function computeExpectedTreeHash({ baselineHead, diff, taskId }) {
+  let cleanWorkspace = null;
+  try {
+    cleanWorkspace = await materializeWorktree(baselineHead, `promotion-${taskId}-expected`);
+  } catch (err) {
+    return { ok: false, code: 'PROMOTION_EXPECTED_TREE_WORKSPACE_FAILED', error: err.message };
+  }
+  try {
+    const applyResult = await applyPatch(cleanWorkspace, diff);
+    if (!applyResult.ok) {
+      return { ok: false, code: 'PROMOTION_EXPECTED_TREE_APPLY_FAILED', error: applyResult.stderr };
+    }
+    const addResult = await runGit(['add', '-A'], { cwd: cleanWorkspace });
+    if (!addResult.ok) {
+      return { ok: false, code: 'PROMOTION_EXPECTED_TREE_UNRESOLVABLE', error: addResult.stderr };
+    }
+    const treeResult = await runGit(['write-tree'], { cwd: cleanWorkspace });
+    if (!treeResult.ok) {
+      return { ok: false, code: 'PROMOTION_EXPECTED_TREE_UNRESOLVABLE', error: treeResult.stderr };
+    }
+    return { ok: true, expectedTreeHash: treeResult.stdout };
+  } finally {
+    await destroyWorkspace(cleanWorkspace);
+  }
 }
 
 /**
@@ -106,6 +153,34 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
     return { promoted: false, code: 'PROMOTION_TREE_UNRESOLVABLE', evidence: { promotionAttemptedAt, error: treeResult.stderr, validatedPatchHash } };
   }
   const validatedTreeHash = treeResult.stdout;
+
+  // 2.5. ER-V1-FINAL-002 — Exact Promotion: prova independente de que validatedTreeHash é
+  //      EXATAMENTE "baseline + diff validado", nunca "baseline + diff + side-effect de teste".
+  //      Ver computeExpectedTreeHash para o achado real reproduzido.
+  const expectedTreeResult = await computeExpectedTreeHash({ baselineHead, diff, taskId });
+  if (!expectedTreeResult.ok) {
+    return {
+      promoted: false,
+      code: expectedTreeResult.code,
+      evidence: { promotionAttemptedAt, error: expectedTreeResult.error, validatedPatchHash, validatedTreeHash },
+    };
+  }
+  const { expectedTreeHash } = expectedTreeResult;
+  if (expectedTreeHash !== validatedTreeHash) {
+    // Diagnóstico preciso do que divergiu — nunca só "não bate": lista os arquivos exatos.
+    const diffNameStatus = await runGit(['diff', '--name-status', expectedTreeHash, validatedTreeHash]);
+    return {
+      promoted: false,
+      code: 'PROMOTION_TREE_CONTAMINATED',
+      evidence: {
+        promotionAttemptedAt,
+        validatedPatchHash,
+        expectedTreeHash,
+        candidateTreeHash: validatedTreeHash,
+        contaminatingFiles: diffNameStatus.ok ? diffNameStatus.stdout : diffNameStatus.stderr,
+      },
+    };
+  }
 
   // 3. Commit real, NÃO referenciado ainda — não afeta HEAD/branch atual/working tree.
   const commitMessage = [
@@ -170,15 +245,29 @@ async function promoteValidatedPatch({ taskId, attemptId, attemptNumber, workspa
     if (smokeWorkspace) await destroyWorkspace(smokeWorkspace);
   }
 
+  // ER-V1-FINAL-002: fileSetHash — hash do conjunto exato de arquivos tocados (ordenado,
+  // conteúdo-endereçado), calculado do diff real entre baseline e candidato (agora provado
+  // idêntico ao expectedTreeHash) — qualquer arquivo adicionado/removido/renomeado fora do
+  // patch validado muda este hash.
+  const fileSetResult = await runGit(['diff', '--name-status', targetHead, candidateCommit]);
+  const fileSetHash = sha256((fileSetResult.stdout || '').split('\n').filter(Boolean).sort().join('\n'));
+  const baselineTreeResult = await runGit(['rev-parse', `${baselineHead}^{tree}`]);
+
   const promotionEvidence = {
     promotionAttemptedAt,
     promotedAt: new Date().toISOString(),
     validatedPatchHash,
+    baselineTreeHash: baselineTreeResult.ok ? baselineTreeResult.stdout : null,
+    expectedTreeHash,
+    candidateTreeHash: validatedTreeHash,
+    promotedTreeHash: validatedTreeHash,
+    fileSetHash,
     validatedTreeHash,
     baselineHead,
     targetHead,
     candidateCommit,
     candidateBranch: branchName,
+    promotionStatus: 'PROMOTED',
     postPromotionTestPass: Boolean(postPromotionTestResult?.allPass),
     postPromotionResults: (postPromotionTestResult?.results || []).map((r) => ({ command: r.command, status: r.status, exitCode: r.exitCode })),
   };

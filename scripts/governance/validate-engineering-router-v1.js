@@ -397,6 +397,32 @@ function main() {
       /promoteValidatedPatch/, /READY_FOR_PROMOTION/, /promotionResult\.promoted/,
     ]),
   });
+  // ER-V1-FINAL-002 — Exact Promotion: `git add -A` no workspace da tentativa (onde testes já
+  // rodaram) não prova candidate==baseline+patch — precisa comparar contra uma árvore
+  // calculada independentemente (baseline limpo + patch, workspace descartável nunca tocado
+  // por CODER/TESTE/REVIEW).
+  checks.push({
+    id: 'PROMOTION_EXPECTED_TREE_INDEPENDENT_COMPUTATION',
+    ...checkFileContains('api/services/engineeringRouter/promotionService.js', [
+      /computeExpectedTreeHash/, /expectedTreeHash/, /PROMOTION_TREE_CONTAMINATED/,
+    ]),
+  });
+  checks.push({
+    id: 'PROMOTION_EXACTNESS_ENFORCED_BEFORE_COMMIT',
+    ok: (() => {
+      const src = readText('api/services/engineeringRouter/promotionService.js');
+      const contaminationCheckIdx = src.indexOf('PROMOTION_TREE_CONTAMINATED');
+      const commitTreeIdx = src.indexOf("'commit-tree'");
+      return contaminationCheckIdx !== -1 && commitTreeIdx !== -1 && contaminationCheckIdx < commitTreeIdx;
+    })(),
+    reason: 'a checagem de contaminação da árvore precisa acontecer ANTES do commit candidato ser criado (nunca depois)',
+  });
+  checks.push({
+    id: 'PROMOTION_EVIDENCE_TREE_HASHES_PERSISTED',
+    ...checkFileContains('api/services/engineeringRouter/promotionService.js', [
+      /baselineTreeHash/, /expectedTreeHash/, /candidateTreeHash/, /promotedTreeHash/, /fileSetHash/, /promotionStatus/,
+    ]),
+  });
   // Achado real ao validar a tela de detalhe da task no browser: o motivo exato de uma
   // promoção que não completou (promotionResult.code) nunca era persistido junto com
   // promotion_evidence — só existia no evento WebSocket ao vivo. Quem abrisse a tela depois da
