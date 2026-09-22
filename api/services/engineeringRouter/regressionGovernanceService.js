@@ -59,7 +59,15 @@ async function checkRegression({ taskId, attemptId, workspacePath, touchedPaths,
 
   // Candidatos a "teste relacionado"/"subsistema" resolvidos AQUI (I/O real, glob do
   // repositório) — buildRegressionPlan em si permanece puro, recebendo a lista já pronta.
-  const availableTestFiles = expandGlobsToFiles(['tests/**/*.test.js']);
+  // Achado real reproduzido ao vivo: sem este filtro, um patch tocando fixtures de teste do
+  // próprio Engineering Router (ex.: tests/fixtures/engineering-router-sandbox/mathUtils.js)
+  // fazia o plano HIGH/MEDIUM sugerir `npx jest tests/fixtures/engineering-router-sandbox/
+  // mathUtils.test.js` — um comando que SEMPRE falha com "No tests found" porque esse
+  // diretório está em `testPathIgnorePatterns` do jest.config.cjs real (mesma exclusão de
+  // `tests/rpa/`). Não é uma reprovação real de regressão, é o próprio plano sugerindo um
+  // comando estruturalmente inválido — replica aqui a MESMA exclusão do jest.config.cjs.
+  const availableTestFiles = expandGlobsToFiles(['tests/**/*.test.js'])
+    .filter((f) => !f.startsWith('tests/rpa/') && !f.startsWith('tests/fixtures/engineering-router-sandbox/'));
   const plan = buildRegressionPlan({ touchedPaths, targetedCommands, risk, availableTestFiles });
 
   if (plan.commands.length === 0) {
