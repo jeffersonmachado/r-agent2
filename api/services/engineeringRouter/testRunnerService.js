@@ -17,7 +17,13 @@ const { parseCommand } = require('../../../engine/engineeringRouter/commandPolic
 const { buildSafeTestEnv } = require('./safeEngineeringEnvironment');
 const { redactText } = require('../../../engine/engineeringRouter/secretRedaction');
 const { ROOT } = require('./contextBuilderService');
-const { runInSandbox } = require('./executionSandbox');
+// ER-V1-SEAL-003 (Dedicated Execution Runner): a API principal NUNCA mais importa
+// `executionSandbox.js` diretamente (isso exigiria Docker CLI + socket do host dentro do
+// processo da API). `engineeringRunnerClient.js` fala com o Engineering Runner — um serviço
+// SEPARADO, o único autorizado a ter o Docker socket montado — via HTTP interno autenticado,
+// preservando a MESMA assinatura e os MESMOS códigos de erro (SANDBOX_UNAVAILABLE/
+// SANDBOX_INVALID_WORKSPACE) que `executionSandbox.runInSandbox` já tinha.
+const { runInSandbox } = require('./engineeringRunnerClient');
 
 const EVIDENCE_ROOT = process.env.ENGINEERING_ROUTER_EVIDENCE_ROOT
   || path.join(ROOT, 'dev', 'engineering-router-v1', 'evidence');

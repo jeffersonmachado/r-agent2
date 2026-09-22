@@ -1,0 +1,14 @@
+{
+  "name": "@results/engineering-runner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RAP Engineering Runner — serviço DEVELOPMENT-ONLY separado, único a ter acesso ao Docker socket do host para executar o Engineering Execution Sandbox (ER-V1-FINAL-001). A API principal (chatbot-api) nunca recebe /var/run/docker.sock — fala com este runner via contrato HTTP interno tipado, autenticado por bearer token (ER-V1-SEAL-003).",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=20.19 || >=22.12"
+  },
+  "dependencies": {}
+}

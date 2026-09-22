@@ -254,3 +254,104 @@ partir daqui pertence exclusivamente a esta missão SEAL.
   - `npm run test:unit` (suíte completa do projeto): `Test Suites: 1 skipped, 850 passed, 851
     total`; `Tests: 2 skipped, 6485 passed, 6487 total`; exit code 0 — GREEN limpo.
 - status: GREEN
+
+### ER-V1-SEAL-003 — Dedicated Execution Runner
+
+- RED reproduzido (achado real, confirmado por investigação direta do código e do
+  docker-compose de produção — não hipotético): `api/services/engineeringRouter/executionSandbox.js`
+  chamava `docker run`/`docker kill`/`docker info` **IN-PROCESS**, dentro do mesmo processo
+  Node.js que serve requisições HTTP do `chatbot-api` (`spawn('docker', ...)`,
+  `execFileSync('docker', ...)`) — nunca um processo/serviço separado. Ao mesmo tempo,
+  `docker-compose.prod.yml` já roda `api` **dentro de um container** (`container_name:
+  r-agent2-api-prod`), e `api/Dockerfile` não instala Docker CLI nem monta
+  `/var/run/docker.sock` — confirmado por leitura completa do Dockerfile e de todos os
+  docker-compose*.yml do projeto (nenhuma montagem de socket existe hoje em lugar nenhum). Ou
+  seja: o Execution Sandbox (ER-V1-FINAL-001), tal como implementado, **não teria como
+  funcionar dentro do container `api` de produção hoje** — e o caminho mais provável de alguém
+  "consertar" isso seria montar o Docker socket diretamente na API, o que daria controle
+  PRIVILEGIADO sobre o host inteiro a um processo que serve requisições HTTP externas. Não era
+  uma vulnerabilidade já explorada, mas uma inconsistência arquitetural latente exatamente do
+  tipo que a missão pede para fechar preventivamente.
+- fix:
+  1. **`services/engineering-runner/`** (novo serviço standalone, seguindo fielmente o padrão
+     arquitetural já estabelecido no projeto para `services/mcp-research/`: container dedicado,
+     próprio `package.json`/`Dockerfile`, autenticação Bearer serviço-a-serviço fail-closed,
+     rede interna isolada): `src/config.js` (`ENGINEERING_RUNNER_TOKEN` obrigatório — sem ele o
+     processo recusa subir, nunca anônimo), `src/auth.js` (Bearer + `timingSafeEqual`, mesmo
+     padrão de `services/mcp-research/src/auth.js`), `src/httpServer.js` (`GET /health` nunca
+     autenticado; `POST /execute` autenticado, aceita SOMENTE um contrato ESTRUTURADO
+     `{executionId, executable, args[], cwd, env{}, timeoutMs, network}` — nunca shell
+     arbitrário nem raw docker args do LLM — valida tipos rigidamente antes de tocar o Docker;
+     resposta estruturada `{executionId, exitCode, durationMs, stdout, stderr, timedOut,
+     signal}`, com `stdout`/`stderr` redigidos via `secretRedaction.js` ANTES de sair do
+     processo do runner), `src/index.js` (entry point, shutdown gracioso). `Dockerfile`:
+     `node:22-bookworm-slim` + Docker CLI (`apt-get install docker.io`) — único container do
+     projeto com esse pacote e com o Docker socket do host montado; reusa (nunca forka)
+     `api/services/engineeringRouter/executionSandbox.js` e
+     `engine/engineeringRouter/secretRedaction.js` via `COPY` (mesmo padrão de reuso de código
+     do `services/mcp-research/Dockerfile`).
+  2. **`api/services/engineeringRouter/engineeringRunnerClient.js`** (novo) — MESMA assinatura
+     de `executionSandbox.runInSandbox` (mesmos `.code` de erro
+     `SANDBOX_UNAVAILABLE`/`SANDBOX_INVALID_WORKSPACE`), mas fala com o runner via `fetch` HTTP
+     autenticado em vez de importar o módulo. **FAIL-CLOSED real**: sem
+     `ENGINEERING_RUNNER_URL`/`ENGINEERING_RUNNER_TOKEN` configurados, ou com o runner
+     indisponível/em erro, lança `SANDBOX_UNAVAILABLE` imediatamente — nunca existe um caminho
+     de "spawn local se o runner falhar" (o próprio módulo não importa `child_process`/`docker`
+     em nenhuma linha).
+  3. **`api/services/engineeringRouter/testRunnerService.js`** — troca de UMA linha de import
+     (`require('./executionSandbox')` → `require('./engineeringRunnerClient')`); nenhuma outra
+     mudança — confirma que a API principal (`api/services/engineeringRouter/*.js`, confirmado
+     via grep) **não importa mais `executionSandbox.js` em lugar nenhum**.
+  4. **`docker-compose.yml`/`docker-compose.prod.yml`** — novo serviço `engineering-runner`
+     (DEVELOPMENT ONLY, sem porta publicada, só rede interna) com
+     `/var/run/docker.sock:/var/run/docker.sock` montado **exclusivamente nele**; serviço `api`
+     ganha `ENGINEERING_RUNNER_URL`/`ENGINEERING_RUNNER_TOKEN` (obrigatória,
+     `:?` fail-closed do compose) e depende (`depends_on`) do runner estar `service_healthy`.
+  5. **`jest.config.cjs`** — `globalSetup`/`globalTeardown` novos
+     (`tests/setup/engineeringRunnerGlobalSetup.js`/`...Teardown.js`): sobem o Engineering
+     Runner REAL como processo separado antes de toda a suíte (a MESMA separação de processo
+     que existe em produção — nunca um mock do runner), aguardam `/health` real responder,
+     propagam `ENGINEERING_RUNNER_URL`/`ENGINEERING_RUNNER_TOKEN` via `process.env` (herdado
+     pelos workers do Jest), e o encerram ao final via PID persistido em disco.
+- tests:
+  - `tests/unit/engineeringRunnerHttpServer.test.js` (novo, 12/12 PASS): `config.js` fail-closed
+    (sem token não sobe); servidor HTTP real (porta efêmera) — `/health` nunca autenticado;
+    `/execute` sem/​com Bearer errado → 401; contrato inválido (args não é array, executionId
+    ausente, timeoutMs acima do teto) → 400, nunca tenta executar; corpo não-JSON → 400; rota
+    inexistente → 404.
+  - `tests/unit/engineeringRunnerClient.test.js` (novo, 5/5 PASS): sem URL/token configurados →
+    `SANDBOX_UNAVAILABLE` imediato, nunca tenta rede; runner inalcançável → `SANDBOX_UNAVAILABLE`;
+    erro estruturado do runner (`SANDBOX_INVALID_WORKSPACE`) preservado, nunca mascarado;
+    contrato de sucesso completo (Bearer correto enviado, corpo correto); resposta não-JSON →
+    `SANDBOX_UNAVAILABLE`.
+  - `tests/integration/engineeringRunnerDeployment.test.js` (novo, 5/5 PASS) — **o "DEPLOYMENT
+    TEST OBRIGATÓRIO" da spec**, com processos REAIS: API nunca importa `executionSandbox.js`;
+    runner real de pé (`/health` real); fluxo ponta a ponta real (API → HTTP real → Runner real
+    → Docker real → sandbox real) via `testRunnerService`; segredo do processo da API confirmado
+    NUNCA aparecendo no stdout do sandbox mesmo passando pela rede até o runner; fail-closed real
+    sem runner configurado (`SANDBOX_UNAVAILABLE`, nunca executa no host).
+  - Regressão: `tests/integration/engineeringPatchApplyAndTestRunner.test.js` (4/4, agora via
+    runner real em vez de import direto); os 4 testes de segurança do sandbox
+    (`engineeringRouterExecutionSandboxSecurity`/`SafeEnvironment`/`CommandExecutionSecurity`/
+    `TestOutputAuthority`) continuam GREEN sem nenhuma mudança (testam `executionSandbox.js`
+    diretamente, o que é correto — testam o sandbox em si, não a separação de processo). Suíte
+    ampla do Engineering Router: **43/43 suítes PASS**.
+- evidence:
+  - `node scripts/governance/validate-engineering-router-v1.js`: `STRUCTURAL_PASS`, 155 checks,
+    0 falhas (10 novos checks do ER-V1-SEAL-003, incluindo
+    `API_NEVER_IMPORTS_EXECUTION_SANDBOX_DIRECTLY` e
+    `DOCKER_SOCKET_NEVER_MOUNTED_IN_API_SERVICE` — este último varre `docker-compose*.yml` e
+    falha se qualquer linha de VOLUME real, não comentário, montar `docker.sock` no serviço
+    `api`).
+  - Teste manual real (via `curl`): runner subido localmente, `/health` retorna
+    `{"status":"ok","sandboxAvailable":true}`; `/execute` sem auth → 401; `/execute` autenticado
+    com `echo hello-from-sandbox` → `{"exitCode":0,"stdout":"hello-from-sandbox\n",...}`.
+  - `npm run test:unit` (suíte completa do projeto): primeira rodada teve 1 timeout isolado em
+    `tests/unit/physicalKioskBiometric.test.js` (biometria de kiosk físico — completamente não
+    relacionado ao Engineering Router); rodado isoladamente passou em 3.8s (bem abaixo do
+    timeout de 30s), e a segunda rodada completa passou 100% limpa — confirma flakiness
+    ambiental de contenção de CPU sob paralelismo pesado (padrão pré-existente do projeto,
+    `bail: 1` já configurado antes desta missão), não uma regressão real do ER-V1-SEAL-003.
+    Segunda rodada: `Test Suites: 1 skipped, 852 passed, 853 total`; `Tests: 2 skipped, 6502
+    passed, 6504 total`; exit code 0 — GREEN limpo.
+- status: GREEN

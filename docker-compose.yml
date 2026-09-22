@@ -32,6 +32,10 @@ services:
       RATE_LIMIT_SCRAPING_PAGES: ${RATE_LIMIT_SCRAPING_PAGES:-20}
       RAG_SERVICE_URL: ${RAG_SERVICE_URL:-http://rag-service:8000}
       RAG_INTERNAL_TOKEN: "${RAG_INTERNAL_TOKEN:?RAG_INTERNAL_TOKEN obrigatória}"
+      # ER-V1-SEAL-003 (Dedicated Execution Runner): a API NUNCA recebe o Docker socket do host —
+      # fala com o Engineering Runner (serviço separado, abaixo) via HTTP interno autenticado.
+      ENGINEERING_RUNNER_URL: ${ENGINEERING_RUNNER_URL:-http://engineering-runner:8090}
+      ENGINEERING_RUNNER_TOKEN: "${ENGINEERING_RUNNER_TOKEN:?ENGINEERING_RUNNER_TOKEN obrigatória}"
       # PostgreSQL
       # DOCKER_DATABASE_URL (não DATABASE_URL): mesmo motivo do REDIS_URL
       # acima — o .env de modo local define DATABASE_URL apontando para
@@ -83,6 +87,8 @@ services:
         condition: service_started
       asterisk:
         condition: service_healthy
+      engineering-runner:
+        condition: service_healthy
     restart: unless-stopped
     volumes:
       - r-agent2-runtime:/var/lib/ragent2
@@ -91,6 +97,28 @@ services:
       # Token RPA canônico do workspace (excluído da imagem via .dockerignore):
       # montado em runtime para que /auth/rpa/login funcione no stack local.
       - ./core/rpa/config/rpa-token.json:/app/core/rpa/config/rpa-token.json:ro
+
+  # ER-V1-SEAL-003 (Dedicated Execution Runner) — DEVELOPMENT ONLY: único serviço com acesso ao
+  # Docker socket do host. Ver comentário completo em docker-compose.prod.yml.
+  engineering-runner:
+    build:
+      context: .
+      dockerfile: ./services/engineering-runner/Dockerfile
+    image: r-agent2-engineering-runner:latest
+    container_name: chatbot-engineering-runner
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      ENGINEERING_RUNNER_PORT: 8090
+      ENGINEERING_RUNNER_TOKEN: "${ENGINEERING_RUNNER_TOKEN:?ENGINEERING_RUNNER_TOKEN obrigatória}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8090/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   asterisk:
     build:

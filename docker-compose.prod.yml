@@ -39,6 +39,11 @@ services:
       # manual: a conexão system/mcp-research é persistida a partir deste endpoint.
       MCP_RESEARCH_ENDPOINT: ${MCP_RESEARCH_ENDPOINT:-http://mcp-research:8080/mcp}
       MCP_RESEARCH_TOKEN: "${MCP_RESEARCH_TOKEN:?MCP_RESEARCH_TOKEN obrigatória}"
+      # ER-V1-SEAL-003 (Dedicated Execution Runner): a API NUNCA recebe /var/run/docker.sock —
+      # fala com o Engineering Runner (serviço separado, único com o socket montado) via HTTP
+      # interno autenticado. DEVELOPMENT ONLY: só usado pelo Engineering Model Router V1.
+      ENGINEERING_RUNNER_URL: ${ENGINEERING_RUNNER_URL:-http://engineering-runner:8090}
+      ENGINEERING_RUNNER_TOKEN: "${ENGINEERING_RUNNER_TOKEN:?ENGINEERING_RUNNER_TOKEN obrigatória}"
       # PostgreSQL - Configuração de produção
       # PROD_DATABASE_URL dedicada: o DATABASE_URL do .env de dev aponta para
       # localhost e vazaria para o container; credenciais alinhadas ao serviço
@@ -121,6 +126,8 @@ services:
       asterisk:
         condition: service_healthy
       mcp-research:
+        condition: service_healthy
+      engineering-runner:
         condition: service_healthy
     restart: unless-stopped
     logging: *default-logging
@@ -279,6 +286,50 @@ services:
       resources:
         limits:
           cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # ER-V1-SEAL-003 (Dedicated Execution Runner) — DEVELOPMENT ONLY: único serviço do projeto
+  # autorizado a ter /var/run/docker.sock montado. Executa o Engineering Execution Sandbox
+  # (ER-V1-FINAL-001) em nome do Engineering Model Router V1 — a API principal (`api`, acima)
+  # NUNCA tem acesso ao socket nem ao Docker CLI; fala com este serviço via HTTP interno
+  # autenticado (engineeringRunnerClient.js). Nunca exposto ao cliente/Workspace — sem porta
+  # publicada, só alcançável por `api` na rede interna `rap-internal`.
+  engineering-runner:
+    build:
+      context: .
+      dockerfile: ./services/engineering-runner/Dockerfile
+    image: r-agent2-engineering-runner:latest
+    container_name: r-agent2-engineering-runner-prod
+    environment:
+      NODE_ENV: production
+      ENGINEERING_RUNNER_PORT: 8090
+      ENGINEERING_RUNNER_TOKEN: "${ENGINEERING_RUNNER_TOKEN:?ENGINEERING_RUNNER_TOKEN obrigatória}"
+    expose:
+      - "8090"
+    volumes:
+      # Único ponto do projeto com acesso ao Docker socket do host — necessidade real e
+      # irredutível para invocar `docker run` do sandbox (ER-V1-FINAL-001); read-only não é
+      # possível aqui (o daemon precisa aceitar comandos de criação de container), mas o
+      # isolamento de rede (só rap-internal, sem egress) e a autenticação Bearer obrigatória
+      # limitam quem pode chegar a este serviço.
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - rap-internal
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8090/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
           memory: 512M
         reservations:
           cpus: '0.1'

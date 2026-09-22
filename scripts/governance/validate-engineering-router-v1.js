@@ -15,7 +15,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { ROOT, writeReport, exists, readText, readJson } = require('./common');
+const { ROOT, writeReport, exists, readText, readJson, listFiles } = require('./common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 
 // ER-V1-FINAL-009 (Full-Suite Isolation): achado real — esta lista era uma CÓPIA hardcoded que
@@ -845,6 +845,84 @@ function main() {
       /operationService\.beginOrReconcile\(\{ taskId, attemptId, phase: 'POST_PROMOTION_VERIFY' \}\)/,
       /findExistingCandidate\(\{ taskId, validatedPatchHash: validatedPatchHashForReconcile \}\)/,
     ]),
+  });
+
+  // ER-V1-SEAL-003 — Dedicated Execution Runner: a API principal (chatbot-api) NUNCA pode ter
+  // acesso ao Docker socket do host — isso daria controle privilegiado sobre o host inteiro a
+  // um processo que serve requisições HTTP externas. Achado real confirmado por investigação:
+  // `docker-compose.prod.yml` já roda `api` DENTRO de um container sem Docker CLI/socket — o
+  // Execution Sandbox (ER-V1-FINAL-001), que chamava `docker run` in-process, não teria como
+  // funcionar ali. Corrigido: `executionSandbox.js` só é importado pelo processo do Engineering
+  // Runner (services/engineering-runner/), um serviço SEPARADO; a API fala com ele via
+  // engineeringRunnerClient.js (HTTP interno autenticado, contrato tipado, nunca shell cru).
+  checks.push({
+    id: 'API_NEVER_IMPORTS_EXECUTION_SANDBOX_DIRECTLY',
+    ok: (() => {
+      const apiFiles = listFiles('api/services/engineeringRouter', (f) => f.endsWith('.js'));
+      const offenders = apiFiles.filter((f) => /require\(.*executionSandbox/.test(readText(f)));
+      return offenders.length === 0;
+    })(),
+    reason: 'nenhum arquivo em api/services/engineeringRouter/ pode importar executionSandbox.js diretamente — só o processo do Engineering Runner (services/engineering-runner/) pode, via seu próprio import isolado',
+  });
+  checks.push({
+    id: 'TEST_RUNNER_USES_RUNNER_CLIENT_NOT_SANDBOX_DIRECTLY',
+    ...checkFileContains('api/services/engineeringRouter/testRunnerService.js', [
+      /require\('\.\/engineeringRunnerClient'\)/,
+    ]),
+  });
+  checks.push({
+    id: 'ENGINEERING_RUNNER_CLIENT_IS_FAIL_CLOSED',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRunnerClient.js', [
+      /SANDBOX_UNAVAILABLE/, /function isRunnerConfigured/, /nunca cai de volta para spawn sem sandbox/,
+    ]),
+  });
+  checks.push({ id: 'ENGINEERING_RUNNER_SERVICE_EXISTS', ok: exists('services/engineering-runner/src/index.js'), reason: 'serviço Engineering Runner ausente' });
+  checks.push({
+    id: 'ENGINEERING_RUNNER_CONFIG_FAIL_CLOSED',
+    ...checkFileContains('services/engineering-runner/src/config.js', [
+      /ENGINEERING_RUNNER_TOKEN ausente/, /nunca sobe anônimo/,
+    ]),
+  });
+  checks.push({
+    id: 'ENGINEERING_RUNNER_AUTH_BEARER_TIMING_SAFE',
+    ...checkFileContains('services/engineering-runner/src/auth.js', [
+      /timingSafeEqual/, /Bearer/,
+    ]),
+  });
+  checks.push({
+    id: 'ENGINEERING_RUNNER_EXECUTE_REJECTS_UNSTRUCTURED_INPUT',
+    ...checkFileContains('services/engineering-runner/src/httpServer.js', [
+      /function validateExecuteRequest/, /Array\.isArray\(args\)/, /isAuthorized\(req, config\.authToken\)/,
+    ]),
+  });
+  checks.push({
+    id: 'ENGINEERING_RUNNER_DOCKERFILE_EXISTS',
+    ok: exists('services/engineering-runner/Dockerfile'),
+    reason: 'Dockerfile do Engineering Runner ausente',
+  });
+  // Nenhum docker-compose pode montar o socket do Docker no serviço `api` — só no serviço
+  // dedicado `engineering-runner` (onde é uma necessidade real e isolada, nunca na API).
+  checks.push({
+    id: 'DOCKER_SOCKET_NEVER_MOUNTED_IN_API_SERVICE',
+    ok: (() => {
+      const composeFiles = ['docker-compose.yml', 'docker-compose.prod.yml'].filter((f) => exists(f));
+      for (const file of composeFiles) {
+        const content = readText(file);
+        // Extrai o bloco do serviço `api:` até o próximo serviço de topo (2 espaços + palavra + ':').
+        const apiBlockMatch = content.match(/\n {2}api:\n([\s\S]*?)(?=\n {2}[a-zA-Z0-9_-]+:\n|$)/);
+        if (!apiBlockMatch) continue;
+        // Só uma linha de VOLUME real (item de lista YAML "- ...docker.sock...") conta —
+        // menções em comentários explicativos (`# ...docker.sock...`, como este próprio
+        // comentário no compose) nunca devem disparar o gate.
+        const hasRealMount = apiBlockMatch[1].split('\n').some((line) => {
+          const trimmed = line.trim();
+          return trimmed.startsWith('-') && /docker\.sock/.test(trimmed) && !trimmed.startsWith('#');
+        });
+        if (hasRealMount) return false;
+      }
+      return true;
+    })(),
+    reason: 'docker-compose*.yml não pode montar /var/run/docker.sock no serviço `api` — isso daria controle privilegiado do host à API principal (ER-V1-SEAL-003)',
   });
 
   // 15. Documentação V1.

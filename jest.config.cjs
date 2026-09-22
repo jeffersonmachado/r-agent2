@@ -29,6 +29,13 @@ module.exports = {
   
   // Setup e teardown globais
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+
+  // ER-V1-SEAL-003 (Dedicated Execution Runner): sobe o Engineering Runner REAL como processo
+  // separado antes de toda a suíte (mesma separação de processo que produção — a API nunca
+  // chama executionSandbox.js diretamente) e o encerra ao final. Testes do Engineering Router
+  // que exercitam execução real (testRunnerService/runTestCommands) falam com ele via HTTP.
+  globalSetup: '<rootDir>/tests/setup/engineeringRunnerGlobalSetup.js',
+  globalTeardown: '<rootDir>/tests/setup/engineeringRunnerGlobalTeardown.js',
   
   testEnvironment: 'node',
   roots,
