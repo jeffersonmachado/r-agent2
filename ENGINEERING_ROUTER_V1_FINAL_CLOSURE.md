@@ -695,3 +695,110 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
     o arquivo original → `status=PASS` de novo. Confirma a garantia central da spec.
 - status: GREEN
 - commit: `e9e12a6b`
+
+## Fechamento final da missão — 10/10 blockers GREEN
+
+### Backlog congelado — status final
+
+| # | Blocker | Título | Status | Commit(s) principal(is) |
+|---|---|---|---|---|
+| 1 | ER-V1-FINAL-001 | Execution Sandbox | GREEN | `342faddd` |
+| 2 | ER-V1-FINAL-002 | Exact Promotion | GREEN | `4ee21088` |
+| 3 | ER-V1-FINAL-003 | Fail-Closed Scope | GREEN | `45faee49` |
+| 4 | ER-V1-FINAL-004 | Mandatory Runtime Gate | GREEN | `986129a1` |
+| 5 | ER-V1-FINAL-005 | Durable Resume | GREEN | `44df73f0` |
+| 6 | ER-V1-FINAL-006 | Real Regression | GREEN | `b6f40f43` + `b863c54a` |
+| 7 | ER-V1-FINAL-007 | Evidence Precision | GREEN | `7a2247c1` + `0ea72c70` |
+| 8 | ER-V1-FINAL-008 | Current Model Catalog | GREEN | `d75ef6fb` + `49d328bc` |
+| 9 | ER-V1-FINAL-009 | Full-Suite Isolation | GREEN | `9b257cbe` + `bb03c37d` + `e33d1a25` + `061354a0` |
+| 10 | ER-V1-FINAL-010 | Self-Proving Audit Envelope | GREEN | `e9e12a6b` + `6e340570` |
+
+**10 de 10 blockers do backlog congelado estão GREEN. Nenhum blocker reaberto sem evidência
+objetiva de regressão (regra 10 da missão respeitada em toda a execução) — as duas reaberturas
+que ocorreram (ver abaixo) tinham evidência concreta de regressão real, não suspeita.**
+
+### Achados classificados como REGRESSION corrigidos no percurso (transparência total)
+
+Nenhum achado foi escondido ou convertido em narrativa de sucesso (regras 14–19 da missão). Dois
+achados reais foram classificados como `REGRESSION` (quebra causada pelas correções desta
+própria missão) e corrigidos no mesmo ciclo do blocker onde foram descobertos, nunca fora de
+ordem:
+
+1. **Dentro de ER-V1-FINAL-006**: `RegressionPlan` (HIGH/MEDIUM) sugeria
+   `tests/fixtures/engineering-router-sandbox/mathUtils.test.js` como comando de regressão — um
+   path excluído por `testPathIgnorePatterns` do `jest.config.cjs`, que SEMPRE falha com "No
+   tests found", fazendo `engineeringRouterFullLoopE2E.test.js` (risco HIGH) terminar em RED
+   real. Corrigido filtrando `availableTestFiles` pelos mesmos caminhos excluídos pelo Jest.
+   Commit `b863c54a`.
+2. **Durante a investigação de ER-V1-FINAL-009**: `tests/integration/engineeringRouterMandatoryRuntimeGate.test.js`
+   (blocker 004, já GREEN) mantinha uma cópia hardcoded de `REQUIRED_RUNTIME_ITEM_IDS` que os
+   blockers 007/008 deixaram dessincronizada (faltavam 2 dos 25 IDs reais, e a fixture sintética
+   não tinha os campos do schema v2.0.0 de ER-V1-FINAL-007). Corrigido eliminando a duplicação
+   na fonte — `collect-engineering-router-runtime-evidence.js` agora exporta `RUNTIME_ITEMS`
+   (autoridade única), gate e teste importam de lá. Commit `e33d1a25`.
+
+### Runtime certification final
+
+```
+node scripts/governance/collect-engineering-router-runtime-evidence.js
+  → status=RUNTIME_PASS items=25 falhas=0
+    commit=e9e12a6bcd808612696ebe756881591cb94b72f4
+    fingerprint=8f14f3fd5d048a11…
+```
+
+Todos os 25 itens de evidência de runtime (schema v2.0.0, ER-V1-FINAL-007: `testCaseId`
+presente, `numPassedTests>=1`, `numFailedTests===0` por item — nunca só `exitCode`) PASS,
+cobrindo: segurança (7 itens), roteamento (5 itens), pilot real RED→FIX→REVIEW→GREEN (4 itens),
+regressão real (1 item), governança (5 itens), promoção exata (3 itens).
+
+### Gate estrutural + runtime final
+
+```
+node scripts/governance/validate-engineering-router-v1.js --runtime
+  → status=PASS (STRUCTURAL_PASS/RUNTIME_PASS) checks=164 falhas=0
+```
+
+### Self-proving audit envelope final
+
+```
+npm run engineering-router:audit-envelope:generate
+  → runId=e9e12a6bcd808612696ebe756881591cb94b72f4 runtimeStatus=RUNTIME_PASS
+    releaseStatus=ENGINEERING_ROUTER_V1_10_OF_10_GREEN
+npm run engineering-router:audit-envelope:verify
+  → status=PASS checks=98 falhas=0
+```
+
+### Regressão completa final (suíte inteira do projeto)
+
+```
+npm run test:unit (commit 6e340570, árvore limpa)
+  → Test Suites: 1 skipped, 850 passed, 851 total
+    Tests:       2 skipped, 6478 passed, 6480 total
+    exit code 0
+```
+
+Nenhuma falha — resultado é "ALL GREEN" real, não `NO_NEW_REGRESSION` sobre uma baseline já
+vermelha.
+
+### Declaração de GO
+
+**GO.**
+
+Com base em evidência real, não em narrativa:
+- 10/10 blockers do backlog congelado GREEN, cada um com RED reproduzido, fix implementado,
+  testes GREEN, regressão dirigida e evidência registrada antes de avançar (regra 8 da missão
+  respeitada em todos os 10 blockers).
+- Runtime certification: `RUNTIME_PASS`, 25/25 itens, commit `e9e12a6bcd808612696ebe756881591cb94b72f4`,
+  fingerprint `8f14f3fd5d048a11…`.
+- Gate agregado estrutural+runtime: `PASS`, 164 checks, 0 falhas.
+- Self-proving audit envelope: gerado e verificado offline, `PASS`, 98 checks, 0 falhas — inclui
+  teste de corrupção deliberada confirmando que qualquer alteração no envelope é detectada.
+- Regressão completa do projeto: `850 passed, 851 total` suítes / `6478 passed, 6480 total`
+  testes, exit code 0.
+- Nenhum `BLOCKED_EXTERNAL` foi necessário — todos os 10 blockers foram fechados com
+  infraestrutura já disponível localmente.
+- Dois achados de `REGRESSION` genuínos foram encontrados e corrigidos no próprio ciclo do
+  blocker onde apareceram, documentados com precisão acima — nunca escondidos, nunca convertidos
+  em narrativa de sucesso vazia.
+
+Fim da missão FINAL_RELEASE_CLOSURE. Backlog congelado ER-V1-FINAL-1 encerrado.
