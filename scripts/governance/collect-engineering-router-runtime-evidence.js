@@ -212,4 +212,17 @@ function main() {
   process.exit(failed.length === 0 ? 0 : 1);
 }
 
-main();
+module.exports = { RUNTIME_ITEMS };
+
+// ER-V1-FINAL-009 (Full-Suite Isolation) — achado real: `validate-engineering-router-v1.js`
+// (REQUIRED_RUNTIME_ITEM_IDS) e `tests/integration/engineeringRouterMandatoryRuntimeGate.test.js`
+// mantinham CÓPIAS hardcoded desta mesma lista de IDs — cada blocker que adicionava um item novo
+// (007, 008) tinha que lembrar de atualizar as 3 cópias manualmente, e o teste do gate (já
+// GREEN desde ER-V1-FINAL-004) divergiu silenciosamente depois de 007/008 (2 IDs novos ausentes
+// da cópia do teste, e a fixture sintética sem os campos do schema v2.0.0). Corrigido: os dois
+// outros lugares agora importam `RUNTIME_ITEMS` deste módulo em vez de duplicar — autoridade
+// única de verdade, nunca mais pode divergir. O guard abaixo garante que `require()`-ar este
+// arquivo NUNCA dispara os 25 testes Jest reais (main() só roda via CLI direto).
+if (require.main === module) {
+  main();
+}

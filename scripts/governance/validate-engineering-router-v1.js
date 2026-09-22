@@ -18,36 +18,15 @@ const path = require('path');
 const { ROOT, writeReport, exists, readText, readJson } = require('./common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 
-// ERV1-CLOSE-010 (Runtime certification): os IDs abaixo têm que bater exatamente com
-// `RUNTIME_ITEMS` em collect-engineering-router-runtime-evidence.js — mesma lista, autoridade
-// única, nunca duplicada com valores divergentes.
-const REQUIRED_RUNTIME_ITEM_IDS = Object.freeze([
-  'SHELL_INJECTION_REJECTED',
-  'SAFE_ENVIRONMENT',
-  'SECRET_REDACTION_MULTILINE',
-  'PATCH_PATH_BOUNDARIES',
-  'ACTUAL_PATCH_APPLY',
-  'DETERMINISTIC_FAILING_TEST_RED',
-  'RED_TO_FIX',
-  'INDEPENDENT_REVIEW',
-  'REVIEWER_REJECTION_RECODE',
-  'REGRESSION_EXECUTION',
-  'GOVERNANCE_EXECUTION',
-  'PROVIDER_MODEL_FAILURE_REROUTE',
-  'RESTART_RESUME',
-  'CRASH_RESUME_MID_STAGE',
-  'CONTROLLED_PROMOTION',
-  'POST_PROMOTION_VERIFICATION',
-  'EXACT_PATCH_PROMOTION',
-  'FAIL_CLOSED_SCOPE',
-  'DEVELOPMENT_AUTHORIZATION',
-  'PRODUCTION_DENIAL',
-  'SUPPORT_DENIAL_DEFAULT',
-  'TENANT_CREDENTIAL_ISOLATION',
-  'RELEASE_CLOSURE_SAME_RUN_INTEGRITY',
-  'EXECUTION_SANDBOX_ISOLATION',
-  'MODEL_CATALOG_GOVERNANCE',
-]);
+// ER-V1-FINAL-009 (Full-Suite Isolation): achado real — esta lista era uma CÓPIA hardcoded que
+// tinha que ser mantida manualmente em sincronia com `RUNTIME_ITEMS` em
+// collect-engineering-router-runtime-evidence.js (e com uma TERCEIRA cópia dentro de
+// tests/integration/engineeringRouterMandatoryRuntimeGate.test.js) — cada blocker que adicionava
+// um item novo (007, 008) tinha que lembrar de atualizar as 3 cópias, e a do teste divergiu
+// silenciosamente. Corrigido: agora deriva de `RUNTIME_ITEMS` (autoridade única, nunca mais pode
+// divergir por esquecimento).
+const { RUNTIME_ITEMS } = require('./collect-engineering-router-runtime-evidence');
+const REQUIRED_RUNTIME_ITEM_IDS = Object.freeze(RUNTIME_ITEMS.map((item) => item.id));
 
 /**
  * ERV1-CLOSE-010: gate must FAIL se a evidência de runtime estiver ausente, velha (fingerprint

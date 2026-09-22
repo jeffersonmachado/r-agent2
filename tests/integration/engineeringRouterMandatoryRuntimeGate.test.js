@@ -125,21 +125,23 @@ describe('ER-V1-FINAL-004 — Mandatory Runtime Gate', () => {
       // gate em si 100% real (nunca mockado).
       // eslint-disable-next-line global-require
       const { computeSourceFingerprint } = require(path.join(ROOT, 'governance', 'proof-engine', 'fingerprint-chain.js'));
-      const REQUIRED_RUNTIME_ITEM_IDS = [
-        'SHELL_INJECTION_REJECTED', 'SAFE_ENVIRONMENT', 'SECRET_REDACTION_MULTILINE', 'PATCH_PATH_BOUNDARIES',
-        'ACTUAL_PATCH_APPLY', 'DETERMINISTIC_FAILING_TEST_RED', 'RED_TO_FIX', 'INDEPENDENT_REVIEW',
-        'REVIEWER_REJECTION_RECODE', 'REGRESSION_EXECUTION', 'GOVERNANCE_EXECUTION', 'PROVIDER_MODEL_FAILURE_REROUTE',
-        'RESTART_RESUME', 'CONTROLLED_PROMOTION', 'POST_PROMOTION_VERIFICATION', 'DEVELOPMENT_AUTHORIZATION',
-        'PRODUCTION_DENIAL', 'SUPPORT_DENIAL_DEFAULT', 'TENANT_CREDENTIAL_ISOLATION', 'RELEASE_CLOSURE_SAME_RUN_INTEGRITY',
-        'EXECUTION_SANDBOX_ISOLATION', 'EXACT_PATCH_PROMOTION', 'FAIL_CLOSED_SCOPE',
-      ];
+      // ER-V1-FINAL-009: nunca mais uma cópia hardcoded desta lista aqui — deriva da MESMA
+      // autoridade única que o gate real usa (achado real: esta cópia divergiu silenciosamente
+      // depois de ER-V1-FINAL-007/008 adicionarem itens novos, quebrando este teste já GREEN).
+      // eslint-disable-next-line global-require
+      const { RUNTIME_ITEMS } = require(path.join(ROOT, 'scripts', 'governance', 'collect-engineering-router-runtime-evidence.js'));
+      const REQUIRED_RUNTIME_ITEM_IDS = RUNTIME_ITEMS.map((item) => item.id);
       fs.mkdirSync(path.dirname(EVIDENCE_PATH), { recursive: true });
       fs.writeFileSync(EVIDENCE_PATH, JSON.stringify({
         artifactType: 'engineering-router-v1-runtime-evidence',
         sourceCommit: 'test-synthetic',
         sourceFingerprint: computeSourceFingerprint(ROOT),
         status: 'RUNTIME_PASS',
-        items: REQUIRED_RUNTIME_ITEM_IDS.map((id) => ({ id, testPath: 'synthetic', exitCode: 0 })),
+        // ER-V1-FINAL-007: schema v2.0.0 — o gate agora exige testCaseId presente e
+        // numPassedTests>=1/numFailedTests===0 por item, não só exitCode===0.
+        items: REQUIRED_RUNTIME_ITEM_IDS.map((id) => ({
+          id, testPath: 'synthetic', testCaseId: 'synthetic', exitCode: 0, numPassedTests: 1, numFailedTests: 0,
+        })),
       }));
       const result = runGate({ runtime: true });
       expect(result.exitCode).toBe(0);
