@@ -20,6 +20,10 @@ const os = require('os');
 const path = require('path');
 const { runTestCommands, EVIDENCE_ROOT } = require('../../api/services/engineeringRouter/testRunnerService');
 
+// ER-V1-FINAL-001: cada comando agora roda via `docker run` real (overhead de alguns
+// segundos); sob a suíte completa em paralelo isso pode estourar o default de 10s do projeto.
+jest.setTimeout(30000);
+
 const FAKE_SECRETS = {
   OPENAI_API_KEY: 'sk-test-secret-123456789012345678901234567890',
   JWT_SECRET: 'fake-jwt-super-secret',

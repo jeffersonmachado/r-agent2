@@ -21,6 +21,10 @@ const path = require('path');
 const crypto = require('crypto');
 const { runTestCommands } = require('../../api/services/engineeringRouter/testRunnerService');
 
+// ER-V1-FINAL-001: cada comando agora roda via `docker run` real (overhead de alguns
+// segundos); sob a suíte completa em paralelo isso pode estourar o default de 10s do projeto.
+jest.setTimeout(30000);
+
 function makeMarkerPath() {
   return path.join(os.tmpdir(), `erv1-close-001-pwned-${crypto.randomBytes(6).toString('hex')}.marker`);
 }

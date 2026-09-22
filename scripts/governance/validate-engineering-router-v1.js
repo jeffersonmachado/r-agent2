@@ -216,7 +216,15 @@ function main() {
   });
   checks.push({
     id: 'STRUCTURED_COMMAND_EXECUTION',
-    ...checkFileContains('api/services/engineeringRouter/testRunnerService.js', [/parseCommand/, /shell:\s*false/]),
+    // ER-V1-FINAL-001: testRunnerService.js delega a execução real ao Execution Sandbox
+    // (executionSandbox.js) — o `spawn(..., {shell:false})` que efetivamente roda o processo
+    // migrou para lá; testRunnerService.js continua responsável por parsear/validar o comando
+    // pela allowlist estrutural antes de repassar ao sandbox.
+    ...checkFileContains('api/services/engineeringRouter/testRunnerService.js', [/parseCommand/, /runInSandbox/]),
+  });
+  checks.push({
+    id: 'SANDBOX_STRUCTURED_COMMAND_EXECUTION',
+    ...checkFileContains('api/services/engineeringRouter/executionSandbox.js', [/shell:\s*false/]),
   });
   checks.push({
     id: 'COMMAND_POLICY_SHELL_METACHAR_BLOCK',
@@ -519,10 +527,65 @@ function main() {
     'tests/integration/engineeringPromotionService.test.js',
     'tests/integration/engineeringReleaseClosureAuthority.test.js',
     'tests/integration/engineeringRouterReviewerRejectionRecodeE2E.test.js',
+    'tests/unit/engineeringRouterExecutionSandboxSecurity.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });
   }
+
+  // 14.5. ER-V1-FINAL-001 — Execution Sandbox: testCommands executam dentro de um container
+  // Docker descartável, non-root, sem rede, sem docker socket, filesystem raiz read-only e
+  // limites de CPU/memória/PIDs — nunca mais um `spawn` de host puro.
+  const sandboxSrc = readText('api/services/engineeringRouter/executionSandbox.js');
+  checks.push({
+    id: 'SANDBOX_NETWORK_NONE_BY_DEFAULT',
+    ok: /network\s*=\s*'none'/.test(sandboxSrc) && /--network=\$\{network/.test(sandboxSrc),
+    reason: 'sandbox precisa negar rede por padrão (--network none)',
+  });
+  checks.push({
+    id: 'SANDBOX_READ_ONLY_ROOTFS',
+    ok: /--read-only/.test(sandboxSrc),
+    reason: 'sandbox precisa de filesystem raiz read-only',
+  });
+  checks.push({
+    id: 'SANDBOX_CAP_DROP_ALL',
+    ok: /--cap-drop=ALL/.test(sandboxSrc) && /--security-opt=no-new-privileges/.test(sandboxSrc),
+    reason: 'sandbox precisa derrubar todas as capabilities e negar no-new-privileges',
+  });
+  checks.push({
+    id: 'SANDBOX_NON_ROOT_FIXED_UID',
+    ok: /const SANDBOX_UID_GID = process\.env\.ENGINEERING_ROUTER_SANDBOX_UIDGID \|\| '10001:10001'/.test(sandboxSrc),
+    reason: 'sandbox precisa rodar sob UID fixo não-privilegiado (10001:10001 por default), nunca root',
+  });
+  checks.push({
+    id: 'SANDBOX_RESOURCE_LIMITS',
+    ok: /--pids-limit=/.test(sandboxSrc) && /--memory=/.test(sandboxSrc) && /--cpus=/.test(sandboxSrc),
+    reason: 'sandbox precisa de limites explícitos de PIDs/memória/CPU',
+  });
+  checks.push({
+    id: 'SANDBOX_NEVER_MOUNTS_DOCKER_SOCKET',
+    ok: !/docker\.sock/.test(sandboxSrc),
+    reason: 'sandbox nunca pode montar o socket do Docker do host (escaparia do isolamento)',
+  });
+  checks.push({
+    id: 'SANDBOX_NODE_MODULES_READ_ONLY',
+    ok: /node_modules[\s\S]*?:ro`/.test(sandboxSrc),
+    reason: 'sandbox precisa montar node_modules do repositório como read-only (nunca gravável)',
+  });
+  checks.push({
+    id: 'SANDBOX_FAIL_CLOSED_WHEN_UNAVAILABLE',
+    ok: /SANDBOX_UNAVAILABLE/.test(sandboxSrc) && /throw error/.test(sandboxSrc),
+    reason: 'sandbox indisponível precisa falhar explicitamente, nunca cair de volta para execução sem sandbox',
+  });
+  checks.push({
+    id: 'TEST_RUNNER_USES_SANDBOX',
+    ...checkFileContains('api/services/engineeringRouter/testRunnerService.js', [/runInSandbox/]),
+  });
+  checks.push({
+    id: 'PATCH_APPLY_NO_WRITABLE_NODE_MODULES_SYMLINK',
+    ok: !/symlinkSync\([\s\S]*?node_modules/.test(readText('api/services/engineeringRouter/patchApplyService.js')),
+    reason: 'patchApplyService.js não pode mais criar o symlink gravável de node_modules para o node_modules real do repositório (ER-V1-FINAL-001)',
+  });
 
   // 15. Documentação V1.
   const docs = [

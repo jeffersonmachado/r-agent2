@@ -54,6 +54,7 @@ const RUNTIME_ITEMS = [
   { id: 'SUPPORT_DENIAL_DEFAULT', testPath: 'tests/unit/engineeringRouterRoutes.test.js' },
   { id: 'TENANT_CREDENTIAL_ISOLATION', testPath: 'tests/unit/engineeringRouterRoutes.test.js' },
   { id: 'RELEASE_CLOSURE_SAME_RUN_INTEGRITY', testPath: 'tests/integration/engineeringReleaseClosureAuthority.test.js' },
+  { id: 'EXECUTION_SANDBOX_ISOLATION', testPath: 'tests/unit/engineeringRouterExecutionSandboxSecurity.test.js' },
 ];
 
 function runSuite(testPath) {

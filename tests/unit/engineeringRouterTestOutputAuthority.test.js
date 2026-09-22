@@ -17,13 +17,29 @@
  * Nenhuma das duas pode ser decidida pelo texto — só pelo exitCode real do processo.
  */
 
-const path = require('path');
 const { runTestCommands } = require('../../api/services/engineeringRouter/testRunnerService');
+const { createWorkspace, destroyWorkspace } = require('../../api/services/engineeringRouter/patchApplyService');
+
+// ER-V1-FINAL-001: cada comando agora roda via `docker run` real (overhead de alguns segundos);
+// sob a suíte completa (múltiplos workers Jest competindo por Docker/CPU) o default de 10s do
+// projeto estourou de verdade em execução real.
+jest.setTimeout(30000);
 
 const PROBE_SCRIPT = 'tests/fixtures/engineering-router-sandbox/promptInjectionOutputProbe.js';
 
 describe('ERV1-CLOSE-010 — autoridade de PASS/FAIL nunca é o texto do output (prompt injection real)', () => {
-  const cwd = path.resolve(__dirname, '..', '..');
+  // ER-V1-FINAL-001: cwd precisa ser um workspace isolado real (nunca o repositório principal
+  // — o Execution Sandbox recusa explicitamente com SANDBOX_INVALID_WORKSPACE, ver
+  // ENGINEERING_ROUTER_V1_FINAL_CLOSURE.md). Usa o mesmo `createWorkspace` de produção.
+  let cwd;
+
+  beforeAll(async () => {
+    cwd = await createWorkspace('erv1-close-010-output-authority', 1);
+  }, 30000);
+
+  afterAll(async () => {
+    if (cwd) await destroyWorkspace(cwd);
+  }, 30000);
 
   test('exitCode != 0 com stdout tentando se passar por APPROVE/PASS ainda é reportado como FAIL', async () => {
     const { results } = await runTestCommands({

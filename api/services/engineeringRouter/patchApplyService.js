@@ -75,11 +75,16 @@ async function createSnapshotCommit() {
 }
 
 /**
- * Materializa um `git worktree` isolado (detached) a partir de um commit real já existente, e
- * linka `node_modules` (gitignored, nunca materializado pelo `git worktree` em si) para
- * qualquer comando de teste real conseguir rodar ali. Compartilhado por `createWorkspace`
- * (snapshot do estado atual) e pela verificação pós-promoção (ERV1-CLOSE-005, a partir de um
- * commit candidato real já criado).
+ * Materializa um `git worktree` isolado (detached) a partir de um commit real já existente.
+ * Compartilhado por `createWorkspace` (snapshot do estado atual) e pela verificação
+ * pós-promoção (ERV1-CLOSE-005, a partir de um commit candidato real já criado).
+ *
+ * ER-V1-FINAL-001: NÃO cria mais o symlink gravável de `node_modules` para o `node_modules`
+ * real do repositório (achado real: um `testCommand` malicioso conseguia escrever/corromper
+ * fisicamente o `node_modules` real através dele — ver ENGINEERING_ROUTER_V1_FINAL_CLOSURE.md).
+ * `node_modules` para os testes reais agora é responsabilidade exclusiva do sandbox de
+ * execução (`executionSandbox.js`), que monta o `node_modules` real como bind READ-ONLY dentro
+ * do container — nunca gravável, nunca fora do sandbox.
  * @returns {Promise<string>} caminho absoluto do workspace
  */
 async function materializeWorktree(commitHash, dirLabel) {
@@ -92,20 +97,6 @@ async function materializeWorktree(commitHash, dirLabel) {
     const err = new Error(`Falha ao criar workspace isolado (git worktree add): ${result.stderr}`);
     err.code = FAILURE_CODES.PATCH_APPLY_FAILED;
     throw err;
-  }
-
-  // `git worktree` só materializa arquivos versionados — `node_modules` é gitignored e não
-  // existe no novo diretório. Sem isso, nenhum comando de teste real (`npm test`, `npx jest`)
-  // conseguiria rodar no workspace isolado. Link simbólico (não cópia: evita duplicar
-  // centenas de MB por tentativa) para as dependências já instaladas no repositório principal.
-  const rootNodeModules = path.join(ROOT, 'node_modules');
-  const workspaceNodeModules = path.join(dir, 'node_modules');
-  try {
-    if (fs.existsSync(rootNodeModules) && !fs.existsSync(workspaceNodeModules)) {
-      fs.symlinkSync(rootNodeModules, workspaceNodeModules, 'dir');
-    }
-  } catch (err) {
-    logger.warn('[patchApplyService] falha ao linkar node_modules no workspace isolado', { dir, error: err.message });
   }
 
   return dir;

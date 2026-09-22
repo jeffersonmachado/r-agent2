@@ -10,7 +10,6 @@
  * apenas um excerto + a referência.
  */
 
-const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -18,6 +17,7 @@ const { parseCommand } = require('../../../engine/engineeringRouter/commandPolic
 const { buildSafeTestEnv } = require('./safeEngineeringEnvironment');
 const { redactText } = require('../../../engine/engineeringRouter/secretRedaction');
 const { ROOT } = require('./contextBuilderService');
+const { runInSandbox } = require('./executionSandbox');
 
 const EVIDENCE_ROOT = process.env.ENGINEERING_ROUTER_EVIDENCE_ROOT
   || path.join(ROOT, 'dev', 'engineering-router-v1', 'evidence');
@@ -29,46 +29,41 @@ function slugCommand(command) {
   return crypto.createHash('sha1').update(command).digest('hex').slice(0, 12);
 }
 
-function runOneCommand(executable, args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
-  return new Promise((resolve) => {
-    const startedAt = Date.now();
-    let stdout = '';
-    let stderr = '';
-    let settled = false;
+async function runOneCommand(executable, args, { cwd, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  const startedAt = Date.now();
 
-    // ERV1-CLOSE-001: shell:false + executable/args estruturados (nunca uma string inteira
-    // interpretada por um shell) — fecha injeção via ";"/"&&"/"||"/"$()"/pipe/redirecionamento.
-    // ERV1-CLOSE-002: env sandboxed (nunca o environment do processo pai inteiro) — o subprocess não recebe
-    // nenhum segredo real do processo pai por padrão.
-    const child = spawn(executable, args, {
+  // ERV1-CLOSE-001: allowlist estrutural de comando (nunca uma string interpretada por shell).
+  // ERV1-CLOSE-002: env sandboxed (nunca o environment do processo pai inteiro).
+  // ER-V1-FINAL-001: execução dentro de um container Docker descartável, non-root, sem rede,
+  // sem docker socket, filesystem raiz read-only e limites de CPU/memória/PIDs — nunca mais um
+  // `spawn` de host puro. Fail-closed: SANDBOX_UNAVAILABLE propaga como falha do comando, nunca
+  // cai de volta para execução sem sandbox.
+  try {
+    const result = await runInSandbox({
+      executable,
+      args,
       cwd,
-      shell: false,
-      timeout: timeoutMs,
       env: buildSafeTestEnv({ cwd }),
+      timeoutMs,
     });
-
-    child.stdout?.on('data', (d) => { stdout += d.toString(); });
-    child.stderr?.on('data', (d) => { stderr += d.toString(); });
-
-    child.on('close', (code, signal) => {
-      if (settled) return;
-      settled = true;
-      resolve({
-        exitCode: code,
-        signal,
-        stdout,
-        stderr,
-        durationMs: Date.now() - startedAt,
-        timedOut: signal === 'SIGTERM' && (Date.now() - startedAt) >= timeoutMs,
-      });
-    });
-
-    child.on('error', (err) => {
-      if (settled) return;
-      settled = true;
-      resolve({ exitCode: null, error: err.message, stdout, stderr, durationMs: Date.now() - startedAt });
-    });
-  });
+    return {
+      exitCode: result.exitCode,
+      signal: result.signal,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      durationMs: Date.now() - startedAt,
+      timedOut: result.timedOut,
+    };
+  } catch (err) {
+    return {
+      exitCode: null,
+      error: err.message,
+      code: err.code,
+      stdout: '',
+      stderr: '',
+      durationMs: Date.now() - startedAt,
+    };
+  }
 }
 
 /**
@@ -106,6 +101,24 @@ async function runTestCommands({ taskId, attemptNumber, commands, cwd }) {
     const startedAt = new Date();
     const run = await runOneCommand(policyCheck.executable, policyCheck.args, { cwd });
     const completedAt = new Date();
+
+    // ER-V1-FINAL-001: sandbox indisponível (Docker inacessível) OU cwd inválido (repositório
+    // principal em vez de um workspace isolado) são falhas de infraestrutura/uso indevido,
+    // nunca um FAIL de teste — fail-closed explícito, nunca executa sem sandbox e nunca
+    // confunde "não rodou" com "rodou e falhou".
+    if (run.code === 'SANDBOX_UNAVAILABLE' || run.code === 'SANDBOX_INVALID_WORKSPACE') {
+      results.push({
+        command,
+        status: run.code,
+        exitCode: null,
+        durationMs: run.durationMs,
+        reason: run.error,
+        code: run.code,
+        startedAt: startedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+      });
+      continue;
+    }
 
     // ERV1-CLOSE-002: toda saída passa por redação ANTES de tocar disco/DB/telemetria/UI —
     // um patch malicioso pode imprimir env/segredos mesmo dentro do env sandboxed (ex.: lendo

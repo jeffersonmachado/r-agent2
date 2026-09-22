@@ -24,6 +24,10 @@ const sequelizeModule = require('../../api/db/sequelize');
 const engineeringTaskService = require('../../api/services/engineeringRouter/engineeringTaskService');
 const { beginRun } = require('../../api/services/engineeringRouter/engineeringRouterService');
 
+// ER-V1-FINAL-001: o loop real (beginRun) roda testCommands via `docker run` real; sob a
+// suíte completa em paralelo isso pode estourar o default de 10s do projeto.
+jest.setTimeout(60000);
+
 let dbAvailable = false;
 let dbReason = null;
 const createdTaskIds = [];
