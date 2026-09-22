@@ -313,6 +313,31 @@ copy_required_proof_entries() {
   done
 }
 
+# ER-V1-SEAL-004 (Self-Proving Deliverable) — injeta o envelope de auditoria do Engineering
+# Router V1 (gerado por `npm run engineering-router:audit-envelope:generate`, em
+# dist/engineering-router-v1-audit-envelope/) dentro do ZIP entregue, em
+# evidence/engineering-router-v1/. `dist/` é excluído do rsync acima (INCLUDE_DIST=false por
+# padrão), então sem esta cópia explícita o envelope NUNCA chegaria ao artefato final — era
+# exatamente o achado real confirmado na baseline desta missão (ZIP anterior sem
+# evidence/engineering-router-v1/).
+#
+# Best-effort e não-bloqueante aqui de propósito: este script empacota o release do projeto
+# INTEIRO, não só o Engineering Router, e gerar o envelope exige rodar os 25 itens de runtime
+# evidence reais (minutos, sandbox Docker) — não é razoável forçar TODO empacotamento por este
+# gate. Quem precisa da garantia forte de "o envelope está presente e válido dentro do ZIP" usa
+# `npm run verify:engineering-router-v1-envelope -- <caminho-do-zip>` explicitamente antes de
+# publicar o release (ex.: no pipeline oficial de selagem).
+copy_engineering_router_v1_audit_envelope() {
+  local src_dir="$PROJECT_DIR/dist/engineering-router-v1-audit-envelope"
+  local dest_dir="$STAGE_DIR/evidence/engineering-router-v1"
+  if [[ ! -d "$src_dir" ]]; then
+    echo -e "${YELLOW}Aviso: dist/engineering-router-v1-audit-envelope/ ausente — ZIP gerado SEM o audit envelope do Engineering Router V1 (rode 'npm run engineering-router:audit-envelope:generate' antes se este release precisa da prova).${NC}" >&2
+    return 0
+  fi
+  mkdir -p "$dest_dir"
+  cp "$src_dir"/*.json "$dest_dir/"
+}
+
 RSYNC_ARGS=(-a)
 for pattern in "${RSYNC_EXCLUDES[@]}"; do
   RSYNC_ARGS+=(--exclude "$pattern")
@@ -320,6 +345,7 @@ done
 
 rsync "${RSYNC_ARGS[@]}" "$PROJECT_DIR/" "$STAGE_DIR/"
 copy_required_proof_entries
+copy_engineering_router_v1_audit_envelope
 release_payload_remove_forbidden_from_tree "$STAGE_DIR"
 
 (

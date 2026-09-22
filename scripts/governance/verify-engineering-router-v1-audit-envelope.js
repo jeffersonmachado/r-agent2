@@ -55,10 +55,14 @@ const REQUIRED_RUNTIME_IDS = Object.freeze([
   'EXECUTION_SANDBOX_ISOLATION', 'MODEL_CATALOG_GOVERNANCE',
 ]);
 
+// ER-V1-SEAL-004: 5 arquivos novos (source-fingerprint, runtime-requirements,
+// structural-certification, sandbox-evidence, resume-evidence) — sandbox/resume extraídas de
+// dentro de security/routing para artifacts próprios (mesmos dados, nunca uma segunda fonte).
 const ARTIFACT_FILES = Object.freeze([
-  'baseline.json', 'runtime-certification.json', 'routing-evidence.json', 'security-evidence.json',
-  'regression-evidence.json', 'governance-evidence.json', 'promotion-evidence.json', 'pilot-evidence.json',
-  'release-closure-evidence.json',
+  'baseline.json', 'source-fingerprint.json', 'runtime-requirements.json', 'runtime-certification.json',
+  'structural-certification.json', 'routing-evidence.json', 'security-evidence.json', 'sandbox-evidence.json',
+  'resume-evidence.json', 'regression-evidence.json', 'governance-evidence.json', 'promotion-evidence.json',
+  'pilot-evidence.json', 'release-closure-evidence.json',
 ]);
 
 function sha256Bytes(buffer) {
@@ -108,7 +112,7 @@ function verifyEnvelope(envelopeDir) {
   push('MANIFEST_PARSEABLE', true);
   const manifest = manifestResult.value;
 
-  for (const field of ['schemaVersion', 'generatedAt', 'head', 'sourceFingerprint', 'treeHash', 'runId', 'artifactHashes', 'runtimeStatus', 'promotionStatus', 'pilotTaskId', 'releaseStatus']) {
+  for (const field of ['schemaVersion', 'generatedAt', 'head', 'sourceFingerprint', 'treeHash', 'runId', 'runtimeRunId', 'governanceRunId', 'artifactHashes', 'runtimeStatus', 'structuralStatus', 'promotionStatus', 'pilotTaskId', 'releaseStatus', 'finalDecision', 'expectedArtifacts']) {
     push(`MANIFEST_FIELD_${field.toUpperCase()}`, manifest[field] !== undefined && manifest[field] !== null, `manifest.${field} ausente`);
   }
 
@@ -155,6 +159,63 @@ function verifyEnvelope(envelopeDir) {
     push('SOURCE_FINGERPRINT_CONSISTENT', baseline.sourceFingerprint === manifest.sourceFingerprint, `baseline.sourceFingerprint != manifest.sourceFingerprint`);
     push('TREE_HASH_CONSISTENT', baseline.treeHash === manifest.treeHash, `baseline.treeHash != manifest.treeHash`);
     push('HEAD_CONSISTENT', baseline.head === manifest.head, `baseline.head != manifest.head`);
+  }
+
+  // ER-V1-SEAL-004 — source-fingerprint.json precisa bater exatamente com baseline/manifest (é o
+  // mesmo valor, extraído para um artifact próprio e content-addressed — uma troca isolada deste
+  // arquivo sem atualizar os outros dois é sinal de adulteração, nunca aceita silenciosamente).
+  const sourceFingerprintArtifact = artifactPayloads['source-fingerprint.json'];
+  if (sourceFingerprintArtifact) {
+    push('SOURCE_FINGERPRINT_ARTIFACT_CONSISTENT', sourceFingerprintArtifact.sourceFingerprint === manifest.sourceFingerprint, 'source-fingerprint.json.sourceFingerprint != manifest.sourceFingerprint');
+  }
+
+  // ER-V1-SEAL-004 — runtime-requirements.json precisa listar EXATAMENTE o mesmo conjunto de IDs
+  // obrigatórios que este verifier exige (REQUIRED_RUNTIME_IDS) — nunca um subconjunto menor
+  // fabricado para passar cobertura sem provar todos os requisitos reais.
+  const runtimeRequirements = artifactPayloads['runtime-requirements.json'];
+  if (!runtimeRequirements) {
+    push('RUNTIME_REQUIREMENTS_PRESENT', false, 'runtime-requirements.json ausente ou ilegível');
+  } else {
+    push('RUNTIME_REQUIREMENTS_PRESENT', true);
+    const declaredIds = new Set(runtimeRequirements.requiredIds || []);
+    const expectedIds = new Set(REQUIRED_RUNTIME_IDS);
+    const missing = [...expectedIds].filter((id) => !declaredIds.has(id));
+    const extra = [...declaredIds].filter((id) => !expectedIds.has(id));
+    push('RUNTIME_REQUIREMENTS_MATCH_REQUIRED_IDS', missing.length === 0 && extra.length === 0, `runtime-requirements.json diverge do REQUIRED_RUNTIME_IDS deste verifier (faltando: ${missing.join(',') || '-'}; a mais: ${extra.join(',') || '-'})`);
+  }
+
+  // ER-V1-SEAL-004 — structural-certification.json precisa provar PASS estrutural+runtime.
+  const structuralCertification = artifactPayloads['structural-certification.json'];
+  if (!structuralCertification) {
+    push('STRUCTURAL_CERTIFICATION_PRESENT', false, 'structural-certification.json ausente ou ilegível');
+  } else {
+    push('STRUCTURAL_CERTIFICATION_PRESENT', true);
+    push('STRUCTURAL_CERTIFICATION_PASS', structuralCertification.status === 'PASS', `structural-certification.status = ${structuralCertification.status}`);
+    push('MANIFEST_STRUCTURAL_STATUS_MATCHES', manifest.structuralStatus === structuralCertification.status, 'manifest.structuralStatus != structural-certification.status');
+  }
+
+  // ER-V1-SEAL-004 — sandbox-evidence.json e resume-evidence.json precisam existir com itens
+  // reais, todos PASS (mesma garantia de PROMOTION_ITEM_PASS/PILOT_ITEM_PASS, aplicada às duas
+  // categorias que antes viviam misturadas dentro de security/routing).
+  const sandboxEvidence = artifactPayloads['sandbox-evidence.json'];
+  if (!sandboxEvidence) {
+    push('SANDBOX_EVIDENCE_PRESENT', false, 'sandbox-evidence.json ausente ou ilegível');
+  } else {
+    push('SANDBOX_EVIDENCE_PRESENT', true);
+    push('SANDBOX_EVIDENCE_NON_EMPTY', Array.isArray(sandboxEvidence.items) && sandboxEvidence.items.length > 0, 'sandbox-evidence.json.items vazio');
+    for (const item of sandboxEvidence.items || []) {
+      push(`SANDBOX_ITEM_PASS_${item.id}`, item.pass === true, `${item.id}: pass=${item.pass}`);
+    }
+  }
+  const resumeEvidence = artifactPayloads['resume-evidence.json'];
+  if (!resumeEvidence) {
+    push('RESUME_EVIDENCE_PRESENT', false, 'resume-evidence.json ausente ou ilegível');
+  } else {
+    push('RESUME_EVIDENCE_PRESENT', true);
+    push('RESUME_EVIDENCE_NON_EMPTY', Array.isArray(resumeEvidence.items) && resumeEvidence.items.length > 0, 'resume-evidence.json.items vazio');
+    for (const item of resumeEvidence.items || []) {
+      push(`RESUME_ITEM_PASS_${item.id}`, item.pass === true, `${item.id}: pass=${item.pass}`);
+    }
   }
 
   // requirement coverage — todos os 25 IDs obrigatórios presentes em runtime-certification.json
@@ -220,6 +281,13 @@ function verifyEnvelope(envelopeDir) {
     push('MANIFEST_RELEASE_STATUS_MATCHES', manifest.releaseStatus === releaseClosure.releaseStatus, 'manifest.releaseStatus != release-closure-evidence.releaseStatus');
   }
 
+  // final decision — o verifier recalcula de forma independente (nunca confia cegamente no
+  // finalDecision gravado pelo gerador) a partir dos MESMOS três sinais que o gerador usa.
+  if (releaseClosure && runtimeCert && structuralCertification) {
+    const expectedDecision = (runtimeCert.status === 'RUNTIME_PASS' && structuralCertification.status === 'PASS' && releaseClosure.allBlockersGreen === true) ? 'GO' : 'NO_GO';
+    push('FINAL_DECISION_RECOMPUTED_MATCHES', manifest.finalDecision === expectedDecision, `manifest.finalDecision (${manifest.finalDecision}) != recalculado (${expectedDecision})`);
+  }
+
   // evidence freshness — best-effort, nunca obrigatório (não pode depender de rede nem de o
   // envelope estar necessariamente dentro do checkout do repositório real).
   const localHead = currentRepoHead(envelopeDir);
@@ -231,11 +299,45 @@ function verifyEnvelope(envelopeDir) {
   return { ok, checks };
 }
 
+// ER-V1-SEAL-004 — a spec pede um comando único que também verifique o envelope diretamente
+// dentro de um ZIP de release já empacotado (onde `generate-zip.sh` o injeta em
+// evidence/engineering-router-v1/, ver scripts/generate-zip.sh::copy_engineering_router_v1_audit_envelope).
+// Extrai só essa subpasta para um tmpdir e reaproveita o MESMO `verifyEnvelope` — nunca uma
+// segunda implementação de verificação para o caso "dentro de um zip".
+function extractEnvelopeFromZip(zipPath) {
+  const os = require('os');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'engineering-router-v1-envelope-zip-'));
+  execFileSync('unzip', ['-q', '-o', zipPath, '*/evidence/engineering-router-v1/*', '-d', tmpDir]);
+  const rootEntries = fs.readdirSync(tmpDir);
+  for (const entry of rootEntries) {
+    const candidate = path.join(tmpDir, entry, 'evidence', 'engineering-router-v1');
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(tmpDir, 'evidence', 'engineering-router-v1');
+}
+
 function main() {
-  const envelopeDir = process.argv[2] ? path.resolve(process.argv[2]) : null;
-  if (!envelopeDir) {
-    process.stderr.write('Uso: node verify-engineering-router-v1-audit-envelope.js <dir-do-envelope>\n');
+  const inputArg = process.argv[2];
+  if (!inputArg) {
+    process.stderr.write('Uso: node verify-engineering-router-v1-audit-envelope.js <dir-do-envelope | arquivo.zip>\n');
     process.exit(2);
+  }
+  const inputPath = path.resolve(inputArg);
+
+  let envelopeDir;
+  if (inputPath.endsWith('.zip')) {
+    if (!fs.existsSync(inputPath)) {
+      process.stdout.write('[audit-envelope-verify] status=FAIL checks=1 falhas=1\n - ZIP_FILE_EXISTS: arquivo não encontrado\n');
+      process.exit(1);
+    }
+    try {
+      envelopeDir = extractEnvelopeFromZip(inputPath);
+    } catch (err) {
+      process.stdout.write(`[audit-envelope-verify] status=FAIL checks=1 falhas=1\n - ZIP_EXTRACTION_FAILED: ${err.message}\n`);
+      process.exit(1);
+    }
+  } else {
+    envelopeDir = inputPath;
   }
 
   let result;

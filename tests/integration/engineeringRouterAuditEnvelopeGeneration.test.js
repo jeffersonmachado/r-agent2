@@ -58,9 +58,16 @@ describe('ER-V1-FINAL-010 — geração real do envelope + verificação offline
     const { manifest } = generate({ outDir: tmpOutDir });
 
     expect(manifest.runtimeStatus).toBe('RUNTIME_PASS');
+    expect(manifest.structuralStatus).toBe('PASS');
     expect(manifest.releaseStatus).toBe('ENGINEERING_ROUTER_V1_10_OF_10_GREEN');
+    expect(manifest.finalDecision).toBe('GO');
     expect(fs.existsSync(path.join(tmpOutDir, 'manifest.json'))).toBe(true);
     expect(fs.existsSync(path.join(tmpOutDir, 'hashes.json'))).toBe(true);
+    // ER-V1-SEAL-004 — os 5 arquivos novos precisam existir de verdade no envelope real, não só
+    // no fixture sintético do teste unitário do verifier.
+    for (const name of ['source-fingerprint.json', 'runtime-requirements.json', 'structural-certification.json', 'sandbox-evidence.json', 'resume-evidence.json']) {
+      expect(fs.existsSync(path.join(tmpOutDir, name))).toBe(true);
+    }
 
     const result = verifyEnvelope(tmpOutDir);
     const failed = result.checks.filter((c) => !c.ok);

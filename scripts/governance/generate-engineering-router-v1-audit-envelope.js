@@ -32,33 +32,40 @@ const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const { ROOT, readJson, sha256 } = require('./common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
+const { RUNTIME_ITEMS } = require('./collect-engineering-router-runtime-evidence');
 
 function sha256Bytes(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
-const SCHEMA_VERSION = '1.0.0';
+// ER-V1-SEAL-004 adiciona 5 arquivos novos ao envelope (source-fingerprint, runtime-requirements,
+// structural-certification, sandbox-evidence, resume-evidence) — bump minor (aditivo, nenhum
+// arquivo/campo existente foi removido ou teve seu significado alterado).
+const SCHEMA_VERSION = '1.1.0';
 const DEFAULT_OUT_DIR = path.join(ROOT, 'dist', 'engineering-router-v1-audit-envelope');
 
 // Categorização dos 25 itens de runtime evidence por área — puramente organizacional (mesmos
 // IDs/dados de `RUNTIME_ITEMS`, nunca uma segunda fonte de verdade sobre O QUE cada item prova).
+// ER-V1-SEAL-004: `sandbox` e `resume` extraídas como categorias PRÓPRIAS (antes agrupadas em
+// `security`/`routing`) — a nova spec pede sandbox-evidence.json e resume-evidence.json como
+// artifacts dedicados, nunca só um item dentro de um arquivo mais genérico.
 const CATEGORY_BY_ID = Object.freeze({
   SHELL_INJECTION_REJECTED: 'security',
   SAFE_ENVIRONMENT: 'security',
   SECRET_REDACTION_MULTILINE: 'security',
   PATCH_PATH_BOUNDARIES: 'security',
   FAIL_CLOSED_SCOPE: 'security',
-  EXECUTION_SANDBOX_ISOLATION: 'security',
   TENANT_CREDENTIAL_ISOLATION: 'security',
+  EXECUTION_SANDBOX_ISOLATION: 'sandbox',
   ACTUAL_PATCH_APPLY: 'pilot',
   DETERMINISTIC_FAILING_TEST_RED: 'pilot',
   RED_TO_FIX: 'pilot',
   REVIEWER_REJECTION_RECODE: 'pilot',
   INDEPENDENT_REVIEW: 'routing',
   PROVIDER_MODEL_FAILURE_REROUTE: 'routing',
-  RESTART_RESUME: 'routing',
-  CRASH_RESUME_MID_STAGE: 'routing',
   MODEL_CATALOG_GOVERNANCE: 'routing',
+  RESTART_RESUME: 'resume',
+  CRASH_RESUME_MID_STAGE: 'resume',
   REGRESSION_EXECUTION: 'regression',
   GOVERNANCE_EXECUTION: 'governance',
   RELEASE_CLOSURE_SAME_RUN_INTEGRITY: 'governance',
@@ -160,6 +167,24 @@ function generate({ outDir }) {
     sourceFingerprint,
   };
 
+  // ER-V1-SEAL-004 (Self-Proving Deliverable) — arquivos novos exigidos pela spec, além dos já
+  // existentes desde ER-V1-FINAL-010. Cada um extrai dados já computados acima/abaixo para um
+  // artifact PRÓPRIO e content-addressed — nunca uma segunda fonte de verdade paralela.
+  const sourceFingerprintArtifact = {
+    artifactType: 'engineering-router-v1-audit-source-fingerprint',
+    runId,
+    sourceFingerprint,
+    algorithm: 'governance/proof-engine/fingerprint-chain.js::computeSourceFingerprint',
+  };
+  const runtimeRequirements = {
+    artifactType: 'engineering-router-v1-audit-runtime-requirements',
+    runId,
+    // Mesma lista/autoridade que `collect-engineering-router-runtime-evidence.js` exporta como
+    // `RUNTIME_ITEMS` (reaproveitada, nunca uma cópia divergente) — os IDs que TODO release
+    // precisa provar com evidência de runtime real antes de ser certificado.
+    requiredIds: RUNTIME_ITEMS.map((item) => item.id),
+  };
+
   const routingEvidence = {
     artifactType: 'engineering-router-v1-audit-routing-evidence',
     runId,
@@ -170,23 +195,38 @@ function generate({ outDir }) {
     runId,
     items: itemsByCategory(runtimeEvidence, 'security'),
   };
+  const sandboxEvidence = {
+    artifactType: 'engineering-router-v1-audit-sandbox-evidence',
+    runId,
+    items: itemsByCategory(runtimeEvidence, 'sandbox'),
+  };
+  const resumeEvidence = {
+    artifactType: 'engineering-router-v1-audit-resume-evidence',
+    runId,
+    items: itemsByCategory(runtimeEvidence, 'resume'),
+  };
   const regressionEvidence = {
     artifactType: 'engineering-router-v1-audit-regression-evidence',
     runId,
     items: itemsByCategory(runtimeEvidence, 'regression'),
   };
+  const structuralCertification = {
+    artifactType: 'engineering-router-v1-audit-structural-certification',
+    runId,
+    status: structuralReport.status,
+    decision: structuralReport.decision,
+    structuralStatus: structuralReport.structuralStatus,
+    runtimeStatus: structuralReport.runtimeStatus,
+    totalChecks: structuralReport.totalChecks,
+    failedChecks: structuralReport.failedChecks,
+  };
   const governanceEvidence = {
     artifactType: 'engineering-router-v1-audit-governance-evidence',
     runId,
     items: itemsByCategory(runtimeEvidence, 'governance'),
-    structuralGate: {
-      status: structuralReport.status,
-      decision: structuralReport.decision,
-      structuralStatus: structuralReport.structuralStatus,
-      runtimeStatus: structuralReport.runtimeStatus,
-      totalChecks: structuralReport.totalChecks,
-      failedChecks: structuralReport.failedChecks,
-    },
+    // Mantido por compatibilidade com consumidores existentes do envelope (ER-V1-FINAL-010) —
+    // structural-certification.json (novo, ER-V1-SEAL-004) é a fonte primária a partir de agora.
+    structuralGate: structuralCertification,
   };
   const promotionEvidence = {
     artifactType: 'engineering-router-v1-audit-promotion-evidence',
@@ -224,9 +264,14 @@ function generate({ outDir }) {
 
   const artifactFiles = {
     'baseline.json': baseline,
+    'source-fingerprint.json': sourceFingerprintArtifact,
+    'runtime-requirements.json': runtimeRequirements,
     'runtime-certification.json': runtimeCertification,
+    'structural-certification.json': structuralCertification,
     'routing-evidence.json': routingEvidence,
     'security-evidence.json': securityEvidence,
+    'sandbox-evidence.json': sandboxEvidence,
+    'resume-evidence.json': resumeEvidence,
     'regression-evidence.json': regressionEvidence,
     'governance-evidence.json': governanceEvidence,
     'promotion-evidence.json': promotionEvidence,
@@ -270,12 +315,24 @@ function generate({ outDir }) {
     sourceFingerprint,
     treeHash,
     runId,
+    // ER-V1-SEAL-004: runtimeRunId/governanceRunId explícitos exigidos pela spec — hoje ambos
+    // derivam do mesmo runId (evidência de runtime e de governança são coletadas na MESMA
+    // execução do coletor, sobre a mesma árvore), mas nomeados separadamente porque o verifier
+    // deve comparar cada um contra o artifact correspondente (runtime-certification.json /
+    // governance-evidence.json), nunca assumir que são o mesmo campo por coincidência.
+    runtimeRunId: runId,
+    governanceRunId: runId,
+    expectedArtifacts: Object.keys(artifactFiles).concat(['hashes.json']),
     artifactHashes: hashes,
     testSuiteHash,
     runtimeStatus: runtimeEvidence.status,
+    structuralStatus: structuralCertification.status,
     promotionStatus: promotionEvidence.items.every((i) => i.pass) ? 'PROMOTION_VERIFIED' : 'PROMOTION_UNVERIFIED',
     pilotTaskId: pilotEvidence.pilotTaskId,
     releaseStatus: releaseClosureEvidence.releaseStatus,
+    finalDecision: (runtimeEvidence.status === 'RUNTIME_PASS' && structuralCertification.status === 'PASS' && releaseClosureEvidence.allBlockersGreen)
+      ? 'GO'
+      : 'NO_GO',
   };
   writeJsonFile(outDir, 'manifest.json', manifest);
 
