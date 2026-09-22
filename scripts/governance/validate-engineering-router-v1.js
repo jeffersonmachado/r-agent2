@@ -185,6 +185,28 @@ function main() {
     id: 'PATH_BOUNDARY_TRAVERSAL_RESOLVED',
     ...checkFileContains('engine/engineeringRouter/pathBoundary.js', [/resolvePathSegments/, /PATH_ESCAPES_ROOT/]),
   });
+  // ER-V1-FINAL-003 — Fail-Closed Scope: allowedPaths vazio/ausente NUNCA mais significa "tudo
+  // permitido" por omissão. Única exceção: scope=REPOSITORY_WIDE + explicitPolicyAuthorization
+  // explícita e persistida (nunca default/inferida).
+  checks.push({
+    id: 'PATH_BOUNDARY_FAIL_CLOSED_EMPTY_SCOPE',
+    ...checkFileContains('engine/engineeringRouter/pathBoundary.js', [
+      /NO_PATCH_SCOPE/, /repositoryWideAuthorized/, /explicitPolicyAuthorization/,
+    ]),
+  });
+  checks.push({
+    id: 'NO_PATCH_SCOPE_FAILURE_CODE_DEFINED',
+    ...checkFileContains('engine/engineeringRouter/constants.js', [/NO_PATCH_SCOPE/]),
+  });
+  checks.push({
+    id: 'EXPLICIT_POLICY_AUTHORIZATION_PERSISTED',
+    ok: (() => {
+      const modelSrc = readText('api/db/models/EngineeringTask.js');
+      const contractSrc = readText('api/services/engineeringRouter/engineeringRouterService.js');
+      return /explicit_policy_authorization/.test(modelSrc) && /explicitPolicyAuthorization/.test(contractSrc);
+    })(),
+    reason: 'explicit_policy_authorization precisa existir no model persistido E ser propagado ao Task Contract em runtime (contractFromTask)',
+  });
   checks.push({
     id: 'CONTROLLED_APPLY',
     ...checkFileContains('api/services/engineeringRouter/patchApplyService.js', [/git worktree/i, /createWorkspace/, /destroyWorkspace/, /normalizeHunkHeaders/]),
@@ -554,6 +576,7 @@ function main() {
     'tests/integration/engineeringReleaseClosureAuthority.test.js',
     'tests/integration/engineeringRouterReviewerRejectionRecodeE2E.test.js',
     'tests/unit/engineeringRouterExecutionSandboxSecurity.test.js',
+    'tests/unit/engineeringRouterFailClosedScope.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });

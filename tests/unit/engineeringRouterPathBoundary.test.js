@@ -24,9 +24,13 @@ describe('engineeringRouter/pathBoundary', () => {
     expect(result.violations[0].reason).toBe('FORBIDDEN_PATH');
   });
 
-  test('sem allowedPaths definido, qualquer caminho passa exceto forbidden', () => {
+  // ER-V1-FINAL-003: allowedPaths vazio/ausente NUNCA mais significa "tudo permitido" por
+  // omissão — fail-closed. Ver tests/unit/engineeringRouterFailClosedScope.test.js para a
+  // cobertura completa (exceção REPOSITORY_WIDE, risk HIGH/CRITICAL, etc.).
+  test('sem allowedPaths definido, qualquer caminho é recusado (fail-closed, nunca "tudo permitido")', () => {
     const result = checkPathBoundary(['qualquer/coisa.js'], { forbiddenPaths: ['segredo/**'] });
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('NO_PATCH_SCOPE');
   });
 
   test('exemplo real da missão: task autorizada só em governance/qa-mesh não pode tocar frontend/verticals', () => {

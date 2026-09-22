@@ -50,6 +50,7 @@ const RUNTIME_ITEMS = [
   { id: 'CONTROLLED_PROMOTION', testPath: 'tests/integration/engineeringPromotionService.test.js' },
   { id: 'POST_PROMOTION_VERIFICATION', testPath: 'tests/integration/engineeringPromotionService.test.js' },
   { id: 'EXACT_PATCH_PROMOTION', testPath: 'tests/integration/engineeringPromotionService.test.js' },
+  { id: 'FAIL_CLOSED_SCOPE', testPath: 'tests/unit/engineeringRouterFailClosedScope.test.js' },
   { id: 'DEVELOPMENT_AUTHORIZATION', testPath: 'tests/unit/engineeringRouterRoutes.test.js' },
   { id: 'PRODUCTION_DENIAL', testPath: 'tests/unit/engineeringRouterRoutes.test.js' },
   { id: 'SUPPORT_DENIAL_DEFAULT', testPath: 'tests/unit/engineeringRouterRoutes.test.js' },

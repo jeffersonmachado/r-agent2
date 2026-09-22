@@ -120,7 +120,13 @@ function validatePatch(diffText, { contract = {}, maxPatchSizeBytes = DEFAULT_MA
 
   const boundary = checkPathBoundary(touchedPaths, contract);
   if (!boundary.ok) {
-    issues.push({ code: FAILURE_CODES.PATCH_OUTSIDE_ALLOWED_SCOPE, message: 'Patch toca caminho fora do escopo autorizado', violations: boundary.violations });
+    // ER-V1-FINAL-003: propaga o code exato de checkPathBoundary — NO_PATCH_SCOPE (ausência
+    // total de escopo declarado) é distinto de PATCH_OUTSIDE_ALLOWED_SCOPE (caminho específico
+    // fora de um escopo que FOI declarado), nunca reportado como se fosse o mesmo motivo.
+    const message = boundary.code === FAILURE_CODES.NO_PATCH_SCOPE
+      ? 'Task Contract sem allowedPaths declarado — patch recusado (fail-closed)'
+      : 'Patch toca caminho fora do escopo autorizado';
+    issues.push({ code: boundary.code, message, violations: boundary.violations });
   }
 
   if (issues.length > 0) {

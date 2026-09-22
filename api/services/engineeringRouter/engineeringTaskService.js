@@ -55,6 +55,9 @@ async function createTask(input = {}, { createdBy = null, idempotencyKey = null 
       required_capabilities: classification.requiredCapabilities,
       allowed_paths: Array.isArray(input.allowedPaths) ? input.allowedPaths : [],
       forbidden_paths: Array.isArray(input.forbiddenPaths) ? input.forbiddenPaths : [],
+      // ER-V1-FINAL-003: nunca default true — só persiste true se o chamador setou
+      // explicitamente (ato deliberado, nunca herdado/inferido).
+      explicit_policy_authorization: input.explicitPolicyAuthorization === true,
       acceptance_criteria: Array.isArray(input.acceptanceCriteria) ? input.acceptanceCriteria : [],
       test_commands: Array.isArray(input.testCommands) ? input.testCommands : [],
       max_iterations: maxIterations,

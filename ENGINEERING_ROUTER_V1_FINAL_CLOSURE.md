@@ -124,3 +124,107 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   (o processo da API ganharia controle efetivo sobre o daemon Docker do host) — não aplicada
   sem confirmação explícita do usuário. Implementação e testes validados neste ambiente de
   desenvolvimento, onde o Docker é diretamente acessível ao processo Node.
+- commit: `342faddd`
+
+### ER-V1-FINAL-002 — Exact Promotion
+
+- RED reproduzido (achado real, não hipotético): `promoteValidatedPatch` provava exatidão só
+  com `git diff --stat` (não vazio) sobre a árvore de `git add -A` no workspace da TENTATIVA —
+  onde CODER/TESTE/REVIEW/REGRESSION/GOVERNANCE já rodaram de verdade. Reprodução ao vivo:
+  aplicado o patch validado, escrito um arquivo `INJECTED_BY_TEST_SIDE_EFFECT.txt` no workspace
+  DEPOIS do apply (simulando efeito colateral real de um testCommand), chamado
+  `promoteValidatedPatch` — resultado: `promoted:true`, e `git show --stat` no commit candidato
+  real confirmou os DOIS arquivos presentes (o do patch + o injetado), promovidos juntos sem
+  nenhum aviso.
+- fix: `computeExpectedTreeHash({baselineHead, diff, taskId})` (novo, em
+  `promotionService.js`) aplica o MESMO diff validado sobre o MESMO baseline, mas num workspace
+  LIMPO e descartável, materializado só para este cálculo (nunca tocado por
+  CODER/TESTE/REVIEW), produzindo `expectedTreeHash`. `promoteValidatedPatch` agora exige
+  `expectedTreeHash === validatedTreeHash` (a árvore do workspace real, onde os testes de fato
+  rodaram) ANTES de criar o commit candidato — qualquer divergência vira
+  `PROMOTION_TREE_CONTAMINATED` com a lista exata dos arquivos contaminantes (`git diff
+  --name-status`). Evidência persistida ampliada: `baselineTreeHash`, `expectedTreeHash`,
+  `candidateTreeHash`, `promotedTreeHash`, `fileSetHash` (hash do conjunto ordenado de arquivos
+  tocados), `promotionStatus`.
+- tests: `tests/integration/engineeringPromotionService.test.js` — 4 novos casos cobrindo os
+  cenários da missão: promoção legítima expõe `expectedTreeHash === candidateTreeHash` (A);
+  arquivo NOVO injetado fora do patch bloqueia com `PROMOTION_TREE_CONTAMINATED` (B); arquivo
+  EXISTENTE alterado fora do patch bloqueia (C); remoção de arquivo fora do patch bloqueia (D).
+  6/6 GREEN determinístico quando isolado, quando junto com os outros 5 testes de
+  promoção/E2E relacionados via `--runInBand`, e quando junto com as 34 suítes do Engineering
+  Router em modo padrão (paralelo).
+- evidence: gate estrutural `PROMOTION_EXPECTED_TREE_INDEPENDENT_COMPUTATION` +
+  `PROMOTION_EXACTNESS_ENFORCED_BEFORE_COMMIT` (prova que a checagem de contaminação acontece
+  ANTES do `commit-tree`, nunca depois) + `PROMOTION_EVIDENCE_TREE_HASHES_PERSISTED`. Runtime
+  evidence: item `EXACT_PATCH_PROMOTION` adicionado. `validate-engineering-router-v1.js` →
+  `STRUCTURAL_PASS`, 110 checks, 0 falhas.
+- status: GREEN
+- observação real (não escondida, não classificada como bug desta correção): ao rodar a
+  suíte COMPLETA do Engineering Router (34 arquivos) em modo paralelo padrão do Jest logo após
+  esta correção, `engineeringRouterFullLoopE2E.test.js` falhou de forma determinística (2/2
+  tentativas) com `EngineeringTask não encontrada`. Isolado, e também junto com as outras 5
+  suítes de promoção/E2E relacionadas via `--runInBand` (serial), o MESMO teste passa 100% das
+  vezes (verificado 2x cada). Causa raiz confirmada depois, rodando a suíte COMPLETA de 845
+  arquivos do projeto: `createWorkspace`/`createSnapshotCommit`
+  (`api/services/engineeringRouter/patchApplyService.js`, pré-existente desde ERV1-CLOSE-005,
+  não introduzido por esta correção) faz `git add -A` no REPOSITÓRIO PRINCIPAL compartilhado
+  para tirar o snapshot do estado atual — sob paralelismo pesado, um arquivo temporário criado
+  por OUTRO teste (`config/benchmarks/__testbXXXXXX.json`) pode ser removido por esse OUTRO
+  teste entre o `git status` interno e o `git add`, e o `add -A` falha com "unable to stat...
+  Arquivo ou diretório inexistente" (TOCTOU clássico sobre um recurso compartilhado — o
+  working tree do repositório principal). Isso é estrutural ao mecanismo de snapshot-do-repo-
+  compartilhado em si, não à lógica de Exact Promotion nem do Execution Sandbox — minha
+  correção apenas tornou `promoteValidatedPatch` um pouco mais lenta (mais um
+  workspace/worktree por chamada), ampliando a janela onde essa fragilidade pré-existente pode
+  se manifestar. Taxa de ocorrência observada: 1 falha em 845 suítes/1914 testes na rodada
+  completa. Registrado aqui com precisão em vez de escondido; a investigação e correção
+  definitiva (workspace de snapshot isolado do repositório principal, ou lock/retry sobre o
+  `git add -A` compartilhado) é o escopo exato do ER-V1-FINAL-009 (Full-Suite Isolation), mais
+  adiante nesta mesma missão — resolvida lá, não aqui, para seguir a ordem obrigatória de
+  blockers sem misturar escopos.
+- commit: `4ee21088`
+
+### ER-V1-FINAL-003 — Fail-Closed Scope
+
+- RED reproduzido (achado real): `checkPathBoundary` (`engine/engineeringRouter/pathBoundary.js`)
+  tratava `allowedPaths` vazio/ausente como "tudo permitido" — `checkPathBoundary(['frontend/src/
+  App.jsx', 'api/server.js'], {allowedPaths: []})` retornava `{ok:true}`. Confirmado também via
+  `validatePatch` real: um patch tocando `api/server.js` com `contract: {allowedPaths: [], risk:
+  'HIGH'}` retornava `{ok:true}` — nenhuma barreira de escopo para uma task HIGH sem nenhum
+  caminho declarado. `taskClassifier.js::inferScope` também classificava `allowedPaths=[]` como
+  escopo `'MEDIUM'` (não REPOSITORY_WIDE, não um alerta), reforçando o comportamento silencioso.
+- fix: `checkPathBoundary` agora trata `allowedPaths` vazio/ausente como `NO_PATCH_SCOPE`
+  (reject) sempre — independente de `forbiddenPaths` e do risco declarado. Única exceção:
+  `contract.scope === 'REPOSITORY_WIDE'` E `contract.explicitPolicyAuthorization === true`
+  (tratado como equivalente a `allowedPaths: ['**']`, ainda respeitando `forbiddenPaths`).
+  Novo campo persistido `explicit_policy_authorization` (migration
+  `20260922114725-add-explicit-policy-authorization.js`, `EngineeringTask` model, nunca default
+  true) — só fica `true` se o criador da task setar explicitamente no payload
+  (`engineeringTaskService.createTask`); propagado ao Task Contract em runtime via
+  `contractFromTask` (`engineeringRouterService.js`). `patchValidator.js` propaga o `code` exato
+  (`NO_PATCH_SCOPE` vs `PATCH_OUTSIDE_ALLOWED_SCOPE`) em vez de hardcodar um único motivo.
+- tests: `tests/unit/engineeringRouterFailClosedScope.test.js` (novo, 14/14 PASS) — cobre
+  exatamente os cenários exigidos pela missão: `allowedPaths=[]`/ausente rejeitado;
+  `allowedPaths` positivo restrito ao escopo declarado (permite dentro, rejeita fora);
+  REPOSITORY_WIDE sem autorização rejeitado; REPOSITORY_WIDE autorizado segue a policy (e ainda
+  respeita `forbiddenPaths`); `explicitPolicyAuthorization`/`scope` isolados um do outro (nenhum
+  dos dois basta sozinho); risk HIGH/CRITICAL/LOW sem allowedPaths sempre rejeitado (fail-closed
+  não depende do risco); risk CRITICAL com REPOSITORY_WIDE autorizado passa mesmo sem
+  allowedPaths. `tests/unit/engineeringRouterPathBoundary.test.js` atualizado (o teste antigo
+  que assumia "sem allowedPaths = tudo permitido" agora prova o oposto).
+- evidence: gate estrutural `PATH_BOUNDARY_FAIL_CLOSED_EMPTY_SCOPE` +
+  `NO_PATCH_SCOPE_FAILURE_CODE_DEFINED` + `EXPLICIT_POLICY_AUTHORIZATION_PERSISTED` (novos).
+  Runtime evidence: item `FAIL_CLOSED_SCOPE` adicionado. `validate-engineering-router-v1.js` →
+  `STRUCTURAL_PASS`, 114 checks, 0 falhas.
+- status: GREEN
+- nota de investigação (não regressão real — mesmo padrão de falso positivo já documentado em
+  ER-V1-FINAL-002): a primeira rodada de regressão completa (35 suítes) com o working tree
+  ainda sujo (10 arquivos deste blocker não commitados) reportou
+  `engineeringRouterModelRerouteE2E.test.js` terminando em `READY_FOR_PROMOTION` em vez de
+  `GREEN`, de forma determinística mesmo isolado — investigado e confirmado como o MESMO
+  mecanismo já descrito em ER-V1-FINAL-002 (`computeExpectedTreeHash` compara o workspace real,
+  que herda qualquer edição não commitada do repositório principal no momento do snapshot,
+  contra um baseline limpo a partir do HEAD real commitado — sob um working tree sujo de
+  desenvolvimento ativo, os dois divergem por definição). Confirmado desaparecendo por completo
+  depois do commit (working tree limpo) — ver regressão abaixo.
+- commit: (a seguir)

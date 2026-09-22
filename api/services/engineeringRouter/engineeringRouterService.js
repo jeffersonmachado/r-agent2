@@ -53,6 +53,10 @@ function contractFromTask(task) {
     allowedPaths: task.allowed_paths || [],
     forbiddenPaths: task.forbidden_paths || [],
     allowDeletes: false,
+    // ER-V1-FINAL-003: campos consumidos por checkPathBoundary para a única exceção válida ao
+    // fail-closed de allowedPaths vazio — nunca inferidos, sempre o valor exato persistido.
+    scope: task.scope,
+    explicitPolicyAuthorization: task.explicit_policy_authorization === true,
   };
 }
 

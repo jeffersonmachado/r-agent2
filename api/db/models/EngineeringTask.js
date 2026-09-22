@@ -31,6 +31,9 @@ function getEngineeringTaskModel() {
       required_capabilities: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       allowed_paths: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       forbidden_paths: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      // ER-V1-FINAL-003: nunca default true — autorização explícita e deliberada para
+      // scope=REPOSITORY_WIDE operar com allowedPaths vazio (equivalente a ['**']).
+      explicit_policy_authorization: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       acceptance_criteria: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       test_commands: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
       max_iterations: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 3 },

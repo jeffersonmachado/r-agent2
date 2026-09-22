@@ -116,6 +116,11 @@ const FAILURE_CODES = Object.freeze({
   // são só uma transição de status decorativa.
   REGRESSION_FAILED: 'REGRESSION_FAILED',
   GOVERNANCE_FAILED: 'GOVERNANCE_FAILED',
+  // ER-V1-FINAL-003: allowedPaths vazio/ausente NUNCA mais significa "tudo permitido" por
+  // omissão — fail-closed explícito, distinto de PATCH_OUTSIDE_ALLOWED_SCOPE (que é sobre um
+  // caminho específico fora de um escopo DECLARADO; NO_PATCH_SCOPE é sobre a AUSÊNCIA total de
+  // escopo declarado).
+  NO_PATCH_SCOPE: 'NO_PATCH_SCOPE',
 });
 
 const FINDING_SEVERITIES = Object.freeze(['BLOCKER', 'REGRESSION', 'POST_RELEASE']);
