@@ -2688,6 +2688,14 @@ async function runFromCli() {
     type,
     executionId,
     scenarioIds,
+    // O processo CLI é single-shot: fechar o singleton Sequelize a cada
+    // cenário (default de applyGovernanceIntegrations) derruba a conexão
+    // global usada por dbStateStore.js (checkpoints fire-and-forget) muito
+    // antes do processo terminar, causando
+    // "ConnectionManager.getConnection was called after the connection
+    // manager was closed!" nos cenários seguintes. O Node encerra a conexão
+    // sozinho ao sair — não precisa fechar por cenário aqui.
+    closeGovernanceDbAfterIntegration: false,
   });
   console.log(JSON.stringify(execution.summary, null, 2));
   if (execution.summary.goNoGo === 'NO_GO') {
