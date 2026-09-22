@@ -578,6 +578,7 @@ function main() {
     'tests/unit/engineeringRouterExecutionSandboxSecurity.test.js',
     'tests/unit/engineeringRouterFailClosedScope.test.js',
     'tests/integration/engineeringRouterMandatoryRuntimeGate.test.js',
+    'tests/unit/engineeringRouterTolerantTransition.test.js',
   ];
   for (const f of testFiles) {
     checks.push({ id: `TEST_${path.basename(f)}`, ok: exists(f), reason: `${f} ausente` });
@@ -651,6 +652,21 @@ function main() {
         && !/validate:engineering-router-v1 &&/.test(script);
     })(),
     reason: 'validate:governance-enforcement precisa chamar validate:engineering-router-v1:runtime (nunca a versão structural-only) — é a autoridade que scripts/governance/seal-release.sh usa para selar releases',
+  });
+  // ER-V1-FINAL-005 — Durable Resume: transitionTask(...).catch(()=>{}) cego (engole QUALQUER
+  // erro, não só a retomada idempotente esperada) nunca pode reaparecer no loop principal —
+  // substituído por tolerantTransition, que só tolera quando o estado real já é o destino, e
+  // propaga/fail-safe em qualquer outro caso.
+  checks.push({
+    id: 'NO_BLIND_TRANSITION_CATCH',
+    ok: !/transitionTask\([^)]*\)\.catch\(\(\)\s*=>\s*\{/.test(readText('api/services/engineeringRouter/engineeringRouterService.js')),
+    reason: 'engineeringRouterService.js não pode conter transitionTask(...).catch(() => {}) cego — usar tolerantTransition',
+  });
+  checks.push({
+    id: 'TOLERANT_TRANSITION_FAIL_SAFE_ON_TERMINAL',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /function tolerantTransition/, /TASK_ALREADY_TERMINAL_DURING_RESUME/, /TERMINAL_STATES\.includes\(current\.status\)/,
+    ]),
   });
   checks.push({
     id: 'LIVE_GOVERNANCE_CHECK_NEVER_REQUIRES_RUNTIME',

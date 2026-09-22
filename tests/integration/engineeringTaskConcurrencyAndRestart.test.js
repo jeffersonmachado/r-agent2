@@ -22,7 +22,7 @@
 
 const sequelizeModule = require('../../api/db/sequelize');
 const engineeringTaskService = require('../../api/services/engineeringRouter/engineeringTaskService');
-const { beginRun } = require('../../api/services/engineeringRouter/engineeringRouterService');
+const { beginRun, tolerantTransition } = require('../../api/services/engineeringRouter/engineeringRouterService');
 
 // ER-V1-FINAL-001: o loop real (beginRun) roda testCommands via `docker run` real; sob a
 // suíte completa em paralelo isso pode estourar o default de 10s do projeto.
@@ -164,5 +164,60 @@ describe('ERV1-CLOSE-009 — concorrência real (lockForRun com Postgres real)',
     const reloaded = await engineeringTaskService.getTask(task.id);
     expect(reloaded.status).toBe('READY_FOR_PROMOTION');
     expect(reloaded.locked_by).toBeFalsy();
+  });
+
+  // ER-V1-FINAL-005 — Durable Resume, com Postgres real (não mockado). Simula exatamente os
+  // cenários "process dies during CODING/TESTING/REVIEWING, restart" exigidos pela missão: o
+  // estado real da task no banco já reflete uma transição que um processo anterior completou
+  // antes de crashar — a retomada precisa reconhecer isso e continuar, nunca lançar
+  // INVALID_STATE_TRANSITION não tratado.
+  describe('ER-V1-FINAL-005 — retomada real após crash simulado (tolerantTransition, Postgres real)', () => {
+    test('processo morre logo APÓS persistir CODING; retomada (novo processo) tolera e não duplica a transição', async () => {
+      if (skipIfNoDatabase()) return;
+      const task = await makeTask('resume-after-coding-crash');
+      await engineeringTaskService.transitionTask(task.id, 'ROUTED');
+      // Simula o processo original completando a transição para CODING e então crashando —
+      // nunca chega a criar o attempt nem a transicionar adiante.
+      await engineeringTaskService.transitionTask(task.id, 'CODING');
+
+      // "Processo reiniciado" chama exatamente o que runOneAttempt chama no início — precisa
+      // tolerar (idempotência real), nunca lançar.
+      const resumed = await tolerantTransition(task.id, 'CODING');
+      expect(resumed.status).toBe('CODING');
+
+      const reloaded = await engineeringTaskService.getTask(task.id);
+      expect(reloaded.status).toBe('CODING');
+    });
+
+    test('processo morre logo APÓS persistir TESTING; retomada tolera sem regredir o estado', async () => {
+      if (skipIfNoDatabase()) return;
+      const task = await makeTask('resume-after-testing-crash');
+      await engineeringTaskService.transitionTask(task.id, 'ROUTED');
+      await engineeringTaskService.transitionTask(task.id, 'CODING');
+      await engineeringTaskService.transitionTask(task.id, 'TESTING');
+
+      const resumed = await tolerantTransition(task.id, 'TESTING');
+      expect(resumed.status).toBe('TESTING');
+    });
+
+    test('cancelamento concorrente durante CODING: retomada para TESTING detecta o estado terminal real e lança TASK_ALREADY_TERMINAL_DURING_RESUME (nunca opera sobre task morta)', async () => {
+      if (skipIfNoDatabase()) return;
+      const task = await makeTask('resume-detects-concurrent-cancel');
+      await engineeringTaskService.transitionTask(task.id, 'ROUTED');
+      await engineeringTaskService.transitionTask(task.id, 'CODING');
+      // Simula POST /tasks/:id/cancel concorrente enquanto o processo original ainda "achava"
+      // que estava em CODING.
+      await engineeringTaskService.transitionTask(task.id, 'CANCELLED');
+
+      await expect(tolerantTransition(task.id, 'TESTING')).rejects.toMatchObject({
+        code: 'TASK_ALREADY_TERMINAL_DURING_RESUME',
+        currentStatus: 'CANCELLED',
+      });
+
+      // A task real permanece CANCELLED — a retomada nunca a arrasta de volta para um estado
+      // ativo.
+      const reloaded = await engineeringTaskService.getTask(task.id);
+      expect(reloaded.status).toBe('CANCELLED');
+    });
   });
 });

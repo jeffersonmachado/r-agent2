@@ -262,4 +262,50 @@ aceita `STRUCTURAL_PASS` sozinho para selar release.
   `--runtime` no caminho ao vivo, não só a presença do padrão correto).
   `validate-engineering-router-v1.js` → `STRUCTURAL_PASS`, 117 checks, 0 falhas.
 - status: GREEN
+- commit: `986129a1`
+
+### ER-V1-FINAL-005 — Durable Resume
+
+- RED reproduzido (achado real, não hipotético): `engineeringRouterService.js` tinha 3
+  ocorrências de `transitionTask(taskId, X).catch(() => {})` no loop principal (CODING/TESTING/
+  REVIEWING), com o comentário "já pode estar em CODING numa retomada — não é fatal". O `.catch`
+  engolia QUALQUER erro de `transitionTask` — não só a retomada idempotente legítima (task já
+  exatamente no estado de destino após um crash anterior), mas também: task já em estado
+  TERMINAL por outro caminho (cancelamento concorrente via `POST /tasks/:id/cancel`, outro
+  runner tendo concluído), task removida do banco (`not_found`), erro real de conexão. O loop
+  continuava operando silenciosamente sobre uma task cujo estado real já não fazia sentido.
+- fix: nova função `tolerantTransition(taskId, toStatus)` substitui as 3 ocorrências. Só tolera
+  quando o estado ATUAL real (relido do banco via `getTask`, nunca a variável em memória do
+  loop) já é EXATAMENTE o destino pedido (retomada idempotente real). Se o estado real for
+  TERMINAL e diferente do destino, lança `TASK_ALREADY_TERMINAL_DURING_RESUME` com o status
+  real — nunca prossegue operando sobre uma task morta. Qualquer outro caso (estado
+  não-terminal inesperado, ou erro que não é `INVALID_STATE_TRANSITION`) propaga o erro
+  original sem mascarar. `runLockedTask` ganhou um handler para o novo código de erro,
+  devolvendo o status real (`{taskId, status: err.currentStatus, reasonCode:
+  'TASK_ALREADY_TERMINAL_DURING_RESUME'}`) em vez de deixar a exceção subir crua até o
+  fire-and-forget de `beginRun`.
+- escopo desta correção (deliberado, dentro do congelamento da missão): o mecanismo de lock
+  transacional real (`lockForRun`/`unlockTask`, `SELECT ... FOR UPDATE`, TTL de lock
+  órfão/stale recovery, rejeição de segunda chamada concorrente genuína com
+  `TASK_ALREADY_RUNNING`, proteção contra relock de task terminal com `TASK_TERMINAL`) e a
+  idempotência de contagem de tentativas (`iterationsUsed` calculado do histórico REAL de
+  `EngineeringAttempt` persistidos, nunca de um contador em memória) já existiam e já cobriam
+  corretamente concorrência genuína e continuidade de iteração — verificado por leitura
+  completa do código antes de decidir o escopo mínimo desta correção. O gap real e concreto era
+  exclusivamente a MÁSCARA de erro nos 3 pontos de retomada de estado da TASK; a Promotion
+  (`promotionService.js`) já é idempotente por design (sempre recomputa do estado atual real,
+  `branch -f` nunca duplica).
+- tests: `tests/unit/engineeringRouterTolerantTransition.test.js` (novo, 7/7 PASS, mocks
+  determinísticos) cobre as 4 decisões da função isoladamente: sucesso direto; retomada
+  tolerada; terminal diferente → erro com status real; erro não-INVALID_STATE_TRANSITION →
+  sempre propaga sem consultar `getTask`. `tests/integration/engineeringTaskConcurrencyAndRestart.test.js`
+  ganhou 3 novos casos com Postgres real simulando "process dies during CODING/TESTING,
+  restart" (persiste a transição real via `transitionTask`, depois chama `tolerantTransition`
+  como um processo reiniciado chamaria) e "cancelamento concorrente durante CODING" (a
+  retomada detecta `CANCELLED` real e nunca arrasta a task de volta para um estado ativo) — 8/8
+  PASS.
+- evidence: gate estrutural `NO_BLIND_TRANSITION_CATCH` (nunca mais um catch cego sobre
+  `transitionTask`) + `TOLERANT_TRANSITION_FAIL_SAFE_ON_TERMINAL` (novos).
+  `validate-engineering-router-v1.js` → `STRUCTURAL_PASS`, 120 checks, 0 falhas.
+- status: GREEN
 - commit: (a seguir)

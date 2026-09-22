@@ -43,6 +43,52 @@ const { FAILURE_CODES, TERMINAL_STATES } = require('../../../engine/engineeringR
 const { emitTaskStage } = require('./engineeringRouterEvents');
 const logger = require('../../utils/logger');
 
+/**
+ * ER-V1-FINAL-005 — Durable Resume.
+ *
+ * Achado real: um catch cego sobre transitionTask (sem checar o motivo real) aparecia em 3
+ * pontos do loop
+ * (CODING/TESTING/REVIEWING), com o comentário "já pode estar em CODING numa retomada — não é
+ * fatal". Isso é verdadeiro para o ÚNICO caso em que a transição falha porque a task JÁ está
+ * exatamente no estado de destino (idempotência real de retomada após crash) — mas o `.catch`
+ * engolia QUALQUER erro: uma task já em estado TERMINAL por outro caminho (cancelamento
+ * concorrente, corrida com outro runner), a task tendo sumido do banco (`not_found`), um erro
+ * real de conexão — tudo silenciosamente ignorado, e o loop seguia operando sobre uma task cujo
+ * estado real no banco já não fazia mais sentido.
+ *
+ * Substitui o `.catch` cego: só tolera a transição quando o estado ATUAL real (relido do
+ * banco, nunca a variável em memória) já é EXATAMENTE o destino pedido — todo o resto propaga.
+ */
+async function tolerantTransition(taskId, toStatus) {
+  try {
+    return await engineeringTaskService.transitionTask(taskId, toStatus);
+  } catch (err) {
+    if (err.code !== FAILURE_CODES.INVALID_STATE_TRANSITION) throw err;
+
+    const current = await engineeringTaskService.getTask(taskId);
+    if (!current) throw err;
+
+    if (current.status === toStatus) {
+      // Retomada real: um processo anterior já fez esta transição antes de crashar depois
+      // dela — idempotente, segue com o estado real já correto.
+      return current;
+    }
+
+    if (TERMINAL_STATES.includes(current.status)) {
+      // A task já terminou por outro caminho (cancelamento concorrente, outro runner) —
+      // nunca prossegue silenciosamente operando sobre uma task morta.
+      const terminalErr = new Error(`EngineeringTask já em estado terminal (${current.status}) durante tentativa de retomada para ${toStatus}`);
+      terminalErr.code = 'TASK_ALREADY_TERMINAL_DURING_RESUME';
+      terminalErr.currentStatus = current.status;
+      throw terminalErr;
+    }
+
+    // Estado real diferente do esperado e não-terminal: cenário não coberto pela retomada
+    // idempotente conhecida — propaga o erro original (nunca mascara).
+    throw err;
+  }
+}
+
 // Escopo canônico de credencial de IA do Engineering Router — nunca o tenant de quem chama a
 // API. Mesmo valor/env var já usado por `engineeringModelAvailabilityService.js` e
 // `engineeringAiInvoker.js` (autoridade única, não duplicada).
@@ -94,9 +140,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     return { outcome: 'FATAL', reasonCode: 'NO_QUALIFIED_CODER' };
   }
 
-  await engineeringTaskService.transitionTask(task.id, 'CODING').catch(() => {
-    // já pode estar em CODING numa retomada — não é fatal, apenas segue.
-  });
+  await tolerantTransition(task.id, 'CODING');
 
   const attempt = await engineeringTaskService.createAttempt(task.id, {
     status: 'CODING',
@@ -203,7 +247,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
       changedFiles,
     });
 
-    await engineeringTaskService.transitionTask(task.id, 'TESTING').catch(() => {});
+    await tolerantTransition(task.id, 'TESTING');
 
     const testCommands = task.test_commands || [];
     emitTaskStage(eventAudienceTenantId, task.id, {
@@ -260,7 +304,7 @@ async function runOneAttempt({ task, routingDecision, failureBundle, previousAtt
     }
 
     await engineeringTaskService.updateAttempt(attempt.id, { status: 'TESTED' });
-    await engineeringTaskService.transitionTask(task.id, 'REVIEWING').catch(() => {});
+    await tolerantTransition(task.id, 'REVIEWING');
 
     const reviewerSelection = routingDecision?.reviewer?.selected;
     if (!reviewerSelection) {
@@ -403,6 +447,13 @@ async function runLockedTask(task, { credentialScope, eventAudienceTenantId }) {
       if (current?.status === 'CANCELLED') {
         return { taskId, status: 'CANCELLED', reasonCode: 'CANCELLED_MID_RUN' };
       }
+    }
+    // ER-V1-FINAL-005: task já terminou por outro caminho (outro runner concluiu, cancelamento
+    // concorrente detectado por tolerantTransition) durante uma tentativa de retomada — o
+    // status real já é a fonte da verdade, nunca uma exceção não tratada subindo até o
+    // fire-and-forget de beginRun.
+    if (err.code === 'TASK_ALREADY_TERMINAL_DURING_RESUME') {
+      return { taskId, status: err.currentStatus, reasonCode: 'TASK_ALREADY_TERMINAL_DURING_RESUME' };
     }
     throw err;
   } finally {
@@ -647,4 +698,5 @@ module.exports = {
   runOneAttempt,
   runTask,
   beginRun,
+  tolerantTransition,
 };
