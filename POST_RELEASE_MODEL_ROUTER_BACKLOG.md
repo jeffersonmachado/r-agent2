@@ -76,6 +76,43 @@ com reroute real e evidência honesta), mas cada um é um hardening real a consi
   (ex.: `codingAttemptsUsed` vs. `reroutesUsed`) seria mais claro para quem está configurando a
   task, sem mudar o comportamento de segurança atual.
 
+## Achados da missão FINAL_SEAL (ER-V1-SEAL-005 — Current Model Policy)
+Registrado durante a investigação do RED real de ER-V1-SEAL-005 (modelos OpenAI desmentidos por
+evidência real ainda mapeados na allowlist). Classificado como POST_RELEASE_HARDENING — não é
+CLOSURE_BLOCKER da V1 porque a allowlist estática já é, hoje, a ÚNICA autoridade de elegibilidade
+de roteamento real (confirmado por leitura de `engineeringModelAvailabilityService.buildAvailableModels`),
+e o fix mínimo aplicado (remover os modelIds desmentidos da allowlist) já fecha o RED real sem
+depender deste item:
+- **Catálogo governado (`EngineeringModelCatalogEntry`/`modelCatalogService`, ER-V1-FINAL-008) é
+  write-only para fins de roteamento**: `reconcileDiscoveredModel` persiste
+  DISCOVERED/APPROVED/RETIRED/DENIED para auditoria, e `isEligibleForRisk` existe e é testado,
+  mas **nenhum código de produção lê o status persistido do catálogo para decidir elegibilidade**
+  — `buildAvailableModels` decide elegibilidade SOMENTE a partir da allowlist estática
+  (`modelCapabilities.js`) + `modelAvailabilityStore` (reativo, em memória, por processo) +
+  `providerModelDiscoveryCache` (proativo, em memória, por processo). Um status `DENIED`
+  persistido no catálogo (ex.: uma decisão humana de banir um modelo específico por
+  segurança/compliance) hoje **não bloquearia** esse modelo de continuar sendo roteado, e um
+  `RETIRED` persistido de uma sessão anterior é **esquecido a cada restart do processo** (o
+  filtro reativo em memória reaprende do zero). Não há hoje nenhuma rota/mecanismo para um
+  humano de fato setar `DENIED` (nenhum endpoint existe) — o estado é alcançável só via
+  reconciliação automática, então o gap é teórico até que um mecanismo de decisão humana seja
+  construído; mas se um `POST /engineering/model-catalog/:id/deny` (ou equivalente) for
+  adicionado no futuro sem TAMBÉM conectar o catálogo como fonte de leitura em
+  `buildAvailableModels`, a decisão de banimento seria completamente ignorada em produção.
+  Missão própria deveria: (a) decidir se vale ter um endpoint de decisão humana; (b) SE sim,
+  conectar `buildAvailableModels` para consultar `modelCatalogService.getCatalogEntry`/
+  `listCatalogEntries` e excluir candidatos `DENIED`/`RETIRED` persistidos, mesmo sem discovery
+  recente confirmando isso na memória do processo atual.
+- **Vocabulário de estados do catálogo diverge nominalmente da spec desta missão** (projeto usa
+  `UNCLASSIFIED`/`APPROVED`/`DENIED`; a spec de ER-V1-SEAL-005 pede
+  `CLASSIFICATION_PENDING`/`ELIGIBLE`/`DISABLED`) — mantido como está nesta missão (puro
+  vocabulário, sem mudança de comportamento, renomear é churn fora do escopo mínimo). Se uma
+  missão futura decidir alinhar o vocabulário literal, fazer como rename mecânico isolado
+  (migração de dado + constante + testes), nunca misturado com mudança de comportamento.
+- `openai:gpt-5.4-mini` permanece mapeado sem confirmação real (nem positiva, nem negativa) de
+  disponibilidade atual — nenhuma evidência refuta nem confirma. Uma missão de discovery real
+  (com credencial OpenAI real disponível) poderia confirmar/reclassificar.
+
 ## Regra de promoção
 Qualquer item desta lista só pode ser promovido a uma nova V-seguinte mediante nova missão com
 seu próprio escopo congelado, backlog e critério de aceite — nunca por ampliação silenciosa da
