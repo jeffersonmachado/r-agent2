@@ -22,7 +22,21 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn, execFileSync } = require('child_process');
 
-const ROOT = path.resolve(__dirname, '..', '..', '..');
+// ER-V1-SEALFIX-002 (Real Container Deployment) — achado real: este módulo roda DENTRO do
+// Engineering Runner (container separado, único com o Docker socket do host montado — ER-V1-
+// SEAL-003) e monta `ROOT/node_modules`/`ROOT/.git` via `docker run -v` executado pelo Docker
+// daemon do HOST. Um `ROOT` calculado por `__dirname` (caminho relativo a ONDE este arquivo foi
+// copiado dentro da imagem do runner, ex. `/app`) NUNCA é um caminho válido para o HOST montar —
+// o daemon procuraria `/app/.git` no filesystem do HOST, não do container, e falharia (ou,
+// pior, montaria algo coincidentalmente presente ali). Só é seguro por acidente quando o runner roda
+// como processo bare no mesmo host que o repositório real (dev, Jest — nunca o caso em
+// produção containerizada). `ENGINEERING_ROUTER_HOST_REPO_ROOT`, quando definida (produção:
+// aponta para o bind mount do checkout real do host, montado no MESMO caminho absoluto dentro
+// do container do runner), tem precedência — mesma env var e mesma convenção de
+// `contextBuilderService.js` (API), nunca uma segunda variável divergente.
+const ROOT = process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT
+  ? path.resolve(process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT)
+  : path.resolve(__dirname, '..', '..', '..');
 const SANDBOX_IMAGE = process.env.ENGINEERING_ROUTER_SANDBOX_IMAGE || 'r-agent2-engineering-router-sandbox:latest';
 const DEFAULT_MEMORY = process.env.ENGINEERING_ROUTER_SANDBOX_MEMORY || '512m';
 const DEFAULT_PIDS_LIMIT = process.env.ENGINEERING_ROUTER_SANDBOX_PIDS_LIMIT || '64';

@@ -983,6 +983,54 @@ function main() {
     ]),
   });
 
+  // ER-V1-SEALFIX-002 (Real Container Deployment) — achado real, confirmado com Docker real
+  // (build + run de dois containers separados): `ROOT` calculado por `path.resolve(__dirname,
+  // ...)` em executionSandbox.js/contextBuilderService.js resolve um caminho relativo a ONDE o
+  // arquivo está fisicamente dentro da imagem do container (ex. `/app`) — mas o Engineering
+  // Runner monta volumes via `docker run -v` executado pelo Docker daemon do HOST (socket), que
+  // resolve esses caminhos contra o filesystem do HOST, nunca do container. Sem
+  // `ENGINEERING_ROUTER_HOST_REPO_ROOT`, todo `docker run -v <ROOT>/...:...` de produção
+  // containerizada apontaria para um caminho inexistente/errado no host.
+  checks.push({
+    id: 'SANDBOX_ROOT_CONFIGURABLE_VIA_HOST_REPO_ROOT_ENV',
+    ...checkFileContains('api/services/engineeringRouter/executionSandbox.js', [
+      /ENGINEERING_ROUTER_HOST_REPO_ROOT/,
+    ]),
+  });
+  checks.push({
+    id: 'CONTEXT_BUILDER_ROOT_CONFIGURABLE_VIA_HOST_REPO_ROOT_ENV',
+    ...checkFileContains('api/services/engineeringRouter/contextBuilderService.js', [
+      /ENGINEERING_ROUTER_HOST_REPO_ROOT/,
+    ]),
+  });
+  checks.push({
+    id: 'COMPOSE_BIND_MOUNTS_HOST_REPO_AND_WORKSPACE_IDENTICAL_PATH',
+    ...checkFileContains('docker-compose.prod.yml', [
+      /\$\{ENGINEERING_ROUTER_HOST_REPO_ROOT\}:\$\{ENGINEERING_ROUTER_HOST_REPO_ROOT\}/,
+      /\$\{ENGINEERING_ROUTER_WORKSPACE_ROOT\}:\$\{ENGINEERING_ROUTER_WORKSPACE_ROOT\}/,
+    ]),
+  });
+  checks.push({
+    id: 'ENGINEERING_RUNNER_DOCKERFILE_COPIES_ALL_REQUIRED_MODULES',
+    // Achado real: o Dockerfile copiava só executionSandbox.js/secretRedaction.js — faltavam
+    // commandPolicy.js/constants.js/safeEngineeringEnvironment.js (dependências do
+    // ER-V1-SEALFIX-003), só detectável rodando o runner num CONTAINER real (MODULE_NOT_FOUND
+    // ao subir), nunca como processo bare no host (onde o require() sempre resolve contra o
+    // monorepo real).
+    ...checkFileContains('services/engineering-runner/Dockerfile', [
+      /COPY api\/services\/engineeringRouter\/executionSandbox\.js/,
+      /COPY api\/services\/engineeringRouter\/safeEngineeringEnvironment\.js/,
+      /COPY engine\/engineeringRouter\/secretRedaction\.js/,
+      /COPY engine\/engineeringRouter\/commandPolicy\.js/,
+      /COPY engine\/engineeringRouter\/constants\.js/,
+    ]),
+  });
+  checks.push({
+    id: 'ENGINEERING_RUNNER_COMPOSE_DEPLOYMENT_E2E_TEST_EXISTS',
+    ok: exists('tests/integration/engineeringRunnerComposeDeploymentE2E.test.js'),
+    reason: 'teste E2E real de deployment via Docker (dois containers separados, sem Jest-no-host/runner-no-host/Docker-no-host) ausente',
+  });
+
   // ER-V1-SEAL-002 — Full Durable Resume: `tolerantTransition` sozinho só evitava erro de
   // re-transição para o MESMO estado — nunca evitava re-execução de efeito colateral (model
   // call, regression, governance, promotion) num resume após crash. `EngineeringOperation` +

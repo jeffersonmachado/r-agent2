@@ -16,7 +16,20 @@ const { applySecretPolicy } = require('../../../engine/engineeringRouter/secretR
 const { globToRegExp, normalize } = require('../../../engine/engineeringRouter/pathBoundary');
 const logger = require('../../utils/logger');
 
-const ROOT = path.resolve(__dirname, '..', '..', '..');
+// ER-V1-SEALFIX-002 (Real Container Deployment) — achado real: `path.resolve(__dirname, ...)`
+// resolve a raiz do monorepo relativa a ONDE ESTE ARQUIVO está fisicamente no filesystem de
+// QUEM o executa. Isso é correto quando o processo roda direto no host (dev, Jest) — mas quebra
+// em produção containerizada: o container da API não necessariamente monta o checkout do
+// projeto no MESMO caminho absoluto que o HOST usa, e o Engineering Runner (container SEPARADO,
+// que fala com o Docker daemon do HOST via socket) precisa que os caminhos que ele passa em
+// `docker run -v <origem>:<destino>` sejam caminhos REAIS DO HOST — nunca um caminho que só faz
+// sentido de dentro do container que o calculou. `ENGINEERING_ROUTER_HOST_REPO_ROOT`, quando
+// definida (produção containerizada: aponta para o bind mount do checkout real do host,
+// montado no MESMO caminho absoluto em api/engineering-runner), tem precedência; sem ela,
+// mantém o comportamento atual (dev/Jest, processo rodando direto no host).
+const ROOT = process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT
+  ? path.resolve(process.env.ENGINEERING_ROUTER_HOST_REPO_ROOT)
+  : path.resolve(__dirname, '..', '..', '..');
 const DEFAULT_MAX_TOTAL_BYTES = Number(process.env.ENGINEERING_ROUTER_CONTEXT_MAX_BYTES || 60 * 1024);
 const DEFAULT_MAX_FILES = Number(process.env.ENGINEERING_ROUTER_CONTEXT_MAX_FILES || 20);
 const MAX_DIR_ENTRIES_WALKED = 5000;

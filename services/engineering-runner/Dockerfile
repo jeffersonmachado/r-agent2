@@ -29,7 +29,14 @@ COPY services/engineering-runner/src ./services/engineering-runner/src
 # Código provado da plataforma, REUSADO (não forkado) — caminhos relativos idênticos aos do
 # monorepo (mesmo padrão de services/mcp-research/Dockerfile).
 COPY api/services/engineeringRouter/executionSandbox.js ./api/services/engineeringRouter/executionSandbox.js
+COPY api/services/engineeringRouter/safeEngineeringEnvironment.js ./api/services/engineeringRouter/safeEngineeringEnvironment.js
 COPY engine/engineeringRouter/secretRedaction.js ./engine/engineeringRouter/secretRedaction.js
+# ER-V1-SEALFIX-003 (Runner Trust Boundary): commandPolicy.js — revalidação independente de
+# executable/args no runner (nunca confia que a API já validou). Achado real: faltava aqui até
+# a validação ER-V1-SEALFIX-002 rodar o runner num container de verdade — em bare host (Jest) o
+# `require()` sempre resolvia contra o monorepo real, mascarando a ausência deste COPY.
+COPY engine/engineeringRouter/commandPolicy.js ./engine/engineeringRouter/commandPolicy.js
+COPY engine/engineeringRouter/constants.js ./engine/engineeringRouter/constants.js
 
 EXPOSE 8090
 

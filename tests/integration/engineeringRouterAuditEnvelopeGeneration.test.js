@@ -85,10 +85,11 @@ describe('ER-V1-FINAL-010 — geração real do envelope + verificação offline
     expect(boundResult.ok).toBe(true);
     expect(boundResult.packageBindingVerifiable).toBe(true);
 
-    // Seal ainda não pode ser TRUE nesta missão: ER-V1-SEALFIX-002/003/004 seguem PENDING até
-    // serem implementados e comprovados com evidência real (nunca fabricado como PASS antes
-    // da hora).
-    expect(manifest.engineeringRouterV1Sealed).toBe(false);
+    // ER-V1-SEALFIX-001..004 GREEN — cada um com evidência real própria (testes adversariais,
+    // crash/restart real, Docker Compose real com dois containers). Nunca fabricado: o valor
+    // aqui é derivado de SEALFIX_BACKLOG (todos 'PASS'), recalculado independentemente pelo
+    // próprio verifier em ENGINEERING_ROUTER_V1_SEALED_RECOMPUTED_MATCHES.
+    expect(manifest.engineeringRouterV1Sealed).toBe(true);
   });
 
   test('gerar sem evidência de runtime fresca falha explicitamente (nunca certifica silenciosamente)', () => {

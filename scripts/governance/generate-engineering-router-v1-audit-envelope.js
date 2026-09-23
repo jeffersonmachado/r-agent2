@@ -118,7 +118,7 @@ const SEAL_BACKLOG = Object.freeze([
 // CLOSURE_BACKLOG/SEAL_BACKLOG (que já estão fechados e não são reabertos aqui).
 const SEALFIX_BACKLOG = Object.freeze([
   { id: 'ER-V1-SEALFIX-001', title: 'Artifact-to-Source Binding', commit: null, status: 'PASS' },
-  { id: 'ER-V1-SEALFIX-002', title: 'Real Container Deployment', commit: null, status: 'PENDING' },
+  { id: 'ER-V1-SEALFIX-002', title: 'Real Container Deployment', commit: null, status: 'PASS' },
   { id: 'ER-V1-SEALFIX-003', title: 'Runner Trust Boundary', commit: null, status: 'PASS' },
   { id: 'ER-V1-SEALFIX-004', title: 'Phase-Aware Durable Resume', commit: null, status: 'PASS' },
 ]);

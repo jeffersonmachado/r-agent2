@@ -36,6 +36,11 @@ services:
       # fala com o Engineering Runner (serviço separado, abaixo) via HTTP interno autenticado.
       ENGINEERING_RUNNER_URL: ${ENGINEERING_RUNNER_URL:-http://engineering-runner:8090}
       ENGINEERING_RUNNER_TOKEN: "${ENGINEERING_RUNNER_TOKEN:?ENGINEERING_RUNNER_TOKEN obrigatória}"
+      # ER-V1-SEALFIX-002 (Real Container Deployment) — ver comentário completo em
+      # docker-compose.prod.yml. MESMO caminho de HOST nos dois serviços, bind-mount literal
+      # (nunca volume nomeado) — o Docker daemon do HOST precisa enxergar os mesmos bytes.
+      ENGINEERING_ROUTER_WORKSPACE_ROOT: "${ENGINEERING_ROUTER_WORKSPACE_ROOT:?ENGINEERING_ROUTER_WORKSPACE_ROOT obrigatória (caminho real do HOST, ver docs/governance ER-V1-SEALFIX-002)}"
+      ENGINEERING_ROUTER_HOST_REPO_ROOT: "${ENGINEERING_ROUTER_HOST_REPO_ROOT:?ENGINEERING_ROUTER_HOST_REPO_ROOT obrigatória (checkout real do monorepo no HOST, ver docs/governance ER-V1-SEALFIX-002)}"
       # PostgreSQL
       # DOCKER_DATABASE_URL (não DATABASE_URL): mesmo motivo do REDIS_URL
       # acima — o .env de modo local define DATABASE_URL apontando para
@@ -97,6 +102,9 @@ services:
       # Token RPA canônico do workspace (excluído da imagem via .dockerignore):
       # montado em runtime para que /auth/rpa/login funcione no stack local.
       - ./core/rpa/config/rpa-token.json:/app/core/rpa/config/rpa-token.json:ro
+      # ER-V1-SEALFIX-002 — ver comentário completo em docker-compose.prod.yml.
+      - ${ENGINEERING_ROUTER_HOST_REPO_ROOT}:${ENGINEERING_ROUTER_HOST_REPO_ROOT}
+      - ${ENGINEERING_ROUTER_WORKSPACE_ROOT}:${ENGINEERING_ROUTER_WORKSPACE_ROOT}
 
   # ER-V1-SEAL-003 (Dedicated Execution Runner) — DEVELOPMENT ONLY: único serviço com acesso ao
   # Docker socket do host. Ver comentário completo em docker-compose.prod.yml.
@@ -110,8 +118,12 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       ENGINEERING_RUNNER_PORT: 8090
       ENGINEERING_RUNNER_TOKEN: "${ENGINEERING_RUNNER_TOKEN:?ENGINEERING_RUNNER_TOKEN obrigatória}"
+      # ER-V1-SEALFIX-002 — ver comentário completo em docker-compose.prod.yml.
+      ENGINEERING_ROUTER_WORKSPACE_ROOT: "${ENGINEERING_ROUTER_WORKSPACE_ROOT:?ENGINEERING_ROUTER_WORKSPACE_ROOT obrigatória (caminho real do HOST, ver docs/governance ER-V1-SEALFIX-002)}"
+      ENGINEERING_ROUTER_HOST_REPO_ROOT: "${ENGINEERING_ROUTER_HOST_REPO_ROOT:?ENGINEERING_ROUTER_HOST_REPO_ROOT obrigatória (checkout real do monorepo no HOST, ver docs/governance ER-V1-SEALFIX-002)}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${ENGINEERING_ROUTER_WORKSPACE_ROOT}:${ENGINEERING_ROUTER_WORKSPACE_ROOT}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8090/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]

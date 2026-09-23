@@ -44,6 +44,17 @@ services:
       # interno autenticado. DEVELOPMENT ONLY: só usado pelo Engineering Model Router V1.
       ENGINEERING_RUNNER_URL: ${ENGINEERING_RUNNER_URL:-http://engineering-runner:8090}
       ENGINEERING_RUNNER_TOKEN: "${ENGINEERING_RUNNER_TOKEN:?ENGINEERING_RUNNER_TOKEN obrigatória}"
+      # ER-V1-SEALFIX-002 (Real Container Deployment): achado real — sem isto, `createWorkspace`
+      # (executado neste container) materializa workspaces sob o /tmp INTERNO deste container,
+      # invisível ao Docker daemon do HOST (que o Engineering Runner usa via socket para montar
+      # `-v <cwd>:<cwd>` no sandbox). MESMO valor de path nos dois serviços (api E
+      # engineering-runner), bind-mount idêntico no host (ver `volumes:` abaixo) — nunca um volume
+      # nomeado (o caminho precisa ser literal e resolvível pelo HOST, não uma abstração do
+      # Docker). `ENGINEERING_ROUTER_HOST_REPO_ROOT` é o checkout real do monorepo no HOST
+      # (mesmo bind, mesmo caminho) — sem ele, `git worktree add` deste container aponta para um
+      # `.git` que não existe do ponto de vista do HOST/do outro container.
+      ENGINEERING_ROUTER_WORKSPACE_ROOT: "${ENGINEERING_ROUTER_WORKSPACE_ROOT:?ENGINEERING_ROUTER_WORKSPACE_ROOT obrigatória (caminho real do HOST, ver docs/governance ER-V1-SEALFIX-002)}"
+      ENGINEERING_ROUTER_HOST_REPO_ROOT: "${ENGINEERING_ROUTER_HOST_REPO_ROOT:?ENGINEERING_ROUTER_HOST_REPO_ROOT obrigatória (checkout real do monorepo no HOST, ver docs/governance ER-V1-SEALFIX-002)}"
       # PostgreSQL - Configuração de produção
       # PROD_DATABASE_URL dedicada: o DATABASE_URL do .env de dev aponta para
       # localhost e vazaria para o container; credenciais alinhadas ao serviço
@@ -116,6 +127,11 @@ services:
       - r-agent2-pbx-recordings-data:/app/api/data/pbx-recordings
       # Include de contextos realtime por tenant: a API escreve, o asterisk le.
       - r-agent2-pbx-asterisk-conf:/etc/asterisk/conf
+      # ER-V1-SEALFIX-002 — bind mounts (caminho HOST idêntico nos dois lados, nunca volume
+      # nomeado): o Engineering Runner precisa enxergar os MESMOS bytes, no MESMO caminho
+      # absoluto, que o Docker daemon do HOST resolve ao montar o sandbox. DEVELOPMENT ONLY.
+      - ${ENGINEERING_ROUTER_HOST_REPO_ROOT}:${ENGINEERING_ROUTER_HOST_REPO_ROOT}
+      - ${ENGINEERING_ROUTER_WORKSPACE_ROOT}:${ENGINEERING_ROUTER_WORKSPACE_ROOT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -307,6 +323,17 @@ services:
       NODE_ENV: production
       ENGINEERING_RUNNER_PORT: 8090
       ENGINEERING_RUNNER_TOKEN: "${ENGINEERING_RUNNER_TOKEN:?ENGINEERING_RUNNER_TOKEN obrigatória}"
+      # ER-V1-SEALFIX-002 — MESMOS valores/caminhos que o serviço `api` usa (ver comentário lá).
+      # `ENGINEERING_ROUTER_HOST_REPO_ROOT` é passado como STRING para
+      # `executionSandbox.js::ROOT` — os `docker run -v <ROOT>/...:...` que ele monta são
+      # resolvidos pelo Docker daemon do HOST (via o socket abaixo), nunca pelo filesystem deste
+      # container; por isso o valor precisa ser um caminho real do HOST, idêntico ao usado por
+      # `api`. `ENGINEERING_ROUTER_WORKSPACE_ROOT` também precisa estar bind-mountada NESTE
+      # container (não só ser uma string) — `ensureWorkspaceReadableBySandbox` roda `find`/`chmod`
+      # diretamente no processo do runner, e o validador de fronteira do runner (ER-V1-SEALFIX-003)
+      # resolve `cwd` por `fs.realpathSync` real.
+      ENGINEERING_ROUTER_WORKSPACE_ROOT: "${ENGINEERING_ROUTER_WORKSPACE_ROOT:?ENGINEERING_ROUTER_WORKSPACE_ROOT obrigatória (caminho real do HOST, ver docs/governance ER-V1-SEALFIX-002)}"
+      ENGINEERING_ROUTER_HOST_REPO_ROOT: "${ENGINEERING_ROUTER_HOST_REPO_ROOT:?ENGINEERING_ROUTER_HOST_REPO_ROOT obrigatória (checkout real do monorepo no HOST, ver docs/governance ER-V1-SEALFIX-002)}"
     expose:
       - "8090"
     volumes:
@@ -316,6 +343,10 @@ services:
       # isolamento de rede (só rap-internal, sem egress) e a autenticação Bearer obrigatória
       # limitam quem pode chegar a este serviço.
       - /var/run/docker.sock:/var/run/docker.sock
+      # ER-V1-SEALFIX-002 — MESMO bind mount, MESMO caminho absoluto do HOST que o serviço `api`
+      # usa (nunca um caminho diferente — o Docker daemon do HOST precisa enxergar exatamente o
+      # mesmo conteúdo pelo mesmo path quando este container pede `docker run -v`).
+      - ${ENGINEERING_ROUTER_WORKSPACE_ROOT}:${ENGINEERING_ROUTER_WORKSPACE_ROOT}
     restart: unless-stopped
     logging: *default-logging
     networks:
