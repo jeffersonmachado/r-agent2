@@ -142,7 +142,22 @@ step "5. Verificando dist/ raiz sem artefatos inesperados..."
 # (governance/release-state-machine.js): candidate/ materializa o candidato de
 # primeira classe (artifactType=CANDIDATE) e archive/ preserva o release
 # publicado anterior (retenção independente do run corrente). Não são sujeira.
-UNEXPECTED="$(ls "$DIST_DIR/" 2>/dev/null | grep -Ev '^(release|governance|signatures|verifier|ci-logs|candidate|archive)$' | grep -Ev '^r-agent2-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.(zip|manifest\.json)$' || true)"
+#
+# `engineering-router-v1-audit-envelope/` (ER-V1-SEAL-004 / ER-V1-SEALFIX-001) é
+# o envelope de auditoria do Engineering Model Router V1 — deliverable
+# self-proving, produzido pelo produtor OFICIAL
+# (`npm run engineering-router:audit-envelope:generate`) e CONSUMIDO pelo
+# empacotamento oficial: `scripts/generate-zip.sh`
+# (`copy_engineering_router_v1_audit_envelope`) copia
+# `dist/engineering-router-v1-audit-envelope/*.json` para
+# `<pacote>/evidence/engineering-router-v1/` dentro do ZIP entregue, que é o que
+# permite ao verificador OFFLINE recomputar o fingerprint do código entregue e
+# provar `código == fingerprint certificado`. Sem esta entrada a release não
+# consegue entregar a própria prova (medido 2026-09-23: o candidato selava o ZIP
+# CORRETO e era bloqueado aqui por `CHECK-DIST-CLEAN`, tornando o requisito de
+# artefato self-proving impossível de satisfazer). Não é sujeira: é artefato
+# governado de release, content-addressed (hashes.json) e auditável offline.
+UNEXPECTED="$(ls "$DIST_DIR/" 2>/dev/null | grep -Ev '^(release|governance|signatures|verifier|ci-logs|candidate|archive|engineering-router-v1-audit-envelope)$' | grep -Ev '^r-agent2-[0-9]{8}-[0-9]{6}(-[a-z0-9-]+)?\.(zip|manifest\.json)$' || true)"
 if [[ -n "$UNEXPECTED" ]]; then
   fail "Arquivos/dirs inesperados na raiz de dist/: $(echo "$UNEXPECTED" | tr '\n' ' ')"
 else

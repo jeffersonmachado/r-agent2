@@ -30,17 +30,45 @@
         "confidence": 0.5842524667968161,
         "chunksFound": 5,
         "timestamp": "2026-09-23T20:49:46.664622"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-09-23T21:27:45.999996"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-23T21:29:52.289238"
+      },
+      {
+        "query": "QASEG20260923213227 horário de atendimento jabuti xadrez lagoa sereia horário atendimento jabuti",
+        "success": true,
+        "confidence": 0.6624793369746946,
+        "chunksFound": 10,
+        "timestamp": "2026-09-23T21:32:30.954615"
+      },
+      {
+        "query": "QASEG20260923213227 horário de atendimento jabuti xadrez lagoa sereia horário atendimento jabuti",
+        "success": true,
+        "confidence": 0.6457200012298041,
+        "chunksFound": 10,
+        "timestamp": "2026-09-23T21:32:32.544604"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 4,
-    "successfulQueries": 4,
+    "totalQueries": 8,
+    "successfulQueries": 8,
     "failedQueries": 0,
-    "avgConfidence": 0.23585057710357704,
-    "lastUpdated": "2026-09-23T20:49:46.664590"
+    "avgConfidence": 0.3844830949468667,
+    "lastUpdated": "2026-09-23T21:32:32.544584"
   },
   "config": {
     "minScore": 0.45,
@@ -53,5 +81,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-09-23T20:49:46.664907"
+  "updatedAt": "2026-09-23T21:32:32.544764"
 }
