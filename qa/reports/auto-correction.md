@@ -1,6 +1,6 @@
 # Auto-Correção Controlada — RAP
 
-**Gerado em:** 2026-09-11T01:09:13.528Z
+**Gerado em:** 2026-09-23T00:18:25.881Z
 **Modo:** patch-controlled
 **Dry-run:** SIM (nenhuma alteração aplicada)
 
@@ -13,8 +13,8 @@
 | Patch executions | 0 |
 | Planos promovidos | 0 |
 | Planos rejeitados | 0 |
-| Stability score before | 100 |
-| Stability score after | 100 |
+| Stability score before | 89.72 |
+| Stability score after | 89.72 |
 
 ## Pipeline de Learning
 

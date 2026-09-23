@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-22T08-41-08-295Z",
+  "executionId": "mesh-20260922234257-5ys1mx",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-09-22T08-41-08-295Z",
+    "executionId": "mesh-20260922234257-5ys1mx",
     "tenantId": "system",
-    "timestamp": "2026-09-22T08:41:08.295Z",
+    "timestamp": "2026-09-22T23:45:44.458Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,13 +31,13 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 133,
+    "passed": 140,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
-    "flaky": 11,
+    "flaky": 4,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
@@ -81,13 +81,13 @@
         "total": 2
       },
       "core": {
-        "passed": 83,
+        "passed": 86,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 7,
+        "flaky": 4,
         "total": 90
       },
       "fitness": {
@@ -101,23 +101,23 @@
         "total": 15
       },
       "food": {
-        "passed": 2,
+        "passed": 4,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 2,
+        "flaky": 0,
         "total": 4
       },
       "market": {
-        "passed": 2,
+        "passed": 3,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 1,
+        "flaky": 0,
         "total": 3
       },
       "services": {
@@ -151,13 +151,13 @@
         "total": 1
       },
       "pbx": {
-        "passed": 2,
+        "passed": 3,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 1,
+        "flaky": 0,
         "total": 3
       },
       "workspace": {
@@ -174,43 +174,17 @@
     "goNoGo": "NO_GO",
     "reasons": [
       "CRITICAL_DOMAIN_FAILED:core",
-      "CRITICAL_DOMAIN_FAILED:pbx",
-      "BASELINE_PASS_RATE_REGRESSION",
-      "BASELINE_BLOCKING_REGRESSION"
+      "BASELINE_PASS_RATE_REGRESSION"
     ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
       "core": {
-        "total": 7,
-        "blocking": 2,
-        "byType": {
-          "flaky": 7
-        },
-        "successRate": 0.9222222222222223
-      },
-      "food": {
-        "total": 2,
-        "blocking": 1,
-        "byType": {
-          "flaky": 2
-        },
-        "successRate": 0.5
-      },
-      "market": {
-        "total": 1,
+        "total": 4,
         "blocking": 0,
         "byType": {
-          "flaky": 1
+          "flaky": 4
         },
-        "successRate": 0.6666666666666666
-      },
-      "pbx": {
-        "total": 1,
-        "blocking": 1,
-        "byType": {
-          "flaky": 1
-        },
-        "successRate": 0.6666666666666666
+        "successRate": 0.9555555555555556
       },
       "beauty": {
         "total": 0,
@@ -236,6 +210,18 @@
         "byType": {},
         "successRate": 1
       },
+      "food": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "market": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "services": {
         "total": 0,
         "blocking": 0,
@@ -254,6 +240,12 @@
         "byType": {},
         "successRate": 1
       },
+      "pbx": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
       "workspace": {
         "total": 0,
         "blocking": 0,
@@ -262,46 +254,34 @@
       }
     },
     "failuresByType": {
-      "flaky": 11
+      "flaky": 4
     },
     "topErrors": [
       {
-        "message": "401 Unauthorized: Token inválido",
-        "count": 6
+        "message": "Tutor não respondeu com conteúdo disponível",
+        "count": 1
       },
       {
         "message": "500 Internal Server Error: Provider de IA 'groq' indisponível (circuit breaker aberto).",
         "count": 1
       },
       {
-        "message": "Agente supervisor seed não encontrado para atribuição de role",
+        "message": "Documento não foi indexado dentro do tempo esperado",
         "count": 1
       },
       {
-        "message": "/server/restart anônimo deveria ser 401, veio 403",
-        "count": 1
-      },
-      {
-        "message": "voice/metrics sem X-Tenant-Id retornou 200 em vez de 403",
-        "count": 1
-      },
-      {
-        "message": "[pbx-voice-tts-asr-smoke] FAIL click2call_not_originated:failed",
+        "message": "Pagina /tenants deveria negar acesso ao papel da sessão (RBAC), mas renderizou",
         "count": 1
       }
     ],
-    "blockingDomains": [
-      "core",
-      "food",
-      "pbx"
-    ],
+    "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-22T08-41-08-295Z",
-      "startedAt": "2026-09-22T08:41:08.295Z",
+      "executionId": "mesh-20260922234257-5ys1mx",
+      "startedAt": "2026-09-22T23:45:44.458Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-22T09:02:10.012Z",
+      "promotedAt": "2026-09-23T00:18:06.650Z",
       "registryTotal": 144,
       "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
@@ -309,16 +289,14 @@
   },
   "reasons": [
     "CRITICAL_DOMAIN_FAILED:core",
-    "CRITICAL_DOMAIN_FAILED:pbx",
-    "BASELINE_PASS_RATE_REGRESSION",
-    "BASELINE_BLOCKING_REGRESSION"
+    "BASELINE_PASS_RATE_REGRESSION"
   ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-22T08-41-08-295Z",
-    "startedAt": "2026-09-22T08:41:08.295Z",
+    "executionId": "mesh-20260922234257-5ys1mx",
+    "startedAt": "2026-09-22T23:45:44.458Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-22T09:02:10.012Z",
+    "promotedAt": "2026-09-23T00:18:06.650Z",
     "registryTotal": 144,
     "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
@@ -327,5 +305,5 @@
   "sourceFingerprint": "dff0317246365e259edb1b22a2da5b4790c1937b1c19966b9730651da2d21f73",
   "sourceCommit": "a76204e68029bc9a82bbb879ebdbd1d264eb0fb8",
   "sourceTree": "170856eabc6c3373dba1113f22714533e9797be5",
-  "generatedAt": "2026-09-22T09:02:10.013Z"
+  "generatedAt": "2026-09-23T00:18:06.651Z"
 }

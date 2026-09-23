@@ -1,21 +1,23 @@
 # Release Gate — Decisão
 
-**Data:** 2026-09-11T01:09:13.524Z
-**Decisão:** ✅ GO — RELEASE APROVADO
-**Score de Estabilidade:** 100
+**Data:** 2026-09-23T00:18:25.870Z
+**Decisão:** ❌ NO_GO — RELEASE BLOQUEADO
+**Score de Estabilidade:** 89.72
 
-## Sem Bloqueadores ✅
+## Bloqueadores (1)
+
+- ❌ qa_mesh_no_go
 
 
 ## Checks Executados
 
 | Check | Status | Detalhe |
 |---|---|---|
-| stability | ✅ | score: 100 |
+| stability | ✅ | score: 89.72 |
 | checkpoints | ✅ | failures: 0 |
-| mesh | ✅ | {"status":"GO","passed":true} |
+| mesh | ❌ | {"status":"NO_GO","passed":false} |
 | replay | ✅ | {"executed":true,"passed":true} |
-| regression | ✅ | {"previousScore":null,"currentScore":100,"delta":null,"maxAllowedDelta":5,"passe |
+| regression | ✅ | {"previousScore":null,"currentScore":89.72,"delta":null,"maxAllowedDelta":5,"pas |
 | evidence | ✅ | {"passed":true,"missing":[],"corrupted":[]} |
 | pipelineSteps | ✅ | {"total":7,"passed":7,"failed":0,"failedNames":[],"allPassed":true} |
 

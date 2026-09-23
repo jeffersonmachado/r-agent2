@@ -1,22 +1,32 @@
 {
   "snapshot": {
-    "executionId": "mesh-20260911003113-iji3vq",
-    "generatedAt": "2026-09-11T01:09:13.328Z",
+    "executionId": "mesh-20260922234257-5ys1mx",
+    "generatedAt": "2026-09-23T00:18:25.664Z",
     "global": {
-      "stabilityScore": 100,
-      "releaseReadiness": 100,
-      "flakyRate": 0,
-      "replayConsistency": 100,
+      "stabilityScore": 89.72,
+      "releaseReadiness": 50,
+      "flakyRate": 2.78,
+      "replayConsistency": 97.22,
       "criticalFlowSuccess": 100
     },
     "domains": [
+      {
+        "name": "core",
+        "score": 84.89,
+        "passRate": 95.56,
+        "regressions": 4,
+        "recurringFailures": 4,
+        "avgRuntimeMs": 396377,
+        "replayConsistency": 95.56,
+        "criticality": "medium"
+      },
       {
         "name": "beauty",
         "score": 100,
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 225149,
+        "avgRuntimeMs": 183716,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -26,7 +36,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 559019,
+        "avgRuntimeMs": 430900,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -36,17 +46,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 316225,
-        "replayConsistency": 100,
-        "criticality": "medium"
-      },
-      {
-        "name": "core",
-        "score": 100,
-        "passRate": 100,
-        "regressions": 0,
-        "recurringFailures": 0,
-        "avgRuntimeMs": 503325,
+        "avgRuntimeMs": 253412,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -56,7 +56,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 208186,
+        "avgRuntimeMs": 166885,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -66,7 +66,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 437622,
+        "avgRuntimeMs": 342156,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -76,7 +76,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 397156,
+        "avgRuntimeMs": 312574,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -86,7 +86,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 316225,
+        "avgRuntimeMs": 253412,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -96,7 +96,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 125468,
+        "avgRuntimeMs": 106540,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -106,7 +106,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 7266,
+        "avgRuntimeMs": 6811,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -116,7 +116,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 25245,
+        "avgRuntimeMs": 36044,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -126,7 +126,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 729,
+        "avgRuntimeMs": 747,
         "replayConsistency": 100,
         "criticality": "medium"
       }
@@ -137,7 +137,7 @@
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 318842,
+        "avgLatencyMs": 242094,
         "replayConsistency": 100,
         "confidenceScore": 80
       },
@@ -146,7 +146,7 @@
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 308249,
+        "avgLatencyMs": 246935,
         "replayConsistency": 100,
         "confidenceScore": 80
       },
@@ -155,18 +155,18 @@
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 158689,
+        "avgLatencyMs": 134758,
         "replayConsistency": 100,
         "confidenceScore": 80
       },
       {
         "name": "api",
-        "score": 80,
-        "passRate": 100,
+        "score": 78.2,
+        "passRate": 96.99,
         "criticalFailures": 0,
-        "avgLatencyMs": 425774,
-        "replayConsistency": 100,
-        "confidenceScore": 80
+        "avgLatencyMs": 338361,
+        "replayConsistency": 96.99,
+        "confidenceScore": 78.2
       }
     ],
     "verticals": [
@@ -177,7 +177,7 @@
         "passed": 12,
         "score": 100,
         "passRate": 100,
-        "lastCriticalReplay": "2026-09-11T00:43:38.730Z",
+        "lastCriticalReplay": "2026-09-22T23:54:24.024Z",
         "readiness": "ready"
       },
       {
@@ -187,7 +187,7 @@
         "passed": 15,
         "score": 100,
         "passRate": 100,
-        "lastCriticalReplay": "2026-09-11T00:48:32.358Z",
+        "lastCriticalReplay": "2026-09-23T00:00:09.358Z",
         "readiness": "ready"
       },
       {
@@ -197,7 +197,7 @@
         "passed": 4,
         "score": 100,
         "passRate": 100,
-        "lastCriticalReplay": "2026-09-11T00:43:26.156Z",
+        "lastCriticalReplay": "2026-09-22T23:54:11.293Z",
         "readiness": "ready"
       },
       {
@@ -241,28 +241,75 @@
         "readiness": "ready"
       }
     ],
-    "failures": [],
+    "failures": [
+      {
+        "signature": "core.flaky.tutor.não.respondeu.com.conteúdo.disponível",
+        "module": "core",
+        "channel": "api",
+        "vertical": null,
+        "count": 2,
+        "impact": "medium",
+        "trend": "recurring",
+        "firstSeenAt": "2026-09-22T23:54:24.065Z",
+        "lastSeenAt": "2026-09-18T01:34:28.277Z"
+      },
+      {
+        "signature": "core.flaky.500.internal.server.error:.provider.de.ia.'groq'.indisponível.(circuit.breaker.a",
+        "module": "core",
+        "channel": "api",
+        "vertical": null,
+        "count": 2,
+        "impact": "medium",
+        "trend": "recurring",
+        "firstSeenAt": "2026-09-22T23:47:00.393Z",
+        "lastSeenAt": "2026-09-22T08:44:23.317Z"
+      },
+      {
+        "signature": "core.flaky.documento.não.foi.indexado.dentro.do.tempo.esperado",
+        "module": "core",
+        "channel": "api",
+        "vertical": null,
+        "count": 1,
+        "impact": "medium",
+        "trend": "new",
+        "firstSeenAt": "2026-09-22T23:55:50.263Z",
+        "lastSeenAt": "2026-09-22T23:57:00.721Z"
+      },
+      {
+        "signature": "core.flaky.pagina./tenants.deveria.negar.acesso.ao.papel.da.sessão.(rbac),.mas.renderizou",
+        "module": "core",
+        "channel": "api",
+        "vertical": null,
+        "count": 1,
+        "impact": "medium",
+        "trend": "new",
+        "firstSeenAt": "2026-09-22T23:57:00.733Z",
+        "lastSeenAt": "2026-09-22T23:58:01.265Z"
+      }
+    ],
     "checkpoints": {
       "currentWave": "WAVE-MESH",
       "progress": {
         "currentWave": "WAVE-MESH",
         "completedWaves": [
+          "WAVE-TEST-1789993236703"
+        ],
+        "failedWaves": [
           "WAVE-MESH"
         ],
-        "failedWaves": [],
-        "globalStatus": "completed",
+        "globalStatus": "blocked",
         "lastSuccessfulCheckpoint": "WAVE-MESH"
       }
     },
     "releaseGate": {
-      "backendBuild": "pass",
-      "frontendBuild": "pass",
-      "technicalQA": "pass",
-      "businessQA": "pass",
+      "backendBuild": "fail",
+      "frontendBuild": "fail",
+      "technicalQA": "fail",
+      "businessQA": "fail",
       "criticalReplay": "pass",
-      "artifactIntegrity": "pass"
+      "artifactIntegrity": "fail"
     }
   },
   "outputPath": "/opt/results/ria/r-agent2/qa/mesh/intelligence/stabilitySnapshot.json",
-  "score": 100
+  "score": 89.72
 }

@@ -1,10 +1,12 @@
 {
-  "decision": "GO",
-  "blockers": [],
+  "decision": "NO_GO",
+  "blockers": [
+    "qa_mesh_no_go"
+  ],
   "warnings": [],
   "checks": {
     "stability": {
-      "score": 100,
+      "score": 89.72,
       "threshold": 70,
       "passed": true
     },
@@ -14,8 +16,8 @@
       "passed": true
     },
     "mesh": {
-      "status": "GO",
-      "passed": true
+      "status": "NO_GO",
+      "passed": false
     },
     "replay": {
       "executed": true,
@@ -23,7 +25,7 @@
     },
     "regression": {
       "previousScore": null,
-      "currentScore": 100,
+      "currentScore": 89.72,
       "delta": null,
       "maxAllowedDelta": 5,
       "passed": true
@@ -48,6 +50,6 @@
     "replayConsistencyMin": 0.85,
     "requireEvidence": true
   },
-  "stabilityScore": 100,
-  "evaluatedAt": "2026-09-11T01:09:13.524Z"
+  "stabilityScore": 89.72,
+  "evaluatedAt": "2026-09-23T00:18:25.870Z"
 }

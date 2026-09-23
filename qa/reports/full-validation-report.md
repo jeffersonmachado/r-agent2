@@ -1,8 +1,8 @@
 # Pipeline Completo — Relatório de Validação
 
-**Data:** 2026-09-11T00:31:13.523Z
-**Gate:** ✅ GO
-**Score de Estabilidade:** 100
+**Data:** 2026-09-22T23:42:57.790Z
+**Gate:** ❌ NO_GO
+**Score de Estabilidade:** 89.72
 
 ## Etapas
 
@@ -16,7 +16,9 @@
 | qa-final-report | ✅ PASS |
 | replay-critical | ✅ PASS |
 
-## Sem Bloqueadores ✅
+## Bloqueadores
+
+- qa_mesh_no_go
 
 ## Artefatos gerados
 

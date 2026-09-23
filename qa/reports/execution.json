@@ -1,61 +1,61 @@
 {
-  "generatedAt": "2026-09-11T01:09:13.516Z",
+  "generatedAt": "2026-09-23T00:18:25.844Z",
   "success": true,
   "stepCount": 7,
   "passedCount": 7,
   "failedCount": 0,
-  "meshExecutionId": "mesh-20260911003113-iji3vq",
-  "meshDecision": "GO",
+  "meshExecutionId": "mesh-20260922234257-5ys1mx",
+  "meshDecision": "NO_GO",
   "replayCriticalPassed": true,
   "steps": [
     {
       "name": "validate-invariants",
       "success": true,
       "exitCode": 0,
-      "startedAt": "2026-09-11T00:31:13.527Z",
-      "finishedAt": "2026-09-11T00:31:13.808Z"
+      "startedAt": "2026-09-22T23:42:57.792Z",
+      "finishedAt": "2026-09-22T23:42:57.976Z"
     },
     {
       "name": "frontend-build",
       "success": true,
       "exitCode": 0,
-      "startedAt": "2026-09-11T00:31:13.809Z",
-      "finishedAt": "2026-09-11T00:31:44.973Z"
+      "startedAt": "2026-09-22T23:42:57.976Z",
+      "finishedAt": "2026-09-22T23:43:22.764Z"
     },
     {
       "name": "contracts",
       "success": true,
       "exitCode": 0,
-      "startedAt": "2026-09-11T00:31:44.974Z",
-      "finishedAt": "2026-09-11T00:31:47.405Z"
+      "startedAt": "2026-09-22T23:43:22.765Z",
+      "finishedAt": "2026-09-22T23:43:26.365Z"
     },
     {
       "name": "unit-tests",
       "success": true,
       "exitCode": 0,
-      "startedAt": "2026-09-11T00:31:47.405Z",
-      "finishedAt": "2026-09-11T00:32:52.430Z"
+      "startedAt": "2026-09-22T23:43:26.365Z",
+      "finishedAt": "2026-09-22T23:45:39.704Z"
     },
     {
       "name": "qa-mesh",
       "success": true,
-      "exitCode": 0,
-      "startedAt": "2026-09-11T00:32:52.518Z",
-      "finishedAt": "2026-09-11T01:09:06.931Z"
+      "exitCode": 1,
+      "startedAt": "2026-09-22T23:45:39.910Z",
+      "finishedAt": "2026-09-23T00:18:18.277Z"
     },
     {
       "name": "qa-final-report",
       "success": true,
-      "exitCode": 0,
-      "startedAt": "2026-09-11T01:09:06.961Z",
-      "finishedAt": "2026-09-11T01:09:06.987Z"
+      "exitCode": 1,
+      "startedAt": "2026-09-23T00:18:18.340Z",
+      "finishedAt": "2026-09-23T00:18:18.393Z"
     },
     {
       "name": "replay-critical",
       "success": true,
       "exitCode": 0,
-      "startedAt": "2026-09-11T01:09:07.018Z",
-      "finishedAt": "2026-09-11T01:09:13.138Z"
+      "startedAt": "2026-09-23T00:18:18.476Z",
+      "finishedAt": "2026-09-23T00:18:25.362Z"
     }
   ]
 }
