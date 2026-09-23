@@ -19,7 +19,7 @@ const path = require('path');
 const { readJson } = require('../../scripts/governance/common');
 const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 const { generate } = require('../../scripts/governance/generate-engineering-router-v1-audit-envelope');
-const { verifyEnvelope } = require('../../scripts/governance/verify-engineering-router-v1-audit-envelope');
+const { verifyEnvelope, computeActualPackageSourceFingerprint } = require('../../scripts/governance/verify-engineering-router-v1-audit-envelope');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
@@ -65,7 +65,7 @@ describe('ER-V1-FINAL-010 — geração real do envelope + verificação offline
     expect(fs.existsSync(path.join(tmpOutDir, 'hashes.json'))).toBe(true);
     // ER-V1-SEAL-004 — os 5 arquivos novos precisam existir de verdade no envelope real, não só
     // no fixture sintético do teste unitário do verifier.
-    for (const name of ['source-fingerprint.json', 'runtime-requirements.json', 'structural-certification.json', 'sandbox-evidence.json', 'resume-evidence.json']) {
+    for (const name of ['source-fingerprint.json', 'runtime-requirements.json', 'structural-certification.json', 'sandbox-evidence.json', 'resume-evidence.json', 'seal-certification.json']) {
       expect(fs.existsSync(path.join(tmpOutDir, name))).toBe(true);
     }
 
@@ -73,6 +73,22 @@ describe('ER-V1-FINAL-010 — geração real do envelope + verificação offline
     const failed = result.checks.filter((c) => !c.ok);
     expect(failed).toEqual([]);
     expect(result.ok).toBe(true);
+
+    // ER-V1-SEALFIX-001 (Artifact-to-Source Binding) — o verifier recomputa o fingerprint REAL
+    // diretamente do ROOT do repositório (nunca confia em nenhum valor declarado dentro do
+    // envelope) e precisa bater exatamente com o que o gerador REAL certificou.
+    const actualRootFingerprint = computeActualPackageSourceFingerprint(ROOT);
+    expect(actualRootFingerprint).toBe(manifest.sourceFingerprint);
+    const boundResult = verifyEnvelope(tmpOutDir, { packageRoot: ROOT });
+    const boundFailed = boundResult.checks.filter((c) => !c.ok);
+    expect(boundFailed).toEqual([]);
+    expect(boundResult.ok).toBe(true);
+    expect(boundResult.packageBindingVerifiable).toBe(true);
+
+    // Seal ainda não pode ser TRUE nesta missão: ER-V1-SEALFIX-002/003/004 seguem PENDING até
+    // serem implementados e comprovados com evidência real (nunca fabricado como PASS antes
+    // da hora).
+    expect(manifest.engineeringRouterV1Sealed).toBe(false);
   });
 
   test('gerar sem evidência de runtime fresca falha explicitamente (nunca certifica silenciosamente)', () => {

@@ -13,17 +13,19 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { verifyEnvelope, REQUIRED_RUNTIME_IDS } = require('../../scripts/governance/verify-engineering-router-v1-audit-envelope');
+const { execFileSync } = require('child_process');
+const { verifyEnvelope, REQUIRED_RUNTIME_IDS, resolvePackageLayout, extractPackageFromZip } = require('../../scripts/governance/verify-engineering-router-v1-audit-envelope');
+const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 
 function sha256Bytes(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
-function buildValidEnvelope(dir) {
+function buildValidEnvelope(dir, overrides = {}) {
   const runId = 'sha-fixture-run-id';
   const head = 'a'.repeat(40);
   const treeHash = 'b'.repeat(40);
-  const sourceFingerprint = 'c'.repeat(64);
+  const sourceFingerprint = overrides.sourceFingerprint || 'c'.repeat(64);
 
   const runtimeItems = REQUIRED_RUNTIME_IDS.map((id) => ({
     id,
@@ -35,7 +37,7 @@ function buildValidEnvelope(dir) {
     numFailedTests: 0,
   }));
 
-  const structuralCertificationPayload = { artifactType: 'x', runId, status: 'PASS', decision: 'GO', structuralStatus: 'STRUCTURAL_PASS', runtimeStatus: 'RUNTIME_PASS', totalChecks: 164, failedChecks: 0 };
+  const structuralCertificationPayload = { artifactType: 'x', runId, sourceFingerprint, status: 'PASS', decision: 'GO', structuralStatus: 'STRUCTURAL_PASS', runtimeStatus: 'RUNTIME_PASS', totalChecks: 164, failedChecks: 0 };
 
   const artifacts = {
     'baseline.json': { artifactType: 'x', runId, head, treeHash, sourceFingerprint },
@@ -49,9 +51,27 @@ function buildValidEnvelope(dir) {
     'resume-evidence.json': { artifactType: 'x', runId, items: [{ id: 'RESTART_RESUME', pass: true }, { id: 'CRASH_RESUME_MID_STAGE', pass: true }] },
     'regression-evidence.json': { artifactType: 'x', runId, items: [] },
     'governance-evidence.json': { artifactType: 'x', runId, items: [], structuralGate: structuralCertificationPayload },
-    'promotion-evidence.json': { artifactType: 'x', runId, items: [{ id: 'CONTROLLED_PROMOTION', pass: true }, { id: 'EXACT_PATCH_PROMOTION', pass: true }] },
-    'pilot-evidence.json': { artifactType: 'x', runId, pilotTaskId: `pilot-${runId}`, items: [{ id: 'RED_TO_FIX', pass: true }] },
-    'release-closure-evidence.json': { artifactType: 'x', runId, backlogVersion: 'ER-V1-FINAL-1', blockers: [], allBlockersGreen: true, releaseStatus: 'ENGINEERING_ROUTER_V1_10_OF_10_GREEN' },
+    'promotion-evidence.json': { artifactType: 'x', runId, sourceFingerprint, items: [{ id: 'CONTROLLED_PROMOTION', pass: true }, { id: 'EXACT_PATCH_PROMOTION', pass: true }] },
+    'pilot-evidence.json': { artifactType: 'x', runId, sourceFingerprint, pilotTaskId: `pilot-${runId}`, items: [{ id: 'RED_TO_FIX', pass: true }] },
+    'release-closure-evidence.json': { artifactType: 'x', runId, sourceFingerprint, backlogVersion: 'ER-V1-FINAL-1', blockers: [], allBlockersGreen: true, releaseStatus: 'ENGINEERING_ROUTER_V1_10_OF_10_GREEN' },
+    'seal-certification.json': {
+      artifactType: 'x',
+      runId,
+      sourceFingerprint,
+      finalClosureBacklog: { version: 'ER-V1-FINAL-1', items: [], allGreen: true },
+      sealBacklog: { version: 'ER-V1-SEAL-1', items: [], allGreen: true },
+      sealFixBacklog: {
+        version: 'ER-V1-SEALFIX-1',
+        items: [
+          { id: 'ER-V1-SEALFIX-001', status: 'PASS' },
+          { id: 'ER-V1-SEALFIX-002', status: 'PASS' },
+          { id: 'ER-V1-SEALFIX-003', status: 'PASS' },
+          { id: 'ER-V1-SEALFIX-004', status: 'PASS' },
+        ],
+        allGreen: true,
+      },
+      engineeringRouterV1Sealed: true,
+    },
   };
 
   const hashes = {};
@@ -81,6 +101,7 @@ function buildValidEnvelope(dir) {
     promotionStatus: 'PROMOTION_VERIFIED',
     pilotTaskId: `pilot-${runId}`,
     releaseStatus: 'ENGINEERING_ROUTER_V1_10_OF_10_GREEN',
+    engineeringRouterV1Sealed: true,
     finalDecision: 'GO',
   };
   fs.writeFileSync(path.join(dir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
@@ -368,5 +389,217 @@ describe('ER-V1-FINAL-010 — verifyEnvelope (offline, determinístico)', () => 
     const result = verifyEnvelope(tmpDir);
     expect(result.ok).toBe(false);
     expect(result.checks.find((c) => c.id === 'MANIFEST_PARSEABLE').ok).toBe(false);
+  });
+});
+
+describe('ER-V1-SEALFIX-001 — Artifact-to-Source Binding (verifyEnvelope com packageRoot real)', () => {
+  let pkgRoot;
+
+  // Constrói um pacote MÍNIMO REAL: uma raiz coberta por SOURCE_ROOTS (`engine/`) com um
+  // arquivo-fonte de verdade, e o envelope dentro de `evidence/engineering-router-v1/`,
+  // exatamente como um release extraído/ZIP real. `computeSourceFingerprint` é o MESMO
+  // algoritmo real do gerador — nunca um valor inventado no teste.
+  function buildPackage({ envelopeSourceFingerprint = null } = {}) {
+    fs.mkdirSync(path.join(pkgRoot, 'engine'), { recursive: true });
+    fs.writeFileSync(path.join(pkgRoot, 'engine', 'fixtureModule.js'), "'use strict';\nmodule.exports = { value: 42 };\n");
+    const actualFingerprint = computeSourceFingerprint(pkgRoot);
+
+    const envelopeDir = path.join(pkgRoot, 'evidence', 'engineering-router-v1');
+    fs.mkdirSync(envelopeDir, { recursive: true });
+    buildValidEnvelope(envelopeDir, { sourceFingerprint: envelopeSourceFingerprint || actualFingerprint });
+
+    return { envelopeDir, actualFingerprint };
+  }
+
+  beforeEach(() => {
+    pkgRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-envelope-package-test-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(pkgRoot, { recursive: true, force: true });
+  });
+
+  test('resolvePackageLayout detecta raiz de pacote real (evidence/engineering-router-v1/manifest.json presente)', () => {
+    const { envelopeDir } = buildPackage();
+    const layout = resolvePackageLayout(pkgRoot);
+    expect(layout.packageRoot).toBe(pkgRoot);
+    expect(layout.envelopeDir).toBe(envelopeDir);
+  });
+
+  test('resolvePackageLayout trata diretório sem árvore-fonte como envelope-only (packageRoot null)', () => {
+    const layout = resolvePackageLayout(pkgRoot); // pkgRoot vazio, sem evidence/ dentro
+    expect(layout.packageRoot).toBeNull();
+    expect(layout.envelopeDir).toBe(pkgRoot);
+  });
+
+  test('[1] pacote original + envelope correto => PASS (ACTUAL_PACKAGE_SOURCE_FINGERPRINT bate em todos os artifacts)', () => {
+    const { envelopeDir } = buildPackage();
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    const failed = result.checks.filter((c) => !c.ok);
+    expect(failed).toEqual([]);
+    expect(result.ok).toBe(true);
+    expect(result.packageBindingVerifiable).toBe(true);
+    expect(result.checks.find((c) => c.id === 'ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_MANIFEST').ok).toBe(true);
+  });
+
+  test('[2] alterar 1 byte em arquivo-fonte real do pacote => FAIL (código entregue != código certificado)', () => {
+    const { envelopeDir } = buildPackage();
+    fs.appendFileSync(path.join(pkgRoot, 'engine', 'fixtureModule.js'), '\n// 1 byte a mais depois do envelope ter sido gerado\n');
+
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_MANIFEST').ok).toBe(false);
+  });
+
+  test('[3] substituir conteúdo do arquivo-fonte mantendo o envelope antigo => FAIL', () => {
+    const { envelopeDir } = buildPackage();
+    fs.writeFileSync(path.join(pkgRoot, 'engine', 'fixtureModule.js'), "'use strict';\nmodule.exports = { value: 'CODIGO COMPLETAMENTE DIFERENTE' };\n");
+
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_MANIFEST').ok).toBe(false);
+  });
+
+  test('[4] substituir o envelope por evidência de outro run/fingerprint, mantendo o código original => FAIL', () => {
+    // O envelope inteiro é gerado com um sourceFingerprint que NUNCA corresponde ao código
+    // real do pacote (simula reaproveitar o envelope de outra build).
+    const { envelopeDir } = buildPackage({ envelopeSourceFingerprint: 'f'.repeat(64) });
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_MANIFEST').ok).toBe(false);
+  });
+
+  test('[5] sourceFingerprint divergente entre manifest e o pacote real => FAIL', () => {
+    const { envelopeDir, actualFingerprint } = buildPackage();
+    const manifestPath = path.join(envelopeDir, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    manifest.sourceFingerprint = 'e'.repeat(64);
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    expect(manifest.sourceFingerprint).not.toBe(actualFingerprint);
+
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_MANIFEST').ok).toBe(false);
+  });
+
+  test('[6] runtime evidence com sourceFingerprint de outra fonte (mesmo com manifest correto) => FAIL', () => {
+    const { envelopeDir } = buildPackage();
+    const rtPath = path.join(envelopeDir, 'runtime-certification.json');
+    const rt = JSON.parse(fs.readFileSync(rtPath, 'utf8'));
+    rt.sourceFingerprint = 'd'.repeat(64);
+    const bytes = Buffer.from(`${JSON.stringify(rt, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(rtPath, bytes);
+    // sincroniza hashes/manifest para isolar exclusivamente a divergência de binding real
+    const newHash = sha256Bytes(bytes);
+    for (const p of [path.join(envelopeDir, 'hashes.json'), path.join(envelopeDir, 'manifest.json')]) {
+      const doc = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const key = p.endsWith('manifest.json') ? 'artifactHashes' : 'hashes';
+      doc[key]['runtime-certification.json'] = newHash;
+      fs.writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`);
+    }
+
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_runtime-certification.json').ok).toBe(false);
+  });
+
+  test('[7] certificação estrutural (seal evidence) ausente => FAIL', () => {
+    const { envelopeDir } = buildPackage();
+    fs.rmSync(path.join(envelopeDir, 'structural-certification.json'));
+
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'ARTIFACT_PRESENT_structural-certification.json').ok).toBe(false);
+  });
+
+  test('[8] item SEALFIX ausente de seal-certification.json => FAIL', () => {
+    const { envelopeDir } = buildPackage();
+    const sealPath = path.join(envelopeDir, 'seal-certification.json');
+    const seal = JSON.parse(fs.readFileSync(sealPath, 'utf8'));
+    seal.sealFixBacklog.items = seal.sealFixBacklog.items.filter((i) => i.id !== 'ER-V1-SEALFIX-003');
+    const bytes = Buffer.from(`${JSON.stringify(seal, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(sealPath, bytes);
+    const newHash = sha256Bytes(bytes);
+    for (const p of [path.join(envelopeDir, 'hashes.json'), path.join(envelopeDir, 'manifest.json')]) {
+      const doc = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const key = p.endsWith('manifest.json') ? 'artifactHashes' : 'hashes';
+      doc[key]['seal-certification.json'] = newHash;
+      fs.writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`);
+    }
+
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'SEALFIX_ITEM_PRESENT_ER-V1-SEALFIX-003').ok).toBe(false);
+  });
+
+  test('nunca confunde "10/10 FINAL GREEN" (release-closure) com "4/4 SEALFIX GREEN" (seal-certification) — um blocker SEALFIX pendente reprova mesmo com release-closure 100% GREEN', () => {
+    const { envelopeDir } = buildPackage();
+    const sealPath = path.join(envelopeDir, 'seal-certification.json');
+    const seal = JSON.parse(fs.readFileSync(sealPath, 'utf8'));
+    // release-closure-evidence.json permanece allBlockersGreen=true (10/10 FINAL GREEN) —
+    // mas um item SEALFIX ainda está PENDING (não implementado), então o Router NUNCA pode
+    // estar SELADO, mesmo com o closure antigo 100% verde.
+    seal.sealFixBacklog.items = seal.sealFixBacklog.items.map((i) => (i.id === 'ER-V1-SEALFIX-004' ? { ...i, status: 'PENDING' } : i));
+    seal.engineeringRouterV1Sealed = true; // forjado — o verifier precisa recusar isso.
+    const bytes = Buffer.from(`${JSON.stringify(seal, null, 2)}\n`, 'utf8');
+    fs.writeFileSync(sealPath, bytes);
+    const newHash = sha256Bytes(bytes);
+    for (const p of [path.join(envelopeDir, 'hashes.json'), path.join(envelopeDir, 'manifest.json')]) {
+      const doc = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const key = p.endsWith('manifest.json') ? 'artifactHashes' : 'hashes';
+      doc[key]['seal-certification.json'] = newHash;
+      fs.writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`);
+    }
+
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find((c) => c.id === 'ENGINEERING_ROUTER_V1_SEALED_RECOMPUTED_MATCHES').ok).toBe(false);
+  });
+
+  test('[9] verifier funciona sem .git (packageRoot é um tmpdir puro, nunca um repositório git)', () => {
+    expect(fs.existsSync(path.join(pkgRoot, '.git'))).toBe(false);
+    const { envelopeDir } = buildPackage();
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(true);
+  });
+
+  test('[10] verifier é 100% offline (nenhuma chamada de rede — determinístico e síncrono sobre arquivos locais)', () => {
+    const { envelopeDir } = buildPackage();
+    // Não há stub de rede aqui de propósito: se o verifier tentasse acessar rede em ambiente
+    // sandboxed sem rede, o teste já falharia por timeout/erro de conexão. PASS determinístico
+    // e imediato é a prova de que nenhuma chamada de rede acontece.
+    const result = verifyEnvelope(envelopeDir, { packageRoot: pkgRoot });
+    expect(result.ok).toBe(true);
+  });
+
+  test('[11] verifier funciona sobre diretório extraído (packageRoot resolvido via resolvePackageLayout, não passado manualmente)', () => {
+    buildPackage();
+    const layout = resolvePackageLayout(pkgRoot);
+    const result = verifyEnvelope(layout.envelopeDir, { packageRoot: layout.packageRoot });
+    expect(result.ok).toBe(true);
+    expect(result.packageBindingVerifiable).toBe(true);
+  });
+
+  test('[12] verifier funciona diretamente sobre um ZIP real (zip do pacote inteiro, extraído e recomputado offline)', () => {
+    const { envelopeDir } = buildPackage();
+    expect(fs.existsSync(envelopeDir)).toBe(true);
+
+    const zipPath = path.join(os.tmpdir(), `audit-envelope-fixture-${Date.now()}.zip`);
+    const parentDir = path.dirname(pkgRoot);
+    const baseName = path.basename(pkgRoot);
+    // zip real via CLI (mesma ferramenta usada por scripts/generate-zip.sh), nunca uma
+    // simulação — a garantia "funciona sobre ZIP" só é real se o ZIP for real.
+    execFileSync('zip', ['-qry', zipPath, baseName], { cwd: parentDir });
+    try {
+      const layout = extractPackageFromZip(zipPath);
+      expect(layout.packageRoot).not.toBeNull();
+      const result = verifyEnvelope(layout.envelopeDir, { packageRoot: layout.packageRoot });
+      const failed = result.checks.filter((c) => !c.ok);
+      expect(failed).toEqual([]);
+      expect(result.ok).toBe(true);
+      expect(result.packageBindingVerifiable).toBe(true);
+    } finally {
+      fs.rmSync(zipPath, { force: true });
+    }
   });
 });

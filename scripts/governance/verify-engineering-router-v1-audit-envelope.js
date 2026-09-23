@@ -34,6 +34,14 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
+// ER-V1-SEALFIX-001 (Artifact-to-Source Binding) — MESMO algoritmo determinístico,
+// order-independent e versionado que o gerador usa (governance/proof-engine/fingerprint-chain.js
+// — puro filesystem walk, nunca `.git`/git rev-parse). Resolvido por caminho relativo a partir
+// deste script, então funciona tanto rodando da árvore original quanto de dentro de uma cópia
+// extraída do pacote de release (o mesmo layout relativo é preservado em ambos os casos) — nunca
+// carrega/`require()` o algoritmo de dentro do PACOTE ALVO (evitaria executar código não
+// verificado de um artefato ainda não confiável).
+const { computeSourceFingerprint } = require('../../governance/proof-engine/fingerprint-chain');
 
 // ER-V1-FINAL-010 — mesma lista de 25 IDs que `collect-engineering-router-runtime-evidence.js`
 // exporta como `RUNTIME_ITEMS` — mas o verifier NUNCA importa esse módulo (ele dispararia os 25
@@ -62,7 +70,13 @@ const ARTIFACT_FILES = Object.freeze([
   'baseline.json', 'source-fingerprint.json', 'runtime-requirements.json', 'runtime-certification.json',
   'structural-certification.json', 'routing-evidence.json', 'security-evidence.json', 'sandbox-evidence.json',
   'resume-evidence.json', 'regression-evidence.json', 'governance-evidence.json', 'promotion-evidence.json',
-  'pilot-evidence.json', 'release-closure-evidence.json',
+  'pilot-evidence.json', 'release-closure-evidence.json', 'seal-certification.json',
+]);
+
+// ER-V1-SEALFIX-001 — os 4 itens que precisam estar presentes e com status PASS em
+// seal-certification.json.sealFixBacklog.items para `ENGINEERING_ROUTER_V1_SEALED` ser real.
+const REQUIRED_SEALFIX_IDS = Object.freeze([
+  'ER-V1-SEALFIX-001', 'ER-V1-SEALFIX-002', 'ER-V1-SEALFIX-003', 'ER-V1-SEALFIX-004',
 ]);
 
 function sha256Bytes(buffer) {
@@ -90,12 +104,50 @@ function currentRepoHead(envelopeDir) {
 }
 
 /**
+ * ER-V1-SEALFIX-001 — Artifact-to-Source Binding: o envelope pode ser internamente
+ * consistente (hashes batem entre si) e AINDA ASSIM não provar que o código
+ * REALMENTE ENTREGUE é o código certificado — um pacote poderia trocar arquivos-fonte
+ * mantendo o envelope antigo intacto, e nenhum check anterior detectaria isso. Este
+ * cálculo é a única forma de fechar esse gap: recomputa o fingerprint diretamente dos
+ * arquivos-fonte REALMENTE presentes em `packageRoot` (nunca confia em nenhum valor
+ * declarado por dentro do próprio pacote) e compara contra TODOS os artifacts que
+ * carregam `sourceFingerprint`.
+ *
+ * @param {string} packageRoot raiz do pacote extraído (contém o código-fonte real).
+ * @returns {string} sourceFingerprint recomputado independentemente pelo verifier.
+ */
+function computeActualPackageSourceFingerprint(packageRoot) {
+  return computeSourceFingerprint(packageRoot);
+}
+
+/**
+ * Localiza a raiz do pacote a partir do caminho informado: se `<path>/evidence/
+ * engineering-router-v1/manifest.json` existir, `<path>` É a raiz do pacote (código-fonte
+ * completo + evidência juntos, como um release real extraído). Caso contrário, `<path>` é
+ * tratado como o próprio diretório do envelope (modo legado/envelope-only — ex.:
+ * `dist/engineering-router-v1-audit-envelope/` local, sem árvore-fonte ao redor), e o
+ * binding com o pacote real não é computável (reportado explicitamente, nunca pulado em
+ * silêncio).
+ */
+function resolvePackageLayout(inputPath) {
+  const candidateEnvelopeDir = path.join(inputPath, 'evidence', 'engineering-router-v1');
+  if (fs.existsSync(path.join(candidateEnvelopeDir, 'manifest.json'))) {
+    return { packageRoot: inputPath, envelopeDir: candidateEnvelopeDir };
+  }
+  return { packageRoot: null, envelopeDir: inputPath };
+}
+
+/**
  * @param {string} envelopeDir
+ * @param {{packageRoot?: string|null}} [options] ER-V1-SEALFIX-001 — quando informado (ou
+ *   auto-detectado por `resolvePackageLayout`), habilita o cross-check
+ *   ACTUAL_PACKAGE_SOURCE_FINGERPRINT contra todos os artifacts com `sourceFingerprint`.
  * @returns {{ok: boolean, checks: Array<{id:string, ok:boolean, reason?:string}>}}
  */
-function verifyEnvelope(envelopeDir) {
+function verifyEnvelope(envelopeDir, options = {}) {
   const checks = [];
   const push = (id, ok, reason) => checks.push({ id, ok, reason });
+  const packageRoot = options.packageRoot !== undefined ? options.packageRoot : null;
 
   if (!fs.existsSync(envelopeDir) || !fs.statSync(envelopeDir).isDirectory()) {
     push('ENVELOPE_DIR_EXISTS', false, `diretório do envelope não encontrado: ${envelopeDir}`);
@@ -112,7 +164,7 @@ function verifyEnvelope(envelopeDir) {
   push('MANIFEST_PARSEABLE', true);
   const manifest = manifestResult.value;
 
-  for (const field of ['schemaVersion', 'generatedAt', 'head', 'sourceFingerprint', 'treeHash', 'runId', 'runtimeRunId', 'governanceRunId', 'artifactHashes', 'runtimeStatus', 'structuralStatus', 'promotionStatus', 'pilotTaskId', 'releaseStatus', 'finalDecision', 'expectedArtifacts']) {
+  for (const field of ['schemaVersion', 'generatedAt', 'head', 'sourceFingerprint', 'treeHash', 'runId', 'runtimeRunId', 'governanceRunId', 'artifactHashes', 'runtimeStatus', 'structuralStatus', 'promotionStatus', 'pilotTaskId', 'releaseStatus', 'finalDecision', 'expectedArtifacts', 'engineeringRouterV1Sealed']) {
     push(`MANIFEST_FIELD_${field.toUpperCase()}`, manifest[field] !== undefined && manifest[field] !== null, `manifest.${field} ausente`);
   }
 
@@ -168,6 +220,46 @@ function verifyEnvelope(envelopeDir) {
   if (sourceFingerprintArtifact) {
     push('SOURCE_FINGERPRINT_ARTIFACT_CONSISTENT', sourceFingerprintArtifact.sourceFingerprint === manifest.sourceFingerprint, 'source-fingerprint.json.sourceFingerprint != manifest.sourceFingerprint');
   }
+
+  // ER-V1-SEALFIX-001 (Artifact-to-Source Binding) — a garantia central desta missão: o
+  // CÓDIGO REALMENTE PRESENTE no pacote precisa provar, por si só, que É o código
+  // certificado pelo envelope. Sem isto, um pacote poderia trocar arquivos-fonte mantendo
+  // um envelope antigo (porém internamente consistente) e todo o resto deste verifier
+  // continuaria reportando PASS.
+  const packageBindingVerifiable = Boolean(packageRoot);
+  if (packageRoot) {
+    let actualPackageSourceFingerprint = null;
+    try {
+      actualPackageSourceFingerprint = computeActualPackageSourceFingerprint(packageRoot);
+      push('ACTUAL_PACKAGE_SOURCE_FINGERPRINT_COMPUTED', true);
+    } catch (err) {
+      push('ACTUAL_PACKAGE_SOURCE_FINGERPRINT_COMPUTED', false, `falha ao recomputar o fingerprint a partir do pacote: ${err.message}`);
+    }
+    if (actualPackageSourceFingerprint) {
+      push('ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_MANIFEST', actualPackageSourceFingerprint === manifest.sourceFingerprint, `fingerprint real do pacote (${actualPackageSourceFingerprint.slice(0, 16)}…) != manifest.sourceFingerprint (${String(manifest.sourceFingerprint).slice(0, 16)}…) — o código entregue NÃO é o código certificado`);
+      // Cada artifact que carrega sourceFingerprint próprio precisa bater com o fingerprint
+      // REAL do pacote — nunca só com o manifest (um manifest e um artifact poderiam ter
+      // sido trocados juntos, de forma consistente entre si, mas ainda divergentes do
+      // código real).
+      const artifactsWithOwnSourceFingerprint = [
+        'baseline.json', 'source-fingerprint.json', 'runtime-certification.json',
+        'structural-certification.json', 'promotion-evidence.json', 'pilot-evidence.json',
+        'release-closure-evidence.json', 'seal-certification.json',
+      ];
+      for (const name of artifactsWithOwnSourceFingerprint) {
+        const payload = artifactPayloads[name];
+        if (!payload || payload.sourceFingerprint === undefined) continue;
+        push(`ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_${name}`, payload.sourceFingerprint === actualPackageSourceFingerprint, `${name}.sourceFingerprint (${String(payload.sourceFingerprint).slice(0, 16)}…) != fingerprint real do pacote (${actualPackageSourceFingerprint.slice(0, 16)}…)`);
+      }
+    }
+  }
+  // packageRoot ausente (modo envelope-only, ex.: apontado direto para
+  // dist/engineering-router-v1-audit-envelope/ local, sem árvore-fonte ao redor — NUNCA um
+  // release real): nenhum check de binding é empurrado aqui, no mesmo padrão best-effort já
+  // usado por EVIDENCE_FRESH_VS_LOCAL_REPO abaixo. A garantia de binding real é OBRIGATÓRIA
+  // para qualquer verificação de release (ZIP ou pacote extraído completo — `main()`/
+  // `resolvePackageLayout` sempre populam `packageRoot` nesses dois casos), nunca para uma
+  // checagem local de pré-empacotamento que não representa um artefato entregável.
 
   // ER-V1-SEAL-004 — runtime-requirements.json precisa listar EXATAMENTE o mesmo conjunto de IDs
   // obrigatórios que este verifier exige (REQUIRED_RUNTIME_IDS) — nunca um subconjunto menor
@@ -281,6 +373,33 @@ function verifyEnvelope(envelopeDir) {
     push('MANIFEST_RELEASE_STATUS_MATCHES', manifest.releaseStatus === releaseClosure.releaseStatus, 'manifest.releaseStatus != release-closure-evidence.releaseStatus');
   }
 
+  // ER-V1-SEALFIX-001 — seal-certification.json é a ÚNICA autoridade de decisão do seal:
+  // "10/10 FINAL GREEN" (release-closure-evidence, backlog ER-V1-FINAL-001..010) NUNCA pode
+  // ser interpretado como "4/4 SEALFIX GREEN" (backlog desta missão, ER-V1-SEALFIX-001..004)
+  // — os dois são verificados aqui de forma independente e explícita, nunca um substituindo
+  // o outro.
+  const sealCertification = artifactPayloads['seal-certification.json'];
+  if (!sealCertification) {
+    push('SEAL_CERTIFICATION_PRESENT', false, 'seal-certification.json ausente ou ilegível');
+  } else {
+    push('SEAL_CERTIFICATION_PRESENT', true);
+    const sealFixItems = (sealCertification.sealFixBacklog && sealCertification.sealFixBacklog.items) || [];
+    const byId = new Map(sealFixItems.map((item) => [item.id, item]));
+    for (const id of REQUIRED_SEALFIX_IDS) {
+      const item = byId.get(id);
+      push(`SEALFIX_ITEM_PRESENT_${id}`, Boolean(item), `item SEALFIX obrigatório ausente de seal-certification.json: ${id}`);
+    }
+    const allSealFixPass = REQUIRED_SEALFIX_IDS.every((id) => byId.get(id)?.status === 'PASS');
+    // Recomputado de forma independente — nunca confia cegamente em `engineeringRouterV1Sealed`
+    // gravado pelo gerador.
+    push('ENGINEERING_ROUTER_V1_SEALED_RECOMPUTED_MATCHES', sealCertification.engineeringRouterV1Sealed === allSealFixPass, `seal-certification.engineeringRouterV1Sealed (${sealCertification.engineeringRouterV1Sealed}) != recalculado a partir dos 4 itens SEALFIX (${allSealFixPass})`);
+    push('MANIFEST_SEALED_STATUS_MATCHES', manifest.engineeringRouterV1Sealed === sealCertification.engineeringRouterV1Sealed, 'manifest.engineeringRouterV1Sealed != seal-certification.engineeringRouterV1Sealed');
+    // Lineage preservada: os backlogs ER-V1-FINAL/ER-V1-SEAL anteriores continuam presentes e
+    // GREEN — nunca reabertos por esta missão, só referenciados para auditoria histórica.
+    push('SEAL_CERTIFICATION_PRESERVES_FINAL_CLOSURE_LINEAGE', Boolean(sealCertification.finalClosureBacklog && sealCertification.finalClosureBacklog.allGreen === true), 'seal-certification.json não preserva o lineage GREEN do backlog ER-V1-FINAL-001..010');
+    push('SEAL_CERTIFICATION_PRESERVES_SEAL_LINEAGE', Boolean(sealCertification.sealBacklog && sealCertification.sealBacklog.allGreen === true), 'seal-certification.json não preserva o lineage GREEN do backlog ER-V1-SEAL-001..005');
+  }
+
   // final decision — o verifier recalcula de forma independente (nunca confia cegamente no
   // finalDecision gravado pelo gerador) a partir dos MESMOS três sinais que o gerador usa.
   if (releaseClosure && runtimeCert && structuralCertification) {
@@ -296,7 +415,7 @@ function verifyEnvelope(envelopeDir) {
   }
 
   const ok = checks.every((c) => c.ok);
-  return { ok, checks };
+  return { ok, checks, packageBindingVerifiable };
 }
 
 // ER-V1-SEAL-004 — a spec pede um comando único que também verifique o envelope diretamente
@@ -304,16 +423,19 @@ function verifyEnvelope(envelopeDir) {
 // evidence/engineering-router-v1/, ver scripts/generate-zip.sh::copy_engineering_router_v1_audit_envelope).
 // Extrai só essa subpasta para um tmpdir e reaproveita o MESMO `verifyEnvelope` — nunca uma
 // segunda implementação de verificação para o caso "dentro de um zip".
-function extractEnvelopeFromZip(zipPath) {
+/**
+ * ER-V1-SEALFIX-001 — extrai o ZIP INTEIRO (não só evidence/engineering-router-v1/*), porque
+ * o binding código<->fingerprint só é verificável com o código-fonte real presente ao lado
+ * do envelope. Retorna `{packageRoot, envelopeDir}` — `packageRoot` é a raiz do pacote (o
+ * único diretório de topo dentro do ZIP), usada para recomputar o fingerprint real.
+ */
+function extractPackageFromZip(zipPath) {
   const os = require('os');
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'engineering-router-v1-envelope-zip-'));
-  execFileSync('unzip', ['-q', '-o', zipPath, '*/evidence/engineering-router-v1/*', '-d', tmpDir]);
-  const rootEntries = fs.readdirSync(tmpDir);
-  for (const entry of rootEntries) {
-    const candidate = path.join(tmpDir, entry, 'evidence', 'engineering-router-v1');
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  return path.join(tmpDir, 'evidence', 'engineering-router-v1');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'engineering-router-v1-package-zip-'));
+  execFileSync('unzip', ['-q', '-o', zipPath, '-d', tmpDir]);
+  const rootEntries = fs.readdirSync(tmpDir).filter((name) => fs.statSync(path.join(tmpDir, name)).isDirectory());
+  const packageRoot = rootEntries.length === 1 ? path.join(tmpDir, rootEntries[0]) : tmpDir;
+  return resolvePackageLayout(packageRoot);
 }
 
 function main() {
@@ -325,24 +447,28 @@ function main() {
   const inputPath = path.resolve(inputArg);
 
   let envelopeDir;
+  let packageRoot = null;
   if (inputPath.endsWith('.zip')) {
     if (!fs.existsSync(inputPath)) {
       process.stdout.write('[audit-envelope-verify] status=FAIL checks=1 falhas=1\n - ZIP_FILE_EXISTS: arquivo não encontrado\n');
       process.exit(1);
     }
     try {
-      envelopeDir = extractEnvelopeFromZip(inputPath);
+      ({ packageRoot, envelopeDir } = extractPackageFromZip(inputPath));
     } catch (err) {
       process.stdout.write(`[audit-envelope-verify] status=FAIL checks=1 falhas=1\n - ZIP_EXTRACTION_FAILED: ${err.message}\n`);
       process.exit(1);
     }
   } else {
-    envelopeDir = inputPath;
+    // ER-V1-SEALFIX-001 — auto-detecta se `inputPath` é a raiz de um pacote extraído
+    // completo (código-fonte + evidence/ juntos, como um release real) ou o diretório do
+    // envelope diretamente (modo legado/local, ex.: dist/.../ sem árvore-fonte ao redor).
+    ({ packageRoot, envelopeDir } = resolvePackageLayout(inputPath));
   }
 
   let result;
   try {
-    result = verifyEnvelope(envelopeDir);
+    result = verifyEnvelope(envelopeDir, { packageRoot });
   } catch (err) {
     process.stderr.write(`[audit-envelope-verify] erro inesperado: ${err.message}\n`);
     process.exit(1);
@@ -350,6 +476,9 @@ function main() {
 
   const failed = result.checks.filter((c) => !c.ok);
   process.stdout.write(`[audit-envelope-verify] status=${result.ok ? 'PASS' : 'FAIL'} checks=${result.checks.length} falhas=${failed.length}\n`);
+  if (!result.packageBindingVerifiable) {
+    process.stdout.write(' [aviso] binding código<->fingerprint NÃO verificado (modo envelope-only, sem raiz de pacote — nunca use este modo para certificar um release real)\n');
+  }
   if (failed.length > 0) {
     for (const f of failed) process.stdout.write(` - ${f.id}: ${f.reason || '(sem detalhe)'}\n`);
   }
@@ -360,4 +489,7 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { verifyEnvelope, REQUIRED_RUNTIME_IDS, ARTIFACT_FILES };
+module.exports = {
+  verifyEnvelope, REQUIRED_RUNTIME_IDS, ARTIFACT_FILES, REQUIRED_SEALFIX_IDS,
+  resolvePackageLayout, computeActualPackageSourceFingerprint, extractPackageFromZip,
+};
