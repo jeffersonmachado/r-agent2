@@ -1,0 +1,57 @@
+{
+  "tenantId": "system",
+  "synonyms": {},
+  "queryPatterns": {
+    "successful": [
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-09-23T20:00:58.527970"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-23T20:02:46.532529"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-09-23T20:48:16.027369"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-23T20:49:46.664622"
+      }
+    ],
+    "failed": []
+  },
+  "promptVariations": [],
+  "metrics": {
+    "totalQueries": 4,
+    "successfulQueries": 4,
+    "failedQueries": 0,
+    "avgConfidence": 0.23585057710357704,
+    "lastUpdated": "2026-09-23T20:49:46.664590"
+  },
+  "config": {
+    "minScore": 0.45,
+    "topK": 6,
+    "chunkOverlap": 75
+  },
+  "learningCycles": {
+    "total": 0,
+    "lastCycle": null,
+    "cycles": []
+  },
+  "createdAt": "2026-09-23T20:00:58.527878",
+  "updatedAt": "2026-09-23T20:49:46.664907"
+}

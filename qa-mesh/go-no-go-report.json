@@ -1,28 +1,25 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-20260922234257-5ys1mx",
+  "executionId": "mesh-2026-09-23T20-45-35-042Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
-  "status": "NO_GO",
-  "reasons": [
-    "CRITICAL_DOMAIN_FAILED:core",
-    "BASELINE_PASS_RATE_REGRESSION"
-  ],
+  "status": "GO",
+  "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-20260922234257-5ys1mx",
-    "startedAt": "2026-09-22T23:45:44.458Z",
+    "executionId": "mesh-2026-09-23T20-45-35-042Z",
+    "startedAt": "2026-09-23T20:45:35.042Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-23T00:18:06.650Z",
+    "promotedAt": "2026-09-23T21:12:07.686Z",
     "registryTotal": 144,
-    "goNoGo": "NO_GO",
+    "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-20260922234257-5ys1mx",
+    "executionId": "mesh-2026-09-23T20-45-35-042Z",
     "tenantId": "system",
-    "timestamp": "2026-09-22T23:45:44.458Z",
+    "timestamp": "2026-09-23T20:45:35.042Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -30,13 +27,13 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 140,
+    "passed": 144,
     "fallbackPassed": 0,
     "failed": 0,
     "skipped": 0,
     "infraErrors": 0,
     "environmentMissing": 0,
-    "flaky": 4,
+    "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
@@ -80,13 +77,13 @@
         "total": 2
       },
       "core": {
-        "passed": 86,
+        "passed": 90,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
-        "flaky": 4,
+        "flaky": 0,
         "total": 90
       },
       "fitness": {
@@ -170,21 +167,10 @@
         "total": 1
       }
     },
-    "goNoGo": "NO_GO",
-    "reasons": [
-      "CRITICAL_DOMAIN_FAILED:core",
-      "BASELINE_PASS_RATE_REGRESSION"
-    ],
+    "goNoGo": "GO",
+    "reasons": [],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "core": {
-        "total": 4,
-        "blocking": 0,
-        "byType": {
-          "flaky": 4
-        },
-        "successRate": 0.9555555555555556
-      },
       "beauty": {
         "total": 0,
         "blocking": 0,
@@ -198,6 +184,12 @@
         "successRate": 1
       },
       "clinic": {
+        "total": 0,
+        "blocking": 0,
+        "byType": {},
+        "successRate": 1
+      },
+      "core": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -252,45 +244,26 @@
         "successRate": 1
       }
     },
-    "failuresByType": {
-      "flaky": 4
-    },
-    "topErrors": [
-      {
-        "message": "Tutor não respondeu com conteúdo disponível",
-        "count": 1
-      },
-      {
-        "message": "500 Internal Server Error: Provider de IA 'groq' indisponível (circuit breaker aberto).",
-        "count": 1
-      },
-      {
-        "message": "Documento não foi indexado dentro do tempo esperado",
-        "count": 1
-      },
-      {
-        "message": "Pagina /tenants deveria negar acesso ao papel da sessão (RBAC), mas renderizou",
-        "count": 1
-      }
-    ],
+    "failuresByType": {},
+    "topErrors": [],
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-20260922234257-5ys1mx",
-      "startedAt": "2026-09-22T23:45:44.458Z",
+      "executionId": "mesh-2026-09-23T20-45-35-042Z",
+      "startedAt": "2026-09-23T20:45:35.042Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-23T00:18:06.650Z",
+      "promotedAt": "2026-09-23T21:12:07.686Z",
       "registryTotal": 144,
-      "goNoGo": "NO_GO",
+      "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260922083602035-87410cca",
-  "sourceFingerprint": "dff0317246365e259edb1b22a2da5b4790c1937b1c19966b9730651da2d21f73",
-  "sourceCommit": "a76204e68029bc9a82bbb879ebdbd1d264eb0fb8",
-  "sourceTree": "170856eabc6c3373dba1113f22714533e9797be5",
-  "generatedAt": "2026-09-23T00:18:06.651Z"
+  "runId": "rap-governed-20260923191944590-02980291",
+  "sourceFingerprint": "04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344",
+  "sourceCommit": "0a69bdaed04d41979a5550464c7738a35db6cecc",
+  "sourceTree": "080bc2ac3de9e4c5c8c3e1034120847e8d82c103",
+  "generatedAt": "2026-09-23T21:12:07.687Z"
 }

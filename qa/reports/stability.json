@@ -1,23 +1,43 @@
 {
   "snapshot": {
-    "executionId": "mesh-20260922234257-5ys1mx",
-    "generatedAt": "2026-09-23T00:18:25.664Z",
+    "executionId": "mesh-20260923164907-rjc1js",
+    "generatedAt": "2026-09-23T17:56:24.921Z",
     "global": {
-      "stabilityScore": 89.72,
-      "releaseReadiness": 50,
+      "stabilityScore": 85.81,
+      "releaseReadiness": 46,
       "flakyRate": 2.78,
-      "replayConsistency": 97.22,
-      "criticalFlowSuccess": 100
+      "replayConsistency": 93.75,
+      "criticalFlowSuccess": 90
     },
     "domains": [
       {
+        "name": "omnichannel",
+        "score": 59,
+        "passRate": 50,
+        "regressions": 2,
+        "recurringFailures": 2,
+        "avgRuntimeMs": 390814,
+        "replayConsistency": 50,
+        "criticality": "high"
+      },
+      {
+        "name": "fitness",
+        "score": 61.67,
+        "passRate": 66.67,
+        "regressions": 5,
+        "recurringFailures": 5,
+        "avgRuntimeMs": 180391,
+        "replayConsistency": 66.67,
+        "criticality": "high"
+      },
+      {
         "name": "core",
-        "score": 84.89,
-        "passRate": 95.56,
-        "regressions": 4,
-        "recurringFailures": 4,
-        "avgRuntimeMs": 396377,
-        "replayConsistency": 95.56,
+        "score": 92.44,
+        "passRate": 97.78,
+        "regressions": 2,
+        "recurringFailures": 2,
+        "avgRuntimeMs": 208344,
+        "replayConsistency": 97.78,
         "criticality": "medium"
       },
       {
@@ -26,7 +46,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 183716,
+        "avgRuntimeMs": 113295,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -36,7 +56,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 430900,
+        "avgRuntimeMs": 226013,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -46,17 +66,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 253412,
-        "replayConsistency": 100,
-        "criticality": "medium"
-      },
-      {
-        "name": "fitness",
-        "score": 100,
-        "passRate": 100,
-        "regressions": 0,
-        "recurringFailures": 0,
-        "avgRuntimeMs": 166885,
+        "avgRuntimeMs": 148842,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -66,7 +76,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 342156,
+        "avgRuntimeMs": 187427,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -76,7 +86,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 312574,
+        "avgRuntimeMs": 174565,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -86,17 +96,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 253412,
-        "replayConsistency": 100,
-        "criticality": "medium"
-      },
-      {
-        "name": "omnichannel",
-        "score": 100,
-        "passRate": 100,
-        "regressions": 0,
-        "recurringFailures": 0,
-        "avgRuntimeMs": 106540,
+        "avgRuntimeMs": 148842,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -106,7 +106,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 6811,
+        "avgRuntimeMs": 7357,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -116,7 +116,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 36044,
+        "avgRuntimeMs": 36870,
         "replayConsistency": 100,
         "criticality": "medium"
       },
@@ -126,7 +126,7 @@
         "passRate": 100,
         "regressions": 0,
         "recurringFailures": 0,
-        "avgRuntimeMs": 747,
+        "avgRuntimeMs": 703,
         "replayConsistency": 100,
         "criticality": "medium"
       }
@@ -137,36 +137,36 @@
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 242094,
+        "avgLatencyMs": 138649,
         "replayConsistency": 100,
         "confidenceScore": 80
       },
       {
         "name": "chat",
-        "score": 80,
-        "passRate": 100,
-        "criticalFailures": 0,
-        "avgLatencyMs": 246935,
-        "replayConsistency": 100,
-        "confidenceScore": 80
+        "score": 52,
+        "passRate": 60,
+        "criticalFailures": 1,
+        "avgLatencyMs": 392799,
+        "replayConsistency": 60,
+        "confidenceScore": 52
       },
       {
         "name": "pbx",
         "score": 80,
         "passRate": 100,
         "criticalFailures": 0,
-        "avgLatencyMs": 134758,
+        "avgLatencyMs": 84156,
         "replayConsistency": 100,
         "confidenceScore": 80
       },
       {
         "name": "api",
-        "score": 78.2,
-        "passRate": 96.99,
-        "criticalFailures": 0,
-        "avgLatencyMs": 338361,
-        "replayConsistency": 96.99,
-        "confidenceScore": 78.2
+        "score": 72.84,
+        "passRate": 94.74,
+        "criticalFailures": 1,
+        "avgLatencyMs": 190761,
+        "replayConsistency": 94.74,
+        "confidenceScore": 72.84
       }
     ],
     "verticals": [
@@ -177,18 +177,18 @@
         "passed": 12,
         "score": 100,
         "passRate": 100,
-        "lastCriticalReplay": "2026-09-22T23:54:24.024Z",
+        "lastCriticalReplay": "2026-09-23T16:56:27.977Z",
         "readiness": "ready"
       },
       {
         "name": "fitness",
         "scenarios": 15,
         "criticalScenarios": 2,
-        "passed": 15,
-        "score": 100,
-        "passRate": 100,
-        "lastCriticalReplay": "2026-09-23T00:00:09.358Z",
-        "readiness": "ready"
+        "passed": 10,
+        "score": 66.67,
+        "passRate": 66.67,
+        "lastCriticalReplay": "2026-09-23T17:18:09.614Z",
+        "readiness": "blocked"
       },
       {
         "name": "food",
@@ -197,7 +197,7 @@
         "passed": 4,
         "score": 100,
         "passRate": 100,
-        "lastCriticalReplay": "2026-09-22T23:54:11.293Z",
+        "lastCriticalReplay": "2026-09-23T16:56:15.238Z",
         "readiness": "ready"
       },
       {
@@ -243,48 +243,70 @@
     ],
     "failures": [
       {
+        "signature": "fitness.functional_failure.1.erro(s).críticos.detectados.na.página",
+        "module": "fitness",
+        "channel": "api",
+        "vertical": "fitness",
+        "count": 4,
+        "impact": "medium",
+        "trend": "worsening",
+        "firstSeenAt": "2026-09-23T17:18:09.617Z",
+        "lastSeenAt": "2026-09-23T17:28:03.864Z"
+      },
+      {
         "signature": "core.flaky.tutor.não.respondeu.com.conteúdo.disponível",
         "module": "core",
         "channel": "api",
         "vertical": null,
-        "count": 2,
+        "count": 3,
         "impact": "medium",
         "trend": "recurring",
-        "firstSeenAt": "2026-09-22T23:54:24.065Z",
+        "firstSeenAt": "2026-09-23T16:56:27.995Z",
         "lastSeenAt": "2026-09-18T01:34:28.277Z"
-      },
-      {
-        "signature": "core.flaky.500.internal.server.error:.provider.de.ia.'groq'.indisponível.(circuit.breaker.a",
-        "module": "core",
-        "channel": "api",
-        "vertical": null,
-        "count": 2,
-        "impact": "medium",
-        "trend": "recurring",
-        "firstSeenAt": "2026-09-22T23:47:00.393Z",
-        "lastSeenAt": "2026-09-22T08:44:23.317Z"
       },
       {
         "signature": "core.flaky.documento.não.foi.indexado.dentro.do.tempo.esperado",
         "module": "core",
         "channel": "api",
         "vertical": null,
-        "count": 1,
+        "count": 2,
         "impact": "medium",
-        "trend": "new",
-        "firstSeenAt": "2026-09-22T23:55:50.263Z",
+        "trend": "recurring",
+        "firstSeenAt": "2026-09-23T16:56:39.664Z",
         "lastSeenAt": "2026-09-22T23:57:00.721Z"
       },
       {
-        "signature": "core.flaky.pagina./tenants.deveria.negar.acesso.ao.papel.da.sessão.(rbac),.mas.renderizou",
-        "module": "core",
+        "signature": "fitness.flaky.tempo.limite.excedido.aguardando.execução.rpa",
+        "module": "fitness",
         "channel": "api",
+        "vertical": "fitness",
+        "count": 1,
+        "impact": "high",
+        "trend": "new",
+        "firstSeenAt": "2026-09-23T16:58:07.151Z",
+        "lastSeenAt": "2026-09-23T17:18:09.614Z"
+      },
+      {
+        "signature": "omnichannel.infra_error.2.erro(s).críticos.detectados.na.página",
+        "module": "omnichannel",
+        "channel": "chat",
         "vertical": null,
         "count": 1,
         "impact": "medium",
         "trend": "new",
-        "firstSeenAt": "2026-09-22T23:57:00.733Z",
-        "lastSeenAt": "2026-09-22T23:58:01.265Z"
+        "firstSeenAt": "2026-09-23T17:21:47.445Z",
+        "lastSeenAt": "2026-09-23T17:26:56.770Z"
+      },
+      {
+        "signature": "omnichannel.flaky.tempo.limite.excedido.aguardando.execução.rpa",
+        "module": "omnichannel",
+        "channel": "chat",
+        "vertical": null,
+        "count": 1,
+        "impact": "high",
+        "trend": "new",
+        "firstSeenAt": "2026-09-23T17:34:09.779Z",
+        "lastSeenAt": "2026-09-23T17:54:11.891Z"
       }
     ],
     "checkpoints": {
@@ -311,5 +333,5 @@
     }
   },
   "outputPath": "/opt/results/ria/r-agent2/qa/mesh/intelligence/stabilitySnapshot.json",
-  "score": 89.72
+  "score": 85.81
 }

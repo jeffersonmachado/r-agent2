@@ -1,8 +1,8 @@
 # Pipeline Completo — Relatório de Validação
 
-**Data:** 2026-09-22T23:42:57.790Z
+**Data:** 2026-09-23T16:49:07.888Z
 **Gate:** ❌ NO_GO
-**Score de Estabilidade:** 89.72
+**Score de Estabilidade:** 85.81
 
 ## Etapas
 
@@ -11,7 +11,7 @@
 | validate-invariants | ✅ PASS |
 | frontend-build | ✅ PASS |
 | contracts | ✅ PASS |
-| unit-tests | ✅ PASS |
+| unit-tests | ❌ FAIL |
 | qa-mesh | ✅ PASS |
 | qa-final-report | ✅ PASS |
 | replay-critical | ✅ PASS |
@@ -19,6 +19,7 @@
 ## Bloqueadores
 
 - qa_mesh_no_go
+- failed_pipeline_steps: unit-tests
 
 ## Artefatos gerados
 

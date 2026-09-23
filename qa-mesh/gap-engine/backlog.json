@@ -6,106 +6,18 @@
       "assertions": [],
       "replayEnrichments": []
     },
-    "id": "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-flows-editor-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-saas-storefront-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenant-config-business-core-biz-tenants-business-core-biz-web-scraping",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "business-core-biz-agenda",
-        "business-core-biz-agents",
-        "business-core-biz-ai-tools",
-        "business-core-biz-backup-restore",
-        "business-core-biz-bulk-messaging",
-        "business-core-biz-channel-accounts",
-        "business-core-biz-conversations-chat",
-        "business-core-biz-failed-messages",
-        "business-core-biz-faq",
-        "business-core-biz-flows-editor",
-        "business-core-biz-kitchen-dispatch",
-        "business-core-biz-knowledge-base",
-        "business-core-biz-maintenance",
-        "business-core-biz-mfa",
-        "business-core-biz-plan-usage",
-        "business-core-biz-product-docs",
-        "business-core-biz-rag-documents",
-        "business-core-biz-saas-storefront",
-        "business-core-biz-segmentation",
-        "business-core-biz-sso-scim",
-        "business-core-biz-tenant-config",
-        "business-core-biz-tenants",
-        "business-core-biz-web-scraping"
-      ],
-      "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-beauty-infra_error-business-beauty-scr-01-business-beauty-scr-02-business-beauty-scr-03-business-beauty-scr-04-business-beauty-scr-05-business-beauty-scr-06",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio beauty",
-    "evidence": {
-      "scenarios": [
-        "business-beauty-scr-01",
-        "business-beauty-scr-02",
-        "business-beauty-scr-03",
-        "business-beauty-scr-04",
-        "business-beauty-scr-05",
-        "business-beauty-scr-06"
-      ],
-      "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-fitness-infra_error-fitness-matricula-agendamento-ui-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding-fitness-matricula-renovacao",
+    "id": "gap-mesh-fitness-functional_failure-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding",
     "severity": "high",
     "area": "qa-mesh",
     "title": "Falha aberta no dominio fitness",
     "evidence": {
       "scenarios": [
-        "fitness-matricula-agendamento-ui",
         "fitness-matricula-cancelamento",
         "fitness-matricula-checkin",
         "fitness-matricula-checkout",
-        "fitness-matricula-onboarding",
-        "fitness-matricula-renovacao"
+        "fitness-matricula-onboarding"
       ],
-      "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-functional_failure-business-core-biz-deliveries-business-core-biz-orders-business-core-biz-physical-queue",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "business-core-biz-deliveries",
-        "business-core-biz-orders",
-        "business-core-biz-physical-queue"
-      ],
-      "sampleError": "401 Unauthorized: Token inválido"
+      "sampleError": "1 erro(s) críticos detectados na página"
     },
     "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
   },
@@ -116,19 +28,17 @@
       "assertions": [],
       "replayEnrichments": []
     },
-    "id": "gap-mesh-fitness-infra_error-business-fit-scr-01-business-fit-scr-02-business-fit-scr-03",
+    "id": "gap-mesh-core-flaky-business-core-biz-academy",
     "severity": "high",
     "area": "qa-mesh",
-    "title": "Falha aberta no dominio fitness",
+    "title": "Falha aberta no dominio core",
     "evidence": {
       "scenarios": [
-        "business-fit-scr-01",
-        "business-fit-scr-02",
-        "business-fit-scr-03"
+        "business-core-biz-academy"
       ],
-      "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
+      "sampleError": "Tutor não respondeu com conteúdo disponível"
     },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
   },
   {
     "blockingClassification": "enterprise-blocker",
@@ -137,285 +47,86 @@
       "assertions": [],
       "replayEnrichments": []
     },
-    "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
+    "id": "gap-mesh-core-flaky-business-core-biz-rag-segregation",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio core",
+    "evidence": {
+      "scenarios": [
+        "business-core-biz-rag-segregation"
+      ],
+      "sampleError": "Documento não foi indexado dentro do tempo esperado"
+    },
+    "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-fitness-flaky-fitness-matricula-agendamento-ui",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio fitness",
+    "evidence": {
+      "scenarios": [
+        "fitness-matricula-agendamento-ui"
+      ],
+      "sampleError": "Tempo limite excedido aguardando execução RPA"
+    },
+    "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads",
     "severity": "high",
     "area": "qa-mesh",
     "title": "Falha aberta no dominio omnichannel",
     "evidence": {
       "scenarios": [
-        "fitness-matricula-leads",
-        "rpa-whatsapp-connections-rpa",
+        "fitness-matricula-leads"
+      ],
+      "sampleError": "2 erro(s) críticos detectados na página"
+    },
+    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-omnichannel-flaky-support-inbox-nota-ui",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio omnichannel",
+    "evidence": {
+      "scenarios": [
         "support-inbox-nota-ui"
       ],
-      "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
+      "sampleError": "Tempo limite excedido aguardando execução RPA"
     },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
   },
   {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-food-functional_failure-business-food-flow-order-lifecycle-business-food-flow-order-payment",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio food",
-    "evidence": {
-      "scenarios": [
-        "business-food-flow-order-lifecycle",
-        "business-food-flow-order-payment"
-      ],
-      "sampleError": "401 Unauthorized: Token inválido"
-    },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-clinic-infra_error-business-clinic-scr-01",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio clinic",
-    "evidence": {
-      "scenarios": [
-        "business-clinic-scr-01"
-      ],
-      "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-infra_error-business-core-biz-login",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "business-core-biz-login"
-      ],
-      "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login Call log: - navigating to \"http://localhost:5173/login\", waiting until \"domcontentloaded\""
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-functional_failure-business-core-biz-rbac",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "business-core-biz-rbac"
-      ],
-      "sampleError": "Agente supervisor seed não encontrado para atribuição de role"
-    },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-functional_failure-business-core-biz-voice-events",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "business-core-biz-voice-events"
-      ],
-      "sampleError": "voice/metrics sem X-Tenant-Id retornou 200 em vez de 403"
-    },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-food-infra_error-business-food-scr-01",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio food",
-    "evidence": {
-      "scenarios": [
-        "business-food-scr-01"
-      ],
-      "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-market-functional_failure-business-market-flow-order-customer",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio market",
-    "evidence": {
-      "scenarios": [
-        "business-market-flow-order-customer"
-      ],
-      "sampleError": "401 Unauthorized: Token inválido"
-    },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-market-infra_error-business-market-scr-01",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio market",
-    "evidence": {
-      "scenarios": [
-        "business-market-scr-01"
-      ],
-      "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-services-infra_error-business-serv-scr-01",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio services",
-    "evidence": {
-      "scenarios": [
-        "business-serv-scr-01"
-      ],
-      "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio bpmn",
-    "evidence": {
-      "scenarios": [
-        "qa-bpmn-editor-smoke"
-      ],
-      "sampleError": "[bpmn-smoke] FAIL: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/bpmn-editor"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-infra_error-qa-core-auth-login",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "qa-core-auth-login"
-      ],
-      "sampleError": "❌ Erro no teste RPA: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "qa-core-config-tenant-intelligence"
-      ],
-      "sampleError": "Tenant Intelligence smoke failed: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/tenant-intelligence"
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-  },
-  {
-    "blockingClassification": "release-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-pbx-functional_failure-qa-pbx-voice-tts-asr-smoke",
+    "id": "gap-proof-stale-fingerprints",
     "severity": "critical",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio pbx",
+    "area": "proof-governance",
+    "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
     "evidence": {
-      "scenarios": [
-        "qa-pbx-voice-tts-asr-smoke"
-      ],
-      "sampleError": "[pbx-voice-tts-asr-smoke] FAIL click2call_not_originated:failed"
+      "diverged": [
+        "scenarioRegistryFingerprint",
+        "chainFingerprint"
+      ]
     },
-    "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-  },
-  {
-    "blockingClassification": "enterprise-blocker",
-    "suggestions": {
-      "journeys": [],
-      "assertions": [],
-      "replayEnrichments": []
-    },
-    "id": "gap-mesh-core-infra_error-rpa-example-test",
-    "severity": "high",
-    "area": "qa-mesh",
-    "title": "Falha aberta no dominio core",
-    "evidence": {
-      "scenarios": [
-        "rpa-example-test"
-      ],
-      "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
-    },
-    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
   }
 ]

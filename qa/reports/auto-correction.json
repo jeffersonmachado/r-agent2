@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T00:18:25.881Z",
+  "generatedAt": "2026-09-23T17:56:25.130Z",
   "learnMode": "patch-controlled",
   "autoPromoteEnabled": false,
   "dryRun": true,
@@ -9,8 +9,8 @@
     "patchExecutions": 0,
     "promotedPlans": 0,
     "rejectedPlans": 0,
-    "scoreBefore": 89.72,
-    "scoreAfter": 89.72
+    "scoreBefore": 85.81,
+    "scoreAfter": 85.81
   },
   "learning": {
     "normalized": 0,
@@ -22,17 +22,17 @@
   "promotionResults": [],
   "patchExecutions": [],
   "learnValidation": {
-    "generatedAt": "2026-09-23T00:18:25.881Z",
+    "generatedAt": "2026-09-23T17:56:25.129Z",
     "sandboxPath": null,
     "skipped": true,
     "reason": "no_fix_plans_generated",
     "before": {
-      "score": 89.72,
+      "score": 85.81,
       "gate": "NO_GO",
       "replayPassed": true
     },
     "after": {
-      "score": 89.72,
+      "score": 85.81,
       "gate": "NO_GO",
       "replayPassed": true
     },

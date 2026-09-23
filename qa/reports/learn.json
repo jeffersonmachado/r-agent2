@@ -1,9 +1,23 @@
 {
-  "generatedAt": "2026-09-23T00:18:25.673Z",
+  "generatedAt": "2026-09-23T17:56:24.931Z",
   "normalized": {
-    "generatedAt": "2026-09-23T00:18:25.667Z",
-    "total": 4,
+    "generatedAt": "2026-09-23T17:56:24.925Z",
+    "total": 6,
     "items": [
+      {
+        "signature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+        "module": "fitness",
+        "vertical": "fitness",
+        "channel": "api",
+        "type": "functional_failure",
+        "criticality": "standard",
+        "frequency": 4,
+        "replayConsistent": true,
+        "firstSeenAt": "2026-09-23T17:18:09.617Z",
+        "lastSeenAt": "2026-09-23T17:28:03.864Z",
+        "sampleError": "1 erro(s) críticos detectados na página",
+        "scenarioId": "fitness-matricula-cancelamento"
+      },
       {
         "signature": "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
         "module": "core",
@@ -13,24 +27,10 @@
         "criticality": "high",
         "frequency": 1,
         "replayConsistent": false,
-        "firstSeenAt": "2026-09-22T23:54:24.065Z",
-        "lastSeenAt": "2026-09-22T23:55:50.113Z",
+        "firstSeenAt": "2026-09-23T16:56:27.995Z",
+        "lastSeenAt": "2026-09-23T16:56:39.634Z",
         "sampleError": "Tutor não respondeu com conteúdo disponível",
         "scenarioId": "business-core-biz-academy"
-      },
-      {
-        "signature": "core.flaky.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
-        "module": "core",
-        "vertical": "core",
-        "channel": "api",
-        "type": "flaky",
-        "criticality": "high",
-        "frequency": 1,
-        "replayConsistent": false,
-        "firstSeenAt": "2026-09-22T23:47:00.393Z",
-        "lastSeenAt": "2026-09-22T23:54:11.293Z",
-        "sampleError": "500 Internal Server Error: Provider de IA 'groq' indisponível (circuit breaker aberto).",
-        "scenarioId": "business-core-biz-flows-editor"
       },
       {
         "signature": "core.flaky.documento.n.o.foi.indexado.dentro.do.tempo.esperado",
@@ -41,44 +41,98 @@
         "criticality": "high",
         "frequency": 1,
         "replayConsistent": false,
-        "firstSeenAt": "2026-09-22T23:55:50.263Z",
-        "lastSeenAt": "2026-09-22T23:57:00.721Z",
+        "firstSeenAt": "2026-09-23T16:56:39.664Z",
+        "lastSeenAt": "2026-09-23T16:57:11.340Z",
         "sampleError": "Documento não foi indexado dentro do tempo esperado",
         "scenarioId": "business-core-biz-rag-segregation"
       },
       {
-        "signature": "core.flaky.pagina.tenants.deveria.negar.acesso.ao.papel.da.sess.o.rbac.mas.renderizou",
-        "module": "core",
-        "vertical": "core",
+        "signature": "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "module": "fitness",
+        "vertical": "fitness",
         "channel": "api",
         "type": "flaky",
-        "criticality": "normal",
+        "criticality": "blocking",
         "frequency": 1,
         "replayConsistent": false,
-        "firstSeenAt": "2026-09-22T23:57:00.733Z",
-        "lastSeenAt": "2026-09-22T23:58:01.265Z",
-        "sampleError": "Pagina /tenants deveria negar acesso ao papel da sessão (RBAC), mas renderizou",
-        "scenarioId": "business-core-biz-tenants"
+        "firstSeenAt": "2026-09-23T16:58:07.151Z",
+        "lastSeenAt": "2026-09-23T17:18:09.614Z",
+        "sampleError": "Tempo limite excedido aguardando execução RPA",
+        "scenarioId": "fitness-matricula-agendamento-ui"
+      },
+      {
+        "signature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
+        "module": "omnichannel",
+        "vertical": "omnichannel",
+        "channel": "api",
+        "type": "infra_error",
+        "criticality": "standard",
+        "frequency": 1,
+        "replayConsistent": true,
+        "firstSeenAt": "2026-09-23T17:21:47.445Z",
+        "lastSeenAt": "2026-09-23T17:26:56.770Z",
+        "sampleError": "2 erro(s) críticos detectados na página",
+        "scenarioId": "fitness-matricula-leads"
+      },
+      {
+        "signature": "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "module": "omnichannel",
+        "vertical": "omnichannel",
+        "channel": "api",
+        "type": "flaky",
+        "criticality": "blocking",
+        "frequency": 1,
+        "replayConsistent": false,
+        "firstSeenAt": "2026-09-23T17:34:09.779Z",
+        "lastSeenAt": "2026-09-23T17:54:11.891Z",
+        "sampleError": "Tempo limite excedido aguardando execução RPA",
+        "scenarioId": "support-inbox-nota-ui"
       }
     ]
   },
   "clustered": {
-    "generatedAt": "2026-09-23T00:18:25.668Z",
-    "totalClusters": 1,
+    "generatedAt": "2026-09-23T17:56:24.925Z",
+    "totalClusters": 5,
     "clusters": [
       {
         "clusterId": "cluster-1",
+        "key": "fitness::functional_failure::functional-contract",
+        "module": "fitness",
+        "type": "functional_failure",
+        "probableCause": "functional-contract",
+        "signatures": [
+          "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina"
+        ],
+        "totalFrequency": 4,
+        "criticality": "low",
+        "items": [
+          {
+            "signature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+            "module": "fitness",
+            "vertical": "fitness",
+            "channel": "api",
+            "type": "functional_failure",
+            "criticality": "standard",
+            "frequency": 4,
+            "replayConsistent": true,
+            "firstSeenAt": "2026-09-23T17:18:09.617Z",
+            "lastSeenAt": "2026-09-23T17:28:03.864Z",
+            "sampleError": "1 erro(s) críticos detectados na página",
+            "scenarioId": "fitness-matricula-cancelamento"
+          }
+        ]
+      },
+      {
+        "clusterId": "cluster-2",
         "key": "core::flaky::state-nondeterminism",
         "module": "core",
         "type": "flaky",
         "probableCause": "state-nondeterminism",
         "signatures": [
           "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
-          "core.flaky.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
-          "core.flaky.documento.n.o.foi.indexado.dentro.do.tempo.esperado",
-          "core.flaky.pagina.tenants.deveria.negar.acesso.ao.papel.da.sess.o.rbac.mas.renderizou"
+          "core.flaky.documento.n.o.foi.indexado.dentro.do.tempo.esperado"
         ],
-        "totalFrequency": 4,
+        "totalFrequency": 2,
         "criticality": "high",
         "items": [
           {
@@ -90,24 +144,10 @@
             "criticality": "high",
             "frequency": 1,
             "replayConsistent": false,
-            "firstSeenAt": "2026-09-22T23:54:24.065Z",
-            "lastSeenAt": "2026-09-22T23:55:50.113Z",
+            "firstSeenAt": "2026-09-23T16:56:27.995Z",
+            "lastSeenAt": "2026-09-23T16:56:39.634Z",
             "sampleError": "Tutor não respondeu com conteúdo disponível",
             "scenarioId": "business-core-biz-academy"
-          },
-          {
-            "signature": "core.flaky.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
-            "module": "core",
-            "vertical": "core",
-            "channel": "api",
-            "type": "flaky",
-            "criticality": "high",
-            "frequency": 1,
-            "replayConsistent": false,
-            "firstSeenAt": "2026-09-22T23:47:00.393Z",
-            "lastSeenAt": "2026-09-22T23:54:11.293Z",
-            "sampleError": "500 Internal Server Error: Provider de IA 'groq' indisponível (circuit breaker aberto).",
-            "scenarioId": "business-core-biz-flows-editor"
           },
           {
             "signature": "core.flaky.documento.n.o.foi.indexado.dentro.do.tempo.esperado",
@@ -118,58 +158,204 @@
             "criticality": "high",
             "frequency": 1,
             "replayConsistent": false,
-            "firstSeenAt": "2026-09-22T23:55:50.263Z",
-            "lastSeenAt": "2026-09-22T23:57:00.721Z",
+            "firstSeenAt": "2026-09-23T16:56:39.664Z",
+            "lastSeenAt": "2026-09-23T16:57:11.340Z",
             "sampleError": "Documento não foi indexado dentro do tempo esperado",
             "scenarioId": "business-core-biz-rag-segregation"
-          },
+          }
+        ]
+      },
+      {
+        "clusterId": "cluster-3",
+        "key": "fitness::flaky::state-nondeterminism",
+        "module": "fitness",
+        "type": "flaky",
+        "probableCause": "state-nondeterminism",
+        "signatures": [
+          "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa"
+        ],
+        "totalFrequency": 1,
+        "criticality": "high",
+        "items": [
           {
-            "signature": "core.flaky.pagina.tenants.deveria.negar.acesso.ao.papel.da.sess.o.rbac.mas.renderizou",
-            "module": "core",
-            "vertical": "core",
+            "signature": "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+            "module": "fitness",
+            "vertical": "fitness",
             "channel": "api",
             "type": "flaky",
-            "criticality": "normal",
+            "criticality": "blocking",
             "frequency": 1,
             "replayConsistent": false,
-            "firstSeenAt": "2026-09-22T23:57:00.733Z",
-            "lastSeenAt": "2026-09-22T23:58:01.265Z",
-            "sampleError": "Pagina /tenants deveria negar acesso ao papel da sessão (RBAC), mas renderizou",
-            "scenarioId": "business-core-biz-tenants"
+            "firstSeenAt": "2026-09-23T16:58:07.151Z",
+            "lastSeenAt": "2026-09-23T17:18:09.614Z",
+            "sampleError": "Tempo limite excedido aguardando execução RPA",
+            "scenarioId": "fitness-matricula-agendamento-ui"
+          }
+        ]
+      },
+      {
+        "clusterId": "cluster-4",
+        "key": "omnichannel::infra_error::runtime-timing",
+        "module": "omnichannel",
+        "type": "infra_error",
+        "probableCause": "runtime-timing",
+        "signatures": [
+          "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina"
+        ],
+        "totalFrequency": 1,
+        "criticality": "low",
+        "items": [
+          {
+            "signature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
+            "module": "omnichannel",
+            "vertical": "omnichannel",
+            "channel": "api",
+            "type": "infra_error",
+            "criticality": "standard",
+            "frequency": 1,
+            "replayConsistent": true,
+            "firstSeenAt": "2026-09-23T17:21:47.445Z",
+            "lastSeenAt": "2026-09-23T17:26:56.770Z",
+            "sampleError": "2 erro(s) críticos detectados na página",
+            "scenarioId": "fitness-matricula-leads"
+          }
+        ]
+      },
+      {
+        "clusterId": "cluster-5",
+        "key": "omnichannel::flaky::state-nondeterminism",
+        "module": "omnichannel",
+        "type": "flaky",
+        "probableCause": "state-nondeterminism",
+        "signatures": [
+          "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa"
+        ],
+        "totalFrequency": 1,
+        "criticality": "high",
+        "items": [
+          {
+            "signature": "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+            "module": "omnichannel",
+            "vertical": "omnichannel",
+            "channel": "api",
+            "type": "flaky",
+            "criticality": "blocking",
+            "frequency": 1,
+            "replayConsistent": false,
+            "firstSeenAt": "2026-09-23T17:34:09.779Z",
+            "lastSeenAt": "2026-09-23T17:54:11.891Z",
+            "sampleError": "Tempo limite excedido aguardando execução RPA",
+            "scenarioId": "support-inbox-nota-ui"
           }
         ]
       }
     ]
   },
   "ranked": {
-    "generatedAt": "2026-09-23T00:18:25.668Z",
-    "totalRanked": 1,
+    "generatedAt": "2026-09-23T17:56:24.926Z",
+    "totalRanked": 5,
     "ranked": [
       {
-        "clusterId": "cluster-1",
+        "clusterId": "cluster-3",
+        "module": "fitness",
+        "probableCause": "state-nondeterminism",
+        "criticality": "high",
+        "totalFrequency": 1,
+        "recurrence": 10,
+        "priorityScore": 81.6,
+        "signatures": [
+          "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa"
+        ]
+      },
+      {
+        "clusterId": "cluster-5",
+        "module": "omnichannel",
+        "probableCause": "state-nondeterminism",
+        "criticality": "high",
+        "totalFrequency": 1,
+        "recurrence": 10,
+        "priorityScore": 81.6,
+        "signatures": [
+          "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa"
+        ]
+      },
+      {
+        "clusterId": "cluster-2",
         "module": "core",
         "probableCause": "state-nondeterminism",
         "criticality": "high",
-        "totalFrequency": 4,
-        "recurrence": 40,
-        "priorityScore": 73.9,
+        "totalFrequency": 2,
+        "recurrence": 20,
+        "priorityScore": 70.7,
         "signatures": [
           "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
-          "core.flaky.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
-          "core.flaky.documento.n.o.foi.indexado.dentro.do.tempo.esperado",
-          "core.flaky.pagina.tenants.deveria.negar.acesso.ao.papel.da.sess.o.rbac.mas.renderizou"
+          "core.flaky.documento.n.o.foi.indexado.dentro.do.tempo.esperado"
+        ]
+      },
+      {
+        "clusterId": "cluster-1",
+        "module": "fitness",
+        "probableCause": "functional-contract",
+        "criticality": "low",
+        "totalFrequency": 4,
+        "recurrence": 40,
+        "priorityScore": 37.4,
+        "signatures": [
+          "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina"
+        ]
+      },
+      {
+        "clusterId": "cluster-4",
+        "module": "omnichannel",
+        "probableCause": "runtime-timing",
+        "criticality": "low",
+        "totalFrequency": 1,
+        "recurrence": 10,
+        "priorityScore": 32.6,
+        "signatures": [
+          "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina"
         ]
       }
     ]
   },
   "suggestions": {
-    "generatedAt": "2026-09-23T00:18:25.668Z",
-    "totalSuggestions": 1,
+    "generatedAt": "2026-09-23T17:56:24.926Z",
+    "totalSuggestions": 5,
     "suggestions": [
       {
-        "clusterId": "cluster-1",
+        "clusterId": "cluster-3",
+        "module": "fitness",
+        "priorityScore": 81.6,
+        "probableCause": "state-nondeterminism",
+        "suggestionType": "determinism-fix",
+        "recommendations": [
+          "fixar seed e resetar estado antes de cada execucao",
+          "isolar dependencias externas com mock controlado",
+          "comparar 3 execucoes consecutivas para validar repetibilidade"
+        ],
+        "signatures": [
+          "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa"
+        ]
+      },
+      {
+        "clusterId": "cluster-5",
+        "module": "omnichannel",
+        "priorityScore": 81.6,
+        "probableCause": "state-nondeterminism",
+        "suggestionType": "determinism-fix",
+        "recommendations": [
+          "fixar seed e resetar estado antes de cada execucao",
+          "isolar dependencias externas com mock controlado",
+          "comparar 3 execucoes consecutivas para validar repetibilidade"
+        ],
+        "signatures": [
+          "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa"
+        ]
+      },
+      {
+        "clusterId": "cluster-2",
         "module": "core",
-        "priorityScore": 73.9,
+        "priorityScore": 70.7,
         "probableCause": "state-nondeterminism",
         "suggestionType": "determinism-fix",
         "recommendations": [
@@ -179,20 +365,94 @@
         ],
         "signatures": [
           "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
-          "core.flaky.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
-          "core.flaky.documento.n.o.foi.indexado.dentro.do.tempo.esperado",
-          "core.flaky.pagina.tenants.deveria.negar.acesso.ao.papel.da.sess.o.rbac.mas.renderizou"
+          "core.flaky.documento.n.o.foi.indexado.dentro.do.tempo.esperado"
+        ]
+      },
+      {
+        "clusterId": "cluster-1",
+        "module": "fitness",
+        "priorityScore": 37.4,
+        "probableCause": "functional-contract",
+        "suggestionType": "contract-alignment",
+        "recommendations": [
+          "alinhar contrato esperado do cenario com implementacao",
+          "adicionar assertiva de causa raiz no passo de falha",
+          "garantir evidencias minimas para diagnostico"
+        ],
+        "signatures": [
+          "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina"
+        ]
+      },
+      {
+        "clusterId": "cluster-4",
+        "module": "omnichannel",
+        "priorityScore": 32.6,
+        "probableCause": "runtime-timing",
+        "suggestionType": "stability-hardening",
+        "recommendations": [
+          "substituir timeout fixo por wait por estado observavel",
+          "isolar clock e estado compartilhado no cenario",
+          "registrar metrica de latencia e timeout por passo"
+        ],
+        "signatures": [
+          "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina"
         ]
       }
     ]
   },
   "fixPlans": {
-    "generatedAt": "2026-09-23T00:18:25.668Z",
-    "totalPlans": 1,
+    "generatedAt": "2026-09-23T17:56:24.926Z",
+    "totalPlans": 5,
     "plans": [
       {
+        "failureSignature": "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "clusterId": "cluster-3",
+        "proposedFix": {
+          "type": "determinism-fix",
+          "targets": [
+            "core/fitness",
+            "qa-mesh/meshRunner.js"
+          ],
+          "actions": [
+            "fixar seed e resetar estado antes de cada execucao",
+            "isolar dependencias externas com mock controlado",
+            "comparar 3 execucoes consecutivas para validar repetibilidade"
+          ]
+        },
+        "validationPlan": [
+          "run qa technical",
+          "run qa mesh",
+          "run critical replay",
+          "compare stability score before/after"
+        ],
+        "executionMode": "patch-controlled"
+      },
+      {
+        "failureSignature": "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "clusterId": "cluster-5",
+        "proposedFix": {
+          "type": "determinism-fix",
+          "targets": [
+            "core/omnichannel",
+            "qa-mesh/meshRunner.js"
+          ],
+          "actions": [
+            "fixar seed e resetar estado antes de cada execucao",
+            "isolar dependencias externas com mock controlado",
+            "comparar 3 execucoes consecutivas para validar repetibilidade"
+          ]
+        },
+        "validationPlan": [
+          "run qa technical",
+          "run qa mesh",
+          "run critical replay",
+          "compare stability score before/after"
+        ],
+        "executionMode": "patch-controlled"
+      },
+      {
         "failureSignature": "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
-        "clusterId": "cluster-1",
+        "clusterId": "cluster-2",
         "proposedFix": {
           "type": "determinism-fix",
           "targets": [
@@ -212,15 +472,193 @@
           "compare stability score before/after"
         ],
         "executionMode": "patch-controlled"
+      },
+      {
+        "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+        "clusterId": "cluster-1",
+        "proposedFix": {
+          "type": "contract-alignment",
+          "targets": [
+            "core/fitness",
+            "qa-mesh/meshRunner.js"
+          ],
+          "actions": [
+            "alinhar contrato esperado do cenario com implementacao",
+            "adicionar assertiva de causa raiz no passo de falha",
+            "garantir evidencias minimas para diagnostico"
+          ]
+        },
+        "validationPlan": [
+          "run qa technical",
+          "run qa mesh",
+          "run critical replay",
+          "compare stability score before/after"
+        ],
+        "executionMode": "suggestion-only"
+      },
+      {
+        "failureSignature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
+        "clusterId": "cluster-4",
+        "proposedFix": {
+          "type": "stability-hardening",
+          "targets": [
+            "core/omnichannel",
+            "qa-mesh/meshRunner.js"
+          ],
+          "actions": [
+            "substituir timeout fixo por wait por estado observavel",
+            "isolar clock e estado compartilhado no cenario",
+            "registrar metrica de latencia e timeout por passo"
+          ]
+        },
+        "validationPlan": [
+          "run qa technical",
+          "run qa mesh",
+          "run critical replay",
+          "compare stability score before/after"
+        ],
+        "executionMode": "suggestion-only"
       }
     ]
   },
   "validationPlans": {
-    "generatedAt": "2026-09-23T00:18:25.669Z",
-    "totalValidationPlans": 1,
+    "generatedAt": "2026-09-23T17:56:24.926Z",
+    "totalValidationPlans": 5,
     "plans": [
       {
+        "failureSignature": "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "requiredChecks": {
+          "backendBuild": true,
+          "frontendBuild": true,
+          "qaTechnical": true,
+          "qaBusiness": false,
+          "criticalReplay": true
+        },
+        "tests": [
+          "npm run test:unit",
+          "npm run frontend:build",
+          "npm run qa",
+          "npm run qa:mesh",
+          "npm run test:rpa:reliability:smoke"
+        ],
+        "replay": [
+          "critical"
+        ],
+        "compareMetrics": [
+          "stabilityScore",
+          "flakyRate",
+          "criticalFlowSuccess",
+          "releaseReadiness"
+        ],
+        "gates": [
+          "backendBuild",
+          "frontendBuild",
+          "qaTechnical",
+          "criticalReplay",
+          "checkpointPersisted"
+        ]
+      },
+      {
+        "failureSignature": "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "requiredChecks": {
+          "backendBuild": true,
+          "frontendBuild": true,
+          "qaTechnical": true,
+          "qaBusiness": false,
+          "criticalReplay": true
+        },
+        "tests": [
+          "npm run test:unit",
+          "npm run frontend:build",
+          "npm run qa",
+          "npm run qa:mesh",
+          "npm run test:rpa:reliability:smoke"
+        ],
+        "replay": [
+          "critical"
+        ],
+        "compareMetrics": [
+          "stabilityScore",
+          "flakyRate",
+          "criticalFlowSuccess",
+          "releaseReadiness"
+        ],
+        "gates": [
+          "backendBuild",
+          "frontendBuild",
+          "qaTechnical",
+          "criticalReplay",
+          "checkpointPersisted"
+        ]
+      },
+      {
         "failureSignature": "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
+        "requiredChecks": {
+          "backendBuild": true,
+          "frontendBuild": true,
+          "qaTechnical": true,
+          "qaBusiness": false,
+          "criticalReplay": true
+        },
+        "tests": [
+          "npm run test:unit",
+          "npm run frontend:build",
+          "npm run qa",
+          "npm run qa:mesh",
+          "npm run test:rpa:reliability:smoke"
+        ],
+        "replay": [
+          "critical"
+        ],
+        "compareMetrics": [
+          "stabilityScore",
+          "flakyRate",
+          "criticalFlowSuccess",
+          "releaseReadiness"
+        ],
+        "gates": [
+          "backendBuild",
+          "frontendBuild",
+          "qaTechnical",
+          "criticalReplay",
+          "checkpointPersisted"
+        ]
+      },
+      {
+        "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+        "requiredChecks": {
+          "backendBuild": true,
+          "frontendBuild": true,
+          "qaTechnical": true,
+          "qaBusiness": false,
+          "criticalReplay": true
+        },
+        "tests": [
+          "npm run test:unit",
+          "npm run frontend:build",
+          "npm run qa",
+          "npm run qa:mesh",
+          "npm run test:rpa:reliability:smoke"
+        ],
+        "replay": [
+          "critical"
+        ],
+        "compareMetrics": [
+          "stabilityScore",
+          "flakyRate",
+          "criticalFlowSuccess",
+          "releaseReadiness"
+        ],
+        "gates": [
+          "backendBuild",
+          "frontendBuild",
+          "qaTechnical",
+          "criticalReplay",
+          "checkpointPersisted"
+        ]
+      },
+      {
+        "failureSignature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
         "requiredChecks": {
           "backendBuild": true,
           "frontendBuild": true,
@@ -255,10 +693,46 @@
     ]
   },
   "patchExecutions": {
-    "generatedAt": "2026-09-23T00:18:25.669Z",
+    "generatedAt": "2026-09-23T17:56:24.927Z",
     "mode": "suggestion-only",
-    "totalExecutions": 1,
+    "totalExecutions": 5,
     "executions": [
+      {
+        "failureSignature": "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "mode": "suggestion-only",
+        "status": "suggested",
+        "applied": false,
+        "dryRun": false,
+        "targets": [
+          "core/fitness",
+          "qa-mesh/meshRunner.js"
+        ],
+        "actions": [
+          "fixar seed e resetar estado antes de cada execucao",
+          "isolar dependencias externas com mock controlado",
+          "comparar 3 execucoes consecutivas para validar repetibilidade"
+        ],
+        "createdAt": "2026-09-23T17:56:24.927Z",
+        "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+      },
+      {
+        "failureSignature": "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "mode": "suggestion-only",
+        "status": "suggested",
+        "applied": false,
+        "dryRun": false,
+        "targets": [
+          "core/omnichannel",
+          "qa-mesh/meshRunner.js"
+        ],
+        "actions": [
+          "fixar seed e resetar estado antes de cada execucao",
+          "isolar dependencias externas com mock controlado",
+          "comparar 3 execucoes consecutivas para validar repetibilidade"
+        ],
+        "createdAt": "2026-09-23T17:56:24.927Z",
+        "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+      },
       {
         "failureSignature": "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
         "mode": "suggestion-only",
@@ -274,25 +748,2067 @@
           "isolar dependencias externas com mock controlado",
           "comparar 3 execucoes consecutivas para validar repetibilidade"
         ],
-        "createdAt": "2026-09-23T00:18:25.669Z",
+        "createdAt": "2026-09-23T17:56:24.927Z",
+        "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+      },
+      {
+        "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+        "mode": "suggestion-only",
+        "status": "suggested",
+        "applied": false,
+        "dryRun": false,
+        "targets": [
+          "core/fitness",
+          "qa-mesh/meshRunner.js"
+        ],
+        "actions": [
+          "alinhar contrato esperado do cenario com implementacao",
+          "adicionar assertiva de causa raiz no passo de falha",
+          "garantir evidencias minimas para diagnostico"
+        ],
+        "createdAt": "2026-09-23T17:56:24.927Z",
+        "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
+      },
+      {
+        "failureSignature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
+        "mode": "suggestion-only",
+        "status": "suggested",
+        "applied": false,
+        "dryRun": false,
+        "targets": [
+          "core/omnichannel",
+          "qa-mesh/meshRunner.js"
+        ],
+        "actions": [
+          "substituir timeout fixo por wait por estado observavel",
+          "isolar clock e estado compartilhado no cenario",
+          "registrar metrica de latencia e timeout por passo"
+        ],
+        "createdAt": "2026-09-23T17:56:24.927Z",
         "notes": "Nenhuma alteracao automatica aplicada; plano somente sugestao."
       }
     ]
   },
   "memory": {
-    "generatedAt": "2026-09-23T00:18:25.671Z",
+    "generatedAt": "2026-09-23T17:56:24.929Z",
     "stats": {
-      "detected": 245,
-      "clustered": 245,
-      "prioritized": 245,
-      "suggested": 245,
-      "planned": 245,
+      "detected": 304,
+      "clustered": 304,
+      "prioritized": 304,
+      "suggested": 304,
+      "planned": 304,
       "patched": 0,
       "validated": 0,
       "promoted": 0,
       "rejected": 0
     },
     "entries": [
+      {
+        "failureSignature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
+        "clusterId": "cluster-4",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 32.6,
+        "plan": {
+          "failureSignature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
+          "clusterId": "cluster-4",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/omnichannel",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:56:24.929Z"
+      },
+      {
+        "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+        "clusterId": "cluster-1",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 37.4,
+        "plan": {
+          "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+          "clusterId": "cluster-1",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:56:24.929Z"
+      },
+      {
+        "failureSignature": "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
+        "clusterId": "cluster-2",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 70.7,
+        "plan": {
+          "failureSignature": "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
+          "clusterId": "cluster-2",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:56:24.929Z"
+      },
+      {
+        "failureSignature": "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "clusterId": "cluster-5",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "omnichannel.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+          "clusterId": "cluster-5",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/omnichannel",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:56:24.929Z"
+      },
+      {
+        "failureSignature": "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+        "clusterId": "cluster-3",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "fitness.flaky.tempo.limite.excedido.aguardando.execu.o.rpa",
+          "clusterId": "cluster-3",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:56:24.929Z"
+      },
+      {
+        "failureSignature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
+        "clusterId": "cluster-10",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 32.6,
+        "plan": {
+          "failureSignature": "omnichannel.infra_error.2.erro.s.cr.ticos.detectados.na.p.gina",
+          "clusterId": "cluster-10",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/omnichannel",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+        "clusterId": "cluster-1",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 37.4,
+        "plan": {
+          "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+          "clusterId": "cluster-1",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "market.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-8",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "market.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-8",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/market",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "beauty.flaky.nenhum.alvo.sem.ntico.encontrado.data.testid.refresh.button.button.has.text.atua",
+        "clusterId": "cluster-5",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "beauty.flaky.nenhum.alvo.sem.ntico.encontrado.data.testid.refresh.button.button.has.text.atua",
+          "clusterId": "cluster-5",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/beauty",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "food.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-4",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 70.7,
+        "plan": {
+          "failureSignature": "food.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-4",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/food",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "core.functional_failure.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
+        "clusterId": "cluster-3",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 70.7,
+        "plan": {
+          "failureSignature": "core.functional_failure.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
+          "clusterId": "cluster-3",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "pbx.flaky..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+        "clusterId": "cluster-9",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "pbx.flaky..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+          "clusterId": "cluster-9",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "scripts/test-pbx-voice-tts-asr-smoke.js",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "omnichannel.flaky.replay.signing.key.required.min.32.bytes",
+        "clusterId": "cluster-7",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 83.2,
+        "plan": {
+          "failureSignature": "omnichannel.flaky.replay.signing.key.required.min.32.bytes",
+          "clusterId": "cluster-7",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/omnichannel",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "fitness.flaky.replay.signing.key.required.min.32.bytes",
+        "clusterId": "cluster-6",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 83.2,
+        "plan": {
+          "failureSignature": "fitness.flaky.replay.signing.key.required.min.32.bytes",
+          "clusterId": "cluster-6",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "core.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-2",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 100,
+        "plan": {
+          "failureSignature": "core.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-2",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T17:54:13.115Z"
+      },
+      {
+        "failureSignature": "core.functional_failure.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
+        "clusterId": "cluster-1",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "core.functional_failure.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
+          "clusterId": "cluster-1",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:28.357Z"
+      },
+      {
+        "failureSignature": "omnichannel.infra_error.page.goto.net.err.connection.refused.at.http.localhost.5173.call.log.navigating.",
+        "clusterId": "cluster-6",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 35.8,
+        "plan": {
+          "failureSignature": "omnichannel.infra_error.page.goto.net.err.connection.refused.at.http.localhost.5173.call.log.navigating.",
+          "clusterId": "cluster-6",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/omnichannel",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "services.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-18",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 43.1,
+        "plan": {
+          "failureSignature": "services.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-18",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/services",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "market.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-17",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 43.1,
+        "plan": {
+          "failureSignature": "market.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-17",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/market",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "bpmn.infra_error..bpmn.smoke.fail.page.goto.net.err.connection.refused.at.http.localhost.5173.bpm",
+        "clusterId": "cluster-19",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "bpmn.infra_error..bpmn.smoke.fail.page.goto.net.err.connection.refused.at.http.localhost.5173.bpm",
+          "clusterId": "cluster-19",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/bpmn",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "market.functional_failure.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-16",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "market.functional_failure.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-16",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/market",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "food.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-15",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "food.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-15",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/food",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "clinic.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-14",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "clinic.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-14",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/clinic",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "market.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-12",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "market.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-12",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/market",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "beauty.flaky.nenhum.alvo.sem.ntico.encontrado.data.testid.refresh.button.button.has.text.atua",
+        "clusterId": "cluster-9",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "beauty.flaky.nenhum.alvo.sem.ntico.encontrado.data.testid.refresh.button.button.has.text.atua",
+          "clusterId": "cluster-9",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/beauty",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "food.functional_failure.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-8",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 70.7,
+        "plan": {
+          "failureSignature": "food.functional_failure.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-8",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/food",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "food.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-7",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 70.7,
+        "plan": {
+          "failureSignature": "food.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-7",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/food",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "beauty.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-2",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 77.1,
+        "plan": {
+          "failureSignature": "beauty.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-2",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/beauty",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "pbx.functional_failure..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+        "clusterId": "cluster-20",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "pbx.functional_failure..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+          "clusterId": "cluster-20",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "scripts/test-pbx-voice-tts-asr-smoke.js",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "pbx.flaky..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+        "clusterId": "cluster-13",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "pbx.flaky..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+          "clusterId": "cluster-13",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "scripts/test-pbx-voice-tts-asr-smoke.js",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "omnichannel.flaky.replay.signing.key.required.min.32.bytes",
+        "clusterId": "cluster-11",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "omnichannel.flaky.replay.signing.key.required.min.32.bytes",
+          "clusterId": "cluster-11",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/omnichannel",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "fitness.flaky.replay.signing.key.required.min.32.bytes",
+        "clusterId": "cluster-10",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "fitness.flaky.replay.signing.key.required.min.32.bytes",
+          "clusterId": "cluster-10",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "core.functional_failure.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-5",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 91.2,
+        "plan": {
+          "failureSignature": "core.functional_failure.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-5",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "fitness.infra_error.page.goto.net.err.connection.refused.at.http.localhost.5173.call.log.navigating.",
+        "clusterId": "cluster-3",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 94.4,
+        "plan": {
+          "failureSignature": "fitness.infra_error.page.goto.net.err.connection.refused.at.http.localhost.5173.call.log.navigating.",
+          "clusterId": "cluster-3",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "core.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-4",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 99.2,
+        "plan": {
+          "failureSignature": "core.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-4",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "core.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-1",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 100,
+        "plan": {
+          "failureSignature": "core.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-1",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T05:00:10.787Z"
+      },
+      {
+        "failureSignature": "core.functional_failure.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
+        "clusterId": "cluster-2",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "core.functional_failure.500.internal.server.error.provider.de.ia.groq.indispon.vel.circuit.breaker.abert",
+          "clusterId": "cluster-2",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:53.387Z"
+      },
+      {
+        "failureSignature": "beauty.flaky.nenhum.alvo.sem.ntico.encontrado.data.testid.refresh.button.button.has.text.atua",
+        "clusterId": "cluster-1",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "beauty.flaky.nenhum.alvo.sem.ntico.encontrado.data.testid.refresh.button.button.has.text.atua",
+          "clusterId": "cluster-1",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/beauty",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:53.387Z"
+      },
+      {
+        "failureSignature": "omnichannel.infra_error.page.goto.net.err.connection.refused.at.http.localhost.5173.call.log.navigating.",
+        "clusterId": "cluster-6",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 35.8,
+        "plan": {
+          "failureSignature": "omnichannel.infra_error.page.goto.net.err.connection.refused.at.http.localhost.5173.call.log.navigating.",
+          "clusterId": "cluster-6",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/omnichannel",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "services.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-17",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 43.1,
+        "plan": {
+          "failureSignature": "services.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-17",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/services",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "market.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-16",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 43.1,
+        "plan": {
+          "failureSignature": "market.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-16",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/market",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "beauty.flaky.nenhum.alvo.sem.ntico.encontrado.data.testid.refresh.button.button.has.text.atua",
+        "clusterId": "cluster-21",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "beauty.flaky.nenhum.alvo.sem.ntico.encontrado.data.testid.refresh.button.button.has.text.atua",
+          "clusterId": "cluster-21",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/beauty",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "bpmn.infra_error..bpmn.smoke.fail.page.goto.net.err.connection.refused.at.http.localhost.5173.bpm",
+        "clusterId": "cluster-18",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "bpmn.infra_error..bpmn.smoke.fail.page.goto.net.err.connection.refused.at.http.localhost.5173.bpm",
+          "clusterId": "cluster-18",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/bpmn",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "market.functional_failure.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-15",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "market.functional_failure.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-15",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/market",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "food.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-14",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "food.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-14",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/food",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "clinic.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-13",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "clinic.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-13",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/clinic",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "market.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-11",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 69.1,
+        "plan": {
+          "failureSignature": "market.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-11",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/market",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "food.functional_failure.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-8",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 70.7,
+        "plan": {
+          "failureSignature": "food.functional_failure.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-8",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/food",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "food.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-7",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 70.7,
+        "plan": {
+          "failureSignature": "food.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-7",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/food",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "beauty.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-2",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 77.1,
+        "plan": {
+          "failureSignature": "beauty.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-2",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/beauty",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "pbx.functional_failure..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+        "clusterId": "cluster-19",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "pbx.functional_failure..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+          "clusterId": "cluster-19",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "scripts/test-pbx-voice-tts-asr-smoke.js",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "pbx.flaky..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+        "clusterId": "cluster-12",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "pbx.flaky..pbx.voice.tts.asr.smoke.fail.click2call.not.originated.failed",
+          "clusterId": "cluster-12",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "scripts/test-pbx-voice-tts-asr-smoke.js",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "omnichannel.flaky.replay.signing.key.required.min.32.bytes",
+        "clusterId": "cluster-10",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "omnichannel.flaky.replay.signing.key.required.min.32.bytes",
+          "clusterId": "cluster-10",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/omnichannel",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "fitness.flaky.replay.signing.key.required.min.32.bytes",
+        "clusterId": "cluster-9",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 81.6,
+        "plan": {
+          "failureSignature": "fitness.flaky.replay.signing.key.required.min.32.bytes",
+          "clusterId": "cluster-9",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+        "clusterId": "cluster-20",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 83.2,
+        "plan": {
+          "failureSignature": "fitness.functional_failure.1.erro.s.cr.ticos.detectados.na.p.gina",
+          "clusterId": "cluster-20",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "core.functional_failure.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-5",
+        "state": "planned",
+        "suggestionType": "contract-alignment",
+        "priorityScore": 94.4,
+        "plan": {
+          "failureSignature": "core.functional_failure.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-5",
+          "proposedFix": {
+            "type": "contract-alignment",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "alinhar contrato esperado do cenario com implementacao",
+              "adicionar assertiva de causa raiz no passo de falha",
+              "garantir evidencias minimas para diagnostico"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "suggestion-only"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "fitness.infra_error.page.goto.net.err.connection.refused.at.http.localhost.5173.call.log.navigating.",
+        "clusterId": "cluster-3",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 94.4,
+        "plan": {
+          "failureSignature": "fitness.infra_error.page.goto.net.err.connection.refused.at.http.localhost.5173.call.log.navigating.",
+          "clusterId": "cluster-3",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/fitness",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "core.flaky.401.unauthorized.token.inv.lido",
+        "clusterId": "cluster-4",
+        "state": "planned",
+        "suggestionType": "determinism-fix",
+        "priorityScore": 99.2,
+        "plan": {
+          "failureSignature": "core.flaky.401.unauthorized.token.inv.lido",
+          "clusterId": "cluster-4",
+          "proposedFix": {
+            "type": "determinism-fix",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "fixar seed e resetar estado antes de cada execucao",
+              "isolar dependencias externas com mock controlado",
+              "comparar 3 execucoes consecutivas para validar repetibilidade"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
+      {
+        "failureSignature": "core.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+        "clusterId": "cluster-1",
+        "state": "planned",
+        "suggestionType": "stability-hardening",
+        "priorityScore": 100,
+        "plan": {
+          "failureSignature": "core.infra_error..business.qa.erro.fatal.page.goto.net.err.connection.refused.at.http.localhost.5",
+          "clusterId": "cluster-1",
+          "proposedFix": {
+            "type": "stability-hardening",
+            "targets": [
+              "core/core",
+              "qa-mesh/meshRunner.js"
+            ],
+            "actions": [
+              "substituir timeout fixo por wait por estado observavel",
+              "isolar clock e estado compartilhado no cenario",
+              "registrar metrica de latencia e timeout por passo"
+            ]
+          },
+          "validationPlan": [
+            "run qa technical",
+            "run qa mesh",
+            "run critical replay",
+            "compare stability score before/after"
+          ],
+          "executionMode": "patch-controlled"
+        },
+        "patchStatus": "suggested",
+        "validationStatus": "pending",
+        "promotionDecision": "blocked",
+        "updatedAt": "2026-09-23T01:22:35.706Z"
+      },
       {
         "failureSignature": "core.flaky.tutor.n.o.respondeu.com.conte.do.dispon.vel",
         "clusterId": "cluster-1",

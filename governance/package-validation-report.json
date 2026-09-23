@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-09-22T08:36:34.622Z",
-  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260921-024731.zip",
-  "zipName": "r-agent2-20260921-024731.zip",
-  "zipSha256": "146061b8aa10d3997130ac7ead8736a7dcb7486ad55dcf07b7080302a6d1eb7b",
+  "generatedAt": "2026-09-23T20:39:06.325Z",
+  "zipPath": "/opt/results/ria/r-agent2/dist/r-agent2-20260923-121751.zip",
+  "zipName": "r-agent2-20260923-121751.zip",
+  "zipSha256": "fa309459ea827c1fe3a18fd8795f9dba2da9e3268de0d372f2b526943b5f3140",
   "payloadCentric": false,
   "envelopePath": null,
   "selectionMode": "audited",
@@ -44,22 +44,22 @@
     "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
-  "entryCount": 6956,
+  "entryCount": 9295,
   "missingEntries": [],
   "missingEntryCodes": [],
   "ok": true,
   "error": null,
   "packageBinding": {
-    "boundTo": "r-agent2-20260921-024731.zip",
-    "sha256": "146061b8aa10d3997130ac7ead8736a7dcb7486ad55dcf07b7080302a6d1eb7b",
+    "boundTo": "r-agent2-20260923-121751.zip",
+    "sha256": "fa309459ea827c1fe3a18fd8795f9dba2da9e3268de0d372f2b526943b5f3140",
     "immutable": true,
     "selfProving": true,
     "offlineAuditable": true
   },
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260922083602035-87410cca",
-  "sourceFingerprint": "dff0317246365e259edb1b22a2da5b4790c1937b1c19966b9730651da2d21f73",
-  "gitCommit": "a76204e68029bc9a82bbb879ebdbd1d264eb0fb8",
-  "gitTree": "170856eabc6c3373dba1113f22714533e9797be5"
+  "runId": "rap-governed-20260923191944590-02980291",
+  "sourceFingerprint": "04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344",
+  "gitCommit": "0a69bdaed04d41979a5550464c7738a35db6cecc",
+  "gitTree": "080bc2ac3de9e4c5c8c3e1034120847e8d82c103"
 }

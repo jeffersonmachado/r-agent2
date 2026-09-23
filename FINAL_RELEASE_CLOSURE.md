@@ -130,3 +130,166 @@ ENGINEERING_ROUTER_V1_SEALED = true
 A partir daqui: NENHUMA nova melhoria no Engineering Router nesta missão. Qualquer achado não
 bloqueante vai para `POST_RELEASE_MODEL_ROUTER_BACKLOG.md`. A missão prossegue para a FASE RAP
 GLOBAL (source freeze final + novo governed run + QA Mesh same-run + gates obrigatórios).
+
+## FASE RAP GLOBAL — Source Freeze final
+
+```
+FINAL_SOURCE_HEAD=0a69bdaed04d41979a5550464c7738a35db6cecc
+FINAL_SOURCE_TREE=080bc2ac3de9e4c5c8c3e1034120847e8d82c103
+FINAL_SOURCE_FINGERPRINT=04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344
+```
+
+Working tree limpo neste HEAD (`git status --porcelain` vazio) — nenhuma alteração de source
+desde a selagem do Router acima.
+
+## Novo governed run
+
+```
+RUN_ID=rap-governed-20260923164847089-171c2c08
+SOURCE_FINGERPRINT=04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344 (idêntico ao freeze acima)
+POLICY=RAP-AGENT-CONSTITUTION v1.0.4, policyFingerprint=4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb, status=PASS
+CRIADO_EM=2026-09-23T16:48:47.195Z
+```
+
+Nunca reaproveita QA/Final Consistency/Final Readiness/runtime evidence/release report de runs
+anteriores — tudo o que segue nasce DENTRO deste run.
+
+---
+
+# RETOMADA DA MISSÃO — segunda passagem (2026-09-23T19:1x UTC)
+
+## BASELINE 2
+
+```
+HEAD=0a69bdaed04d41979a5550464c7738a35db6cecc
+SOURCE_FINGERPRINT=04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344
+STARTED_AT=2026-09-23T19:10:00Z
+ROUTER_STRUCTURAL=PASS (209 checks, 0 falhas) — ENGINEERING_ROUTER_V1_SEALED=true
+ROUTER_RUNTIME=RUNTIME_PASS (25/25, 0 falhas) — fingerprint 04280aa2 (mesma fonte)
+QA_MESH=NO_GO (mesh-20260923164907-rjc1js; 135/144, failed=4, infra=1, flaky=4)
+FINAL_CONSISTENCY=stale (run rap-governed-20260922083602035-87410cca)
+FINAL_READINESS=stale (projeção dev/platform-readiness/latest.json com runId estrangeiro)
+GOVERNANCE=stale
+CURRENT_RUN_ID=rap-governed-20260923164847089-171c2c08 (stale — source regredido, ver abaixo)
+```
+
+## REGRESSION encontrada no worktree (corrigida antes de qualquer outra ação)
+
+Dois arquivos de SOURCE estavam revertidos para um estado ~7 commits anterior, removendo
+integração do Engineering Model Router do código entregue:
+
+- `package.json` (blob `fccbb6db`, era o de `ERV1-CLOSE-010`): sem
+  `collect:engineering-router-runtime-evidence`, sem `validate:engineering-router-v1:runtime`,
+  sem `engineering-router:audit-envelope:generate|verify` e sem `verify:engineering-router-v1-envelope`;
+  o gate agregado `validate:governance-enforcement` chamava `validate:engineering-router-v1` no lugar
+  de `validate:engineering-router-v1:runtime` — o gate de runtime do Router saía SILENCIOSAMENTE do
+  agregado (falso GREEN permitido).
+- `api/db/models/index.js` (blob `dc53bddb`, era o de `ER-V1-FINAL-006`): sem
+  `EngineeringRegressionRun`, `EngineeringModelCatalogEntry` e `EngineeringOperation`
+  (modelo criado por `ER-V1-SEAL-002`) e sem as associações `regressionRuns`.
+
+Origem: escrita dos dois arquivos em `2026-09-23T19:14:30/49Z` (mtime), DEPOIS do fim do mesh das
+17:54Z e sem entrada de checkout/reset no reflog. Nenhum script do repositório faz esse revert.
+
+**Causa raiz confirmada** por evidência já versionada: `POST_RELEASE_MODEL_ROUTER_BACKLOG.md`
+(seção "Integração futura") documenta exatamente este modo de falha — *"um
+`two-pass-release.sh`/`seal-release.sh` rodando em paralelo pode restaurar o working tree principal
+e afetar arquivos ainda não commitados"*. Um pipeline de release concorrente restaurou o worktree
+para um snapshot anterior. É o mesmo defeito de integridade: um gate (runtime do Router) sai do
+agregado silenciosamente e passa a permitir falso GREEN.
+
+Ação: `git checkout HEAD -- package.json api/db/models/index.js`. O fingerprint de source voltou a
+`04280aa2…`, idêntico ao fonte congelada do selo do Router — nenhuma outra divergência de source
+(`git status` pós-restauração: apenas artefatos de relatório + este documento).
+
+## Novo governed run (válido sobre a fonte restaurada)
+
+```
+RUN_ID=rap-governed-20260923191944590-02980291
+SOURCE_FINGERPRINT=04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344
+SOURCE_COMMIT=0a69bdaed04d41979a5550464c7738a35db6cecc
+SOURCE_TREE=080bc2ac3de9e4c5c8c3e1034120847e8d82c103
+POLICY=RAP-AGENT-CONSTITUTION v1.0.4 (attestation PASS)
+CRIADO_EM=2026-09-23T19:19:44.822Z
+```
+
+## Achados reais do mesh anterior (mesh-20260923164907-rjc1js) e classificação
+
+| item | domínio | status anterior | causa raiz | classificação |
+|---|---|---|---|---|
+| `business-core-biz-flows-editor` | core | PASS nesta execução (fail/flaky nas 3 anteriores) | `groq` sem credencial → 401 → circuit breaker aberto; fix `affb5708` faz a mensagem carregar "credencial não configurada" → mesh classifica `environment_missing` (não bloqueante) | externo/ambiente — revalidado PASS com o stack vivo |
+| `fitness-matricula-{checkin,checkout,cancelamento,onboarding}` | fitness | failed | `page_error: Request timed out after 15000ms` — requisição do frontend PROD (timeout 15s) contra API saturada (login levou 47s) | ambiente/carga (POST_RELEASE_HARDENING) |
+| `fitness-matricula-leads` | omnichannel | infra_error | idem acima (2 timeouts) | ambiente/carga |
+| `fitness-matricula-agendamento-ui`, `support-inbox-nota-ui` | fitness/omnichannel | flaky (blocking) | `Tempo limite excedido aguardando execução RPA` | ambiente/carga |
+| `business-core-biz-academy`, `business-core-biz-rag-segregation` | core | flaky | rag-service NÃO estava vivo (8001 ausente) + carga | ambiente — revalidado com rag-service vivo |
+
+O pipeline anterior (`npm run pipeline`) rodou o mesh concorrendo com `test:unit` já reprovado e com
+a GUI/workstation sob load average ~11,6 (12 cores) — a latência da API estourou o timeout de 15s do
+bundle de produção nas páginas RPA.
+
+`unit-tests` do pipeline anterior falhou (`exit 1`) em
+`tests/unit/governance/convergenceFixpoint.test.js` → projeção `dev/platform-readiness/latest.json`
+com runId ESTRANGEIRO em relação ao run corrente. É o defeito de sequência de convergência
+(produtor de projeção tem de rodar depois da criação do run) — resolvido pela convergência canônica.
+
+## Pré-requisitos REAIS de ambiente para a etapa 1/12 (enterprise proof smoke)
+
+A convergência abortava em `1/12` com `enterprise-proof-report.ok=false` antes de qualquer
+evidência de run. Diagnóstico medido (não hipótese), em 3 defeitos de ambiente DISTINTOS:
+
+1. **L-04 (`scripts/test-pbx-call-events-runtime-smoke.js`)** insere o CDR sintético por
+   `docker compose -f docker-compose.test.yml exec -T api …`. Nesta estação não existe serviço
+   `api` nesse compose → `synthetic_cdr_insert_failed:1:service "api" is not running`.
+   Modo suportado pelo próprio script:
+   `PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct` + `PBX_CALL_EVENTS_RUNTIME_ALLOW_DB_FALLBACK=1`
+   (satisfaz `assertDirectModeDbIntent()`), mesma lógica e mesma DB, sem Docker.
+2. **Ponte host↔container ausente**: `scripts/pbx-host-db-bridge.sh` (socat
+   `172.17.0.1:15432` → `127.0.0.1:5432`). O container já tinha o DSN correto
+   (`ODBCINI=/tmp/odbc.ini` → `r_agent2`, verificado lendo `/proc/1/environ`), mas sem a ponte
+   o INSERT do Asterisk nunca chegava ao banco do host → `pbxProdLike.cdr=false`,
+   `hangupCauses=false` e `omnichannelUnifiedReplay.pbx=false` (uma causa, três sinais).
+3. **Contexto de tenant não declarado no Asterisk**: `/etc/asterisk` é `tmpfs` populado no
+   start a partir de `/etc/asterisk-static`. O `conf/tenants.conf` gerado pelo
+   `syncRealtimeTenantContexts` (host, 09-22T23:10Z) continha `debug-e2e-engineering-router`,
+   mas o **tmpfs do container tinha a cópia de 09-12** — `dialplan reload` via AMI não relê o
+   arquivo do host. Sem a declaração, `Local/9191@<tenant>` não tem dialplan → chamada não
+   atendida → `Log unanswered calls: No` → nenhum CDR.
+   Remedição correta: `docker restart chatbot-asterisk` (re-copia o tmpfs) + confirmar
+   `asterisk -rx "dialplan show debug-e2e-engineering-router"` = `Realtime/…@extensions`.
+   Após isso: CDR real gravado (`dst=9191, disposition=ANSWERED`) e
+   `enterprise-proof-report.ok=true` com os 3 blocos `ok=true`.
+
+Nenhum código-fonte foi alterado para isto — é reparo de ambiente da estação de dev. Registrado
+como `POST_RELEASE_HARDENING` a fragilidade estrutural (tmpfs do Asterisk + reload que não
+relê o arquivo do host; e o smoke L-03 escolher o tenant mais novo não-`system`).
+
+## 4º defeito de runtime (causa raiz das falhas RPA `fitness-matricula-*`) — medido
+
+Rodada `converge` #3 chegou a executar o mesh (etapa 8/12) e reprovou em
+`fitness-matricula-agendamento-ui` (blocking) e `fitness-matricula-checkout` com
+`Tempo limite excedido aguardando execução RPA` (10 min × 2 tentativas = 20 min por cenário).
+
+Causa raiz provada, não hipótese:
+
+```
+GET /workspace   (Accept: text/html)   vite preview 5173  ->  404  len=0    {"error":"not_found"}
+GET /workspace   (Accept: text/html)   vite dev     5174  ->  200  len=1135 (index.html)
+GET /support, /tasks, /dev/qa-waves    (ambos)             ->  200
+```
+
+`frontend/vite.config.mjs` registra o plugin `frontend-routes` **somente** com
+`configureServer` (DEV). No `vite preview` o plugin não existe, e o `bypass` da regra de proxy
+`'^/workspace'` devolve `false` para navegação HTML — o Vite termina a resposta em vez de servir
+o SPA, então `/workspace` cai no `x-api-route-fallback` da API (404 JSON).
+
+Consequência: **todos** os seeds `fitness-matricula-*` (metadata `autoLogin`, pouso em
+`/workspace`) travam até o timeout do adaptador. O runtime usado por `pipeline/runFullValidation.js`
+em `ensureRuntime()` é `npm run preview` quando a 5173 está livre — armadilha silenciosa.
+
+Prova de que não é defeito de produto: com o **dev server** na 5173, o mesmo seed executa
+`18/18` passos com `success: true` (jornada real: workspace → Construtor → Execução → Tarefas →
+criar tarefa → Agendar → modal → toast "Agendamento criado").
+
+Ação: convergência reexecutada com `npm run dev:frontend` na 5173 (runtime correto). Defeito do
+preview registrado como `POST_RELEASE_HARDENING` (fazer o preview servir as rotas SPA ou falhar
+de forma explícita — nunca deixar o run rodar com runtime quebrado).

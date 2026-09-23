@@ -1,10 +1,10 @@
 # Verticals Coverage
 
 ## beauty
-- Classification: validated
+- Classification: production-like
 - Journeys: 2
 - Scenarios: 25
-- Blockers: qa_mesh_failures_open
+- Blockers: none
 
 ## fitness
 - Classification: validated
@@ -13,28 +13,28 @@
 - Blockers: qa_mesh_failures_open
 
 ## food
-- Classification: validated
+- Classification: production-like
 - Journeys: 2
 - Scenarios: 13
-- Blockers: qa_mesh_failures_open
+- Blockers: none
 
 ## services
-- Classification: validated
+- Classification: production-like
 - Journeys: 1
 - Scenarios: 7
-- Blockers: qa_mesh_failures_open
+- Blockers: none
 
 ## clinic
-- Classification: validated
+- Classification: production-like
 - Journeys: 1
 - Scenarios: 6
-- Blockers: qa_mesh_failures_open
+- Blockers: none
 
 ## market
-- Classification: validated
+- Classification: production-like
 - Journeys: 1
 - Scenarios: 8
-- Blockers: qa_mesh_failures_open
+- Blockers: none
 
 ## bakery
 - Classification: production-like
