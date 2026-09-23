@@ -1,5 +1,8 @@
 'use strict';
 
+const path = require('path');
+const os = require('os');
+
 /**
  * Configuração do Engineering Runner — TUDO via env, fail-closed (mesmo padrão de
  * services/mcp-research/src/config.js: sem token obrigatório, o processo nem sobe).
@@ -13,6 +16,13 @@
  *                                      (default 300000 — 5min; protege contra um
  *                                      contrato malicioso/errado pedindo timeout
  *                                      absurdo que prenderia o runner indefinidamente).
+ *   ENGINEERING_ROUTER_WORKSPACE_ROOT  ER-V1-SEALFIX-003 (Runner Trust Boundary): MESMA env var
+ *                                      que api/services/engineeringRouter/patchApplyService.js
+ *                                      usa para materializar workspaces — o runner nunca confia
+ *                                      no `cwd` que o caller envia sem antes confirmar que ele
+ *                                      está DENTRO desta raiz (defesa em profundidade: mesmo que
+ *                                      a API já valide, o runner que tem o Docker socket real
+ *                                      revalida por conta própria).
  */
 
 function configError(message) {
@@ -44,6 +54,12 @@ function loadConfig(env = process.env, overrides = {}) {
     throw configError('ENGINEERING_RUNNER_TOKEN ausente — o runner nunca sobe anônimo (o único guardião do Docker socket do host precisa de autenticação real)');
   }
 
+  const workspaceRoot = path.resolve(
+    typeof source.ENGINEERING_ROUTER_WORKSPACE_ROOT === 'string' && source.ENGINEERING_ROUTER_WORKSPACE_ROOT.trim()
+      ? source.ENGINEERING_ROUTER_WORKSPACE_ROOT.trim()
+      : path.join(os.tmpdir(), 'engineering-router-workspaces'),
+  );
+
   return Object.freeze({
     port: parseInteger(source.ENGINEERING_RUNNER_PORT ?? source.PORT, 8090, { min: 0, max: 65535, field: 'PORT' }),
     host: typeof source.ENGINEERING_RUNNER_HOST === 'string' && source.ENGINEERING_RUNNER_HOST.trim()
@@ -51,6 +67,8 @@ function loadConfig(env = process.env, overrides = {}) {
       : '0.0.0.0',
     authToken,
     maxTimeoutMs: parseInteger(source.ENGINEERING_RUNNER_MAX_TIMEOUT_MS, 300000, { min: 1000, max: 600000, field: 'ENGINEERING_RUNNER_MAX_TIMEOUT_MS' }),
+    workspaceRoot,
+    maxConcurrentExecutions: parseInteger(source.ENGINEERING_RUNNER_MAX_CONCURRENCY, 4, { min: 1, max: 64, field: 'ENGINEERING_RUNNER_MAX_CONCURRENCY' }),
   });
 }
 

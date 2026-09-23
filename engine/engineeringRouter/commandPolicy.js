@@ -219,4 +219,8 @@ module.exports = {
   parseCommand,
   checkCommand,
   validateCommands,
+  // ER-V1-SEALFIX-003 (Runner Trust Boundary) — exportado para o Engineering Runner revalidar
+  // {executable, args} JÁ estruturados de forma independente, nunca confiando que a API
+  // (chamador) já validou. Mesma policy reutilizada, nunca uma segunda allowlist divergente.
+  validateStructuredCommand,
 };

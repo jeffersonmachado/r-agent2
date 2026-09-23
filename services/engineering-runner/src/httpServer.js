@@ -20,6 +20,8 @@
  *                    persistir, mas o runner nunca deve deixar um segredo cru atravessar a rede).
  */
 
+const fs = require('fs');
+const path = require('path');
 const http = require('http');
 const { isAuthorized, writeUnauthorized } = require('./auth');
 
@@ -29,6 +31,24 @@ const { isAuthorized, writeUnauthorized } = require('./auth');
 // services/mcp-research, que reusa api/services/research/* por caminho relativo idêntico).
 const { runInSandbox, isSandboxAvailable } = require('../../../api/services/engineeringRouter/executionSandbox');
 const { redactText } = require('../../../engine/engineeringRouter/secretRedaction');
+// ER-V1-SEALFIX-003 (Runner Trust Boundary) — o runner tem o Docker socket real do host: NUNCA
+// confia que a API (chamador) já validou nada disso, revalida tudo de forma independente,
+// reusando as MESMAS policies já provadas (nunca uma segunda allowlist divergente).
+const { validateStructuredCommand } = require('../../../engine/engineeringRouter/commandPolicy');
+const { SAFE_ENV_PASSTHROUGH_KEYS } = require('../../../api/services/engineeringRouter/safeEngineeringEnvironment');
+
+// V1: única rede permitida é `none` — decidido exclusivamente por esta constante do runner,
+// NUNCA por um valor que o caller envie. Uma exceção futura precisaria mudar esta lista aqui,
+// nunca aceitar uma string arbitrária vinda da requisição.
+const ALLOWED_NETWORKS = Object.freeze(['none']);
+
+// Allowlist reconstruída no runner — mesma fonte de verdade que a API usa para montar o env
+// seguro (safeEngineeringEnvironment.js), mas aplicada aqui de forma INDEPENDENTE: mesmo que o
+// caller (API/orchestrator) já tenha filtrado, o runner nunca aceita um env arbitrário no corpo
+// da requisição — reconstrói do zero, descartando silenciosamente qualquer chave fora da lista.
+const RUNNER_ENV_ALLOWLIST = new Set([...SAFE_ENV_PASSTHROUGH_KEYS, 'HOME']);
+
+const DANGEROUS_CWD_PREFIXES = Object.freeze(['/etc', '/root', '/home', '/var/run', '/proc', '/sys']);
 
 function readJsonBody(req, { maxBytes = 8 * 1024 * 1024 } = {}) {
   return new Promise((resolve, reject) => {
@@ -88,7 +108,70 @@ function validateExecuteRequest(body, { maxTimeoutMs }) {
   return { ok: true, value: { executionId, executable, args, cwd, env: env || {}, timeoutMs, network } };
 }
 
+/**
+ * ER-V1-SEALFIX-003 — fronteira de rede: a ÚNICA rede permitida em V1 é `none`, decidida
+ * exclusivamente pela policy do runner (`ALLOWED_NETWORKS`). Um caller que peça qualquer outra
+ * coisa (`host`, `bridge`, `container:<id>`, rede customizada) é recusado explicitamente — nunca
+ * repassado ao Docker silenciosamente nem sobrescrito em silêncio sem o caller saber.
+ */
+function validateNetworkPolicy(network) {
+  if (network === undefined) return { ok: true, value: 'none' };
+  if (ALLOWED_NETWORKS.includes(network)) return { ok: true, value: network };
+  return { ok: false, reason: `network "${network}" não é permitida pela policy do runner (permitido: ${ALLOWED_NETWORKS.join(', ')})` };
+}
+
+/**
+ * ER-V1-SEALFIX-003 — fronteira de filesystem: resolve `cwd` por `realpath` (fecha escape via
+ * symlink) e exige que o caminho REAL esteja estritamente dentro de `workspaceRoot` — nunca
+ * confia que a string enviada já é segura só porque "parece" um path de workspace. Bloqueia
+ * explicitamente prefixos perigosos conhecidos como defesa em profundidade adicional, mesmo que
+ * o contain-check já devesse cobri-los.
+ */
+function validateWorkspaceCwd(cwd, workspaceRoot) {
+  for (const dangerous of DANGEROUS_CWD_PREFIXES) {
+    if (cwd === dangerous || cwd.startsWith(`${dangerous}/`)) {
+      return { ok: false, reason: `cwd "${cwd}" aponta para um caminho de sistema proibido (${dangerous})` };
+    }
+  }
+  let realCwd;
+  try {
+    realCwd = fs.realpathSync(cwd);
+  } catch (err) {
+    return { ok: false, reason: `cwd "${cwd}" não pôde ser resolvido (${err.code || err.message}) — workspace precisa existir antes da execução` };
+  }
+  let realWorkspaceRoot;
+  try {
+    realWorkspaceRoot = fs.realpathSync(workspaceRoot);
+  } catch (_) {
+    realWorkspaceRoot = path.resolve(workspaceRoot);
+  }
+  const withinRoot = realCwd === realWorkspaceRoot || realCwd.startsWith(`${realWorkspaceRoot}${path.sep}`);
+  if (!withinRoot) {
+    return { ok: false, reason: `cwd resolvido ("${realCwd}") está fora de ENGINEERING_ROUTER_WORKSPACE_ROOT ("${realWorkspaceRoot}") — nunca executa fora de um workspace isolado conhecido` };
+  }
+  return { ok: true, value: realCwd };
+}
+
+/**
+ * ER-V1-SEALFIX-003 — reconstrói o env do zero a partir da allowlist do runner: qualquer chave
+ * fora dela é descartada silenciosamente (nunca propagada), mesmo que o caller a tenha enviado.
+ * "Secrets não propagam" por construção — nenhuma chave da allowlist é um segredo.
+ */
+function sanitizeExecutionEnv(callerEnv) {
+  const sanitized = {};
+  for (const key of Object.keys(callerEnv || {})) {
+    if (RUNNER_ENV_ALLOWLIST.has(key)) sanitized[key] = callerEnv[key];
+  }
+  return sanitized;
+}
+
 function createHttpServer({ config, logger = console } = {}) {
+  // ER-V1-SEALFIX-003 — limite de concorrência: evita abuso acidental (um caller com bug em
+  // loop, ou vários workers da API disputando o mesmo runner) esgotar o host com containers
+  // Docker demais simultâneos. Novo pedido além do limite é recusado explicitamente (503),
+  // nunca enfileirado silenciosamente (o caller decide se tenta de novo).
+  let inFlight = 0;
+
   const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && req.url === '/health') {
       sendJson(res, 200, { status: 'ok', sandboxAvailable: isSandboxAvailable() });
@@ -116,9 +199,37 @@ function createHttpServer({ config, logger = console } = {}) {
       }
 
       const { executionId, executable, args, cwd, env, timeoutMs, network } = validation.value;
+
+      // ER-V1-SEALFIX-003 — fronteira de segurança do runner: TUDO abaixo é revalidado de forma
+      // independente, nunca confiando que a API (chamador) já validou. Cada rejeição é 400
+      // explícito, nunca uma execução silenciosa com um valor "ajustado"/"corrigido" sem o
+      // caller saber.
+      const commandValidation = validateStructuredCommand(executable, args);
+      if (!commandValidation.ok) {
+        sendJson(res, 400, { executionId, error: 'command_not_allowed', message: commandValidation.reason });
+        return;
+      }
+      const networkValidation = validateNetworkPolicy(network);
+      if (!networkValidation.ok) {
+        sendJson(res, 400, { executionId, error: 'network_not_allowed', message: networkValidation.reason });
+        return;
+      }
+      const cwdValidation = validateWorkspaceCwd(cwd, config.workspaceRoot);
+      if (!cwdValidation.ok) {
+        sendJson(res, 400, { executionId, error: 'cwd_not_allowed', message: cwdValidation.reason });
+        return;
+      }
+      const safeEnv = sanitizeExecutionEnv(env);
+
+      if (inFlight >= config.maxConcurrentExecutions) {
+        sendJson(res, 503, { executionId, error: 'runner_at_capacity', message: `limite de ${config.maxConcurrentExecutions} execuções concorrentes atingido — tente novamente` });
+        return;
+      }
+
+      inFlight += 1;
       const startedAt = Date.now();
       try {
-        const result = await runInSandbox({ executable, args, cwd, env, timeoutMs, network });
+        const result = await runInSandbox({ executable, args, cwd: cwdValidation.value, env: safeEnv, timeoutMs, network: networkValidation.value });
         sendJson(res, 200, {
           executionId,
           exitCode: result.exitCode,
@@ -134,6 +245,8 @@ function createHttpServer({ config, logger = console } = {}) {
         // cliente (engineeringRunnerClient.js) tratar exatamente como tratava o erro local.
         logger.error?.('[engineering-runner] execução falhou', { executionId, code: err.code, error: err.message });
         sendJson(res, 502, { executionId, error: err.message, code: err.code || 'EXECUTION_FAILED' });
+      } finally {
+        inFlight -= 1;
       }
       return;
     }
@@ -148,4 +261,8 @@ function createHttpServer({ config, logger = console } = {}) {
   };
 }
 
-module.exports = { createHttpServer, validateExecuteRequest };
+module.exports = {
+  createHttpServer, validateExecuteRequest,
+  validateNetworkPolicy, validateWorkspaceCwd, sanitizeExecutionEnv,
+  ALLOWED_NETWORKS, RUNNER_ENV_ALLOWLIST, DANGEROUS_CWD_PREFIXES,
+};
