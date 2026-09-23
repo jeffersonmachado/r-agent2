@@ -1,0 +1,61 @@
+{
+  "artifactType": "engineering-router-v1-seal-report",
+  "generatedAt": "2026-09-23T16:46:58.938Z",
+  "derivedFrom": "dist/engineering-router-v1-audit-envelope (verificado offline, PASS, 160 checks, contra ZIP de release real)",
+  "runId": "08d9f3622832c427a895d77b8ec3ddd138b10b59",
+  "head": "08d9f3622832c427a895d77b8ec3ddd138b10b59",
+  "sourceFingerprint": "04280aa266c022750969878ab02675211f7fa97fd759a8e55b06399d2d1b0344",
+  "engineeringRouterV1Sealed": true,
+  "sealFixBacklog": {
+    "version": "ER-V1-SEALFIX-1",
+    "items": [
+      {
+        "id": "ER-V1-SEALFIX-001",
+        "title": "Artifact-to-Source Binding",
+        "commit": "aca93434",
+        "status": "PASS"
+      },
+      {
+        "id": "ER-V1-SEALFIX-002",
+        "title": "Real Container Deployment",
+        "commit": "08d9f362",
+        "status": "PASS"
+      },
+      {
+        "id": "ER-V1-SEALFIX-003",
+        "title": "Runner Trust Boundary",
+        "commit": "54128514",
+        "status": "PASS"
+      },
+      {
+        "id": "ER-V1-SEALFIX-004",
+        "title": "Phase-Aware Durable Resume",
+        "commit": "f3d1e006",
+        "status": "PASS"
+      }
+    ],
+    "allGreen": true
+  },
+  "structural": {
+    "status": "PASS",
+    "totalChecks": 209,
+    "failedChecks": 0
+  },
+  "runtime": {
+    "status": "RUNTIME_PASS",
+    "totalItems": 25,
+    "failedItems": 0
+  },
+  "pilot": {
+    "pilotTaskId": "pilot-08d9f3622832c427a895d77b8ec3ddd138b10b59",
+    "items": 4,
+    "allPass": true
+  },
+  "offlineVerification": {
+    "checks": 160,
+    "failures": 0,
+    "mode": "zip-real-package-binding",
+    "status": "PASS"
+  },
+  "finalDecision": "GO"
+}

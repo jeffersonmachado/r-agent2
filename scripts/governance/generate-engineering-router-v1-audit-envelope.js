@@ -117,10 +117,10 @@ const SEAL_BACKLOG = Object.freeze([
 // autoridade de decisão de "ENGINEERING_ROUTER_V1_SEALED" deriva deste array, nunca de
 // CLOSURE_BACKLOG/SEAL_BACKLOG (que já estão fechados e não são reabertos aqui).
 const SEALFIX_BACKLOG = Object.freeze([
-  { id: 'ER-V1-SEALFIX-001', title: 'Artifact-to-Source Binding', commit: null, status: 'PASS' },
-  { id: 'ER-V1-SEALFIX-002', title: 'Real Container Deployment', commit: null, status: 'PASS' },
-  { id: 'ER-V1-SEALFIX-003', title: 'Runner Trust Boundary', commit: null, status: 'PASS' },
-  { id: 'ER-V1-SEALFIX-004', title: 'Phase-Aware Durable Resume', commit: null, status: 'PASS' },
+  { id: 'ER-V1-SEALFIX-001', title: 'Artifact-to-Source Binding', commit: 'aca93434', status: 'PASS' },
+  { id: 'ER-V1-SEALFIX-002', title: 'Real Container Deployment', commit: '08d9f362', status: 'PASS' },
+  { id: 'ER-V1-SEALFIX-003', title: 'Runner Trust Boundary', commit: '54128514', status: 'PASS' },
+  { id: 'ER-V1-SEALFIX-004', title: 'Phase-Aware Durable Resume', commit: 'f3d1e006', status: 'PASS' },
 ]);
 
 function parseArgs(argv) {
