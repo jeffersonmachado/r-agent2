@@ -58,17 +58,45 @@
         "confidence": 0.6457200012298041,
         "chunksFound": 10,
         "timestamp": "2026-09-23T21:32:32.544604"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-09-23T22:16:55.056754"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-23T22:18:03.251378"
+      },
+      {
+        "query": "QASEG20260923222032 horário de atendimento yuca penhasco neblina fagulha horário atendimento yuca",
+        "success": true,
+        "confidence": 0.7100502055649693,
+        "chunksFound": 6,
+        "timestamp": "2026-09-23T22:20:34.115514"
+      },
+      {
+        "query": "QASEG20260923222032 horário de atendimento yuca penhasco neblina fagulha horário atendimento yuca",
+        "success": true,
+        "confidence": 0.6809455871951324,
+        "chunksFound": 10,
+        "timestamp": "2026-09-23T22:20:35.569628"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 8,
-    "successfulQueries": 8,
+    "totalQueries": 12,
+    "successfulQueries": 12,
     "failedQueries": 0,
-    "avgConfidence": 0.3844830949468667,
-    "lastUpdated": "2026-09-23T21:32:32.544584"
+    "avgConfidence": 0.48980482667350667,
+    "lastUpdated": "2026-09-23T22:20:35.569600"
   },
   "config": {
     "minScore": 0.45,
@@ -81,5 +109,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-09-23T21:32:32.544764"
+  "updatedAt": "2026-09-23T22:20:35.569778"
 }
