@@ -65,7 +65,25 @@ async function findExistingCandidate({ taskId, validatedPatchHash }) {
   if (!showResult.ok) return { found: false };
   const messageContainsHash = showResult.stdout.includes(`validatedPatchHash=${validatedPatchHash}`);
   if (!messageContainsHash) return { found: false };
-  return { found: true, candidateCommit, candidateBranch: branchName };
+  // ER-V1-SEALFIX-004 (Phase-Aware Durable Resume) — achado real: o chamador que retoma via
+  // RECONCILE (engineeringRouterService.advanceFromCodedAttempt) precisa do mesmo
+  // `validatedTreeHash` que `createPromotionCandidate` teria retornado, para
+  // `verifyPromotedCandidate` funcionar depois — sem isto, POST_PROMOTION_VERIFY sempre falhava
+  // silenciosamente com `validatedTreeHash: undefined`, mesmo com o candidate real e correto já
+  // promovido, terminando a task em READY_FOR_PROMOTION em vez de GREEN. A árvore do commit
+  // candidato JÁ É a validatedTreeHash, por construção: `createPromotionCandidate` só cria o
+  // commit quando `candidateTreeHash === expectedTreeHash === validatedTreeHash` (prova de
+  // Exact Promotion, ER-V1-FINAL-002) — nunca um valor novo, só o mesmo já provado sendo lido
+  // de volta do git real.
+  const treeResult = await runGit(['rev-parse', `${candidateCommit}^{tree}`]);
+  const candidateTreeHash = treeResult.ok ? treeResult.stdout : null;
+  return {
+    found: true,
+    candidateCommit,
+    candidateBranch: branchName,
+    candidateTreeHash,
+    validatedTreeHash: candidateTreeHash,
+  };
 }
 
 /**

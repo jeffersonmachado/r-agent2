@@ -849,7 +849,7 @@ function main() {
   checks.push({
     id: 'AUDIT_ENVELOPE_VERIFIER_ACCEPTS_ZIP_INPUT',
     ...checkFileContains('scripts/governance/verify-engineering-router-v1-audit-envelope.js', [
-      /function extractEnvelopeFromZip/, /evidence\/engineering-router-v1/,
+      /function extractPackageFromZip/, /evidence\/engineering-router-v1/,
     ]),
   });
   checks.push({
@@ -861,6 +861,126 @@ function main() {
   checks.push({
     id: 'AUDIT_ENVELOPE_VERIFY_NPM_ALIAS_REGISTERED',
     ...checkFileContains('package.json', [/"verify:engineering-router-v1-envelope":/]),
+  });
+
+  // ER-V1-SEALFIX-001 (Artifact-to-Source Binding) — missão FINAL_RELEASE_CLOSURE: o envelope
+  // podia ser internamente consistente e ainda assim não provar que o código REALMENTE
+  // ENTREGUE no pacote é o código certificado. O verifier agora recomputa
+  // ACTUAL_PACKAGE_SOURCE_FINGERPRINT diretamente dos arquivos do pacote (nunca de `.git`) e
+  // cruza contra TODOS os artifacts que carregam `sourceFingerprint` — e seal-certification.json
+  // é a única autoridade de "ENGINEERING_ROUTER_V1_SEALED", nunca conflada com
+  // release-closure-evidence (backlog ER-V1-FINAL-001..010, já fechado).
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFIER_COMPUTES_ACTUAL_PACKAGE_FINGERPRINT',
+    ...checkFileContains('scripts/governance/verify-engineering-router-v1-audit-envelope.js', [
+      /function computeActualPackageSourceFingerprint/, /function resolvePackageLayout/,
+      /ACTUAL_PACKAGE_SOURCE_FINGERPRINT_MATCHES_MANIFEST/, /computeSourceFingerprint/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFIER_NEVER_TRUSTS_TARGET_PACKAGE_CODE',
+    ok: !/require\(packageRoot|require\(path\.join\(packageRoot/.test(readText('scripts/governance/verify-engineering-router-v1-audit-envelope.js')),
+    reason: 'o verifier nunca pode fazer require() de código de dentro do pacote alvo (não confiável) — o algoritmo de fingerprint é sempre o do PRÓPRIO verifier, resolvido por caminho relativo',
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFIER_ZIP_MODE_EXTRACTS_FULL_PACKAGE',
+    ...checkFileContains('scripts/governance/verify-engineering-router-v1-audit-envelope.js', [
+      /function extractPackageFromZip/, /resolvePackageLayout\(packageRoot\)/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_GENERATOR_WRITES_SEAL_CERTIFICATION',
+    ...checkFileContains('scripts/governance/generate-engineering-router-v1-audit-envelope.js', [
+      /'seal-certification\.json': sealCertification/, /SEALFIX_BACKLOG/, /SEAL_BACKLOG/,
+      /engineeringRouterV1Sealed/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_SEAL_BACKLOG_HAS_FOUR_SEALFIX_ITEMS',
+    ...checkFileContains('scripts/governance/generate-engineering-router-v1-audit-envelope.js', [
+      /'ER-V1-SEALFIX-001'/, /'ER-V1-SEALFIX-002'/, /'ER-V1-SEALFIX-003'/, /'ER-V1-SEALFIX-004'/,
+    ]),
+  });
+  checks.push({
+    id: 'AUDIT_ENVELOPE_VERIFIER_NEVER_CONFLATES_CLOSURE_WITH_SEAL',
+    ...checkFileContains('scripts/governance/verify-engineering-router-v1-audit-envelope.js', [
+      /ENGINEERING_ROUTER_V1_SEALED_RECOMPUTED_MATCHES/, /SEALFIX_ITEM_PRESENT_/,
+      /SEAL_CERTIFICATION_PRESERVES_FINAL_CLOSURE_LINEAGE/,
+    ]),
+  });
+
+  // ER-V1-SEALFIX-003 (Runner Trust Boundary) — o runner tem o Docker socket real do host:
+  // defesa em profundidade obrigatória, NUNCA confia que a API já validou. Revalida
+  // executable/args (mesma policy de commandPolicy.js, reusada), network (allowlist fixa da
+  // policy do runner, nunca string do caller), cwd (realpath + contido em
+  // ENGINEERING_ROUTER_WORKSPACE_ROOT) e env (allowlist reconstruída do zero).
+  checks.push({
+    id: 'RUNNER_REVALIDATES_COMMAND_INDEPENDENTLY',
+    ...checkFileContains('services/engineering-runner/src/httpServer.js', [
+      /require\('..\/..\/..\/engine\/engineeringRouter\/commandPolicy'\)/, /validateStructuredCommand\(executable, args\)/,
+    ]),
+  });
+  checks.push({
+    id: 'RUNNER_NETWORK_POLICY_NEVER_FROM_CALLER',
+    ...checkFileContains('services/engineering-runner/src/httpServer.js', [
+      /const ALLOWED_NETWORKS = Object\.freeze\(\['none'\]\)/, /function validateNetworkPolicy/,
+    ]),
+  });
+  checks.push({
+    id: 'RUNNER_CWD_RESOLVED_BY_REALPATH_AND_CONTAINED',
+    ...checkFileContains('services/engineering-runner/src/httpServer.js', [
+      /function validateWorkspaceCwd/, /fs\.realpathSync\(cwd\)/, /DANGEROUS_CWD_PREFIXES/,
+    ]),
+  });
+  checks.push({
+    id: 'RUNNER_ENV_RECONSTRUCTED_FROM_ALLOWLIST',
+    ...checkFileContains('services/engineering-runner/src/httpServer.js', [
+      /function sanitizeExecutionEnv/, /RUNNER_ENV_ALLOWLIST/, /SAFE_ENV_PASSTHROUGH_KEYS/,
+    ]),
+  });
+  checks.push({
+    id: 'RUNNER_HAS_CONCURRENCY_LIMIT',
+    ...checkFileContains('services/engineering-runner/src/httpServer.js', [
+      /maxConcurrentExecutions/, /runner_at_capacity/,
+    ]),
+  });
+  checks.push({
+    id: 'RUNNER_HTTP_CONTRACT_NEVER_ACCEPTS_DOCKER_PRIVILEGE_FIELDS',
+    ok: !/privileged|capAdd|securityOpt|dockerSocket/.test(readText('services/engineering-runner/src/httpServer.js').replace(/\/\/.*$/gm, '')),
+    reason: 'o contrato HTTP do runner (validateExecuteRequest) nunca pode aceitar campos de privilégio Docker (privileged/capAdd/securityOpt/dockerSocket) — quem decide esses parâmetros é sempre buildDockerArgs em executionSandbox.js, nunca o caller',
+  });
+
+  // ER-V1-SEALFIX-004 (Phase-Aware Durable Resume) — achado real: `executeRoutedLoop` sempre
+  // recomeçava do zero em CODING depois de um restart de processo, mesmo quando
+  // REGRESSION/GOVERNANCE/PROMOTING/POST_PROMOTION_VERIFY já tinham progresso real persistido
+  // (inclusive o candidate de PROMOTING, um efeito IRREVERSÍVEL). `operationService` (ER-V1-SEAL-002)
+  // já era seguro, mas nunca era alcançado de novo depois de um restart real — resolvido com
+  // `resumeAdvancePhaseIfNeeded`/`advanceFromCodedAttempt` reentrantes.
+  checks.push({
+    id: 'EXECUTE_ROUTED_LOOP_CHECKS_RESUME_BEFORE_NEW_ATTEMPT',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /async function resumeAdvancePhaseIfNeeded/, /resumeAdvancePhaseIfNeeded\(task, lastAttempt/,
+      /if \(resumed\) return resumed;/,
+    ]),
+  });
+  checks.push({
+    id: 'ADVANCE_FROM_CODED_ATTEMPT_IS_REENTRANT',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /async function advanceFromCodedAttempt\(task, result, \{ eventAudienceTenantId \}\)/,
+      /function enterAdvancePhase/, /ADVANCE_PHASE_ORDER/,
+    ]),
+  });
+  checks.push({
+    id: 'INFLIGHT_ATTEMPT_NEVER_SILENTLY_IGNORED_ON_RESUME',
+    ...checkFileContains('api/services/engineeringRouter/engineeringRouterService.js', [
+      /ATTEMPT_INFLIGHT_STATUSES/, /'ABANDONED'/, /RESUME_ABANDONED_INCOMPLETE_PHASE/,
+    ]),
+  });
+  checks.push({
+    id: 'PROMOTION_RECONCILE_EVIDENCE_INCLUDES_TREE_HASH',
+    ...checkFileContains('api/services/engineeringRouter/promotionService.js', [
+      /candidateTreeHash,\s*\n\s*validatedTreeHash: candidateTreeHash,/,
+    ]),
   });
 
   // ER-V1-SEAL-002 — Full Durable Resume: `tolerantTransition` sozinho só evitava erro de

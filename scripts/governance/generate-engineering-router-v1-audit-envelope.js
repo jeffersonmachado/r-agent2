@@ -41,7 +41,10 @@ function sha256Bytes(buffer) {
 // ER-V1-SEAL-004 adiciona 5 arquivos novos ao envelope (source-fingerprint, runtime-requirements,
 // structural-certification, sandbox-evidence, resume-evidence) — bump minor (aditivo, nenhum
 // arquivo/campo existente foi removido ou teve seu significado alterado).
-const SCHEMA_VERSION = '1.1.0';
+// ER-V1-SEALFIX-001 adiciona seal-certification.json (autoridade única de decisão do seal) +
+// sourceFingerprint em structural-certification/promotion-evidence/pilot-evidence/
+// release-closure-evidence — bump minor (aditivo).
+const SCHEMA_VERSION = '1.2.0';
 const DEFAULT_OUT_DIR = path.join(ROOT, 'dist', 'engineering-router-v1-audit-envelope');
 
 // Categorização dos 25 itens de runtime evidence por área — puramente organizacional (mesmos
@@ -93,6 +96,31 @@ const CLOSURE_BACKLOG = Object.freeze([
   { id: 'ER-V1-FINAL-008', title: 'Current Model Catalog', commit: 'd75ef6fb', status: 'GREEN' },
   { id: 'ER-V1-FINAL-009', title: 'Full-Suite Isolation', commit: 'bb03c37d', status: 'GREEN' },
   { id: 'ER-V1-FINAL-010', title: 'Self-Proving Audit Envelope', commit: null, status: 'GREEN' },
+]);
+
+// ER-V1-SEALFIX-001 (Artifact-to-Source Binding) — achado real da missão FINAL_RELEASE_CLOSURE:
+// o envelope só rastreava CLOSURE_BACKLOG (ER-V1-FINAL-001..010), nunca o backlog da missão
+// FINAL_SEAL (ER-V1-SEAL-001..005) nem o backlog desta missão (ER-V1-SEALFIX-001..004) — os três
+// são backlogs DISTINTOS, cada um seu próprio ciclo de fechamento, e NUNCA podem ser conflados:
+// "10/10 FINAL GREEN" não significa "5/5 SEAL GREEN" nem "4/4 SEALFIX GREEN". Preservados aqui
+// separadamente, com lineage explícita.
+const SEAL_BACKLOG = Object.freeze([
+  { id: 'ER-V1-SEAL-001', title: 'Immutable Promotion Baseline', commit: '471c262e', status: 'GREEN' },
+  { id: 'ER-V1-SEAL-002', title: 'Full Durable Resume', commit: '815d598b', status: 'GREEN' },
+  { id: 'ER-V1-SEAL-003', title: 'Dedicated Execution Runner', commit: '8cd29620', status: 'GREEN' },
+  { id: 'ER-V1-SEAL-004', title: 'Self-Proving Deliverable', commit: 'b6631f10', status: 'GREEN' },
+  { id: 'ER-V1-SEAL-005', title: 'Current Model Policy', commit: 'aa52f6e2', status: 'GREEN' },
+]);
+
+// Backlog congelado desta missão (FINAL_RELEASE_CLOSURE). Status atualizado manualmente por
+// commit à medida que cada SEALFIX fecha GREEN de verdade (nunca fabricado) — a ÚNICA
+// autoridade de decisão de "ENGINEERING_ROUTER_V1_SEALED" deriva deste array, nunca de
+// CLOSURE_BACKLOG/SEAL_BACKLOG (que já estão fechados e não são reabertos aqui).
+const SEALFIX_BACKLOG = Object.freeze([
+  { id: 'ER-V1-SEALFIX-001', title: 'Artifact-to-Source Binding', commit: null, status: 'PASS' },
+  { id: 'ER-V1-SEALFIX-002', title: 'Real Container Deployment', commit: null, status: 'PENDING' },
+  { id: 'ER-V1-SEALFIX-003', title: 'Runner Trust Boundary', commit: null, status: 'PASS' },
+  { id: 'ER-V1-SEALFIX-004', title: 'Phase-Aware Durable Resume', commit: null, status: 'PASS' },
 ]);
 
 function parseArgs(argv) {
@@ -176,6 +204,19 @@ function generate({ outDir }) {
     sourceFingerprint,
     algorithm: 'governance/proof-engine/fingerprint-chain.js::computeSourceFingerprint',
   };
+  // ER-V1-SEALFIX-001 — a autoridade ÚNICA de decisão do seal. `engineeringRouterV1Sealed`
+  // exige TODOS os 4 itens de SEALFIX_BACKLOG em PASS — nunca inferido de CLOSURE_BACKLOG ou
+  // SEAL_BACKLOG (backlogs de missões JÁ fechadas, preservados aqui só como lineage).
+  const sealCertification = {
+    artifactType: 'engineering-router-v1-audit-seal-certification',
+    runId,
+    sourceFingerprint,
+    finalClosureBacklog: { version: 'ER-V1-FINAL-1', items: CLOSURE_BACKLOG, allGreen: CLOSURE_BACKLOG.every((b) => b.status === 'GREEN') },
+    sealBacklog: { version: 'ER-V1-SEAL-1', items: SEAL_BACKLOG, allGreen: SEAL_BACKLOG.every((b) => b.status === 'GREEN') },
+    sealFixBacklog: { version: 'ER-V1-SEALFIX-1', items: SEALFIX_BACKLOG, allGreen: SEALFIX_BACKLOG.every((b) => b.status === 'PASS') },
+    engineeringRouterV1Sealed: SEALFIX_BACKLOG.every((b) => b.status === 'PASS'),
+  };
+
   const runtimeRequirements = {
     artifactType: 'engineering-router-v1-audit-runtime-requirements',
     runId,
@@ -213,6 +254,7 @@ function generate({ outDir }) {
   const structuralCertification = {
     artifactType: 'engineering-router-v1-audit-structural-certification',
     runId,
+    sourceFingerprint,
     status: structuralReport.status,
     decision: structuralReport.decision,
     structuralStatus: structuralReport.structuralStatus,
@@ -231,11 +273,13 @@ function generate({ outDir }) {
   const promotionEvidence = {
     artifactType: 'engineering-router-v1-audit-promotion-evidence',
     runId,
+    sourceFingerprint,
     items: itemsByCategory(runtimeEvidence, 'promotion'),
   };
   const pilotEvidence = {
     artifactType: 'engineering-router-v1-audit-pilot-evidence',
     runId,
+    sourceFingerprint,
     // "pilotTaskId": o pilot real do Engineering Router V1 É o loop RED→FIX→REVIEW→GREEN
     // exercitado de ponta a ponta pelos próprios testes E2E reais que compõem estes itens
     // (nunca uma execução fabricada só para preencher este campo) — identificado pelo runId
@@ -256,6 +300,7 @@ function generate({ outDir }) {
   const releaseClosureEvidence = {
     artifactType: 'engineering-router-v1-audit-release-closure-evidence',
     runId,
+    sourceFingerprint,
     backlogVersion: 'ER-V1-FINAL-1',
     blockers: CLOSURE_BACKLOG,
     allBlockersGreen: CLOSURE_BACKLOG.every((b) => b.status === 'GREEN'),
@@ -277,6 +322,7 @@ function generate({ outDir }) {
     'promotion-evidence.json': promotionEvidence,
     'pilot-evidence.json': pilotEvidence,
     'release-closure-evidence.json': releaseClosureEvidence,
+    'seal-certification.json': sealCertification,
   };
 
   const writtenPaths = {};
@@ -330,6 +376,10 @@ function generate({ outDir }) {
     promotionStatus: promotionEvidence.items.every((i) => i.pass) ? 'PROMOTION_VERIFIED' : 'PROMOTION_UNVERIFIED',
     pilotTaskId: pilotEvidence.pilotTaskId,
     releaseStatus: releaseClosureEvidence.releaseStatus,
+    // ER-V1-SEALFIX-001 — nunca conflar com finalDecision/releaseStatus (que certificam
+    // CLOSURE_BACKLOG, ER-V1-FINAL-001..010): este campo é a ÚNICA fonte para "o Router V1
+    // está SELADO", derivada exclusivamente de SEALFIX_BACKLOG.
+    engineeringRouterV1Sealed: sealCertification.engineeringRouterV1Sealed,
     finalDecision: (runtimeEvidence.status === 'RUNTIME_PASS' && structuralCertification.status === 'PASS' && releaseClosureEvidence.allBlockersGreen)
       ? 'GO'
       : 'NO_GO',
@@ -355,4 +405,6 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { generate, CLOSURE_BACKLOG, CATEGORY_BY_ID, SCHEMA_VERSION };
+module.exports = {
+  generate, CLOSURE_BACKLOG, SEAL_BACKLOG, SEALFIX_BACKLOG, CATEGORY_BY_ID, SCHEMA_VERSION,
+};

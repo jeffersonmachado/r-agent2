@@ -26,6 +26,7 @@
  *     alcançar o cliente certo.
  */
 
+const fs = require('fs');
 const engineeringTaskService = require('./engineeringTaskService');
 const { buildContext } = require('./contextBuilderService');
 const { generatePatch } = require('./coderService');
@@ -104,6 +105,33 @@ async function tolerantTransition(taskId, toStatus) {
 // API. Mesmo valor/env var já usado por `engineeringModelAvailabilityService.js` e
 // `engineeringAiInvoker.js` (autoridade única, não duplicada).
 const ENGINEERING_CREDENTIAL_SCOPE = DEFAULT_TENANT_ID;
+
+// ER-V1-SEALFIX-004 (Phase-Aware Durable Resume) — ordem real das fases dentro de
+// `advanceFromCodedAttempt` (depois que CODING/TESTING/REVIEWING já terminaram com sucesso).
+// Usada SOMENTE para decidir se uma transição de ENTRADA de fase deve ser pulada (retomada a
+// partir de uma fase mais adiante que já passou de verdade antes do crash) — nunca para pular
+// o TRABALHO real de cada fase, que continua sempre passando por
+// `operationService.beginOrReconcile` (RESUME reaproveita evidência já persistida sem
+// reexecutar nada; só decide isso a partir de evidência real, nunca da posição no array).
+const ADVANCE_PHASE_ORDER = Object.freeze(['REVIEWING', 'REGRESSION', 'GOVERNANCE', 'PROMOTING', 'POST_PROMOTION_VERIFY', 'GREEN']);
+
+/**
+ * Transição de ENTRADA de fase, tolerante a retomada a partir de uma fase mais adiante: se
+ * `currentStatusRef.value` já está NA FRENTE de `toStatus` em `ADVANCE_PHASE_ORDER` (retomada
+ * depois de um crash que já persistiu progresso real além deste ponto), nunca tenta a
+ * transição (que falharia como INVALID_STATE_TRANSITION — o state machine é estritamente
+ * forward-only) — só confirma e segue. Do contrário, delega para `tolerantTransition` normal
+ * (mesma tolerância a re-entrada no MESMO estado já existente desde ER-V1-FINAL-005).
+ */
+async function enterAdvancePhase(taskId, toStatus, currentStatusRef) {
+  const curIdx = ADVANCE_PHASE_ORDER.indexOf(currentStatusRef.value);
+  const targetIdx = ADVANCE_PHASE_ORDER.indexOf(toStatus);
+  if (curIdx >= 0 && targetIdx >= 0 && curIdx > targetIdx) {
+    return; // já passamos deste ponto numa retomada — nunca transição para trás.
+  }
+  await tolerantTransition(taskId, toStatus);
+  currentStatusRef.value = toStatus;
+}
 
 function contractFromTask(task) {
   return {
@@ -531,6 +559,23 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
   const lastAttempt = existingAttempts[existingAttempts.length - 1] || null;
   if (lastAttempt && lastAttempt.failure_bundle) failureBundle = lastAttempt.failure_bundle;
 
+  // ER-V1-SEALFIX-004 (Phase-Aware Durable Resume) — achado real: antes desta correção,
+  // `executeRoutedLoop` SEMPRE entrava no `while` abaixo e chamava `runOneAttempt` do zero
+  // (nova chamada de CODER, novo patch, novo workspace), não importa em qual fase a task
+  // estivesse quando o PROCESSO (não só a promise) morreu. Se o crash acontecesse depois de
+  // REGRESSION/GOVERNANCE já terem passado de verdade — ou pior, depois do candidate de
+  // PROMOTING já ter sido criado de verdade no git —, esse progresso real ficava órfão e
+  // escondido: o restart nunca sequer chegava a olhar `operationService.beginOrReconcile`
+  // (que já existe e já é seguro, ver `advanceFromCodedAttempt`) porque o loop nunca re-entrava
+  // na fase ADVANCE por conta própria. Resolvido: ANTES de decidir criar uma tentativa nova,
+  // verifica se a ÚLTIMA tentativa persistida já passou por CODING/TESTING/REVIEWING com
+  // sucesso real (`status === 'DONE'`, diff/workspace persistidos) e a TASK está numa fase
+  // pós-CODE (REGRESSION/GOVERNANCE/PROMOTING/POST_PROMOTION_VERIFY/READY_FOR_PROMOTION) — se
+  // sim, RETOMA por ali, nunca cria uma tentativa nova redundante nem arrisca reexecutar
+  // REGRESSION/GOVERNANCE/PROMOTING do zero sem checar o que já é real.
+  const resumed = await resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTenantId });
+  if (resumed) return resumed;
+
   // ERV1-CLOSE-008: acumula, para esta execução da task, todo modelo que já falhou por
   // indisponibilidade real — nunca reselecionar o mesmo candidato quebrado num reroute
   // seguinte dentro da mesma task.
@@ -594,13 +639,54 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
     }
 
     if (result.outcome === 'ADVANCE') {
-      // ERV1-CLOSE-005: `runOneAttempt` deliberadamente NÃO destrói o workspace num ADVANCE —
-      // a Promotion precisa dele (tree pós-patch) mais abaixo. Esta função assume a
-      // responsabilidade de destruí-lo, em QUALQUER saída deste bloco (RED de regressão/
-      // governança, READY_FOR_PROMOTION, ou GREEN).
-      const attemptId = result.attempt.id;
-      try {
-        await tolerantTransition(taskId, 'REGRESSION');
+      return advanceFromCodedAttempt(task, result, { eventAudienceTenantId });
+    }
+
+    // RETRY
+    failureBundle = result.failureBundle;
+    emitTaskStage(eventAudienceTenantId, taskId, {
+      stage: 'RETRY',
+      status: 'info',
+      message: `Tentativa ${iterationsUsed}/${task.max_iterations} falhou (${failureBundle?.failedCommand || 'motivo desconhecido'}) — iniciando nova tentativa.`,
+    });
+    logger.info('[engineeringRouterService] RED->FIX: nova tentativa', { taskId, iterationsUsed, reason: failureBundle?.failedCommand });
+  }
+
+  await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED, message: `Esgotadas ${task.max_iterations} tentativas` });
+  await engineeringTaskService.transitionTask(taskId, 'RED');
+  emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: `Esgotadas ${task.max_iterations} tentativas.` });
+  return { taskId, status: 'RED', reasonCode: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED };
+}
+
+/**
+ * ER-V1-SEALFIX-004 (Phase-Aware Durable Resume) — extraído de dentro do loop de
+ * `executeRoutedLoop` para ser reentrante: chamado tanto no fluxo normal (logo após
+ * `runOneAttempt` retornar ADVANCE) quanto no fluxo de RESUME (quando o processo reinicia com a
+ * task já em REGRESSION/GOVERNANCE/PROMOTING/POST_PROMOTION_VERIFY — ver
+ * `resumeAdvancePhaseIfNeeded`). Em ambos os casos o contrato é o mesmo: um `attempt` cujo
+ * CODING/TESTING/REVIEWING já terminou com sucesso de verdade (patch validado, testado e
+ * aprovado), com `diff`/`workspace` reais prontos para REGRESSION→GOVERNANCE→PROMOTING→
+ * POST_PROMOTION_VERIFY→GREEN.
+ *
+ * Nunca duplica efeito colateral: cada fase usa `operationService.beginOrReconcile` (já provado
+ * em ER-V1-SEAL-002) — RESUME reaproveita evidência já persistida, RECONCILE decide com base em
+ * evidência real (ex.: `findExistingCandidate` para PROMOTING), FAIL_SAFE nunca roda
+ * concorrentemente com outra execução real da MESMA fase.
+ */
+async function advanceFromCodedAttempt(task, result, { eventAudienceTenantId }) {
+  const taskId = task.id;
+  // ERV1-CLOSE-005: `runOneAttempt` deliberadamente NÃO destrói o workspace num ADVANCE —
+  // a Promotion precisa dele (tree pós-patch) mais abaixo. Esta função assume a
+  // responsabilidade de destruí-lo, em QUALQUER saída deste bloco (RED de regressão/
+  // governança, READY_FOR_PROMOTION, ou GREEN).
+  const attemptId = result.attempt.id;
+  // ER-V1-SEALFIX-004 — rastreado à parte de `task.status` (que pode ficar desatualizado
+  // dentro desta função): `enterAdvancePhase` atualiza esta referência a cada transição real
+  // bem-sucedida, permitindo detectar corretamente "já passamos por aqui" mesmo numa retomada
+  // que começa várias fases à frente do valor original de `task.status`.
+  const currentStatusRef = { value: task.status };
+  try {
+        await enterAdvancePhase(taskId, 'REGRESSION', currentStatusRef);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'running', message: 'Executando RegressionPlan real (proporcional ao risco) em workspace isolado.' });
 
         // ER-V1-SEAL-002 (Full Durable Resume): REGRESSION nunca tem efeito colateral externo
@@ -645,7 +731,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
         }
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'REGRESSION', status: 'success', message: `Regressão real: ${regressionResult.evidence.commandCount || 0} comando(s) PASS.`, meta: regressionResult.evidence });
 
-        await tolerantTransition(taskId, 'GOVERNANCE');
+        await enterAdvancePhase(taskId, 'GOVERNANCE', currentStatusRef);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GOVERNANCE', status: 'running', message: 'Executando gate de governança real (scripts/governance/validate-engineering-router-v1.js).' });
 
         // Mesma lógica de reconciliação de REGRESSION — GOVERNANCE também não tem efeito
@@ -683,7 +769,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
         // efeito real e IRREVERSÍVEL (commit + branch reais). Um RUNNING órfão aqui NUNCA pode
         // ser tratado como "seguro repetir" sem antes checar evidência EXTERNA real (a branch
         // candidata já existe?) — nunca promover duas vezes por crash.
-        await tolerantTransition(taskId, 'PROMOTING');
+        await enterAdvancePhase(taskId, 'PROMOTING', currentStatusRef);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'PROMOTION', status: 'running', message: 'Promovendo patch validado (commit + branch local dedicada, sem push/merge).' });
 
         const validatedPatchHashForReconcile = computeValidatedPatchHash(result.diff);
@@ -710,6 +796,11 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
                   validatedPatchHash: validatedPatchHashForReconcile,
                   targetCommit: targetHeadNow,
                   targetHead: targetHeadNow,
+                  // ER-V1-SEALFIX-004: sem isto, verifyPromotedCandidate (POST_PROMOTION_VERIFY)
+                  // recebia validatedTreeHash=undefined e nunca confirmava — a task terminava em
+                  // READY_FOR_PROMOTION mesmo com o candidate real e correto já promovido.
+                  candidateTreeHash: existing.candidateTreeHash,
+                  validatedTreeHash: existing.validatedTreeHash,
                   reconciledFromExternalEvidence: true,
                 },
               };
@@ -759,7 +850,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
 
         // ER-V1-SEAL-002: POST_PROMOTION_VERIFY — o candidate já existe de verdade (efeito
         // irreversível já aconteceu); esta fase só confirma via smoke, nunca duplica nada.
-        await tolerantTransition(taskId, 'POST_PROMOTION_VERIFY');
+        await enterAdvancePhase(taskId, 'POST_PROMOTION_VERIFY', currentStatusRef);
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'POST_PROMOTION_VERIFY', status: 'running', message: 'Confirmando smoke pós-promoção em worktree novo a partir do candidate real.' });
 
         const verifyOp = await operationService.beginOrReconcile({ taskId, attemptId, phase: 'POST_PROMOTION_VERIFY' });
@@ -830,25 +921,90 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
         await tolerantTransition(taskId, 'GREEN');
         emitTaskStage(eventAudienceTenantId, taskId, { stage: 'GREEN', status: 'success', message: 'Task concluída com sucesso — patch promovido ao repositório real.' });
         return { taskId, status: 'GREEN', attemptId };
-      } finally {
-        if (result.workspace) await destroyWorkspace(result.workspace);
+  } finally {
+    if (result.workspace) await destroyWorkspace(result.workspace);
+  }
+}
+
+// ER-V1-SEALFIX-004 — statuses de `EngineeringAttempt.status` que só existem ENQUANTO
+// `runOneAttempt` está com a promise em voo (nunca sobrevivem a um retorno normal da função —
+// toda saída de `runOneAttempt`, seja ADVANCE/RETRY/REROUTE/FATAL, deixa o attempt num status
+// terminal-para-a-tentativa antes de retornar). Encontrar um destes ao recarregar do banco só
+// pode significar uma coisa real: o PROCESSO morreu no meio de CODING/TESTING/REVIEWING.
+const ATTEMPT_INFLIGHT_STATUSES = Object.freeze(['CODING', 'APPLIED', 'TESTED']);
+
+/**
+ * ER-V1-SEALFIX-004 (Phase-Aware Durable Resume) — chamado uma vez, no início de
+ * `executeRoutedLoop`, ANTES de decidir criar uma tentativa nova. Nunca silencioso: toda
+ * tentativa presa é marcada explicitamente (auditável), e toda retomada real passa pela MESMA
+ * `advanceFromCodedAttempt`/`operationService` já usadas no caminho normal (nunca uma segunda
+ * implementação paralela de "promover"/"rodar regressão"/etc.).
+ *
+ * @returns {Promise<object|null>} o resultado final da task (já formatado como o retorno
+ *   público de `executeRoutedLoop`) se uma retomada real aconteceu, ou `null` se não havia nada
+ *   para retomar (fluxo normal deve prosseguir para o `while` de novas tentativas).
+ */
+async function resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTenantId }) {
+  const taskId = task.id;
+  if (!lastAttempt) return null;
+
+  if (lastAttempt.status === 'DONE') {
+    // CODING/TESTING/REVIEWING já terminaram com sucesso real (patch validado, testado,
+    // aprovado) numa execução anterior deste MESMO attempt — a task só está aqui (não-terminal,
+    // já passou pelo check de `acquireRunLock`) porque o processo morreu em algum ponto de
+    // REGRESSION/GOVERNANCE/PROMOTING/POST_PROMOTION_VERIFY antes de a task chegar a um estado
+    // terminal. Nunca cria uma tentativa nova redundante — retoma exatamente daqui.
+    let workspace = lastAttempt.workspace_path;
+    const diff = lastAttempt.patch_diff;
+    if (!diff) {
+      // Estado real impossível pela lógica de `runOneAttempt` (DONE só é setado depois de
+      // `patch_diff` já persistido), mas nunca assume — se acontecer, é auditável, nunca uma
+      // promoção silenciosa sobre dado incompleto.
+      await engineeringTaskService.saveLastError(taskId, { code: 'RESUME_MISSING_PATCH_DIFF', message: `Tentativa ${lastAttempt.id} está DONE mas sem patch_diff persistido — retomada não é segura.` });
+      await engineeringTaskService.transitionTask(taskId, 'BLOCKED');
+      emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: 'Retomada bloqueada: tentativa concluída sem patch persistido (estado inconsistente, nunca assumido).' });
+      return { taskId, status: 'BLOCKED', reasonCode: 'RESUME_MISSING_PATCH_DIFF' };
+    }
+    if (!workspace || !fs.existsSync(workspace)) {
+      // Workspace efêmero pode não sobreviver a um restart real (tmpdir limpo, container
+      // reiniciado) — SEAL-001 garante que HEAD é real e imutável, então reaplicar o MESMO
+      // diff persistido sobre um workspace novo produz a MESMA tree, determinístico.
+      try {
+        workspace = await createWorkspace(taskId, lastAttempt.attempt_number);
+        const applyResult = await applyPatch(workspace, diff);
+        if (!applyResult.ok) {
+          await engineeringTaskService.saveLastError(taskId, { code: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED', message: applyResult.stderr || applyResult.code });
+          await engineeringTaskService.transitionTask(taskId, 'BLOCKED');
+          emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: `Retomada bloqueada: não foi possível reconstruir o workspace a partir do patch já validado (${applyResult.code}).` });
+          return { taskId, status: 'BLOCKED', reasonCode: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED' };
+        }
+      } catch (err) {
+        await engineeringTaskService.saveLastError(taskId, { code: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED', message: err.message });
+        await engineeringTaskService.transitionTask(taskId, 'BLOCKED');
+        emitTaskStage(eventAudienceTenantId, taskId, { stage: 'BLOCKED', status: 'error', message: `Retomada bloqueada: falha real ao reconstruir workspace (${err.message}).` });
+        return { taskId, status: 'BLOCKED', reasonCode: 'RESUME_WORKSPACE_RECONSTRUCTION_FAILED' };
       }
     }
-
-    // RETRY
-    failureBundle = result.failureBundle;
-    emitTaskStage(eventAudienceTenantId, taskId, {
-      stage: 'RETRY',
-      status: 'info',
-      message: `Tentativa ${iterationsUsed}/${task.max_iterations} falhou (${failureBundle?.failedCommand || 'motivo desconhecido'}) — iniciando nova tentativa.`,
-    });
-    logger.info('[engineeringRouterService] RED->FIX: nova tentativa', { taskId, iterationsUsed, reason: failureBundle?.failedCommand });
+    logger.info('[engineeringRouterService] retomando fase pós-CODE após reinício de processo', { taskId, attemptId: lastAttempt.id, taskStatus: task.status });
+    emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RESUME', status: 'info', message: `Retomando a partir de ${task.status} após reinício — patch já validado, nunca uma nova tentativa de CODER.` });
+    return advanceFromCodedAttempt(task, { attempt: lastAttempt, diff, workspace }, { eventAudienceTenantId });
   }
 
-  await engineeringTaskService.saveLastError(taskId, { code: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED, message: `Esgotadas ${task.max_iterations} tentativas` });
-  await engineeringTaskService.transitionTask(taskId, 'RED');
-  emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RED', status: 'error', message: `Esgotadas ${task.max_iterations} tentativas.` });
-  return { taskId, status: 'RED', reasonCode: FAILURE_CODES.ENGINEERING_TASK_EXHAUSTED };
+  if (ATTEMPT_INFLIGHT_STATUSES.includes(lastAttempt.status)) {
+    // Processo morreu com a tentativa em voo dentro de CODING/TESTING/REVIEWING — nenhum efeito
+    // colateral IRREVERSÍVEL pode ter acontecido ainda nessas fases (nenhuma promoção, nenhum
+    // commit real), então nunca é inseguro simplesmente abandonar esta tentativa e deixar o
+    // `while` normal criar uma nova — mas NUNCA em silêncio: marcada explicitamente, auditável.
+    await engineeringTaskService.updateAttempt(lastAttempt.id, {
+      status: 'ABANDONED',
+      error: { code: 'RESUME_ABANDONED_INCOMPLETE_PHASE', message: `Processo reiniciado com a tentativa presa em status=${lastAttempt.status} (task.status=${task.status}) — nenhum efeito irreversível nesta fase, tentativa marcada como abandonada e uma nova será criada.` },
+      completed_at: new Date(),
+    });
+    logger.warn('[engineeringRouterService] tentativa anterior abandonada após reinício de processo (fase sem efeito irreversível)', { taskId, attemptId: lastAttempt.id, attemptStatus: lastAttempt.status });
+    emitTaskStage(eventAudienceTenantId, taskId, { stage: 'RESUME', status: 'info', message: `Tentativa anterior (status=${lastAttempt.status}) abandonada após reinício — iniciando nova tentativa.` });
+  }
+
+  return null;
 }
 
 module.exports = {
@@ -858,4 +1014,10 @@ module.exports = {
   runTask,
   beginRun,
   tolerantTransition,
+  // ER-V1-SEALFIX-004 — exportados para o teste E2E de crash/restart poder simular o estado
+  // exato que um processo real teria persistido antes de morrer, e verificar a retomada real
+  // via a mesma função pública (`runTask`) — nunca uma segunda implementação paralela de teste.
+  advanceFromCodedAttempt,
+  resumeAdvancePhaseIfNeeded,
+  ADVANCE_PHASE_ORDER,
 };
