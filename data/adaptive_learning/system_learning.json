@@ -86,17 +86,45 @@
         "confidence": 0.6809455871951324,
         "chunksFound": 10,
         "timestamp": "2026-09-23T22:20:35.569628"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-09-23T23:03:07.416951"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-23T23:04:20.736930"
+      },
+      {
+        "query": "QASEG20260923230711 horário de atendimento kilim orquidea penhasco sereia horário atendimento kilim",
+        "success": true,
+        "confidence": 0.6073199283815691,
+        "chunksFound": 8,
+        "timestamp": "2026-09-23T23:07:13.956046"
+      },
+      {
+        "query": "QASEG20260923230711 horário de atendimento kilim orquidea penhasco sereia horário atendimento kilim",
+        "success": true,
+        "confidence": 0.5939115569644227,
+        "chunksFound": 7,
+        "timestamp": "2026-09-23T23:07:15.359291"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 12,
-    "successfulQueries": 12,
+    "totalQueries": 16,
+    "successfulQueries": 16,
     "failedQueries": 0,
-    "avgConfidence": 0.48980482667350667,
-    "lastUpdated": "2026-09-23T22:20:35.569600"
+    "avgConfidence": 0.5409572868897781,
+    "lastUpdated": "2026-09-23T23:07:15.359260"
   },
   "config": {
     "minScore": 0.45,
@@ -109,5 +137,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-09-23T22:20:35.569778"
+  "updatedAt": "2026-09-23T23:07:15.359475"
 }

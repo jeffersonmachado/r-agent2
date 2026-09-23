@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-23T22:01:15.692Z",
-  "artifact": "r-agent2-20260923-181537.payload.zip",
+  "generatedAt": "2026-09-23T23:36:27.585Z",
+  "artifact": "r-agent2-20260923-195042.payload.zip",
   "pass": true,
   "decision": "GO",
   "totalChecks": 9,
@@ -12,9 +12,9 @@
       "pass": true,
       "severity": "CRITICAL",
       "details": {
-        "zipName": "r-agent2-20260923-181537.payload.zip",
-        "computedHash": "29ef36441540a1b9a3a6708e2144e77d33adf6af00a93a6e221fb11b4d3a2e27",
-        "recordedHash": "29ef36441540a1b9a3a6708e2144e77d33adf6af00a93a6e221fb11b4d3a2e27",
+        "zipName": "r-agent2-20260923-195042.payload.zip",
+        "computedHash": "01d9544470e42f95e304273779f04395ba2d365372b7b794d8d81d232fbbb57f",
+        "recordedHash": "01d9544470e42f95e304273779f04395ba2d365372b7b794d8d81d232fbbb57f",
         "match": true
       }
     },
@@ -25,7 +25,7 @@
       "details": {
         "valid": true,
         "hashMatch": true,
-        "subject": "r-agent2-20260923-181537.payload.manifest.json"
+        "subject": "r-agent2-20260923-195042.payload.manifest.json"
       }
     },
     {
@@ -34,7 +34,7 @@
       "severity": "CRITICAL",
       "details": {
         "valid": true,
-        "subject": "r-agent2-20260923-181537.payload.zip"
+        "subject": "r-agent2-20260923-195042.payload.zip"
       }
     },
     {
@@ -55,7 +55,7 @@
         "chainRootValid": true,
         "tampered": false,
         "failures": [],
-        "storedChainRoot": "917880cf2b441b7bcb310c5c…"
+        "storedChainRoot": "b8761bd3ffeb9a5fda01b35a…"
       }
     },
     {
@@ -98,9 +98,5 @@
       }
     }
   ],
-  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada.",
-  "runId": "rap-governed-20260923220508741-cd53886e",
-  "sourceFingerprint": "89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884",
-  "artifactType": "tamper-detection-report",
-  "artifactVersion": "1.0.0"
+  "summary": "Todos os 9 checks de integridade passaram. Nenhuma adulteração detectada."
 }
