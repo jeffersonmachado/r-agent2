@@ -68,6 +68,53 @@ describe('aiControlPlaneStatus — circuit breaker por provider', () => {
     // o buffer não expõe drain no serviço; valida apenas o estado contábil.
     expect(svc.getBufferState().size).toBe(1);
   });
+
+  // Achado real (QA Mesh, execução canônica do pipeline oficial): um cenário sem
+  // GROQ_API_KEY configurada neste ambiente falha 3x com 401 real, abre o breaker, e
+  // TODA falha subsequente vira "Provider de IA 'groq' indisponível (circuit breaker
+  // aberto)." — mensagem genérica, sem nenhum indício de que a causa raiz é
+  // credencial ausente/inválida (uma condição de AMBIENTE, não uma falha funcional
+  // real do provider). O QA Mesh classifica erros contendo "não configurad"/"missing"
+  // como `environment_missing` (nunca bloqueante) — mas essa mensagem genérica não
+  // contém nenhum desses termos, então cai em `functional_failure` (bloqueante),
+  // mascarando uma limitação de ambiente como se fosse um bug de produto.
+  test('circuito aberto por falhas de AUTH preserva o motivo real na mensagem de bloqueio (nunca genérica demais para diagnosticar)', async () => {
+    const authFailure = jest.fn(async () => {
+      const err = new Error('invalid api key');
+      err.status = 401;
+      throw err;
+    });
+    const wrapped = svc.wrapProviderGenerate('groq', authFailure);
+
+    await expect(wrapped('p', {})).rejects.toThrow();
+    await expect(wrapped('p', {})).rejects.toThrow();
+    await expect(wrapped('p', {})).rejects.toThrow();
+    expect(svc.getProviderBreaker('groq').getState().state).toBe('open');
+
+    await expect(wrapped('p', {})).rejects.toMatchObject({
+      code: 'provider_circuit_open',
+      message: expect.stringMatching(/não configurad|credencial|auth/i),
+    });
+  });
+
+  test('circuito aberto por falhas transitórias (5xx) mantém a mensagem genérica — nunca inventa causa de credencial sem evidência', async () => {
+    const transientFailure = jest.fn(async () => {
+      const err = new Error('upstream unavailable');
+      err.status = 503;
+      throw err;
+    });
+    const wrapped = svc.wrapProviderGenerate('mistral', transientFailure);
+
+    await expect(wrapped('p', {})).rejects.toThrow();
+    await expect(wrapped('p', {})).rejects.toThrow();
+    await expect(wrapped('p', {})).rejects.toThrow();
+    expect(svc.getProviderBreaker('mistral').getState().state).toBe('open');
+
+    await expect(wrapped('p', {})).rejects.toMatchObject({
+      code: 'provider_circuit_open',
+      message: expect.not.stringMatching(/não configurad|credencial/i),
+    });
+  });
 });
 
 describe('aiControlPlaneStatus — status de componentes e relatório', () => {

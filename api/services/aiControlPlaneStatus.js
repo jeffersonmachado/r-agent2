@@ -72,6 +72,20 @@ for (const id of Object.keys(COMPONENT_DEFINITIONS)) {
 /** @type {Record<string, object>} circuit breakers por provider de IA. */
 const providerBreakers = {};
 
+/**
+ * Última categoria de erro real (`classifyProviderError`) que levou este provider a
+ * `recordFailure()`. Achado real (QA Mesh, execução canônica do pipeline oficial): sem
+ * isto, TODA chamada bloqueada por circuito aberto lançava a mesma mensagem genérica
+ * "indisponível (circuit breaker aberto)", não importa se a causa raiz foi uma
+ * credencial ausente/inválida (condição de AMBIENTE, nunca deveria contar como falha
+ * funcional bloqueante) ou uma instabilidade real do provider (falha funcional de
+ * verdade). Guardado FORA do breaker genérico (`engine/aiControlPlaneResilience.js`,
+ * primitivo reusado por outros consumidores como `src/core/mcp/tool-lifecycle.js`) —
+ * nunca muda o contrato compartilhado, é estado auxiliar só deste consumidor.
+ * @type {Record<string, {category: string, message: string}>}
+ */
+const providerLastFailureReason = {};
+
 /** Buffer limitado e priorizado de eventos críticos de auditoria. */
 let eventBuffer = createBoundedEventBuffer({
   maxEntries: parsePositiveInt(process.env.AI_CP_BUFFER_MAX_ENTRIES, 1000),
@@ -157,7 +171,11 @@ function wrapProviderGenerate(providerId, generateFn) {
   const breaker = getProviderBreaker(providerId);
   return async function resilientGenerate(prompt, context) {
     if (!breaker.acquire()) {
-      const err = new Error(`Provider de IA '${providerId}' indisponível (circuit breaker aberto).`);
+      const lastReason = providerLastFailureReason[providerId];
+      const suffix = lastReason && lastReason.category === 'AUTH'
+        ? ' Motivo da última falha real: credencial não configurada ou inválida (auth).'
+        : '';
+      const err = new Error(`Provider de IA '${providerId}' indisponível (circuit breaker aberto).${suffix}`);
       err.code = 'provider_circuit_open';
       throw err;
     }
@@ -167,12 +185,14 @@ function wrapProviderGenerate(providerId, generateFn) {
       return result;
     } catch (err) {
       breaker.recordFailure();
+      const { category } = classifyProviderError(err);
+      providerLastFailureReason[providerId] = { category, message: err.message };
       // Registra falha de acesso a modelo no buffer (prioridade alta).
       bufferEvent(
         {
           type: 'model_access_failure',
           provider: providerId,
-          category: classifyProviderError(err).category,
+          category,
           at: new Date().toISOString(),
         },
         EVENT_PRIORITY.MODEL_ACCESS_FAILURE,
@@ -230,6 +250,9 @@ function resetAiControlPlaneState() {
   }
   for (const key of Object.keys(providerBreakers)) {
     delete providerBreakers[key];
+  }
+  for (const key of Object.keys(providerLastFailureReason)) {
+    delete providerLastFailureReason[key];
   }
   eventBuffer = createBoundedEventBuffer({
     maxEntries: parsePositiveInt(process.env.AI_CP_BUFFER_MAX_ENTRIES, 1000),
