@@ -114,17 +114,45 @@
         "confidence": 0.5939115569644227,
         "chunksFound": 7,
         "timestamp": "2026-09-23T23:07:15.359291"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-09-23T23:48:33.903977"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-23T23:49:33.570158"
+      },
+      {
+        "query": "QASEG20260923235153 horário de atendimento zimbro tundra orquidea sereia horário atendimento zimbro",
+        "success": true,
+        "confidence": 0.607547276650358,
+        "chunksFound": 10,
+        "timestamp": "2026-09-23T23:51:54.997908"
+      },
+      {
+        "query": "QASEG20260923235153 horário de atendimento zimbro tundra orquidea sereia horário atendimento zimbro",
+        "success": true,
+        "confidence": 0.6018132158291793,
+        "chunksFound": 10,
+        "timestamp": "2026-09-23T23:51:56.556967"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 16,
-    "successfulQueries": 16,
+    "totalQueries": 20,
+    "successfulQueries": 20,
     "failedQueries": 0,
-    "avgConfidence": 0.5409572868897781,
-    "lastUpdated": "2026-09-23T23:07:15.359260"
+    "avgConfidence": 0.5753290432683404,
+    "lastUpdated": "2026-09-23T23:51:56.556956"
   },
   "config": {
     "minScore": 0.45,
@@ -137,5 +165,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-09-23T23:07:15.359475"
+  "updatedAt": "2026-09-23T23:51:56.557074"
 }
