@@ -126,10 +126,20 @@ preflight() {
 
   # dist/: ZIP de ciclo anterior sem correspondente em archive/ = sobra que já
   # fez o package-validator ler o ZIP errado (PASS 2.9) e abortar a release.
-  local stale_zip
-  stale_zip="$(ls dist/r-agent2-*.zip 2>/dev/null | head -1 || true)"
-  if [ -n "$stale_zip" ]; then
-    _bad "dist/ tem ZIP de ciclo anterior ($stale_zip) — limpe o estado transitório (dist/r-agent2-*.zip, dist/*.manifest.json, dist/candidate/*, dist/governance-artifacts/) preservando dist/archive/ e dist/engineering-router-v1-audit-envelope/, ou o PASS 2.9 lê o pacote errado"
+  # dist/: sobras de ciclo anterior fazem o empacotamento ler o artefato ERRADO
+  # (medido 2026-09-24: artifact_manifest_invalid "Unexpected token 'P', \"PK\""
+  # porque o package-validator recebeu o ZIP do ciclo anterior — um ciclo inteiro
+  # perdido, duas vezes). O check cobre raiz, release/ e candidate/.
+  local leftover=""
+  leftover="$(ls dist/r-agent2-*.zip 2>/dev/null | head -1 || true)"
+  if [ -z "$leftover" ]; then
+    leftover="$(ls dist/release/*.payload.zip 2>/dev/null | head -1 || true)"
+  fi
+  if [ -z "$leftover" ]; then
+    leftover="$(ls dist/candidate/* 2>/dev/null | head -1 || true)"
+  fi
+  if [ -n "$leftover" ]; then
+    _bad "dist/ tem sobra de ciclo anterior ($leftover) — limpe o estado transitório (dist/r-agent2-*.zip, dist/*.manifest.json, dist/release/*, dist/candidate/*, dist/governance-artifacts/) preservando dist/archive/ e dist/engineering-router-v1-audit-envelope/, ou o empacotamento lê o pacote errado"
   else
     _ok "dist/ sem sobras de ciclo anterior"
   fi
@@ -141,7 +151,32 @@ preflight() {
   echo "[preflight] OK"
 }
 
+# ── DRIFT GUARD (same-run é obrigatório) ─────────────────────────────────────
+# Defeito medido (2026-09-24): a convergência descobria RUN_SOURCE_DRIFT DEPOIS
+# do mesh (etapa 8/12, ~30 min). O selador então criava um run novo do
+# fingerprint atual e re-executava tudo — queimando um mesh inteiro por nada.
+# Aqui a comparação acontece ANTES de qualquer evidência e de novo imediatamente
+# antes do mesh, com o MESMO marcador que o selador já reconhece
+# (grep 'RUN_SOURCE_DRIFT'), então a recuperação automática continua valendo —
+# só que sem perder o mesh.
+drift_guard() {
+  local current run_fp
+  current="$(node -e "const {computeSourceFingerprint}=require('./governance/proof-engine/fingerprint-chain');process.stdout.write(String(computeSourceFingerprint(process.cwd())))" 2>/dev/null || true)"
+  run_fp="$(node -e "try{const r=require('./governance/.current-run.json');process.stdout.write(String(r.sourceFingerprint||''))}catch(_){}" 2>/dev/null || true)"
+  if [ -z "$current" ] || [ -z "$run_fp" ]; then
+    echo "[drift-guard] ⚠ não foi possível resolver fingerprint/run governado — seguindo com os gates" >&2
+    return 0
+  fi
+  if [ "$current" != "$run_fp" ]; then
+    echo "[drift-guard] RUN_SOURCE_DRIFT: source atual ${current:0:16}… != run ${run_fp:0:16}…" >&2
+    echo "[drift-guard] evidência same-run exige run do fingerprint atual: rode 'node scripts/governance/create-governed-run.js' e reexecute a convergência (o selador faz isso automaticamente ao ler este marcador)." >&2
+    exit 1
+  fi
+  echo "[drift-guard] run governado vinculado ao source atual (${current:0:16}…)"
+}
+
 preflight
+drift_guard
 
 echo "[converge] 1/12 enterprise proof smoke DENTRO do run (evidência same-run qa/enterprise/*)"
 # RUNTIME_EVIDENCE: só é prova do run se executar nele. O smoke resolve o
@@ -202,6 +237,11 @@ echo "[converge] 7/12 evidência executável com validade temporal (test/regress
 $NODE scripts/governance/generate-policy-evidence.js
 $NODE scripts/governance/generate-domain-evidence.js >/dev/null
 $NODE scripts/governance/generate-persistence-evidence.js >/dev/null
+
+# Reavalia o vínculo run<->source IMEDIATAMENTE antes do passo mais caro do
+# ciclo: se as etapas 1-7 escreveram algo sob raiz de fingerprint, o mesh não
+# pode rodar (a evidência dele nasceria de um run já inválido).
+drift_guard
 
 echo "[converge] 8/12 QA Mesh canônico DENTRO do run governado (~35min; evidência same-run RAP-024/026)"
 # RUNTIME_EVIDENCE: o go-no-go do mesh só é prova do run em que o mesh

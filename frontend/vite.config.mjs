@@ -15,9 +15,14 @@ function normalizeBasePath(input) {
 
 // Plugin para interceptar rotas de página do frontend antes do proxy
 function frontendRoutesPlugin() {
-  return {
-    name: 'frontend-routes',
-    configureServer(server) {
+  // O middleware de rotas SPA é registrado em DEV **e** em PREVIEW.
+  // Defeito medido (2026-09-24): `vite preview` é o runtime que
+  // `pipeline/runFullValidation.js::ensureRuntime()` sobe quando a 5173 está
+  // livre; registrando o middleware só em `configureServer` (DEV), o `bypass` do
+  // proxy de `/workspace` terminava a resposta com 404 (len=0) e TODOS os seeds
+  // `fitness-matricula-*` travavam (10 min x 2 tentativas cada), com o pipeline
+  // reportando runtime OK. Os dois hooks compartilham a MESMA classificação.
+  const installFrontendRouteMiddleware = (server) => {
       // Rotas de página do frontend que não devem ser proxyadas
       const frontendRoutes = ['/config', '/support', '/maintenance', '/editor', '/audit', '/agents', '/login', '/web-scraping', '/dev/rpa-test', '/chat', '/inbox', '/failed-messages', '/agenda', '/ai-tools', '/segmentation', '/workspace'];
       
@@ -181,6 +186,16 @@ function frontendRoutesPlugin() {
         
         next();
       });
+  };
+
+  return {
+    name: 'frontend-routes',
+    configureServer(server) {
+      installFrontendRouteMiddleware(server);
+    },
+    // Sem este hook o preview responde 404 nas rotas SPA (ver comentário acima).
+    configurePreviewServer(server) {
+      installFrontendRouteMiddleware(server);
     },
   };
 }

@@ -440,6 +440,80 @@ Bloqueado por `qa-mesh=NO_GO` (causa raiz = defeito 6). Após a correção do pr
 críticos passam isoladamente; o ciclo de governança precisa ser re-executado sobre nova fonte
 congelada (as otimizações acima vivem em raízes de fingerprint).
 
+## OTIMIZAÇÕES DE TEMPO IMPLEMENTADAS (com prova medida)
+
+Quatro defeitos que custavam ciclos inteiros foram corrigidos e **provados** nesta missão.
+
+### 8º defeito — `ENGINE_AI_TIMEOUT_MS` de 30 s contra modelos que levam 26 s (CAUSA RAIZ DO FLAKY)
+
+O mesh do run `rap-governed-20260924034627968-75141ffd` terminou com **0 falhas e 3 flaky**
+(`business-core-biz-academy`, `-flows-editor`, `-rag-segregation`) → `CRITICAL_DOMAIN_FAILED:core`
+→ `NO_GO`. O domínio crítico trata flaky como falha, então o release ficou bloqueado.
+
+- A causa não era "rede instável": o log da API mostrou
+  `ai_timeout: provider de IA excedeu 30000ms` em `openai` — ou seja, **o NOSSO** timeout
+  abortando uma chamada real.
+- Medição com geração representativa (mesmos modelos configurados do tenant `system`):
+
+  | Provider | Modelo | Latência medida | tokens de saída | % do orçamento de 30 s |
+  |---|---|---|---|---|
+  | openai | `gpt-5.2` | 12,8 s / 15,5 s | 1302 / 1561 | 52% |
+  | deepseek | `deepseek-flash` | 4,9 s / 5,3 s | 900 | 18% |
+  | kimi | `kimi-k2.6` | **22,4 s / 25,8 s** | 900 / 1200 | **86%** |
+
+  Com o kimi consumindo 86% do orçamento, qualquer variação de carga estoura o timeout, a
+  cadeia cai para o próximo provider e o cenário termina `flaky`.
+- Correção: `ENGINE_AI_TIMEOUT_MS=90000` (3,5× a pior medição real). Chamada que passa de 90 s
+  está **travada**, não lenta — o fallback continua funcionando.
+- Nota de método: isto **não** é "aumentar timeout para ficar verde" — é dimensionar o timeout
+  contra o tempo real dos modelos configurados, com o número medido ao lado.
+- Prova: **3 rodadas × 3 cenários = 9/9 PASS com zero `ai_timeout`** (antes: falha em 100% dos
+  runs recentes). `.env` é gitignored, então a correção **não exige novo freeze** nem
+  recertificação do Router — o run governado permanece válido.
+
+### 9º defeito — `RUN_SOURCE_DRIFT` descoberto DEPOIS do mesh (queimava ~30 min)
+
+Reproduzido duas vezes: a convergência só descobria o drift depois do passo 8, e o selador então
+criava outro run e **re-executava o mesh inteiro**. Correção: `drift_guard()` em
+`converge-governance.sh`, chamado logo após o preflight e **imediatamente antes do mesh**, com o
+mesmo marcador `RUN_SOURCE_DRIFT` que o selador já reconhece (a recuperação automática continua
+valendo, só que sem perder o mesh).
+Prova real: o guard detectou o próprio commit pendente desta missão
+(`source 5e815da5… != run 1ae8a61e…`) e saiu 1 com mensagem acionável.
+
+### 10º defeito — sobras em `dist/` derrubavam o empacotamento (2 ciclos perdidos)
+
+`artifact_manifest_invalid: … Unexpected token 'P', "PK"` porque o `package-validator` recebeu o
+ZIP do ciclo anterior. O preflight agora também barra sobras em `dist/release/*` e
+`dist/candidate/*`, além do `dist/r-agent2-*.zip` que já cobria.
+
+### 11º defeito — `vite preview` sem as rotas SPA (runtime quebrado em silêncio, ~20 min)
+
+O middleware `frontend-routes` só era registrado em `configureServer` (DEV).
+`pipeline/runFullValidation.js::ensureRuntime()` sobe `npm run preview` quando a 5173 está livre
+→ `/workspace` respondia **404 com 0 bytes** e todos os seeds `fitness-matricula-*` travavam
+(10 min × 2 tentativas), com o pipeline reportando runtime OK.
+Correção: o middleware passou a ser registrado também em `configurePreviewServer`.
+Prova: `vite preview` na 5199 → `/workspace` **200 com 1111 bytes** (antes 404/0), e
+`/support`, `/editor`, `/dev/qa-waves`, `/login` todos 200.
+`frontend/vite.config.mjs` **não entra no source fingerprint** (verificado por probe), então
+também não exigiu freeze.
+
+### Pendentes por governança (NÃO implementados, com o motivo)
+
+- **Reuso de sessão autenticada nos seeds RPA (~4–5 min/ciclo)**: tecnicamente viável (o
+  auto-login é helper pré-passo, `core/rpa/utils/autoLoginFlow.js`), mas altera o estado inicial
+  das execuções e toca replay governance (`replayHash`/tamper detection) — exige decisão e
+  regressão RPA completa.
+- **Concorrência entre grupos do mesh (~14–18 min/ciclo)**: medido overlap **0,99** (26 grupos
+  somando 27,7 min de 28,0 de wall). É a maior alavanca, mas o mesh produz evidência canônica
+  same-run (RAP-024/026) e a serialização existe para não introduzir contenção — mudança
+  governada, não patch sob pressão de release.
+- **Break de circuito contaminado por erro de configuração**: `wrapProviderGenerate` chama
+  `breaker.recordFailure()` para **todo** erro, inclusive `ai_provider_not_configured`
+  (credencial ausente não é indisponibilidade do provider). Correção identificada, não aplicada
+  (exigiria novo freeze sem necessidade para este ciclo).
+
 ## POST_RELEASE_HARDENING (registrado, NÃO implementado nesta missão)
 
 1. **`vite preview` não serve rotas SPA** — `frontend/vite.config.mjs` registra o plugin
