@@ -1,11 +1,8 @@
 {
-  "generatedAt": "2026-09-24T01:12:30.585Z",
+  "generatedAt": "2026-09-24T04:56:56.581Z",
   "ok": false,
-  "error": "artifact_manifest_invalid:/opt/results/ria/r-agent2/dist/r-agent2-20260923-213255.zip:Unexpected token 'P', \"PK\u0003\u0004\n\u0000\u0000\u0000\u0000\u0000\"... is not valid JSON",
-  "deferred": false,
-  "phase": "POST_PACKAGE",
-  "status": "FAIL",
-  "missingEntries": [],
+  "zipPath": null,
+  "zipName": null,
   "requiredEntries": [
     "qa/smoke-evidence.json",
     "qa/l01-physical-queue-evidence.json",
@@ -32,10 +29,15 @@
     "governance/outbound-reliability-report.json",
     "governance/source-remote-provenance-report.json"
   ],
+  "missingEntries": [],
+  "error": "artifact_missing:none_found_in_dist",
+  "deferred": true,
+  "phase": "PRE_PACKAGE",
+  "status": "DEFERRED",
   "artifactType": "package-validation-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260923220508741-cd53886e",
-  "sourceFingerprint": "89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884",
-  "gitCommit": "3166b8c98732a62bd7e6aef075870ef32fba055c",
-  "gitTree": "09d236cbe7f08652d5952ffed59f45106a2ac384"
+  "runId": "rap-governed-20260924045619192-6ea56eb1",
+  "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
+  "gitCommit": "219de123604c48587bd6f2dc6280cb57f2accfe6",
+  "gitTree": "d459573ee9a18ec0fc3a18f51c9bb6060f78a6be"
 }
