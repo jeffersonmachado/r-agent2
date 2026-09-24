@@ -1,12 +1,107 @@
 [
   {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-core-flaky-business-core-biz-academy",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio core",
+    "evidence": {
+      "scenarios": [
+        "business-core-biz-academy"
+      ],
+      "sampleError": "Tutor não respondeu com conteúdo disponível"
+    },
+    "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-core-flaky-business-core-biz-rag-segregation",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio core",
+    "evidence": {
+      "scenarios": [
+        "business-core-biz-rag-segregation"
+      ],
+      "sampleError": "Documento não foi indexado dentro do tempo esperado"
+    },
+    "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-core-flaky-business-core-biz-flows-editor",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio core",
+    "evidence": {
+      "scenarios": [
+        "business-core-biz-flows-editor"
+      ],
+      "sampleError": "500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker aberto)."
+    },
+    "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-core-flaky-business-core-biz-projects",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio core",
+    "evidence": {
+      "scenarios": [
+        "business-core-biz-projects"
+      ],
+      "sampleError": "500 Internal Server Error: Erro ao criar projeto"
+    },
+    "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+  },
+  {
+    "blockingClassification": "enterprise-blocker",
+    "suggestions": {
+      "journeys": [],
+      "assertions": [],
+      "replayEnrichments": []
+    },
+    "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads",
+    "severity": "high",
+    "area": "qa-mesh",
+    "title": "Falha aberta no dominio omnichannel",
+    "evidence": {
+      "scenarios": [
+        "fitness-matricula-leads"
+      ],
+      "sampleError": "1 erro(s) críticos detectados na página"
+    },
+    "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+  },
+  {
     "id": "gap-proof-stale-fingerprints",
     "severity": "critical",
     "area": "proof-governance",
     "title": "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE)",
     "evidence": {
       "diverged": [
-        "sourceFingerprint",
+        "scenarioRegistryFingerprint",
         "chainFingerprint"
       ]
     },
