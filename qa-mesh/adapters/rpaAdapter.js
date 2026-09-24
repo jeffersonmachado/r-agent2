@@ -69,12 +69,39 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context
   return new Promise((resolve) => {
     let settled = false;
 
+    // FAIL-FAST POR ESTAGNAÇÃO.
+    // Defeito medido (2026-09-23): uma execução RPA que trava (ex.: rota SPA
+    // respondendo 404 e a UI nunca montando) NÃO muda `progress`/`currentStep`
+    // e só terminava pelo deadline de 10 min — com 2 tentativas, um único
+    // cenário travado custava 20 min de parede (mesh de 65-75 min contra 28-30
+    // min quando tudo passa). Nenhum passo dos seeds declara timeout > 20 s, e
+    // o auto-login não emite progresso por ~45-60 s; logo "sem mudança de
+    // progresso/passo por N segundos" só acontece em travamento real.
+    // O cenário continua FALHANDO (nunca é mascarado) — só falha mais rápido,
+    // com motivo explícito, e mantém o retry normal.
+    const stagnationMs = (() => {
+      const raw = Number(process.env.QA_MESH_RPA_STAGNATION_MS || (3 * 60 * 1000));
+      return Number.isFinite(raw) && raw > 0 ? raw : 3 * 60 * 1000;
+    })();
+
     const finish = (result) => {
       if (settled) return;
       settled = true;
       clearTimeout(deadline);
+      clearInterval(stagnationWatch);
       rpaExecutionEvents.off('updated', handleUpdate);
       resolve(result);
+    };
+
+    let lastSignature = null;
+    let lastChangeAt = Date.now();
+
+    const observe = (status) => {
+      const signature = `${status.progress ?? 0}|${status.currentStep ?? ''}|${status.totalSteps ?? 0}`;
+      if (signature !== lastSignature) {
+        lastSignature = signature;
+        lastChangeAt = Date.now();
+      }
     };
 
     const checkNow = () => {
@@ -87,6 +114,7 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context
         finish(buildTerminalResult(status));
         return;
       }
+      observe(status);
       notifyProgress(status);
     };
 
@@ -94,6 +122,28 @@ async function waitForExecution(executionId, timeoutMs = 10 * 60 * 1000, context
       if (!event || event.id !== executionId || settled) return;
       checkNow();
     };
+
+    const stagnationWatch = setInterval(() => {
+      if (settled) return;
+      checkNow();
+      if (settled) return;
+      const idleMs = Date.now() - lastChangeAt;
+      if (idleMs >= stagnationMs) {
+        finish({
+          success: false,
+          logs: [],
+          metrics: { status: 'stagnation' },
+          errors: [{ error: 'rpa_execution_stagnation' }],
+          artifacts: [],
+          stagnation: {
+            idleMs,
+            thresholdMs: stagnationMs,
+            lastSignature,
+          },
+        });
+      }
+    }, 15000);
+    if (typeof stagnationWatch.unref === 'function') stagnationWatch.unref();
 
     const deadline = setTimeout(() => {
       finish({
@@ -125,6 +175,11 @@ function isTransientRpaFailure(result) {
   const status = String(result?.metrics?.status || '').toLowerCase();
   return (
     status === 'timeout' ||
+    // Estagnação = execução viva que parou de progredir; é falha de
+    // infraestrutura/execução, não veredito funcional do produto — por isso
+    // também merece o retry normal (fail-fast reduz o custo, não remove o retry).
+    status === 'stagnation' ||
+    text.includes('rpa_execution_stagnation') ||
     text.includes('tempo limite excedido aguardando execução rpa') ||
     text.includes('target page, context or browser has been closed') ||
     text.includes('err_connection_refused') ||

@@ -55,6 +55,94 @@ cd "$(dirname "$0")/../.."
 
 NODE="node --env-file-if-exists=.env"
 
+# ── PREFLIGHT (fail-fast de ambiente) ────────────────────────────────────────
+# Defeito medido (2026-09-23): três falhas reais de AMBIENTE só apareceram DEPOIS
+# do mesh (etapa 1/12, 8.5/12 e 2.9 do empacotamento), custando 30-50 min de
+# ciclo perdido cada uma:
+#   (a) rag-service fora do ar -> relatório RAG UNREACHABLE -> coverage gate NO_GO;
+#   (b) `vite preview` na 5173 em vez do dev server -> `GET /workspace` = 404
+#       (o plugin `frontend-routes` só existe em `configureServer`/DEV) -> todos os
+#       seeds `fitness-matricula-*` travam 10 min x 2;
+#   (c) `/etc/asterisk` do container é tmpfs populado só no start, então o
+#       `tenants.conf` regerado no host nunca entra em vigor sem restart ->
+#       `Local/9191@<tenant>` sem dialplan -> chamada não atendida -> sem CDR.
+# Este bloco custa segundos e converte cada uma dessas em mensagem acionável.
+preflight() {
+  local fail=0
+  local api_url="${TEST_BASE_URL:-${TEST_API_URL:-${API_URL:-http://localhost:3001}}}"
+  local frontend_url="${TEST_FRONTEND_URL:-${FRONTEND_URL:-http://localhost:5173}}"
+  local rag_url="${RAG_SERVICE_URL:-http://localhost:8001}"
+
+  _ok()   { echo "  ✓ $1"; }
+  _bad()  { echo "  ✗ $1" >&2; fail=1; }
+
+  echo "[preflight] validando runtime obrigatório (API, frontend SPA, RAG, PBX, dist)"
+
+  if curl -sf -m 10 -o /dev/null "${api_url}/health"; then _ok "API viva em ${api_url}"
+  else _bad "API não responde em ${api_url}/health — suba 'node api/server.js' (repo root)"; fi
+
+  # nodemon observa `api`,`engine`,`src`,`qa-mesh`: qualquer escrita nessas
+  # árvores no meio do mesh reinicia a API e o cenário morre com
+  # `fetch failed (cause: UND_ERR_SOCKET)` (medido 2026-09-24 no
+  # business-core-biz-flows-editor). Aviso, não falha: o supervisor é útil em dev.
+  if pgrep -f "nodemon api/server.js" >/dev/null 2>&1 || pgrep -f "nodemon.*api" >/dev/null 2>&1; then
+    echo "  ⚠ API supervisionada por nodemon — reinício no meio do run causa UND_ERR_SOCKET; para o ciclo de governança rode 'node --env-file-if-exists=.env api/server.js' direto"
+  else
+    _ok "API sem supervisor (sem reinício acidental)"
+  fi
+
+  # A rota canônica `/workspace` precisa ser servida pelo FRONTEND. Em
+  # `vite preview` ela é proxyada para a API e volta 404 (`x-api-route-fallback`).
+  local ws_code
+  ws_code="$(curl -s -m 15 -o /dev/null -w '%{http_code}' -H 'Accept: text/html,application/xhtml+xml' "${frontend_url}/workspace" || echo 000)"
+  if [ "$ws_code" = "200" ]; then _ok "frontend servindo /workspace em ${frontend_url}"
+  else _bad "GET ${frontend_url}/workspace devolveu ${ws_code} — use o DEV server ('npm run dev:frontend' na 5173); 'vite preview' NÃO serve rotas SPA (plugin frontend-routes só existe em DEV) e faz os seeds fitness-matricula-* travarem"; fi
+
+  if curl -sf -m 10 -o /dev/null "${rag_url}/health"; then _ok "rag-service vivo em ${rag_url}"
+  else _bad "rag-service não responde em ${rag_url}/health — sem ele o relatório de segregação fica UNREACHABLE e o coverage gate (8.5/12) reprova"; fi
+
+  if [ "${PBX_CALL_EVENTS_RUNTIME_INSERT_MODE:-}" = "direct" ]; then _ok "PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct"
+  else _bad "PBX_CALL_EVENTS_RUNTIME_INSERT_MODE != direct — o smoke L-04 tenta 'docker compose -f docker-compose.test.yml exec api' (serviço inexistente aqui) e a etapa 1/12 aborta"; fi
+
+  if command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -qF "${PBX_ODBC_PORT:-15432}"; then _ok "ponte host<->Asterisk escutando (${PBX_ODBC_PORT:-15432})"
+  else _bad "ponte host<->Asterisk ausente — rode 'set -a && . ./.env && set +a && bash scripts/pbx-host-db-bridge.sh start' (sem ela o CDR do Asterisk nunca chega ao banco da API)"; fi
+
+  # tmpfs do Asterisk: o container copia /etc/asterisk-static SÓ no start; se o
+  # tenants.conf do host for mais novo, o contexto de tenant não está em vigor.
+  local host_tc="pbx/asterisk/etc/asterisk/conf/tenants.conf"
+  if [ -f "$host_tc" ] && command -v docker >/dev/null 2>&1; then
+    if docker exec chatbot-asterisk sh -c 'test -f /etc/asterisk/conf/tenants.conf' 2>/dev/null; then
+      local host_mtime cont_mtime
+      host_mtime="$(stat -c %Y "$host_tc" 2>/dev/null || echo 0)"
+      cont_mtime="$(docker exec chatbot-asterisk stat -c %Y /etc/asterisk/conf/tenants.conf 2>/dev/null || echo 0)"
+      if [ "$cont_mtime" -ge "$host_mtime" ]; then _ok "tenants.conf em vigor no Asterisk"
+      else _bad "tenants.conf do container é MAIS ANTIGO que o do host — rode 'docker restart chatbot-asterisk' (o tmpfs só é repovoado no start; 'dialplan reload' não relê o arquivo do host)"; fi
+    else
+      _bad "container chatbot-asterisk sem /etc/asterisk/conf/tenants.conf"
+    fi
+  else
+    echo "  ⚠ validação do dialplan de tenants pulada (host_tc ou docker indisponível)"
+  fi
+
+  # dist/: ZIP de ciclo anterior sem correspondente em archive/ = sobra que já
+  # fez o package-validator ler o ZIP errado (PASS 2.9) e abortar a release.
+  local stale_zip
+  stale_zip="$(ls dist/r-agent2-*.zip 2>/dev/null | head -1 || true)"
+  if [ -n "$stale_zip" ]; then
+    _bad "dist/ tem ZIP de ciclo anterior ($stale_zip) — limpe o estado transitório (dist/r-agent2-*.zip, dist/*.manifest.json, dist/candidate/*, dist/governance-artifacts/) preservando dist/archive/ e dist/engineering-router-v1-audit-envelope/, ou o PASS 2.9 lê o pacote errado"
+  else
+    _ok "dist/ sem sobras de ciclo anterior"
+  fi
+
+  if [ "$fail" -ne 0 ]; then
+    echo "[preflight] FALHOU — corrija os itens acima antes de rodar a convergência (evita perder um ciclo de ~40 min)" >&2
+    exit 1
+  fi
+  echo "[preflight] OK"
+}
+
+preflight
+
 echo "[converge] 1/12 enterprise proof smoke DENTRO do run (evidência same-run qa/enterprise/*)"
 # RUNTIME_EVIDENCE: só é prova do run se executar nele. O smoke resolve o
 # lineage NA ORIGEM (governance/.current-run.json) e sai != 0 quando

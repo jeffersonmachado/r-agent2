@@ -347,6 +347,61 @@ publicação   8/8 PASS, recibo PUBLISHED_VERIFIED, tag remota conferida
   `verify-enterprise-governance-v2.sh` → `verify-payload-governance.js`, autocontido):
   `CHECK-DIST-CLEAN: PASS` (exit 0).
 
+## TERCEIRA PASSAGEM — 2 defeitos de ambiente REAIS + otimizações seguras de tempo
+
+Contexto: o RELEASE #2 falhou 3× seguidas, e a terceira falha foi atribuída (hipótese inicial) a
+"flakiness do provedor de IA" no mesh `mesh-2026-09-24T01-26-03-248Z` (141/144 →
+`CRITICAL_DOMAIN_FAILED:core` + `BASELINE_PASS_RATE_REGRESSION`). A investigação mostrou que
+**não era flakiness**: eram 2 defeitos de ambiente determinísticos.
+
+### 6º defeito — provedor `groq` habilitado SEM credencial (causa raiz das 3 falhas `core`)
+
+- `ai_providers.groq.enabled = t`, mas **não existe linha de `groq` em `tenant_ai_credentials`**
+  para o tenant `system` (existiam `openai`, `deepseek`, `kimi`, todas válidas).
+- Efeito medido: `CORE-BIZ-FLOWS-EDITOR` falhava em `flow-validation` com
+  `500 Provider de IA 'groq' indisponível (circuit breaker aberto)`, arrastando
+  `business-core-biz-academy` ("Tutor não respondeu com conteúdo disponível") e
+  `business-core-biz-rag-segregation` ("Documento não foi indexado dentro do tempo esperado").
+- Correção (ambiente, não código): `UPDATE ai_providers SET enabled=false WHERE key='groq'`.
+- Prova: os 3 cenários, isolados, passaram **3/3 PASS** (`/tmp/ai4.log`, exit 0) após a correção,
+  contra 0/3 antes.
+
+### 7º defeito — `nodemon` reinicia a API DENTRO do run e mata o cenário
+
+- `nodemon.json` observa `api`, `engine`, `src`, `qa-mesh`; qualquer escrita nessas árvores durante
+  QA/mesh provoca restart e o cenário morre com `fetch failed (cause: UND_ERR_SOCKET)`.
+  Medido: `CORE-BIZ-FLOWS-EDITOR` falhou exatamente assim (`flow-validation`, 42 s) enquanto a API
+  reiniciava.
+- Correção (ambiente): rodar a API **sem supervisor** no ciclo de governança
+  (`node --env-file-if-exists=.env api/server.js`), e o preflight agora avisa quando há nodemon.
+
+### Otimizações seguras de tempo implementadas (nenhum gate enfraquecido)
+
+Fonte única de custo medida: mesh 28–30 min quando verde contra 65–75 min quando um seed RPA trava
+(10 min de deadline × 2 tentativas = 20 min por cenário travado).
+
+1. **Fail-fast por estagnação em `qa-mesh/adapters/rpaAdapter.js`**: uma execução viva que para de
+   progredir (`progress`/`currentStep`/`totalSteps` inalterados por `QA_MESH_RPA_STAGNATION_MS`,
+   default 3 min) termina imediatamente com
+   `metrics.status='stagnation'` + `errors[0].error='rpa_execution_stagnation'`.
+   Justificativa medida: **nenhum passo dos seeds declara timeout > 20 s** e o auto-login não emite
+   progresso por ~45–60 s, logo "sem mudança por 3 min" só ocorre em travamento real.
+   O cenário continua **FALHANDO** (nunca é mascarado) e **mantém o retry** — muda apenas o tempo
+   de detecção, com motivo explícito na evidência.
+2. **Preflight de ambiente (etapa 0) em `scripts/governance/converge-governance.sh`**: valida em
+   segundos o que antes só era descoberto depois de 30–50 min de ciclo — API 3001, `/workspace`
+   servido pelo frontend na 5173 (reprova `vite preview`, defeito #4), rag-service 8001 (reprova
+   cedo a causa do NO_GO 8.5/12), `PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct`, ponte
+   host↔Asterisk em 15432, `tenants.conf` em vigor no tmpfs do Asterisk (compara mtime container
+   × host), sobras de `dist/` de ciclo anterior (defeito do `package-validator`), e avisa se a API
+   está sob `nodemon`. Falha com mensagem acionável, não com stack trace.
+
+### Estado do RELEASE #2
+
+Bloqueado por `qa-mesh=NO_GO` (causa raiz = defeito 6). Após a correção do provedor, os 3 cenários
+críticos passam isoladamente; o ciclo de governança precisa ser re-executado sobre nova fonte
+congelada (as otimizações acima vivem em raízes de fingerprint).
+
 ## POST_RELEASE_HARDENING (registrado, NÃO implementado nesta missão)
 
 1. **`vite preview` não serve rotas SPA** — `frontend/vite.config.mjs` registra o plugin
@@ -365,7 +420,8 @@ publicação   8/8 PASS, recibo PUBLISHED_VERIFIED, tag remota conferida
    da convergência aborta.
 5. **Variáveis de runtime obrigatórias não são validadas no início do ciclo** (`PBX_*`,
    `TEST_FRONTEND_URL`, rag-service vivo em 8001): a convergência falha tarde (etapa 1/12 ou
-   8.5/12) em vez de fail-fast. Endurecer: preflight explícito em `converge-governance.sh`.
+   8.5/12) em vez de fail-fast. ~~Endurecer: preflight explícito em `converge-governance.sh`.~~
+   **IMPLEMENTADO nesta missão** (etapa 0 de `converge-governance.sh`, ver seção acima).
 6. **O pipeline de empacotamento não é re-executável sobre sobras do `dist/`**: um segundo ciclo
    consecutivo encontrou ZIP/manifest do ciclo anterior no root de `dist/` e o
    `package-validator` foi invocado com o nome do ciclo antigo
