@@ -134,6 +134,7 @@
     "validate:engineering-router-v1": "node scripts/governance/validate-engineering-router-v1.js",
     "validate:anti-greenwashing": "node scripts/governance/validate-anti-greenwashing.js",
     "verify:mission-crash-recovery": "node scripts/governance/verify-mission-crash-recovery.js",
+    "validate:engineering-router-v2": "node scripts/governance/validate-engineering-router-v2.js",
     "test:release-authoritative": "RELEASE_AUTHORITATIVE=1 jest tests/unit/engineeringMission tests/integration/engineeringMission tests/unit/engineeringRouterQwenProvider.test.js --runInBand --no-coverage",
     "collect:engineering-router-runtime-evidence": "node scripts/governance/collect-engineering-router-runtime-evidence.js",
     "validate:engineering-router-v1:runtime": "npm run collect:engineering-router-runtime-evidence && node scripts/governance/validate-engineering-router-v1.js --runtime",
