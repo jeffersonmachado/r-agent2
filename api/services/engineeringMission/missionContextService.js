@@ -185,8 +185,130 @@ async function lookupEngineeringMemory({ keywords = [], originalMissionHash = nu
   return result;
 }
 
+/** * Orçamento de conhecimento (§16): um contexto de missão não pode crescer sem limite. O que é
+ * cortado é REGISTRADO — truncar em silêncio produziria um contexto que parece completo e não é.
+ */
+const KNOWLEDGE_BUDGET_DEFAULTS = Object.freeze({
+  maxItems: 6,
+  maxCharsPerItem: 600,
+  maxTotalChars: 3000,
+  minScore: 0.35,
+});
+
 /**
- * @returns {Promise<{facts:Object, keywords:string[], memory:Object, factsHash:string, degraded:Array<string>}>}
+ * Conhecimento de engenharia (§14–§18) via Knowledge Plane, SEMPRE no domínio SYSTEM.
+ *
+ * Regras que este código não negocia:
+ *   - o domínio é resolvido pela identidade do ator (`resolveRetrievalScope`), nunca pelo texto da
+ *     missão; se o ator não puder acessar SYSTEM, a resposta é VAZIA com degradação declarada —
+ *     jamais um fallback para OPERATIONAL (isso vazaria dado de cliente para dentro da missão);
+ *   - retrieval puro (`hybridRetrieve`), sem geração: o contexto alimenta o compiler, não responde
+ *     ao usuário;
+ *   - cada item carrega PROVENIÊNCIA (fonte, domínio, classificação, score, autoridade, hash do
+ *     trecho), para que a decisão de engenharia possa ser auditada depois;
+ *   - indisponibilidade degrada a confiança (`degraded`), nunca inventa conhecimento.
+ *
+ * @returns={Promise<{items:Array, provenance:Array, budget:Object, degraded:Array<string>, scope:Object|null}>}
+ */
+async function retrieveEngineeringKnowledge({
+  query,
+  tenantId = 'system',
+  actorClassification = 'DEVELOPMENT',
+  budget = {},
+} = {}) {
+  const limits = { ...KNOWLEDGE_BUDGET_DEFAULTS, ...budget };
+  const out = {
+    items: [],
+    provenance: [],
+    budget: { ...limits, usedItems: 0, usedChars: 0, truncated: false, dropped: 0, droppedReasons: [] },
+    degraded: [],
+    scope: null,
+  };
+
+  if (!query || String(query).trim().length === 0) {
+    out.degraded.push('KNOWLEDGE_QUERY_EMPTY');
+    return out;
+  }
+
+  let scopeResolution;
+  try {
+    const { resolveRetrievalScope, createResolvedScope, hybridRetrieve } = require('../../../src/core/knowledge-plane');
+    scopeResolution = resolveRetrievalScope({
+      actor: { id: 'engineering-mission', classification: actorClassification },
+      requestedDomain: 'SYSTEM',
+    });
+    if (!scopeResolution || !scopeResolution.allowed || scopeResolution.scope.domain !== 'SYSTEM') {
+      out.degraded.push(`KNOWLEDGE_DOMAIN_NOT_AUTHORIZED:${(scopeResolution && scopeResolution.reason) || 'unknown'}`);
+      return out;
+    }
+
+    const resolvedScope = createResolvedScope({
+      domain: 'SYSTEM',
+      classifications: scopeResolution.scope.classifications,
+      retrievalPurpose: null,
+      knowledgeTypes: ['SEMANTIC'],
+      policy: scopeResolution.retrievalPolicy,
+      reason: scopeResolution.reason,
+    });
+    out.scope = { domain: resolvedScope.domain, classifications: [...resolvedScope.classifications] };
+
+    const retrieved = await hybridRetrieve({
+      query: String(query),
+      tenantId,
+      actor: { id: 'engineering-mission', classification: actorClassification },
+      knowledgeScope: resolvedScope,
+    });
+
+    const raw = Array.isArray(retrieved.results) ? retrieved.results : [];
+    // Resultado vazio é ESTADO, não silêncio: sem documentos no domínio SYSTEM a missão não recebe
+    // conhecimento, e quem lê o relatório precisa saber a diferença entre "não há nada indexado" e
+    // "o retrieval falhou".
+    if (raw.length === 0) out.degraded.push('KNOWLEDGE_NO_RESULTS');
+    for (const item of raw) {
+      const score = Number(item.score ?? item.relevance ?? 0);
+      if (limits.minScore && score < limits.minScore) {
+        out.budget.dropped += 1;
+        out.budget.droppedReasons.push('BELOW_MIN_SCORE');
+        continue;
+      }
+      if (out.items.length >= limits.maxItems) {
+        out.budget.dropped += 1;
+        out.budget.droppedReasons.push('BUDGET_ITEMS_EXCEEDED');
+        continue;
+      }
+      const text = String(item.content || item.text || item.summary || '');
+      const clipped = text.length > limits.maxCharsPerItem;
+      const body = clipped ? text.slice(0, limits.maxCharsPerItem) : text;
+      if (out.budget.usedChars + body.length > limits.maxTotalChars) {
+        out.budget.dropped += 1;
+        out.budget.droppedReasons.push('BUDGET_CHARS_EXCEEDED');
+        continue;
+      }
+      if (clipped) out.budget.truncated = true;
+      out.budget.usedChars += body.length;
+      out.items.push({ id: item.id || null, score, text: body, truncated: clipped });
+      out.provenance.push({
+        sourceId: item.id || null,
+        title: item.title || item.documentTitle || null,
+        domain: resolvedScope.domain,
+        classification: item.classification || null,
+        score,
+        authority: item.authority ?? null,
+        knowledgeType: item.knowledgeType || 'SEMANTIC',
+        hash: sha256(body),
+      });
+    }
+    out.budget.usedItems = out.items.length;
+    out.budget.droppedReasons = [...new Set(out.budget.droppedReasons)];
+  } catch (err) {
+    // Knowledge Plane fora do ar degrada a confiança; não vira conhecimento inventado nem vira
+    // fallback de domínio.
+    out.degraded.push(`KNOWLEDGE_RETRIEVAL_UNAVAILABLE:${err.message}`);
+  }
+  return out;
+}
+
+/** * @returns {Promise<{facts:Object, keywords:string[], memory:Object, factsHash:string, degraded:Array<string>}>}
  */
 async function collectContextFacts({ originalMission, repository = null, branch = null, contextHints = {}, missionId = null }) {
   const degraded = [];
@@ -231,7 +353,20 @@ async function collectContextFacts({ originalMission, repository = null, branch 
   facts.previousOccurrences = memory.previousOccurrences;
   facts.relatedGaps = memory.relatedGaps;
 
-  // 4. Declaração explícita de fatos que NÃO podem ser inferidos por varredura/texto.
+  // 4. Conhecimento de engenharia (§14–§18) via Knowledge Plane no domínio SYSTEM. Retrieval puro
+  // com orçamento e proveniência: alimenta o compiler, sem geração de texto.
+  const knowledge = await retrieveEngineeringKnowledge({
+    query: originalMission,
+    tenantId: process.env.ENGINEERING_MISSION_KNOWLEDGE_TENANT || 'system',
+  });
+  facts.knowledgeItems = knowledge.items.length;
+  facts.knowledgeRefs = knowledge.provenance.map((p) => ({ sourceId: p.sourceId, title: p.title, hash: p.hash, score: p.score }));
+  facts.knowledgeBudget = knowledge.budget;
+  if (knowledge.items.length > 0) contextSources.push('ENGINEERING_RAG');
+  for (const reason of knowledge.degraded) degraded.push(reason);
+  if (knowledge.budget.dropped > 0) degraded.push(`KNOWLEDGE_BUDGET_TRUNCATED:${knowledge.budget.dropped}`);
+
+  // 5. Declaração explícita de fatos que NÃO podem ser inferidos por varredura/texto.
   for (const key of ['isReleaseBlocker', 'touchesPerformanceSensitive']) {
     if (contextHints && Object.prototype.hasOwnProperty.call(contextHints, key)) facts[key] = contextHints[key] === true;
   }
@@ -255,9 +390,11 @@ module.exports = {
   SCAN_ROOTS,
   TEXT_FACT_RULES,
   HINT_KEYS,
+  KNOWLEDGE_BUDGET_DEFAULTS,
   tokenize,
   detectFactsFromText,
   scanRepository,
   lookupEngineeringMemory,
+  retrieveEngineeringKnowledge,
   collectContextFacts,
 };

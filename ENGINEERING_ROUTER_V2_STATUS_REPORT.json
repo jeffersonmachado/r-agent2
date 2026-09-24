@@ -75,9 +75,20 @@
       ]
     },
     "MISSION_COMPILER": {
-      "state": "PARTIAL",
+      "state": "GO",
       "measured": "suítes de compiler/enrichment/context budget PASS",
-      "gap": "§14–§18: enriquecimento profundo com Engineering/System RAG (domínio SYSTEM, nunca OPERATIONAL), com proveniência de contexto e orçamento auditável — NOT_EXECUTED"
+      "contextIntegration": {
+        "state": "GO",
+        "artifact": "retrieveEngineeringKnowledge em api/services/engineeringMission/missionContextService.js (Knowledge Plane, domínio SYSTEM)",
+        "measured": "7/7 em tests/unit/engineeringMissionContextKnowledge.test.js",
+        "proof": [
+          "SEGRECACAO: ator PRODUCTION NÃO acessa SYSTEM — fail-closed, sem fallback para OPERATIONAL",
+          "ORCAMENTO: maxItems/minScore/limite de caracteres aplicados; o que é cortado é REGISTRADO em droppedReasons",
+          "PROVENIENCIA: cada item aceito carrega fonte, domínio, score, autoridade e hash SHA-256 do trecho",
+          "DEGRADACAO_DECLARADA: KNOWLEDGE_QUERY_EMPTY / KNOWLEDGE_NO_RESULTS / KNOWLEDGE_RETRIEVAL_UNAVAILABLE / KNOWLEDGE_DOMAIN_NOT_AUTHORIZED — nada de silêncio"
+        ],
+        "observedGap": "o retrieval responde VAZIO no ambiente atual (0 documentos no domínio SYSTEM): o estado é declarado como KNOWLEDGE_NO_RESULTS, não como sucesso. Indexar conhecimento de engenharia SYSTEM é o próximo passo para o contexto ficar de fato enriquecido."
+      }
     },
     "QWEN_PROVIDER_STRUCTURAL": { "state": "GO", "measured": "registry canônico único; nenhum nome de modelo no código de decisão" },
     "QWEN_CONTRACT": {
@@ -94,11 +105,12 @@
     },
     "ENGINEERING_ROUTER_V2": {
       "state": "NO_GO",
-      "reason": "faltam itens obrigatórios da missão (§5/§6 selo+envelope, §9/§40 crash real com SIGKILL, V2-01..V2-42)",
+      "reason": "faltam itens obrigatórios da missão (§5/§6 selo+envelope, V2-01..V2-42; resíduos de §9 e §14–§18)",
       "notGreenBecause": [
-        "nenhum E2E com processo A morto por SIGKILL -9 seguido de boot do processo B recuperando até GREEN foi executado",
         "não existe validate-engineering-router-v2 nem ENGINEERING_ROUTER_V2_AUDIT_ENVELOPE com hash binding",
-        "RAG de contexto (§14–§18) não integrado"
+        "a retomada por crash é provada na DECISÃO, não sobre uma task real de execução",
+        "o contexto de engenharia consulta o Knowledge Plane, mas não há documentos SYSTEM indexados",
+        "V2-01..V2-42 (42 testes obrigatórios) ainda não estão mapeados um a um"
       ]
     },
     "RAP_FINAL_RELEASE": {
@@ -119,6 +131,7 @@
   },
   "deferredWork": [
     "§9/§40 (residual) — exercitar a retomada de uma TASK real de execução através do SIGKILL (hoje a decisão de recuperação é provada, a task real não)",
+    "§14–§18 (residual) — indexar conhecimento de engenharia no domínio SYSTEM para o retrieval deixar de responder vazio (hoje o estado é declarado como KNOWLEDGE_NO_RESULTS)",
     "§5/§6/§42–§45 — validate-engineering-router-v2 + SEAL_REPORT + RUNTIME_EVIDENCE + AUDIT_ENVELOPE (hash binding) + AUDIT_VERIFICATION",
     "§14–§18 — enriquecimento profundo com RAG de engenharia (SYSTEM), proveniência e orçamento",
     "V2-01..V2-42 — os 42 testes obrigatórios da missão",
