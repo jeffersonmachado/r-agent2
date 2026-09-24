@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-23T23-45-51-151Z",
+  "executionId": "mesh-2026-09-24T00-41-24-150Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-09-23T23-45-51-151Z",
+    "executionId": "mesh-2026-09-24T00-41-24-150Z",
     "tenantId": "system",
-    "timestamp": "2026-09-23T23:45:51.152Z",
+    "timestamp": "2026-09-24T00:41:24.151Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -253,11 +253,11 @@
     "blockingDomains": [],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-23T23-45-51-151Z",
-      "startedAt": "2026-09-23T23:45:51.152Z",
+      "executionId": "mesh-2026-09-24T00-41-24-150Z",
+      "startedAt": "2026-09-24T00:41:24.151Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-24T00:15:12.448Z",
+      "promotedAt": "2026-09-24T01:09:22.717Z",
       "registryTotal": 144,
       "goNoGo": "GO",
       "criterion": "serialized_canonical_execution"
@@ -265,11 +265,11 @@
   },
   "reasons": [],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-23T23-45-51-151Z",
-    "startedAt": "2026-09-23T23:45:51.152Z",
+    "executionId": "mesh-2026-09-24T00-41-24-150Z",
+    "startedAt": "2026-09-24T00:41:24.151Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-24T00:15:12.448Z",
+    "promotedAt": "2026-09-24T01:09:22.717Z",
     "registryTotal": 144,
     "goNoGo": "GO",
     "criterion": "serialized_canonical_execution"
@@ -278,5 +278,5 @@
   "sourceFingerprint": "89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884",
   "sourceCommit": "eeb18e2f85d9853533f7e9298f5a2a638f575ba8",
   "sourceTree": "199024d7d5eff3b6d980b09c854359fe11375b29",
-  "generatedAt": "2026-09-24T00:15:12.451Z"
+  "generatedAt": "2026-09-24T01:09:22.718Z"
 }

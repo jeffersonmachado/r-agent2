@@ -142,17 +142,31 @@
         "confidence": 0.6018132158291793,
         "chunksFound": 10,
         "timestamp": "2026-09-23T23:51:56.556967"
+      },
+      {
+        "query": "Olá, preciso de ajuda suporte assistência socorro preciso ajuda",
+        "success": true,
+        "confidence": 0.7986548840598731,
+        "chunksFound": 1,
+        "timestamp": "2026-09-24T00:43:58.846295"
+      },
+      {
+        "query": "QA jornada rag_documents jornada",
+        "success": true,
+        "confidence": 0.5842524667968161,
+        "chunksFound": 5,
+        "timestamp": "2026-09-24T00:44:46.218685"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 20,
-    "successfulQueries": 20,
+    "totalQueries": 22,
+    "successfulQueries": 22,
     "failedQueries": 0,
-    "avgConfidence": 0.5753290432683404,
-    "lastUpdated": "2026-09-23T23:51:56.556956"
+    "avgConfidence": 0.596320711292426,
+    "lastUpdated": "2026-09-24T00:44:46.218668"
   },
   "config": {
     "minScore": 0.45,
@@ -165,5 +179,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-09-23T23:51:56.557074"
+  "updatedAt": "2026-09-24T00:44:46.218780"
 }

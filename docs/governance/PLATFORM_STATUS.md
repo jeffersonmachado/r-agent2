@@ -1,9 +1,9 @@
 # Platform Status
 
-- Generated at: 2026-09-24T00:23:55.698Z
-- Canonical mesh execution: mesh-2026-09-23T23-45-51-151Z
+- Generated at: 2026-09-24T01:11:00.771Z
+- Canonical mesh execution: mesh-2026-09-24T00-41-24-150Z
 - Canonical mesh decision: GO
-- Readiness decision: AUTONOMOUS_READY_GO
+- Readiness decision: NO_GO:BLOCKING_GAPS
 - Readiness score: 100
 - QA coverage: 100%
 - Replay coverage: 100%
@@ -13,7 +13,7 @@
 - none
 
 ## Canonical mesh artifacts
-- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-23T23-45-51-151Z.json
+- History: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-24T00-41-24-150Z.json
 - Summary: /opt/results/ria/r-agent2/qa-mesh/meshReport.json
 - GO/NO_GO: /opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json
 - Metrics: /opt/results/ria/r-agent2/qa-mesh/metrics.json
@@ -23,4 +23,5 @@
 - Operational smokes L01-L05 remain available as evidence-backed platform pillars.
 
 ## NO_GO reasons
-- Sem bloqueadores ativos.
+- ZIP de release nao contem todos os proofs obrigatorios [gap-proof-package-validation]
+- Contradição cross-report: package_validation_failed [gap-cross-report-package_validation_failed]

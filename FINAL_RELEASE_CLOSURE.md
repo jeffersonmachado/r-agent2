@@ -293,3 +293,56 @@ criar tarefa → Agendar → modal → toast "Agendamento criado").
 Ação: convergência reexecutada com `npm run dev:frontend` na 5173 (runtime correto). Defeito do
 preview registrado como `POST_RELEASE_HARDENING` (fazer o preview servir as rotas SPA ou falhar
 de forma explícita — nunca deixar o run rodar com runtime quebrado).
+
+## 5º defeito (RELEASE_BLOCKER de integridade da prova) — corrigido em código
+
+`scripts/check-dist-clean.sh` (raiz de fingerprint) rejeitava
+`dist/engineering-router-v1-audit-envelope` como "arquivo inesperado na raiz de dist/" — MAS é
+exatamente de lá que `scripts/generate-zip.sh` embarca o envelope em
+`<pacote>/evidence/engineering-router-v1/`. Medido no candidato real
+(`dist/release/r-agent2-20260923-181537`): o ZIP era selado CORRETO (com o envelope dentro) e o
+gate bloqueava depois, com `CHECK-DIST-CLEAN: FAIL`.
+
+Consequência: **nenhuma** release pelo pipeline oficial podia satisfazer o requisito de deliverable
+self-proving (`código == fingerprint certificado`), porque a prova era removida/rejeitada antes do
+pacote existir.
+
+Fix: entrada explícita e justificada na allowlist de `dist/` (mesmo tratamento de `candidate/` e
+`archive/`), com o racional de que o envelope é artefato GOVERNADO de release: produtor oficial,
+content-addressed (`hashes.json`) e verificado offline contra o código entregue. Commit `eeb18e2f`.
+
+## Fonte final congelada (após o fix)
+
+```
+HEAD_AGORA=0e42bfb8ba540ac7054936180a8931381f9dbed4 (commit do envelope)
+FINAL_SOURCE_FINGERPRINT=89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884
+GOVERNED_RUN=rap-governed-20260923220508741-cd53886e
+ROUTER_RUNTIME=RUNTIME_PASS (25/25, 0 falhas, recertificado nesta fonte)
+ROUTER_STRUCTURAL=PASS (209 checks, 0 falhas)
+AUDIT_ENVELOPE=head 0e42bfb8, fp 89818f8e, runtime RUNTIME_PASS, structural PASS, sealed true, decision GO
+```
+
+## CLEAN RELEASE #1 — `r-agent2-20260923-203701`
+
+```
+commit       dc6b7fdec16a8f6f3835a38718c0b7b283b9cb93
+git_tree     a5b3abbf5f838786317f4a0f4e78c101342ab17c
+sourceFingerprint 89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884
+runId        rap-governed-20260923220508741-cd53886e
+H_final      65bd22309b2912ced04adb2ae11a5f8d335271684f180c49d3204ff7499c8dd5
+delivery zip sha256 65bd22309b2912ced04adb2ae11a5f8d335271684f180c49d3204ff7499c8dd5
+payload  zip sha256 91ded99da62275f30d27e8861232f9c1a81cffdca6c890fade50b25d669046cb
+scorecard    78/78, below10=0, AUTONOMOUS_READY
+gate agregado EXIT 0 | MCP_RESEARCH_DOCKER_E2E PASS fresco
+verify:delivered-release DELIVERED_RELEASE_VERIFIED
+publicação   8/8 PASS, recibo PUBLISHED_VERIFIED, tag remota conferida
+```
+
+### OFFLINE_VERIFY #1 — PASS
+
+- Envelope do Router, executado **contra o ZIP real**, sem `.git`/DB/rede:
+  `status=PASS checks=160 falhas=0` (binding `ACTUAL_PACKAGE_SOURCE_FINGERPRINT` ativo contra
+  todos os artefatos com `sourceFingerprint`).
+- Verificação rígida offline do payload (`dist/verifier/check-dist-clean.sh` →
+  `verify-enterprise-governance-v2.sh` → `verify-payload-governance.js`, autocontido):
+  `CHECK-DIST-CLEAN: PASS` (exit 0).
