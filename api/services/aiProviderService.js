@@ -750,6 +750,16 @@ async function initializeAiProviders() {
       // openai (SDK) e anthropic (SDK) já foram registrados explicitamente acima.
       if (def.id === 'openai' || def.id === 'anthropic') continue;
 
+      // Provider DESABILITADO no banco não é registrado como invocável: sem
+      // isto, desligar um provider na UI/DB só mudava o rótulo e a engine
+      // continuava roteando para ele (defeito medido 2026-09-24 — groq sem
+      // credencial habilitado por padrão derrubava o mesh com 500
+      // "circuit breaker aberto"). Estado desabilitado é fail-closed.
+      if (def.enabled === false) {
+        logger.info(`⏭️  Provider ${def.label || def.id} desabilitado — não registrado`);
+        continue;
+      }
+
       try {
         const provider = def.kind === 'anthropic'
           ? createAnthropicCompatibleProvider(def)

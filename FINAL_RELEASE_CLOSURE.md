@@ -354,17 +354,55 @@ Contexto: o RELEASE #2 falhou 3× seguidas, e a terceira falha foi atribuída (h
 `CRITICAL_DOMAIN_FAILED:core` + `BASELINE_PASS_RATE_REGRESSION`). A investigação mostrou que
 **não era flakiness**: eram 2 defeitos de ambiente determinísticos.
 
-### 6º defeito — provedor `groq` habilitado SEM credencial (causa raiz das 3 falhas `core`)
+### 6º defeito — `enabled=false` de provider builtin era um NO-OP (causa raiz das falhas `core`)
 
-- `ai_providers.groq.enabled = t`, mas **não existe linha de `groq` em `tenant_ai_credentials`**
-  para o tenant `system` (existiam `openai`, `deepseek`, `kimi`, todas válidas).
-- Efeito medido: `CORE-BIZ-FLOWS-EDITOR` falhava em `flow-validation` com
-  `500 Provider de IA 'groq' indisponível (circuit breaker aberto)`, arrastando
-  `business-core-biz-academy` ("Tutor não respondeu com conteúdo disponível") e
-  `business-core-biz-rag-segregation` ("Documento não foi indexado dentro do tempo esperado").
-- Correção (ambiente, não código): `UPDATE ai_providers SET enabled=false WHERE key='groq'`.
-- Prova: os 3 cenários, isolados, passaram **3/3 PASS** (`/tmp/ai4.log`, exit 0) após a correção,
-  contra 0/3 antes.
+Diagnóstico em duas camadas, a segunda só apareceu porque a primeira foi refutada por medição.
+
+1. **Sintoma**: `ai_providers.groq.enabled = t` sem nenhuma linha de `groq` em
+   `tenant_ai_credentials` para o tenant `system` (existiam `openai`, `deepseek`, `kimi`, válidas).
+   `CORE-BIZ-FLOWS-EDITOR` falhava em `flow-validation` com
+   `500 Provider de IA 'groq' indisponível (circuit breaker aberto)`, arrastando
+   `business-core-biz-academy` e `business-core-biz-rag-segregation`.
+2. **Primeira tentativa (INÓCUA)**: `UPDATE ai_providers SET enabled=false WHERE key='groq'`
+   fez os 3 cenários passarem 3/3 em isolamento — mas o efeito **não sobreviveu ao boot**: o
+   valor voltou a `enabled = t` (com `updated_at` intacto, prova de que a escrita não veio de
+   `now()`).
+3. **Causa raiz (código)**: dois defeitos em `api/services/aiProviderRegistryService.js` +
+   `api/services/aiProviderService.js`:
+   - `ensureBuiltinProviders()` gravava `enabled: true` em **toda** sincronização de boot
+     (`existing.update(data)`), reescrevendo a decisão do operador → o toggle de provider
+     builtin era um no-op;
+   - `getRuntimeProviders()` **hardcodava** `enabled: true` para todos os builtins e o loop do
+     banco fazia `if (!row.enabled) continue` — então um builtin desabilitado continuava
+     presente no map de runtime;
+   - `initializeAiProviders()` registrava todo provider do map **sem** checar `enabled`, ou seja,
+     mesmo o map corrigido ainda seria invocado.
+4. **Correção (código, mesma fonte)**: o catálogo governa metadados; `enabled` é do operador.
+   `ensureBuiltinProviders()` só nasce habilitado no INSERT; `getRuntimeProviders()` aplica o
+   `enabled` real do banco ao builtin (default do catálogo apenas na ausência de linha);
+   `initializeAiProviders()` **não registra** provider com `enabled === false` (fail-closed).
+5. **Prova**: boot registra `✅ OpenAI/Anthropic/DeepSeek/Kimi/Mistral` e
+   `⏭️ Provider Groq desabilitado — não registrado`; `ai_providers` mantém `groq=false` após o
+   boot; os 3 cenários passam **3/3** com **zero** ocorrências de `circuit breaker aberto`.
+
+> Correção importante de leitura: a narrativa inicial ("basta desabilitar o groq no banco") era
+> **falsa** — o fix só valeu depois do conserto de código acima. Fica registrado para não se
+> repetir o atalho.
+
+### Saturação de pool observada no mesh — SINTOMA, não causa (medido)
+
+O mesh `02:34` registrou 22 `SequelizeConnectionAcquireTimeoutError` (inclusive
+`Project.count` → `500 Erro ao criar projeto`, único `failed` real do run). Investigado e
+**deliberadamente NÃO "corrigido" por aumento de limite**:
+
+- `DB_POOL_MAX=40` (em `.env`); PostgreSQL `max_connections=100`.
+- Os **3 meshes 144/144** anteriores rodaram com **exatamente essa mesma configuração** e zero
+  saturação — logo o pool não é o defeito;
+- a saturação acompanha o **storm de IA**: cada chamada a um provider quebrado percorre a cadeia
+  de fallback, relê credenciais/settings no banco e reencadeia retries — pressão de conexão +
+  volume de 500s. Corrigida a causa raiz (acima), a pressão esperada é a dos meshes verdes.
+- Fica como item de `POST_RELEASE_HARDENING` (abaixo), com o número medido, para o caso de a
+  saturação reaparecer em mesh verde.
 
 ### 7º defeito — `nodemon` reinicia a API DENTRO do run e mata o cenário
 
@@ -443,3 +481,22 @@ congelada (as otimizações acima vivem em raízes de fingerprint).
    serviço fora, o coverage gate reprova honestamente (`rag_runtime_unreachable`) e a
    convergência aborta em 8.5/12. O gerador já carrega o `.env` sozinho (guarda
    `gateChildProcessEnv.test.js`), o que falta é o serviço no ar.
+10. **Roteamento de IA não é consciente da credencial do tenant** (causa raiz de fundo do defeito
+    6): o router pode escolher um provider habilitado para o qual o tenant não tem linha em
+    `tenant_ai_credentials`. `enabled` no catálogo é uma condição NECESSÁRIA, não suficiente —
+    a seleção deve exigir credencial utilizável do tenant antes de tentar o provider, e o estado
+    "sem credencial" deve ser terminal (`provider_not_configured`), nunca `circuit breaker
+    aberto` depois de N tentativas reais. Não implementado nesta missão: exige mudar o
+    `modelSelector`/`engineeringModelAvailabilityService` (determinismo de replay).
+11. **Saturação de pool sob mesh** (medida: 22 `SequelizeConnectionAcquireTimeoutError` no mesh
+    `02:34`; pico observado de 43 sessões do banco durante UM grupo de 84 cenários;
+    `DB_POOL_MAX=40`, `max_connections=100`). Tratada como sintoma do storm de IA (ver acima),
+    **não** como limite a aumentar. Se reaparecer em mesh sem falha de IA: medir o pico de
+    `pg_stat_activity` durante o mesh completo antes de mexer em `DB_POOL_MAX` — e observar que
+    os processos de teste também abrem conexão própria, então o teto relevante é a soma
+    (pool da API + pools dos processos de teste) contra `max_connections`.
+12. **A convergência pode invalidar o próprio fingerprint do run** (`RUN_SOURCE_DRIFT` após as
+    etapas 1-7): o selador já trata de forma reativa (cria novo run e re-executa o converge),
+    mas isso queima o mesh de uma tentativa inteira (~30 min). Endurecer: cada etapa que escreve
+    no repositório deve gravar em diretório fora das raízes de fingerprint, ou o fingerprint
+    deve ser reavaliado ANTES do passo 8 (mesh) e não depois.

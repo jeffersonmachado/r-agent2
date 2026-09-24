@@ -75,6 +75,13 @@ async function ensureBuiltinProviders() {
     const model = getModel();
     for (const def of Object.values(AI_PROVIDERS)) {
       const existing = await model.findOne({ where: { key: def.id } });
+      // `enabled` é decisão do OPERADOR, não do catálogo de built-ins.
+      // Defeito medido (2026-09-24): gravar `enabled: true` em toda sincronização
+      // tornava o toggle de provider builtin um NO-OP — `ai_providers.groq`
+      // voltava a habilitado sozinho e a engine roteava para um provider sem
+      // credencial para o tenant (500 "circuit breaker aberto"), derrubando o
+      // mesh com CRITICAL_DOMAIN_FAILED:core. O catálogo governa os metadados;
+      // ligar/desligar é do operador. Só o INSERT inicial nasce habilitado.
       const data = {
         key: def.id,
         label: def.label,
@@ -84,12 +91,11 @@ async function ensureBuiltinProviders() {
         models: Array.isArray(def.models) ? def.models : [],
         validation_model: def.validationModel || null,
         is_builtin: true,
-        enabled: true,
       };
       if (existing) {
         await existing.update(data);
       } else {
-        await model.create(data);
+        await model.create({ ...data, enabled: true });
       }
     }
     invalidateRuntimeCache();
@@ -133,8 +139,21 @@ async function getRuntimeProviders() {
       const model = getModel();
       const rows = await model.findAll({ order: [['is_builtin', 'DESC'], ['created_at', 'ASC']] });
       for (const row of rows) {
-        if (!row.enabled) continue;
         const def = serializeProvider(row);
+        if (def.isBuiltin) {
+          // Builtin: o map já nasce com o default do catálogo (enabled=true);
+          // o banco tem a palavra final. Sem isto, `enabled=false` no banco era
+          // silenciosamente reintroduzido como `true` no runtime e a decisão do
+          // operador nunca valia (defeito medido 2026-09-24).
+          if (map[def.key]) {
+            map[def.key] = { ...map[def.key], ...def, enabled: !!row.enabled };
+          } else if (row.enabled) {
+            map[def.key] = def;
+          }
+          continue;
+        }
+        // Custom: só existe no runtime quando habilitado.
+        if (!row.enabled) continue;
         map[def.key] = def;
       }
     }
