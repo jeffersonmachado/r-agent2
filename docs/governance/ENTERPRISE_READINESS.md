@@ -4,7 +4,7 @@
 - Canonical mesh execution: mesh-2026-09-24T06-23-15-821Z
 - Enterprise readiness: prod-like
 - Production readiness: NO_GO:BLOCKING_GAPS
-- Blocking gaps: 13
+- Blocking gaps: 12
 - Blocking domains: bpmn, core, fitness, omnichannel
 
 ## Hard blockers
@@ -20,4 +20,3 @@
 - gap-mesh-core-infra_error-qa-core-auth-login: Falha aberta no dominio core (high)
 - gap-mesh-core-infra_error-qa-core-config-tenant-intelligence: Falha aberta no dominio core (high)
 - gap-mesh-core-infra_error-rpa-example-test: Falha aberta no dominio core (high)
-- gap-proof-stale-fingerprints: Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) (critical)

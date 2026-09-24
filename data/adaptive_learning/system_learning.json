@@ -170,17 +170,31 @@
         "confidence": 0.6486121592691991,
         "chunksFound": 10,
         "timestamp": "2026-09-24T06:01:04.481364"
+      },
+      {
+        "query": "QASEG20260924071559 horário de atendimento neblina penhasco bussola orquidea horário atendimento neblina",
+        "success": true,
+        "confidence": 0.6918977714626284,
+        "chunksFound": 9,
+        "timestamp": "2026-09-24T07:19:22.903761"
+      },
+      {
+        "query": "QASEG20260924071559 horário de atendimento neblina penhasco bussola orquidea horário atendimento neblina",
+        "success": true,
+        "confidence": 0.6794685839775303,
+        "chunksFound": 8,
+        "timestamp": "2026-09-24T07:19:24.538597"
       }
     ],
     "failed": []
   },
   "promptVariations": [],
   "metrics": {
-    "totalQueries": 24,
-    "successfulQueries": 24,
+    "totalQueries": 26,
+    "successfulQueries": 26,
     "failedQueries": 0,
-    "avgConfidence": 0.6080048661424232,
-    "lastUpdated": "2026-09-24T06:01:04.481343"
+    "avgConfidence": 0.6227015994047524,
+    "lastUpdated": "2026-09-24T07:19:24.538567"
   },
   "config": {
     "minScore": 0.45,
@@ -193,5 +207,5 @@
     "cycles": []
   },
   "createdAt": "2026-09-23T20:00:58.527878",
-  "updatedAt": "2026-09-24T06:01:04.481652"
+  "updatedAt": "2026-09-24T07:19:24.538875"
 }
