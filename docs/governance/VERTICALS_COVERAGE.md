@@ -1,10 +1,10 @@
 # Verticals Coverage
 
 ## beauty
-- Classification: production-like
+- Classification: validated
 - Journeys: 2
 - Scenarios: 25
-- Blockers: none
+- Blockers: qa_mesh_failures_open
 
 ## fitness
 - Classification: validated

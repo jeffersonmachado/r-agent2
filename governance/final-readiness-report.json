@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-24T06:46:17.134Z",
+  "generatedAt": "2026-09-24T07:26:23.845Z",
   "runId": "rap-governed-20260924064228071-5bdacdaa",
   "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
   "artifactType": "final-readiness-report",
@@ -9,30 +9,29 @@
   "candidateMaturityLevel": "PRODLIKE_GO",
   "stageReadiness": "PRODLIKE_GO",
   "blockingReasons": [
-    "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-saas-storefront-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenants-business-core-biz-web-scraping",
-    "gap-mesh-fitness-infra_error-fitness-matricula-agendamento-ui-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding-fitness-matricula-renovacao",
-    "gap-mesh-omnichannel-infra_error-fitness-matricula-leads-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
+    "gap-mesh-fitness-infra_error-fitness-matricula-renovacao",
+    "gap-mesh-omnichannel-infra_error-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
     "gap-mesh-core-functional_failure-business-core-biz-academy",
-    "gap-mesh-core-functional_failure-business-core-biz-rag-segregation",
     "gap-mesh-core-functional_failure-business-core-biz-flows-editor",
-    "gap-mesh-core-infra_error-business-core-biz-login",
-    "gap-mesh-core-functional_failure-business-core-biz-tenant-config",
+    "gap-mesh-core-functional_failure-business-core-biz-rag-segregation",
     "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
     "gap-mesh-core-infra_error-qa-core-auth-login",
     "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
-    "gap-mesh-core-infra_error-rpa-example-test"
+    "gap-mesh-core-infra_error-rpa-example-test",
+    "gap-mesh-beauty-functional_failure-business-beauty-scr-06",
+    "gap-mesh-fitness-flaky-fitness-matricula-checkout"
   ],
   "mandatoryBlockReasons": [
     "qa-mesh=NO_GO",
     "release-gate=NO_GO",
     "governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-001: score=7 target=10 | RAP-001: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-001: open blockers=1 | RAP-001: open gaps=1 | RAP-003: score=7 target=10 | RAP-003: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-003: open blockers=1 | RAP-003: open gaps=1 | RAP-004: score=7 target=10 | RAP-004: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-004: open blockers=1 | RAP-004: open gaps=1 | RAP-005: score=7 target=10 | RAP-005: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-005: open blockers=1 | RAP-005: open gaps=1 | RAP-006: score=6 target=10 | RAP-006: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-006: open blockers=1 | RAP-006: open gaps=1 | RAP-009: score=6 target=10 | RAP-009: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-009: open blockers=2 | RAP-009: open gaps=2 | RAP-021: score=6 target=10 | RAP-021: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-021: open blockers=2 | RAP-021: open gaps=2 | RAP-037: score=6 target=10 | RAP-037: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-037: open blockers=2 | RAP-037: open gaps=2 | RAP-038: score=6 target=10 | RAP-038: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-038: open blockers=2 | RAP-038: open gaps=2 | RAP-039: score=7 target=10 | RAP-039: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-039: open blockers=1 | RAP-039: open gaps=1 | RAP-041: score=6 target=10 | RAP-041: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-041: open blockers=2 | RAP-041: open gaps=2 | RAP-042: score=7 target=10 | RAP-042: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-042: open blockers=1 | RAP-042: open gaps=1 | RAP-043: score=7 target=10 | RAP-043: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-043: open blockers=1 | RAP-043: open gaps=1 | RAP-044: score=6 target=10 | RAP-044: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-044: open blockers=2 | RAP-044: open gaps=2 | RAP-045: score=6 target=10 | RAP-045: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-045: open blockers=2 | RAP-045: open gaps=2 | RAP-046: score=6 target=10 | RAP-046: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-046: open blockers=2 | RAP-046: open gaps=2 | RAP-047: score=7 target=10 | RAP-047: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-047: open blockers=1 | RAP-047: open gaps=1 | RAP-049: score=6 target=10 | RAP-049: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-049: open blockers=2 | RAP-049: open gaps=2 | RAP-050: score=6 target=10 | RAP-050: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-050: open blockers=1 | RAP-050: open gaps=1 | RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-054: open blockers=2 | RAP-054: open gaps=2 | RAP-056: score=7 target=10 | RAP-056: mandatory requirement failures=governed,no-known-gap | RAP-056: open gaps=1 | RAP-059: score=7 target=10 | RAP-059: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-059: open blockers=1 | RAP-059: open gaps=1 | RAP-060: score=7 target=10 | RAP-060: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-060: open blockers=1 | RAP-060: open gaps=1 | RAP-067: score=7 target=10 | RAP-067: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-067: open blockers=1 | RAP-067: open gaps=1 | scorecard: open blockers=34 | scorecard: open gaps=35 | FINAL_PROOF_NOT_PASS: NO_GO:BLOCKING_GAPS | FINAL_READINESS_NOT_PASS: NO_GO:BLOCKING_GAPS]"
   ],
-  "canonicalMeshExecutionId": "mesh-2026-09-24T06-23-15-821Z",
-  "totalCoverage": 97.92,
+  "canonicalMeshExecutionId": "mesh-2026-09-24T06-55-00-751Z",
+  "totalCoverage": 98.09,
   "certificationStates": {
     "corePlatformReadiness": {
       "state": "CORE_GO",
-      "score": 97.92,
+      "score": 98.09,
       "scope": "plataforma (docs, QA mesh, QA waves, replay, verticais implementadas, validação production-like)",
       "doesNotInclude": [
         "market research",
@@ -146,10 +145,12 @@
   "verticalCoverage": [
     {
       "vertical": "beauty",
-      "classification": "production-like",
+      "classification": "validated",
       "scenarioCount": 25,
       "journeyCount": 2,
-      "blockers": []
+      "blockers": [
+        "qa_mesh_failures_open"
+      ]
     },
     {
       "vertical": "fitness",
@@ -226,12 +227,13 @@
     ]
   },
   "qaCoverage": {
-    "executionId": "mesh-2026-09-24T06-23-15-821Z",
-    "percent": 91.67,
-    "observedFailureFreePercent": 91.67,
+    "executionId": "mesh-2026-09-24T06-55-00-751Z",
+    "percent": 92.36,
+    "observedFailureFreePercent": 92.36,
     "registryDeclaredTotal": 144,
     "canonicalRegistryTotal": 144,
     "blockingDomains": [
+      "beauty",
       "bpmn",
       "core",
       "fitness",
@@ -287,7 +289,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 113,
+      "scenarioCount": 114,
       "blocker": false
     },
     {
@@ -429,7 +431,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 113,
+      "scenarioCount": 114,
       "blocker": false
     },
     {
@@ -504,24 +506,24 @@
       "autonomous_ready": false
     },
     "foundationProdLikeCount": 4,
-    "verticalProdLikeCount": 6,
+    "verticalProdLikeCount": 5,
     "omnichannelScenarioCount": 7,
     "missingProofs": [
       "vertical_prod_like_coverage"
     ]
   },
   "proofReport": {
-    "generatedAt": "2026-09-24T06:46:51.766Z",
+    "generatedAt": "2026-09-24T07:27:10.116Z",
     "runId": "rap-governed-20260924064228071-5bdacdaa",
     "artifactType": "final-proof-report",
     "artifactVersion": "2.0.0",
     "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
     "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-    "scenarioFingerprint": "89c08841f36e3cdfc4f8b5c6c566f92c95995859526db0c58d6b777d5c32a2c5",
+    "scenarioFingerprint": "7899b2d06419abf8b4033d05702d9f3797faab906c3bfdc5d48b0c9318892480",
     "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-    "evidenceFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa",
-    "chainFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa",
-    "fingerprintGeneratedAt": "2026-09-24T06:46:51.766Z",
+    "evidenceFingerprint": "1fe32edbbcc446e0cd3de001c745d0acf2742237f4ba910af58f1dc90db4d303",
+    "chainFingerprint": "1fe32edbbcc446e0cd3de001c745d0acf2742237f4ba910af58f1dc90db4d303",
+    "fingerprintGeneratedAt": "2026-09-24T07:27:10.116Z",
     "fingerprintStatus": "FRESH",
     "proofCoverage": {
       "total": 24,
@@ -530,7 +532,7 @@
     },
     "missingArtifacts": [],
     "invalidReferences": [],
-    "blockerCount": 12,
+    "blockerCount": 11,
     "replayCoverage": {
       "required": 8,
       "found": 8,
@@ -552,14 +554,14 @@
     },
     "prodLikeCoverage": {
       "required": 7,
-      "found": 6,
-      "percent": 85.71
+      "found": 5,
+      "percent": 71.43
     },
     "verticalCoverage": {
       "status": "PARTIAL",
-      "validated": 6,
+      "validated": 5,
       "required": 7,
-      "percent": 85.71,
+      "percent": 71.43,
       "invalidClaims": []
     },
     "omnichannelCoverage": {
@@ -2920,19 +2922,14 @@
       "unstableDomains": [],
       "recurringFailures": [
         {
-          "domain": "core",
-          "fingerprint": "core::infra_error::[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/",
-          "recurringCount": 21
-        },
-        {
           "domain": "fitness",
           "fingerprint": "fitness::infra_error::page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
-          "recurringCount": 6
+          "recurringCount": 7
         },
         {
           "domain": "omnichannel",
           "fingerprint": "omnichannel::infra_error::page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
-          "recurringCount": 3
+          "recurringCount": 5
         },
         {
           "domain": "core",
@@ -2941,14 +2938,39 @@
         },
         {
           "domain": "core",
+          "fingerprint": "core::functional_failure::500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker aberto).",
+          "recurringCount": 2
+        },
+        {
+          "domain": "core",
           "fingerprint": "core::functional_failure::Documento não foi indexado dentro do tempo esperado",
+          "recurringCount": 2
+        },
+        {
+          "domain": "bpmn",
+          "fingerprint": "bpmn::infra_error::[bpmn-smoke] FAIL: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/bpmn-editor",
+          "recurringCount": 2
+        },
+        {
+          "domain": "core",
+          "fingerprint": "core::infra_error::❌ Erro no teste RPA: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login",
+          "recurringCount": 2
+        },
+        {
+          "domain": "core",
+          "fingerprint": "core::infra_error::Tenant Intelligence smoke failed: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/tenant-intelligence",
+          "recurringCount": 2
+        },
+        {
+          "domain": "core",
+          "fingerprint": "core::infra_error::page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
           "recurringCount": 2
         }
       ],
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-09-24T06:46:51.765Z",
+      "generatedAt": "2026-09-24T07:27:10.115Z",
       "expectedZipName": null,
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
@@ -2961,7 +2983,7 @@
       "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-09-24T06:46:51.733Z",
+      "generatedAt": "2026-09-24T07:27:10.090Z",
       "ok": false,
       "zipPath": null,
       "zipName": null,
@@ -3000,11 +3022,11 @@
       "artifactVersion": "1.0.0",
       "runId": "rap-governed-20260924064228071-5bdacdaa",
       "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
-      "gitCommit": "2feba6cb22852bbc4f0b0a99bfdd0df7bf6868fb",
-      "gitTree": "cf161956756985df146f3bd90207062292c1c504"
+      "gitCommit": "f9e62d064f7cb3cae079027b9f97265a1cb0b60d",
+      "gitTree": "cea63f255b457a8154c6f22b90c6749cd08a225c"
     },
     "evidenceManifest": {
-      "generatedAt": "2026-09-24T06:46:51.135Z",
+      "generatedAt": "2026-09-24T07:27:09.604Z",
       "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
       "runId": "rap-governed-20260924064228071-5bdacdaa",
       "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
@@ -3039,9 +3061,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l01-physical-queue-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "e34487d8d06658774fef9d1328980fe16bedbd4e2609d9f8285c73853e8e2ced",
-          "checksum": "e34487d8d06658774fef9d1328980fe16bedbd4e2609d9f8285c73853e8e2ced",
-          "timestamp": "2026-09-24T06:41:20.291Z",
+          "hash": "eb8df1f5d2c4c91974ed34132cb1735ec634340182b72e36182b9fd192d38b0d",
+          "checksum": "eb8df1f5d2c4c91974ed34132cb1735ec634340182b72e36182b9fd192d38b0d",
+          "timestamp": "2026-09-24T07:24:52.701Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3058,9 +3080,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l02-ura-publish-rollback-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f206b8ebc34034aad2a94ba31719b15ea704fe4dc9a47f082d2dad0edca75ad1",
-          "checksum": "f206b8ebc34034aad2a94ba31719b15ea704fe4dc9a47f082d2dad0edca75ad1",
-          "timestamp": "2026-09-24T06:41:33.703Z",
+          "hash": "05db0fcb2b0563118222611f01e1b8bee8289d61400d01da51fa1aac168605cd",
+          "checksum": "05db0fcb2b0563118222611f01e1b8bee8289d61400d01da51fa1aac168605cd",
+          "timestamp": "2026-09-24T07:25:01.053Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3077,9 +3099,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "713a29cf35609b3c8e7378f5faa5238fa6ff070c852fe58028e6dd6febd30a1d",
-          "checksum": "713a29cf35609b3c8e7378f5faa5238fa6ff070c852fe58028e6dd6febd30a1d",
-          "timestamp": "2026-09-24T06:45:46.709Z",
+          "hash": "4605cb5f45c05a882a3fd4a8178b03813aa6317c651e6c6c08cc0e189d2ac2a7",
+          "checksum": "4605cb5f45c05a882a3fd4a8178b03813aa6317c651e6c6c08cc0e189d2ac2a7",
+          "timestamp": "2026-09-24T07:24:51.487Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3096,9 +3118,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "331e5323346c1c97476354e79b0f9003569692f4b1e4f7e30c9c5f59b541c73a",
-          "checksum": "331e5323346c1c97476354e79b0f9003569692f4b1e4f7e30c9c5f59b541c73a",
-          "timestamp": "2026-09-24T06:45:55.654Z",
+          "hash": "9cad2bbd1dbced4041ae64ef2e1578a5a186be4fec9fece6c367dd3b45111d93",
+          "checksum": "9cad2bbd1dbced4041ae64ef2e1578a5a186be4fec9fece6c367dd3b45111d93",
+          "timestamp": "2026-09-24T07:24:41.581Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3115,9 +3137,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f12c19b235333e86a76edbc2274ed85a1f242998abb7d54a280173e72d8bbe2f",
-          "checksum": "f12c19b235333e86a76edbc2274ed85a1f242998abb7d54a280173e72d8bbe2f",
-          "timestamp": "2026-09-24T06:46:01.056Z",
+          "hash": "385fe0f3f7171d10d03b8026c4f6adff6bed4a83159f9559931325df1d05a73c",
+          "checksum": "385fe0f3f7171d10d03b8026c4f6adff6bed4a83159f9559931325df1d05a73c",
+          "timestamp": "2026-09-24T07:23:53.475Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3176,9 +3198,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-screenshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "b166a13ce805f1d0641c869fa0e5f2070748e6d54c1269aebe366eda14f6847f",
-          "checksum": "b166a13ce805f1d0641c869fa0e5f2070748e6d54c1269aebe366eda14f6847f",
-          "timestamp": "2026-09-24T06:46:17.318Z",
+          "hash": "4ce95ddef6b5a72928b5a6acb0124931fd2370ac248616e3951aed58cf3b92d1",
+          "checksum": "4ce95ddef6b5a72928b5a6acb0124931fd2370ac248616e3951aed58cf3b92d1",
+          "timestamp": "2026-09-24T07:26:24.231Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3222,9 +3244,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "8aea1a85e8fd64dbecd885e0944a4f352032866c193101c9564f0feaaf4a1774",
-          "checksum": "8aea1a85e8fd64dbecd885e0944a4f352032866c193101c9564f0feaaf4a1774",
-          "timestamp": "2026-09-24T06:46:17.202Z",
+          "hash": "66232aadf99e083d17c9f589d8423c5060273b247ce3ca7f2f56524821835b29",
+          "checksum": "66232aadf99e083d17c9f589d8423c5060273b247ce3ca7f2f56524821835b29",
+          "timestamp": "2026-09-24T07:26:23.936Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3245,9 +3267,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "591f9ba19e9c00db895d3a1bb8d3491152de25893a8a4510217d58def4287fde",
-          "checksum": "591f9ba19e9c00db895d3a1bb8d3491152de25893a8a4510217d58def4287fde",
-          "timestamp": "2026-09-24T06:46:17.203Z",
+          "hash": "d912bf14555c11332168fb0b62635cf90a660f21f7a7db0db6573056d3ee7f84",
+          "checksum": "d912bf14555c11332168fb0b62635cf90a660f21f7a7db0db6573056d3ee7f84",
+          "timestamp": "2026-09-24T07:26:23.968Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3268,9 +3290,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "dfb9157b3fc0c09fe0e6088f8f18e58e649a17f7fb721446fc552a0fb603be9f",
-          "checksum": "dfb9157b3fc0c09fe0e6088f8f18e58e649a17f7fb721446fc552a0fb603be9f",
-          "timestamp": "2026-09-24T06:46:17.203Z",
+          "hash": "4ad56a9bf49386c258096c13c63304e84672b56b1b13f7aef9c7365d68793476",
+          "checksum": "4ad56a9bf49386c258096c13c63304e84672b56b1b13f7aef9c7365d68793476",
+          "timestamp": "2026-09-24T07:26:24.017Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3314,9 +3336,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-crm-mutations.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "a5e4b8b0587b2f8262d927fb8193383a4d2142816fcea5be9fdd0f51431aaf38",
-          "checksum": "a5e4b8b0587b2f8262d927fb8193383a4d2142816fcea5be9fdd0f51431aaf38",
-          "timestamp": "2026-09-24T06:46:17.222Z",
+          "hash": "9cafa17e2a633406d5727d7ec6a72a3c19f71695731c602174e489164eb8e2c1",
+          "checksum": "9cafa17e2a633406d5727d7ec6a72a3c19f71695731c602174e489164eb8e2c1",
+          "timestamp": "2026-09-24T07:26:24.052Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3337,9 +3359,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/digital-twin-snapshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "45f4fd71fb38f547abbbca3769d0162d24627e8f45f031f87bc757b74b8c3685",
-          "checksum": "45f4fd71fb38f547abbbca3769d0162d24627e8f45f031f87bc757b74b8c3685",
-          "timestamp": "2026-09-24T06:46:17.247Z",
+          "hash": "f9e573b6b1062708a44d9c972bf6b0615e087595fb48165d128e507307b2f2c7",
+          "checksum": "f9e573b6b1062708a44d9c972bf6b0615e087595fb48165d128e507307b2f2c7",
+          "timestamp": "2026-09-24T07:26:24.090Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3375,9 +3397,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "22b7d6ff7c7a3505aa670c7b3868696bd3fb93e4db35133848954a80f8350cee",
-          "checksum": "22b7d6ff7c7a3505aa670c7b3868696bd3fb93e4db35133848954a80f8350cee",
-          "timestamp": "2026-09-24T06:46:17.323Z",
+          "hash": "cb8426f39cd91fd78e6aeff27dde1cf25df95a7f0c01d268952318f983c99ad1",
+          "checksum": "cb8426f39cd91fd78e6aeff27dde1cf25df95a7f0c01d268952318f983c99ad1",
+          "timestamp": "2026-09-24T07:26:24.248Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3394,9 +3416,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "fefacfd0a668828c89aa73a40656d54c026a7d2b1b9adb7b1468010727cf4061",
-          "checksum": "fefacfd0a668828c89aa73a40656d54c026a7d2b1b9adb7b1468010727cf4061",
-          "timestamp": "2026-09-24T06:46:17.492Z",
+          "hash": "074a3e316d3472e9f20876db2f04f136e0a97b071c472754c2df287e6c2d2ca5",
+          "checksum": "074a3e316d3472e9f20876db2f04f136e0a97b071c472754c2df287e6c2d2ca5",
+          "timestamp": "2026-09-24T07:26:24.493Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3413,9 +3435,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "965dad13dc2c345519705cd53818906c837c2e5c22e98c88606dd214199b6326",
-          "checksum": "965dad13dc2c345519705cd53818906c837c2e5c22e98c88606dd214199b6326",
-          "timestamp": "2026-09-24T06:43:03.016Z",
+          "hash": "b8c6e8d871d245a8651aca3741c26858612d733ad6cc6909640c13b8de0ad272",
+          "checksum": "b8c6e8d871d245a8651aca3741c26858612d733ad6cc6909640c13b8de0ad272",
+          "timestamp": "2026-09-24T07:22:38.729Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3504,9 +3526,9 @@
       "fingerprints": {
         "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
         "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-        "scenarioRegistryFingerprint": "89c08841f36e3cdfc4f8b5c6c566f92c95995859526db0c58d6b777d5c32a2c5",
+        "scenarioRegistryFingerprint": "7899b2d06419abf8b4033d05702d9f3797faab906c3bfdc5d48b0c9318892480",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa"
+        "chainFingerprint": "1fe32edbbcc446e0cd3de001c745d0acf2742237f4ba910af58f1dc90db4d303"
       }
     },
     "fingerprintChain": {
@@ -3515,16 +3537,16 @@
       "registered": {
         "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
         "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-        "scenarioRegistryFingerprint": "89c08841f36e3cdfc4f8b5c6c566f92c95995859526db0c58d6b777d5c32a2c5",
+        "scenarioRegistryFingerprint": "7899b2d06419abf8b4033d05702d9f3797faab906c3bfdc5d48b0c9318892480",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa"
+        "chainFingerprint": "1fe32edbbcc446e0cd3de001c745d0acf2742237f4ba910af58f1dc90db4d303"
       },
       "current": {
         "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
         "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-        "scenarioRegistryFingerprint": "89c08841f36e3cdfc4f8b5c6c566f92c95995859526db0c58d6b777d5c32a2c5",
+        "scenarioRegistryFingerprint": "7899b2d06419abf8b4033d05702d9f3797faab906c3bfdc5d48b0c9318892480",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa"
+        "chainFingerprint": "1fe32edbbcc446e0cd3de001c745d0acf2742237f4ba910af58f1dc90db4d303"
       }
     },
     "proofStatus": "FRESH",
@@ -3699,8 +3721,8 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 519,
-    "executableScenarioCount": 485,
+    "scenarioCount": 520,
+    "executableScenarioCount": 486,
     "executableJourneyIds": [
       "0cf4b599-167e-419a-907d-20104fa295c8",
       "0e4ca104-adfe-473d-89ad-785c5e8f24d7",
@@ -3786,6 +3808,7 @@
       "agent-validation-qa-agent-20260924004242",
       "agent-validation-qa-agent-20260924051334",
       "agent-validation-qa-agent-20260924062432",
+      "agent-validation-qa-agent-20260924065625",
       "agent_factory",
       "agent_marketplace",
       "agent_orchestrator",
@@ -3898,56 +3921,12 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-saas-storefront-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenants-business-core-biz-web-scraping",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio core",
-      "evidence": {
-        "scenarios": [
-          "business-core-biz-agenda",
-          "business-core-biz-agents",
-          "business-core-biz-ai-tools",
-          "business-core-biz-backup-restore",
-          "business-core-biz-bulk-messaging",
-          "business-core-biz-channel-accounts",
-          "business-core-biz-conversations-chat",
-          "business-core-biz-failed-messages",
-          "business-core-biz-faq",
-          "business-core-biz-kitchen-dispatch",
-          "business-core-biz-knowledge-base",
-          "business-core-biz-maintenance",
-          "business-core-biz-mfa",
-          "business-core-biz-plan-usage",
-          "business-core-biz-product-docs",
-          "business-core-biz-rag-documents",
-          "business-core-biz-saas-storefront",
-          "business-core-biz-segmentation",
-          "business-core-biz-sso-scim",
-          "business-core-biz-tenants",
-          "business-core-biz-web-scraping"
-        ],
-        "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
-      },
-      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-fitness-infra_error-fitness-matricula-agendamento-ui-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding-fitness-matricula-renovacao",
+      "id": "gap-mesh-fitness-infra_error-fitness-matricula-renovacao",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio fitness",
       "evidence": {
         "scenarios": [
-          "fitness-matricula-agendamento-ui",
-          "fitness-matricula-cancelamento",
-          "fitness-matricula-checkin",
-          "fitness-matricula-checkout",
-          "fitness-matricula-onboarding",
           "fitness-matricula-renovacao"
         ],
         "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
@@ -3961,13 +3940,12 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
+      "id": "gap-mesh-omnichannel-infra_error-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio omnichannel",
       "evidence": {
         "scenarios": [
-          "fitness-matricula-leads",
           "rpa-whatsapp-connections-rpa",
           "support-inbox-nota-ui"
         ],
@@ -4001,25 +3979,6 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-functional_failure-business-core-biz-rag-segregation",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio core",
-      "evidence": {
-        "scenarios": [
-          "business-core-biz-rag-segregation"
-        ],
-        "sampleError": "Documento não foi indexado dentro do tempo esperado"
-      },
-      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
       "id": "gap-mesh-core-functional_failure-business-core-biz-flows-editor",
       "severity": "high",
       "area": "qa-mesh",
@@ -4039,34 +3998,15 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-infra_error-business-core-biz-login",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-rag-segregation",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
       "evidence": {
         "scenarios": [
-          "business-core-biz-login"
+          "business-core-biz-rag-segregation"
         ],
-        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login Call log: - navigating to \"http://localhost:5173/login\", waiting until \"domcontentloaded\""
-      },
-      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
-    },
-    {
-      "blockingClassification": "enterprise-blocker",
-      "suggestions": {
-        "journeys": [],
-        "assertions": [],
-        "replayEnrichments": []
-      },
-      "id": "gap-mesh-core-functional_failure-business-core-biz-tenant-config",
-      "severity": "high",
-      "area": "qa-mesh",
-      "title": "Falha aberta no dominio core",
-      "evidence": {
-        "scenarios": [
-          "business-core-biz-tenant-config"
-        ],
-        "sampleError": "page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document. at UtilityScript.evaluate (<anonymous>:292:16) at UtilityScript.<anonymous> (<anonymous>:1:44)"
+        "sampleError": "Documento não foi indexado dentro do tempo esperado"
       },
       "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
@@ -4145,21 +4085,58 @@
         "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
       },
       "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-beauty-functional_failure-business-beauty-scr-06",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio beauty",
+      "evidence": {
+        "scenarios": [
+          "business-beauty-scr-06"
+        ],
+        "sampleError": "Nenhum alvo semântico encontrado: [data-testid=\"refresh-button\"], button:has-text(\"Atualizar\"), button:has-text(\"Recarregar\"), button[aria-label*=\"Atualizar\" i]"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-flaky-fitness-matricula-checkout",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-checkout"
+        ],
+        "sampleError": "Navegador fechado pelo usuário"
+      },
+      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
     }
   ],
   "noGoReasons": [
-    "Falha aberta no dominio core [gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-saas-storefront-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenants-business-core-biz-web-scraping]",
-    "Falha aberta no dominio fitness [gap-mesh-fitness-infra_error-fitness-matricula-agendamento-ui-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding-fitness-matricula-renovacao]",
-    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-infra_error-fitness-matricula-leads-rpa-whatsapp-connections-rpa-support-inbox-nota-ui]",
+    "Falha aberta no dominio fitness [gap-mesh-fitness-infra_error-fitness-matricula-renovacao]",
+    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-infra_error-rpa-whatsapp-connections-rpa-support-inbox-nota-ui]",
     "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-academy]",
-    "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-rag-segregation]",
     "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-flows-editor]",
-    "Falha aberta no dominio core [gap-mesh-core-infra_error-business-core-biz-login]",
-    "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-tenant-config]",
+    "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-rag-segregation]",
     "Falha aberta no dominio bpmn [gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke]",
     "Falha aberta no dominio core [gap-mesh-core-infra_error-qa-core-auth-login]",
     "Falha aberta no dominio core [gap-mesh-core-infra_error-qa-core-config-tenant-intelligence]",
-    "Falha aberta no dominio core [gap-mesh-core-infra_error-rpa-example-test]"
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-rpa-example-test]",
+    "Falha aberta no dominio beauty [gap-mesh-beauty-functional_failure-business-beauty-scr-06]",
+    "Falha aberta no dominio fitness [gap-mesh-fitness-flaky-fitness-matricula-checkout]"
   ],
   "goReasons": [
     "Foundation prod-like QA Waves governance exists and is machine-readable.",

@@ -1,12 +1,11 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-24T06-23-15-821Z",
+  "executionId": "mesh-2026-09-24T06-55-00-751Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
   "status": "NO_GO",
   "reasons": [
-    "FAILURE_RATE_ABOVE_THRESHOLD",
     "CRITICAL_DOMAIN_FAILED:core",
     "CRITICAL_DOMAIN_FAILED:omnichannel",
     "BASELINE_PASS_RATE_REGRESSION",
@@ -14,19 +13,19 @@
     "BASELINE_INFRA_REGRESSION"
   ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-24T06-23-15-821Z",
-    "startedAt": "2026-09-24T06:23:15.821Z",
+    "executionId": "mesh-2026-09-24T06-55-00-751Z",
+    "startedAt": "2026-09-24T06:55:00.751Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-24T06:42:15.499Z",
+    "promotedAt": "2026-09-24T07:25:50.234Z",
     "registryTotal": 144,
     "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
   "totals": {
-    "executionId": "mesh-2026-09-24T06-23-15-821Z",
+    "executionId": "mesh-2026-09-24T06-55-00-751Z",
     "tenantId": "system",
-    "timestamp": "2026-09-24T06:23:15.821Z",
+    "timestamp": "2026-09-24T06:55:00.751Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -34,13 +33,13 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 105,
+    "passed": 132,
     "fallbackPassed": 0,
     "failed": 4,
     "skipped": 0,
-    "infraErrors": 35,
+    "infraErrors": 7,
     "environmentMissing": 0,
-    "flaky": 0,
+    "flaky": 1,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
@@ -54,9 +53,9 @@
     "executionQuality": "valid",
     "domains": {
       "beauty": {
-        "passed": 12,
+        "passed": 11,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 1,
         "skipped": 0,
         "infra_error": 0,
         "environment_missing": 0,
@@ -84,23 +83,23 @@
         "total": 2
       },
       "core": {
-        "passed": 61,
+        "passed": 84,
         "fallbackPassed": 0,
-        "failed": 4,
+        "failed": 3,
         "skipped": 0,
-        "infra_error": 25,
+        "infra_error": 3,
         "environment_missing": 0,
         "flaky": 0,
         "total": 90
       },
       "fitness": {
-        "passed": 9,
+        "passed": 13,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 6,
+        "infra_error": 1,
         "environment_missing": 0,
-        "flaky": 0,
+        "flaky": 1,
         "total": 15
       },
       "food": {
@@ -134,11 +133,11 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 1,
+        "passed": 2,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 3,
+        "infra_error": 2,
         "environment_missing": 0,
         "flaky": 0,
         "total": 4
@@ -176,7 +175,6 @@
     },
     "goNoGo": "NO_GO",
     "reasons": [
-      "FAILURE_RATE_ABOVE_THRESHOLD",
       "CRITICAL_DOMAIN_FAILED:core",
       "CRITICAL_DOMAIN_FAILED:omnichannel",
       "BASELINE_PASS_RATE_REGRESSION",
@@ -185,30 +183,31 @@
     ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
-      "core": {
-        "total": 29,
-        "blocking": 1,
+      "beauty": {
+        "total": 1,
+        "blocking": 0,
         "byType": {
-          "functional_failure": 4,
-          "infra_error": 25
+          "functional_failure": 1
         },
-        "successRate": 0.6777777777777778
+        "successRate": 0.9166666666666666
       },
-      "fitness": {
+      "core": {
         "total": 6,
         "blocking": 1,
         "byType": {
-          "infra_error": 6
-        },
-        "successRate": 0.6
-      },
-      "omnichannel": {
-        "total": 3,
-        "blocking": 1,
-        "byType": {
+          "functional_failure": 3,
           "infra_error": 3
         },
-        "successRate": 0.25
+        "successRate": 0.9333333333333333
+      },
+      "fitness": {
+        "total": 2,
+        "blocking": 0,
+        "byType": {
+          "flaky": 1,
+          "infra_error": 1
+        },
+        "successRate": 0.8666666666666667
       },
       "bpmn": {
         "total": 1,
@@ -218,11 +217,13 @@
         },
         "successRate": 0
       },
-      "beauty": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
+      "omnichannel": {
+        "total": 2,
+        "blocking": 1,
+        "byType": {
+          "infra_error": 2
+        },
+        "successRate": 0.5
       },
       "bakery": {
         "total": 0,
@@ -269,16 +270,17 @@
     },
     "failuresByType": {
       "functional_failure": 4,
-      "infra_error": 35
+      "flaky": 1,
+      "infra_error": 7
     },
     "topErrors": [
       {
-        "message": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/",
-        "count": 21
+        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
+        "count": 4
       },
       {
-        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
-        "count": 10
+        "message": "Nenhum alvo semântico encontrado: [data-testid=\"refresh-button\"], button:has-text(\"Atualizar\"), button:has-text(\"Recarregar\"), button[aria-label*=\"Atualizar\" i]",
+        "count": 1
       },
       {
         "message": "Tutor não respondeu com conteúdo disponível",
@@ -289,15 +291,11 @@
         "count": 1
       },
       {
-        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login Call log: - navigating to \"http://localhost:5173/login\", waiting until \"domcontentloaded\"",
-        "count": 1
-      },
-      {
         "message": "Documento não foi indexado dentro do tempo esperado",
         "count": 1
       },
       {
-        "message": "page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document. at UtilityScript.evaluate (<anonymous>:292:16) at UtilityScript.<anonymous> (<anonymous>:1:44)",
+        "message": "Navegador fechado pelo usuário",
         "count": 1
       },
       {
@@ -315,16 +313,15 @@
     ],
     "blockingDomains": [
       "core",
-      "fitness",
       "omnichannel"
     ],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-24T06-23-15-821Z",
-      "startedAt": "2026-09-24T06:23:15.821Z",
+      "executionId": "mesh-2026-09-24T06-55-00-751Z",
+      "startedAt": "2026-09-24T06:55:00.751Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-24T06:42:15.499Z",
+      "promotedAt": "2026-09-24T07:25:50.234Z",
       "registryTotal": 144,
       "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
@@ -332,9 +329,9 @@
   },
   "artifactType": "go-no-go-report",
   "artifactVersion": "1.0.0",
-  "runId": "rap-governed-20260924055102287-2aaabc8b",
+  "runId": "rap-governed-20260924064228071-5bdacdaa",
   "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
-  "sourceCommit": "3e672c6bdbd2f61fcfb44f66d9fe837c415f659f",
-  "sourceTree": "459779130d5313e6759e272290c6c2f0329f512d",
-  "generatedAt": "2026-09-24T06:42:15.501Z"
+  "sourceCommit": "e85d36b706f2add8c7f0d7f0596ac451990aa21d",
+  "sourceTree": "ead87919f0d3cf8eaca2500a273cede2acd91ba8",
+  "generatedAt": "2026-09-24T07:25:50.237Z"
 }

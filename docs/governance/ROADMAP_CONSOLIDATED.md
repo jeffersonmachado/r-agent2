@@ -8,7 +8,7 @@
 - QA Waves e replay: docs/governance/QA_WAVES_STATUS.md e docs/governance/REPLAY_OPERATIONAL_STATUS.md
 
 ## Now
-- Close Bpmn, Core, Fitness and Omnichannel failures reported by qa-mesh/intelligence/latest.json.
+- Close Beauty, Bpmn, Core, Fitness and Omnichannel failures reported by qa-mesh/intelligence/latest.json.
 - Produce a full omnichannel replay proving WhatsApp -> AI -> handoff -> human -> backend mutation chronology.
 - Eliminate broken document references and retire legacy docs as non-canonical.
 
