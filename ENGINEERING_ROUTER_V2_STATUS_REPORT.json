@@ -40,6 +40,21 @@
         "CREATED/ENRICHING → RE_ENRICH; APPROVED sem task → START_EXECUTION; APPROVED/EXECUTING → RESUME_TASK; resto SKIP com motivo"
       ]
     },
+    "CRASH_RECOVERY_SIGKILL": {
+      "state": "GO",
+      "verifier": "npm run verify:mission-crash-recovery (scripts/governance/verify-mission-crash-recovery.js)",
+      "report": "reports/mission-crash-recovery-report.json",
+      "measured": "13/13 checks PASS, status=GO, com processo REAL morto por SIGKILL -9",
+      "proof": [
+        "processo A separado adquire lease (fence=1) e entra em EXECUTING; handshake READY observado",
+        "SIGKILL_REAL: signal=SIGKILL confirmado; PROCESSO_A_MORTO: pid deixou de existir",
+        "MISSAO_CONTINUA_EXECUTING + LEASE_ORFAO_DO_WORKER_MORTO: NADA foi limpo na morte",
+        "RECOVERY_ENCONTROU_A_MISSAO: o boot varreu e decidiu (action=NO_TASK_TO_RESUME, reason=EXECUTION_INTERRUPTED)",
+        "LEASE_NAO_PERTENCE_MAIS_AO_WORKER_MORTO (fence 1→2) e ESCRITA_DO_WORKER_MORTO_RECUSADA (MISSION_LEASE_NOT_HELD)",
+        "MISSAO_NAO_FOI_MARCADA_GREEN_PELO_MORTO: status permaneceu EXECUTING"
+      ],
+      "residualGap": "a retomada foi decidida e executada sobre uma missão interrompida SEM task de execução real; exercitar a retomada de uma task real (orchestrator) através do crash fica como pendência. O teste Jest correspondente consome esta evidência runtime e FALHA em modo autoritativo se ela faltar — não há pulo silencioso."
+    },
     "MISSION_APPROVAL": {
       "state": "GO",
       "measured": "13 unit (RBAC) + 6 integration (review enforcement) PASS",
@@ -103,7 +118,7 @@
     "antiGreenwashingGate": "PASS suites=17 violações=0"
   },
   "deferredWork": [
-    "§9/§40 — E2E de crash real: processo A cria missão, executa, avança de fase, recebe SIGKILL -9; processo B sobe, recupera sozinho e conclui GREEN (fases ENRICHING/pós-aprovação/IMPLEMENTING/TESTING/REVIEWING/REGRESSION)",
+    "§9/§40 (residual) — exercitar a retomada de uma TASK real de execução através do SIGKILL (hoje a decisão de recuperação é provada, a task real não)",
     "§5/§6/§42–§45 — validate-engineering-router-v2 + SEAL_REPORT + RUNTIME_EVIDENCE + AUDIT_ENVELOPE (hash binding) + AUDIT_VERIFICATION",
     "§14–§18 — enriquecimento profundo com RAG de engenharia (SYSTEM), proveniência e orçamento",
     "V2-01..V2-42 — os 42 testes obrigatórios da missão",
