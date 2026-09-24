@@ -27,8 +27,9 @@ const createdMissionIds = [];
 
 function skipIfNoDatabase() {
   if (dbAvailable) return false;
-  console.warn(`[mission-enrichment-degradation] PULADO: postgres_unreachable (${dbReason})`);
-  return true;
+  // Porta ÚNICA de infraestrutura (§11/§12): em RELEASE_AUTHORITATIVE=1 isto LANÇA INFRA_ERROR
+  // (nunca PASS silencioso); em dev registra NOT_EXECUTED com motivo.
+  return require('../helpers/infraGate').skipOrFail({ suite: 'mission-enrichment-degradation', available: dbAvailable, reason: dbReason, requirement: 'postgres' });
 }
 
 async function newMission() {

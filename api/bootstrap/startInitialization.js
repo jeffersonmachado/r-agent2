@@ -227,6 +227,35 @@ function createStartInitialization({
         logger.warn(`[Init] ⚠️  Aviso ao inicializar providers de IA: ${aiErr.message}`);
         logger.warn(`[Init] ⚠️  Aviso ao inicializar providers de IA: ${aiErr.message}`);
       }
+
+      // ── RECOVERY AUTOMÁTICO de missões de engenharia (§7/§8) ─────────────────────────────────
+      // Achado real da auditoria V2: a retomada de missões existia, mas só acontecia se alguém
+      // chamasse `POST /engineering/missions/resume-interrupted`. Boot nenhum chamava o
+      // orquestrador — ou seja, "durable execution" dependia de ação humana. Aqui a aplicação passa
+      // a varrer sozinha no boot (e periodicamente) trabalho abandonado: descobre a missão, valida a
+      // spec aprovada, adquire LEASE e continua a TASK pelo Router durável.
+      // DETACHED de propósito: o loop do Router pode levar minutos e a subida do servidor não pode
+      // esperar por ele. `ENGINEERING_MISSION_RECOVERY_ENABLED=0` desliga (default: ligado fora de teste).
+      try {
+        const recovery = require('../services/engineeringMission/missionRecoveryCoordinator');
+        if (recovery.recoveryEnabled()) {
+          const loop = recovery.startRecoveryLoop();
+          logger.info(`[Init] ✅ Mission recovery loop: ${loop.started ? `intervalo ${loop.intervalMs}ms` : loop.reason}`);
+          setTimeout(() => {
+            recovery.runBootRecovery({ autoStart: true })
+              .then((summary) => {
+                if (summary.scanned > 0) {
+                  logger.info(`[Init] ✅ Mission recovery de boot: ${summary.recovered} retomada(s) de ${summary.scanned} candidata(s)`);
+                }
+              })
+              .catch((err) => logger.warn(`[Init] ⚠️  Mission recovery de boot falhou: ${err.message}`));
+          }, 1500);
+        } else {
+          logger.info('[Init] Mission recovery desabilitado por configuração');
+        }
+      } catch (recoveryErr) {
+        logger.warn(`[Init] ⚠️  Aviso ao iniciar mission recovery: ${recoveryErr.message}`);
+      }
     })();
 
     return initializationPromise;

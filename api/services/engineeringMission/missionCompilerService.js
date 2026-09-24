@@ -28,6 +28,7 @@ const {
 const { buildEnrichment } = require('../../../engine/engineeringMission/enrichmentBuilder');
 const { classifyMateriality } = require('../../../engine/engineeringMission/materiality');
 const { buildEnrichmentPreview } = require('../../../engine/engineeringMission/missionPreview');
+const { resolveMissionPolicy } = require('../../../engine/engineeringMission/policyResolver');
 const { evaluateAutoApproval } = require('../../../engine/engineeringMission/autoApprovalPolicy');
 const { deriveDisplayStatus } = require('../../../engine/engineeringMission/missionStatus');
 const { MISSION_FAILURE_CODES } = require('../../../engine/engineeringMission/constants');
@@ -200,7 +201,7 @@ function buildSpecFromEnrichment({ mission, enrichment, contextFacts, previousSp
  * — a versão já gravada para os mesmos fatos é reaproveitada em vez de duplicada (unicidade de
  * `spec_hash` no banco).
  */
-async function enrichMission(missionId, { actor = null, tenantId = 'system', contextHints = {}, forceNewVersion = false } = {}) {
+async function enrichMission(missionId, { actor = null, tenantId = 'system', contextHints = {}, forceNewVersion = false, policyEscalationAuthorized = false } = {}) {
   const mission = await missionStore.getMission(missionId);
   if (!mission) {
     const err = new Error(`mission ${missionId} não encontrada`);
@@ -254,16 +255,27 @@ async function enrichMission(missionId, { actor = null, tenantId = 'system', con
     const materiality = classifyMateriality({ previousSpec, nextSpec: spec, enrichment, changes });
 
     const policy = await missionStore.getAutoApprovalPolicy();
-    // Precedência: override EXPLÍCITO da missão (`auto_approval_policy`) > política da instalação.
-    // `mission.approval_mode` NÃO entra aqui: ele é o REGISTRO da última decisão tomada, não um
-    // override — usá-lo como entrada tornava POLICY_BASED inalcançável (defeito real: toda missão
-    // nascia com approval_mode='MANUAL' e portanto nunca era autoaprovável, mesmo com a política
-    // da instalação habilitada).
-    const effectivePolicy = {
-      ...policy,
-      ...(mission.auto_approval_policy || {}),
-      mode: (mission.auto_approval_policy || {}).mode || policy.mode,
-    };
+    // POLICY RESOLVER (§20/§21) — o merge ingênuo `{...policy, ...mission.auto_approval_policy}`
+    // permitia a própria MISSÃO ampliar privilégio (ex.: declarar `maxRisk: 'CRITICAL'` e
+    // `confidenceThreshold: 0.1` passava a autorizar mais do que a instalação autorizava). Agora a
+    // resolução é formal: restringir é sempre permitido; ampliar exige autorização administrativa
+    // explícita NOS DOIS lados (identidade + política), e sem ela a operação é RECUSADA — nunca
+    // "clampada" em silêncio.
+    const policyResolution = resolveMissionPolicy({
+      globalPolicy: policy,
+      requestedPolicy: mission.auto_approval_policy || null,
+      // Autorização de escalação NUNCA vem do corpo da requisição: só de quem já passou pela
+      // checagem de permissão (RBAC `engineering.policy_admin`) na borda HTTP ou de worker confiável.
+      actor: { id: actor, canEscalatePolicy: policyEscalationAuthorized === true },
+      evaluatedAt: new Date().toISOString(),
+    });
+    if (policyResolution.decision === 'DENY') {
+      throw Object.assign(
+        new Error(policyResolution.reason),
+        { code: 'POLICY_ESCALATION_DENIED', missionId, escalations: policyResolution.escalations, resolution: policyResolution },
+      );
+    }
+    const effectivePolicy = policyResolution.effectivePolicy;
     const autoApproval = evaluateAutoApproval({
       policy: effectivePolicy,
       spec,
@@ -280,6 +292,9 @@ async function enrichMission(missionId, { actor = null, tenantId = 'system', con
       materiality,
       autoApproval,
     });
+    // §21: a resolução de política é EVIDÊNCIA persistida (global × solicitada × efetiva,
+    // diferenças, escalações e a decisão com motivo) — não um cálculo que se perde na memória.
+    preview.policyResolution = policyResolution;
 
     const versionRow = await missionStore.saveVersion({
       missionId,
@@ -346,6 +361,9 @@ async function enrichMission(missionId, { actor = null, tenantId = 'system', con
     });
     await missionStore.mergeMissionJson(missionId, {
       resume: { phase: approvalState === 'AUTO_APPROVED' ? 'APPROVED' : 'AWAITING_APPROVAL', enrichedAt: new Date().toISOString() },
+      // §21: guarda a resolução de política também no resume metadata, para que a evidência
+      // sobreviva mesmo se o preview for regerado por um re-enriquecimento.
+      policyResolution,
     });
 
     const detail = await getMissionDetail(missionId);
@@ -387,6 +405,9 @@ async function compileMission(rawMission, options = {}) {
     actor: options.createdBy || null,
     tenantId: options.tenantId || 'system',
     contextHints: options.contextHints || {},
+    // Propagação OBRIGATÓRIA: sem isto, `compileMission` (que cria E enriquece) recusaria toda
+    // missão com política mais ampla mesmo quando a borda HTTP já autorizou a escalação.
+    policyEscalationAuthorized: options.policyEscalationAuthorized === true,
   });
   return { mission: detail, created: true };
 }

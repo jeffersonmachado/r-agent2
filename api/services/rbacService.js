@@ -35,6 +35,16 @@
  */
 const ROLE_PERMISSIONS = {
   owner: [
+    // Engineering Mission (§19): ações granulares de engenharia. `policy_admin` é a ÚNICA
+    // autorização que permite escalação de política (§20) — por isso é concedida apenas a owner
+    // (e a super_admin, que já tem bypass) e NUNCA a papéis operacionais.
+    { resource: 'engineering', action: 'read' },
+    { resource: 'engineering', action: 'create' },
+    { resource: 'engineering', action: 'enrich' },
+    { resource: 'engineering', action: 'approve' },
+    { resource: 'engineering', action: 'reject' },
+    { resource: 'engineering', action: 'execute' },
+    { resource: 'engineering', action: 'policy_admin' },
     // Acesso total + gestão de tenant
     { resource: 'tenant', action: 'read' },
     { resource: 'tenant', action: 'update' },
@@ -145,6 +155,14 @@ const ROLE_PERMISSIONS = {
   ],
 
   admin: [
+    // Engineering Mission (§19): engenharia sim, mas SEM `policy_admin` — um admin de tenant não
+    // autoriza escalação de política da instalação (§20). Quem precisa escalar pede a owner.
+    { resource: 'engineering', action: 'read' },
+    { resource: 'engineering', action: 'create' },
+    { resource: 'engineering', action: 'enrich' },
+    { resource: 'engineering', action: 'approve' },
+    { resource: 'engineering', action: 'reject' },
+    { resource: 'engineering', action: 'execute' },
     // Tickets
     { resource: 'tickets', action: 'create' },
     { resource: 'tickets', action: 'read' },

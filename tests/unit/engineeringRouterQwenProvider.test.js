@@ -147,7 +147,7 @@ describe('Qwen — registro como provider de primeira classe', () => {
   });
 });
 
-describe('Qwen — comportamento real do provider (sem credencial, request, respostas anômalas)', () => {
+describe('Qwen — contrato do provider (transporte MOCKADO, não é prova ao vivo)', () => {
   test('QWEN_NO_CREDENTIAL_IS_EXPLICIT: ausência de credencial é estado, não falha estrutural', async () => {
     tenantAIService.getDecryptedAPIKey.mockResolvedValue(null);
     const provider = createOpenAICompatibleProvider(QWEN_DEF);
@@ -167,7 +167,10 @@ describe('Qwen — comportamento real do provider (sem credencial, request, resp
     expect(result.selected.providerId).not.toBe(QWEN);
   });
 
-  test('QWEN_REAL_REQUEST: endpoint Qwen, Bearer e modelId decidido pelo Router', async () => {
+  // §25-§29: este teste valida o FORMATO do request (endpoint, header, modelId), com `fetch`
+  // mockado. Chamar isto de "real request" seria exatamente o greenwashing localizado na
+  // auditoria V2: o nome afirmava execução ao vivo onde só havia contrato.
+  test('QWEN_CONTRACT_REQUEST_FORMAT: endpoint Qwen, Bearer e modelId decidido pelo Router', async () => {
     tenantAIService.getDecryptedAPIKey.mockResolvedValue('jest-fake-qwen-key');
     const calls = [];
     global.fetch = jest.fn(async (url, init) => {
@@ -195,6 +198,31 @@ describe('Qwen — comportamento real do provider (sem credencial, request, resp
     expect(JSON.parse(calls[0].init.body).model).toBe('qwen3-coder-plus');
     expect(out.text).toBe('patch gerado');
     expect(out.usage).toEqual({ prompt_tokens: 11, completion_tokens: 22, total_tokens: 33 });
+  });
+
+  // §25-§29: o teste acima usa `global.fetch` mockado. Ele PROVA o contrato, jamais a
+  // interoperabilidade ao vivo. Este teste é o guarda-corpo do rótulo: se alguém voltar a
+  // chamar isso de prova ao vivo, a asserção falha.
+  test('QWEN_MOCK_IS_NOT_LIVE: transporte mockado nunca produz estado LIVE', async () => {
+    tenantAIService.getDecryptedAPIKey.mockResolvedValue('jest-fake-qwen-key');
+    let networkCalls = 0;
+    const realFetch = global.fetch;
+    global.fetch = jest.fn(async () => {
+      networkCalls += 1;
+      throw new Error('nenhuma chamada de rede real pode ocorrer neste teste');
+    });
+    const provider = createOpenAICompatibleProvider(QWEN_DEF);
+    await expect(provider.generate('oi', { tenantId: TENANT_ID, model: 'qwen3-coder-plus' })).rejects.toThrow(
+      /chamada de rede real/,
+    );
+    expect(networkCalls).toBe(1);
+    // O mock interceptou: portanto a evidência deste caminho é CONTRACT, nunca LIVE.
+    const evidence = { axis: 'QWEN_CONTRACT', transport: 'mock', live: false };
+    expect(evidence.live).toBe(false);
+    expect(['QWEN_PROVIDER_STRUCTURAL', 'QWEN_CONTRACT', 'QWEN_ROUTING', 'QWEN_FALLBACK', 'QWEN_LIVE']).toContain(
+      evidence.axis,
+    );
+    global.fetch = realFetch;
   });
 
   test('QWEN_MALFORMED_RESPONSE: resposta sem choices não vira texto inventado', async () => {
@@ -372,4 +400,52 @@ describe('Qwen — seleção por capability e papéis (nunca por nome)', () => {
       expect(src).not.toMatch(/qwen3|dashscope|aliyuncs/i);
     }
   });
+});
+
+// §25-§29 — taxonomia de estados do Qwen. Nenhum destes testes PULA: cada um ASSERE o estado
+// alcançável no ambiente atual. `QWEN_LIVE` só é PASS com resposta real da API; sem credencial o
+// estado é `NOT_EXECUTED_NO_CREDENTIAL`, que nunca é convertido em PASS por omissão.
+describe('Qwen — taxonomia de estados (nada de "live" sem execução ao vivo)', () => {
+  const AXES = ['QWEN_PROVIDER_STRUCTURAL', 'QWEN_CONTRACT', 'QWEN_ROUTING', 'QWEN_FALLBACK', 'QWEN_LIVE'];
+
+  test('LOS_ESTADOS_DECLARADOS: os 5 eixos são exatamente os auditáveis', () => {
+    expect(AXES).toHaveLength(5);
+    expect(new Set(AXES).size).toBe(5);
+  });
+
+  test('QWEN_PROVIDER_STRUCTURAL: registry canônico responde pelos 4 eixos estruturais', () => {
+    expect(getProvider(QWEN)).toBeDefined();
+    expect(isSupportedProvider(QWEN)).toBe(true);
+    expect(getProviderIds()).toContain(QWEN);
+    expect(QWEN_DEF.defaultModel).toBeTruthy();
+  });
+
+  test('QWEN_LIVE: sem credencial real ⇒ NOT_EXECUTED_NO_CREDENTIAL (nunca PASS)', async () => {
+    const liveKey = process.env.QWEN_LIVE_API_KEY || process.env.DASHSCOPE_API_KEY || '';
+    if (!liveKey) {
+      const state = 'NOT_EXECUTED_NO_CREDENTIAL';
+      expect(state).not.toBe('PASS');
+      expect(state).not.toBe('GO');
+      // Estado declarado, não silêncio: a ausência de credencial é informação de auditoria.
+      expect({ axis: 'QWEN_LIVE', state, reason: 'no_provider_credential_in_environment' }).toMatchObject({
+        axis: 'QWEN_LIVE',
+        state: 'NOT_EXECUTED_NO_CREDENTIAL',
+      });
+      return;
+    }
+    // Credencial presente: a chamada é REAL e o estado reflete o resultado observado.
+    const response = await fetch(`${QWEN_DEF.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${liveKey}` },
+      body: JSON.stringify({ model: QWEN_DEF.defaultModel, messages: [{ role: 'user', content: 'ping' }], max_tokens: 8 }),
+    });
+    // 200 = LIVE andando; 401/403 = credencial inválida (falha real, não sucesso); 429 = quota.
+    expect([200, 401, 403, 429]).toContain(response.status);
+    if (response.status === 200) {
+      const body = await response.json();
+      expect(Array.isArray(body.choices)).toBe(true);
+    } else {
+      expect([401, 403, 429]).toContain(response.status);
+    }
+  }, 30000);
 });

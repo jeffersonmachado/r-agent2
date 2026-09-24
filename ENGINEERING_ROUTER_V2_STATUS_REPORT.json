@@ -1,0 +1,112 @@
+{
+  "report": "ENGINEERING_ROUTER_V2_STATUS_REPORT",
+  "generatedAt": "2026-09-24",
+  "generatedBy": "engineering-router-v2 mission execution (local, no GitHub Actions — runner budget exhausted)",
+  "rule": "Cada eixo declara o SEU estado. Nenhum eixo verde implica RAP_FINAL_RELEASE verde (§3, §48).",
+  "evidencePolicy": {
+    "authoritativeMode": "RELEASE_AUTHORITATIVE=1 — infraestrutura ausente LANÇA INFRA_ERROR, nunca PASS",
+    "skipMechanisms": "proibidos e verificados por scripts/governance/validate-anti-greenwashing.js",
+    "notExecutedIsDeclared": "estados NOT_EXECUTED / NOT_EXECUTED_NO_CREDENTIAL são declarados explicitamente, nunca convertidos em PASS"
+  },
+  "axes": {
+    "ANTI_GREENWASHING": {
+      "state": "GO",
+      "validator": "npm run validate:anti-greenwashing",
+      "report": "reports/anti-greenwashing-report.json",
+      "measured": "status=PASS suites=17 violações=0 exit=0",
+      "proof": [
+        "tests/unit/antiGreenwashingGate.test.js — 10/10: autoritativo+infra ausente LANÇA INFRA_ERROR; dev registra NOT_EXECUTED com motivo; evidência vira PASS_WITH_NOT_EXECUTED",
+        "17 suítes de missão migradas de skipIfNoDatabase() silencioso para tests/helpers/infraGate.js",
+        "falso positivo corrigido: token em fixture/string (patch que o Meta Reviewer deve reprovar) não é mecanismo de skip"
+      ]
+    },
+    "DISTRIBUTED_CONCURRENCY": {
+      "state": "GO",
+      "artifact": "engine/engineeringMission/leasePolicy.js (função pura: sem relógio, sem random, sem IO)",
+      "measured": "14 unit (leasePolicy) + 7 integration (lease distribuído) PASS",
+      "defectFixed": "process.kill(pid) deixou de ser a autoridade de lease; fencing token monotônico + CAS em SQL",
+      "proof": [
+        "worker antigo recebe MISSION_STALE_WORKER_WRITE em vez de sobrescrever o trabalho",
+        "MISSION_LEASE_LOST em renovação de lease perdido; MISSION_LEASE_HELD_BY_OTHER_WORKER em aquisição concorrente"
+      ]
+    },
+    "DURABLE_RECOVERY": {
+      "state": "GO",
+      "artifact": "api/services/engineeringMission/missionRecoveryCoordinator.js + wiring em api/bootstrap/startInitialization.js",
+      "measured": "12 unit (planRecovery puro) + 5 integration (boot recovery) PASS",
+      "defectFixed": "recuperação exigia POST /resume-interrupted manual; agora o boot retoma sozinho",
+      "proof": [
+        "boot real registra '[Init] ✅ Mission recovery de boot: N retomada(s)'",
+        "CREATED/ENRICHING → RE_ENRICH; APPROVED sem task → START_EXECUTION; APPROVED/EXECUTING → RESUME_TASK; resto SKIP com motivo"
+      ]
+    },
+    "MISSION_APPROVAL": {
+      "state": "GO",
+      "measured": "13 unit (RBAC) + 6 integration (review enforcement) PASS",
+      "proof": [
+        "guard() resolve a ação por ROUTE_ACTIONS de forma fail-closed (rota não mapeada ⇒ 403 action_not_mapped)",
+        "requirePermission ausente ⇒ 500 permission_checker_missing (jamais allow)"
+      ]
+    },
+    "MISSION_AUTOAPPROVAL": {
+      "state": "GO",
+      "artifact": "engine/engineeringMission/policyResolver.js (função pura)",
+      "measured": "19 unit (policy resolver) + 5 integration (escalation) PASS",
+      "defectFixed": "merge ingênuo {...global, ...mission.auto_approval_policy} permitia a missão ampliar a própria política",
+      "proof": [
+        "ampliar exige canEscalatePolicy do ator E allowPolicyEscalation da instalação",
+        "negação aplica a política da INSTALAÇÃO, nunca a solicitada; POLICY_ESCALATION_DENIED ⇒ 403 com as diferenças",
+        "nothing clamped silentemente; lista vazia = 'qualquer' (WIDER); threshold menor = WIDER"
+      ]
+    },
+    "MISSION_COMPILER": {
+      "state": "PARTIAL",
+      "measured": "suítes de compiler/enrichment/context budget PASS",
+      "gap": "§14–§18: enriquecimento profundo com Engineering/System RAG (domínio SYSTEM, nunca OPERATIONAL), com proveniência de contexto e orçamento auditável — NOT_EXECUTED"
+    },
+    "QWEN_PROVIDER_STRUCTURAL": { "state": "GO", "measured": "registry canônico único; nenhum nome de modelo no código de decisão" },
+    "QWEN_CONTRACT": {
+      "state": "GO",
+      "measured": "27/27 em tests/unit/engineeringRouterQwenProvider.test.js",
+      "defectFixed": "QWEN_REAL_REQUEST renomeado para QWEN_CONTRACT_REQUEST_FORMAT (o transporte é MOCKADO); QWEN_MOCK_IS_NOT_LIVE impede o rótulo 'ao vivo' sobre mock"
+    },
+    "QWEN_ROUTING": { "state": "GO", "measured": "seleção por capability, fallback nos dois sentidos, independência coder/reviewer" },
+    "QWEN_FALLBACK": { "state": "GO", "measured": "falha de provider não vira texto inventado; 429/401 preservam código para o reroute" },
+    "QWEN_LIVE": {
+      "state": "NOT_EXECUTED_NO_CREDENTIAL",
+      "reason": "nenhuma credencial real do provedor no ambiente",
+      "note": "o teste QWEN_LIVE ASSERE este estado (não pula); com credencial presente ele executa chamada real e exige 200/401/403/429 observado"
+    },
+    "ENGINEERING_ROUTER_V2": {
+      "state": "NO_GO",
+      "reason": "faltam itens obrigatórios da missão (§5/§6 selo+envelope, §9/§40 crash real com SIGKILL, V2-01..V2-42)",
+      "notGreenBecause": [
+        "nenhum E2E com processo A morto por SIGKILL -9 seguido de boot do processo B recuperando até GREEN foi executado",
+        "não existe validate-engineering-router-v2 nem ENGINEERING_ROUTER_V2_AUDIT_ENVELOPE com hash binding",
+        "RAG de contexto (§14–§18) não integrado"
+      ]
+    },
+    "RAP_FINAL_RELEASE": {
+      "state": "NO_GO",
+      "measured": [
+        "qa-mesh canônico: NO_GO",
+        "coverage gate: NO_GO (ponderado 93.7; 48 jornadas críticas falhando; criticalJourneysValidated 78.6; criticalOutcomesValidated 90)",
+        "18 rotas api:GET:/api/benchmark-research/* órfãs no grafo de rastreabilidade",
+        "dist/ com resíduo (81 arquivos)"
+      ],
+      "insight": "parte do NO_GO é artefato de ambiente: REPLAY_SIGNING_KEY e RAG_INTERNAL_TOKEN existem no .env mas não estavam exportados para os validadores. Reexecutar com 'set -a && . ./.env && set +a' antes de concluir NO_GO definitivo."
+    }
+  },
+  "measuredTotals": {
+    "releaseAuthoritative": "17 suites / 202 testes PASS com RELEASE_AUTHORITATIVE=1 (zero pulos silenciosos)",
+    "qwenSuite": "27 testes PASS",
+    "antiGreenwashingGate": "PASS suites=17 violações=0"
+  },
+  "deferredWork": [
+    "§9/§40 — E2E de crash real: processo A cria missão, executa, avança de fase, recebe SIGKILL -9; processo B sobe, recupera sozinho e conclui GREEN (fases ENRICHING/pós-aprovação/IMPLEMENTING/TESTING/REVIEWING/REGRESSION)",
+    "§5/§6/§42–§45 — validate-engineering-router-v2 + SEAL_REPORT + RUNTIME_EVIDENCE + AUDIT_ENVELOPE (hash binding) + AUDIT_VERIFICATION",
+    "§14–§18 — enriquecimento profundo com RAG de engenharia (SYSTEM), proveniência e orçamento",
+    "V2-01..V2-42 — os 42 testes obrigatórios da missão",
+    "RAP_FINAL_RELEASE — reexecutar governança com .env exportado antes de fixar NO_GO"
+  ]
+}

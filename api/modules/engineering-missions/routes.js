@@ -11,10 +11,51 @@
  *   - o enriquecimento NUNCA executa;
  *   - a aprovação NUNCA executa;
  *   - a execução exige aprovação válida para a versão corrente (409 com causa exata).
+ *
+ * AUTORIZAÇÃO (§19): classificação DEVELOPMENT não é autorização suficiente para toda ação —
+ * ela diz ONDE a rota pode ser chamada, não O QUE aquele usuário pode fazer. O módulo passa a
+ * compor, além de auth + classificação, o RBAC real do produto
+ * (`requirePermission(req, 'engineering', <ação>)` de `api/middleware/auth.js`), com um mapa
+ * DECLARATIVO rota→ação. Rota sem entrada no mapa é NEGADA (fail-closed) — nunca "herda" a
+ * permissão da vizinha por esquecimento.
  */
 
 const express = require('express');
 const { checkClassification } = require('../../middleware/requireClassification');
+
+/**
+ * Mapa rota→ação do RBAC. `pattern` casa o pathname RELATIVO ao prefixo `/engineering/missions`;
+ * os padrões de sufixo primeiro (aprovar/rejeitar/executar) e os genéricos por último.
+ */
+const ROUTE_ACTIONS = Object.freeze([
+  { method: 'GET', pattern: /^\/overview\/?$/, action: 'read' },
+  { method: 'GET', pattern: /^\/self-assessment\/?$/, action: 'read' },
+  { method: 'GET', pattern: /^\/policy\/?$/, action: 'read' },
+  { method: 'PUT', pattern: /^\/policy\/?$/, action: 'policy_admin' },
+  { method: 'POST', pattern: /^\/resume-interrupted\/?$/, action: 'execute' },
+  { method: 'GET', pattern: /^\/?$/, action: 'read' },
+  { method: 'POST', pattern: /^\/?$/, action: 'create' },
+  { method: 'GET', pattern: /^\/[^/]+\/preview\/?$/, action: 'read' },
+  { method: 'GET', pattern: /^\/[^/]+\/versions\/?$/, action: 'read' },
+  { method: 'GET', pattern: /^\/[^/]+\/approvals\/?$/, action: 'read' },
+  { method: 'GET', pattern: /^\/[^/]+\/report\/?$/, action: 'read' },
+  { method: 'GET', pattern: /^\/[^/]+\/review\/?$/, action: 'read' },
+  { method: 'POST', pattern: /^\/[^/]+\/enrich\/?$/, action: 'enrich' },
+  { method: 'POST', pattern: /^\/[^/]+\/approve\/?$/, action: 'approve' },
+  { method: 'POST', pattern: /^\/[^/]+\/reject\/?$/, action: 'reject' },
+  { method: 'POST', pattern: /^\/[^/]+\/edit\/?$/, action: 'approve' },
+  { method: 'POST', pattern: /^\/[^/]+\/execute\/?$/, action: 'execute' },
+  { method: 'POST', pattern: /^\/[^/]+\/review\/?$/, action: 'execute' },
+  { method: 'GET', pattern: /^\/[^/]+\/?$/, action: 'read' },
+]);
+
+/** Descobre a ação exigida por (método, pathname). Sem match ⇒ null ⇒ negação. */
+function resolveRequiredAction(method, pathname) {
+  const relative = String(pathname || '').replace(/^\/engineering\/missions/, '') || '/';
+  const upper = String(method || '').toUpperCase();
+  const match = ROUTE_ACTIONS.find((entry) => entry.method === upper && entry.pattern.test(relative));
+  return match ? match.action : null;
+}
 
 function createEngineeringMissionRoutes({ buildDeps }) {
   const router = express.Router();
@@ -30,7 +71,34 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       deps.sendJson(res, 403, { error: 'classification_required', required: check.required, classification: check.classification });
       return null;
     }
+    // RBAC por AÇÃO (§19). Fail-closed: rota não mapeada não é liberada por omissão.
+    const action = resolveRequiredAction(req.method, req.path || req.url);
+    if (!action) {
+      deps.sendJson(res, 403, { error: 'action_not_mapped', message: 'rota sem ação de RBAC declarada', method: req.method, path: req.path });
+      return null;
+    }
+    if (typeof deps.requirePermission !== 'function') {
+      // Composition incompleta = falha de fiação. NUNCA liberar por ausência de checker.
+      deps.logger.error('[engineering-missions] requirePermission ausente na composition — acesso negado', { method: req.method, path: req.path });
+      deps.sendJson(res, 500, { error: 'permission_checker_missing', message: 'checador de permissão não injetado nesta montagem' });
+      return null;
+    }
+    const permission = deps.requirePermission(req, 'engineering', action);
+    if (!permission.allowed) {
+      deps.sendJson(res, 403, { error: 'forbidden', required: { resource: 'engineering', action }, message: permission.error });
+      return null;
+    }
     return auth;
+  }
+
+  /**
+   * Autorização de ESCALAÇÃO DE POLÍTICA (§20): exige a permissão administrativa explícita
+   * `engineering.policy_admin`. Sem ela, `policyEscalationAuthorized` é false e o resolver recusa
+   * qualquer pedido que amplie a política da instalação.
+   */
+  function policyEscalationAuthorized(req, deps) {
+    const check = deps.requirePermission(req, 'engineering', 'policy_admin');
+    return check.allowed === true;
   }
 
   function handleError(res, deps, err, context) {
@@ -44,13 +112,23 @@ function createEngineeringMissionRoutes({ buildDeps }) {
       MISSION_STALE_VERSION: 409,
       MISSION_REJECTED: 409,
       MISSION_LOCKED_BY_OTHER_WORKER: 409,
+      MISSION_LEASE_HELD_BY_OTHER_WORKER: 409,
+      MISSION_LEASE_LOST: 409,
+      MISSION_STALE_WORKER_WRITE: 409,
       MISSION_TYPE_NOT_MAPPED: 422,
       INVALID_MISSION_TRANSITION: 422,
       ENRICHMENT_FAILED: 422,
+      // Escalação de política é NEGADA, não "ajustada": 403 com os eixos recusados.
+      POLICY_ESCALATION_DENIED: 403,
     };
     const status = statusByCode[code] || 500;
     if (status >= 500) deps.logger.error(`[engineering-missions] ${context}`, err);
-    deps.sendJson(res, status, { error: code, message: err.message, detail: err.detail || undefined });
+    deps.sendJson(res, status, {
+      error: code,
+      message: err.message,
+      detail: err.detail || undefined,
+      escalations: err.escalations || undefined,
+    });
   }
 
   async function readBody(req, res, deps) {
@@ -174,6 +252,10 @@ function createEngineeringMissionRoutes({ buildDeps }) {
         createdBy: req.agent?.id || req.agent?.email || null,
         tenantId: req.tenantId || 'system',
         idempotencyKey: req.headers['idempotency-key'] || body.idempotencyKey || null,
+        // §20: a autorização de escalação vem da PERMISSÃO do agente (`engineering.policy_admin`),
+        // nunca do corpo da requisição. Sem ela, pedir política mais ampla que a instalação falha
+        // com POLICY_ESCALATION_DENIED (403).
+        policyEscalationAuthorized: policyEscalationAuthorized(req, deps),
       });
       deps.sendJson(res, result.created ? 201 : 200, {
         mission: result.mission,
@@ -432,4 +514,10 @@ function createEngineeringMissionRoutes({ buildDeps }) {
   return router;
 }
 
-module.exports = { createEngineeringMissionRoutes };
+module.exports = {
+  createEngineeringMissionRoutes,
+  // Exportado para teste direto do mapa rota→ação: a garantia de que uma rota nova NÃO passa em
+  // silêncio (fail-closed) é verificável sem subir HTTP.
+  resolveRequiredAction,
+  ROUTE_ACTIONS,
+};

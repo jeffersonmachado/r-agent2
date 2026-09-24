@@ -45,8 +45,9 @@ const createdMissionIds = [];
 
 function skipIfNoDatabase() {
   if (dbAvailable) return false;
-  console.warn(`[engineering-mission-resume] PULADO: postgres_unreachable (${dbReason})`);
-  return true;
+  // Porta ÚNICA de infraestrutura (§11/§12): em RELEASE_AUTHORITATIVE=1 isto LANÇA INFRA_ERROR
+  // (nunca PASS silencioso); em dev registra NOT_EXECUTED com motivo.
+  return require('../helpers/infraGate').skipOrFail({ suite: 'engineering-mission-resume', available: dbAvailable, reason: dbReason, requirement: 'postgres' });
 }
 
 beforeAll(async () => {

@@ -32,6 +32,10 @@ function buildDepsFactory(overrides = {}) {
   };
   const base = {
     requireAuth: () => ({ valid: true }),
+    // Stub do RBAC real (§19). O default permite para que os testes de auth/validação/ordem de
+    // rota continuem medindo o que se propõem a medir; a MATRIZ de permissão tem testes próprios
+    // (que negam explicitamente) mais abaixo neste arquivo.
+    requirePermission: () => ({ allowed: true }),
     sendJson: (res, status, body) => { res.status(status).json(body); },
     badRequest: (res, message) => { res.status(400).json({ error: 'bad_request', message }); },
     hasJsonContentType: () => true,

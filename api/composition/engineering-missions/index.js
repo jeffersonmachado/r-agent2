@@ -4,7 +4,7 @@
  * Composition root do domínio Engineering Mission Compiler / Enriquecimento (DEVELOPMENT-only).
  */
 
-const { requireAuth } = require('../../middleware/auth');
+const { requireAuth, requirePermission } = require('../../middleware/auth');
 const {
   sendJson,
   badRequest,
@@ -26,6 +26,8 @@ const { createEngineeringMissionRoutes } = require('../../modules/engineering-mi
 function buildEngineeringMissionRouteDeps() {
   return {
     requireAuth,
+    // RBAC real do produto (§19): classificação DEVELOPMENT diz ONDE, permissão diz O QUE.
+    requirePermission,
     sendJson,
     badRequest,
     hasJsonContentType,

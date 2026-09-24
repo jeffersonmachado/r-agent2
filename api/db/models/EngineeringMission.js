@@ -66,6 +66,17 @@ function getEngineeringMissionModel() {
       idempotency_key: { type: DataTypes.STRING, allowNull: true, unique: true },
       locked_at: { type: DataTypes.DATE, allowNull: true },
       locked_by: { type: DataTypes.STRING, allowNull: true },
+      // LEASE DISTRIBUÍDO (§30–§32): identidade de instância + TTL + heartbeat + fencing.
+      // `locked_by` continua existindo como registro local legado; a autoridade de takeover é o
+      // lease (expiração real) e a de escrita é o par (lease_token, lease_fence).
+      lease_worker_instance_id: { type: DataTypes.STRING, allowNull: true },
+      lease_worker_type: { type: DataTypes.STRING, allowNull: true },
+      lease_host: { type: DataTypes.STRING, allowNull: true },
+      lease_token: { type: DataTypes.STRING, allowNull: true },
+      lease_fence: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+      lease_acquired_at: { type: DataTypes.DATE, allowNull: true },
+      lease_expires_at: { type: DataTypes.DATE, allowNull: true },
+      lease_heartbeat_at: { type: DataTypes.DATE, allowNull: true },
       started_at: { type: DataTypes.DATE, allowNull: true },
       completed_at: { type: DataTypes.DATE, allowNull: true },
     }, {
@@ -76,6 +87,8 @@ function getEngineeringMissionModel() {
         { fields: ['status'], name: 'engineering_missions_status_idx' },
         { fields: ['mission_type'], name: 'engineering_missions_type_idx' },
         { fields: ['risk'], name: 'engineering_missions_risk_idx' },
+        { fields: ['lease_expires_at'], name: 'engineering_missions_lease_expires_idx' },
+        { fields: ['lease_worker_instance_id'], name: 'engineering_missions_lease_worker_idx' },
         { unique: true, fields: ['idempotency_key'], name: 'engineering_missions_idempotency_key_unique' },
       ],
     });

@@ -47,7 +47,28 @@ const MISSION_STATES = Object.freeze([
   'DEGRADED',
 ]);
 
-const TERMINAL_MISSION_STATES = Object.freeze(['GREEN', 'REJECTED', 'FAILED']);
+const TERMINAL_MISSION_STATES = Object.freeze(['GREEN', 'REJECTED', 'FAILED', 'CANCELLED']);
+
+/**
+ * Estados em que existe TRABALHO EM ANDAMENTO que um worker pode retomar sozinho depois de um
+ * crash. Achado real da auditoria V2: esta lista estava escrita como literal em TRÊS lugares do
+ * store (findResumableMissions, findMissionsWithExpiredLease, findMissionsWithoutLease) — mesma
+ * classe de defeito que o gate do ER V1 já registrou ao encontrar a lista de runtime items copiada
+ * 3 vezes e divergindo em silêncio. Fonte única agora.
+ *
+ * `AWAITING_APPROVAL`, `BLOCKED` e `DEGRADED` NÃO entram: os dois primeiros esperam decisão
+ * humana/novo parecer e o terceiro espera promoção — retomá-los automaticamente seria o sistema
+ * avançando por cima de uma decisão que não é dele.
+ */
+const RESUMABLE_MISSION_STATES = Object.freeze(['CREATED', 'ENRICHING', 'APPROVED', 'EXECUTING']);
+
+function isTerminalMissionState(state) {
+  return TERMINAL_MISSION_STATES.includes(state);
+}
+
+function isResumableMissionState(state) {
+  return RESUMABLE_MISSION_STATES.includes(state);
+}
 
 /**
  * Status DERIVADO exibido em UI/API/CLI (§42 — status não pode mentir).
@@ -152,6 +173,9 @@ module.exports = {
   MISSION_TYPES,
   MISSION_STATES,
   TERMINAL_MISSION_STATES,
+  RESUMABLE_MISSION_STATES,
+  isTerminalMissionState,
+  isResumableMissionState,
   DISPLAY_STATUSES,
   APPROVAL_MODES,
   APPROVAL_STATES,

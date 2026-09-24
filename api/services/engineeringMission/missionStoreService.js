@@ -15,18 +15,29 @@
  */
 
 const { Op } = require('sequelize');
+const crypto = require('crypto');
 const { sha256 } = require('../../../engine/engineeringMission/missionSpec');
 const { DEFAULT_POLICY } = require('../../../engine/engineeringMission/autoApprovalPolicy');
+const {
+  DEFAULT_LEASE_TTL_MS,
+  normalizeLease,
+  resolveLeaseState,
+  assertWriterAuthorized,
+} = require('../../../engine/engineeringMission/leasePolicy');
+const { RESUMABLE_MISSION_STATES } = require('../../../engine/engineeringMission/constants');
 const logger = require('../../utils/logger');
 
 const LOCK_STALE_MS = Number(process.env.ENGINEERING_MISSION_LOCK_STALE_MS || 15 * 60 * 1000);
+const LEASE_TTL_MS = Number(process.env.ENGINEERING_MISSION_LEASE_TTL_MS || DEFAULT_LEASE_TTL_MS);
 const SETTINGS_ID = 'default';
 
 function models() {
   // require tardio: evita ciclo de inicialização com o índice de models.
   const index = require('../../db/models');
+  const MissionModel = index.EngineeringMission();
   return {
-    Mission: index.EngineeringMission(),
+    sequelize: MissionModel.sequelize,
+    Mission: MissionModel,
     Version: index.EngineeringMissionVersion(),
     Approval: index.EngineeringMissionApproval(),
     Settings: index.EngineeringMissionSettings(),
@@ -163,15 +174,36 @@ async function updateMission(id, patch = {}) {
   return toPlain(row);
 }
 
-/** Campos JSONB acumulativos: merge em vez de sobrescrever cegamente. */
-async function mergeMissionJson(id, { resume = null, enrichment = null, preview = null } = {}) {
+/**
+ * Campos JSONB acumulativos: merge em vez de sobrescrever cegamente.
+ *
+ * Achado real (auditoria V2): esta função aceitava APENAS `resume`/`enrichment`/`preview` e
+ * DESCARTava qualquer outra chave em silêncio — a evidência de resolução de política passada pelo
+ * compilador simplesmente não era persistida, e nada avisava. Chave desconhecida agora é erro
+ * explícito (`MISSION_MERGE_UNKNOWN_KEY`), porque "merge que ignora o que recebeu" é a mesma
+ * classe de falha silenciosa que o resto deste módulo existe para impedir.
+ */
+const MERGE_JSON_KEYS = Object.freeze(['resume', 'enrichment', 'preview', 'policyResolution']);
+
+async function mergeMissionJson(id, patch = {}) {
+  const unknown = Object.keys(patch).filter((key) => !MERGE_JSON_KEYS.includes(key));
+  if (unknown.length > 0) {
+    const err = new Error(`mergeMissionJson recebeu chave(s) não suportada(s): ${unknown.join(', ')}`);
+    err.code = 'MISSION_MERGE_UNKNOWN_KEY';
+    err.unknownKeys = unknown;
+    throw err;
+  }
+  const { resume = null, enrichment = null, preview = null, policyResolution = null } = patch;
   const current = await getMission(id);
   if (!current) return null;
-  const patch = {};
-  if (resume) patch.resume_metadata = { ...(current.resume_metadata || {}), ...resume };
-  if (enrichment) patch.enrichment = { ...(current.enrichment || {}), ...enrichment };
-  if (preview) patch.preview = { ...(current.preview || {}), ...preview };
-  return updateMission(id, patch);
+  const out = {};
+  if (resume) out.resume_metadata = { ...(current.resume_metadata || {}), ...resume };
+  if (enrichment) out.enrichment = { ...(current.enrichment || {}), ...enrichment };
+  if (preview) out.preview = { ...(current.preview || {}), ...preview };
+  // §21: a resolução de política é EVIDÊNCIA — sobrevive a re-enriquecimento porque vive em
+  // resume_metadata, não só no preview que é regerado.
+  out.resume_metadata = { ...(current.resume_metadata || {}), ...(out.resume_metadata || {}), ...(policyResolution ? { policyResolution } : {}) };
+  return updateMission(id, out);
 }
 
 // ── Lock de concorrência (múltiplos workers) ───────────────────────────────────────────────────
@@ -249,11 +281,212 @@ async function unlockMission(id, workerId) {
   await Mission.update({ locked_at: null, locked_by: null }, { where });
 }
 
+// ── LEASE DISTRIBUÍDO (§30–§32) ────────────────────────────────────────────────────────────────
+//
+// Por que isto existe (achado real da auditoria V2): a autoridade de "worker vivo" era
+// `process.kill(pid, 0)`. PID não é identidade global — dois containers podem compartilhar PID e
+// uma instância em outra máquina tem PID sem significado local. Sem fencing, um worker antigo
+// podia voltar depois de perder o trabalho e gravar por cima do worker novo. O lease resolve as
+// duas coisas: identidade de INSTÂNCIA + validade temporal (takeover) + fencing token monotônico
+// (escrita). `process.kill` permanece só como otimização local de diagnóstico.
+
+/**
+ * Adquire (ou renova, se já for do mesmo worker) o lease da missão — CAS atômico no banco.
+ *
+ * A condição do UPDATE é a própria regra de takeover: livre, expirado, ou do próprio worker.
+ * `lease_fence` só cresce, então um worker que perdeu o lease tem fence desatualizado e suas
+ * escritas passam a ser rejeitadas por `updateMissionGuarded`.
+ */
+async function acquireMissionLease(missionId, { workerInstanceId, workerType = 'COMPILER', host = null, ttlMs = LEASE_TTL_MS } = {}) {
+  if (!workerInstanceId) {
+    const err = new Error('workerInstanceId é obrigatório para adquirir lease');
+    err.code = 'MISSION_LEASE_WORKER_REQUIRED';
+    throw err;
+  }
+  const { sequelize } = models();
+  const token = crypto.randomUUID();
+  const ttlSeconds = Math.max(1, Math.round(ttlMs / 1000));
+  // QueryTypes.SELECT devolve a LISTA de linhas; o RETURNING tem uma única linha.
+  const [row] = await sequelize.query(
+    `UPDATE engineering_missions
+        SET lease_worker_instance_id = :workerInstanceId,
+            lease_worker_type = :workerType,
+            lease_host = :host,
+            lease_token = :token,
+            lease_fence = lease_fence + 1,
+            lease_acquired_at = NOW(),
+            lease_expires_at = NOW() + make_interval(secs => :ttlSeconds),
+            lease_heartbeat_at = NOW(),
+            locked_at = NOW(),
+            locked_by = :legacyWorkerId,
+            updated_at = NOW()
+      WHERE id = :missionId
+        AND status NOT IN ('GREEN', 'FAILED', 'BLOCKED', 'DEGRADED', 'REJECTED', 'CANCELLED')
+        AND (lease_token IS NULL OR lease_expires_at <= NOW() OR lease_worker_instance_id = :workerInstanceId)
+      RETURNING lease_token, lease_fence, lease_expires_at, lease_worker_instance_id, lease_acquired_at, lease_heartbeat_at`,
+    {
+      replacements: {
+        missionId, workerInstanceId, workerType, host, token, ttlSeconds,
+        legacyWorkerId: `${String(workerType).toLowerCase()}-${workerInstanceId}`,
+      },
+      type: sequelize.constructor.QueryTypes.SELECT,
+    },
+  );
+  if (!row) {
+    const current = await getMission(missionId);
+    if (!current) return { acquired: false, reason: 'MISSION_NOT_FOUND', lease: null };
+    const lease = normalizeLease(current);
+    return {
+      acquired: false,
+      reason: resolveLeaseState(lease, Date.now()) === 'ACTIVE' ? 'MISSION_LEASE_HELD_BY_OTHER_WORKER' : 'MISSION_TERMINAL_OR_UNKNOWN',
+      lease,
+    };
+  }
+  return {
+    acquired: true,
+    lease: normalizeLease({
+      lease_token: row.lease_token,
+      lease_fence: row.lease_fence,
+      lease_expires_at: row.lease_expires_at,
+      lease_worker_instance_id: row.lease_worker_instance_id,
+      lease_acquired_at: row.lease_acquired_at,
+      lease_heartbeat_at: row.lease_heartbeat_at,
+    }),
+  };
+}
+
+/**
+ * Heartbeat: renova a validade do PRÓPRIO lease. Perder o lease é falha explícita
+ * (`MISSION_LEASE_LOST`) — o worker não pode continuar trabalhando "achando" que tem o lease.
+ */
+async function renewMissionLease(missionId, { leaseToken, ttlMs = LEASE_TTL_MS } = {}) {
+  const { sequelize } = models();
+  const ttlSeconds = Math.max(1, Math.round(ttlMs / 1000));
+  const [row] = await sequelize.query(
+    `UPDATE engineering_missions
+        SET lease_expires_at = NOW() + make_interval(secs => :ttlSeconds),
+            lease_heartbeat_at = NOW(),
+            updated_at = NOW()
+      WHERE id = :missionId AND lease_token = :leaseToken AND lease_expires_at > NOW()
+      RETURNING lease_token, lease_fence, lease_expires_at, lease_heartbeat_at`,
+    {
+      replacements: { missionId, leaseToken, ttlSeconds },
+      type: sequelize.constructor.QueryTypes.SELECT,
+    },
+  );
+  if (!row) {
+    const err = new Error(`lease da missão ${missionId} não está mais ativo para este worker`);
+    err.code = 'MISSION_LEASE_LOST';
+    throw err;
+  }
+  return normalizeLease(row);
+}
+
+/**
+ * Libera o lease (fim de fase / fim de trabalho). O `lease_fence` NÃO é zerado — fence monotônico
+ * é o que impede um worker antigo de "reentrar" com credencial vencida.
+ */
+async function releaseMissionLease(missionId, { leaseToken } = {}) {
+  const { Mission } = models();
+  const where = leaseToken ? { id: missionId, lease_token: leaseToken } : { id: missionId };
+  const [affected] = await Mission.update(
+    {
+      lease_token: null,
+      lease_expires_at: null,
+      lease_heartbeat_at: null,
+      lease_worker_instance_id: null,
+      lease_worker_type: null,
+      lease_host: null,
+      locked_at: null,
+      locked_by: null,
+    },
+    { where },
+  );
+  return affected > 0;
+}
+
+/** Lease atual (shape normalizado) — usado por recovery, relatório e guarda de escrita. */
+async function getMissionLease(missionId) {
+  const mission = await getMission(missionId);
+  if (!mission) return null;
+  return normalizeLease(mission);
+}
+
+/**
+ * Escrita de worker com FENCING (§32). Diferente de `updateMission`, esta porta exige que o autor
+ * ainda seja o dono do lease vigente: um worker antigo que voltou tarde recebe
+ * `MISSION_STALE_WORKER_WRITE` e NÃO consegue sobrescrever o estado da execução atual.
+ */
+async function updateMissionGuarded(missionId, patch, { leaseToken, fence = null } = {}) {
+  const { sequelize } = models();
+  const lease = await getMissionLease(missionId);
+  if (!lease) {
+    const err = new Error(`mission ${missionId} não encontrada`);
+    err.code = 'not_found';
+    throw err;
+  }
+  const authorization = assertWriterAuthorized({ lease, nowMs: Date.now(), leaseToken, fence });
+  if (!authorization.authorized) {
+    const err = new Error(`escrita recusada: ${authorization.detail}`);
+    err.code = authorization.code;
+    err.leaseStale = authorization.code === 'MISSION_STALE_WORKER_WRITE';
+    throw err;
+  }
+  // Guarda adicional no WHERE: mesmo que o lease mude entre a leitura e o UPDATE, o CAS falha.
+  // O SET toca uma coluna real sem alterar semântica — é o próprio WHERE que prova a posse.
+  const [row] = await sequelize.query(
+    `UPDATE engineering_missions
+        SET updated_at = NOW()
+      WHERE id = :missionId AND lease_token = :leaseToken AND lease_fence = :fence
+      RETURNING id`,
+    { replacements: { missionId, leaseToken, fence: lease.fence }, type: sequelize.constructor.QueryTypes.SELECT },
+  );
+  if (!row) {
+    const err = new Error('escrita recusada: lease mudou durante a operação (CAS)');
+    err.code = 'MISSION_STALE_WORKER_WRITE';
+    err.leaseStale = true;
+    throw err;
+  }
+  return updateMission(missionId, patch);
+}
+
+/**
+ * Missões não terminais cujo lease EXPIROU: trabalho abandonado por worker morto (crash, kill -9,
+ * container removido). É a entrada do recovery automático — nunca depende de chamada manual.
+ */
+async function findMissionsWithExpiredLease({ limit = 50 } = {}) {
+  const { Mission } = models();
+  const rows = await Mission.findAll({
+    where: {
+      status: { [Op.in]: RESUMABLE_MISSION_STATES },
+      lease_token: { [Op.ne]: null },
+      lease_expires_at: { [Op.lte]: new Date() },
+    },
+    order: [['lease_expires_at', 'ASC']],
+    limit,
+  });
+  return rows.map(toPlain);
+}
+
+/** Missões não terminais SEM lease (crash antes de adquirir, ou linhas legadas). */
+async function findMissionsWithoutLease({ limit = 50 } = {}) {
+  const { Mission } = models();
+  const rows = await Mission.findAll({
+    where: {
+      status: { [Op.in]: RESUMABLE_MISSION_STATES },
+      lease_token: null,
+    },
+    order: [['updated_at', 'ASC']],
+    limit,
+  });
+  return rows.map(toPlain);
+}
+
 /** Missões não terminais — insumo do resume durável após restart. */
 async function findResumableMissions({ limit = 50 } = {}) {
   const { Mission } = models();
   const rows = await Mission.findAll({
-    where: { status: { [Op.in]: ['CREATED', 'ENRICHING', 'APPROVED', 'EXECUTING'] } },
+    where: { status: { [Op.in]: RESUMABLE_MISSION_STATES } },
     order: [['updated_at', 'ASC']],
     limit,
   });
@@ -509,6 +742,14 @@ async function supersedeApprovalsForOlderVersions(missionId, keepVersion) {
 module.exports = {
   LOCK_STALE_MS,
   lockOwnerIsDead,
+  // Lease distribuído (§30–§32)
+  acquireMissionLease,
+  renewMissionLease,
+  releaseMissionLease,
+  getMissionLease,
+  updateMissionGuarded,
+  findMissionsWithExpiredLease,
+  findMissionsWithoutLease,
   getAutoApprovalPolicy,
   setAutoApprovalPolicy,
   createMission,
