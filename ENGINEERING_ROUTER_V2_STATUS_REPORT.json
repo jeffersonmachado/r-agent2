@@ -103,6 +103,36 @@
       "reason": "nenhuma credencial real do provedor no ambiente",
       "note": "o teste QWEN_LIVE ASSERE este estado (não pula); com credencial presente ele executa chamada real e exige 200/401/403/429 observado"
     },
+    "ENGINEERING_ROUTER_V2_SEAL": {
+      "state": "NO_GO",
+      "artifact": "scripts/governance/validate-engineering-router-v2.js (npm run validate:engineering-router-v2)",
+      "report": "reports/engineering-router-v2-seal-report.json",
+      "measured": "10/10 itens PASS, 0 falhas, envelope verificado (mismatches=[]), 3 pendências obrigatórias",
+      "structuralItems": [
+        "V2_LEASE_POLICY_PURE — política de lease pura (sem relógio, random ou env)",
+        "V2_PID_NAO_E_AUTORIDADE — PID não é autoridade de posse (probe de vida é aceitável, matar o dono/anterior não)",
+        "V2_POLICY_RESOLVER_SEM_MERGE_INGENUO — resolveMissionPolicy CHAMADO no enriquecimento",
+        "V2_ESTADOS_TERMINAIS_CENTRALIZADOS — TERMINAL/RESUMABLE_MISSION_STATES em constants.js",
+        "V2_RECOVERY_AUTOMATICO_NO_BOOT — runBootRecovery + startRecoveryLoop ligados no boot",
+        "V2_FK_RESTRICT_NA_MIGRATION — FK RESTRICT (nunca CASCADE) com pré-checagem de órfãos",
+        "V2_RBAC_FAIL_CLOSED — action_not_mapped ⇒ 403 e permission_checker_missing ⇒ 500",
+        "V2_ANTI_GREENWASHING_PORTA_UNICA — infraGate com RELEASE_AUTHORITATIVE e INFRA_ERROR"
+      ],
+      "runtimeItems": [
+        "V2_ANTI_GREENWASHING_VERDE — reports/anti-greenwashing-report.json verde",
+        "V2_CRASH_SIGKILL_VERDE — reports/mission-crash-recovery-report.json GO e fresco"
+      ],
+      "auditEnvelope": "sha256 de 13 artefatos + das evidências runtime, com verification que RECOMPUTA os hashes (adulteração = FAIL)",
+      "mandatoryPending": [
+        "V2-01..V2-42 — os 42 testes obrigatórios ainda não estão mapeados um a um",
+        "retomada de TASK real de execução através do crash (hoje prova a decisão, não a task)",
+        "conhecimento de engenharia indexado no domínio SYSTEM (retrieval responde vazio hoje)"
+      ],
+      "validatorDefectsFoundByItself": [
+        "falso positivo: invariante acusada em COMENTÁRIO — corrigido removendo comentários antes de avaliar",
+        "falso negativo: FK declarada via onDelete 'RESTRICT' do Sequelize não era reconhecida"
+      ]
+    },
     "ENGINEERING_ROUTER_V2": {
       "state": "NO_GO",
       "reason": "faltam itens obrigatórios da missão (§5/§6 selo+envelope, V2-01..V2-42; resíduos de §9 e §14–§18)",
