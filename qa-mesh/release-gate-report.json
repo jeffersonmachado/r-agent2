@@ -1,6 +1,6 @@
 {
   "source": "qa-mesh",
-  "executionId": "mesh-2026-09-24T05-12-13-932Z",
+  "executionId": "mesh-2026-09-24T06-23-15-821Z",
   "executionOrigin": "pipeline",
   "executionKind": null,
   "isCanonicalExecution": true,
@@ -21,9 +21,9 @@
     ]
   },
   "totals": {
-    "executionId": "mesh-2026-09-24T05-12-13-932Z",
+    "executionId": "mesh-2026-09-24T06-23-15-821Z",
     "tenantId": "system",
-    "timestamp": "2026-09-24T05:12:13.933Z",
+    "timestamp": "2026-09-24T06:23:15.821Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
     "isCanonicalExecution": true,
@@ -31,13 +31,13 @@
     "attempted": 144,
     "executed": 144,
     "total": 144,
-    "passed": 139,
+    "passed": 105,
     "fallbackPassed": 0,
-    "failed": 0,
+    "failed": 4,
     "skipped": 0,
-    "infraErrors": 1,
+    "infraErrors": 35,
     "environmentMissing": 0,
-    "flaky": 4,
+    "flaky": 0,
     "fallbackUsed": 0,
     "fallbackBlockingUsed": 0,
     "governanceDecisions": {
@@ -81,21 +81,21 @@
         "total": 2
       },
       "core": {
-        "passed": 86,
+        "passed": 61,
         "fallbackPassed": 0,
-        "failed": 0,
+        "failed": 4,
         "skipped": 0,
-        "infra_error": 0,
+        "infra_error": 25,
         "environment_missing": 0,
-        "flaky": 4,
+        "flaky": 0,
         "total": 90
       },
       "fitness": {
-        "passed": 15,
+        "passed": 9,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 0,
+        "infra_error": 6,
         "environment_missing": 0,
         "flaky": 0,
         "total": 15
@@ -131,21 +131,21 @@
         "total": 2
       },
       "omnichannel": {
-        "passed": 3,
+        "passed": 1,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 1,
+        "infra_error": 3,
         "environment_missing": 0,
         "flaky": 0,
         "total": 4
       },
       "bpmn": {
-        "passed": 1,
+        "passed": 0,
         "fallbackPassed": 0,
         "failed": 0,
         "skipped": 0,
-        "infra_error": 0,
+        "infra_error": 1,
         "environment_missing": 0,
         "flaky": 0,
         "total": 1
@@ -173,28 +173,47 @@
     },
     "goNoGo": "NO_GO",
     "reasons": [
+      "FAILURE_RATE_ABOVE_THRESHOLD",
       "CRITICAL_DOMAIN_FAILED:core",
       "CRITICAL_DOMAIN_FAILED:omnichannel",
       "BASELINE_PASS_RATE_REGRESSION",
+      "BASELINE_BLOCKING_REGRESSION",
       "BASELINE_INFRA_REGRESSION"
     ],
     "pipelineBlocked": 0,
     "failuresByDomain": {
       "core": {
-        "total": 4,
-        "blocking": 0,
+        "total": 29,
+        "blocking": 1,
         "byType": {
-          "flaky": 4
+          "functional_failure": 4,
+          "infra_error": 25
         },
-        "successRate": 0.9555555555555556
+        "successRate": 0.6777777777777778
+      },
+      "fitness": {
+        "total": 6,
+        "blocking": 1,
+        "byType": {
+          "infra_error": 6
+        },
+        "successRate": 0.6
       },
       "omnichannel": {
+        "total": 3,
+        "blocking": 1,
+        "byType": {
+          "infra_error": 3
+        },
+        "successRate": 0.25
+      },
+      "bpmn": {
         "total": 1,
         "blocking": 0,
         "byType": {
           "infra_error": 1
         },
-        "successRate": 0.75
+        "successRate": 0
       },
       "beauty": {
         "total": 0,
@@ -209,12 +228,6 @@
         "successRate": 1
       },
       "clinic": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
-      "fitness": {
         "total": 0,
         "blocking": 0,
         "byType": {},
@@ -238,12 +251,6 @@
         "byType": {},
         "successRate": 1
       },
-      "bpmn": {
-        "total": 0,
-        "blocking": 0,
-        "byType": {},
-        "successRate": 1
-      },
       "pbx": {
         "total": 0,
         "blocking": 0,
@@ -258,10 +265,18 @@
       }
     },
     "failuresByType": {
-      "flaky": 4,
-      "infra_error": 1
+      "functional_failure": 4,
+      "infra_error": 35
     },
     "topErrors": [
+      {
+        "message": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/",
+        "count": 21
+      },
+      {
+        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
+        "count": 10
+      },
       {
         "message": "Tutor não respondeu com conteúdo disponível",
         "count": 1
@@ -271,7 +286,7 @@
         "count": 1
       },
       {
-        "message": "500 Internal Server Error: Erro ao criar projeto",
+        "message": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login Call log: - navigating to \"http://localhost:5173/login\", waiting until \"domcontentloaded\"",
         "count": 1
       },
       {
@@ -279,42 +294,60 @@
         "count": 1
       },
       {
-        "message": "1 erro(s) críticos detectados na página",
+        "message": "page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document. at UtilityScript.evaluate (<anonymous>:292:16) at UtilityScript.<anonymous> (<anonymous>:1:44)",
+        "count": 1
+      },
+      {
+        "message": "[bpmn-smoke] FAIL: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/bpmn-editor",
+        "count": 1
+      },
+      {
+        "message": "❌ Erro no teste RPA: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login",
+        "count": 1
+      },
+      {
+        "message": "Tenant Intelligence smoke failed: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/tenant-intelligence",
         "count": 1
       }
     ],
-    "blockingDomains": [],
+    "blockingDomains": [
+      "core",
+      "fitness",
+      "omnichannel"
+    ],
     "changedFiles": [],
     "canonicalPromotion": {
-      "executionId": "mesh-2026-09-24T05-12-13-932Z",
-      "startedAt": "2026-09-24T05:12:13.933Z",
+      "executionId": "mesh-2026-09-24T06-23-15-821Z",
+      "startedAt": "2026-09-24T06:23:15.821Z",
       "executionOrigin": "pipeline",
       "executionKind": null,
-      "promotedAt": "2026-09-24T05:50:49.268Z",
+      "promotedAt": "2026-09-24T06:42:15.499Z",
       "registryTotal": 144,
       "goNoGo": "NO_GO",
       "criterion": "serialized_canonical_execution"
     }
   },
   "reasons": [
+    "FAILURE_RATE_ABOVE_THRESHOLD",
     "CRITICAL_DOMAIN_FAILED:core",
     "CRITICAL_DOMAIN_FAILED:omnichannel",
     "BASELINE_PASS_RATE_REGRESSION",
+    "BASELINE_BLOCKING_REGRESSION",
     "BASELINE_INFRA_REGRESSION"
   ],
   "canonicalPromotion": {
-    "executionId": "mesh-2026-09-24T05-12-13-932Z",
-    "startedAt": "2026-09-24T05:12:13.933Z",
+    "executionId": "mesh-2026-09-24T06-23-15-821Z",
+    "startedAt": "2026-09-24T06:23:15.821Z",
     "executionOrigin": "pipeline",
     "executionKind": null,
-    "promotedAt": "2026-09-24T05:50:49.268Z",
+    "promotedAt": "2026-09-24T06:42:15.499Z",
     "registryTotal": 144,
     "goNoGo": "NO_GO",
     "criterion": "serialized_canonical_execution"
   },
-  "runId": "rap-governed-20260924045619192-6ea56eb1",
+  "runId": "rap-governed-20260924055102287-2aaabc8b",
   "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
-  "sourceCommit": "219de123604c48587bd6f2dc6280cb57f2accfe6",
-  "sourceTree": "d459573ee9a18ec0fc3a18f51c9bb6060f78a6be",
-  "generatedAt": "2026-09-24T05:50:49.271Z"
+  "sourceCommit": "3e672c6bdbd2f61fcfb44f66d9fe837c415f659f",
+  "sourceTree": "459779130d5313e6759e272290c6c2f0329f512d",
+  "generatedAt": "2026-09-24T06:42:15.502Z"
 }

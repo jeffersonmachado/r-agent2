@@ -1,16 +1,23 @@
 {
-  "generatedAt": "2026-09-24T05:51:35.279Z",
-  "runId": "rap-governed-20260924055102287-2aaabc8b",
+  "generatedAt": "2026-09-24T06:42:28.779Z",
+  "runId": "rap-governed-20260924064228071-5bdacdaa",
   "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
   "finalDecision": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-001: score=7 target=10 | RAP-001: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-001: open blockers=1 | RAP-001: open gaps=1 | RAP-003: score=7 target=10 | RAP-003: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-003: open blockers=1 | RAP-003: open gaps=1 | RAP-004: score=7 target=10 | RAP-004: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-004: open blockers=1 | RAP-004: open gaps=1 | RAP-005: score=7 target=10 | RAP-005: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-005: open blockers=1 | RAP-005: open gaps=1 | RAP-006: score=6 target=10 | RAP-006: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-006: open blockers=1 | RAP-006: open gaps=1 | RAP-009: score=6 target=10 | RAP-009: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-009: open blockers=2 | RAP-009: open gaps=2 | RAP-021: score=6 target=10 | RAP-021: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-021: open blockers=2 | RAP-021: open gaps=2 | RAP-037: score=6 target=10 | RAP-037: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-037: open blockers=2 | RAP-037: open gaps=2 | RAP-038: score=6 target=10 | RAP-038: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-038: open blockers=2 | RAP-038: open gaps=2 | RAP-039: score=7 target=10 | RAP-039: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-039: open blockers=1 | RAP-039: open gaps=1 | RAP-041: score=6 target=10 | RAP-041: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-041: open blockers=2 | RAP-041: open gaps=2 | RAP-042: score=7 target=10 | RAP-042: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-042: open blockers=1 | RAP-042: open gaps=1 | RAP-043: score=7 target=10 | RAP-043: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-043: open blockers=1 | RAP-043: open gaps=1 | RAP-044: score=6 target=10 | RAP-044: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-044: open blockers=2 | RAP-044: open gaps=2 | RAP-045: score=6 target=10 | RAP-045: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-045: open blockers=2 | RAP-045: open gaps=2 | RAP-046: score=6 target=10 | RAP-046: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-046: open blockers=2 | RAP-046: open gaps=2 | RAP-047: score=7 target=10 | RAP-047: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-047: open blockers=1 | RAP-047: open gaps=1 | RAP-049: score=6 target=10 | RAP-049: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-049: open blockers=2 | RAP-049: open gaps=2 | RAP-050: score=6 target=10 | RAP-050: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-050: open blockers=1 | RAP-050: open gaps=1 | RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-054: open blockers=2 | RAP-054: open gaps=2 | RAP-056: score=7 target=10 | RAP-056: mandatory requirement failures=governed,no-known-gap | RAP-056: open gaps=1 | RAP-059: score=7 target=10 | RAP-059: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-059: open blockers=1 | RAP-059: open gaps=1 | RAP-060: score=7 target=10 | RAP-060: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-060: open blockers=1 | RAP-060: open gaps=1 | RAP-067: score=7 target=10 | RAP-067: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-067: open blockers=1 | RAP-067: open gaps=1 | scorecard: open blockers=34 | scorecard: open gaps=35 | FINAL_PROOF_NOT_PASS: NO_GO:BLOCKING_GAPS | FINAL_READINESS_NOT_PASS: NO_GO:BLOCKING_GAPS]]",
-  "candidateMaturityLevel": "ENTERPRISE_READY_GO",
-  "stageReadiness": "ENTERPRISE_READY_GO",
+  "candidateMaturityLevel": "PRODLIKE_GO",
+  "stageReadiness": "PRODLIKE_GO",
   "blockingReasons": [
-    "gap-mesh-core-flaky-business-core-biz-academy",
-    "gap-mesh-core-flaky-business-core-biz-rag-segregation",
-    "gap-mesh-core-flaky-business-core-biz-flows-editor",
-    "gap-mesh-core-flaky-business-core-biz-projects",
-    "gap-mesh-omnichannel-infra_error-fitness-matricula-leads",
+    "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-saas-storefront-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenants-business-core-biz-web-scraping",
+    "gap-mesh-fitness-infra_error-fitness-matricula-agendamento-ui-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding-fitness-matricula-renovacao",
+    "gap-mesh-omnichannel-infra_error-fitness-matricula-leads-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
+    "gap-mesh-core-functional_failure-business-core-biz-academy",
+    "gap-mesh-core-functional_failure-business-core-biz-rag-segregation",
+    "gap-mesh-core-functional_failure-business-core-biz-flows-editor",
+    "gap-mesh-core-infra_error-business-core-biz-login",
+    "gap-mesh-core-functional_failure-business-core-biz-tenant-config",
+    "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
+    "gap-mesh-core-infra_error-qa-core-auth-login",
+    "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
+    "gap-mesh-core-infra_error-rpa-example-test",
     "gap-proof-stale-fingerprints"
   ],
   "mandatoryBlockReasons": [
@@ -19,30 +26,32 @@
     "governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-001: score=7 target=10 | RAP-001: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-001: open blockers=1 | RAP-001: open gaps=1 | RAP-003: score=7 target=10 | RAP-003: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-003: open blockers=1 | RAP-003: open gaps=1 | RAP-004: score=7 target=10 | RAP-004: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-004: open blockers=1 | RAP-004: open gaps=1 | RAP-005: score=7 target=10 | RAP-005: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-005: open blockers=1 | RAP-005: open gaps=1 | RAP-006: score=6 target=10 | RAP-006: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-006: open blockers=1 | RAP-006: open gaps=1 | RAP-009: score=6 target=10 | RAP-009: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-009: open blockers=2 | RAP-009: open gaps=2 | RAP-021: score=6 target=10 | RAP-021: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-021: open blockers=2 | RAP-021: open gaps=2 | RAP-037: score=6 target=10 | RAP-037: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-037: open blockers=2 | RAP-037: open gaps=2 | RAP-038: score=6 target=10 | RAP-038: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-038: open blockers=2 | RAP-038: open gaps=2 | RAP-039: score=7 target=10 | RAP-039: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-039: open blockers=1 | RAP-039: open gaps=1 | RAP-041: score=6 target=10 | RAP-041: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-041: open blockers=2 | RAP-041: open gaps=2 | RAP-042: score=7 target=10 | RAP-042: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-042: open blockers=1 | RAP-042: open gaps=1 | RAP-043: score=7 target=10 | RAP-043: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-043: open blockers=1 | RAP-043: open gaps=1 | RAP-044: score=6 target=10 | RAP-044: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-044: open blockers=2 | RAP-044: open gaps=2 | RAP-045: score=6 target=10 | RAP-045: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-045: open blockers=2 | RAP-045: open gaps=2 | RAP-046: score=6 target=10 | RAP-046: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-046: open blockers=2 | RAP-046: open gaps=2 | RAP-047: score=7 target=10 | RAP-047: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-047: open blockers=1 | RAP-047: open gaps=1 | RAP-049: score=6 target=10 | RAP-049: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-049: open blockers=2 | RAP-049: open gaps=2 | RAP-050: score=6 target=10 | RAP-050: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-050: open blockers=1 | RAP-050: open gaps=1 | RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-054: open blockers=2 | RAP-054: open gaps=2 | RAP-056: score=7 target=10 | RAP-056: mandatory requirement failures=governed,no-known-gap | RAP-056: open gaps=1 | RAP-059: score=7 target=10 | RAP-059: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-059: open blockers=1 | RAP-059: open gaps=1 | RAP-060: score=7 target=10 | RAP-060: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-060: open blockers=1 | RAP-060: open gaps=1 | RAP-067: score=7 target=10 | RAP-067: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-067: open blockers=1 | RAP-067: open gaps=1 | scorecard: open blockers=34 | scorecard: open gaps=35 | FINAL_PROOF_NOT_PASS: NO_GO:BLOCKING_GAPS | FINAL_READINESS_NOT_PASS: NO_GO:BLOCKING_GAPS]"
   ],
   "platformMaturity": "enterprise-partial",
-  "canonicalMeshExecutionId": "mesh-2026-09-24T05-12-13-932Z",
+  "canonicalMeshExecutionId": "mesh-2026-09-24T06-23-15-821Z",
   "canonicalMeshArtifacts": {
-    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-24T05-12-13-932Z.json",
+    "historyPath": "/opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-24T06-23-15-821Z.json",
     "summaryPath": "/opt/results/ria/r-agent2/qa-mesh/meshReport.json",
     "goNoGoPath": "/opt/results/ria/r-agent2/qa-mesh/go-no-go-report.json",
     "metricsPath": "/opt/results/ria/r-agent2/qa-mesh/metrics.json"
   },
   "readiness": {
     "docsScore": 100,
-    "meshScore": 96.53,
+    "meshScore": 91.67,
     "qaWavesScore": 100,
     "replayScore": 100,
     "verticalScore": 100,
     "productionScore": 100,
-    "readinessScore": 99.13
+    "readinessScore": 97.92
   },
   "qaCoverage": {
-    "executionId": "mesh-2026-09-24T05-12-13-932Z",
-    "percent": 96.53,
-    "observedFailureFreePercent": 96.53,
+    "executionId": "mesh-2026-09-24T06-23-15-821Z",
+    "percent": 91.67,
+    "observedFailureFreePercent": 91.67,
     "registryDeclaredTotal": 144,
     "canonicalRegistryTotal": 144,
     "blockingDomains": [
+      "bpmn",
       "core",
+      "fitness",
       "omnichannel"
     ],
     "status": "NO_GO"
@@ -105,7 +114,7 @@
   "certificationStates": {
     "corePlatformReadiness": {
       "state": "CORE_GO",
-      "score": 99.13,
+      "score": 97.92,
       "scope": "plataforma (docs, QA mesh, QA waves, replay, verticais implementadas, validação production-like)",
       "doesNotInclude": [
         "market research",
@@ -228,7 +237,7 @@
     }
   },
   "docsValidation": {
-    "generatedAt": "2026-09-24T05:51:35.279Z",
+    "generatedAt": "2026-09-24T06:42:28.779Z",
     "filesScanned": 414,
     "totalMarkdownLinks": 269,
     "brokenMarkdownLinks": [],
@@ -279,12 +288,32 @@
       "backendAssertions": 62,
       "implemented": true,
       "tested": true,
-      "validated": true,
+      "validated": false,
       "productionLike": true,
-      "enterpriseReady": true,
-      "sellable": true,
-      "blockers": [],
-      "qaFailures": [],
+      "enterpriseReady": false,
+      "sellable": false,
+      "blockers": [
+        "qa_mesh_failures_open"
+      ],
+      "qaFailures": [
+        {
+          "fingerprint": "fitness::infra_error::page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
+          "domain": "fitness",
+          "failureType": "infra_error",
+          "count": 6,
+          "scenarios": [
+            "fitness-matricula-agendamento-ui",
+            "fitness-matricula-cancelamento",
+            "fitness-matricula-checkin",
+            "fitness-matricula-checkout",
+            "fitness-matricula-onboarding",
+            "fitness-matricula-renovacao"
+          ],
+          "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
+          "recurringCount": 6,
+          "suggestion": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+        }
+      ],
       "journeys": [
         "agendamento",
         "cancelamento",
@@ -297,7 +326,7 @@
         "onboarding",
         "renovacao"
       ],
-      "classification": "production-like"
+      "classification": "validated"
     },
     {
       "vertical": "food",
@@ -485,7 +514,7 @@
       "evidence": [
         "qa/enterprise/human-handoff-full-validation.json"
       ],
-      "scenarioCount": 112,
+      "scenarioCount": 113,
       "blocker": false
     },
     {
@@ -547,7 +576,91 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-flaky-business-core-biz-academy",
+      "id": "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-saas-storefront-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenants-business-core-biz-web-scraping",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-agenda",
+          "business-core-biz-agents",
+          "business-core-biz-ai-tools",
+          "business-core-biz-backup-restore",
+          "business-core-biz-bulk-messaging",
+          "business-core-biz-channel-accounts",
+          "business-core-biz-conversations-chat",
+          "business-core-biz-failed-messages",
+          "business-core-biz-faq",
+          "business-core-biz-kitchen-dispatch",
+          "business-core-biz-knowledge-base",
+          "business-core-biz-maintenance",
+          "business-core-biz-mfa",
+          "business-core-biz-plan-usage",
+          "business-core-biz-product-docs",
+          "business-core-biz-rag-documents",
+          "business-core-biz-saas-storefront",
+          "business-core-biz-segmentation",
+          "business-core-biz-sso-scim",
+          "business-core-biz-tenants",
+          "business-core-biz-web-scraping"
+        ],
+        "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-infra_error-fitness-matricula-agendamento-ui-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding-fitness-matricula-renovacao",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-agendamento-ui",
+          "fitness-matricula-cancelamento",
+          "fitness-matricula-checkin",
+          "fitness-matricula-checkout",
+          "fitness-matricula-onboarding",
+          "fitness-matricula-renovacao"
+        ],
+        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio omnichannel",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-leads",
+          "rpa-whatsapp-connections-rpa",
+          "support-inbox-nota-ui"
+        ],
+        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-functional_failure-business-core-biz-academy",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
@@ -557,7 +670,7 @@
         ],
         "sampleError": "Tutor não respondeu com conteúdo disponível"
       },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
     {
       "blockingClassification": "enterprise-blocker",
@@ -566,7 +679,7 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-flaky-business-core-biz-rag-segregation",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-rag-segregation",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
@@ -576,7 +689,7 @@
         ],
         "sampleError": "Documento não foi indexado dentro do tempo esperado"
       },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
     {
       "blockingClassification": "enterprise-blocker",
@@ -585,7 +698,7 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-flaky-business-core-biz-flows-editor",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-flows-editor",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
@@ -595,7 +708,7 @@
         ],
         "sampleError": "500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker aberto)."
       },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
     {
       "blockingClassification": "enterprise-blocker",
@@ -604,17 +717,17 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-flaky-business-core-biz-projects",
+      "id": "gap-mesh-core-infra_error-business-core-biz-login",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
       "evidence": {
         "scenarios": [
-          "business-core-biz-projects"
+          "business-core-biz-login"
         ],
-        "sampleError": "500 Internal Server Error: Erro ao criar projeto"
+        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login Call log: - navigating to \"http://localhost:5173/login\", waiting until \"domcontentloaded\""
       },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
     },
     {
       "blockingClassification": "enterprise-blocker",
@@ -623,15 +736,91 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-tenant-config",
       "severity": "high",
       "area": "qa-mesh",
-      "title": "Falha aberta no dominio omnichannel",
+      "title": "Falha aberta no dominio core",
       "evidence": {
         "scenarios": [
-          "fitness-matricula-leads"
+          "business-core-biz-tenant-config"
         ],
-        "sampleError": "1 erro(s) críticos detectados na página"
+        "sampleError": "page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document. at UtilityScript.evaluate (<anonymous>:292:16) at UtilityScript.<anonymous> (<anonymous>:1:44)"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio bpmn",
+      "evidence": {
+        "scenarios": [
+          "qa-bpmn-editor-smoke"
+        ],
+        "sampleError": "[bpmn-smoke] FAIL: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/bpmn-editor"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-qa-core-auth-login",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "qa-core-auth-login"
+        ],
+        "sampleError": "❌ Erro no teste RPA: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "qa-core-config-tenant-intelligence"
+        ],
+        "sampleError": "Tenant Intelligence smoke failed: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/tenant-intelligence"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-rpa-example-test",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "rpa-example-test"
+        ],
+        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
       },
       "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
     },
@@ -657,28 +846,30 @@
       "pbx_prod_like": true,
       "omnichannel_unified_replay": true,
       "replay_universalization": true,
-      "vertical_prod_like_coverage": true,
+      "vertical_prod_like_coverage": false,
       "proof_based_governance": true,
-      "enterprise_ready": true,
-      "autonomous_ready": true
+      "enterprise_ready": false,
+      "autonomous_ready": false
     },
     "foundationProdLikeCount": 4,
-    "verticalProdLikeCount": 7,
+    "verticalProdLikeCount": 6,
     "omnichannelScenarioCount": 7,
-    "missingProofs": []
+    "missingProofs": [
+      "vertical_prod_like_coverage"
+    ]
   },
   "proofReport": {
-    "generatedAt": "2026-09-24T05:52:20.277Z",
-    "runId": "rap-governed-20260924055102287-2aaabc8b",
+    "generatedAt": "2026-09-24T06:43:02.874Z",
+    "runId": "rap-governed-20260924064228071-5bdacdaa",
     "artifactType": "final-proof-report",
     "artifactVersion": "2.0.0",
     "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
     "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-    "scenarioFingerprint": "eaba583dcad6bfcf3c47934a61f0208c1a2b18bafa2956280078ecdeca92500d",
+    "scenarioFingerprint": "89c08841f36e3cdfc4f8b5c6c566f92c95995859526db0c58d6b777d5c32a2c5",
     "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-    "evidenceFingerprint": "c75840428aa2299df1b6e511b3da3a8996fca83d115b7fec4bcd27ba13d0f30f",
-    "chainFingerprint": "c75840428aa2299df1b6e511b3da3a8996fca83d115b7fec4bcd27ba13d0f30f",
-    "fingerprintGeneratedAt": "2026-09-24T05:52:20.277Z",
+    "evidenceFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa",
+    "chainFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa",
+    "fingerprintGeneratedAt": "2026-09-24T06:43:02.874Z",
     "fingerprintStatus": "STALE",
     "proofCoverage": {
       "total": 24,
@@ -687,7 +878,7 @@
     },
     "missingArtifacts": [],
     "invalidReferences": [],
-    "blockerCount": 5,
+    "blockerCount": 12,
     "replayCoverage": {
       "required": 8,
       "found": 8,
@@ -709,14 +900,14 @@
     },
     "prodLikeCoverage": {
       "required": 7,
-      "found": 7,
-      "percent": 100
+      "found": 6,
+      "percent": 85.71
     },
     "verticalCoverage": {
-      "status": "VALIDATED",
-      "validated": 7,
+      "status": "PARTIAL",
+      "validated": 6,
       "required": 7,
-      "percent": 100,
+      "percent": 85.71,
       "invalidClaims": []
     },
     "omnichannelCoverage": {
@@ -3078,24 +3269,34 @@
       "recurringFailures": [
         {
           "domain": "core",
-          "fingerprint": "core::flaky::Tutor não respondeu com conteúdo disponível",
+          "fingerprint": "core::infra_error::[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/",
+          "recurringCount": 21
+        },
+        {
+          "domain": "fitness",
+          "fingerprint": "fitness::infra_error::page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
+          "recurringCount": 6
+        },
+        {
+          "domain": "omnichannel",
+          "fingerprint": "omnichannel::infra_error::page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\"",
           "recurringCount": 3
         },
         {
           "domain": "core",
-          "fingerprint": "core::flaky::Documento não foi indexado dentro do tempo esperado",
-          "recurringCount": 3
+          "fingerprint": "core::functional_failure::Tutor não respondeu com conteúdo disponível",
+          "recurringCount": 2
         },
         {
           "domain": "core",
-          "fingerprint": "core::flaky::500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker aberto).",
+          "fingerprint": "core::functional_failure::Documento não foi indexado dentro do tempo esperado",
           "recurringCount": 2
         }
       ],
       "blocksAutonomous": false
     },
     "crossReportConsistency": {
-      "generatedAt": "2026-09-24T05:52:20.277Z",
+      "generatedAt": "2026-09-24T06:43:02.872Z",
       "expectedZipName": null,
       "pbxMaturity": "enterprise-real",
       "contradictions": [],
@@ -3108,7 +3309,7 @@
       "summary": "Nenhuma contradição crítica encontrada. Readiness claims são consistentes com evidências físicas."
     },
     "packageValidation": {
-      "generatedAt": "2026-09-24T05:52:20.240Z",
+      "generatedAt": "2026-09-24T06:43:02.829Z",
       "ok": false,
       "zipPath": null,
       "zipName": null,
@@ -3145,15 +3346,15 @@
       "status": "DEFERRED",
       "artifactType": "package-validation-report",
       "artifactVersion": "1.0.0",
-      "runId": "rap-governed-20260924055102287-2aaabc8b",
+      "runId": "rap-governed-20260924064228071-5bdacdaa",
       "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
-      "gitCommit": "3e672c6bdbd2f61fcfb44f66d9fe837c415f659f",
-      "gitTree": "459779130d5313e6759e272290c6c2f0329f512d"
+      "gitCommit": "e85d36b706f2add8c7f0d7f0596ac451990aa21d",
+      "gitTree": "ead87919f0d3cf8eaca2500a273cede2acd91ba8"
     },
     "evidenceManifest": {
-      "generatedAt": "2026-09-24T05:52:19.714Z",
+      "generatedAt": "2026-09-24T06:43:01.887Z",
       "runtimeRoot": "/home/jmachado/.local/share/ragent2-runtime",
-      "runId": "rap-governed-20260924055102287-2aaabc8b",
+      "runId": "rap-governed-20260924064228071-5bdacdaa",
       "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
       "artifactType": "evidence-manifest",
       "artifactVersion": "1.0.0",
@@ -3186,9 +3387,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l01-physical-queue-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "70a37a7e0a668510128013eba2a0228cf2150d8bb299ff8c9268b802f8e36bd8",
-          "checksum": "70a37a7e0a668510128013eba2a0228cf2150d8bb299ff8c9268b802f8e36bd8",
-          "timestamp": "2026-09-24T05:47:08.540Z",
+          "hash": "e34487d8d06658774fef9d1328980fe16bedbd4e2609d9f8285c73853e8e2ced",
+          "checksum": "e34487d8d06658774fef9d1328980fe16bedbd4e2609d9f8285c73853e8e2ced",
+          "timestamp": "2026-09-24T06:41:20.291Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3205,9 +3406,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l02-ura-publish-rollback-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "2fda0d3999fcb7c4d51ad0c13175eb0a0a247c9b800953bc139bd8b4ab6338f3",
-          "checksum": "2fda0d3999fcb7c4d51ad0c13175eb0a0a247c9b800953bc139bd8b4ab6338f3",
-          "timestamp": "2026-09-24T05:47:19.023Z",
+          "hash": "f206b8ebc34034aad2a94ba31719b15ea704fe4dc9a47f082d2dad0edca75ad1",
+          "checksum": "f206b8ebc34034aad2a94ba31719b15ea704fe4dc9a47f082d2dad0edca75ad1",
+          "timestamp": "2026-09-24T06:41:33.703Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3224,9 +3425,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "6a8fab102bd2d4690cdf40947f4f67f9bd79f61cd882efbc52f8e734ef4ceb4c",
-          "checksum": "6a8fab102bd2d4690cdf40947f4f67f9bd79f61cd882efbc52f8e734ef4ceb4c",
-          "timestamp": "2026-09-24T05:51:12.105Z",
+          "hash": "7fb546de08837cc252c4b75069d7588f1d006362f8cd17f5a34fa58ff62e8a86",
+          "checksum": "7fb546de08837cc252c4b75069d7588f1d006362f8cd17f5a34fa58ff62e8a86",
+          "timestamp": "2026-09-24T06:41:19.495Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3243,9 +3444,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l04-pbx-call-events-runtime-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "b33032b0a694f9cfe7de4a9bbcfdf9ce08a46f2be7da0016d7936858fe2dc197",
-          "checksum": "b33032b0a694f9cfe7de4a9bbcfdf9ce08a46f2be7da0016d7936858fe2dc197",
-          "timestamp": "2026-09-24T05:51:14.528Z",
+          "hash": "25450c15112906f801ef11dfb09cc58820d20e84d2ed18044706fb137238673a",
+          "checksum": "25450c15112906f801ef11dfb09cc58820d20e84d2ed18044706fb137238673a",
+          "timestamp": "2026-09-24T06:41:09.808Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3262,9 +3463,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "9a147284f652b014d3e0cf79d82dab32bb3f7f40f18707ac8442692ca7debe26",
-          "checksum": "9a147284f652b014d3e0cf79d82dab32bb3f7f40f18707ac8442692ca7debe26",
-          "timestamp": "2026-09-24T05:51:23.222Z",
+          "hash": "3c8e49dc450c4236fe25e5b7225f5a5f42bd8c22a11aa05372ce64db0abec8c4",
+          "checksum": "3c8e49dc450c4236fe25e5b7225f5a5f42bd8c22a11aa05372ce64db0abec8c4",
+          "timestamp": "2026-09-24T06:40:30.877Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3300,9 +3501,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-full-validation.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "d3d55b72db5b661f5e4b092556243ac4d4bf3ad9c498739dc4045e7b6e87a368",
-          "checksum": "d3d55b72db5b661f5e4b092556243ac4d4bf3ad9c498739dc4045e7b6e87a368",
-          "timestamp": "2026-09-24T05:51:04.999Z",
+          "hash": "62f10dfa29cd160f08c3fad834444341774c29a9946e4ef9435bf04a47fd880c",
+          "checksum": "62f10dfa29cd160f08c3fad834444341774c29a9946e4ef9435bf04a47fd880c",
+          "timestamp": "2026-09-24T06:12:08.981Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3323,9 +3524,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/human-handoff-screenshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "d0c7089d662c990181c753e48925d1932a80c8e729f90f1ef752873c00b13a4a",
-          "checksum": "d0c7089d662c990181c753e48925d1932a80c8e729f90f1ef752873c00b13a4a",
-          "timestamp": "2026-09-24T05:51:35.467Z",
+          "hash": "4fa259e927f2a120c675ad990cef2e2ffa01492c32266aba74748602dc3867c6",
+          "checksum": "4fa259e927f2a120c675ad990cef2e2ffa01492c32266aba74748602dc3867c6",
+          "timestamp": "2026-09-24T06:42:28.894Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3346,9 +3547,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-voice-flow-prod-like.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "c6d1dd2c9987f82522c725a9a2edcc079bb461c06725a83c719ff5e882d36392",
-          "checksum": "c6d1dd2c9987f82522c725a9a2edcc079bb461c06725a83c719ff5e882d36392",
-          "timestamp": "2026-09-24T05:51:25.233Z",
+          "hash": "81892046350abd4f838c4d291e0fa0493dab7688255fb81aa20daf23b1f78603",
+          "checksum": "81892046350abd4f838c4d291e0fa0493dab7688255fb81aa20daf23b1f78603",
+          "timestamp": "2026-09-24T06:12:34.821Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3369,9 +3570,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-asr-transcript.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "15ba9ec00a46fbcb8cf559c5e859be4a2e1fc275df7018c590b34e7165c5e8ab",
-          "checksum": "15ba9ec00a46fbcb8cf559c5e859be4a2e1fc275df7018c590b34e7165c5e8ab",
-          "timestamp": "2026-09-24T05:51:35.354Z",
+          "hash": "802944a21537f06aeaaeea6e024aa780cea71f74a14766eeaaf9e981f5d376c9",
+          "checksum": "802944a21537f06aeaaeea6e024aa780cea71f74a14766eeaaf9e981f5d376c9",
+          "timestamp": "2026-09-24T06:42:28.826Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3392,9 +3593,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-tts-prompts.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "9187be7a94c4693e9a188ae0f397360bb8b35b42a87f4e96d344f5f8345350a4",
-          "checksum": "9187be7a94c4693e9a188ae0f397360bb8b35b42a87f4e96d344f5f8345350a4",
-          "timestamp": "2026-09-24T05:51:35.356Z",
+          "hash": "3fa4b6dca772ff90065e9d07350dd2eac865dee7d851a930359f9a3174c9a287",
+          "checksum": "3fa4b6dca772ff90065e9d07350dd2eac865dee7d851a930359f9a3174c9a287",
+          "timestamp": "2026-09-24T06:42:28.826Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3415,9 +3616,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/pbx-recordings-metadata.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "da2e4e91e550eb08e114c53020840f3a4a553d4dc774be4a29a9f6c72ffd2f4c",
-          "checksum": "da2e4e91e550eb08e114c53020840f3a4a553d4dc774be4a29a9f6c72ffd2f4c",
-          "timestamp": "2026-09-24T05:51:35.356Z",
+          "hash": "7a95b650f96bf030d0542269ae6c18c1b7e46ab6fbaf7654ba74c0dbb82aacbb",
+          "checksum": "7a95b650f96bf030d0542269ae6c18c1b7e46ab6fbaf7654ba74c0dbb82aacbb",
+          "timestamp": "2026-09-24T06:42:28.826Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3438,9 +3639,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-unified-replay.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "65cd5fe779478b19e3d516adb8b2587082a3d2b2be574421e1c8033f6463543e",
-          "checksum": "65cd5fe779478b19e3d516adb8b2587082a3d2b2be574421e1c8033f6463543e",
-          "timestamp": "2026-09-24T05:51:25.235Z",
+          "hash": "59e97ff95855ea2f8debded947e0aecd08e5a49bd75b0b6cac13807534d761df",
+          "checksum": "59e97ff95855ea2f8debded947e0aecd08e5a49bd75b0b6cac13807534d761df",
+          "timestamp": "2026-09-24T06:12:34.825Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3461,9 +3662,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/omnichannel-crm-mutations.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "f28a4cdded4bc9cdc39145b32952e9060da3c37272415db54b4c98b8c0e17791",
-          "checksum": "f28a4cdded4bc9cdc39145b32952e9060da3c37272415db54b4c98b8c0e17791",
-          "timestamp": "2026-09-24T05:51:35.374Z",
+          "hash": "0db3b4af2f3d3fbf2718850ba906ab9d968ac6d6dbd680dd73172304dc0adf5b",
+          "checksum": "0db3b4af2f3d3fbf2718850ba906ab9d968ac6d6dbd680dd73172304dc0adf5b",
+          "timestamp": "2026-09-24T06:42:28.839Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [
@@ -3484,9 +3685,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/qa/enterprise/digital-twin-snapshots.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "18b032699ff19899c1dbbc4e4506f42614f1166f12dd59ff5cbe1eef707a178c",
-          "checksum": "18b032699ff19899c1dbbc4e4506f42614f1166f12dd59ff5cbe1eef707a178c",
-          "timestamp": "2026-09-24T05:51:35.394Z",
+          "hash": "298256013b28aa5539983064898fff4669ec1144535e8a0e1f08119a12972899",
+          "checksum": "298256013b28aa5539983064898fff4669ec1144535e8a0e1f08119a12972899",
+          "timestamp": "2026-09-24T06:42:28.851Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3503,9 +3704,9 @@
           "resolvedPath": "/home/jmachado/.local/share/ragent2-runtime/qa/qa-waves-enterprise-governance.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "3306b776659f0e3d3d1901712c583d633d963cbdbd658eb97f40879039f92c99",
-          "checksum": "3306b776659f0e3d3d1901712c583d633d963cbdbd658eb97f40879039f92c99",
-          "timestamp": "2026-09-24T05:51:34.826Z",
+          "hash": "7868134b97fc28db7e9be2119ec1bf1282b550e1674ff1baea685c6ff3d12a6a",
+          "checksum": "7868134b97fc28db7e9be2119ec1bf1282b550e1674ff1baea685c6ff3d12a6a",
+          "timestamp": "2026-09-24T06:12:45.815Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3522,9 +3723,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/proof-signature.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "8c314f9b74785c3663f68b7272b6018f0d6cd58a3cb00af7c11454b8a073f312",
-          "checksum": "8c314f9b74785c3663f68b7272b6018f0d6cd58a3cb00af7c11454b8a073f312",
-          "timestamp": "2026-09-24T05:51:35.474Z",
+          "hash": "bc6a5a65c3b81eac61b0e7620c4a449dfc39f5227753a858f35d72ba64f3e01e",
+          "checksum": "bc6a5a65c3b81eac61b0e7620c4a449dfc39f5227753a858f35d72ba64f3e01e",
+          "timestamp": "2026-09-24T06:42:28.899Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3541,9 +3742,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/cleanup-proof.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "24dcfae438ee4db1eeeb4ec86976f617cca280e94e6d6e5c64a1007fe838ec08",
-          "checksum": "24dcfae438ee4db1eeeb4ec86976f617cca280e94e6d6e5c64a1007fe838ec08",
-          "timestamp": "2026-09-24T05:51:35.702Z",
+          "hash": "241746a1672ff991c949bc9bb45e896f7fb1d9bc0751f7bc3b79af60d0556fa1",
+          "checksum": "241746a1672ff991c949bc9bb45e896f7fb1d9bc0751f7bc3b79af60d0556fa1",
+          "timestamp": "2026-09-24T06:42:29.060Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3560,9 +3761,9 @@
           "resolvedPath": "/opt/results/ria/r-agent2/governance/final-readiness-report.json",
           "exists": true,
           "packageRequired": true,
-          "hash": "9cd16f1710cfb8ed48cc217323949374fc998d8edf275f3931123b3e4ef48222",
-          "checksum": "9cd16f1710cfb8ed48cc217323949374fc998d8edf275f3931123b3e4ef48222",
-          "timestamp": "2026-09-24T05:03:30.874Z",
+          "hash": "b48034c90ac1d3ef3d8522f4a9ed4aa7619043d485d2a0b13ba5de6da9331c09",
+          "checksum": "b48034c90ac1d3ef3d8522f4a9ed4aa7619043d485d2a0b13ba5de6da9331c09",
+          "timestamp": "2026-09-24T06:13:17.369Z",
           "proofStatus": "valid",
           "semanticViolations": [],
           "replayLinkage": [],
@@ -3651,9 +3852,9 @@
       "fingerprints": {
         "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
         "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-        "scenarioRegistryFingerprint": "eaba583dcad6bfcf3c47934a61f0208c1a2b18bafa2956280078ecdeca92500d",
+        "scenarioRegistryFingerprint": "89c08841f36e3cdfc4f8b5c6c566f92c95995859526db0c58d6b777d5c32a2c5",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "c75840428aa2299df1b6e511b3da3a8996fca83d115b7fec4bcd27ba13d0f30f"
+        "chainFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa"
       }
     },
     "fingerprintChain": {
@@ -3665,16 +3866,16 @@
       "registered": {
         "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
         "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-        "scenarioRegistryFingerprint": "be2c6fe8535d58bb1dc15e3fbc6d6b759bd551b7d3fa65d9abe33257080347d1",
+        "scenarioRegistryFingerprint": "eaba583dcad6bfcf3c47934a61f0208c1a2b18bafa2956280078ecdeca92500d",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "ffe5ae1e9ad76ffc0b9853d391516560a8430333b1e4ca9f957acf9c56f990f1"
+        "chainFingerprint": "c75840428aa2299df1b6e511b3da3a8996fca83d115b7fec4bcd27ba13d0f30f"
       },
       "current": {
         "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
         "inventoryFingerprint": "43d60c711310a7d49783c0b1b134e50524b2f5cd2413549c09c27db46f1a36cd",
-        "scenarioRegistryFingerprint": "eaba583dcad6bfcf3c47934a61f0208c1a2b18bafa2956280078ecdeca92500d",
+        "scenarioRegistryFingerprint": "89c08841f36e3cdfc4f8b5c6c566f92c95995859526db0c58d6b777d5c32a2c5",
         "policyFingerprint": "4105767b265223362456fabfab89eef312e12d777e55af409f5eb9b1bb8548fb",
-        "chainFingerprint": "c75840428aa2299df1b6e511b3da3a8996fca83d115b7fec4bcd27ba13d0f30f"
+        "chainFingerprint": "e7d2c78b123fed79db53903f12416609c558cc26e1b2bfa94072d9e9f10e70fa"
       }
     },
     "proofStatus": "STALE",
@@ -3775,13 +3976,13 @@
         "enterprise-ready": "ENTERPRISE_READY_GO",
         "autonomous-ready": "AUTONOMOUS_READY_GO"
       },
-      "currentLevel": "enterprise-ready",
+      "currentLevel": "prod-like",
       "blockersClear": false,
       "gateChecks": {
         "blockersClear": false,
         "proofsComplete": true,
         "replayCoverageOk": true,
-        "prodLikeCoverageOk": true,
+        "prodLikeCoverageOk": false,
         "omnichannelCoverageOk": true,
         "PBXCoverageOk": true,
         "pbxFullyReal": true,
@@ -3832,14 +4033,14 @@
         "suggestedFix": "Regerar as evidencias e o proof sobre o codigo atual; proof STALE nunca conta como GO."
       }
     ],
-    "candidateMaturityLevel": "ENTERPRISE_READY_GO",
-    "stageReadiness": "ENTERPRISE_READY_GO",
+    "candidateMaturityLevel": "PRODLIKE_GO",
+    "stageReadiness": "PRODLIKE_GO",
     "blockingReasons": [
       "gap-proof-stale-fingerprints"
     ]
   },
   "operationalDigitalTwin": {
-    "status": "complete",
+    "status": "partial",
     "description": "Operational Digital Twin representa o trace viewer operacional enterprise com replay, decisoes de IA, acoes humanas e estados internos.",
     "observedSignals": [
       "chronological_replays",
@@ -3865,8 +4066,8 @@
     ]
   },
   "scenarioQuality": {
-    "scenarioCount": 518,
-    "executableScenarioCount": 484,
+    "scenarioCount": 519,
+    "executableScenarioCount": 485,
     "executableJourneyIds": [
       "0cf4b599-167e-419a-907d-20104fa295c8",
       "0e4ca104-adfe-473d-89ad-785c5e8f24d7",
@@ -3951,6 +4152,7 @@
       "agent-validation-qa-agent-20260923234728",
       "agent-validation-qa-agent-20260924004242",
       "agent-validation-qa-agent-20260924051334",
+      "agent-validation-qa-agent-20260924062432",
       "agent_factory",
       "agent_marketplace",
       "agent_orchestrator",
@@ -4064,7 +4266,7 @@
     "Governance policies versioned under governance/."
   ],
   "nowItems": [
-    "Close Core and Omnichannel failures reported by qa-mesh/intelligence/latest.json.",
+    "Close Bpmn, Core, Fitness and Omnichannel failures reported by qa-mesh/intelligence/latest.json.",
     "Produce a full omnichannel replay proving WhatsApp -> AI -> handoff -> human -> backend mutation chronology.",
     "Eliminate broken document references and retire legacy docs as non-canonical."
   ],
@@ -4082,11 +4284,18 @@
     "Operational smokes L01-L05 remain available as evidence-backed platform pillars."
   ],
   "noGoReasons": [
-    "Falha aberta no dominio core [gap-mesh-core-flaky-business-core-biz-academy]",
-    "Falha aberta no dominio core [gap-mesh-core-flaky-business-core-biz-rag-segregation]",
-    "Falha aberta no dominio core [gap-mesh-core-flaky-business-core-biz-flows-editor]",
-    "Falha aberta no dominio core [gap-mesh-core-flaky-business-core-biz-projects]",
-    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-infra_error-fitness-matricula-leads]",
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-saas-storefront-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenants-business-core-biz-web-scraping]",
+    "Falha aberta no dominio fitness [gap-mesh-fitness-infra_error-fitness-matricula-agendamento-ui-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding-fitness-matricula-renovacao]",
+    "Falha aberta no dominio omnichannel [gap-mesh-omnichannel-infra_error-fitness-matricula-leads-rpa-whatsapp-connections-rpa-support-inbox-nota-ui]",
+    "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-academy]",
+    "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-rag-segregation]",
+    "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-flows-editor]",
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-business-core-biz-login]",
+    "Falha aberta no dominio core [gap-mesh-core-functional_failure-business-core-biz-tenant-config]",
+    "Falha aberta no dominio bpmn [gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke]",
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-qa-core-auth-login]",
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-qa-core-config-tenant-intelligence]",
+    "Falha aberta no dominio core [gap-mesh-core-infra_error-rpa-example-test]",
     "Fingerprint chain divergente — codigo/cenarios/politicas mudaram apos o proof (STALE) [gap-proof-stale-fingerprints]"
   ],
   "productionReadiness": {
@@ -4106,9 +4315,11 @@
     ]
   },
   "enterpriseReadiness": {
-    "status": "enterprise-ready",
+    "status": "prod-like",
     "evidenceBased": true,
-    "missingProofs": []
+    "missingProofs": [
+      "vertical_prod_like_coverage"
+    ]
   },
   "automaticGapBacklog": [
     {
@@ -4118,7 +4329,91 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-flaky-business-core-biz-academy",
+      "id": "gap-mesh-core-infra_error-business-core-biz-agenda-business-core-biz-agents-business-core-biz-ai-tools-business-core-biz-backup-restore-business-core-biz-bulk-messaging-business-core-biz-channel-accounts-business-core-biz-conversations-chat-business-core-biz-failed-messages-business-core-biz-faq-business-core-biz-kitchen-dispatch-business-core-biz-knowledge-base-business-core-biz-maintenance-business-core-biz-mfa-business-core-biz-plan-usage-business-core-biz-product-docs-business-core-biz-rag-documents-business-core-biz-saas-storefront-business-core-biz-segmentation-business-core-biz-sso-scim-business-core-biz-tenants-business-core-biz-web-scraping",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "business-core-biz-agenda",
+          "business-core-biz-agents",
+          "business-core-biz-ai-tools",
+          "business-core-biz-backup-restore",
+          "business-core-biz-bulk-messaging",
+          "business-core-biz-channel-accounts",
+          "business-core-biz-conversations-chat",
+          "business-core-biz-failed-messages",
+          "business-core-biz-faq",
+          "business-core-biz-kitchen-dispatch",
+          "business-core-biz-knowledge-base",
+          "business-core-biz-maintenance",
+          "business-core-biz-mfa",
+          "business-core-biz-plan-usage",
+          "business-core-biz-product-docs",
+          "business-core-biz-rag-documents",
+          "business-core-biz-saas-storefront",
+          "business-core-biz-segmentation",
+          "business-core-biz-sso-scim",
+          "business-core-biz-tenants",
+          "business-core-biz-web-scraping"
+        ],
+        "sampleError": "[business-qa] erro fatal: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-fitness-infra_error-fitness-matricula-agendamento-ui-fitness-matricula-cancelamento-fitness-matricula-checkin-fitness-matricula-checkout-fitness-matricula-onboarding-fitness-matricula-renovacao",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio fitness",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-agendamento-ui",
+          "fitness-matricula-cancelamento",
+          "fitness-matricula-checkin",
+          "fitness-matricula-checkout",
+          "fitness-matricula-onboarding",
+          "fitness-matricula-renovacao"
+        ],
+        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads-rpa-whatsapp-connections-rpa-support-inbox-nota-ui",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio omnichannel",
+      "evidence": {
+        "scenarios": [
+          "fitness-matricula-leads",
+          "rpa-whatsapp-connections-rpa",
+          "support-inbox-nota-ui"
+        ],
+        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-functional_failure-business-core-biz-academy",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
@@ -4128,7 +4423,7 @@
         ],
         "sampleError": "Tutor não respondeu com conteúdo disponível"
       },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
     {
       "blockingClassification": "enterprise-blocker",
@@ -4137,7 +4432,7 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-flaky-business-core-biz-rag-segregation",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-rag-segregation",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
@@ -4147,7 +4442,7 @@
         ],
         "sampleError": "Documento não foi indexado dentro do tempo esperado"
       },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
     {
       "blockingClassification": "enterprise-blocker",
@@ -4156,7 +4451,7 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-flaky-business-core-biz-flows-editor",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-flows-editor",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
@@ -4166,7 +4461,7 @@
         ],
         "sampleError": "500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker aberto)."
       },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
     },
     {
       "blockingClassification": "enterprise-blocker",
@@ -4175,17 +4470,17 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-core-flaky-business-core-biz-projects",
+      "id": "gap-mesh-core-infra_error-business-core-biz-login",
       "severity": "high",
       "area": "qa-mesh",
       "title": "Falha aberta no dominio core",
       "evidence": {
         "scenarios": [
-          "business-core-biz-projects"
+          "business-core-biz-login"
         ],
-        "sampleError": "500 Internal Server Error: Erro ao criar projeto"
+        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login Call log: - navigating to \"http://localhost:5173/login\", waiting until \"domcontentloaded\""
       },
-      "suggestedFix": "Transformar waits implícitos em sincronização semântica e revisar estado compartilhado."
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
     },
     {
       "blockingClassification": "enterprise-blocker",
@@ -4194,15 +4489,91 @@
         "assertions": [],
         "replayEnrichments": []
       },
-      "id": "gap-mesh-omnichannel-infra_error-fitness-matricula-leads",
+      "id": "gap-mesh-core-functional_failure-business-core-biz-tenant-config",
       "severity": "high",
       "area": "qa-mesh",
-      "title": "Falha aberta no dominio omnichannel",
+      "title": "Falha aberta no dominio core",
       "evidence": {
         "scenarios": [
-          "fitness-matricula-leads"
+          "business-core-biz-tenant-config"
         ],
-        "sampleError": "1 erro(s) críticos detectados na página"
+        "sampleError": "page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document. at UtilityScript.evaluate (<anonymous>:292:16) at UtilityScript.<anonymous> (<anonymous>:1:44)"
+      },
+      "suggestedFix": "Inspecionar o artefato do cenário e corrigir a causa raiz antes de reexecutar a wave."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-bpmn-infra_error-qa-bpmn-editor-smoke",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio bpmn",
+      "evidence": {
+        "scenarios": [
+          "qa-bpmn-editor-smoke"
+        ],
+        "sampleError": "[bpmn-smoke] FAIL: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/bpmn-editor"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-qa-core-auth-login",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "qa-core-auth-login"
+        ],
+        "sampleError": "❌ Erro no teste RPA: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/login"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-qa-core-config-tenant-intelligence",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "qa-core-config-tenant-intelligence"
+        ],
+        "sampleError": "Tenant Intelligence smoke failed: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/tenant-intelligence"
+      },
+      "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
+    },
+    {
+      "blockingClassification": "enterprise-blocker",
+      "suggestions": {
+        "journeys": [],
+        "assertions": [],
+        "replayEnrichments": []
+      },
+      "id": "gap-mesh-core-infra_error-rpa-example-test",
+      "severity": "high",
+      "area": "qa-mesh",
+      "title": "Falha aberta no dominio core",
+      "evidence": {
+        "scenarios": [
+          "rpa-example-test"
+        ],
+        "sampleError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/ Call log: - navigating to \"http://localhost:5173/\", waiting until \"domcontentloaded\""
       },
       "suggestedFix": "Priorizar correção de browser/runtime/rede antes de investigar regra de negócio."
     },
@@ -4222,7 +4593,7 @@
   ],
   "journeyCoverage": {
     "beauty": {
-      "generatedAt": "2026-09-24T05:51:35.279Z",
+      "generatedAt": "2026-09-24T06:42:28.779Z",
       "vertical": "beauty",
       "maturity": "production-like",
       "replaySupported": true,
@@ -4686,9 +5057,9 @@
       ]
     },
     "fitness": {
-      "generatedAt": "2026-09-24T05:51:35.279Z",
+      "generatedAt": "2026-09-24T06:42:28.779Z",
       "vertical": "fitness",
-      "maturity": "production-like",
+      "maturity": "validated",
       "replaySupported": true,
       "journeys": [
         {
@@ -7536,7 +7907,7 @@
       ]
     },
     "food": {
-      "generatedAt": "2026-09-24T05:51:35.279Z",
+      "generatedAt": "2026-09-24T06:42:28.779Z",
       "vertical": "food",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7826,7 +8197,7 @@
       ]
     },
     "services": {
-      "generatedAt": "2026-09-24T05:51:35.279Z",
+      "generatedAt": "2026-09-24T06:42:28.779Z",
       "vertical": "services",
       "maturity": "production-like",
       "replaySupported": true,
@@ -7984,7 +8355,7 @@
       ]
     },
     "clinic": {
-      "generatedAt": "2026-09-24T05:51:35.279Z",
+      "generatedAt": "2026-09-24T06:42:28.779Z",
       "vertical": "clinic",
       "maturity": "production-like",
       "replaySupported": true,
@@ -8126,7 +8497,7 @@
       ]
     },
     "market": {
-      "generatedAt": "2026-09-24T05:51:35.279Z",
+      "generatedAt": "2026-09-24T06:42:28.779Z",
       "vertical": "market",
       "maturity": "production-like",
       "replaySupported": true,
@@ -8294,7 +8665,7 @@
       ]
     },
     "bakery": {
-      "generatedAt": "2026-09-24T05:51:35.279Z",
+      "generatedAt": "2026-09-24T06:42:28.779Z",
       "vertical": "bakery",
       "maturity": "production-like",
       "replaySupported": true,
@@ -9010,7 +9381,7 @@
       ]
     },
     "core": {
-      "generatedAt": "2026-09-24T05:51:35.279Z",
+      "generatedAt": "2026-09-24T06:42:28.779Z",
       "vertical": "core",
       "kind": "system",
       "maturity": "system",
