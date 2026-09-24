@@ -346,3 +346,44 @@ publicação   8/8 PASS, recibo PUBLISHED_VERIFIED, tag remota conferida
 - Verificação rígida offline do payload (`dist/verifier/check-dist-clean.sh` →
   `verify-enterprise-governance-v2.sh` → `verify-payload-governance.js`, autocontido):
   `CHECK-DIST-CLEAN: PASS` (exit 0).
+
+## POST_RELEASE_HARDENING (registrado, NÃO implementado nesta missão)
+
+1. **`vite preview` não serve rotas SPA** — `frontend/vite.config.mjs` registra o plugin
+   `frontend-routes` apenas em `configureServer` (DEV) e o `bypass` do proxy `^/workspace`
+   termina a resposta. `pipeline/runFullValidation.js:ensureRuntime()` sobe `npm run preview`
+   quando a 5173 está livre → o run roda com runtime quebrado **em silêncio**.
+   Endurecer: `configurePreviewServer` com a mesma classificação de rotas, ou falhar explícito.
+2. **Asterisk: `tenants.conf` é copiado para tmpfs só no start** e `dialplan reload` via AMI não
+   relê o arquivo do host → contexto de tenant novo nunca entra em vigor sem restart do
+   container. Endurecer: montar `conf/` diretamente (ou re-render no reload).
+3. **Smoke L-03 escolhe o tenant mais NOVO não-`system`** (`/super-admin/tenants`) → qualquer
+   tenant de debug criado por teste E2E vira o alvo da prova de PBX. Endurecer: tenant explícito
+   obrigatório (`TEST_PBX_TENANT_ID`) ou excluir tenants de debug por contrato.
+4. **Smoke L-04 depende de `docker compose -f docker-compose.test.yml exec api`** — serviço que
+   não existe na estação de dev; sem `PBX_CALL_EVENTS_RUNTIME_INSERT_MODE=direct` a etapa 1/12
+   da convergência aborta.
+5. **Variáveis de runtime obrigatórias não são validadas no início do ciclo** (`PBX_*`,
+   `TEST_FRONTEND_URL`, rag-service vivo em 8001): a convergência falha tarde (etapa 1/12 ou
+   8.5/12) em vez de fail-fast. Endurecer: preflight explícito em `converge-governance.sh`.
+6. **O pipeline de empacotamento não é re-executável sobre sobras do `dist/`**: um segundo ciclo
+   consecutivo encontrou ZIP/manifest do ciclo anterior no root de `dist/` e o
+   `package-validator` foi invocado com o nome do ciclo antigo
+   (`artifact_manifest_invalid: .../r-agent2-20260923-213255.zip: Unexpected token 'P', "PK"...`).
+   Nesta missão o ciclo só passou após limpeza manual do estado transitório
+   (`dist/r-agent2-*.zip`, `dist/*.manifest.json`, `dist/candidate/*`, `dist/governance-artifacts/`)
+   **preservando** `dist/archive/` e o envelope do Router. Endurecer: `zip:release` deve limpar
+   o estado transitório por contrato (fail-closed se houver ZIP de ciclo anterior sem
+   `published`/`archived` correspondente).
+7. **Pipeline de release concorrente pode restaurar o worktree principal** (já registrado em
+   `POST_RELEASE_MODEL_ROUTER_BACKLOG.md`) — **reproduzido nesta missão**: dois arquivos de source
+   foram revertidos para um estado ~7 commits anterior, removendo a integração do Router do
+   agregado. Ver "REGRESSION encontrada no worktree" acima.
+8. **Qualquer arquivo sob raízes de fingerprint `scripts/**` (`*.js|*.cjs|*.sh`), `api/`,
+   `governance/proof-engine/`, `qa/contracts` invalida o governed run em curso**
+   (`RUN_SOURCE_DRIFT`) — inclusive um arquivo NOVO de ferramenta de apoio. Medido nesta missão.
+   Endurecer: preflight avisando ao criar/editar arquivos sob essas raízes com run ativo.
+9. **`reports/rag-domain-segregation-report.json` depende do rag-service vivo em 8001**; com o
+   serviço fora, o coverage gate reprova honestamente (`rag_runtime_unreachable`) e a
+   convergência aborta em 8.5/12. O gerador já carrega o `.env` sozinho (guarda
+   `gateChildProcessEnv.test.js`), o que falta é o serviço no ar.
