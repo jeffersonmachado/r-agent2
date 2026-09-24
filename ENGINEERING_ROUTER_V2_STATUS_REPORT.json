@@ -145,13 +145,18 @@
     },
     "RAP_FINAL_RELEASE": {
       "state": "NO_GO",
+      "revalidatedAt": "2026-09-24",
       "measured": [
         "qa-mesh canônico: NO_GO",
-        "coverage gate: NO_GO (ponderado 93.7; 48 jornadas críticas falhando; criticalJourneysValidated 78.6; criticalOutcomesValidated 90)",
+        "coverage gate: NO_GO (exit=1) — jornadas em FAILED/BLOCKED medidas diretamente",
+        "journey:flows_editor_rpa_replay: FAILED (business-core-biz-flows-editor)",
+        "journey:rag_documents: FAILED (business-core-biz-rag-documents, business-core-biz-rag-segregation)",
+        "journey:login: BLOCKED (business-core-biz-login, qa-core-auth-login)",
+        "replay governance: PASS (verificado nos dois modos de ambiente)",
         "18 rotas api:GET:/api/benchmark-research/* órfãs no grafo de rastreabilidade",
-        "dist/ com resíduo (81 arquivos)"
+        "dist/ com resíduo"
       ],
-      "insight": "parte do NO_GO é artefato de ambiente: REPLAY_SIGNING_KEY e RAG_INTERNAL_TOKEN existem no .env mas não estavam exportados para os validadores. Reexecutar com 'set -a && . ./.env && set +a' antes de concluir NO_GO definitivo."
+      "nextStep": "as jornadas acima são o alvo: sem elas verdes, o release da plataforma permanece NO_GO independentemente do ENGINEERING ROUTER V2."
     }
   },
   "measuredTotals": {
