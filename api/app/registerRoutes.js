@@ -39,6 +39,8 @@ const { createQaExpressRouter } = require('../composition/qa');
 const { createQaWavesExpressRouter } = require('../composition/qa-waves');
 const { createQaMeshExpressRouter } = require('../composition/qa-mesh');
 const { createEngineeringRouterExpressRouter } = require('../composition/engineering-router');
+// Engineering Mission Compiler / enriquecimento (DEVELOPMENT-only).
+const { createEngineeringMissionExpressRouter } = require('../composition/engineering-missions');
 // §M8: administração do MCP Control Plane (DEVELOPMENT-only).
 const { createMcpExpressRouter } = require('../composition/mcp');
 const { createDemoExpressRouter } = require('../composition/demo');
@@ -138,6 +140,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
   const qaWavesRouter = createQaWavesExpressRouter();
   const qaMeshRouter = createQaMeshExpressRouter();
   const engineeringRouterRouter = createEngineeringRouterExpressRouter();
+  const engineeringMissionRouter = createEngineeringMissionExpressRouter();
   // Pesquisa de benchmarks: superfície de engenharia (DEVELOPMENT).
   const benchmarkResearchRouter = createBenchmarkResearchExpressRouter({ buildCoreRoutingContext });
   // Descoberta de mercado: superfície de engenharia (DEVELOPMENT), tenant SYSTEM.
@@ -213,6 +216,7 @@ function registerRoutes(app, { buildCoreRoutingContext, buildPlatformRoutingCont
     qaWavesRouter,
     qaMeshRouter,
     engineeringRouterRouter,
+    engineeringMissionRouter,
     benchmarkResearchRouter,
     marketDiscoveryRouter,
     mcpRouter,

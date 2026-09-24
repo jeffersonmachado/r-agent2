@@ -155,6 +155,41 @@ const MODEL_CAPABILITIES = Object.freeze({
     contextClass: 'EXTENDED',
     costClass: 'HIGH',
   }),
+  // Qwen (Alibaba Cloud) — família com múltiplos modelos/versões, exatamente como qualquer outro
+  // provider: as entradas abaixo são elegibilidade DECLARADA por capability, não garantia de
+  // disponibilidade. Um `providerId:modelId` só participa do roteamento se estiver aqui
+  // (allowlist estática), e mesmo estando aqui continua sujeito a `enabled` (decisão do
+  // operador em `ai_providers`), `hasCredential` (credencial do tenant) e `available`
+  // (falha real recente do modelId específico registrada em `modelAvailabilityStore`) — os
+  // mesmos quatro filtros aplicados a todos os providers em `modelSelector.evaluateCandidate`.
+  // Nenhum destes nomes é referenciado em código de roteamento: o Router resolve por capability.
+  'qwen:qwen3-coder-plus': entry({
+    roles: ['CODER'],
+    capabilities: [...CODING_CORE, 'TEST_GENERATION', 'LONG_CONTEXT', 'FRONTEND'],
+    contextClass: 'LONG',
+    costClass: 'MEDIUM',
+  }),
+  'qwen:qwen3-coder-flash': entry({
+    roles: ['CODER'],
+    capabilities: ['CODING', 'DEBUGGING', 'TEST_GENERATION'],
+    contextClass: 'STANDARD',
+    costClass: 'LOW',
+  }),
+  // qwen3-max: modelo generalista de raciocínio — cobre CODER, REVIEWER e ENRICHER, o que dá ao
+  // Mission Compiler uma opção Qwen real quando a policy exigir enriquecimento por provider
+  // diferente do coder.
+  'qwen:qwen3-max': entry({
+    roles: ['CODER', 'REVIEWER', 'ENRICHER'],
+    capabilities: [...CODING_CORE, ...REVIEW_CORE, 'TEST_GENERATION', 'LONG_CONTEXT', 'DATABASE', 'FRONTEND'],
+    contextClass: 'EXTENDED',
+    costClass: 'MEDIUM',
+  }),
+  'qwen:qwen-plus': entry({
+    roles: ['REVIEWER', 'ENRICHER'],
+    capabilities: ['CODE_REVIEW', 'ARCHITECTURE', 'GOVERNANCE', 'CODING'],
+    contextClass: 'LONG',
+    costClass: 'LOW',
+  }),
 });
 
 function keyOf(providerId, modelId) {

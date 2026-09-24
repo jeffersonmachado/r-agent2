@@ -208,6 +208,11 @@ const getEngineeringModelCatalogEntry = require('./EngineeringModelCatalogEntry'
 const getEngineeringOperation = require('./EngineeringOperation');
 const getEngineeringReview = require('./EngineeringReview');
 const getEngineeringTelemetryEvent = require('./EngineeringTelemetryEvent');
+const getEngineeringMission = require('./EngineeringMission');
+const getEngineeringMissionVersion = require('./EngineeringMissionVersion');
+const getEngineeringMissionApproval = require('./EngineeringMissionApproval');
+const getEngineeringMissionSettings = require('./EngineeringMissionSettings');
+const getEngineeringMissionReview = require('./EngineeringMissionReview');
 const getIntegrationConnection = require('./IntegrationConnection');
 const getIntegrationObjectLink = require('./IntegrationObjectLink');
 const getIntegrationSyncState = require('./IntegrationSyncState');
@@ -416,6 +421,11 @@ const EngineeringModelCatalogEntry = () => getEngineeringModelCatalogEntry();
 const EngineeringOperation = () => getEngineeringOperation();
 const EngineeringReview = () => getEngineeringReview();
 const EngineeringTelemetryEvent = () => getEngineeringTelemetryEvent();
+const EngineeringMission = () => getEngineeringMission();
+const EngineeringMissionVersion = () => getEngineeringMissionVersion();
+const EngineeringMissionApproval = () => getEngineeringMissionApproval();
+const EngineeringMissionSettings = () => getEngineeringMissionSettings();
+const EngineeringMissionReview = () => getEngineeringMissionReview();
 const IntegrationConnection = () => getIntegrationConnection();
 const IntegrationObjectLink = () => getIntegrationObjectLink();
 const IntegrationSyncState = () => getIntegrationSyncState();
@@ -895,6 +905,18 @@ function defineRelationships() {
   EngineeringReviewModel.belongsTo(EngineeringAttemptModel, { foreignKey: 'attempt_id', as: 'attempt' });
   EngineeringTaskModel.hasMany(EngineeringTelemetryEventModel, { foreignKey: 'task_id', as: 'telemetryEvents' });
   EngineeringTelemetryEventModel.belongsTo(EngineeringTaskModel, { foreignKey: 'task_id', as: 'task' });
+
+  // Engineering Mission Compiler: mission → versões de MissionSpec → aprovações.
+  const EngineeringMissionModel = EngineeringMission();
+  const EngineeringMissionVersionModel = EngineeringMissionVersion();
+  const EngineeringMissionApprovalModel = EngineeringMissionApproval();
+
+  EngineeringMissionModel.hasMany(EngineeringMissionVersionModel, { foreignKey: 'mission_id', as: 'versions' });
+  EngineeringMissionVersionModel.belongsTo(EngineeringMissionModel, { foreignKey: 'mission_id', as: 'mission' });
+  EngineeringMissionModel.hasMany(EngineeringMissionApprovalModel, { foreignKey: 'mission_id', as: 'approvals' });
+  EngineeringMissionApprovalModel.belongsTo(EngineeringMissionModel, { foreignKey: 'mission_id', as: 'mission' });
+  // A task de execução é ligada por id (sem FK rígida: a missão pode sobreviver a várias tasks).
+  EngineeringMissionModel.belongsTo(EngineeringTaskModel, { foreignKey: 'linked_task_id', as: 'linkedTask', constraints: false });
 }
 
 module.exports = {
@@ -1299,6 +1321,16 @@ module.exports = {
   EngineeringOperation,
   EngineeringReview,
   EngineeringTelemetryEvent,
+  EngineeringMission,
+  EngineeringMissionVersion,
+  EngineeringMissionApproval,
+  getEngineeringMission,
+  getEngineeringMissionVersion,
+  getEngineeringMissionApproval,
+  EngineeringMissionSettings,
+  getEngineeringMissionSettings,
+  EngineeringMissionReview,
+  getEngineeringMissionReview,
   getEngineeringTask,
   getEngineeringAttempt,
   getEngineeringTestRun,

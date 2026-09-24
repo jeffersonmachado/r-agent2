@@ -118,6 +118,44 @@ const AI_PROVIDERS = {
       { value: 'gemma2-9b-it', label: 'Gemma 2 9B' },
     ],
   },
+  // Qwen (Alibaba Cloud / Model Studio) — provider de PRIMEIRA CLASSE desta arquitetura, não uma
+  // integração paralela: entra pelo MESMO registry estático que alimenta
+  // `aiProviderService.initializeAiProviders` (registro real na engine, com circuit breaker e
+  // timeout do AI Control Plane), o MESMO `aiProviderRegistryService.ensureBuiltinProviders`
+  // (catálogo governado em `ai_providers`), a MESMA resolução de credencial por tenant
+  // (`tenantAIService.getDecryptedAPIKey`) e o MESMO inventário de modelos consumido pelo
+  // frontend. Nenhum provider/modelo Qwen é referenciado por nome em nenhum outro ponto do
+  // código: o Engineering Model Router só o enxerga via `modelCapabilities.js` (capability) e o
+  // Mission Compiler via capability/policy.
+  //
+  // Endpoint: modo OpenAI-compatible do Model Studio (`/compatible-mode/v1`, chat/completions com
+  // Bearer). A credencial é por tenant (`provider = 'qwen'`), nunca lida aqui — este módulo é puro
+  // e não toca env/banco/segredo.
+  //
+  // `models` é o CATÁLOGO DE APRESENTAÇÃO (dropdown/labels), nunca a autoridade de elegibilidade:
+  // um modelo listado aqui e ausente da allowlist de `modelCapabilities.js` NÃO é roteável, e um
+  // modelo aqui listado mas não confirmado pelo discovery real da credencial do tenant cai em
+  // PROVIDER_NO_CREDENTIAL/MODEL_UNAVAILABLE no roteamento — nunca é assumido como disponível só
+  // porque o nome aparece nesta lista (mesma política aplicada a OpenAI/DeepSeek/Kimi).
+  //
+  // Sem credencial configurada: o provider fica registrado mas indisponível (`AI_PROVIDER_NOT_CONFIGURED`
+  // na primeira invocação real), health/status reportam a causa e o Router continua operando com
+  // os demais providers — ausência de credencial Qwen nunca é erro estrutural de boot.
+  qwen: {
+    id: 'qwen',
+    label: 'Qwen (Alibaba Cloud)',
+    kind: 'openai-compatible',
+    baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+    defaultModel: 'qwen3-max',
+    models: [
+      { value: 'qwen3-max', label: 'Qwen3 Max' },
+      { value: 'qwen3-coder-plus', label: 'Qwen3 Coder Plus' },
+      { value: 'qwen3-coder-flash', label: 'Qwen3 Coder Flash' },
+      { value: 'qwen-max', label: 'Qwen Max' },
+      { value: 'qwen-plus', label: 'Qwen Plus' },
+      { value: 'qwen-turbo', label: 'Qwen Turbo' },
+    ],
+  },
 };
 
 const SUPPORTED_PROVIDER_IDS = Object.freeze(Object.keys(AI_PROVIDERS));

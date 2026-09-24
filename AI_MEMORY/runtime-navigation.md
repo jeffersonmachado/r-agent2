@@ -68,3 +68,57 @@ Jornada executada em browser real (Chromium headless, 1440×900) com o helper ca
 - **Zero** erros de console, **zero** `pageerror`, **zero** requisições falhas (nenhum HTTP ≥ 500) durante toda a jornada.
 - Evidência visual: `AI_MEMORY/evidence/ask-ai-journey-<timestamp>.png`.
 - Complemento de runtime (API, sem UI): `npm run verify:ask-ai-copilot:runtime` → **9/9 PASS** com `ASKAI_VERIFY_USER/PASSWORD/TENANT/BASE` (evidência em `reports/ask-ai-copilot-runtime-evidence.json`).
+
+## Engineering Missions — enriquecimento com Qwen (2026-09-24)
+
+Ciclo novo de engenharia: missão em linguagem natural → enriquecimento com provenance →
+preview → aprovação (humana ou por política) → Engineer Router → GREEN. Entrega e evidência
+completa: `docs/architecture/QWEN_COM_ENRIQUECIMENTO.md` e
+`reports/qwen-com-enriquecimento-report.json`.
+
+Rotas de interface (todas `requireAuth` + `requireClassification('DEVELOPMENT')`):
+
+- `/dev/engineering/missions` — lista + formulário de missão + painel/toggle da política de
+  autoaprovação (`EngineeringMissionsPage`).
+- `/dev/engineering/missions/:id` — preview ORIGINAL × ENRIQUECIDO com provenance
+  (`ADDED`/`MODIFIED`/`INFERRED`/`POLICY_REQUIRED`/`UNCHANGED`), contrato de execução editável,
+  Aprovar/Rejeitar/Reenriquecer/Executar, histórico de versões e de decisões, execução real,
+  relatório de auditoria, painel de **Meta Review / Adversarial Review** e aviso **“GREEN recusado”**
+  quando a revisão da versão corrente bloqueia (`EngineeringMissionDetailPage` +
+  `MissionReviewPanel`).
+- Cartão **“Autoavaliação contínua”** na lista de missões (botão *Calcular*): métricas de
+  enriquecimento/aprovação/execução/revisões; métrica sem denominador aparece como “—” (`null`),
+  nunca como `0`.
+- Menu: `Engineering → Missions / Enriquecimento` (classificação DEVELOPMENT).
+
+Rotas de API (mesmo prefixo `/engineering/missions`): `GET /overview`, `GET /` (lista),
+`POST /` (compilar/enriquecer), `GET /:id`, `GET /:id/preview`, `GET /:id/versions`,
+`GET /:id/approvals`, `POST /:id/enrich`, `POST /:id/approve`, `POST /:id/reject`,
+`POST /:id/edit`, `POST /:id/execute`, `GET /:id/report`, `GET|PUT /policy`,
+`GET /self-assessment`, `POST /:id/review`, `GET /:id/review`, `POST /resume-interrupted`. Registradas em `api/composition/engineering-missions`,
+`api/app/registerRoutes.js` e `api/app/routeRegistry.js` (router fora do registry responde 404
+silencioso — validado por `npm run validate:route-mounts`).
+
+Jornada validada em browser real (Chromium, `tests/helpers/playwrightAuth.js` +
+`loginWithTenantSelection`, tenant `system`): abrir a URL → autenticar → digitar a missão →
+enriquecer → revisar diff/provenance → aprovar → conferir histórico e relatório → rodar Meta
+Review + Adversarial Review pela UI → calcular a autoavaliação. **18/18 PASS**, sem erros de
+console inesperados e sem falhas de rede reais (`net::ERR_ABORTED` em `/auth/me` é cancelamento
+por navegação; o toast de erro do próprio app no passo de revisão é o resultado ESPERADO de uma
+revisão bloqueante e é contado à parte, não como defeito de página). Evidência:
+`AI_MEMORY/evidence/2026-09-24-engineering-missions-browser.json` + screenshots
+`2026-09-24-engineering-mission-preview.png`, `...-approved.png`, `...-review.png` e
+`...-self-assessment.png`.
+
+Notas de runtime medidas:
+
+- Qwen aparece em `ai_providers` como builtin (`enabled=true`, `kind=openai-compatible`) após o
+  boot real; sem credencial configurada, o provider fica indisponível de forma explícita
+  (`AI_PROVIDER_NOT_CONFIGURED`) e o Router continua operando com os demais providers.
+- Sem nenhum provider com credencial, o enriquecimento registra a degradação
+  (`modelSelection.selected = null`) e segue com fatos + regras — nunca finge interpretação.
+- Reiniciar a API é necessário para montar routers novos: `/engineering/missions` respondia 404
+  com o processo antigo e 401 (montada + auth) depois do restart.
+- Ordem de rota é contrato: `GET /self-assessment` estava capturada por `/:id` e respondia o
+  handler errado — rota estática tem de vir ANTES de `/:id` (teste de regressão em
+  `tests/unit/engineeringMissionRoutes.test.js`).

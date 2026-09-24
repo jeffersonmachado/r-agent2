@@ -86,6 +86,8 @@ const EngineeringTasksPage = lazyPage(() => import('./pages/EngineeringTasksPage
 const EngineeringTaskDetailPage = lazyPage(() => import('./pages/EngineeringTaskDetailPage'), 'EngineeringTaskDetailPage');
 const EngineeringModelsPage = lazyPage(() => import('./pages/EngineeringModelsPage'), 'EngineeringModelsPage');
 const EngineeringReleaseClosurePage = lazyPage(() => import('./pages/EngineeringReleaseClosurePage'), 'EngineeringReleaseClosurePage');
+const EngineeringMissionsPage = lazyPage(() => import('./pages/engineering-missions/EngineeringMissionsPage'), 'EngineeringMissionsPage');
+const EngineeringMissionDetailPage = lazyPage(() => import('./pages/engineering-missions/EngineeringMissionDetailPage'), 'EngineeringMissionDetailPage');
 const QaGapsPage = lazyPage(() => import('./pages/QaGapsPage'), 'QaGapsPage');
 const BenchmarkResearchGovernancePage = lazyPage(() => import('./pages/BenchmarkResearchGovernancePage'), 'BenchmarkResearchGovernancePage');
 const QaWavesOperationalHealthPage = lazyPage(() => import('./pages/QaWavesOperationalHealthPage'), 'QaWavesOperationalHealthPage');
@@ -503,9 +505,12 @@ function AppWithAuth() {
   const isEngineeringTaskDetail = /^\/dev\/engineering\/tasks\/[^/]+\/?$/.test(currentPath);
   const isEngineeringTasks = isRoute('/dev/engineering/tasks') && !isEngineeringTaskDetail;
   const isEngineeringModels = isRoute('/dev/engineering/models');
+  const isEngineeringMissionDetail = /^\/dev\/engineering\/missions\/[^/]+\/?$/.test(currentPath);
+  const isEngineeringMissions = isRoute('/dev/engineering/missions') && !isEngineeringMissionDetail;
   const isEngineeringReleaseClosure = isRoute('/dev/engineering/release-closure');
   const isEngineeringOverview = isRoute('/dev/engineering')
-    && !isEngineeringTasks && !isEngineeringTaskDetail && !isEngineeringModels && !isEngineeringReleaseClosure;
+    && !isEngineeringTasks && !isEngineeringTaskDetail && !isEngineeringModels && !isEngineeringReleaseClosure
+    && !isEngineeringMissions && !isEngineeringMissionDetail;
   const isBenchmarkResearch = isRoute('/dev/benchmark-research');
   const isQaWavesOperationalHealth = isRoute('/dev/qa-waves/operational-health');
   const isQaWavesEnterpriseGovernance = isRoute('/dev/qa-waves/enterprise-governance');
@@ -592,6 +597,7 @@ function AppWithAuth() {
       isOrders, isKitchen, isDispatch,
       isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isBenchmarkResearch,
       isEngineeringOverview, isEngineeringTasks, isEngineeringTaskDetail, isEngineeringModels, isEngineeringReleaseClosure,
+      isEngineeringMissions, isEngineeringMissionDetail,
       isAgentOsHub,
       isQaAudit,
       isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup,
@@ -610,7 +616,7 @@ function AppWithAuth() {
     isDashboard, isDashboardLegacy, isEditor, isBpmnEditor, isSupport, isWorkspace, isInbox, isCases, isPlatformSupport, isMaintenance, isConfig, isAgents, isTenants, isSuperAdminPage, isOnboarding, isAudit,
     isQuickReplies, isFaq, isDepartments, isBulkMessaging, isAnalytics, isAcademy, isTenantIntelligence, isSupervisor, isRbac, isMfa, isWhatsAppIvr, isWhatsAppConnections, isDeveloperKeys, isAutomations, isProjects, isProjectBoard, isProjectList, isProjectDashboard, isProjectTimeline, isProjectActivities, isProjectSettings, isProjectGantt, isProjectCalendar, isTasks, isAgenda, isSlaPolicies, isExport,
     isAITools, isSegmentation, isWhatsAppTemplates, isKnowledgeBase, isProductDocs, isRAGDocuments, isWebScraping, isRpaTest, isRpaReplays, isRpaSeeds, isChat, isQaStability, isQa, isQaMesh, isGenerateSystem, isSystemStatus, isStackVersions, isChannelHealth, isChannelAccounts, isPlanUsage, isPbxExtensions, isPbxTrunks, isPbxRoutes, isPbxOperatorPanel, isPbxModule, isPbx, isChatHumanoDashboard, isCrmDashboard, isDemo, isFailedMessages, isQueuePhysicalDashboard, isDevDashboard,
-            isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isBenchmarkResearch, isEngineeringOverview, isEngineeringTasks, isEngineeringTaskDetail, isEngineeringModels, isEngineeringReleaseClosure, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
+            isOrders, isKitchen, isDispatch, isMarketing, isAccessControl, isOperationsDashboard, isFitnessStudents, isFitnessMemberships, isFitnessAttendance, isBeautySchedule, isBeautyCampaigns, isBeautyLeads, isBeautyCustomers, isBeautyBundles, isBeautyServices, isBeautyPayments, isVerticalDashboard, isSolutions, isNodeMarketplace, isSsoScim, isBackup, isQaWaves, isQaGaps, isQaWavesOperationalHealth, isQaWavesEnterpriseGovernance, isBenchmarkResearch, isEngineeringOverview, isEngineeringTasks, isEngineeringTaskDetail, isEngineeringModels, isEngineeringReleaseClosure, isEngineeringMissions, isEngineeringMissionDetail, isSaasLanding, isSaasProducts, isSaasSolutions, isSaasPricing, isSaasSignup, isLogin, isAuthenticated, navigate, loading, currentPath
   ]);
 
   // NÃO redireciona automaticamente quando autenticado na rota de login
@@ -734,6 +740,7 @@ function AppWithAuth() {
       '/beauty/payments': '💄 Beleza • Pagamentos',
       '/vertical/dashboard': '📊 Painel Vertical',
       '/dev/engineering/tasks': '⚙️ Engineering • Tasks',
+      '/dev/engineering/missions': '⚙️ Engineering • Missions',
       '/dev/engineering/models': '⚙️ Engineering • Models',
       '/dev/engineering/release-closure': '⚙️ Engineering • Release Closure',
       '/dev/engineering': '⚙️ Engineering Model Router',
@@ -1050,6 +1057,10 @@ function AppWithAuth() {
     pageContent = <QaWavesPage />;
   } else if (isQaGaps) {
     pageContent = <QaGapsPage />;
+  } else if (isEngineeringMissionDetail) {
+    pageContent = <EngineeringMissionDetailPage missionId={currentPath.replace(/^\/dev\/engineering\/missions\//, '').replace(/\/$/, '')} />;
+  } else if (isEngineeringMissions) {
+    pageContent = <EngineeringMissionsPage />;
   } else if (isEngineeringTaskDetail) {
     pageContent = <EngineeringTaskDetailPage />;
   } else if (isEngineeringTasks) {

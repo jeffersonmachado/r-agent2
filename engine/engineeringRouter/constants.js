@@ -46,7 +46,10 @@ const CAPABILITIES = Object.freeze([
   'RELEASE',
 ]);
 
-const MODEL_ROLES = Object.freeze(['CODER', 'REVIEWER']);
+// Papéis de modelo. CODER/REVIEWER são o loop de correção do Router; ENRICHER é o papel usado
+// pelo Engineering Mission Compiler (enriquecimento de missão) — o mesmo `selectForRole` do
+// `modelSelector.js` é reutilizado, nenhum seletor paralelo é criado.
+const MODEL_ROLES = Object.freeze(['CODER', 'REVIEWER', 'ENRICHER']);
 
 const COST_CLASSES = Object.freeze(['LOW', 'MEDIUM', 'HIGH', 'ANY']);
 const CONTEXT_CLASSES = Object.freeze(['STANDARD', 'LONG', 'EXTENDED']);

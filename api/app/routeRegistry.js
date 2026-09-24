@@ -20,6 +20,9 @@ function createRouteRegistry(routers) {
     { router: routers.qaWavesRouter },
     { router: routers.qaMeshRouter },
     { router: routers.engineeringRouterRouter },
+    // Engineering Mission Compiler / enriquecimento (DEVELOPMENT). Router fora
+    // desta lista simplesmente NÃO é montado (responde 404 sem erro de boot).
+    { router: routers.engineeringMissionRouter },
     // §B1/§B2: pesquisa competitiva de benchmarks (DEVELOPMENT). Montado aqui
     // porque router fora desta lista simplesmente NÃO é montado.
     { router: routers.benchmarkResearchRouter },

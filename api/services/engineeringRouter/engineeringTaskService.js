@@ -72,7 +72,15 @@ async function createTask(input = {}, { createdBy = null, idempotencyKey = null 
     });
   } catch (err) {
     // Corrida em idempotência: outra chamada concorrente já criou com a mesma chave.
-    if (idempotencyKey && /unique/i.test(err.message || '')) {
+    // Achado real (missão de enriquecimento, teste §33 "duas execuções concorrentes"): o
+    // `SequelizeUniqueConstraintError` tem `message === 'Validation error'` — não contém
+    // "unique" — então a checagem por regex na mensagem NÃO pegava a corrida, e a segunda
+    // chamada concorrente estourava em vez de devolver a task já criada. O `name` do erro é o
+    // discriminador correto.
+    const isUniqueViolation = err?.name === 'SequelizeUniqueConstraintError'
+      || err?.parent?.code === '23505'
+      || /unique|constraint/i.test(err.message || '');
+    if (idempotencyKey && isUniqueViolation) {
       const existing = await Model.findOne({ where: { idempotency_key: idempotencyKey } });
       if (existing) return toPlain(existing);
     }

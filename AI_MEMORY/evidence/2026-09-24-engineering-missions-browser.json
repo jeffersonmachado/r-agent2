@@ -1,0 +1,146 @@
+{
+  "startedAt": "2026-09-24T13:44:54.884Z",
+  "baseUrl": "http://127.0.0.1:5173",
+  "journey": "engineering-missions",
+  "steps": [
+    {
+      "name": "login com seleção de tenant",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:10.524Z"
+    },
+    {
+      "name": "tela de missões acessível por URL direta",
+      "status": "PASS",
+      "detail": "http://127.0.0.1:5173/dev/engineering/missions",
+      "at": "2026-09-24T13:45:14.175Z"
+    },
+    {
+      "name": "painel de política de autoaprovação presente",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:14.195Z"
+    },
+    {
+      "name": "enriquecimento executado pela UI",
+      "status": "PASS",
+      "detail": "http://127.0.0.1:5173/dev/engineering/missions/edbaf35e-ddea-4b53-899c-206d89b70787",
+      "at": "2026-09-24T13:45:19.748Z"
+    },
+    {
+      "name": "missão original exibida sem alteração",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:19.776Z"
+    },
+    {
+      "name": "preview mostra categorias do enriquecimento",
+      "status": "PASS",
+      "detail": "policy=0 inferred=1",
+      "at": "2026-09-24T13:45:19.846Z"
+    },
+    {
+      "name": "provenance exibida (fonte + motivo)",
+      "status": "PASS",
+      "detail": "fonte=1 motivo=1",
+      "at": "2026-09-24T13:45:19.847Z"
+    },
+    {
+      "name": "status AWAITING_APPROVAL exibido antes da aprovação",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:19.857Z"
+    },
+    {
+      "name": "aprovação humana pela interface",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:21.379Z"
+    },
+    {
+      "name": "histórico de versões e decisões visível",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:21.409Z"
+    },
+    {
+      "name": "relatório de auditoria contém a missão original",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:22.907Z"
+    },
+    {
+      "name": "Meta Review executado pela UI com status visível",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:26.701Z"
+    },
+    {
+      "name": "itens NOT_VERIFIABLE são declarados (nunca PASS cego)",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:26.713Z"
+    },
+    {
+      "name": "findings objetivos do Meta Review listados",
+      "status": "PASS",
+      "detail": "11 finding(s) com id MR-*",
+      "at": "2026-09-24T13:45:26.720Z"
+    },
+    {
+      "name": "Adversarial Review mostra cobertura do catálogo",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:26.731Z"
+    },
+    {
+      "name": "autoavaliação calculada e exibida",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:33.199Z"
+    },
+    {
+      "name": "sem erros de console inesperados",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:33.678Z"
+    },
+    {
+      "name": "sem falhas de rede",
+      "status": "PASS",
+      "detail": "",
+      "at": "2026-09-24T13:45:33.678Z"
+    }
+  ],
+  "consoleErrors": [
+    "[2026-09-24T13:45:24.834Z] [ERROR] Toast [error]: Revisão encontrou finding bloqueante (META): GREEN recusado {\n  \"type\": \"error\",\n  \"duration\": 6000\n}"
+  ],
+  "networkFailures": [
+    {
+      "url": "http://127.0.0.1:5173/workspace/entities/e9ab311c-020c-4cc4-a46b-f7e45a4ebca3/timeline?limit=30&offset=0",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:5173/workspace/entities/e9ab311c-020c-4cc4-a46b-f7e45a4ebca3/actions",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:5173/workspace/entities/e9ab311c-020c-4cc4-a46b-f7e45a4ebca3/autocorrections",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:5173/workspace/entities/e9ab311c-020c-4cc4-a46b-f7e45a4ebca3/insights",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:5173/auth/me",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "passed": 18,
+  "failed": 0,
+  "expectedToastErrors": 1,
+  "abortedRequests": 5,
+  "finishedAt": "2026-09-24T13:45:33.678Z",
+  "url": "http://127.0.0.1:5173/dev/engineering/missions"
+}
