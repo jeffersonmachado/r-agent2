@@ -1,9 +1,9 @@
 # QA Waves Status
 
-- Governance status: GO
+- Governance status: NO_GO
 - Canonical mesh execution: mesh-2026-09-24T06-55-00-751Z
 - Canonical mesh decision: NO_GO
-- Operational confidence: 100
+- Operational confidence: 98.2
 - Replay integrity valid: true
 - Blocking domains in mesh: beauty, bpmn, core, fitness, omnichannel
 - Mesh history artifact: /opt/results/ria/r-agent2/qa-mesh/meshHistory/mesh-2026-09-24T06-55-00-751Z.json

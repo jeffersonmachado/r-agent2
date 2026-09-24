@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-24T06:46:16.506Z",
+  "generatedAt": "2026-09-24T07:29:36.913Z",
   "runId": "rap-governed-20260924064228071-5bdacdaa",
   "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
   "artifactType": "qa-waves-enterprise-governance",
   "artifactVersion": "1.0.0",
-  "status": "GO",
-  "governanceStatus": "GO",
+  "status": "NO_GO",
+  "governanceStatus": "NO_GO",
   "threshold": 95,
   "replayIntegrity": {
-    "valid": true,
-    "rate": 100,
+    "valid": false,
+    "rate": 0,
     "artifacts": [
       {
         "journeyId": "support_ticket_flow",
@@ -84,7 +84,35 @@
         "smokeExecutionId": "prod-like-replay-agendamento-1790061832169"
       }
     ],
-    "blockers": []
+    "blockers": [
+      {
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "replay_signing_key_unavailable"
+      }
+    ]
   },
   "smokeHealth": {
     "status": "GO",
@@ -92,11 +120,73 @@
     "healthy": true,
     "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/prod-like/qa-waves-operational-prod-like-smoke.json"
   },
-  "operationalConfidence": 100,
-  "confidenceGrade": "A+",
-  "riskLevel": "LOW",
+  "operationalConfidence": 79.2,
+  "confidenceGrade": "D",
+  "riskLevel": "CRITICAL",
   "failedProofs": [],
-  "activeBlockers": [],
+  "activeBlockers": [
+    {
+      "journeyId": "support_ticket_flow",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "journeyId": "fitness_customer_checkin",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "journeyId": "booking_flow",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "journeyId": "payment_charge_flow",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "journeyId": "food_order_status_flow",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "journeyId": "bakery_encomenda_flow",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "journeyId": "market_node_publish_flow",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "journeyId": "clinic_calendar_block_flow",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "journeyId": "agendamento",
+      "reason": "replay_signing_key_unavailable"
+    },
+    {
+      "reason": "continuous_smoke_degraded",
+      "status": "GO",
+      "evidenceReasons": [
+        "scheduled_evidence_stale",
+        "scheduled_source_evidence_stale",
+        "scheduled_flow_source_mismatch:support_ticket_flow:integrityValid",
+        "scheduled_flow_source_mismatch:fitness_customer_checkin:integrityValid",
+        "scheduled_flow_source_mismatch:booking_flow:integrityValid",
+        "scheduled_flow_source_mismatch:payment_charge_flow:integrityValid",
+        "scheduled_flow_source_mismatch:food_order_status_flow:integrityValid",
+        "scheduled_flow_source_mismatch:bakery_encomenda_flow:integrityValid",
+        "scheduled_flow_source_mismatch:market_node_publish_flow:integrityValid",
+        "scheduled_flow_source_mismatch:clinic_calendar_block_flow:integrityValid",
+        "scheduled_flow_source_mismatch:agendamento:integrityValid"
+      ]
+    },
+    {
+      "reason": "operational_confidence_degraded",
+      "threshold": 95,
+      "operationalConfidence": 79.2
+    },
+    {
+      "reason": "enterprise_signing_key_unavailable"
+    }
+  ],
   "replayArtifacts": [
     {
       "journeyId": "support_ticket_flow",
@@ -172,66 +262,66 @@
     }
   ],
   "governanceSignature": {
-    "valid": true,
+    "valid": false,
     "signatures": [
       {
         "journeyId": "support_ticket_flow",
-        "valid": true,
-        "expected": "hmac-sha256:7e8a012a1bb864a5c01a58dc74aaa5d6e2b3875f98c1677ab09546bd5b90ae3f",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:7e8a012a1bb864a5c01a58dc74aaa5d6e2b3875f98c1677ab09546bd5b90ae3f"
       },
       {
         "journeyId": "fitness_customer_checkin",
-        "valid": true,
-        "expected": "hmac-sha256:6ca5b56b45a52e4d2812730b3b4288a7ee655b09d0c5912af5f9750209469613",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:6ca5b56b45a52e4d2812730b3b4288a7ee655b09d0c5912af5f9750209469613"
       },
       {
         "journeyId": "booking_flow",
-        "valid": true,
-        "expected": "hmac-sha256:77f6b379f253b16c30d2aec56b4999b181042700f4a5f897c411ffcd675519e4",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:77f6b379f253b16c30d2aec56b4999b181042700f4a5f897c411ffcd675519e4"
       },
       {
         "journeyId": "payment_charge_flow",
-        "valid": true,
-        "expected": "hmac-sha256:733cd4557ba2a2a69794c415f2cd7685b1c0377fbe57be90d9de2ae67b3c6a9a",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:733cd4557ba2a2a69794c415f2cd7685b1c0377fbe57be90d9de2ae67b3c6a9a"
       },
       {
         "journeyId": "food_order_status_flow",
-        "valid": true,
-        "expected": "hmac-sha256:2f78c4d2f61593093879e57f7ecbae078db4e8dbcb4b975b2343db16a7d51221",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:2f78c4d2f61593093879e57f7ecbae078db4e8dbcb4b975b2343db16a7d51221"
       },
       {
         "journeyId": "bakery_encomenda_flow",
-        "valid": true,
-        "expected": "hmac-sha256:af85d3eb2ac2b424266ef092e224e11eda2a418dcdb8dc72d8215b7a1095ed1f",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:af85d3eb2ac2b424266ef092e224e11eda2a418dcdb8dc72d8215b7a1095ed1f"
       },
       {
         "journeyId": "market_node_publish_flow",
-        "valid": true,
-        "expected": "hmac-sha256:08d64e15acb655d7a43462788fd62c5749f041e9d1ee5344e54184caaa8c100f",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:08d64e15acb655d7a43462788fd62c5749f041e9d1ee5344e54184caaa8c100f"
       },
       {
         "journeyId": "clinic_calendar_block_flow",
-        "valid": true,
-        "expected": "hmac-sha256:65070349ca79eb2dddac9c3c849397552833c5a6a9781e73ae504408c2abb738",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:65070349ca79eb2dddac9c3c849397552833c5a6a9781e73ae504408c2abb738"
       },
       {
         "journeyId": "agendamento",
-        "valid": true,
-        "expected": "hmac-sha256:b298620ae1ff3daf566ebd485c5705f04bab04e82542e90e2652bc8a5a0df4fd",
+        "valid": false,
+        "expected": null,
         "actual": "hmac-sha256:b298620ae1ff3daf566ebd485c5705f04bab04e82542e90e2652bc8a5a0df4fd"
       }
     ]
   },
   "enterpriseSigning": {
-    "available": true,
+    "available": false,
     "algorithm": "hmac-sha256"
   },
   "lastSmokeExecution": {
@@ -241,11 +331,11 @@
   },
   "continuousValidationStatus": {
     "status": "GO",
-    "healthy": true,
+    "healthy": false,
     "evidencePath": "/opt/results/ria/r-agent2/qa/smoke/qa-waves-scheduled-operational-smoke.json",
     "mode": "production_health",
     "generatedAt": "2026-09-22T07:23:55.854Z",
-    "ageHours": 47.37,
+    "ageHours": 48.09,
     "maxAgeHours": 48,
     "evidenceValid": true,
     "evidenceBound": true,
@@ -269,26 +359,100 @@
       "agendamento"
     ],
     "missingJourneys": [],
-    "reasons": []
+    "reasons": [
+      "scheduled_evidence_stale",
+      "scheduled_source_evidence_stale",
+      "scheduled_flow_source_mismatch:support_ticket_flow:integrityValid",
+      "scheduled_flow_source_mismatch:fitness_customer_checkin:integrityValid",
+      "scheduled_flow_source_mismatch:booking_flow:integrityValid",
+      "scheduled_flow_source_mismatch:payment_charge_flow:integrityValid",
+      "scheduled_flow_source_mismatch:food_order_status_flow:integrityValid",
+      "scheduled_flow_source_mismatch:bakery_encomenda_flow:integrityValid",
+      "scheduled_flow_source_mismatch:market_node_publish_flow:integrityValid",
+      "scheduled_flow_source_mismatch:clinic_calendar_block_flow:integrityValid",
+      "scheduled_flow_source_mismatch:agendamento:integrityValid"
+    ]
   },
   "releaseReadiness": {
-    "go": true,
+    "go": false,
     "reasons": []
   },
   "deploymentSafety": {
-    "deployAllowed": true,
+    "deployAllowed": false,
     "threshold": 95,
-    "operationalConfidence": 100,
-    "blockers": []
+    "operationalConfidence": 79.2,
+    "blockers": [
+      {
+        "journeyId": "support_ticket_flow",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "journeyId": "fitness_customer_checkin",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "journeyId": "booking_flow",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "journeyId": "payment_charge_flow",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "journeyId": "food_order_status_flow",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "journeyId": "bakery_encomenda_flow",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "journeyId": "market_node_publish_flow",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "journeyId": "clinic_calendar_block_flow",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "journeyId": "agendamento",
+        "reason": "replay_signing_key_unavailable"
+      },
+      {
+        "reason": "continuous_smoke_degraded",
+        "status": "GO",
+        "evidenceReasons": [
+          "scheduled_evidence_stale",
+          "scheduled_source_evidence_stale",
+          "scheduled_flow_source_mismatch:support_ticket_flow:integrityValid",
+          "scheduled_flow_source_mismatch:fitness_customer_checkin:integrityValid",
+          "scheduled_flow_source_mismatch:booking_flow:integrityValid",
+          "scheduled_flow_source_mismatch:payment_charge_flow:integrityValid",
+          "scheduled_flow_source_mismatch:food_order_status_flow:integrityValid",
+          "scheduled_flow_source_mismatch:bakery_encomenda_flow:integrityValid",
+          "scheduled_flow_source_mismatch:market_node_publish_flow:integrityValid",
+          "scheduled_flow_source_mismatch:clinic_calendar_block_flow:integrityValid",
+          "scheduled_flow_source_mismatch:agendamento:integrityValid"
+        ]
+      },
+      {
+        "reason": "operational_confidence_degraded",
+        "threshold": 95,
+        "operationalConfidence": 79.2
+      },
+      {
+        "reason": "enterprise_signing_key_unavailable"
+      }
+    ]
   },
-  "enterpriseGovernanceSignature": "hmac-sha256:c597eea4851d543ad445d808164ccc0027d3160c2e1ae6f16e94bca854d087e5",
-  "reportHash": "db67510829b10de677716ffc84f5d998958d01c7ee5178d504ea1322058baf92",
+  "enterpriseGovernanceSignature": null,
+  "reportHash": "dcab0a475d201843d1d1e0e00359f87226317b72e7f007281089f62c22034462",
   "auditTrail": {
     "path": "/opt/results/ria/r-agent2/qa/qa-waves-governance-audit.jsonl",
-    "latestEntryHash": "ee323795c4fb803fcbfa5377e0654d72d2c4ab77afd37aa03e3de96cce9f012b",
+    "latestEntryHash": "e17702589635efb1c6f5cbffefdd86022644c45a70b35015ffa94844e5468624",
     "immutable": true,
     "valid": true,
-    "entries": 418,
+    "entries": 420,
     "reasons": []
   }
 }

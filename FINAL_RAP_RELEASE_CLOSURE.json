@@ -1,0 +1,128 @@
+{
+  "artifactType": "final-rap-release-closure",
+  "artifactVersion": "1.0.0",
+  "generatedAt": "2026-09-24T07:31:39.421Z",
+  "derivedFrom": "evidências em disco + verificador offline executado como processo filho — nenhum campo escrito à mão",
+  "source": {
+    "headNow": "b0665b7672e9d8eeb4633c9210e3b53e834613f1",
+    "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
+    "sourceCommit": "e85d36b706f2add8c7f0d7f0596ac451990aa21d",
+    "sourceTree": "ead87919f0d3cf8eaca2500a273cede2acd91ba8",
+    "worktreeClean": false
+  },
+  "engineeringRouter": {
+    "sealFix001": "PASS",
+    "sealFix002": "PASS",
+    "sealFix003": "PASS",
+    "sealFix004": "PASS",
+    "structuralStatus": "PASS",
+    "structuralChecks": 209,
+    "structuralFailed": 0,
+    "runtimeStatus": "RUNTIME_PASS",
+    "runtimeItems": 25,
+    "runtimeFailed": 0,
+    "pilotAllPass": true,
+    "envelopeManifest": {
+      "head": "219de123604c48587bd6f2dc6280cb57f2accfe6",
+      "runId": "219de123604c48587bd6f2dc6280cb57f2accfe6",
+      "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
+      "runtimeStatus": "RUNTIME_PASS",
+      "structuralStatus": "PASS",
+      "engineeringRouterV1Sealed": true,
+      "finalDecision": "GO"
+    }
+  },
+  "governedRun": {
+    "runId": "rap-governed-20260924064228071-5bdacdaa",
+    "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
+    "policyVersion": "1.0.4",
+    "startedAt": "2026-09-24T06:42:28.289Z",
+    "qaMesh": {
+      "status": "NO_GO",
+      "executionId": "mesh-2026-09-24T06-55-00-751Z",
+      "runId": "rap-governed-20260924064228071-5bdacdaa",
+      "sourceFingerprint": "5e815da5aff6b322880842d9351df1ffa18329e23e387dd5e52810245472410a",
+      "passed": 132,
+      "total": 144,
+      "failed": 4,
+      "infraErrors": 7,
+      "flaky": 1,
+      "reasons": [
+        "CRITICAL_DOMAIN_FAILED:core",
+        "CRITICAL_DOMAIN_FAILED:omnichannel",
+        "BASELINE_PASS_RATE_REGRESSION",
+        "BASELINE_BLOCKING_REGRESSION",
+        "BASELINE_INFRA_REGRESSION"
+      ]
+    },
+    "coverageGate": "NO_GO",
+    "finalReadiness": "NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO | governance=NO_GO:GOVERNANCE_BLOCKED [MASTER_SCORECARD_NOT_10_OF_10: RAP-001: score=7 target=10 | RAP-001: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-001: open blockers=1 | RAP-001: open gaps=1 | RAP-003: score=7 target=10 | RAP-003: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-003: open blockers=1 | RAP-003: open gaps=1 | RAP-004: score=7 target=10 | RAP-004: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-004: open blockers=1 | RAP-004: open gaps=1 | RAP-005: score=7 target=10 | RAP-005: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-005: open blockers=1 | RAP-005: open gaps=1 | RAP-006: score=6 target=10 | RAP-006: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-006: open blockers=1 | RAP-006: open gaps=1 | RAP-009: score=6 target=10 | RAP-009: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-009: open blockers=2 | RAP-009: open gaps=2 | RAP-021: score=6 target=10 | RAP-021: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-021: open blockers=2 | RAP-021: open gaps=2 | RAP-037: score=6 target=10 | RAP-037: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-037: open blockers=2 | RAP-037: open gaps=2 | RAP-038: score=6 target=10 | RAP-038: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-038: open blockers=2 | RAP-038: open gaps=2 | RAP-039: score=7 target=10 | RAP-039: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-039: open blockers=1 | RAP-039: open gaps=1 | RAP-041: score=6 target=10 | RAP-041: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-041: open blockers=2 | RAP-041: open gaps=2 | RAP-042: score=7 target=10 | RAP-042: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-042: open blockers=1 | RAP-042: open gaps=1 | RAP-043: score=7 target=10 | RAP-043: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-043: open blockers=1 | RAP-043: open gaps=1 | RAP-044: score=6 target=10 | RAP-044: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-044: open blockers=2 | RAP-044: open gaps=2 | RAP-045: score=6 target=10 | RAP-045: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-045: open blockers=2 | RAP-045: open gaps=2 | RAP-046: score=6 target=10 | RAP-046: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-046: open blockers=2 | RAP-046: open gaps=2 | RAP-047: score=7 target=10 | RAP-047: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-047: open blockers=1 | RAP-047: open gaps=1 | RAP-049: score=6 target=10 | RAP-049: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-049: open blockers=2 | RAP-049: open gaps=2 | RAP-050: score=6 target=10 | RAP-050: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-050: open blockers=1 | RAP-050: open gaps=1 | RAP-052: score=6 target=10 | RAP-052: mandatory requirement failures=runtime-validated,no-known-gap,no-open-blocker | RAP-052: open blockers=1 | RAP-052: open gaps=1 | RAP-054: score=6 target=10 | RAP-054: mandatory requirement failures=runtime-validated,governed,no-known-gap,no-open-blocker | RAP-054: open blockers=2 | RAP-054: open gaps=2 | RAP-056: score=7 target=10 | RAP-056: mandatory requirement failures=governed,no-known-gap | RAP-056: open gaps=1 | RAP-059: score=7 target=10 | RAP-059: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-059: open blockers=1 | RAP-059: open gaps=1 | RAP-060: score=7 target=10 | RAP-060: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-060: open blockers=1 | RAP-060: open gaps=1 | RAP-067: score=7 target=10 | RAP-067: mandatory requirement failures=governed,no-known-gap,no-open-blocker | RAP-067: open blockers=1 | RAP-067: open gaps=1 | scorecard: open blockers=34 | scorecard: open gaps=35 | FINAL_PROOF_NOT_PASS: NO_GO:BLOCKING_GAPS | FINAL_READINESS_NOT_PASS: NO_GO:BLOCKING_GAPS]]",
+    "governanceScore": 100,
+    "governanceScoreStatus": "PASS",
+    "mcpResearchDockerE2e": "PASS",
+    "deliveredReleaseVerification": "DELIVERED_RELEASE_NO_GO"
+  },
+  "cleanReleases": [
+    {
+      "release": "r-agent2-20260923-195042",
+      "payload": "dist/archive/r-agent2-20260923-195042.payload/r-agent2-20260923-195042.payload.zip",
+      "payloadSha256": "01d9544470e42f95e304273779f04395ba2d365372b7b794d8d81d232fbbb57f",
+      "delivery": "dist/archive/r-agent2-20260923-195042/r-agent2-20260923-195042.zip",
+      "deliverySha256": "88c6f3c2262a12b35dcd6591e0c4e66600b558cfe549bdfe4f18fa2ef07e062c",
+      "manifest": {
+        "artifactType": "payload",
+        "gitCommit": "0e42bfb8ba540ac7054936180a8931381f9dbed4",
+        "gitTree": "694e417ab7ef920cd329303336068ca4b216b3ee",
+        "sourceFingerprint": "89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884",
+        "runId": "rap-governed-20260923220508741-cd53886e",
+        "declaredPayloadSha256": "01d9544470e42f95e304273779f04395ba2d365372b7b794d8d81d232fbbb57f",
+        "payloadSha256MatchesDeclared": true
+      },
+      "offlineEnvelopeVerify": {
+        "ran": true,
+        "status": "PASS",
+        "checks": 160,
+        "failures": 0,
+        "mode": "zip-real-package-binding"
+      }
+    },
+    {
+      "release": "r-agent2-20260923-203701",
+      "payload": "dist/archive/r-agent2-20260923-203701.payload/r-agent2-20260923-203701.payload.zip",
+      "payloadSha256": "91ded99da62275f30d27e8861232f9c1a81cffdca6c890fade50b25d669046cb",
+      "delivery": "dist/archive/r-agent2-20260923-203701/r-agent2-20260923-203701.zip",
+      "deliverySha256": "65bd22309b2912ced04adb2ae11a5f8d335271684f180c49d3204ff7499c8dd5",
+      "manifest": {
+        "artifactType": "payload",
+        "gitCommit": "dc6b7fdec16a8f6f3835a38718c0b7b283b9cb93",
+        "gitTree": "a5b3abbf5f838786317f4a0f4e78c101342ab17c",
+        "sourceFingerprint": "89818f8e1b272fc1e1962d87f7cf670ff9bcb493b3b122f0185ab4f89cc90884",
+        "runId": "rap-governed-20260923220508741-cd53886e",
+        "declaredPayloadSha256": "91ded99da62275f30d27e8861232f9c1a81cffdca6c890fade50b25d669046cb",
+        "payloadSha256MatchesDeclared": true
+      },
+      "offlineEnvelopeVerify": {
+        "ran": true,
+        "status": "PASS",
+        "checks": 160,
+        "failures": 0,
+        "mode": "zip-real-package-binding"
+      }
+    }
+  ],
+  "reproducibility": {
+    "releasesCompared": [
+      "r-agent2-20260923-195042",
+      "r-agent2-20260923-203701"
+    ],
+    "sameSourceFingerprint": true,
+    "sameGitTree": false,
+    "samePayloadSha256": false,
+    "payloadSha256Values": [
+      "01d9544470e42f95e304273779f04395ba2d365372b7b794d8d81d232fbbb57f",
+      "91ded99da62275f30d27e8861232f9c1a81cffdca6c890fade50b25d669046cb"
+    ],
+    "criterion": "mesma fonte (sourceFingerprint + git_tree) e payload canônico idêntico quando o empacotamento é determinístico; diferenças permitidas apenas em campos voláteis (timestamp/nome do release)"
+  },
+  "finalDecision": "PENDING"
+}

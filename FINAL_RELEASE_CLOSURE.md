@@ -514,6 +514,96 @@ também não exigiu freeze.
   (credencial ausente não é indisponibilidade do provider). Correção identificada, não aplicada
   (exigiria novo freeze sem necessidade para este ciclo).
 
+## SEGUNDA RELEASE — DESFECHO HONESTO (NO_GO) e causas medidas
+
+Tentativas de produzir a segunda clean release nesta sessão: 5 ciclos completos de `release:seal`.
+Nenhum chegou à fase `candidate`. Motivo imediato, idêntico nos ciclos finais:
+
+```
+[converge] 3/12 qa-waves enterprise governance (bridge)
+=> status NO_GO | operationalConfidence 79.2 | confidenceGrade D | riskLevel CRITICAL
+   reasons: qa_waves_status_not_go, qa_waves_replay_integrity_invalid,
+            qa_waves_governance_signature_invalid, qa_waves_active_blockers,
+            qa_waves_continuous_smoke_degraded, qa_waves_operational_confidence_degraded,
+            qa_waves_enterprise_signing_key_unavailable
+```
+
+O bridge exige `governanceStatus: GO`, `replayIntegrity.valid`, `governanceSignature.valid`,
+`continuousValidationStatus.healthy` e confiança **≥ 95** (medido: **79,2**). Sem isso a
+convergência aborta em 3/12 e **nenhum selo novo pode existir** — a governança canônica está
+`NO_GO` e a regra da missão proíbe declarar release verde.
+
+### Por que o estado degradou (tudo medido)
+
+1. **`qa_waves_continuous_smoke_degraded`** — o smoke contínuo de produção tem TTL de 48 h e a
+   última evidência `END status=GO` é de **2026-09-22T07:24Z** (vencendo exatamente às
+   **07:24Z de 24/09**, momento em que os ciclos passaram a falhar em 3/12).
+2. **O cron que deveria renovar essa evidência derruba o próprio runtime**:
+   `crontab`: `23 4 * * * … run-scheduled-production-health-smoke.sh` (04:23 local). O script
+   chama `stop_dev_services()` — `pkill -f "node api/server.js"`, `pkill -f "vite --configLoader"`,
+   `pkill -f "uvicorn main:app"` — e **só depois** verifica `reachable(API_URL)`; como ele mesmo
+   acabou de matar a API, o resultado é sempre `SKIP api=… indisponível`. Reproduzido no log
+   `logs/qa/scheduled-production-health-smoke.log` em 24/09 07:23:02Z e em 23/09 07:23:01Z (além de
+   19/09, 20/09 ×2, 21/09, 22/09). Ou seja: **a evidência expira e o renovador não consegue renová-la**
+   no ambiente de dev — ele só produz GO quando a stack prod-like Docker está no ar em 3001/8080.
+3. **Impacto direto nos ciclos**: em 24/09 07:23:02Z o cron matou a API, o Vite dev server
+   (exit 143) e o rag-service **durante** um `release:seal` em andamento → o preflight do ciclo
+   seguinte reprovou com `✗ frontend … devolveu 000`, e ciclos anteriores perderam cenários por
+   runtime morto no meio do mesh. O cron foi temporariamente desabilitado (backup
+   `/tmp/crontab-backup-20260924-042504.txt`) e **restaurado ao final**.
+
+### Classificação dos achados desta sessão (taxonomia da missão)
+
+| Achado | Classificação | Evidência |
+|---|---|---|
+| `enabled` de provider builtin era no-op (groq sem credencial roteado) | **RELEASE_BLOCKER** (corrigido) | commit `31e0596d`; boot registra "Groq desabilitado"; 3/3 cenários |
+| `ENGINE_AI_TIMEOUT_MS` 30 s vs modelos de 22–26 s (`ai_timeout`) | **RELEASE_BLOCKER** (corrigido) | 9/9 PASS sem `ai_timeout`; kimi 25,8 s medidos |
+| 90 s colidia com o teto de 90 s do cliente | **REGRESSION** (introduzida e corrigida por mim) | seed `fitness-matricula-leads` `Request timed out after 90000ms` → `completed` com 45 s |
+| `RUN_SOURCE_DRIFT` descoberto **depois** do mesh (queimava ~30 min) | **RELEASE_BLOCKER** de eficiência (corrigido) | `drift_guard()` provado detectando commit pendente |
+| sobras de `dist/` derrubavam o empacotamento (2 ciclos perdidos) | **RELEASE_BLOCKER** (corrigido) | `artifact_manifest_invalid: "PK"` |
+| `vite preview` sem rotas SPA (runtime quebrado em silêncio) | **RELEASE_BLOCKER** (corrigido) | `/workspace` 404/0 → **200/1111** |
+| Cron de smoke derruba API/Vite/RAG e não renova evidência | **RELEASE_BLOCKER (ambiente, ABERTO)** | log do smoke 24/09 07:23:02Z |
+| Evidência de smoke contínuo expirada (TTL 48 h) | **RELEASE_BLOCKER (governança, ABERTO)** | último GO 22/09 07:24Z; ciclo 3/12 NO_GO |
+| `PropertyField.jsx:510` chama IA sem `timeoutMs` (default 15 s em produção) | **POST_RELEASE_HARDENING** (patch pronto) | latências medidas 4,9–25,8 s |
+
+## Decisão final
+
+**`NO_GO` para a segunda release.** A governança canônica está `NO_GO`
+(`final-readiness = NO_GO:MANDATORY_GATE_BLOCKED [qa-mesh=NO_GO | release-gate=NO_GO |
+governance=NO_GO:GOVERNANCE_BLOCKED (scorecard: 34 blockers / 35 gaps abertos)]`, coverage gate
+`NO_GO`), e nenhum selo novo é produzível enquanto o bridge de QA Waves reprovar em 3/12.
+
+**O que está entregue e verificado por bytes**:
+
+- **Clean Release #1 `r-agent2-20260923-203701`** — selada, publicada e verificada offline:
+  envelope do Router `status=PASS checks=160 falhas=0` contra o `payload.zip` real; commit
+  `dc6b7fde…`, tree `a5b3abbf…`, delivery SHA256 `65bd2230…`, payload SHA256 `91ded99d…`,
+  scorecard 78/78 com `below10=0`.
+- **Reprodutibilidade**: o empacotamento anterior do MESMO freeze
+  (`r-agent2-20260923-195042`) também verifica offline (`PASS checks=160`); os dois manifestos
+  compartilham o mesmo `sourceFingerprint` e os payloads diferem **apenas em campos voláteis**
+  (nome do release/timestamps) — exatamente o critério documentado.
+- **Engineering Model Router V1**: `ER-V1-SEALFIX-001..004 = PASS`,
+  `STRUCTURAL_PASS` + `RUNTIME_PASS` (209/0 e 25/0), envelope
+  `ENGINEERING_ROUTER_V1_10_OF_10_GREEN` na fonte `5e815da5`.
+- **Otimizações de tempo implementadas e provadas**: drift guard (~30 min/ocorrência), preflight
+  de sobras (~10–20 min/ciclo), `vite preview` com rotas SPA (~20 min), fail-fast de estagnação
+  RPA (20 min → ~5 min por seed travado), `ENGINE_AI_TIMEOUT_MS=45000` e breaker
+  `threshold=6/reset=10s` (0 `ai_timeout`, 0 circuit-breaker aberto nos testes após o ajuste).
+
+### Caminho exato para GO (próximo ciclo)
+
+1. Subir a stack prod-like (Docker Compose) em 3001/8080 e rodar
+   `scripts/smoke/run-scheduled-production-health-smoke.sh` para produzir evidência
+   `production_health` fresca (renova `continuousValidationStatus`).
+   Alternativa estrutural: corrigir a ordem do script (verificar `reachable` **antes** de
+   `stop_dev_services`) e/ou suportar execução dev para a evidência.
+2. Regenerar o relatório de QA Waves assinado com a chave enterprise disponível
+   (`qa_waves_enterprise_signing_key_unavailable` hoje) para elevar
+   `operationalConfidence` de 79,2 a ≥ 95.
+3. Rodar `npm run release:seal` (a fonte `5e815da5` já está pronta: Router recertificado,
+   preflight/drift guard ativos, runtime documentado) e então `OFFLINE_VERIFY #2`.
+
 ## POST_RELEASE_HARDENING (registrado, NÃO implementado nesta missão)
 
 1. **`vite preview` não serve rotas SPA** — `frontend/vite.config.mjs` registra o plugin

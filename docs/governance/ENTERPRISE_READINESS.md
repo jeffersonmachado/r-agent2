@@ -4,7 +4,7 @@
 - Canonical mesh execution: mesh-2026-09-24T06-55-00-751Z
 - Enterprise readiness: prod-like
 - Production readiness: NO_GO:BLOCKING_GAPS
-- Blocking gaps: 11
+- Blocking gaps: 12
 - Blocking domains: beauty, bpmn, core, fitness, omnichannel
 
 ## Hard blockers
@@ -19,3 +19,4 @@
 - gap-mesh-core-infra_error-rpa-example-test: Falha aberta no dominio core (high)
 - gap-mesh-beauty-functional_failure-business-beauty-scr-06: Falha aberta no dominio beauty (high)
 - gap-mesh-fitness-flaky-fitness-matricula-checkout: Falha aberta no dominio fitness (high)
+- gap-proof-invalid-artifact-semantics: Proof artifacts presentes mas semanticamente invalidos (presenca != validade) (critical)
