@@ -1,0 +1,120 @@
+{
+  "$comment": "Mapeamento dos EIXOS verificáveis do Engineering Router V2 (os que existem de fato no repositório) para as suítes do manifesto canônico e para a evidência que comprova cada um. É a base da matriz machine-readable gerada por scripts/governance/generate-v2-requirements-matrix.js. O STATUS de cada eixo NÃO é escrito aqui: é derivado do relatório de execução real (reports/release-suite-execution.json) e dos relatórios de governança. NOTA DE HONESTIDADE: a numeração V2-01..V2-42 citada no prompt original da missão NÃO está mapeada — os 42 identificadores não existem em nenhum artefato do repositório, e inventá-los seria fabricar conteúdo. Os 17 eixos abaixo são os requisitos reais e verificáveis hoje; `unmappedRequirementIds` registra a lacuna explicitamente.",
+  "matrixVersion": "1.0.0",
+  "unmappedRequirementIds": {
+    "range": "V2-01..V2-42",
+    "status": "NOT_MAPPED_BY_REPOSITORY",
+    "reason": "Nenhum artefato do repositório define os 42 identificadores individualmente (nem o catálogo de requisitos, nem o prompt versionado). O validador V2 já registrava esta pendência. Mapear por suposição produziria uma matriz que parece completa e não é.",
+    "whereDeclared": "scripts/governance/validate-engineering-router-v2.js"
+  },
+  "axes": {
+    "ANTI_GREENWASHING": {
+      "requirement": "Nenhum gate de release pode passar por suíte não executada, pulada em silêncio ou que passou sem executar teste.",
+      "suites": [],
+      "evidence": ["reports/anti-greenwashing-report.json"],
+      "gate": "npm run validate:anti-greenwashing"
+    },
+    "CANONICAL_SUITE_MANIFEST": {
+      "requirement": "A lista de suítes autoritativas é derivada por descoberta determinística; suíte candidata fora do manifesto é violação, e suíte do manifesto não executada nunca conta como cobertura.",
+      "suites": ["tests/unit/governance/releaseSuiteManifest.test.js"],
+      "evidence": ["reports/release-suite-execution.json", "config/canonical-release-suites.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "MISSION_COMPILER": {
+      "requirement": "A missão é compilada em MissionSpec versionada e enriquecida, com evidência persistida.",
+      "suites": ["tests/unit/engineeringMissionCompiler.test.js", "tests/integration/engineeringMissionFullE2E.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "MISSION_ENRICHMENT_CODE_AWARE": {
+      "requirement": "O enriquecimento encontra símbolo por CONTEÚDO (não só por nome de arquivo), declara a origem da evidência e reporta truncamento/orçamento explicitamente.",
+      "suites": ["tests/unit/engineeringMissionDeepScan.test.js", "tests/unit/engineeringMissionContextBudget.test.js", "tests/unit/engineeringMissionContextKnowledge.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "MISSION_APPROVAL": {
+      "requirement": "Aprovação congela versão+hash e libera SOMENTE aquela versão; aprovação de versão antiga não autoriza execução.",
+      "suites": ["tests/integration/engineeringMissionGovernanceAndConcurrency.test.js", "tests/unit/engineeringMissionRbac.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "MISSION_AUTOAPPROVAL_POLICY": {
+      "requirement": "Autoaprovação é governada por política, deixa evidência completa e nunca é concedida por esta camada por conta própria.",
+      "suites": ["tests/integration/engineeringMissionGovernanceAndConcurrency.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "POLICY_RESOLVER_ALL_PATHS": {
+      "requirement": "A política de autoaprovação tem UMA autoridade de resolução: preview/UI e execução real derivam a MESMA decisão, e escalação de privilégio exige autorização nos dois lados.",
+      "suites": ["tests/unit/engineeringMissionPolicyAuthority.test.js", "tests/unit/engineeringMissionPolicyResolver.test.js", "tests/integration/engineeringMissionPolicyEscalation.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "STALE_MISSION_SPEC": {
+      "requirement": "Toda EngineeringTask declara mission/versão/hash e nenhuma fase material roda sobre contrato obsoleto; a resolução é explícita (SUPERSEDE/RECONCILE/CANCEL/REPLAN).",
+      "suites": ["tests/unit/engineeringMissionSpecFreshness.test.js", "tests/integration/engineeringMissionStaleSpec.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "DISTRIBUTED_CONCURRENCY": {
+      "requirement": "Duas execuções concorrentes da mesma task jamais ocorrem; a posse é do lease, não de um timestamp.",
+      "suites": ["tests/integration/engineeringMissionDistributedLease.test.js", "tests/integration/engineeringTaskConcurrencyAndRestart.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "STALE_WORKER_PROTECTION": {
+      "requirement": "Escrita de worker antigo é recusada por fence monotônico (não sobrescreve o trabalho do dono novo).",
+      "suites": ["tests/unit/engineeringMissionLeasePolicy.test.js", "tests/integration/engineeringTaskFencing.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "DURABLE_RECOVERY": {
+      "requirement": "Crash e restart retomam sem duplicar versão, aprovação ou task.",
+      "suites": ["tests/integration/engineeringMissionDurableResume.test.js", "tests/unit/engineeringMissionRecoveryPlan.test.js", "tests/integration/engineeringMissionBootRecovery.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "CRASH_RECOVERY_SIGKILL": {
+      "requirement": "Morte súbita REAL do processo (SIGKILL) é recuperada por varredura automática, sem comando humano.",
+      "suites": ["tests/integration/engineeringMissionCrashRecoveryE2E.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "ENRICHMENT_DEGRADATION": {
+      "requirement": "Falha do provedor ou resposta malformada degrada EXPLICITAMENTE e nunca vira enriquecimento inventado ou fallback em memória.",
+      "suites": ["tests/integration/engineeringMissionEnrichmentDegradation.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "REVIEW_ENFORCEMENT": {
+      "requirement": "Reviewer/Meta Reviewer produzem findings com autoridade declarada; GREEN não é obtido por atalho e degradado nunca é contado como verde.",
+      "suites": ["tests/unit/engineeringMissionReviewEngines.test.js", "tests/integration/engineeringMissionReviewEnforcement.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "QWEN_PROVIDER_STRUCTURAL": {
+      "requirement": "Qwen é provider de primeira classe no registry, sem credencial versionada.",
+      "suites": ["tests/unit/engineeringRouterQwenProvider.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run test:release-authoritative"
+    },
+    "ROUTE_SURFACE_INTEGRITY": {
+      "requirement": "Toda rota instanciada é montada (router fora do registry responde 404 sem erro de boot) e a superfície é coerente.",
+      "suites": ["tests/unit/engineeringMissionRoutes.test.js"],
+      "evidence": ["reports/route-mount-report.json", "reports/release-suite-execution.json"],
+      "gate": "npm run validate:route-mounts"
+    },
+    "AUDIT_ENVELOPE_V2": {
+      "requirement": "Existe envelope de auditoria V2 com geração e verificação SEPARADAS; o verifier consome envelope existente, nunca o regenera, e adulteração é detectada em ambos os sentidos.",
+      "suites": ["tests/integration/engineeringV2EnvelopeTamper.test.js"],
+      "evidence": ["reports/release-suite-execution.json"],
+      "gate": "npm run engineering-router:v2-envelope <dir>"
+    },
+    "ENGINEERING_ROUTER_V2_SEAL": {
+      "requirement": "O selo V2 só é declarado com todos os eixos acima comprovados por execução real e reproduzível.",
+      "suites": [],
+      "evidence": ["reports/engineering-router-v2-seal-report.json"],
+      "gate": "npm run validate:engineering-router-v2"
+    }
+  }
+}
