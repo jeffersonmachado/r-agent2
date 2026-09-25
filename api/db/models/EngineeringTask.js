@@ -46,6 +46,16 @@ function getEngineeringTaskModel() {
       routing_decision: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
       locked_at: { type: DataTypes.DATE, allowNull: true },
       locked_by: { type: DataTypes.STRING, allowNull: true },
+      // Lease + fencing (missão V2): `locked_at`/`locked_by` são apenas temporais e não impedem um
+      // worker ANTIGO sobrescrever o estado produzido pelo novo depois de um takeover. O fence é
+      // monotônico e o token é do dono: qualquer escrita sensível passa por CAS.
+      lease_token: { type: DataTypes.UUID, allowNull: true },
+      lease_fence: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+      lease_worker_instance_id: { type: DataTypes.STRING(160), allowNull: true },
+      lease_host: { type: DataTypes.STRING(160), allowNull: true },
+      lease_acquired_at: { type: DataTypes.DATE, allowNull: true },
+      lease_expires_at: { type: DataTypes.DATE, allowNull: true },
+      lease_heartbeat_at: { type: DataTypes.DATE, allowNull: true },
       last_error: { type: DataTypes.JSONB, allowNull: true },
     }, {
       tableName: 'engineering_tasks',
@@ -56,6 +66,8 @@ function getEngineeringTaskModel() {
         { fields: ['task_type'], name: 'engineering_tasks_type_idx' },
         { fields: ['risk'], name: 'engineering_tasks_risk_idx' },
         { unique: true, fields: ['idempotency_key'], name: 'engineering_tasks_idempotency_key_unique' },
+        { fields: ['lease_expires_at'], name: 'engineering_tasks_lease_expires_idx' },
+        { fields: ['lease_worker_instance_id'], name: 'engineering_tasks_lease_worker_idx' },
       ],
     });
   }
