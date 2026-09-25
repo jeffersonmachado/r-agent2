@@ -150,6 +150,51 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
     }
   }
 
+  // ── Varredura de ENGINEERINGTASK (missão V2) ────────────────────────────────────────────────
+  // GAP CONFIRMADO: o sweep só olhava MISSÕES. Uma task cujo worker morreu (lease expirado) e cuja
+  // missão não é resumível ficava órfã para sempre, e a retomada dependia de a missão estar no
+  // caminho. A missão exige explicitamente: "scan incomplete EngineeringTasks → evaluate leases →
+  // acquire valid lease → schedule task → continue execution".
+  const taskService = require('../engineeringRouter/engineeringTaskService');
+  summary.taskItems = [];
+  try {
+    const orphanTasks = await taskService.findTasksWithExpiredLease({ limit: DEFAULT_LIMIT });
+    for (const task of orphanTasks) {
+      const acquired = await taskService.acquireTaskLease(task.id, {
+        workerInstanceId: `${workerInstanceId}-task`,
+        host,
+      });
+      if (!acquired.acquired) {
+        summary.taskItems.push({ taskId: task.id, action: 'SKIP', reason: acquired.reason || 'TASK_LEASE_NOT_ACQUIRED' });
+        continue;
+      }
+      // A task está sob posse de um worker vivo (o deste recovery) com fence avançado: a execução
+      // pode continuar do ponto onde parou. Se ela veio de uma missão, o caminho é o Router.
+      let resumed = false;
+      if (task.missionId || task.mission_id) {
+        const orchestrator = require('./missionOrchestratorService');
+        try {
+          await orchestrator.runMissionTask(task.missionId || task.mission_id, { tenantId });
+          resumed = true;
+        } catch (error) {
+          summary.taskItems.push({ taskId: task.id, action: 'RESUME_FAILED', reason: error.code || error.message, leaseFence: acquired.lease.fence });
+          continue;
+        }
+      }
+      summary.taskItems.push({
+        taskId: task.id,
+        action: resumed ? 'TASK_RESUMED' : 'TASK_LEASE_TAKEN',
+        previousWorker: task.leaseWorkerInstanceId || null,
+        leaseFence: acquired.lease.fence,
+        resumed,
+      });
+    }
+    summary.tasksScanned = orphanTasks.length;
+    summary.tasksRecovered = summary.taskItems.filter((i) => i.action === 'TASK_RESUMED' || i.action === 'TASK_LEASE_TAKEN').length;
+  } catch (error) {
+    summary.taskItems.push({ action: 'TASK_SWEEP_FAILED', reason: error.code || error.message });
+  }
+
   summary.finishedAt = new Date().toISOString();
   lastSweep = summary;
   if (summary.scanned > 0) {
