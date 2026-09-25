@@ -373,11 +373,18 @@ async function saveRoutingDecision(taskId, routingDecision) {
   return toPlain(row);
 }
 
-async function saveLastError(taskId, error) {
+async function saveLastError(taskId, error = {}) {
   const Model = getEngineeringTaskModel();
   const row = await Model.findByPk(taskId);
   if (!row) return null;
-  await row.update({ last_error: { message: error.message, code: error.code || null, at: new Date().toISOString() } });
+  // DEFEITO REAL corrigido aqui (medido em 2026-09-25): a versão anterior montava
+  // `{ message, code, at }` e DESCARTAVA todo o resto que o chamador passou. Quem registrava um
+  // bloqueio com contexto adicional (estado, estratégia, decisão pendente) achava que tinha
+  // persistido evidência, e o banco guardava só a mensagem — o mesmo padrão de "engolir
+  // informação" que já produziu diagnósticos enganosos em outros pontos. Agora os campos extras
+  // são preservados; o formato histórico (`message`/`code`/`at`) continua idêntico.
+  const { message = null, code = null, ...extra } = error;
+  await row.update({ last_error: { message, code: code || null, at: new Date().toISOString(), ...extra } });
   return toPlain(row);
 }
 
@@ -478,8 +485,43 @@ async function listTelemetry(taskId) {
   return rows.map(toPlain);
 }
 
-async function computeOverview() {
+/**
+ * Campos de METADADO de vínculo/identidade da task. Allowlist ESTRITA: `updateTaskFields` não é
+ * uma porta lateral para escrever `status` sem passar pelo fencing (seria um bypass do CAS).
+ */
+const TASK_METADATA_FIELDS = Object.freeze([
+  'mission_id',
+  'mission_version',
+  'mission_spec_hash',
+  'mission_spec_state',
+  'mission_spec_checked_at',
+  'superseded_by_task_id',
+]);
+
+/**
+ * Escrita de metadados (vínculo com a MissionSpec, estado de frescor, supersessão).
+ *
+ * Não é escrita de estado de execução: não altera `status`, resultado ou evidência de trabalho, e
+ * por isso não passa pelo fence — que existe para impedir um worker ANTIGO de sobrescrever o
+ * trabalho do dono novo. Como consequência, qualquer campo fora da allowlist é RECUSADO (em
+ * especial `status`), para que esta função nunca vire um caminho de escrita sem CAS.
+ */
+async function updateTaskFields(taskId, patch = {}) {
+  const invalid = Object.keys(patch).filter((key) => !TASK_METADATA_FIELDS.includes(key));
+  if (invalid.length > 0) {
+    throw Object.assign(
+      new Error(`updateTaskFields recusa campos não-metadados: ${invalid.join(', ')} — escrita de estado passa por transitionTask/updateTaskGuarded (CAS)`),
+      { code: 'TASK_METADATA_FIELD_NOT_ALLOWED', fields: invalid },
+    );
+  }
   const Model = getEngineeringTaskModel();
+  const row = await Model.findByPk(taskId);
+  if (!row) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
+  await row.update(patch);
+  return toPlain(row);
+}
+
+async function computeOverview() {
   // ERV1-CLOSE-005: usa TERMINAL_STATES (fonte única) em vez de uma lista hardcoded — quando
   // READY_FOR_PROMOTION foi adicionado como terminal, uma lista solta aqui teria continuado
   // contando essas tasks como "em execução" para sempre.
@@ -507,6 +549,8 @@ module.exports = {
   RISK_LEVELS,
   TASK_SCOPES,
   createTask,
+  updateTaskFields,
+  TASK_METADATA_FIELDS,
   getTask,
   listTasks,
   transitionTask,

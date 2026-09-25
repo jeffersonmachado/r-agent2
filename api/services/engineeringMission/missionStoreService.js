@@ -493,6 +493,27 @@ async function findResumableMissions({ limit = 50 } = {}) {
   return rows.map(toPlain);
 }
 
+/**
+ * Encontra a missão que possui a task no HISTÓRICO de vínculos (`linked_task_ids`). Usado para
+ * derivar o vínculo task↔MissionSpec de tasks criadas antes das colunas de vínculo existirem.
+ * Procura no histórico, não só no vínculo corrente: uma task substituída continua pertencendo à
+ * missão (e é justamente por isso que precisa ser reconhecida como obsoleta, não como órfã).
+ */
+async function findMissionByLinkedTask(taskId) {
+  const { Mission } = models();
+  const rows = await Mission.findAll({
+    where: {
+      [Op.or]: [
+        { linked_task_id: taskId },
+        { linked_task_ids: { [Op.contains]: [taskId] } },
+      ],
+    },
+    order: [['updated_at', 'DESC']],
+    limit: 1,
+  });
+  return rows.length > 0 ? toPlain(rows[0]) : null;
+}
+
 async function linkTask({ missionId, taskId }) {
   const current = await getMission(missionId);
   if (!current) return null;
@@ -761,6 +782,7 @@ module.exports = {
   unlockMission,
   findResumableMissions,
   linkTask,
+  findMissionByLinkedTask,
   saveVersion,
   getVersion,
   getCurrentVersion,

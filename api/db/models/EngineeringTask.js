@@ -56,6 +56,16 @@ function getEngineeringTaskModel() {
       lease_acquired_at: { type: DataTypes.DATE, allowNull: true },
       lease_expires_at: { type: DataTypes.DATE, allowNull: true },
       lease_heartbeat_at: { type: DataTypes.DATE, allowNull: true },
+      // Vínculo verificável com a versão da MissionSpec que originou esta task (missão V2,
+      // §22/§23 — stale mission spec). Sem estes campos, uma task criada para a v1 seguia
+      // executando fases materiais (com efeito real no git) depois da v2 aprovada, sem que
+      // nenhuma fase pudesse detectar o contrato obsoleto.
+      mission_id: { type: DataTypes.UUID, allowNull: true },
+      mission_version: { type: DataTypes.INTEGER, allowNull: true },
+      mission_spec_hash: { type: DataTypes.STRING(80), allowNull: true },
+      mission_spec_state: { type: DataTypes.STRING(20), allowNull: true },
+      superseded_by_task_id: { type: DataTypes.UUID, allowNull: true },
+      mission_spec_checked_at: { type: DataTypes.DATE, allowNull: true },
       last_error: { type: DataTypes.JSONB, allowNull: true },
     }, {
       tableName: 'engineering_tasks',
@@ -68,6 +78,8 @@ function getEngineeringTaskModel() {
         { unique: true, fields: ['idempotency_key'], name: 'engineering_tasks_idempotency_key_unique' },
         { fields: ['lease_expires_at'], name: 'engineering_tasks_lease_expires_idx' },
         { fields: ['lease_worker_instance_id'], name: 'engineering_tasks_lease_worker_idx' },
+        { fields: ['mission_id'], name: 'engineering_tasks_mission_id_idx' },
+        { fields: ['mission_spec_state'], name: 'engineering_tasks_mission_spec_state_idx' },
       ],
     });
   }

@@ -22,9 +22,12 @@ const missionStore = require('./missionStoreService');
 const compiler = require('./missionCompilerService');
 const approvalService = require('./missionApprovalService');
 const missionReviewService = require('./missionReviewService');
+const taskSpecBinding = require('./taskSpecBindingService');
 const { emitMissionStage } = require('./missionEvents');
 const engineeringTaskService = require('../engineeringRouter/engineeringTaskService');
 const { runTask } = require('../engineeringRouter/engineeringRouterService');
+const { TERMINAL_STATES } = require('../../../engine/engineeringRouter/constants');
+const { SPEC_STRATEGIES } = require('../../../engine/engineeringMission/missionSpecFreshness');
 const logger = require('../../utils/logger');
 
 const DISPLAY_TO_MISSION_STATE = Object.freeze({
@@ -59,6 +62,38 @@ function buildTaskContract(spec, { createdBy = null } = {}) {
  * Não dispara o loop de execução — isso é `runMissionTask`, para que a rota possa responder
  * imediatamente e o loop seguir em background (mesmo padrão do Router).
  */
+/**
+ * SUPERSEDE explícito (§23). Quando a execução passa a ser da versão NOVA, a task da versão
+ * anterior não pode simplesmente continuar existindo em estado executável: ela é CANCELADA e
+ * marcada com `superseded_by_task_id` — ou, se já produziu trabalho material, fica PENDENTE DE
+ * DECISÃO HUMANA (nunca se destrói trabalho real em silêncio).
+ */
+async function supersedePreviousTask({ mission, newTaskId, actor = null, tenantId = 'system' }) {
+  const previousTaskId = mission?.linked_task_id || null;
+  if (!previousTaskId || previousTaskId === newTaskId) return null;
+
+  const previous = await engineeringTaskService.getTask(previousTaskId);
+  if (!previous || TERMINAL_STATES.includes(previous.status)) return null;
+
+  const { assessment } = await taskSpecBinding.assessTaskSpecFreshness(previousTaskId);
+  if (assessment.strategy === SPEC_STRATEGIES.PROCEED) return null;
+
+  const outcome = await taskSpecBinding.resolveStaleTask(previousTaskId, {
+    supersededByTaskId: newTaskId,
+    actor,
+    reason: assessment.reason,
+  });
+  emitMissionStage(tenantId, mission.id, {
+    stage: 'TASK_SUPERSEDED',
+    status: 'warning',
+    phase: 'EXECUTING',
+    displayStatus: null,
+    message: `EngineeringTask ${previousTaskId} (vínculo ${assessment.state}) resolvida como ${outcome.applied}`,
+    meta: { previousTaskId, newTaskId, state: assessment.state, strategy: assessment.strategy, applied: outcome.applied },
+  });
+  return outcome;
+}
+
 async function startExecution(missionId, { actor = null, tenantId = 'system' } = {}) {
   const { mission, spec, approval } = await approvalService.assertMissionExecutable(missionId);
 
@@ -66,6 +101,15 @@ async function startExecution(missionId, { actor = null, tenantId = 'system' } =
     buildTaskContract(spec, { createdBy: actor }),
     { createdBy: actor, idempotencyKey: `mission:${missionId}:v${spec.version}` },
   );
+
+  // VÍNCULO VERIFICÁVEL (§22): a task passa a declarar DE QUAL versão da MissionSpec ela veio.
+  // Sem isso, uma task da v1 continuava executando fases materiais depois da v2 aprovada e nenhuma
+  // fase podia detectar o contrato obsoleto — o gap STALE_MISSION_SPEC.
+  const binding = await taskSpecBinding.bindTaskToSpec({ taskId: task.id, missionId, spec, approval });
+
+  // A task da versão anterior (se havia e se o contrato dela ficou obsoleto) é resolvida de forma
+  // EXPLÍCITA antes do novo vínculo, para que não reste execução paralela sobre contrato antigo.
+  const supersession = await supersedePreviousTask({ mission, newTaskId: task.id, actor, tenantId });
 
   await missionStore.linkTask({ missionId, taskId: task.id });
   await missionStore.updateMission(missionId, { status: 'EXECUTING' });
@@ -103,7 +147,15 @@ async function runMissionTask(missionId, { tenantId = null, runnerId = undefined
     });
   }
 
+  // GUARD de fase material: a execução só começa se o contrato da task ainda corresponde à
+  // versão corrente da MissionSpec. Se uma versão superadora existe, o erro carrega a ESTRATÉGIA
+  // explícita (§23) em vez de deixar a task avançar sobre contrato obsoleto.
+  await taskSpecBinding.assertTaskSpecFresh(mission.linked_task_id, { phase: 'EXECUTION_ENTRY', missionId });
+
   const result = await runTask(mission.linked_task_id, {
+    // GUARD por fase: injetado aqui (o Router é genérico e não conhece missões). Revalida antes de
+    // CODING, antes de retomar fase de avanço e antes de promover.
+    specFreshnessGuard: ({ phase }) => taskSpecBinding.assertTaskSpecFresh(mission.linked_task_id, { phase, missionId }),
     ...(runnerId ? { runnerId } : {}),
     ...(credentialScope ? { credentialScope } : {}),
     ...(tenantId ? { eventAudienceTenantId: tenantId } : {}),

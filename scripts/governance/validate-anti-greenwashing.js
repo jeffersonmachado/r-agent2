@@ -33,6 +33,7 @@ const AUTHORITATIVE_SUITES = Object.freeze([
   'tests/unit/engineeringMissionRecoveryPlan.test.js',
   'tests/unit/engineeringMissionPolicyResolver.test.js',
   'tests/unit/engineeringMissionPolicyAuthority.test.js',
+  'tests/unit/engineeringMissionSpecFreshness.test.js',
   'tests/unit/engineeringMissionRoutes.test.js',
   'tests/unit/engineeringMissionRbac.test.js',
   'tests/unit/engineeringMissionReviewEngines.test.js',
@@ -46,6 +47,7 @@ const AUTHORITATIVE_SUITES = Object.freeze([
   'tests/integration/engineeringMissionDurableResume.test.js',
   'tests/integration/engineeringMissionGovernanceAndConcurrency.test.js',
   'tests/integration/engineeringMissionFullE2E.test.js',
+  'tests/integration/engineeringMissionStaleSpec.test.js',
 ]);
 
 /** Mecanismos de pulo que NÃO são permitidos em suite autoritativa. */

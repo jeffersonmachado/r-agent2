@@ -473,10 +473,10 @@ async function acquireRunLock(taskId, runnerId) {
   return { task, alreadyTerminal: false };
 }
 
-async function runLockedTask(task, { credentialScope, eventAudienceTenantId }) {
+async function runLockedTask(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null }) {
   const taskId = task.id;
   try {
-    return await executeRoutedLoop(task, { credentialScope, eventAudienceTenantId });
+    return await executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard });
   } catch (err) {
     // Cancelamento concorrente (POST /tasks/:id/cancel enquanto este loop já estava rodando)
     // aparece como uma transição de estado agora inválida a partir de CANCELLED — tratado como
@@ -504,6 +504,7 @@ async function runTask(taskId, {
   runnerId = `runner-${process.pid}-${Date.now()}`,
   credentialScope = ENGINEERING_CREDENTIAL_SCOPE,
   eventAudienceTenantId = null,
+  specFreshnessGuard = null,
 } = {}) {
   const { task, alreadyTerminal } = await acquireRunLock(taskId, runnerId);
   if (alreadyTerminal) return { taskId, status: task.status, idempotent: true };
@@ -512,7 +513,20 @@ async function runTask(taskId, {
   // evento cai no próprio credentialScope — mesmo default de sempre para quem não pediu uma
   // audiência específica. Nunca o inverso (nunca derivar credentialScope da audiência).
   const resolvedAudience = eventAudienceTenantId || credentialScope;
-  return runLockedTask(task, { credentialScope, eventAudienceTenantId: resolvedAudience });
+  return runLockedTask(task, { credentialScope, eventAudienceTenantId: resolvedAudience, specFreshnessGuard });
+}
+
+/**
+ * GUARD de fase material injetado pela camada que conhece o vínculo com a missão.
+ *
+ * O Router é GENÉRICO: ele não sabe o que é uma MissionSpec e não pode passar a saber (acoplaria
+ * camadas). Mas é ele quem executa as fases com efeito real no git. A solução é INJEÇÃO: quem cria
+ * a task fornece uma função que responde "este contrato ainda vale?". O Router apenas a invoca
+ * antes de cada fase material e obedece. Sem guard injetado, o comportamento é o de sempre.
+ */
+async function assertSpecFresh(guard, phase, taskId) {
+  if (typeof guard !== 'function') return;
+  await guard({ phase, taskId });
 }
 
 /**
@@ -542,7 +556,7 @@ async function beginRun(taskId, {
   return { taskId, status: 'ACCEPTED', accepted: true };
 }
 
-async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId }) {
+async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId, specFreshnessGuard = null }) {
   const taskId = task.id;
   task = await ensureRouted(task, { credentialScope, eventAudienceTenantId });
 
@@ -573,6 +587,7 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
   // pós-CODE (REGRESSION/GOVERNANCE/PROMOTING/POST_PROMOTION_VERIFY/READY_FOR_PROMOTION) — se
   // sim, RETOMA por ali, nunca cria uma tentativa nova redundante nem arrisca reexecutar
   // REGRESSION/GOVERNANCE/PROMOTING do zero sem checar o que já é real.
+  await assertSpecFresh(specFreshnessGuard, 'ADVANCE_RESUME', taskId);
   const resumed = await resumeAdvancePhaseIfNeeded(task, lastAttempt, { eventAudienceTenantId });
   if (resumed) return resumed;
 
@@ -582,6 +597,9 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
   const excludedModelKeys = new Set();
 
   while (iterationsUsed < task.max_iterations) {
+    // Fase CODING: consome LLM, gera patch e cria workspace. É trabalho material — não roda sobre
+    // contrato obsoleto.
+    await assertSpecFresh(specFreshnessGuard, 'CODING', taskId);
     const result = await runOneAttempt({ task, routingDecision: task.routing_decision, failureBundle, previousAttempt: lastAttempt, credentialScope, eventAudienceTenantId });
     iterationsUsed += 1;
 
@@ -639,6 +657,9 @@ async function executeRoutedLoop(task, { credentialScope, eventAudienceTenantId 
     }
 
     if (result.outcome === 'ADVANCE') {
+      // Fase pós-CODING: REGRESSION/GOVERNANCE e, sobretudo, PROMOTING (candidate commit + branch
+      // já criados = efeito real e irreversível). Revalida ANTES de promover.
+      await assertSpecFresh(specFreshnessGuard, 'ADVANCE_PROMOTION', taskId);
       return advanceFromCodedAttempt(task, result, { eventAudienceTenantId });
     }
 
