@@ -170,7 +170,7 @@
       ],
       "auditEnvelope": "sha256 de 13 artefatos + das evidências runtime, com verification que RECOMPUTA os hashes (adulteração = FAIL)",
       "ragSegregationCauseInvestigation": {
-        "state": "CAUSA_NAO_DETERMINADA (3 hipóteses refutadas por medição)",
+        "state": "CAUSA_NAO_DETERMINADA (4 hipóteses refutadas por medição)",
         "factsEstablished": [
           "Em ISOLAMENTO o cenário passa na PRIMEIRA tentativa (POST 201; GET 200 com indexed=true; domain=OPERATIONAL; chunks=1)",
           "No mesh falhou por timeout de 30s SEM erro de poll — o GET respondia 200 com indexed ainda falso",
@@ -179,10 +179,11 @@
         "hypothesesRefuted": [
           "1) LATÊNCIA SOB CARGA: refutada — quem indexa leva 47-71ms (min/mediana); não há lentidão",
           "2) DEDUPLICAÇÃO DO PADRÃO DO CENÁRIO: refutada — replicando a geração exata do cenário (frase base + 16 palavras de 24 seedadas), 12/12 foram indexados e 0 descartados",
-          "3) RESÍDUO DE EXECUÇÕES ANTERIORES: refutada — 0 documentos QASEG/QA Segregation/QA Load remanescentes no índice; o cleanup do cenário funciona"
+          "3) RESÍDUO DE EXECUÇÕES ANTERIORES: refutada — 0 documentos QASEG/QA Segregation/QA Load remanescentes no índice; o cleanup do cenário funciona",
+          "4) DEDUPLICAÇÃO CRUZADA ENTRE CENÁRIOS RAG: refutada — criando os DOIS documentos com os textos EXATOS dos cenários (QA RAG Doc + QA Segregation), ambos indexaram com chunks=1"
         ],
         "whyNotConcluded": "Eu já havia publicado uma explicação confortável ('latência sob carga') que a medição derrubou. Substituí-la por outra explicação confortável sem medir seria repetir o erro. A causa provável remanescente (deduplicação cruzada entre cenários RAG concorrentes no mesh, que não acontece em isolamento) permanece NÃO VERIFICADA.",
-        "nextExperiment": "Rodar o cenário isolado em repetição e com os demais cenários RAG (CORE-BIZ-RAG-DOCUMENTS e o fluxo de src-docs) em paralelo, capturando index_status/index_error_message do documento do cenário ANTES do cleanup — hoje o cleanup apaga a evidência antes de qualquer inspeção (limitação reconhecida do diagnóstico)."
+        "nextExperiment": "ENCERRADA A GERAÇÃO DE HIPÓTESES APÓS 4 REFUTAÇÕES. O caminho agora é EVIDÊNCIA NO MOMENTO DA FALHA, não arqueologia: a instrumentação adicionada em 2026-09-25 (tests/rpa/business/runtime.js) embute o estado final do documento no erro (indexStatus/chunks/indexed/erro + último erro de poll). O próximo `npm run qa:mesh` que falhar neste cenário trará a causa escrita na própria mensagem, sem precisar de sondas externas nem apagar evidência. Cada nova hipótese levantada sem esse dado seria palpite — e quatro já caíram."
       },
       "auditEnvelopeLimitation": "HONESTIDADE SOBRE O ALCANCE: a verificação recomputa os hashes na MESMA execução em que o envelope é gerado. Isso prova integridade e detecta adulteração do relatório, mas NÃO é um selo imutável ao longo do tempo — como os fontes do repositório continuam evoluindo, os hashes do envelope mudam a cada execução do validador. Um selo com validade temporal exigiria assinatura com chave e registro externo (fora do escopo desta sessão).",
       "sessionFinalValidation": {
