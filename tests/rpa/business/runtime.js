@@ -4317,7 +4317,17 @@ async function runFlowScenario(definition, ctx) {
         if (!indexed) await new Promise((resolve) => setTimeout(resolve, 1500));
       }
       if (!indexed) {
-        throw new Error(`Documento não foi indexado dentro do tempo esperado${lastPollError ? ` (último erro de poll: ${lastPollError})` : ''}`);
+        // Instrumentação para diagnóstico: a mensagem antiga não dizia POR QUE não indexou, e o
+        // cleanup apaga o documento logo depois — a evidência desaparecia antes de qualquer
+        // inspeção. Medido em 2026-09-25: investigar a causa exigiu sondas externas e ainda assim
+        // três hipóteses caíram. Com o estado final do documento no erro, a próxima falha se
+        // explica sozinha.
+        const last = await api.get(`/rag/documents/${encodeURIComponent(documentId)}`).catch(() => null);
+        const d = last?.document || last;
+        const finalState = d
+          ? `indexStatus=${d.indexStatus} chunks=${d.chunksCount} indexed=${d.indexed} erro=${d.indexErrorCode || '-'}::${String(d.indexErrorMessage || '').slice(0, 120)}`
+          : 'estado indisponível (GET final falhou)';
+        throw new Error(`Documento não foi indexado dentro do tempo esperado (estado final: ${finalState}${lastPollError ? ` | último erro de poll: ${lastPollError}` : ''})`);
       }
 
       // Query operacional: deve encontrar o documento e reportar o escopo aplicado.
