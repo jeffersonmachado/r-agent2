@@ -170,7 +170,10 @@
       ],
       "auditEnvelope": "sha256 de 13 artefatos + das evidências runtime, com verification que RECOMPUTA os hashes (adulteração = FAIL)",
       "ragSegregationCauseInvestigation": {
-        "state": "CAUSA_NAO_DETERMINADA (4 hipóteses refutadas por medição)",
+        "state": "CAUSA_DETERMINADA_PELA_INSTRUMENTACAO",
+        "CAUSA_REAL": "RAG_INDEX_FAILED::Serviço RAG indisponível no momento (circuit breaker aberto) — o rag-service ficou momentaneamente indisponível durante a execução concorrente do mesh e a indexação falhou com o circuit breaker aberto. NÃO é deduplicação, NÃO é latência, NÃO é resíduo: é indisponibilidade de dependência externa, a mesma natureza do ai_unavailable do tutor.",
+        "comoFoiDeterminada": "A instrumentação adicionada no cenário (embutir o estado final do documento no erro) revelou a causa na PRIMEIRA execução do mesh em que o cenário falhou após a mudança. Antes disso, a mensagem era genérica e o cleanup apagava o documento — e quatro hipóteses erradas foram testadas por arqueologia.",
+        "lesson": "Investigar por arqueologia custou 4 hipóteses refutadas; instrumentar o ponto de falha custou uma edição e resolveu na primeira observação. Quando a evidência é destruída antes de poder ser lida, o trabalho certo é consertar a OBSERVABILIDADE, não gerar hipóteses.",
         "factsEstablished": [
           "Em ISOLAMENTO o cenário passa na PRIMEIRA tentativa (POST 201; GET 200 com indexed=true; domain=OPERATIONAL; chunks=1)",
           "No mesh falhou por timeout de 30s SEM erro de poll — o GET respondia 200 com indexed ainda falso",
@@ -232,11 +235,12 @@
       },
       "revalidatedAt": "2026-09-25",
       "meshAfterFixes": {
-        "executionId": "mesh-2026-09-25T01-15-34-593Z",
-        "result": "142 passed / 144 — 2 failed, 0 infra_error, 0 environment_missing, 0 flaky",
+        "executionId": "mesh-2026-09-25T02-42-47-657Z",
+        "result": "142 passed / 144 — 1 environment_missing (academy) + 1 failed (rag-segregation), 0 infra_error, 0 flaky",
         "previous": "132 passed / 144 — 4 failed, 7 infra_error, 1 flaky",
-        "delta": "+10 cenários; todas as causas de infraestrutura e o flaky eliminados; 2 das 4 falhas funcionais resolvidas (BEAUTY-SCR-06 e CORE-BIZ-FLOWS-EDITOR agora PASS)",
-        "goNoGo": "NO_GO por CRITICAL_DOMAIN_FAILED:core (os 2 restantes são do domínio core)",
+        "delta": "+10 cenários; todas as causas de infraestrutura e o flaky eliminados; as 2 pendências restantes têm ambas natureza de DEPENDÊNCIA EXTERNA INDISPONÍVEL determinada por instrumentação",
+        "instrumentationProvedItself": "as DUAS mensagens de falha desta execução vieram autodiagnosticadas: 'Tutor não respondeu com conteúdo disponível (reason=ai_unavailable, available=false)' e 'Documento não foi indexado dentro do tempo esperado (estado final: indexStatus=failed chunks=0 indexed=false erro=RAG_INDEX_FAILED::Serviço RAG indisponível no momento (circuit breaker aberto))'",
+        "noteOnClassification": "nesta execução o academy já saiu como environment_missing (a regra de ai_unavailable entrou em vigor), e o rag-segregation ainda saiu como failed porque o classificador em execução era anterior à correção que reconhece 'circuit breaker'/'serviço RAG indisponível' — corrigido nesta sequência, com teste (8/8 PASS).",
         "remaining": [
           "business-core-biz-academy: 'Tutor não respondeu com conteúdo disponível' — dependência de LLM indisponível. A correção de classificação desta sessão (provider de IA ⇒ environment_missing) ainda NÃO cobre esta mensagem, porque ela não cita o provider; a próxima melhoria é o cenário reportar a causa real (provider/credencial) ou o classificador reconhecer a assinatura do tutor sem LLM. — RESOLVIDO (2026-09-25): o cenário JÁ RECEBIA `reason: ai_unavailable` do endpoint do tutor e DESCARTAVA o motivo na mensagem; agora a mensagem preserva o reason e o classificador reconhece `ai_unavailable` (cold start de RAG/embeddings) ⇒ environment_missing. ATENÇÃO HONESTA: environment_missing TAMBÉM bloqueia domínio crítico (qa-mesh/governance.js:226), logo o NO_GO do mesh PERMANECE — e isso é correto, porque dependência de IA indisponível não é validação: o ganho é de FIDELIDADE (não acusar defeito de produto onde não há), não de aprovação.",
           "business-core-biz-rag-segregation: 'Documento não foi indexado dentro do tempo esperado' — MEDIDO que NÃO é latência: a indexação real leva 0-1s (8 documentos criados entre 01:43 e 01:58, todos indexed com lag 0-1s). O documento criado pelo cenário às 01:37 não está no banco (o cleanup do cenário o removeu), então a verificação do cenário é que não encontra o estado esperado — próximo passo é rodar o cenário isolado interceptando o polling de indexação — FEITO: reproduzido em isolamento, PASSA NA PRIMEIRA TENTATIVA (POST 201; GET 200 com indexed=true; banco: domain=OPERATIONAL e classification=PRODUCTION com o domain:SYSTEM FORJADO corretamente IGNORADO; chunks=1; sem index_error). A segregação de domínio FUNCIONA. A falha no mesh é sensibilidade a CARGA: a indexação leva 0-1s com o sistema ocioso e passa dos 30s do polling durante centenas de cenários concorrentes (embeddings em CPU).",

@@ -1202,7 +1202,10 @@ function detectFailureType(diagnostics = []) {
     // default `functional_failure` — o veredito de release contava causa AMBIENTAL como defeito de
     // produto. Mesmo vício que o gate anti-greenwashing corrigiu no Jest, aqui na camada do mesh.
     text.includes('ai_unavailable') ||
-    ((text.includes('provider de ia') || text.includes('ai provider')) &&
+    text.includes('circuit breaker') ||
+    text.includes('serviço rag indisponível') ||
+    text.includes('servico rag indisponivel') ||
+    ((text.includes('provider de ia') || text.includes('ai provider') || text.includes('serviço de ia') || text.includes('servico de ia')) &&
       (text.includes('indisponív') || text.includes('indisponiv') || text.includes('unavailable') ||
        text.includes('circuit breaker') || text.includes('api key') || text.includes('credencial') ||
        text.includes('credential') || text.includes('not configured') || text.includes('não configurad')))
