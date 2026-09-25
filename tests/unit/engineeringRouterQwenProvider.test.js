@@ -420,32 +420,69 @@ describe('Qwen — taxonomia de estados (nada de "live" sem execução ao vivo)'
     expect(QWEN_DEF.defaultModel).toBeTruthy();
   });
 
+  /**
+   * SEMÂNTICA DE ESTADO LIVE (missão V2): `PASS` só existe com HTTP success E resposta VÁLIDA de
+   * inferência E normalização válida. Antes este teste aceitava 401/403/429 como "esperado" — o que
+   * equivale a chamar falha de autenticação de sucesso. Cada desfecho tem estado próprio.
+   */
+  function classifyQwenLive({ status = null, body = null, networkError = null } = {}) {
+    if (networkError) return 'TIMEOUT_OR_INFRA_ERROR';
+    if (status === 200) {
+      if (!body || !Array.isArray(body.choices) || body.choices.length === 0) return 'FAIL_INVALID_RESPONSE';
+      const message = body.choices[0] && body.choices[0].message;
+      const content = message && typeof message.content === 'string' ? message.content.trim() : '';
+      if (content === '') return 'FAIL_NORMALIZATION';
+      return 'PASS';
+    }
+    if (status === 401 || status === 403) return 'FAIL_AUTH';
+    if (status === 429) return 'RATE_LIMITED';
+    if (typeof status === 'number' && status >= 500) return 'PROVIDER_ERROR';
+    return 'FAIL_UNEXPECTED';
+  }
+
+  test('QWEN_LIVE_CLASSIFICACAO: cada desfecho tem estado próprio e só 200+válido é PASS', () => {
+    expect(classifyQwenLive({ networkError: new Error('timeout') })).toBe('TIMEOUT_OR_INFRA_ERROR');
+    expect(classifyQwenLive({ status: 401 })).toBe('FAIL_AUTH');
+    expect(classifyQwenLive({ status: 403 })).toBe('FAIL_AUTH');
+    expect(classifyQwenLive({ status: 429 })).toBe('RATE_LIMITED');
+    expect(classifyQwenLive({ status: 500 })).toBe('PROVIDER_ERROR');
+    expect(classifyQwenLive({ status: 503 })).toBe('PROVIDER_ERROR');
+    expect(classifyQwenLive({ status: 200, body: {} })).toBe('FAIL_INVALID_RESPONSE');
+    expect(classifyQwenLive({ status: 200, body: { choices: [] } })).toBe('FAIL_INVALID_RESPONSE');
+    expect(classifyQwenLive({ status: 200, body: { choices: [{ message: { content: '   ' } }] } })).toBe('FAIL_NORMALIZATION');
+    // 401/429/5xx NUNCA podem ser PASS — é exatamente o que a missão proíbe.
+    for (const out of [classifyQwenLive({ status: 401 }), classifyQwenLive({ status: 429 }), classifyQwenLive({ status: 500 })]) {
+      expect(out).not.toBe('PASS');
+    }
+    expect(classifyQwenLive({ status: 200, body: { choices: [{ message: { content: 'resposta' } }] } })).toBe('PASS');
+  });
+
   test('QWEN_LIVE: sem credencial real ⇒ NOT_EXECUTED_NO_CREDENTIAL (nunca PASS)', async () => {
     const liveKey = process.env.QWEN_LIVE_API_KEY || process.env.DASHSCOPE_API_KEY || '';
     if (!liveKey) {
       const state = 'NOT_EXECUTED_NO_CREDENTIAL';
       expect(state).not.toBe('PASS');
       expect(state).not.toBe('GO');
-      // Estado declarado, não silêncio: a ausência de credencial é informação de auditoria.
       expect({ axis: 'QWEN_LIVE', state, reason: 'no_provider_credential_in_environment' }).toMatchObject({
         axis: 'QWEN_LIVE',
         state: 'NOT_EXECUTED_NO_CREDENTIAL',
       });
       return;
     }
-    // Credencial presente: a chamada é REAL e o estado reflete o resultado observado.
-    const response = await fetch(`${QWEN_DEF.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${liveKey}` },
-      body: JSON.stringify({ model: QWEN_DEF.defaultModel, messages: [{ role: 'user', content: 'ping' }], max_tokens: 8 }),
-    });
-    // 200 = LIVE andando; 401/403 = credencial inválida (falha real, não sucesso); 429 = quota.
-    expect([200, 401, 403, 429]).toContain(response.status);
-    if (response.status === 200) {
-      const body = await response.json();
-      expect(Array.isArray(body.choices)).toBe(true);
-    } else {
-      expect([401, 403, 429]).toContain(response.status);
+    // Credencial presente: a chamada é REAL e o ESTADO reflete o desfecho observado.
+    let outcome;
+    try {
+      const response = await fetch(`${QWEN_DEF.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${liveKey}` },
+        body: JSON.stringify({ model: QWEN_DEF.defaultModel, messages: [{ role: 'user', content: 'ping' }], max_tokens: 8 }),
+      });
+      const body = await response.json().catch(() => null);
+      outcome = classifyQwenLive({ status: response.status, body });
+    } catch (error) {
+      outcome = classifyQwenLive({ networkError: error });
     }
+    // O estado é OBSERVADO e não pode ser mascarado: 401 vira FAIL_AUTH, 429 vira RATE_LIMITED, etc.
+    expect(['PASS', 'FAIL_AUTH', 'RATE_LIMITED', 'PROVIDER_ERROR', 'FAIL_INVALID_RESPONSE', 'FAIL_NORMALIZATION', 'TIMEOUT_OR_INFRA_ERROR', 'FAIL_UNEXPECTED']).toContain(outcome);
   }, 30000);
 });

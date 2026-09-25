@@ -68,6 +68,9 @@ async function hybridRetrieve({
   const results = [];
   const sources = [];
   const strategiesUsed = [];
+  // Falhas de estratégia NÃO podem virar vazio mudo: quem consome precisa distinguir "não há
+  // conhecimento" de "o serviço de conhecimento está indisponível".
+  const strategyFailures = [];
 
   const knowledgeTypes = knowledgeScope.knowledgeTypes || ['SEMANTIC'];
 
@@ -93,7 +96,10 @@ async function hybridRetrieve({
       sources.push(...(vectorResults.sources || []));
       strategiesUsed.push('vector_rag');
     } catch (error) {
-      defaultLogger().warn('[KnowledgePlane] Vector RAG unavailable', { error: error.message });
+      // A falha da estratégia precisa CHEGAR ao consumidor (antes era só um warn no log): sem isso o
+      // enriquecedor não distingue "não há conhecimento" de "o serviço de conhecimento caiu".
+      strategyFailures.push({ strategy: 'vector_rag', code: error.code || null, message: error.message });
+      defaultLogger().warn('[KnowledgePlane] Vector RAG unavailable', { error: error.message, code: error.code || null });
     }
   }
 
@@ -138,9 +144,11 @@ async function hybridRetrieve({
     results: ranked.slice(0, knowledgeScope.collections?.maxResults || 10),
     sources: deduplicateSources(sources),
     strategy: strategiesUsed,
+    failures: strategyFailures,
     metadata: {
       totalRetrieved: results.length,
       strategiesUsed,
+      strategyFailures,
       knowledgeTypes,
       retrievalPurpose: knowledgeScope.retrievalPurpose,
     },
@@ -167,7 +175,17 @@ async function retrieveVectorRag({ query, tenantId, actor, knowledgeScope, deps 
     scope: knowledgeScope,
   });
 
-  if (!result.success) return { results: [], sources: [] };
+  // FALHA VISÍVEL (missão V2): antes, `!result.success` virava `{ results: [], sources: [] }` — vazio
+  // MUDO. Medido em 2026-09-25: com ~5954 chunks SYSTEM indexados, o retrieval devolvia 0 itens e o
+  // único sinal era KNOWLEDGE_NO_RESULTS, que descreve AUSÊNCIA DE CONHECIMENTO quando a causa real
+  // era INDISPONIBILIDADE do serviço (o queryRag envolve geração e falha com circuit breaker aberto).
+  // Diagnóstico errado é pior que erro: agora a causa viaja com o erro.
+  if (!result.success) {
+    const err = new Error(result.error || result.message || 'vector RAG indisponível');
+    err.code = 'VECTOR_RAG_UNAVAILABLE';
+    err.ragErrorCode = result.errorCode || result.code || null;
+    throw err;
+  }
 
   return {
     results: (result.sources || []).map((s) => ({

@@ -368,9 +368,14 @@ async function retrieveEngineeringKnowledge({
     });
 
     const raw = Array.isArray(retrieved.results) ? retrieved.results : [];
-    // Resultado vazio é ESTADO, não silêncio: sem documentos no domínio SYSTEM a missão não recebe
-    // conhecimento, e quem lê o relatório precisa saber a diferença entre "não há nada indexado" e
-    // "o retrieval falhou".
+    // FALHA DE ESTRATÉGIA ≠ AUSÊNCIA DE CONHECIMENTO. Medido em 2026-09-25: com ~5954 chunks SYSTEM
+    // indexados, o retrieval devolvia 0 itens com `KNOWLEDGE_NO_RESULTS` — diagnóstico ENGANOSO,
+    // porque a causa real era o vector RAG indisponível (o caminho envolve geração e falha com
+    // circuit breaker aberto). Agora a causa real aparece em `degraded`.
+    const strategyFailures = (retrieved.failures || retrieved.metadata?.strategyFailures || []);
+    for (const failure of strategyFailures) {
+      out.degraded.push(`KNOWLEDGE_STRATEGY_FAILED:${failure.strategy}:${failure.code || failure.message}`);
+    }
     if (raw.length === 0) out.degraded.push('KNOWLEDGE_NO_RESULTS');
     for (const item of raw) {
       const score = Number(item.score ?? item.relevance ?? 0);
@@ -470,6 +475,30 @@ async function collectContextFacts({ originalMission, repository = null, branch 
   facts.knowledgeItems = knowledge.items.length;
   facts.knowledgeRefs = knowledge.provenance.map((p) => ({ sourceId: p.sourceId, title: p.title, hash: p.hash, score: p.score }));
   facts.knowledgeBudget = knowledge.budget;
+
+  // CONTEÚDO do chunk, não apenas metadados (missão V2): antes o enricher recebia só
+  // sourceId/title/hash/score — o que NÃO é conhecimento utilizável, é um índice. A missão exige o
+  // fluxo "Engineering RAG → retrieve → rank → select → Mission Enricher RECEBE CONTEÚDO →
+  // enrichment → provenance". Cada chunk carrega o texto recuperado (já limitado pelo orçamento de
+  // `retrieveEngineeringKnowledge`) MAIS a proveniência do MESMO chunk, para que toda informação
+  // significativa possa dizer de onde veio.
+  facts.knowledgeChunks = knowledge.items.map((item, index) => {
+    const prov = knowledge.provenance[index] || {};
+    return {
+      text: item.text,
+      score: item.score,
+      truncated: item.truncated === true,
+      sourceId: prov.sourceId || null,
+      title: prov.title || null,
+      hash: prov.hash || null,
+      domain: prov.domain || 'SYSTEM',
+      classification: prov.classification || null,
+      knowledgeType: prov.knowledgeType || 'SEMANTIC',
+    };
+  });
+  // Só conteúdo de SYSTEM entra aqui: a segregação é resolvida na origem
+  // (`retrieveEngineeringKnowledge` falha fechado se o ator não puder acessar SYSTEM).
+  facts.knowledgeDomains = [...new Set(facts.knowledgeChunks.map((c) => c.domain))];
   if (knowledge.items.length > 0) contextSources.push('ENGINEERING_RAG');
   for (const reason of knowledge.degraded) degraded.push(reason);
   if (knowledge.budget.dropped > 0) degraded.push(`KNOWLEDGE_BUDGET_TRUNCATED:${knowledge.budget.dropped}`);
