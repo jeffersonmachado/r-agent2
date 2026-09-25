@@ -149,19 +149,52 @@ async function transitionTask(taskId, toStatus, extra = {}, guard = {}) {
  * continuam preenchidos, mas como ESPELHO de diagnóstico — nunca como critério de posse.
  */
 async function lockForRun(taskId, runnerId) {
-  const acquired = await acquireTaskLease(taskId, { workerInstanceId: runnerId, host: null });
-  if (acquired.acquired) return acquired.lease;
-
   const Model = getEngineeringTaskModel();
-  const row = await Model.findByPk(taskId);
-  const err = new Error('EngineeringTask já está em execução');
-  err.code = FAILURE_CODES.TASK_ALREADY_RUNNING;
-  err.lockedBy = row ? row.lease_worker_instance_id : null;
-  err.lockedAt = row ? row.lease_acquired_at : null;
-  err.leaseExpiresAt = row ? row.lease_expires_at : null;
-  err.fence = row ? row.lease_fence : null;
-  err.reason = acquired.reason || null;
-  throw err;
+  const sequelize = Model.sequelize;
+  const now = new Date();
+
+  return sequelize.transaction(async (t) => {
+    const row = await Model.findByPk(taskId, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!row) throw Object.assign(new Error('EngineeringTask não encontrada'), { code: 'not_found' });
+
+    if (isTerminal(row.status)) {
+      const err = new Error(`Task já está em estado terminal: ${row.status}`);
+      err.code = 'TASK_TERMINAL';
+      err.status = row.status;
+      throw err;
+    }
+
+    // ORDEM: o LEASE é consultado PRIMEIRO e é a autoridade quando existe. O lock temporal só decide
+    // quando não há lease algum (tasks criadas antes desta mudança). Assim o comportamento do fluxo
+    // legado é preservado byte a byte — a troca de autoridade acontece apenas onde o lease existe.
+    const leaseState = row.lease_token ? resolveLeaseState(taskLeaseToPlain(row), now.getTime()) : null;
+    if (leaseState === 'ACTIVE') {
+      const err = new Error('EngineeringTask já está em execução');
+      err.code = FAILURE_CODES.TASK_ALREADY_RUNNING;
+      err.lockedBy = row.lease_worker_instance_id;
+      err.leaseExpiresAt = row.lease_expires_at;
+      err.fence = row.lease_fence;
+      throw err;
+    }
+
+    const lockedAt = row.locked_at ? new Date(row.locked_at) : null;
+    const lockIsStale = lockedAt && (now.getTime() - lockedAt.getTime() > LOCK_STALE_MS);
+
+    if (lockedAt && !lockIsStale && leaseState === null) {
+      const err = new Error('EngineeringTask já está em execução');
+      err.code = FAILURE_CODES.TASK_ALREADY_RUNNING;
+      err.lockedBy = row.locked_by;
+      err.lockedAt = row.locked_at;
+      throw err;
+    }
+
+    if (lockIsStale) {
+      logger.warn('[engineeringTaskService] recuperando lock órfão (restart-safe)', { taskId, previousOwner: row.locked_by, lockedAt: row.locked_at });
+    }
+
+    await row.update({ locked_at: now, locked_by: runnerId }, { transaction: t });
+    return toPlain(row);
+  });
 }
 
 async function unlockTask(taskId) {

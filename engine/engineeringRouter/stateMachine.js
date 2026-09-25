@@ -64,15 +64,11 @@ function canTransition(from, to) {
  * @throws {Error} com `.code = INVALID_STATE_TRANSITION` se a transição não for permitida.
  */
 function assertTransition(from, to) {
-  // RETOMADA IDEMPOTENTE (missão V2): reaplicar a fase em que a task JÁ está não é uma transição —
-  // é o que acontece quando o recovery retoma uma task que parou no meio de IMPLEMENTING (o worker
-  // morreu com a fase setada). Medido em 2026-09-25: sem isto, o Router retomava, tomava o lease e
-  // falhava com INVALID_STATE_TRANSITION — a task continuava, mas o caminho registrava erro, e a
-  // retomada deixava de ser idempotente. Estados terminais continuam protegidos: reentrar em GREEN
-  // ou FAILED NÃO é permitido.
-  if (from === to && !isTerminal(from)) {
-    return true;
-  }
+  // REVERTIDO (2026-09-25): eu havia permitido `from === to` como "retomada idempotente" para
+  // resolver IMPLEMENTING->RED — que era, na verdade, vocabulário ERRADO meu nos testes (o estado
+  // real é CODING). Medido: com a tolerância, o loop E2E real (RED→FIX→REVIEW→GREEN, fixture real)
+  // passou a terminar em RED em vez de GREEN, porque o Router DEPENDE de a transição repetida ser
+  // rejeitada para decidir o próximo passo. Não se mexe no motor para acomodar um teste.
   if (!canTransition(from, to)) {
     const err = new Error(`Transição de estado inválida: ${from} -> ${to}`);
     err.code = FAILURE_CODES.INVALID_STATE_TRANSITION;
