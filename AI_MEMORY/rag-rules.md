@@ -59,3 +59,18 @@ release.
   correto: `set -a; source .env; set +a; ./venv/bin/uvicorn main:app --reload --port 8001`.
   Verifique depois que `curl localhost:8001/health` reporte
   `dbConfigured: true`.
+
+- **Execuções de QA/mesh exigem rag-service estável — o circuit breaker transforma
+  indisponibilidade em falha de cenário** (2026-09-25). O breaker vive em
+  `api/services/rag/ragRuntime.js` (`RAG_CB_FAILURE_THRESHOLD`, `RAG_CB_RESET_MS`,
+  `RAG_CB_RETRY_BASE_MS`): após falhas consecutivas ele abre e passa a devolver
+  `RAG_INDEX_FAILED::Serviço RAG indisponível no momento (circuit breaker aberto)`. O serviço
+  em modo dev roda com `--reload`, que reinicia o worker e o deixa indisponível por alguns
+  segundos. Medido no mesh: o cenário `CORE-BIZ-RAG-SEGREGATION` falhava exatamente por isso —
+  **não** por deduplicação nem latência (quatro hipóteses foram refutadas por medição antes de
+  instrumentar o cenário e ler o estado real do documento). Consequências práticas:
+  (a) cenários que dependem de IA/RAG devem declarar dependência indisponível
+  (`environment_missing`), nunca `failed` — `qa-mesh/meshRunner.js` reconhece `ai_unavailable`,
+  `circuit breaker` e "serviço RAG indisponível"; (b) execuções de QA devem rodar o rag-service
+  **sem `--reload`**; (c) mensagem de falha deve carregar o estado final do documento
+  (`indexStatus`/`chunks`/`indexed`/erro), porque o `cleanup` do cenário apaga a evidência.
