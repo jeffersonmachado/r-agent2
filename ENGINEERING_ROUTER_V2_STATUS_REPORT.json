@@ -148,6 +148,12 @@
       "revalidatedAt": "2026-09-24",
       "measured": [
         "qa-mesh canônico: NO_GO",
+        "mesh 2026-09-24T06-55-00-751Z: 144 cenários — 132 passed, 4 failed, 7 infra_error, 1 flaky",
+        "infra_error (7) — CAUSA RAIZ MEDIDA: ERR_CONNECTION_REFUSED at http://localhost:5173 (frontend indisponível no momento da execução). NÃO é defeito de código.",
+        "DEFEITO REAL CORRIGIDO: scripts/test-bpmn-editor-smoke.js usava default http://localhost:15173 (porta inexistente; o Vite roda na 5173) — cenário qa-bpmn-editor-smoke falhava como se fosse infra. Após a correção o smoke passa ([bpmn-smoke] OK).",
+        "failed (4) — causa medida em business-core-biz-rag-segregation: 'Documento não foi indexado dentro do tempo esperado' (timeout de 30s); o rag-service reporta indexedDocuments=0, coerente com o retrieval vazio observado no contexto de missão",
+        "failed (4) — restantes: business-beauty-scr-06, business-core-biz-academy, business-core-biz-flows-editor (relatórios em tests/rpa/reports/business-qa-*.json, FAIL: 1 cada)",
+        "flaky (1) — fitness-matricula-checkout: 'Navegador fechado pelo usuário', RPA",
         "coverage gate: NO_GO (exit=1) — jornadas em FAILED/BLOCKED medidas diretamente",
         "journey:flows_editor_rpa_replay: FAILED (business-core-biz-flows-editor)",
         "journey:rag_documents: FAILED (business-core-biz-rag-documents, business-core-biz-rag-segregation)",

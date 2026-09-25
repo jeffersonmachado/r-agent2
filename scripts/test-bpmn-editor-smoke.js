@@ -10,7 +10,7 @@
  *   6. Re-importa o internal flow e valida status
  *
  * Env vars:
- *   FRONTEND_URL               - base URL do frontend (default: http://localhost:15173)
+ *   TEST_FRONTEND_URL/FRONTEND_URL - base URL do frontend (default: http://localhost:5173)
  *   BPMN_EDITOR_EVIDENCE_PATH  - caminho de saída da evidência JSON (default: qa/l06-bpmn-editor-evidence.json)
  */
 
@@ -22,7 +22,11 @@ const { chromium } = require('playwright');
 const { runtimeAwarePath, resolveWorkspacePath } = require('../tools/system/lib/runtime-paths');
 
 const ROOT = path.join(__dirname, '..');
-const BASE_URL = process.env.FRONTEND_URL || 'http://localhost:15173';
+// Defeito real corrigido: o default era `http://localhost:15173`, porta que NÃO existe no ambiente
+// (o dev server do Vite roda na 5173). O cenário qa-bpmn-editor-smoke falhava com
+// ERR_CONNECTION_REFUSED e a falha parecia "infra", quando era o default do próprio script.
+// A ordem agora é a mesma dos outros consumidores: TEST_FRONTEND_URL > FRONTEND_URL > 5173.
+const BASE_URL = process.env.TEST_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
 const EVIDENCE_PATH = resolveWorkspacePath(
   ROOT,
   runtimeAwarePath(ROOT, 'qa/l06-bpmn-editor-evidence.json', 'BPMN_EDITOR_EVIDENCE_PATH'),
