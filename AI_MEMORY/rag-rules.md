@@ -74,3 +74,26 @@ release.
   `circuit breaker` e "serviço RAG indisponível"; (b) execuções de QA devem rodar o rag-service
   **sem `--reload`**; (c) mensagem de falha deve carregar o estado final do documento
   (`indexStatus`/`chunks`/`indexed`/erro), porque o `cleanup` do cenário apaga a evidência.
+
+
+## Retrieval retrieve-only e ACL do corpus (medido 2026-09-25)
+
+O gap "enriquecimento sem conteúdo" tinha **três causas independentes**, todas medidas contra o
+serviço vivo:
+
+1. **Retrieval era refém da geração.** Só existia `POST /rag/query` (busca + LLM). Com ~5954
+   chunks indexados, o enriquecimento recebia `VECTOR_RAG_UNAVAILABLE` porque o breaker abria por
+   falha de GERAÇÃO. Corrigido com `POST /rag/search` (retrieve-only) + `searchChunks()` no Node.
+2. **ACL — a que realmente zerava.** Os 5954 chunks SYSTEM têm `permissions.roles=['super_admin']`.
+   A busca ia com `roles: []` e a cláusula `permissions->'roles' ?| ARRAY[]` excluía TODOS.
+   Com o role correto: `chunksFound 0 → 5`. A ACL **não** é contornada: o role de serviço é
+   configurado em `ENGINEERING_KNOWLEDGE_ROLES`, e sem ele o estado é 0 itens +
+   `KNOWLEDGE_ACL_NO_ROLES` (fail-closed, visível).
+3. **Limites liam de um array.** `createResolvedScope` define `collections` como LISTA, mas o
+   consumidor lia `collections?.maxResults`/`.minScore` — sempre `undefined`. Logo o `minScore` do
+   budget nunca era aplicável e o serviço usava o default (0.5), descartando o corpus de
+   engenharia (scores típicos 0.28–0.35). Agora os limites vivem em `scope.limits`.
+
+**Lição permanente:** dois dos defeitos acima passaram por testes com *fakes* que tinham
+exatamente a forma que eu supunha. Só o dado real revelou. Todo serializer/leitor de contrato
+precisa de teste contra a ESTRUTURA REAL do produtor.

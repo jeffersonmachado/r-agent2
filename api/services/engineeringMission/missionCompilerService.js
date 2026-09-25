@@ -201,7 +201,17 @@ function buildSpecFromEnrichment({ mission, enrichment, contextFacts, previousSp
  * — a versão já gravada para os mesmos fatos é reaproveitada em vez de duplicada (unicidade de
  * `spec_hash` no banco).
  */
-async function enrichMission(missionId, { actor = null, tenantId = 'system', contextHints = {}, forceNewVersion = false, policyEscalationAuthorized = false } = {}) {
+async function enrichMission(missionId, {
+  actor = null,
+  tenantId = 'system',
+  contextHints = {},
+  forceNewVersion = false,
+  policyEscalationAuthorized = false,
+  // Roles do ator para a ACL do corpus de conhecimento (domínio SYSTEM). Sem eles o retrieval
+  // devolve 0 itens — por AUTORIZAÇÃO, não por ausência de conteúdo.
+  actorRoles = null,
+  actorClassification = 'DEVELOPMENT',
+} = {}) {
   const mission = await missionStore.getMission(missionId);
   if (!mission) {
     const err = new Error(`mission ${missionId} não encontrada`);
@@ -227,6 +237,8 @@ async function enrichMission(missionId, { actor = null, tenantId = 'system', con
       branch: mission.branch,
       contextHints,
       missionId,
+      actorRoles,
+      actorClassification,
     });
 
     const proposal = await proposeIntent({ originalMission: mission.original_mission, facts, tenantId });

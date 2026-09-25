@@ -367,6 +367,16 @@ async function retrieveEngineeringKnowledge({
     });
     out.scope = { domain: resolvedScope.domain, classifications: [...resolvedScope.classifications] };
 
+    // RESOLUÇÃO DOS ROLES (ACL): o ator informado tem precedência; na ausência dele, usa-se o
+    // papel de SERVIÇO configurado em `ENGINEERING_KNOWLEDGE_ROLES` (lista separada por vírgula).
+    //
+    // NÃO se usa um role fixo no código: o corpus de engenharia é protegido por ACL e "super_admin
+    // hardcoded" seria contornar a autorização, não exercê-la. Sem configuração, o resultado é
+    // zero itens com diagnóstico `KNOWLEDGE_ACL_NO_ROLES` — fail-closed e visível.
+    const effectiveActorRoles = (Array.isArray(actorRoles) && actorRoles.length > 0)
+      ? actorRoles
+      : String(process.env.ENGINEERING_KNOWLEDGE_ROLES || '').split(',').map((r) => r.trim()).filter(Boolean);
+
     const retrieved = await hybridRetrieve({
       query: String(query),
       tenantId,
@@ -381,7 +391,7 @@ async function retrieveEngineeringKnowledge({
       // A ACL NÃO é relaxada aqui: se o ator não tem role, o conhecimento continua negado — o que
       // muda é o DIAGNÓSTICO (ver abaixo), que passa a dizer que houve negação de ACL em vez de
       // alegar ausência de conhecimento.
-      actorRoles: Array.isArray(actorRoles) ? actorRoles : null,
+      actorRoles: effectiveActorRoles.length > 0 ? effectiveActorRoles : null,
       knowledgeScope: resolvedScope,
     });
 
@@ -389,10 +399,10 @@ async function retrieveEngineeringKnowledge({
     // DIAGNÓSTICO HONESTO da negação de ACL: 0 itens com domínio SYSTEM e nenhum role informado
     // não é "não há conhecimento indexado" — é o corpus protegido recusando o acesso.
     const aclBlocked = raw.length === 0
-      && (!Array.isArray(actorRoles) || actorRoles.length === 0)
+      && effectiveActorRoles.length === 0
       && resolvedScope.domain === 'SYSTEM';
     if (aclBlocked) {
-      out.degraded.push('KNOWLEDGE_ACL_NO_ROLES: domínio SYSTEM exige roles do ator (o corpus é protegido por ACL); informe actorRoles com o papel do requisitante');
+      out.degraded.push('KNOWLEDGE_ACL_NO_ROLES: domínio SYSTEM exige roles do ator (o corpus é protegido por ACL); informe actorRoles ou configure ENGINEERING_KNOWLEDGE_ROLES com o papel de serviço');
     }
     // FALHA DE ESTRATÉGIA ≠ AUSÊNCIA DE CONHECIMENTO. Medido em 2026-09-25: com ~5954 chunks SYSTEM
     // indexados, o retrieval devolvia 0 itens com `KNOWLEDGE_NO_RESULTS` — diagnóstico ENGANOSO,
@@ -449,7 +459,17 @@ async function retrieveEngineeringKnowledge({
 
 /** * @returns {Promise<{facts:Object, keywords:string[], memory:Object, factsHash:string, degraded:Array<string>}>}
  */
-async function collectContextFacts({ originalMission, repository = null, branch = null, contextHints = {}, missionId = null }) {
+async function collectContextFacts({
+  originalMission,
+  repository = null,
+  branch = null,
+  contextHints = {},
+  missionId = null,
+  // Roles do ator (RBAC) para a ACL do corpus de conhecimento. Sem eles o domínio SYSTEM não
+  // devolve nada (o corpus exige role) e o resultado é 0 itens — por AUTORIZAÇÃO.
+  actorRoles = null,
+  actorClassification = 'DEVELOPMENT',
+}) {
   const degraded = [];
   const keywords = tokenize(originalMission);
   const facts = {
@@ -497,6 +517,8 @@ async function collectContextFacts({ originalMission, repository = null, branch 
   const knowledge = await retrieveEngineeringKnowledge({
     query: originalMission,
     tenantId: process.env.ENGINEERING_MISSION_KNOWLEDGE_TENANT || 'system',
+    actorClassification,
+    actorRoles,
   });
   facts.knowledgeItems = knowledge.items.length;
   facts.knowledgeRefs = knowledge.provenance.map((p) => ({ sourceId: p.sourceId, title: p.title, hash: p.hash, score: p.score }));
