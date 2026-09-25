@@ -201,6 +201,19 @@
     },
     "RAP_FINAL_RELEASE": {
       "state": "NO_GO",
+      "ragLoadProbe": {
+        "state": "DEFECT_MEASURED",
+        "tool": "sonda controlada com 15 documentos simultâneos pela rota oficial (POST /rag/documents com autoIndex)",
+        "measured": "1a execução: 5/15 não indexaram em 90s | 2a execução: 2/15. Latências dos que indexam: min 47-58ms, mediana 65-71ms. Reproduzível.",
+        "stateOfLosers": "index_status=failed, indexed=false, chunks 0, index_error_code=RAG_INDEX_FAILED, index_error_message='Indexação retornou 0 chunks (não persistido no vector store)'",
+        "CORRECTION_OF_MY_OWN_CLAIM": "CORREÇÃO DA MINHA ANÁLISE ANTERIOR: eu havia atribuído a falha do cenário a 'latência sob carga (indexação passando dos 30s)'. A sonda refuta isso — os documentos que não aparecem NÃO estão lentos, estão em failed por DEDUPLICAÇÃO (0 chunks). Não é lentidão: é descarte. O polling de 30s jamais veria sucesso porque o documento esteve failed o tempo todo.",
+        "rootCause": "O rag-service descarta chunks com similaridade semântica > 0.97 (deduplicação, documentada no próprio cenário). Documentos com conteúdo suficientemente parecido são tratados como duplicados e ficam com 0 chunks — o que é DEFENSÁVEL como deduplicação, mas o estado resultante está errado: é registrado como FAILED ('falha de indexação'), quando a semântica correta é 'duplicado descartado / não indexado por deduplicação'. Isso (a) faz o operador caçar um erro que não existe e (b) faz o cenário parecer defeito funcional.",
+        "twoFacets": [
+          "MODELAGEM DE ESTADO (defeito real): '0 chunks por deduplicação' precisa de estado próprio (ex. DUPLICATE/NOT_INDEXED_DEDUPLICATED), não 'failed' — mesmo padrão dos documentos de imagem sem OCR.",
+          "GERAÇÃO DE CONTEÚDO NO CENÁRIO: o cenário varia o texto com 16 palavras de um vocabulário de 24, seedado pelo runId; sob execuções concorrentes a variação efetiva cai e a deduplicação dispara. A tentativa de variar já existe no código, mas não é suficiente para garantir unicidade."
+        ],
+        "honesty": "Isto NÃO é o mesmo que 'o produto perde dados do usuário': deduplicar conteúdo quase idêntico é intencional. O defeito é o ESTADO com que o descarte é registrado (failed) e a fragilidade do cenário em gerar conteúdo único sob concorrência."
+      },
       "revalidatedAt": "2026-09-25",
       "meshAfterFixes": {
         "executionId": "mesh-2026-09-25T01-15-34-593Z",
