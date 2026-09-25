@@ -164,37 +164,54 @@ async function retrieveVectorRag({ query, tenantId, actor, knowledgeScope, deps 
     try { return require('../../../api/services/ragService'); } catch (_) { return null; }
   })();
 
-  if (!ragService || typeof ragService.queryRag !== 'function') {
+  // CAMINHO RETRIEVE-ONLY (correção de arquitetura, 2026-09-25).
+  //
+  // Antes usava `queryRag`, que BUSCA e GERA: o retrieval dependia do provedor de IA sem precisar.
+  // Medido: com ~5954 chunks SYSTEM indexados, o enriquecimento recebia
+  // `VECTOR_RAG_UNAVAILABLE` porque o circuit breaker abria por falha de GERAÇÃO — o dado estava
+  // lá e a busca vetorial não exige LLM. Agora o caminho é `searchChunks` (`POST /rag/search`),
+  // que devolve CHUNKS com score e proveniência, sem geração.
+  const search = typeof ragService.searchChunks === 'function'
+    ? ragService.searchChunks.bind(ragService)
+    : null;
+  if (!search) {
     return { results: [], sources: [] };
   }
 
-  const result = await ragService.queryRag(query, tenantId, { actor: actor || null }, {
-    domain: knowledgeScope.domain,
-    classifications: knowledgeScope.classifications,
+  const result = await search(query, tenantId, {
     topK: knowledgeScope.collections?.maxResults || 6,
-    scope: knowledgeScope,
+    minScore: knowledgeScope.collections?.minScore,
+    // Escopo SEMPRE explícito: o domínio SYSTEM (engenharia) não é o default do Domain Policy
+    // (que aplica OPERATIONAL/PRODUCTION quando ausente).
+    scope: {
+      domain: knowledgeScope.domain,
+      classifications: knowledgeScope.classifications,
+      sensitivities: knowledgeScope.sensitivities,
+    },
   });
 
   // FALHA VISÍVEL (missão V2): antes, `!result.success` virava `{ results: [], sources: [] }` — vazio
   // MUDO. Medido em 2026-09-25: com ~5954 chunks SYSTEM indexados, o retrieval devolvia 0 itens e o
   // único sinal era KNOWLEDGE_NO_RESULTS, que descreve AUSÊNCIA DE CONHECIMENTO quando a causa real
-  // era INDISPONIBILIDADE do serviço (o queryRag envolve geração e falha com circuit breaker aberto).
-  // Diagnóstico errado é pior que erro: agora a causa viaja com o erro.
+  // era INDISPONIBILIDADE do serviço. Diagnóstico errado é pior que erro: a causa viaja com o erro.
   if (!result.success) {
-    const err = new Error(result.error || result.message || 'vector RAG indisponível');
+    const err = new Error(result.error || result.message || 'busca vetorial indisponível');
     err.code = 'VECTOR_RAG_UNAVAILABLE';
     err.ragErrorCode = result.errorCode || result.code || null;
     throw err;
   }
 
+  // O endpoint retrieve-only devolve `chunks` (não `sources`): manter a leitura antiga deixaria o
+  // retrieval permanentemente vazio, agora por CONTRATO errado em vez de geração indisponível.
+  const chunks = Array.isArray(result.chunks) ? result.chunks : [];
   return {
-    results: (result.sources || []).map((s) => ({
-      text: s.content || s.text || '',
-      source: s,
-      score: s.score || 0,
+    results: chunks.map((chunk) => ({
+      text: chunk.text || chunk.content || '',
+      source: chunk,
+      score: chunk.score || 0,
       strategy: 'vector_rag',
     })),
-    sources: result.sources || [],
+    sources: chunks,
   };
 }
 

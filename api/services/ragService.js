@@ -943,6 +943,77 @@ async function deindexDocument(documentId, tenantId) {
 }
 
 /**
+ * BUSCA VETORIAL PURA (retrieve-only) — devolve CHUNKS, nunca uma resposta gerada.
+ *
+ * ACHADO REAL (2026-09-25): só existia `queryRag`, que busca chunks E gera resposta com LLM.
+ * Consumidores que precisam de CONTEÚDO (enriquecimento de engenharia, análise) ficavam reféns do
+ * provedor de IA: com ~5954 chunks SYSTEM indexados, o retrieval devolvia indisponibilidade
+ * porque o breaker abria por falha de GERAÇÃO — sendo que a busca vetorial não precisa de LLM.
+ *
+ * Aqui a separação é explícita: RETRIEVAL não é GERAÇÃO. Mesma infraestrutura do `queryRag`
+ * (URL por tenant, headers internos, breaker, timeout), sem a etapa de geração.
+ *
+ * `scope` NUNCA é opcional na prática: sem ele, o Domain Policy aplica o mais restritivo
+ * (`OPERATIONAL`/`PRODUCTION`). Consumidores do domínio SYSTEM DEVEM informar o escopo.
+ *
+ * @returns {Promise<{success:boolean, chunks:Array, metadata:Object, error:string|null}>}
+ */
+async function searchChunks(query, tenantId, options = {}) {
+  if (typeof query !== 'string' || !query.trim()) {
+    throw new Error('Query não pode ser vazia');
+  }
+  tenantId = normalizeTenantId(tenantId);
+  if (!tenantId) {
+    throw new Error('tenantId é obrigatório');
+  }
+
+  const serviceUrl = getRagServiceUrl(tenantId);
+  const timeout = getRagQueryTimeout(tenantId);
+
+  const payload = {
+    query: safeTrim(query).substring(0, 2000),
+    tenantId,
+    topK: Number.isFinite(options.topK) ? options.topK : undefined,
+    minScore: Number.isFinite(options.minScore) ? options.minScore : undefined,
+  };
+  if (options.scope) payload.scope = options.scope;
+  if (options.filters) payload.filters = options.filters;
+
+  const response = await fetchRagWithBreaker(
+    `${serviceUrl}/rag/search`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getRagInternalHeaders(),
+      },
+      body: JSON.stringify(payload),
+    },
+    timeout
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    // Falha de busca é ERRO, nunca lista vazia: quem consome precisa distinguir
+    // "não há conhecimento" de "o serviço falhou".
+    return {
+      success: false,
+      chunks: [],
+      metadata: null,
+      error: `RAG search error: ${response.status} ${safeErrorMessage(errorText) || response.statusText}`,
+    };
+  }
+
+  const result = await response.json();
+  return {
+    success: result?.success === true,
+    chunks: Array.isArray(result?.chunks) ? result.chunks : [],
+    metadata: result?.metadata || null,
+    error: result?.error || null,
+  };
+}
+
+/**
  * Verifica se o serviço RAG está disponível.
  *
  * @returns {Promise<boolean>}
@@ -1484,6 +1555,7 @@ async function listVectorDocuments(tenantId, options = {}) {
 
 module.exports = {
   queryRag,
+  searchChunks,
   indexDocument,
   deindexDocument,
   isRagAvailable,
