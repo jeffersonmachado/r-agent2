@@ -1195,6 +1195,24 @@ function detectFailureType(diagnostics = []) {
     };
   }
   if (
+    // Dependência EXTERNA de IA indisponível (provider fora do ar, credencial ausente, circuit
+    // breaker aberto) NÃO é falha funcional do código. Medido (2026-09-24): `CORE-BIZ-FLOWS-EDITOR`
+    // respondia `500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker)`
+    // e caía no default `functional_failure` — ou seja, o veredito de release contava uma causa
+    // AMBIENTAL como defeito de produto. É o mesmo vício que o gate anti-greenwashing corrigiu no
+    // Jest, aqui na camada do mesh.
+    (text.includes('provider de ia') || text.includes('ai provider') || text.includes('provider de ia')) &&
+      (text.includes('indisponív') || text.includes('indisponiv') || text.includes('unavailable') ||
+       text.includes('circuit breaker') || text.includes('api key') || text.includes('credencial') ||
+       text.includes('credential') || text.includes('not configured') || text.includes('não configurad'))
+  ) {
+    return {
+      failureType: 'environment_missing',
+      status: 'environment_missing',
+      rootCauseHint: 'Provedor de IA indisponível ou sem credencial no ambiente: o cenário não exercitou a funcionalidade (não é defeito funcional).',
+    };
+  }
+  if (
     text.includes('exige o pipeline oficial') ||
     text.includes('execute: npm run pipeline') ||
     text.includes('pipeline_bypass=1')
