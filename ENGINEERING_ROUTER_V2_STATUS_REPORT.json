@@ -121,6 +121,34 @@
       "healthRetraction": "RETRATAÇÃO POR MEDIÇÃO (2026-09-24): eu havia registrado aqui que o /health do rag-service 'reporta 0 e engana o operador'. ESTAVA ERRADO. Medido: sem tenant_id e sem token interno o serviço devolve 0 + scopeRestricted:true por PROTEÇÃO CROSS-TENANT DELIBERADA; com ?tenant_id=system devolve indexedDocuments=1928/indexedChunks=6403; com X-RAG-Internal-Token devolve 1939/6423/tenantsCount=5. NÃO há defeito — a leitura apressada era minha.",
       "bonus": "a jornada rag_documents falhava por timeout esperando 'indexed' em um documento que caía em RAG_INDEX_FAILED durante a execução do mesh (doc-1790234607354, 07:23) — esse documento ESTÁ indexed depois do reparo."
     },
+    "MESH_FAILURE_TRIAGE": {
+      "state": "TRIAGED",
+      "measuredAt": "2026-09-24",
+      "scope": "as 4 falhas funcionais (failed) da execução mesh-2026-09-24T06-55-00-751Z, lidas nos relatórios tests/rpa/reports/business-qa-*.json",
+      "items": [
+        {
+          "scenario": "CORE-BIZ-FLOWS-EDITOR",
+          "cause": "500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker)",
+          "nature": "AMBIENTE — sem provedor de IA disponível. Mesmo padrão do QWEN_LIVE: deveria ser declarado NOT_EXECUTED_NO_CREDENTIAL, não FAIL."
+        },
+        {
+          "scenario": "CORE-BIZ-ACADEMY",
+          "cause": "Tutor não respondeu com conteúdo disponível",
+          "nature": "AMBIENTE — mesma raiz (LLM indisponível). Evidência de que não é defeito: no ciclo seguinte (07:19) o mesmo cenário consta PASS."
+        },
+        {
+          "scenario": "BEAUTY-SCR-06",
+          "cause": "Nenhum alvo semântico encontrado: [data-testid=\"refresh-button\"], button:has-text(\"Atualizar\"), button:has-text(\"Recarregar\"), button[aria-label*=\"Atualizar\" i]",
+          "nature": "HIPÓTESE 'DEFEITO DE UI' DESCARTADA POR INSPEÇÃO: a rota /beauty/payments existe (frontend/src/main.jsx:1107 → BeautyPaymentsPage) e o botão é renderizado INCONDICIONALMENTE (BeautyPaymentsPage.jsx:57, texto dinâmico Atualizar/Atualizando..., que casa com has-text por substring). Não falta UI. Resta investigar a RESOLUÇÃO/ESPERA do alvo no runner de cenários de tela."
+        },
+        {
+          "scenario": "CORE-BIZ-RAG-SEGREGATION",
+          "cause": "estágio 1 (07:06): 'Documento não foi indexado dentro do tempo esperado' — RESOLVIDO pelo reparo do índice. estágio 2 (07:19): 'Documento operacional não encontrado no escopo OPERATIONAL: [src-docs-guia-manual...]'",
+          "nature": "Estágio 1 era ambiente/estado do índice (corrigido). Estágio 2 é a investigar: busca no escopo OPERATIONAL não encontra o documento — área da segregação de domínio."
+        }
+      ],
+      "governanceInsight": "Cenários que dependem de LLM sem credencial falham como FAIL e contaminam o veredito de release com causa ambiental. É o mesmo vício que o gate anti-greenwashing corrigiu no Jest, agora na camada do mesh: o estado correto seria NOT_EXECUTED_NO_CREDENTIAL."
+    },
     "ENGINEERING_ROUTER_V2_SEAL": {
       "state": "NO_GO",
       "artifact": "scripts/governance/validate-engineering-router-v2.js (npm run validate:engineering-router-v2)",
