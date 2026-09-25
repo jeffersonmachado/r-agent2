@@ -3042,7 +3042,12 @@ async function runFlowScenario(definition, ctx) {
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
     if (!tutor || tutor.available !== true) {
-      throw new Error('Tutor não respondeu com conteúdo disponível');
+      // O motivo REAL não pode ser descartado: sem ele a falha fica indistinguível de defeito
+      // funcional e o classificador do mesh não consegue reconhecer dependência de IA indisponível
+      // (medido em 2026-09-25: 'Tutor não respondeu com conteúdo disponível' era tudo o que o
+      // relatório trazia, embora a resposta já trouxesse `reason`).
+      const reason = tutor && (tutor.reason || tutor.error) ? String(tutor.reason || tutor.error) : 'unknown';
+      throw new Error(`Tutor não respondeu com conteúdo disponível (reason=${reason}, available=${tutor && tutor.available})`);
     }
 
     const missions = await api.get('/api/learning/missions/me');

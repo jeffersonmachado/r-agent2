@@ -34,6 +34,14 @@ describe('meshRunner — classificação de falha por causa', () => {
     expect(out.failureType).toBe('environment_missing');
   });
 
+  test('TUTOR_SEM_IA: ai_unavailable (cold start do RAG/embeddings) é ambiente, não falha funcional', () => {
+    // Caso real do CORE-BIZ-ACADEMY: o cenário recebia `reason: ai_unavailable` e descartava o
+    // motivo na mensagem. Agora o motivo é preservado e classificado como dependência indisponível.
+    const out = classify({ success: false, errors: [{ message: 'Tutor não respondeu com conteúdo disponível (reason=ai_unavailable, available=false)' }] });
+    expect(out.failureType).toBe('environment_missing');
+    expect(out.status).not.toBe('failed');
+  });
+
   test('FALHA_FUNCIONAL_REAL_CONTINUA_FAILED: assert/expected não vira ambiente', () => {
     const out = classify({ success: false, errors: [{ error: 'assertion failed: expected total 3, got 5' }] });
     expect(out.failureType).toBe('functional_failure');

@@ -1195,16 +1195,17 @@ function detectFailureType(diagnostics = []) {
     };
   }
   if (
-    // Dependência EXTERNA de IA indisponível (provider fora do ar, credencial ausente, circuit
-    // breaker aberto) NÃO é falha funcional do código. Medido (2026-09-24): `CORE-BIZ-FLOWS-EDITOR`
-    // respondia `500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker)`
-    // e caía no default `functional_failure` — ou seja, o veredito de release contava uma causa
-    // AMBIENTAL como defeito de produto. É o mesmo vício que o gate anti-greenwashing corrigiu no
-    // Jest, aqui na camada do mesh.
-    (text.includes('provider de ia') || text.includes('ai provider') || text.includes('provider de ia')) &&
+    // Dependência EXTERNA de IA/RAG indisponível (provider fora do ar, credencial ausente, circuit
+    // breaker aberto, cold start do serviço de embeddings) NÃO é falha funcional do código.
+    // Medido (2026-09-24): `CORE-BIZ-FLOWS-EDITOR` respondia
+    // `500 Internal Server Error: Provider de IA 'mistral' indisponível (circuit breaker)` e caía no
+    // default `functional_failure` — o veredito de release contava causa AMBIENTAL como defeito de
+    // produto. Mesmo vício que o gate anti-greenwashing corrigiu no Jest, aqui na camada do mesh.
+    text.includes('ai_unavailable') ||
+    ((text.includes('provider de ia') || text.includes('ai provider')) &&
       (text.includes('indisponív') || text.includes('indisponiv') || text.includes('unavailable') ||
        text.includes('circuit breaker') || text.includes('api key') || text.includes('credencial') ||
-       text.includes('credential') || text.includes('not configured') || text.includes('não configurad'))
+       text.includes('credential') || text.includes('not configured') || text.includes('não configurad')))
   ) {
     return {
       failureType: 'environment_missing',
