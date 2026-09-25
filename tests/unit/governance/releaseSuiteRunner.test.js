@@ -59,12 +59,15 @@ describe('run-release-suites — mapSuiteResult', () => {
     expect(result.testsExecuted).toBe(2);
   });
 
-  it('INFRA_ERROR na mensagem prevalece sobre PASS (infra ausente nunca vira verde)', () => {
-    const result = mapSuiteResult(suite({ assertions: ['passed'], message: 'INFRA_ERROR: postgres indisponível' }));
+  it('INFRA_ERROR na mensagem de uma suíte que FALHOU tem estado próprio (não é FAIL genérico)', () => {
+    // O `infraGate` LANÇA em modo autoritativo — a suíte fica `failed` com a mensagem. É esse o
+    // cenário real. (Ler `message` de suíte que PASSOU seria a varredura de texto que causou o
+    // falso positivo corrigido abaixo.)
+    const result = mapSuiteResult(suite({ assertions: [], status: 'failed', message: 'INFRA_ERROR: postgres indisponível' }));
     expect(result.state).toBe('INFRA_ERROR');
   });
 
-  it('INFRA_ERROR no erro de um teste é detectado (a varredura não olha só o topo)', () => {
+  it('INFRA_ERROR em failureMessages é detectado (estrutura, não texto de título)', () => {
     const result = {
       name: '/tmp/x.test.js',
       status: 'failed',
@@ -72,6 +75,32 @@ describe('run-release-suites — mapSuiteResult', () => {
       assertionResults: [{ status: 'failed', title: 'DB', failureMessages: ['Error: INFRA_ERROR: postgres indisponível'] }],
     };
     expect(mapSuiteResult(result).state).toBe('INFRA_ERROR');
+  });
+
+  it('REGRESSÃO: a PALAVRA INFRA_ERROR no título de um teste que PASSOU não classifica a suíte', () => {
+    // Defeito real: a varredura usava JSON.stringify(assertionResults), que inclui títulos. A
+    // suíte que testa este mapeador tem casos com "INFRA_ERROR" no título e passou a ser marcada
+    // como INFRA_ERROR no modo autoritativo — reprovando uma execução 100% verde.
+    const result = {
+      name: '/tmp/x.test.js',
+      status: 'passed',
+      message: '',
+      assertionResults: [
+        { status: 'passed', title: 'INFRA_ERROR em failureMessages é detectado', failureMessages: [] },
+        { status: 'passed', title: 'INFRA_ERROR no erro de um teste', failureMessages: [] },
+      ],
+    };
+    expect(mapSuiteResult(result).state).toBe('PASS');
+  });
+
+  it('REGRESSÃO: mensagem de FALHA real sem INFRA_ERROR continua FAIL (não vira estado especial)', () => {
+    const result = {
+      name: '/tmp/x.test.js',
+      status: 'failed',
+      message: 'expect(received).toBe(expected)',
+      assertionResults: [{ status: 'failed', title: 'X', failureMessages: ['expect(received).toBe(expected)'] }],
+    };
+    expect(mapSuiteResult(result).state).toBe('FAIL');
   });
 
   it('suíte marcada failed sem assertions é FAIL (erro de suíte, não zero testes silencioso)', () => {

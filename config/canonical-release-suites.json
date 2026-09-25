@@ -12,7 +12,8 @@
       "tests/unit/governance/releaseSuiteManifest.test.js",
       "tests/unit/governance/releaseSuiteRunner.test.js",
       "tests/unit/governance/v2RequirementsMatrix.test.js",
-      "tests/integration/engineeringV2EnvelopeTamper.test.js"
+      "tests/integration/engineeringV2EnvelopeTamper.test.js",
+      "tests/unit/governance/v2SealOrchestration.test.js"
     ]
   },
   "exclusions": [

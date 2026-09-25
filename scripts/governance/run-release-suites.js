@@ -42,7 +42,17 @@ function mapSuiteResult(testResult) {
   const failed = assertionResults.filter((a) => a.status === 'failed').length
     + Number(testResult.numRuntimeErrorTestSuites || 0)
     + (assertionResults.length === 0 && testResult.status === 'failed' ? 1 : 0);
-  const infraError = /INFRA_ERROR/.test(testResult.message || '') || /INFRA_ERROR/.test(JSON.stringify(assertionResults));
+  // FALSO POSITIVO REAL corrigido em 2026-09-25: a detecção varria `JSON.stringify(assertionResults)`,
+  // que inclui o TÍTULO de cada teste. A própria suíte que testa este mapeador tem casos com a
+  // palavra "INFRA_ERROR" no título — e a suíte inteira passou a ser classificada como
+  // INFRA_ERROR, reprovando uma execução verde. É a mesma classe de defeito que o
+  // anti-greenwashing já resolve com `isFixtureOrStringLine`: dado não é mecanismo.
+  // Correção: olhar apenas MENSAGENS DE FALHA (estrutura), nunca o texto do título.
+  const failureText = [
+    testResult.status === 'failed' ? (testResult.message || '') : '',
+    ...assertionResults.flatMap((a) => (Array.isArray(a.failureMessages) ? a.failureMessages : [])),
+  ].join('\n');
+  const infraError = /INFRA_ERROR/.test(failureText);
   const skipped = assertionResults.filter((a) => a.status === 'pending' || a.status === 'todo').length;
   const onlySkipped = testsExecuted > 0 && skipped === testsExecuted;
 

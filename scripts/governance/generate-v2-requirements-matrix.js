@@ -126,8 +126,8 @@ function buildMatrix({
   const axes = {};
   const violations = [];
   let totalTestsExecuted = 0;
-  let suitesPass = 0;
   const suitesSeen = new Set();
+  const suitesPassed = new Set();
 
   for (const [axisId, definition] of Object.entries(config.axes)) {
     const derived = deriveAxisStatus({ axisId, definition, suiteExecution, antiGreenwashing, sealReport });
@@ -148,9 +148,30 @@ function buildMatrix({
     totalTestsExecuted += derived.testsExecuted;
     for (const s of derived.suiteStates) {
       suitesSeen.add(s.suite);
-      if (s.state === 'PASS') suitesPass += 1;
+      if (s.state === 'PASS') suitesPassed.add(s.suite);
     }
-    if (derived.status !== 'GO') violations.push({ axis: axisId, detail: derived.reason });
+    // O eixo agregado NÃO entra nas violações individuais: o veredito dele é calculado depois, a
+    // partir dos demais. Sem isso há CIRCULARIDADE REAL (o selo exigindo a si mesmo) — defeito
+    // encontrado ao rodar o sealer pela primeira vez: a matriz reprovava por causa do eixo do selo
+    // e o selo abortava por causa da matriz, sem que nada estivesse comprovadamente errado.
+    if (derived.status !== 'GO' && definition.aggregate !== true) {
+      violations.push({ axis: axisId, detail: derived.reason });
+    }
+  }
+
+  // SEGUNDO PASSE: resolve os eixos agregados a partir dos demais.
+  for (const [axisId, definition] of Object.entries(config.axes)) {
+    if (definition.aggregate !== true) continue;
+    const others = Object.entries(axes).filter(([id]) => id !== axisId);
+    const notGo = others.filter(([, axis]) => axis.status !== 'GO').map(([id]) => id);
+    const go = notGo.length === 0;
+    axes[axisId].status = go ? 'GO' : 'NO_GO';
+    axes[axisId].decision = axes[axisId].status;
+    axes[axisId].testsExecuted = 0;
+    axes[axisId].reason = go
+      ? `agregado: todos os ${others.length} eixos avaliados estão GO`
+      : `agregado: eixo(s) sem prova — ${notGo.join(', ')}`;
+    if (!go) violations.push({ axis: axisId, detail: axes[axisId].reason });
   }
 
   const axesCount = Object.keys(axes).length;
@@ -174,7 +195,7 @@ function buildMatrix({
       axesGo: goAxes,
       axesNoGo: axesCount - goAxes,
       suitesMapped: suitesSeen.size,
-      suitesPass,
+      suitesPass: suitesPassed.size,
       testsExecuted: totalTestsExecuted,
     },
     unmappedRequirementIds: config.unmappedRequirementIds || null,

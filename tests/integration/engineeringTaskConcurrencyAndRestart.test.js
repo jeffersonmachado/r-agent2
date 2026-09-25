@@ -34,8 +34,18 @@ const createdTaskIds = [];
 
 function skipIfNoDatabase() {
   if (dbAvailable) return false;
-  console.warn(`[engineering-task-concurrency] PULADO: postgres_unreachable (${dbReason})`);
-  return true;
+  // PORTA ÚNICA de infraestrutura (tests/helpers/infraGate.js): em RELEASE_AUTHORITATIVE=1 isto
+  // LANÇA INFRA_ERROR (nunca PASS silencioso); em dev registra NOT_EXECUTED com motivo.
+  // DEFEITO REAL corrigido em 2026-09-25: esta suíte era autoritativa e pulava com console.warn
+  // direto, ficando INVISÍVEL no relatório — e justamente por isso escapava do gate
+  // anti-greenwashing, que só olhava a lista manual de suítes. O pulo só ficou visível quando o
+  // manifesto passou a ser derivado por descoberta (item MANIFESTO CANÔNICO).
+  return require('../helpers/infraGate').skipOrFail({
+    suite: 'engineering-task-concurrency',
+    available: dbAvailable,
+    reason: dbReason,
+    requirement: 'postgres',
+  });
 }
 
 beforeAll(async () => {

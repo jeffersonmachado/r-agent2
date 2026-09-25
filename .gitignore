@@ -212,3 +212,4 @@ training/
 # Include de contextos realtime gerado em runtime pela API (pbxDialplanService).
 # Nao versionado: eh config derivada do banco, nao fonte.
 pbx/asterisk/etc/asterisk/conf/
+reports/.release-suite-jest.json

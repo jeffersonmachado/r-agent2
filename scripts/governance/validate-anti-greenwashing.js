@@ -26,29 +26,19 @@ const fs = require('fs');
 const path = require('path');
 const { ROOT, writeReport } = require('./common');
 
-/** Suítes que um gate de release considera AUTORITATIVAS para o Engineering Mission / Router. */
-const AUTHORITATIVE_SUITES = Object.freeze([
-  'tests/unit/engineeringRouterQwenProvider.test.js',
-  'tests/unit/engineeringMissionLeasePolicy.test.js',
-  'tests/unit/engineeringMissionRecoveryPlan.test.js',
-  'tests/unit/engineeringMissionPolicyResolver.test.js',
-  'tests/unit/engineeringMissionPolicyAuthority.test.js',
-  'tests/unit/engineeringMissionSpecFreshness.test.js',
-  'tests/unit/engineeringMissionRoutes.test.js',
-  'tests/unit/engineeringMissionRbac.test.js',
-  'tests/unit/engineeringMissionReviewEngines.test.js',
-  'tests/unit/engineeringMissionCompiler.test.js',
-  'tests/unit/engineeringMissionContextBudget.test.js',
-  'tests/integration/engineeringMissionDistributedLease.test.js',
-  'tests/integration/engineeringMissionBootRecovery.test.js',
-  'tests/integration/engineeringMissionPolicyEscalation.test.js',
-  'tests/integration/engineeringMissionReviewEnforcement.test.js',
-  'tests/integration/engineeringMissionEnrichmentDegradation.test.js',
-  'tests/integration/engineeringMissionDurableResume.test.js',
-  'tests/integration/engineeringMissionGovernanceAndConcurrency.test.js',
-  'tests/integration/engineeringMissionFullE2E.test.js',
-  'tests/integration/engineeringMissionStaleSpec.test.js',
-]);
+/**
+ * Suítes autoritativas: DERIVADAS do manifesto canônico (`config/canonical-release-suites.json`).
+ *
+ * ACHADO REAL (2026-09-25): esta lista era escrita À MÃO e divergia da execução canônica —
+ * verificava N suítes enquanto `test:release-authoritative` rodava outro conjunto. Durante a
+ * própria sessão de correção, suítes novas ficaram fora dela DUAS VEZES e o gate continuou PASS
+ * com cobertura incompleta. Agora a lista vem da descoberta determinística e qualquer suíte
+ * candidata fora do manifesto (sem exclusão justificada) é VIOLAÇÃO.
+ */
+const { resolveManifest } = require('./lib/releaseSuiteManifest');
+
+const RESOLVED_MANIFEST = resolveManifest();
+const AUTHORITATIVE_SUITES = RESOLVED_MANIFEST.authoritative;
 
 /** Mecanismos de pulo que NÃO são permitidos em suite autoritativa. */
 const FORBIDDEN_SKIP_PATTERNS = Object.freeze([
@@ -92,6 +82,16 @@ function readSuite(relativePath) {
 function evaluate() {
   const checks = [];
   const violations = [];
+
+  // Divergência manifesto × disco: suíte que existe e casa com a descoberta mas não está no
+  // manifesto nem em exclusão justificada (existir e não ser executada = verde falso).
+  for (const violation of RESOLVED_MANIFEST.violations) {
+    checks.push({ id: `MANIFEST:${violation.code}:${violation.suite || 'global'}`, ok: false, reason: violation.detail });
+    violations.push({ suite: violation.suite || 'config/canonical-release-suites.json', code: violation.code, detail: violation.detail });
+  }
+  if (RESOLVED_MANIFEST.violations.length === 0) {
+    checks.push({ id: 'MANIFEST:CONSISTENT', ok: true });
+  }
 
   for (const suite of AUTHORITATIVE_SUITES) {
     const source = readSuite(suite);
@@ -151,6 +151,12 @@ function evaluate() {
     state,
     authoritativeMode,
     authoritativeSuites: AUTHORITATIVE_SUITES.length,
+    manifest: {
+      version: RESOLVED_MANIFEST.manifestVersion,
+      configPath: 'config/canonical-release-suites.json',
+      discovered: RESOLVED_MANIFEST.discovered.length,
+      excluded: RESOLVED_MANIFEST.excluded.map((e) => ({ path: e.path, glob: e.glob, reason: e.reason })),
+    },
     violations,
     violationCount: violations.length,
     checks,
