@@ -169,6 +169,16 @@
         "V2_CRASH_SIGKILL_VERDE — reports/mission-crash-recovery-report.json GO e fresco"
       ],
       "auditEnvelope": "sha256 de 13 artefatos + das evidências runtime, com verification que RECOMPUTA os hashes (adulteração = FAIL)",
+      "auditEnvelopeLimitation": "HONESTIDADE SOBRE O ALCANCE: a verificação recomputa os hashes na MESMA execução em que o envelope é gerado. Isso prova integridade e detecta adulteração do relatório, mas NÃO é um selo imutável ao longo do tempo — como os fontes do repositório continuam evoluindo, os hashes do envelope mudam a cada execução do validador. Um selo com validade temporal exigiria assinatura com chave e registro externo (fora do escopo desta sessão).",
+      "sessionFinalValidation": {
+        "authoritative": "19 suítes / 215 testes PASS com RELEASE_AUTHORITATIVE=1 (era 17/202 antes dos testes desta sequência: contexto+RAG, classificação de falhas do mesh e evidência de crash)",
+        "gates": {
+          "antiGreenwashing": "PASS suites=17 violações=0",
+          "engineeringRouterV2": "NO_GO itens=10 falhas=0 pendencias=3",
+          "missionCrashRecovery": "GO checks=13 falhas=0"
+        },
+        "mesh": "142/144 PASS — NO_GO por CRITICAL_DOMAIN_FAILED:core (2 cenários, ambos com causa NÃO funcional comprovada)"
+      },
       "mandatoryPending": [
         "V2-01..V2-42 — os 42 testes obrigatórios ainda não estão mapeados um a um",
         "retomada de TASK real de execução através do crash (hoje prova a decisão, não a task)",
