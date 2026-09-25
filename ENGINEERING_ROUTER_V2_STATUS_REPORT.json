@@ -118,7 +118,7 @@
         "2 documentos com tenant=null (títulos 'exemplo-invalido' e 'host-inexistente-qa.invalid', criados 2026-07-27): dados de teste órfãos. 'tenantId é obrigatório' é a VALIDAÇÃO FUNCIONANDO — documento sem tenant não pode ser indexado.",
         "3 documentos de imagem (.jpeg/.png, 2026-03-02): 'Indexação retornou 0 chunks'. DEFEITO DE ESTADO, não de indexação: imagem sem OCR é 'sem conteúdo textual', e o sistema a rotula como failed em vez de ter um estado próprio (ex. NOT_APPLICABLE). Consertar isso é modelagem de estados, não maquiagem — marcar como indexed seria falso."
       ],
-      "openDefect": "GET /health do rag-service reporta indexedDocuments=0 e indexedChunks=0 APESAR de 1939 documentos e 6423 chunks reais no banco. Leitura do health incorreta: engana o operador e foi a razão pela qual o contexto de missão parecia 'sem conhecimento'.",
+      "healthRetraction": "RETRATAÇÃO POR MEDIÇÃO (2026-09-24): eu havia registrado aqui que o /health do rag-service 'reporta 0 e engana o operador'. ESTAVA ERRADO. Medido: sem tenant_id e sem token interno o serviço devolve 0 + scopeRestricted:true por PROTEÇÃO CROSS-TENANT DELIBERADA; com ?tenant_id=system devolve indexedDocuments=1928/indexedChunks=6403; com X-RAG-Internal-Token devolve 1939/6423/tenantsCount=5. NÃO há defeito — a leitura apressada era minha.",
       "bonus": "a jornada rag_documents falhava por timeout esperando 'indexed' em um documento que caía em RAG_INDEX_FAILED durante a execução do mesh (doc-1790234607354, 07:23) — esse documento ESTÁ indexed depois do reparo."
     },
     "ENGINEERING_ROUTER_V2_SEAL": {
