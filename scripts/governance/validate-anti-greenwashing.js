@@ -32,6 +32,7 @@ const AUTHORITATIVE_SUITES = Object.freeze([
   'tests/unit/engineeringMissionLeasePolicy.test.js',
   'tests/unit/engineeringMissionRecoveryPlan.test.js',
   'tests/unit/engineeringMissionPolicyResolver.test.js',
+  'tests/unit/engineeringMissionPolicyAuthority.test.js',
   'tests/unit/engineeringMissionRoutes.test.js',
   'tests/unit/engineeringMissionRbac.test.js',
   'tests/unit/engineeringMissionReviewEngines.test.js',

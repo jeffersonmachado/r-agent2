@@ -389,6 +389,11 @@ function createEngineeringMissionRoutes({ buildDeps }) {
         reason: body.reason || null,
         approveEdited: body.approveEdited !== false,
         tenantId: req.tenantId || 'system',
+        // §20: mesma origem de autorização da rota de enriquecimento — a PERMISSÃO do agente
+        // (`engineering.policy_admin`), nunca o corpo. Sem ela, editar uma missão cuja política
+        // declarada amplia a da instalação falha com POLICY_ESCALATION_DENIED (403) em vez de
+        // aprovar sob uma política que o operador não autorizou.
+        policyEscalationAuthorized: policyEscalationAuthorized(req, deps),
       });
       deps.sendJson(res, 200, result);
     } catch (err) {

@@ -28,7 +28,6 @@ const {
 const { buildEnrichment } = require('../../../engine/engineeringMission/enrichmentBuilder');
 const { classifyMateriality } = require('../../../engine/engineeringMission/materiality');
 const { buildEnrichmentPreview } = require('../../../engine/engineeringMission/missionPreview');
-const { resolveMissionPolicy } = require('../../../engine/engineeringMission/policyResolver');
 const { evaluateAutoApproval } = require('../../../engine/engineeringMission/autoApprovalPolicy');
 const { deriveDisplayStatus } = require('../../../engine/engineeringMission/missionStatus');
 const { MISSION_FAILURE_CODES } = require('../../../engine/engineeringMission/constants');
@@ -37,6 +36,7 @@ const { selectForRole } = require('../../../engine/engineeringRouter/modelSelect
 
 const missionStore = require('./missionStoreService');
 const missionContext = require('./missionContextService');
+const policyAuthority = require('./missionPolicyAuthority');
 const { emitMissionStage } = require('./missionEvents');
 const { invokeModel } = require('../engineeringRouter/engineeringAiInvoker');
 const availabilityService = require('../engineeringRouter/engineeringModelAvailabilityService');
@@ -255,27 +255,20 @@ async function enrichMission(missionId, { actor = null, tenantId = 'system', con
     const materiality = classifyMateriality({ previousSpec, nextSpec: spec, enrichment, changes });
 
     const policy = await missionStore.getAutoApprovalPolicy();
-    // POLICY RESOLVER (§20/§21) — o merge ingênuo `{...policy, ...mission.auto_approval_policy}`
-    // permitia a própria MISSÃO ampliar privilégio (ex.: declarar `maxRisk: 'CRITICAL'` e
-    // `confidenceThreshold: 0.1` passava a autorizar mais do que a instalação autorizava). Agora a
-    // resolução é formal: restringir é sempre permitido; ampliar exige autorização administrativa
-    // explícita NOS DOIS lados (identidade + política), e sem ela a operação é RECUSADA — nunca
-    // "clampada" em silêncio.
-    const policyResolution = resolveMissionPolicy({
-      globalPolicy: policy,
-      requestedPolicy: mission.auto_approval_policy || null,
+    // AUTORIDADE ÚNICA de política (api/services/engineeringMission/missionPolicyAuthority).
+    // O merge ingênuo `{...policy, ...mission.auto_approval_policy}` permitia a própria MISSÃO
+    // ampliar privilégio (ex.: declarar `maxRisk: 'CRITICAL'` e `confidenceThreshold: 0.1`
+    // autorizava mais do que a instalação autorizava). A resolução formal já existia AQUI, mas
+    // não nos outros caminhos (UI/edição) — que passavam a discordar da execução. Agora todos
+    // consomem o mesmo resolvedor.
+    const policyResolution = await policyAuthority.resolvePolicyForMission({
+      mission,
+      actor,
       // Autorização de escalação NUNCA vem do corpo da requisição: só de quem já passou pela
       // checagem de permissão (RBAC `engineering.policy_admin`) na borda HTTP ou de worker confiável.
-      actor: { id: actor, canEscalatePolicy: policyEscalationAuthorized === true },
-      evaluatedAt: new Date().toISOString(),
+      policyEscalationAuthorized: policyEscalationAuthorized === true,
     });
-    if (policyResolution.decision === 'DENY') {
-      throw Object.assign(
-        new Error(policyResolution.reason),
-        { code: 'POLICY_ESCALATION_DENIED', missionId, escalations: policyResolution.escalations, resolution: policyResolution },
-      );
-    }
-    const effectivePolicy = policyResolution.effectivePolicy;
+    const effectivePolicy = policyAuthority.requireAuthorizedPolicy(policyResolution, missionId);
     const autoApproval = evaluateAutoApproval({
       policy: effectivePolicy,
       spec,

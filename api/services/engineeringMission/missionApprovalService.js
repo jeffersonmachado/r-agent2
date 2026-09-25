@@ -21,6 +21,7 @@ const { buildEnrichmentPreview } = require('../../../engine/engineeringMission/m
 const { createNextVersion, diffSpecs, assertExecutableVersion, computeSpecHash } = require('../../../engine/engineeringMission/missionSpec');
 const { MISSION_FAILURE_CODES } = require('../../../engine/engineeringMission/constants');
 const missionStore = require('./missionStoreService');
+const policyAuthority = require('./missionPolicyAuthority');
 const compiler = require('./missionCompilerService');
 const { emitMissionStage } = require('./missionEvents');
 
@@ -121,7 +122,7 @@ async function reject(missionId, { actor = null, reason = null, tenantId = 'syst
  * por decisão explícita do operador, aprova a versão resultante.
  * `originalMission` continua intocável (o patch que tente alterá-la falha alto).
  */
-async function editAndApprove(missionId, { patch = {}, actor = null, reason = null, tenantId = 'system', approveEdited = true } = {}) {
+async function editAndApprove(missionId, { patch = {}, actor = null, reason = null, tenantId = 'system', approveEdited = true, policyEscalationAuthorized = false } = {}) {
   const mission = await requireMission(missionId);
   const current = await missionStore.getCurrentVersion(missionId);
   if (!current) throw fail(MISSION_FAILURE_CODES.MISSION_SPEC_NOT_APPROVED, 'mission ainda não foi enriquecida');
@@ -135,9 +136,17 @@ async function editAndApprove(missionId, { patch = {}, actor = null, reason = nu
     changes,
   });
 
-  const policy = await missionStore.getAutoApprovalPolicy();
+  // AUTORIDADE ÚNICA: antes este caminho usava a política GLOBAL pura e ignorava a política
+  // declarada pela missão — a decisão de editar/aprovar era tomada sob política diferente da que
+  // o preview exibiu ao operador. Agora resolve igual ao compilador (recusa explícita).
+  const policyResolution = await policyAuthority.resolvePolicyForMission({
+    mission,
+    actor,
+    policyEscalationAuthorized: policyEscalationAuthorized === true,
+  });
+  const effectivePolicy = policyAuthority.requireAuthorizedPolicy(policyResolution, missionId);
   const autoApproval = evaluateAutoApproval({
-    policy,
+    policy: effectivePolicy,
     spec: nextSpec,
     enrichment: { ...(current.enrichment || {}), derivedRequirements: nextSpec.derivedRequirements, risk: nextSpec.risk, confidence: nextSpec.confidence, missionType: nextSpec.missionType },
     repository: nextSpec.repository,
@@ -152,6 +161,7 @@ async function editAndApprove(missionId, { patch = {}, actor = null, reason = nu
     materiality,
     autoApproval,
   });
+  preview.policyResolution = policyResolution;
 
   await missionStore.saveVersion({
     missionId,
@@ -223,14 +233,29 @@ async function evaluatePolicyForMission(missionId) {
   const mission = await requireMission(missionId);
   const current = await missionStore.getCurrentVersion(missionId);
   if (!current) return { eligible: false, blockers: [{ code: 'NOT_ENRICHED', detail: 'mission ainda não enriquecida' }] };
-  const policy = await missionStore.getAutoApprovalPolicy();
-  return evaluateAutoApproval({
-    policy: { ...policy, ...(mission.auto_approval_policy || {}) },
+  // AUTORIDADE ÚNICA (mesma do compilador). Antes esta função fazia
+  // `{ ...policy, ...mission.auto_approval_policy }` — merge ingênuo que aceitava a escalação de
+  // privilégio declarada pela missão e exibia ELEGÍVEL justamente o que a execução real recusava
+  // com POLICY_ESCALATION_DENIED (UI e execução discordavam).
+  const resolution = await policyAuthority.resolvePolicyForMission({
+    mission,
+    actor: null,
+    // A UI não é identidade administrativa: sem RBAC verificado, escalação é NEGADA.
+    policyEscalationAuthorized: false,
+  });
+  const autoApproval = resolution.evaluate({
     spec: current.spec,
     enrichment: current.enrichment || {},
     repository: current.spec.repository,
     branch: current.spec.branch,
   });
+  const denialBlocker = policyAuthority.policyDenialBlocker(resolution);
+  return {
+    ...autoApproval,
+    eligible: denialBlocker ? false : autoApproval.eligible,
+    blockers: denialBlocker ? [denialBlocker, ...(autoApproval.blockers || [])] : (autoApproval.blockers || []),
+    policyResolution: resolution,
+  };
 }
 
 async function getPolicy() {
