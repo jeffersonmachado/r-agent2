@@ -19,6 +19,12 @@ const { resolveMaxIterations } = require('../../../engine/engineeringRouter/rout
 const { assertTransition, isTerminal } = require('../../../engine/engineeringRouter/stateMachine');
 const { TASK_TYPES, RISK_LEVELS, TASK_SCOPES, FAILURE_CODES, TERMINAL_STATES } = require('../../../engine/engineeringRouter/constants');
 const logger = require('../../utils/logger');
+// DEFEITO LATENTE REAL corrigido em 2026-09-25: `resolveLeaseState` era USADO em `lockForRun`
+// (caminho do lease) sem estar importado. O erro só aparece quando a task JÁ tem `lease_token` —
+// ou seja, exatamente no caminho de RETOMADA real após crash. Os testes de task passavam porque
+// criavam tasks sem lease (`row.lease_token` falso ⇒ a expressão nem era avaliada). Descoberto
+// pelo verificador de retomada de task real, que exercita o caminho de verdade.
+const { resolveLeaseState } = require('../../../engine/engineeringMission/leasePolicy');
 
 const LOCK_STALE_MS = Number(process.env.ENGINEERING_ROUTER_LOCK_STALE_MS || 15 * 60 * 1000);
 
@@ -168,7 +174,15 @@ async function lockForRun(taskId, runnerId) {
     // quando não há lease algum (tasks criadas antes desta mudança). Assim o comportamento do fluxo
     // legado é preservado byte a byte — a troca de autoridade acontece apenas onde o lease existe.
     const leaseState = row.lease_token ? resolveLeaseState(taskLeaseToPlain(row), now.getTime()) : null;
-    if (leaseState === 'ACTIVE') {
+    // DEFEITO REAL corrigido em 2026-09-25: o lease ATIVO era tratado como conflito SEM olhar de
+    // quem ele é. Resultado medido na retomada real: o worker que acabara de tomar posse da task
+    // (via `acquireTaskLease`, fence+1) era RECUSADO por `lockForRun` com TASK_ALREADY_RUNNING —
+    // o próprio dono não conseguia executar o que tinha acabado de assumir. `leasePolicy` já
+    // trata o dono como escritor autorizado; aqui a regra é a mesma: lease ativo do PRÓPRIO
+    // runnerId não é conflito, é o dono continuando.
+    const leaseOwner = row.lease_worker_instance_id || null;
+    const sameOwner = Boolean(leaseOwner) && leaseOwner === runnerId;
+    if (leaseState === 'ACTIVE' && !sameOwner) {
       const err = new Error('EngineeringTask já está em execução');
       err.code = FAILURE_CODES.TASK_ALREADY_RUNNING;
       err.lockedBy = row.lease_worker_instance_id;

@@ -141,10 +141,47 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
       // em que parou; se a task já terminou, a chamada é reconciliadora e idempotente.
       const current = await missionStore.getMission(step.missionId);
       if (current?.linked_task_id) {
-        await orchestrator.runMissionTask(step.missionId, { tenantId });
+        // TAKEOVER DO LEASE DA TASK — defeito real corrigido em 2026-09-25.
+        //
+        // A retomada pela via da missão executava a task SEM tomar posse do lease dela. O worker
+        // anterior estava morto (SIGKILL) mas o lease continuava no nome dele; a execução então
+        // escrevia com um fence que não era mais do dono e era recusada com TASK_LEASE_EXPIRED.
+        // Pior: como a via da missão marcava a task em `tasksResumedByMission`, a varredura de
+        // tasks (que ADQUIRE lease corretamente) fazia SKIP com ALREADY_RESUMED_BY_MISSION — ou
+        // seja, as duas vias se anulavam e o lease órfão permanecia. Medido pelo verificador de
+        // retomada real: `FENCE_AVANCOU antes=1 depois=1` e `LEASE_NAO_E_MAIS_DO_WORKER_MORTO`.
+        //
+        // Aqui a posse é tomada ANTES de executar: `acquireTaskLease` é CAS e só recusa se houver
+        // lease VIVO de outro worker; lease expirado é assumido com `fence+1`, que é exatamente o
+        // que invalida o worker morto.
+        const taskService = require('../engineeringRouter/engineeringTaskService');
+        const taskLease = await taskService.acquireTaskLease(current.linked_task_id, {
+          workerInstanceId: `${workerInstanceId}-mission`,
+        });
+        if (!taskLease.acquired) {
+          summary.skippedLeaseHeld += 1;
+          summary.items.push({
+            ...step,
+            action: 'SKIP',
+            taskId: current.linked_task_id,
+            reason: taskLease.reason || 'TASK_LEASE_NOT_ACQUIRED',
+            detail: 'lease da task pertence a outro worker VIVO — não se retoma por cima',
+          });
+          continue;
+        }
+        // O MESMO identificador do lease é passado como runnerId: as duas primitivas (lease e lock
+        // de execução) precisam concordar sobre quem é o dono, senão o dono recém-empossado é
+        // recusado por si mesmo (`TASK_ALREADY_RUNNING`).
+        await orchestrator.runMissionTask(step.missionId, { tenantId, runnerId: `${workerInstanceId}-mission` });
         tasksResumedByMission.add(current.linked_task_id);
         summary.recovered += 1;
-        summary.items.push({ ...step, action: 'TASK_RESUMED', taskId: current.linked_task_id, leaseFence: acquired.lease.fence });
+        summary.items.push({
+          ...step,
+          action: 'TASK_RESUMED',
+          taskId: current.linked_task_id,
+          leaseFence: taskLease.lease.fence,
+          previousWorker: taskLease.lease.workerInstanceId || null,
+        });
       } else {
         summary.items.push({ ...step, action: 'NO_TASK_TO_RESUME' });
       }
