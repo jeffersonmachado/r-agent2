@@ -22,12 +22,24 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
+const envelopeLib = require('./lib/engineeringV2Envelope');
 const ROOT = path.resolve(__dirname, '..', '..');
 const REPORT = path.join(ROOT, 'reports', 'engineering-router-v2-seal-report.json');
 const AUTHORITATIVE = process.env.RELEASE_AUTHORITATIVE === '1';
 
 function sha256(text) {
   return crypto.createHash('sha256').update(text).digest('hex');
+}
+
+/** Lê e parseia um relatório relativo à raiz. Ausente/ilegível ⇒ null (nunca inventa). */
+function readJsonRel(rel) {
+  const content = read(rel);
+  if (content === null) return null;
+  try {
+    return JSON.parse(content);
+  } catch (_) {
+    return null;
+  }
 }
 
 function read(rel) {
@@ -93,8 +105,20 @@ const STRUCTURAL_ITEMS = [
     'V2_POLICY_RESOLVER_SEM_MERGE_INGENUO',
     'api/services/engineeringMission/missionCompilerService.js',
     (src) => {
+      // O invariante é: NENHUM merge ingênuo E a política vinda de UMA autoridade.
+      //
+      // FALSO NEGATIVO REAL corrigido em 2026-09-25: este check exigia literalmente
+      // `resolveMissionPolicy(` DENTRO deste arquivo. Quando a resolução passou a ser delegada à
+      // autoridade única (`missionPolicyAuthority.resolvePolicyForMission`), que é a correção
+      // CERTA (§POLICY_RESOLVER_ALL_PATHS), o check passou a acusar FAIL contra código correto —
+      // um validador reprovando a própria correção que o fortalece. O que importa não é ONDE a
+      // função é chamada, e sim que a política NUNCA seja montada por merge nem avaliada por
+      // caminho que ignore a autoridade.
       if (src.includes('...mission.auto_approval_policy')) return 'merge ingênuo de política ainda presente (permite a missão ampliar a própria política)';
-      if (!/resolveMissionPolicy\(/.test(src)) return 'resolveMissionPolicy não é CHAMADO no enriquecimento';
+      const usesAuthority = /policyAuthority\.resolvePolicyForMission\(/.test(src)
+        || /resolveMissionPolicy\(/.test(src);
+      if (!usesAuthority) return 'a política efetiva não é obtida por autoridade de resolução (nem policyAuthority.resolvePolicyForMission nem resolveMissionPolicy)';
+      if (!/requireAuthorizedPolicy\(/.test(src)) return 'escalação de política não é aplicada por requireAuthorizedPolicy (recusa explícita ausente)';
       return true;
     },
   ),
@@ -182,72 +206,105 @@ const RUNTIME_ITEMS = [
   }),
 ];
 
-function buildEnvelope(items) {
-  const artifacts = [
-    'engine/engineeringMission/leasePolicy.js',
-    'engine/engineeringMission/policyResolver.js',
-    'engine/engineeringMission/constants.js',
-    'api/services/engineeringMission/missionStoreService.js',
-    'api/services/engineeringMission/missionRecoveryCoordinator.js',
-    'api/services/engineeringMission/missionCompilerService.js',
-    'api/services/engineeringMission/missionContextService.js',
-    'api/modules/engineering-missions/routes.js',
-    'api/db/migrations/20260924160000-engineering-mission-distributed-lease.js',
-    'api/bootstrap/startInitialization.js',
-    'tests/helpers/infraGate.js',
-    'scripts/governance/validate-anti-greenwashing.js',
-    'scripts/governance/verify-mission-crash-recovery.js',
-  ];
-  const hashes = {};
-  for (const rel of artifacts) {
-    const content = read(rel);
-    hashes[rel] = content === null ? null : sha256(content);
-  }
-  const runtimeEvidence = {};
-  for (const rel of ['reports/anti-greenwashing-report.json', 'reports/mission-crash-recovery-report.json']) {
-    const content = read(rel);
-    runtimeEvidence[rel] = content === null ? null : sha256(content);
-  }
-  return {
-    generatedAt: new Date().toISOString(),
-    hashAlgorithm: 'sha256',
-    artifacts: hashes,
-    runtimeEvidence,
-    itemsHash: sha256(JSON.stringify(items)),
-    rapFinalReleaseTouched: false,
-  };
+/**
+ * ENVELOPE — implementação ÚNICA (`lib/engineeringV2Envelope`).
+ *
+ * ACHADO REAL (2026-09-25): este arquivo tinha a sua PRÓPRIA construção de envelope e a verificava
+ * no MESMO processo (`buildEnvelope` + `verifyEnvelope` locais). Isso é um envelope
+ * AUTO-REFERENTE: ele nasce e é conferido no mesmo instante, então "verificação" ali só detectava
+ * alteração ocorrida DURANTE a execução — nada provava sobre um envelope previamente selado. Além
+ * disso, era uma TERCEIRA implementação de envelope no repositório (V1 do Router, esta, e a lib
+ * V2), exatamente o "arquitetura paralela" que a missão proíbe.
+ *
+ * Agora: a verificação CONSOME o envelope em disco, produzido por
+ * `engineering-router:v2-envelope:generate` em outra execução. Se o envelope não existir, o
+ * estado é `ENVELOPE_NOT_SEALED` (pendência declarada) — nunca um envelope forjado na hora para
+ * poder "passar".
+ */
+function resolveEnvelopeDir() {
+  if (process.env.V2_ENVELOPE_DIR) return path.resolve(process.env.V2_ENVELOPE_DIR);
+  const shipped = path.join(ROOT, 'dist', 'engineering-router-v2-audit-envelope');
+  return shipped;
 }
 
-/** Recomputa e compara: envelope adulterado ou artefato alterado depois do selo = FAIL. */
-function verifyEnvelope(envelope) {
-  const problems = [];
-  for (const [rel, expected] of Object.entries(envelope.artifacts)) {
-    const content = read(rel);
-    const actual = content === null ? null : sha256(content);
-    if (actual !== expected) problems.push(rel);
+function verifySealedEnvelope() {
+  const dir = resolveEnvelopeDir();
+  if (!fs.existsSync(dir)) {
+    return {
+      id: 'ENVELOPE_VERIFICATION',
+      status: 'PENDING',
+      detail: `envelope não selado em ${path.relative(ROOT, dir)} — gere com engineering-router:v2-envelope:generate e verifique com engineering-router:v2-envelope (a verificação NUNCA gera o envelope)`,
+      dir: path.relative(ROOT, dir),
+    };
   }
-  for (const [rel, expected] of Object.entries(envelope.runtimeEvidence)) {
-    const content = read(rel);
-    const actual = content === null ? null : sha256(content);
-    if (actual !== expected) problems.push(rel);
+  let result;
+  try {
+    result = envelopeLib.verifyEnvelope(dir);
+  } catch (error) {
+    return { id: 'ENVELOPE_VERIFICATION', status: 'FAIL', detail: `falha ao verificar: ${error.message}`, dir: path.relative(ROOT, dir) };
   }
-  return { verified: problems.length === 0, mismatches: problems };
+  return {
+    id: 'ENVELOPE_VERIFICATION',
+    status: result.status === 'VERIFIED' ? 'PASS' : 'FAIL',
+    detail: `${result.checks.length} checks, ${result.failures.length} falha(s)${result.failures.length > 0 ? ` — ${result.failures.slice(0, 3).map((f) => f.id).join(', ')}` : ''}`,
+    dir: path.relative(ROOT, dir),
+    runId: result.manifest?.runId || null,
+    failures: result.failures.map((f) => f.id),
+  };
 }
 
 function main() {
   const items = [...STRUCTURAL_ITEMS, ...RUNTIME_ITEMS];
 
-  // Pendências obrigatórias da missão que este selo ainda NÃO cobre (§5/§6, §54).
-  const missingMandatory = [
-    'V2-01..V2-42: os 42 testes obrigatórios ainda não estão mapeados um a um',
-    'retomada de TASK real de execução através do crash (hoje prova a decisão, não a task)',
-    'conhecimento de engenharia indexado no domínio SYSTEM (retrieval responde vazio hoje)',
-  ].map((reason) => ({ id: 'MANDATORY_PENDING', status: 'PENDING', detail: reason }));
+  // PENDÊNCIAS OBRIGATÓRIAS — DERIVADAS de relatórios reais, nunca texto fixo.
+  //
+  // DEFEITO REAL corrigido em 2026-09-25: esta lista era um array de STRINGS escrita à mão. Duas
+  // das três frases já estavam FALSAS — "retomada de TASK real" havia sido implementada e provada
+  // (reports/real-task-recovery-report.json = GO, 16/16) e a pendência dos 42 requisitos havia
+  // mudado de natureza (existe matriz derivada de 17 eixos; o que falta é a numeração do prompt).
+  // Uma pendência desatualizada mente no mesmo grau que um PASS falso: ela afirma que falta algo
+  // que já existe. Agora cada pendência é lida do relatório que a comprova.
+  const derivePending = () => {
+    const pending = [];
 
-  const envelope = buildEnvelope(items);
-  const verification = verifyEnvelope(envelope);
+    const recovery = readJsonRel('reports/real-task-recovery-report.json');
+    if (!recovery) {
+      pending.push({ id: 'REAL_TASK_RECOVERY', status: 'PENDING', detail: 'sem relatório de retomada de task real (rode npm run verify:real-task-recovery)' });
+    } else if (recovery.status !== 'GO') {
+      pending.push({ id: 'REAL_TASK_RECOVERY', status: 'PENDING', detail: `retomada de task real não comprovada: status=${recovery.status}` });
+    }
+
+    const matrix = readJsonRel('reports/engineering-router-v2-requirements-matrix.json');
+    if (!matrix) {
+      pending.push({ id: 'V2_REQUIREMENTS_MATRIX', status: 'PENDING', detail: 'matriz de requisitos ausente (rode npm run validate:v2-requirements-matrix)' });
+    } else if (matrix.unmappedRequirementIds?.status === 'NOT_MAPPED_BY_REPOSITORY') {
+      pending.push({
+        id: 'V2_REQUIREMENTS_MATRIX',
+        status: 'PENDING',
+        detail: `matriz derivada cobrindo ${matrix.totals.axesGo}/${matrix.totals.axes} eixos; a numeração ${matrix.unmappedRequirementIds.range} continua sem fonte no repositório — não foi inventada`,
+      });
+    }
+    if (matrix && matrix.status !== 'GO') {
+      pending.push({ id: 'V2_REQUIREMENTS_MATRIX_STATUS', status: 'PENDING', detail: `matriz em ${matrix.status} (${matrix.violationCount} eixo(s) sem prova): ${matrix.violations.slice(0, 3).map((v) => v.axis).join(', ')}` });
+    }
+
+    const statusReport = readJsonRel('reports/engineering-router-v2-status-report.json') || readJsonRel('ENGINEERING_ROUTER_V2_STATUS_REPORT.json');
+    const ragAxis = statusReport?.axes?.RAG_INDEX_HEALTH;
+    if (ragAxis && /REPAIRED_WITH_RESIDUAL|NO_GO|FAIL/i.test(String(ragAxis.status || ''))) {
+      pending.push({ id: 'ENGINEERING_RAG_ENRICHMENT', status: 'PENDING', detail: `eixo RAG_INDEX_HEALTH=${ragAxis.status}: o caminho de retrieval ainda depende de geração, então o enriquecimento não recebe conteúdo` });
+    }
+    if (statusReport?.axes?.QWEN_LIVE && /NOT_EXECUTED/.test(String(statusReport.axes.QWEN_LIVE.status))) {
+      pending.push({ id: 'QWEN_LIVE', status: 'PENDING', detail: `QWEN_LIVE=${statusReport.axes.QWEN_LIVE.status}: prova ao vivo não executada neste ambiente (sem credencial)` });
+    }
+    return pending;
+  };
+
+  const missingMandatory = derivePending();
+
+  const envelopeItem = verifySealedEnvelope();
   const failed = items.filter((item) => item.status === 'FAIL');
-  const status = failed.length === 0 && missingMandatory.length === 0 && verification.verified ? 'GO' : 'NO_GO';
+  // GO exige: nenhum item FAIL, nenhuma pendência obrigatória E envelope selado e VERIFIED.
+  const status = failed.length === 0 && missingMandatory.length === 0 && envelopeItem.status === 'PASS' ? 'GO' : 'NO_GO';
 
   const report = {
     report: 'ENGINEERING_ROUTER_V2_SEAL',
@@ -256,8 +313,7 @@ function main() {
     status,
     items,
     mandatoryPending: missingMandatory,
-    envelope,
-    verification,
+    envelopeVerification: envelopeItem,
     axes: {
       ENGINEERING_ROUTER_V2: status,
       RAP_FINAL_RELEASE: 'NO_GO_INDEPENDENTE',
@@ -274,7 +330,7 @@ function main() {
   } else {
     for (const item of items) process.stdout.write(`  [${item.status}] ${item.id} — ${item.detail}\n`);
     for (const item of missingMandatory) process.stdout.write(`  [${item.status}] ${item.id} — ${item.detail}\n`);
-    process.stdout.write(`  [${verification.verified ? 'PASS' : 'FAIL'}] ENVELOPE_VERIFICATION — mismatches=${JSON.stringify(verification.mismatches)}\n`);
+    process.stdout.write(`  [${envelopeItem.status}] ${envelopeItem.id} — ${envelopeItem.detail}\n`);
     process.stdout.write(`[engineering-router-v2] status=${status} itens=${items.length} falhas=${failed.length} pendencias=${missingMandatory.length}\n`);
   }
   process.exit(status === 'GO' ? 0 : 1);

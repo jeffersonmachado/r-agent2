@@ -1,0 +1,33 @@
+{
+  "$comment": "Manifesto CANÔNICO de suítes de release do Engineering Router/Mission. Fonte única consumida por: execução Jest autoritativa (scripts/governance/run-release-suites.js), validador anti-greenwashing e V2 Seal. A lista NÃO é escrita à mão: é DERIVADA da descoberta abaixo; `exclusions` é a única forma legítima de manter algo fora, e exige motivo. Ver docs/architecture do Engineering Router e reports/release-suite-execution.json.",
+  "manifestVersion": "1.0.0",
+  "discovery": {
+    "globs": [
+      "tests/unit/engineeringMission*.test.js",
+      "tests/integration/engineeringMission*.test.js",
+      "tests/integration/engineeringTask*.test.js"
+    ],
+    "explicit": [
+      "tests/unit/engineeringRouterQwenProvider.test.js",
+      "tests/unit/governance/releaseSuiteManifest.test.js",
+      "tests/unit/governance/releaseSuiteRunner.test.js",
+      "tests/unit/governance/v2RequirementsMatrix.test.js",
+      "tests/integration/engineeringV2EnvelopeTamper.test.js"
+    ]
+  },
+  "exclusions": [
+    {
+      "glob": "tests/unit/engineeringRouter*.test.js",
+      "reason": "Módulos de unidade pura do Router (state machine, seleção de modelo, redaction, validadores de patch, classificador, rotas). São cobertos pela suíte de unidade geral do repositório (npm run test:unit) e não fazem parte da execução AUTORITATIVA de release, que exige runtime real (banco, provider, filesystem). Manter aqui inflaria o gate com testes que nunca tocam infraestrutura real e diluiria o significado de PASS autoritativo. Itens declarados em `discovery.explicit` têm PRECEDÊNCIA sobre esta exclusão (senão o teste do provider Qwen seria removido em silêncio)."
+    }
+  ],
+  "execution": {
+    "runner": "jest",
+    "concurrency": "serial",
+    "requiredStates": [
+      "PASS"
+    ],
+    "zeroTestsIsViolation": true,
+    "note": "Suíte do manifesto que não for executada, ou que executar 0 testes, é violação (nunca PASS)."
+  }
+}

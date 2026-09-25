@@ -1,0 +1,87 @@
+'use strict';
+
+/**
+ * Runner canônico — MAPEAMENTO do relatório do Jest para os estados do manifesto.
+ *
+ * Dois defeitos reais aconteceram exatamente aqui (2026-09-25), e ambos passariam por `node
+ * --check`:
+ *
+ *   1. `numTotalTests` lido no NÍVEL DA SUÍTE — no JSON do Jest esse campo só existe na raiz; por
+ *      suíte o que existe é `assertionResults[]`. Toda suíte virava "executou ZERO testes", ou
+ *      seja, uma execução 100% verde era reprovada (e o inverso poderia aprovar suíte vazia);
+ *   2. variável de decisão perdida numa edição (ReferenceError em runtime).
+ *
+ * Este teste fixa o mapeamento contra a ESTRUTURA REAL do Jest.
+ */
+
+const { mapSuiteResult } = require('../../../scripts/governance/run-release-suites');
+
+function suite({ assertions = [], status = 'passed', message = '' }) {
+  return {
+    name: '/tmp/x.test.js',
+    status,
+    message,
+    assertionResults: assertions.map((a) => ({ status: a })),
+  };
+}
+
+describe('run-release-suites — mapSuiteResult', () => {
+  it('conta os testes por assertionResults (o campo numTotalTests NÃO existe por suíte)', () => {
+    const result = mapSuiteResult(suite({ assertions: ['passed', 'passed', 'passed'] }));
+    expect(result.testsExecuted).toBe(3);
+    expect(result.state).toBe('PASS');
+  });
+
+  it('suíte com ZERO testes é FAIL (nunca PASS vacuoso)', () => {
+    const result = mapSuiteResult(suite({ assertions: [] }));
+    expect(result.testsExecuted).toBe(0);
+    expect(result.state).toBe('FAIL');
+    expect(result.reason).toMatch(/ZERO testes/);
+  });
+
+  it('um único teste falhando marca a suíte inteira como FAIL', () => {
+    const result = mapSuiteResult(suite({ assertions: ['passed', 'failed', 'passed'] }));
+    expect(result.state).toBe('FAIL');
+    expect(result.failed).toBe(1);
+    expect(result.testsExecuted).toBe(3);
+  });
+
+  it('todos os testes pulados é NOT_EXECUTED (não conta como cobertura)', () => {
+    const result = mapSuiteResult(suite({ assertions: ['pending', 'pending'] }));
+    expect(result.state).toBe('NOT_EXECUTED');
+    expect(result.skipped).toBe(2);
+  });
+
+  it('alguns pulados com o restante passando é PASS (pulo parcial é declarado, não é falha)', () => {
+    const result = mapSuiteResult(suite({ assertions: ['passed', 'pending'] }));
+    expect(result.state).toBe('PASS');
+    expect(result.skipped).toBe(1);
+    expect(result.testsExecuted).toBe(2);
+  });
+
+  it('INFRA_ERROR na mensagem prevalece sobre PASS (infra ausente nunca vira verde)', () => {
+    const result = mapSuiteResult(suite({ assertions: ['passed'], message: 'INFRA_ERROR: postgres indisponível' }));
+    expect(result.state).toBe('INFRA_ERROR');
+  });
+
+  it('INFRA_ERROR no erro de um teste é detectado (a varredura não olha só o topo)', () => {
+    const result = {
+      name: '/tmp/x.test.js',
+      status: 'failed',
+      message: 'suite falhou',
+      assertionResults: [{ status: 'failed', title: 'DB', failureMessages: ['Error: INFRA_ERROR: postgres indisponível'] }],
+    };
+    expect(mapSuiteResult(result).state).toBe('INFRA_ERROR');
+  });
+
+  it('suíte marcada failed sem assertions é FAIL (erro de suíte, não zero testes silencioso)', () => {
+    const result = mapSuiteResult(suite({ assertions: [], status: 'failed', message: 'Cannot find module' }));
+    expect(result.state).toBe('FAIL');
+    expect(result.failed).toBeGreaterThanOrEqual(1);
+  });
+
+  it('estrutura ausente não derruba o mapeamento (relatório malformado ⇒ FAIL, nunca exceção)', () => {
+    expect(mapSuiteResult({ name: '/tmp/y.test.js' }).state).toBe('FAIL');
+    expect(mapSuiteResult({}).state).toBe('FAIL');
+  });
+});

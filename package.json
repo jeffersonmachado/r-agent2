@@ -136,7 +136,7 @@
     "verify:mission-crash-recovery": "node scripts/governance/verify-mission-crash-recovery.js",
     "validate:engineering-router-v2": "node scripts/governance/validate-engineering-router-v2.js",
     "rag:repair-failed": "node --env-file-if-exists=.env scripts/reindex-failed-rag-documents.js",
-    "test:release-authoritative": "RELEASE_AUTHORITATIVE=1 jest tests/unit/engineeringMission tests/integration/engineeringMission tests/unit/engineeringRouterQwenProvider.test.js --runInBand --no-coverage",
+    "test:release-authoritative": "node scripts/governance/run-release-suites.js",
     "collect:engineering-router-runtime-evidence": "node scripts/governance/collect-engineering-router-runtime-evidence.js",
     "validate:engineering-router-v1:runtime": "npm run collect:engineering-router-runtime-evidence && node scripts/governance/validate-engineering-router-v1.js --runtime",
     "engineering-router:audit-envelope:generate": "node scripts/governance/generate-engineering-router-v1-audit-envelope.js",
@@ -369,7 +369,12 @@
     "validate:benchmark-semantic-version": "node --env-file-if-exists=.env scripts/governance/validate-benchmark-semantic-version.js",
     "validate:benchmark-persisted-corpus": "node --env-file-if-exists=.env scripts/governance/validate-benchmark-persisted-corpus.js",
     "validate:benchmark-phase-model": "node --env-file-if-exists=.env scripts/governance/validate-benchmark-phase-model.js",
-    "validate:benchmark-certification-consistency": "node scripts/governance/validate-benchmark-certification-consistency.js"
+    "validate:benchmark-certification-consistency": "node scripts/governance/validate-benchmark-certification-consistency.js",
+    "validate:release-suites-manifest": "node scripts/governance/run-release-suites.js",
+    "engineering-router:v2-envelope:generate": "node scripts/governance/generate-engineering-router-v2-audit-envelope.js",
+    "engineering-router:v2-envelope": "node scripts/governance/verify-engineering-router-v2-audit-envelope.js",
+    "validate:v2-requirements-matrix": "node scripts/governance/generate-v2-requirements-matrix.js",
+    "validate:recovery": "node scripts/governance/verify-real-task-recovery.js"
   },
   "engines": {
     "node": ">=20.19.0 || >=22.12.0",
