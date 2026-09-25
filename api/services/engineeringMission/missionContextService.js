@@ -35,6 +35,18 @@ const MAX_FILES_SCANNED = Number(process.env.ENGINEERING_MISSION_SCAN_MAX_FILES 
 const MAX_EVIDENCE_REFS = 40;
 const MAX_SUBSYSTEMS = 8;
 
+// Scan de CONTEÚDO (code-aware): sem isto o enriquecimento era só path matching — a missão exige que
+// a palavra seja encontrada em símbolo/função/comentário/rota/model/teste mesmo quando o NOME do
+// arquivo não a contém. Orçamento próprio para não ler 25k arquivos a cada missão.
+const CONTENT_SCAN_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.sql']);
+const MAX_CONTENT_FILES = Number(process.env.ENGINEERING_MISSION_SCAN_MAX_CONTENT_FILES || 6000);
+const MAX_CONTENT_BYTES = Number(process.env.ENGINEERING_MISSION_SCAN_MAX_CONTENT_BYTES || 524288);
+
+/** Trecho curto e estável da linha onde a palavra apareceu (evidência objetiva, sem chain-of-thought). */
+function compactLine(line) {
+  return String(line || '').trim().replace(/\s+/g, ' ').slice(0, 180);
+}
+
 const STOPWORDS = new Set([
   'para', 'como', 'todos', 'todas', 'deve', 'devem', 'esta', 'este', 'isso', 'aquilo', 'mais',
   'menos', 'muito', 'pouco', 'quando', 'onde', 'qual', 'quais', 'sem', 'com', 'por', 'que',
@@ -92,11 +104,50 @@ function detectFactsFromText(text) {
 }
 
 /** Varredura determinística e limitada do repositório — sem rede, sem shell. */
+/**
+ * Classifica ONDE a palavra apareceu no conteúdo — o que a missão exige em vez de path matching.
+ * Ordem importa: símbolo/rota/model valem mais como evidência de código que texto solto.
+ */
+const CONTENT_HIT_KINDS = Object.freeze(['symbol', 'route', 'model', 'comment', 'content']);
+
+function classifyContentHit(line, keyword) {
+  const lower = line.toLowerCase();
+  const kwIndex = lower.indexOf(keyword);
+  if (kwIndex === -1) return null;
+  const before = line.slice(0, kwIndex);
+  // Comentário: a linha é (ou começa) comentário antes da ocorrência.
+  if (/^\s*(\/\/|\*|\/\*)/.test(line)) return 'comment';
+  // Rota: declaração de rota HTTP com a palavra no caminho.
+  if (/\b(router|app)\.(get|post|put|patch|delete)\s*\(/.test(line)) return 'route';
+  // Model/tabela: definição de modelo ORM ou DDL.
+  if (/sequelize\.define|DataTypes\.|CREATE TABLE|tableName\s*:/.test(line)) return 'model';
+  // Símbolo: função/classe/const/variável declarada com a palavra no nome.
+  const kwNormalized = keyword.replace(/[^a-z0-9]/gi, '');
+  const symbolPattern = /(function|const|let|var|class|async function)\s+([A-Za-z0-9_$]+)/g;
+  let match = symbolPattern.exec(line);
+  while (match) {
+    if (match[2].toLowerCase().replace(/[^a-z0-9]/gi, '').includes(kwNormalized)) return 'symbol';
+    match = symbolPattern.exec(line);
+  }
+  return 'content';
+}
+
 function scanRepository(keywords) {
   const evidenceRefs = [];
+  // Priorização MEDIDA: evidência por CAMINHO (o arquivo se chama assim) é mais forte que linha de
+  // conteúdo, mas as duas competiam pelo mesmo orçamento e o conteúdo — varrido antes dentro de cada
+  // diretório — esgotava os 40 refs, deixando o path matching de fora. Duas listas e a concatenação
+  // no fim resolvem sem uma segunda varredura.
+  const pathRefs = [];
+  const contentRefs = [];
   const subsystemHits = new Map();
   let filesScanned = 0;
   let truncated = false;
+  // Orçamento PRÓPRIO do scan de conteúdo: ler 25k arquivos seria caro demais. O teto é explícito e o
+  // truncamento é reportado como fato (`contentTruncated`), nunca escondido.
+  let contentFilesScanned = 0;
+  let contentTruncated = false;
+  const hitsByKind = {};
 
   const walk = (relDir) => {
     if (truncated) return;
@@ -121,24 +172,81 @@ function scanRepository(keywords) {
       }
       const relPath = path.join(relDir, entry.name);
       const normalizedPath = normalize(relPath);
-      if (!keywords.some((kw) => normalizedPath.includes(kw))) continue;
       const segments = relPath.split(path.sep);
       const subsystem = segments.slice(0, 2).join('/');
-      subsystemHits.set(subsystem, (subsystemHits.get(subsystem) || 0) + 1);
-      if (evidenceRefs.length < MAX_EVIDENCE_REFS) {
-        evidenceRefs.push({ path: relPath, kind: 'file', subsystem });
+
+      // (1) Hit por CAMINHO — preservado, mas deixou de ser o único critério.
+      // Case-insensitive dos DOIS lados: o caminho é normalizado para minúsculas e a comparação era
+      // case-sensitive, então uma keyword com maiúscula (ex. 'engineeringMission', camelCase natural
+      // de um nome de módulo) NUNCA casa por path. Medido por teste.
+      if (keywords.some((kw) => normalizedPath.includes(String(kw).toLowerCase()))) {
+        subsystemHits.set(subsystem, (subsystemHits.get(subsystem) || 0) + 1);
+        if (pathRefs.length < MAX_EVIDENCE_REFS) {
+          pathRefs.push({ path: relPath, kind: 'file', subsystem });
+        }
+        continue;
+      }
+
+      // (2) Hit por CONTEÚDO — code-aware. É o que permite encontrar a palavra quando ela não está no
+      // nome do arquivo: em símbolo, função, comentário arquitetural, rota, model ou teste.
+      const ext = path.extname(entry.name).toLowerCase();
+      if (!CONTENT_SCAN_EXTENSIONS.has(ext)) continue;
+      if (contentTruncated) continue;
+      contentFilesScanned += 1;
+      if (contentFilesScanned > MAX_CONTENT_FILES) {
+        contentTruncated = true;
+        continue;
+      }
+      let content;
+      try {
+        const stat = fs.statSync(path.join(ROOT, relPath));
+        if (stat.size > MAX_CONTENT_BYTES) continue;
+        content = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+      } catch {
+        continue;
+      }
+      const lines = content.split('\n');
+      for (const kw of keywords) {
+        if (contentRefs.length >= MAX_EVIDENCE_REFS) break;
+        for (let i = 0; i < lines.length; i += 1) {
+          const line = lines[i];
+          if (!line.toLowerCase().includes(kw)) continue;
+          const kind = classifyContentHit(line, kw) || 'content';
+          hitsByKind[kind] = (hitsByKind[kind] || 0) + 1;
+          subsystemHits.set(subsystem, (subsystemHits.get(subsystem) || 0) + 1);
+          if (contentRefs.length < MAX_EVIDENCE_REFS) {
+            contentRefs.push({
+              path: relPath,
+              kind,
+              subsystem,
+              line: i + 1,
+              snippet: compactLine(line),
+            });
+          }
+          break; // uma evidência por arquivo/palavra
+        }
       }
     }
   };
 
   for (const root of SCAN_ROOTS) walk(root);
 
+  // Path primeiro, conteúdo depois — a ordem é a prioridade.
+  for (const ref of pathRefs) {
+    if (evidenceRefs.length >= MAX_EVIDENCE_REFS) break;
+    evidenceRefs.push(ref);
+  }
+  for (const ref of contentRefs) {
+    if (evidenceRefs.length >= MAX_EVIDENCE_REFS) break;
+    evidenceRefs.push(ref);
+  }
+
   const subsystems = [...subsystemHits.entries()]
     .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
     .slice(0, MAX_SUBSYSTEMS)
     .map(([s]) => s);
 
-  return { evidenceRefs, subsystems, filesScanned, truncated };
+  return { evidenceRefs, subsystems, filesScanned, truncated, contentFilesScanned, contentTruncated, hitsByKind };
 }
 
 /**

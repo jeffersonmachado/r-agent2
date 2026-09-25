@@ -45,7 +45,12 @@ describe('missionContextService — orçamento de varredura', () => {
     const ctx = loadContextModule(undefined);
     const result = ctx.scanRepository(['mathutils']);
     expect(result.evidenceRefs.length).toBeGreaterThan(0);
-    expect(result.evidenceRefs.every((e) => e.path.startsWith('tests/'))).toBe(true);
+    // `some`, não `every`: com o enriquecimento CODE-AWARE, a varredura também traz evidências de
+    // CONTEÚDO (arquivos que mencionam a palavra sem tê-la no nome) — e essas naturalmente vivem fora
+    // de tests/. O propósito deste teste é garantir que a varredura ALCANCE tests/ ("isso já é
+    // coberto?"), o que `some` verifica; `every` passou a ser uma expectativa do comportamento
+    // antigo (path matching como único critério).
+    expect(result.evidenceRefs.some((e) => e.path.startsWith('tests/'))).toBe(true);
   });
 
   test('tokenização descarta stopwords e ruído do texto da missão', () => {
