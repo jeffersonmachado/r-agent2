@@ -58,6 +58,9 @@ async function hybridRetrieve({
   query,
   tenantId,
   actor = null,
+  // Roles do ator para a ACL do corpus. Ausente = nenhum role (a busca continua fail-closed: o
+  // corpus protegido simplesmente não devolve nada, e o chamador é avisado disso).
+  actorRoles = null,
   knowledgeScope,
   deps = {},
 } = {}) {
@@ -89,6 +92,7 @@ async function hybridRetrieve({
         query,
         tenantId,
         actor,
+        actorRoles,
         knowledgeScope,
         deps,
       });
@@ -141,7 +145,9 @@ async function hybridRetrieve({
   const ranked = rankResults(results, knowledgeScope, HYBRID_WEIGHTS);
 
   return {
-    results: ranked.slice(0, knowledgeScope.collections?.maxResults || 10),
+    // `collections` é uma LISTA; os limites de recuperação vivem em `limits` (defeito real
+    // corrigido em 2026-09-25 — ler `collections?.maxResults` sempre devolvia undefined).
+    results: ranked.slice(0, knowledgeScope.limits?.maxResults || 10),
     sources: deduplicateSources(sources),
     strategy: strategiesUsed,
     failures: strategyFailures,
@@ -159,7 +165,7 @@ async function hybridRetrieve({
 // Retrieval strategies
 // ---------------------------------------------------------------------------
 
-async function retrieveVectorRag({ query, tenantId, actor, knowledgeScope, deps }) {
+async function retrieveVectorRag({ query, tenantId, actor, actorRoles = null, knowledgeScope, deps }) {
   const ragService = deps.vectorRag || (() => {
     try { return require('../../../api/services/ragService'); } catch (_) { return null; }
   })();
@@ -179,8 +185,11 @@ async function retrieveVectorRag({ query, tenantId, actor, knowledgeScope, deps 
   }
 
   const result = await search(query, tenantId, {
-    topK: knowledgeScope.collections?.maxResults || 6,
-    minScore: knowledgeScope.collections?.minScore,
+    topK: knowledgeScope.limits?.maxResults || 6,
+    minScore: knowledgeScope.limits?.minScore ?? undefined,
+    // ACL: sem roles informados, a cláusula de interseção do corpus exclui os chunks protegidos
+    // (medido: 0 de 5954 no domínio SYSTEM). A ACL não é contornada — os roles vêm do ator.
+    filters: Array.isArray(actorRoles) && actorRoles.length > 0 ? { roles: actorRoles } : undefined,
     // Escopo SEMPRE explícito: o domínio SYSTEM (engenharia) não é o default do Domain Policy
     // (que aplica OPERATIONAL/PRODUCTION quando ausente).
     scope: {

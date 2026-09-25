@@ -114,7 +114,21 @@ const PURPOSE_KNOWLEDGE_TYPES = Object.freeze({
  * Cria um escopo de conhecimento resolvido internamente.
  * NUNCA expor esta factory para payloads externos.
  */
-function createResolvedScope({ domain, classifications, retrievalPurpose, knowledgeTypes, collections, policy, reason }) {
+/**
+ * Limites de recuperação POR ESCOPO (limites declarados, não implícitos no transporte).
+ *
+ * ACHADO REAL corrigido em 2026-09-25: `collections` é uma LISTA de coleções, mas o consumidor
+ * (`hybrid-retrieval`) lia `collections?.maxResults` e `collections?.minScore` — propriedades de
+ * um objeto de configuração que nunca existiu ali. Consequência medida: `minScore` era SEMPRE
+ * `undefined`, então o serviço RAG aplicava o seu próprio default (0.5) e descartava praticamente
+ * todo o corpus de engenharia (scores típicos 0.28–0.35) — o enriquecimento recebia vazio mesmo
+ * com a busca funcionando. Ninguém conseguia ajustar o piso: o valor não tinha onde ser passado.
+ *
+ * Agora o piso e o teto viajam em `limits`, separados da lista de coleções.
+ */
+const DEFAULT_RETRIEVAL_LIMITS = Object.freeze({ maxResults: 10, minScore: null });
+
+function createResolvedScope({ domain, classifications, retrievalPurpose, knowledgeTypes, collections, limits, policy, reason }) {
   return Object.freeze({
     _internal: true,
     domain,
@@ -122,6 +136,7 @@ function createResolvedScope({ domain, classifications, retrievalPurpose, knowle
     retrievalPurpose: retrievalPurpose || null,
     knowledgeTypes: Object.freeze([...(knowledgeTypes || [])]),
     collections: Object.freeze([...(collections || [])]),
+    limits: Object.freeze({ ...DEFAULT_RETRIEVAL_LIMITS, ...(limits || {}) }),
     policy,
     reason,
     resolvedAt: new Date().toISOString(),

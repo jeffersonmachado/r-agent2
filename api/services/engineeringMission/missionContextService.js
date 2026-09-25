@@ -322,6 +322,10 @@ async function retrieveEngineeringKnowledge({
   query,
   tenantId = 'system',
   actorClassification = 'DEVELOPMENT',
+  // Roles do ator (RBAC). Ausente = nenhum role: a ACL do corpus SYSTEM exige `super_admin` para
+  // o conhecimento de engenharia, então sem roles o retrieval devolve vazio — por AUTORIZAÇÃO,
+  // não por ausência de dados.
+  actorRoles = null,
   budget = {},
 } = {}) {
   const limits = { ...KNOWLEDGE_BUDGET_DEFAULTS, ...budget };
@@ -355,6 +359,9 @@ async function retrieveEngineeringKnowledge({
       classifications: scopeResolution.scope.classifications,
       retrievalPurpose: null,
       knowledgeTypes: ['SEMANTIC'],
+      // O piso de relevância do BUDGET precisa chegar ao retrieval: sem `limits`, o serviço RAG
+      // aplicava o default dele (0.5) e descartava o corpus de engenharia (scores ~0.28-0.35).
+      limits: { maxResults: limits.maxItems, minScore: limits.minScore },
       policy: scopeResolution.retrievalPolicy,
       reason: scopeResolution.reason,
     });
@@ -364,10 +371,29 @@ async function retrieveEngineeringKnowledge({
       query: String(query),
       tenantId,
       actor: { id: 'engineering-mission', classification: actorClassification },
+      // ROLES DO ATOR — sem eles a ACL do corpus exclui TUDO, e o resultado é 0 itens.
+      //
+      // Causa raiz medida em 2026-09-25 contra o serviço vivo: os 5954 chunks do domínio SYSTEM
+      // têm `permissions.roles = ['super_admin']`. A busca ia com `roles: []` e a cláusula
+      // `permissions->'roles' ?| ARRAY[]` não encontrava interseção — `chunksFound: 0`. Com os
+      // roles corretos, os mesmos chunks aparecem com conteúdo e proveniência.
+      //
+      // A ACL NÃO é relaxada aqui: se o ator não tem role, o conhecimento continua negado — o que
+      // muda é o DIAGNÓSTICO (ver abaixo), que passa a dizer que houve negação de ACL em vez de
+      // alegar ausência de conhecimento.
+      actorRoles: Array.isArray(actorRoles) ? actorRoles : null,
       knowledgeScope: resolvedScope,
     });
 
     const raw = Array.isArray(retrieved.results) ? retrieved.results : [];
+    // DIAGNÓSTICO HONESTO da negação de ACL: 0 itens com domínio SYSTEM e nenhum role informado
+    // não é "não há conhecimento indexado" — é o corpus protegido recusando o acesso.
+    const aclBlocked = raw.length === 0
+      && (!Array.isArray(actorRoles) || actorRoles.length === 0)
+      && resolvedScope.domain === 'SYSTEM';
+    if (aclBlocked) {
+      out.degraded.push('KNOWLEDGE_ACL_NO_ROLES: domínio SYSTEM exige roles do ator (o corpus é protegido por ACL); informe actorRoles com o papel do requisitante');
+    }
     // FALHA DE ESTRATÉGIA ≠ AUSÊNCIA DE CONHECIMENTO. Medido em 2026-09-25: com ~5954 chunks SYSTEM
     // indexados, o retrieval devolvia 0 itens com `KNOWLEDGE_NO_RESULTS` — diagnóstico ENGANOSO,
     // porque a causa real era o vector RAG indisponível (o caminho envolve geração e falha com
