@@ -169,6 +169,21 @@
         "V2_CRASH_SIGKILL_VERDE — reports/mission-crash-recovery-report.json GO e fresco"
       ],
       "auditEnvelope": "sha256 de 13 artefatos + das evidências runtime, com verification que RECOMPUTA os hashes (adulteração = FAIL)",
+      "ragSegregationCauseInvestigation": {
+        "state": "CAUSA_NAO_DETERMINADA (3 hipóteses refutadas por medição)",
+        "factsEstablished": [
+          "Em ISOLAMENTO o cenário passa na PRIMEIRA tentativa (POST 201; GET 200 com indexed=true; domain=OPERATIONAL; chunks=1)",
+          "No mesh falhou por timeout de 30s SEM erro de poll — o GET respondia 200 com indexed ainda falso",
+          "A deduplicação (similaridade > 0.97) EXISTE e descarta conteúdo quase idêntico: sonda com 15 documentos quase iguais => 5/15 e depois 2/15 em failed com 'Indexação retornou 0 chunks (não persistido no vector store)'"
+        ],
+        "hypothesesRefuted": [
+          "1) LATÊNCIA SOB CARGA: refutada — quem indexa leva 47-71ms (min/mediana); não há lentidão",
+          "2) DEDUPLICAÇÃO DO PADRÃO DO CENÁRIO: refutada — replicando a geração exata do cenário (frase base + 16 palavras de 24 seedadas), 12/12 foram indexados e 0 descartados",
+          "3) RESÍDUO DE EXECUÇÕES ANTERIORES: refutada — 0 documentos QASEG/QA Segregation/QA Load remanescentes no índice; o cleanup do cenário funciona"
+        ],
+        "whyNotConcluded": "Eu já havia publicado uma explicação confortável ('latência sob carga') que a medição derrubou. Substituí-la por outra explicação confortável sem medir seria repetir o erro. A causa provável remanescente (deduplicação cruzada entre cenários RAG concorrentes no mesh, que não acontece em isolamento) permanece NÃO VERIFICADA.",
+        "nextExperiment": "Rodar o cenário isolado em repetição e com os demais cenários RAG (CORE-BIZ-RAG-DOCUMENTS e o fluxo de src-docs) em paralelo, capturando index_status/index_error_message do documento do cenário ANTES do cleanup — hoje o cleanup apaga a evidência antes de qualquer inspeção (limitação reconhecida do diagnóstico)."
+      },
       "auditEnvelopeLimitation": "HONESTIDADE SOBRE O ALCANCE: a verificação recomputa os hashes na MESMA execução em que o envelope é gerado. Isso prova integridade e detecta adulteração do relatório, mas NÃO é um selo imutável ao longo do tempo — como os fontes do repositório continuam evoluindo, os hashes do envelope mudam a cada execução do validador. Um selo com validade temporal exigiria assinatura com chave e registro externo (fora do escopo desta sessão).",
       "sessionFinalValidation": {
         "authoritative": "19 suítes / 215 testes PASS com RELEASE_AUTHORITATIVE=1 (era 17/202 antes dos testes desta sequência: contexto+RAG, classificação de falhas do mesh e evidência de crash)",
