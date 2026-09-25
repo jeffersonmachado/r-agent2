@@ -103,6 +103,24 @@
       "reason": "nenhuma credencial real do provedor no ambiente",
       "note": "o teste QWEN_LIVE ASSERE este estado (não pula); com credencial presente ele executa chamada real e exige 200/401/403/429 observado"
     },
+    "RAG_INDEX_HEALTH": {
+      "state": "REPAIRED_WITH_RESIDUAL",
+      "measuredBefore": "1944 documentos (1664 indexed, 280 failed) | 6026 chunks (100% com embedding) | SYSTEM 1869 / OPERATIONAL 75",
+      "measuredAfter": "1939 indexed, 5 failed | 6423 chunks | reparados 274 de 279 processados, 395 chunks criados",
+      "tool": "npm run rag:repair-failed (scripts/reindex-failed-rag-documents.js — dry-run por padrão, --apply para executar)",
+      "report": "reports/rag-failed-reindex-report.json",
+      "rootCausesFound": [
+        "RAG_INCONSISTENT (247): documento marcado como indexed SEM chunks gravados — o verificador de consistência do próprio sistema detectou e marcou como failed (o detector funcionou; o estado estava corrompido)",
+        "RAG_INDEX_FAILED (27): rag-service fora do ar no momento da indexação (http://localhost:8001/rag/index inacessível)",
+        "RAG_INDEX_FAILED (1): 503 service_misconfigured — autenticação interna do RAG (RAG_INTERNAL_TOKEN) ausente na subida do serviço"
+      ],
+      "residualJustified": [
+        "2 documentos com tenant=null (títulos 'exemplo-invalido' e 'host-inexistente-qa.invalid', criados 2026-07-27): dados de teste órfãos. 'tenantId é obrigatório' é a VALIDAÇÃO FUNCIONANDO — documento sem tenant não pode ser indexado.",
+        "3 documentos de imagem (.jpeg/.png, 2026-03-02): 'Indexação retornou 0 chunks'. DEFEITO DE ESTADO, não de indexação: imagem sem OCR é 'sem conteúdo textual', e o sistema a rotula como failed em vez de ter um estado próprio (ex. NOT_APPLICABLE). Consertar isso é modelagem de estados, não maquiagem — marcar como indexed seria falso."
+      ],
+      "openDefect": "GET /health do rag-service reporta indexedDocuments=0 e indexedChunks=0 APESAR de 1939 documentos e 6423 chunks reais no banco. Leitura do health incorreta: engana o operador e foi a razão pela qual o contexto de missão parecia 'sem conhecimento'.",
+      "bonus": "a jornada rag_documents falhava por timeout esperando 'indexed' em um documento que caía em RAG_INDEX_FAILED durante a execução do mesh (doc-1790234607354, 07:23) — esse documento ESTÁ indexed depois do reparo."
+    },
     "ENGINEERING_ROUTER_V2_SEAL": {
       "state": "NO_GO",
       "artifact": "scripts/governance/validate-engineering-router-v2.js (npm run validate:engineering-router-v2)",
