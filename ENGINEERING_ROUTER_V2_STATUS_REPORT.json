@@ -191,7 +191,19 @@
     },
     "RAP_FINAL_RELEASE": {
       "state": "NO_GO",
-      "revalidatedAt": "2026-09-24",
+      "revalidatedAt": "2026-09-25",
+      "meshAfterFixes": {
+        "executionId": "mesh-2026-09-25T01-15-34-593Z",
+        "result": "142 passed / 144 — 2 failed, 0 infra_error, 0 environment_missing, 0 flaky",
+        "previous": "132 passed / 144 — 4 failed, 7 infra_error, 1 flaky",
+        "delta": "+10 cenários; todas as causas de infraestrutura e o flaky eliminados; 2 das 4 falhas funcionais resolvidas (BEAUTY-SCR-06 e CORE-BIZ-FLOWS-EDITOR agora PASS)",
+        "goNoGo": "NO_GO por CRITICAL_DOMAIN_FAILED:core (os 2 restantes são do domínio core)",
+        "remaining": [
+          "business-core-biz-academy: 'Tutor não respondeu com conteúdo disponível' — dependência de LLM indisponível. A correção de classificação desta sessão (provider de IA ⇒ environment_missing) ainda NÃO cobre esta mensagem, porque ela não cita o provider; a próxima melhoria é o cenário reportar a causa real (provider/credencial) ou o classificador reconhecer a assinatura do tutor sem LLM.",
+          "business-core-biz-rag-segregation: 'Documento não foi indexado dentro do tempo esperado' — MEDIDO que NÃO é latência: a indexação real leva 0-1s (8 documentos criados entre 01:43 e 01:58, todos indexed com lag 0-1s). O documento criado pelo cenário às 01:37 não está no banco (o cleanup do cenário o removeu), então a verificação do cenário é que não encontra o estado esperado — próximo passo é rodar o cenário isolado interceptando o polling de indexação.",
+          "NOTA DE MÉTRICA: a latência média de indexação em 7 dias aparece como ~64h porque o reparo desta sessão renovou indexed_at de documentos antigos que estavam em failed. É artefato do reparo, não regressão de performance."
+        ]
+      },
       "measured": [
         "qa-mesh canônico: NO_GO",
         "mesh 2026-09-24T06-55-00-751Z: 144 cenários — 132 passed, 4 failed, 7 infra_error, 1 flaky",
