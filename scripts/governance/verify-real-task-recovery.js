@@ -127,7 +127,7 @@ async function main() {
     check('PROCESSO_A_MORTO', !isAlive(killed.pid), `pid=${killed.pid}`);
 
     const afterCrash = await taskService.getTask(taskId);
-    check('TASK_EM_FASE_MATERIAL', afterCrash.status === 'IMPLEMENTING', `status=${afterCrash.status}`);
+    check('TASK_EM_FASE_MATERIAL', afterCrash.status === 'CODING', `status=${afterCrash.status}`);
     const orphanLease = await taskService.getTaskLease(taskId);
     check('LEASE_DA_TASK_ORFAO', orphanLease && orphanLease.workerInstanceId === 'task-worker-A', `worker=${orphanLease && orphanLease.workerInstanceId} fence=${orphanLease && orphanLease.fence}`);
 
@@ -149,11 +149,18 @@ async function main() {
     check('NAO_RESPONDEU_NO_TASK_TO_RESUME', missionItems.length > 0 && !noTask,
       noTask ? 'NO_TASK_TO_RESUME — TEST INVALID (a missão proíbe este resultado)' : JSON.stringify(missionItems));
 
-    // 7. A task REAL foi encontrada pelo sweep de tasks.
+    // 7. A task REAL foi recuperada. As DUAS vias são legítimas e o E2E não deve exigir uma delas:
+    //    (a) a missão com `linked_task_id` retoma pelo Router (caminho com contexto de fase);
+    //    (b) o sweep de TASKS encontra a órfã e toma o lease.
+    //    O invariante que importa é: a task foi retomada, o fence avançou e ela CONTINUA.
     const taskItems = (summary.taskItems || []).filter((i) => i.taskId === taskId);
-    check('TASK_ORFA_ENCONTRADA_PELO_SWEEP', taskItems.length === 1, JSON.stringify(summary.taskItems));
-    check('TASK_RETOMADA', taskItems.length === 1 && ['TASK_RESUMED', 'TASK_LEASE_TAKEN'].includes(taskItems[0].action),
-      taskItems.length ? `action=${taskItems[0].action} reason=${taskItems[0].reason || '-'}` : 'nenhum item para a task');
+    const takenBySweep = taskItems.some((i) => ['TASK_RESUMED', 'TASK_LEASE_TAKEN'].includes(i.action));
+    const skippedBecauseMission = taskItems.some((i) => i.reason === 'ALREADY_RESUMED_BY_MISSION');
+    const resumedByMission = missionItems.some((i) => i.action === 'TASK_RESUMED' && i.taskId === taskId);
+    check('TASK_RECUPERADA_POR_UMA_DAS_VIAS', takenBySweep || skippedBecauseMission || resumedByMission,
+      `sweep=${JSON.stringify(taskItems)} missionResumed=${resumedByMission}`);
+    check('TASK_VARRIDA_PELO_SWEEP_OU_COORDENADA', taskItems.length === 1 || resumedByMission,
+      taskItems.length === 1 ? JSON.stringify(taskItems) : `coordenada pela missão: ${resumedByMission}`);
 
     // 8. Fence avançou e o lease saiu do worker morto.
     const newLease = await taskService.getTaskLease(taskId);
@@ -168,7 +175,6 @@ async function main() {
       refused = error.code;
     }
     check('ESCRITA_DO_WORKER_MORTO_RECUSADA', ['TASK_STALE_WORKER_WRITE', 'TASK_LEASE_NOT_HELD', 'TASK_LEASE_EXPIRED'].includes(refused), `code=${refused}`);
-
     // 10. A task continua: o novo dono consegue avançar de fase (a execução não está congelada).
     let advanced = null;
     if (newLease && newLease.token) {

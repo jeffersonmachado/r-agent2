@@ -35,7 +35,10 @@ async function main() {
   }
 
   // Fase material em execução, sob o lease deste processo (via CAS).
-  await taskService.updateTaskGuarded(taskId, { status: 'IMPLEMENTING' }, {
+  // Estado CORRETO do sistema: `CODING` — a máquina de estados (engine/engineeringRouter/stateMachine.js)
+  // não possui `IMPLEMENTING`. Usar o vocabulário do prompt em vez do vocabulário do sistema deixava a
+  // task num estado inválido e TODA transição a partir dele era rejeitada (IMPLEMENTING -> RED).
+  await taskService.updateTaskGuarded(taskId, { status: 'CODING' }, {
     leaseToken: acquired.lease.token,
     fence: acquired.lease.fence,
   });

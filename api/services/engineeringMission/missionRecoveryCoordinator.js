@@ -101,6 +101,12 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
   };
 
   const plan = planRecovery(candidates);
+  // Coordenação explícita entre os dois caminhos do sweep: a missão com `linked_task_id` retoma a
+  // task pelo Router (caminho com contexto de fase) e o sweep de TASKS não deve disputar o mesmo
+  // lease depois. Medido em 2026-09-25: sem esta marca, o sweep de tasks tomava o lease primeiro e o
+  // caminho da missão falhava com TASK_ALREADY_RUNNING — a recuperação acontecia, mas por um caminho
+  // e com um erro no outro.
+  const tasksResumedByMission = new Set();
   for (const step of plan) {
     if (step.action === 'SKIP') {
       summary.skippedNotResumable += 1;
@@ -136,6 +142,7 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
       const current = await missionStore.getMission(step.missionId);
       if (current?.linked_task_id) {
         await orchestrator.runMissionTask(step.missionId, { tenantId });
+        tasksResumedByMission.add(current.linked_task_id);
         summary.recovered += 1;
         summary.items.push({ ...step, action: 'TASK_RESUMED', taskId: current.linked_task_id, leaseFence: acquired.lease.fence });
       } else {
@@ -160,6 +167,11 @@ async function sweep({ tenantId = 'system', limit = DEFAULT_LIMIT, workerInstanc
   try {
     const orphanTasks = await taskService.findTasksWithExpiredLease({ limit: DEFAULT_LIMIT });
     for (const task of orphanTasks) {
+      // Já retomada pelo caminho da missão nesta mesma varredura: não disputa o lease.
+      if (tasksResumedByMission.has(task.id)) {
+        summary.taskItems.push({ taskId: task.id, action: 'SKIP', reason: 'ALREADY_RESUMED_BY_MISSION' });
+        continue;
+      }
       const acquired = await taskService.acquireTaskLease(task.id, {
         workerInstanceId: `${workerInstanceId}-task`,
         host,
