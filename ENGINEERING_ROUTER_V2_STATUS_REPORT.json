@@ -233,6 +233,14 @@
         ],
         "honesty": "Isto NÃO é o mesmo que 'o produto perde dados do usuário': deduplicar conteúdo quase idêntico é intencional. O defeito é o ESTADO com que o descarte é registrado (failed) e a fragilidade do cenário em gerar conteúdo único sob concorrência."
       },
+      "distHygiene": {
+        "state": "KNOWN_ISSUE_NOT_ACTED (risco documentado de deadlock)",
+        "measured": "npm run validate:release-hygiene => status=PASS com 1 issue: FOREIGN_RELEASE_ARTIFACT dist/r-agent2-20260924-125107.zip — artefato fora do canal governado (dist/release/). E dist/release/ está VAZIO (sem payload).",
+        "alsoDetected": "scripts/check-dist-clean.sh falha (validate:dist): STALE_VERIFIER_RESULT — dist/verifier/verify-result.json é de 2026-09-24T00:32 (gerado 10h ANTES do ZIP de 12:51), sem runId e sem sourceFingerprint, logo não rastreável ao pacote atual. E 'Nenhum PAYLOAD encontrado em dist/release/*.payload.zip'.",
+        "correctAction": "npm run zip:release — produzir o pacote NO CANAL GOVERNADO (dist/release/) com manifesto, na mesma sessão.",
+        "whyNotActedNow": "DECISÃO DELIBERADA E CONSERVADORA: a memória do repositório (r-agent2-dist-emptied-seal-deadlock) documenta que zip:release APAGA os ZIPs de dist/ ANTES de reconstruir, e que ficar sem pacote deliverado faz o scorecard tratar RAP-052/RAP-054 como FALHA REAL (below10 salta de 2 para ~27-29, governança vira NO_GO, o próprio zip:release aborta e o pacote não sela). A regra de ouro registrada é: NUNCA deixar o dist esvaziar sem terminar o empacotamento NA MESMA SESSÃO. Iniciar um zip:release sem orçamento de contexto para acompanhá-lo até o fim é exatamente como se cria esse deadlock — então não iniciei. Requer sessão dedicada.",
+        "limitationNoted": "O gate folha validate:release-hygiene está PASS (com issue); quem fica vermelho é validate:dist (check-dist-clean). O STALE_VERIFIER_RESULT é removível isoladamente (o ZIP permaneceria, sem risco de esvaziar), mas só faz sentido depois do pacote governado existir — caso contrário volta a ficar stale."
+      },
       "revalidatedAt": "2026-09-25",
       "meshAfterFixes": {
         "executionId": "mesh-2026-09-25T02-42-47-657Z",
