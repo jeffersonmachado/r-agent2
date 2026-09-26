@@ -1,7 +1,7 @@
 {
   "artifactType": "enterprise-proof-artifact",
   "artifactVersion": "1.0.0",
-  "generatedAt": "2026-09-26T13:17:57.040Z",
+  "generatedAt": "2026-09-26T22:45:06.014Z",
   "ok": true,
   "apiBaseUrl": "http://localhost:3001",
   "authMode": "rpa",
@@ -11,7 +11,7 @@
       "name": "l03",
       "ok": true,
       "status": 0,
-      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1790428664165 callId=call-voice-tts-asr-1790428664165 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
+      "stdout": "[pbx-voice-tts-asr-smoke] OK auth=rpa_scoped flowId=flow-voice-tts-asr-smoke-1790462675083 callId=call-voice-tts-asr-1790462675083 selftest=WARN realCallStatus=originated cdrFound=true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l03-pbx-voice-tts-asr-evidence.json",
       "stderr": ""
     },
     {
@@ -25,7 +25,7 @@
       "name": "l05",
       "ok": true,
       "status": 0,
-      "stdout": "[inbox-smoke] OK ticket=default-1790428673894-ldkb970 conversation=conv-1790428673961-ffdb88ee572c queue=ux1_smoke_1790428673868 quickReply=qr-1790428674388-vol4ug8tg phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
+      "stdout": "[inbox-smoke] OK ticket=default-1790462699377-vozdmer conversation=conv-1790462699833-6821fdf88245 queue=ux1_smoke_1790462696300 quickReply=qr-1790462702796-qf2v4z4zn phoneMasking=false->true evidence=/home/jmachado/.local/share/ragent2-runtime/qa/l05-chatpro-omnichannel-evidence.json",
       "stderr": ""
     }
   ],
@@ -78,8 +78,8 @@
     },
     "warnings": []
   },
-  "runId": "rap-governed-20260926131512127-011ed76c",
-  "sourceFingerprint": "c9ae35e023a1a3f90dbac749df6e17371ea44352979ff1a30b63cd6944fce595",
-  "sourceCommit": "f485eb7c4685a660a598a143e50c7cd52e0e6714",
-  "sourceTree": "35ad833278e640ac7d86b564ab144e1a4d7b1ee0"
+  "runId": "rap-governed-20260926224430758-48c59a9e",
+  "sourceFingerprint": "21c4dc33ccea35070e6cabc8e602204ad0c974e2ef5ed9e8418afa8e54fd93b1",
+  "sourceCommit": "9f0688f3d6ef06d0a2b06205ab65a047149bb809",
+  "sourceTree": "2801818a2a176ccb4867a8a1ac1109fc4ed9ae17"
 }
